@@ -6,3 +6,27 @@ build/
 test-results/
 .env
 .env.local
+
+# additional ignores for monorepo
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+**/playwright-report/
+**/test-results/
+**/coverage/
+**/*.log
+**/.DS_Store
+**/.local/
+**/.cache/
+**/.turbo/
+**/.vite/
+**/.env
+**/.env.*
+**/android/.gradle/
+**/android/app/build/
+**/ios/Pods/
+
+# ignore nested repositories
+APPS/peacepad/
+APPS/saywetin/
