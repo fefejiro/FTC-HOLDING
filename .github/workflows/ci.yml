@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ 'main' ]
+  pull_request:
+    branches: [ 'main' ]
+
+jobs:
+  ftc-site:
+    name: ftc-site build & tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies for ftc-site
+        working-directory: APPS/ftc-site
+        run: |
+          npm ci --legacy-peer-deps
+
+      - name: Install Playwright browsers
+        working-directory: APPS/ftc-site
+        run: npx playwright install --with-deps
+
+      - name: Build ftc-site
+        working-directory: APPS/ftc-site
+        run: npm run build
+
+      - name: Run ftc-site E2E tests
+        working-directory: APPS/ftc-site
+        run: npm run test:e2e

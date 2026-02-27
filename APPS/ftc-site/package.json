@@ -1,0 +1,33 @@
+{
+  "name": "@ftc/ftc-site",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test:e2e": "playwright test",
+    "test": "npm run test:e2e",
+    "check": "npm run lint && npm run build && npm run test:e2e"
+  },
+  "dependencies": {
+    "@ftc/config": "file:../../PACKAGES/config",
+    "@ftc/logger": "file:../../PACKAGES/logger",
+    "@ftc/types": "file:../../PACKAGES/types",
+    "@ftc/supabase": "file:../../PACKAGES/supabase",
+    "@ftc/auth": "file:../../PACKAGES/auth",
+    "next": "^14.2.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.1",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "eslint": "8.0.0",
+    "eslint-config-next": "14.0.0",
+    "typescript": "^5.3.3",
+    "@playwright/test": "^1.38.0"
+  }
+}

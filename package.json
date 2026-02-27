@@ -1,0 +1,25 @@
+{
+  "name": "ftc-holding",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "APPS/*",
+    "PACKAGES/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:ftc",
+    "build": "npm run build:all",
+    "build:all": "npm run build:ftc && npm run build:peacepad && npm run build:saywetin",
+    "build:ftc": "npm --workspace=@ftc/ftc-site run build",
+    "build:peacepad": "npm --workspace=@ftc/peacepad run build",
+    "build:saywetin": "npm --workspace=@ftc/saywetin run build",
+    "test": "npm run test:ftc && npm run test:peacepad && npm run test:saywetin",
+    "test:ftc": "npm --workspace=@ftc/ftc-site run test || echo 'no tests'",
+    "test:peacepad": "npm --workspace=@ftc/peacepad run test || echo 'no tests'",
+    "test:saywetin": "npm --workspace=@ftc/saywetin run test || echo 'no tests'",
+    "dev:ftc": "npm --workspace=@ftc/ftc-site run dev",
+    "dev:peacepad": "npm --workspace=@ftc/peacepad run dev || echo 'peacepad has no dev'",
+    "dev:saywetin": "npm --workspace=@ftc/saywetin run dev || echo 'saywetin has no dev'",
+    "doctor": "node -v && npm -v && (test -d APPS && echo APPS ok)"
+  }
+}
