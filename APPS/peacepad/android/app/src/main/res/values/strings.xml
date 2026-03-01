@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PeacePad</string>
+    <string name="title_activity_main">PeacePad</string>
+    <string name="package_name">ca.peacepad.family</string>
+    <string name="custom_url_scheme">ca.peacepad.family</string>
+    
+    <!-- Play Store Metadata -->
+    <string name="app_description">Communication tools for co-parents. Fair turn-based conversations (Conch Mode), real-time messaging with AI tone analysis, shared calendars, expense tracking, and domestic violence resources.</string>
+    <string name="app_tagline">Peaceful co-parenting communication</string>
+</resources>

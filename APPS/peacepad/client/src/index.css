@@ -1,0 +1,914 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* iOS App-Like Stability - Prevent layout shifts and bouncing */
+html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  /* Prevent iOS overscroll bouncing */
+  overscroll-behavior: none;
+  /* Force GPU compositing for smoother rendering */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  /* Prevent iOS overscroll bouncing */
+  overscroll-behavior: none;
+  /* Prevent text size adjustment on orientation change */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Force GPU layer */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* Contain layout to prevent reflows affecting parent */
+  contain: layout style;
+  /* GPU compositing */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* LIGHT MODE - Vibrant & Playful Palette: Optimistic, Empowering & Inviting */
+:root {
+  --button-outline: rgba(0,0,0, .08);
+  --badge-outline: rgba(0,0,0, .04);
+
+  /* Automatic computation of border around primary / danger buttons */
+  --opaque-button-border-intensity: -8; /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .06);
+
+  /* Soft warm white background - calm & inviting */
+  --background: 30 15% 98.5%;
+
+  /* Soft dark text - easy on the eyes */
+  --foreground: 222 12% 24%;
+
+  /* Warm subtle border - barely there */
+  --border: 25 10% 91%;
+
+  /* Warm white cards - inviting, not clinical */
+  --card: 30 20% 99%;
+
+  --card-foreground: 222 12% 22%;
+
+  --card-border: 25 10% 91%;
+
+  /* Warm light sidebar */
+  --sidebar: 30 12% 96%;
+
+  --sidebar-foreground: 222 12% 22%;
+
+  --sidebar-border: 25 10% 90%;
+
+  /* Vibrant Purple primary - playful & engaging #A78BFE */
+  --sidebar-primary: 255 97% 77%;
+
+  --sidebar-primary-foreground: 222 15% 20%;
+
+  --sidebar-accent: 220 14% 93%;
+
+  --sidebar-accent-foreground: 222 15% 25%;
+
+  --sidebar-ring: 255 97% 77%;
+
+  /* Warm white popover */
+  --popover: 30 15% 99%;
+
+  --popover-foreground: 222 12% 22%;
+
+  --popover-border: 25 10% 91%;
+
+  /* Vibrant Purple - Primary Action (playful, empowering, optimistic) #A78BFE */
+  --primary: 255 97% 77%;
+
+  --primary-foreground: 222 15% 20%;
+
+  /* Warm secondary - soft sand undertone */
+  --secondary: 30 10% 93%;
+
+  --secondary-foreground: 222 12% 22%;
+
+  /* Warm muted - gentle warmth */
+  --muted: 30 10% 96%;
+
+  --muted-foreground: 220 8% 50%;
+
+  /* Bright Coral accent - warm & inviting #FF7F66 */
+  --accent: 9 100% 70%;
+
+  --accent-foreground: 0 0% 100%;
+
+  /* Vibrant Red - clear but friendly */
+  --destructive: 0 85% 60%;
+
+  --destructive-foreground: 0 0% 100%;
+
+  --input: 25 10% 91%;
+  --ring: 255 97% 77%;
+  
+  /* Chart colors - vibrant, playful palette (exact brand colors) */
+  --chart-1: 255 97% 77%;  /* Purple #A78BFE */
+  --chart-2: 207 100% 70%;  /* Blue #64BAFF */
+  --chart-3: 146 61% 66%;  /* Green #70E09E */
+  --chart-4: 43 100% 70%;   /* Yellow #FFD864 */
+  --chart-5: 9 100% 70%;   /* Coral #FF7F66 */
+
+  --font-sans: Inter, Open Sans, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: JetBrains Mono, Menlo, monospace;
+  --radius: .5rem; /* 8px */
+  --shadow-2xs: 0px 1px 2px 0px hsl(220 20% 40% / 0.04);
+  --shadow-xs: 0px 1px 3px 0px hsl(220 20% 40% / 0.06);
+  --shadow-sm: 0px 2px 4px 0px hsl(220 20% 40% / 0.05), 0px 1px 2px -1px hsl(220 20% 40% / 0.03);
+  --shadow: 0px 4px 6px 0px hsl(220 20% 40% / 0.06), 0px 2px 4px -1px hsl(220 20% 40% / 0.04);
+  --shadow-md: 0px 6px 12px 0px hsl(220 20% 40% / 0.06), 0px 3px 6px -2px hsl(220 20% 40% / 0.04);
+  --shadow-lg: 0px 10px 20px 0px hsl(220 20% 40% / 0.08), 0px 4px 8px -2px hsl(220 20% 40% / 0.06);
+  --shadow-xl: 0px 16px 32px 0px hsl(220 20% 40% / 0.10), 0px 6px 12px -3px hsl(220 20% 40% / 0.08);
+  --shadow-2xl: 0px 24px 48px 0px hsl(220 20% 40% / 0.12);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
+
+  /* Fallback for older browsers */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+.dark {
+  --button-outline: rgba(255,255,255, .12);
+  --badge-outline: rgba(255,255,255, .08);
+
+  --opaque-button-border-intensity: 10;  /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(255,255,255, .06);
+  --elevate-2: rgba(255,255,255, .10);
+
+  /* Pure black background - clean & dramatic like AppClose */
+  --background: 0 0% 0%;
+
+  /* Bright white foreground - high contrast */
+  --foreground: 0 0% 98%;
+
+  /* Subtle dark border */
+  --border: 0 0% 15%;
+
+  /* Elevated dark cards */
+  --card: 0 0% 8%;
+
+  --card-foreground: 0 0% 98%;
+
+  --card-border: 0 0% 18%;
+
+  /* Dark sidebar */
+  --sidebar: 0 0% 6%;
+
+  --sidebar-foreground: 0 0% 98%;
+
+  --sidebar-border: 0 0% 12%;
+
+  /* Vibrant Purple primary - pops on black #A78BFE */
+  --sidebar-primary: 255 97% 77%;
+
+  --sidebar-primary-foreground: 222 15% 20%;
+
+  --sidebar-accent: 0 0% 12%;
+
+  --sidebar-accent-foreground: 0 0% 95%;
+
+  --sidebar-ring: 255 97% 77%;
+
+  /* Dark popover */
+  --popover: 0 0% 7%;
+
+  --popover-foreground: 0 0% 98%;
+
+  --popover-border: 0 0% 18%;
+
+  /* Vibrant Purple primary - playful & empowering #A78BFE */
+  --primary: 255 97% 77%;
+
+  --primary-foreground: 222 15% 20%;
+
+  /* Dark neutral secondary */
+  --secondary: 0 0% 15%;
+
+  --secondary-foreground: 0 0% 98%;
+
+  /* Dark muted */
+  --muted: 0 0% 12%;
+
+  --muted-foreground: 0 0% 65%;
+
+  /* Bright Coral accent - warm & inviting on black #FF7F66 */
+  --accent: 9 100% 70%;
+
+  --accent-foreground: 0 0% 100%;
+
+  /* Vibrant Red for destructive actions */
+  --destructive: 0 90% 65%;
+
+  --destructive-foreground: 0 0% 100%;
+
+  --input: 0 0% 20%;
+  --ring: 255 97% 77%;
+  
+  /* Vibrant chart colors - exact same as light mode for consistency */
+  --chart-1: 255 97% 77%;  /* Purple #A78BFE */
+  --chart-2: 207 100% 70%;  /* Blue #64BAFF */
+  --chart-3: 146 61% 66%;  /* Green #70E09E */
+  --chart-4: 43 100% 70%;   /* Yellow #FFD864 */
+  --chart-5: 9 100% 70%;   /* Coral #FF7F66 */
+
+  --shadow-2xs: 0px 1px 2px 0px hsl(20 30% 5% / 0.20);
+  --shadow-xs: 0px 1px 3px 0px hsl(20 30% 5% / 0.30);
+  --shadow-sm: 0px 2px 4px 0px hsl(20 30% 5% / 0.25), 0px 1px 2px -1px hsl(20 30% 5% / 0.20);
+  --shadow: 0px 4px 6px 0px hsl(20 30% 5% / 0.30), 0px 2px 4px -1px hsl(20 30% 5% / 0.25);
+  --shadow-md: 0px 6px 12px 0px hsl(20 30% 5% / 0.35), 0px 3px 6px -2px hsl(20 30% 5% / 0.30);
+  --shadow-lg: 0px 10px 20px 0px hsl(20 30% 5% / 0.40), 0px 4px 8px -2px hsl(20 30% 5% / 0.35);
+  --shadow-xl: 0px 16px 32px 0px hsl(20 30% 5% / 0.45), 0px 6px 12px -3px hsl(20 30% 5% / 0.40);
+  --shadow-2xl: 0px 24px 48px 0px hsl(20 30% 5% / 0.50);
+
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* Prevent horizontal overflow on mobile */
+  html, body {
+    @apply overflow-x-hidden;
+    width: 100%;
+    max-width: 100vw;
+    position: relative;
+  }
+
+  /* Dynamic viewport height for mobile - prevents jumping when address bar shows/hides */
+  :root {
+    --app-viewport-height: 100vh;
+    --app-viewport-height: 100dvh; /* Modern browsers use this, older fallback to 100vh */
+  }
+
+  /* Safe area utility for notched devices and bottom nav */
+  html {
+    /* Store safe area values for use in components */
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Ensure main app container respects viewport */
+  #root {
+    @apply overflow-x-hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* Ensure inputs scroll into view accounting for sticky header */
+  input, textarea, select, [role="combobox"], [role="textbox"] {
+    scroll-margin-top: 5rem; /* Account for sticky header */
+    scroll-margin-bottom: 6rem; /* Account for bottom nav on mobile */
+  }
+
+  /* Better mobile input handling - prevent zoom on focus */
+  @media (max-width: 768px) {
+    input, textarea, select {
+      font-size: 16px; /* Prevent iOS zoom on focus */
+    }
+  }
+
+  /* Smooth transitions for all interactive elements */
+  button, a, input, textarea, select, [role="button"], [role="tab"] {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  /* Smooth color transitions for theme switching */
+  * {
+    @apply transition-colors duration-300 ease-in-out;
+  }
+
+  /* Theme color transition animation */
+  @keyframes themeColorTransition {
+    0% {
+      opacity: 0.8;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  /* Enhanced transitions for color properties */
+  html {
+    --transition-duration: 300ms;
+    --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Smooth primary color transitions */
+  button:not([disabled]),
+  [role="button"]:not([disabled]),
+  .bg-primary,
+  .text-primary,
+  .border-primary,
+  .ring-primary {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Smooth accent color transitions */
+  .bg-accent,
+  .text-accent,
+  .border-accent,
+  .ring-accent {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Smooth foreground transitions */
+  .text-foreground,
+  .text-primary-foreground,
+  .text-accent-foreground {
+    @apply transition-colors duration-300 ease-in-out;
+  }
+
+  /* ===== AODA / WCAG 2.1 AA ACCESSIBILITY ===== */
+  
+  /* Enhanced focus indicators for keyboard navigation (WCAG 2.4.7) */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+    outline-style: solid;
+  }
+
+  /* Remove default focus for mouse users, keep for keyboard */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* High contrast focus ring for interactive elements */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [role="button"]:focus-visible,
+  [role="tab"]:focus-visible,
+  [role="checkbox"]:focus-visible,
+  [role="radio"]:focus-visible,
+  [role="switch"]:focus-visible,
+  [role="menuitem"]:focus-visible,
+  [role="link"]:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
+    outline: none;
+  }
+
+  /* Ensure minimum touch target size (WCAG 2.5.5 - 44x44px) */
+  @media (pointer: coarse) {
+    button, 
+    a, 
+    [role="button"],
+    [role="tab"],
+    [role="checkbox"],
+    [role="radio"],
+    [role="switch"],
+    [role="menuitem"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* Respect user's reduced motion preference (WCAG 2.3.3) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --border: 0 0% 30%;
+      --ring: 255 100% 50%;
+    }
+    
+    button, a, [role="button"] {
+      border-width: 2px;
+    }
+  }
+
+  /* Selection styling for better visibility */
+  ::selection {
+    @apply bg-primary/30 text-foreground;
+  }
+
+  /* Ensure link underlines are visible (WCAG 1.4.1) */
+  a:not([class*="button"]):not([role="button"]) {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  /* Screen reader only utility class */
+  .sr-only-focusable:focus,
+  .sr-only-focusable:active {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: inherit !important;
+    margin: inherit !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: normal !important;
+  }
+}
+
+
+/* Smooth Page & Component Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gentleBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Success animation for completed actions */
+@keyframes successPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+@keyframes calmPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.animate-calm-pulse {
+  animation: calmPulse 4s ease-in-out infinite;
+}
+
+/* Apply animations */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.4s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out;
+}
+
+.animate-gentle-bounce {
+  animation: gentleBounce 0.6s ease-in-out;
+}
+
+.animate-success-pulse {
+  animation: successPulse 0.5s ease-in-out;
+}
+
+/**
+ * Using the elevate system.
+ * Automatic contrast adjustment.
+ *
+ * <element className="hover-elevate" />
+ * <element className="active-elevate-2" />
+ *
+ * // Using the tailwind utility when a data attribute is "on"
+ * <element className="toggle-elevate data-[state=on]:toggle-elevated" />
+ * // Or manually controlling the toggle state
+ * <element className="toggle-elevate toggle-elevated" />
+ *
+ * Elevation systems have to handle many states.
+ * - not-hovered, vs. hovered vs. active  (three mutually exclusive states)
+ * - toggled or not
+ * - focused or not (this is not handled with these utilities)
+ *
+ * Even without handling focused or not, this is six possible combinations that
+ * need to be distinguished from eachother visually.
+ */
+@layer utilities {
+
+  /* Hide ugly search cancel button in Chrome until we can style it properly */
+  input[type="search"]::-webkit-search-cancel-button {
+    @apply hidden;
+  }
+
+  /* Placeholder styling for contentEditable div */
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
+   * buttons/badges can remove the automatic brightness adjustment on interactions
+   * and program their own. */
+  .no-default-hover-elevate {}
+
+  .no-default-active-elevate {}
+
+
+  /**
+   * Toggleable backgrounds go behind the content. Hoverable/active goes on top.
+   * This way they can stack/compound. Both will overlap the parent's borders!
+   * So borders will be automatically adjusted both on toggle, and hover/active,
+   * and they will be compounded.
+   */
+  .toggle-elevate::before,
+  .toggle-elevate-2::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: -1;
+    /* sits behind content but above backdrop */
+  }
+
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.toggle-elevate::before {
+    inset: -1px;
+  }
+
+  /* Does not work on elements with overflow:hidden! */
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: 999;
+    /* sits in front of content */
+  }
+
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
+    inset: -1px;
+  }
+
+  /* ===== MOBILE OPTIMIZATIONS ===== */
+  
+  /* iOS Safe Area Support */
+  @supports (padding: max(0px)) {
+    body {
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+
+  /* Touch-Friendly Tap Targets (minimum 44x44px for accessibility) */
+  @media (max-width: 768px) {
+    button, a, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Make inputs larger on mobile for better usability */
+    input, textarea, select {
+      font-size: 16px !important; /* Prevents iOS zoom on focus */
+    }
+
+    /* Ensure chat input area is visible above keyboard */
+    .sticky.bottom-0 {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Optimize chat bubbles for mobile */
+    [data-testid^="message-"] {
+      max-width: 85%; /* Better fit on small screens */
+    }
+
+    /* Mobile-friendly modal sizing */
+    [role="dialog"] {
+      max-width: 95vw;
+      max-height: 90vh;
+    }
+  }
+
+  /* Prevent text selection on buttons and interactive elements on mobile */
+  @media (pointer: coarse) {
+    button, a, [role="button"] {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+  }
+
+  /* Better touch scrolling on iOS */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent horizontal scroll on mobile */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Bottom Nav Animations - Springy Press Style */
+  
+  /* Spring-back animation after press release - triggered via JS class */
+  /* Uses translateZ(0) throughout to prevent layer promotion changes mid-animation */
+  @keyframes nav-spring-release {
+    0% {
+      transform: scale(0.88) translateZ(0);
+    }
+    40% {
+      transform: scale(1.06) translateZ(0);
+    }
+    70% {
+      transform: scale(0.98) translateZ(0);
+    }
+    100% {
+      transform: scale(1) translateZ(0);
+    }
+  }
+
+  /* Dot indicator fade-in - uses translateZ(0) for GPU stability */
+  @keyframes nav-dot-appear {
+    0% {
+      transform: scale(0) translateZ(0);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.3) translateZ(0);
+    }
+    100% {
+      transform: scale(1) translateZ(0);
+      opacity: 1;
+    }
+  }
+
+  /* Nav button base - native buttons in BottomNav with custom press behavior */
+  /* iOS stability: GPU compositing + prevent layout shifts */
+  .nav-button {
+    -webkit-tap-highlight-color: transparent;
+    transform: scale(1) translateZ(0);
+    -webkit-transform: scale(1) translateZ(0);
+    transition: transform 0.08s ease-out;
+    -webkit-transition: -webkit-transform 0.08s ease-out;
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    touch-action: manipulation;
+    contain: layout style;
+    transform-origin: center center;
+  }
+
+  /* Compress on press - use translateZ(0) to maintain GPU layer */
+  .nav-button.pressing {
+    transform: scale(0.88) translateZ(0);
+    -webkit-transform: scale(0.88) translateZ(0);
+  }
+
+  /* Spring-back animation - only applied via JS on release */
+  .nav-button.springing {
+    animation: nav-spring-release 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    -webkit-animation: nav-spring-release 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* Active icon styling */
+  .nav-icon-active {
+    color: hsl(var(--primary));
+  }
+
+  .nav-icon-inactive {
+    transition: color 0.2s ease-out;
+  }
+
+  /* Dot indicator for active state - GPU accelerated */
+  .nav-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    animation: nav-dot-appear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    -webkit-animation: nav-dot-appear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    will-change: transform, opacity;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* Respect reduced motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    .nav-button.pressing {
+      transform: none;
+    }
+    .nav-button.springing {
+      animation: none;
+    }
+    .nav-dot {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
+  /* Safe area utilities for fixed elements */
+  /* Safe area handling for native Android/iOS apps via Capacitor */
+  /* Only apply status bar padding when running inside native app (body.capacitor-native) */
+  /* Regular browser views (including mobile browsers) get no extra padding */
+  
+  /* Default: no safe-area padding (web browsers) */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  /* Native app: Android WebViews often don't report env(safe-area-inset-*) correctly */
+  /* Use fixed 1.75rem (~28px) as fallback for the status bar height */
+  body.capacitor-native .safe-area-top {
+    padding-top: 1.75rem;
+  }
+  
+  @supports (padding-top: max(1px, 1px)) {
+    body.capacitor-native .safe-area-top {
+      padding-top: max(env(safe-area-inset-top, 0px), 1.75rem);
+    }
+  }
+  
+  /* Desktop: No safe-area padding needed regardless of native/web */
+  @media (min-width: 1024px) {
+    .safe-area-top {
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+  }
+  
+  /* Bottom safe area for navigation bar */
+  .safe-area-bottom {
+    padding-bottom: 0.5rem;
+  }
+  
+  @supports (padding-bottom: max(1px, 1px)) {
+    .safe-area-bottom {
+      padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
+    }
+  }
+  
+  /* Combined safe area for full-height containers */
+  .safe-area-insets {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Hide Vite's "Reload Latest" banner - only show when there's an actual update */
+  /* This targets Vite's dev overlay */
+  #vite-plugin-checker-notification-root,
+  [id^="vite-error-overlay"],
+  .vite-dev-indicator {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.3s ease-in-out !important;
+  }
+
+  /* Show it when there's actual content/update */
+  #vite-plugin-checker-notification-root:has([data-active="true"]),
+  [id^="vite-error-overlay"]:not(:empty),
+  .vite-dev-indicator[data-state="visible"] {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}

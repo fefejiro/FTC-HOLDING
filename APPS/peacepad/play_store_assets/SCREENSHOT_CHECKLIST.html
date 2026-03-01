@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PeacePad - Screenshot Checklist</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #A78BFE;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .instructions {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .screenshot-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .number {
+            background: #A78BFE;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .content {
+            flex: 1;
+        }
+        .title {
+            font-weight: bold;
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .description {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .link {
+            display: inline-block;
+            background: #FF7F66;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+        .link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 127, 102, 0.3);
+        }
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .spec {
+            background: #FFF9E6;
+            border-left: 4px solid #FFD864;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .spec strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>📸 PeacePad Screenshot Checklist</h1>
+    <p class="subtitle">Capture these 8 screenshots for Play Store submission</p>
+
+    <div class="instructions">
+        <h3>📱 How to Capture:</h3>
+        <ol>
+            <li><strong>On Mobile:</strong> Navigate to each link, take a screenshot (Volume Down + Power on Android)</li>
+            <li><strong>On Desktop:</strong> Press F12 → Click device toggle → Select "Pixel 5" or custom 1080x1920 → Capture screenshot from DevTools menu (⋮)</li>
+        </ol>
+        <div class="spec">
+            <strong>Required Specs:</strong> 1080 x 1920 pixels (portrait), PNG or JPG, max 8MB each
+        </div>
+    </div>
+
+    <div class="screenshot-item">
+        <div class="number">1</div>
+        <input type="checkbox" class="checkbox">
+        <div class="content">
+            <div class="title">Home / Chat Screen</div>
+            <div class="description">Show messaging interface with AI tone indicator and conversation</div>
+            <a href="/" class="link" target="_blank">Open Chat →</a>
+        </div>
+    </div>
+
+    <div class="screenshot-item">
+        <div class="number">2</div>
+        <input type="checkbox" class="checkbox">
+        <div class="content">
+            <div class="title">Conch Mode Active</div>
+            <div class="description">Structured conversation with mood tracking and speaking timer</div>
+            <a href="/conch-mode" class="link" target="_blank">Open Conch Mode →</a>
+        </div>
+    </div>
+
+    <div class="screenshot-item">
+        <div class="number">3</div>
+        <input type="checkbox" class="checkbox">
+        <div class="content">
+            <div class="title">Progress Dashboard</div>
+            <div class="description">Achievements, streaks, and stats showcasing progress tracking</div>
+            <a href="/progress" class="link" target="_blank">Open Progress →</a>
+        </div>
+    </div>
+
+    <div class="screenshot-item">
+        <div class="number">4</div>
+        <input type="checkbox" class="checkbox">
+        <div class="content">
+            <div class="title">Shared Calendar</div>
+            <div class="description">Month view with color-coded events and scheduling</div>
+            <a href="/scheduling" class="link" target="_blank">Open Calendar →</a>
+        </div>
+    </div>
+
+    <div class="screenshot-item">
+        <div class="number">5</div>
+        <input type="checkbox" class="checkbox">
+        <div class="content">
+            <div class="title">AI Tone Analysis</div>
+            <div class="description">Message input with tone feedback and AI suggestions (type a frustrated message first!)</div>
+            <a href="/chat" class="link" target="_blank">Open Chat →</a>
+        </div>
+    </div>
+
+    <div class="screenshot-item">
+        <div class="number">6</div>
+        <input type="checkbox" class="checkbox">
+        <div class="content">
+            <div class="title">Expense Tracking</div>
+            <div class="description">Receipt uploads, split costs, and payment status</div>
+            <a href="/expenses" class="link" target="_blank">Open Expenses →</a>
+        </div>
+    </div>
+
+    <div class="screenshot-item">
+        <div class="number">7</div>
+        <input type="checkbox" class="checkbox">
+        <div class="content">
+            <div class="title">Tasks & To-Dos</div>
+            <div class="description">Shared task list with completion status</div>
+            <a href="/tasks" class="link" target="_blank">Open Tasks →</a>
+        </div>
+    </div>
+
+    <div class="screenshot-item">
+        <div class="number">8</div>
+        <input type="checkbox" class="checkbox">
+        <div class="content">
+            <div class="title">Settings / Profile</div>
+            <div class="description">User customization options and preferences</div>
+            <a href="/settings" class="link" target="_blank">Open Settings →</a>
+        </div>
+    </div>
+
+    <div class="instructions" style="margin-top: 30px;">
+        <h3>✅ After Capturing:</h3>
+        <ol>
+            <li>Save screenshots as: <code>screenshot_01_chat.png</code>, <code>screenshot_02_conch.png</code>, etc.</li>
+            <li>Ensure all are exactly <strong>1080 x 1920 pixels</strong></li>
+            <li>Save to <code>play_store_assets/screenshots/</code> folder</li>
+        </ol>
+    </div>
+
+</body>
+</html>

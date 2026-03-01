@@ -1,0 +1,81 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+server/public
+*.tar.gz
+test-reports/
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development
+.env.production
+.env.*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+.cache
+
+# Vite
+vite.config.ts.*
+
+# Replit specific
+.replit
+replit.nix
+.config
+.upm
+.cache
+
+# Test coverage
+coverage
+*.lcov
+
+# Playwright
+tests/.auth/
+playwright-report/
+test-results/
+
+# Production
+build
+
+# Mobile signing and provider config (never commit secrets)
+android/keystore.properties
+android/*.keystore
+android/app/*.keystore
+*.keystore
+android/app/google-services.json
+android/local.properties
+android/app/build.gradle.backup
+KEY_ALIAS
+
+# Local/generated artifacts
+attached_assets/
+uploads/

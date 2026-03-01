@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+.git
+*.min.js
+*.min.css
+android
+uploads
+attached_assets

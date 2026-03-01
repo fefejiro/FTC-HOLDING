@@ -1,0 +1,890 @@
+import { db } from "./db";
+import { supportResources, type InsertSupportResource } from "../shared/schema";
+
+// GLOBAL CRISIS RESOURCES - Organized by country
+const globalSupportResources: InsertSupportResource[] = [
+  // ============================================
+  // CANADA - National Crisis Lines
+  // ============================================
+  {
+    organization: "988 Suicide Crisis Helpline",
+    region: "Canada (nationwide)",
+    countryCode: "CA",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Suicide prevention", "Mental health support"],
+    phone: "988",
+    website: "https://988.ca",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "French"],
+  },
+  {
+    organization: "Kids Help Phone",
+    region: "Canada (nationwide)",
+    countryCode: "CA",
+    isNationwide: true,
+    services: ["24/7 youth crisis line", "Text support", "Online chat"],
+    phone: "1-800-668-6868",
+    website: "https://kidshelpphone.ca",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "French"],
+  },
+  {
+    organization: "Crisis Text Line",
+    region: "Canada (nationwide)",
+    countryCode: "CA",
+    isNationwide: true,
+    services: ["24/7 text support", "Crisis intervention"],
+    phone: "Text HOME to 686868",
+    website: "https://www.crisistextline.ca",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "French"],
+  },
+  {
+    organization: "Trans Lifeline Canada",
+    region: "Canada (nationwide)",
+    countryCode: "CA",
+    isNationwide: true,
+    services: ["Crisis hotline", "Peer support", "Transgender resources"],
+    phone: "1-877-330-6366",
+    website: "https://translifeline.org",
+    category: "crisis",
+    genderFocus: "lgbtq",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "French"],
+  },
+  {
+    organization: "Hope for Wellness Helpline",
+    region: "Canada (nationwide)",
+    countryCode: "CA",
+    isNationwide: true,
+    services: ["Indigenous crisis support", "Mental health counselling", "Cultural support"],
+    phone: "1-855-242-3310",
+    website: "https://www.hopeforwellness.ca",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "French", "Cree", "Ojibwe", "Inuktitut"],
+  },
+
+  // ============================================
+  // UNITED STATES - National Crisis Lines
+  // ============================================
+  {
+    organization: "988 Suicide & Crisis Lifeline",
+    region: "United States (nationwide)",
+    countryCode: "US",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Suicide prevention", "Mental health support"],
+    phone: "988",
+    website: "https://988lifeline.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Spanish", "200+ languages via interpretation"],
+  },
+  {
+    organization: "National Domestic Violence Hotline",
+    region: "United States (nationwide)",
+    countryCode: "US",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Safety planning", "Shelter referrals", "Legal support"],
+    phone: "1-800-799-7233",
+    website: "https://www.thehotline.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Spanish", "200+ languages via interpretation"],
+  },
+  {
+    organization: "Crisis Text Line (US)",
+    region: "United States (nationwide)",
+    countryCode: "US",
+    isNationwide: true,
+    services: ["24/7 text support", "Crisis intervention"],
+    phone: "Text HOME to 741741",
+    website: "https://www.crisistextline.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Spanish"],
+  },
+  {
+    organization: "RAINN National Sexual Assault Hotline",
+    region: "United States (nationwide)",
+    countryCode: "US",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Sexual assault support", "Referrals"],
+    phone: "1-800-656-4673",
+    website: "https://www.rainn.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Spanish"],
+  },
+  {
+    organization: "The Trevor Project",
+    region: "United States (nationwide)",
+    countryCode: "US",
+    isNationwide: true,
+    services: ["24/7 LGBTQ+ youth crisis line", "Text support", "Online chat"],
+    phone: "1-866-488-7386",
+    website: "https://www.thetrevorproject.org",
+    category: "crisis",
+    genderFocus: "lgbtq",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Spanish"],
+  },
+  {
+    organization: "Trans Lifeline (US)",
+    region: "United States (nationwide)",
+    countryCode: "US",
+    isNationwide: true,
+    services: ["Crisis hotline", "Peer support", "Transgender resources"],
+    phone: "1-877-565-8860",
+    website: "https://translifeline.org",
+    category: "crisis",
+    genderFocus: "lgbtq",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Spanish"],
+  },
+  {
+    organization: "Childhelp National Child Abuse Hotline",
+    region: "United States (nationwide)",
+    countryCode: "US",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Child abuse prevention", "Counselling"],
+    phone: "1-800-422-4453",
+    website: "https://www.childhelp.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Spanish"],
+  },
+
+  // ============================================
+  // UNITED KINGDOM - National Crisis Lines
+  // ============================================
+  {
+    organization: "Samaritans",
+    region: "United Kingdom (nationwide)",
+    countryCode: "GB",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Emotional support", "Suicide prevention"],
+    phone: "116 123",
+    email: "jo@samaritans.org",
+    website: "https://www.samaritans.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Welsh"],
+  },
+  {
+    organization: "National Domestic Abuse Helpline",
+    region: "United Kingdom (nationwide)",
+    countryCode: "GB",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Safety planning", "Referrals"],
+    phone: "0808 2000 247",
+    website: "https://www.nationaldahelpline.org.uk",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English"],
+  },
+  {
+    organization: "Men's Advice Line",
+    region: "United Kingdom (nationwide)",
+    countryCode: "GB",
+    isNationwide: true,
+    services: ["Helpline for male victims of domestic abuse", "Support", "Referrals"],
+    phone: "0808 801 0327",
+    website: "https://mensadviceline.org.uk",
+    category: "crisis",
+    genderFocus: "male",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "Mon-Fri 10am-8pm",
+    languages: ["English"],
+  },
+  {
+    organization: "Childline UK",
+    region: "United Kingdom (nationwide)",
+    countryCode: "GB",
+    isNationwide: true,
+    services: ["24/7 youth crisis line", "Online chat", "Counselling"],
+    phone: "0800 1111",
+    website: "https://www.childline.org.uk",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English"],
+  },
+  {
+    organization: "Switchboard LGBT+ Helpline",
+    region: "United Kingdom (nationwide)",
+    countryCode: "GB",
+    isNationwide: true,
+    services: ["LGBT+ support line", "Information", "Referrals"],
+    phone: "0800 0119 100",
+    website: "https://switchboard.lgbt",
+    category: "crisis",
+    genderFocus: "lgbtq",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "10am-10pm daily",
+    languages: ["English"],
+  },
+
+  // ============================================
+  // AUSTRALIA - National Crisis Lines
+  // ============================================
+  {
+    organization: "Lifeline Australia",
+    region: "Australia (nationwide)",
+    countryCode: "AU",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Suicide prevention", "Mental health support"],
+    phone: "13 11 14",
+    website: "https://www.lifeline.org.au",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English"],
+  },
+  {
+    organization: "1800RESPECT",
+    region: "Australia (nationwide)",
+    countryCode: "AU",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Sexual assault support", "Domestic violence support"],
+    phone: "1800 737 732",
+    website: "https://www.1800respect.org.au",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Translation available"],
+  },
+  {
+    organization: "Kids Helpline Australia",
+    region: "Australia (nationwide)",
+    countryCode: "AU",
+    isNationwide: true,
+    services: ["24/7 youth crisis line", "Online chat", "Counselling"],
+    phone: "1800 55 1800",
+    website: "https://kidshelpline.com.au",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English"],
+  },
+  {
+    organization: "MensLine Australia",
+    region: "Australia (nationwide)",
+    countryCode: "AU",
+    isNationwide: true,
+    services: ["24/7 men's crisis line", "Relationship support", "Mental health"],
+    phone: "1300 78 99 78",
+    website: "https://mensline.org.au",
+    category: "crisis",
+    genderFocus: "male",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English"],
+  },
+  {
+    organization: "QLife LGBTQ+",
+    region: "Australia (nationwide)",
+    countryCode: "AU",
+    isNationwide: true,
+    services: ["LGBTQ+ support line", "Peer support", "Counselling"],
+    phone: "1800 184 527",
+    website: "https://qlife.org.au",
+    category: "crisis",
+    genderFocus: "lgbtq",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "3pm-12am daily",
+    languages: ["English"],
+  },
+
+  // ============================================
+  // NEW ZEALAND - National Crisis Lines
+  // ============================================
+  {
+    organization: "Lifeline New Zealand",
+    region: "New Zealand (nationwide)",
+    countryCode: "NZ",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Suicide prevention", "Mental health support"],
+    phone: "0800 543 354",
+    website: "https://www.lifeline.org.nz",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Maori"],
+  },
+  {
+    organization: "Women's Refuge NZ",
+    region: "New Zealand (nationwide)",
+    countryCode: "NZ",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Domestic violence support", "Shelter referrals"],
+    phone: "0800 733 843",
+    website: "https://womensrefuge.org.nz",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Maori"],
+  },
+  {
+    organization: "Youthline NZ",
+    region: "New Zealand (nationwide)",
+    countryCode: "NZ",
+    isNationwide: true,
+    services: ["24/7 youth crisis line", "Text support", "Online chat"],
+    phone: "0800 376 633",
+    website: "https://www.youthline.co.nz",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English"],
+  },
+
+  // ============================================
+  // IRELAND - National Crisis Lines
+  // ============================================
+  {
+    organization: "Samaritans Ireland",
+    region: "Ireland (nationwide)",
+    countryCode: "IE",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Emotional support", "Suicide prevention"],
+    phone: "116 123",
+    website: "https://www.samaritans.org/ireland",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Irish"],
+  },
+  {
+    organization: "Women's Aid Ireland",
+    region: "Ireland (nationwide)",
+    countryCode: "IE",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Domestic violence support", "Referrals"],
+    phone: "1800 341 900",
+    website: "https://www.womensaid.ie",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English"],
+  },
+  {
+    organization: "Childline Ireland",
+    region: "Ireland (nationwide)",
+    countryCode: "IE",
+    isNationwide: true,
+    services: ["24/7 youth crisis line", "Online chat", "Text support"],
+    phone: "1800 66 66 66",
+    website: "https://www.childline.ie",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Irish"],
+  },
+
+  // ============================================
+  // GERMANY - National Crisis Lines
+  // ============================================
+  {
+    organization: "Telefonseelsorge",
+    region: "Germany (nationwide)",
+    countryCode: "DE",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Emotional support", "Suicide prevention"],
+    phone: "0800 111 0 111",
+    website: "https://online.telefonseelsorge.de",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["German"],
+  },
+  {
+    organization: "Hilfetelefon Gewalt gegen Frauen",
+    region: "Germany (nationwide)",
+    countryCode: "DE",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Violence against women support", "Referrals"],
+    phone: "0800 116 016",
+    website: "https://www.hilfetelefon.de",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["German", "English", "17+ languages"],
+  },
+
+  // ============================================
+  // FRANCE - National Crisis Lines
+  // ============================================
+  {
+    organization: "SOS Amitie",
+    region: "France (nationwide)",
+    countryCode: "FR",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Emotional support", "Suicide prevention"],
+    phone: "09 72 39 40 50",
+    website: "https://www.sos-amitie.com",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["French"],
+  },
+  {
+    organization: "Violences Femmes Info",
+    region: "France (nationwide)",
+    countryCode: "FR",
+    isNationwide: true,
+    services: ["Crisis line", "Violence against women support", "Referrals"],
+    phone: "3919",
+    website: "https://arretonslesviolences.gouv.fr",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["French"],
+  },
+
+  // ============================================
+  // SPAIN - National Crisis Lines
+  // ============================================
+  {
+    organization: "Telefono de la Esperanza",
+    region: "Spain (nationwide)",
+    countryCode: "ES",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Emotional support", "Suicide prevention"],
+    phone: "717 003 717",
+    website: "https://telefonodelaesperanza.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Spanish"],
+  },
+  {
+    organization: "016 Violencia de Genero",
+    region: "Spain (nationwide)",
+    countryCode: "ES",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Gender violence support", "Referrals"],
+    phone: "016",
+    website: "https://violenciagenero.igualdad.gob.es",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Spanish", "English", "52+ languages"],
+  },
+
+  // ============================================
+  // INDIA - National Crisis Lines
+  // ============================================
+  {
+    organization: "iCall",
+    region: "India (nationwide)",
+    countryCode: "IN",
+    isNationwide: true,
+    services: ["Crisis line", "Mental health support", "Counselling"],
+    phone: "9152987821",
+    website: "https://icallhelpline.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "Mon-Sat 8am-10pm",
+    languages: ["English", "Hindi", "Marathi"],
+  },
+  {
+    organization: "Vandrevala Foundation",
+    region: "India (nationwide)",
+    countryCode: "IN",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Mental health support", "Counselling"],
+    phone: "1860-2662-345",
+    website: "https://www.vandrevalafoundation.com",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Hindi"],
+  },
+  {
+    organization: "Women Helpline India",
+    region: "India (nationwide)",
+    countryCode: "IN",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Violence against women support", "Police referrals"],
+    phone: "181",
+    website: "https://ncw.nic.in",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Hindi", "Regional languages"],
+  },
+
+  // ============================================
+  // SOUTH AFRICA - National Crisis Lines
+  // ============================================
+  {
+    organization: "South African Depression and Anxiety Group",
+    region: "South Africa (nationwide)",
+    countryCode: "ZA",
+    isNationwide: true,
+    services: ["Crisis line", "Mental health support", "Suicide prevention"],
+    phone: "0800 567 567",
+    website: "https://www.sadag.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["English", "Afrikaans", "Zulu"],
+  },
+  {
+    organization: "People Opposing Women Abuse (POWA)",
+    region: "South Africa (nationwide)",
+    countryCode: "ZA",
+    isNationwide: true,
+    services: ["Crisis line", "Domestic violence support", "Shelter referrals"],
+    phone: "011 642 4345",
+    website: "https://www.powa.co.za",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "Mon-Fri 8am-5pm",
+    languages: ["English", "Zulu", "Sotho"],
+  },
+
+  // ============================================
+  // BRAZIL - National Crisis Lines
+  // ============================================
+  {
+    organization: "CVV - Centro de Valorização da Vida",
+    region: "Brazil (nationwide)",
+    countryCode: "BR",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Emotional support", "Suicide prevention"],
+    phone: "188",
+    website: "https://www.cvv.org.br",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Portuguese"],
+  },
+  {
+    organization: "Central de Atendimento à Mulher",
+    region: "Brazil (nationwide)",
+    countryCode: "BR",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Violence against women support", "Referrals"],
+    phone: "180",
+    website: "https://www.gov.br/mdh/pt-br/assuntos/violencia-contra-a-mulher",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Portuguese", "Spanish", "English"],
+  },
+
+  // ============================================
+  // MEXICO - National Crisis Lines
+  // ============================================
+  {
+    organization: "SAPTEL",
+    region: "Mexico (nationwide)",
+    countryCode: "MX",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Emotional support", "Suicide prevention"],
+    phone: "55 5259-8121",
+    website: "https://www.saptel.org.mx",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Spanish"],
+  },
+  {
+    organization: "Linea de la Vida",
+    region: "Mexico (nationwide)",
+    countryCode: "MX",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Addiction support", "Mental health"],
+    phone: "800 911 2000",
+    website: "https://www.gob.mx/salud",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Spanish"],
+  },
+
+  // ============================================
+  // JAPAN - National Crisis Lines
+  // ============================================
+  {
+    organization: "TELL Lifeline Japan",
+    region: "Japan (nationwide)",
+    countryCode: "JP",
+    isNationwide: true,
+    services: ["Crisis line", "Mental health support", "Counselling"],
+    phone: "03-5774-0992",
+    website: "https://telljp.com",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "9am-11pm daily",
+    languages: ["English", "Japanese"],
+  },
+  {
+    organization: "Inochi no Denwa",
+    region: "Japan (nationwide)",
+    countryCode: "JP",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Suicide prevention", "Emotional support"],
+    phone: "0120-783-556",
+    website: "https://www.inochinodenwa.org",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Japanese"],
+  },
+
+  // ============================================
+  // NETHERLANDS - National Crisis Lines
+  // ============================================
+  {
+    organization: "113 Zelfmoordpreventie",
+    region: "Netherlands (nationwide)",
+    countryCode: "NL",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Suicide prevention", "Online chat"],
+    phone: "0900 0113",
+    website: "https://www.113.nl",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Dutch", "English"],
+  },
+  {
+    organization: "Veilig Thuis",
+    region: "Netherlands (nationwide)",
+    countryCode: "NL",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Domestic violence support", "Child abuse"],
+    phone: "0800 2000",
+    website: "https://www.vooreenveiligthuis.nl",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Dutch"],
+  },
+
+  // ============================================
+  // SWEDEN - National Crisis Lines
+  // ============================================
+  {
+    organization: "Mind Sjalvmordslinjen",
+    region: "Sweden (nationwide)",
+    countryCode: "SE",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Suicide prevention", "Mental health support"],
+    phone: "90101",
+    website: "https://mind.se",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Swedish"],
+  },
+  {
+    organization: "Kvinnofridslinjen",
+    region: "Sweden (nationwide)",
+    countryCode: "SE",
+    isNationwide: true,
+    services: ["24/7 crisis line", "Violence against women support", "Referrals"],
+    phone: "020 50 50 50",
+    website: "https://kvinnofridslinjen.se",
+    category: "crisis",
+    genderFocus: "female",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "24/7",
+    languages: ["Swedish", "English", "Arabic", "Other languages"],
+  },
+
+  // ============================================
+  // INTERNATIONAL - Global Resources
+  // ============================================
+  {
+    organization: "International Association for Suicide Prevention",
+    region: "International",
+    countryCode: "INT",
+    isNationwide: true,
+    services: ["Crisis center directory", "Resources", "Prevention information"],
+    website: "https://www.iasp.info/resources/Crisis_Centres/",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "Online resources 24/7",
+    languages: ["English"],
+  },
+  {
+    organization: "FindAHelpline",
+    region: "International",
+    countryCode: "INT",
+    isNationwide: true,
+    services: ["Global helpline directory", "Crisis center search", "Mental health resources"],
+    website: "https://findahelpline.com",
+    category: "crisis",
+    genderFocus: "all",
+    isFree: true,
+    isVerified: true,
+    operatingHours: "Online resources 24/7",
+    languages: ["English", "Multiple languages"],
+  },
+];
+
+async function seedSupportResources() {
+  console.log("🌱 Seeding global support resources...");
+
+  try {
+    // Clear existing resources
+    await db.delete(supportResources);
+    console.log("✓ Cleared existing support resources");
+
+    // Insert all global resources
+    await db.insert(supportResources).values(globalSupportResources);
+    console.log(`✓ Inserted ${globalSupportResources.length} global support resources`);
+
+    // Count by country
+    const countryStats = globalSupportResources.reduce((acc, r) => {
+      acc[r.countryCode || "Unknown"] = (acc[r.countryCode || "Unknown"] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    console.log("\n🌍 Resources by Country:");
+    Object.entries(countryStats)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([country, count]) => {
+        console.log(`   ${country}: ${count}`);
+      });
+
+    // Count by gender focus
+    const genderStats = globalSupportResources.reduce((acc, r) => {
+      acc[r.genderFocus] = (acc[r.genderFocus] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    console.log("\n👥 By Gender Focus:");
+    Object.entries(genderStats).forEach(([focus, count]) => {
+      console.log(`   ${focus}: ${count}`);
+    });
+
+    console.log("\n✅ Global seed completed successfully!");
+    console.log(`   Total resources: ${globalSupportResources.length}`);
+    console.log(`   Countries covered: ${Object.keys(countryStats).length}`);
+  } catch (error) {
+    console.error("❌ Seed failed:", error);
+    throw error;
+  }
+}
+
+// Run the seed
+seedSupportResources()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

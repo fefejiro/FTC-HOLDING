@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 35+ (Android 15+): Edge-to-edge is enforced by default.
+         Deprecated attributes (statusBarColor, navigationBarColor,
+         windowDrawsSystemBarBackgrounds, windowLayoutInDisplayCutoutMode)
+         are omitted as they are no-ops on Android 15+. -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+        <item name="android:windowTranslucentStatus">false</item>
+    </style>
+</resources>

@@ -1,0 +1,100 @@
+// Load keystore properties
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def defaultDebugKeystorePath = System.getenv("ANDROID_DEBUG_KEYSTORE") ?: "${System.getProperty("user.home")}/.android/debug.keystore"
+def appLocalDebugKeystore = file("debug.keystore")
+def resolvedDebugKeystore = appLocalDebugKeystore.exists() ? appLocalDebugKeystore : file(defaultDebugKeystorePath)
+
+apply plugin: 'com.android.application'
+
+android {
+    namespace "ca.peacepad.family"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "ca.peacepad.family"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 20
+        versionName "1.0.3"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    
+    signingConfigs {
+        debug {
+            storeFile resolvedDebugKeystore
+            storePassword System.getenv("ANDROID_DEBUG_STORE_PASSWORD") ?: "android"
+            keyAlias System.getenv("ANDROID_DEBUG_KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword System.getenv("ANDROID_DEBUG_KEY_PASSWORD") ?: "android"
+        }
+        release {
+            def releaseStoreFile = keystoreProperties['storeFile'] ?: System.getenv("ANDROID_RELEASE_STORE_FILE")
+            def releaseStorePassword = keystoreProperties['storePassword'] ?: System.getenv("ANDROID_RELEASE_STORE_PASSWORD")
+            def releaseKeyAlias = keystoreProperties['keyAlias'] ?: System.getenv("ANDROID_RELEASE_KEY_ALIAS")
+            def releaseKeyPassword = keystoreProperties['keyPassword'] ?: System.getenv("ANDROID_RELEASE_KEY_PASSWORD")
+
+            if (releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword) {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                
+                // Add these lines to help resolve subproject dependencies
+                v1SigningEnabled true
+                v2SigningEnabled true
+            }
+        }
+    }
+    
+    buildTypes {
+        debug {
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    // EdgeToEdge API for Android 15+ compatibility (fixes deprecated LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES)
+    implementation "androidx.activity:activity:1.9.0"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

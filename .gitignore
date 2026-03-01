@@ -6,6 +6,7 @@ build/
 test-results/
 .env
 .env.local
+.env.*
 
 # additional ignores for monorepo
 **/node_modules/
@@ -28,5 +29,4 @@ test-results/
 **/ios/Pods/
 
 # ignore nested repositories
-APPS/peacepad/
 APPS/saywetin/

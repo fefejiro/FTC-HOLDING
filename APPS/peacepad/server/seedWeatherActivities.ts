@@ -1,0 +1,361 @@
+import { storage } from "./storage";
+import type { InsertWeatherActivity } from "@shared/schema";
+
+// Comprehensive weather activity suggestions for co-parenting families
+const weatherActivities: InsertWeatherActivity[] = [
+  // SUNNY WEATHER ACTIVITIES
+  {
+    title: "Backyard Treasure Hunt",
+    description: "Create a treasure map and hide small toys or treats around the backyard. Kids love the excitement of finding hidden treasures!",
+    ageMinMonths: "24",
+    ageMaxMonths: "120",
+    activityType: "outdoor",
+    weatherConditions: ["sunny", "cloudy"],
+    category: "active",
+    durationMinutes: "30-60",
+    materialsNeeded: ["Small toys or treats", "Paper for map", "Crayons"],
+  },
+  {
+    title: "Nature Scavenger Hunt",
+    description: "Create a list of natural items to find (pinecone, smooth rock, feather, etc.). Take photos of each discovery!",
+    ageMinMonths: "36",
+    ageMaxMonths: "144",
+    activityType: "outdoor",
+    weatherConditions: ["sunny", "cloudy"],
+    category: "educational",
+    durationMinutes: "45-90",
+    materialsNeeded: ["Printed checklist", "Small bag for collection", "Phone for photos"],
+  },
+  {
+    title: "Sidewalk Chalk Art Gallery",
+    description: "Turn the driveway into an art gallery! Draw pictures, practice letters, or create a colorful hopscotch course.",
+    ageMinMonths: "24",
+    ageMaxMonths: "96",
+    activityType: "outdoor",
+    weatherConditions: ["sunny", "cloudy"],
+    category: "creative",
+    durationMinutes: "30-60",
+    materialsNeeded: ["Sidewalk chalk", "Water for cleanup"],
+  },
+  {
+    title: "Bubble Science Experiment",
+    description: "Make homemade bubble solution and experiment with different wands. Try to make the biggest bubble!",
+    ageMinMonths: "18",
+    ageMaxMonths: "120",
+    activityType: "outdoor",
+    weatherConditions: ["sunny", "cloudy"],
+    category: "educational",
+    durationMinutes: "20-40",
+    materialsNeeded: ["Dish soap", "Water", "Glycerin or corn syrup", "Wire or pipe cleaners for wands"],
+  },
+  {
+    title: "Park Playground Adventure",
+    description: "Visit a new playground in your area. Bring a picnic lunch and make it a special outing!",
+    ageMinMonths: "12",
+    ageMaxMonths: "144",
+    activityType: "outdoor",
+    weatherConditions: ["sunny", "cloudy"],
+    category: "active",
+    durationMinutes: "60-120",
+    materialsNeeded: ["Sunscreen", "Water bottles", "Snacks", "Blanket"],
+  },
+  {
+    title: "Water Balloon Toss",
+    description: "Perfect for hot days! Start close together and take a step back after each successful catch.",
+    ageMinMonths: "36",
+    ageMaxMonths: "144",
+    activityType: "outdoor",
+    weatherConditions: ["sunny", "hot"],
+    category: "active",
+    durationMinutes: "20-40",
+    materialsNeeded: ["Water balloons", "Towels", "Change of clothes"],
+  },
+
+  // RAINY WEATHER ACTIVITIES
+  {
+    title: "Indoor Fort Building",
+    description: "Use blankets, pillows, and furniture to create the ultimate cozy fort. Perfect for reading stories inside!",
+    ageMinMonths: "24",
+    ageMaxMonths: "120",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold"],
+    category: "creative",
+    durationMinutes: "45-120",
+    materialsNeeded: ["Blankets", "Pillows", "Chairs or couch cushions", "Flashlight", "Books"],
+  },
+  {
+    title: "Baking Together",
+    description: "Make simple cookies or muffins. Kids love measuring ingredients and decorating treats!",
+    ageMinMonths: "30",
+    ageMaxMonths: "144",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "snowy"],
+    category: "educational",
+    durationMinutes: "60-90",
+    materialsNeeded: ["Recipe ingredients", "Mixing bowls", "Measuring cups", "Cookie cutters"],
+  },
+  {
+    title: "Living Room Dance Party",
+    description: "Create a playlist of favorite songs and dance together. Add freeze dance or musical statues for extra fun!",
+    ageMinMonths: "18",
+    ageMaxMonths: "120",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "snowy", "cloudy"],
+    category: "active",
+    durationMinutes: "20-45",
+    materialsNeeded: ["Music player", "Space to move"],
+  },
+  {
+    title: "Rainy Day Puddle Jumping",
+    description: "Put on rain boots and splash in puddles! Embrace the rain and make it an adventure.",
+    ageMinMonths: "24",
+    ageMaxMonths: "96",
+    activityType: "outdoor",
+    weatherConditions: ["rainy"],
+    category: "active",
+    durationMinutes: "15-30",
+    materialsNeeded: ["Rain boots", "Raincoat", "Towels for after", "Warm bath ready"],
+  },
+  {
+    title: "DIY Playdough Making",
+    description: "Make homemade playdough together, then create sculptures and shapes. Add food coloring for rainbow fun!",
+    ageMinMonths: "24",
+    ageMaxMonths: "84",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "cloudy"],
+    category: "sensory",
+    durationMinutes: "45-90",
+    materialsNeeded: ["Flour", "Salt", "Cream of tartar", "Vegetable oil", "Food coloring", "Water"],
+  },
+  {
+    title: "Indoor Obstacle Course",
+    description: "Use pillows, tape, and household items to create a fun obstacle course. Time each round!",
+    ageMinMonths: "30",
+    ageMaxMonths: "120",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "snowy"],
+    category: "active",
+    durationMinutes: "30-60",
+    materialsNeeded: ["Masking tape", "Pillows", "Chairs", "Stuffed animals", "Timer"],
+  },
+
+  // SNOWY WEATHER ACTIVITIES
+  {
+    title: "Build a Snowman Family",
+    description: "Create a whole family of snowmen! Use natural materials for faces and accessories.",
+    ageMinMonths: "30",
+    ageMaxMonths: "144",
+    activityType: "outdoor",
+    weatherConditions: ["snowy", "cold"],
+    category: "creative",
+    durationMinutes: "30-90",
+    materialsNeeded: ["Warm winter clothes", "Carrots", "Sticks", "Buttons or rocks", "Scarves and hats"],
+  },
+  {
+    title: "Snow Painting Art",
+    description: "Fill spray bottles with water and food coloring. Spray designs on fresh snow for colorful art!",
+    ageMinMonths: "36",
+    ageMaxMonths: "120",
+    activityType: "outdoor",
+    weatherConditions: ["snowy"],
+    category: "creative",
+    durationMinutes: "20-45",
+    materialsNeeded: ["Spray bottles", "Water", "Food coloring", "Warm gloves"],
+  },
+  {
+    title: "Indoor Hibernation Story Time",
+    description: "Cuddle up with hot cocoa and favorite books. Create a cozy reading nook with blankets.",
+    ageMinMonths: "12",
+    ageMaxMonths: "120",
+    activityType: "indoor",
+    weatherConditions: ["snowy", "cold"],
+    category: "educational",
+    durationMinutes: "30-90",
+    materialsNeeded: ["Favorite books", "Blankets", "Hot cocoa", "Marshmallows"],
+  },
+  {
+    title: "Ice Excavation Activity",
+    description: "Freeze small toys in ice blocks. Let kids use warm water and tools to excavate the treasures!",
+    ageMinMonths: "30",
+    ageMaxMonths: "96",
+    activityType: "indoor",
+    weatherConditions: ["snowy", "cold"],
+    category: "sensory",
+    durationMinutes: "30-60",
+    materialsNeeded: ["Small toys", "Containers for freezing", "Warm water", "Spoons or small tools", "Towels"],
+  },
+
+  // HOT WEATHER ACTIVITIES
+  {
+    title: "DIY Water Park",
+    description: "Set up sprinklers, slip-n-slide, and water tables. Stay cool while having a blast!",
+    ageMinMonths: "24",
+    ageMaxMonths: "120",
+    activityType: "outdoor",
+    weatherConditions: ["hot", "sunny"],
+    category: "active",
+    durationMinutes: "60-120",
+    materialsNeeded: ["Sprinkler", "Kiddie pool", "Water toys", "Sunscreen", "Towels"],
+  },
+  {
+    title: "Frozen Treat Making",
+    description: "Make popsicles or fruit ice pops together. Experiment with different fruit combinations!",
+    ageMinMonths: "24",
+    ageMaxMonths: "144",
+    activityType: "indoor",
+    weatherConditions: ["hot"],
+    category: "educational",
+    durationMinutes: "15 prep + 4 hours freezing",
+    materialsNeeded: ["Popsicle molds", "Fruit juice or yogurt", "Fresh fruit pieces", "Freezer"],
+  },
+  {
+    title: "Early Morning Nature Walk",
+    description: "Beat the heat with an early morning walk. Look for birds, butterflies, and morning dew!",
+    ageMinMonths: "24",
+    ageMaxMonths: "144",
+    activityType: "outdoor",
+    weatherConditions: ["hot", "sunny"],
+    category: "educational",
+    durationMinutes: "30-60",
+    materialsNeeded: ["Water bottles", "Sun hats", "Sunscreen", "Binoculars (optional)"],
+  },
+
+  // FLEXIBLE / ANY WEATHER
+  {
+    title: "Science Experiments Day",
+    description: "Try simple experiments like baking soda volcanoes, rainbow milk, or growing crystals!",
+    ageMinMonths: "48",
+    ageMaxMonths: "144",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cloudy", "cold"],
+    category: "educational",
+    durationMinutes: "45-90",
+    materialsNeeded: ["Baking soda", "Vinegar", "Food coloring", "Dish soap", "Various household items"],
+  },
+  {
+    title: "Movie Theater at Home",
+    description: "Pick a family movie, make popcorn, and create a cozy movie theater atmosphere at home!",
+    ageMinMonths: "24",
+    ageMaxMonths: "144",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "snowy", "hot"],
+    category: "social",
+    durationMinutes: "90-120",
+    materialsNeeded: ["Movie or streaming service", "Popcorn", "Blankets", "Pillows", "Dimmed lights"],
+  },
+  {
+    title: "Arts and Crafts Afternoon",
+    description: "Set up a crafting station with paper, glue, scissors, and various materials. Let creativity flow!",
+    ageMinMonths: "30",
+    ageMaxMonths: "144",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "hot", "cloudy"],
+    category: "creative",
+    durationMinutes: "45-120",
+    materialsNeeded: ["Construction paper", "Glue", "Safety scissors", "Crayons/markers", "Stickers", "Recyclables"],
+  },
+  {
+    title: "Board Game Tournament",
+    description: "Pull out age-appropriate board games and have a family tournament. Keep score and award prizes!",
+    ageMinMonths: "48",
+    ageMaxMonths: "144",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "snowy", "hot"],
+    category: "social",
+    durationMinutes: "60-120",
+    materialsNeeded: ["Board games", "Paper for scorekeeping", "Small prizes (stickers, treats)"],
+  },
+  {
+    title: "Kitchen Science - Cooking Adventure",
+    description: "Make a recipe together and talk about how ingredients transform. Pizza, smoothies, or sandwiches work great!",
+    ageMinMonths: "36",
+    ageMaxMonths: "144",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "hot", "cloudy"],
+    category: "educational",
+    durationMinutes: "45-90",
+    materialsNeeded: ["Recipe ingredients", "Kid-safe cooking tools", "Aprons"],
+  },
+  {
+    title: "Bike Ride or Scooter Adventure",
+    description: "Explore the neighborhood on bikes or scooters. Stop at a park or get ice cream!",
+    ageMinMonths: "48",
+    ageMaxMonths: "144",
+    activityType: "outdoor",
+    weatherConditions: ["sunny", "cloudy"],
+    category: "active",
+    durationMinutes: "30-90",
+    materialsNeeded: ["Bikes or scooters", "Helmets", "Water bottles", "Snacks"],
+  },
+  {
+    title: "Photography Scavenger Hunt",
+    description: "Give kids a camera or phone and a list of things to photograph. Create a photo album afterward!",
+    ageMinMonths: "60",
+    ageMaxMonths: "144",
+    activityType: "flexible",
+    weatherConditions: ["sunny", "cloudy", "rainy"],
+    category: "creative",
+    durationMinutes: "45-90",
+    materialsNeeded: ["Camera or smartphone", "Printed list", "Computer for reviewing photos"],
+  },
+  {
+    title: "LEGO Building Challenge",
+    description: "Set a timer and challenge each other to build specific things (tallest tower, coolest vehicle, etc.)",
+    ageMinMonths: "36",
+    ageMaxMonths: "144",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "hot", "cloudy", "snowy"],
+    category: "creative",
+    durationMinutes: "30-90",
+    materialsNeeded: ["LEGO or building blocks", "Timer"],
+  },
+  {
+    title: "Plant a Garden Together",
+    description: "Plant flowers, herbs, or vegetables. Kids love watching things grow and taking care of plants!",
+    ageMinMonths: "30",
+    ageMaxMonths: "144",
+    activityType: "outdoor",
+    weatherConditions: ["sunny", "cloudy"],
+    category: "educational",
+    durationMinutes: "45-90",
+    materialsNeeded: ["Seeds or seedlings", "Soil", "Pots or garden space", "Small shovel", "Watering can"],
+  },
+  {
+    title: "Yoga and Mindfulness for Kids",
+    description: "Try simple yoga poses and breathing exercises. Great for calm, focused time together!",
+    ageMinMonths: "36",
+    ageMaxMonths: "144",
+    activityType: "indoor",
+    weatherConditions: ["rainy", "cold", "hot", "cloudy", "snowy"],
+    category: "active",
+    durationMinutes: "15-30",
+    materialsNeeded: ["Yoga mats or towels", "Comfortable clothes", "Calm music (optional)"],
+  },
+];
+
+export async function seedWeatherActivities() {
+  console.log("Seeding weather activities...");
+  
+  try {
+    // Check if activities already exist
+    const existing = await storage.getWeatherActivities();
+    if (existing.length > 0) {
+      console.log(`Found ${existing.length} existing weather activities. Skipping seed.`);
+      return;
+    }
+
+    // Create activities
+    for (const activity of weatherActivities) {
+      await storage.createWeatherActivity(activity);
+    }
+
+    console.log(`Successfully seeded ${weatherActivities.length} weather activities!`);
+  } catch (error: any) {
+    // Gracefully handle database errors
+    if (error.message?.includes('disabled') || error.message?.includes('suspended')) {
+      console.log('[Seed Activities] Database suspended - activities will be seeded when database wakes up');
+    } else {
+      console.error("Error seeding weather activities:", error);
+    }
+  }
+}

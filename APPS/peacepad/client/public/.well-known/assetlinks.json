@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ca.peacepad.family",
+      "sha256_cert_fingerprints": [
+        "70:0C:A8:42:D0:83:2E:9D:DC:08:17:19:14:31:44:FE:DC:D8:83:A1:13:69:C9:8F:03:E6:02:72:0D:B0:55:07",
+        "70:51:22:1D:7C:6F:7E:EE:EB:86:2F:D0:CA:00:94:B8:15:DA:4B:EA:08:1B:38:D0:F3:2A:F3:31:56:89:80:94"
+      ]
+    }
+  }
+]

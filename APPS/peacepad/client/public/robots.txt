@@ -1,0 +1,52 @@
+# PeacePad Robots.txt
+# https://peacepad.ca
+
+User-agent: *
+Allow: /
+
+# Public pages for indexing
+Allow: /help
+Allow: /resources
+Allow: /therapist-directory
+Allow: /features/
+Allow: /privacy
+Allow: /terms
+
+# Disallow authenticated/private pages
+Disallow: /chat
+Disallow: /onboarding
+Disallow: /join/
+Disallow: /join-partnership
+Disallow: /settings
+Disallow: /call-preferences
+Disallow: /calls
+Disallow: /call/
+Disallow: /scheduling
+Disallow: /tasks
+Disallow: /expenses
+Disallow: /expense/
+Disallow: /notes
+Disallow: /child-updates
+Disallow: /pets
+Disallow: /parenting-tips
+Disallow: /weather-activities
+Disallow: /storybook-creator
+Disallow: /shopping-list
+Disallow: /conch-mode
+Disallow: /dashboard
+Disallow: /progress
+Disallow: /admin
+Disallow: /admin/
+Disallow: /audit-trail
+Disallow: /delete-account
+Disallow: /support/safety-plan
+Disallow: /beta/
+
+# Disallow API endpoints
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://peacepad.ca/sitemap.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1

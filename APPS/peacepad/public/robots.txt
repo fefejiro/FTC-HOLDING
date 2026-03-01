@@ -1,0 +1,28 @@
+# Allow all search engines to crawl the site
+User-agent: *
+Allow: /
+
+# Disallow authenticated/private pages from indexing
+Disallow: /chat
+Disallow: /onboarding
+Disallow: /join-partnership
+Disallow: /settings
+Disallow: /call-preferences
+Disallow: /calls
+Disallow: /join-call
+Disallow: /scheduling
+Disallow: /tasks
+Disallow: /expenses
+Disallow: /notes
+Disallow: /child-updates
+Disallow: /pets
+Disallow: /parenting-tips
+Disallow: /weather-activities
+Disallow: /storybook-creator
+Disallow: /shopping-list
+Disallow: /conch-mode
+Disallow: /dashboard
+Disallow: /admin
+
+# Sitemap location
+Sitemap: https://peacepad.ca/sitemap.xml
