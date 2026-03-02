@@ -1,41 +1,81 @@
-# PeacePad Railway API Setup
+# PeacePad Railway API Setup (Option A API Host)
 
-## Service
-- Service name: `peacepad-api`
-- Root directory: `APPS/peacepad`
-- Install command: `npm install --legacy-peer-deps`
-- Build command: `npm run build`
-- Start command: `npm run start`
+This setup makes Railway host only the API at `api.peacepad.ca`.  
+`peacepad.ca` and `www.peacepad.ca` must stay on Cloudflare Pages.
 
-## Health Checks
-- `/health`
-- `/api/health`
+## Railway Dashboard Click Path
+1. Railway dashboard -> `New Project` -> `Deploy from GitHub repo`.
+2. Select repo `FTC-HOLDING`.
+3. Open the created service -> `Settings`.
 
-## Required Environment Variables
+## Service Settings (Copy/Paste)
+- Root Directory: `APPS/peacepad`
+- Install Command: `npm ci`
+- Build Command: `npm run build`
+- Start Command: `npm run start`
+
+Start command must not include `-p`. The app already reads `process.env.PORT` in `server/index.ts`.
+
+Railway `PORT` UI field expects a numeric port (or default behavior), not `$PORT`.
+
+## Networking / Health
+- Health check path: `/health`
+- Additional check path: `/api/health`
+
+## Environment Variables (No Secrets in Git)
+Required:
 - `NODE_ENV=production`
-- `PORT` (Railway sets this)
-- `SESSION_SECRET`
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `DATABASE_URL` (if DB-backed mode is enabled)
-- `OPENAI_API_KEY` (only if AI features are enabled)
-- `MAILJET_API_KEY` (only if email features are enabled)
-- `MAILJET_SECRET_KEY` (only if email features are enabled)
-- `VAPID_PUBLIC_KEY` (only if push features are enabled)
-- `VAPID_PRIVATE_KEY` (only if push features are enabled)
-- `VAPID_EMAIL` (only if push features are enabled)
-- `CUSTOM_DOMAINS=peacepad.ca,www.peacepad.ca`
+- `SESSION_SECRET=<set in Railway>`
+- `SUPABASE_URL=<set in Railway>`
+- `SUPABASE_ANON_KEY=<set in Railway>`
+- `DATABASE_URL=<set in Railway>`
 
-Set all values in Railway variables. Do not commit values to git.
+If Replit OIDC routes are still used in your environment, also set:
+- `REPLIT_DOMAINS=<comma-separated allowed domains>`
+- `REPL_ID=<set in Railway>`
+- `ISSUER_URL=https://replit.com/oidc` (or your configured issuer)
 
-## CORS Assumptions for `api.peacepad.ca`
-Server CORS policy must allow:
+Optional by feature:
+- `OPENAI_API_KEY`
+- `MAILJET_API_KEY`
+- `MAILJET_SECRET_KEY`
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_EMAIL`
+- `CUSTOM_DOMAINS`
+
+## CORS Targets Required by Option A
+The API must allow:
 - `https://peacepad.ca`
 - `https://www.peacepad.ca`
-- `capacitor://localhost`
-- `http://localhost`
-- `http://127.0.0.1`
-- `http://localhost:5173`
-- `http://127.0.0.1:5173`
+- local dev origins (`http://localhost`, `http://127.0.0.1`, `http://localhost:5173`, `http://127.0.0.1:5173`)
 
-Current PeacePad API server code already includes these origins in production configuration.
+Current `APPS/peacepad/server/index.ts` production CORS list already includes these.
+
+## Domain Mapping Rule (Critical)
+- Railway custom domain for this service: `api.peacepad.ca` only.
+- Do not attach `peacepad.ca` or `www.peacepad.ca` to Railway in Option A.
+- Do not authorize Railway DNS changes for the apex domain in Option A.
+
+If Railway custom domain limit is hit:
+1. Railway service -> `Settings` -> `Domains`.
+2. Delete `peacepad.ca` and `www.peacepad.ca` entries if present.
+3. Keep only `api.peacepad.ca`.
+
+## DNS Record for API
+Create/confirm this DNS record in Cloudflare DNS:
+
+- Type: `CNAME`
+- Name: `api`
+- Target: `use the value shown in Railway domain UI`
+- Proxy status: `Proxied` (recommended) or `DNS only` during validation
+
+## Verification
+Run from repo root:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-prod.ps1
+```
+
+Expected API checks:
+- `https://api.peacepad.ca/health` returns `200`
+- `https://api.peacepad.ca/api/health` returns `200`

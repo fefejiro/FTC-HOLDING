@@ -1,64 +1,70 @@
-# PeacePad Cloudflare Pages Setup
+# PeacePad Cloudflare Pages Setup (Option A UI Host)
 
-## Exact Pages Project Settings
-Use these values in Cloudflare Pages for PeacePad:
+This setup makes `peacepad.ca` and `www.peacepad.ca` serve the PeacePad frontend from Cloudflare Pages only.
 
+## Cloudflare Dashboard Click Path
+1. Cloudflare dashboard -> `Workers & Pages`.
+2. Open the PeacePad Pages project (or `Create application` -> `Pages` -> connect Git repo).
+3. `Settings` -> `Build & deployments`.
+
+## Pages Build Settings (Copy/Paste)
 - Production branch: `main`
-- Root directory: `APPS/peacepad`
+- Root directory (monorepo): `APPS/peacepad`
 - Framework preset: `None`
 - Build command: `npm run build`
 - Build output directory: `dist/public`
 - Node.js version: `20.x`
 - Git submodules: `Disabled`
 
-Notes:
-- If Git submodules is enabled, Cloudflare may attempt a submodule update and fail.
-- This repo now tracks `APPS/peacepad` as a normal directory (not a gitlink).
-
-## Environment Variables (Pages - Production)
-Set in Pages dashboard (do not commit values):
+## Required Pages Environment Variables
+Set in Pages -> `Settings` -> `Environment variables` (Production):
 
 - `VITE_API_BASE_URL=https://api.peacepad.ca`
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_URL=<set in dashboard>`
+- `VITE_SUPABASE_ANON_KEY=<set in dashboard>`
 
-## SPA Rewrite Requirement
-Required file (already in repo):
+Do not commit secret values to git.
 
+## SPA Routing Requirement
+File in repo:
 - `APPS/peacepad/client/public/_redirects`
 
-Required rule:
-
+Required content:
 ```text
 /* /index.html 200
 ```
 
-This is required so `/auth/callback` and `/auth/mobile-callback` return `200` on Pages.
+This is required so callback routes do not 404:
+- `https://peacepad.ca/auth/callback`
+- `https://peacepad.ca/auth/mobile-callback`
 
-## Domain Attach Steps
-In Pages project:
-
-1. Go to `Custom domains`.
-2. Add `peacepad.ca`.
+## Attach Custom Domains
+Click path:
+1. Pages project -> `Custom domains`.
+2. `Set up a custom domain` -> add `peacepad.ca`.
 3. Add `www.peacepad.ca`.
-4. For each domain, create DNS record exactly as Pages instructs.
+4. For each domain, use the exact DNS target shown in the Pages UI.
 
 ## DNS Records (Cloudflare DNS)
-Create CNAME records using the exact destination shown in the Pages custom domain UI:
+Create CNAME records exactly as Pages instructs. Do not hardcode the target in docs.
 
 - Type: `CNAME`
-- Name: `peacepad.ca` (or apex `@`)
+- Name: `@` (apex for `peacepad.ca`) or `peacepad.ca` if your DNS UI uses full hostnames
 - Target: `use the value shown in Pages custom domain UI`
-- Proxy status: `DNS only` until validation is complete, then switch to `Proxied` if desired
+- Proxy status: `DNS only` until SSL/domain validation completes, then `Proxied` if desired
 
 - Type: `CNAME`
 - Name: `www`
 - Target: `use the value shown in Pages custom domain UI`
-- Proxy status: `DNS only` until validation is complete, then switch to `Proxied` if desired
+- Proxy status: `DNS only` until SSL/domain validation completes, then `Proxied` if desired
 
-Do not hardcode a CNAME destination in docs; use the value Cloudflare Pages shows for your project.
+## Verify the Deployment Is Serving HTML
+Run from repo root:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-prod.ps1
+```
 
-## Callback URLs That Must Resolve
-- `https://peacepad.ca/auth/callback`
-- `https://peacepad.ca/auth/mobile-callback`
-- `https://www.peacepad.ca/auth/mobile-callback`
+Expected:
+- `https://peacepad.ca` returns `200` and `Content-Type` includes `text/html`
+- `https://www.peacepad.ca` returns `200` and `Content-Type` includes `text/html`
+- callback routes return `200` (not `404 Not Found`)
