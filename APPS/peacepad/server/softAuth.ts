@@ -426,7 +426,8 @@ export async function createDemoPartnership(userId: string, userType: "guest" | 
     const { user: demoParent } = await storage.upsertUser({
       displayName: "Demo Co-Parent",
       isGuest: true,
-      guestId: `demo_${nanoid(4)}`,
+      // users.guestId is varchar(6); keep demo IDs within that bound
+      guestId: nanoid(6),
     });
 
     const partnership = await storage.createPartnership({
