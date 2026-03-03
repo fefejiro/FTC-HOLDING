@@ -58,7 +58,7 @@ export default function ExpenseDetailPage() {
   const { data: expense, isLoading: expenseLoading } = useQuery<EnrichedExpense>({
     queryKey: ["/api/expenses", expenseId],
     queryFn: async () => {
-      const response = await fetch(`/api/expenses?id=${expenseId}`);
+      const response = await fetch(`/api/expenses?id=${expenseId}`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to load expense");
       const data = await response.json();
       return data.expenses?.[0] || null;

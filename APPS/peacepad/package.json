@@ -5,11 +5,15 @@
     "license":  "MIT",
     "scripts":  {
                     "dev":  "cross-env NODE_ENV=development tsx server/index.ts",
-                    "build":  "vite build \u0026\u0026 esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+                    "clean":  "rm -rf dist node_modules/typescript/tsbuildinfo",
+                    "prebuild":  "npm run clean",
+                    "build":  "vite build \u0026\u0026 esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist \u0026\u0026 npm run verify:no-replit-domains",
                     "start":  "cross-env NODE_ENV=production node dist/index.js",
+                    "verify:no-replit-domains":  "if grep -R \"REPLIT_DOMAINS not provided\" dist; then echo \"[build] ERROR: stale REPLIT_DOMAINS hard-fail found in dist output\"; exit 1; fi",
                     "check":  "tsc",
                     "db:push":  "drizzle-kit push",
-                    "test:report":  "node scripts/generateTestSummary.cjs"
+                    "test:report":  "node scripts/generateTestSummary.cjs",
+                    "smoke:guest-auth":  "node scripts/smoke-guest-auth.mjs"
                 },
     "dependencies":  {
                          "@capacitor/android":  "^7.4.5",

@@ -1,12 +1,8 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
-
-const viteLogger = createLogger();
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -20,6 +16,10 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  const [{ createServer: createViteServer, createLogger }, { default: viteConfig }] =
+    await Promise.all([import("vite"), import("../vite.config")]);
+  const viteLogger = createLogger();
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -80,10 +80,19 @@ export function serveStatic(app: Express) {
     maxAge: '1y',
     immutable: true,
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.html')) {
+      const normalizedPath = filePath.replace(/\\/g, "/");
+      const isServiceWorkerScript = normalizedPath.endsWith("/sw.js");
+      const isManifest = normalizedPath.endsWith("/manifest.json");
+
+      // Never aggressively cache HTML/SW/manifest so production updates can land quickly.
+      if (filePath.endsWith('.html') || isServiceWorkerScript || isManifest) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
+      }
+
+      if (isServiceWorkerScript) {
+        res.setHeader('Service-Worker-Allowed', '/');
       }
     }
   }));

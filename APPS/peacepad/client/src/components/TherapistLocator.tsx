@@ -47,7 +47,9 @@ export default function TherapistLocator() {
     setIsLoading(true);
     
     try {
-      const response = await fetch(`/api/therapists/search?postalCode=${encodeURIComponent(query)}`);
+      const response = await fetch(`/api/therapists/search?postalCode=${encodeURIComponent(query)}`, {
+        credentials: "include",
+      });
       if (!response.ok) throw new Error("Search failed");
       
       const data = await response.json();

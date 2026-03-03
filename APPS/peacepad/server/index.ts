@@ -1,14 +1,16 @@
 import express, { type Request, Response, NextFunction } from "express";
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { testMonitor } from "./testMonitor";
 import { startConchSessionCleanup } from "./conchSessionCleanup";
 import { startCallCleanup } from "./callCleanup";
+import { startGuestSessionCleanup } from "./guestSessionCleanup";
 import { initializeWeeklyReportScheduler } from "./weeklyReport";
 import { setupSoftAuth } from "./softAuth";
 import { killProcessOnPort, HealthMonitor, setupAutoCleanup } from "./autoRecovery";
 import path from "path";
+import { config } from "./config";
 
 // Detect build mode for Play Store APK/AAB builds
 const isBuildMode = process.env.BUILD_MODE === 'true' || process.env.PLAY_STORE_BUILD === 'true';
@@ -27,8 +29,7 @@ export const BUILD_ID = Date.now().toString();
 
 const app = express();
 
-// CRITICAL: Health check endpoints MUST be first (before any middleware)
-// Replit autoscale requires fast health responses for deployment
+// Health endpoints stay first so probes return quickly.
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: Date.now() });
 });
@@ -36,51 +37,71 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: Date.now() });
 });
 
-// Enable CORS with credentials for authentication
-// Production: allow peacepad.ca and Replit deployment domains
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [
-      'https://peacepad.ca', 
-      'https://www.peacepad.ca',
-      'https://saywetin.app',
-      'https://www.saywetin.app',
-      'https://peace-pad.replit.app',
-      'https://Peace-Pad.replit.app',
-      // Capacitor native app origins (Android/iOS)
-      'capacitor://localhost',
-      'http://localhost',
-      'http://127.0.0.1',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:5174',
-      'http://127.0.0.1:5174',
-      // Include any custom domain from environment
-      ...(process.env.CUSTOM_DOMAINS ? process.env.CUSTOM_DOMAINS.split(',').map(d => d.trim()) : [])
-    ].filter(Boolean)
-  : true; // Allow all origins in development
+const allowedOrigins = new Set(config.cors.allowedOrigins);
+const allowedOriginHosts = new Set(
+  config.cors.allowedOrigins
+    .map((entry) => {
+      if (!entry || entry === "*") return undefined;
+      try {
+        return new URL(entry).hostname.toLowerCase();
+      } catch {
+        return undefined;
+      }
+    })
+    .filter((entry): entry is string => Boolean(entry)),
+);
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.has("*")) {
+      callback(null, true);
+      return;
+    }
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
-app.set("trust proxy", 1); // Replit proxy fix
+    if (allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    try {
+      const parsed = new URL(origin);
+      const normalizedOrigin = parsed.origin;
+      const host = parsed.hostname.toLowerCase();
+      if (allowedOrigins.has(normalizedOrigin) || allowedOriginHosts.has(host)) {
+        callback(null, true);
+        return;
+      }
+    } catch {
+      // Ignore parse failures and treat as disallowed.
+    }
+
+    console.warn(`[CORS] Origin not allowed: ${origin}`);
+    callback(null, false);
+  },
+  credentials: config.cors.allowCredentials,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Override external CSP with WebRTC-compatible policy
 app.use((req, res, next) => {
-  // Allow Replit iframe preview in development
-  const frameAncestors = process.env.NODE_ENV === 'production'
-    ? "'self' https://peacepad.ca https://www.peacepad.ca"
-    : "'self' https://*.replit.dev https://*.replit.app https://replit.com";
+  const frameAncestorOrigins = config.app.origins.filter((origin) =>
+    origin.startsWith("http://") || origin.startsWith("https://"),
+  );
+  const frameAncestors = ["'self'", ...frameAncestorOrigins].join(" ");
   
   res.setHeader(
     "Content-Security-Policy",
     [
       "default-src 'self' blob: data:;",
       "connect-src 'self' wss: https:;",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://replit.com https://*.firebaseio.com;",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://*.firebaseio.com;",
       "img-src 'self' data: blob: https:;",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
       "font-src 'self' https://fonts.gstatic.com;",
@@ -148,8 +169,6 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
     } else if (filePath.endsWith('.ogg')) {
       res.setHeader('Content-Type', 'audio/ogg');
     }
-    // Enable CORS for audio files
-    res.setHeader('Access-Control-Allow-Origin', '*');
   }
 }));
 
@@ -187,7 +206,7 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
+  const port = config.server.port;
   
   // SMART AUTO-RECOVERY: Clear port before starting
   console.log('[Auto-Recovery] Initializing smart startup sequence...');
@@ -198,14 +217,14 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
     return new Promise((resolve, reject) => {
       const serverInstance = server.listen({
         port,
-        host: "0.0.0.0",
+        host: config.server.host,
         ...(process.platform === "win32" ? {} : { reusePort: true }),
       }, () => {
         log(`serving on port ${port}`);
         console.log('[Auto-Recovery] Server started successfully');
 
         // Suppress the verbose Replit ASCII art in console
-        if (process.env.NODE_ENV === 'production') {
+        if (config.isProduction) {
           console.log = () => {}; // Suppress console logs in production
         }
         resolve();
@@ -243,6 +262,9 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
 
   // Start call cleanup service (marks stuck ringing calls as missed after 60 seconds)
   startCallCleanup();
+
+  // Start daily cleanup for expired guest sessions + guest-scoped data
+  startGuestSessionCleanup();
 
   // Initialize weekly report scheduler (sends reports every Monday at 9:00 AM)
   initializeWeeklyReportScheduler();

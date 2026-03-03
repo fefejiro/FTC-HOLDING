@@ -13,6 +13,7 @@ test-reports/
 .env.development
 .env.production
 .env.*
+!.env.example
 
 # Database
 *.db

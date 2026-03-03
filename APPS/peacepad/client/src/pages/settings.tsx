@@ -272,6 +272,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/profile-upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 
@@ -442,7 +443,7 @@ export default function SettingsPage() {
     try {
       // Clear server-side session first
       try {
-        await fetch("/api/auth/logout", { method: "POST" });
+        await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
       } catch (e) {
         // Continue even if logout endpoint fails
       }

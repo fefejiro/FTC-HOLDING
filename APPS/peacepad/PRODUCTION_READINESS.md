@@ -111,9 +111,11 @@ PGPASSWORD=<production password>
 ### Authentication
 ```bash
 SESSION_SECRET=<generate strong random string>
-REPLIT_DOMAINS=<production replit domain>
-CUSTOM_DOMAINS=peacepad.ca
-ISSUER_URL=https://replit.com/oidc     # Default is fine
+PUBLIC_BASE_URL=https://api.peacepad.ca
+APP_ORIGINS=https://peacepad.ca,https://www.peacepad.ca
+CORS_ALLOWED_ORIGINS=https://peacepad.ca,https://www.peacepad.ca
+OIDC_CLIENT_ID=<optional; required only if OIDC login routes are enabled>
+OIDC_ISSUER_URL=https://replit.com/oidc # Optional, defaults to Replit issuer
 ```
 
 ### AI Services
@@ -273,4 +275,3 @@ fetch('/api/version').then(r => r.json()).then(console.log)
 2. **Database connection pooling** - Already configured  
 3. **Static file serving** - Production uses optimized static serving
 4. **Session store** - Uses PostgreSQL for persistence
-

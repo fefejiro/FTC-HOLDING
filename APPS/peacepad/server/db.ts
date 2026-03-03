@@ -1,30 +1,9 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
+import { config } from "./config";
 
-// Build DATABASE_URL from individual PG* env vars if not provided
-function getDatabaseUrl(): string {
-  if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
-  }
-  
-  // Fallback to individual PG* environment variables
-  const host = process.env.PGHOST;
-  const port = process.env.PGPORT || '5432';
-  const user = process.env.PGUSER;
-  const password = process.env.PGPASSWORD;
-  const database = process.env.PGDATABASE;
-  
-  if (host && user && password && database) {
-    return `postgresql://${user}:${password}@${host}:${port}/${database}`;
-  }
-  
-  throw new Error(
-    "DATABASE_URL or PGHOST/PGUSER/PGPASSWORD/PGDATABASE must be set. Did you forget to provision a database?",
-  );
-}
-
-const connectionString = getDatabaseUrl();
+const connectionString = config.database.url;
 
 // Create pool with connection retry settings
 export const pool = new Pool({ 
@@ -38,7 +17,7 @@ export const db = drizzle(pool, { schema });
 
 // Health check function with retry logic
 async function checkDatabaseConnection(retries = 3, delay = 1000): Promise<boolean> {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = config.isProduction;
   
   for (let i = 0; i < retries; i++) {
     try {
@@ -76,7 +55,7 @@ async function checkDatabaseConnection(retries = 3, delay = 1000): Promise<boole
 
 // Initialize connection check - blocking in production, non-blocking in development
 const connectionPromise = checkDatabaseConnection();
-if (process.env.NODE_ENV === 'production') {
+if (config.isProduction) {
   // In production, wait for connection check before continuing
   connectionPromise.catch(err => {
     console.error('[Database] FATAL: Health check error:', err);

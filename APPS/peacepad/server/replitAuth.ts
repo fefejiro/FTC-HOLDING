@@ -12,6 +12,7 @@ import { sendNewUserAdminNotification } from "./email";
 import { db } from "./db";
 import { mobileAuthTokens, mobileAuthStates as mobileAuthStatesTable } from "@shared/schema";
 import { eq, and, gt, lt, isNull } from "drizzle-orm";
+import { config as appConfig } from "./config";
 
 // Extend session type to include mobile auth flag
 declare module 'express-session' {
@@ -21,15 +22,14 @@ declare module 'express-session' {
   }
 }
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
-}
-
 const getOidcConfig = memoize(
   async () => {
+    if (!appConfig.auth.oidcClientId) {
+      throw new Error("OIDC client ID is not configured. Set OIDC_CLIENT_ID.");
+    }
     return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
+      new URL(appConfig.auth.oidcIssuerUrl),
+      appConfig.auth.oidcClientId
     );
   },
   { maxAge: 3600 * 1000 }
@@ -39,13 +39,13 @@ export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
+    conString: appConfig.database.url,
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",
   });
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: appConfig.auth.sessionSecret,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
@@ -155,13 +155,7 @@ async function cleanupExpiredMobileAuthStates() {
 // Allowed domains whitelist - only these can have OAuth strategies
 // SECURITY: This prevents Host header injection attacks
 function getAllowedDomains(): string[] {
-  const envDomains = process.env.REPLIT_DOMAINS?.split(",").map(d => d.trim().toLowerCase()) || [];
-  
-  // Add known custom domains here
-  // In production, this should come from a secure configuration source
-  const customDomains = process.env.CUSTOM_DOMAINS?.split(",").map(d => d.trim().toLowerCase()) || [];
-  
-  return [...envDomains, ...customDomains];
+  return appConfig.auth.allowedHostnames;
 }
 
 // Normalize and validate hostname
@@ -231,12 +225,17 @@ async function ensureStrategy(hostname: string): Promise<string> {
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
-  app.use(getSession());
+  const hasSharedSession = Boolean(app.get("softAuthSessionConfigured"));
+  if (!hasSharedSession) {
+    app.use(getSession());
+  } else if (process.env.NODE_ENV !== "production") {
+    console.log("[Auth] Reusing shared session middleware from softAuth");
+  }
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const config = await getOidcConfig();
-  oidcConfig = config; // Store for dynamic registration
+  const oidcEnabled = appConfig.auth.oidcEnabled;
+  let oidcProviderConfig: Awaited<ReturnType<typeof getOidcConfig>> | null = null;
 
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
@@ -247,34 +246,52 @@ export async function setupAuth(app: Express) {
     await upsertUser(tokens.claims());
     verified(null, user);
   };
-  verifyCallback = verify; // Store for dynamic registration
+  verifyCallback = verify;
 
-  const domains = process.env.REPLIT_DOMAINS!.split(",");
-  console.log("[Auth] Registering Replit Auth strategies for domains:", domains);
-  
-  for (const domain of domains) {
-    const trimmedDomain = domain.trim();
-    registeredDomains.push(trimmedDomain);
-    const strategyName = `replitauth:${trimmedDomain}`;
-    console.log(`[Auth] Registering strategy: ${strategyName}`);
-    
-    const strategy = new Strategy(
-      {
-        name: strategyName,
-        config,
-        scope: "openid email profile offline_access",
-        callbackURL: `https://${trimmedDomain}/api/callback`,
-      },
-      verify,
-    );
-    passport.use(strategy);
+  if (oidcEnabled) {
+    oidcProviderConfig = await getOidcConfig();
+    oidcConfig = oidcProviderConfig;
+
+    const domains = getAllowedDomains();
+    console.log("[Auth] Registering OIDC strategies for domains:", domains);
+
+    for (const domain of domains) {
+      const trimmedDomain = domain.trim().toLowerCase();
+      if (!trimmedDomain) {
+        continue;
+      }
+
+      if (!registeredDomains.includes(trimmedDomain)) {
+        registeredDomains.push(trimmedDomain);
+      }
+      const strategyName = `replitauth:${trimmedDomain}`;
+      console.log(`[Auth] Registering strategy: ${strategyName}`);
+
+      const strategy = new Strategy(
+        {
+          name: strategyName,
+          config: oidcProviderConfig,
+          scope: "openid email profile offline_access",
+          callbackURL: `https://${trimmedDomain}/api/callback`,
+        },
+        verify,
+      );
+      passport.use(strategy);
+    }
+    console.log("[Auth] OIDC strategies registered successfully");
+  } else {
+    oidcConfig = null;
+    verifyCallback = null;
+    console.warn("[Auth] OIDC is disabled. Set OIDC_CLIENT_ID to enable /api/login and /api/callback.");
   }
-  console.log("[Auth] All strategies registered successfully");
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", async (req, res, next) => {
+    if (!oidcEnabled) {
+      return res.status(503).json({ message: "OIDC authentication is not configured." });
+    }
     try {
       const strategyName = await ensureStrategy(req.hostname);
       console.log(`[Auth] Login requested - hostname: ${req.hostname}, strategy: ${strategyName}`);
@@ -290,6 +307,9 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", async (req, res, next) => {
+    if (!oidcEnabled) {
+      return res.status(503).send("OIDC authentication is not configured.");
+    }
     try {
       const stateParam = req.query.state as string | undefined;
       const codeParam = req.query.code as string | undefined;
@@ -411,6 +431,9 @@ export async function setupAuth(app: Express) {
   // Uses the standard /api/callback but stores state to detect mobile flow
   // (session doesn't persist across external browser → app WebView)
   app.get("/api/login/mobile", async (req, res, next) => {
+    if (!oidcEnabled) {
+      return res.status(503).json({ message: "OIDC authentication is not configured." });
+    }
     try {
       const hostname = req.hostname;
       const normalizedHost = normalizeHostname(hostname);
@@ -697,14 +720,19 @@ a{display:inline-block;padding:0.75rem 2rem;background:#7c3aed;color:#fff;border
         // Clear both possible session cookies
         res.clearCookie('connect.sid', { path: '/' });
         res.clearCookie('peacepad.sid', { path: '/' });
+        res.clearCookie('peacepad_guest', { path: '/' });
         
-        // Redirect to Replit's end-session URL to fully log out
-        res.redirect(
-          client.buildEndSessionUrl(config, {
-            client_id: process.env.REPL_ID!,
-            post_logout_redirect_uri: `${req.protocol}://${req.hostname}/?logged_out=1`,
-          }).href
-        );
+        if (oidcEnabled && oidcProviderConfig && appConfig.auth.oidcClientId) {
+          res.redirect(
+            client.buildEndSessionUrl(oidcProviderConfig, {
+              client_id: appConfig.auth.oidcClientId,
+              post_logout_redirect_uri: `${req.protocol}://${req.hostname}/?logged_out=1`,
+            }).href
+          );
+          return;
+        }
+
+        res.redirect("/");
       });
     });
   });
@@ -712,8 +740,10 @@ a{display:inline-block;padding:0.75rem 2rem;background:#7c3aed;color:#fff;border
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
+  const isSessionAuthenticated =
+    typeof req.isAuthenticated === "function" && req.isAuthenticated();
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!isSessionAuthenticated || !user?.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
@@ -729,8 +759,11 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 
   try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
+    if (!appConfig.auth.oidcEnabled) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const oidcRuntimeConfig = await getOidcConfig();
+    const tokenResponse = await client.refreshTokenGrant(oidcRuntimeConfig, refreshToken);
     updateUserSession(user, tokenResponse);
     return next();
   } catch (error) {
@@ -741,8 +774,10 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
 export const isAdmin: RequestHandler = async (req: any, res, next) => {
   const user = req.user as any;
+  const isSessionAuthenticated =
+    typeof req.isAuthenticated === "function" && req.isAuthenticated();
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!isSessionAuthenticated || !user?.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

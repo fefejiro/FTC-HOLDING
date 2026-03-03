@@ -9,10 +9,10 @@ This setup makes Railway host only the API at `api.peacepad.ca`.
 3. Open the created service -> `Settings`.
 
 ## Service Settings (Copy/Paste)
-- Root Directory: `APPS/peacepad`
+- Root Directory: repository root
 - Install Command: `npm ci`
-- Build Command: `npm run build`
-- Start Command: `npm run start`
+- Build Command: `npm --workspace=@ftc/peacepad run build`
+- Start Command: `npm --workspace=@ftc/peacepad run start`
 
 Start command must not include `-p`. The app already reads `process.env.PORT` in `server/index.ts`.
 
@@ -30,10 +30,12 @@ Required:
 - `SUPABASE_ANON_KEY=<set in Railway>`
 - `DATABASE_URL=<set in Railway>`
 
-If Replit OIDC routes are still used in your environment, also set:
-- `REPLIT_DOMAINS=<comma-separated allowed domains>`
-- `REPL_ID=<set in Railway>`
-- `ISSUER_URL=https://replit.com/oidc` (or your configured issuer)
+If OIDC routes are enabled, also set:
+- `PUBLIC_BASE_URL=<https://api.peacepad.ca>`
+- `APP_ORIGINS=<comma-separated app origins>`
+- `CORS_ALLOWED_ORIGINS=<comma-separated browser origins>`
+- `OIDC_CLIENT_ID=<set in Railway>`
+- `OIDC_ISSUER_URL=https://replit.com/oidc` (or your configured issuer)
 
 Optional by feature:
 - `OPENAI_API_KEY`

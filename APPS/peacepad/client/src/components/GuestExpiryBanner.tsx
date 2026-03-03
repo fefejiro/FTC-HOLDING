@@ -3,10 +3,20 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Clock, X, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { markGuestUpgradeIntent } from "@/lib/guestUpgrade";
 
 interface GuestSessionInfo {
   expiresAt: string;
   daysRemaining: number;
+}
+
+function resolveDaysRemaining(sessionInfo: GuestSessionInfo): number {
+  const expiresAtMs = new Date(sessionInfo.expiresAt).getTime();
+  if (!Number.isFinite(expiresAtMs)) {
+    return Math.max(0, sessionInfo.daysRemaining);
+  }
+  const msRemaining = expiresAtMs - Date.now();
+  return Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
 }
 
 export function GuestExpiryBanner() {
@@ -44,8 +54,13 @@ export function GuestExpiryBanner() {
     setIsDismissed(true);
   };
 
-  const { daysRemaining } = sessionInfo;
+  const daysRemaining = resolveDaysRemaining(sessionInfo);
   const isUrgent = daysRemaining <= 3;
+
+  const handleUpgradeLogin = () => {
+    markGuestUpgradeIntent();
+    login();
+  };
 
   return (
     <div
@@ -63,10 +78,12 @@ export function GuestExpiryBanner() {
         <Clock className={`h-3 w-3 flex-shrink-0 ${isUrgent ? "text-destructive" : "text-muted-foreground"}`} />
         <span className={isUrgent ? "text-destructive font-medium" : "text-muted-foreground"}>
           {daysRemaining === 0
-            ? "Trial expires today"
+            ? "Guest data expires today. Sign in to keep your data."
             : daysRemaining === 1
-            ? "Trial expires tomorrow"
-            : `Trial: ${daysRemaining}d left`}
+            ? "Guest data expires tomorrow. Sign in to keep your data."
+            : isUrgent
+            ? `Guest data expires in ${daysRemaining} days. Sign in to keep your data.`
+            : `Guest session: ${daysRemaining} days left`}
         </span>
       </div>
 
@@ -74,7 +91,7 @@ export function GuestExpiryBanner() {
         <Button
           size="sm"
           variant={isUrgent ? "destructive" : "outline"}
-          onClick={login}
+          onClick={handleUpgradeLogin}
           className="h-6 px-2 text-xs gap-1"
           data-testid="button-upgrade-account"
         >

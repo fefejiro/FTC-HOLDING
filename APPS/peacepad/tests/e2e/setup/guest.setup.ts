@@ -39,6 +39,13 @@ setup('authenticate as guest user', async ({ page }) => {
     }
   }
 
+  const continueAsGuestChoice = page.getByTestId('button-onboarding-continue-guest');
+  if (await continueAsGuestChoice.isVisible({ timeout: 5000 }).catch(() => false)) {
+    console.log('[Setup] Found onboarding auth choice, selecting continue as guest');
+    await continueAsGuestChoice.click({ force: true });
+    await page.waitForTimeout(1000);
+  }
+
   const enterButton = page.getByTestId('button-enter-peacepad');
   if (await enterButton.isVisible({ timeout: 5000 }).catch(() => false)) {
     console.log('[Setup] Found GuestEntry page, clicking Enter PeacePad button');

@@ -15,6 +15,8 @@
     "build:ftc:deps": "npm run build --workspace=@ftc/config && npm run build --workspace=@ftc/types && npm run build --workspace=@ftc/logger && npm run build --workspace=@ftc/supabase && npm run build --workspace=@ftc/auth",
     "build:ftc": "npm run build:ftc:deps && npm --workspace=@ftc/ftc-site run build",
     "build:peacepad": "npm --workspace=@ftc/peacepad run build",
+    "railway:build:peacepad": "npm --workspace=@ftc/peacepad run build",
+    "railway:start:peacepad": "npm --workspace=@ftc/peacepad run start",
     "build:saywetin": "npm --workspace=@ftc/saywetin run build",
     "test": "npm run test:ftc && npm run test:peacepad && npm run test:saywetin",
     "test:ftc": "npm --workspace=@ftc/ftc-site run test || echo 'no tests'",

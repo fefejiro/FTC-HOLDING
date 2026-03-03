@@ -12,6 +12,7 @@ import {
   partnershipBalances,
   events,
   guestSessions,
+  guestSessionData,
   usageMetrics,
   contacts,
   partnerships,
@@ -63,6 +64,8 @@ import {
   type InsertEvent,
   type GuestSession,
   type InsertGuestSession,
+  type GuestSessionData,
+  type InsertGuestSessionData,
   type UsageMetric,
   type InsertUsageMetric,
   type Contact,
@@ -191,9 +194,20 @@ export interface IStorage {
   
   // Guest session operations
   getGuestSession(sessionId: string): Promise<GuestSession | undefined>;
+  getGuestSessionByGuestId(guestId: string): Promise<GuestSession | undefined>;
+  getGuestSessionByUserId(userId: string): Promise<GuestSession | undefined>;
   createGuestSession(session: InsertGuestSession): Promise<GuestSession>;
+  getGuestSessionData(guestSessionId: string): Promise<GuestSessionData | undefined>;
+  upsertGuestSessionData(data: InsertGuestSessionData): Promise<GuestSessionData>;
   updateGuestSessionActivity(sessionId: string): Promise<void>;
-  cleanupExpiredSessions(): Promise<void>;
+  markGuestSessionUpgraded(guestId: string, userId: string): Promise<void>;
+  markGuestSessionUpgradedBySessionId(sessionId: string, userId: string): Promise<void>;
+  migrateGuestDataToUser(guestUserId: string, userId: string): Promise<void>;
+  cleanupExpiredSessions(): Promise<{
+    deletedSessions: number;
+    deletedGuestData: number;
+    deletedUsageMetrics: number;
+  }>;
   
   // Usage metrics operations
   getUsageMetrics(sessionId: string): Promise<UsageMetric | undefined>;
@@ -965,6 +979,15 @@ export class DatabaseStorage implements IStorage {
     return session;
   }
 
+  async getGuestSessionByGuestId(guestId: string): Promise<GuestSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(guestSessions)
+      .where(eq(guestSessions.guestId, guestId))
+      .limit(1);
+    return session;
+  }
+
   async getGuestSessionByUserId(userId: string): Promise<GuestSession | undefined> {
     const [session] = await db.select().from(guestSessions)
       .where(eq(guestSessions.userId, userId))
@@ -978,15 +1001,299 @@ export class DatabaseStorage implements IStorage {
     return session;
   }
 
+  async getGuestSessionData(guestSessionId: string): Promise<GuestSessionData | undefined> {
+    const [row] = await db
+      .select()
+      .from(guestSessionData)
+      .where(eq(guestSessionData.guestSessionId, guestSessionId))
+      .limit(1);
+    return row;
+  }
+
+  async upsertGuestSessionData(data: InsertGuestSessionData): Promise<GuestSessionData> {
+    const now = new Date();
+    const existing = await this.getGuestSessionData(data.guestSessionId);
+
+    if (existing) {
+      const [updated] = await db
+        .update(guestSessionData)
+        .set({
+          data: data.data ?? {},
+          updatedAt: now,
+        })
+        .where(eq(guestSessionData.id, existing.id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db
+      .insert(guestSessionData)
+      .values({
+        guestSessionId: data.guestSessionId,
+        data: data.data ?? {},
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return created;
+  }
+
   async updateGuestSessionActivity(sessionId: string): Promise<void> {
+    const now = new Date();
     await db
       .update(guestSessions)
-      .set({ lastActive: new Date() })
+      .set({ lastActive: now, lastSeenAt: now })
       .where(eq(guestSessions.sessionId, sessionId));
   }
 
-  async cleanupExpiredSessions(): Promise<void> {
-    await db.delete(guestSessions).where(desc(guestSessions.expiresAt));
+  async markGuestSessionUpgraded(guestId: string, userId: string): Promise<void> {
+    await db
+      .update(guestSessions)
+      .set({
+        upgradedToUserId: userId,
+        lastSeenAt: new Date(),
+      })
+      .where(eq(guestSessions.guestId, guestId));
+  }
+
+  async markGuestSessionUpgradedBySessionId(sessionId: string, userId: string): Promise<void> {
+    await db
+      .update(guestSessions)
+      .set({
+        upgradedToUserId: userId,
+        lastSeenAt: new Date(),
+      })
+      .where(eq(guestSessions.sessionId, sessionId));
+  }
+
+  async migrateGuestDataToUser(guestUserId: string, userId: string): Promise<void> {
+    if (!guestUserId || !userId || guestUserId === userId) {
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      const [guestUser] = await tx.select().from(users).where(eq(users.id, guestUserId)).limit(1);
+      const [targetUser] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
+
+      if (!guestUser || !targetUser) {
+        return;
+      }
+
+      const now = new Date();
+      const profilePatch: Record<string, any> = {};
+      if (!targetUser.displayName && guestUser.displayName) profilePatch.displayName = guestUser.displayName;
+      if (!targetUser.profileImageUrl && guestUser.profileImageUrl) profilePatch.profileImageUrl = guestUser.profileImageUrl;
+      if (!targetUser.phoneNumber && guestUser.phoneNumber) profilePatch.phoneNumber = guestUser.phoneNumber;
+      if (!targetUser.relationshipType && guestUser.relationshipType) profilePatch.relationshipType = guestUser.relationshipType;
+      if (!targetUser.childName && guestUser.childName) profilePatch.childName = guestUser.childName;
+      if (!targetUser.termsAcceptedAt && guestUser.termsAcceptedAt) profilePatch.termsAcceptedAt = guestUser.termsAcceptedAt;
+      if (!targetUser.consentAcceptedAt && guestUser.consentAcceptedAt) profilePatch.consentAcceptedAt = guestUser.consentAcceptedAt;
+      if (!targetUser.activePartnershipId && guestUser.activePartnershipId) profilePatch.activePartnershipId = guestUser.activePartnershipId;
+      if (Object.keys(profilePatch).length > 0) {
+        profilePatch.updatedAt = now;
+        await tx.update(users).set(profilePatch).where(eq(users.id, userId));
+      }
+
+      // Core communication + planning records
+      await tx.update(messages).set({ senderId: userId }).where(eq(messages.senderId, guestUserId));
+      await tx.update(messages).set({ recipientId: userId }).where(eq(messages.recipientId, guestUserId));
+      await tx.update(notes).set({ createdBy: userId }).where(eq(notes.createdBy, guestUserId));
+      await tx.update(tasks).set({ createdBy: userId }).where(eq(tasks.createdBy, guestUserId));
+      await tx.update(tasks).set({ assignedTo: userId }).where(eq(tasks.assignedTo, guestUserId));
+      await tx.update(childUpdates).set({ createdBy: userId }).where(eq(childUpdates.createdBy, guestUserId));
+      await tx.update(children).set({ userId }).where(eq(children.userId, guestUserId));
+      await tx.update(pets).set({ createdBy: userId }).where(eq(pets.createdBy, guestUserId));
+      await tx.update(events).set({ createdBy: userId }).where(eq(events.createdBy, guestUserId));
+      await tx.update(expenses).set({ paidBy: userId }).where(eq(expenses.paidBy, guestUserId));
+      await tx.update(expenseParticipants).set({ userId }).where(eq(expenseParticipants.userId, guestUserId));
+      await tx.update(settlements).set({ payerId: userId }).where(eq(settlements.payerId, guestUserId));
+      await tx.update(settlements).set({ receiverId: userId }).where(eq(settlements.receiverId, guestUserId));
+      await tx.update(partnershipBalances).set({ userId }).where(eq(partnershipBalances.userId, guestUserId));
+      await tx.update(partnerships).set({ user1Id: userId }).where(eq(partnerships.user1Id, guestUserId));
+      await tx.update(partnerships).set({ user2Id: userId }).where(eq(partnerships.user2Id, guestUserId));
+      await tx.update(conversations).set({ createdBy: userId }).where(eq(conversations.createdBy, guestUserId));
+      await tx.update(conversationMembers).set({ userId }).where(eq(conversationMembers.userId, guestUserId));
+      await tx.update(messageSummaries).set({ createdBy: userId }).where(eq(messageSummaries.createdBy, guestUserId));
+      await tx.update(prepChatSessions).set({ userId }).where(eq(prepChatSessions.userId, guestUserId));
+      await tx.update(scheduleTemplates).set({ createdBy: userId }).where(eq(scheduleTemplates.createdBy, guestUserId));
+      await tx.update(storybooks).set({ createdBy: userId }).where(eq(storybooks.createdBy, guestUserId));
+      await tx.update(storyPages).set({ createdBy: userId }).where(eq(storyPages.createdBy, guestUserId));
+      await tx.update(shoppingLists).set({ createdBy: userId }).where(eq(shoppingLists.createdBy, guestUserId));
+      await tx.update(shoppingItems).set({ addedBy: userId }).where(eq(shoppingItems.addedBy, guestUserId));
+      await tx.update(shoppingItems).set({ checkedBy: userId }).where(eq(shoppingItems.checkedBy, guestUserId));
+
+      // Calls + conch records
+      await tx.update(callSessions).set({ hostId: userId }).where(eq(callSessions.hostId, guestUserId));
+      await tx.update(calls).set({ callerId: userId }).where(eq(calls.callerId, guestUserId));
+      await tx.update(calls).set({ receiverId: userId }).where(eq(calls.receiverId, guestUserId));
+      await tx.update(scheduledCalls).set({ schedulerId: userId }).where(eq(scheduledCalls.schedulerId, guestUserId));
+      await tx.update(scheduledCalls).set({ participantId: userId }).where(eq(scheduledCalls.participantId, guestUserId));
+      await tx.update(callRecordings).set({ recordedBy: userId }).where(eq(callRecordings.recordedBy, guestUserId));
+      await tx.update(conchSessions).set({ initiatorUserId: userId }).where(eq(conchSessions.initiatorUserId, guestUserId));
+      await tx.update(conchSessions).set({ conchHolderUserId: userId }).where(eq(conchSessions.conchHolderUserId, guestUserId));
+      await tx.update(conchSessionParticipants).set({ userId }).where(eq(conchSessionParticipants.userId, guestUserId));
+      await tx.update(callSessionsV2).set({ createdByUserId: userId }).where(eq(callSessionsV2.createdByUserId, guestUserId));
+      await tx.update(callParticipantsV2).set({ userId }).where(eq(callParticipantsV2.userId, guestUserId));
+      await tx.update(conchStateV2).set({ holderUserId: userId }).where(eq(conchStateV2.holderUserId, guestUserId));
+      await tx.update(conchTurnsV2).set({ userId }).where(eq(conchTurnsV2.userId, guestUserId));
+      await tx.update(callEventsV2).set({ userId }).where(eq(callEventsV2.userId, guestUserId));
+      await tx.update(auditLogs).set({ userId }).where(eq(auditLogs.userId, guestUserId));
+      await tx.update(usageMetrics).set({ userId }).where(eq(usageMetrics.userId, guestUserId));
+      await tx.update(feedback).set({ userId }).where(eq(feedback.userId, guestUserId));
+      await tx.update(agentInterventions).set({ targetUserId: userId }).where(eq(agentInterventions.targetUserId, guestUserId));
+      await tx.update(pushSubscriptions).set({ userId }).where(eq(pushSubscriptions.userId, guestUserId));
+      await tx.update(streaks).set({ userId }).where(eq(streaks.userId, guestUserId));
+      await tx.update(userAchievements).set({ userId }).where(eq(userAchievements.userId, guestUserId));
+
+      // participant arrays
+      await tx.execute(
+        sql`update call_recordings set participants = array_replace(participants, ${guestUserId}, ${userId}) where ${guestUserId} = any(participants)`
+      );
+      await tx.execute(
+        sql`update relationship_memories set participants = array_replace(participants, ${guestUserId}, ${userId}) where ${guestUserId} = any(participants)`
+      );
+
+      // Unique-by-user tables: keep authenticated user's record when it already exists.
+      const [guestCallPreference] = await tx.select().from(callPreferences).where(eq(callPreferences.userId, guestUserId)).limit(1);
+      const [targetCallPreference] = await tx.select().from(callPreferences).where(eq(callPreferences.userId, userId)).limit(1);
+      if (guestCallPreference) {
+        if (targetCallPreference) {
+          await tx.delete(callPreferences).where(eq(callPreferences.id, guestCallPreference.id));
+        } else {
+          await tx.update(callPreferences).set({ userId, updatedAt: now }).where(eq(callPreferences.id, guestCallPreference.id));
+        }
+      }
+
+      const [guestListeningSettings] = await tx.select().from(listeningSettings).where(eq(listeningSettings.userId, guestUserId)).limit(1);
+      const [targetListeningSettings] = await tx.select().from(listeningSettings).where(eq(listeningSettings.userId, userId)).limit(1);
+      if (guestListeningSettings) {
+        if (targetListeningSettings) {
+          await tx.delete(listeningSettings).where(eq(listeningSettings.id, guestListeningSettings.id));
+        } else {
+          await tx.update(listeningSettings).set({ userId, updatedAt: now }).where(eq(listeningSettings.id, guestListeningSettings.id));
+        }
+      }
+
+      const [guestAgentSettings] = await tx.select().from(agentSettings).where(eq(agentSettings.userId, guestUserId)).limit(1);
+      const [targetAgentSettings] = await tx.select().from(agentSettings).where(eq(agentSettings.userId, userId)).limit(1);
+      if (guestAgentSettings) {
+        if (targetAgentSettings) {
+          await tx.delete(agentSettings).where(eq(agentSettings.id, guestAgentSettings.id));
+        } else {
+          await tx.update(agentSettings).set({ userId, updatedAt: now }).where(eq(agentSettings.id, guestAgentSettings.id));
+        }
+      }
+
+      const [guestSafetyPlan] = await tx.select().from(safetyPlans).where(eq(safetyPlans.userId, guestUserId)).limit(1);
+      const [targetSafetyPlan] = await tx.select().from(safetyPlans).where(eq(safetyPlans.userId, userId)).limit(1);
+      if (guestSafetyPlan) {
+        if (targetSafetyPlan) {
+          await tx.delete(safetyPlans).where(eq(safetyPlans.id, guestSafetyPlan.id));
+        } else {
+          await tx.update(safetyPlans).set({ userId, updatedAt: now }).where(eq(safetyPlans.id, guestSafetyPlan.id));
+        }
+      }
+
+      // Merge user stats to preserve trial engagement progress.
+      const [guestStats] = await tx.select().from(userStats).where(eq(userStats.userId, guestUserId)).limit(1);
+      const [targetStats] = await tx.select().from(userStats).where(eq(userStats.userId, userId)).limit(1);
+      if (guestStats) {
+        if (targetStats) {
+          await tx.update(userStats).set({
+            totalMessagesSent: (targetStats.totalMessagesSent || 0) + (guestStats.totalMessagesSent || 0),
+            positiveMessagesSent: (targetStats.positiveMessagesSent || 0) + (guestStats.positiveMessagesSent || 0),
+            calendarEventsCreated: (targetStats.calendarEventsCreated || 0) + (guestStats.calendarEventsCreated || 0),
+            tasksCompleted: (targetStats.tasksCompleted || 0) + (guestStats.tasksCompleted || 0),
+            expensesLogged: (targetStats.expensesLogged || 0) + (guestStats.expensesLogged || 0),
+            conchSessionsCompleted: (targetStats.conchSessionsCompleted || 0) + (guestStats.conchSessionsCompleted || 0),
+            summariesValidated: (targetStats.summariesValidated || 0) + (guestStats.summariesValidated || 0),
+            understandingStreak: Math.max(targetStats.understandingStreak || 0, guestStats.understandingStreak || 0),
+            longestUnderstandingStreak: Math.max(targetStats.longestUnderstandingStreak || 0, guestStats.longestUnderstandingStreak || 0),
+            averageValidationScore: targetStats.averageValidationScore ?? guestStats.averageValidationScore,
+            updatedAt: now,
+          }).where(eq(userStats.id, targetStats.id));
+          await tx.delete(userStats).where(eq(userStats.id, guestStats.id));
+        } else {
+          await tx.update(userStats).set({ userId, updatedAt: now }).where(eq(userStats.id, guestStats.id));
+        }
+      }
+
+      // Deduplicate conversation membership rows after reassignment.
+      await tx.execute(sql`
+        delete from conversation_members a
+        using conversation_members b
+        where a.id < b.id
+          and a.conversation_id = b.conversation_id
+          and a.user_id = b.user_id
+      `);
+
+      // Link historical guest sessions to the upgraded auth user.
+      await tx
+        .update(guestSessions)
+        .set({
+          upgradedToUserId: userId,
+          lastSeenAt: now,
+        })
+        .where(eq(guestSessions.userId, guestUserId));
+    });
+  }
+
+  async cleanupExpiredSessions(): Promise<{
+    deletedSessions: number;
+    deletedGuestData: number;
+    deletedUsageMetrics: number;
+  }> {
+    const now = new Date();
+    const expiredSessions = await db
+      .select({
+        sessionId: guestSessions.sessionId,
+      })
+      .from(guestSessions)
+      .where(lt(guestSessions.expiresAt, now));
+
+    if (expiredSessions.length === 0) {
+      return {
+        deletedSessions: 0,
+        deletedGuestData: 0,
+        deletedUsageMetrics: 0,
+      };
+    }
+
+    const sessionFiltersForUsage = expiredSessions.map((session) =>
+      eq(usageMetrics.sessionId, session.sessionId),
+    );
+    const sessionFiltersForGuestData = expiredSessions.map((session) =>
+      eq(guestSessionData.guestSessionId, session.sessionId),
+    );
+    const sessionFiltersForSessions = expiredSessions.map((session) =>
+      eq(guestSessions.sessionId, session.sessionId),
+    );
+
+    const usageRows = await db
+      .select({ id: usageMetrics.id })
+      .from(usageMetrics)
+      .where(or(...sessionFiltersForUsage));
+
+    const guestDataRows = await db
+      .select({ id: guestSessionData.id })
+      .from(guestSessionData)
+      .where(or(...sessionFiltersForGuestData));
+
+    if (usageRows.length > 0) {
+      await db.delete(usageMetrics).where(or(...sessionFiltersForUsage));
+    }
+
+    if (guestDataRows.length > 0) {
+      await db.delete(guestSessionData).where(or(...sessionFiltersForGuestData));
+    }
+
+    await db.delete(guestSessions).where(or(...sessionFiltersForSessions));
+
+    return {
+      deletedSessions: expiredSessions.length,
+      deletedGuestData: guestDataRows.length,
+      deletedUsageMetrics: usageRows.length,
+    };
   }
 
   // Usage metrics operations

@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { storage } from './storage';
+import { config } from './config';
 
 // NOTE: firebase-admin package needs to be installed for native push notifications
 let admin: any = null;
@@ -17,18 +18,18 @@ function cleanVapidKey(key: string | undefined): string | undefined {
   return key.trim().replace(/[\s\n\r=]+/g, '');
 }
 
-const VAPID_PUBLIC_KEY = cleanVapidKey(process.env.VAPID_PUBLIC_KEY) || DEV_PUBLIC_KEY;
-const VAPID_PRIVATE_KEY = cleanVapidKey(process.env.VAPID_PRIVATE_KEY) || DEV_PRIVATE_KEY;
+const VAPID_PUBLIC_KEY = cleanVapidKey(config.integrations.vapidPublicKey) || DEV_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = cleanVapidKey(config.integrations.vapidPrivateKey) || DEV_PRIVATE_KEY;
 
 // Warn if using development keys in production
-if (!process.env.VAPID_PUBLIC_KEY && process.env.NODE_ENV === 'production') {
+if (!config.integrations.vapidPublicKey && config.isProduction) {
   console.warn('WARNING: Using development VAPID keys. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment variables for production!');
 }
 
 // Configure web-push with VAPID details
 try {
   webpush.setVapidDetails(
-    process.env.VAPID_EMAIL || 'mailto:support@peacepad.com',
+    config.integrations.vapidEmail || 'mailto:support@peacepad.com',
     VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY
   );
@@ -46,11 +47,12 @@ const firebaseInitPromise = (async () => {
     admin = firebaseModule.default || firebaseModule;
     console.log('✅ firebase-admin package loaded successfully');
     
-    // Initialize Firebase Admin SDK for FCM/APNs
-    // Requires FIREBASE_SERVICE_ACCOUNT environment variable (JSON service account key)
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // Initialize Firebase Admin SDK for FCM/APNs.
+    // Accepts FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_JSON_PATH.
+    const firebaseServiceAccountJson = config.integrations.firebaseServiceAccountJson;
+    if (firebaseServiceAccountJson) {
       try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        const serviceAccount = JSON.parse(firebaseServiceAccountJson);
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
         });
@@ -58,10 +60,10 @@ const firebaseInitPromise = (async () => {
         console.log('✅ Firebase Admin SDK initialized successfully');
       } catch (error) {
         console.error('❌ Failed to initialize Firebase Admin SDK:', error);
-        console.warn('Native push notifications will not work. Set FIREBASE_SERVICE_ACCOUNT environment variable.');
+        console.warn('Native push notifications will not work. Check FIREBASE_SERVICE_ACCOUNT_JSON configuration.');
       }
     } else {
-      console.warn('⚠️  FIREBASE_SERVICE_ACCOUNT not set. Native push notifications disabled.');
+      console.warn('⚠️  FIREBASE_SERVICE_ACCOUNT_JSON not set. Native push notifications disabled.');
     }
   } catch (error: any) {
     console.warn('⚠️  firebase-admin failed to load:', error?.message || error);

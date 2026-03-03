@@ -299,8 +299,13 @@ self.addEventListener('fetch', (event) => {
       .catch(() => {
         // Return offline fallback for documents
         if (request.destination === 'document') {
-          return caches.match('/');
+          return caches.match('/').then((doc) => {
+            return doc || new Response('Offline', { status: 503, statusText: 'Offline' });
+          });
         }
+        // Non-document requests must still resolve to a Response object.
+        // Returning undefined here causes: "Failed to convert value to 'Response'".
+        return Response.error();
       })
   );
 });

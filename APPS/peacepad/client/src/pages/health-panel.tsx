@@ -24,6 +24,7 @@ export default function HealthPanelPage() {
   );
 
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
+  const apiBaseDisplay = apiBaseUrl || "(same-origin)";
   const apiHealthUrl = `${apiBaseUrl.replace(/\/+$/, "")}/health`;
 
   const {
@@ -69,7 +70,7 @@ export default function HealthPanelPage() {
           </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">Effective API Base URL</span>
-            <span className="text-sm font-medium break-all text-right">{apiBaseUrl}</span>
+            <span className="text-sm font-medium break-all text-right">{apiBaseDisplay}</span>
           </div>
         </CardContent>
       </Card>

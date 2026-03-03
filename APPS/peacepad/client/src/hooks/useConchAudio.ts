@@ -496,7 +496,7 @@ export function useConchAudio({ sessionCode, partnerId, enabled, videoEnabled = 
       let configuration = { iceServers: stunFallback };
 
       try {
-        const iceResponse = await fetch('/api/webrtc/ice-servers');
+        const iceResponse = await fetch('/api/webrtc/ice-servers', { credentials: 'include' });
         if (iceResponse.ok) {
           const { iceServers } = await iceResponse.json();
           if (iceServers && iceServers.length > 0) {

@@ -7,7 +7,12 @@ import {
   getUserId,
   isAuthenticatedEither,
   createDemoPartnership,
+  clearGuestCookie,
+  resolveGuestIdentity,
+  trialEnforcer,
+  GUEST_COOKIE_NAME,
 } from "./softAuth";
+import { createUpgradeFromGuestHandler } from "./guestUpgrade";
 import {
   insertMessageSchema,
   insertNoteSchema,
@@ -526,6 +531,11 @@ async function getTranscribedText(filePath: string): Promise<string> {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
+  const upgradeFromGuestHandler = createUpgradeFromGuestHandler({
+    storage,
+    resolveGuestIdentity,
+    clearGuestCookie,
+  });
 
   // Track active users after auth middleware (so req.user is populated)
   app.use((req: any, res, next) => {
@@ -534,6 +544,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     next();
   });
+
+  // Enforce guest trial expiry on write operations without affecting authenticated users.
+  app.use("/api", trialEnforcer);
 
   // Geocoding routes moved to comprehensive route below (line ~6740)
 
@@ -1240,6 +1253,37 @@ Crawl-delay: 1
     });
   });
 
+  app.post("/api/auth/upgrade-from-guest", isAuthenticated, upgradeFromGuestHandler);
+  // Backward-compatible alias: treat legacy calls as confirmed.
+  app.post("/api/auth/upgrade", isAuthenticated, (req: any, res, next) => {
+    req.body = { ...(req.body || {}), confirmUpgrade: true };
+    return upgradeFromGuestHandler(req, res, next);
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/api/debug/cookies", (req: any, res) => {
+      const rawCookie = String(req.headers?.cookie || "");
+      const cookiePairs = rawCookie
+        .split(";")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      const guestCookieEntry = cookiePairs.find((entry) => entry.startsWith(`${GUEST_COOKIE_NAME}=`));
+
+      res.json({
+        origin: req.headers?.origin || null,
+        host: req.headers?.host || null,
+        protocol: req.protocol,
+        secure: Boolean(req.secure),
+        hasGuestCookie: Boolean(guestCookieEntry),
+        guestCookie: guestCookieEntry || null,
+        hasSessionCookie: cookiePairs.some(
+          (entry) => entry.startsWith("peacepad.sid=") || entry.startsWith("connect.sid="),
+        ),
+        cookies: cookiePairs,
+      });
+    });
+  }
+
   // Get current authenticated user (supports both Replit Auth and Guest Auth)
   app.get("/api/auth/user", isAuthenticatedEither, async (req: any, res) => {
     try {
@@ -1248,8 +1292,12 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // Track active day
-      await storage.updateUserActiveDays(userId);
+      // Non-critical telemetry should never block auth/session restoration.
+      try {
+        await storage.updateUserActiveDays(userId);
+      } catch (error) {
+        console.warn("[Auth] Failed to update active days:", error);
+      }
 
       let user = await storage.getUser(userId);
 
@@ -1262,22 +1310,30 @@ Crawl-delay: 1
 
       // Ensure user has an invite code (for legacy users)
       if (user && !user.inviteCode) {
-        const newCode = await storage.generateInviteCode();
-        const result = await storage.upsertUser({
-          ...user,
-          inviteCode: newCode,
-        });
-        user = result.user;
+        try {
+          const newCode = await storage.generateInviteCode();
+          const result = await storage.upsertUser({
+            ...user,
+            inviteCode: newCode,
+          });
+          user = result.user;
+        } catch (error) {
+          console.warn("[Auth] Failed to backfill invite code:", error);
+        }
       }
 
       // Track last login time and device info
       if (user) {
-        const userAgent = req.headers['user-agent'] || null;
-        await storage.upsertUser({
-          ...user,
-          lastLoginAt: new Date(),
-          lastUserAgent: userAgent,
-        });
+        try {
+          const userAgent = req.headers['user-agent'] || null;
+          await storage.upsertUser({
+            ...user,
+            lastLoginAt: new Date(),
+            lastUserAgent: userAgent,
+          });
+        } catch (error) {
+          console.warn("[Auth] Failed to update last login metadata:", error);
+        }
       }
 
       // Log user action for analytics (login/session check)
@@ -1379,6 +1435,7 @@ Crawl-delay: 1
     try {
       // Always clear the cookie first, regardless of session state
       res.clearCookie("connect.sid", { path: "/" });
+      clearGuestCookie(req, res);
       
       if (req.logout) {
         req.logout((err: any) => {
@@ -6800,7 +6857,7 @@ Crawl-delay: 1
         return res.status(400).json({ message: "Endpoint is required" });
       }
 
-      await storage.deletePushSubscription(endpoint);
+      await storage.deletePushSubscription({ endpoint });
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting push subscription:", error);

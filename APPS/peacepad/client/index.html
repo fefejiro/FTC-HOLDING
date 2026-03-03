@@ -221,7 +221,12 @@
     <script>
       (async function() {
         try {
-          const response = await fetch('/api/version');
+          const host = window.location.hostname.replace(/\.$/, "").toLowerCase();
+          const isPeacepadWebHost = host === "peacepad.ca" || host === "www.peacepad.ca";
+          const apiBase = isPeacepadWebHost
+            ? `${window.location.protocol}//api.peacepad.ca`
+            : window.location.origin;
+          const response = await fetch(`${apiBase}/api/version`);
           const { buildId } = await response.json();
           const storedVersion = localStorage.getItem('peacepad_build_id');
           

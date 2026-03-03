@@ -7,6 +7,7 @@ import {
   exchangeSupabaseTokenForApiSession,
   finalizeSupabaseCallback,
 } from "@/lib/supabaseAuth";
+import { consumeGuestUpgradeIntent, upgradeFromGuestSessionIfRequested } from "@/lib/guestUpgrade";
 
 type CallbackMode = "web" | "mobile";
 
@@ -21,6 +22,19 @@ function AuthCallbackView({ mode }: { mode: CallbackMode }) {
       try {
         const session = await finalizeSupabaseCallback();
         await exchangeSupabaseTokenForApiSession(session.access_token);
+
+        const shouldUpgradeFromGuest = consumeGuestUpgradeIntent();
+        if (shouldUpgradeFromGuest) {
+          try {
+            const upgraded = await upgradeFromGuestSessionIfRequested();
+            if (upgraded) {
+              console.info("[Auth] Guest session upgraded to authenticated account.");
+            }
+          } catch (upgradeError) {
+            console.warn("[Auth] Guest upgrade after login failed:", upgradeError);
+          }
+        }
+
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
 

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, index, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, index, jsonb, integer, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -39,7 +39,7 @@ export const users = pgTable("users", {
   conflictResolutionStyle: varchar("conflict_resolution_style"), // collaborative, competitive, accommodating, avoiding, compromising
   stressTriggers: text("stress_triggers"), // Free-form text describing what causes stress/tension
   parentingPhilosophy: text("parenting_philosophy"), // Free-form description of parenting approach and values
-  activePartnershipId: varchar("active_partnership_id").references(() => partnerships.id), // Primary partnership for all features (safety: prevents accidental messages to wrong ex)
+  activePartnershipId: varchar("active_partnership_id").references((): AnyPgColumn => partnerships.id), // Primary partnership for all features (safety: prevents accidental messages to wrong ex)
   isGuest: boolean("is_guest").notNull().default(false), // True if this is a guest account (14-day expiration)
   guestId: varchar("guest_id", { length: 6 }), // Short random ID for guest users (e.g., "abc123")
   onboardingCompletedAt: timestamp("onboarding_completed_at"), // Timestamp when user completed the onboarding wizard
@@ -65,13 +65,32 @@ export const users = pgTable("users", {
 // Guest session tracking with localStorage sync
 export const guestSessions = pgTable("guest_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  guestId: varchar("guest_id", { length: 36 }).notNull().default(sql`gen_random_uuid()`).unique(),
   sessionId: varchar("session_id").notNull().unique(),
   userId: varchar("user_id").notNull().references(() => users.id),
   displayName: varchar("display_name"),
   lastActive: timestamp("last_active").notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
+  upgradedToUserId: varchar("upgraded_to_user_id").references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// Guest-scoped persistent payloads. Data is kept separate from authenticated records
+// and always tagged by guestSessionId for explicit lifecycle cleanup.
+export const guestSessionData = pgTable(
+  "guest_session_data",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    guestSessionId: varchar("guest_session_id")
+      .notNull()
+      .references(() => guestSessions.sessionId, { onDelete: "cascade" }),
+    data: jsonb("data").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [index("guest_session_data_session_id_idx").on(table.guestSessionId)],
+);
 
 // Mobile auth tokens - one-time tokens for native app OAuth flow
 // When OAuth completes in external browser, we generate a token and redirect to peacepad://auth-success?token=xxx
@@ -116,8 +135,8 @@ export const contacts = pgTable("contacts", {
 // Partnerships table for co-parenting relationships (supports multiple co-parents)
 export const partnerships = pgTable("partnerships", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  user1Id: varchar("user1_id").notNull().references(() => users.id), // First co-parent
-  user2Id: varchar("user2_id").notNull().references(() => users.id), // Second co-parent
+  user1Id: varchar("user1_id").notNull().references((): AnyPgColumn => users.id), // First co-parent
+  user2Id: varchar("user2_id").notNull().references((): AnyPgColumn => users.id), // Second co-parent
   inviteCode: varchar("invite_code", { length: 6 }).notNull(), // Shared code used to create partnership
   // Partnership-level permissions (both parties can configure)
   allowAudio: boolean("allow_audio").notNull().default(true),
@@ -525,6 +544,7 @@ export const insertPetSchema = createInsertSchema(pets).omit({ id: true, created
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
 export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertGuestSessionSchema = createInsertSchema(guestSessions).omit({ id: true, createdAt: true });
+export const insertGuestSessionDataSchema = createInsertSchema(guestSessionData).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertUsageMetricSchema = createInsertSchema(usageMetrics).omit({ id: true, lastUpdated: true });
 export const insertContactSchema = createInsertSchema(contacts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPartnershipSchema = createInsertSchema(partnerships).omit({ id: true, createdAt: true, updatedAt: true });
@@ -549,6 +569,8 @@ export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type Expense = typeof expenses.$inferSelect;
 export type InsertGuestSession = z.infer<typeof insertGuestSessionSchema>;
 export type GuestSession = typeof guestSessions.$inferSelect;
+export type InsertGuestSessionData = z.infer<typeof insertGuestSessionDataSchema>;
+export type GuestSessionData = typeof guestSessionData.$inferSelect;
 export type InsertUsageMetric = z.infer<typeof insertUsageMetricSchema>;
 export type UsageMetric = typeof usageMetrics.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;

@@ -2,62 +2,129 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { Capacitor } from "@capacitor/core";
 import { logApiError, logNetworkError, getCurrentUserContext } from "./errorLogger";
 import { checkAndNotifyRateLimit, extractRateLimitError, formatRetryTime } from "./rateLimitUtils";
-
-const DEFAULT_DEV_API_BASE_URL = "http://127.0.0.1:8000";
-const DEFAULT_PROD_API_BASE_URL = "https://api.peacepad.ca";
-const API_PREFIXES = ["/api", "/health", "/__replit_health"];
-
-function trimTrailingSlash(value: string): string {
-  return value.replace(/\/+$/, "");
-}
-
-function isApiPath(path: string): boolean {
-  return API_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`) || path.startsWith(`${prefix}?`));
-}
-
-function normalizePath(path: string): string {
-  return path.startsWith("/") ? path : `/${path}`;
-}
+import {
+  formatApiBaseForLog,
+  isAbsoluteHttpUrl,
+  isApiPath,
+  isApiPeacepadBaseUrl,
+  isPlatformFallbackResponse,
+  normalizePath,
+  resolveApiBaseUrl,
+} from "./apiBaseUrl";
 
 function rewriteApiPath(path: string): string {
-  if (path.startsWith("http://") || path.startsWith("https://")) {
+  if (isAbsoluteHttpUrl(path)) {
     return path;
   }
 
   const normalized = normalizePath(path);
-  return isApiPath(normalized) ? `${getApiBaseUrl()}${normalized}` : normalized;
+  if (!isApiPath(normalized)) {
+    return normalized;
+  }
+
+  const baseUrl = getApiBaseUrl();
+  return baseUrl ? `${baseUrl}${normalized}` : normalized;
+}
+
+function getWebOrigin(): string {
+  if (typeof window === "undefined" || !window.location?.origin) {
+    return "";
+  }
+  return window.location.origin;
+}
+
+function resolveRuntimeApiBaseUrl() {
+  return resolveApiBaseUrl({
+    configuredBaseUrl: import.meta.env.VITE_API_BASE_URL,
+    isNativePlatform: Capacitor.isNativePlatform(),
+    webOrigin: getWebOrigin(),
+  });
 }
 
 /**
- * Get the full URL for API calls.
- * Uses VITE_API_BASE_URL if provided.
- * Defaults to 127.0.0.1 in development and api.peacepad.ca in production.
+ * Single source of truth for API base URL resolution.
+ * - Uses VITE_API_BASE_URL when configured
+ * - Defaults to window.location.origin for web
+ * - Falls back to api.peacepad.ca only on native Capacitor builds
  */
 export function getApiBaseUrl(): string {
-  const configured = trimTrailingSlash((import.meta.env.VITE_API_BASE_URL || "").trim());
-  if (configured) {
-    return configured;
-  }
-
-  return import.meta.env.DEV ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL;
+  return resolveRuntimeApiBaseUrl().baseUrl;
 }
 
 export function getApiUrl(path: string): string {
-  // If already an absolute URL, return as-is
-  if (path.startsWith('http://') || path.startsWith('https://')) {
+  if (isAbsoluteHttpUrl(path)) {
     return path;
   }
 
-  // For native app, use API base for all relative paths
+  const normalizedPath = normalizePath(path);
+
+  // Native requests always resolve against the API base URL.
   if (Capacitor.isNativePlatform()) {
-    return `${getApiBaseUrl()}${normalizePath(path)}`;
+    const baseUrl = getApiBaseUrl();
+    return baseUrl ? `${baseUrl}${normalizedPath}` : normalizedPath;
   }
 
-  // For web, rewrite API/health paths; keep other relative paths unchanged
-  return rewriteApiPath(path);
+  // Web defaults to same-origin and only rewrites known API/health paths.
+  return rewriteApiPath(normalizedPath);
 }
 
 let fetchPatched = false;
+let apiBaseLogged = false;
+const warnedPlatformFallbackRequests = new Set<string>();
+
+function getRequestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+
+  if (input instanceof URL) {
+    return input.href;
+  }
+
+  if (typeof Request !== "undefined" && input instanceof Request) {
+    return input.url;
+  }
+
+  return "";
+}
+
+function maybeWarnPlatformFallback(requestUrl: string, response: Response): void {
+  const baseUrl = getApiBaseUrl();
+  if (!isApiPeacepadBaseUrl(baseUrl)) {
+    return;
+  }
+
+  const targetUrl = requestUrl || response.url;
+  if (!targetUrl || !isPlatformFallbackResponse(targetUrl, response)) {
+    return;
+  }
+
+  const warningKey = `${targetUrl}|${response.status}`;
+  if (warnedPlatformFallbackRequests.has(warningKey)) {
+    return;
+  }
+
+  warnedPlatformFallbackRequests.add(warningKey);
+  console.warn("[API] Platform fallback response detected while using api.peacepad.ca base URL.", {
+    requestUrl: targetUrl,
+    responseUrl: response.url,
+    status: response.status,
+  });
+}
+
+function logResolvedApiBaseUrlOnce(): void {
+  if (apiBaseLogged || typeof window === "undefined") {
+    return;
+  }
+
+  apiBaseLogged = true;
+  const resolution = resolveRuntimeApiBaseUrl();
+  console.info("[API] Runtime configuration", {
+    baseUrl: formatApiBaseForLog(resolution.baseUrl),
+    source: resolution.source,
+    capacitorDetected: Capacitor.isNativePlatform(),
+  });
+}
 
 /**
  * Patch browser fetch so direct fetch('/api/...') calls are routed to API origin.
@@ -68,18 +135,27 @@ export function installApiFetchPatch(): void {
     return;
   }
 
+  logResolvedApiBaseUrlOnce();
   const nativeFetch = window.fetch.bind(window);
 
   window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    let rewrittenInput: RequestInfo | URL = input;
+    let requestUrl = getRequestUrl(input);
+
     if (typeof input === "string") {
-      return nativeFetch(rewriteApiPath(input), init);
+      const rewritten = rewriteApiPath(input);
+      rewrittenInput = rewritten;
+      requestUrl = rewritten;
+    } else if (input instanceof URL && input.origin === window.location.origin) {
+      const rewritten = rewriteApiPath(`${input.pathname}${input.search}${input.hash}`);
+      rewrittenInput = rewritten;
+      requestUrl = rewritten;
     }
 
-    if (input instanceof URL && input.origin === window.location.origin) {
-      return nativeFetch(rewriteApiPath(`${input.pathname}${input.search}${input.hash}`), init);
-    }
-
-    return nativeFetch(input, init);
+    return nativeFetch(rewrittenInput, init).then((response) => {
+      maybeWarnPlatformFallback(requestUrl, response);
+      return response;
+    });
   }) as typeof window.fetch;
 
   fetchPatched = true;
@@ -122,7 +198,7 @@ async function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
   } catch (error) {
     // Network error (offline, DNS failure, etc.)
     const err = error instanceof Error ? error : new Error(String(error));
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : 'unknown';
+    const url = getRequestUrl(input) || "unknown";
     logNetworkError(err, url);
     throw error;
   }

@@ -5,10 +5,28 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Upload, User, Shield, Lock, ChevronRight, Heart, Check } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { getApiUrl, queryClient } from "@/lib/queryClient";
 
 interface GuestEntryProps {
   onAuthenticated: () => void;
+}
+
+interface GuestAuthResponse {
+  success?: boolean;
+  user?: unknown;
+  guestSessionId?: string;
+  sessionId?: string;
+  guestId?: string;
+  expiresAt?: string;
+}
+
+function getDaysRemainingFromExpiry(expiresAt: string): number {
+  const expiresAtMs = new Date(expiresAt).getTime();
+  if (!Number.isFinite(expiresAtMs)) {
+    return 0;
+  }
+  const msRemaining = expiresAtMs - Date.now();
+  return Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
 }
 
 // Color palette theme mapping
@@ -37,7 +55,9 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
       const sessionId = localStorage.getItem("peacepad_session_id");
       if (sessionId) {
         try {
-          const response = await fetch("/api/auth/user");
+          const response = await fetch(getApiUrl("/api/auth/user"), {
+            credentials: "include",
+          });
           if (response.ok) {
             const data = await response.json();
             toast({
@@ -176,7 +196,7 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
         hasAcceptedConsent,
       };
       
-      const response = await fetch("/api/auth/guest", {
+      const response = await fetch(getApiUrl("/api/auth/guest"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
@@ -188,8 +208,39 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
         throw new Error(errorData.message || "Authentication failed");
       }
 
-      const data = await response.json();
-      localStorage.setItem("peacepad_session_id", data.sessionId);
+      const data = (await response.json()) as GuestAuthResponse;
+      if (typeof data.sessionId === "string" && data.sessionId.length > 0) {
+        localStorage.setItem("peacepad_session_id", data.sessionId);
+      }
+
+      if (data.user) {
+        queryClient.setQueryData(["/api/auth/user"], data.user);
+      }
+
+      if (typeof data.expiresAt === "string") {
+        const daysRemaining = getDaysRemainingFromExpiry(data.expiresAt);
+        queryClient.setQueryData(["/api/auth/guest-session-info"], {
+          expiresAt: data.expiresAt,
+          daysRemaining,
+        });
+        queryClient.setQueryData(["/api/session"], {
+          sessionType: "guest",
+          mode: "guest",
+          user: data.user ?? null,
+          guest: {
+            guestId: data.guestId ?? null,
+            guestSessionId: data.guestSessionId ?? data.sessionId ?? null,
+            sessionId: data.sessionId ?? null,
+            expiresAt: data.expiresAt,
+          },
+          trial: {
+            expiresAt: data.expiresAt,
+            daysRemaining,
+            isExpired: false,
+          },
+        });
+      }
+
       // Store avatar color for theme personalization
       if (selectedAvatar) {
         localStorage.setItem("selected_avatar_color", selectedAvatar);

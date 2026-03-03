@@ -94,6 +94,7 @@ async function saveSubscriptionToServer(subscription: PushSubscriptionData): Pro
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(subscription),
     });
 
@@ -128,10 +129,11 @@ export async function unsubscribeFromPush(): Promise<boolean> {
     
     // Remove from server
     await fetch('/api/push/unsubscribe', {
-      method: 'POST',
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ endpoint: subscription.endpoint }),
     });
 

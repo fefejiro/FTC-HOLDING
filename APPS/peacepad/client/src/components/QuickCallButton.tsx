@@ -55,7 +55,8 @@ export function QuickCallButton({ variant = "icon", className }: QuickCallButton
     enabled: !!selectedPartner,
     queryFn: async () => {
       const response = await fetch(
-        `/api/call-preferences/check/${selectedPartner}?isEmergency=${isEmergency}`
+        `/api/call-preferences/check/${selectedPartner}?isEmergency=${isEmergency}`,
+        { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to check preferences");
       return response.json();

@@ -24,6 +24,7 @@ test-results/
 **/.vite/
 **/.env
 **/.env.*
+!**/.env.example
 **/android/.gradle/
 **/android/app/build/
 **/ios/Pods/
