@@ -2,6 +2,7 @@ import { Router } from "express";
 import { pool } from "../../db";
 import { createConflictCheckModuleRoute } from "../modules/conflictCheck";
 import { createRewriteMessageModuleRoute } from "../modules/rewriteMessage";
+import { createSupportDiscoveryModuleRoute } from "../modules/supportDiscovery";
 import { createIntentRoute } from "../router/intentRoute";
 import { v2HealthResponseSchema } from "../schemas/health";
 
@@ -51,6 +52,7 @@ export function createV2Router(): Router {
   router.use("/router", createIntentRoute());
   router.use("/modules", createConflictCheckModuleRoute());
   router.use("/modules", createRewriteMessageModuleRoute());
+  router.use("/modules", createSupportDiscoveryModuleRoute());
 
   return router;
 }

@@ -59,3 +59,9 @@ This document defines the `v2` boundary and the phased implementation plan for a
 - Rewrite refactor service added in `server/v2/services/rewriteService.ts` using `prepChatService`.
 - Strict schemas added in `server/v2/schemas/rewriteMessage.ts`.
 - Unit test added in `tests/unit/v2/rewriteMessage.test.ts`.
+
+## Phase 4 Delivered
+- `POST /v2/modules/support-discovery` implemented in `server/v2/modules/supportDiscovery.ts`.
+- Support discovery refactor service added in `server/v2/services/supportDiscoveryService.ts` using existing support sources.
+- Strict schemas added in `server/v2/schemas/supportDiscovery.ts`.
+- Unit test added in `tests/unit/v2/supportDiscovery.test.ts`.
