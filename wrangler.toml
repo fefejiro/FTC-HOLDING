@@ -2,6 +2,7 @@ name = "peacepadai"
 main = "workers/peacepadai/src/index.ts"
 compatibility_date = "2026-03-04"
 workers_dev = true
+preview_urls = true
 
 # Keep this worker self-contained so Cloudflare Workers Builds can
 # compile/deploy from repository root without relying on app-specific paths.
