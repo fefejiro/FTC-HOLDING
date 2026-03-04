@@ -242,6 +242,11 @@ self.addEventListener('fetch', (event) => {
                 })
               );
             });
+          }).catch(() => {
+            return new Response('Offline', {
+              status: 503,
+              statusText: 'Offline',
+            });
           });
         })
     );
@@ -281,6 +286,9 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         });
+      }).catch(() => {
+        // Ensure we always resolve a Response and never reject the fetch handler.
+        return Response.error();
       })
     );
     return;
@@ -312,6 +320,8 @@ self.addEventListener('fetch', (event) => {
         if (request.destination === 'document') {
           return caches.match('/').then((doc) => {
             return doc || new Response('Offline', { status: 503, statusText: 'Offline' });
+          }).catch(() => {
+            return new Response('Offline', { status: 503, statusText: 'Offline' });
           });
         }
         // Non-document requests must still resolve to a Response object.
