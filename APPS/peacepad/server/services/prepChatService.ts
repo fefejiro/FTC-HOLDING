@@ -29,6 +29,37 @@ interface ChatMessage {
   timestamp: string;
 }
 
+function buildGuaranteedRevision(draft: string): string {
+  const raw = (draft || '').trim();
+  if (!raw) {
+    return "Could we talk when you have a moment? I'd like to find a solution that works for both of us.";
+  }
+
+  let revised = raw;
+  revised = revised.replace(/\byou always\b/gi, "I feel this has happened repeatedly");
+  revised = revised.replace(/\byou never\b/gi, "I feel this hasn't been happening");
+  revised = revised.replace(/\byour fault\b/gi, "something that's been difficult for me");
+  revised = revised.replace(/\bwhy (did|do) you\b/gi, "Could you help me understand why");
+
+  if (!/^(hi|hello|hey|could|can|would|i\b)/i.test(revised)) {
+    revised = `I want to communicate this clearly: ${revised}`;
+  }
+
+  if (!/[.!?]$/.test(revised)) {
+    revised = `${revised}.`;
+  }
+
+  return revised;
+}
+
+function ensureSuggestedRevision(suggestedRevision: string | undefined, draft: string): string {
+  const candidate = (suggestedRevision || '').trim();
+  if (candidate.length >= 3) {
+    return candidate;
+  }
+  return buildGuaranteedRevision(draft);
+}
+
 export async function generatePrepChatCoaching(
   topic: string,
   messages: ChatMessage[],
@@ -217,7 +248,7 @@ IMPORTANT: If the message is accusatory or uses "you never/always" language, it 
         toneScore: 20,
         potentialTriggers: patternCheck.triggers,
         howItMightBePerceived: 'This message contains accusatory language that may trigger defensiveness.',
-        suggestedRevision: undefined,
+        suggestedRevision: buildGuaranteedRevision(draft),
         strengthsIdentified: [],
       };
     }
@@ -226,7 +257,7 @@ IMPORTANT: If the message is accusatory or uses "you never/always" language, it 
       toneScore: 50,
       potentialTriggers: [],
       howItMightBePerceived: 'AI service not available for detailed analysis.',
-      suggestedRevision: undefined,
+      suggestedRevision: buildGuaranteedRevision(draft),
       strengthsIdentified: [],
     };
   }
@@ -251,6 +282,7 @@ IMPORTANT: If the message is accusatory or uses "you never/always" language, it 
       
       // Validate and fix tone/score alignment if needed
       const alignedResult = validateAndAlignToneScore(parsed, patternCheck);
+      alignedResult.suggestedRevision = ensureSuggestedRevision(alignedResult.suggestedRevision, draft);
       
       console.log('[PrepChat] Analysis result:', {
         tone: alignedResult.overallTone,
@@ -271,7 +303,7 @@ IMPORTANT: If the message is accusatory or uses "you never/always" language, it 
       toneScore: 22,
       potentialTriggers: patternCheck.triggers,
       howItMightBePerceived: 'This message may come across as accusatory and could trigger a defensive response.',
-      suggestedRevision: undefined,
+      suggestedRevision: buildGuaranteedRevision(draft),
       strengthsIdentified: [],
     };
   }
@@ -281,6 +313,7 @@ IMPORTANT: If the message is accusatory or uses "you never/always" language, it 
     toneScore: 50,
     potentialTriggers: [],
     howItMightBePerceived: 'Analysis temporarily unavailable. Please try again.',
+    suggestedRevision: buildGuaranteedRevision(draft),
     strengthsIdentified: [],
   };
 }

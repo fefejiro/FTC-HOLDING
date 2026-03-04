@@ -101,9 +101,14 @@ export default function PrepChatPage() {
       });
       return res.json();
     },
-    onSuccess: (data) => {
-      setResult(data);
-      setEditedResult(data.suggestedRevision || "");
+    onSuccess: (data, draft) => {
+      const safeRevision =
+        typeof data?.suggestedRevision === "string" && data.suggestedRevision.trim().length > 0
+          ? data.suggestedRevision.trim()
+          : (draft || "").trim();
+
+      setResult({ ...data, suggestedRevision: safeRevision });
+      setEditedResult(safeRevision);
       setIsEditing(false);
     },
     onError: () => {
@@ -124,7 +129,7 @@ export default function PrepChatPage() {
 
   // Copy puts suggestion INTO the input field (ready to send)
   const handleCopy = () => {
-    const textToCopy = isEditing ? editedResult : (result?.suggestedRevision || "");
+    const textToCopy = isEditing ? editedResult : (result?.suggestedRevision || originalMessage || message);
     setMessage(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -156,7 +161,7 @@ export default function PrepChatPage() {
   };
 
   const handleSendToChat = () => {
-    const messageToSend = isEditing ? editedResult : (result?.suggestedRevision || message);
+    const messageToSend = isEditing ? editedResult : (result?.suggestedRevision || originalMessage || message);
     localStorage.setItem('preparedMessage', messageToSend);
     
     if (hasPartnership) {
@@ -230,7 +235,7 @@ export default function PrepChatPage() {
                 ) : (
                   <div className="p-6 bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/40 dark:border-blue-800/30 rounded-2xl">
                     <p className="text-lg leading-relaxed whitespace-pre-wrap text-foreground" data-testid="text-suggested-message">
-                      {result.suggestedRevision}
+                      {result.suggestedRevision || originalMessage || message}
                     </p>
                   </div>
                 )}
