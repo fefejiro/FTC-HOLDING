@@ -12,6 +12,26 @@ export interface WebSocketConfig {
   params?: Record<string, string>;
 }
 
+const WEB_WS_FALLBACK_HOSTS = new Set([
+  "peacepad.ca",
+  "www.peacepad.ca",
+  "ftc-holding.pages.dev",
+]);
+
+function resolveWebSocketBaseUrl(candidateBaseUrl: string): string {
+  const fallbackBaseUrl = "https://api.peacepad.ca";
+
+  try {
+    const parsed = new URL(candidateBaseUrl, window.location.origin);
+    if (WEB_WS_FALLBACK_HOSTS.has(parsed.hostname.toLowerCase())) {
+      return fallbackBaseUrl;
+    }
+    return parsed.toString();
+  } catch {
+    return fallbackBaseUrl;
+  }
+}
+
 /**
  * Creates a properly formatted WebSocket URL from the current window location
  * 
@@ -38,7 +58,9 @@ export function createWebSocketUrl(config: WebSocketConfig): string {
     webOrigin: window.location.origin,
   });
 
-  const resolvedBase = resolution.baseUrl || window.location.origin;
+  const resolvedBase = resolveWebSocketBaseUrl(
+    resolution.baseUrl || window.location.origin,
+  );
   const normalizedPath = config.path.startsWith("/") ? config.path : `/${config.path}`;
 
   let baseUrl: URL;
