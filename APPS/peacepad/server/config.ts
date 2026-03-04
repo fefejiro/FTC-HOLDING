@@ -213,9 +213,6 @@ if (isProduction) {
   if (!vapidPublicKey) missing.push("VAPID_PUBLIC_KEY");
   if (!vapidPrivateKey) missing.push("VAPID_PRIVATE_KEY");
   if (!vapidEmail) missing.push("VAPID_EMAIL");
-  if (!vitsBaseUrl) missing.push("VITS_BASE_URL");
-  if (!mailjetApiKey) missing.push("MAILJET_API_KEY");
-  if (!mailjetSecretKey) missing.push("MAILJET_SECRET_KEY");
   if (!firebaseServiceAccountJson) {
     missing.push("FIREBASE_SERVICE_ACCOUNT_JSON (or FIREBASE_SERVICE_ACCOUNT_JSON_PATH)");
   }
@@ -223,6 +220,16 @@ if (isProduction) {
 
 if (missing.length > 0) {
   throw new Error(`[Config] Missing required environment variables: ${missing.join(", ")}`);
+}
+
+if (isProduction && !vitsBaseUrl) {
+  console.warn("[Config] VITS_BASE_URL is not set; voice synthesis features may be limited.");
+}
+
+if (isProduction && (!mailjetApiKey || !mailjetSecretKey)) {
+  console.warn(
+    "[Config] MAILJET_API_KEY/MAILJET_SECRET_KEY not set; transactional emails are disabled.",
+  );
 }
 
 if (databaseUrl) {
