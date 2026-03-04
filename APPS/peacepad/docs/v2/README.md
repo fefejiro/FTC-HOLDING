@@ -47,3 +47,9 @@ This document defines the `v2` boundary and the phased implementation plan for a
 - `GET /v2/health` with versioned payload and dependency checks.
 - New `v2` mount added in `server/routes.ts` as `app.use("/v2", ...)`.
 - Unit tests added for intent routing behavior in `tests/unit/v2/intentRouter.test.ts`.
+
+## Phase 2 Delivered
+- `POST /v2/modules/conflict-check` implemented in `server/v2/modules/conflictCheck.ts`.
+- Conflict analysis refactor service added in `server/v2/services/conflictService.ts`.
+- Strict schemas added in `server/v2/schemas/conflictCheck.ts`.
+- Unit test added in `tests/unit/v2/conflictCheck.test.ts`.

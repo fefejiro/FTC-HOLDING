@@ -11,6 +11,7 @@ export const safetyFlagSchema = z.enum([
   "off_topic",
   "high_conflict",
 ]);
+export type SafetyFlag = z.infer<typeof safetyFlagSchema>;
 
 export const cardSuggestionSchema = z
   .object({

@@ -1,6 +1,7 @@
 import { analyzeConflict, type ConflictAnalysis } from "../../emotionAnalyzer";
 import { isOffTopicRequest } from "../../services/aiBoundaries.js";
 import { MODULE_IDS, type ModuleId } from "../registry/moduleRegistry";
+import { detectSafetyFlagsFromText, hasCrisisSafetyFlag } from "../services/safetySignals";
 import type { IntentRouteRequest, IntentRouteResponse } from "../schemas/intent";
 
 type AnalyzeConflictFn = (
@@ -31,50 +32,13 @@ function hasPattern(text: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(text));
 }
 
-function detectSafetyFlags(
-  text: string,
-  conflictLevel: number,
-  isOffTopic: boolean,
-): IntentRouteResponse["safety_flags"] {
-  const flags = new Set<IntentRouteResponse["safety_flags"][number]>();
-  const lower = text.toLowerCase();
-
-  if (hasPattern(lower, [/\b(kill|hurt|hit|harm|threaten|abuse|unsafe)\b/i])) {
-    flags.add("immediate_danger");
-    flags.add("domestic_violence_risk");
-  }
-
-  if (hasPattern(lower, [/\b(self harm|suicide|end my life|kill myself)\b/i])) {
-    flags.add("self_harm_risk");
-  }
-
-  if (hasPattern(lower, [/\b(court|lawyer|legal action|restraining order)\b/i])) {
-    flags.add("legal_escalation");
-  }
-
-  if (hasPattern(lower, [/\b(or else|you better|answer me now|last chance)\b/i])) {
-    flags.add("pressure_control");
-  }
-
-  if (conflictLevel >= 3) {
-    flags.add("high_conflict");
-  }
-
-  if (isOffTopic) {
-    flags.add("off_topic");
-  }
-
-  return Array.from(flags);
-}
-
 function pickModuleId(
   text: string,
   conflictLevel: number,
   safetyFlags: IntentRouteResponse["safety_flags"],
 ): ModuleId {
   const lower = text.toLowerCase();
-  const crisisFlags = new Set(["immediate_danger", "domestic_violence_risk", "self_harm_risk"]);
-  const hasCrisisFlag = safetyFlags.some((flag) => crisisFlags.has(flag));
+  const hasCrisisFlag = hasCrisisSafetyFlag(safetyFlags);
 
   if (
     hasCrisisFlag ||
@@ -192,9 +156,12 @@ export async function routeIntent(
 
   const conflictAnalysis = await analyzeConflictFn(input.text, conversationHistory);
   let conflictLevel = mapSeverityToConflictLevel(conflictAnalysis);
-  const safetyFlags = detectSafetyFlags(input.text, conflictLevel, offTopic.isOffTopic);
+  const safetyFlags = detectSafetyFlagsFromText(input.text, {
+    conflictLevel,
+    isOffTopic: offTopic.isOffTopic,
+  });
 
-  if (safetyFlags.includes("immediate_danger") || safetyFlags.includes("self_harm_risk")) {
+  if (hasCrisisSafetyFlag(safetyFlags)) {
     conflictLevel = 4;
   }
 
