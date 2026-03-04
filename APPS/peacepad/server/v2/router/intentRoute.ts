@@ -1,6 +1,8 @@
 import { Router } from "express";
+import { MODULE_IDS } from "../registry/moduleRegistry";
 import { routeIntent } from "./intentRouter";
 import { intentRouteRequestSchema, intentRouteResponseSchema } from "../schemas/intent";
+import { withModuleRunTracking } from "../services/moduleRunTracker";
 
 export function createIntentRoute(): Router {
   const router = Router();
@@ -15,7 +17,15 @@ export function createIntentRoute(): Router {
     }
 
     try {
-      const response = await routeIntent(parsedRequest.data);
+      const response = await withModuleRunTracking(
+        {
+          moduleId: MODULE_IDS.ROUTER_INTENT,
+          input: parsedRequest.data,
+          userId: parsedRequest.data.context?.user_id,
+          sessionId: parsedRequest.data.context?.session_id,
+        },
+        () => routeIntent(parsedRequest.data),
+      );
       const parsedResponse = intentRouteResponseSchema.parse(response);
       return res.status(200).json(parsedResponse);
     } catch (error) {

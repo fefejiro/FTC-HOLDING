@@ -1,9 +1,11 @@
 import { Router } from "express";
+import { MODULE_IDS } from "../registry/moduleRegistry";
 import { runConflictCheck } from "../services/conflictService";
 import {
   conflictCheckRequestSchema,
   conflictCheckResponseSchema,
 } from "../schemas/conflictCheck";
+import { withModuleRunTracking } from "../services/moduleRunTracker";
 
 export function createConflictCheckModuleRoute(): Router {
   const router = Router();
@@ -18,7 +20,15 @@ export function createConflictCheckModuleRoute(): Router {
     }
 
     try {
-      const result = await runConflictCheck(parsedRequest.data);
+      const result = await withModuleRunTracking(
+        {
+          moduleId: MODULE_IDS.CONFLICT_CHECK,
+          input: parsedRequest.data,
+          userId: parsedRequest.data.context?.user_id,
+          sessionId: parsedRequest.data.context?.session_id,
+        },
+        () => runConflictCheck(parsedRequest.data),
+      );
       const response = conflictCheckResponseSchema.parse(result);
       return res.status(200).json(response);
     } catch (error) {

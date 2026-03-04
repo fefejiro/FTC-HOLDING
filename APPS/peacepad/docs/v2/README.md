@@ -9,6 +9,13 @@ This document defines the `v2` boundary and the phased implementation plan for a
 - Existing `v1` routes remain in `server/routes.ts` and are left unchanged.
 - `v2` mounts as an additional router from the main server route registration.
 
+## v2 Routes
+- `GET /v2/health`
+- `POST /v2/router/intent`
+- `POST /v2/modules/conflict-check`
+- `POST /v2/modules/rewrite-message`
+- `POST /v2/modules/support-discovery`
+
 ## Current Baseline (Phase 0 inspection)
 - Main route registration: `server/routes.ts` via `registerRoutes(app)`.
 - Server bootstrap: `server/index.ts`.
@@ -40,6 +47,10 @@ This document defines the `v2` boundary and the phased implementation plan for a
    - Add `pp_v2_module_runs` and `pp_v2_launcher_state` tables through shared schema + migration SQL.
    - Complete `docs/v2/*` handover docs.
    - Run lint/tests/smoke checks and verify `v1` endpoints still respond.
+
+## Data Tracking
+- `pp_v2_module_runs`: tracks v2 module execution metadata and hashes.
+- `pp_v2_launcher_state`: stores launcher pin/recent/usage state by user/session.
 
 ## Phase 1 Delivered
 - `server/v2/registry/moduleRegistry.ts` with stable module IDs and metadata.

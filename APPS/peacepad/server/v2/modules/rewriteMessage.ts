@@ -1,9 +1,11 @@
 import { Router } from "express";
+import { MODULE_IDS } from "../registry/moduleRegistry";
 import { runRewriteMessage } from "../services/rewriteService";
 import {
   rewriteMessageRequestSchema,
   rewriteMessageResponseSchema,
 } from "../schemas/rewriteMessage";
+import { withModuleRunTracking } from "../services/moduleRunTracker";
 
 export function createRewriteMessageModuleRoute(): Router {
   const router = Router();
@@ -18,7 +20,15 @@ export function createRewriteMessageModuleRoute(): Router {
     }
 
     try {
-      const result = await runRewriteMessage(parsedRequest.data);
+      const result = await withModuleRunTracking(
+        {
+          moduleId: MODULE_IDS.REWRITE_MESSAGE,
+          input: parsedRequest.data,
+          userId: parsedRequest.data.context?.user_id,
+          sessionId: parsedRequest.data.context?.session_id,
+        },
+        () => runRewriteMessage(parsedRequest.data),
+      );
       const response = rewriteMessageResponseSchema.parse(result);
       return res.status(200).json(response);
     } catch (error) {

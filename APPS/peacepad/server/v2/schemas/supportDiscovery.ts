@@ -8,6 +8,13 @@ export const supportDiscoveryRequestSchema = z
     conflict_level: conflictLevelSchema.optional(),
     safety_flags: z.array(safetyFlagSchema).optional(),
     limit: z.number().int().min(1).max(20).optional(),
+    context: z
+      .object({
+        user_id: z.string().min(1).max(120).optional(),
+        session_id: z.string().min(1).max(120).optional(),
+      })
+      .strict()
+      .optional(),
     location: z
       .object({
         latitude: z.number().min(-90).max(90).optional(),

@@ -1,9 +1,11 @@
 import { Router } from "express";
+import { MODULE_IDS } from "../registry/moduleRegistry";
 import { runSupportDiscovery } from "../services/supportDiscoveryService";
 import {
   supportDiscoveryRequestSchema,
   supportDiscoveryResponseSchema,
 } from "../schemas/supportDiscovery";
+import { withModuleRunTracking } from "../services/moduleRunTracker";
 
 export function createSupportDiscoveryModuleRoute(): Router {
   const router = Router();
@@ -18,7 +20,15 @@ export function createSupportDiscoveryModuleRoute(): Router {
     }
 
     try {
-      const result = await runSupportDiscovery(parsedRequest.data);
+      const result = await withModuleRunTracking(
+        {
+          moduleId: MODULE_IDS.SUPPORT_DISCOVERY,
+          input: parsedRequest.data,
+          userId: parsedRequest.data.context?.user_id,
+          sessionId: parsedRequest.data.context?.session_id,
+        },
+        () => runSupportDiscovery(parsedRequest.data),
+      );
       const response = supportDiscoveryResponseSchema.parse(result);
       return res.status(200).json(response);
     } catch (error) {
