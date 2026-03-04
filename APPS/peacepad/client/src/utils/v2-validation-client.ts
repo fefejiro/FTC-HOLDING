@@ -6,6 +6,7 @@
  */
 
 import type { CallEngineV2State, CallEngineV2Actions } from '@/hooks/useCallEngineV2';
+import { createWebSocketUrl } from '@/lib/ws';
 
 export interface V2ValidationResult {
   feature: string;
@@ -99,8 +100,10 @@ export class V2ClientValidator {
       }
       
       // Test creating a WebSocket connection
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws/signaling?sessionId=test&userId=test`;
+      const wsUrl = createWebSocketUrl({
+        path: '/ws/signaling',
+        params: { sessionId: 'test', userId: 'test' },
+      });
       
       const testPromise = new Promise<void>((resolve, reject) => {
         const testWs = new WebSocket(wsUrl);

@@ -4,6 +4,8 @@
  * Provides robust WebSocket URL construction and creation
  * to prevent issues like "wss://localhost:undefined"
  */
+import { resolveApiBaseUrl } from "./apiBaseUrl";
+import { Capacitor } from "@capacitor/core";
 
 export interface WebSocketConfig {
   path: string;
@@ -30,19 +32,25 @@ export function createWebSocketUrl(config: WebSocketConfig): string {
     throw new Error('createWebSocketUrl can only be called in browser environment');
   }
 
-  const { protocol, host } = window.location;
-  
-  // Validate that we have a proper host
-  if (!host || host === 'undefined' || host.includes('undefined')) {
-    console.error('[WebSocket] Invalid host detected:', host);
-    throw new Error('Invalid host for WebSocket connection');
+  const resolution = resolveApiBaseUrl({
+    configuredBaseUrl: import.meta.env.VITE_API_BASE_URL,
+    isNativePlatform: Capacitor.isNativePlatform(),
+    webOrigin: window.location.origin,
+  });
+
+  const resolvedBase = resolution.baseUrl || window.location.origin;
+  const normalizedPath = config.path.startsWith("/") ? config.path : `/${config.path}`;
+
+  let baseUrl: URL;
+  try {
+    baseUrl = new URL(resolvedBase, window.location.origin);
+  } catch (error) {
+    console.error("[WebSocket] Invalid base URL for connection:", resolvedBase, error);
+    throw new Error("Invalid base URL for WebSocket connection");
   }
 
-  // Determine WebSocket protocol based on HTTP protocol
-  const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-  
-  // Build base URL
-  let url = `${wsProtocol}//${host}${config.path}`;
+  const wsProtocol = baseUrl.protocol === "https:" ? "wss:" : "ws:";
+  let url = `${wsProtocol}//${baseUrl.host}${normalizedPath}`;
   
   // Add query parameters if provided
   if (config.params && Object.keys(config.params).length > 0) {
@@ -56,7 +64,7 @@ export function createWebSocketUrl(config: WebSocketConfig): string {
     }
   }
 
-  console.log('[WebSocket] Created URL:', url);
+  console.log("[WebSocket] Created URL:", url);
   return url;
 }
 
