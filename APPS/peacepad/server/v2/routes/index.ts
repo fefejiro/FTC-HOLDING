@@ -5,6 +5,11 @@ import { createRewriteMessageModuleRoute } from "../modules/rewriteMessage";
 import { createSupportDiscoveryModuleRoute } from "../modules/supportDiscovery";
 import { createIntentRoute } from "../router/intentRoute";
 import { v2HealthResponseSchema } from "../schemas/health";
+import {
+  resolveRequestId,
+  V2_REQUEST_ID_HEADER,
+  V2_REQUEST_ID_LOCALS_KEY,
+} from "../services/requestId";
 
 function resolveCommitSha(): string | undefined {
   return (
@@ -33,6 +38,13 @@ async function getDatabaseDependencyCheck() {
 
 export function createV2Router(): Router {
   const router = Router();
+
+  router.use((req, res, next) => {
+    const requestId = resolveRequestId(req.header(V2_REQUEST_ID_HEADER) || undefined);
+    res.locals[V2_REQUEST_ID_LOCALS_KEY] = requestId;
+    res.setHeader(V2_REQUEST_ID_HEADER, requestId);
+    next();
+  });
 
   router.get("/health", async (_req, res) => {
     const payload = {

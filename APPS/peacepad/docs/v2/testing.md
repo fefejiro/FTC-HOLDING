@@ -8,7 +8,8 @@ npx vitest run \
   tests/unit/v2/intentRouter.test.ts \
   tests/unit/v2/conflictCheck.test.ts \
   tests/unit/v2/rewriteMessage.test.ts \
-  tests/unit/v2/supportDiscovery.test.ts
+  tests/unit/v2/supportDiscovery.test.ts \
+  tests/unit/v2/requestId.test.ts
 ```
 
 What is covered:
@@ -16,6 +17,7 @@ What is covered:
 - Conflict check returns `conflict_level` and `safety_flags`.
 - Rewrite message returns three styles and filters escalation language.
 - Support discovery applies ranking and crisis-first safety gating.
+- Request ID resolver preserves valid IDs and generates fallback IDs for invalid values.
 
 ## Type Check / Lint Baseline
 Project command:
@@ -28,7 +30,7 @@ Note: this repo currently has pre-existing TypeScript errors outside `server/v2/
 
 ## Latest Execution Snapshot (2026-03-04)
 - `npm run check`: fails due existing non-v2 TypeScript errors in `client/*`, `server/replit_integrations/*`, and other legacy files.
-- `npx vitest run tests/unit/v2/*.test.ts`: pass (6 tests).
+- `npx vitest run tests/unit/v2/*.test.ts`: pass (9 tests).
 - Local smoke endpoints on `http://127.0.0.1:5099`:
   - `GET /v2/health` -> `200`
   - `POST /v2/router/intent` -> `200`
@@ -53,6 +55,13 @@ Also verify a v1 endpoint still responds:
 
 ```bash
 curl -s http://localhost:5000/api/version
+```
+
+Verify request correlation behavior:
+
+```bash
+curl -i -s http://localhost:5000/v2/health | grep -i x-request-id
+curl -i -s http://localhost:5000/v2/health -H 'x-request-id: pp-manual-123' | grep -i x-request-id
 ```
 
 Note:

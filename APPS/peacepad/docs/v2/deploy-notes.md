@@ -26,5 +26,6 @@
 
 ## Risk Mitigations
 - Strict request/response schemas on every v2 endpoint.
+- Per-request correlation via `x-request-id` on all `/v2/*` responses.
 - Module run tracking is best-effort and non-blocking.
 - v2 uses additive routing and does not overwrite existing handlers.

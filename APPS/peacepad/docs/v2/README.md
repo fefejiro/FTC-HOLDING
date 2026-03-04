@@ -52,6 +52,11 @@ This document defines the `v2` boundary and the phased implementation plan for a
 - `pp_v2_module_runs`: tracks v2 module execution metadata and hashes.
 - `pp_v2_launcher_state`: stores launcher pin/recent/usage state by user/session.
 
+## Operational Docs
+- Rollout status tracker: `docs/v2/roadmap.md`
+- SQL query pack: `docs/v2/observability.sql`
+- Observability playbook: `docs/v2/observability-runbook.md`
+
 ## Phase 1 Delivered
 - `server/v2/registry/moduleRegistry.ts` with stable module IDs and metadata.
 - `POST /v2/router/intent` with strict request/response validation.

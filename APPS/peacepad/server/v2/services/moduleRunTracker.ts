@@ -13,6 +13,7 @@ interface ModuleRunTrackContext {
   input: unknown;
   userId?: string;
   sessionId?: string;
+  requestId?: string;
 }
 
 function hashPayload(payload: unknown): string {
@@ -49,11 +50,19 @@ export async function withModuleRunTracking<T>(
     if (dbError.code === "42P01") {
       trackingAvailable = false;
       if (!missingTableWarningShown) {
-        console.warn("[v2][tracker] tracking table missing; run v2 migrations to enable run auditing.");
+        console.warn("[v2][tracker] tracking table missing; run v2 migrations to enable run auditing.", {
+          requestId: ctx.requestId,
+          moduleId: ctx.moduleId,
+        });
         missingTableWarningShown = true;
       }
     } else {
-      console.warn("[v2][tracker] start tracking failed", error);
+      console.warn("[v2][tracker] start tracking failed", {
+        requestId: ctx.requestId,
+        moduleId: ctx.moduleId,
+        errorName: error instanceof Error ? error.name : "UNKNOWN_ERROR",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -91,7 +100,12 @@ export async function withModuleRunTracking<T>(
           })
           .where(eq(ppV2ModuleRuns.id, runId));
       } catch (updateError) {
-        console.warn("[v2][tracker] failed to update errored run", updateError);
+        console.warn("[v2][tracker] failed to update errored run", {
+          requestId: ctx.requestId,
+          moduleId: ctx.moduleId,
+          errorName: updateError instanceof Error ? updateError.name : "UNKNOWN_ERROR",
+          errorMessage: updateError instanceof Error ? updateError.message : String(updateError),
+        });
       }
     }
     throw error;

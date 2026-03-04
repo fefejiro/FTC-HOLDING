@@ -1,6 +1,7 @@
 # PeacePad v2 Module Contracts
 
 All contracts are validated with strict Zod schemas under `server/v2/schemas/*`.
+All `/v2/*` responses include `x-request-id` for request/log correlation.
 
 ## `GET /v2/health`
 Response:
