@@ -30,6 +30,17 @@ export function useAuth() {
         console.log('[Auth] Session fetch failed:', res.status);
         return null;
       }
+
+      const contentType = (res.headers.get("content-type") || "").toLowerCase();
+      if (!contentType.includes("application/json")) {
+        // Prevent hard failures/loops when a misrouted API call returns HTML.
+        console.error("[Auth] Unexpected non-JSON session response", {
+          status: res.status,
+          contentType,
+          url: res.url,
+        });
+        return null;
+      }
       
       const userData = await res.json();
       console.log('[Auth] Session restored for user:', userData.id);

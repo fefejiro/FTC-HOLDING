@@ -1,7 +1,16 @@
 export const NATIVE_API_BASE_FALLBACK_URL = "https://api.peacepad.ca";
 export const API_PREFIXES = ["/api", "/health", "/__replit_health"] as const;
+const WEB_API_FALLBACK_HOSTS = new Set([
+  "peacepad.ca",
+  "www.peacepad.ca",
+  "ftc-holding.pages.dev",
+]);
 
-export type ApiBaseUrlSource = "env" | "same-origin" | "native-fallback";
+export type ApiBaseUrlSource =
+  | "env"
+  | "same-origin"
+  | "native-fallback"
+  | "web-fallback";
 
 export interface ApiBaseUrlResolution {
   baseUrl: string;
@@ -44,6 +53,20 @@ export function resolveApiBaseUrl({
   }
 
   const normalizedWebOrigin = normalizeApiBaseUrl(webOrigin);
+
+  if (normalizedWebOrigin) {
+    try {
+      const hostname = new URL(normalizedWebOrigin).hostname.toLowerCase();
+      if (WEB_API_FALLBACK_HOSTS.has(hostname)) {
+        return {
+          baseUrl: NATIVE_API_BASE_FALLBACK_URL,
+          source: "web-fallback",
+        };
+      }
+    } catch {
+      // Fall through to same-origin.
+    }
+  }
 
   return {
     baseUrl: normalizedWebOrigin,
