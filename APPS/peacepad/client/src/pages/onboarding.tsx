@@ -8,14 +8,13 @@ import SingleSlideWelcome from "@/components/SingleSlideWelcome";
 import ConsentAgreement from "@/components/ConsentAgreement";
 import GuestEntry from "@/components/GuestEntry";
 import { SEOHead } from "@/components/SEOHead";
-import { LogIn, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 
 interface OnboardingAuthChoiceProps {
   onContinueAsGuest: () => void;
-  onSignIn: () => void;
 }
 
-function OnboardingAuthChoice({ onContinueAsGuest, onSignIn }: OnboardingAuthChoiceProps) {
+function OnboardingAuthChoice({ onContinueAsGuest }: OnboardingAuthChoiceProps) {
   return (
     <div className="min-h-[100dvh] flex items-center justify-center px-6 py-10 bg-background">
       <div
@@ -23,24 +22,14 @@ function OnboardingAuthChoice({ onContinueAsGuest, onSignIn }: OnboardingAuthCho
         data-testid="onboarding-auth-choice"
       >
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Choose how to continue</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Continue to PeacePad</h1>
           <p className="text-sm text-muted-foreground">
-            Continue as a guest for up to 14 days, or sign in to keep your data long-term.
+            Start as a guest for up to 14 days. You can upgrade your account later.
           </p>
         </div>
 
         <div className="space-y-3">
           <Button
-            onClick={onSignIn}
-            className="w-full justify-center"
-            data-testid="button-onboarding-sign-in"
-          >
-            <LogIn className="h-4 w-4" />
-            Sign in
-          </Button>
-
-          <Button
-            variant="outline"
             onClick={onContinueAsGuest}
             className="w-full justify-center"
             data-testid="button-onboarding-continue-guest"
@@ -68,7 +57,7 @@ export default function OnboardingPage() {
   });
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const { user, isLoading, login } = useAuth();
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
     if (isLoading) return;
@@ -215,7 +204,6 @@ export default function OnboardingPage() {
     return (
       <OnboardingAuthChoice
         onContinueAsGuest={() => setShowGuestEntry(true)}
-        onSignIn={login}
       />
     );
   }

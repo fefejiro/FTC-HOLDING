@@ -35,7 +35,6 @@ test.describe("P1 Critical: Guest-First Onboarding", () => {
     await completeIntroAndConsent(page);
 
     await expect(page.getByTestId("onboarding-auth-choice")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId("button-onboarding-sign-in")).toBeVisible();
     await expect(page.getByTestId("button-onboarding-continue-guest")).toBeVisible();
 
     await page.getByTestId("button-onboarding-continue-guest").click();
