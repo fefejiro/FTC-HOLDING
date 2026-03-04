@@ -1,78 +1,68 @@
-# PeacePad v2 Module Engine
+# PeacePad v2 Conversation Orchestrator
 
 ## Purpose
-This document defines the `v2` boundary and the phased implementation plan for a safe rollout that does not alter existing `v1` behavior.
+`v2` provides a strict, evolvable assistant contract without changing existing `v1 /api` behavior.
 
-## v2 Boundary
-- New API prefix: `/v2/*`
-- New server code root: `server/v2/*`
-- Existing `v1` routes remain in `server/routes.ts` and are left unchanged.
-- `v2` mounts as an additional router from the main server route registration.
+Primary entrypoint:
+- `POST /v2/conversation/orchestrate`
 
-## v2 Routes
+Supporting endpoints:
 - `GET /v2/health`
 - `POST /v2/router/intent`
 - `POST /v2/modules/conflict-check`
 - `POST /v2/modules/rewrite-message`
 - `POST /v2/modules/support-discovery`
 
-## Current Baseline (Phase 0 inspection)
-- Main route registration: `server/routes.ts` via `registerRoutes(app)`.
-- Server bootstrap: `server/index.ts`.
-- Validation tooling in use: `zod` and `drizzle-zod` (`shared/schema.ts`).
-- DB tooling in use: `drizzle-orm`, `drizzle-kit`, SQL migrations in `migrations/` and operational SQL scripts in `server/migrations/`.
-- Reusable services identified:
-  - Conflict and safety signals: `server/emotionAnalyzer.ts`, `server/services/aiBoundaries.ts`
-  - Rewrite support: `server/services/prepChatService.ts`
-  - Support discovery: `server/services/ontario211.ts`, `storage.getSupportResources(...)`
+## v2 Boundary
+- API prefix: `/v2/*`
+- Server implementation: `server/v2/*`
+- Documentation: `docs/v2/*`
+- Additive migration files only: `server/migrations/*`
+- Existing `v1` routes in `server/routes.ts` remain untouched.
 
-## Implementation Plan
-1. Phase 1: Module registry + intent router + `/v2/health`
-   - Add `server/v2` router mount and schemas.
-   - Implement canonical module registry and intent routing endpoint.
-   - Add minimal unit tests and docs updates.
-2. Phase 2: Conflict check module
-   - Add `/v2/modules/conflict-check`.
-   - Reuse `analyzeConflict` and boundaries logic.
-   - Add strict input/output schemas and tests.
-3. Phase 3: Rewrite message module
-   - Add `/v2/modules/rewrite-message`.
-   - Reuse `analyzeDraftTone` and safe rewrite generation patterns.
-   - Include calm/neutral/boundary variants with personality-aware phrasing.
-4. Phase 4: Support discovery module
-   - Add `/v2/modules/support-discovery`.
-   - Reuse support resource storage and Ontario 211 integration.
-   - Add ranking and crisis-first safety gating.
-5. Data + handover
-   - Add `pp_v2_module_runs` and `pp_v2_launcher_state` tables through shared schema + migration SQL.
-   - Complete `docs/v2/*` handover docs.
-   - Run lint/tests/smoke checks and verify `v1` endpoints still respond.
+## Canonical Envelope (all v2 endpoints)
+Every v2 endpoint returns the same top-level envelope:
+- `ok`
+- `session`
+- `intent`
+- `analysis.conflict`
+- `safety`
+- `explain`
+- `actions`
+- `ui`
+- `data`
+- `errors`
+
+Contract details:
+- `ui.version` is always `1`.
+- Conflict meter is always represented via `ui.chips`.
+- User-operable buttons are expressed via `actions` only.
+- Existing module payloads are preserved under `data` for compatibility.
+
+## Orchestrator Responsibilities
+`POST /v2/conversation/orchestrate` composes existing v2 modules with deterministic safety behavior:
+1. Create/resume session.
+2. Persist user message.
+3. Resolve intent (`userChoice` first, otherwise router).
+4. Run conflict check with deterministic fallback if AI/provider is unavailable.
+5. Apply safety gating:
+   - High-risk safety flags trigger support-first handoff and block rewrite.
+6. Chain module execution when safe (`rewrite` or `support`).
+7. Return canonical envelope with UX contract fields (`chips`, `actions`, `explain`).
 
 ## Data Tracking
-- `pp_v2_module_runs`: tracks v2 module execution metadata and hashes.
-- `pp_v2_launcher_state`: stores launcher pin/recent/usage state by user/session.
+Existing:
+- `pp_v2_module_runs`
+- `pp_v2_launcher_state`
 
-## Phase 1 Delivered
-- `server/v2/registry/moduleRegistry.ts` with stable module IDs and metadata.
-- `POST /v2/router/intent` with strict request/response validation.
-- `GET /v2/health` with versioned payload and dependency checks.
-- New `v2` mount added in `server/routes.ts` as `app.use("/v2", ...)`.
-- Unit tests added for intent routing behavior in `tests/unit/v2/intentRouter.test.ts`.
+New for orchestrator:
+- `pp_v2_conversation_sessions`
+- `pp_v2_conversation_messages`
+- `pp_v2_coparent_profiles` (lightweight personalization hints; no invite/thread model)
 
-## Phase 2 Delivered
-- `POST /v2/modules/conflict-check` implemented in `server/v2/modules/conflictCheck.ts`.
-- Conflict analysis refactor service added in `server/v2/services/conflictService.ts`.
-- Strict schemas added in `server/v2/schemas/conflictCheck.ts`.
-- Unit test added in `tests/unit/v2/conflictCheck.test.ts`.
-
-## Phase 3 Delivered
-- `POST /v2/modules/rewrite-message` implemented in `server/v2/modules/rewriteMessage.ts`.
-- Rewrite refactor service added in `server/v2/services/rewriteService.ts` using `prepChatService`.
-- Strict schemas added in `server/v2/schemas/rewriteMessage.ts`.
-- Unit test added in `tests/unit/v2/rewriteMessage.test.ts`.
-
-## Phase 4 Delivered
-- `POST /v2/modules/support-discovery` implemented in `server/v2/modules/supportDiscovery.ts`.
-- Support discovery refactor service added in `server/v2/services/supportDiscoveryService.ts` using existing support sources.
-- Strict schemas added in `server/v2/schemas/supportDiscovery.ts`.
-- Unit test added in `tests/unit/v2/supportDiscovery.test.ts`.
+## UX Contract Pointers
+See `docs/v2/ux-contract.md` for:
+- `ui.version` migration strategy
+- Conflict chip and meter semantics
+- `start_new_session` action behavior
+- `message_only` vs `history_assisted` conflict source semantics
