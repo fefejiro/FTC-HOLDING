@@ -2,6 +2,10 @@ import { calculateConflictEscalationScore, type CESResult } from "../../aiHelper
 import { analyzeConflict, type ConflictAnalysis } from "../../emotionAnalyzer";
 import type { ConflictCheckRequest, ConflictCheckResponse } from "../schemas/conflictCheck";
 import { detectSafetyFlagsFromText, hasCrisisSafetyFlag } from "./safetySignals";
+import {
+  fallbackScoreToLegacyConflictLevel,
+  scoreConflictFallback,
+} from "./deterministicFallback";
 
 type AnalyzeConflictFn = (
   message: string,
@@ -157,11 +161,56 @@ export async function runConflictCheck(
   const cesHistory = toCESHistory(conversationHistory);
   const userId = input.context?.user_id ?? "v2-user";
 
-  const [analysis, cesResult] = await Promise.all([
-    analyzeConflictFn(input.text, conversationHistory),
-    Promise.resolve(calculateCESFn(input.text, cesHistory, userId)),
-  ]);
+  let analysis: ConflictAnalysis;
+  let fallbackSignals: string[] = [];
+  try {
+    analysis = await analyzeConflictFn(input.text, conversationHistory);
+  } catch (error) {
+    const fallback = scoreConflictFallback(input.text);
+    const fallbackLevel = fallbackScoreToLegacyConflictLevel(fallback.score);
+    fallbackSignals = fallback.signals;
+    analysis = {
+      hasConflict: fallbackLevel > 0,
+      conflictType: fallbackLevel > 0 ? "communication" : "none",
+      severity: fallback.level === "high" ? "high" : fallback.level === "medium" ? "medium" : "low",
+      triggerPhrases: fallback.signals,
+      rootCause: "Deterministic fallback activated because AI analysis was unavailable.",
+      resolution: {
+        immediate: "Pause and send a concise factual statement.",
+        shortTerm: "Avoid threat/insult language and focus on concrete next steps.",
+        longTerm: "Use repeatable communication boundaries and support escalation paths.",
+      },
+      communicationTip: "Lead with one clear request and child-focused framing.",
+      language: "en",
+    };
+    console.warn("[v2][conflict-check] Falling back to deterministic scoring.", error);
+  }
 
+  let cesResult: CESResult;
+  try {
+    cesResult = await Promise.resolve(calculateCESFn(input.text, cesHistory, userId));
+  } catch (error) {
+    const fallback = scoreConflictFallback(input.text);
+    const fallbackScore = Math.round(fallback.score * 100);
+    cesResult = {
+      score: fallbackScore,
+      state: fallbackScore >= 60 ? "escalating" : "stable",
+      phase: fallbackScore >= 60 ? "warm" : "calm",
+      interventionLevel: fallbackScore >= 60 ? "modal" : "none",
+      trajectory: fallbackScore >= 60 ? "worsening" : "stable",
+      signals: fallback.signals.map((signal) => ({
+        type: "pattern",
+        signal,
+        weight: 8,
+        description: `Fallback signal: ${signal.replace(/_/g, " ")}`,
+      })),
+      suggestedActions: [],
+      pauseRecommended: fallbackScore >= 60,
+      pauseDuration: fallbackScore >= 60 ? 20 : 0,
+      childImpactReminder: fallbackScore >= 30,
+    } as CESResult;
+    console.warn("[v2][conflict-check] CES unavailable; using deterministic score.", error);
+  }
   const baseLevel = mapSeverityToLevel(analysis.severity, analysis.hasConflict);
   const cesLevel = mapCESScoreToLevel(cesResult.score);
   let conflictLevel = Math.max(baseLevel, cesLevel);
@@ -173,9 +222,19 @@ export async function runConflictCheck(
     conflictLevel = 4;
   }
 
+  const signals = buildSignals(analysis, cesResult);
+  for (const fallbackSignal of fallbackSignals) {
+    signals.push({
+      type: "pattern",
+      key: fallbackSignal,
+      description: `Fallback signal: ${fallbackSignal.replace(/_/g, " ")}`,
+      weight: 8,
+    });
+  }
+
   return {
     conflict_level: conflictLevel,
-    signals: buildSignals(analysis, cesResult),
+    signals: signals.slice(0, 20),
     safety_flags: safetyFlags,
     recommended_next_actions: buildRecommendedActions(conflictLevel, crisisFlag, analysis),
     do_not_say: buildDoNotSayList(analysis),
