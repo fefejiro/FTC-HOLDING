@@ -1,0 +1,845 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PeacePad v2 API",
+    "version": "1.0.0",
+    "description": "OpenAPI spec generated from PeacePad v2 Zod contracts."
+  },
+  "servers": [
+    {
+      "url": "https://api.peacepad.ca"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v2/conversation/orchestrate": {
+      "post": {
+        "operationId": "orchestrateConversationV2",
+        "summary": "Run the v2 conversation orchestrator",
+        "tags": [
+          "v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrchestrateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canonical v2 envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V2ResponseEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/health": {
+      "get": {
+        "operationId": "getV2Health",
+        "summary": "Get v2 health status",
+        "tags": [
+          "v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "Canonical v2 envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V2ResponseEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/router/intent": {
+      "post": {
+        "operationId": "routeIntentV2",
+        "summary": "Route text to the best v2 module",
+        "tags": [
+          "v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntentRouteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canonical v2 envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V2ResponseEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/modules/conflict-check": {
+      "post": {
+        "operationId": "runConflictCheckV2",
+        "summary": "Run conflict analysis",
+        "tags": [
+          "v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConflictCheckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canonical v2 envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V2ResponseEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/modules/rewrite-message": {
+      "post": {
+        "operationId": "runRewriteMessageV2",
+        "summary": "Rewrite a co-parenting message",
+        "tags": [
+          "v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RewriteMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canonical v2 envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V2ResponseEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/modules/support-discovery": {
+      "post": {
+        "operationId": "runSupportDiscoveryV2",
+        "summary": "Discover support resources",
+        "tags": [
+          "v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportDiscoveryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canonical v2 envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V2ResponseEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Use `Bearer <token>` in the Authorization header."
+      }
+    },
+    "schemas": {
+      "V2ResponseEnvelope": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "session": {
+            "type": "object",
+            "properties": {
+              "sessionId": {
+                "type": "string",
+                "minLength": 1,
+                "nullable": true
+              },
+              "isNew": {
+                "type": "boolean"
+              },
+              "userId": {
+                "type": "string",
+                "minLength": 1,
+                "nullable": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "sessionId",
+              "isNew",
+              "userId"
+            ]
+          },
+          "intent": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "nullable": true
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "nullable": true
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "user_choice",
+                  "router",
+                  "unknown"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "confidence",
+              "source"
+            ]
+          },
+          "analysis": {
+            "type": "object",
+            "properties": {
+              "conflict": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "low",
+                      "medium",
+                      "high"
+                    ]
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "message_only",
+                      "history_assisted"
+                    ]
+                  },
+                  "signals": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "score",
+                  "level",
+                  "source",
+                  "signals"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "conflict"
+            ]
+          },
+          "safety": {
+            "type": "object",
+            "properties": {
+              "safeToProceed": {
+                "type": "boolean"
+              },
+              "flags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "handoff": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "support"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "reason"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "safeToProceed",
+              "flags",
+              "handoff"
+            ]
+          },
+          "explain": {
+            "type": "object",
+            "properties": {
+              "summary": {
+                "type": "string"
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "summary",
+              "reasons"
+            ]
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "copy",
+                    "run_module",
+                    "open_url",
+                    "save",
+                    "start_new_session"
+                  ]
+                },
+                "payload": {}
+              },
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "label",
+                "type",
+                "payload"
+              ]
+            }
+          },
+          "ui": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "integer",
+                "enum": [
+                  1
+                ],
+                "default": 1
+              },
+              "chips": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "variant": {
+                      "type": "string",
+                      "enum": [
+                        "info",
+                        "warning",
+                        "danger"
+                      ]
+                    },
+                    "expandable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "label",
+                    "variant",
+                    "expandable"
+                  ]
+                }
+              },
+              "cards": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "chips",
+              "cards"
+            ]
+          },
+          "data": {},
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "session",
+          "intent",
+          "analysis",
+          "safety",
+          "explain",
+          "actions",
+          "ui",
+          "data",
+          "errors"
+        ]
+      },
+      "OrchestrateRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "userId": {
+                "type": "string",
+                "minLength": 1,
+                "nullable": true
+              },
+              "locale": {
+                "type": "string",
+                "minLength": 1,
+                "nullable": true
+              },
+              "tz": {
+                "type": "string",
+                "minLength": 1,
+                "nullable": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "userId",
+              "locale",
+              "tz"
+            ],
+            "nullable": true
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "narration",
+              "task"
+            ]
+          },
+          "message": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "voice",
+                  "typed"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "source"
+            ]
+          },
+          "userChoice": {
+            "type": "object",
+            "properties": {
+              "moduleId": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "moduleId"
+            ],
+            "nullable": true
+          },
+          "contextHints": {
+            "type": "object",
+            "properties": {
+              "coparentTone": {
+                "type": "string",
+                "minLength": 1,
+                "nullable": true
+              },
+              "userTone": {
+                "type": "string",
+                "minLength": 1,
+                "nullable": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "coparentTone",
+              "userTone"
+            ],
+            "nullable": true
+          },
+          "debug": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sessionId",
+          "user",
+          "mode",
+          "message",
+          "userChoice",
+          "contextHints",
+          "debug"
+        ]
+      },
+      "IntentRouteRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "user_style": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "coparent_style": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "conversation_history": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000
+                },
+                "maxItems": 25
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "user_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ]
+      },
+      "ConflictCheckRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "conversation_history": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            },
+            "maxItems": 25
+          },
+          "user_style": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "coparent_style": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ]
+      },
+      "RewriteMessageRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "user_style": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "coparent_style": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "conflict_level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ]
+      },
+      "SupportDiscoveryRequest": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 250
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "conflict_level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "safety_flags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "immediate_danger",
+                "domestic_violence_risk",
+                "self_harm_risk",
+                "legal_escalation",
+                "pressure_control",
+                "off_topic",
+                "high_conflict"
+              ]
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            },
+            "additionalProperties": false
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "latitude": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "city": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "country_code": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 3
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}
