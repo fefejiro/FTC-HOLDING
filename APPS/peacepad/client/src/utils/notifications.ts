@@ -2,6 +2,7 @@
 // Using W3C Push API with VAPID (not FCM)
 
 let registration: ServiceWorkerRegistration | null = null;
+const SERVICE_WORKER_ENABLED = import.meta.env.VITE_ENABLE_SW === 'true';
 
 export interface PushSubscriptionData {
   endpoint: string;
@@ -15,6 +16,11 @@ export interface PushSubscriptionData {
  */
 export async function initPushNotifications(): Promise<PushSubscriptionData | null> {
   try {
+    if (!SERVICE_WORKER_ENABLED) {
+      console.warn('[notifications] Service Worker disabled by config (VITE_ENABLE_SW!=true)');
+      return null;
+    }
+
     // Check if service worker and push are supported
     if (!('serviceWorker' in navigator)) {
       console.warn('[notifications] Service Worker not supported');

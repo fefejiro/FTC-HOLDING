@@ -3,6 +3,8 @@ import App from "./App";
 import "./index.css";
 import { installApiFetchPatch } from "./lib/queryClient";
 
+const SERVICE_WORKER_ENABLED = import.meta.env.VITE_ENABLE_SW === "true";
+
 installApiFetchPatch();
 
 // Early platform detection for safe-area CSS (runs before React mounts)
@@ -34,5 +36,30 @@ installApiFetchPatch();
     // Not running in Capacitor
   }
 })();
+
+// Emergency safety valve:
+// Keep Service Worker disabled unless explicitly enabled via VITE_ENABLE_SW=true.
+// This prevents stale/corrupted SW fetch handlers from breaking app navigation.
+if (!SERVICE_WORKER_ENABLED && "serviceWorker" in navigator) {
+  (async () => {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+
+      if ("caches" in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames
+            .filter((name) => name.startsWith("peacepad-"))
+            .map((name) => caches.delete(name)),
+        );
+      }
+
+      console.warn("[SW] Disabled by config (VITE_ENABLE_SW!=true). Existing workers unregistered.");
+    } catch (error) {
+      console.warn("[SW] Failed to unregister existing service workers:", error);
+    }
+  })();
+}
 
 createRoot(document.getElementById("root")!).render(<App />);

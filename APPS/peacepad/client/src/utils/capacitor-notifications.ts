@@ -1,6 +1,8 @@
 import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 
+const SERVICE_WORKER_ENABLED = import.meta.env.VITE_ENABLE_SW === 'true';
+
 /**
  * PeacePad Unified Push Notification Service
  * 
@@ -65,6 +67,11 @@ export async function initializeNotifications(): Promise<void> {
  */
 async function initWebPush(): Promise<void> {
   console.log('[Notifications] Initializing web push...');
+
+  if (!SERVICE_WORKER_ENABLED) {
+    console.warn('[Notifications] Service Worker disabled by config (VITE_ENABLE_SW!=true)');
+    return;
+  }
   
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     throw new Error('Web push not supported in this browser');
