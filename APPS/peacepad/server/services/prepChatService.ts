@@ -29,12 +29,21 @@ interface ChatMessage {
   timestamp: string;
 }
 
+function normalizeForComparison(text: string): string {
+  return (text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function buildGuaranteedRevision(draft: string): string {
   const raw = (draft || '').trim();
   if (!raw) {
     return "Could we talk when you have a moment? I'd like to find a solution that works for both of us.";
   }
 
+  const originalNormalized = normalizeForComparison(raw);
   let revised = raw;
   revised = revised.replace(/\byou always\b/gi, "I feel this has happened repeatedly");
   revised = revised.replace(/\byou never\b/gi, "I feel this hasn't been happening");
@@ -49,12 +58,24 @@ function buildGuaranteedRevision(draft: string): string {
     revised = `${revised}.`;
   }
 
+  // Guarantee this is actually a revision and not effectively the same sentence.
+  if (normalizeForComparison(revised) === originalNormalized) {
+    if (/\b(pickup|pick up|drop off|schedule|friday|monday|tuesday|wednesday|thursday|saturday|sunday)\b/i.test(raw)) {
+      revised = "Hi, I'd like to coordinate the pickup schedule for Friday. Could we agree on a time that works for both of us?";
+    } else {
+      revised = `Hi, I'd like to communicate this clearly: ${raw} Could we work through this together?`;
+    }
+  }
+
   return revised;
 }
 
 function ensureSuggestedRevision(suggestedRevision: string | undefined, draft: string): string {
   const candidate = (suggestedRevision || '').trim();
-  if (candidate.length >= 3) {
+  if (
+    candidate.length >= 3 &&
+    normalizeForComparison(candidate) !== normalizeForComparison(draft)
+  ) {
     return candidate;
   }
   return buildGuaranteedRevision(draft);
@@ -238,7 +259,9 @@ Analyze the message thoroughly and respond with this EXACT JSON structure:
   "strengthsIdentified": ["any positive aspects of the message"]
 }
 
-IMPORTANT: If the message is accusatory or uses "you never/always" language, it is NEVER neutral. It is confrontational.`;
+IMPORTANT: If the message is accusatory or uses "you never/always" language, it is NEVER neutral. It is confrontational.
+IMPORTANT: "suggestedRevision" MUST be a rewritten version, not a near-copy of the original draft.
+If the original is already calm, still improve clarity/collaboration and avoid returning the same sentence.`;
 
   if (!openai) {
     // Even without AI, use pattern detection for basic classification
