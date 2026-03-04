@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { conflictLevelSchema, safetyFlagSchema } from "./common";
+import { conflictLevelSchema, safetyFlagSchema } from "./common.ts";
 
 export const rewriteMessageRequestSchema = z
   .object({

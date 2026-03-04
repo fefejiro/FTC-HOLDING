@@ -12,6 +12,7 @@
                     "verify:no-replit-domains":  "if grep -R \"REPLIT_DOMAINS not provided\" dist; then echo \"[build] ERROR: stale REPLIT_DOMAINS hard-fail found in dist output\"; exit 1; fi",
                     "check":  "tsc",
                     "db:push":  "drizzle-kit push",
+                    "v2:openapi":  "node ./server/v2/tools/generateOpenApi.ts",
                     "test:report":  "node scripts/generateTestSummary.cjs",
                     "smoke:guest-auth":  "node scripts/smoke-guest-auth.mjs"
                 },

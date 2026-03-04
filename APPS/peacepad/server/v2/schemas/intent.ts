@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { MODULE_IDS } from "../registry/moduleRegistry";
-import { cardSuggestionSchema, conflictLevelSchema, safetyFlagSchema } from "./common";
+import { MODULE_IDS } from "../registry/moduleRegistry.ts";
+import { cardSuggestionSchema, conflictLevelSchema, safetyFlagSchema } from "./common.ts";
 
 export const intentRouteRequestSchema = z
   .object({
