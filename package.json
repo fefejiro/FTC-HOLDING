@@ -28,6 +28,8 @@
     "doctor": "node -v && npm -v && (test -d APPS && echo APPS ok)",
     "audit:secrets": "node scripts/audit-secrets.cjs",
     "verify:peacepad:prod": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-prod.ps1",
-    "verify:peacepad:local": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-local.ps1"
+    "verify:peacepad:local": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-local.ps1",
+    "worker:deploy:dry-run": "npx wrangler deploy --dry-run",
+    "worker:dev": "npx wrangler dev"
   }
 }
