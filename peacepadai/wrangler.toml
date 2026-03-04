@@ -1,0 +1,6 @@
+name = "peacepadai"
+main = "workers/peacepadai/src/index.ts"
+compatibility_date = "2026-03-04"
+workers_dev = true
+
+# Worker config for Cloudflare Workers Builds when root directory is "peacepadai".
