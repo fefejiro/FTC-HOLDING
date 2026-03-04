@@ -1,4 +1,5 @@
 export const MODULE_IDS = {
+  CONVERSATION_ORCHESTRATE: "PP_MOD_CONVERSATION_ORCHESTRATE",
   ROUTER_INTENT: "PP_MOD_ROUTER_INTENT",
   CONFLICT_CHECK: "PP_MOD_CONFLICT_CHECK",
   REWRITE_MESSAGE: "PP_MOD_REWRITE_MESSAGE",
@@ -19,6 +20,16 @@ export interface ModuleRegistryEntry {
 }
 
 export const moduleRegistry: Record<ModuleId, ModuleRegistryEntry> = {
+  [MODULE_IDS.CONVERSATION_ORCHESTRATE]: {
+    module_id: MODULE_IDS.CONVERSATION_ORCHESTRATE,
+    title: "Conversation Orchestrator",
+    description:
+      "Composes intent routing, conflict checks, rewrite, and support modules into a unified assistant response envelope.",
+    tags: ["orchestration", "assistant", "conversation"],
+    risk_level: "medium",
+    endpoint_path: "/v2/conversation/orchestrate",
+    version: "v2",
+  },
   [MODULE_IDS.ROUTER_INTENT]: {
     module_id: MODULE_IDS.ROUTER_INTENT,
     title: "Intent Router",
