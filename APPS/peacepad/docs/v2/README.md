@@ -66,3 +66,24 @@ See `docs/v2/ux-contract.md` for:
 - Conflict chip and meter semantics
 - `start_new_session` action behavior
 - `message_only` vs `history_assisted` conflict source semantics
+
+## GPT Action Import
+- OpenAPI file: `APPS/peacepad/docs/v2/openapi.yml`
+- Recommended single action for GPT tools: `POST /v2/conversation/orchestrate`
+- Bearer token location: set `Authorization` header as `Bearer <token>` in the Action authentication configuration.
+
+Minimal orchestrate payload:
+```json
+{
+  "sessionId": null,
+  "user": null,
+  "mode": "task",
+  "message": {
+    "text": "Help me draft a calm pickup update.",
+    "source": "typed"
+  },
+  "userChoice": null,
+  "contextHints": null,
+  "debug": false
+}
+```
