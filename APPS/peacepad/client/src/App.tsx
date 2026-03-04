@@ -426,13 +426,34 @@ function WebRTCContextWrapper({ children }: { children: React.ReactNode }) {
   const needsRealtime = !!user;
   const sessionId = typeof window !== 'undefined' ? (localStorage.getItem("peacepad_session_id") || user?.id || '') : '';
   const wsUrl = user && typeof window !== 'undefined'
-    ? createWebSocketUrl({
-        path: '/ws/signaling',
-        params: {
-          sessionId: sessionId || '',
-          userId: user.id
+    ? (() => {
+        const createdUrl = createWebSocketUrl({
+          path: '/ws/signaling',
+          params: {
+            sessionId: sessionId || '',
+            userId: user.id
+          }
+        });
+
+        // Last-resort guard: never let production web connect signaling via the Pages host.
+        if (
+          createdUrl.includes("://peacepad.ca/") ||
+          createdUrl.includes("://www.peacepad.ca/") ||
+          createdUrl.includes("://ftc-holding.pages.dev/")
+        ) {
+          const forcedUrl = createdUrl.replace(
+            /^wss?:\/\/(peacepad\.ca|www\.peacepad\.ca|ftc-holding\.pages\.dev)/i,
+            "wss://api.peacepad.ca",
+          );
+          console.warn("[WebSocket] Forced signaling host rewrite at App layer", {
+            createdUrl,
+            forcedUrl,
+          });
+          return forcedUrl;
         }
-      })
+
+        return createdUrl;
+      })()
     : '';
 
   const handleWebSocketMessage = useCallback(async (event: MessageEvent) => {

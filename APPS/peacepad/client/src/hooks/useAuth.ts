@@ -10,44 +10,78 @@ import {
 } from "@/lib/supabaseAuth";
 import type { User } from "@shared/schema";
 
+const AUTH_FETCH_THROTTLE_MS = 1500;
+let inFlightSessionFetch: Promise<User | null> | null = null;
+let lastSessionFetchAt = 0;
+let lastSessionSnapshot: User | null = null;
+
+async function fetchSessionSnapshot(): Promise<User | null> {
+  console.log('[Auth] Fetching user session...');
+  const res = await fetch(getApiUrl("/api/auth/user"), {
+    credentials: "include",
+  });
+  
+  if (res.status === 401) {
+    console.log('[Auth] No active session (401)');
+    return null;
+  }
+  
+  if (!res.ok) {
+    console.log('[Auth] Session fetch failed:', res.status);
+    return null;
+  }
+
+  const contentType = (res.headers.get("content-type") || "").toLowerCase();
+  if (!contentType.includes("application/json")) {
+    // Prevent hard failures/loops when a misrouted API call returns HTML.
+    console.error("[Auth] Unexpected non-JSON session response", {
+      status: res.status,
+      contentType,
+      url: res.url,
+    });
+    return null;
+  }
+  
+  const userData = await res.json();
+  console.log('[Auth] Session restored for user:', userData.id);
+  return userData;
+}
+
 export function useAuth() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   const { data: user, isLoading, isFetching, status } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
-      console.log('[Auth] Fetching user session...');
-      const res = await fetch(getApiUrl("/api/auth/user"), {
-        credentials: "include",
-      });
-      
-      if (res.status === 401) {
-        console.log('[Auth] No active session (401)');
-        return null;
-      }
-      
-      if (!res.ok) {
-        console.log('[Auth] Session fetch failed:', res.status);
-        return null;
+      const now = Date.now();
+
+      if (inFlightSessionFetch) {
+        return inFlightSessionFetch;
       }
 
-      const contentType = (res.headers.get("content-type") || "").toLowerCase();
-      if (!contentType.includes("application/json")) {
-        // Prevent hard failures/loops when a misrouted API call returns HTML.
-        console.error("[Auth] Unexpected non-JSON session response", {
-          status: res.status,
-          contentType,
-          url: res.url,
-        });
-        return null;
+      // Defensive dedupe: avoid storming /api/auth/user when multiple components
+      // invalidate/remount in quick succession.
+      if (now - lastSessionFetchAt < AUTH_FETCH_THROTTLE_MS) {
+        return lastSessionSnapshot;
       }
-      
-      const userData = await res.json();
-      console.log('[Auth] Session restored for user:', userData.id);
-      return userData;
+
+      inFlightSessionFetch = fetchSessionSnapshot()
+        .then((snapshot) => {
+          lastSessionSnapshot = snapshot;
+          lastSessionFetchAt = Date.now();
+          return snapshot;
+        })
+        .finally(() => {
+          inFlightSessionFetch = null;
+        });
+
+      return inFlightSessionFetch;
     },
     retry: false,
     staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     enabled: !isLoggingOut, // Don't refetch during logout
   });
 

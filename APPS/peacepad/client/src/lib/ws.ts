@@ -18,17 +18,41 @@ const WEB_WS_FALLBACK_HOSTS = new Set([
   "ftc-holding.pages.dev",
 ]);
 
+function shouldForceApiWebSocketHost(hostname: string): boolean {
+  return WEB_WS_FALLBACK_HOSTS.has(hostname.toLowerCase());
+}
+
 function resolveWebSocketBaseUrl(candidateBaseUrl: string): string {
   const fallbackBaseUrl = "https://api.peacepad.ca";
 
   try {
     const parsed = new URL(candidateBaseUrl, window.location.origin);
-    if (WEB_WS_FALLBACK_HOSTS.has(parsed.hostname.toLowerCase())) {
+    if (shouldForceApiWebSocketHost(parsed.hostname)) {
       return fallbackBaseUrl;
     }
     return parsed.toString();
   } catch {
     return fallbackBaseUrl;
+  }
+}
+
+function hardenWebSocketUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (!shouldForceApiWebSocketHost(parsed.hostname)) {
+      return parsed.toString();
+    }
+
+    parsed.protocol = "wss:";
+    parsed.hostname = "api.peacepad.ca";
+    parsed.port = "";
+    console.warn("[WebSocket] Rewrote signaling host to api.peacepad.ca", {
+      originalUrl: url,
+      rewrittenUrl: parsed.toString(),
+    });
+    return parsed.toString();
+  } catch {
+    return url;
   }
 }
 
@@ -86,8 +110,12 @@ export function createWebSocketUrl(config: WebSocketConfig): string {
     }
   }
 
-  console.log("[WebSocket] Created URL:", url);
-  return url;
+  const hardenedUrl = hardenWebSocketUrl(url);
+  console.log("[WebSocket] Created URL:", hardenedUrl, {
+    resolvedBase,
+    source: resolution.source,
+  });
+  return hardenedUrl;
 }
 
 /**
