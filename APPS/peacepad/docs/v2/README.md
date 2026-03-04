@@ -53,3 +53,9 @@ This document defines the `v2` boundary and the phased implementation plan for a
 - Conflict analysis refactor service added in `server/v2/services/conflictService.ts`.
 - Strict schemas added in `server/v2/schemas/conflictCheck.ts`.
 - Unit test added in `tests/unit/v2/conflictCheck.test.ts`.
+
+## Phase 3 Delivered
+- `POST /v2/modules/rewrite-message` implemented in `server/v2/modules/rewriteMessage.ts`.
+- Rewrite refactor service added in `server/v2/services/rewriteService.ts` using `prepChatService`.
+- Strict schemas added in `server/v2/schemas/rewriteMessage.ts`.
+- Unit test added in `tests/unit/v2/rewriteMessage.test.ts`.
