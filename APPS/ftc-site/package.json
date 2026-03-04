@@ -11,9 +11,7 @@
     "lint": "next lint",
     "test:e2e": "playwright test",
     "test": "npm run test:e2e",
-    "check": "npm run lint && npm run build && npm run test:e2e",
-    "worker:deploy:dry-run": "npx wrangler deploy --dry-run",
-    "worker:dev": "npx wrangler dev"
+    "check": "npm run lint && npm run build && npm run test:e2e"
   },
   "dependencies": {
     "@ftc/config": "1.0.0",

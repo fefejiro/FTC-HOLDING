@@ -13,9 +13,7 @@
                     "check":  "tsc",
                     "db:push":  "drizzle-kit push",
                     "test:report":  "node scripts/generateTestSummary.cjs",
-                    "smoke:guest-auth":  "node scripts/smoke-guest-auth.mjs",
-                    "worker:deploy:dry-run": "npx wrangler deploy --dry-run",
-                    "worker:dev": "npx wrangler dev"
+                    "smoke:guest-auth":  "node scripts/smoke-guest-auth.mjs"
                 },
     "dependencies":  {
                          "@capacitor/android":  "^7.4.5",
