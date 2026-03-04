@@ -262,34 +262,5 @@
     
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Service Worker Registration (Production Only) -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          const hostname = window.location.hostname;
-          const isDevelopment = hostname.includes('dev.') || hostname.includes('localhost') || hostname.includes('replit.dev');
-          
-          if (isDevelopment) {
-            // On development domains, UNREGISTER any existing service workers
-            navigator.serviceWorker.getRegistrations().then((registrations) => {
-              registrations.forEach((registration) => {
-                registration.unregister();
-                console.log('[Dev] Service worker unregistered:', registration);
-              });
-            });
-            console.log('[Dev] Service worker disabled on development domain');
-          } else {
-            // On production domains, register the service worker
-            navigator.serviceWorker.register('/sw.js')
-              .then((registration) => {
-                console.log('[Prod] SW registered:', registration);
-              })
-              .catch((error) => {
-                console.log('[Prod] SW registration failed:', error);
-              });
-          }
-        });
-      }
-    </script>
   </body>
 </html>
