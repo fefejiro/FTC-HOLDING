@@ -29,12 +29,191 @@ export const BUILD_ID = Date.now().toString();
 
 const app = express();
 
+type JsonRpcId = string | number | null;
+
+interface JsonRpcRequest {
+  jsonrpc?: string;
+  id?: JsonRpcId;
+  method?: string;
+  params?: unknown;
+}
+
+interface JsonRpcError {
+  code: number;
+  message: string;
+  data?: unknown;
+}
+
+interface JsonRpcResponse {
+  jsonrpc: "2.0";
+  id: JsonRpcId;
+  result?: unknown;
+  error?: JsonRpcError;
+}
+
+function jsonRpcResponse(id: JsonRpcId, payload: { result?: unknown; error?: JsonRpcError }): JsonRpcResponse {
+  return {
+    jsonrpc: "2.0",
+    id,
+    ...payload,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function sendRpcError(
+  res: Response,
+  id: JsonRpcId,
+  code: number,
+  message: string,
+  data?: unknown,
+) {
+  res.status(200).json(
+    jsonRpcResponse(id, {
+      error: {
+        code,
+        message,
+        ...(data !== undefined ? { data } : {}),
+      },
+    }),
+  );
+}
+
+const mcpTools = [
+  {
+    name: "peacepad_health_check",
+    description: "Check PeacePad API health status.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "peacepad_links",
+    description: "Get key PeacePad public links for support and terms.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+];
+
 // Health endpoints stay first so probes return quickly.
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: Date.now() });
 });
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: Date.now() });
+});
+app.get('/mcp', (_req, res) => {
+  res.status(200).json({
+    service: "peacepad-mcp",
+    protocol: "jsonrpc-2.0",
+    methods: ["initialize", "tools/list", "tools/call"],
+  });
+});
+app.post('/mcp', async (req: Request, res: Response) => {
+  const rpc = req.body as JsonRpcRequest;
+  const id: JsonRpcId = rpc?.id ?? null;
+
+  if (!isRecord(rpc) || rpc.jsonrpc !== "2.0" || typeof rpc.method !== "string") {
+    sendRpcError(res, id, -32600, "Invalid Request");
+    return;
+  }
+
+  // Notification style methods do not require a JSON-RPC response body.
+  if (rpc.method.startsWith("notifications/")) {
+    res.status(202).end();
+    return;
+  }
+
+  if (rpc.method === "initialize") {
+    res.status(200).json(
+      jsonRpcResponse(id, {
+        result: {
+          protocolVersion: "2024-11-05",
+          capabilities: {
+            tools: {
+              listChanged: false,
+            },
+          },
+          serverInfo: {
+            name: "peacepad-mcp",
+            version: "1.0.0",
+          },
+          instructions:
+            "Use peacepad_links for public URLs and peacepad_health_check for service status.",
+        },
+      }),
+    );
+    return;
+  }
+
+  if (rpc.method === "tools/list") {
+    res.status(200).json(
+      jsonRpcResponse(id, {
+        result: {
+          tools: mcpTools,
+        },
+      }),
+    );
+    return;
+  }
+
+  if (rpc.method === "tools/call") {
+    if (!isRecord(rpc.params) || typeof rpc.params.name !== "string") {
+      sendRpcError(res, id, -32602, "Invalid params");
+      return;
+    }
+
+    const toolName = rpc.params.name;
+
+    if (toolName === "peacepad_health_check") {
+      res.status(200).json(
+        jsonRpcResponse(id, {
+          result: {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ status: "ok", timestamp: Date.now() }),
+              },
+            ],
+          },
+        }),
+      );
+      return;
+    }
+
+    if (toolName === "peacepad_links") {
+      res.status(200).json(
+        jsonRpcResponse(id, {
+          result: {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  website: "https://peacepad.ca",
+                  support: "https://peacepad.ca/support",
+                  terms: "https://peacepad.ca/terms",
+                  apiHealth: "https://api.peacepad.ca/health",
+                }),
+              },
+            ],
+          },
+        }),
+      );
+      return;
+    }
+
+    sendRpcError(res, id, -32601, `Unknown tool: ${toolName}`);
+    return;
+  }
+
+  sendRpcError(res, id, -32601, `Method not found: ${rpc.method}`);
 });
 
 const allowedOrigins = new Set(config.cors.allowedOrigins);
