@@ -85,6 +85,11 @@ const mcpTools = [
   {
     name: "peacepad_health_check",
     description: "Check PeacePad API health status.",
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: false,
+      destructiveHint: false,
+    },
     inputSchema: {
       type: "object",
       properties: {},
@@ -94,6 +99,11 @@ const mcpTools = [
   {
     name: "peacepad_links",
     description: "Get key PeacePad public links for support and terms.",
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: false,
+      destructiveHint: false,
+    },
     inputSchema: {
       type: "object",
       properties: {},
