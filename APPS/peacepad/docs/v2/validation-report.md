@@ -6,6 +6,42 @@
 - Head commit at validation start: `3685508`
 - Scope: Phase 0 repo/tooling/docs validation + Phase 1 registry/router/health/tests/smoke validation
 
+## Repeatable Validation (Action Build Readiness)
+Run from `APPS/peacepad`.
+
+### PowerShell
+```powershell
+Set-Location "APPS/peacepad"
+npm run v2:openapi
+git diff -- docs/v2/openapi.yml
+npx vitest run tests/unit/v2/*.test.ts
+# Optional: known legacy baseline check
+npm run check
+```
+
+### bash
+```bash
+cd APPS/peacepad
+npm run v2:openapi
+git diff -- docs/v2/openapi.yml
+npx vitest run tests/unit/v2/*.test.ts
+# Optional: known legacy baseline check
+npm run check
+```
+
+Smoke endpoint list (manual/API-client):
+- `GET /v2/health`
+- `POST /v2/conversation/orchestrate`
+- `POST /v2/router/intent`
+- `POST /v2/modules/conflict-check`
+- `POST /v2/modules/rewrite-message`
+- `POST /v2/modules/support-discovery`
+- Guardrail: `GET /api/version`
+
+Notes:
+- `npm run v2:openapi` should regenerate `docs/v2/openapi.yml`; a clean `git diff -- docs/v2/openapi.yml` confirms no spec drift.
+- `npm run check` may still fail due pre-existing legacy v1 typing issues outside the v2 scope; this is expected unless separately remediated.
+
 ## Commands Run and Results
 1. Route mount inspection
 - `sed -n '520,620p' APPS/peacepad/server/routes.ts`
@@ -105,3 +141,13 @@
 - Add one lightweight route-level integration test for `/v2/health` headers and status contract.
 - Keep `docs/v2/testing.md` snapshot updated with each validation run.
 - Track first-week v2 error rate by `module_id` and `error_code` to catch early regressions.
+
+## Cleanup validation (2026-03-05)
+- `npm run v2:openapi`
+  - Result: pass (`[v2:openapi] Wrote .../docs/v2/openapi.yml`).
+- `npx vitest run tests/unit/v2/*.test.ts`
+  - Result in this shell: `No test files found` (glob was not expanded by this invocation).
+- `npx vitest run tests/unit/v2` (deterministic equivalent)
+  - Result: pass (`8` files, `19` tests).
+- `git diff -- docs/v2/openapi.yml`
+  - Result: clean (no content diff after regeneration/tests).

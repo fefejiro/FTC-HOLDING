@@ -17,6 +17,7 @@ Supporting endpoints:
 - API prefix: `/v2/*`
 - Server implementation: `server/v2/*`
 - Documentation: `docs/v2/*`
+- Worker/Wrangler operational docs belong in repo-level `docs/ops/*` (not `APPS/peacepad/docs/v2/*`).
 - Additive migration files only: `server/migrations/*`
 - Existing `v1` routes in `server/routes.ts` remain untouched.
 
@@ -67,12 +68,13 @@ See `docs/v2/ux-contract.md` for:
 - `start_new_session` action behavior
 - `message_only` vs `history_assisted` conflict source semantics
 
-## GPT Action Import
-- OpenAPI file: `APPS/peacepad/docs/v2/openapi.yml`
-- Recommended single action for GPT tools: `POST /v2/conversation/orchestrate`
-- Bearer token location: set `Authorization` header as `Bearer <token>` in the Action authentication configuration.
+## ChatGPT Action Quickstart
+- OpenAPI file: `docs/v2/openapi.yml`
+- API base URL: `https://api.peacepad.ca`
+- Auth header: `Authorization: Bearer <token>`
+- Primary endpoint for most flows: `POST /v2/conversation/orchestrate`
 
-Minimal orchestrate payload:
+Example request payload:
 ```json
 {
   "sessionId": null,
@@ -87,3 +89,19 @@ Minimal orchestrate payload:
   "debug": false
 }
 ```
+
+Example response envelope fields to wire in the Action:
+- `session`
+- `intent`
+- `ui`
+- `analysis`
+- `actions`
+- `explain`
+- `safety`
+- `errors`
+
+Behavior notes:
+- `ui.version` is currently fixed at `1`.
+- `analysis.conflict.source` is:
+  - `message_only` when no history is used
+  - `history_assisted` when conversation history contributes to analysis
