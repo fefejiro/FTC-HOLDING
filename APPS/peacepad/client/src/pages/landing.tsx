@@ -189,12 +189,28 @@ export default function LandingPage() {
             Help
           </a>
           <span className="text-white/40">|</span>
+          <a
+            href="/support"
+            className="hover:text-white transition-colors"
+            data-testid="link-support"
+          >
+            Support
+          </a>
+          <span className="text-white/40">|</span>
           <a 
             href="/privacy"
             className="hover:text-white transition-colors"
             data-testid="link-privacy-policy"
           >
             Privacy Policy
+          </a>
+          <span className="text-white/40">|</span>
+          <a
+            href="/terms"
+            className="hover:text-white transition-colors"
+            data-testid="link-terms"
+          >
+            Terms
           </a>
           <span className="text-white/40">|</span>
           <a 

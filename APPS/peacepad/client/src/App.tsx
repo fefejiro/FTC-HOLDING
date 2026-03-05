@@ -75,6 +75,7 @@ const CallsPage = lazy(() => import("@/pages/calls"));
 const CallPreferencesPage = lazy(() => import("@/pages/call-preferences"));
 const ConchModePage = lazy(() => import("@/pages/conch-mode"));
 const TermsPage = lazy(() => import("@/pages/terms"));
+const SupportPage = lazy(() => import("@/pages/support"));
 const PrivacyPage = lazy(() => import("@/pages/privacy"));
 const DeleteAccountPage = lazy(() => import("@/pages/delete-account"));
 const ResourcesPage = lazy(() => import("@/pages/resources"));
@@ -200,6 +201,7 @@ function Router() {
             <Route path="/admin/errors" component={AdminErrorsPage} />
             <Route path="/admin/feedback" component={AdminFeedbackPage} />
             <Route path="/help" component={HelpPage} />
+            <Route path="/support" component={SupportPage} />
             <Route path="/terms" component={TermsPage} />
             <Route path="/privacy" component={PrivacyPage} />
             <Route path="/delete-account" component={DeleteAccountPage} />
@@ -246,6 +248,7 @@ function Router() {
         <Route path="/features/expenses" component={ExpensesFeaturePage} />
         <Route path="/features/support" component={SupportFeaturePage} />
         <Route path="/privacy" component={PrivacyPage} />
+        <Route path="/support" component={SupportPage} />
         <Route path="/terms" component={TermsPage} />
         <Route path="/delete-account" component={DeleteAccountPage} />
         <Route component={NotFound} />
