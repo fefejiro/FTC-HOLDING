@@ -74,14 +74,14 @@ See `docs/v2/ux-contract.md` for:
 - Auth header: `Authorization: Bearer <token>`
 - Primary endpoint for most flows: `POST /v2/conversation/orchestrate`
 
-Example request payload:
+Golden request payload (fresh session, narration):
 ```json
 {
-  "sessionId": null,
+  "sessionId": "demo-session-001",
   "user": null,
-  "mode": "task",
+  "mode": "narration",
   "message": {
-    "text": "Help me draft a calm pickup update.",
+    "text": "She said I cannot pick him up today.",
     "source": "typed"
   },
   "userChoice": null,
@@ -90,7 +90,20 @@ Example request payload:
 }
 ```
 
-Example response envelope fields to wire in the Action:
+Golden response keys (what to check first):
+```json
+{
+  "session": { "sessionId": "demo-session-001" },
+  "intent": { "id": "PP_MOD_REWRITE_MESSAGE" },
+  "ui": { "version": 1 },
+  "analysis": { "conflict": { "source": "message_only" } },
+  "actions": [
+    { "id": "send_calm_response", "type": "copy" }
+  ]
+}
+```
+
+Response envelope fields to wire in the Action:
 - `session`
 - `intent`
 - `ui`
@@ -102,6 +115,8 @@ Example response envelope fields to wire in the Action:
 
 Behavior notes:
 - `ui.version` is currently fixed at `1`.
+- For a fresh session, expect `analysis.conflict.source = "message_only"`.
 - `analysis.conflict.source` is:
   - `message_only` when no history is used
   - `history_assisted` when conversation history contributes to analysis
+- When conflict is safe-to-proceed, `actions` should include rewrite-oriented actions (for example `send_calm_response`).

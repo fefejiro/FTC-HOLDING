@@ -144,10 +144,26 @@ Notes:
 
 ## Cleanup validation (2026-03-05)
 - `npm run v2:openapi`
-  - Result: pass (`[v2:openapi] Wrote .../docs/v2/openapi.yml`).
-- `npx vitest run tests/unit/v2/*.test.ts`
-  - Result in this shell: `No test files found` (glob was not expanded by this invocation).
-- `npx vitest run tests/unit/v2` (deterministic equivalent)
+  - Result: pass (`[v2:openapi] Up to date: .../docs/v2/openapi.yml`).
+- `npx vitest run tests/unit/v2`
   - Result: pass (`8` files, `19` tests).
 - `git diff -- docs/v2/openapi.yml`
   - Result: clean (no content diff after regeneration/tests).
+
+PowerShell note:
+- `npx vitest run tests/unit/v2/*.test.ts` may not expand as expected in some shells; use `npx vitest run tests/unit/v2` for deterministic execution.
+
+## Worker check triage (PR #1, #4, #5)
+Re-run attempt:
+- GitHub REST re-request attempts for Cloudflare check-runs (`/check-runs/{id}/rerequest`, `/check-suites/{id}/rerequest`) returned `404` for this token/app combination.
+- Practical implication: check re-runs for these external Cloudflare checks must be initiated from GitHub UI/Cloudflare integration context with appropriate app permissions.
+- Follow-up tracking issue created: `https://github.com/fefejiro/FTC-HOLDING/issues/6`.
+
+Triage rows:
+
+| PR | Check name | Worker project | Root directory used | First error line | Matches known fixed `peacepadai` issue? | Classification |
+|---|---|---|---|---|---|---|
+| #1 | `Workers Builds: peacepadai` | `peacepadai` | Not exposed via GitHub check API; requires Cloudflare build log view | Not exposed via GitHub check API | Possibly yes | Likely same lineage as prior `peacepadai` failures; confirm in Cloudflare build log |
+| #4 | `Workers Builds: peacepadai` | `peacepadai` | Not exposed via GitHub check API; requires Cloudflare build log view | Not exposed via GitHub check API | Possibly yes | Likely same lineage as prior `peacepadai` failures; confirm in Cloudflare build log |
+| #4 | `Workers Builds: peacepad` | `peacepad` | Not exposed via GitHub check API; requires Cloudflare build log view | Not exposed via GitHub check API | No | Different worker target from known `peacepadai` fix; investigate `peacepad` config/root |
+| #5 | `Workers Builds: peacepad` | `peacepad` | Not exposed via GitHub check API; requires Cloudflare build log view | Not exposed via GitHub check API | No | Different worker target from known `peacepadai` fix; investigate `peacepad` config/root |
