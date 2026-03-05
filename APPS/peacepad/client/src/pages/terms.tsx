@@ -29,25 +29,39 @@ export default function TermsPage() {
             <section>
               <h2 className="text-2xl font-bold mb-2">PeacePad Terms of Service</h2>
               <p className="text-muted-foreground">
-                These terms explain how to use PeacePad responsibly.
+                These terms explain simple rules for using PeacePad responsibly.
               </p>
             </section>
 
-            <section className="border-t pt-6">
+            <section className="border-t pt-6 space-y-3">
+              <h3 className="text-lg font-semibold">Core terms</h3>
               <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                 <li>Use PeacePad responsibly and respectfully.</li>
+                <li>Keep your account secure and do not share passwords or access credentials.</li>
                 <li>PeacePad provides AI-assisted communication guidance and is not legal advice.</li>
-                <li>You control what you send and are responsible for your messages.</li>
-                <li>AI-generated suggestions are optional guidance.</li>
-                <li>Service availability is not guaranteed.</li>
+                <li>You control what you send and are responsible for your messages and decisions.</li>
+                <li>AI-generated suggestions are optional guidance and may not fit every situation.</li>
+                <li>Service availability is not guaranteed, and features may change over time.</li>
+                <li>To the extent allowed by law, PeacePad is not liable for indirect losses from app use.</li>
                 <li>
-                  Questions? Contact{" "}
+                  Questions or support requests:{" "}
                   <a href="mailto:support@peacepad.ca" className="text-primary hover:underline">
                     support@peacepad.ca
                   </a>
-                  .
+                  . We typically reply within two business days.
                 </li>
               </ul>
+            </section>
+
+            <section className="border-t pt-6 space-y-3">
+              <h3 className="text-lg font-semibold">Privacy reference</h3>
+              <p className="text-muted-foreground">
+                Please also review our{" "}
+                <a href="/privacy" className="text-primary hover:underline" data-testid="link-privacy">
+                  Privacy Policy
+                </a>{" "}
+                for details on data handling and protection.
+              </p>
             </section>
 
             <section className="border-t pt-6 text-sm text-muted-foreground">
@@ -61,6 +75,9 @@ export default function TermsPage() {
                 </a>
                 <a href="/support" className="text-primary hover:underline" data-testid="link-support">
                   Support
+                </a>
+                <a href="/privacy" className="text-primary hover:underline" data-testid="link-privacy-footer">
+                  Privacy Policy
                 </a>
               </div>
             </section>

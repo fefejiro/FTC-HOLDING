@@ -28,21 +28,30 @@ export default function SupportPage() {
           <div className="space-y-6">
             <section>
               <h2 className="text-2xl font-bold mb-2">PeacePad Support</h2>
-              <p className="text-muted-foreground">
-                For help with your account or the app, email{" "}
-                <a href="mailto:support@peacepad.ca" className="text-primary hover:underline">
-                  support@peacepad.ca
-                </a>
-                . We typically reply within two business days.
-              </p>
+              <p className="text-muted-foreground">We are here to help with account access and app usage questions.</p>
             </section>
 
             <section className="border-t pt-6 space-y-3">
-              <h3 className="text-lg font-semibold">What to expect</h3>
+              <h3 className="text-lg font-semibold">Contact and response time</h3>
               <p className="text-muted-foreground">
-                PeacePad provides AI-assisted communication guidance and does not provide legal
-                advice. You are always in control of what you send.
+                Email{" "}
+                <a href="mailto:support@peacepad.ca" className="text-primary hover:underline">
+                  support@peacepad.ca
+                </a>{" "}
+                for support. We typically respond within two business days.
               </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+                <li>Most requests receive an initial response within two business days.</li>
+                <li>Complex issues may take longer to investigate, and we will keep you updated.</li>
+              </ul>
+            </section>
+
+            <section className="border-t pt-6 space-y-3">
+              <h3 className="text-lg font-semibold">Service scope</h3>
+              <p className="text-muted-foreground">
+                PeacePad provides AI-assisted communication guidance. It is not legal advice, and it is not an emergency service.
+              </p>
+              <p className="text-muted-foreground">You are always in control of what you send and what you act on.</p>
             </section>
 
             <section className="border-t pt-6 space-y-3">
@@ -50,6 +59,13 @@ export default function SupportPage() {
               <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                 <li>Do not share passwords or sensitive credentials in messages.</li>
                 <li>Your messages may be processed to generate recommendations.</li>
+                <li>
+                  Learn how information is handled in our{" "}
+                  <a href="/privacy" className="text-primary hover:underline" data-testid="link-privacy">
+                    Privacy Policy
+                  </a>
+                  .
+                </li>
               </ul>
             </section>
 
@@ -60,6 +76,9 @@ export default function SupportPage() {
                 </a>
                 <a href="/terms" className="text-primary hover:underline" data-testid="link-terms">
                   Terms of Service
+                </a>
+                <a href="/privacy" className="text-primary hover:underline" data-testid="link-privacy-footer">
+                  Privacy Policy
                 </a>
               </div>
             </section>
