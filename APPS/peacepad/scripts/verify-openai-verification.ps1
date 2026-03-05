@@ -26,7 +26,13 @@ function Get-TextHash {
   param([string]$Value)
 
   $bytes = [Text.Encoding]::UTF8.GetBytes($Value)
-  $hash = [Security.Cryptography.SHA256]::HashData($bytes)
+  $sha = [Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = $sha.ComputeHash($bytes)
+  }
+  finally {
+    $sha.Dispose()
+  }
   return ($hash | ForEach-Object { $_.ToString("x2") }) -join ""
 }
 
@@ -43,7 +49,24 @@ if (-not (Test-Path -LiteralPath $localFilePath)) {
 $expectedBody = [System.IO.File]::ReadAllText($localFilePath)
 $url = "$($Domain.TrimEnd('/'))$relativePath"
 $response = Invoke-WebRequest -Uri $url -UseBasicParsing -Method Get -TimeoutSec 30
-$actualBody = [string]$response.Content
+$actualBody = ""
+if ($response.Content -is [byte[]]) {
+  $actualBody = [Text.Encoding]::UTF8.GetString($response.Content)
+}
+elseif ($response.RawContentStream) {
+  $stream = $response.RawContentStream
+  if ($stream.CanSeek) { $stream.Position = 0 }
+  $reader = New-Object System.IO.StreamReader($stream, [Text.Encoding]::UTF8, $true, 1024, $true)
+  try {
+    $actualBody = $reader.ReadToEnd()
+  }
+  finally {
+    $reader.Dispose()
+  }
+}
+else {
+  $actualBody = [string]$response.Content
+}
 
 if ([int]$response.StatusCode -ne 200) {
   throw "Expected HTTP 200 at $url but received $($response.StatusCode)."
