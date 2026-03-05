@@ -116,7 +116,7 @@ app.get('/mcp', (_req, res) => {
     methods: ["initialize", "tools/list", "tools/call"],
   });
 });
-app.post('/mcp', async (req: Request, res: Response) => {
+app.post('/mcp', express.json(), async (req: Request, res: Response) => {
   const rpc = req.body as JsonRpcRequest;
   const id: JsonRpcId = rpc?.id ?? null;
 
