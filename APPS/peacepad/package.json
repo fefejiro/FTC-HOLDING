@@ -13,7 +13,10 @@
                     "check":  "tsc",
                     "db:push":  "drizzle-kit push",
                     "test:report":  "node scripts/generateTestSummary.cjs",
-                    "smoke:guest-auth":  "node scripts/smoke-guest-auth.mjs"
+                    "smoke:guest-auth":  "node scripts/smoke-guest-auth.mjs",
+                    "guard:openai-secrets":  "node scripts/guard-openai-secrets.mjs",
+                    "guard:openai-secrets:all":  "node scripts/guard-openai-secrets.mjs --all",
+                    "guard:openai-secrets:test":  "node scripts/guard-openai-secrets.mjs --self-test"
                 },
     "dependencies":  {
                          "@capacitor/android":  "^7.4.5",
