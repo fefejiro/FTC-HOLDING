@@ -29,6 +29,13 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface PersonalityAdaptationProfile {
+  userPersonalityType?: string;
+  coParentPersonalityType?: string;
+  adaptationNotes: string[];
+  applied: boolean;
+}
+
 function normalizeForComparison(text: string): string {
   return (text || '')
     .toLowerCase()
@@ -81,6 +88,182 @@ function ensureSuggestedRevision(suggestedRevision: string | undefined, draft: s
   return buildGuaranteedRevision(draft);
 }
 
+const MBTI_PATTERN = /^[EI][NS][TF][JP]$/i;
+
+function normalizeMbtiType(type?: string | null): string | undefined {
+  if (!type) return undefined;
+  const normalized = type.trim().toUpperCase();
+  return MBTI_PATTERN.test(normalized) ? normalized : undefined;
+}
+
+export function buildPrepChatPersonalityProfile(
+  userPersonality?: string,
+  coParentPersonality?: string,
+): PersonalityAdaptationProfile {
+  const userType = normalizeMbtiType(userPersonality);
+  const coParentType = normalizeMbtiType(coParentPersonality);
+  const adaptationNotes: string[] = [];
+
+  if (userType && coParentType) {
+    if (userType[2] === 'T' && coParentType[2] === 'F') {
+      adaptationNotes.push('Start with emotional validation before logistics.');
+    } else if (userType[2] === 'F' && coParentType[2] === 'T') {
+      adaptationNotes.push('Lead with concrete facts, then add relational framing.');
+    }
+
+    if (coParentType[3] === 'J') {
+      adaptationNotes.push('End with one clear ask and a concrete timeline.');
+    } else if (coParentType[3] === 'P') {
+      adaptationNotes.push('Offer two flexible options instead of one rigid demand.');
+    }
+
+    if (coParentType[0] === 'I') {
+      adaptationNotes.push('Keep wording concise and low-pressure.');
+    } else if (coParentType[0] === 'E') {
+      adaptationNotes.push('Invite collaborative back-and-forth in a direct way.');
+    }
+  } else if (coParentType) {
+    if (coParentType[2] === 'F') {
+      adaptationNotes.push('Use validating language before requests.');
+    } else if (coParentType[2] === 'T') {
+      adaptationNotes.push('Use specific facts and practical wording.');
+    }
+
+    if (coParentType[3] === 'J') {
+      adaptationNotes.push('Include a clear next step and time boundary.');
+    } else if (coParentType[3] === 'P') {
+      adaptationNotes.push('Present flexible options and invite input.');
+    }
+  } else if (userType) {
+    if (userType[2] === 'T') {
+      adaptationNotes.push('Keep language structured and objective.');
+    } else if (userType[2] === 'F') {
+      adaptationNotes.push('Keep language warm and relationship-aware.');
+    }
+
+    if (userType[3] === 'J') {
+      adaptationNotes.push('Finish with a concrete action request.');
+    } else if (userType[3] === 'P') {
+      adaptationNotes.push('Signal openness to alternatives.');
+    }
+  }
+
+  return {
+    userPersonalityType: userType,
+    coParentPersonalityType: coParentType,
+    adaptationNotes,
+    applied: adaptationNotes.length > 0,
+  };
+}
+
+function buildPersonalityPromptBlock(profile: PersonalityAdaptationProfile): string {
+  if (!profile.applied) {
+    return '';
+  }
+
+  const senderLine = profile.userPersonalityType
+    ? `- Sender personality: ${profile.userPersonalityType}`
+    : '- Sender personality: unknown';
+  const recipientLine = profile.coParentPersonalityType
+    ? `- Recipient personality: ${profile.coParentPersonalityType}`
+    : '- Recipient personality: unknown';
+
+  return `\nPERSONALITY CONTEXT (apply explicitly):
+${senderLine}
+${recipientLine}
+- Adaptation rules:
+${profile.adaptationNotes.map((note) => `  - ${note}`).join('\n')}
+Ensure "suggestedRevision" visibly reflects these adaptation rules.`;
+}
+
+function buildPersonalityLead(profile: PersonalityAdaptationProfile): string {
+  const parts: string[] = [];
+
+  if (profile.userPersonalityType?.[2] === 'F' || profile.coParentPersonalityType?.[2] === 'F') {
+    parts.push('I want to keep this respectful and constructive.');
+  } else if (profile.userPersonalityType?.[2] === 'T' || profile.coParentPersonalityType?.[2] === 'T') {
+    parts.push('I want to keep this clear and practical.');
+  }
+
+  if (profile.coParentPersonalityType?.[0] === 'I') {
+    parts.push("I'll keep this brief so it's easy to process.");
+  } else if (profile.coParentPersonalityType?.[0] === 'E') {
+    parts.push("I'm open to talking this through together.");
+  }
+
+  return parts.join(' ');
+}
+
+function buildPersonalityEnding(profile: PersonalityAdaptationProfile): string {
+  if (profile.coParentPersonalityType?.[3] === 'J') {
+    return 'Could we confirm one specific plan and timing?';
+  }
+  if (profile.coParentPersonalityType?.[3] === 'P') {
+    return 'Could we choose the option that works best for both of us?';
+  }
+  if (profile.userPersonalityType?.[3] === 'J') {
+    return 'Could we align on a clear next step?';
+  }
+  if (profile.userPersonalityType?.[3] === 'P') {
+    return "I'm open to alternatives if you see a better option.";
+  }
+  return '';
+}
+
+export function applyPrepChatPersonalityStyle(
+  suggestedRevision: string,
+  profile: PersonalityAdaptationProfile,
+): string {
+  if (!profile.applied) {
+    return suggestedRevision;
+  }
+
+  const revision = (suggestedRevision || '').trim();
+  if (!revision) {
+    return suggestedRevision;
+  }
+
+  const lead = buildPersonalityLead(profile);
+  const ending = buildPersonalityEnding(profile);
+  let styled = revision;
+
+  if (lead && !normalizeForComparison(styled).includes(normalizeForComparison(lead))) {
+    styled = `${lead} ${styled}`.trim();
+  }
+
+  if (ending && !normalizeForComparison(styled).includes(normalizeForComparison(ending))) {
+    const punctuated = /[.!?]$/.test(styled) ? styled : `${styled}.`;
+    styled = `${punctuated} ${ending}`.trim();
+  }
+
+  return styled;
+}
+
+function addPersonalityPerceptionContext(
+  perception: string,
+  profile: PersonalityAdaptationProfile,
+): string {
+  if (!profile.applied) {
+    return perception;
+  }
+
+  const focusedNotes = profile.adaptationNotes.slice(0, 2).join(' ');
+  if (!focusedNotes) {
+    return perception;
+  }
+
+  const base = (perception || '').trim();
+  if (!base) {
+    return `Personality-adjusted interpretation: ${focusedNotes}`;
+  }
+
+  if (normalizeForComparison(base).includes(normalizeForComparison(focusedNotes))) {
+    return base;
+  }
+
+  return `${base} Personality-adjusted interpretation: ${focusedNotes}`;
+}
+
 export async function generatePrepChatCoaching(
   topic: string,
   messages: ChatMessage[],
@@ -96,13 +279,8 @@ export async function generatePrepChatCoaching(
   };
 
   const topicContext = topicDescriptions[topic] || topicDescriptions.custom;
-
-  const personalityGuidance = userPersonality && coParentPersonality
-    ? `\n\nPersonality context:
-- You are coaching someone with ${userPersonality} personality type
-- They are preparing to communicate with a co-parent who has ${coParentPersonality} personality type
-- Adjust your coaching to help bridge these communication styles`
-    : '';
+  const personalityProfile = buildPrepChatPersonalityProfile(userPersonality, coParentPersonality);
+  const personalityGuidance = buildPersonalityPromptBlock(personalityProfile);
 
   const conversationHistory = messages.map(m => 
     `${m.role === 'user' ? 'Parent' : 'Coach'}: ${m.content}`
@@ -170,6 +348,12 @@ export interface DraftToneAnalysis {
   howItMightBePerceived: string;
   suggestedRevision?: string;
   strengthsIdentified: string[];
+  personalityContextApplied?: boolean;
+  personalityContext?: {
+    userPersonalityType?: string;
+    coParentPersonalityType?: string;
+    adaptationNotes: string[];
+  };
 }
 
 // Tone classification thresholds for consistent scoring
@@ -220,16 +404,15 @@ export async function analyzeDraftTone(
 ): Promise<DraftToneAnalysis> {
   // Quick pattern detection for obvious cases
   const patternCheck = detectConfrontationalPatterns(draft);
-  
-  const personalityContext = coParentPersonality && userPersonality
-    ? `
-PERSONALITY CONTEXT (Critical for suggestions):
-- Sender personality: ${userPersonality}
-- Recipient personality: ${coParentPersonality}
-- Tailor the suggested revision to bridge these communication styles.`
-    : coParentPersonality
-    ? `\nRecipient personality: ${coParentPersonality}. Consider how they might perceive this.`
-    : '';
+  const personalityProfile = buildPrepChatPersonalityProfile(userPersonality, coParentPersonality);
+  const personalityContext = buildPersonalityPromptBlock(personalityProfile);
+
+  console.log('[PrepChat] Personality context', {
+    userPersonalityType: personalityProfile.userPersonalityType || null,
+    coParentPersonalityType: personalityProfile.coParentPersonalityType || null,
+    adaptationApplied: personalityProfile.applied,
+    adaptationNotes: personalityProfile.adaptationNotes,
+  });
 
   const systemPrompt = `You are an expert co-parenting communication analyst and mediator. Your job is to analyze message drafts ACCURATELY and help prevent conflict.
 
@@ -263,25 +446,48 @@ IMPORTANT: If the message is accusatory or uses "you never/always" language, it 
 IMPORTANT: "suggestedRevision" MUST be a rewritten version, not a near-copy of the original draft.
 If the original is already calm, still improve clarity/collaboration and avoid returning the same sentence.`;
 
+  const personalityMeta = personalityProfile.applied
+    ? {
+        personalityContextApplied: true,
+        personalityContext: {
+          userPersonalityType: personalityProfile.userPersonalityType,
+          coParentPersonalityType: personalityProfile.coParentPersonalityType,
+          adaptationNotes: personalityProfile.adaptationNotes,
+        },
+      }
+    : {
+        personalityContextApplied: false,
+      };
+
   if (!openai) {
     // Even without AI, use pattern detection for basic classification
     if (patternCheck.isConfrontational) {
+      const baseRevision = buildGuaranteedRevision(draft);
       return {
         overallTone: 'confrontational',
         toneScore: 20,
         potentialTriggers: patternCheck.triggers,
-        howItMightBePerceived: 'This message contains accusatory language that may trigger defensiveness.',
-        suggestedRevision: buildGuaranteedRevision(draft),
+        howItMightBePerceived: addPersonalityPerceptionContext(
+          'This message contains accusatory language that may trigger defensiveness.',
+          personalityProfile,
+        ),
+        suggestedRevision: applyPrepChatPersonalityStyle(baseRevision, personalityProfile),
         strengthsIdentified: [],
+        ...personalityMeta,
       };
     }
+    const neutralBaseRevision = buildGuaranteedRevision(draft);
     return {
       overallTone: 'neutral',
       toneScore: 50,
       potentialTriggers: [],
-      howItMightBePerceived: 'AI service not available for detailed analysis.',
-      suggestedRevision: buildGuaranteedRevision(draft),
+      howItMightBePerceived: addPersonalityPerceptionContext(
+        'AI service not available for detailed analysis.',
+        personalityProfile,
+      ),
+      suggestedRevision: applyPrepChatPersonalityStyle(neutralBaseRevision, personalityProfile),
       strengthsIdentified: [],
+      ...personalityMeta,
     };
   }
 
@@ -305,7 +511,12 @@ If the original is already calm, still improve clarity/collaboration and avoid r
       
       // Validate and fix tone/score alignment if needed
       const alignedResult = validateAndAlignToneScore(parsed, patternCheck);
-      alignedResult.suggestedRevision = ensureSuggestedRevision(alignedResult.suggestedRevision, draft);
+      const safeRevision = ensureSuggestedRevision(alignedResult.suggestedRevision, draft);
+      alignedResult.suggestedRevision = applyPrepChatPersonalityStyle(safeRevision, personalityProfile);
+      alignedResult.howItMightBePerceived = addPersonalityPerceptionContext(
+        alignedResult.howItMightBePerceived,
+        personalityProfile,
+      );
       
       console.log('[PrepChat] Analysis result:', {
         tone: alignedResult.overallTone,
@@ -313,7 +524,10 @@ If the original is already calm, still improve clarity/collaboration and avoid r
         triggers: alignedResult.potentialTriggers.length,
       });
       
-      return alignedResult;
+      return {
+        ...alignedResult,
+        ...personalityMeta,
+      };
     }
   } catch (error) {
     console.error('[PrepChat] Draft analysis failed:', error);
@@ -321,23 +535,33 @@ If the original is already calm, still improve clarity/collaboration and avoid r
 
   // Fallback with pattern detection
   if (patternCheck.isConfrontational) {
+    const baseRevision = buildGuaranteedRevision(draft);
     return {
       overallTone: 'confrontational',
       toneScore: 22,
       potentialTriggers: patternCheck.triggers,
-      howItMightBePerceived: 'This message may come across as accusatory and could trigger a defensive response.',
-      suggestedRevision: buildGuaranteedRevision(draft),
+      howItMightBePerceived: addPersonalityPerceptionContext(
+        'This message may come across as accusatory and could trigger a defensive response.',
+        personalityProfile,
+      ),
+      suggestedRevision: applyPrepChatPersonalityStyle(baseRevision, personalityProfile),
       strengthsIdentified: [],
+      ...personalityMeta,
     };
   }
 
+  const baseRevision = buildGuaranteedRevision(draft);
   return {
     overallTone: 'neutral',
     toneScore: 50,
     potentialTriggers: [],
-    howItMightBePerceived: 'Analysis temporarily unavailable. Please try again.',
-    suggestedRevision: buildGuaranteedRevision(draft),
+    howItMightBePerceived: addPersonalityPerceptionContext(
+      'Analysis temporarily unavailable. Please try again.',
+      personalityProfile,
+    ),
+    suggestedRevision: applyPrepChatPersonalityStyle(baseRevision, personalityProfile),
     strengthsIdentified: [],
+    ...personalityMeta,
   };
 }
 

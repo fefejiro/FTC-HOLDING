@@ -9416,11 +9416,26 @@ Crawl-delay: 1
       }
 
       const { draft, coParentPersonality, userPersonality } = req.body;
+      const normalizePersonalityPayload = (value: unknown): string | undefined => {
+        if (typeof value !== "string") return undefined;
+        const normalized = value.trim().toUpperCase();
+        return /^[EI][NS][TF][JP]$/.test(normalized) ? normalized : undefined;
+      };
+
+      const normalizedCoParentPersonality = normalizePersonalityPayload(coParentPersonality);
+      const normalizedUserPersonality = normalizePersonalityPayload(userPersonality);
+
+      if (typeof coParentPersonality === "string" && coParentPersonality.trim() && !normalizedCoParentPersonality) {
+        console.warn("[PrepChat] Ignoring invalid coParentPersonality payload", { userId, coParentPersonality });
+      }
+      if (typeof userPersonality === "string" && userPersonality.trim() && !normalizedUserPersonality) {
+        console.warn("[PrepChat] Ignoring invalid userPersonality payload", { userId, userPersonality });
+      }
 
       const analysis = await analyzeDraftTone(
         sanitizeInput(draft),
-        coParentPersonality,
-        userPersonality
+        normalizedCoParentPersonality,
+        normalizedUserPersonality
       );
 
       res.json(analysis);

@@ -26,6 +26,12 @@ interface AnalysisResult {
   howItMightBePerceived: string;
   suggestedRevision?: string;
   strengthsIdentified: string[];
+  personalityContextApplied?: boolean;
+  personalityContext?: {
+    userPersonalityType?: string;
+    coParentPersonalityType?: string;
+    adaptationNotes?: string[];
+  };
 }
 
 const PERSONALITY_TYPES = [
@@ -106,6 +112,10 @@ export default function PrepChatPage() {
         typeof data?.suggestedRevision === "string" && data.suggestedRevision.trim().length > 0
           ? data.suggestedRevision.trim()
           : (draft || "").trim();
+
+      if (data?.personalityContextApplied) {
+        console.debug("[PrepChat] Personality adaptation applied", data.personalityContext);
+      }
 
       setResult({ ...data, suggestedRevision: safeRevision });
       setEditedResult(safeRevision);
