@@ -25,15 +25,29 @@ function Invoke-EndpointCheck {
   $detail = ""
 
   try {
-    $response = Invoke-WebRequest -Uri $Check.Url -Method Get -MaximumRedirection 5 -TimeoutSec $TimeoutSec -ErrorAction Stop
-    $statusCode = [int]$response.StatusCode
-    $contentType = [string]$response.Headers["Content-Type"]
-  } catch {
-    if ($_.Exception.Response) {
-      try { $statusCode = [int]$_.Exception.Response.StatusCode } catch {}
-      try { $contentType = [string]$_.Exception.Response.Headers["Content-Type"] } catch {}
+    $rawHeaders = & curl.exe -sS -L -I --max-time $TimeoutSec $Check.Url 2>$null
+    if (-not $rawHeaders) {
+      throw "No response received."
     }
-    $detail = $_.Exception.Message
+
+    $statusLines = @($rawHeaders | Select-String -Pattern "^HTTP/" | ForEach-Object { $_.Line.Trim() })
+    if ($statusLines.Count -eq 0) {
+      throw "Could not parse HTTP status line."
+    }
+
+    $statusParts = $statusLines[-1] -split "\s+"
+    if ($statusParts.Count -lt 2) {
+      throw "Could not parse HTTP status code."
+    }
+
+    $statusCode = [int]$statusParts[1]
+
+    $contentTypeLines = @($rawHeaders | Select-String -Pattern "^Content-Type:" | ForEach-Object { $_.Line.Trim() })
+    if ($contentTypeLines.Count -gt 0) {
+      $contentType = [string]($contentTypeLines[-1] -replace "^Content-Type:\s*", "")
+    }
+  } catch {
+    $detail = [string]$_.Exception.Message
   }
 
   $statusPass = $statusCode -eq $Check.Expected
