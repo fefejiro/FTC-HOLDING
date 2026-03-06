@@ -81,3 +81,4 @@ KEY_ALIAS
 # Local/generated artifacts
 attached_assets/
 uploads/
+client/public/_peacepad/build-meta.json

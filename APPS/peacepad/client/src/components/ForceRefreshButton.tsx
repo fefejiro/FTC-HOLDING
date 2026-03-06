@@ -15,13 +15,23 @@ export function ForceRefreshButton() {
   
   // Fetch build ID from server
   useEffect(() => {
-    fetch('/api/version')
+    fetch(`/_peacepad/build-meta.json?ts=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
-        // Convert timestamp to readable format
-        const timestamp = parseInt(data.buildId);
-        const date = new Date(timestamp);
-        setBuildId(date.toLocaleTimeString());
+        if (data?.deployedAt) {
+          const date = new Date(data.deployedAt);
+          if (!Number.isNaN(date.getTime())) {
+            setBuildId(date.toLocaleTimeString());
+            return;
+          }
+        }
+
+        if (data?.webBuildId) {
+          setBuildId(String(data.webBuildId).slice(0, 8));
+          return;
+        }
+
+        setBuildId('unknown');
       })
       .catch(() => setBuildId('unknown'));
   }, []);

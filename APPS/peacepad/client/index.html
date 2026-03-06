@@ -217,45 +217,59 @@
   <body>
     <div id="root"></div>
     
-    <!-- Auto version check and refresh (runs before React loads) -->
+    <!-- Frontend build metadata check (runs before React loads) -->
     <script>
       (async function() {
         try {
-          const host = window.location.hostname.replace(/\.$/, "").toLowerCase();
-          const isPeacepadWebHost = host === "peacepad.ca" || host === "www.peacepad.ca";
-          const apiBase = isPeacepadWebHost
-            ? `${window.location.protocol}//api.peacepad.ca`
-            : window.location.origin;
-          const response = await fetch(`${apiBase}/api/version`);
-          const { buildId } = await response.json();
-          const storedVersion = localStorage.getItem('peacepad_build_id');
-          
-          if (storedVersion && storedVersion !== buildId) {
-            // Version changed - clear caches and reload
-            console.log('[Version Check] New version detected, refreshing...');
-            
-            // Clear all caches
-            if ('caches' in window) {
-              const cacheNames = await caches.keys();
-              await Promise.all(cacheNames.map(name => caches.delete(name)));
+          const response = await fetch(`/_peacepad/build-meta.json?ts=${Date.now()}`, {
+            method: 'GET',
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
             }
-            
-            // Unregister service workers
-            if ('serviceWorker' in navigator) {
-              const registrations = await navigator.serviceWorker.getRegistrations();
-              await Promise.all(registrations.map(reg => reg.unregister()));
-            }
-            
-            // Update version and reload
-            localStorage.setItem('peacepad_build_id', buildId);
-            window.location.reload(true);
+          });
+
+          if (!response.ok) return;
+
+          const payload = await response.json();
+          const webBuildId = typeof payload?.webBuildId === 'string' ? payload.webBuildId.trim() : '';
+          if (!webBuildId) return;
+
+          const buildKey = 'peacepad_web_build_id';
+          const pendingKey = 'peacepad_pending_web_build_id';
+          const deferredKey = 'peacepad_update_deferred';
+          const forceAfterKey = 'peacepad_update_force_after';
+          const forceDelayMs = 24 * 60 * 60 * 1000;
+          const storedBuildId = localStorage.getItem(buildKey);
+
+          if (!storedBuildId) {
+            localStorage.setItem(buildKey, webBuildId);
+            localStorage.removeItem(pendingKey);
+            localStorage.removeItem(deferredKey);
+            localStorage.removeItem(forceAfterKey);
             return;
           }
-          
-          // Store current version
-          localStorage.setItem('peacepad_build_id', buildId);
+
+          if (storedBuildId !== webBuildId) {
+            localStorage.setItem(pendingKey, webBuildId);
+            if (!localStorage.getItem(forceAfterKey)) {
+              localStorage.setItem(forceAfterKey, String(Date.now() + forceDelayMs));
+            }
+
+            window.dispatchEvent(
+              new CustomEvent('peacepad:web-update-detected', {
+                detail: { webBuildId }
+              })
+            );
+            return;
+          }
+
+          localStorage.removeItem(pendingKey);
+          localStorage.removeItem(deferredKey);
+          localStorage.removeItem(forceAfterKey);
         } catch (error) {
-          console.error('[Version Check] Failed:', error);
+          console.error('[Build Meta Check] Failed:', error);
         }
       })();
     </script>

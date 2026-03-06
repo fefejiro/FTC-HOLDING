@@ -332,19 +332,63 @@ export default function App() {
 
   // Background/foreground resilience: refetch data when app returns to foreground
   useEffect(() => {
+    let isMounted = true;
+    let appStateListener: { remove: () => Promise<void> } | null = null;
+
+    const handleAppResume = () => {
+      console.log('[App] App returned to foreground - refetching data');
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+      window.dispatchEvent(new Event('peacepad:app-resume'));
+    };
+
+    const handleAppBackground = () => {
+      console.log('[App] App going to background');
+      window.dispatchEvent(new Event('peacepad:app-background'));
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[App] App returned to foreground - refetching data');
-        // Refetch critical data to catch up on any changes made while backgrounded
-        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+        handleAppResume();
       } else {
-        console.log('[App] App going to background');
+        handleAppBackground();
       }
     };
 
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (!isMounted || !Capacitor.isNativePlatform()) {
+          return;
+        }
+
+        const { App: CapacitorApp } = await import('@capacitor/app');
+        if (!isMounted) {
+          return;
+        }
+
+        appStateListener = await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) {
+            handleAppResume();
+          } else {
+            handleAppBackground();
+          }
+        });
+      } catch (error) {
+        console.warn('[App] Failed to register native appStateChange listener:', error);
+      }
+    })();
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      isMounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (appStateListener) {
+        appStateListener.remove().catch(() => {
+          // no-op cleanup fallback
+        });
+      }
+    };
   }, []);
 
   return (

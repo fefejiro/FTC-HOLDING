@@ -10,6 +10,7 @@
 - Railway must run with `DEPLOY_ROLE=api` in production so non-API routes return JSON `404`
 - Frontend must call API via `VITE_API_BASE_URL=https://api.peacepad.ca`
 - Android/Play Store releases are separate from web deploys
+- Release workflow reference: `DOCS/PEACEPAD_RELEASE_POLICY.md`
 
 ## Current High-Priority Checks
 
@@ -24,4 +25,3 @@
 - `npm --prefix APPS/peacepad run verify:deployment-ownership`
 - `npm --prefix APPS/peacepad run test -- --run tests/unit/prepChatPersonality.test.ts`
 - `npm --prefix APPS/peacepad run build`
-

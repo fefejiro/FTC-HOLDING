@@ -7,7 +7,7 @@
                     "dev":  "cross-env NODE_ENV=development tsx server/index.ts",
                     "clean":  "rm -rf dist node_modules/typescript/tsbuildinfo",
                     "prebuild":  "npm run clean",
-                    "build":  "vite build \u0026\u0026 esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist \u0026\u0026 npm run verify:no-replit-domains",
+                    "build":  "node scripts/write-web-build-meta.mjs \u0026\u0026 vite build \u0026\u0026 esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist \u0026\u0026 npm run verify:no-replit-domains",
                     "start":  "cross-env NODE_ENV=production node dist/index.js",
                     "verify:no-replit-domains":  "if grep -R \"REPLIT_DOMAINS not provided\" dist; then echo \"[build] ERROR: stale REPLIT_DOMAINS hard-fail found in dist output\"; exit 1; fi",
                     "check":  "tsc",
