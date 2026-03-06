@@ -382,13 +382,27 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
     }
   });
 
-  // importantly only setup vite in development and after
+  // Importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // doesn't interfere with the other routes.
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    if (config.deployment.serveFrontend) {
+      serveStatic(app);
+    } else {
+      console.log("[Deploy] API-only mode enabled; static frontend serving is disabled.");
+      app.use("*", (req, res) => {
+        if (req.path.startsWith("/api/") || req.path === "/health" || req.path === "/mcp") {
+          res.status(404).json({ message: "Endpoint not found" });
+          return;
+        }
+
+        res.status(404).json({
+          message: "This host only serves the PeacePad API. Use https://peacepad.ca for the web app.",
+        });
+      });
+    }
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT

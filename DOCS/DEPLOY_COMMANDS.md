@@ -17,6 +17,7 @@ Commands therefore run from app roots (`APPS/peacepad`, `APPS/saywetin`).
 - Install: `npm install --legacy-peer-deps`
 - Build: `npm run build`
 - Start: `npm run start`
+- Deploy trigger: GitHub `main` -> Railway
 
 ## SayWetin API (Railway)
 
@@ -31,6 +32,7 @@ Commands therefore run from app roots (`APPS/peacepad`, `APPS/saywetin`).
 - Install command: `npm install --legacy-peer-deps`
 - Build command: `npm exec vite build`
 - Output directory: `dist/public`
+- Deploy trigger: GitHub `main` -> Cloudflare Pages
 
 ## SayWetin Frontend (Cloudflare Pages)
 

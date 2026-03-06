@@ -25,6 +25,7 @@ Railway `PORT` UI field expects a numeric port (or default behavior), not `$PORT
 ## Environment Variables (No Secrets in Git)
 Required:
 - `NODE_ENV=production`
+- `DEPLOY_ROLE=api`
 - `SESSION_SECRET=<set in Railway>`
 - `SUPABASE_URL=<set in Railway>`
 - `SUPABASE_ANON_KEY=<set in Railway>`
@@ -45,6 +46,8 @@ Optional by feature:
 - `VAPID_PRIVATE_KEY`
 - `VAPID_EMAIL`
 - `CUSTOM_DOMAINS`
+
+`DEPLOY_ROLE=api` keeps Railway in API-only mode in production. Non-API routes (for example `/onboarding`) should return a JSON `404` on `api.peacepad.ca`.
 
 ## CORS Targets Required by Option A
 The API must allow:
@@ -81,3 +84,4 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-prod.ps1
 Expected API checks:
 - `https://api.peacepad.ca/health` returns `200`
 - `https://api.peacepad.ca/api/health` returns `200`
+- `https://api.peacepad.ca/onboarding` returns `404` JSON (API-only ownership guard)

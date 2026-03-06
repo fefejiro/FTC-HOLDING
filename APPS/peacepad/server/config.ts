@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { resolveDeploymentRole, shouldServeFrontend } from "./lib/deploymentMode";
 
 type EnvMode = "development" | "test" | "production";
 
@@ -200,6 +201,14 @@ const authAllowedHostnames = unique(
   ].filter((value): value is string => Boolean(value)),
 );
 
+const deployRole = resolveDeploymentRole({
+  nodeEnv,
+  explicitRole: readEnv("DEPLOY_ROLE"),
+  publicBaseUrl: normalizedPublicBaseUrl,
+  railwayEnvPresent: Boolean(readEnv("RAILWAY_ENVIRONMENT") || readEnv("RAILWAY_PROJECT_ID")),
+});
+const serveFrontend = shouldServeFrontend(deployRole);
+
 const missing: string[] = [];
 if (!sessionSecret) {
   missing.push("SESSION_SECRET");
@@ -277,6 +286,10 @@ export const config = {
   },
   app: {
     origins: appOrigins,
+  },
+  deployment: {
+    role: deployRole,
+    serveFrontend,
   },
   integrations: {
     openAiApiKey,

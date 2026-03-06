@@ -16,6 +16,8 @@ This setup makes `peacepad.ca` and `www.peacepad.ca` serve the PeacePad frontend
 - Node.js version: `20.x`
 - Git submodules: `Disabled`
 
+Pages must deploy directly from GitHub `main`. Do not chain Pages deployment through Railway.
+
 ## Required Pages Environment Variables
 Set in Pages -> `Settings` -> `Environment variables` (Production):
 
@@ -68,3 +70,13 @@ Expected:
 - `https://peacepad.ca` returns `200` and `Content-Type` includes `text/html`
 - `https://www.peacepad.ca` returns `200` and `Content-Type` includes `text/html`
 - callback routes return `200` (not `404 Not Found`)
+
+Ownership checks (run from `APPS/peacepad`):
+```powershell
+npm run verify:deployment-ownership
+```
+
+Expected:
+- `peacepad.ca` is served by Cloudflare and references `api.peacepad.ca` in frontend bundle.
+- `api.peacepad.ca/api/health` returns `200` JSON from Railway.
+- `api.peacepad.ca/onboarding` returns `404` JSON (Railway API-only mode).
