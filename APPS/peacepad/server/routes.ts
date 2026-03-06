@@ -162,6 +162,31 @@ const openai = new OpenAI({
   baseURL: baseURL,
 });
 
+function getActionsApiKey(): string {
+  return (
+    process.env.PEACEPAD_ACTIONS_API_KEY ||
+    process.env.ACTIONS_API_KEY ||
+    ""
+  ).trim();
+}
+
+function extractActionsApiKey(req: any): string | null {
+  const apiKeyHeader = req.get("x-api-key");
+  if (typeof apiKeyHeader === "string" && apiKeyHeader.trim()) {
+    return apiKeyHeader.trim();
+  }
+
+  const authHeader = req.get("authorization");
+  if (typeof authHeader === "string") {
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (bearerMatch?.[1]) {
+      return bearerMatch[1].trim();
+    }
+  }
+
+  return null;
+}
+
 // Configure multer for call recordings
 const uploadDir = path.join(process.cwd(), "uploads", "recordings");
 if (!fs.existsSync(uploadDir)) {
@@ -1769,6 +1794,62 @@ Crawl-delay: 1
     } catch (error) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // GPT Actions endpoint (stateless auth via API key header).
+  // Uses same tone analysis engine as in-app preview but does not require a session cookie.
+  app.post("/api/actions/preview-tone", async (req: any, res) => {
+    try {
+      const configuredApiKey = getActionsApiKey();
+      if (!configuredApiKey) {
+        return res.status(503).json({
+          message: "Actions API key is not configured on the server.",
+        });
+      }
+
+      const providedApiKey = extractActionsApiKey(req);
+      if (!providedApiKey || providedApiKey !== configuredApiKey) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const content =
+        typeof req.body?.content === "string"
+          ? sanitizeInput(req.body.content).trim()
+          : "";
+
+      if (!content) {
+        return res.status(400).json({ message: "content is required" });
+      }
+
+      let conversationHistory: string[] | undefined;
+      if (Array.isArray(req.body?.conversationHistory)) {
+        const normalized = req.body.conversationHistory
+          .filter((item: unknown): item is string => typeof item === "string")
+          .map((item: string) => sanitizeInput(item).trim())
+          .filter(Boolean)
+          .slice(-10);
+        if (normalized.length > 0) {
+          conversationHistory = normalized;
+        }
+      }
+
+      const { tone, summary, emoji, rewordingSuggestion } = await analyzeTone(
+        content,
+        undefined,
+        conversationHistory,
+      );
+
+      return res.json({
+        tone,
+        summary,
+        emoji,
+        rewordingSuggestion: rewordingSuggestion ?? null,
+        originalMessage: content,
+      });
+    } catch (error) {
+      console.error("Error in actions preview-tone:", error);
+      return res.status(500).json({ message: "Failed to analyze message tone" });
     }
   });
 
