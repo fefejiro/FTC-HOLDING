@@ -75,7 +75,7 @@ export default function ConsentAgreement({ onAccept }: ConsentAgreementProps) {
                   Secure Sign-In
                 </p>
                 <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200">
-                  PeacePad uses secure authentication. You can sign in with Google, GitHub, or email - your credentials are always protected.
+                  PeacePad uses secure account protection and private guest sessions. Access upgrades are currently managed internally during private beta.
                 </p>
               </div>
             </div>

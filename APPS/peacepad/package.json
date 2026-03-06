@@ -11,6 +11,7 @@
                     "start":  "cross-env NODE_ENV=production node dist/index.js",
                     "verify:no-replit-domains":  "if grep -R \"REPLIT_DOMAINS not provided\" dist; then echo \"[build] ERROR: stale REPLIT_DOMAINS hard-fail found in dist output\"; exit 1; fi",
                     "check":  "tsc",
+                    "test":  "vitest run",
                     "db:push":  "drizzle-kit push",
                     "test:report":  "node scripts/generateTestSummary.cjs",
                     "smoke:guest-auth":  "node scripts/smoke-guest-auth.mjs",

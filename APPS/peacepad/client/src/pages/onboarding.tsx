@@ -24,7 +24,7 @@ function OnboardingAuthChoice({ onContinueAsGuest }: OnboardingAuthChoiceProps) 
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Continue to PeacePad</h1>
           <p className="text-sm text-muted-foreground">
-            Start as a guest for up to 14 days. You can upgrade your account later.
+            Start as a guest for up to 14 days. Private beta account access is currently managed internally.
           </p>
         </div>
 

@@ -1,8 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { MessageCircle, Brain, Calendar, Shield, TrendingUp, Users, Lock, Sparkles } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { MessageCircle, Brain, Calendar, Shield, TrendingUp, Users } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
 import familyImage from "@assets/generated_images/Co-parents_and_child_holding_hands_e55c74b4.png";
@@ -10,7 +8,6 @@ import peacepadIcon from "/peacepad-icon.png";
 
 export default function LandingPage() {
   const hasScrolledToTop = useRef(false);
-  const { login } = useAuth();
   const [, setLocation] = useLocation();
 
   // Always redirect unauthenticated users to onboarding flow
@@ -131,7 +128,7 @@ export default function LandingPage() {
                   Get Started
                 </h2>
                 <p className="text-lg md:text-xl text-white/90">
-                  Sign in to start communicating with confidence
+                  Access the current private beta experience
                 </p>
               </div>
               
@@ -140,34 +137,13 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   className="bg-white hover:bg-purple-50 text-purple-700 shadow-2xl hover:shadow-3xl text-lg md:text-xl px-12 py-8 w-full sm:max-w-md font-bold transition-all duration-200 transform hover:scale-105 border-0"
-                  onClick={login}
-                  data-testid="button-sign-in-google"
-                >
-                  <Lock className="mr-3 h-6 w-6 text-purple-600" />
-                  Sign In Securely
-                </Button>
-                
-              </div>
-              
-              {/* Divider */}
-              <div className="flex items-center gap-4 w-full max-w-md mx-auto">
-                <div className="flex-1 h-px bg-white/20"></div>
-                <span className="text-sm text-white/50 font-medium">OR</span>
-                <div className="flex-1 h-px bg-white/20"></div>
-              </div>
-              
-              {/* Guest Option */}
-              <div className="space-y-2">
-                <button
                   onClick={() => setLocation("/onboarding")}
-                  className="text-white hover:text-white underline underline-offset-4 text-base md:text-lg font-medium transition-colors"
-                  data-testid="button-continue-guest"
-                  aria-label="Continue as guest for 14 days"
+                  data-testid="button-private-beta-entry"
                 >
-                  Try as Guest (14 days)
-                </button>
-                <p className="text-xs md:text-sm text-white/70">
-                  Limited features. Sign in for full access.
+                  Continue to Private Beta
+                </Button>
+                <p className="text-sm text-white/80 max-w-md">
+                  Account access is currently managed internally. Guest mode remains available for supported flows.
                 </p>
               </div>
             </div>

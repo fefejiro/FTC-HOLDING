@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -631,7 +632,12 @@ export default function TherapistDirectoryPage() {
             <div className="flex gap-2">
               <div className="flex-1 relative" ref={suggestionsRef}>
                 <div className="relative">
+                  <Label htmlFor="support-location-input" className="sr-only">
+                    Search by city or postal code
+                  </Label>
                   <Input
+                    id="support-location-input"
+                    name="locationSearch"
                     type="text"
                     placeholder="City, postal code..."
                     value={postalCode}
@@ -641,6 +647,8 @@ export default function TherapistDirectoryPage() {
                         setShowSuggestions(true);
                       }
                     }}
+                    autoComplete="postal-code"
+                    aria-label="Search by city or postal code"
                     className="text-sm"
                     data-testid="input-postal-code"
                   />
@@ -692,7 +700,11 @@ export default function TherapistDirectoryPage() {
             <div className="flex gap-2 flex-wrap">
               {/* Type Filter */}
               <Select value={resourceType} onValueChange={setResourceType}>
-                <SelectTrigger className="w-auto text-xs sm:text-sm h-9" data-testid="select-resource-type">
+                <SelectTrigger
+                  className="w-auto text-xs sm:text-sm h-9"
+                  data-testid="select-resource-type"
+                  aria-label="Filter by service type"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -706,7 +718,11 @@ export default function TherapistDirectoryPage() {
 
               {/* Gender Focus Filter */}
               <Select value={genderFocus} onValueChange={setGenderFocus}>
-                <SelectTrigger className="w-auto text-xs sm:text-sm h-9" data-testid="select-gender-focus">
+                <SelectTrigger
+                  className="w-auto text-xs sm:text-sm h-9"
+                  data-testid="select-gender-focus"
+                  aria-label="Filter by gender focus"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -720,7 +736,11 @@ export default function TherapistDirectoryPage() {
               {/* Distance Filter - Only shown when location selected */}
               {userLocation && (
                 <Select value={searchDistance.toString()} onValueChange={(v) => setSearchDistance(parseInt(v))}>
-                  <SelectTrigger className="w-auto text-xs sm:text-sm h-9" data-testid="select-search-radius">
+                  <SelectTrigger
+                    className="w-auto text-xs sm:text-sm h-9"
+                    data-testid="select-search-radius"
+                    aria-label="Filter by search radius"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

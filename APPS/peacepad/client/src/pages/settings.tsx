@@ -19,6 +19,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { useTheme } from "@/components/ThemeProvider";
 import { SEOHead } from "@/components/SEOHead";
 import { ThemeColorSelector } from "@/components/ThemeColorSelector";
+import { cn } from "@/lib/utils";
+import { getProfileAvatarDescriptor } from "@/lib/profileAvatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,6 +85,8 @@ export default function SettingsPage() {
   const [partnershipToDelete, setPartnershipToDelete] = useState<any | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [profileImagePreviewUrl, setProfileImagePreviewUrl] = useState<string | null>(null);
+  const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
   const { theme, setTheme } = useTheme();
 
   const { data: partnerships = [] } = useQuery<any[]>({
@@ -167,6 +171,14 @@ export default function SettingsPage() {
     }
   }, [user?.personalityType]);
 
+  useEffect(() => {
+    return () => {
+      if (profileImagePreviewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(profileImagePreviewUrl);
+      }
+    };
+  }, [profileImagePreviewUrl]);
+
   // Sync co-parent personality guess from server
   useEffect(() => {
     if (personalitySettings?.coParentPersonalityGuess !== undefined) {
@@ -181,9 +193,11 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setIsUploadingProfileImage(false);
       toast({ title: "Profile updated successfully", duration: 3000 });
     },
     onError: () => {
+      setIsUploadingProfileImage(false);
       toast({
         title: "Error",
         description: "Failed to update profile",
@@ -266,6 +280,10 @@ export default function SettingsPage() {
       return;
     }
 
+    const localPreviewUrl = URL.createObjectURL(file);
+    setProfileImagePreviewUrl(localPreviewUrl);
+    setIsUploadingProfileImage(true);
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -281,18 +299,29 @@ export default function SettingsPage() {
       }
 
       const data = await res.json();
+      if (typeof data.url === "string" && data.url.trim()) {
+        setProfileImagePreviewUrl(data.url);
+      }
       updateProfile.mutate({ profileImageUrl: data.url });
     } catch (error) {
+      setProfileImagePreviewUrl(null);
+      setIsUploadingProfileImage(false);
       toast({
         title: "Upload failed",
         description: "Failed to upload profile photo",
         variant: "destructive",
         duration: 5000,
       });
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
   const currentProfileImage = user?.profileImageUrl || "";
+  const displayedProfileImage = profileImagePreviewUrl || currentProfileImage;
+  const profileAvatar = getProfileAvatarDescriptor(displayedProfileImage, displayName || user?.displayName);
 
   const inviteCode = user?.inviteCode || "";
   const inviteLink = inviteCode ? `${window.location.origin}/join/${inviteCode}` : "";
@@ -588,39 +617,81 @@ export default function SettingsPage() {
                   {/* Profile Picture */}
                   <div>
                     <Label className="text-sm font-medium mb-3 block">Profile Picture</Label>
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-20 w-20 border-2 border-border">
-                        {currentProfileImage ? (
-                          <AvatarImage src={currentProfileImage} alt="Profile" />
-                        ) : (
-                          <AvatarFallback className="bg-muted">
-                            <User className="h-10 w-10 text-muted-foreground" />
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div className="flex-1 space-y-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={updateProfile.isPending}
-                          data-testid="button-upload-image"
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          {currentProfileImage ? "Change Photo" : "Upload Photo"}
-                        </Button>
-                        <Input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImageUpload}
-                          data-testid="input-profile-image"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Square image, max 5MB
-                        </p>
+                    <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                        <Avatar className="h-24 w-24 border-2 border-border/60 shadow-sm">
+                          {profileAvatar.kind === "image" ? (
+                            <>
+                              <AvatarImage src={profileAvatar.value} alt="Profile" />
+                              <AvatarFallback className="bg-muted text-lg font-semibold">
+                                {profileAvatar.initials}
+                              </AvatarFallback>
+                            </>
+                          ) : profileAvatar.kind === "emoji" ? (
+                            <AvatarFallback className="bg-muted text-4xl">
+                              {profileAvatar.value}
+                            </AvatarFallback>
+                          ) : profileAvatar.kind === "theme" ? (
+                            <AvatarFallback
+                              className={cn(
+                                "text-lg font-semibold",
+                                profileAvatar.themeClassName,
+                              )}
+                            >
+                              {profileAvatar.initials}
+                            </AvatarFallback>
+                          ) : (
+                            <AvatarFallback className="bg-muted">
+                              <User className="h-10 w-10 text-muted-foreground" />
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="flex-1 space-y-2">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">
+                              {currentProfileImage ? "Your current profile image" : "Add a profile image"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Square image recommended. JPG, PNG, GIF, or WebP. Max 5MB.
+                            </p>
+                          </div>
+                          {isUploadingProfileImage && (
+                            <p className="text-xs text-primary">Uploading and saving your photo...</p>
+                          )}
+                          {profileImagePreviewUrl && !isUploadingProfileImage && (
+                            <p className="text-xs text-muted-foreground">Preview updated.</p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={updateProfile.isPending || isUploadingProfileImage}
+                              data-testid="button-upload-image"
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              {currentProfileImage ? "Change Photo" : "Upload Photo"}
+                            </Button>
+                            {displayedProfileImage && (
+                              <span className="text-xs text-muted-foreground">
+                                {profileAvatar.kind === "theme"
+                                  ? "Theme avatar active"
+                                  : profileAvatar.kind === "emoji"
+                                    ? "Emoji avatar active"
+                                    : "Photo active"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
+                      <Input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        data-testid="input-profile-image"
+                      />
                     </div>
                   </div>
 

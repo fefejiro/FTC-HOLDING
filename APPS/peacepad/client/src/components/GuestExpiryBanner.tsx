@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Clock, X, UserPlus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Clock, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { markGuestUpgradeIntent } from "@/lib/guestUpgrade";
 
 interface GuestSessionInfo {
   expiresAt: string;
@@ -20,7 +20,7 @@ function resolveDaysRemaining(sessionInfo: GuestSessionInfo): number {
 }
 
 export function GuestExpiryBanner() {
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const [isDismissed, setIsDismissed] = useState(() => {
     return sessionStorage.getItem("guestBannerDismissed") === "true";
   });
@@ -57,11 +57,6 @@ export function GuestExpiryBanner() {
   const daysRemaining = resolveDaysRemaining(sessionInfo);
   const isUrgent = daysRemaining <= 3;
 
-  const handleUpgradeLogin = () => {
-    markGuestUpgradeIntent();
-    login();
-  };
-
   return (
     <div
       className={`relative flex items-center justify-between gap-2 px-3 py-1.5 text-xs h-[34px] ${
@@ -78,26 +73,19 @@ export function GuestExpiryBanner() {
         <Clock className={`h-3 w-3 flex-shrink-0 ${isUrgent ? "text-destructive" : "text-muted-foreground"}`} />
         <span className={isUrgent ? "text-destructive font-medium" : "text-muted-foreground"}>
           {daysRemaining === 0
-            ? "Guest data expires today. Sign in to keep your data."
+            ? "Guest data expires today. Private beta access upgrades are managed internally."
             : daysRemaining === 1
-            ? "Guest data expires tomorrow. Sign in to keep your data."
+            ? "Guest data expires tomorrow. Private beta access upgrades are managed internally."
             : isUrgent
-            ? `Guest data expires in ${daysRemaining} days. Sign in to keep your data.`
+            ? `Guest data expires in ${daysRemaining} days. Private beta access upgrades are managed internally.`
             : `Guest session: ${daysRemaining} days left`}
         </span>
       </div>
 
       <div className="flex items-center gap-1.5">
-        <Button
-          size="sm"
-          variant={isUrgent ? "destructive" : "outline"}
-          onClick={handleUpgradeLogin}
-          className="h-6 px-2 text-xs gap-1"
-          data-testid="button-upgrade-account"
-        >
-          <UserPlus className="h-3 w-3" />
-          Sign Up
-        </Button>
+        <Badge variant="outline" className="h-6 px-2 text-[10px] uppercase tracking-wide">
+          Private beta
+        </Badge>
         <Button
           size="icon"
           variant="ghost"

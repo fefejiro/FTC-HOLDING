@@ -115,8 +115,8 @@ import { rateLimiters } from "./rateLimiter";
 import { sanitizeInput, sanitizeObject } from "./sanitizer";
 import { generateICalFromEvents } from "./utils/icalGenerator";
 import { seedScheduleTemplates } from "./seedTemplates";
-import { seedWeatherActivities } from "./seedWeatherActivities";
-import { seedParentingTips } from "./seedParentingTips";
+import { seedWeatherActivities, weatherActivitiesSeed } from "./seedWeatherActivities";
+import { seedParentingTips, parentingTipsSeed } from "./seedParentingTips";
 import { seedMessages } from "./seedMessages";
 import { seedAchievements } from "./seedAchievements";
 import { testMonitor } from "./testMonitor";
@@ -133,6 +133,15 @@ import { buildBoundaryPrompt } from "./services/aiBoundaries.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import {
+  buildParentingTipFallbackCatalog,
+  buildWeatherActivityFallbackCatalog,
+  getFallbackParentingTips,
+  getFallbackWeatherActivities,
+  normalizeParentingCategory,
+  normalizeWeatherCondition,
+} from "./lib/contentFallbacks";
+import { findScheduleConflicts, getDisplayEventTitle, normalizeSchedulableEvent } from "@shared/peacepad/scheduling";
 
 // Initialize OpenAI with proper error checking
 // Prioritize OPENAI_API_KEY (user's own key) over AI_INTEGRATIONS key which may have incorrect values
@@ -348,6 +357,9 @@ interface UserPreferences {
   conflictResolutionStyle?: string;
 }
 
+const parentingTipFallbackCatalog = buildParentingTipFallbackCatalog(parentingTipsSeed);
+const weatherActivityFallbackCatalog = buildWeatherActivityFallbackCatalog(weatherActivitiesSeed);
+
 // Helper function to fetch user preferences including co-parent personality
 async function getUserPreferencesWithCoParent(userId: string): Promise<UserPreferences | undefined> {
   const user = await storage.getUser(userId);
@@ -395,6 +407,8 @@ async function analyzeTone(
   summary: string;
   emoji: string;
   rewordingSuggestion: string | null;
+  manipulationFlags?: string[];
+  translationToPlainEnglish?: string;
 }> {
   try {
     console.log(`[Tone Analysis] ========== START ==========`);
@@ -505,7 +519,10 @@ Respond ONLY with a JSON object.
     const tone = parsed.tone?.toLowerCase() || "neutral";
     const summary = parsed.summary || "Message sent";
     const emoji = parsed.emoji || "😐";
-    const rewordingSuggestion = parsed.rewordingSuggestion || undefined;
+    const rewordingSuggestion =
+      typeof parsed.rewordingSuggestion === "string" && parsed.rewordingSuggestion.trim()
+        ? parsed.rewordingSuggestion
+        : null;
     const manipulationFlags = Array.isArray(parsed.manipulationFlags)
       ? parsed.manipulationFlags
       : [];
@@ -520,7 +537,7 @@ Respond ONLY with a JSON object.
       tone,
       summary,
       emoji,
-      rewordingSuggestion: (rewordingSuggestion || undefined) as string | undefined,
+      rewordingSuggestion,
       manipulationFlags,
       translationToPlainEnglish: (translationToPlainEnglish || undefined) as string | undefined,
     };
@@ -2146,13 +2163,13 @@ Crawl-delay: 1
           await storage.updateMessageTone(message.id, {
             tone: "neutral",
             toneSummary: "Message sent",
-            toneEmoji: null,
+            toneEmoji: "😐",
             rewordingSuggestion: null,
           });
           await broadcastMessageToneUpdate(message.id, conversationId, {
             tone: "neutral",
             toneSummary: "Message sent",
-            toneEmoji: null,
+            toneEmoji: "😐",
             rewordingSuggestion: null,
           });
         }
@@ -4040,14 +4057,14 @@ Crawl-delay: 1
         const partnershipId = expense.partnershipId;
 
         // Increment expenses logged
-        await storage.incrementUserStat(userId, "expensesLogged", 1, (partnershipId || undefined) as number | undefined);
+        await storage.incrementUserStat(userId, "expensesLogged", 1, partnershipId || undefined);
 
         // Check and award achievements
-        const stats = await storage.getUserStats(userId, (partnershipId || undefined) as number | undefined);
+        const stats = await storage.getUserStats(userId, partnershipId || undefined);
         if (stats) {
           // Expense Tracker achievement (30 expenses)
           if (stats.expensesLogged === 30) {
-            await storage.awardAchievement(userId, "expense_tracker", (partnershipId || undefined) as number | undefined);
+            await storage.awardAchievement(userId, "expense_tracker", partnershipId || undefined);
           }
         }
       } catch (gamificationError) {
@@ -4544,21 +4561,25 @@ Crawl-delay: 1
       const user = await storage.getUser(userId);
       if (user?.activePartnershipId) {
         const allEvents = await storage.getEvents(userId);
-        const newStart = parsed.startDate.getTime();
-        const newEnd = parsed.endDate ? parsed.endDate.getTime() : newStart + 3600000; // Default 1 hour
+        const normalizedNewEvent = normalizeSchedulableEvent(parsed);
+        const newStart = normalizedNewEvent?.start.getTime() ?? parsed.startDate.getTime();
+        const newEnd = normalizedNewEvent?.end.getTime() ?? (parsed.endDate ? parsed.endDate.getTime() : newStart + 3600000);
 
         for (const existingEvent of allEvents) {
           if (existingEvent.id === event.id) continue;
-          const existingStart = new Date(existingEvent.startDate).getTime();
-          const existingEnd = existingEvent.endDate
-            ? new Date(existingEvent.endDate).getTime()
-            : existingStart + 3600000;
+          const normalizedExistingEvent = normalizeSchedulableEvent(existingEvent);
+          if (!normalizedExistingEvent) {
+            continue;
+          }
+
+          const existingStart = normalizedExistingEvent.start.getTime();
+          const existingEnd = normalizedExistingEvent.end.getTime();
 
           // Check for overlap
           if (newStart < existingEnd && newEnd > existingStart) {
             broadcastCalendarConflict(user.activePartnershipId, userId, {
-              eventTitle: parsed.title || "New event",
-              conflictsWith: existingEvent.title || "Existing event",
+              eventTitle: getDisplayEventTitle(parsed.title) || "New event",
+              conflictsWith: normalizedExistingEvent.title,
             });
             break; // Only notify once per creation
           }
@@ -4642,20 +4663,24 @@ Crawl-delay: 1
       const user = await storage.getUser(userId);
       if (user?.activePartnershipId) {
         const allEvents = await storage.getEvents(userId);
-        const newStart = parsed.startDate.getTime();
-        const newEnd = parsed.endDate ? parsed.endDate.getTime() : newStart + 3600000;
+        const normalizedNewEvent = normalizeSchedulableEvent(parsed);
+        const newStart = normalizedNewEvent?.start.getTime() ?? parsed.startDate.getTime();
+        const newEnd = normalizedNewEvent?.end.getTime() ?? (parsed.endDate ? parsed.endDate.getTime() : newStart + 3600000);
 
         for (const existingEvent of allEvents) {
           if (existingEvent.id === event.id) continue;
-          const existingStart = new Date(existingEvent.startDate).getTime();
-          const existingEnd = existingEvent.endDate
-            ? new Date(existingEvent.endDate).getTime()
-            : existingStart + 3600000;
+          const normalizedExistingEvent = normalizeSchedulableEvent(existingEvent);
+          if (!normalizedExistingEvent) {
+            continue;
+          }
+
+          const existingStart = normalizedExistingEvent.start.getTime();
+          const existingEnd = normalizedExistingEvent.end.getTime();
 
           if (newStart < existingEnd && newEnd > existingStart) {
             broadcastCalendarConflict(user.activePartnershipId, userId, {
-              eventTitle: parsed.title || "Updated event",
-              conflictsWith: existingEvent.title || "Existing event",
+              eventTitle: getDisplayEventTitle(parsed.title) || "Updated event",
+              conflictsWith: normalizedExistingEvent.title,
             });
             break;
           }
@@ -4866,30 +4891,8 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
       const events = await storage.getEvents(userId);
-      const conflicts: string[] = [];
+      const conflicts = findScheduleConflicts(events);
       const suggestions: string[] = [];
-
-      // Check for overlapping events
-      for (let i = 0; i < events.length; i++) {
-        for (let j = i + 1; j < events.length; j++) {
-          const event1 = events[i];
-          const event2 = events[j];
-          const start1 = new Date(event1.startDate);
-          const end1 = event1.endDate
-            ? new Date(event1.endDate)
-            : new Date(start1.getTime() + 60 * 60 * 1000);
-          const start2 = new Date(event2.startDate);
-          const end2 = event2.endDate
-            ? new Date(event2.endDate)
-            : new Date(start2.getTime() + 60 * 60 * 1000);
-
-          if (start1 < end2 && start2 < end1) {
-            conflicts.push(
-              `"${event1.title}" overlaps with "${event2.title}" on ${start1.toLocaleDateString()}`
-            );
-          }
-        }
-      }
 
       // Dev mode protection - use mock suggestions to avoid token usage
       if (isDevMode()) {
@@ -8042,14 +8045,14 @@ Crawl-delay: 1
 
   // Parenting tips API with smart fallback
   app.get("/api/parenting-tips", isAuthenticatedEither, async (req: any, res) => {
-    try {
-      const { childAgeMonths, category } = req.query;
-      
-      // Normalize inputs: treat "all", empty strings, or non-numeric values as undefined
-      const parsedAge = childAgeMonths && childAgeMonths !== "all" ? parseInt(childAgeMonths as string) : NaN;
-      const ageMonths = isNaN(parsedAge) ? undefined : parsedAge;
-      const categoryFilter = category && category !== "all" ? category as string : undefined;
+    const parsedAge =
+      req.query.childAgeMonths && req.query.childAgeMonths !== "all"
+        ? parseInt(req.query.childAgeMonths as string, 10)
+        : NaN;
+    const ageMonths = isNaN(parsedAge) ? undefined : parsedAge;
+    const categoryFilter = normalizeParentingCategory(req.query.category as string | undefined);
 
+    try {
       // First, try exact match
       let tips = await storage.getParentingTips(ageMonths, categoryFilter);
 
@@ -8099,10 +8102,14 @@ Crawl-delay: 1
         }
       }
 
+      if (tips.length === 0) {
+        tips = getFallbackParentingTips(parentingTipFallbackCatalog, ageMonths, categoryFilter);
+      }
+
       res.json(tips);
     } catch (error) {
       console.error("Error fetching parenting tips:", error);
-      res.status(500).json({ message: "Failed to fetch parenting tips" });
+      res.json(getFallbackParentingTips(parentingTipFallbackCatalog, ageMonths, categoryFilter));
     }
   });
 
@@ -8123,11 +8130,14 @@ Crawl-delay: 1
 
   // Weather activities API
   app.get("/api/weather-activities", isAuthenticatedEither, async (req: any, res) => {
-    try {
-      const { childAgeMonths, weatherCondition } = req.query;
-      const ageMonths = childAgeMonths && childAgeMonths !== "all" ? parseInt(childAgeMonths as string) : undefined;
-      const weather = weatherCondition && weatherCondition !== "all" ? weatherCondition as string : undefined;
+    const parsedAge =
+      req.query.childAgeMonths && req.query.childAgeMonths !== "all"
+        ? parseInt(req.query.childAgeMonths as string, 10)
+        : NaN;
+    const ageMonths = Number.isFinite(parsedAge) ? parsedAge : undefined;
+    const weather = normalizeWeatherCondition(req.query.weatherCondition as string | undefined);
 
+    try {
       console.log(`[API] Fetching activities - Age: ${ageMonths}, Weather: ${weather}`);
 
       let activities = await storage.getWeatherActivities(ageMonths, weather);
@@ -8150,10 +8160,14 @@ Crawl-delay: 1
         }
       }
 
+      if (activities.length === 0) {
+        activities = getFallbackWeatherActivities(weatherActivityFallbackCatalog, ageMonths, weather);
+      }
+
       res.json(activities);
     } catch (error) {
       console.error("Error fetching weather activities:", error);
-      res.status(500).json({ message: "Failed to fetch weather activities" });
+      res.json(getFallbackWeatherActivities(weatherActivityFallbackCatalog, ageMonths, weather));
     }
   });
 
@@ -9355,7 +9369,7 @@ Crawl-delay: 1
         : partnership?.user1Id;
       const coParent = coParentId ? await storage.getUser(coParentId) : null;
 
-      const messages = (session.messages as Array<{role: string, content: string, timestamp: string}>) || [];
+      const messages = (session.messages as Array<{role: "user" | "coach"; content: string; timestamp: string}>) || [];
       
       // Add user message
       messages.push({

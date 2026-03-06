@@ -1,7 +1,6 @@
-import { storage } from "./storage";
 import type { InsertParentingTip } from "@shared/schema";
 
-const parentingTips: InsertParentingTip[] = [
+export const parentingTipsSeed: InsertParentingTip[] = [
   // NEWBORN (0-3 months)
   {
     title: "The Power of Skin-to-Skin Contact",
@@ -645,17 +644,18 @@ export async function seedParentingTips() {
   console.log("Seeding parenting tips...");
   
   try {
+    const { storage } = await import("./storage");
     const existing = await storage.getParentingTips();
     if (existing.length > 0) {
       console.log(`Found ${existing.length} existing parenting tips. Skipping seed.`);
       return;
     }
 
-    for (const tip of parentingTips) {
+    for (const tip of parentingTipsSeed) {
       await storage.createParentingTip(tip);
     }
 
-    console.log(`Successfully seeded ${parentingTips.length} parenting tips!`);
+    console.log(`Successfully seeded ${parentingTipsSeed.length} parenting tips!`);
   } catch (error: any) {
     if (error.message?.includes('disabled') || error.message?.includes('suspended')) {
       console.log('[Seed Tips] Database suspended - tips will be seeded when database wakes up');

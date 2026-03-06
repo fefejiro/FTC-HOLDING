@@ -1,8 +1,7 @@
-import { storage } from "./storage";
 import type { InsertWeatherActivity } from "@shared/schema";
 
 // Comprehensive weather activity suggestions for co-parenting families
-const weatherActivities: InsertWeatherActivity[] = [
+export const weatherActivitiesSeed: InsertWeatherActivity[] = [
   // SUNNY WEATHER ACTIVITIES
   {
     title: "Backyard Treasure Hunt",
@@ -337,6 +336,7 @@ export async function seedWeatherActivities() {
   console.log("Seeding weather activities...");
   
   try {
+    const { storage } = await import("./storage");
     // Check if activities already exist
     const existing = await storage.getWeatherActivities();
     if (existing.length > 0) {
@@ -345,11 +345,11 @@ export async function seedWeatherActivities() {
     }
 
     // Create activities
-    for (const activity of weatherActivities) {
+    for (const activity of weatherActivitiesSeed) {
       await storage.createWeatherActivity(activity);
     }
 
-    console.log(`Successfully seeded ${weatherActivities.length} weather activities!`);
+    console.log(`Successfully seeded ${weatherActivitiesSeed.length} weather activities!`);
   } catch (error: any) {
     // Gracefully handle database errors
     if (error.message?.includes('disabled') || error.message?.includes('suspended')) {
