@@ -163,24 +163,30 @@ const openai = new OpenAI({
 });
 
 function getActionsApiKey(): string {
-  return (
+  const value =
     process.env.PEACEPAD_ACTIONS_API_KEY ||
     process.env.ACTIONS_API_KEY ||
-    ""
-  ).trim();
+    "";
+  return normalizeActionsApiKey(value);
+}
+
+function normalizeActionsApiKey(value: string | null | undefined): string {
+  const trimmed = (value || "").trim();
+  // Accept mistakenly quoted env values (e.g. "abc123" or 'abc123')
+  return trimmed.replace(/^['"]+|['"]+$/g, "").trim();
 }
 
 function extractActionsApiKey(req: any): string | null {
   const apiKeyHeader = req.get("x-api-key");
   if (typeof apiKeyHeader === "string" && apiKeyHeader.trim()) {
-    return apiKeyHeader.trim();
+    return normalizeActionsApiKey(apiKeyHeader);
   }
 
   const authHeader = req.get("authorization");
   if (typeof authHeader === "string") {
     const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
     if (bearerMatch?.[1]) {
-      return bearerMatch[1].trim();
+      return normalizeActionsApiKey(bearerMatch[1]);
     }
   }
 
