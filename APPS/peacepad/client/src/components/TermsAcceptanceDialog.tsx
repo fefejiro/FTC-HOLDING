@@ -80,7 +80,7 @@ export function TermsAcceptanceDialog({ open, userId }: TermsAcceptanceDialogPro
               <p className="font-medium text-sm">Secure Sign-In</p>
               <p className="text-xs text-muted-foreground mt-1">
                 PeacePad uses secure account protection.
-                Private beta account access is currently managed internally while rollout expands.
+                Account access is managed securely while rollout continues.
               </p>
             </div>
           </div>

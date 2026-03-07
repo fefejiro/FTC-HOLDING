@@ -45,8 +45,8 @@ export default function TermsPage() {
                 <li>To the extent allowed by law, PeacePad is not liable for indirect losses from app use.</li>
                 <li>
                   Questions or support requests:{" "}
-                  <a href="mailto:support@peacepad.ca" className="text-primary hover:underline">
-                    support@peacepad.ca
+                  <a href="mailto:peacepad@peacepad.ca" className="text-primary hover:underline">
+                    peacepad@peacepad.ca
                   </a>
                   . We typically reply within two business days.
                 </li>

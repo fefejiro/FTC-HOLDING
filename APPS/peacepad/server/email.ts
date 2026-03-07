@@ -781,7 +781,7 @@ export async function sendPartnershipConnectedEmail(userEmail: string, userName:
         </div>
         <div class="footer">
           <p>PeacePad - Secure Co-Parenting Platform</p>
-          <p>Questions? Contact support@peacepad.ca</p>
+          <p>Questions? Contact peacepad@peacepad.ca</p>
         </div>
       </div>
     </body>
@@ -812,7 +812,7 @@ Review Partnerships: ${process.env.VITE_BASE_URL || 'https://peacepad.ca'}/setti
 
 ---
 PeacePad - Secure Co-Parenting Platform
-Questions? Contact support@peacepad.ca
+Questions? Contact peacepad@peacepad.ca
   `;
 
   return sendEmail({
@@ -895,7 +895,7 @@ export async function sendDataExportEmail(userEmail: string, userName: string, t
         </div>
         <div class="footer">
           <p>PeacePad - Secure Co-Parenting Platform</p>
-          <p>Questions? Contact support@peacepad.ca</p>
+          <p>Questions? Contact peacepad@peacepad.ca</p>
         </div>
       </div>
     </body>
@@ -936,7 +936,7 @@ Review Account: ${process.env.VITE_BASE_URL || 'https://peacepad.ca'}/settings
 
 ---
 PeacePad - Secure Co-Parenting Platform
-Questions? Contact support@peacepad.ca
+Questions? Contact peacepad@peacepad.ca
   `;
 
   return sendEmail({
@@ -1017,7 +1017,7 @@ export async function sendPartnershipRemovedEmail(userEmail: string, userName: s
         </div>
         <div class="footer">
           <p>PeacePad - Secure Co-Parenting Platform</p>
-          <p>Questions? Contact support@peacepad.ca</p>
+          <p>Questions? Contact peacepad@peacepad.ca</p>
         </div>
       </div>
     </body>
@@ -1051,7 +1051,7 @@ View Settings: ${process.env.VITE_BASE_URL || 'https://peacepad.ca'}/settings
 
 ---
 PeacePad - Secure Co-Parenting Platform
-Questions? Contact support@peacepad.ca
+Questions? Contact peacepad@peacepad.ca
   `;
 
   return sendEmail({

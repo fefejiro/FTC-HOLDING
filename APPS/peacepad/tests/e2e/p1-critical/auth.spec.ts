@@ -67,21 +67,22 @@ test.describe('P1 Critical: Authentication', () => {
     expect(urlAfter.includes('/chat') || urlAfter.includes('/') ).toBe(true);
   });
 
-  test('onboarding public auth messaging is private-beta only', async ({ browser }) => {
+  test('onboarding routes directly to prep chat after terms acceptance', async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
 
     try {
+      await page.addInitScript(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
       await page.goto('/onboarding');
       await page.waitForLoadState('domcontentloaded');
       await completeIntroAndConsent(page);
 
-      const authChoice = page.getByTestId('onboarding-auth-choice');
-      await expect(authChoice).toBeVisible({ timeout: 10000 });
-      await expect(authChoice).toContainText('private beta');
-      await expect(page.getByText(/Continue as guest/i)).toHaveCount(0);
-      await expect(page.getByTestId('button-onboarding-request-access')).toContainText('Request private beta access');
-      await expect(page.getByTestId('button-onboarding-enter-private-beta')).toHaveCount(0);
+      await page.waitForURL(/\/prep-chat|\/chat|\/dashboard/, { timeout: 30000 });
+      await expect(page.getByText(/private beta/i)).toHaveCount(0);
+      await expect(page.getByTestId('banner-guest-expiry')).toHaveCount(0);
     } finally {
       await context.close();
     }

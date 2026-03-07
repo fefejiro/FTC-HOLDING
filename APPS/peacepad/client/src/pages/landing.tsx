@@ -128,7 +128,7 @@ export default function LandingPage() {
                   Get Started
                 </h2>
                 <p className="text-lg md:text-xl text-white/90">
-                  Access the current private beta experience
+                  Start your PeacePad onboarding experience
                 </p>
               </div>
               
@@ -140,11 +140,8 @@ export default function LandingPage() {
                   onClick={() => setLocation("/onboarding")}
                   data-testid="button-private-beta-entry"
                 >
-                  Continue to Private Beta
+                  Continue to PeacePad
                 </Button>
-                <p className="text-sm text-white/80 max-w-md">
-                  Account access is currently managed internally while private beta rollout expands.
-                </p>
               </div>
             </div>
           </div>

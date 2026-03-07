@@ -5,22 +5,23 @@ function readSource(relativePath: string): string {
   return readFileSync(new URL(relativePath, import.meta.url), "utf8");
 }
 
-describe("public auth copy guard", () => {
-  it("keeps onboarding auth choice in private-beta posture", () => {
+describe("public onboarding copy guard", () => {
+  it("removes beta/guest gate messaging from onboarding", () => {
     const onboarding = readSource("../../client/src/pages/onboarding.tsx");
 
-    expect(onboarding).toContain("private beta");
-    expect(onboarding).toContain("Request private beta access");
-    expect(onboarding).not.toMatch(/Start as a guest for up to 14 days/i);
-    expect(onboarding).not.toMatch(/Continue as guest/i);
-    expect(onboarding).not.toMatch(/private beta access window/i);
+    expect(onboarding).not.toMatch(/private beta/i);
+    expect(onboarding).not.toMatch(/request private beta access/i);
+    expect(onboarding).not.toMatch(/continue as guest/i);
+    expect(onboarding).not.toMatch(/support@peacepad\.ca/i);
+    expect(onboarding).toContain("Preparing your PeacePad workspace");
   });
 
-  it("keeps landing CTA aligned to private-beta access", () => {
+  it("keeps landing cta neutral and free of beta gate copy", () => {
     const landing = readSource("../../client/src/pages/landing.tsx");
 
-    expect(landing).toContain("Continue to Private Beta");
-    expect(landing).toContain("private beta rollout");
+    expect(landing).toContain("Continue to PeacePad");
+    expect(landing).not.toMatch(/private beta/i);
     expect(landing).not.toMatch(/replit/i);
   });
 });
+

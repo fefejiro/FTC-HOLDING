@@ -75,7 +75,7 @@ export default function ConsentAgreement({ onAccept }: ConsentAgreementProps) {
                   Secure Sign-In
                 </p>
                 <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200">
-                  PeacePad uses secure account protection. Private beta access is currently managed internally while rollout expands.
+                  PeacePad uses secure account protection. Account access is managed securely as rollout continues.
                 </p>
               </div>
             </div>

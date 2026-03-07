@@ -35,8 +35,8 @@ export default function SupportPage() {
               <h3 className="text-lg font-semibold">Contact and response time</h3>
               <p className="text-muted-foreground">
                 Email{" "}
-                <a href="mailto:support@peacepad.ca" className="text-primary hover:underline">
-                  support@peacepad.ca
+                <a href="mailto:peacepad@peacepad.ca" className="text-primary hover:underline">
+                  peacepad@peacepad.ca
                 </a>{" "}
                 for support. We typically respond within two business days.
               </p>

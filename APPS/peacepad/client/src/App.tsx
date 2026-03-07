@@ -23,7 +23,6 @@ import { MessageCircle } from "lucide-react";
 import { unlockAudio } from "@/utils/ringManager";
 import { initializeRemoteAudioManager } from "./call/remoteAudioManager";
 import { PageSkeleton, AuthLoadingSkeleton } from "@/components/PageSkeleton";
-import { GuestExpiryBanner } from "@/components/GuestExpiryBanner";
 import { VersionGuard } from "@/components/VersionGuard";
 
 // Lazy load non-critical UI components for better initial load performance
@@ -42,7 +41,6 @@ const AppRatingPrompt = lazy(() => import("@/components/AppRatingPrompt").then(m
 const RateLimitNotifier = lazy(() => import("@/components/RateLimitNotifier").then(m => ({ default: m.RateLimitNotifier })));
 
 // Import frequently used pages immediately (critical path)
-import LandingPage from "@/pages/landing";
 import OnboardingPage from "@/pages/onboarding";
 import AuthCallbackPage, { MobileAuthCallbackPage } from "@/pages/auth-callback";
 import ChatPage from "@/pages/chat";
@@ -234,7 +232,7 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        <Route path="/" component={LandingPage} />
+        <Route path="/" component={OnboardingPage} />
         <Route path="/onboarding" component={OnboardingPage} />
         <Route path="/auth/callback" component={AuthCallbackPage} />
         <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
@@ -422,7 +420,6 @@ export default function App() {
                             }}
                           >
                             <ConditionalHeader />
-                            <GuestExpiryBanner />
                             <main 
                               id="main-content" 
                               className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden pb-24 lg:pb-0 min-h-0"
