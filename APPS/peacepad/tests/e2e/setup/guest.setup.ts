@@ -5,11 +5,7 @@ const STORAGE_STATE_PATH = 'tests/.auth/guest.json';
 setup('authenticate as guest user', async ({ page }) => {
   console.log('[Setup] Starting guest authentication flow...');
 
-  await page.addInitScript(() => {
-    localStorage.setItem("peacepad_internal_guest_ui", "true");
-  });
-  
-  await page.goto('/');
+  await page.goto('/onboarding?qaGuestUi=1');
   await page.waitForLoadState('domcontentloaded');
   
   // Hide Replit dev banner if present (it can intercept clicks)
@@ -87,6 +83,10 @@ setup('authenticate as guest user', async ({ page }) => {
     await page.goto('/chat');
     await page.waitForLoadState('domcontentloaded');
   }
+
+  await page.evaluate(() => {
+    localStorage.removeItem("peacepad_internal_guest_ui");
+  });
 
   console.log('[Setup] Saving authentication state...');
   await page.context().storageState({ path: STORAGE_STATE_PATH });
