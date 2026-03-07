@@ -12,6 +12,8 @@
 - Android/Play Store releases are separate from web deploys
 - Release workflow reference: `DOCS/PEACEPAD_RELEASE_POLICY.md`
 - Phase 2 hardening reference: `DOCS/PEACEPAD_PHASE2_HARDENING.md`
+- Voice audit reference: `DOCS/PEACEPAD_VOICE_AUDIT_2026-03-07.md`
+- Phase 0 baseline snapshot: `DOCS/PEACEPAD_PHASE0_BASELINE_2026-03-07.md`
 
 ## Current High-Priority Checks
 

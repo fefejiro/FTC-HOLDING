@@ -22,6 +22,22 @@ test.describe('Conch Mode Tests', () => {
     await ensureConchMode(page);
   });
 
+  test('should expose Call and Coach Voice tabs while preserving Call as default', async ({ page }) => {
+    await page.goto('/conch-mode');
+    await page.waitForLoadState('domcontentloaded');
+
+    await expect(page.getByTestId('button-conch-tab-call')).toBeVisible();
+    await expect(page.getByTestId('button-conch-tab-coach')).toBeVisible();
+
+    await expect(page.getByTestId('button-conch-tab-call')).toHaveClass(/bg-background/);
+    await expect(page.getByTestId('panel-conch-coach-mode')).toHaveCount(0);
+
+    await page.getByTestId('button-conch-tab-coach').click();
+    await expect(page.getByTestId('panel-conch-coach-mode')).toBeVisible();
+    await expect(page.getByTestId('button-voice-transcribe')).toBeVisible();
+    await expect(page.getByTestId('button-conch-tab-coach')).toHaveClass(/bg-background/);
+  });
+
   test('should validate turn sequencing', async ({ page }) => {
     const turnIndicator = page.locator('[data-testid*="turn"], [data-testid*="status"], text=/turn/i');
     

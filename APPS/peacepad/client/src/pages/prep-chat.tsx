@@ -55,6 +55,7 @@ const PERSONALITY_TYPES = [
 
 export default function PrepChatPage() {
   const [message, setMessage] = useState("");
+  const [voiceInputStatus, setVoiceInputStatus] = useState<"idle" | "listening" | "transcribing" | "error">("idle");
   const [originalMessage, setOriginalMessage] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [editedResult, setEditedResult] = useState("");
@@ -364,13 +365,27 @@ export default function PrepChatPage() {
             </div>
 
             {/* Input Field */}
-            <div className="bg-background border-2 border-primary/20 rounded-2xl p-2 flex items-center gap-2 transition-colors">
+            <div
+              className={`bg-background border-2 rounded-2xl p-2 flex items-center gap-2 transition-colors ${
+                voiceInputStatus === "listening"
+                  ? "border-destructive/50"
+                  : voiceInputStatus === "transcribing"
+                    ? "border-primary/50"
+                    : "border-primary/20"
+              }`}
+            >
               <div className="flex-1 relative flex items-center min-w-0 pl-2">
                 <Textarea
                   ref={textareaRef}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="What do you want to say?"
+                  placeholder={
+                    voiceInputStatus === "listening"
+                      ? "Listening... speak naturally"
+                      : voiceInputStatus === "transcribing"
+                        ? "Transcribing your voice note..."
+                        : "What do you want to say?"
+                  }
                   className="w-full text-base resize-none border-0 bg-transparent p-2 leading-relaxed placeholder:text-muted-foreground/50"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -386,6 +401,7 @@ export default function PrepChatPage() {
                       setMessage("");
                       setResult(null);
                     }}
+                    onStatusChange={setVoiceInputStatus}
                     onTranscription={(text) => {
                       if (text) {
                         setMessage(text);
@@ -411,6 +427,13 @@ export default function PrepChatPage() {
                 )}
               </Button>
             </div>
+            {(voiceInputStatus === "listening" || voiceInputStatus === "transcribing") && (
+              <p className="text-xs text-muted-foreground px-2" data-testid="text-prep-voice-hint">
+                {voiceInputStatus === "listening"
+                  ? "Listening now. Tap the mic again when you are done speaking."
+                  : "Converting speech to text..."}
+              </p>
+            )}
           </div>
         </div>
       </div>

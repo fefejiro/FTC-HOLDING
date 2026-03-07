@@ -24,7 +24,7 @@ function OnboardingAuthChoice({ onContinueAsGuest }: OnboardingAuthChoiceProps) 
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Continue to PeacePad</h1>
           <p className="text-sm text-muted-foreground">
-            Start as a guest for up to 14 days. Private beta account access is currently managed internally.
+            PeacePad is currently in private beta. Access is being opened in stages while we refine the experience.
           </p>
         </div>
 
@@ -35,7 +35,7 @@ function OnboardingAuthChoice({ onContinueAsGuest }: OnboardingAuthChoiceProps) 
             data-testid="button-onboarding-continue-guest"
           >
             <UserRound className="h-4 w-4" />
-            Continue as guest
+            Enter private beta
           </Button>
         </div>
       </div>

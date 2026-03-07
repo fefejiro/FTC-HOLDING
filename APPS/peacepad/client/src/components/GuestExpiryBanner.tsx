@@ -73,12 +73,12 @@ export function GuestExpiryBanner() {
         <Clock className={`h-3 w-3 flex-shrink-0 ${isUrgent ? "text-destructive" : "text-muted-foreground"}`} />
         <span className={isUrgent ? "text-destructive font-medium" : "text-muted-foreground"}>
           {daysRemaining === 0
-            ? "Guest data expires today. Private beta access upgrades are managed internally."
+            ? "Your private beta access window ends today. Contact support if you need extended access."
             : daysRemaining === 1
-            ? "Guest data expires tomorrow. Private beta access upgrades are managed internally."
+            ? "Your private beta access window ends tomorrow. Contact support if you need extended access."
             : isUrgent
-            ? `Guest data expires in ${daysRemaining} days. Private beta access upgrades are managed internally.`
-            : `Guest session: ${daysRemaining} days left`}
+            ? `Your private beta access window ends in ${daysRemaining} days. Contact support if you need extended access.`
+            : `Private beta access window: ${daysRemaining} days left`}
         </span>
       </div>
 

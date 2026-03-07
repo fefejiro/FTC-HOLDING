@@ -143,7 +143,7 @@ export default function LandingPage() {
                   Continue to Private Beta
                 </Button>
                 <p className="text-sm text-white/80 max-w-md">
-                  Account access is currently managed internally. Guest mode remains available for supported flows.
+                  Account access is currently managed internally while private beta rollout expands.
                 </p>
               </div>
             </div>
