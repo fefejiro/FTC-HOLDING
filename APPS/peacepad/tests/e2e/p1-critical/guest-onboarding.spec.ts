@@ -27,17 +27,18 @@ test.describe("P1 Critical: Guest-First Onboarding", () => {
     await page.addInitScript(() => {
       localStorage.clear();
       sessionStorage.clear();
+      localStorage.setItem("peacepad_internal_guest_ui", "true");
     });
 
-    await page.goto("/onboarding");
+    await page.goto("/onboarding?qaGuestUi=1");
     await page.waitForLoadState("domcontentloaded");
 
     await completeIntroAndConsent(page);
 
     await expect(page.getByTestId("onboarding-auth-choice")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId("button-onboarding-continue-guest")).toBeVisible();
+    await expect(page.getByTestId("button-onboarding-enter-private-beta")).toBeVisible();
 
-    await page.getByTestId("button-onboarding-continue-guest").click();
+    await page.getByTestId("button-onboarding-enter-private-beta").click();
     await expect(page.getByTestId("button-enter-peacepad")).toBeVisible({ timeout: 10000 });
 
     const guestResponsePromise = page.waitForResponse(
@@ -76,12 +77,12 @@ test.describe("P1 Critical: Guest-First Onboarding", () => {
       });
     });
 
-    await page.goto("/chat");
+    await page.goto("/chat?qaGuestUi=1");
     await page.waitForLoadState("domcontentloaded");
 
     const banner = page.getByTestId("banner-guest-expiry");
     await expect(banner).toBeVisible({ timeout: 15000 });
-    await expect(banner).toContainText(/Guest data expires/i);
-    await expect(page.getByTestId("button-upgrade-account")).toBeVisible();
+    await expect(banner).toContainText(/private beta access window ends tomorrow/i);
+    await expect(page.getByTestId("button-dismiss-banner")).toBeVisible();
   });
 });

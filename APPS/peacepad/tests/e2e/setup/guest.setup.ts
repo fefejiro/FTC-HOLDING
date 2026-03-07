@@ -4,6 +4,10 @@ const STORAGE_STATE_PATH = 'tests/.auth/guest.json';
 
 setup('authenticate as guest user', async ({ page }) => {
   console.log('[Setup] Starting guest authentication flow...');
+
+  await page.addInitScript(() => {
+    localStorage.setItem("peacepad_internal_guest_ui", "true");
+  });
   
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
@@ -39,7 +43,7 @@ setup('authenticate as guest user', async ({ page }) => {
     }
   }
 
-  const continueAsGuestChoice = page.getByTestId('button-onboarding-continue-guest');
+  const continueAsGuestChoice = page.getByTestId('button-onboarding-enter-private-beta');
   if (await continueAsGuestChoice.isVisible({ timeout: 5000 }).catch(() => false)) {
     console.log('[Setup] Found onboarding auth choice, selecting continue as guest');
     await continueAsGuestChoice.click({ force: true });

@@ -10,9 +10,10 @@ describe("public auth copy guard", () => {
     const onboarding = readSource("../../client/src/pages/onboarding.tsx");
 
     expect(onboarding).toContain("private beta");
-    expect(onboarding).toContain("Enter private beta");
+    expect(onboarding).toContain("Request private beta access");
     expect(onboarding).not.toMatch(/Start as a guest for up to 14 days/i);
     expect(onboarding).not.toMatch(/Continue as guest/i);
+    expect(onboarding).not.toMatch(/private beta access window/i);
   });
 
   it("keeps landing CTA aligned to private-beta access", () => {

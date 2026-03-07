@@ -80,7 +80,8 @@ test.describe('P1 Critical: Authentication', () => {
       await expect(authChoice).toBeVisible({ timeout: 10000 });
       await expect(authChoice).toContainText('private beta');
       await expect(page.getByText(/Continue as guest/i)).toHaveCount(0);
-      await expect(page.getByTestId('button-onboarding-continue-guest')).toContainText('Enter private beta');
+      await expect(page.getByTestId('button-onboarding-request-access')).toContainText('Request private beta access');
+      await expect(page.getByTestId('button-onboarding-enter-private-beta')).toHaveCount(0);
     } finally {
       await context.close();
     }

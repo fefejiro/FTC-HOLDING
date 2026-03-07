@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { isGuestUiEnabled } from "@/lib/guestUiPolicy";
 
 interface GuestSessionInfo {
   expiresAt: string;
@@ -21,6 +22,7 @@ function resolveDaysRemaining(sessionInfo: GuestSessionInfo): number {
 
 export function GuestExpiryBanner() {
   const { user } = useAuth();
+  const guestUiEnabled = isGuestUiEnabled();
   const [isDismissed, setIsDismissed] = useState(() => {
     return sessionStorage.getItem("guestBannerDismissed") === "true";
   });
@@ -31,7 +33,7 @@ export function GuestExpiryBanner() {
     staleTime: 60 * 60 * 1000,
   });
 
-  if (!user?.isGuest || isDismissed) {
+  if (!guestUiEnabled || !user?.isGuest || isDismissed) {
     return null;
   }
 

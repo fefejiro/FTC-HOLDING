@@ -9,12 +9,14 @@ import ConsentAgreement from "@/components/ConsentAgreement";
 import GuestEntry from "@/components/GuestEntry";
 import { SEOHead } from "@/components/SEOHead";
 import { UserRound } from "lucide-react";
+import { isGuestUiEnabled } from "@/lib/guestUiPolicy";
 
 interface OnboardingAuthChoiceProps {
   onContinueAsGuest: () => void;
+  allowGuestEntry: boolean;
 }
 
-function OnboardingAuthChoice({ onContinueAsGuest }: OnboardingAuthChoiceProps) {
+function OnboardingAuthChoice({ onContinueAsGuest, allowGuestEntry }: OnboardingAuthChoiceProps) {
   return (
     <div className="min-h-[100dvh] flex items-center justify-center px-6 py-10 bg-background">
       <div
@@ -29,14 +31,22 @@ function OnboardingAuthChoice({ onContinueAsGuest }: OnboardingAuthChoiceProps) 
         </div>
 
         <div className="space-y-3">
-          <Button
-            onClick={onContinueAsGuest}
-            className="w-full justify-center"
-            data-testid="button-onboarding-continue-guest"
-          >
-            <UserRound className="h-4 w-4" />
-            Enter private beta
-          </Button>
+          {allowGuestEntry ? (
+            <Button
+              onClick={onContinueAsGuest}
+              className="w-full justify-center"
+              data-testid="button-onboarding-enter-private-beta"
+            >
+              <UserRound className="h-4 w-4" />
+              Enter private beta
+            </Button>
+          ) : (
+            <Button asChild className="w-full justify-center" data-testid="button-onboarding-request-access">
+              <a href="mailto:support@peacepad.ca?subject=PeacePad%20private%20beta%20access">
+                Request private beta access
+              </a>
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -44,6 +54,7 @@ function OnboardingAuthChoice({ onContinueAsGuest }: OnboardingAuthChoiceProps) 
 }
 
 export default function OnboardingPage() {
+  const allowGuestEntry = isGuestUiEnabled();
   const [showWelcome, setShowWelcome] = useState(() => {
     const hasSeenIntro = localStorage.getItem("hasSeenIntro");
     const hasAcceptedConsent = localStorage.getItem("hasAcceptedConsent");
@@ -53,7 +64,7 @@ export default function OnboardingPage() {
   const [showGuestEntry, setShowGuestEntry] = useState(() => {
     const pendingCode = localStorage.getItem("pending_join_code");
     const hasAcceptedConsent = localStorage.getItem("hasAcceptedConsent") === "true";
-    return Boolean(pendingCode && hasAcceptedConsent);
+    return allowGuestEntry && Boolean(pendingCode && hasAcceptedConsent);
   });
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -81,7 +92,7 @@ export default function OnboardingPage() {
       setLocation("/prep-chat");
       return;
     }
-  }, [user, isLoading, setLocation]);
+  }, [user, isLoading, setLocation, allowGuestEntry]);
 
   const handleGetStarted = () => {
     console.log("[Onboarding] User clicked Start Your First Conversation");
@@ -122,7 +133,7 @@ export default function OnboardingPage() {
     
     // Check if user is authenticated - if not, show guest entry
     const pendingCode = localStorage.getItem("pending_join_code");
-    if (!user && pendingCode) {
+    if (!user && pendingCode && allowGuestEntry) {
       console.log("[Onboarding] User not authenticated with pending join code - showing guest entry");
       setShowGuestEntry(true);
     }
@@ -196,13 +207,14 @@ export default function OnboardingPage() {
 
   // After consent, if no user yet, show guest entry
   if (!user) {
-    if (showGuestEntry) {
+    if (showGuestEntry && allowGuestEntry) {
       console.log("[Onboarding] No user, showing GuestEntry");
       return <GuestEntry onAuthenticated={handleGuestAuthenticated} />;
     }
 
     return (
       <OnboardingAuthChoice
+        allowGuestEntry={allowGuestEntry}
         onContinueAsGuest={() => setShowGuestEntry(true)}
       />
     );
