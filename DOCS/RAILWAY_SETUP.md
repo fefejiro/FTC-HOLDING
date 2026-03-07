@@ -39,6 +39,7 @@ Required environment variables:
 - Start command: `npm run start`
 - Health checks:
   - `/health`
+  - `/api/health`
   - `/api/status`
 
 Required environment variables:
@@ -54,6 +55,13 @@ Required environment variables:
 - `ACRCLOUD_ACCESS_KEY`
 - `ACRCLOUD_ACCESS_SECRET`
 - `GENIUS_API_KEY`
+
+Post-deploy verification:
+
+- `powershell -ExecutionPolicy Bypass -File scripts/verify-saywetin-prod.ps1`
+- Release gate for listen pipeline:
+  - `/api/status` must report `acrcloud.configured=true`
+  - `/api/status` must report `openai.configured=true`
 
 ## Dockerfiles
 

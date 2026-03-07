@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Saywetin</string>
+    <string name="title_activity_main">Saywetin</string>
+    <string name="package_name">com.saywetin.app</string>
+    <string name="custom_url_scheme">com.saywetin.app</string>
+</resources>

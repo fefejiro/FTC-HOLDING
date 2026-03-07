@@ -25,6 +25,7 @@ Commands therefore run from app roots (`APPS/peacepad`, `APPS/saywetin`).
 - Install: `npm install`
 - Build: `npm run build`
 - Start: `npm run start`
+- Production verify: `powershell -ExecutionPolicy Bypass -File scripts/verify-saywetin-prod.ps1`
 
 ## PeacePad Frontend (Cloudflare Pages)
 
@@ -36,6 +37,7 @@ Commands therefore run from app roots (`APPS/peacepad`, `APPS/saywetin`).
 
 ## SayWetin Frontend (Cloudflare Pages)
 
+- Gate 1 (must pass before Pages setup): `npm --workspace=@ftc/saywetin run verify:frontend-build`
 - Root directory: `APPS/saywetin`
 - Install command: `npm install`
 - Build command: `npm exec vite build`

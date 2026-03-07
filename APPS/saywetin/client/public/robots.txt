@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://saywetin.app/sitemap.xml
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /

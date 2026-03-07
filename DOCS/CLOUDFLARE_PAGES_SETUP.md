@@ -18,12 +18,18 @@ Custom domains:
 
 ## SayWetin Frontend
 
+- Frontend gate (run before Pages setup): `npm --workspace=@ftc/saywetin run verify:frontend-build`
+  - Must generate `APPS/saywetin/dist/public/index.html`
+  - Must generate `APPS/saywetin/dist/public/assets/*`
 - Project root directory: `APPS/saywetin`
 - Install command: `npm install`
 - Build command: `npm exec vite build`
 - Build output directory: `dist/public`
 - Environment variable:
   - `VITE_API_BASE_URL=https://api.saywetin.app`
+- SPA fallback file required:
+  - `APPS/saywetin/client/public/_redirects`
+  - Content: `/* /index.html 200`
 
 Custom domains:
 

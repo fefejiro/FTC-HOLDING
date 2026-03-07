@@ -1,0 +1,17 @@
+{
+  "appId": "com.saywetin.app",
+  "appName": "Saywetin",
+  "webDir": "dist/public",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://saywetin.app",
+    "cleartext": false,
+    "allowNavigation": [
+      "https://saywetin.app",
+      "https://www.saywetin.app",
+      "https://api.saywetin.app"
+    ],
+    "androidScheme": "https",
+    "iosScheme": "https"
+  }
+}

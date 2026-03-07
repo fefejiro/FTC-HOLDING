@@ -29,5 +29,5 @@ test-results/
 **/android/app/build/
 **/ios/Pods/
 
-# ignore nested repositories
-APPS/saywetin/
+# keep SayWetin trackable in monorepo, but ignore local nested git backup artifacts
+APPS/saywetin/.git.backup-*/
