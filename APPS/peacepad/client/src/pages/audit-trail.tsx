@@ -5,8 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Download, FileText, Calendar, MessageSquare, Phone, Video, FileCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 interface AuditTrail {
   messages: any[];
@@ -109,6 +107,10 @@ export default function AuditTrailPage() {
   const handleExportPDF = async () => {
     try {
       setIsExporting(true);
+      const [{ default: JsPdf }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
       
       const response = await fetch('/api/audit-trail?format=json', {
         credentials: 'include',
@@ -124,7 +126,7 @@ export default function AuditTrailPage() {
         throw new Error('Invalid audit trail data received');
       }
       
-      const doc = new jsPDF();
+      const doc = new JsPdf();
       const pageWidth = doc.internal.pageSize.getWidth();
       const now = new Date();
       

@@ -1,0 +1,110 @@
+name: PeacePad Production Gates
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  production-gates:
+    name: Production Ownership + Smoke Gates
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Determine gate mode
+        id: gate_mode
+        shell: pwsh
+        run: |
+          $nowUtc = [DateTime]::UtcNow
+          $hardGateStart = [DateTime]::Parse("2026-03-16T00:00:00Z").ToUniversalTime()
+          $softWindowStart = [DateTime]::Parse("2026-03-09T00:00:00Z").ToUniversalTime()
+          $softWindowEnd = [DateTime]::Parse("2026-03-13T23:59:59Z").ToUniversalTime()
+
+          if ($nowUtc -ge $hardGateStart) {
+            $mode = "hard"
+          } else {
+            $mode = "soft"
+          }
+
+          $window = if ($nowUtc -lt $softWindowStart) {
+            "pre-soft-window"
+          } elseif ($nowUtc -le $softWindowEnd) {
+            "soft-window"
+          } elseif ($nowUtc -lt $hardGateStart) {
+            "soft-extension"
+          } else {
+            "hard-window"
+          }
+
+          "mode=$mode" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "window=$window" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "now_utc=$($nowUtc.ToString('o'))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Run production gate checks
+        shell: pwsh
+        env:
+          GATE_MODE: ${{ steps.gate_mode.outputs.mode }}
+        run: |
+          $checks = @(
+            @{ Name = "Deployment ownership"; Command = "npm --prefix APPS/peacepad run verify:deployment-ownership" },
+            @{ Name = "Production endpoint verify"; Command = "npm run verify:peacepad:prod" },
+            @{ Name = "Guest auth smoke"; Command = "npm --prefix APPS/peacepad run smoke:guest-auth" }
+          )
+
+          $failures = New-Object System.Collections.Generic.List[string]
+
+          foreach ($check in $checks) {
+            Write-Host "Running: $($check.Name)"
+            cmd /c $check.Command
+            if ($LASTEXITCODE -ne 0) {
+              $failures.Add($check.Name)
+              Write-Host "::error::$($check.Name) failed."
+            } else {
+              Write-Host "PASS: $($check.Name)"
+            }
+          }
+
+          if ($failures.Count -gt 0) {
+            if ($env:GATE_MODE -eq "hard") {
+              throw "Hard gate failure: $($failures -join ', ')"
+            }
+
+            Write-Host "::warning::Soft gate failures detected: $($failures -join ', ')"
+          } else {
+            Write-Host "All production gate checks passed."
+          }
+
+      - name: Publish gate summary and rollback runbook
+        if: always()
+        shell: pwsh
+        run: |
+          $summary = @"
+          ## PeacePad Production Gates
+
+          - Gate mode: `${{ steps.gate_mode.outputs.mode }}`
+          - Window state: `${{ steps.gate_mode.outputs.window }}`
+          - Run time (UTC): `${{ steps.gate_mode.outputs.now_utc }}`
+
+          ### Check order
+          1. Deployment ownership verify
+          2. Production endpoint verify
+          3. Guest auth smoke
+
+          ### Rollback runbook
+          1. **Railway**: open deploy history, select the last known-good deployment, and redeploy.
+          2. **Cloudflare Pages**: promote the previous stable production deployment.
+          3. Re-run:
+             - `npm --prefix APPS/peacepad run verify:deployment-ownership`
+             - `npm run verify:peacepad:prod`
+             - `npm --prefix APPS/peacepad run smoke:guest-auth`
+          "@
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary

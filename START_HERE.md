@@ -11,6 +11,7 @@
 - Frontend must call API via `VITE_API_BASE_URL=https://api.peacepad.ca`
 - Android/Play Store releases are separate from web deploys
 - Release workflow reference: `DOCS/PEACEPAD_RELEASE_POLICY.md`
+- Phase 2 hardening reference: `DOCS/PEACEPAD_PHASE2_HARDENING.md`
 
 ## Current High-Priority Checks
 

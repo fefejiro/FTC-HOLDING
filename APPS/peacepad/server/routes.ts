@@ -142,6 +142,11 @@ import {
   normalizeWeatherCondition,
 } from "./lib/contentFallbacks";
 import { findScheduleConflicts, getDisplayEventTitle, normalizeSchedulableEvent } from "@shared/peacepad/scheduling";
+import {
+  getWebUpdateMetrics,
+  parseWebUpdateTelemetryPayload,
+  recordWebUpdateTelemetry,
+} from "./lib/webUpdateTelemetry";
 
 // Initialize OpenAI with proper error checking
 // Prioritize OPENAI_API_KEY (user's own key) over AI_INTEGRATIONS key which may have incorrect values
@@ -1082,6 +1087,24 @@ Crawl-delay: 1
 
     testMonitor.log("P3", "Performance", summary, metrics);
     res.json({ logged: true });
+  });
+
+  app.post("/api/telemetry/web-update", (req, res) => {
+    const parsed = parseWebUpdateTelemetryPayload(req.body);
+    if (!parsed.ok) {
+      return res.status(400).json({
+        message: "Invalid web update telemetry payload",
+        errors: parsed.errors,
+      });
+    }
+
+    try {
+      recordWebUpdateTelemetry(parsed.payload);
+      return res.status(202).json({ accepted: true });
+    } catch (error) {
+      console.error("[WebUpdateTelemetry] Failed to record event:", error);
+      return res.status(500).json({ message: "Failed to record telemetry event" });
+    }
   });
 
   app.get("/api/test-monitor/analysis", (req, res) => {
@@ -8470,6 +8493,17 @@ Crawl-delay: 1
     } catch (error) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.get("/api/admin/web-update-metrics", isAuthenticated, (req: any, res) => {
+    try {
+      const windowInput = typeof req.query?.window === "string" ? req.query.window : 24;
+      const metrics = getWebUpdateMetrics(windowInput);
+      return res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching web update metrics:", error);
+      return res.status(500).json({ message: "Failed to fetch web update metrics" });
     }
   });
 

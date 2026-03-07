@@ -217,6 +217,7 @@ async function performHardRefresh(): Promise<void> {
 export async function applyWebUpdateNow(
   storage?: StorageLike,
   refreshHandler: () => Promise<void> = performHardRefresh,
+  beforeRefresh?: () => Promise<void> | void,
 ): Promise<void> {
   const localStorageRef = getStorage(storage);
   if (localStorageRef) {
@@ -225,6 +226,10 @@ export async function applyWebUpdateNow(
       localStorageRef.setItem(WEB_BUILD_ID_KEY, pendingBuild);
     }
     clearUpdateFlags(localStorageRef);
+  }
+
+  if (beforeRefresh) {
+    await beforeRefresh();
   }
 
   await refreshHandler();

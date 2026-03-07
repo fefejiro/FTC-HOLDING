@@ -36,6 +36,9 @@ A new AAB is required only for native-shell changes, including:
 4. Run:
    - `npm run verify:peacepad:prod`
    - `npm --prefix APPS/peacepad run smoke:guest-auth`
+5. Phase 2 hardening checks:
+   - `npm --prefix APPS/peacepad run verify:deployment-ownership`
+   - `npm --prefix APPS/peacepad run smoke:e2e:update-lifecycle`
 
 ## Native Release Checklist
 
@@ -43,3 +46,7 @@ A new AAB is required only for native-shell changes, including:
 2. Build signed AAB (`bundleRelease`).
 3. Upload to Play Console internal testing first.
 4. Validate on-device native flows, then staged production rollout.
+
+## Operational Reference
+
+- Phase 2 hardening playbook: `DOCS/PEACEPAD_PHASE2_HARDENING.md`

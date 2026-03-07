@@ -7,12 +7,39 @@ import {
   deferWebUpdate,
   type WebUpdateStatus,
 } from "@/lib/webUpdateManager";
+import { useAuth } from "@/hooks/useAuth";
+import { sendWebUpdateTelemetryEvent, type WebUpdateTelemetrySessionType } from "@/lib/webUpdateTelemetry";
 
 export function UpdateNotification() {
+  const { isAuthenticated, user } = useAuth();
   const [updateStatus, setUpdateStatus] = useState<WebUpdateStatus | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const dismissedForCurrentOpenRef = useRef(false);
   const isApplyingUpdateRef = useRef(false);
+  const lastPromptEventBuildRef = useRef<string | null>(null);
+
+  const sessionType = useMemo<WebUpdateTelemetrySessionType>(() => {
+    if (!isAuthenticated) {
+      return "public";
+    }
+
+    if ((user as any)?.isGuest === true || (user as any)?.sessionType === "guest") {
+      return "guest";
+    }
+
+    return "authenticated";
+  }, [isAuthenticated, user]);
+
+  const sendTelemetry = useCallback(
+    (eventName: Parameters<typeof sendWebUpdateTelemetryEvent>[0], status: WebUpdateStatus) => {
+      sendWebUpdateTelemetryEvent(eventName, {
+        webBuildId: status.currentBuildId || "",
+        knownBuildId: status.knownBuildId,
+        sessionType,
+      });
+    },
+    [sessionType],
+  );
 
   const remainingHours = useMemo(() => {
     if (!updateStatus?.forceAfterMs) {
@@ -27,20 +54,23 @@ export function UpdateNotification() {
     return Math.ceil(msRemaining / (60 * 60 * 1000));
   }, [updateStatus?.forceAfterMs]);
 
-  const applyUpdate = useCallback(async () => {
+  const applyUpdate = useCallback(async (status: WebUpdateStatus) => {
     if (isApplyingUpdateRef.current) {
       return;
     }
 
     isApplyingUpdateRef.current = true;
     setIsRefreshing(true);
+    sendTelemetry("update_apply_started", status);
 
     try {
-      await applyWebUpdateNow();
+      await applyWebUpdateNow(undefined, undefined, async () => {
+        sendTelemetry("update_apply_completed", status);
+      });
     } finally {
       isApplyingUpdateRef.current = false;
     }
-  }, []);
+  }, [sendTelemetry]);
 
   const evaluateUpdate = useCallback(async () => {
     const status = await checkForWebUpdate();
@@ -52,8 +82,9 @@ export function UpdateNotification() {
     }
 
     if (status.forceUpdateRequired) {
+      sendTelemetry("update_forced_24h", status);
       setUpdateStatus(status);
-      await applyUpdate();
+      await applyUpdate(status);
       return;
     }
 
@@ -61,8 +92,13 @@ export function UpdateNotification() {
       return;
     }
 
+    if (status.currentBuildId && lastPromptEventBuildRef.current !== status.currentBuildId) {
+      sendTelemetry("update_prompt_shown", status);
+      lastPromptEventBuildRef.current = status.currentBuildId;
+    }
+
     setUpdateStatus(status);
-  }, [applyUpdate]);
+  }, [applyUpdate, sendTelemetry]);
 
   useEffect(() => {
     evaluateUpdate();
@@ -102,10 +138,19 @@ export function UpdateNotification() {
   }, [evaluateUpdate]);
 
   const handleRefresh = async () => {
-    await applyUpdate();
+    if (!updateStatus) {
+      return;
+    }
+
+    sendTelemetry("update_now_clicked", updateStatus);
+    await applyUpdate(updateStatus);
   };
 
   const handleLater = () => {
+    if (updateStatus) {
+      sendTelemetry("update_later_clicked", updateStatus);
+    }
+
     deferWebUpdate();
     dismissedForCurrentOpenRef.current = true;
     setUpdateStatus(null);
