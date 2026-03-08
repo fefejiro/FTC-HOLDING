@@ -17,14 +17,14 @@ export default function Hero({ projects }: HeroProps) {
             businesses, creators, and emerging platforms.
           </p>
           <div className="hero-actions">
-            <Link href="/work" className="btn btn-primary">
+            <Link href="/work-with-ftc" className="btn btn-primary">
+              Start a Project
+            </Link>
+            <Link href="/work" className="btn btn-secondary">
               View Work
             </Link>
-            <Link href="/work-with-ftc" className="btn btn-secondary">
-              Work With FTC
-            </Link>
           </div>
-          <p className="proof-strip">Featured work: PeacePad - SayWetin - ATEAM</p>
+          <p className="proof-strip">Featured work: PeacePad • SayWetin • ATEAM</p>
         </div>
         <div className="hero-collage">
           <p className="collage-label">Studio Projects</p>

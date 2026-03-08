@@ -4,15 +4,25 @@
 
 Launch FTC V1 at `https://ftc.peacepad.ca` without new domain purchase.
 
-## DNS baseline (must remain unchanged unless noted)
+## Cloudflare source alignment (must be true before publish)
 
-- `CNAME ftc -> ftc-site.pages.dev` = **Proxied**
+- Pages project bound to FTC domain: `ftc-site-pages`
+- Custom domain: `ftc.peacepad.ca`
+- Monorepo source root: `APPS/ftc-site`
+- Production branch: `main`
+
+## DNS baseline (must remain unchanged unless explicitly noted)
+
+- `CNAME ftc -> <active ftc-site-pages host>.pages.dev` = **Proxied**
 - `CNAME api -> uka7e8pj.up.railway.app` = **DNS only**
-- `CNAME peacepad.ca -> ftc-holding.pages.dev` = unchanged in this pass
-- `CNAME www -> ftc-holding.pages.dev` = unchanged in this pass
+- `peacepad.ca` root + `www` records remain mapped to PeacePad project
 - MX/TXT/DKIM/SPF records = unchanged in this pass
 
-If `https://ftc.peacepad.ca` returns Cloudflare `403`, verify the `ftc` CNAME target is a resolvable Pages default domain.
+If `https://ftc.peacepad.ca` returns Cloudflare `403` or legacy pages:
+
+1. verify `ftc` CNAME target resolves to the active FTC Pages project;
+2. verify Cloudflare Pages source root is `APPS/ftc-site`;
+3. trigger production redeploy.
 
 ## Pre-publish checks
 
@@ -43,8 +53,9 @@ If `https://ftc.peacepad.ca` returns Cloudflare `403`, verify the `ftc` CNAME ta
 
 ## Publish path (budget-safe)
 
-1. Confirm custom domain binding for `ftc.peacepad.ca` in Cloudflare Pages project.
-2. Validate DNS resolve + TLS certificate active for `ftc.peacepad.ca`.
-3. Validate production route navigation + redirects.
-4. Share canonical links in LinkedIn, Upwork, Fiverr profiles.
-5. Delay custom domain purchase until budget decision.
+1. Confirm `ftc-site-pages` project source root is `APPS/ftc-site`.
+2. Redeploy production from `main`.
+3. Validate DNS resolve + TLS certificate active for `ftc.peacepad.ca`.
+4. Validate production route navigation + redirects.
+5. Share canonical links in LinkedIn, Upwork, Fiverr profiles.
+6. Delay custom domain purchase until budget decision.

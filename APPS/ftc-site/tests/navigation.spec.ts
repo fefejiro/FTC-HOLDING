@@ -43,6 +43,10 @@ test.describe("FTC site routes", () => {
     ];
 
     for (const redirect of redirects) {
+      const response = await page.request.fetch(redirect.from, { maxRedirects: 0 });
+      expect([301, 308]).toContain(response.status());
+      expect(response.headers().location).toBe(redirect.to);
+
       await page.goto(redirect.from);
       await expect(page).toHaveURL(redirect.to);
     }
