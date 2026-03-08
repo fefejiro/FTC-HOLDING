@@ -40,7 +40,12 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
-          <Link href="/work-with-ftc" className="cta-btn">
+          <Link
+            href="/work-with-ftc"
+            className="cta-btn"
+            data-analytics-event="start_project_click"
+            data-analytics-location="header_desktop"
+          >
             Start a Project
           </Link>
         </nav>
@@ -61,7 +66,12 @@ export default function Header() {
             </Link>
           ))}
           <div style={{ marginTop: 12 }}>
-            <Link href="/work-with-ftc" className="cta-btn">
+            <Link
+              href="/work-with-ftc"
+              className="cta-btn"
+              data-analytics-event="start_project_click"
+              data-analytics-location="header_mobile"
+            >
               Start a Project
             </Link>
           </div>

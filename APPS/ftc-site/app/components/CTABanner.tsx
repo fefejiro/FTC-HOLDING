@@ -22,11 +22,21 @@ export default function CTABanner({
       <h2>{title}</h2>
       <p>{description}</p>
       <div className="hero-actions">
-        <Link href={primaryHref} className="btn btn-primary">
+        <Link
+          href={primaryHref}
+          className="btn btn-primary"
+          data-analytics-event="start_project_click"
+          data-analytics-location="final_cta"
+        >
           {primaryLabel}
         </Link>
         {secondaryLabel && secondaryHref ? (
-          <Link href={secondaryHref} className="btn btn-secondary">
+          <Link
+            href={secondaryHref}
+            className="btn btn-secondary"
+            data-analytics-event="view_work_click"
+            data-analytics-location="final_cta"
+          >
             {secondaryLabel}
           </Link>
         ) : null}
@@ -34,4 +44,3 @@ export default function CTABanner({
     </section>
   );
 }
-

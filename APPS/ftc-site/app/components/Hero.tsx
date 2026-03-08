@@ -17,10 +17,20 @@ export default function Hero({ projects }: HeroProps) {
             businesses, creators, and emerging platforms.
           </p>
           <div className="hero-actions">
-            <Link href="/work-with-ftc" className="btn btn-primary">
+            <Link
+              href="/work-with-ftc"
+              className="btn btn-primary"
+              data-analytics-event="start_project_click"
+              data-analytics-location="hero"
+            >
               Start a Project
             </Link>
-            <Link href="/work" className="btn btn-secondary">
+            <Link
+              href="/work"
+              className="btn btn-secondary"
+              data-analytics-event="view_work_click"
+              data-analytics-location="hero"
+            >
               View Work
             </Link>
           </div>

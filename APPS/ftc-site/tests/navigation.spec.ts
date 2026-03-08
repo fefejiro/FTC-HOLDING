@@ -70,4 +70,30 @@ test.describe("FTC site routes", () => {
     const sitemapText = await sitemap?.text();
     expect(sitemapText || "").toContain("https://ftc.peacepad.ca/work/peacepad");
   });
+
+  test("homepage keeps Start a Project as primary conversion action", async ({ page }) => {
+    await page.goto("/");
+    const ctas = page.getByRole("link", { name: "Start a Project" });
+    const count = await ctas.count();
+    expect(count).toBeGreaterThanOrEqual(3);
+    await expect(ctas.first()).toBeVisible();
+  });
+
+  test("intake API accepts valid lead payload", async ({ page }) => {
+    const response = await page.request.post("/api/intake", {
+      data: {
+        name: "Integration Test",
+        email: "integration-test@example.com",
+        projectIdea:
+          "Need an AI-assisted workflow to route intake requests and automate status updates.",
+        budgetRange: "5k-15k",
+        timeline: "6-12-weeks",
+        companyWebsite: "",
+        startedAt: Date.now() - 3_000
+      }
+    });
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.ok).toBeTruthy();
+  });
 });

@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test",
+    "smoke:prod": "node scripts/smoke-prod.mjs",
     "test": "npm run test:e2e",
     "check": "npm run lint && npm run build && npm run test:e2e"
   },

@@ -4,6 +4,9 @@ import { SITE_URL } from "../lib/site";
 import "../styles/globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import Analytics from "./components/Analytics";
+
+const GOOGLE_SITE_VERIFICATION = process.env.GOOGLE_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -19,7 +22,12 @@ export const metadata: Metadata = {
       "FTC builds AI tools, automation systems, and digital products for businesses, creators, and startups.",
     url: SITE_URL,
     siteName: "FTC"
-  }
+  },
+  verification: GOOGLE_SITE_VERIFICATION
+    ? {
+        google: GOOGLE_SITE_VERIFICATION
+      }
+    : undefined
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );

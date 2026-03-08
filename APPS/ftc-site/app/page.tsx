@@ -47,7 +47,12 @@ export default function HomePage() {
             ))}
           </div>
           <p className="section-link-row">
-            <Link href="/work" className="inline-link">
+            <Link
+              href="/work"
+              className="inline-link"
+              data-analytics-event="view_work_click"
+              data-analytics-location="home_selected_work"
+            >
               Explore all case studies
             </Link>
           </p>
@@ -83,4 +88,3 @@ export default function HomePage() {
     </>
   );
 }
-

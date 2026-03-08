@@ -6,9 +6,17 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({ project }: ProjectCardProps) {
+  const statusLabel =
+    project.status === "live"
+      ? "Live"
+      : project.status === "active-development"
+        ? "Active Development"
+        : "Internal Runtime";
+
   return (
     <article className="card project-card">
       <p className="card-kicker">{project.pillar.replace("-", " ")}</p>
+      <span className="status-pill">{statusLabel}</span>
       <h3>{project.name}</h3>
       <p className="muted">{project.tagline}</p>
       <p>{project.summary}</p>
@@ -19,10 +27,15 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           </li>
         ))}
       </ul>
-      <Link href={`/work/${project.slug}`} className="inline-link">
+      <Link
+        href={`/work/${project.slug}`}
+        className="inline-link"
+        data-analytics-event="case_study_click"
+        data-analytics-label={project.slug}
+        data-analytics-location="project_card"
+      >
         View case study
       </Link>
     </article>
   );
 }
-

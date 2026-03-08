@@ -43,13 +43,24 @@ If `https://ftc.peacepad.ca` returns Cloudflare `403` or legacy pages:
 - Canonical redirect check: `*.pages.dev` host redirects to `https://ftc.peacepad.ca`
 - Mobile pass on hero, cards, and intake form
 - Header and footer links checked manually
+- Intake API check:
+  - `POST /api/intake` returns 200 for valid payload
+  - honeypot/rate-limit paths return non-200 safely
 
 ## Content checks
 
 - Hero copy aligns with FTC identity statement
 - Case studies for PeacePad, SayWetin, ATEAM are complete
 - Intake form fields are present: name, email, project idea, budget, timeline
+- Intake form submit shows success/failure state
+- `Start a Project` is primary CTA in hero and final CTA banner
 - `robots.txt` and `sitemap.xml` resolve with canonical host `https://ftc.peacepad.ca`
+
+## Analytics and verification checks
+
+- GA4 script loads only when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set
+- CTA and case-study links emit analytics events
+- Google verification meta appears when `GOOGLE_SITE_VERIFICATION` is set
 
 ## Publish path (budget-safe)
 
