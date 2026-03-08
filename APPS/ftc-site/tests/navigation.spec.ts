@@ -1,47 +1,69 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
-test.describe('Navigation', () => {
-  const routes = [
-    { path: '/', title: 'From Manual Complexity to Intelligent Systems' },
-    { path: '/about', title: 'Applied Artificial Intelligence' },
-    { path: '/services', title: 'Services' },
-    { path: '/services/enterprise-systems-infrastructure', title: 'Enterprise Systems & Infrastructure Consulting' },
-    { path: '/services/intelligent-systems-automation', title: 'Intelligent Systems & Automation Engineering' },
-    { path: '/services/product-technical-architecture', title: 'Product & Technical Architecture Advisory' },
-    { path: '/case-studies', title: 'Case Studies' },
-    { path: '/contact', title: 'Contact' },
+test.describe("FTC site routes", () => {
+  const routeChecks = [
+    { path: "/", title: "Intelligent software. Creative AI. Real-world systems." },
+    { path: "/capabilities", title: "Capabilities" },
+    { path: "/work", title: "Work" },
+    { path: "/products", title: "Products" },
+    { path: "/about", title: "About FTC" },
+    { path: "/work-with-ftc", title: "Work With FTC" }
   ];
 
-  routes.forEach(route => {
+  routeChecks.forEach((route) => {
     test(`visiting ${route.path}`, async ({ page }) => {
       await page.goto(route.path);
-      await expect(page.locator('h1')).toHaveText(route.title);
+      await expect(page.locator("h1")).toHaveText(route.title);
     });
   });
 
-  test('header links', async ({ page }) => {
-    await page.goto('/');
-    const linkNames = ['Home', 'About', 'Services', 'Case Studies', 'Contact'];
-    for (const name of linkNames) {
-      // Click the first matching link (to avoid clicking the duplicate Contact CTA button)
-      await page.locator('header').getByRole('link', { name }).first().click();
-      // "Home" stays at /, others navigate to /name-in-kebab-case
-      const expectedPath = name === 'Home' ? '/' : `/${name.toLowerCase().replace(/ /g, '-')}`;
-      await expect(page).toHaveURL(expectedPath);
+  test("header links hit the new IA routes", async ({ page }) => {
+    await page.goto("/");
+    const navTargets: Array<{ label: string; expectedPath: string }> = [
+      { label: "Home", expectedPath: "/" },
+      { label: "Capabilities", expectedPath: "/capabilities" },
+      { label: "Work", expectedPath: "/work" },
+      { label: "Products", expectedPath: "/products" },
+      { label: "About", expectedPath: "/about" },
+      { label: "Work With FTC", expectedPath: "/work-with-ftc" }
+    ];
+
+    for (const target of navTargets) {
+      await page.goto("/");
+      await page.locator("header").getByRole("link", { name: target.label }).first().click();
+      await expect(page).toHaveURL(target.expectedPath);
     }
   });
 
-  test('from /services click pillar cards', async ({ page }) => {
-    await page.goto('/services');
-    const cardLinks = [
-      '/services/enterprise-systems-infrastructure',
-      '/services/intelligent-systems-automation',
-      '/services/product-technical-architecture',
+  test("legacy routes redirect to new routes", async ({ page }) => {
+    const redirects: Array<{ from: string; to: string }> = [
+      { from: "/services", to: "/capabilities" },
+      { from: "/case-studies", to: "/work" },
+      { from: "/contact", to: "/work-with-ftc" }
     ];
-    for (const href of cardLinks) {
-      await page.locator(`a[href="${href}"]`).click();
-      await expect(page).toHaveURL(href);
-      await page.goBack();
+
+    for (const redirect of redirects) {
+      await page.goto(redirect.from);
+      await expect(page).toHaveURL(redirect.to);
     }
+  });
+
+  test("case study detail route works", async ({ page }) => {
+    await page.goto("/work/peacepad");
+    await expect(page.locator("h1")).toHaveText("PeacePad");
+    await expect(page.getByRole("heading", { name: "Problem" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Outcome" })).toBeVisible();
+  });
+
+  test("robots and sitemap are exposed", async ({ page }) => {
+    const robots = await page.goto("/robots.txt");
+    expect(robots?.status()).toBe(200);
+    const robotsText = await robots?.text();
+    expect(robotsText || "").toContain("Sitemap: https://ftc.peacepad.ca/sitemap.xml");
+
+    const sitemap = await page.goto("/sitemap.xml");
+    expect(sitemap?.status()).toBe(200);
+    const sitemapText = await sitemap?.text();
+    expect(sitemapText || "").toContain("https://ftc.peacepad.ca/work/peacepad");
   });
 });

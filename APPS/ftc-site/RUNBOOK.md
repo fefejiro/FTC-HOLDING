@@ -1,37 +1,47 @@
 # RUNBOOK - FTC Site
 
 ## Prerequisites
-- Node.js v18+ or later
-- npm installed
 
-## Install
+- Node.js v18+
+- npm
+
+## Install (repo root)
+
 ```powershell
 npm install
 ```
 
-## Run dev
+## Dev
+
 ```powershell
-npm run dev
+npm --workspace=@ftc/ftc-site run dev
 ```
 
 ## Build
+
 ```powershell
-npm run build
+npm --workspace=@ftc/ftc-site run build
 ```
 
-## Start production
+## Test
+
 ```powershell
-npm run start
+npm --workspace=@ftc/ftc-site run test:e2e
 ```
 
-## Test commands
+## DNS and TLS verification (launch)
+
 ```powershell
-npm run test:e2e
+Resolve-DnsName ftc.peacepad.ca
+curl -I https://ftc.peacepad.ca
 ```
 
-## Troubleshooting
-- Port 3000 may be in use; stop other servers or set `PORT` env var.
-- If build errors reference missing ESLint config, install `eslint-config-next` or ignore.
+## Launch readiness artifacts
 
-## Deployment notes
-Static exports supported; host on Vercel or any static web server with Next.js support.
+- `docs/LAUNCH_READINESS_CHECKLIST.md`
+- `docs/EXTERNAL_PROFILE_LINKAGE_PACK.md`
+- `docs/LAUNCH_VERIFICATION_REPORT_2026-03-08.md`
+
+## No-deploy policy in this pass
+
+This implementation pass does not deploy or bind domains. It prepares a deploy-ready V1 for subdomain-first publishing.

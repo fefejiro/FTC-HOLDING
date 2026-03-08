@@ -1,76 +1,86 @@
-import Hero from './components/Hero';
-import OverviewCards from './components/OverviewCards';
-import CredibilityStrip from './components/CredibilityStrip';
-import DifferentiatorSection from './components/DifferentiatorSection';
-import VenturesSection from './components/VenturesSection';
-import CallToAction from './components/CallToAction';
-import { logger } from '../lib/logger';
-import { getSupabase } from '../lib/supabase';
-
-
-// Log page initialization during build/render
-if (typeof window === 'undefined') {
-  logger.info('HomePage rendering');
-}
-
-// verify supabase client imported (will not run on server)
-if (typeof window !== 'undefined') {
-  const s = getSupabase();
-  console.log('supabase client', s);
-}
+import Link from "next/link";
+import CTABanner from "./components/CTABanner";
+import CapabilityCard from "./components/CapabilityCard";
+import Hero from "./components/Hero";
+import ProjectCard from "./components/ProjectCard";
+import ServiceCard from "./components/ServiceCard";
+import { capabilities, projectCaseStudies, serviceTracks } from "../lib/content";
 
 export default function HomePage() {
   return (
     <>
-      <section className="section">
-        <Hero>
-          <h1>From Manual Complexity to Intelligent Systems</h1>
-          <p>Our team combines operational experience with applied artificial intelligence to deliver pragmatic outcomes.</p>
-        </Hero>
+      <section className="section section-hero">
+        <div className="container">
+          <Hero projects={projectCaseStudies} />
+        </div>
       </section>
 
       <section className="section">
-        <h2>Our Service Pillars</h2>
-        <div className="cards-grid">
-          <div className="card">
-            <h3>Enterprise Systems & Infrastructure Consulting</h3>
-            <p className="muted">Practical integration, operational resilience, and governance-ready delivery.</p>
-            <a href="/services/enterprise-systems-infrastructure">Learn more</a>
+        <div className="container">
+          <div className="section-heading">
+            <h2>What We Build</h2>
+            <p>
+              FTC designs intelligent systems, creative tools, and automation platforms
+              that help people communicate, create, and operate with clarity.
+            </p>
           </div>
-          <div className="card">
-            <h3>Intelligent Systems & Automation Engineering</h3>
-            <p className="muted">Automation and operational intelligence designed for governance and scale.</p>
-            <a href="/services/intelligent-systems-automation">Learn more</a>
-          </div>
-          <div className="card">
-            <h3>Product & Technical Architecture Advisory</h3>
-            <p className="muted">Architecture that supports clarity, maintainability, and growth.</p>
-            <a href="/services/product-technical-architecture">Learn more</a>
+          <div className="cards-grid cards-grid-3">
+            {capabilities.map((capability) => (
+              <CapabilityCard key={capability.slug} capability={capability} />
+            ))}
           </div>
         </div>
       </section>
 
       <section className="section">
-        <div className="credibility-strip">
-          <p>Incorporated 2019 — experience with LCBO, Canadian Tire, Home Depot, Ontario Ministry</p>
+        <div className="container">
+          <div className="section-heading">
+            <h2>Selected Work</h2>
+            <p>
+              Projects and systems developed by FTC across AI, automation, and creative
+              technology.
+            </p>
+          </div>
+          <div className="cards-grid cards-grid-3">
+            {projectCaseStudies.map((project) => (
+              <ProjectCard key={project.slug} project={project} />
+            ))}
+          </div>
+          <p className="section-link-row">
+            <Link href="/work" className="inline-link">
+              Explore all case studies
+            </Link>
+          </p>
         </div>
       </section>
 
       <section className="section">
-        <DifferentiatorSection />
-      </section>
-
-      <section className="section">
-        <h2>Founder-led initiatives</h2>
-        <div className="ventures">
-          <div className="venture-card"><a href="https://peacepad.ca/" target="_blank" rel="noreferrer">PeacePad</a></div>
-          <div className="venture-card"><a href="https://saywetin.app/" target="_blank" rel="noreferrer">SayWetin</a></div>
+        <div className="container">
+          <div className="section-heading">
+            <h2>What We Can Build Together</h2>
+            <p>We work across business workflows, creator systems, and startup products.</p>
+          </div>
+          <div className="cards-grid cards-grid-3">
+            {serviceTracks.map((track) => (
+              <ServiceCard key={track.audience} track={track} />
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="section cta-area">
-        <CallToAction />
+      <section className="section">
+        <div className="container">
+          <CTABanner
+            title="Have an idea, workflow, or system to build?"
+            description="FTC helps turn concepts into intelligent tools, creative systems, and modern digital products."
+            primaryLabel="Start a Project"
+            primaryHref="/work-with-ftc"
+            secondaryLabel="View Work"
+            secondaryHref="/work"
+          />
+        </div>
       </section>
     </>
   );
 }
+

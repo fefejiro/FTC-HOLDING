@@ -1,8 +1,9 @@
 "use client";
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
-import Logo from './Logo';
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import Logo from "./Logo";
+import { siteNav } from "../../lib/content";
 
 export default function Header() {
   const [open, setOpen] = useState(false);
@@ -27,16 +28,21 @@ export default function Header() {
           <Link href="/" className="logo-link">
             <Logo />
           </Link>
-          <div className="brand">Fejiro Technology Consultancy Inc.</div>
+          <div>
+            <p className="brand">FTC</p>
+            <p className="brand-subtitle">Creative AI Technology Studio</p>
+          </div>
         </div>
 
         <nav className="primary" aria-label="Main navigation">
-          <Link href="/">Home</Link>
-          <Link href="/about">About</Link>
-          <Link href="/services">Services</Link>
-          <Link href="/case-studies">Case Studies</Link>
-          <Link href="/contact">Contact</Link>
-          <Link href="/contact" className="cta-btn">Contact</Link>
+          {siteNav.map((link) => (
+            <Link key={link.href} href={link.href}>
+              {link.label}
+            </Link>
+          ))}
+          <Link href="/work-with-ftc" className="cta-btn">
+            Start a Project
+          </Link>
         </nav>
 
         <button
@@ -45,17 +51,19 @@ export default function Header() {
           className="mobile-toggle"
           onClick={() => setOpen(v => !v)}
         >
-          ☰
+          Menu
         </button>
 
         <div className={`mobile-panel ${open ? 'open' : ''}`} role="dialog" aria-modal="true">
-          <Link href="/">Home</Link>
-          <Link href="/about">About</Link>
-          <Link href="/services">Services</Link>
-          <Link href="/case-studies">Case Studies</Link>
-          <Link href="/contact">Contact</Link>
+          {siteNav.map((link) => (
+            <Link key={link.href} href={link.href}>
+              {link.label}
+            </Link>
+          ))}
           <div style={{ marginTop: 12 }}>
-            <Link href="/contact" className="cta-btn">Contact</Link>
+            <Link href="/work-with-ftc" className="cta-btn">
+              Start a Project
+            </Link>
           </div>
         </div>
       </div>
