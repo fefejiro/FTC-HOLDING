@@ -2,54 +2,76 @@
 
 ## Scope
 
-- Canonical/domain launch checks for `ftc.peacepad.ca`
-- DNS/TLS reachability checks
-- API/mail regression checks
+- FTC V1 cutover on `https://ftc.peacepad.ca`
+- Cloudflare Pages source/build alignment for monorepo
+- Route contract, redirect contract, and canonical host checks
+- Regression check for PeacePad domain mapping
 
-## Results
+## Implementation and deployment trail
 
-### 1) Build and route tests (local)
+### Code commits applied to `main`
+
+1. `e7b2494` - `ftc-site: enforce studio CTA and cutover verification updates`
+2. `596a039` - `ftc-site: make work route static for Cloudflare Pages build`
+3. `3d52e29` - `ftc-site: enforce legacy route redirects at middleware layer`
+4. `bfbc9b3` - `ftc-site: clean hero featured-work proof strip copy`
+
+### Cloudflare Pages project
+
+- Project: `ftc-site-pages`
+- Domains: `ftc-site-pages.pages.dev`, `ftc.peacepad.ca`
+- Production commit now canonical: `bfbc9b3`
+- Canonical deployment id: `f7177eb5-e61f-4220-af08-e474326c5175` (active)
+
+### Source/build alignment status
+
+Project-level build config has been explicitly aligned to monorepo app root:
+
+- `root_dir = APPS/ftc-site`
+- `build_command = npm run build:deps && npx @cloudflare/next-on-pages@1`
+- `destination_dir = .vercel/output/static`
+
+## Verification results
+
+### 1) Local preflight
 
 - `npm --workspace=@ftc/ftc-site run build`: pass
-- `npm --workspace=@ftc/ftc-site run test:e2e`: pass
+- `npm --workspace=@ftc/ftc-site run test:e2e`: pass (10/10)
 
-### 2) DNS checks (public)
+### 2) Production route contract (HTTP)
 
-- `Resolve-DnsName ftc.peacepad.ca`: resolves to Cloudflare edge A/AAAA
-- `Resolve-DnsName -Type MX peacepad.ca`: unchanged (`smtp.google.com`)
-- `Resolve-DnsName -Type TXT peacepad.ca`: unchanged SPF + verification TXT records
+Returned `200`:
 
-### 3) HTTPS checks (public)
+- `/`
+- `/capabilities`
+- `/work`
+- `/products`
+- `/about`
+- `/work-with-ftc`
+- `/robots.txt`
+- `/sitemap.xml`
+- `/work/peacepad`
 
-- `curl -I https://ftc.peacepad.ca`: responds `403` from Cloudflare edge
-- `curl -I https://api.peacepad.ca/health`: responds `200 OK` (unchanged API health)
+Returned `308`:
 
-### 4) Pages target checks
+- `/services -> /capabilities`
+- `/case-studies -> /work`
+- `/contact -> /work-with-ftc`
+- `https://ftc-site-pages.pages.dev/ -> https://ftc.peacepad.ca/`
 
-- `curl -I https://ftc-site.pages.dev`: **does not resolve**
-- `curl -I https://ftc-holding.pages.dev`: `200 OK`
-- Wrangler pages project list currently shows `ftc-holding` project/domain set, not `ftc-site`
+### 3) Business acceptance checks
 
-## Blocker
+- Hero is studio-first (`Intelligent software. Creative AI. Real-world systems.`)
+- Hero primary CTA is `Start a Project`
+- Final CTA banner primary action is `Start a Project`
+- PeacePad, SayWetin, and ATEAM are visible in hero proof strip and project sections
+- Mobile snapshot check passed for hero readability, CTA visibility, and section flow
 
-`ftc.peacepad.ca` currently points to `ftc-site.pages.dev`, but that target is not resolvable publicly.  
-This blocks successful custom-domain serving and explains the Cloudflare `403`.
+### 4) PeacePad mapping regression check
 
-## Required remediation before go-live
+Cloudflare Pages project bindings were verified:
 
-Choose one valid path and keep records stable otherwise:
+- `ftc-site-pages` owns: `ftc-site-pages.pages.dev`, `ftc.peacepad.ca`
+- `ftc-holding` remains mapped to: `ftc-holding.pages.dev`, `peacepad.ca`, `www.peacepad.ca`
 
-1. Point `ftc` CNAME to active Pages project domain (`ftc-holding.pages.dev`) **or**
-2. Create/restore a Pages project whose default domain is `ftc-site.pages.dev` and bind `ftc.peacepad.ca`.
-
-After remediation:
-
-- Verify `https://ftc.peacepad.ca` returns `200`
-- Verify certificate is Active in Cloudflare Pages custom domain panel
-- Verify canonical redirect behavior from pages.dev host after deploy
-
-## Regression status
-
-- `api.peacepad.ca` remains healthy (`200`)
-- MX/TXT/DKIM/SPF surface for `peacepad.ca` unchanged in verification sample
-
+No PeacePad domain mapping changes were made during this cutover.
