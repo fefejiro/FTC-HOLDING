@@ -2,6 +2,12 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { SITE_HOST } from "./lib/site";
 
+const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
+  "/services": "/capabilities",
+  "/case-studies": "/work",
+  "/contact": "/work-with-ftc"
+};
+
 function resolveRequestHost(req: NextRequest): string {
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
   return host.toLowerCase();
@@ -15,6 +21,14 @@ function shouldRedirectToCanonical(host: string): boolean {
 }
 
 export function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
+  const redirectPath = LEGACY_ROUTE_REDIRECTS[pathname];
+  if (redirectPath) {
+    const url = req.nextUrl.clone();
+    url.pathname = redirectPath;
+    return NextResponse.redirect(url, 308);
+  }
+
   const host = resolveRequestHost(req);
   if (!shouldRedirectToCanonical(host)) {
     return NextResponse.next();
@@ -29,4 +43,3 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
 };
-
