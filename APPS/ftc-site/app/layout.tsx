@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/"
   },
+  icons: {
+    icon: "/brand/una-mark.svg",
+    shortcut: "/brand/una-mark.svg"
+  },
   openGraph: {
     title: "Una Labs | Intelligent software and creative AI systems",
     description:
