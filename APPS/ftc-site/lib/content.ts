@@ -35,6 +35,26 @@ export interface ProjectCaseStudy {
   };
 }
 
+export interface NetworkingLink {
+  label: string;
+  url: string;
+  description: string;
+}
+
+export interface NetworkingProfile {
+  fullName: string;
+  title: string;
+  studioName: string;
+  studioLine: string;
+  phoneDisplay: string;
+  phoneE164: string;
+  email: string;
+  linkedInUrl: string;
+  networkHubUrl: string;
+  startProjectHref: string;
+  portfolioLinks: NetworkingLink[];
+}
+
 export const siteNav = [
   { label: "Home", href: "/" },
   { label: "Studio", href: "/capabilities" },
@@ -42,6 +62,36 @@ export const siteNav = [
   { label: "Products", href: "/products" },
   { label: "About", href: "/about" }
 ] as const;
+
+export const networkingProfile: NetworkingProfile = {
+  fullName: "Fejiro Efiuvwere",
+  title: "Systems & Architecture Consultant",
+  studioName: "Una Labs",
+  studioLine: "Technology Studio",
+  phoneDisplay: "+1 (416) 473-2732",
+  phoneE164: "+14164732732",
+  email: "fejiro.efiuvwere@gmail.com",
+  linkedInUrl: "https://linkedin.com/in/fejiro-efiuvwere",
+  networkHubUrl: "https://unalabs.cloud/connect",
+  startProjectHref: "/work-with-ftc",
+  portfolioLinks: [
+    {
+      label: "Una Labs Work",
+      url: "https://unalabs.cloud/work",
+      description: "Studio projects and case studies."
+    },
+    {
+      label: "PeacePad",
+      url: "https://peacepad.ca",
+      description: "Pre-send communication safety product."
+    },
+    {
+      label: "SayWetin",
+      url: "https://saywetin.app",
+      description: "Nigerian music and language context intelligence."
+    }
+  ]
+};
 
 export const capabilities: CapabilityItem[] = [
   {

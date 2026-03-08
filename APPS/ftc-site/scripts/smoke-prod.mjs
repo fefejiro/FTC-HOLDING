@@ -21,9 +21,12 @@ const ROUTE_CHECKS = [
   { url: `${BASE_URL}/products`, expectedStatus: [200] },
   { url: `${BASE_URL}/about`, expectedStatus: [200] },
   { url: `${BASE_URL}/work-with-ftc`, expectedStatus: [200] },
+  { url: `${BASE_URL}/connect`, expectedStatus: [200] },
+  { url: `${BASE_URL}/connect/qr.svg`, expectedStatus: [200] },
   { url: `${BASE_URL}/services`, expectedStatus: [301, 308], locationIncludes: `${BASE_URL}/capabilities` },
   { url: `${BASE_URL}/case-studies`, expectedStatus: [301, 308], locationIncludes: `${BASE_URL}/work` },
   { url: `${BASE_URL}/contact`, expectedStatus: [301, 308], locationIncludes: `${BASE_URL}/work-with-ftc` },
+  { url: `${BASE_URL}/c`, expectedStatus: [301, 308], locationIncludes: `${BASE_URL}/connect` },
   { url: `${BASE_URL}/robots.txt`, expectedStatus: [200] },
   { url: `${BASE_URL}/sitemap.xml`, expectedStatus: [200] },
   { url: `${PAGES_URL}/`, expectedStatus: [301, 308], locationIncludes: `${BASE_URL}/` }

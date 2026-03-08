@@ -5,7 +5,8 @@ import { LEGACY_CANONICAL_HOSTS, SITE_HOST } from "./lib/site";
 const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
   "/services": "/capabilities",
   "/case-studies": "/work",
-  "/contact": "/work-with-ftc"
+  "/contact": "/work-with-ftc",
+  "/c": "/connect"
 };
 
 function resolveRequestHost(req: NextRequest): string {

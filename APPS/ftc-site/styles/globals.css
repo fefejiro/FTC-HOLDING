@@ -513,6 +513,86 @@ nav.primary a:hover {
   color: #7f1d1d;
 }
 
+/* Networking hub */
+.connect-page {
+  display: grid;
+  gap: 18px;
+}
+
+.connect-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.connect-identity h1 {
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+}
+
+.connect-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.connect-studio {
+  color: var(--muted);
+}
+
+.connect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.connect-direct-contact {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.connect-link-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.connect-link-list li {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: #f9fbff;
+}
+
+.connect-link-list a {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--accent);
+}
+
+.connect-link-list a:hover {
+  text-decoration: underline;
+}
+
+.connect-qr-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.connect-qr-grid img {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px;
+}
+
 /* Footer */
 footer {
   border-top: 1px solid var(--border);
@@ -559,5 +639,9 @@ textarea:focus-visible {
 
   .cards-grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  .connect-actions .btn {
+    width: 100%;
   }
 }

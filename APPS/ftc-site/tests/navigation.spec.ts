@@ -8,7 +8,8 @@ test.describe("Una Labs site routes", () => {
     { path: "/work", title: "Work" },
     { path: "/products", title: "Products" },
     { path: "/about", title: "About Una Labs" },
-    { path: "/work-with-ftc", title: "Start a Project" }
+    { path: "/work-with-ftc", title: "Start a Project" },
+    { path: "/connect", title: "Fejiro Efiuvwere" }
   ];
 
   routeChecks.forEach((route) => {
@@ -51,6 +52,37 @@ test.describe("Una Labs site routes", () => {
       await page.goto(redirect.from);
       await expect(page).toHaveURL(redirect.to);
     }
+  });
+
+  test("connect alias redirects to /connect", async ({ page }) => {
+    const response = await page.request.fetch("/c", { maxRedirects: 0 });
+    expect([301, 308]).toContain(response.status());
+    expect(response.headers().location).toBe("/connect");
+
+    await page.goto("/c");
+    await expect(page).toHaveURL("/connect");
+  });
+
+  test("connect routes expose vcard and qr", async ({ page }) => {
+    const vcard = await page.request.get("/connect/vcard");
+    expect(vcard.status()).toBe(200);
+    expect(vcard.headers()["content-type"] || "").toContain("text/vcard");
+    const vcardBody = await vcard.text();
+    expect(vcardBody).toContain("BEGIN:VCARD");
+    expect(vcardBody).toContain("FN:Fejiro Efiuvwere");
+
+    const qr = await page.request.get("/connect/qr.svg");
+    expect(qr.status()).toBe(200);
+    expect(qr.headers()["content-type"] || "").toContain("image/svg+xml");
+    const qrBody = await qr.text();
+    expect(qrBody).toContain("<svg");
+  });
+
+  test("connect page keeps Start a Project action", async ({ page }) => {
+    await page.goto("/connect");
+    const cta = page.getByRole("link", { name: "Start a Project" }).first();
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute("href", "/work-with-ftc");
   });
 
   test("case study detail route works", async ({ page }) => {
