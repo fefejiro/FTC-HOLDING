@@ -71,6 +71,10 @@ If `https://ftc.peacepad.ca` returns Cloudflare `403` or legacy pages:
 3. Validate DNS resolve + TLS certificate active for `ftc.peacepad.ca`.
 4. Validate production route navigation + redirects.
 5. Bind `unalabs.cloud` and `www.unalabs.cloud` to `ftc-site-pages`.
-6. Switch canonical env (`UNALABS_SITE_URL`) to `https://unalabs.cloud`.
-7. Add `UNALABS_REDIRECT_FROM_HOSTS=ftc.peacepad.ca` and redeploy.
-8. Re-run smoke checks and then share `https://unalabs.cloud` in outreach profiles.
+6. In `unalabs.cloud` DNS (proxied), set:
+   - `CNAME @ -> ftc-site-pages.pages.dev`
+   - `CNAME www -> unalabs.cloud`
+7. Wait for Pages custom-domain status to show `active` for both hosts.
+8. Switch canonical env (`UNALABS_SITE_URL`) to `https://unalabs.cloud`.
+9. Add `UNALABS_REDIRECT_FROM_HOSTS=ftc.peacepad.ca` and redeploy.
+10. Re-run smoke checks and then share `https://unalabs.cloud` in outreach profiles.

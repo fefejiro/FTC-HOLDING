@@ -5,7 +5,7 @@
 - Rebrand FTC studio UI/content to Una Labs (routes unchanged).
 - Preserve compatibility for intake API, route contract, and redirects.
 - Keep Phase A canonical host on `https://ftc.peacepad.ca`.
-- Prepare Phase B migration to `https://unalabs.cloud` (pending nameserver activation).
+- Prepare Phase B migration to `https://unalabs.cloud` (pending DNS CNAME verification).
 
 ## Code verification baseline
 
@@ -44,21 +44,29 @@
 - `*.pages.dev` requests redirect to canonical host.
 - `robots.txt` and `sitemap.xml` emit canonical URLs from runtime host configuration.
 
-## Phase B readiness (pending external propagation)
+## Phase B readiness (pending DNS verification)
 
-- `unalabs.cloud` zone added in Cloudflare.
-- DNS resolves on Cloudflare, but Pages custom-domain binding is not active yet.
+- `unalabs.cloud` zone is active on Cloudflare nameservers:
+  - `aldo.ns.cloudflare.com`
+  - `raphaela.ns.cloudflare.com`
+- Pages custom domains were added to `ftc-site-pages`:
+  - `unalabs.cloud`
+  - `www.unalabs.cloud`
+- Current Pages domain status:
+  - `ftc.peacepad.ca`: `active`
+  - `unalabs.cloud`: `pending` (`CNAME record not set`)
+  - `www.unalabs.cloud`: `pending` (`CNAME record not set`)
 - Current live checks:
   - `https://unalabs.cloud` returns `522` (origin not serving for this host yet)
   - `https://www.unalabs.cloud` returns `525` (TLS handshake not ready)
-- `wrangler pages project list` still shows `ftc-site-pages` bound only to:
-  - `ftc-site-pages.pages.dev`
-  - `ftc.peacepad.ca`
-- After activation:
-  1. Bind `unalabs.cloud` + `www.unalabs.cloud` to `ftc-site-pages`.
-  2. Set canonical env `UNALABS_SITE_URL=https://unalabs.cloud`.
-  3. Set legacy redirect env `UNALABS_REDIRECT_FROM_HOSTS=ftc.peacepad.ca`.
-  4. Redeploy and verify `ftc.peacepad.ca -> 308 -> https://unalabs.cloud`.
+- Remaining actions:
+  1. In Cloudflare DNS for `unalabs.cloud`, create proxied CNAME records:
+     - `@ -> ftc-site-pages.pages.dev`
+     - `www -> unalabs.cloud`
+  2. Wait until Pages custom domains become `active`.
+  3. Set canonical env `UNALABS_SITE_URL=https://unalabs.cloud`.
+  4. Set legacy redirect env `UNALABS_REDIRECT_FROM_HOSTS=ftc.peacepad.ca`.
+  5. Redeploy and verify `ftc.peacepad.ca -> 308 -> https://unalabs.cloud`.
 
 ## Non-goals in this pass
 
