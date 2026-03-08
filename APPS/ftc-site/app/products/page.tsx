@@ -2,8 +2,8 @@ import Link from "next/link";
 import { projectCaseStudies } from "../../lib/content";
 
 export const metadata = {
-  title: "Products | FTC",
-  description: "Internal FTC products and capability engines."
+  title: "Products | Una Labs",
+  description: "Internal Una Labs products and capability engines."
 };
 
 export default function ProductsPage() {
@@ -11,7 +11,7 @@ export default function ProductsPage() {
     <div className="container page-content">
       <h1>Products</h1>
       <p className="page-intro">
-        FTC product tracks are both market-facing tools and capability engines for a
+        Una Labs product tracks are both market-facing tools and capability engines for a
         broader platform direction.
       </p>
 
@@ -31,4 +31,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-

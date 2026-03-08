@@ -1,12 +1,13 @@
-# FTC Site Launch Readiness Checklist
+# Una Labs Site Launch Readiness Checklist
 
 ## Goal
 
-Launch FTC V1 at `https://ftc.peacepad.ca` without new domain purchase.
+Launch Una Labs rebrand without route breaks, then migrate canonical host from
+`https://ftc.peacepad.ca` to `https://unalabs.cloud` in Phase B.
 
 ## Cloudflare source alignment (must be true before publish)
 
-- Pages project bound to FTC domain: `ftc-site-pages`
+- Pages project bound to studio domain: `ftc-site-pages`
 - Custom domain: `ftc.peacepad.ca`
 - Monorepo source root: `APPS/ftc-site`
 - Production branch: `main`
@@ -17,10 +18,11 @@ Launch FTC V1 at `https://ftc.peacepad.ca` without new domain purchase.
 - `CNAME api -> uka7e8pj.up.railway.app` = **DNS only**
 - `peacepad.ca` root + `www` records remain mapped to PeacePad project
 - MX/TXT/DKIM/SPF records = unchanged in this pass
+- `saywetin.app` behavior is deferred in this pass
 
 If `https://ftc.peacepad.ca` returns Cloudflare `403` or legacy pages:
 
-1. verify `ftc` CNAME target resolves to the active FTC Pages project;
+1. verify `ftc` CNAME target resolves to the active studio Pages project;
 2. verify Cloudflare Pages source root is `APPS/ftc-site`;
 3. trigger production redeploy.
 
@@ -40,7 +42,7 @@ If `https://ftc.peacepad.ca` returns Cloudflare `403` or legacy pages:
   - `/services` -> `/capabilities`
   - `/case-studies` -> `/work`
   - `/contact` -> `/work-with-ftc`
-- Canonical redirect check: `*.pages.dev` host redirects to `https://ftc.peacepad.ca`
+- Canonical redirect check: `*.pages.dev` host redirects to active canonical host
 - Mobile pass on hero, cards, and intake form
 - Header and footer links checked manually
 - Intake API check:
@@ -49,12 +51,12 @@ If `https://ftc.peacepad.ca` returns Cloudflare `403` or legacy pages:
 
 ## Content checks
 
-- Hero copy aligns with FTC identity statement
+- Hero copy aligns with Una Labs identity statement
 - Case studies for PeacePad, SayWetin, ATEAM are complete
 - Intake form fields are present: name, email, project idea, budget, timeline
 - Intake form submit shows success/failure state
 - `Start a Project` is primary CTA in hero and final CTA banner
-- `robots.txt` and `sitemap.xml` resolve with canonical host `https://ftc.peacepad.ca`
+- `robots.txt` and `sitemap.xml` resolve with active canonical host
 
 ## Analytics and verification checks
 
@@ -65,8 +67,10 @@ If `https://ftc.peacepad.ca` returns Cloudflare `403` or legacy pages:
 ## Publish path (budget-safe)
 
 1. Confirm `ftc-site-pages` project source root is `APPS/ftc-site`.
-2. Redeploy production from `main`.
+2. Redeploy production from `main` (Phase A rebrand).
 3. Validate DNS resolve + TLS certificate active for `ftc.peacepad.ca`.
 4. Validate production route navigation + redirects.
-5. Share canonical links in LinkedIn, Upwork, Fiverr profiles.
-6. Delay custom domain purchase until budget decision.
+5. Bind `unalabs.cloud` and `www.unalabs.cloud` to `ftc-site-pages`.
+6. Switch canonical env (`UNALABS_SITE_URL`) to `https://unalabs.cloud`.
+7. Add `UNALABS_REDIRECT_FROM_HOSTS=ftc.peacepad.ca` and redeploy.
+8. Re-run smoke checks and then share `https://unalabs.cloud` in outreach profiles.

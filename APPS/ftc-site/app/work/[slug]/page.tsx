@@ -10,12 +10,12 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   const project = getProjectCaseStudy(params.slug);
   if (!project) {
     return {
-      title: "Case Study | FTC"
+      title: "Case Study | Una Labs"
     };
   }
 
   return {
-    title: `${project.name} | FTC Work`,
+    title: `${project.name} | Una Labs Work`,
     description: project.summary
   };
 }
@@ -78,8 +78,8 @@ export default function WorkDetailPage({ params }: { params: { slug: string } })
       <section>
         <h2>Build Something Similar</h2>
         <p className="muted">
-          If this capability direction matches your product or workflow, FTC can scope a
-          practical implementation path.
+          If this capability direction matches your product or workflow, Una Labs can
+          scope a practical implementation path.
         </p>
         <div className="hero-actions">
           <Link

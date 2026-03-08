@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { SITE_HOST } from "./lib/site";
+import { LEGACY_CANONICAL_HOSTS, SITE_HOST } from "./lib/site";
 
 const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
   "/services": "/capabilities",
@@ -17,6 +17,7 @@ function shouldRedirectToCanonical(host: string): boolean {
   if (!host) return false;
   if (host === SITE_HOST) return false;
   if (host === "localhost:3001" || host === "localhost") return false;
+  if (LEGACY_CANONICAL_HOSTS.includes(host)) return true;
   return host.endsWith(".pages.dev");
 }
 

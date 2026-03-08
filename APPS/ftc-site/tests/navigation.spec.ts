@@ -1,13 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { SITE_URL } from "../lib/site";
 
-test.describe("FTC site routes", () => {
+test.describe("Una Labs site routes", () => {
   const routeChecks = [
     { path: "/", title: "Intelligent software. Creative AI. Real-world systems." },
-    { path: "/capabilities", title: "Capabilities" },
+    { path: "/capabilities", title: "Studio" },
     { path: "/work", title: "Work" },
     { path: "/products", title: "Products" },
-    { path: "/about", title: "About FTC" },
-    { path: "/work-with-ftc", title: "Work With FTC" }
+    { path: "/about", title: "About Una Labs" },
+    { path: "/work-with-ftc", title: "Start a Project" }
   ];
 
   routeChecks.forEach((route) => {
@@ -21,11 +22,11 @@ test.describe("FTC site routes", () => {
     await page.goto("/");
     const navTargets: Array<{ label: string; expectedPath: string }> = [
       { label: "Home", expectedPath: "/" },
-      { label: "Capabilities", expectedPath: "/capabilities" },
+      { label: "Studio", expectedPath: "/capabilities" },
       { label: "Work", expectedPath: "/work" },
       { label: "Products", expectedPath: "/products" },
       { label: "About", expectedPath: "/about" },
-      { label: "Work With FTC", expectedPath: "/work-with-ftc" }
+      { label: "Start a Project", expectedPath: "/work-with-ftc" }
     ];
 
     for (const target of navTargets) {
@@ -63,12 +64,12 @@ test.describe("FTC site routes", () => {
     const robots = await page.goto("/robots.txt");
     expect(robots?.status()).toBe(200);
     const robotsText = await robots?.text();
-    expect(robotsText || "").toContain("Sitemap: https://ftc.peacepad.ca/sitemap.xml");
+    expect(robotsText || "").toContain(`Sitemap: ${SITE_URL}/sitemap.xml`);
 
     const sitemap = await page.goto("/sitemap.xml");
     expect(sitemap?.status()).toBe(200);
     const sitemapText = await sitemap?.text();
-    expect(sitemapText || "").toContain("https://ftc.peacepad.ca/work/peacepad");
+    expect(sitemapText || "").toContain(`${SITE_URL}/work/peacepad`);
   });
 
   test("homepage keeps Start a Project as primary conversion action", async ({ page }) => {

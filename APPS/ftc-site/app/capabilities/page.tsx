@@ -3,16 +3,16 @@ import CapabilityCard from "../components/CapabilityCard";
 import { capabilities } from "../../lib/content";
 
 export const metadata = {
-  title: "Capabilities | FTC",
-  description: "AI systems, creative technology, and business intelligence capabilities at FTC."
+  title: "Studio | Una Labs",
+  description: "AI systems, creative technology, and business intelligence capabilities at Una Labs."
 };
 
 export default function CapabilitiesPage() {
   return (
     <div className="container page-content">
-      <h1>Capabilities</h1>
+      <h1>Studio</h1>
       <p className="page-intro">
-        FTC combines engineering rigor and creative execution to deliver capability-led
+        Una Labs combines engineering rigor and creative execution to deliver capability-led
         systems that can evolve into reusable platform modules.
       </p>
 
@@ -25,10 +25,9 @@ export default function CapabilitiesPage() {
       <CTABanner
         title="Need one of these capabilities in your workflow?"
         description="We can integrate directly into existing operations or build net-new products."
-        primaryLabel="Work With FTC"
+        primaryLabel="Start a Project"
         primaryHref="/work-with-ftc"
       />
     </div>
   );
 }
-

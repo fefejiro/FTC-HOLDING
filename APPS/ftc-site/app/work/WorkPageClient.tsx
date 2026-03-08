@@ -21,8 +21,8 @@ export default function WorkPageClient() {
     <div className="container page-content">
       <h1>Work</h1>
       <p className="page-intro">
-        FTC projects are structured as capability proofs. Each case study shows the
-        problem, insight, solution, and delivery outcome.
+        Una Labs projects are structured as capability proofs. Each case study shows
+        the problem, insight, solution, and delivery outcome.
       </p>
 
       <div className="filter-row" aria-label="Work filters">

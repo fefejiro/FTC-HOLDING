@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 
-const BASE_URL = process.env.FTC_SMOKE_BASE_URL || "https://ftc.peacepad.ca";
-const PAGES_URL = process.env.FTC_SMOKE_PAGES_URL || "https://ftc-site-pages.pages.dev";
+const BASE_URL =
+  process.env.UNALABS_SMOKE_BASE_URL ||
+  process.env.FTC_SMOKE_BASE_URL ||
+  "https://ftc.peacepad.ca";
+const PAGES_URL =
+  process.env.UNALABS_SMOKE_PAGES_URL ||
+  process.env.FTC_SMOKE_PAGES_URL ||
+  "https://ftc-site-pages.pages.dev";
 
 /**
  * @typedef {{url:string, expectedStatus:number[], locationIncludes?:string}} RouteCheck
@@ -72,4 +78,3 @@ run().catch((error) => {
   console.error("Smoke script failed with error:", error);
   process.exit(1);
 });
-

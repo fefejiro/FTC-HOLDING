@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import WorkPageClient from "./WorkPageClient";
 
 export const metadata = {
-  title: "Work | FTC",
-  description: "Portfolio and case studies for FTC projects and capability systems."
+  title: "Work | Una Labs",
+  description: "Portfolio and case studies for Una Labs projects and capability systems."
 };
 
 export default function WorkPage() {

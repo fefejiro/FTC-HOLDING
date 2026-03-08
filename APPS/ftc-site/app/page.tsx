@@ -20,8 +20,8 @@ export default function HomePage() {
           <div className="section-heading">
             <h2>What We Build</h2>
             <p>
-              FTC designs intelligent systems, creative tools, and automation platforms
-              that help people communicate, create, and operate with clarity.
+              Una Labs builds intelligent systems, creative tools, and automation
+              platforms that help people communicate, create, and operate with clarity.
             </p>
           </div>
           <div className="cards-grid cards-grid-3">
@@ -37,8 +37,8 @@ export default function HomePage() {
           <div className="section-heading">
             <h2>Selected Work</h2>
             <p>
-              Projects and systems developed by FTC across AI, automation, and creative
-              technology.
+              Projects and systems developed by Una Labs across AI, automation, and
+              creative technology.
             </p>
           </div>
           <div className="cards-grid cards-grid-3">
@@ -77,7 +77,7 @@ export default function HomePage() {
         <div className="container">
           <CTABanner
             title="Have an idea, workflow, or system to build?"
-            description="FTC helps turn concepts into intelligent tools, creative systems, and modern digital products."
+            description="Una Labs helps turn concepts into intelligent tools, creative systems, and modern digital products."
             primaryLabel="Start a Project"
             primaryHref="/work-with-ftc"
             secondaryLabel="View Work"

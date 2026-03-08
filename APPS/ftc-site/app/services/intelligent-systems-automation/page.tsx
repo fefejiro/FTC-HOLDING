@@ -10,7 +10,7 @@ export default function IntelligentSystemsAutomationPage() {
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '56px 20px' }}>
       <h1 style={{ marginBottom: 12 }}>Intelligent Systems & Automation Engineering</h1>
       <p style={{ maxWidth: 820, opacity: 0.9 }}>
-        FTC designs automation that reduces manual work, improves consistency, and strengthens decision-making.
+        Una Labs designs automation that reduces manual work, improves consistency, and strengthens decision-making.
         The goal is operational intelligence that fits governance realities and supports long-term scale.
       </p>
 
@@ -56,8 +56,8 @@ export default function IntelligentSystemsAutomationPage() {
       </section>
 
       <section style={{ marginTop: 36 }}>
-        <Link href="/contact" style={{ textDecoration: 'underline' }}>
-          Schedule a strategic consultation
+        <Link href="/work-with-ftc" style={{ textDecoration: 'underline' }}>
+          Start a Project
         </Link>
       </section>
     </main>

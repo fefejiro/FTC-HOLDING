@@ -1,8 +1,8 @@
-# FTC Site Project Context
+# Una Labs Site Project Context
 
 ## Purpose
 
-FTC's public web shell that explains studio identity, showcases products/case studies, and converts visitors into project intake.
+Una Labs public web shell that explains studio identity, showcases products/case studies, and converts visitors into project intake.
 
 ## Architecture
 
@@ -14,16 +14,17 @@ FTC's public web shell that explains studio identity, showcases products/case st
 ## Current IA
 
 - Home
-- Capabilities
+- Studio (`/capabilities`)
 - Work
 - Work detail (`/work/[slug]`)
 - Products
 - About
-- Work With FTC
+- Start a Project (`/work-with-ftc`)
 
 ## Canonical domain policy
 
-- Canonical host: `ftc.peacepad.ca`
+- Phase A canonical host: `ftc.peacepad.ca`
+- Phase B canonical host target: `unalabs.cloud`
 - Requests arriving on `*.pages.dev` are redirected to canonical host.
 - `robots.txt` and `sitemap.xml` emit canonical host URLs.
 
@@ -35,6 +36,6 @@ FTC's public web shell that explains studio identity, showcases products/case st
 
 ## Operational notes
 
-- Subdomain-first launch path with canonical URL `https://ftc.peacepad.ca`
-- Domain purchase/custom binding deferred
-- No backend form processing implemented yet (intake form is structure-only)
+- Phase A runs on `https://ftc.peacepad.ca`
+- Phase B migrates canonical to `https://unalabs.cloud` with old-host 308 redirects
+- Intake backend is live at `POST /api/intake` with anti-spam + rate limiting

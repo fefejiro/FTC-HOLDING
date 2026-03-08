@@ -10,10 +10,10 @@ export default function Hero({ projects }: HeroProps) {
     <section className="hero">
       <div className="hero-grid">
         <div>
-          <p className="eyebrow">FTC - Creative AI Technology Studio</p>
+          <p className="eyebrow">Una Labs - Technology Studio</p>
           <h1>Intelligent software. Creative AI. Real-world systems.</h1>
           <p className="lead">
-            FTC designs AI-powered tools, automation systems, and digital products for
+            Una Labs builds AI-powered tools, automation systems, and digital products for
             businesses, creators, and emerging platforms.
           </p>
           <div className="hero-actions">

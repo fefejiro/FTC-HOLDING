@@ -1,4 +1,4 @@
-# RUNBOOK - FTC Site
+# RUNBOOK - Una Labs Site
 
 ## Prerequisites
 
@@ -39,8 +39,8 @@ npm --workspace=@ftc/ftc-site run smoke:prod
 Optional overrides:
 
 ```powershell
-$env:FTC_SMOKE_BASE_URL="https://ftc.peacepad.ca"
-$env:FTC_SMOKE_PAGES_URL="https://ftc-site-pages.pages.dev"
+$env:UNALABS_SMOKE_BASE_URL="https://ftc.peacepad.ca"
+$env:UNALABS_SMOKE_PAGES_URL="https://ftc-site-pages.pages.dev"
 npm --workspace=@ftc/ftc-site run smoke:prod
 ```
 
@@ -54,7 +54,7 @@ Set-Location "C:\FTC HOLDING\APPS\ftc-site"
 npx wrangler pages download config ftc-site-pages
 ```
 
-Expected project binding for FTC V1:
+Expected project binding for V1:
 
 - Pages project: `ftc-site-pages`
 - Custom domain: `ftc.peacepad.ca`
@@ -64,7 +64,9 @@ Expected project binding for FTC V1:
 If production is still showing legacy pages, trigger a production redeploy from the
 Cloudflare Pages dashboard after confirming the source root is `APPS/ftc-site`.
 
-## DNS, TLS, and canonical verification (launch)
+## DNS, TLS, and canonical verification
+
+### Phase A (rebrand on existing host)
 
 ```powershell
 Resolve-DnsName ftc.peacepad.ca
@@ -73,6 +75,29 @@ curl -I https://ftc.peacepad.ca/capabilities
 curl -I https://ftc.peacepad.ca/services
 curl -I https://ftc-site-pages.pages.dev/
 ```
+
+### Phase B (domain migration to unalabs.cloud)
+
+Cloudflare dashboard sequence:
+
+1. `Workers & Pages -> ftc-site-pages -> Custom domains -> Set up a custom domain`
+2. Add `unalabs.cloud`
+3. Add `www.unalabs.cloud`
+4. Ensure DNS records are proxied and certificates are active
+
+```powershell
+Resolve-DnsName unalabs.cloud
+Resolve-DnsName www.unalabs.cloud
+curl -I https://unalabs.cloud/
+curl -I https://www.unalabs.cloud/
+curl -I https://ftc.peacepad.ca/
+```
+
+Expected after Phase B switch:
+
+- canonical host = `https://unalabs.cloud`
+- `https://www.unalabs.cloud` serves production (or redirects to apex)
+- `https://ftc.peacepad.ca` returns `308` to `https://unalabs.cloud`
 
 ## Launch readiness artifacts
 
@@ -84,11 +109,11 @@ curl -I https://ftc-site-pages.pages.dev/
 
 After production smoke is green:
 
-1. set profile website URL to `https://ftc.peacepad.ca`
-2. point profile CTA to `https://ftc.peacepad.ca/work-with-ftc`
+1. set profile website URL to `https://unalabs.cloud`
+2. point profile CTA to `https://unalabs.cloud/work-with-ftc`
 3. add featured links:
-   - `https://ftc.peacepad.ca/work`
-   - `https://ftc.peacepad.ca/products`
-   - `https://ftc.peacepad.ca/work/peacepad`
-   - `https://ftc.peacepad.ca/work/saywetin`
-   - `https://ftc.peacepad.ca/work/ateam`
+   - `https://unalabs.cloud/work`
+   - `https://unalabs.cloud/products`
+   - `https://unalabs.cloud/work/peacepad`
+   - `https://unalabs.cloud/work/saywetin`
+   - `https://unalabs.cloud/work/ateam`

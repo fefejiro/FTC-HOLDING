@@ -29,8 +29,8 @@ export default function Header() {
             <Logo />
           </Link>
           <div>
-            <p className="brand">FTC</p>
-            <p className="brand-subtitle">Creative AI Technology Studio</p>
+            <p className="brand">Una Labs</p>
+            <p className="brand-subtitle">Technology Studio</p>
           </div>
         </div>
 

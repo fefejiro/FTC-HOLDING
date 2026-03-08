@@ -37,11 +37,10 @@ export interface ProjectCaseStudy {
 
 export const siteNav = [
   { label: "Home", href: "/" },
-  { label: "Capabilities", href: "/capabilities" },
+  { label: "Studio", href: "/capabilities" },
   { label: "Work", href: "/work" },
   { label: "Products", href: "/products" },
-  { label: "About", href: "/about" },
-  { label: "Work With FTC", href: "/work-with-ftc" }
+  { label: "About", href: "/about" }
 ] as const;
 
 export const capabilities: CapabilityItem[] = [
@@ -151,7 +150,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
         "Cloud API integration"
       ],
       outcome:
-        "PeacePad is a production-facing product proving FTC's communication-intelligence capability."
+        "PeacePad is a production-facing product proving Una Labs' communication-intelligence capability."
     }
   },
   {
@@ -182,7 +181,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
         "Cloud-backed service architecture"
       ],
       outcome:
-        "SayWetin is an active product track that demonstrates FTC's creative technology and audio-intelligence direction."
+        "SayWetin is an active product track that demonstrates Una Labs' creative technology and audio-intelligence direction."
     }
   },
   {
@@ -221,4 +220,3 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
 export function getProjectCaseStudy(slug: string): ProjectCaseStudy | undefined {
   return projectCaseStudies.find((item) => item.slug === slug);
 }
-

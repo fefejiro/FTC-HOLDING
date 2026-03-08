@@ -134,14 +134,16 @@ export async function POST(req: NextRequest) {
     timeline: lead.timeline
   });
 
-  const webhookUrl = process.env.FTC_INTAKE_WEBHOOK_URL;
+  const webhookUrl =
+    process.env.UNALABS_INTAKE_WEBHOOK_URL || process.env.FTC_INTAKE_WEBHOOK_URL;
   if (webhookUrl) {
     try {
       const webhookResponse = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-ftc-source": "ftc-site"
+          "x-ftc-source": "ftc-site",
+          "x-unalabs-source": "unalabs-site"
         },
         body: JSON.stringify({
           type: "ftc_intake_submission",
@@ -164,9 +166,9 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(
     {
       ok: true,
-      message: "Thanks. FTC received your intake and will respond with a scoped next step."
+      message:
+        "Thanks. Una Labs received your intake and will respond with a scoped next step."
     },
     { status: 200 }
   );
 }
-

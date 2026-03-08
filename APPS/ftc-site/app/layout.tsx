@@ -10,18 +10,18 @@ const GOOGLE_SITE_VERIFICATION = process.env.GOOGLE_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "FTC | Intelligent software and creative AI systems",
+  title: "Una Labs | Intelligent software and creative AI systems",
   description:
-    "FTC builds AI tools, automation systems, and digital products for businesses, creators, and startups.",
+    "Una Labs builds AI tools, automation systems, and digital products for businesses, creators, and startups.",
   alternates: {
     canonical: "/"
   },
   openGraph: {
-    title: "FTC | Intelligent software and creative AI systems",
+    title: "Una Labs | Intelligent software and creative AI systems",
     description:
-      "FTC builds AI tools, automation systems, and digital products for businesses, creators, and startups.",
+      "Una Labs builds AI tools, automation systems, and digital products for businesses, creators, and startups.",
     url: SITE_URL,
-    siteName: "FTC"
+    siteName: "Una Labs"
   },
   verification: GOOGLE_SITE_VERIFICATION
     ? {

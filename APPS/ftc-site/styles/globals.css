@@ -117,6 +117,29 @@ header {
   gap: 12px;
 }
 
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-mark {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  padding: 4px;
+}
+
+.logo-mark svg {
+  width: 100%;
+  height: 100%;
+}
+
 .brand {
   margin: 0;
   font-weight: 700;
