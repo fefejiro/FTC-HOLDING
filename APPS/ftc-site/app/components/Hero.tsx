@@ -24,7 +24,7 @@ export default function Hero({ projects }: HeroProps) {
               View Work
             </Link>
           </div>
-          <p className="proof-strip">Featured work: PeacePad • SayWetin • ATEAM</p>
+          <p className="proof-strip">Featured work: PeacePad | SayWetin | ATEAM</p>
         </div>
         <div className="hero-collage">
           <p className="collage-label">Studio Projects</p>
@@ -41,3 +41,4 @@ export default function Hero({ projects }: HeroProps) {
     </section>
   );
 }
+
