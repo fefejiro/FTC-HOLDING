@@ -31,21 +31,29 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2" data-testid="text-logo">
+        <div className="container max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 min-w-0" data-testid="text-logo">
             <img src="/app-icon.jpg" alt="Saywetin" className="h-9 w-9 rounded-lg" />
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-orange-600 via-amber-500 to-green-500 bg-clip-text text-transparent">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-orange-600 via-amber-500 to-green-500 bg-clip-text text-transparent truncate">
               Saywetin
             </h1>
           </div>
 
-          <nav className="flex items-center gap-2">
-            <ThemeToggle />
+          <nav className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className="hidden min-[380px]:block">
+              <ThemeToggle className="h-9 w-9" />
+            </div>
 
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" data-testid="button-user-menu" aria-label="User menu">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    data-testid="button-user-menu"
+                    aria-label="User menu"
+                    className="h-9 w-9"
+                  >
                     <User className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -81,6 +89,8 @@ export default function Home() {
                 <Button
                   onClick={() => navigate('/login')}
                   data-testid="button-login"
+                  size="sm"
+                  className="h-9 px-3 sm:px-4"
                 >
                   Sign in
                 </Button>
