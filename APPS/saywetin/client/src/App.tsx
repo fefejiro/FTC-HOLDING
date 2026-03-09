@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BottomNav } from "@/components/bottom-nav";
 import { UpdateNotification } from "@/components/update-notification";
+import { VersionGuard } from "@/components/version-guard";
 import Home from "@/pages/home";
 import SongDetail from "@/pages/song-detail";
 import RecognizedTrack from "@/pages/recognized-track";
@@ -69,6 +70,10 @@ function AppContent() {
       window.dispatchEvent(new Event("saywetin:app-resume"));
     };
 
+    const handleFocus = () => {
+      handleResume();
+    };
+
     const handleBackground = () => {
       window.dispatchEvent(new Event("saywetin:app-background"));
     };
@@ -81,21 +86,22 @@ function AppContent() {
       }
     };
 
+    let isMounted = true;
     let appStateListener: { remove: () => Promise<void> } | null = null;
 
     (async () => {
       try {
-        const capacitor = (window as any).Capacitor;
-        if (!capacitor?.isNativePlatform?.()) {
+        const { Capacitor } = await import("@capacitor/core");
+        if (!isMounted || !Capacitor.isNativePlatform()) {
           return;
         }
 
-        const appPlugin = capacitor?.Plugins?.App;
-        if (!appPlugin?.addListener) {
+        const { App: CapacitorApp } = await import("@capacitor/app");
+        if (!isMounted) {
           return;
         }
 
-        appStateListener = await appPlugin.addListener("appStateChange", ({ isActive }: { isActive: boolean }) => {
+        appStateListener = await CapacitorApp.addListener("appStateChange", ({ isActive }: { isActive: boolean }) => {
           if (isActive) {
             handleResume();
           } else {
@@ -108,10 +114,13 @@ function AppContent() {
     })();
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
     handleResume();
 
     return () => {
+      isMounted = false;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
       if (appStateListener) {
         appStateListener.remove().catch(() => {});
       }
@@ -133,11 +142,13 @@ function AppContent() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark">
-        <TooltipProvider>
-          <AppContent />
-        </TooltipProvider>
-      </ThemeProvider>
+      <VersionGuard>
+        <ThemeProvider defaultTheme="dark">
+          <TooltipProvider>
+            <AppContent />
+          </TooltipProvider>
+        </ThemeProvider>
+      </VersionGuard>
     </QueryClientProvider>
   );
 }

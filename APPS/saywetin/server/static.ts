@@ -4,6 +4,7 @@ import path from "path";
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
+
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
@@ -12,23 +13,32 @@ export function serveStatic(app: Express) {
 
   app.use(
     express.static(distPath, {
+      maxAge: "1y",
+      immutable: true,
       setHeaders: (res, filePath) => {
-        const normalizedPath = filePath.replace(/\\/g, "/").toLowerCase();
-        const isHtml = normalizedPath.endsWith("/index.html");
-        const isBuildMeta = normalizedPath.endsWith("/_saywetin/build-meta.json");
+        const normalizedPath = filePath.replace(/\\/g, "/");
+        const isServiceWorkerScript = normalizedPath.endsWith("/sw.js");
+        const isManifest = normalizedPath.endsWith("/manifest.json");
+        const isWebBuildMeta = normalizedPath.endsWith("/_saywetin/build-meta.json");
 
-        if (isHtml || isBuildMeta) {
-          res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        // Keep metadata + shell files fresh so web updates are detected immediately.
+        if (filePath.endsWith(".html") || isServiceWorkerScript || isManifest || isWebBuildMeta) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
           res.setHeader("Pragma", "no-cache");
+          res.setHeader("Expires", "0");
+        }
+
+        if (isServiceWorkerScript) {
+          res.setHeader("Service-Worker-Allowed", "/");
         }
       },
     }),
   );
 
-  // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

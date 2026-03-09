@@ -12,6 +12,49 @@ const oidcClientId = process.env.OIDC_CLIENT_ID?.trim();
 const oidcIssuerUrl = process.env.OIDC_ISSUER_URL?.trim();
 const oidcEnabled = Boolean(oidcClientId && oidcIssuerUrl);
 
+function parseBooleanEnv(rawValue: string | undefined): boolean | null {
+  if (typeof rawValue !== "string") {
+    return null;
+  }
+
+  const normalized = rawValue.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return null;
+}
+
+function isLoginEnabled(): boolean {
+  // Primary control for re-enabling login later:
+  // SAYWETIN_AUTH_LOGIN_ENABLED=true
+  const explicitEnable = parseBooleanEnv(process.env.SAYWETIN_AUTH_LOGIN_ENABLED);
+  if (explicitEnable !== null) {
+    return oidcEnabled && explicitEnable;
+  }
+
+  // Legacy compatibility knob:
+  // SAYWETIN_AUTH_LOGIN_DISABLED=true
+  const explicitDisable = parseBooleanEnv(process.env.SAYWETIN_AUTH_LOGIN_DISABLED);
+  if (explicitDisable === true) {
+    return false;
+  }
+  if (explicitDisable === false) {
+    return oidcEnabled;
+  }
+
+  // Default: keep auth entry points disabled until mobile flow is stabilized.
+  return false;
+}
+
 function getSessionSecret(): string {
   const configured = process.env.SESSION_SECRET?.trim();
   if (configured) {
@@ -46,15 +89,18 @@ function getAuthRuntimeStatus() {
   const supabaseBaseUrl = getSupabaseAuthBaseUrl();
   const supabaseAnonKey = getSupabaseAnonKey();
   const supabaseExchangeConfigured = Boolean(supabaseBaseUrl && supabaseAnonKey);
+  const loginEnabled = isLoginEnabled();
 
   return {
-    loginEnabled: oidcEnabled,
-    loginMethod: oidcEnabled ? "oidc" : "disabled",
+    loginEnabled,
+    loginMethod: loginEnabled ? "oidc" : "disabled",
     oidcConfigured: oidcEnabled,
     supabaseExchangeConfigured,
-    message: oidcEnabled
-      ? "Authentication is available."
-      : "OIDC authentication is not configured.",
+    message: !oidcEnabled
+      ? "OIDC authentication is not configured."
+      : loginEnabled
+        ? "Authentication is available."
+        : "Sign in is temporarily disabled while we stabilize app updates.",
   };
 }
 
@@ -166,14 +212,17 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/auth/status", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
     res.json(getAuthRuntimeStatus());
   });
 
   app.get("/api/login", (req, res, next) => {
-    if (!oidcEnabled) {
+    const runtimeStatus = getAuthRuntimeStatus();
+    if (!runtimeStatus.loginEnabled) {
       return res.status(503).json({
-        errorCode: "AUTH_NOT_CONFIGURED",
-        ...getAuthRuntimeStatus(),
+        errorCode: runtimeStatus.oidcConfigured ? "AUTH_TEMPORARILY_DISABLED" : "AUTH_NOT_CONFIGURED",
+        ...runtimeStatus,
       });
     }
 
@@ -185,8 +234,9 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
-    if (!oidcEnabled) {
-      return res.status(503).json({ message: "OIDC authentication is not configured." });
+    const runtimeStatus = getAuthRuntimeStatus();
+    if (!runtimeStatus.loginEnabled) {
+      return res.status(503).json({ message: runtimeStatus.message });
     }
 
     const strategyName = ensureStrategy(req.hostname);

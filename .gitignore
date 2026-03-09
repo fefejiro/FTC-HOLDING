@@ -31,3 +31,9 @@ test-results/
 
 # keep SayWetin trackable in monorepo, but ignore local nested git backup artifacts
 APPS/saywetin/.git.backup-*/
+
+# local duplicate clone/tree - not source of truth for this repo
+FTC-HOLDING/
+
+# local ATEAM temp artifacts
+APPS/ATEAM/tmpclaude-*

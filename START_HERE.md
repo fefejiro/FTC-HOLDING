@@ -1,5 +1,11 @@
 # PeacePad Start Here
 
+This file is the **PeacePad operations quickstart** only.  
+For repo-wide structure and app ownership, use:
+- `README.md`
+- `DOCS/RUNBOOK.md`
+- `DOCS/REPO_OWNERSHIP_AND_TRACKING.md`
+
 - Primary app path: `C:\FTC HOLDING\APPS\peacepad`
 - Source of truth: `origin/main` on GitHub
 - Frontend production owner: Cloudflare Pages (`https://peacepad.ca`, `https://www.peacepad.ca`)

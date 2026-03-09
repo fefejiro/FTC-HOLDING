@@ -1,93 +1,90 @@
-# FTC HOLDING Monorepo Runbook
+# FTC HOLDING Runbook
 
-This runbook documents the current repository layout and operational commands.
+Last updated: 2026-03-08
+Canonical root: `C:\FTC HOLDING`
 
-## Prerequisites
-- Windows 10/11 or similar
-- Node.js 22+ (24.x recommended for this repo)
-- npm 11.x
-- PowerShell
+## 1. App Classification
 
-## Directory Layout
+### 1.1 Deployed app surfaces
 
-```text
-C:\FTC HOLDING\FTC-HOLDING
-|- APPS
-|  |- ftc-site
-|  |- peacepad
-|  |- saywetin
-|- PACKAGES
-|  |- auth
-|  |- config
-|  |- logger
-|  |- supabase
-|  |- types
-|- DOCS
-```
+1. PeacePad
+- Frontend: Cloudflare Pages (`peacepad.ca`, `www.peacepad.ca`)
+- API: Railway (`api.peacepad.ca`)
 
-Notes:
-- Keep app-level deployment configs aligned with real app folders.
-- See `DOCS/SAYWETIN_HANDOVER.md` for SayWetin runtime/domain notes.
+2. ftc-site
+- Deployed as website shell (Cloudflare Pages flow via `APPS/ftc-site`)
 
-## Install
+3. SayWetin
+- Deployed as split frontend/API surfaces
+- Verify frontend output before cutover: `npm --prefix APPS/saywetin run verify:frontend-build`
 
-```powershell
-cd C:\FTC HOLDING\FTC-HOLDING
-npm install --legacy-peer-deps
-```
+### 1.2 Local-only / decision-pending surfaces
 
-Per-app install (if needed):
+1. ATEAM (`APPS/ATEAM`)
+- Active code and tests exist.
+- Root git tracking/ownership decision is still pending.
+
+2. Nested duplicate tree (`FTC-HOLDING/`)
+- Contains its own `.git`.
+- Not canonical for this root repo.
+
+## 2. Daily Operator Checks
+
+Run from `C:\FTC HOLDING`:
 
 ```powershell
-cd APPS\ftc-site ; npm install --legacy-peer-deps
-cd ..\peacepad   ; npm install --legacy-peer-deps
-cd ..\saywetin   ; npm install
+git status -sb
+npm run audit:secrets
 ```
 
-## Build
+### 2.1 PeacePad production checks
 
 ```powershell
-# from repo root
-npm run build:ftc
-npm run build:peacepad
-npm run build:saywetin
-npm run build
+npm --prefix APPS/peacepad run verify:deployment-ownership
+npm run verify:peacepad:prod
+npm --prefix APPS/peacepad run smoke:guest-auth
 ```
 
-Or per app:
+### 2.2 PeacePad critical E2E
 
 ```powershell
-cd APPS\ftc-site ; npm run build
-cd ..\peacepad   ; npm run build
-cd ..\saywetin   ; npm run build
+npm --prefix APPS/peacepad run smoke:e2e:update-lifecycle
 ```
 
-## Develop
+### 2.3 Build health checks
 
 ```powershell
-cd APPS\ftc-site ; npm run dev
-cd APPS\peacepad ; npm run dev
-cd APPS\saywetin ; npm run dev
+npm --prefix APPS/peacepad run build
+npm --prefix APPS/ftc-site run build
+npm --prefix APPS/saywetin run verify:frontend-build
+npm --prefix APPS/saywetin run check
+npm --prefix APPS/ATEAM/Server run test:backend
 ```
 
-## Test
+## 3. Repo Ownership and Tracking Rules
 
-```powershell
-npm run test
-```
+1. Always operate from `C:\FTC HOLDING` unless explicitly switching.
+2. Treat nested `FTC-HOLDING/` as non-canonical for this repo.
+3. Do not assume `APPS/ATEAM` is part of root tracked history without checking `git ls-tree`.
 
-## Railway (PeacePad API)
-- Root directory: `APPS/peacepad`
-- Build command: `npm run build`
-- Start command: `npm run start`
-- Healthcheck path: `/health`
+Ownership reference:
+- [REPO_OWNERSHIP_AND_TRACKING.md](REPO_OWNERSHIP_AND_TRACKING.md)
 
-## Railway (SayWetin API)
-- Root directory: `APPS/saywetin`
-- Builder: Dockerfile
-- Dockerfile path: `Dockerfile` (when root directory is already `APPS/saywetin`)
-- Healthcheck path: `/health`
+## 4. Known Risks
 
-## CI
-- `.github/workflows/ci.yml` validates workspace build/test paths.
-- Keep scripts aligned with actual folders under `APPS/`.
+1. ATEAM root tracking ambiguity (manual decision required).
+2. Duplicate nested tree can cause wrong-path commits if operators are not careful.
+3. SayWetin typecheck may fail even when frontend build passes.
+4. PeacePad E2E reliability should remain in release gate checks.
+
+## 5. Escalation / Handover Artifacts
+
+When handing over, include:
+
+1. Current `git status -sb`
+2. Results of command sets in sections 2.1 to 2.3
+3. Production check failure details
+4. Link to latest audit handover
+
+Primary audit reference:
+- [REPO_HANDOVER_AUDIT_2026-03-07.md](REPO_HANDOVER_AUDIT_2026-03-07.md)

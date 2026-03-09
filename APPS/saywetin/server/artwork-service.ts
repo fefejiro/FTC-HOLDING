@@ -13,6 +13,7 @@ interface ArtworkCacheEntry {
 }
 
 const ARTWORK_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const SPOTIFY_OEMBED_TIMEOUT_MS = 1800;
 const ITUNES_TIMEOUT_MS = 2200;
 const DEEZER_TIMEOUT_MS = 2200;
 
@@ -96,6 +97,67 @@ function withTimeoutSignal(timeoutMs: number): AbortSignal | undefined {
 function normalizeITunesArtwork(url: string): string {
   // iTunes commonly returns .../100x100bb.jpg; request a larger variant.
   return url.replace(/\/\d+x\d+bb\./i, "/1200x1200bb.");
+}
+
+async function searchSpotifyArtworkByTrackId(spotifyId: string): Promise<string | null> {
+  const normalizedTrackId = spotifyId.trim();
+  if (!normalizedTrackId) {
+    return null;
+  }
+
+  const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(`spotify:track:${normalizedTrackId}`)}`;
+  const response = await fetch(oembedUrl, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "SayWetin/1.0 (+https://saywetin.app)",
+    },
+    signal: withTimeoutSignal(SPOTIFY_OEMBED_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = (await response.json()) as { thumbnail_url?: string };
+  return isValidArtworkUrl(payload?.thumbnail_url) ? payload.thumbnail_url : null;
+}
+
+async function searchDeezerArtworkByIsrc(isrc: string): Promise<string | null> {
+  const normalizedIsrc = isrc.trim();
+  if (!normalizedIsrc) {
+    return null;
+  }
+
+  const url = `https://api.deezer.com/track/isrc:${encodeURIComponent(normalizedIsrc)}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "SayWetin/1.0 (+https://saywetin.app)",
+    },
+    signal: withTimeoutSignal(DEEZER_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = (await response.json()) as {
+    album?: {
+      cover_xl?: string;
+      cover_big?: string;
+      cover_medium?: string;
+    };
+  };
+
+  const artwork =
+    payload.album?.cover_xl ||
+    payload.album?.cover_big ||
+    payload.album?.cover_medium ||
+    null;
+
+  return isValidArtworkUrl(artwork) ? artwork : null;
 }
 
 async function searchItunesArtwork(input: ArtworkLookupInput): Promise<string | null> {
@@ -249,6 +311,20 @@ export async function resolveTrackArtwork(input: ArtworkLookupInput): Promise<st
 
   const lookupPromise = (async () => {
     try {
+      if (input.spotifyId?.trim()) {
+        const spotify = await searchSpotifyArtworkByTrackId(input.spotifyId);
+        if (spotify) {
+          return spotify;
+        }
+      }
+
+      if (input.isrc?.trim()) {
+        const deezerByIsrc = await searchDeezerArtworkByIsrc(input.isrc);
+        if (deezerByIsrc) {
+          return deezerByIsrc;
+        }
+      }
+
       const itunes = await searchItunesArtwork(input);
       if (itunes) {
         return itunes;

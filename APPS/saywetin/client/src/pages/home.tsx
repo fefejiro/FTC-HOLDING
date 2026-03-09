@@ -12,7 +12,6 @@ import {
 import { User, LogOut, UserCircle, Mic, PenLine, Music, Headphones, Radio } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
-import { useAuthStatus } from '@/hooks/use-auth-status';
 import { AudioRecorder } from '@/components/audio-recorder';
 
 type ListenState = 'idle' | 'listening';
@@ -20,7 +19,6 @@ type ListenState = 'idle' | 'listening';
 export default function Home() {
   const [, navigate] = useLocation();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
-  const { isAuthAvailable } = useAuthStatus();
   
   const [listenState, setListenState] = useState<ListenState>('idle');
 
@@ -84,15 +82,6 @@ export default function Home() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : isAuthAvailable ? (
-              <Button
-                onClick={() => navigate('/login')}
-                data-testid="button-login"
-                size="sm"
-                className="h-9 px-3 sm:px-4"
-              >
-                Sign in
-              </Button>
             ) : null}
           </nav>
         </div>
