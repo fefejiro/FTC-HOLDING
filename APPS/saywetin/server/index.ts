@@ -30,8 +30,6 @@ app.use(cors({
     'https://www.peacepad.ca',
     'https://saywetin.app',
     'https://www.saywetin.app',
-    /^https?:\/\/.*\.replit\.dev$/,
-    /^https?:\/\/.*\.replit\.app$/,
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -57,8 +55,8 @@ app.get("/api/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-// Root health check for Replit deployments (checked before other routes)
-app.get("/__replit_health", (_req, res) => {
+// Lightweight internal health alias used by some local tools.
+app.get("/__health", (_req, res) => {
   res.status(200).send("OK");
 });
 

@@ -141,7 +141,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-lg font-semibold">Contact Us</h2>
               <p className="text-muted-foreground leading-relaxed">
                 If you have questions about this Privacy Policy or our data practices, please contact 
-                us through the Saywetin app or visit our website at saywetin.replit.app.
+                us through the Saywetin app or visit our website at saywetin.app.
               </p>
             </section>
           </CardContent>

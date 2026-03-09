@@ -9,7 +9,7 @@ export default mergeConfig(base, defineConfig({
     proxy: {
       "/api": { target: "http://127.0.0.1:8001", changeOrigin: true },
       "/health": { target: "http://127.0.0.1:8001", changeOrigin: true },
-      "/__replit_health": { target: "http://127.0.0.1:8001", changeOrigin: true }
+      "/__health": { target: "http://127.0.0.1:8001", changeOrigin: true }
     }
   }
 }));

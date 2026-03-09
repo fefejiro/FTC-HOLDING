@@ -47,10 +47,8 @@ Server/runtime:
 - `SESSION_SECRET`
 - `PORT`
 - `NODE_ENV`
-- `OIDC_CLIENT_ID` (optional; falls back to `REPL_ID`)
-- `OIDC_ISSUER_URL` (optional; falls back to `ISSUER_URL` then Replit default)
-- `REPL_ID` (legacy optional)
-- `ISSUER_URL` (legacy optional)
+- `OIDC_CLIENT_ID` (optional)
+- `OIDC_ISSUER_URL` (optional)
 - `SUPABASE_URL` (required only when using `/api/auth/supabase/exchange`)
 - `SUPABASE_ANON_KEY` (optional for `/api/auth/supabase/exchange`)
 - `OPENAI_API_KEY`
@@ -81,13 +79,10 @@ Post-deploy verification:
 1. `curl -i https://<railway-service-domain>/health` returns `200`
 2. Browser upload to `/api/listen` from `saywetin.app` succeeds without `Failed to fetch`
 
-## Current Replit Coupling (to migrate off)
-- `.replit`
-- `replit.md`
-- `server/replit_integrations/*`
-- Replit OIDC integration (now optional; app boots without `REPL_ID`/`ISSUER_URL`)
-- Replit Vite plugins in `vite.config.ts`
-- `__replit_health` endpoint
+## Auth Mode (Current)
+- Guest mode works without OIDC settings.
+- OIDC login is optional and enabled only when both `OIDC_CLIENT_ID` and `OIDC_ISSUER_URL` are set.
+- `/api/listen` does not require login.
 
 ## Capacitor Config Authority
 - Authoritative source: `capacitor.config.ts`

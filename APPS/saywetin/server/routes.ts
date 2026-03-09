@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
 import { storage } from "./storage";
 import { pool } from "./db";
 import {
@@ -22,11 +22,11 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Setup Replit Auth (OIDC-based authentication with Google, GitHub, etc.)
+  // Setup optional OIDC + session auth (guest usage works without OIDC env vars).
   await setupAuth(app);
   registerAuthRoutes(app);
 
-  // Helper to get user ID from Replit Auth session
+  // Helper to get user ID from authenticated session
   const getUserId = (req: any): string | null => {
     if (!req.isAuthenticated() || !req.user?.claims?.sub) return null;
     return req.user.claims.sub;

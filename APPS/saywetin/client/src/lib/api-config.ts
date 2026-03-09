@@ -8,7 +8,7 @@ declare global {
 
 const DEFAULT_DEV_API_BASE_URL = "http://127.0.0.1:8001";
 const DEFAULT_PROD_API_BASE_URL = "https://api.saywetin.app";
-const API_PREFIXES = ["/api", "/health", "/__replit_health"] as const;
+const API_PREFIXES = ["/api", "/health", "/__health"] as const;
 
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");

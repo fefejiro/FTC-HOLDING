@@ -8,9 +8,9 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 
-const oidcClientId = process.env.OIDC_CLIENT_ID ?? process.env.REPL_ID;
-const oidcIssuerUrl = process.env.OIDC_ISSUER_URL ?? process.env.ISSUER_URL ?? "https://replit.com/oidc";
-const oidcEnabled = Boolean(oidcClientId);
+const oidcClientId = process.env.OIDC_CLIENT_ID?.trim();
+const oidcIssuerUrl = process.env.OIDC_ISSUER_URL?.trim();
+const oidcEnabled = Boolean(oidcClientId && oidcIssuerUrl);
 
 function getSessionSecret(): string {
   const configured = process.env.SESSION_SECRET?.trim();
@@ -44,8 +44,8 @@ function getSupabaseAnonKey(): string {
 
 const getOidcConfig = memoize(
   async () => {
-    if (!oidcClientId) {
-      throw new Error("OIDC client ID is not configured. Set OIDC_CLIENT_ID or REPL_ID.");
+    if (!oidcClientId || !oidcIssuerUrl) {
+      throw new Error("OIDC is not configured. Set OIDC_CLIENT_ID and OIDC_ISSUER_URL.");
     }
 
     return await client.discovery(new URL(oidcIssuerUrl), oidcClientId);
@@ -107,7 +107,7 @@ export async function setupAuth(app: Express) {
   if (oidcEnabled) {
     oidcConfig = await getOidcConfig();
   } else {
-    console.warn("[Auth] OIDC disabled (OIDC_CLIENT_ID/REPL_ID not set). /api/login will return 503.");
+    console.warn("[Auth] OIDC disabled (OIDC_CLIENT_ID/OIDC_ISSUER_URL not set). /api/login will return 503.");
   }
 
   const verify: VerifyFunction = async (
@@ -128,7 +128,7 @@ export async function setupAuth(app: Express) {
     }
 
     const normalizedDomain = domain.split(":")[0].toLowerCase();
-    const strategyName = `replitauth:${normalizedDomain}`;
+    const strategyName = `oidcauth:${normalizedDomain}`;
     if (!registeredStrategies.has(strategyName)) {
       const strategy = new Strategy(
         {
