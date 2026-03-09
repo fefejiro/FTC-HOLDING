@@ -41,6 +41,10 @@ interface AudioRecorderProps {
   listenDuration?: number;
 }
 
+type ApiError = Error & {
+  code?: string;
+};
+
 function getApiErrorMessage(payload: any): string | undefined {
   if (typeof payload?.error === "string") {
     return payload.error;
@@ -55,6 +59,31 @@ function getApiErrorMessage(payload: any): string | undefined {
   }
 
   return undefined;
+}
+
+function getApiErrorCode(payload: any): string | undefined {
+  if (typeof payload?.errorCode === "string") {
+    return payload.errorCode;
+  }
+
+  if (typeof payload?.error?.code === "string") {
+    return payload.error.code;
+  }
+
+  return undefined;
+}
+
+function createApiError(payload: any, fallbackMessage: string): ApiError {
+  const error = new Error(getApiErrorMessage(payload) || fallbackMessage) as ApiError;
+  const code = getApiErrorCode(payload);
+  if (code) {
+    error.code = code;
+  }
+  return error;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderProps) {
@@ -237,8 +266,6 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
     }
   };
 
-  const retryCountRef = useRef<number>(0);
-
   const sendAudioToServer = async (audioBlob: Blob, mimeType: string, ext: string): Promise<any> => {
     const apiUrl = getApiUrl('/api/listen');
     console.log('[SAYWETIN-UPLOAD] Sending to:', apiUrl);
@@ -266,7 +293,7 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
     console.log('[SAYWETIN-UPLOAD] Result:', JSON.stringify(result).substring(0, 500));
 
     if (!response.ok || !result.success) {
-      throw new Error(getApiErrorMessage(result) || 'Could not identify the song');
+      throw createApiError(result, 'Could not identify the song');
     }
 
     return result;
@@ -298,21 +325,42 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
       });
 
       let result: any;
-      try {
-        result = await sendAudioToServer(audioBlob, mimeType, ext);
-      } catch (firstError: any) {
-        const isNoMusic = firstError.message?.toLowerCase().includes('no music') || 
-                          firstError.message?.toLowerCase().includes('no result');
-        if (isNoMusic && retryCountRef.current === 0) {
-          console.log('[SAYWETIN-UPLOAD] First attempt failed with "no music found", retrying...');
-          retryCountRef.current = 1;
+      let noMusicRetries = 0;
+      let databaseRetries = 0;
+      while (!result) {
+        try {
           result = await sendAudioToServer(audioBlob, mimeType, ext);
-        } else {
-          throw firstError;
+        } catch (attemptError: any) {
+          const errorMessage = String(attemptError?.message || '').toLowerCase();
+          const errorCode = typeof attemptError?.code === 'string' ? attemptError.code : '';
+          const isNoMusic =
+            errorMessage.includes('no music') ||
+            errorMessage.includes('no result');
+          const isDatabaseUnavailable =
+            errorCode === 'DATABASE_UNAVAILABLE' ||
+            errorMessage.includes('database pooler is temporarily unavailable') ||
+            errorMessage.includes('database is currently unavailable');
+
+          if (isNoMusic && noMusicRetries < 1) {
+            noMusicRetries += 1;
+            console.log('[SAYWETIN-UPLOAD] First attempt failed with "no music found", retrying...');
+            continue;
+          }
+
+          if (isDatabaseUnavailable && databaseRetries < 2) {
+            databaseRetries += 1;
+            const waitMs = databaseRetries * 1200;
+            console.log(
+              `[SAYWETIN-UPLOAD] Database temporarily unavailable, retry ${databaseRetries}/2 in ${waitMs}ms...`,
+            );
+            await delay(waitMs);
+            continue;
+          }
+
+          throw attemptError;
         }
       }
 
-      retryCountRef.current = 0;
       setRecordingState('success');
       toast({
         title: 'We don catch am!',
@@ -337,7 +385,6 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
         onSuccess(result);
       }
     } catch (error: any) {
-      retryCountRef.current = 0;
       console.error('Upload failed:', error);
       setRecordingState('error');
       

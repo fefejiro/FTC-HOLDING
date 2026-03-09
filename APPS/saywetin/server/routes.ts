@@ -70,6 +70,21 @@ function classifyDatabaseIssue(error: unknown): InfrastructureIssue | null {
   }
 
   if (
+    normalized.includes("self-signed certificate in certificate chain") ||
+    normalized.includes("unable to verify the first certificate") ||
+    normalized.includes("certificate has expired")
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_TLS_ERROR",
+      error: "Database TLS handshake failed.",
+      troubleshooting:
+        "Verify DATABASE_URL points to the Supabase pooler endpoint and SSL settings are applied. If needed, enable DATABASE_SSL_NO_VERIFY=true for this runtime.",
+      details: message,
+    };
+  }
+
+  if (
     normalized.includes("connect econnrefused") ||
     normalized.includes("could not connect to server") ||
     normalized.includes("connection terminated unexpectedly") ||

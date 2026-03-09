@@ -10,5 +10,26 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const databaseUrl = process.env.DATABASE_URL.trim();
+const databaseHost = (() => {
+  try {
+    return new URL(databaseUrl).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+})();
+const isSupabasePooler = databaseHost.endsWith(".pooler.supabase.com");
+const forceNoVerify = (process.env.DATABASE_SSL_NO_VERIFY || "").trim().toLowerCase() === "true";
+
+const poolConfig: pg.PoolConfig = {
+  connectionString: databaseUrl,
+};
+
+if (isSupabasePooler || forceNoVerify) {
+  poolConfig.ssl = {
+    rejectUnauthorized: false,
+  };
+}
+
+export const pool = new Pool(poolConfig);
 export const db = drizzle(pool, { schema });

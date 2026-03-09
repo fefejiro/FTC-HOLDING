@@ -42,6 +42,7 @@ Required environment variables:
 - `NODE_ENV=production`
 - `PORT` (Railway sets this; do not hardcode)
 - `DATABASE_URL` (Supabase pooler URI from project dashboard; username must be `postgres.<project-ref>`)
+- `DATABASE_SSL_NO_VERIFY=true` (optional fallback if runtime reports TLS chain errors like `self-signed certificate in certificate chain`)
 - `SESSION_SECRET`
 - `VITE_API_BASE_URL` (recommended: `https://saywetin.app` for same-origin API routing)
 - `OPENAI_API_KEY`

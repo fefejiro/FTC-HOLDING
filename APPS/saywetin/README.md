@@ -44,6 +44,7 @@ Non-Docker fallback commands (documentation only):
 ## Environment Variables (names only)
 Server/runtime:
 - `DATABASE_URL`
+- `DATABASE_SSL_NO_VERIFY` (optional, set `true` only if database TLS chain validation fails in runtime)
 - `SESSION_SECRET`
 - `PORT`
 - `NODE_ENV`
