@@ -10,22 +10,28 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const databaseUrl = process.env.DATABASE_URL.trim();
-const databaseHost = (() => {
+const databaseUrlRaw = process.env.DATABASE_URL.trim();
+const databaseUrlObject = (() => {
   try {
-    return new URL(databaseUrl).hostname.toLowerCase();
+    return new URL(databaseUrlRaw);
   } catch {
-    return "";
+    return null;
   }
 })();
+const databaseHost = databaseUrlObject?.hostname.toLowerCase() || "";
 const isSupabasePooler = databaseHost.endsWith(".pooler.supabase.com");
 const forceNoVerify = (process.env.DATABASE_SSL_NO_VERIFY || "").trim().toLowerCase() === "true";
+const useNoVerifySsl = isSupabasePooler || forceNoVerify;
+if (databaseUrlObject && useNoVerifySsl) {
+  databaseUrlObject.searchParams.set("sslmode", "no-verify");
+}
+const databaseUrl = databaseUrlObject ? databaseUrlObject.toString() : databaseUrlRaw;
 
 const poolConfig: pg.PoolConfig = {
   connectionString: databaseUrl,
 };
 
-if (isSupabasePooler || forceNoVerify) {
+if (useNoVerifySsl) {
   poolConfig.ssl = {
     rejectUnauthorized: false,
   };

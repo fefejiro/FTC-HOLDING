@@ -79,7 +79,7 @@ function classifyDatabaseIssue(error: unknown): InfrastructureIssue | null {
       errorCode: "DATABASE_TLS_ERROR",
       error: "Database TLS handshake failed.",
       troubleshooting:
-        "Verify DATABASE_URL points to the Supabase pooler endpoint and SSL settings are applied. If needed, enable DATABASE_SSL_NO_VERIFY=true for this runtime.",
+        "Verify DATABASE_URL points to the Supabase pooler endpoint and uses sslmode=no-verify for this runtime. If needed, set DATABASE_SSL_NO_VERIFY=true and redeploy.",
       details: message,
     };
   }

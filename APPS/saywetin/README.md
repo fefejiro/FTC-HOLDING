@@ -58,7 +58,7 @@ Server/runtime:
 - `ACRCLOUD_HOST`
 - `ACRCLOUD_ACCESS_KEY`
 - `ACRCLOUD_ACCESS_SECRET`
-- `GENIUS_API_KEY`
+- `GENIUS_API_KEY` (optional; improves lyrics source coverage)
 
 Frontend:
 - `VITE_API_BASE_URL`

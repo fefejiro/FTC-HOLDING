@@ -49,7 +49,7 @@ Required environment variables:
 - `ACRCLOUD_HOST`
 - `ACRCLOUD_ACCESS_KEY`
 - `ACRCLOUD_ACCESS_SECRET`
-- `GENIUS_API_KEY`
+- `GENIUS_API_KEY` (optional; app still works without it, but lyrics hit rate may drop)
 
 Post-deploy verification:
 
@@ -61,6 +61,7 @@ Post-deploy verification:
 
 Troubleshooting:
 - If `/api/listen` returns `DATABASE_CREDENTIAL_INVALID` or `Tenant or user not found`, the `DATABASE_URL` user/password is incorrect for the current Supabase project. Re-copy the session pooler URI from Supabase and paste it into Railway unchanged.
+- If `/api/listen` returns `DATABASE_TLS_ERROR`, ensure `DATABASE_URL` includes `sslmode=no-verify` (or set `DATABASE_SSL_NO_VERIFY=true`) and redeploy.
 
 ## Dockerfiles
 
