@@ -40,9 +40,7 @@ export default function Home() {
           </div>
 
           <nav className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
-            <div className="hidden min-[380px]:block">
-              <ThemeToggle className="h-9 w-9" />
-            </div>
+            <ThemeToggle className="h-9 w-9" />
 
             {isAuthenticated ? (
               <DropdownMenu>
@@ -84,18 +82,7 @@ export default function Home() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => navigate('/login')}
-                  data-testid="button-login"
-                  size="sm"
-                  className="h-9 px-3 sm:px-4"
-                >
-                  Sign in
-                </Button>
-              </div>
-            )}
+            ) : null}
           </nav>
         </div>
       </header>
