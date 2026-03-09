@@ -24,6 +24,7 @@ interface InfrastructureIssue {
   error: string;
   troubleshooting: string;
   details?: string;
+  retryable?: boolean;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -57,6 +58,9 @@ function classifyDatabaseIssue(error: unknown): InfrastructureIssue | null {
     normalized.includes("connect econnrefused") ||
     normalized.includes("could not connect to server") ||
     normalized.includes("connection terminated unexpectedly") ||
+    normalized.includes("connection to database not available") ||
+    normalized.includes("authentication query failed") ||
+    normalized.includes("context: handshake") ||
     normalized.includes("timeout expired") ||
     normalized.includes("getaddrinfo enotfound") ||
     normalized.includes("etimedout")
@@ -68,10 +72,49 @@ function classifyDatabaseIssue(error: unknown): InfrastructureIssue | null {
       troubleshooting:
         "Check DATABASE_URL host/port/ssl settings and confirm the database service is reachable from Railway.",
       details: message,
+      retryable: true,
     };
   }
 
   return null;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withDatabaseRetry<T>(
+  operationName: string,
+  operation: () => Promise<T>,
+  maxAttempts = 3,
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      const issue = classifyDatabaseIssue(error);
+      const shouldRetry =
+        !!issue &&
+        issue.errorCode === "DATABASE_UNAVAILABLE" &&
+        issue.retryable === true &&
+        attempt < maxAttempts;
+
+      if (!shouldRetry) {
+        throw error;
+      }
+
+      const delayMs = attempt * 400;
+      console.warn(
+        `[DB-RETRY] ${operationName} failed with transient database issue (attempt ${attempt}/${maxAttempts}). Retrying in ${delayMs}ms.`,
+      );
+      await wait(delayMs);
+    }
+  }
+
+  throw lastError;
 }
 
 export async function registerRoutes(
@@ -225,11 +268,13 @@ export async function registerRoutes(
 
       // Step 1: Create listening session
       console.log('📝 [LISTEN] Creating listening session...');
-      const session = await storage.createListeningSession({
-        userId,
-        status: 'recording',
-        audioDuration,
-      });
+      const session = await withDatabaseRetry("createListeningSession", () =>
+        storage.createListeningSession({
+          userId,
+          status: 'recording',
+          audioDuration,
+        }),
+      );
       sessionId = session.id;
 
       // Step 2: Recognize song with ACRCloud
