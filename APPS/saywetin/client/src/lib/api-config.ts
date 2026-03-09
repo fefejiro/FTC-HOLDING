@@ -7,8 +7,46 @@ declare global {
 }
 
 const DEFAULT_DEV_API_BASE_URL = "http://127.0.0.1:8001";
-const DEFAULT_PROD_API_BASE_URL = "https://api.saywetin.app";
+const CANONICAL_WEB_ORIGIN = "https://saywetin.app";
+const DEFAULT_PROD_API_BASE_URL = CANONICAL_WEB_ORIGIN;
 const API_PREFIXES = ["/api", "/health", "/__health"] as const;
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
+
+function normalizeHostname(hostname: string): string {
+  return hostname.trim().toLowerCase();
+}
+
+export function isLegacyWebHost(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  return normalized === "www.saywetin.app" || normalized.endsWith("saywetin-pages.pages.dev");
+}
+
+export function isSaywetinHostedWebHost(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  return (
+    normalized === "saywetin.app" ||
+    normalized === "www.saywetin.app" ||
+    normalized.endsWith("saywetin-pages.pages.dev")
+  );
+}
+
+export function getCanonicalWebOrigin(): string {
+  return CANONICAL_WEB_ORIGIN;
+}
+
+export function getCanonicalUrlForCurrentLocation(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const { hostname, pathname, search, hash } = window.location;
+  const normalizedHost = normalizeHostname(hostname);
+  if (LOCAL_HOSTS.has(normalizedHost) || !isLegacyWebHost(normalizedHost)) {
+    return null;
+  }
+
+  return `${CANONICAL_WEB_ORIGIN}${pathname}${search}${hash}`;
+}
 
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
@@ -44,6 +82,11 @@ export function getApiBaseUrl(): string {
 
   if (typeof window !== "undefined") {
     try {
+      const normalizedHost = normalizeHostname(window.location.hostname);
+      if (isLegacyWebHost(normalizedHost)) {
+        return CANONICAL_WEB_ORIGIN;
+      }
+
       // Web should default to same-origin so production calls stay on the live app host.
       return trimTrailingSlash(window.location.origin);
     } catch {
