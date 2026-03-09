@@ -40,6 +40,20 @@ function classifyDatabaseIssue(error: unknown): InfrastructureIssue | null {
   const normalized = message.toLowerCase();
 
   if (
+    (normalized.includes('relation "') && normalized.includes('" does not exist')) ||
+    (normalized.includes('column "') && normalized.includes('" does not exist'))
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_SCHEMA_MISSING",
+      error: "Database schema is missing required tables/columns.",
+      troubleshooting:
+        "Run schema migration against production DATABASE_URL (for example: npm --prefix APPS/saywetin run db:push).",
+      details: message,
+    };
+  }
+
+  if (
     normalized.includes("tenant or user not found") ||
     normalized.includes("password authentication failed") ||
     (normalized.includes("role") && normalized.includes("does not exist"))
@@ -196,6 +210,7 @@ export async function registerRoutes(
     let database: {
       configured: boolean;
       connected: boolean;
+      schemaReady?: boolean;
       errorCode?: string;
       error?: string;
       troubleshooting?: string;
@@ -215,9 +230,22 @@ export async function registerRoutes(
     } else {
       try {
         await pool.query("select 1");
+        const schemaCheck = await pool.query(
+          "select to_regclass('public.listening_sessions') as listening_sessions",
+        );
+        const schemaReady = !!schemaCheck.rows?.[0]?.listening_sessions;
         database = {
           ...database,
           connected: true,
+          schemaReady,
+          ...(schemaReady
+            ? {}
+            : {
+                errorCode: "DATABASE_SCHEMA_MISSING",
+                error: "Database schema is missing required tables.",
+                troubleshooting:
+                  "Run schema migration against production DATABASE_URL (for example: npm --prefix APPS/saywetin run db:push).",
+              }),
         };
       } catch (error) {
         const classified = classifyDatabaseIssue(error);

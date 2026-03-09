@@ -62,6 +62,9 @@ Post-deploy verification:
 Troubleshooting:
 - If `/api/listen` returns `DATABASE_CREDENTIAL_INVALID` or `Tenant or user not found`, the `DATABASE_URL` user/password is incorrect for the current Supabase project. Re-copy the session pooler URI from Supabase and paste it into Railway unchanged.
 - If `/api/listen` returns `DATABASE_TLS_ERROR`, ensure `DATABASE_URL` includes `sslmode=no-verify` (or set `DATABASE_SSL_NO_VERIFY=true`) and redeploy.
+- If `/api/listen` returns `DATABASE_SCHEMA_MISSING` or `relation "listening_sessions" does not exist`, run migrations against production DB:
+  - From repo root: `npm.cmd --prefix APPS/saywetin run db:push`
+  - Or in Railway shell (SayWetin service): `npm run db:push`
 
 ## Dockerfiles
 
