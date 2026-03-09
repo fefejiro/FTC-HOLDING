@@ -231,7 +231,7 @@ export async function registerRoutes(
       try {
         await pool.query("select 1");
         const schemaCheck = await pool.query(
-          "select to_regclass('public.listening_sessions') as listening_sessions",
+          "select to_regclass('listening_sessions') as listening_sessions",
         );
         const schemaReady = !!schemaCheck.rows?.[0]?.listening_sessions;
         database = {
