@@ -1,4 +1,12 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+async function dismissBlockingModals(page: Page) {
+  const whatsNewDialog = page.getByTestId("dialog-whats-new");
+  if (await whatsNewDialog.isVisible()) {
+    await page.getByTestId("button-got-it").click();
+    await expect(whatsNewDialog).toBeHidden();
+  }
+}
 
 test.describe("P1 Critical: Web update lifecycle", () => {
   test("shows update prompt, allows Later, and re-shows on next resume", async ({ page }) => {
@@ -23,12 +31,16 @@ test.describe("P1 Critical: Web update lifecycle", () => {
       localStorage.removeItem("peacepad_update_deferred");
       localStorage.removeItem("peacepad_update_force_after");
       localStorage.removeItem("peacepad_pending_web_build_id");
+      localStorage.setItem("app-rating-status", "dismissed");
+      localStorage.setItem("just_joined_partnership", JSON.stringify({ timestamp: Date.now() }));
     });
 
     await page.goto("/onboarding");
+    await dismissBlockingModals(page);
 
     const updatePrompt = page.getByTestId("notification-update-available");
     await expect(updatePrompt).toBeVisible();
+    await dismissBlockingModals(page);
 
     await page.getByTestId("button-update-later").click();
     await expect(updatePrompt).toBeHidden();
@@ -67,9 +79,12 @@ test.describe("P1 Critical: Web update lifecycle", () => {
       localStorage.setItem("peacepad_pending_web_build_id", currentBuildId);
       localStorage.setItem("peacepad_update_deferred", "true");
       localStorage.setItem("peacepad_update_force_after", String(Date.now() - 1000));
+      localStorage.setItem("app-rating-status", "dismissed");
+      localStorage.setItem("just_joined_partnership", JSON.stringify({ timestamp: Date.now() }));
     }, { currentBuildId: currentBuild });
 
     await page.goto("/onboarding");
+    await dismissBlockingModals(page);
 
     await page.waitForFunction(
       ({ buildId }) => {

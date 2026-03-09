@@ -1,63 +1,75 @@
-# FTC HOLDING
+# FTC HOLDING Monorepo
 
-![CI](https://github.com/<owner>/<repo>/actions/workflows/ci.yml/badge.svg)
+Canonical repository root: `C:\FTC HOLDING`
 
-This monorepo contains related applications and shared packages for the FTC ecosystem.
+This repo contains multiple apps plus shared packages. Use this as the top-level orientation doc.
 
-## Workspace layout
-- `APPS/` - application projects in this checkout: `ftc-site`, `peacepad`, `saywetin`
-- `PACKAGES/` - shared libraries: `auth`, `config`, `logger`, `supabase`, `types`
+## Current Structure
 
-## Running
-- `npm install` to install dependencies for all workspaces.
-- `npm run dev` (runs ftc-site dev server).
-- `npm run build` builds ftc-site, peacepad, and saywetin sequentially.
-- `npm run test` runs available tests in each workspace.
-- `npm run dev:peacepad` starts peacepad.
-- `npm run dev:saywetin` starts saywetin.
+- `APPS/`
+  - `ftc-site` (Next.js marketing/site shell)
+  - `peacepad` (Vite frontend + Node API + Capacitor mobile shell)
+  - `saywetin` (Vite frontend + Node API + Capacitor mobile shell)
+  - `ATEAM` (local-first AI app under active ownership decision)
+- `PACKAGES/`
+  - `auth`, `config`, `logger`, `supabase`, `types`
+- `DOCS/`
+  - operational and deployment docs
+- `workers/peacepadai`
+  - Cloudflare Worker project
 
-## PeacePad API Base URL
-- `VITE_API_BASE_URL` is optional and overrides the client API host for web + native.
-- If `VITE_API_BASE_URL` is unset:
-  - Web defaults to same-origin (`""`), so requests stay on the current host.
-  - Capacitor native falls back to `https://api.peacepad.ca`.
+## Deployment Reality (Current)
 
-## PeacePad Guest Cookie Security
-- Guest auth cookie: `peacepad_guest` (`HttpOnly`).
-- `SameSite=Lax` by default for same-origin web sessions (CSRF baseline).
-- `SameSite=None; Secure` only for secure cross-site contexts (for native/webview cross-origin API usage).
+1. PeacePad
+- Frontend production owner: Cloudflare Pages (`https://peacepad.ca`, `https://www.peacepad.ca`)
+- Backend production owner: Railway (`https://api.peacepad.ca`)
+- Primary checks:
+  - `npm --prefix APPS/peacepad run verify:deployment-ownership`
+  - `npm run verify:peacepad:prod`
+  - `npm --prefix APPS/peacepad run smoke:guest-auth`
 
-## Deploy on Railway (PeacePad API)
-1. Create a Railway service from this repo with:
-   - Root Directory: `APPS/peacepad`
-   - Install Command: `npm ci`
-   - Build Command: `npm run build`
-   - Start Command: `npm run start`
-2. In Railway `Variables`, add at minimum:
-   - `NODE_ENV=production`
-   - `PORT` (Railway usually injects this automatically)
-   - `SESSION_SECRET`
-   - `DATABASE_URL` (and optional `DIRECT_URL`)
-   - `OPENAI_BASE_URL`
-   - `OPENAI_API_KEY`
-   - `VITS_BASE_URL`
-   - `VAPID_PUBLIC_KEY`
-   - `VAPID_PRIVATE_KEY`
-   - `VAPID_EMAIL`
-   - `MAILJET_API_KEY`
-   - `MAILJET_SECRET_KEY`
-   - `FIREBASE_SERVICE_ACCOUNT_JSON` or `FIREBASE_SERVICE_ACCOUNT_JSON_PATH`
-3. CORS configuration:
-   - Always allow `https://peacepad.ca`.
-   - Add extra allowed browser origins to `CORS_ALLOWED_ORIGINS` (comma-separated).
-   - Optional origin inputs: `PUBLIC_BASE_URL` and `APP_ORIGINS`.
-4. Railway healthcheck path:
-   - `/health` (fast 200)
+2. ftc-site
+- Deployed separately (Cloudflare Pages flow) from `APPS/ftc-site`.
 
-## SayWetin Status
-- SayWetin source is now present at `APPS/saywetin`.
-- Dockerfile-based deploy files are included in that app folder.
-- See `DOCS/SAYWETIN_HANDOVER.md` for runtime and domain notes.
+3. SayWetin
+- Frontend and API are separate deployment surfaces.
+- Use `npm --prefix APPS/saywetin run verify:frontend-build` before frontend cutover.
+- Runtime/domain notes: `DOCS/SAYWETIN_HANDOVER.md`
 
-Local setup helper:
-- Run `node scripts/setup-env.mjs` to create `APPS/peacepad/.env` interactively without echoing secret values.
+4. ATEAM
+- Not in current root deployment pipeline.
+- Treated as local/analysis track until ownership/tracking decision is finalized.
+
+## Local Build/Test Commands
+
+Run from `C:\FTC HOLDING`:
+
+```powershell
+# repo hygiene
+npm run audit:secrets
+
+# peacepad
+npm --prefix APPS/peacepad run build
+npm --prefix APPS/peacepad run smoke:e2e:update-lifecycle
+
+# ftc-site
+npm --prefix APPS/ftc-site run build
+
+# saywetin
+npm --prefix APPS/saywetin run verify:frontend-build
+npm --prefix APPS/saywetin run check
+
+# ateam backend
+npm --prefix APPS/ATEAM/Server run test:backend
+```
+
+## Known Risks / Open Decisions
+
+1. `APPS/ATEAM` currently appears untracked from root git history.
+2. A nested duplicate tree exists at `C:\FTC HOLDING\FTC-HOLDING` (not canonical root).
+3. Cross-app documentation drift can happen quickly; keep `DOCS` and app-local docs aligned.
+
+See:
+- [REPO_HANDOVER_AUDIT_2026-03-07.md](DOCS/REPO_HANDOVER_AUDIT_2026-03-07.md)
+- [REPO_OWNERSHIP_AND_TRACKING.md](DOCS/REPO_OWNERSHIP_AND_TRACKING.md)
+- [START_HERE.md](START_HERE.md)
