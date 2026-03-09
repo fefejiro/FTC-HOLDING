@@ -86,6 +86,7 @@ interface RankedAcrCandidate {
   hasExternalIds: boolean;
   hasExternalMetadata: boolean;
   nonLatinDominant: boolean;
+  genericArtistName: boolean;
 }
 
 function normalizeText(value: unknown): string {
@@ -98,6 +99,26 @@ function collectArtistNames(matchData: any): string {
     .map((artist: any) => normalizeText(artist?.name))
     .filter(Boolean)
     .join(', ');
+}
+
+const GENERIC_ARTIST_PATTERNS: RegExp[] = [
+  /\bvarious artists\b/i,
+  /\bunknown artist\b/i,
+  /\bafro hits?\b/i,
+  /\btop hits?\b/i,
+  /\bbest hits?\b/i,
+  /\bplaylists?\b/i,
+  /\bcollection\b/i,
+  /\bmix\b/i,
+  /\btopic\b/i,
+  /\bofficial\b/i,
+  /\brecords?\b/i,
+  /\bchannel\b/i,
+];
+
+function isGenericArtistLabel(artistsText: string): boolean {
+  if (!artistsText) return true;
+  return GENERIC_ARTIST_PATTERNS.some((pattern) => pattern.test(artistsText));
 }
 
 function hasExternalIdentity(matchData: any): { hasExternalIds: boolean; hasExternalMetadata: boolean } {
@@ -146,8 +167,10 @@ function countAfrobeatsSignals(matchData: any): number {
 function toRankedCandidate(matchData: any, source: 'music' | 'humming', index: number): RankedAcrCandidate {
   const confidenceScore = parseConfidenceScore(matchData?.score);
   const { hasExternalIds, hasExternalMetadata } = hasExternalIdentity(matchData);
+  const artists = collectArtistNames(matchData);
   const afrobeatsSignals = countAfrobeatsSignals(matchData);
-  const nonLatinDominant = isMostlyNonLatinScript(`${normalizeText(matchData?.title)} ${collectArtistNames(matchData)}`);
+  const nonLatinDominant = isMostlyNonLatinScript(`${normalizeText(matchData?.title)} ${artists}`);
+  const genericArtistName = isGenericArtistLabel(artists);
 
   let weightedScore = confidenceScore ?? 0;
   if (hasExternalIds) weightedScore += 8;
@@ -155,6 +178,7 @@ function toRankedCandidate(matchData: any, source: 'music' | 'humming', index: n
   weightedScore += afrobeatsSignals * 6;
   if (source === 'humming') weightedScore -= 10;
   if (nonLatinDominant && afrobeatsSignals === 0) weightedScore -= 20;
+  if (genericArtistName) weightedScore -= 18;
 
   return {
     matchData,
@@ -166,6 +190,7 @@ function toRankedCandidate(matchData: any, source: 'music' | 'humming', index: n
     hasExternalIds,
     hasExternalMetadata,
     nonLatinDominant,
+    genericArtistName,
   };
 }
 
@@ -339,6 +364,7 @@ export async function recognizeSong(
           hasExternalIds: candidate.hasExternalIds,
           hasExternalMetadata: candidate.hasExternalMetadata,
           nonLatinDominant: candidate.nonLatinDominant,
+          genericArtistName: candidate.genericArtistName,
         })),
       );
     }
@@ -390,6 +416,15 @@ export async function recognizeSong(
         success: false,
         errorCode: 'ACRCLOUD_RECOGNITION_FAILED',
         errorMessage: `Match may be incorrect (${confidenceScore}). Try another 8-10 second sample from the chorus.`,
+        rawResponse: data,
+      };
+    }
+
+    if (selectedCandidate.genericArtistName && selectedCandidate.afrobeatsSignals === 0 && confidenceScore < 92) {
+      return {
+        success: false,
+        errorCode: 'ACRCLOUD_RECOGNITION_FAILED',
+        errorMessage: `Match may be a generic catalog entry (${confidenceScore}). Try another 8-10 second sample from the main chorus.`,
         rawResponse: data,
       };
     }
