@@ -5,7 +5,6 @@ import {
   applyWebUpdateNow,
   checkForWebUpdate,
   deferWebUpdate,
-  isNativeLocalShellRuntime,
   type WebUpdateStatus,
 } from "@/lib/web-update-manager";
 
@@ -16,7 +15,6 @@ export function UpdateNotification() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const dismissedForCurrentOpenRef = useRef(false);
   const isApplyingUpdateRef = useRef(false);
-  const isNativeShell = useMemo(() => isNativeLocalShellRuntime(), []);
 
   const remainingHours = useMemo(() => {
     if (!updateStatus?.forceAfterMs) {
@@ -88,6 +86,15 @@ export function UpdateNotification() {
       void evaluateUpdate();
     };
 
+    const handleResume = () => {
+      dismissedForCurrentOpenRef.current = false;
+      void evaluateUpdate();
+    };
+
+    const handleBackground = () => {
+      dismissedForCurrentOpenRef.current = false;
+    };
+
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === "visible") {
         void evaluateUpdate();
@@ -96,12 +103,16 @@ export function UpdateNotification() {
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleFocus);
+    window.addEventListener("saywetin:app-resume", handleResume);
+    window.addEventListener("saywetin:app-background", handleBackground);
     window.addEventListener("saywetin:web-update-detected", handleFocus as EventListener);
 
     return () => {
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("saywetin:app-resume", handleResume);
+      window.removeEventListener("saywetin:app-background", handleBackground);
       window.removeEventListener("saywetin:web-update-detected", handleFocus as EventListener);
     };
   }, [evaluateUpdate]);
@@ -141,9 +152,7 @@ export function UpdateNotification() {
         <div className="flex-1 min-w-0 space-y-2">
           <p className="font-medium text-sm">A new SayWetin update is ready</p>
           <p className="text-xs opacity-90">
-            {isNativeShell
-              ? "A newer app build is available. Open Play Store to update and get the latest fixes."
-              : "We made improvements and fixes. Update now to use the latest version."}
+            We made improvements and fixes. Update now to use the latest version.
           </p>
           {forceText && (
             <p className="text-xs opacity-80 flex items-center gap-1">
@@ -163,12 +172,12 @@ export function UpdateNotification() {
               {isRefreshing ? (
                 <>
                   <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                  {isNativeShell ? "Opening..." : "Updating..."}
+                  Updating...
                 </>
               ) : (
                 <>
                   <RefreshCw className="w-3 h-3 mr-1" />
-                  {isNativeShell ? "Open Play Store" : "Update now"}
+                  Update now
                 </>
               )}
             </Button>

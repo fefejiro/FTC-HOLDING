@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -62,6 +63,60 @@ function AppContent() {
                         location.startsWith('/recognized-track/') ||
                         location.startsWith('/traditional/') ||
                         location === '/admin';
+
+  useEffect(() => {
+    const handleResume = () => {
+      window.dispatchEvent(new Event("saywetin:app-resume"));
+    };
+
+    const handleBackground = () => {
+      window.dispatchEvent(new Event("saywetin:app-background"));
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleResume();
+      } else {
+        handleBackground();
+      }
+    };
+
+    let appStateListener: { remove: () => Promise<void> } | null = null;
+
+    (async () => {
+      try {
+        const capacitor = (window as any).Capacitor;
+        if (!capacitor?.isNativePlatform?.()) {
+          return;
+        }
+
+        const appPlugin = capacitor?.Plugins?.App;
+        if (!appPlugin?.addListener) {
+          return;
+        }
+
+        appStateListener = await appPlugin.addListener("appStateChange", ({ isActive }: { isActive: boolean }) => {
+          if (isActive) {
+            handleResume();
+          } else {
+            handleBackground();
+          }
+        });
+      } catch (error) {
+        console.warn("[Saywetin App] Failed to register native app lifecycle listener:", error);
+      }
+    })();
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    handleResume();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (appStateListener) {
+        appStateListener.remove().catch(() => {});
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background pt-[env(safe-area-inset-top)]">
