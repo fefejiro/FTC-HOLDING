@@ -103,16 +103,17 @@ function getWebCaptureProfile(requestedDuration: number): WebCaptureProfile {
   const desktop = isDesktopWebRuntime();
   if (desktop) {
     return {
-      listenDurationSec: Math.max(requestedDuration, 7),
-      gain: 2.8,
-      sampleRate: 44100,
+      // Desktop mics and speaker distance usually need a longer window + stronger make-up gain.
+      listenDurationSec: Math.max(requestedDuration, 9),
+      gain: 3.6,
+      sampleRate: 48000,
       autoGainControl: true,
     };
   }
 
   return {
-    listenDurationSec: Math.max(requestedDuration, 5),
-    gain: 2.2,
+    listenDurationSec: Math.max(requestedDuration, 6),
+    gain: 2.6,
     sampleRate: 44100,
     autoGainControl: true,
   };
@@ -248,11 +249,11 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
       highPass.frequency.value = 100;
 
       const compressor = audioContext.createDynamicsCompressor();
-      compressor.threshold.value = -24;
+      compressor.threshold.value = -30;
       compressor.knee.value = 30;
-      compressor.ratio.value = 4;
+      compressor.ratio.value = 3;
       compressor.attack.value = 0.003;
-      compressor.release.value = 0.25;
+      compressor.release.value = 0.2;
 
       const gainNode = audioContext.createGain();
       gainNode.gain.value = captureProfile.gain;
