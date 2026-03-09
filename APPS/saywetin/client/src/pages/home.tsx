@@ -13,7 +13,6 @@ import { User, LogOut, UserCircle, Mic, PenLine, Music, Headphones, Radio } from
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
 import { AudioRecorder } from '@/components/audio-recorder';
-import { getApiUrl } from '@/lib/api-config';
 
 type ListenState = 'idle' | 'listening';
 
@@ -80,7 +79,7 @@ export default function Home() {
             ) : (
               <div className="flex items-center gap-2">
                 <Button
-                  onClick={() => window.location.href = getApiUrl('/api/login')}
+                  onClick={() => navigate('/login')}
                   data-testid="button-login"
                 >
                   Sign in

@@ -14,6 +14,10 @@ export function redirectToLogin(toast?: (options: { title: string; description: 
     });
   }
   setTimeout(() => {
-    window.location.href = getApiUrl("/api/login");
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    } else {
+      window.location.href = getApiUrl("/api/login");
+    }
   }, 500);
 }

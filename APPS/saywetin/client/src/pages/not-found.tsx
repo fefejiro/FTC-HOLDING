@@ -1,7 +1,55 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { useLocation } from "wouter";
 
 export default function NotFound() {
+  const [location, setLocation] = useLocation();
+  const normalizedPath = location.toLowerCase();
+  const authRedirect = useMemo(() => {
+    const signupHints = [
+      "signup",
+      "sign-up",
+      "sign_up",
+      "register",
+      "create-account",
+      "create_account",
+      "join",
+    ];
+    if (signupHints.some((hint) => normalizedPath.includes(hint))) {
+      return "/signup";
+    }
+
+    const loginHints = [
+      "login",
+      "log-in",
+      "log_in",
+      "signin",
+      "sign-in",
+      "sign_in",
+      "/auth/",
+    ];
+    if (loginHints.some((hint) => normalizedPath.includes(hint))) {
+      return "/login";
+    }
+
+    return null;
+  }, [normalizedPath]);
+
+  useEffect(() => {
+    if (authRedirect && location !== authRedirect) {
+      setLocation(authRedirect);
+    }
+  }, [authRedirect, location, setLocation]);
+
+  if (authRedirect) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 px-4">
+        <p className="text-sm text-gray-600">Redirecting you...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md mx-4">

@@ -19,7 +19,6 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { getApiUrl } from '@/lib/api-config';
 
 const LANGUAGES = [
   { value: 'yo', label: 'Yoruba' },
@@ -127,7 +126,7 @@ export default function Contribute() {
                 Join our community and earn rewards by contributing lyrics
               </p>
               <div className="flex gap-4 justify-center">
-                <Button onClick={() => window.location.href = getApiUrl('/api/login')} data-testid="button-login">
+                <Button onClick={() => navigate('/login')} data-testid="button-login">
                   Sign in
                 </Button>
               </div>

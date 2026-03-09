@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Music, History, ArrowLeft, Star, Trophy, TrendingUp, Sparkles, LogOut } from "lucide-react";
 import type { Song, UserLyricTranslation, UserRewards } from "@shared/schema";
-import { getApiUrl } from "@/lib/api-config";
 
 export default function Profile() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
@@ -70,7 +69,7 @@ export default function Profile() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button className="w-full" onClick={() => window.location.href = getApiUrl("/api/login")} data-testid="button-login">
+            <Button className="w-full" onClick={() => setLocation("/login")} data-testid="button-login">
               Sign in
             </Button>
           </CardContent>

@@ -30,11 +30,25 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/profile" component={Profile} />
       <Route path="/login" component={Login} />
+      <Route path="/login/" component={Login} />
       <Route path="/signin" component={Login} />
+      <Route path="/signin/" component={Login} />
+      <Route path="/sign-in" component={Login} />
+      <Route path="/sign_in" component={Login} />
+      <Route path="/auth/login" component={Login} />
+      <Route path="/auth/signin" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/signup/" component={Signup} />
       <Route path="/sign-up" component={Signup} />
+      <Route path="/sign-up/" component={Signup} />
+      <Route path="/sign_up" component={Signup} />
       <Route path="/register" component={Signup} />
+      <Route path="/register/" component={Signup} />
       <Route path="/create-account" component={Signup} />
+      <Route path="/create-account/" component={Signup} />
+      <Route path="/auth/signup" component={Signup} />
+      <Route path="/auth/sign-up" component={Signup} />
+      <Route path="/auth/register" component={Signup} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/delete-data" component={DeleteData} />
       <Route component={NotFound} />
