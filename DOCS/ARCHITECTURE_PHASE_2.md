@@ -38,5 +38,5 @@ Build & usage
 
 Operational notes
 - Keep the packages small and focused; when a shared helper grows complex, consider splitting responsibilities.
-- Do not upgrade Supabase or auth behavior across apps without testing builds for PeacePad and SayWetin.
+- Do not upgrade Supabase or auth behavior across apps without testing all active app integrations (currently PeacePad and SayWetin).
 

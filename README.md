@@ -2,18 +2,19 @@
 
 ![CI](https://github.com/<owner>/<repo>/actions/workflows/ci.yml/badge.svg)
 
-This monorepo contains multiple related applications and shared packages for the FTC ecosystem.
+This monorepo contains related applications and shared packages for the FTC ecosystem.
 
 ## Workspace layout
-- `APPS/` – individual applications (ftc-site, peacepad, saywetin)
-- `PACKAGES/` – shared libraries; currently contains `ateam`
+- `APPS/` - application projects in this checkout: `ftc-site`, `peacepad`, `saywetin`
+- `PACKAGES/` - shared libraries: `auth`, `config`, `logger`, `supabase`, `types`
 
 ## Running
 - `npm install` to install dependencies for all workspaces.
 - `npm run dev` (runs ftc-site dev server).
-- `npm run build` builds all apps sequentially.
+- `npm run build` builds ftc-site, peacepad, and saywetin sequentially.
 - `npm run test` runs available tests in each workspace.
-- `npm run dev:peacepad` / `npm run dev:saywetin` for other apps.
+- `npm run dev:peacepad` starts peacepad.
+- `npm run dev:saywetin` starts saywetin.
 
 ## PeacePad API Base URL
 - `VITE_API_BASE_URL` is optional and overrides the client API host for web + native.
@@ -25,9 +26,6 @@ This monorepo contains multiple related applications and shared packages for the
 - Guest auth cookie: `peacepad_guest` (`HttpOnly`).
 - `SameSite=Lax` by default for same-origin web sessions (CSRF baseline).
 - `SameSite=None; Secure` only for secure cross-site contexts (for native/webview cross-origin API usage).
-
-## Notes
-Keep each app as a standalone project; migrations use `robocopy` to move content.
 
 ## Deploy on Railway (PeacePad API)
 1. Create a Railway service from this repo with:
@@ -55,6 +53,11 @@ Keep each app as a standalone project; migrations use `robocopy` to move content
    - Optional origin inputs: `PUBLIC_BASE_URL` and `APP_ORIGINS`.
 4. Railway healthcheck path:
    - `/health` (fast 200)
+
+## SayWetin Status
+- SayWetin source is now present at `APPS/saywetin`.
+- Dockerfile-based deploy files are included in that app folder.
+- See `DOCS/SAYWETIN_HANDOVER.md` for runtime and domain notes.
 
 Local setup helper:
 - Run `node scripts/setup-env.mjs` to create `APPS/peacepad/.env` interactively without echoing secret values.

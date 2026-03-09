@@ -1,8 +1,8 @@
-﻿# Cloudflare Pages Setup
+# Cloudflare Pages Setup
 
 Use one Pages project per frontend.
 
-## PeacePad Frontend
+## PeacePad Frontend (in-repo)
 
 - Project root directory: `APPS/peacepad`
 - Install command: `npm install --legacy-peer-deps`
@@ -12,7 +12,6 @@ Use one Pages project per frontend.
   - `VITE_API_BASE_URL=https://api.peacepad.ca`
 
 Custom domains:
-
 - `peacepad.ca`
 - `www.peacepad.ca`
 
@@ -22,11 +21,12 @@ Custom domains:
   - Must generate `APPS/saywetin/dist/public/index.html`
   - Must generate `APPS/saywetin/dist/public/assets/*`
 - Project root directory: `APPS/saywetin`
-- Install command: `npm install`
-- Build command: `npm exec vite build`
+- Install command: `npm ci`
+- Build command: `npm run build:frontend`
 - Build output directory: `dist/public`
 - Environment variable:
-  - `VITE_API_BASE_URL=https://api.saywetin.app`
+  - `VITE_API_BASE_URL=https://saywetin.app`
+  - If a dedicated API host is healthy and routable, you may switch to that host.
 - SPA fallback file required:
   - `APPS/saywetin/client/public/_redirects`
   - Content: `/* /index.html 200`

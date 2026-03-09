@@ -23,7 +23,7 @@ This folder is the current source of truth for SayWetin.
 
 ## Railway Docker Deployment (Strict)
 - Railway root directory: `APPS/saywetin`
-- Dockerfile path: `APPS/saywetin/Dockerfile`
+- Dockerfile path: `Dockerfile` (relative to the configured root directory)
 - Docker build context: `APPS/saywetin`
 - `.dockerignore` path: `APPS/saywetin/.dockerignore`
 - Lockfile path: `APPS/saywetin/package-lock.json` and it must be committed.
@@ -63,6 +63,7 @@ Server/runtime:
 
 Frontend:
 - `VITE_API_BASE_URL`
+  - Recommended for current production routing: `https://saywetin.app` (same-origin web API calls)
 
 ## Verification Checklist
 Local/source verification:
@@ -93,9 +94,11 @@ Post-deploy verification:
 - `capacitor.config.json` must stay aligned for tooling that reads JSON directly.
 
 ## Known Integration Blockers
-- This folder is a nested git repo (`APPS/saywetin/.git`).
-- Parent repo currently ignores this path (`C:\FTC HOLDING\.gitignore` has `APPS/saywetin/`).
-- Result: SayWetin is not tracked as a normal workspace package in the parent repo yet.
+- Railway root directory and Dockerfile path must match exactly:
+  - Root directory: `APPS/saywetin`
+  - Dockerfile path: `Dockerfile`
+- `api.saywetin.app` must have healthy DNS/origin if used as a separate API host.
+- If API and frontend share `saywetin.app`, keep frontend API base on same-origin.
 
 ## Migration Readiness Report
 See: `docs/MIGRATION_READINESS.md`

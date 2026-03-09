@@ -1,8 +1,6 @@
-﻿# Railway Setup
+# Railway Setup
 
-Use two Railway services, one per API.
-
-## Service: peacepad-api
+## Service: peacepad-api (in-repo)
 
 - Root directory: `APPS/peacepad`
 - Install command: `npm install --legacy-peer-deps`
@@ -13,7 +11,6 @@ Use two Railway services, one per API.
   - `/api/health`
 
 Required environment variables:
-
 - `NODE_ENV=production`
 - `DEPLOY_ROLE=api`
 - `PORT` (Railway sets this; do not hardcode)
@@ -34,22 +31,19 @@ Required environment variables:
 ## Service: saywetin-api
 
 - Root directory: `APPS/saywetin`
-- Install command: `npm install`
-- Build command: `npm run build`
-- Start command: `npm run start`
+- Builder: Dockerfile
+- Dockerfile path: `Dockerfile` (do not prepend `APPS/saywetin/` when root directory is already set)
+- Build command: empty
+- Start command: empty
 - Health checks:
   - `/health`
-  - `/api/health`
-  - `/api/status`
 
 Required environment variables:
-
 - `NODE_ENV=production`
 - `PORT` (Railway sets this; do not hardcode)
 - `DATABASE_URL`
 - `SESSION_SECRET`
-- `REPL_ID`
-- `ISSUER_URL=https://replit.com/oidc`
+- `VITE_API_BASE_URL` (recommended: `https://saywetin.app` for same-origin API routing)
 - `OPENAI_API_KEY`
 - `ACRCLOUD_HOST`
 - `ACRCLOUD_ACCESS_KEY`
@@ -65,7 +59,8 @@ Post-deploy verification:
 
 ## Dockerfiles
 
-Not required currently because each API has a working root-level package and start/build scripts Railway can run directly.
+- SayWetin API: Dockerfile deploy is required (`APPS/saywetin/Dockerfile` with root directory `APPS/saywetin`).
+- PeacePad API: script-based Railway deploy remains valid (`npm install --legacy-peer-deps`, `npm run build`, `npm run start`).
 
 ## Domain ownership rule (critical)
 

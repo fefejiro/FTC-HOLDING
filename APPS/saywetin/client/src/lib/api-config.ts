@@ -8,7 +8,6 @@ declare global {
 
 const DEFAULT_DEV_API_BASE_URL = "http://127.0.0.1:8001";
 const DEFAULT_PROD_API_BASE_URL = "https://api.saywetin.app";
-const WEB_API_FALLBACK_HOSTS = new Set(["saywetin.app", "www.saywetin.app"]);
 const API_PREFIXES = ["/api", "/health", "/__replit_health"] as const;
 
 function trimTrailingSlash(value: string): string {
@@ -45,10 +44,7 @@ export function getApiBaseUrl(): string {
 
   if (typeof window !== "undefined") {
     try {
-      const hostname = window.location.hostname.toLowerCase();
-      if (WEB_API_FALLBACK_HOSTS.has(hostname)) {
-        return DEFAULT_PROD_API_BASE_URL;
-      }
+      // Web should default to same-origin so production calls stay on the live app host.
       return trimTrailingSlash(window.location.origin);
     } catch {
       return DEFAULT_PROD_API_BASE_URL;
