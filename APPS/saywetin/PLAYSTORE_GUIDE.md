@@ -6,15 +6,28 @@ Canonical release references:
 
 ## Quick Start (Same Pattern as PeacePad)
 
-From `APPS/saywetin`:
+From `C:\FTC HOLDING\APPS\saywetin`:
 
 ```powershell
 npm ci
 npm run build
+Set-Item Env:CAPACITOR_ENV production
 npx cap sync android
 Set-Location .\android
 .\gradlew.bat assembleDebug
 .\gradlew.bat bundleRelease
+```
+
+Verify generated native config points to hosted web bundle before building:
+
+```powershell
+Get-Content .\app\src\main\assets\capacitor.config.json
+```
+
+Expected `server.url`:
+
+```json
+"url": "https://saywetin.app"
 ```
 
 ## AAB Path

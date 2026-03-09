@@ -96,6 +96,7 @@ Post-deploy verification:
 ## Capacitor Config Authority
 - Authoritative source: `capacitor.config.ts`
 - `capacitor.config.json` must stay aligned for tooling that reads JSON directly.
+- For Android release builds, run `Set-Item Env:CAPACITOR_ENV production` before `npx cap sync android`, then verify generated `android/app/src/main/assets/capacitor.config.json` contains `"url": "https://saywetin.app"`.
 
 ## Known Integration Blockers
 - Railway root directory and Dockerfile path must match exactly:

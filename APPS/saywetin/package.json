@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "NODE_ENV=development tsx server/index.ts",
         "clean": "node -e \"require('node:fs').rmSync('dist',{ recursive: true, force: true })\"",
-        "build:frontend": "vite build",
+        "build:frontend": "vite build && node script/write-web-build-meta.mjs",
         "verify:frontend-build": "npm run build:frontend && node script/verify-frontend-build.mjs",
         "build": "npm run clean && node --import tsx script/build.ts",
         "validate:dist": "node --check dist/index.cjs",

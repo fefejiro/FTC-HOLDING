@@ -1,3 +1,9 @@
+import {
+  getCanonicalUrlForCurrentLocation,
+  getCanonicalWebOrigin,
+  isSaywetinHostedWebHost,
+} from "@/lib/api-config";
+
 export const WEB_BUILD_META_PATH = "/_saywetin/build-meta.json";
 export const WEB_BUILD_ID_KEY = "saywetin_web_build_id";
 export const WEB_PENDING_BUILD_ID_KEY = "saywetin_pending_web_build_id";
@@ -59,6 +65,32 @@ function clearUpdateFlags(storage: StorageLike): void {
   storage.removeItem(WEB_PENDING_BUILD_ID_KEY);
 }
 
+function getBuildMetaCandidateUrls(): string[] {
+  if (typeof window === "undefined") {
+    return [WEB_BUILD_META_PATH];
+  }
+
+  const currentOrigin = window.location.origin.replace(/\/+$/, "");
+  const currentHost = window.location.hostname;
+  const canonicalMetaUrl = `${getCanonicalWebOrigin()}${WEB_BUILD_META_PATH}`;
+  const currentMetaUrl = `${currentOrigin}${WEB_BUILD_META_PATH}`;
+
+  const candidates: string[] = [];
+  if (isSaywetinHostedWebHost(currentHost) && currentOrigin !== getCanonicalWebOrigin()) {
+    // On known non-canonical hosts, check canonical build first.
+    candidates.push(canonicalMetaUrl);
+  }
+
+  candidates.push(currentMetaUrl);
+
+  if (isSaywetinHostedWebHost(currentHost) && !candidates.includes(canonicalMetaUrl)) {
+    // Keep canonical as fallback so host drift still detects current production.
+    candidates.push(canonicalMetaUrl);
+  }
+
+  return [...new Set(candidates)];
+}
+
 async function performHardRefresh(): Promise<void> {
   if (typeof window === "undefined") {
     return;
@@ -80,6 +112,12 @@ async function performHardRefresh(): Promise<void> {
     } catch (error) {
       console.warn("[WebUpdateManager] Failed to unregister service workers:", error);
     }
+  }
+
+  const canonicalUrl = getCanonicalUrlForCurrentLocation();
+  if (canonicalUrl && canonicalUrl !== window.location.href) {
+    window.location.replace(canonicalUrl);
+    return;
   }
 
   window.location.reload();
@@ -169,7 +207,19 @@ export async function fetchWebBuildMeta(
   fetchImpl: typeof fetch = fetch,
   nowMs: number = Date.now(),
 ): Promise<WebBuildMeta | null> {
-  return fetchWebBuildMetaFromUrl(WEB_BUILD_META_PATH, fetchImpl, nowMs);
+  const candidateUrls = getBuildMetaCandidateUrls();
+  for (const candidateUrl of candidateUrls) {
+    try {
+      const meta = await fetchWebBuildMetaFromUrl(candidateUrl, fetchImpl, nowMs);
+      if (meta) {
+        return meta;
+      }
+    } catch {
+      // Try next candidate.
+    }
+  }
+
+  return null;
 }
 
 export async function checkForWebUpdate(options: CheckWebUpdateOptions = {}): Promise<WebUpdateStatus> {
@@ -223,6 +273,7 @@ export function deferWebUpdate(storage?: StorageLike, nowMs: number = Date.now()
 export async function applyWebUpdateNow(
   storage?: StorageLike,
   refreshHandler: () => Promise<void> = performHardRefresh,
+  beforeRefresh?: () => Promise<void> | void,
 ): Promise<void> {
   const localStorageRef = getStorage(storage);
   if (localStorageRef) {
@@ -231,6 +282,10 @@ export async function applyWebUpdateNow(
       localStorageRef.setItem(WEB_BUILD_ID_KEY, pendingBuild);
     }
     clearUpdateFlags(localStorageRef);
+  }
+
+  if (beforeRefresh) {
+    await beforeRefresh();
   }
 
   await refreshHandler();
