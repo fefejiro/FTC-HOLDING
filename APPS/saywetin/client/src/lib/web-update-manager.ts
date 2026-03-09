@@ -4,6 +4,8 @@ export const WEB_PENDING_BUILD_ID_KEY = "saywetin_pending_web_build_id";
 export const WEB_UPDATE_DEFERRED_KEY = "saywetin_update_deferred";
 export const WEB_UPDATE_FORCE_AFTER_KEY = "saywetin_update_force_after";
 export const WEB_FORCE_UPDATE_DELAY_MS = 24 * 60 * 60 * 1000;
+export const WEB_REMOTE_BUILD_META_URL = "https://saywetin.app/_saywetin/build-meta.json";
+export const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.saywetin.app";
 
 export interface WebBuildMeta {
   webBuildId: string;
@@ -27,6 +29,26 @@ export interface CheckWebUpdateOptions {
 }
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+function isNativePlatformRuntime(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return !!window.Capacitor?.isNativePlatform?.();
+}
+
+export function isNativeLocalShellRuntime(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  if (!isNativePlatformRuntime()) {
+    return false;
+  }
+
+  const protocol = window.location.protocol.toLowerCase();
+  const hostname = window.location.hostname.toLowerCase();
+  return protocol === "capacitor:" || hostname === "localhost";
+}
 
 function getStorage(storage?: StorageLike): StorageLike | null {
   if (storage) {
@@ -132,11 +154,56 @@ function syncBuildState(storage: StorageLike, currentBuildId: string, nowMs: num
   };
 }
 
-export async function fetchWebBuildMeta(
-  fetchImpl: typeof fetch = fetch,
-  nowMs: number = Date.now(),
+function syncNativeLocalShellBuildState(
+  storage: StorageLike,
+  localBuildId: string,
+  remoteBuildId: string,
+  nowMs: number,
+): WebUpdateStatus {
+  if (!localBuildId) {
+    return syncBuildState(storage, remoteBuildId, nowMs);
+  }
+
+  storage.setItem(WEB_BUILD_ID_KEY, localBuildId);
+
+  if (localBuildId === remoteBuildId) {
+    clearUpdateFlags(storage);
+    return {
+      updateAvailable: false,
+      forceUpdateRequired: false,
+      currentBuildId: localBuildId,
+      knownBuildId: remoteBuildId,
+      deferred: false,
+    };
+  }
+
+  storage.setItem(WEB_PENDING_BUILD_ID_KEY, remoteBuildId);
+
+  let forceAfterMs = parseForceAfter(storage.getItem(WEB_UPDATE_FORCE_AFTER_KEY));
+  if (!forceAfterMs) {
+    forceAfterMs = nowMs + WEB_FORCE_UPDATE_DELAY_MS;
+    storage.setItem(WEB_UPDATE_FORCE_AFTER_KEY, String(forceAfterMs));
+  }
+
+  const deferred = storage.getItem(WEB_UPDATE_DEFERRED_KEY) === "true";
+
+  return {
+    updateAvailable: true,
+    forceUpdateRequired: nowMs >= forceAfterMs,
+    currentBuildId: localBuildId,
+    knownBuildId: remoteBuildId,
+    deferred,
+    forceAfterMs,
+  };
+}
+
+async function fetchWebBuildMetaFromUrl(
+  targetUrl: string,
+  fetchImpl: typeof fetch,
+  nowMs: number,
 ): Promise<WebBuildMeta | null> {
-  const versionedUrl = `${WEB_BUILD_META_PATH}?ts=${nowMs}`;
+  const separator = targetUrl.includes("?") ? "&" : "?";
+  const versionedUrl = `${targetUrl}${separator}ts=${nowMs}`;
   const response = await fetchImpl(versionedUrl, {
     method: "GET",
     cache: "no-store",
@@ -163,9 +230,17 @@ export async function fetchWebBuildMeta(
   };
 }
 
+export async function fetchWebBuildMeta(
+  fetchImpl: typeof fetch = fetch,
+  nowMs: number = Date.now(),
+): Promise<WebBuildMeta | null> {
+  return fetchWebBuildMetaFromUrl(WEB_BUILD_META_PATH, fetchImpl, nowMs);
+}
+
 export async function checkForWebUpdate(options: CheckWebUpdateOptions = {}): Promise<WebUpdateStatus> {
   const nowMs = options.nowMs ?? Date.now();
   const storage = getStorage(options.storage);
+  const fetchImpl = options.fetchImpl ?? fetch;
 
   if (!storage) {
     return {
@@ -176,7 +251,25 @@ export async function checkForWebUpdate(options: CheckWebUpdateOptions = {}): Pr
   }
 
   try {
-    const meta = await fetchWebBuildMeta(options.fetchImpl ?? fetch, nowMs);
+    if (isNativeLocalShellRuntime()) {
+      const [localMeta, remoteMeta] = await Promise.all([
+        fetchWebBuildMetaFromUrl(WEB_BUILD_META_PATH, fetchImpl, nowMs),
+        fetchWebBuildMetaFromUrl(WEB_REMOTE_BUILD_META_URL, fetchImpl, nowMs),
+      ]);
+
+      if (!remoteMeta?.webBuildId) {
+        return {
+          updateAvailable: false,
+          forceUpdateRequired: false,
+          deferred: storage.getItem(WEB_UPDATE_DEFERRED_KEY) === "true",
+        };
+      }
+
+      const localBuildId = localMeta?.webBuildId || storage.getItem(WEB_BUILD_ID_KEY) || "";
+      return syncNativeLocalShellBuildState(storage, localBuildId, remoteMeta.webBuildId, nowMs);
+    }
+
+    const meta = await fetchWebBuildMeta(fetchImpl, nowMs);
     if (!meta?.webBuildId) {
       return {
         updateAvailable: false,
@@ -214,6 +307,13 @@ export async function applyWebUpdateNow(
   storage?: StorageLike,
   refreshHandler: () => Promise<void> = performHardRefresh,
 ): Promise<void> {
+  if (isNativeLocalShellRuntime()) {
+    if (typeof window !== "undefined") {
+      window.open(PLAY_STORE_URL, "_blank", "noopener,noreferrer");
+    }
+    return;
+  }
+
   const localStorageRef = getStorage(storage);
   if (localStorageRef) {
     const pendingBuild = localStorageRef.getItem(WEB_PENDING_BUILD_ID_KEY);

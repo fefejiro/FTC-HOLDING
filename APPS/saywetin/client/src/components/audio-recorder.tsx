@@ -87,6 +87,37 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+interface WebCaptureProfile {
+  listenDurationSec: number;
+  gain: number;
+  sampleRate: number;
+  autoGainControl: boolean;
+}
+
+function isDesktopWebRuntime(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(pointer:fine)').matches || window.innerWidth >= 1024;
+}
+
+function getWebCaptureProfile(requestedDuration: number): WebCaptureProfile {
+  const desktop = isDesktopWebRuntime();
+  if (desktop) {
+    return {
+      listenDurationSec: Math.max(requestedDuration, 7),
+      gain: 2.8,
+      sampleRate: 44100,
+      autoGainControl: true,
+    };
+  }
+
+  return {
+    listenDurationSec: Math.max(requestedDuration, 5),
+    gain: 2.2,
+    sampleRate: 44100,
+    autoGainControl: true,
+  };
+}
+
 export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderProps) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [progress, setProgress] = useState<number>(0);
@@ -187,6 +218,9 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
   // Web recording (fallback for browser)
   const startWebListening = async () => {
     try {
+      const captureProfile = getWebCaptureProfile(listenDuration);
+      const effectiveListenDuration = captureProfile.listenDurationSec;
+
       setRecordingState('requesting');
       audioChunksRef.current = [];
       setProgress(0);
@@ -196,22 +230,37 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
         audio: {
           echoCancellation: false,  // Keep off to preserve music fidelity
           noiseSuppression: false,  // Keep off to preserve music detail
-          autoGainControl: true,    // Enable to boost quiet audio automatically
-          sampleRate: 44100,        // Higher quality for better recognition
+          autoGainControl: captureProfile.autoGainControl,
+          sampleRate: captureProfile.sampleRate,
+          channelCount: 1,
         }
       });
       streamRef.current = stream;
 
       // Create audio context and amplify the signal for better recognition
-      const audioContext = new AudioContext({ sampleRate: 44100 });
+      const audioContext = new AudioContext({ sampleRate: captureProfile.sampleRate });
       audioContextRef.current = audioContext;
+      console.log('[SAYWETIN-REC] Using web capture profile:', captureProfile);
       
       const source = audioContext.createMediaStreamSource(stream);
+      const highPass = audioContext.createBiquadFilter();
+      highPass.type = 'highpass';
+      highPass.frequency.value = 100;
+
+      const compressor = audioContext.createDynamicsCompressor();
+      compressor.threshold.value = -24;
+      compressor.knee.value = 30;
+      compressor.ratio.value = 4;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.25;
+
       const gainNode = audioContext.createGain();
-      gainNode.gain.value = 2.0; // Boost volume by 2x for better recognition
+      gainNode.gain.value = captureProfile.gain;
       
       const destination = audioContext.createMediaStreamDestination();
-      source.connect(gainNode);
+      source.connect(highPass);
+      highPass.connect(compressor);
+      compressor.connect(gainNode);
       gainNode.connect(destination);
       
       // Use the amplified stream for recording
@@ -236,7 +285,7 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
       const startTime = Date.now();
       progressIntervalRef.current = setInterval(() => {
         const elapsed = (Date.now() - startTime) / 1000;
-        setProgress(Math.min((elapsed / listenDuration) * 100, 100));
+        setProgress(Math.min((elapsed / effectiveListenDuration) * 100, 100));
       }, 50);
 
       recordingTimeoutRef.current = setTimeout(() => {
@@ -244,7 +293,7 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
           mediaRecorderRef.current.stop();
           cleanup();
         }
-      }, listenDuration * 1000);
+      }, effectiveListenDuration * 1000);
 
     } catch (error: any) {
       console.error('Failed to start recording:', error);

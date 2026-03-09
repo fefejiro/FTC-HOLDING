@@ -5,6 +5,7 @@ import {
   applyWebUpdateNow,
   checkForWebUpdate,
   deferWebUpdate,
+  isNativeLocalShellRuntime,
   type WebUpdateStatus,
 } from "@/lib/web-update-manager";
 
@@ -15,6 +16,7 @@ export function UpdateNotification() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const dismissedForCurrentOpenRef = useRef(false);
   const isApplyingUpdateRef = useRef(false);
+  const isNativeShell = useMemo(() => isNativeLocalShellRuntime(), []);
 
   const remainingHours = useMemo(() => {
     if (!updateStatus?.forceAfterMs) {
@@ -139,7 +141,9 @@ export function UpdateNotification() {
         <div className="flex-1 min-w-0 space-y-2">
           <p className="font-medium text-sm">A new SayWetin update is ready</p>
           <p className="text-xs opacity-90">
-            We made improvements and fixes. Update now to use the latest version.
+            {isNativeShell
+              ? "A newer app build is available. Open Play Store to update and get the latest fixes."
+              : "We made improvements and fixes. Update now to use the latest version."}
           </p>
           {forceText && (
             <p className="text-xs opacity-80 flex items-center gap-1">
@@ -159,12 +163,12 @@ export function UpdateNotification() {
               {isRefreshing ? (
                 <>
                   <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                  Updating...
+                  {isNativeShell ? "Opening..." : "Updating..."}
                 </>
               ) : (
                 <>
                   <RefreshCw className="w-3 h-3 mr-1" />
-                  Update now
+                  {isNativeShell ? "Open Play Store" : "Update now"}
                 </>
               )}
             </Button>
