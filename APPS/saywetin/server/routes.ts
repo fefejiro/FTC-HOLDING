@@ -649,8 +649,21 @@ export async function registerRoutes(
       const userId = getUserId(req);
 
       // Use OpenAI to identify the song from the text query
+      const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+      if (!apiKey) {
+        return res.status(503).json({
+          success: false,
+          error: "Text identification requires OpenAI API configuration.",
+        });
+      }
+
       const { default: OpenAI } = await import("openai");
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const openai = new OpenAI({
+        apiKey,
+        baseURL: process.env.OPENAI_API_KEY
+          ? undefined
+          : process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
       
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",

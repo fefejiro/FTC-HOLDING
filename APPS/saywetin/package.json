@@ -5,12 +5,18 @@
     "license": "MIT",
     "scripts": {
         "dev": "NODE_ENV=development tsx server/index.ts",
+        "clean": "node -e \"require('node:fs').rmSync('dist',{ recursive: true, force: true })\"",
         "build:frontend": "vite build",
         "verify:frontend-build": "npm run build:frontend && node script/verify-frontend-build.mjs",
-        "build": "tsx script/build.ts",
-        "start": "NODE_ENV=production node dist/index.cjs",
+        "build": "npm run clean && node --import tsx script/build.ts",
+        "validate:dist": "node --check dist/index.cjs",
+        "build:prod": "npm run build && npm run validate:dist",
+        "start": "node dist/index.cjs",
         "check": "tsc",
         "db:push": "drizzle-kit push"
+    },
+    "engines": {
+        "node": ">=20.0.0"
     },
     "dependencies": {
         "@capacitor/android": "^8.0.1",

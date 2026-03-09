@@ -2,7 +2,13 @@ import axios from 'axios';
 import OpenAI from 'openai';
 
 const LYRICS_OVH_BASE_URL = 'https://api.lyrics.ovh/v1';
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openAiApiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const openAiBaseUrl = process.env.OPENAI_API_KEY
+  ? undefined
+  : process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+const openai = openAiApiKey
+  ? new OpenAI({ apiKey: openAiApiKey, baseURL: openAiBaseUrl })
+  : null;
 
 function getGeniusApiKey(): string | undefined {
   return process.env.GENIUS_API_KEY;
@@ -283,8 +289,8 @@ async function searchAZLyrics(title: string, artist: string): Promise<string | n
 }
 
 async function recallLyricsWithAI(title: string, artist: string): Promise<string | null> {
-  if (!process.env.OPENAI_API_KEY) {
-    console.log(`🧠 [AI Recall] Skipped - no OPENAI_API_KEY configured`);
+  if (!openai) {
+    console.log(`🧠 [AI Recall] Skipped - no OpenAI API key configured`);
     return null;
   }
   

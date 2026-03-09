@@ -3,8 +3,21 @@ import { findMatchingPhrases, NIGERIAN_PHRASES, type NigerianPhrase } from "./ni
 
 // This is using OpenAI's API directly with your own API key for reliable cultural analysis
 // Using gpt-4o-mini for cost efficiency (user requested to save tokens)
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openAiApiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const openAiBaseUrl = process.env.OPENAI_API_KEY
+  ? undefined
+  : process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+const openai = openAiApiKey
+  ? new OpenAI({ apiKey: openAiApiKey, baseURL: openAiBaseUrl })
+  : null;
 const MODEL = "gpt-4o-mini"; // Cost-efficient model for cultural analysis
+
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    throw new Error("OPENAI_API_KEY (or AI_INTEGRATIONS_OPENAI_API_KEY) is not configured");
+  }
+  return openai;
+}
 
 interface TranslationResult {
   translation: string;
@@ -49,7 +62,7 @@ Return your response as JSON with this exact structure:
   "culturalMeaning": "Cultural explanation here"
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
@@ -163,7 +176,7 @@ Important:
 - Note if there's wordplay or multiple meanings
 - If code-switching occurs, explain WHY (cultural significance)`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
@@ -236,7 +249,7 @@ ${lyricsText}
 JSON ${lyricsToAnalyze.length} items:
 {"analyses":[{"translation":"...","detectedLanguage":"...","culturalContext":"1 sentence","artistIntent":"1 sentence","deeperMeaning":"1 sentence","lyricBreakdown":"word(meaning)+word(meaning)","languageNotes":"","slangTerms":[{"term":"w","meaning":"d","language":"l"}]}]}`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
@@ -303,7 +316,7 @@ Return JSON:
 
 For lyricBreakdown: break key words/phrases with their meanings. Be concise. Focus on notable slang/idioms.`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
@@ -379,7 +392,7 @@ Return JSON with EXACTLY ${lyricsToAnalyze.length} analyses (one per line):
 For lyricBreakdown: break key words/phrases with their meanings like "omo (child) + naija (Nigeria) = Nigerian youth"
 For slangTerms: identify 1-2 notable slang/idioms per line. Focus on Pidgin, Yoruba, Igbo words. Be very concise.`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
@@ -448,7 +461,7 @@ Return JSON:
 
 For lyricBreakdown: break key words/phrases with their meanings. Be concise. Focus on notable slang/idioms.`;
 
-    const stream = await openai.chat.completions.create({
+    const stream = await getOpenAIClient().chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 600,
@@ -535,7 +548,7 @@ Confidence scoring:
 
 Be accurate and specific. The emotional tone should capture the dominant feeling of the song.`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
@@ -596,7 +609,7 @@ Artist: ${artistName}, Song: ${songTitle}${album ? `, Album: ${album}` : ''}${ge
 
 JSON: {"artistBio":"2 sentences","artistOrigin":"city, country","musicStyle":"1 sentence","songBackground":"2 sentences","albumInfo":"1 sentence or null","funFact":"1 sentence or null"}`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
@@ -698,7 +711,7 @@ Return JSON:
 ${matchedPhrases.length > 0 ? 'Include the matched phrases above in detectedPhrases with their provided meanings.' : ''}
 If the title is already clear English with no African phrases, still provide culturalNote about the artist's style. Keep responses concise.`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
