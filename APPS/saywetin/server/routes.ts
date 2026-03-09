@@ -55,6 +55,21 @@ function classifyDatabaseIssue(error: unknown): InfrastructureIssue | null {
   }
 
   if (
+    normalized.includes("circuit breaker open") ||
+    normalized.includes("failed to retrieve database credentials")
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_UNAVAILABLE",
+      error: "Database pooler is temporarily unavailable.",
+      troubleshooting:
+        "This is usually transient on Supabase pooler. Retry in a few seconds, then verify the Supabase project is active and DATABASE_URL points to the current pooler URI with sslmode=require.",
+      details: message,
+      retryable: true,
+    };
+  }
+
+  if (
     normalized.includes("connect econnrefused") ||
     normalized.includes("could not connect to server") ||
     normalized.includes("connection terminated unexpectedly") ||
