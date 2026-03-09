@@ -46,6 +46,7 @@ export interface ACRCloudRecognitionResult {
     isrc?: string;
     spotifyId?: string;
     youtubeId?: string;
+    coverArtUrl?: string;
     confidenceScore?: number; // 0-100
     playOffsetMs?: number; // Where in song the audio matched
   };
@@ -209,6 +210,15 @@ export async function recognizeSong(
     // Extract external IDs
     const externalIds = matchData.external_ids || {};
     const externalMetadata = matchData.external_metadata || {};
+    const spotifyTrack = externalMetadata.spotify?.track;
+    const deezerTrack = externalMetadata.deezer?.track;
+    const coverArtUrl =
+      spotifyTrack?.album?.images?.[0]?.url ||
+      spotifyTrack?.album?.cover ||
+      deezerTrack?.album?.cover_xl ||
+      deezerTrack?.album?.cover_big ||
+      deezerTrack?.album?.cover_medium ||
+      undefined;
 
     // Parse result
     const result: ACRCloudRecognitionResult = {
@@ -228,6 +238,7 @@ export async function recognizeSong(
         isrc: externalIds.isrc,
         spotifyId: externalMetadata.spotify?.track?.id,
         youtubeId: externalMetadata.youtube?.vid,
+        coverArtUrl,
         confidenceScore,
         playOffsetMs: matchData.play_offset_ms,
       },

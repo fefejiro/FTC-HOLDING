@@ -109,6 +109,7 @@ interface RecognizedTrackDetail {
     confidenceScore?: number;
     spotifyId?: string;
     youtubeId?: string;
+    coverArtUrl?: string | null;
     isrc?: string;
     playOffsetMs?: number;
     trackDurationMs?: number;
@@ -244,6 +245,7 @@ export default function RecognizedTrack() {
   const [loadingLines, setLoadingLines] = useState<Set<string>>(new Set());
   // Streaming state - tracks partial content for typing effect
   const [streamingContent, setStreamingContent] = useState<Map<string, string>>(new Map());
+  const [artworkLoadFailed, setArtworkLoadFailed] = useState(false);
 
   // Anonymous interaction logging for behavioral analytics
   const { logInteraction } = useInteractionLogger(trackId, undefined);
@@ -419,7 +421,7 @@ export default function RecognizedTrack() {
     setSseComplete(false);
     setSseData(null);
   }, [trackId]);
-  
+
   useEffect(() => {
     if (!trackId) return;
     
@@ -485,6 +487,10 @@ export default function RecognizedTrack() {
   // Use SSE data while streaming, then switch to query data
   const data = sseData || queryData;
   const isLoading = !data && queryLoading && !sseData;
+
+  useEffect(() => {
+    setArtworkLoadFailed(false);
+  }, [trackId, data?.track?.coverArtUrl]);
 
   // Check if we're in processing state
   const isInProcessingState = data && 
@@ -774,8 +780,21 @@ export default function RecognizedTrack() {
 
         <div className="relative container max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-6 sm:pt-12 sm:pb-8">
           <div className="flex flex-col sm:flex-row items-start gap-6">
-            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 flex items-center justify-center shadow-xl shadow-orange-500/20 shrink-0">
-              <Music className="h-14 w-14 sm:h-16 sm:w-16 text-white/90" />
+            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden shadow-xl shadow-orange-500/20 shrink-0 bg-gradient-to-br from-orange-500 via-amber-500 to-green-500">
+              {track.coverArtUrl && !artworkLoadFailed ? (
+                <img
+                  src={track.coverArtUrl}
+                  alt={`${track.title} artwork`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  onError={() => setArtworkLoadFailed(true)}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Music className="h-14 w-14 sm:h-16 sm:w-16 text-white/90" />
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 min-w-0 flex-1">

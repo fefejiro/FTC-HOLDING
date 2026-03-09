@@ -17,6 +17,7 @@ import multer from "multer";
 import crypto from "crypto";
 import { recognizeSong, isACRCloudConfigured } from "./acrcloud-service";
 import { fetchLyrics, isMusixmatchConfigured } from "./musixmatch-service";
+import { resolveTrackArtwork } from "./artwork-service";
 
 interface InfrastructureIssue {
   statusCode: number;
@@ -369,6 +370,14 @@ export async function registerRoutes(
         console.log(`📍 [LISTEN] Play offset: ${Math.round(track.playOffsetMs / 1000)}s into the song`);
       }
 
+      const coverArtLookup = resolveTrackArtwork({
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        spotifyId: track.spotifyId,
+        isrc: track.isrc,
+        existingCoverArtUrl: track.coverArtUrl,
+      });
       // Step 3: Create recognized track record
       const recognizedTrack = await storage.createRecognizedTrack({
         userId,
@@ -591,6 +600,7 @@ export async function registerRoutes(
 
       // Step 4: Return early with recognition results for progressive UX
       const recognitionTime = Date.now() - startTime;
+      const coverArtUrl = await coverArtLookup;
       
       // Immediately return the recognized track so user can see metadata
       res.json({
@@ -606,7 +616,7 @@ export async function registerRoutes(
           spotifyId: track.spotifyId,
           youtubeId: track.youtubeId,
           confidenceScore: track.confidenceScore,
-          coverArtUrl: (track as any).coverArtUrl || (track.spotifyId ? `https://i.scdn.co/image/${track.spotifyId}` : null),
+          coverArtUrl,
         },
         processingTime: recognitionTime,
       });
@@ -1135,6 +1145,13 @@ Rules:
       console.log(`🎵 [SPOTIFY] Identifying: "${title}" by ${artist}`);
       
       const userId = getUserId(req);
+      const resolvedCoverArtUrl = await resolveTrackArtwork({
+        title,
+        artist,
+        album,
+        spotifyId,
+        existingCoverArtUrl: coverArtUrl,
+      });
 
       // Create listening session
       const session = await storage.createListeningSession({
@@ -1169,6 +1186,7 @@ Rules:
           artist,
           album,
           spotifyId,
+          coverArtUrl: resolvedCoverArtUrl,
           confidenceScore: 100,
         },
         processingTime: Date.now() - startTime,
@@ -1319,6 +1337,18 @@ Rules:
         return res.status(404).json({ error: "Track not found" });
       }
 
+      const coverArtUrl = await resolveTrackArtwork({
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        spotifyId: track.spotifyId,
+        isrc: track.isrc,
+      });
+      const trackWithArtwork = {
+        ...track,
+        coverArtUrl,
+      };
+
       // Fetch transient lyrics if available
       let lyrics = null;
       const transientLyrics = await storage.getTransientLyricsByTrackId(req.params.id);
@@ -1335,7 +1365,7 @@ Rules:
       const aiTranslations = await storage.getAiTranslationsByRecognizedTrackId(req.params.id);
 
       res.json({
-        track,
+        track: trackWithArtwork,
         lyrics,
         culturalAnalysis: aiTranslations,
       });
@@ -1372,6 +1402,17 @@ Rules:
           res.end();
           return;
         }
+        const coverArtUrl = await resolveTrackArtwork({
+          title: track.title,
+          artist: track.artist,
+          album: track.album,
+          spotifyId: track.spotifyId,
+          isrc: track.isrc,
+        });
+        const trackWithArtwork = {
+          ...track,
+          coverArtUrl,
+        };
         
         let lyrics = null;
         const transientLyrics = await storage.getTransientLyricsByTrackId(trackId);
@@ -1382,10 +1423,10 @@ Rules:
         
         const aiTranslations = await storage.getAiTranslationsByRecognizedTrackId(trackId);
         
-        sendEvent('update', { track, lyrics, culturalAnalysis: aiTranslations });
+        sendEvent('update', { track: trackWithArtwork, lyrics, culturalAnalysis: aiTranslations });
         
-        const lyricsComplete = ['completed', 'failed', 'no_lyrics'].includes(track.lyricsStatus || '');
-        const analysisComplete = ['completed', 'failed', 'no_lyrics'].includes(track.analysisStatus || '');
+        const lyricsComplete = ['completed', 'failed', 'no_lyrics'].includes(trackWithArtwork.lyricsStatus || '');
+        const analysisComplete = ['completed', 'failed', 'no_lyrics'].includes(trackWithArtwork.analysisStatus || '');
         
         if (lyricsComplete && analysisComplete) {
           sendEvent('complete', { message: 'Processing complete' });

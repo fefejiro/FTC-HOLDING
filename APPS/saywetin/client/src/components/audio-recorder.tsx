@@ -26,6 +26,7 @@ interface RecognitionResult {
     genre?: string;
     spotifyId?: string;
     youtubeId?: string;
+    coverArtUrl?: string | null;
     confidenceScore?: number;
   };
   lyrics?: {
