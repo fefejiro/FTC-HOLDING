@@ -19,14 +19,14 @@ $checks = @(
     ContentTypeContains = "text/html";
   },
   @{
-    Name = "api.saywetin.app /health";
-    Url = "https://api.saywetin.app/health";
+    Name = "saywetin.app /health";
+    Url = "https://saywetin.app/health";
     Expected = 200;
     ContentTypeContains = "application/json";
   },
   @{
-    Name = "api.saywetin.app /api/status";
-    Url = "https://api.saywetin.app/api/status";
+    Name = "saywetin.app /api/status";
+    Url = "https://saywetin.app/api/status";
     Expected = 200;
     ContentTypeContains = "application/json";
   }
@@ -87,11 +87,11 @@ foreach ($check in $checks) {
 
 $statusResponse = $null
 try {
-  $statusResponse = Invoke-RestMethod -Uri "https://api.saywetin.app/api/status" -Method Get -TimeoutSec $TimeoutSec -ErrorAction Stop
+  $statusResponse = Invoke-RestMethod -Uri "https://saywetin.app/api/status" -Method Get -TimeoutSec $TimeoutSec -ErrorAction Stop
 } catch {
   $results += [pscustomobject]@{
     Check       = "listen readiness status endpoint"
-    Url         = "https://api.saywetin.app/api/status"
+    Url         = "https://saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = "FAIL"
@@ -106,7 +106,7 @@ if ($statusResponse) {
 
   $results += [pscustomobject]@{
     Check       = "listen readiness acrcloud configured"
-    Url         = "https://api.saywetin.app/api/status"
+    Url         = "https://saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = if ($acrcloudConfigured) { "PASS" } else { "FAIL" }
@@ -115,7 +115,7 @@ if ($statusResponse) {
 
   $results += [pscustomobject]@{
     Check       = "listen readiness openai configured"
-    Url         = "https://api.saywetin.app/api/status"
+    Url         = "https://saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = if ($openaiConfigured) { "PASS" } else { "FAIL" }
@@ -124,7 +124,7 @@ if ($statusResponse) {
 
   $results += [pscustomobject]@{
     Check       = "listen readiness lyrics configured"
-    Url         = "https://api.saywetin.app/api/status"
+    Url         = "https://saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = if ($lyricsConfigured) { "PASS" } else { "WARN" }
