@@ -23,12 +23,150 @@ function readScoreEnv(name: string, fallback: number): number {
 
 const ACRCLOUD_MIN_SCORE = readScoreEnv('ACRCLOUD_MIN_SCORE', 55);
 const ACRCLOUD_MIN_HUMMING_SCORE = readScoreEnv('ACRCLOUD_MIN_HUMMING_SCORE', 75);
+const ACRCLOUD_MIN_SCORE_WITHOUT_IDS = readScoreEnv('ACRCLOUD_MIN_SCORE_WITHOUT_IDS', 72);
+const ACRCLOUD_MIN_SCORE_NON_LATIN = readScoreEnv('ACRCLOUD_MIN_SCORE_NON_LATIN', 82);
 
 function parseConfidenceScore(rawScore: unknown): number | null {
   const numeric = Number(rawScore);
   if (!Number.isFinite(numeric)) return null;
   const rounded = Math.round(numeric);
   return Math.max(0, Math.min(100, rounded));
+}
+
+const AFROBEATS_KEYWORDS = [
+  'afrobeats',
+  'afrobeat',
+  'afropop',
+  'amapiano',
+  'highlife',
+  'hiplife',
+  'naija',
+  'nigerian',
+  'ghanaian',
+  'african',
+];
+
+const PRIORITY_ARTIST_KEYWORDS = [
+  'burna boy',
+  'shallipopi',
+  'asake',
+  'wizkid',
+  'davido',
+  'rema',
+  'tems',
+  'ayra starr',
+  'kizz daniel',
+  'omah lay',
+  'fireboy dml',
+  'joeboy',
+  'pheelz',
+  'bnxn',
+  'ruger',
+  'odumodublvck',
+  'seyi vibez',
+  'zinoleesky',
+  'tiwa savage',
+  'yemi alade',
+  'olamide',
+  'naira marley',
+  'adekunle gold',
+  'oxlade',
+  'fave',
+  'victony',
+  'ckay',
+];
+
+interface RankedAcrCandidate {
+  matchData: any;
+  source: 'music' | 'humming';
+  index: number;
+  confidenceScore: number | null;
+  weightedScore: number;
+  afrobeatsSignals: number;
+  hasExternalIds: boolean;
+  hasExternalMetadata: boolean;
+  nonLatinDominant: boolean;
+}
+
+function normalizeText(value: unknown): string {
+  return String(value || '').toLowerCase().trim();
+}
+
+function collectArtistNames(matchData: any): string {
+  if (!Array.isArray(matchData?.artists)) return '';
+  return matchData.artists
+    .map((artist: any) => normalizeText(artist?.name))
+    .filter(Boolean)
+    .join(', ');
+}
+
+function hasExternalIdentity(matchData: any): { hasExternalIds: boolean; hasExternalMetadata: boolean } {
+  const externalIds = matchData?.external_ids || {};
+  const externalMetadata = matchData?.external_metadata || {};
+  const hasExternalIds =
+    !!normalizeText(externalIds.isrc) ||
+    !!normalizeText(externalIds.upc) ||
+    !!normalizeText(externalIds.spotify);
+  const hasExternalMetadata =
+    !!normalizeText(externalMetadata?.spotify?.track?.id) ||
+    !!normalizeText(externalMetadata?.youtube?.vid) ||
+    !!normalizeText(externalMetadata?.deezer?.track?.id);
+  return { hasExternalIds, hasExternalMetadata };
+}
+
+function isMostlyNonLatinScript(text: string): boolean {
+  if (!text) return false;
+  const letters = text.match(/\p{L}/gu) || [];
+  if (letters.length < 4) return false;
+  const latinLetters = letters.filter((char) => /\p{Script=Latin}/u.test(char));
+  return latinLetters.length / letters.length < 0.5;
+}
+
+function countAfrobeatsSignals(matchData: any): number {
+  const title = normalizeText(matchData?.title);
+  const album = normalizeText(matchData?.album?.name);
+  const artists = collectArtistNames(matchData);
+  const genreText = Array.isArray(matchData?.genres)
+    ? matchData.genres.map((g: any) => normalizeText(g?.name)).filter(Boolean).join(' ')
+    : '';
+
+  let signals = 0;
+  if (AFROBEATS_KEYWORDS.some((keyword) => genreText.includes(keyword))) {
+    signals += 2;
+  }
+  if (PRIORITY_ARTIST_KEYWORDS.some((keyword) => artists.includes(keyword))) {
+    signals += 2;
+  }
+  if (AFROBEATS_KEYWORDS.some((keyword) => `${title} ${album}`.includes(keyword))) {
+    signals += 1;
+  }
+  return signals;
+}
+
+function toRankedCandidate(matchData: any, source: 'music' | 'humming', index: number): RankedAcrCandidate {
+  const confidenceScore = parseConfidenceScore(matchData?.score);
+  const { hasExternalIds, hasExternalMetadata } = hasExternalIdentity(matchData);
+  const afrobeatsSignals = countAfrobeatsSignals(matchData);
+  const nonLatinDominant = isMostlyNonLatinScript(`${normalizeText(matchData?.title)} ${collectArtistNames(matchData)}`);
+
+  let weightedScore = confidenceScore ?? 0;
+  if (hasExternalIds) weightedScore += 8;
+  if (hasExternalMetadata) weightedScore += 6;
+  weightedScore += afrobeatsSignals * 6;
+  if (source === 'humming') weightedScore -= 10;
+  if (nonLatinDominant && afrobeatsSignals === 0) weightedScore -= 20;
+
+  return {
+    matchData,
+    source,
+    index,
+    confidenceScore,
+    weightedScore,
+    afrobeatsSignals,
+    hasExternalIds,
+    hasExternalMetadata,
+    nonLatinDominant,
+  };
 }
 
 export interface ACRCloudRecognitionResult {
@@ -175,12 +313,37 @@ export async function recognizeSong(
       };
     }
 
-    // Extract music metadata (use humming only when explicitly enabled).
-    const musicData = data.metadata?.music?.[0];
-    const hummingData = data.metadata?.humming?.[0];
-    const matchData = musicData || (ACRCLOUD_ALLOW_HUMMING_FALLBACK ? hummingData : undefined);
-    
-    if (!matchData) {
+    // Build and rank all candidates (music first, humming optional fallback).
+    const musicCandidates = Array.isArray(data.metadata?.music) ? data.metadata.music : [];
+    const hummingCandidates =
+      ACRCLOUD_ALLOW_HUMMING_FALLBACK && Array.isArray(data.metadata?.humming)
+        ? data.metadata.humming
+        : [];
+    const rankedCandidates: RankedAcrCandidate[] = [
+      ...musicCandidates.map((candidate: any, index: number) => toRankedCandidate(candidate, 'music', index)),
+      ...hummingCandidates.map((candidate: any, index: number) => toRankedCandidate(candidate, 'humming', index)),
+    ].sort((a, b) => b.weightedScore - a.weightedScore);
+
+    const selectedCandidate = rankedCandidates[0];
+    if (rankedCandidates.length > 0) {
+      console.log(
+        '[ACRCloud] Top candidates:',
+        rankedCandidates.slice(0, 3).map((candidate) => ({
+          source: candidate.source,
+          index: candidate.index,
+          title: candidate.matchData?.title,
+          artist: collectArtistNames(candidate.matchData),
+          score: candidate.confidenceScore,
+          weightedScore: candidate.weightedScore,
+          afrobeatsSignals: candidate.afrobeatsSignals,
+          hasExternalIds: candidate.hasExternalIds,
+          hasExternalMetadata: candidate.hasExternalMetadata,
+          nonLatinDominant: candidate.nonLatinDominant,
+        })),
+      );
+    }
+
+    if (!selectedCandidate?.matchData) {
       return {
         success: false,
         errorMessage: 'No music found in audio. Try playing the song louder or singing more clearly.',
@@ -188,12 +351,13 @@ export async function recognizeSong(
       };
     }
 
-    const isHummingMatch = !musicData && !!hummingData;
+    const matchData = selectedCandidate.matchData;
+    const isHummingMatch = selectedCandidate.source === 'humming';
     if (isHummingMatch) {
-      console.log('🎤 [ACRCloud] Matched via humming recognition');
+      console.log('[ACRCloud] Matched via humming recognition');
     }
 
-    const confidenceScore = parseConfidenceScore((matchData as any).score);
+    const confidenceScore = selectedCandidate.confidenceScore;
     const minimumAcceptedScore = isHummingMatch ? ACRCLOUD_MIN_HUMMING_SCORE : ACRCLOUD_MIN_SCORE;
     if (confidenceScore === null || confidenceScore < minimumAcceptedScore) {
       return {
@@ -203,6 +367,29 @@ export async function recognizeSong(
           confidenceScore === null
             ? 'Recognition confidence is unavailable. Try again with louder, clearer audio.'
             : `Low-confidence match (${confidenceScore}). Try again with louder, clearer audio.`,
+        rawResponse: data,
+      };
+    }
+
+    const hasStrongIdentity = selectedCandidate.hasExternalIds || selectedCandidate.hasExternalMetadata;
+    if (!hasStrongIdentity && selectedCandidate.afrobeatsSignals === 0 && confidenceScore < ACRCLOUD_MIN_SCORE_WITHOUT_IDS) {
+      return {
+        success: false,
+        errorCode: 'ACRCLOUD_RECOGNITION_FAILED',
+        errorMessage: `Match looked weak (${confidenceScore}) with limited metadata. Try again with louder audio or move closer to the speaker.`,
+        rawResponse: data,
+      };
+    }
+
+    if (
+      selectedCandidate.nonLatinDominant &&
+      selectedCandidate.afrobeatsSignals === 0 &&
+      confidenceScore < ACRCLOUD_MIN_SCORE_NON_LATIN
+    ) {
+      return {
+        success: false,
+        errorCode: 'ACRCLOUD_RECOGNITION_FAILED',
+        errorMessage: `Match may be incorrect (${confidenceScore}). Try another 8-10 second sample from the chorus.`,
         rawResponse: data,
       };
     }
@@ -275,3 +462,4 @@ export function getACRCloudStatus() {
     configured: isACRCloudConfigured(),
   };
 }
+
