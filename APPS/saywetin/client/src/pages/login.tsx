@@ -12,13 +12,25 @@ export default function Login() {
     const beginLogin = async () => {
       const loginUrl = getApiUrl("/api/login");
       try {
-        const response = await fetch(loginUrl, {
+        const statusResponse = await fetch(getApiUrl("/api/auth/status"), {
           credentials: "include",
-          redirect: "manual",
+          cache: "no-store",
         });
 
-        if (response.status === 503) {
-          const payload = await response.json().catch(() => null);
+        if (statusResponse.ok) {
+          const statusPayload = await statusResponse.json().catch(() => null);
+          if (statusPayload?.loginEnabled !== true) {
+            const message =
+              typeof statusPayload?.message === "string" && statusPayload.message.trim().length > 0
+                ? statusPayload.message
+                : "Sign in is currently unavailable.";
+            if (active) {
+              setErrorMessage(message);
+            }
+            return;
+          }
+        } else if (statusResponse.status === 503) {
+          const payload = await statusResponse.json().catch(() => null);
           const message =
             typeof payload?.message === "string" && payload.message.trim().length > 0
               ? payload.message

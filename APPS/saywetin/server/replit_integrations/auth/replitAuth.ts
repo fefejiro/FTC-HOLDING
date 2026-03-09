@@ -42,6 +42,22 @@ function getSupabaseAnonKey(): string {
   return (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "").trim();
 }
 
+function getAuthRuntimeStatus() {
+  const supabaseBaseUrl = getSupabaseAuthBaseUrl();
+  const supabaseAnonKey = getSupabaseAnonKey();
+  const supabaseExchangeConfigured = Boolean(supabaseBaseUrl && supabaseAnonKey);
+
+  return {
+    loginEnabled: oidcEnabled,
+    loginMethod: oidcEnabled ? "oidc" : "disabled",
+    oidcConfigured: oidcEnabled,
+    supabaseExchangeConfigured,
+    message: oidcEnabled
+      ? "Authentication is available."
+      : "OIDC authentication is not configured.",
+  };
+}
+
 const getOidcConfig = memoize(
   async () => {
     if (!oidcClientId || !oidcIssuerUrl) {
@@ -149,9 +165,16 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
+  app.get("/api/auth/status", (_req, res) => {
+    res.json(getAuthRuntimeStatus());
+  });
+
   app.get("/api/login", (req, res, next) => {
     if (!oidcEnabled) {
-      return res.status(503).json({ message: "OIDC authentication is not configured." });
+      return res.status(503).json({
+        errorCode: "AUTH_NOT_CONFIGURED",
+        ...getAuthRuntimeStatus(),
+      });
     }
 
     const strategyName = ensureStrategy(req.hostname);

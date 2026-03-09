@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthStatus } from "@/hooks/use-auth-status";
 import { useLocation } from "wouter";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +13,7 @@ import type { Song, UserLyricTranslation, UserRewards } from "@shared/schema";
 
 export default function Profile() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { isAuthAvailable, authStatus } = useAuthStatus();
   const [, setLocation] = useLocation();
 
   const { data: favorites = [], isLoading: favoritesLoading } = useQuery<Song[]>({
@@ -65,13 +67,26 @@ export default function Profile() {
           <CardHeader>
             <CardTitle>Abeg sign in</CardTitle>
             <CardDescription>
-              Make you sign in to see your profile
+              {isAuthAvailable
+                ? "Make you sign in to see your profile"
+                : authStatus?.message || "Sign in is temporarily unavailable."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Button className="w-full" onClick={() => setLocation("/login")} data-testid="button-login">
-              Sign in
-            </Button>
+          <CardContent className="space-y-3">
+            {isAuthAvailable ? (
+              <Button className="w-full" onClick={() => setLocation("/login")} data-testid="button-login">
+                Sign in
+              </Button>
+            ) : (
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => setLocation("/")}
+                data-testid="button-login-unavailable-back-home"
+              >
+                Back home
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

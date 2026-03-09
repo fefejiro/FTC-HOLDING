@@ -17,6 +17,7 @@ import {
 import { Music, PenLine, Gift, Trophy, Star, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
+import { useAuthStatus } from '@/hooks/use-auth-status';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
@@ -37,6 +38,7 @@ const LANGUAGES = [
 export default function Contribute() {
   const [, navigate] = useLocation();
   const { user, isAuthenticated } = useAuth();
+  const { isAuthAvailable, authStatus } = useAuthStatus();
   const { toast } = useToast();
   
   const [songTitle, setSongTitle] = useState('');
@@ -123,12 +125,24 @@ export default function Contribute() {
               <PenLine className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h2 className="text-2xl font-bold mb-2">Sign in to Contribute</h2>
               <p className="text-muted-foreground mb-6">
-                Join our community and earn rewards by contributing lyrics
+                {isAuthAvailable
+                  ? 'Join our community and earn rewards by contributing lyrics'
+                  : authStatus?.message || 'Sign in is temporarily unavailable.'}
               </p>
               <div className="flex gap-4 justify-center">
-                <Button onClick={() => navigate('/login')} data-testid="button-login">
-                  Sign in
-                </Button>
+                {isAuthAvailable ? (
+                  <Button onClick={() => navigate('/login')} data-testid="button-login">
+                    Sign in
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/')}
+                    data-testid="button-login-unavailable-back-home"
+                  >
+                    Back home
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
