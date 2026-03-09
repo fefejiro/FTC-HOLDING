@@ -33,6 +33,8 @@ function Router() {
       <Route path="/signin" component={Login} />
       <Route path="/signup" component={Signup} />
       <Route path="/sign-up" component={Signup} />
+      <Route path="/register" component={Signup} />
+      <Route path="/create-account" component={Signup} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/delete-data" component={DeleteData} />
       <Route component={NotFound} />
