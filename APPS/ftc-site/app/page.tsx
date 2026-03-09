@@ -8,7 +8,7 @@ import ServiceCard from "./components/ServiceCard";
 import { capabilities, projectCaseStudies, serviceTracks } from "../lib/content";
 
 export const metadata: Metadata = {
-  title: "Una Labs — Creative AI Studio Building AI Products",
+  title: "Una Labs \u2014 Creative AI Studio Building AI Products",
   description:
     "Una Labs is a creative AI studio building real-world AI products including PeacePad and SayWetin. Explore our work in automation, AI tools, and product innovation.",
   alternates: {
@@ -22,19 +22,19 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="section section-hero">
+      <section className="section section-hero fade-on-scroll">
         <div className="container">
           <Hero projects={projectCaseStudies} />
         </div>
       </section>
 
-      <section className="section">
+      <section className="section fade-on-scroll">
         <div className="container">
           <div className="section-heading">
             <h2>AI Product Development</h2>
             <p>
-              Una Labs is a creative AI studio shipping product-grade systems that solve
-              communication, language, and automation problems in the real world.
+              We build production-focused AI systems with clear business outcomes across
+              communication, automation, and cultural intelligence.
             </p>
           </div>
           <div className="cards-grid cards-grid-3">
@@ -45,13 +45,56 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section fade-on-scroll">
+        <div className="container">
+          <div className="section-heading">
+            <h2>Products</h2>
+            <p>
+              Discover flagship products from Una Labs, including PeacePad, SayWetin, and
+              ATEAM. Each product is designed as a real-world capability engine.
+            </p>
+          </div>
+          <div className="cards-grid cards-grid-3 product-showcase-grid">
+            {projectCaseStudies.map((project) => (
+              <ProjectCard key={project.slug} project={project} />
+            ))}
+          </div>
+          <p className="section-link-row">
+            <Link href="/products" className="inline-link">
+              Explore all products
+            </Link>{" "}
+            <Link href="/projects" className="inline-link">
+              or browse the projects hub
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      <section className="section fade-on-scroll">
+        <div className="container">
+          <div className="section-heading">
+            <h2>The Studio Model</h2>
+            <p>
+              Una Labs operates as a creative AI studio exploring real-world applications of
+              artificial intelligence across communication, automation, and cultural
+              technology.
+            </p>
+          </div>
+          <p className="section-link-row">
+            <Link href="/about" className="inline-link">
+              Learn more about our studio philosophy
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      <section className="section fade-on-scroll">
         <div className="container">
           <div className="section-heading">
             <h2>Automation Systems</h2>
             <p>
-              We design automation frameworks, orchestration layers, and AI-enabled
-              workflows that reduce manual operations and improve decision quality.
+              We design automation architecture for startup teams, creators, and operational
+              businesses that need repeatable intelligent workflows.
             </p>
           </div>
           <div className="cards-grid cards-grid-3">
@@ -62,54 +105,37 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section fade-on-scroll">
         <div className="container">
           <div className="section-heading">
-            <h2>Creative AI Studio</h2>
+            <h2>Work / Project Grid</h2>
             <p>
-              From prototyping to deployment, Una Labs blends product strategy, software
-              architecture, and applied AI to deliver tools people use daily.
+              Review case studies showing how Una Labs ships AI products from concept to
+              production.
             </p>
           </div>
-          <p className="section-link-row">
-            <Link href="/about" className="inline-link">
-              Learn how Una Labs builds and ships practical AI products
-            </Link>
-          </p>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <div className="section-heading">
-            <h2>Products</h2>
-            <p>
-              Explore the Una Labs product portfolio across PeacePad, SayWetin, and ATEAM.
-              Visit the full <Link href="/work" className="inline-link">work library</Link> or
-              browse the <Link href="/projects" className="inline-link">projects hub</Link>.
-            </p>
-          </div>
-          <div className="cards-grid cards-grid-3">
+          <div className="cards-grid cards-grid-3 work-glass-grid">
             {projectCaseStudies.map((project) => (
-              <ProjectCard key={project.slug} project={project} />
+              <ProjectCard key={`work-${project.slug}`} project={project} />
             ))}
           </div>
           <p className="section-link-row">
-            <Link href="/work" className="inline-link" data-analytics-event="view_work_click" data-analytics-location="home_selected_work">
+            <Link
+              href="/work"
+              className="inline-link"
+              data-analytics-event="view_work_click"
+              data-analytics-location="home_work_grid"
+            >
               Explore all case studies
             </Link>{" "}
-            <Link href="/about" className="inline-link">
-              and learn more about Una Labs
-            </Link>
-            {" "}
             <Link href="/blog" className="inline-link">
-              or read our AI product blog
+              and read product insights on the blog
             </Link>
           </p>
         </div>
       </section>
 
-      <section className="section">
+      <section className="section fade-on-scroll">
         <div className="container">
           <div className="section-heading">
             <h2>PeacePad</h2>
@@ -118,19 +144,18 @@ export default function HomePage() {
               <Link href="/peacepad" className="inline-link">
                 AI communication platform
               </Link>{" "}
-              built by Una Labs to help people de-escalate high-stakes conversations before
-              messages are sent.
+              designed to help users choose calmer responses in high-stakes conversations.
             </p>
           </div>
           <p className="section-link-row">
             <Link href="/peacepad" className="inline-link">
-              Read the PeacePad product overview
+              Read the PeacePad overview
             </Link>
             {peacePadProject ? (
               <>
                 {" "}
                 <Link href={`/work/${peacePadProject.slug}`} className="inline-link">
-                  or view the detailed case study
+                  or view the case study
                 </Link>
               </>
             ) : null}
@@ -138,7 +163,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section fade-on-scroll">
         <div className="container">
           <div className="section-heading">
             <h2>SayWetin</h2>
@@ -147,19 +172,18 @@ export default function HomePage() {
               <Link href="/saywetin" className="inline-link">
                 Nigerian music AI
               </Link>{" "}
-              product that combines audio recognition with local language and cultural
-              intelligence.
+              product combining audio recognition with local language and cultural context.
             </p>
           </div>
           <p className="section-link-row">
             <Link href="/saywetin" className="inline-link">
-              Read the SayWetin product overview
+              Read the SayWetin overview
             </Link>
             {sayWetinProject ? (
               <>
                 {" "}
                 <Link href={`/work/${sayWetinProject.slug}`} className="inline-link">
-                  or view the detailed case study
+                  or view the case study
                 </Link>
               </>
             ) : null}
@@ -167,15 +191,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section fade-on-scroll">
         <div className="container">
           <CTABanner
-            title="Have an idea, workflow, or system to build?"
-            description="Una Labs helps turn concepts into intelligent tools, creative systems, and modern digital products."
-            primaryLabel="Start a Project"
-            primaryHref="/work-with-ftc"
-            secondaryLabel="View Work"
-            secondaryHref="/work"
+            title="Have an idea to ship?"
+            description="Una Labs helps founders and teams build practical AI products with speed, clarity, and technical depth."
+            primaryLabel="Explore Our Work"
+            primaryHref="/work"
+            secondaryLabel="View Products"
+            secondaryHref="/products"
           />
         </div>
       </section>

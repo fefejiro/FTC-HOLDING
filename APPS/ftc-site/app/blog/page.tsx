@@ -13,22 +13,29 @@ export const metadata: Metadata = {
 
 export default function BlogPage() {
   return (
-    <div className="container page-content">
+    <div className="container page-content blog-page">
       <h1>Una Labs Blog</h1>
       <p className="page-intro">
         Practical writing on AI product development, automation systems, and how Una Labs
         ships real-world products like PeacePad and SayWetin.
       </p>
 
-      <div className="cards-grid">
+      <div className="blog-grid">
         {blogPosts.map((post) => (
-          <article key={post.slug} className="card">
+          <article key={post.slug} className="card blog-card fade-on-scroll">
             <p className="card-kicker">Blog Post</p>
             <h2>{post.title}</h2>
-            <p className="muted">
-              Published {post.publishedAt} | Updated {post.updatedAt}
+            <p className="blog-meta">
+              Published{" "}
+              <time dateTime={post.publishedAt}>
+                {new Date(post.publishedAt).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric"
+                })}
+              </time>
             </p>
-            <p>{post.excerpt}</p>
+            <p className="blog-excerpt">{post.excerpt}</p>
             <p className="section-link-row">
               <Link href={`/blog/${post.slug}`} className="inline-link">
                 Read article

@@ -1,0 +1,67 @@
+{
+  "id": "sess_mlu5v7l2_f9s077",
+  "created_at": "2026-02-20T00:37:58.694Z",
+  "mode": "interview",
+  "title": "Session",
+  "audio_path": "audio/sess_mlu5v7l2_f9s077.webm",
+  "transcript_text": "The transcript is not Accurate as a vision could be Maybe it could be the setting and volume of the microphone So I'm going to increase my pitch in speaking and also increase my tempo in speaking and let's see how This turns out",
+  "duration_seconds": 56,
+  "metrics_json": {
+    "wordCount": 44,
+    "wpm": 47,
+    "fillerCount": 0,
+    "fillerDensityPer100": 0,
+    "topFillers": [],
+    "flaggedEndingsCount": 0,
+    "flaggedEndingsExamples": []
+  },
+  "drills_json": [
+    {
+      "id": "drill_final_s",
+      "title": "Final 's' Release",
+      "description": "Practice clear final 's' sounds",
+      "words": [
+        "hiss",
+        "miss",
+        "kiss",
+        "sis"
+      ],
+      "target": "photosynthesis",
+      "targetGuide": "phuh-toh-SIN-thuh-sis (with exaggerated 'sss')",
+      "duration": "2-3 min"
+    },
+    {
+      "id": "drill_pencil_vowel",
+      "title": "Vowel Reduction: Pencil",
+      "description": "Master the schwa sound in unstressed syllables",
+      "pattern": "/ˈpen.səl/",
+      "pronunciation": "PEN-suhl (not PEN-seal)",
+      "targetSentence": "Pass me the pencil.",
+      "duration": "1-2 min"
+    },
+    {
+      "id": "drill_minimal_pair",
+      "title": "Minimal Pair: Cloud vs Claude",
+      "description": "Distinguish similar sounds",
+      "pair": [
+        "cloud",
+        "Claude"
+      ],
+      "guide": "Notice the subtle difference in articulation",
+      "duration": "1 min"
+    },
+    {
+      "id": "drill_sentence_ending",
+      "title": "Sentence Ending Clarity",
+      "description": "Pronounce final consonant clusters",
+      "sentence": "I consistently complete my consonants.",
+      "focus": "Final 'ts' in 'consonants' and 'complete'",
+      "duration": "2 min"
+    }
+  ],
+  "reflection_notes_json": {
+    "audioOnly": [],
+    "videoMuted": [],
+    "full": []
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "threadId": "global",
+  "summaryLines": [
+    "User focus: trying out a command",
+    "Agent direction: Understood. Please specify the command you want to try out, and I’ll assist you accordingly.",
+    "Earlier ask: status update please",
+    "Earlier response: Understood. Please specify the command you would like to test, and I'll assist you accordingly.",
+    "Keep continuity with prior context and avoid repeating already-resolved points."
+  ],
+  "summarizedUserTurns": 49,
+  "lastMessageCount": 93,
+  "updatedAt": "2026-02-20T09:20:39.442Z"
+}

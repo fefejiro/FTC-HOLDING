@@ -1,0 +1,12 @@
+{
+  "clean": "The process of photosynthesis converts light energy into chemical energy through a series of reactions.",
+  "withFillers": "Um, like, you know, photosynthesis basically, uh, converts light energy into chemical energy, right?",
+  "withFlaggedEndings": "Tests for consistency in consonants. Photosynthesis demonstrates completeness.",
+  "shortTranscript": "Cloud versus Claude.",
+  "longTranscript": "The photosynthesis process demonstrates how plants convert light energy. Consistency in pronouncing consonants like tests and completeness is important. Cloud versus Claude shows the distinction between similar sounds. Filler words like um and uh should be detected. This is a longer sample to test word counting and analysis metrics. The process continues as we analyze various aspects. Different modes of learning require practice. Eventually you gain consistency through deliberate effort.",
+  "emptyTranscript": "",
+  "whitespaceOnly": "   \n\n   ",
+  "singleWord": "photosynthesis",
+  "specialCharacters": "Testing émojis and café - these shouldn't break analysis.",
+  "rapidFillers": "um um um uh uh uh like like like you know you know basically"
+}

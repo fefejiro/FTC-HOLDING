@@ -77,7 +77,7 @@ export default function BlogDetailPage({ params }: { params: { slug: string } })
   };
 
   return (
-    <article className="container page-content case-study">
+    <article className="container page-content case-study blog-detail">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -87,7 +87,22 @@ export default function BlogDetailPage({ params }: { params: { slug: string } })
       <p className="card-kicker">Blog</p>
       <h1>{post.title}</h1>
       <p className="muted">
-        Published {post.publishedAt} | Updated {post.updatedAt}
+        Published{" "}
+        <time dateTime={post.publishedAt}>
+          {new Date(post.publishedAt).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric"
+          })}
+        </time>{" "}
+        | Updated{" "}
+        <time dateTime={post.updatedAt}>
+          {new Date(post.updatedAt).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric"
+          })}
+        </time>
       </p>
       <p className="page-intro">{post.excerpt}</p>
 

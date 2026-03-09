@@ -1,0 +1,339 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATEAM Local</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top-bar">
+    <div class="brand">ATEAM Local MVP</div>
+    <div class="top-actions">
+      <button id="go-dashboard" class="top-btn active">Dashboard</button>
+      <button id="go-talk" class="top-btn">Talk Mode</button>
+      <button id="go-speech" class="top-btn">Speech</button>
+    </div>
+  </header>
+
+  <main id="dashboard-view" class="view dashboard-view">
+    <aside class="team-roster">
+      <h2>Team</h2>
+      <div class="agent-row" data-agent="Coach"><span class="agent-name">Coach</span><span class="agent-role">Coordinator</span><span class="agent-runtime-status" id="agent-status-coach">Idle</span></div>
+      <div class="agent-row" data-agent="Strategist"><span class="agent-name">Strategist</span><span class="agent-role">Architecture</span><span class="agent-runtime-status" id="agent-status-strategist">Idle</span></div>
+      <div class="agent-row" data-agent="Builder"><span class="agent-name">Builder</span><span class="agent-role">Apps Lab</span><span class="agent-runtime-status" id="agent-status-builder">Idle</span></div>
+      <div class="agent-row" data-agent="Scout"><span class="agent-name">Scout</span><span class="agent-role">Jobs Command</span><span class="agent-runtime-status" id="agent-status-scout">Idle</span></div>
+      <div class="agent-row" data-agent="Think Tank"><span class="agent-name">Think Tank</span><span class="agent-role">Learning</span><span class="agent-runtime-status" id="agent-status-thinker">Idle</span></div>
+      <div class="agent-row" data-agent="Podcast"><span class="agent-name">Podcast</span><span class="agent-role">Talk Agent</span><span class="agent-runtime-status" id="agent-status-podcast">Idle</span></div>
+    </aside>
+
+    <section class="map-panel">
+      <h2>Operations Map</h2>
+      <div class="map" id="map">
+        <div class="room" id="room-strategy">Strategy Core</div>
+        <div class="room" id="room-apps">Apps Lab</div>
+        <div class="room" id="room-jobs">Jobs Command</div>
+        <div class="room" id="room-think">Think Tank</div>
+        <div class="agent-token" id="token-coach" data-agent="Coach">Coach</div>
+        <div class="agent-token" id="token-strategist" data-agent="Strategist">Strategist</div>
+        <div class="agent-token" id="token-builder" data-agent="Builder">Builder</div>
+        <div class="agent-token" id="token-scout" data-agent="Scout">Scout</div>
+        <div class="agent-token" id="token-thinker" data-agent="Think Tank">Think Tank</div>
+      </div>
+    </section>
+
+    <aside class="task-panel">
+      <h2>Tasks</h2>
+      <div class="task-card" data-task-id="task_design_dashboard" data-agent="Builder" data-room="room-apps">
+        <div class="task-title">Design dashboard layout</div>
+        <div class="task-meta">Assigned to: Builder</div>
+        <div class="task-status">Status: <strong>created</strong></div>
+      </div>
+      <div class="task-card" data-task-id="task_define_roles" data-agent="Strategist" data-room="room-strategy">
+        <div class="task-title">Define AI roles</div>
+        <div class="task-meta">Assigned to: Strategist</div>
+        <div class="task-status">Status: <strong>created</strong></div>
+      </div>
+      <div class="task-card" data-task-id="task_jobs_pipeline" data-agent="Scout" data-room="room-jobs">
+        <div class="task-title">Build jobs pipeline</div>
+        <div class="task-meta">Assigned to: Scout</div>
+        <div class="task-status">Status: <strong>created</strong></div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="console-wrap view" id="dashboard-console">
+    <div class="console-header">
+      <div class="chip" id="chip-task">Task: none</div>
+      <div class="chip" id="chip-agent">Agent: Coach</div>
+      <div class="chip" id="chip-api">API: disconnected</div>
+    </div>
+    <div class="console-row">
+      <input id="dashboard-input" type="text" placeholder="Send a command for selected task" />
+      <button id="dashboard-send">Send</button>
+    </div>
+    <div id="dashboard-thread" class="thread-log"></div>
+    <div class="decision-row">
+      <button class="decision-btn" data-action="approve">Approve</button>
+      <button class="decision-btn" data-action="revise">Revise</button>
+      <button class="decision-btn" data-action="kill">Kill</button>
+    </div>
+  </section>
+
+  <main id="talk-view" class="view talk-view hidden">
+    <div class="talk-top">
+      <div class="talk-meta">
+        <div class="talk-mode-label">Talk Mode</div>
+        <div class="talk-session">Session: ATEAM Podcast</div>
+      </div>
+      <div class="talk-head-controls">
+        <div class="talk-task" id="talk-task-label">Session Thread: global_podcast</div>
+        <label class="talk-voice-control" for="talk-speaker-select">
+          <span>Speaker</span>
+          <select id="talk-speaker-select" class="talk-voice-select" aria-label="Select current speaker">
+            <option value="unknown">Unknown</option>
+            <option value="michael">Michael</option>
+            <option value="mark">Mark</option>
+            <option value="guest">Guest</option>
+            <option value="ai_podcast">AI</option>
+          </select>
+        </label>
+        <button
+          id="talk-speaker-edit-label-btn"
+          class="top-btn talk-speaker-edit-btn"
+          type="button"
+          aria-label="Edit selected speaker label">
+          Edit Name
+        </button>
+        <label class="talk-voice-control" for="talk-voice-style">
+          <span>Voice</span>
+          <select id="talk-voice-style" class="talk-voice-select" aria-label="Select voice style">
+            <option value="male_assistant">Male Assistant</option>
+            <option value="female_assistant">Female Assistant</option>
+            <option value="nigerian_professor_ss">Nigerian Professor (South South vibe)</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <section class="talk-core">
+      <button id="talk-orb-button" class="talk-orb-wrap" aria-label="Toggle listening">
+        <canvas id="talk-orb" width="620" height="620"></canvas>
+        <div class="talk-state" id="talk-state">
+          <div id="talk-state-label">Idle</div>
+          <div id="talk-subtitle" class="talk-subtitle"></div>
+        </div>
+      </button>
+      <div id="talk-hint" class="talk-hint">Tap to talk</div>
+
+      <div class="subtitle-overlay" id="subtitle-overlay" aria-live="polite">
+        <div id="subtitle-user" class="subtitle-line subtitle-user"></div>
+        <div id="subtitle-agent" class="subtitle-line subtitle-agent"></div>
+      </div>
+
+      <div id="vision-controls" class="vision-controls hidden" aria-label="Vision controls">
+        <button id="screen-share-btn" class="vision-btn" title="Start screen share" aria-label="Start screen share">🖥</button>
+        <button id="camera-view-btn" class="vision-btn" title="Start camera view" aria-label="Start camera view">📷</button>
+        <div id="vision-indicator" class="vision-indicator hidden">Vision ON</div>
+      </div>
+
+      <div id="screen-preview-wrap" class="vision-preview hidden">
+        <video id="screen-preview" autoplay muted playsinline></video>
+        <button id="screen-stop-btn" class="vision-stop-btn">Stop Screen</button>
+      </div>
+
+      <div id="camera-preview-wrap" class="vision-preview hidden">
+        <video id="camera-preview" autoplay muted playsinline></video>
+        <button id="camera-stop-btn" class="vision-stop-btn">Stop Camera</button>
+      </div>
+
+      <div id="fallback-composer" class="fallback-composer hidden">
+        <input id="fallback-input" type="text" placeholder="Type your message and press Enter" />
+        <div id="fallback-suggestions" class="fallback-suggestions hidden" aria-label="Transcript suggestions"></div>
+        <div class="fallback-actions">
+          <button id="fallback-send-btn" type="button" class="top-btn fallback-action-btn">Send</button>
+          <button id="fallback-retry-btn" type="button" class="top-btn fallback-action-btn">Retry</button>
+          <button id="fallback-cancel-btn" type="button" class="top-btn fallback-action-btn">Cancel</button>
+        </div>
+        <div class="fallback-help">Enter to send, Esc to cancel</div>
+      </div>
+    </section>
+
+    <section id="talk-transcript-wrap" class="talk-transcript-wrap">
+      <div class="talk-transcript-head">
+        <span>Transcript</span>
+        <button id="talk-transcript-toggle" class="top-btn transcript-toggle">Expand</button>
+      </div>
+      <div class="talk-transcript" id="talk-transcript">
+        <div class="talk-empty">Tap the orb to start.</div>
+      </div>
+    </section>
+
+    <section id="talk-timeline-wrap" class="talk-timeline-wrap">
+      <div class="talk-timeline-head">
+        <span>Session Timeline</span>
+        <button id="timeline-refresh-btn" class="top-btn timeline-refresh-btn">Refresh</button>
+      </div>
+      <div class="timeline-controls">
+        <button id="timeline-pause-btn" class="top-btn timeline-control-btn">Pause</button>
+        <button id="timeline-resume-btn" class="top-btn timeline-control-btn">Resume</button>
+        <button id="timeline-clear-btn" class="top-btn timeline-control-btn">Clear View</button>
+        <button id="timeline-export-btn" class="top-btn timeline-control-btn">Export JSON</button>
+        <button id="timeline-export-pack-btn" class="top-btn timeline-control-btn">Export Pack</button>
+        <button id="review-mode-btn" class="top-btn timeline-control-btn">Review: Off</button>
+        <button id="timeline-highlight-btn" class="top-btn timeline-control-btn">Mark Highlight</button>
+        <button id="tts-toggle-btn" class="top-btn timeline-control-btn">TTS: On</button>
+        <button id="tts-stop-btn" class="top-btn timeline-control-btn stop-voice-btn disabled hidden" disabled>Interrupt</button>
+      </div>
+      <div id="timeline-review-controls" class="timeline-review-controls">
+        <button id="timeline-review-prev-btn" class="top-btn timeline-control-btn">Prev</button>
+        <button id="timeline-review-next-btn" class="top-btn timeline-control-btn">Next</button>
+        <button id="timeline-review-latest-btn" class="top-btn timeline-control-btn">Latest</button>
+        <button id="timeline-review-autoplay-btn" class="top-btn timeline-control-btn">Auto: Off</button>
+        <span id="timeline-review-status" class="timeline-review-status">Review cursor: none</span>
+      </div>
+      <div id="timeline-filters" class="timeline-filters" role="tablist" aria-label="Timeline filters">
+        <button class="timeline-filter-btn active" data-filter="all">All</button>
+        <button class="timeline-filter-btn" data-filter="talk">Talk</button>
+        <button class="timeline-filter-btn" data-filter="highlights">Highlights</button>
+        <button class="timeline-filter-btn" data-filter="status">Status</button>
+        <button class="timeline-filter-btn" data-filter="errors">Errors</button>
+        <label class="timeline-speaker-filter-label" for="timeline-speaker-filter">
+          <span>Speaker</span>
+          <select id="timeline-speaker-filter" class="timeline-speaker-filter" aria-label="Filter timeline by speaker">
+            <option value="all">All</option>
+            <option value="michael">Michael</option>
+            <option value="mark">Mark</option>
+            <option value="guest">Guest</option>
+            <option value="ai_podcast">AI</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </label>
+      </div>
+      <div id="talk-timeline" class="talk-timeline">
+        <div class="timeline-empty">No events yet.</div>
+      </div>
+    </section>
+
+    <section id="talk-chapters-wrap" class="talk-chapters-wrap">
+      <div class="talk-chapters-head">
+        <span>Chapters</span>
+        <button id="chapter-clear-focus-btn" class="top-btn timeline-refresh-btn">Full Timeline</button>
+      </div>
+      <div id="talk-chapters" class="talk-chapters">
+        <div class="timeline-empty">No chapters yet.</div>
+      </div>
+      <div class="talk-speaker-analytics-head">Speaker Analytics</div>
+      <div class="talk-speaker-analytics-note">Talk time uses measured audio windows only.</div>
+      <div id="talk-speaker-analytics-controls" class="talk-speaker-analytics-controls" aria-label="Speaker analytics sort controls">
+        <span class="talk-speaker-analytics-controls-label">Sort</span>
+        <button type="button" class="speaker-analytics-sort-btn active" data-sort="turns">Turns</button>
+        <button type="button" class="speaker-analytics-sort-btn" data-sort="talk_time">Talk Time</button>
+        <button type="button" class="speaker-analytics-sort-btn" data-sort="longest_gap">Longest Gap</button>
+      </div>
+      <div id="talk-speaker-analytics" class="talk-speaker-analytics">
+        <div class="timeline-empty">No speaker data yet.</div>
+      </div>
+    </section>
+  </main>
+  <main id="speech-view" class="view speech-view hidden">
+    <div class="speech-header">
+      <h1>Speech Clarity Trainer</h1>
+      <p class="speech-subtitle">Personal oral communication clarity trainer</p>
+    </div>
+
+    <section class="speech-container">
+      <!-- Session List/Detail View -->
+      <div id="speech-list-panel" class="speech-panel">
+        <h2>My Sessions</h2>
+        <div class="speech-mode-select">
+          <label>Mode: 
+            <select id="speech-mode-select">
+              <option value="learning">Learning</option>
+              <option value="podcast">Podcast</option>
+              <option value="interview">Interview</option>
+            </select>
+          </label>
+          <input id="speech-title-input" type="text" placeholder="Session title (optional)" />
+          <button id="speech-create-btn" class="btn-primary">New Session</button>
+        </div>
+        <div id="speech-sessions-list" class="sessions-list"></div>
+      </div>
+
+      <!-- Recording View -->
+      <div id="speech-record-panel" class="speech-panel hidden">
+        <h2 id="speech-session-title">Recording Session</h2>
+        <div class="record-controls">
+          <button id="speech-start-btn" class="btn-primary">Start Recording</button>
+          <button id="speech-stop-btn" class="btn-danger hidden">Stop Recording</button>
+          <div class="record-status" id="speech-record-status"></div>
+        </div>
+        <div class="transcript-display">
+          <h3>Live Transcript</h3>
+          <div id="speech-live-transcript" class="speech-transcript-box"></div>
+        </div>
+        <div class="record-actions">
+          <button id="speech-save-btn" class="btn-primary hidden">Save Session</button>
+          <button id="speech-cancel-btn" class="btn-secondary">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Analysis View -->
+      <div id="speech-analysis-panel" class="speech-panel hidden">
+        <h2>Session Analysis</h2>
+        <div class="analysis-metrics">
+          <div class="metric-card">
+            <h4>Words Per Minute</h4>
+            <div id="speech-wpm" class="metric-value">--</div>
+          </div>
+          <div class="metric-card">
+            <h4>Filler Density</h4>
+            <div id="speech-filler-density" class="metric-value">--</div>
+          </div>
+          <div class="metric-card">
+            <h4>Flagged Endings</h4>
+            <div id="speech-flagged-count" class="metric-value">--</div>
+          </div>
+        </div>
+
+        <div class="drills-section">
+          <h3>Recommended Drills</h3>
+          <div id="speech-drills-list" class="drills-list"></div>
+        </div>
+
+        <div class="analysis-actions">
+          <button id="speech-reflection-btn" class="btn-primary">Add Reflection Notes</button>
+          <button id="speech-back-btn" class="btn-secondary">Back to Sessions</button>
+        </div>
+      </div>
+
+      <!-- Reflection View -->
+      <div id="speech-reflection-panel" class="speech-panel hidden">
+        <h2>Reflection Review</h2>
+        <div class="reflection-mode-select">
+          <label>Review Mode:
+            <select id="speech-reflection-mode">
+              <option value="audioOnly">Audio Only</option>
+              <option value="videoMuted">Video Muted</option>
+              <option value="full">Full Review</option>
+            </select>
+          </label>
+        </div>
+        <div class="reflection-prompts">
+          <div>" id="speech-reflection-prompt">What did you notice about your clarity?</div>
+          <textarea id="speech-reflection-notes" placeholder="Enter your observations..." rows="4"></textarea>
+        </div>
+        <div class="reflection-actions">
+          <button id="speech-save-reflection-btn" class="btn-primary">Save Notes</button>
+          <button id="speech-reflection-back-btn" class="btn-secondary">Back</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js?v=phase12_voice_flow_shift_2"></script>
+</body>
+</html>

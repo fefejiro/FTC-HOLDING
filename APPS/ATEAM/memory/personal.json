@@ -1,0 +1,41 @@
+﻿{
+  "version": 1,
+  "owner": {
+    "preferredName": "Manchi",
+    "timezone": "-0500",
+    "device": "Windows"
+  },
+  "style": {
+    "language": "English",
+    "tone": ["human", "natural", "witty", "practical"],
+    "avoid": ["contractions", "em-dash"]
+  },
+  "identity": {
+    "themes": ["Afrofuturism", "technology", "culture", "faith", "humor"],
+    "voiceNotes": ["Warri timing", "clean clarity", "no forced slang"]
+  },
+  "defaults": {
+    "optionMode": "A",
+    "buildModePreference": "ui",
+    "taskFirst": true
+  },
+  "shortcuts": {
+    "rooms": {
+      "apps": "Apps Lab",
+      "jobs": "Jobs Command",
+      "learning": "Think Tank",
+      "strategy": "Strategy Core"
+    },
+    "agents": {
+      "coach": "Coach",
+      "strategist": "Strategist",
+      "builder": "Builder",
+      "scout": "Scout",
+      "thinktank": "Think Tank"
+    }
+  },
+  "pins": [
+    "A Team is a personal AI OS for one user only (Option A).",
+    "Functionality and brain come before UI polish."
+  ]
+}

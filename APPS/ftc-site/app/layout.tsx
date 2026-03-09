@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import { Sora, Space_Grotesk } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import React from "react";
 import { SITE_URL } from "../lib/site";
 import "../styles/globals.css";
@@ -12,10 +12,10 @@ const Analytics = dynamic(() => import("./components/Analytics"), { ssr: false }
 const GOOGLE_SITE_VERIFICATION = process.env.GOOGLE_SITE_VERIFICATION;
 const GOOGLE_ANALYTICS_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
-const sora = Sora({
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-sora"
+  variable: "--font-inter"
 });
 
 const spaceGrotesk = Space_Grotesk({
@@ -24,7 +24,7 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk"
 });
 
-const defaultTitle = "Una Labs — Creative AI Studio Building AI Products";
+const defaultTitle = "Una Labs \u2014 Creative AI Studio Building AI Products";
 const defaultDescription =
   "Una Labs is a creative AI studio building real-world AI products including PeacePad and SayWetin. Explore our work in automation, AI tools, and product innovation.";
 const defaultOgImage = `${SITE_URL}/opengraph-image`;
@@ -114,11 +114,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className={`${sora.variable} ${spaceGrotesk.variable}`}>
+      <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <Header />
-        <main className="main-shell">
-          {children}
-        </main>
+        <main className="main-shell">{children}</main>
         <Footer />
         {GOOGLE_ANALYTICS_ID ? <Analytics /> : null}
       </body>

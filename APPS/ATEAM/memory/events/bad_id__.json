@@ -1,0 +1,13 @@
+[
+  {
+    "id": "d480309a-47f2-481d-9d8b-cbd71e633518",
+    "timestamp": "2026-02-20T10:42:23.608Z",
+    "type": "talk_turn_committed",
+    "actor": "user",
+    "lane": "talk",
+    "summary": "demo",
+    "meta": {
+      "turnId": "turn_demo_1"
+    }
+  }
+]
