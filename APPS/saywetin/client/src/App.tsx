@@ -12,6 +12,8 @@ import Explore from "@/pages/explore";
 import Contribute from "@/pages/contribute";
 import Admin from "@/pages/admin";
 import Profile from "@/pages/profile";
+import Login from "@/pages/login";
+import Signup from "@/pages/signup";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import DeleteData from "@/pages/delete-data";
 import NotFound from "@/pages/not-found";
@@ -27,6 +29,10 @@ function Router() {
       <Route path="/contribute" component={Contribute} />
       <Route path="/admin" component={Admin} />
       <Route path="/profile" component={Profile} />
+      <Route path="/login" component={Login} />
+      <Route path="/signin" component={Login} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/sign-up" component={Signup} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/delete-data" component={DeleteData} />
       <Route component={NotFound} />
