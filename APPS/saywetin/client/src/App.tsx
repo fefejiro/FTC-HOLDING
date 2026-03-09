@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BottomNav } from "@/components/bottom-nav";
+import { UpdateNotification } from "@/components/update-notification";
 import Home from "@/pages/home";
 import SongDetail from "@/pages/song-detail";
 import RecognizedTrack from "@/pages/recognized-track";
@@ -13,7 +14,6 @@ import Contribute from "@/pages/contribute";
 import Admin from "@/pages/admin";
 import Profile from "@/pages/profile";
 import Login from "@/pages/login";
-import Signup from "@/pages/signup";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import DeleteData from "@/pages/delete-data";
 import NotFound from "@/pages/not-found";
@@ -37,18 +37,18 @@ function Router() {
       <Route path="/sign_in" component={Login} />
       <Route path="/auth/login" component={Login} />
       <Route path="/auth/signin" component={Login} />
-      <Route path="/signup" component={Signup} />
-      <Route path="/signup/" component={Signup} />
-      <Route path="/sign-up" component={Signup} />
-      <Route path="/sign-up/" component={Signup} />
-      <Route path="/sign_up" component={Signup} />
-      <Route path="/register" component={Signup} />
-      <Route path="/register/" component={Signup} />
-      <Route path="/create-account" component={Signup} />
-      <Route path="/create-account/" component={Signup} />
-      <Route path="/auth/signup" component={Signup} />
-      <Route path="/auth/sign-up" component={Signup} />
-      <Route path="/auth/register" component={Signup} />
+      <Route path="/signup" component={Login} />
+      <Route path="/signup/" component={Login} />
+      <Route path="/sign-up" component={Login} />
+      <Route path="/sign-up/" component={Login} />
+      <Route path="/sign_up" component={Login} />
+      <Route path="/register" component={Login} />
+      <Route path="/register/" component={Login} />
+      <Route path="/create-account" component={Login} />
+      <Route path="/create-account/" component={Login} />
+      <Route path="/auth/signup" component={Login} />
+      <Route path="/auth/sign-up" component={Login} />
+      <Route path="/auth/register" component={Login} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/delete-data" component={DeleteData} />
       <Route component={NotFound} />
@@ -68,6 +68,7 @@ function AppContent() {
       <div className={hideBottomNav ? '' : 'pb-20'}>
         <Router />
       </div>
+      <UpdateNotification />
       {!hideBottomNav && <BottomNav />}
       <Toaster />
     </div>

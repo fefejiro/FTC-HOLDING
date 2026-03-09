@@ -17,7 +17,7 @@ export default function NotFound() {
       "join",
     ];
     if (signupHints.some((hint) => normalizedPath.includes(hint))) {
-      return "/signup";
+      return "/login";
     }
 
     const loginHints = [
