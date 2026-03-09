@@ -96,13 +96,12 @@ function AppContent() {
           return;
         }
 
-        const capacitor = (window as any).Capacitor;
-        const appPlugin = capacitor?.Plugins?.App;
-        if (!appPlugin?.addListener) {
+        const { App: CapacitorApp } = await import("@capacitor/app");
+        if (!isMounted) {
           return;
         }
 
-        appStateListener = await appPlugin.addListener("appStateChange", ({ isActive }: { isActive: boolean }) => {
+        appStateListener = await CapacitorApp.addListener("appStateChange", ({ isActive }: { isActive: boolean }) => {
           if (isActive) {
             handleResume();
           } else {

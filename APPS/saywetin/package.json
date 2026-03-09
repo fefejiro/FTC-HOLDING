@@ -20,6 +20,7 @@
     },
     "dependencies": {
         "@capacitor/android": "^8.0.1",
+        "@capacitor/app": "^7.1.0",
         "@capacitor/cli": "^7.4.5",
         "@capacitor/core": "^8.0.1",
         "@capacitor/filesystem": "^8.1.2",
