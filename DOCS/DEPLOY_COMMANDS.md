@@ -33,7 +33,7 @@ Commands in this repository run from app roots (`APPS/peacepad`, `APPS/ftc-site`
 - Dockerfile path: `Dockerfile`
 - Build command: empty
 - Start command: empty
-- Production verify: `powershell -ExecutionPolicy Bypass -File scripts/verify-saywetin-prod.ps1`
+- Production verify: `powershell -ExecutionPolicy Bypass -File scripts/verify-saywetin-prod.ps1` (must pass `acrcloud.configured`, `openai.configured`, and `database.connected`)
 
 ## SayWetin Frontend (Cloudflare Pages or bundled web)
 

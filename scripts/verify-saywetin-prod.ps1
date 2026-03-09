@@ -103,6 +103,10 @@ if ($statusResponse) {
   $acrcloudConfigured = [bool]($statusResponse.acrcloud -and $statusResponse.acrcloud.configured)
   $openaiConfigured = [bool]($statusResponse.openai -and $statusResponse.openai.configured)
   $lyricsConfigured = [bool]($statusResponse.lyrics -and $statusResponse.lyrics.configured)
+  $databaseConfigured = [bool]($statusResponse.database -and $statusResponse.database.configured)
+  $databaseConnected = [bool]($statusResponse.database -and $statusResponse.database.connected)
+  $databaseErrorCode = if ($statusResponse.database -and $statusResponse.database.errorCode) { [string]$statusResponse.database.errorCode } else { "UNKNOWN" }
+  $databaseTroubleshooting = if ($statusResponse.database -and $statusResponse.database.troubleshooting) { [string]$statusResponse.database.troubleshooting } else { "-" }
 
   $results += [pscustomobject]@{
     Check       = "listen readiness acrcloud configured"
@@ -120,6 +124,24 @@ if ($statusResponse) {
     ContentType = "-"
     Result      = if ($openaiConfigured) { "PASS" } else { "FAIL" }
     Detail      = if ($openaiConfigured) { "-" } else { "openai.configured=false" }
+  }
+
+  $results += [pscustomobject]@{
+    Check       = "listen readiness database configured"
+    Url         = "https://saywetin.app/api/status"
+    Status      = "-"
+    ContentType = "-"
+    Result      = if ($databaseConfigured) { "PASS" } else { "FAIL" }
+    Detail      = if ($databaseConfigured) { "-" } else { "database.configured=false" }
+  }
+
+  $results += [pscustomobject]@{
+    Check       = "listen readiness database connected"
+    Url         = "https://saywetin.app/api/status"
+    Status      = "-"
+    ContentType = "-"
+    Result      = if ($databaseConnected) { "PASS" } else { "FAIL" }
+    Detail      = if ($databaseConnected) { "-" } else { "$databaseErrorCode :: $databaseTroubleshooting" }
   }
 
   $results += [pscustomobject]@{

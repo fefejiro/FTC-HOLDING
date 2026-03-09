@@ -18,6 +18,62 @@ import crypto from "crypto";
 import { recognizeSong, isACRCloudConfigured } from "./acrcloud-service";
 import { fetchLyrics, isMusixmatchConfigured } from "./musixmatch-service";
 
+interface InfrastructureIssue {
+  statusCode: number;
+  errorCode: string;
+  error: string;
+  troubleshooting: string;
+  details?: string;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (typeof error === "string") return error;
+  if (error && typeof (error as any).message === "string") return (error as any).message;
+  return "";
+}
+
+function classifyDatabaseIssue(error: unknown): InfrastructureIssue | null {
+  const message = getErrorMessage(error);
+  if (!message) return null;
+
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("tenant or user not found") ||
+    normalized.includes("password authentication failed") ||
+    (normalized.includes("role") && normalized.includes("does not exist"))
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_CREDENTIAL_INVALID",
+      error: "Database credentials are invalid.",
+      troubleshooting:
+        "Check DATABASE_URL in Railway. For Supabase pooler URIs, use the full user (for example postgres.<project-ref>) and the latest DB password.",
+      details: message,
+    };
+  }
+
+  if (
+    normalized.includes("connect econnrefused") ||
+    normalized.includes("could not connect to server") ||
+    normalized.includes("connection terminated unexpectedly") ||
+    normalized.includes("timeout expired") ||
+    normalized.includes("getaddrinfo enotfound") ||
+    normalized.includes("etimedout")
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_UNAVAILABLE",
+      error: "Database is currently unavailable.",
+      troubleshooting:
+        "Check DATABASE_URL host/port/ssl settings and confirm the database service is reachable from Railway.",
+      details: message,
+    };
+  }
+
+  return null;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -62,7 +118,49 @@ export async function registerRoutes(
   });
 
   // Service status endpoint - Check if external services are configured
-  app.get("/api/status", (req, res) => {
+  app.get("/api/status", async (_req, res) => {
+    const databaseUrl = (process.env.DATABASE_URL || "").trim();
+    let database: {
+      configured: boolean;
+      connected: boolean;
+      errorCode?: string;
+      error?: string;
+      troubleshooting?: string;
+      details?: string;
+    } = {
+      configured: databaseUrl.length > 0,
+      connected: false,
+    };
+
+    if (!database.configured) {
+      database = {
+        ...database,
+        errorCode: "DATABASE_URL_MISSING",
+        error: "DATABASE_URL is not configured.",
+        troubleshooting: "Set DATABASE_URL in Railway service variables.",
+      };
+    } else {
+      try {
+        await pool.query("select 1");
+        database = {
+          ...database,
+          connected: true,
+        };
+      } catch (error) {
+        const classified = classifyDatabaseIssue(error);
+        const details = getErrorMessage(error);
+        database = {
+          ...database,
+          errorCode: classified?.errorCode || "DATABASE_UNAVAILABLE",
+          error: classified?.error || "Database connectivity check failed.",
+          troubleshooting:
+            classified?.troubleshooting ||
+            "Verify DATABASE_URL and database reachability from Railway.",
+          ...(process.env.NODE_ENV === "production" ? {} : { details }),
+        };
+      }
+    }
+
     res.json({
       acrcloud: {
         configured: isACRCloudConfigured(),
@@ -76,6 +174,7 @@ export async function registerRoutes(
         configured: !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY || !!process.env.OPENAI_API_KEY,
         service: 'AI Cultural Context',
       },
+      database,
     });
   });
 
@@ -429,12 +528,27 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error('❌ [LISTEN] Pipeline error:', error);
 
+      const databaseIssue = classifyDatabaseIssue(error);
+
       // Update session with error status if session was created
       if (sessionId) {
         await storage.updateListeningSession(sessionId, {
           status: 'failed',
           errorMessage: error.message,
         }).catch(err => console.error('Failed to update session:', err));
+      }
+
+      if (databaseIssue) {
+        return res.status(databaseIssue.statusCode).json({
+          success: false,
+          errorCode: databaseIssue.errorCode,
+          error: databaseIssue.error,
+          troubleshooting: databaseIssue.troubleshooting,
+          ...(process.env.NODE_ENV === "production"
+            ? {}
+            : { details: databaseIssue.details || getErrorMessage(error) }),
+          sessionId,
+        });
       }
 
       res.status(500).json({

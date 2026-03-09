@@ -41,7 +41,7 @@ Required environment variables:
 Required environment variables:
 - `NODE_ENV=production`
 - `PORT` (Railway sets this; do not hardcode)
-- `DATABASE_URL`
+- `DATABASE_URL` (Supabase pooler URI from project dashboard; username must be `postgres.<project-ref>`)
 - `SESSION_SECRET`
 - `VITE_API_BASE_URL` (recommended: `https://saywetin.app` for same-origin API routing)
 - `OPENAI_API_KEY`
@@ -56,6 +56,10 @@ Post-deploy verification:
 - Release gate for listen pipeline:
   - `/api/status` must report `acrcloud.configured=true`
   - `/api/status` must report `openai.configured=true`
+  - `/api/status` must report `database.connected=true`
+
+Troubleshooting:
+- If `/api/listen` returns `DATABASE_CREDENTIAL_INVALID` or `Tenant or user not found`, the `DATABASE_URL` user/password is incorrect for the current Supabase project. Re-copy the session pooler URI from Supabase and paste it into Railway unchanged.
 
 ## Dockerfiles
 

@@ -63,6 +63,11 @@ Frontend:
 - `VITE_API_BASE_URL`
   - Recommended for current production routing: `https://saywetin.app` (same-origin web API calls)
 
+## Production Database URL Note (Supabase + Railway)
+- Use the Supabase pooler URI shown in your project dashboard (`Connect` -> connection string) for `DATABASE_URL`, with `sslmode=require`.
+- The username must include the project ref (example: `postgres.<project-ref>`), not just `postgres`.
+- If `/api/listen` returns `DATABASE_CREDENTIAL_INVALID` or mentions `Tenant or user not found`, regenerate the DB password in Supabase and update Railway `DATABASE_URL`.
+
 ## Verification Checklist
 Local/source verification:
 1. `npm ci`
