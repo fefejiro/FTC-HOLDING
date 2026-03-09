@@ -84,6 +84,8 @@ interface ArtistSongInfo {
   songBackground: string;
   albumInfo?: string;
   funFact?: string;
+  verification?: 'verified' | 'unverified';
+  verificationNote?: string;
 }
 
 interface FragmentInterpretation {
@@ -996,6 +998,16 @@ export default function RecognizedTrack() {
                   </div>
                 ) : artistInfo ? (
                   <div className="grid gap-4 sm:grid-cols-2">
+                    {artistInfo.verification === 'unverified' && (
+                      <div className="sm:col-span-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10">
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                          Profile never fully verified yet
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {artistInfo.verificationNote || 'We dey show only safe details to avoid wrong artist story.'}
+                        </p>
+                      </div>
+                    )}
                     <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 dark:bg-muted/20">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
                         <User className="h-3.5 w-3.5" />
@@ -1093,7 +1105,7 @@ export default function RecognizedTrack() {
                 </div>
 
                 {/* X-Ray Artist Info - shown during loading to make wait engaging */}
-                {artistInfo && (
+                {artistInfo && artistInfo.verification !== 'unverified' && (
                   <div className="mt-6 pt-5 border-t border-primary/10">
                     <div className="flex items-center gap-2 mb-3 text-sm font-medium text-primary">
                       <User className="h-4 w-4" />

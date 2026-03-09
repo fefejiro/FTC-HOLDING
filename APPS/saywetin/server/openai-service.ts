@@ -581,55 +581,151 @@ export interface ArtistSongInfo {
   songBackground: string;
   albumInfo?: string;
   funFact?: string;
+  verification: 'verified' | 'unverified';
+  verificationNote?: string;
 }
 
 const artistInfoCache = new Map<string, { data: ArtistSongInfo; timestamp: number }>();
 const ARTIST_CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
+interface ArtistInfoGenerationOptions {
+  spotifyId?: string | null;
+  isrc?: string | null;
+  confidenceScore?: number | null;
+}
+
+const GENERIC_ARTIST_PATTERNS: RegExp[] = [
+  /\bvarious\s+artists\b/i,
+  /\bunknown\s+artist\b/i,
+  /\bafro\s*hits?\b/i,
+  /\btop\s*hits?\b/i,
+  /\bbest\s*hits?\b/i,
+  /\bmusic\b/i,
+  /\bsounds?\b/i,
+  /\btopic\b/i,
+  /\bofficial\b/i,
+  /\brecords?\b/i,
+  /\bchannel\b/i,
+];
+
+const HALLUCINATION_PATTERNS: string[] = [
+  'rising star in the african music scene',
+  'known for blending traditional african',
+  'contemporary beats',
+  'dedicated following across the continent',
+  'innovative artist known for blending',
+];
+
+function looksGenericArtistName(artistName: string): boolean {
+  const name = artistName.trim();
+  if (!name) return true;
+  return GENERIC_ARTIST_PATTERNS.some((pattern) => pattern.test(name));
+}
+
+function includesTemplateHallucination(info: ArtistSongInfo): boolean {
+  const haystack = `${info.artistBio} ${info.musicStyle} ${info.songBackground}`.toLowerCase();
+  return HALLUCINATION_PATTERNS.some((pattern) => haystack.includes(pattern));
+}
+
+function buildUnverifiedArtistInfo(
+  artistName: string,
+  songTitle: string,
+  album?: string,
+  genre?: string,
+  releaseYear?: number
+): ArtistSongInfo {
+  const genreLabel = genre || 'the detected genre';
+  const albumLabel = album ? `The track is linked to "${album}". ` : '';
+  const yearLabel = releaseYear ? `Release year detected: ${releaseYear}. ` : '';
+  return {
+    artistBio: `We never fit verify a trusted public profile for ${artistName} yet, so we dey avoid guessing biography details.`,
+    artistOrigin: '',
+    musicStyle: `${artistName} is currently shown as connected to ${genreLabel}.`,
+    songBackground: `${albumLabel}${yearLabel}"${songTitle}" was recognized from your audio sample, but artist background still needs verification.`,
+    albumInfo: album ? `Album: ${album}` : undefined,
+    funFact: undefined,
+    verification: 'unverified',
+    verificationNote: 'Artist profile hidden until we can verify trusted source data.',
+  };
+}
 
 export async function generateArtistSongInfo(
   artistName: string,
   songTitle: string,
   album?: string,
   genre?: string,
-  releaseYear?: number
+  releaseYear?: number,
+  options?: ArtistInfoGenerationOptions
 ): Promise<ArtistSongInfo | null> {
   try {
-    const cacheKey = `${artistName.toLowerCase()}|${songTitle.toLowerCase()}`;
+    const cacheKey = `${artistName.toLowerCase()}|${songTitle.toLowerCase()}|${options?.spotifyId || ''}|${options?.isrc || ''}`;
     const cached = artistInfoCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < ARTIST_CACHE_TTL) {
-      console.log(`⚡ [AI] X-Ray cache hit for ${artistName} - ${songTitle}`);
+      console.log(`[AI] X-Ray cache hit for ${artistName} - ${songTitle}`);
       return cached.data;
     }
-    
-    console.log(`🎤 [AI] Generating X-Ray info for ${artistName} - ${songTitle}`);
+
+    const noTrustedMetadata = !(options?.spotifyId || options?.isrc);
+    const genericArtistName = looksGenericArtistName(artistName);
+    const lowConfidence = typeof options?.confidenceScore === 'number' && options.confidenceScore < 75;
+
+    if (genericArtistName || (noTrustedMetadata && lowConfidence)) {
+      const safeInfo = buildUnverifiedArtistInfo(artistName, songTitle, album, genre, releaseYear);
+      artistInfoCache.set(cacheKey, { data: safeInfo, timestamp: Date.now() });
+      return safeInfo;
+    }
+
+    console.log(`[AI] Generating X-Ray info for ${artistName} - ${songTitle}`);
     const startTime = Date.now();
 
-    const prompt = `African music expert. Quick engaging info:
+    const prompt = `African music expert. Provide only verified-safe info. Never invent facts.
 Artist: ${artistName}, Song: ${songTitle}${album ? `, Album: ${album}` : ''}${genre ? `, Genre: ${genre}` : ''}${releaseYear ? `, Year: ${releaseYear}` : ''}
 
-JSON: {"artistBio":"2 sentences","artistOrigin":"city, country","musicStyle":"1 sentence","songBackground":"2 sentences","albumInfo":"1 sentence or null","funFact":"1 sentence or null"}`;
+Rules:
+- If a fact is not confidently known, say "Not publicly verified yet."
+- Do not guess birthplace, awards, career history, or discography.
+- Keep it concise and factual.
+
+JSON: {"artistBio":"2 sentences","artistOrigin":"city, country or empty","musicStyle":"1 sentence","songBackground":"2 sentences","albumInfo":"1 sentence or null","funFact":"1 sentence or null","verification":"verified"|"unverified","verificationNote":"short note when unverified or empty"}`;
 
     const response = await getOpenAIClient().chat.completions.create({
       model: MODEL,
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
       max_tokens: 300,
     });
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
-      throw new Error("No response from OpenAI");
+      throw new Error('No response from OpenAI');
     }
 
-    const result = JSON.parse(content) as ArtistSongInfo;
+    const parsed = JSON.parse(content) as Partial<ArtistSongInfo>;
+    const result: ArtistSongInfo = {
+      artistBio: parsed.artistBio || `We no fit verify public profile details for ${artistName} yet.`,
+      artistOrigin: parsed.artistOrigin || '',
+      musicStyle: parsed.musicStyle || `${artistName} appears in this recognition result for "${songTitle}".`,
+      songBackground: parsed.songBackground || `Recognition linked this sample to "${songTitle}".`,
+      albumInfo: parsed.albumInfo || undefined,
+      funFact: parsed.funFact || undefined,
+      verification: parsed.verification === 'verified' ? 'verified' : 'unverified',
+      verificationNote: parsed.verificationNote || undefined,
+    };
+
+    if (includesTemplateHallucination(result)) {
+      const safeInfo = buildUnverifiedArtistInfo(artistName, songTitle, album, genre, releaseYear);
+      artistInfoCache.set(cacheKey, { data: safeInfo, timestamp: Date.now() });
+      return safeInfo;
+    }
+
     const elapsed = Date.now() - startTime;
-    console.log(`✅ [AI] X-Ray info generated in ${elapsed}ms`);
-    
+    console.log(`[AI] X-Ray info generated in ${elapsed}ms`);
+
     artistInfoCache.set(cacheKey, { data: result, timestamp: Date.now() });
-    
+
     return result;
   } catch (error) {
-    console.error("❌ [AI] Error generating artist/song info:", error);
+    console.error('[AI] Error generating artist/song info:', error);
     return null;
   }
 }
@@ -757,3 +853,4 @@ If the title is already clear English with no African phrases, still provide cul
     return null;
   }
 }
+

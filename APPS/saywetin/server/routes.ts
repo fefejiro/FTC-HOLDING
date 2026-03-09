@@ -424,7 +424,12 @@ export async function registerRoutes(
           track.title,
           track.album || undefined,
           track.genre || undefined,
-          track.releaseYear
+          track.releaseYear,
+          {
+            spotifyId: track.spotifyId || null,
+            isrc: track.isrc || null,
+            confidenceScore: track.confidenceScore ?? null,
+          }
         ).catch(err => {
           console.log(`[WARMUP] Artist info pre-fetch failed (non-critical): ${err.message}`);
           return null;
@@ -1476,7 +1481,12 @@ Rules:
         track.title,
         track.album || undefined,
         track.genre || undefined,
-        track.releaseYear || undefined
+        track.releaseYear || undefined,
+        {
+          spotifyId: track.spotifyId || null,
+          isrc: track.isrc || null,
+          confidenceScore: track.confidenceScore ?? null,
+        }
       );
 
       if (!info) {
