@@ -11,7 +11,11 @@ export default function Footer() {
           <div className="footer-links">
             <a href="/capabilities">Studio</a>
             <a href="/work">Work</a>
-            <a href="/products">Products</a>
+            <a href="/projects">Projects</a>
+            <a href="/blog">Blog</a>
+            <a href="/peacepad">AI communication platform</a>
+            <a href="/saywetin">Nigerian music AI</a>
+            <a href="/about">About</a>
             <a href="/work-with-ftc">Start a Project</a>
           </div>
         </div>

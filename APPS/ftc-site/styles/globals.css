@@ -28,7 +28,7 @@ body {
     radial-gradient(80% 70% at 0% 0%, #deebff 0%, transparent 60%),
     radial-gradient(80% 70% at 100% 10%, #dff7f6 0%, transparent 55%),
     var(--bg);
-  font-family: "Sora", "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  font-family: var(--font-sora), "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
   line-height: 1.55;
 }
 
@@ -62,7 +62,7 @@ a {
 h1,
 h2,
 h3 {
-  font-family: "Space Grotesk", "Sora", "Avenir Next", sans-serif;
+  font-family: var(--font-space-grotesk), var(--font-sora), "Avenir Next", sans-serif;
   line-height: 1.2;
   margin: 0;
 }

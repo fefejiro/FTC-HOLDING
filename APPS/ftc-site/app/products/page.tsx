@@ -22,6 +22,18 @@ export default function ProductsPage() {
             <p className="muted">{project.tagline}</p>
             <p>{project.summary}</p>
             <p className="status-pill">{project.status.replace("-", " ")}</p>
+            <Link
+              href={
+                project.slug === "peacepad"
+                  ? "/peacepad"
+                  : project.slug === "saywetin"
+                    ? "/saywetin"
+                    : `/work/${project.slug}`
+              }
+              className="inline-link"
+            >
+              View product overview
+            </Link>
             <Link href={`/work/${project.slug}`} className="inline-link">
               Read project case study
             </Link>

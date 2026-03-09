@@ -28,7 +28,7 @@ export default function ConnectPage() {
         <h1>{networkingProfile.fullName}</h1>
         <p className="connect-title">{networkingProfile.title}</p>
         <p className="connect-studio">
-          {networkingProfile.studioName} · {networkingProfile.studioLine}
+          {networkingProfile.studioName} | {networkingProfile.studioLine}
         </p>
         <p className="muted">
           Quick exchange page for contact details, portfolio access, and a scannable
@@ -89,7 +89,7 @@ export default function ConnectPage() {
           </Link>
         </div>
         <p className="connect-direct-contact">
-          <strong>Phone:</strong> {networkingProfile.phoneDisplay} ·{" "}
+          <strong>Phone:</strong> {networkingProfile.phoneDisplay} |{" "}
           <strong>Email:</strong> {networkingProfile.email}
         </p>
       </section>
@@ -126,7 +126,8 @@ export default function ConnectPage() {
             alt="QR code linking to unalabs.cloud/connect"
             width={220}
             height={220}
-            loading="eager"
+            loading="lazy"
+            decoding="async"
           />
           <div className="hero-actions">
             <a

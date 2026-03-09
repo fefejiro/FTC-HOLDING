@@ -10,11 +10,11 @@ export default function Hero({ projects }: HeroProps) {
     <section className="hero">
       <div className="hero-grid">
         <div>
-          <p className="eyebrow">Una Labs - Technology Studio</p>
-          <h1>Intelligent software. Creative AI. Real-world systems.</h1>
+          <p className="eyebrow">Una Labs - Creative AI Studio</p>
+          <h1>Una Labs — Creative AI Studio</h1>
           <p className="lead">
-            Una Labs builds AI-powered tools, automation systems, and digital products for
-            businesses, creators, and emerging platforms.
+            Una Labs builds real-world AI products, automation systems, and creative tools
+            for founders, operators, and high-growth teams.
           </p>
           <div className="hero-actions">
             <Link

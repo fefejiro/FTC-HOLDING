@@ -59,7 +59,8 @@ export const siteNav = [
   { label: "Home", href: "/" },
   { label: "Studio", href: "/capabilities" },
   { label: "Work", href: "/work" },
-  { label: "Products", href: "/products" },
+  { label: "Projects", href: "/projects" },
+  { label: "Blog", href: "/blog" },
   { label: "About", href: "/about" }
 ] as const;
 
