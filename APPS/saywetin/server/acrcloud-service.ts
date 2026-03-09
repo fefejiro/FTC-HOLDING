@@ -10,6 +10,26 @@ function sanitizeCredential(value: string): string {
 const ACRCLOUD_HOST = sanitizeCredential(process.env.ACRCLOUD_HOST || '');
 const ACRCLOUD_ACCESS_KEY = sanitizeCredential(process.env.ACRCLOUD_ACCESS_KEY || '');
 const ACRCLOUD_ACCESS_SECRET = sanitizeCredential(process.env.ACRCLOUD_ACCESS_SECRET || '');
+const ACRCLOUD_ALLOW_HUMMING_FALLBACK =
+  sanitizeCredential(process.env.ACRCLOUD_ALLOW_HUMMING_FALLBACK || '').toLowerCase() === 'true';
+
+function readScoreEnv(name: string, fallback: number): number {
+  const raw = sanitizeCredential(process.env[name] || '');
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  const rounded = Math.round(parsed);
+  return Math.max(0, Math.min(100, rounded));
+}
+
+const ACRCLOUD_MIN_SCORE = readScoreEnv('ACRCLOUD_MIN_SCORE', 55);
+const ACRCLOUD_MIN_HUMMING_SCORE = readScoreEnv('ACRCLOUD_MIN_HUMMING_SCORE', 75);
+
+function parseConfidenceScore(rawScore: unknown): number | null {
+  const numeric = Number(rawScore);
+  if (!Number.isFinite(numeric)) return null;
+  const rounded = Math.round(numeric);
+  return Math.max(0, Math.min(100, rounded));
+}
 
 export interface ACRCloudRecognitionResult {
   success: boolean;
@@ -154,10 +174,10 @@ export async function recognizeSong(
       };
     }
 
-    // Extract music metadata (try standard music first, then humming results)
+    // Extract music metadata (use humming only when explicitly enabled).
     const musicData = data.metadata?.music?.[0];
     const hummingData = data.metadata?.humming?.[0];
-    const matchData = musicData || hummingData;
+    const matchData = musicData || (ACRCLOUD_ALLOW_HUMMING_FALLBACK ? hummingData : undefined);
     
     if (!matchData) {
       return {
@@ -170,6 +190,20 @@ export async function recognizeSong(
     const isHummingMatch = !musicData && !!hummingData;
     if (isHummingMatch) {
       console.log('🎤 [ACRCloud] Matched via humming recognition');
+    }
+
+    const confidenceScore = parseConfidenceScore((matchData as any).score);
+    const minimumAcceptedScore = isHummingMatch ? ACRCLOUD_MIN_HUMMING_SCORE : ACRCLOUD_MIN_SCORE;
+    if (confidenceScore === null || confidenceScore < minimumAcceptedScore) {
+      return {
+        success: false,
+        errorCode: 'ACRCLOUD_RECOGNITION_FAILED',
+        errorMessage:
+          confidenceScore === null
+            ? 'Recognition confidence is unavailable. Try again with louder, clearer audio.'
+            : `Low-confidence match (${confidenceScore}). Try again with louder, clearer audio.`,
+        rawResponse: data,
+      };
     }
 
     // Extract external IDs
@@ -194,7 +228,7 @@ export async function recognizeSong(
         isrc: externalIds.isrc,
         spotifyId: externalMetadata.spotify?.track?.id,
         youtubeId: externalMetadata.youtube?.vid,
-        confidenceScore: matchData.score ? Math.round(matchData.score) : undefined,
+        confidenceScore,
         playOffsetMs: matchData.play_offset_ms,
       },
       rawResponse: data,

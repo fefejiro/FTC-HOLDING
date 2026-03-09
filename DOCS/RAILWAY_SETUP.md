@@ -49,6 +49,9 @@ Required environment variables:
 - `ACRCLOUD_HOST`
 - `ACRCLOUD_ACCESS_KEY`
 - `ACRCLOUD_ACCESS_SECRET`
+- `ACRCLOUD_MIN_SCORE=55` (optional, stricter threshold for low-quality matches)
+- `ACRCLOUD_ALLOW_HUMMING_FALLBACK=false` (optional, keep false to avoid noisy humming matches)
+- `ACRCLOUD_MIN_HUMMING_SCORE=75` (optional)
 - `GENIUS_API_KEY` (optional; app still works without it, but lyrics hit rate may drop)
 
 Post-deploy verification:

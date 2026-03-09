@@ -58,6 +58,9 @@ Server/runtime:
 - `ACRCLOUD_HOST`
 - `ACRCLOUD_ACCESS_KEY`
 - `ACRCLOUD_ACCESS_SECRET`
+- `ACRCLOUD_MIN_SCORE` (optional, default `55`; higher = stricter recognition)
+- `ACRCLOUD_ALLOW_HUMMING_FALLBACK` (optional, default `false`)
+- `ACRCLOUD_MIN_HUMMING_SCORE` (optional, default `75`)
 - `GENIUS_API_KEY` (optional; improves lyrics source coverage)
 
 Frontend:
