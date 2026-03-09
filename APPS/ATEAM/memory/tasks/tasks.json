@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "allowedStatuses": [
+    "created",
+    "assigned",
+    "proposed",
+    "awaiting_approval",
+    "approved",
+    "executed",
+    "rejected",
+    "archived",
+    "approve",
+    "revise",
+    "kill"
+  ],
+  "tasks": {
+    "global": {
+      "taskId": "global",
+      "status": "approve",
+      "decisionNote": "smoke",
+      "title": "",
+      "assignedAgent": "",
+      "updatedAt": "2026-02-13T05:46:23.223Z"
+    },
+    "task_define-ai-roles_assigned-to-strategist": {
+      "taskId": "task_define-ai-roles_assigned-to-strategist",
+      "status": "approve",
+      "decisionNote": "",
+      "title": "",
+      "assignedAgent": "",
+      "updatedAt": "2026-02-13T05:54:08.832Z"
+    },
+    "task_design_dashboard": {
+      "taskId": "task_design_dashboard",
+      "status": "revise",
+      "decisionNote": "revise from dashboard",
+      "title": "",
+      "assignedAgent": "",
+      "updatedAt": "2026-02-20T01:13:35.154Z"
+    },
+    "task_define_roles": {
+      "taskId": "task_define_roles",
+      "status": "approve",
+      "decisionNote": "approve from dashboard",
+      "title": "",
+      "assignedAgent": "",
+      "updatedAt": "2026-02-19T23:06:09.460Z"
+    },
+    "task_jobs_pipeline": {
+      "taskId": "task_jobs_pipeline",
+      "status": "kill",
+      "decisionNote": "kill from dashboard",
+      "title": "",
+      "assignedAgent": "",
+      "updatedAt": "2026-02-19T23:06:13.154Z"
+    }
+  },
+  "updatedAt": "2026-02-20T01:13:35.154Z"
+}

@@ -1,0 +1,22 @@
+{
+  "project": "personal_ai_os",
+  "description": "Multi agent local first AI operating system",
+  "status": "active",
+  "goals": [
+    "Structured delegation",
+    "Persistent memory",
+    "Low cost model routing",
+    "Mobile PWA capability"
+  ],
+  "constraints": [
+    "Local JSON first",
+    "Approval required for execution",
+    "Minimal UI distraction"
+  ],
+  "decisions": [],
+  "openIssues": [
+    "Chat UI legibility",
+    "Movement speed of agents"
+  ],
+  "taskHistory": []
+}

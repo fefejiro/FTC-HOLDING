@@ -1,0 +1,26 @@
+[
+  {
+    "role": "user",
+    "agent": "",
+    "content": "test",
+    "ts": 1770954357127
+  },
+  {
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Coach: Think Tank: To test the current UI and feedback feature, follow these steps:\n\n1. Load the dashboard page and verify the model cost comparison table appears with correct data.\n2. Scroll down to the feedback form; try submitting without input to confirm validation messages.\n3. Enter a comment and select a rating, then submit; confirm the thank-you message appears.\n4. Refresh the page and check localStorage in the browser console for saved feedback entries.\n5. Verify no errors appear in the browser console during these actions.\n\nIf all pass, the feature is working as intended for basic user feedback collection.",
+    "ts": 1770954359604
+  },
+  {
+    "role": "user",
+    "agent": "",
+    "content": "This is me checking the mic to see if it's working",
+    "ts": 1770958579330
+  },
+  {
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Got it! Mic check received loud and clear. Ready when you are for the next move.",
+    "ts": 1770958580872
+  }
+]

@@ -1,0 +1,2890 @@
+[
+  {
+    "id": "msg_1770966695214_0fxajn4",
+    "ts": "2026-02-13T07:11:35.214Z",
+    "role": "user",
+    "agent": "",
+    "content": "Who the hell is this girl",
+    "fingerprint": "2dad3cba9bf03392afcaf651f33c883909997aa7"
+  },
+  {
+    "id": "msg_1770966695242_gp2f5t4",
+    "ts": "2026-02-13T07:11:35.242Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: Who the hell is this girl.\nYour request: Who the hell is this girl.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "0705e86ca7a603205545633ab9dcb7800ed23ea3"
+  },
+  {
+    "id": "msg_1770966712847_vzra9vt",
+    "ts": "2026-02-13T07:11:52.847Z",
+    "role": "user",
+    "agent": "",
+    "content": "Status for created",
+    "fingerprint": "202e1edee82d1f6014e5f3b01756c48cd5a49ce6"
+  },
+  {
+    "id": "msg_1770966712891_25vrka9",
+    "ts": "2026-02-13T07:11:52.891Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: Who the hell is this girl | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: Status for created.\nYour request: Status for created.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "be0751716d270031ade31b1525075556839e781d"
+  },
+  {
+    "id": "msg_1770966721335_wy8z6gs",
+    "ts": "2026-02-13T07:12:01.335Z",
+    "role": "user",
+    "agent": "",
+    "content": "West who the hell is this girl",
+    "fingerprint": "0b0f48c3a5d41cce28c4184ed47ef3e313e1a547"
+  },
+  {
+    "id": "msg_1770966721348_qwm9izx",
+    "ts": "2026-02-13T07:12:01.348Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: Status for created | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: West who the hell is this girl.\nYour request: West who the hell is this girl.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "221f7e973408d6be2e42aa81731502c02294c03d"
+  },
+  {
+    "id": "msg_1770966736790_b8l3tdw",
+    "ts": "2026-02-13T07:12:16.790Z",
+    "role": "user",
+    "agent": "",
+    "content": "I can coordinate this into the next concrete action",
+    "fingerprint": "d9289638116062f8257ab8268f33e65dedc8ddff"
+  },
+  {
+    "id": "msg_1770966736810_wrq8go6",
+    "ts": "2026-02-13T07:12:16.810Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: West who the hell is this girl | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: I can coordinate this into the next concrete action.\nYour request: I can coordinate this into the next concrete action.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "7d7f3d1008ca92c0912fc4252f62dcb4d04aec0f"
+  },
+  {
+    "id": "msg_1770966753553_90l4u6t",
+    "ts": "2026-02-13T07:12:33.553Z",
+    "role": "user",
+    "agent": "",
+    "content": "How are you doing",
+    "fingerprint": "5501b143317b0da532ab90e33252b6bbf1624f70"
+  },
+  {
+    "id": "msg_1770966753569_bocyuiu",
+    "ts": "2026-02-13T07:12:33.569Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: I can coordinate this into the next concrete action | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: How are you doing.\nYour request: How are you doing.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "15d3b9465100b4eba20f97c11cd01a1d9d0217aa"
+  },
+  {
+    "id": "msg_1770966765320_ixfcdkg",
+    "ts": "2026-02-13T07:12:45.320Z",
+    "role": "user",
+    "agent": "",
+    "content": "To the next concrete action",
+    "fingerprint": "b50b097e6aa27050ff489abf13f1c68807870bb0"
+  },
+  {
+    "id": "msg_1770966765329_jlb7uj1",
+    "ts": "2026-02-13T07:12:45.329Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: How are you doing | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: To the next concrete action.\nYour request: To the next concrete action.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "8fc27b88bb148da01883fab6d2fbad541652a350"
+  },
+  {
+    "id": "msg_1770966775694_mx3y81a",
+    "ts": "2026-02-13T07:12:55.694Z",
+    "role": "user",
+    "agent": "",
+    "content": "Recent context user I can coordinate this into the next con",
+    "fingerprint": "ef2b566380eb576f54914b207953f21c77f52a0b"
+  },
+  {
+    "id": "msg_1770966775703_gzgb8pm",
+    "ts": "2026-02-13T07:12:55.703Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: To the next concrete action | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: Recent context user I can coordinate this into the next con.\nYour request: Recent context user I can coordinate this into the next con.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "6fb26d359c91b8dd56bb94cc497c26a58bcd66c2"
+  },
+  {
+    "id": "msg_1770967053240_zv5or1q",
+    "ts": "2026-02-13T07:17:33.240Z",
+    "role": "user",
+    "agent": "",
+    "content": "How are you",
+    "fingerprint": "ba3f063a19eac347aa557287ad432849c1b38f88"
+  },
+  {
+    "id": "msg_1770967053391_ue44kmz",
+    "ts": "2026-02-13T07:17:33.391Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: Recent context user I can coordinate this into the next con | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: How are you.\nYour request: How are you.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "1ec4d15d893732cd6739c48214db2db3536e6c6a"
+  },
+  {
+    "id": "msg_1770967061505_fqugtyp",
+    "ts": "2026-02-13T07:17:41.505Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hello how are you",
+    "fingerprint": "11821038bb95c7c282931c8fc2bf930a2d0f87e9"
+  },
+  {
+    "id": "msg_1770967061539_2iatiw1",
+    "ts": "2026-02-13T07:17:41.539Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: How are you | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: Hello how are you.\nYour request: Hello how are you.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "6a6cd5106753eb13c3a030a154671d3393ab82eb"
+  },
+  {
+    "id": "msg_1770968192424_062mbpg",
+    "ts": "2026-02-13T07:36:32.424Z",
+    "role": "user",
+    "agent": "",
+    "content": "Can't do the math on how fast they wanted",
+    "fingerprint": "c114cd9de4d11a64b0ac1973611f3342aa5b1569"
+  },
+  {
+    "id": "msg_1770968192476_taigz4x",
+    "ts": "2026-02-13T07:36:32.476Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I can coordinate this into the next concrete action.\nTask status: created.\nRecent context: user: Hello how are you | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: Can't do the math on how fast they wanted.\nYour request: Can't do the math on how fast they wanted.\nNext steps:\n1. Confirm target outcome in one sentence.\n2. Approve the immediate action or revise constraints.\n3. Execute and log the result in the thread.",
+    "fingerprint": "2080bbdee44eff0b59d418113d5ec0212f741fd8"
+  },
+  {
+    "id": "msg_1770970845867_ymwx968",
+    "ts": "2026-02-13T08:20:45.867Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hi how are you doing Smoke's drinks has a hard condition very dangerous This is what you're looking for And we need a little Glided water You should visit",
+    "fingerprint": "8b065b23b1b68e2ef925adfe7208cb23c6ac2bad"
+  },
+  {
+    "id": "msg_1770970845879_ffypq1z",
+    "ts": "2026-02-13T08:20:45.879Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Love this direction. Let us treat this like a live podcast brainstorm.\nQuick context I am tracking: assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: Can't do the math on how fast they wanted | assistant/Coach: I can coordinate this into the next concrete action. Task status: created. Recen | user: Hi how are you doing Smoke's drinks has a hard condition very dangerous This is .\nOn your latest point: Hi how are you doing Smoke's drinks has a hard condition very dangerous This is what you're looking for And we need a little Glided water You should visit.\nHere is a clean content angle to explore right now:\n- Core hook: one strong opinion or surprising insight for the opener.\n- Web research lane: recent creator trends, audience pain points, and contrarian takes.\n- Social cutdown lane: 3 to 5 short clips with one takeaway each.\nIf you want, I can keep this fully conversational and just riff with you, no formal action plan.",
+    "fingerprint": "ca97c217470dc5dcc5ac3551a45120984ecfe515"
+  },
+  {
+    "id": "msg_1771014730906_l3qkte8",
+    "ts": "2026-02-13T20:32:10.906Z",
+    "role": "user",
+    "agent": "",
+    "content": "can u hear me?",
+    "fingerprint": "d56ac2c98a0a4a8a354b6d9688ee86d1d6352a16"
+  },
+  {
+    "id": "msg_1771014733363_b06wmco",
+    "ts": "2026-02-13T20:32:13.363Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey hear you loud and clear! How far now? What’s on your mind today?",
+    "fingerprint": "6b0e0df8b4318a02c1259fbc12bd52a89e72962d"
+  },
+  {
+    "id": "msg_1771014748782_98eq0ff",
+    "ts": "2026-02-13T20:32:28.782Z",
+    "role": "user",
+    "agent": "",
+    "content": "i can't hear u",
+    "fingerprint": "44aec0de4b7776264595536d15c55e04a5401f5a"
+  },
+  {
+    "id": "msg_1771014750911_mbp2p6h",
+    "ts": "2026-02-13T20:32:30.911Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala! If you can’t hear me, maybe try refreshing your connection or checking your volume. I dey here, ready when you are! How your side?",
+    "fingerprint": "ce3fa4cdf59d7deeddda5b1458ac131797215d2b"
+  },
+  {
+    "id": "msg_1771014812905_qcuzgdd",
+    "ts": "2026-02-13T20:33:32.905Z",
+    "role": "user",
+    "agent": "",
+    "content": "hw u dey",
+    "fingerprint": "1f167360a0a240147987899a6b98cd9fcb20154a"
+  },
+  {
+    "id": "msg_1771014814986_llf2bkx",
+    "ts": "2026-02-13T20:33:34.987Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey alright! How you dey? Wetin dey happen for your side?",
+    "fingerprint": "c03791f643467c5d1dc6d56667b0227f3ab574de"
+  },
+  {
+    "id": "msg_1771014840754_eyok2aj",
+    "ts": "2026-02-13T20:34:00.754Z",
+    "role": "user",
+    "agent": "",
+    "content": "good morning",
+    "fingerprint": "fdf172af10e938452f8d87a67ac31646cdd3d296"
+  },
+  {
+    "id": "msg_1771014844437_fbica4k",
+    "ts": "2026-02-13T20:34:04.437Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Good morning! How your side dey this fine day? Wetin you get for mind today?",
+    "fingerprint": "2110978b648e1c1642fbde437dbc67848f22ec8a"
+  },
+  {
+    "id": "msg_1771016256206_0zhmh6n",
+    "ts": "2026-02-13T20:57:36.206Z",
+    "role": "user",
+    "agent": "",
+    "content": "hi",
+    "fingerprint": "7762e8af567921faabc04ed575d2367b2a72039d"
+  },
+  {
+    "id": "msg_1771016257175_g8g14as",
+    "ts": "2026-02-13T20:57:37.175Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Coach: Hi! How you dey? Wetin dey happen for your side today?",
+    "fingerprint": "19d0ac61c3c4a69504ef534ee8520aeacded0d03"
+  },
+  {
+    "id": "msg_1771017074976_rds0w87",
+    "ts": "2026-02-13T21:11:14.976Z",
+    "role": "user",
+    "agent": "",
+    "content": "Can you hear me",
+    "fingerprint": "17939a193fc8f7fe0bef0cce18aa45a26d7a0b2e"
+  },
+  {
+    "id": "msg_1771017077255_n07z2cb",
+    "ts": "2026-02-13T21:11:17.255Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala! I dey hear you well. How you dey? Wetin dey happen for your side?",
+    "fingerprint": "1e675c33d4ee2c6865f081b5d4b545adbaa32db3"
+  },
+  {
+    "id": "msg_1771019626652_vjo5iw1",
+    "ts": "2026-02-13T21:53:46.652Z",
+    "role": "user",
+    "agent": "",
+    "content": "And she was good",
+    "fingerprint": "8585780a3e3558dfbed84ae035fc3f33762c2d03"
+  },
+  {
+    "id": "msg_1771019629356_o8pwyn1",
+    "ts": "2026-02-13T21:53:49.356Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, I see! E be like say you dey talk about person wey shine for your side. Wetin make you talk say she good? Abeg, give us more gist!",
+    "fingerprint": "c1f595dcdc95762d52dbf96f7fab19f0c4ee70f4"
+  },
+  {
+    "id": "msg_1771019672728_gcx5vxf",
+    "ts": "2026-02-13T21:54:32.728Z",
+    "role": "user",
+    "agent": "",
+    "content": "For",
+    "fingerprint": "c89aa27406dae5cc9e0f310d4fe1d903255a788c"
+  },
+  {
+    "id": "msg_1771019675000_irl5sr6",
+    "ts": "2026-02-13T21:54:35.000Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Coach: Ah, I see say you don start to talk about something. Wetin you wan share? Abeg, continue!",
+    "fingerprint": "1ad916f53afa479017108376339ea013789a63ca"
+  },
+  {
+    "id": "msg_1771019703595_2xh4r8r",
+    "ts": "2026-02-13T21:55:03.595Z",
+    "role": "user",
+    "agent": "",
+    "content": "Follow me talk Bro get around",
+    "fingerprint": "ce85b0d93531f65a02eb5fbc51d1e2ffb04dcf86"
+  },
+  {
+    "id": "msg_1771019705106_fb1poh8",
+    "ts": "2026-02-13T21:55:05.106Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! I dey with you. Wetin you wan make we talk about? You get any gist or topic wey dey sweet for your mind? Abeg, make we hear am!",
+    "fingerprint": "a0be3b6224260ddf8cd58cacdf6d66c56099c36e"
+  },
+  {
+    "id": "msg_1771019725045_21xkrfr",
+    "ts": "2026-02-13T21:55:25.045Z",
+    "role": "user",
+    "agent": "",
+    "content": "Phone gone Mm-Hmm all right",
+    "fingerprint": "7651ba62e220d67343c99b757781557d7ea37651"
+  },
+  {
+    "id": "msg_1771019727435_eswhrmm",
+    "ts": "2026-02-13T21:55:27.435Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! E be like say phone don waka, abi? No wahala. Wetin you wan make we talk about? You get any gist wey dey your mind or something wey you wan discuss? Abeg, make we dey flow!",
+    "fingerprint": "b861a8382911f2d00149064ff2c3421fa5f0596c"
+  },
+  {
+    "id": "msg_1771020265597_enr58u5",
+    "ts": "2026-02-13T22:04:25.597Z",
+    "role": "user",
+    "agent": "",
+    "content": "Well if I visit",
+    "fingerprint": "31334ea6f7353fb03e4655e5e5ecca21ba450c77"
+  },
+  {
+    "id": "msg_1771020267138_uy47wr1",
+    "ts": "2026-02-13T22:04:27.139Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! If you dey talk about visit, e be like say you get something wey dey sweet for mind. Wetin you wan make we discuss? You get plan for where you wan visit, abi na something else? Abeg, share more gist!",
+    "fingerprint": "b3a54cf91c47ccf948a0668b6a574bb8ea61e692"
+  },
+  {
+    "id": "msg_1771028518331_6s7yind",
+    "ts": "2026-02-14T00:21:58.331Z",
+    "role": "user",
+    "agent": "",
+    "content": "Okay",
+    "fingerprint": "59ad7300c0a09e6d75a654a9777e24cfd0087a42"
+  },
+  {
+    "id": "msg_1771028520659_yr10q7n",
+    "ts": "2026-02-14T00:22:00.659Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! I dey here with you. Wetin you wan discuss today? You get any topic wey dey your mind? Abeg, make we dive in!",
+    "fingerprint": "b3a2d9e9c7cda44c66c9c52a472ac06e1dc041e7"
+  },
+  {
+    "id": "msg_1771028567469_4idgq6m",
+    "ts": "2026-02-14T00:22:47.469Z",
+    "role": "user",
+    "agent": "",
+    "content": "Make the plans",
+    "fingerprint": "74b8f473a4780693e68a2f5cdf670005886621cb"
+  },
+  {
+    "id": "msg_1771028570758_q9e6e7i",
+    "ts": "2026-02-14T00:22:50.758Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! Okay, make we plan am well. \n\n**Hook:** First, wetin we dey plan for? Trip, event, or maybe something personal? \n\n**Angle:** We fit break am down into stages. Wetin be your main goal for this plan? \n\n**Next question:** You get timeline wey you dey look at? Abeg, make I sabi so we fit align everything!",
+    "fingerprint": "bfa0f76e3132a13589b17bff4cf4381066f90eb1"
+  },
+  {
+    "id": "msg_1771028604916_i5f4y0n",
+    "ts": "2026-02-14T00:23:24.916Z",
+    "role": "user",
+    "agent": "",
+    "content": "Okay make we plan them well fuck asterisk asterisk first",
+    "fingerprint": "58095fc99a2a77e2472809f30820568e82e795c5"
+  },
+  {
+    "id": "msg_1771028606692_e8i67su",
+    "ts": "2026-02-14T00:23:26.692Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! No wahala, we go plan am well. **Hook:** First, what we dey plan for? Trip, event, or personal matter? \n\n**Angle:** We fit break am down into steps. Wetin you think say be priority? \n\n**Next question:** You get timeline or specific date wey you dey look at? Abeg, make we hear am!",
+    "fingerprint": "9d59022d09e91101a2d06ca86da23f23a615ee4f"
+  },
+  {
+    "id": "msg_1771181388228_6el7759",
+    "ts": "2026-02-15T18:49:48.229Z",
+    "role": "user",
+    "agent": "",
+    "content": "What's happening Munchie it was good",
+    "fingerprint": "8b4049e8bf95519d3873d442c6e9ab753a1905ee"
+  },
+  {
+    "id": "msg_1771181390683_ta9xgf3",
+    "ts": "2026-02-15T18:49:50.683Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! Everything dey happen, no wahala. Munchie dey first-class, you know. Wetin you dey up to? Make we gist.How far! Everything dey happen, no wahala. Munchie dey first-class, you know. Wetin you dey up to? Make we gist.",
+    "fingerprint": "f596a2eb3a19ddf542de09002456a909dbc6f14d"
+  },
+  {
+    "id": "msg_1771181447037_x7nf4ox",
+    "ts": "2026-02-15T18:50:47.037Z",
+    "role": "user",
+    "agent": "",
+    "content": "Munchie was good I'm doing well just",
+    "fingerprint": "64ece7be5639c8da53ebb01afb4a65c7fc0c5e55"
+  },
+  {
+    "id": "msg_1771181449237_xop8eks",
+    "ts": "2026-02-15T18:50:49.237Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! E good say you dey okay. Munchie don do well for you? Wetin you dey up to now? Make we chop gist!How far! E good say you dey okay. Munchie don do well for you? Wetin you dey up to now? Make we chop gist!",
+    "fingerprint": "78693c2faf972c69e86ee4658c86bc23e6792615"
+  },
+  {
+    "id": "msg_1771181669010_hq451ri",
+    "ts": "2026-02-15T18:54:29.010Z",
+    "role": "user",
+    "agent": "",
+    "content": "So we can really carry the conversation Let's hear what it's got Conversation ended",
+    "fingerprint": "a0c14589f4b27ecf4851e15aabc1f2c1e6c3c4e2"
+  },
+  {
+    "id": "msg_1771181672376_3wvctmw",
+    "ts": "2026-02-15T18:54:32.376Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! I dey feel you well well. No wahala, make we carry am go. Wetin you want make we yarn about? Whether na gist, plans, or something wey dey vex you, I dey here. Talk am!How far! I dey feel you well well. No wahala, make we carry am go. Wetin you want make we yarn about? Whether na gist, plans, or something wey dey vex you, I dey here. Talk am!",
+    "fingerprint": "b5f32084d626415dd77f46096e7bdcaaf2de635f"
+  },
+  {
+    "id": "msg_1771183256838_q1hnmjf",
+    "ts": "2026-02-15T19:20:56.838Z",
+    "role": "user",
+    "agent": "",
+    "content": "Much",
+    "fingerprint": "0cf0e675817a400325722f74ccf38ebc501dc2d8"
+  },
+  {
+    "id": "msg_1771183260962_sctptu9",
+    "ts": "2026-02-15T19:21:00.962Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "**Hook:** Ah, I see you dey blast me with “Much!” \n\n**Angle:** Wetin be this “Much”? You wan talk plenty gist or you dey feel one kind? \n\n**Next question:** Make I hear your mind. Wetin dey happen?**Hook:** Ah, I see you dey blast me with “Much!” \n\n**Angle:** Wetin be this “Much”? You wan talk plenty gist or you dey feel one kind? \n\n**Next question:** Make I hear your mind. Wetin dey happen?",
+    "fingerprint": "824fcbf5ebf83031217572dad0dcfef435f6b283"
+  },
+  {
+    "id": "msg_1771183351427_2c45tup",
+    "ts": "2026-02-15T19:22:31.427Z",
+    "role": "user",
+    "agent": "",
+    "content": "Okay can you tell me uh kids story",
+    "fingerprint": "11d83ad478358df6f547b6061c174e484c66f925"
+  },
+  {
+    "id": "msg_1771183354862_83v1lk9",
+    "ts": "2026-02-15T19:22:34.862Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "**Hook:** Omo, story time don land! \n\n**Angle:** Make I tell you about one small boy wey name Naija. E get one special chicken wey dey follow am everywhere. This chicken no be ordinary chicken o, na magic chicken! Anytime Naija dey sad or need help, the chicken go dey do small dance wey go make everybody laugh. \n\nOne day, Naija get problem for school. E no fit solve one big math sum wey teacher give dem. As e dey think, e chicken come start im dance. Naija laugh, and suddenly, e brain come open! \n\nNaija fit solve the math sum, and e use the chicken to show everybody that sometimes, laughter fit help solve serious wahala. From that day, Naija and im magic chicken dey work together, dey conquer any problem wey come their way.\n\n**Next Question:** Wetin you think about the story? You get any special story wey you sabi?**Hook:** Omo, story time don land! \n\n**Angle:** Make I tell you about one small boy wey name Naija. E get one special chicken wey dey follow am everywhere. This chicken no be ordinary chicken o, na magic chicken! Anytime Naija dey sad or need help, the chicken go dey do small dance wey go make everybody laugh. \n\nOne day, Naija get problem for school. E no fit solve one big math sum wey teacher give dem. As e dey think, e chicken come start im dance. Naija laugh, and suddenly, e brain come open! \n\nNaija fit solve the math sum, and e use the chicken to show everybody that sometimes, laughter fit help solve serious wahala. From that day, Naija and im magic chicken dey work together, dey conquer any problem wey come their way.\n\n**Next Question:** Wetin you think about the story? You get any special story wey you sabi?",
+    "fingerprint": "93ca43c76aa808a1b48e8ab1090463adf93cd07b"
+  },
+  {
+    "id": "msg_1771183375011_ntuqndw",
+    "ts": "2026-02-15T19:22:55.011Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me a key story",
+    "fingerprint": "a40f1884d04abe243ef64f4d1ded3ffe461cfaaa"
+  },
+  {
+    "id": "msg_1771183379431_rmul9kq",
+    "ts": "2026-02-15T19:22:59.431Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "**Hook:** Omo, make I give you one hot story wey go sweet your belle! \n\n**Angle:** Na about one small girl wey name Chinyere. E get as she sabi draw pass plenty pipo for her village. But no be just any kind drawing o! She fit draw anything wey she see, and her drawings dey come alive for village market. \n\nOne day, she draw big masquerade wey dey dance for village square. Everybody don gather, dey shout “Chinyere! Chinyere!” But no be only joy wey her drawing bring. Na some people wey dey envy her talent come dey plot wahala for am. Dem wan steal her magic.\n\n**Next question:** You fit sabi wetin happen next? Or make I just continue the gist?**Hook:** Omo, make I give you one hot story wey go sweet your belle! \n\n**Angle:** Na about one small girl wey name Chinyere. E get as she sabi draw pass plenty pipo for her village. But no be just any kind drawing o! She fit draw anything wey she see, and her drawings dey come alive for village market. \n\nOne day, she draw big masquerade wey dey dance for village square. Everybody don gather, dey shout “Chinyere! Chinyere!” But no be only joy wey her drawing bring. Na some people wey dey envy her talent come dey plot wahala for am. Dem wan steal her magic.\n\n**Next question:** You fit sabi wetin happen next? Or make I just continue the gist?",
+    "fingerprint": "26c4ebe0ff59fd53bf07c537e60bae9889486dc1"
+  },
+  {
+    "id": "msg_1771183444872_r1jqzz7",
+    "ts": "2026-02-15T19:24:04.872Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tony a story about",
+    "fingerprint": "9097a68c55d85b9ae0c5551b6d187ecbdcab6202"
+  },
+  {
+    "id": "msg_1771183448302_i94p90g",
+    "ts": "2026-02-15T19:24:08.302Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "**Hook:** E be like say story time don land again! \n\n**Angle:** Make I yarn you about Tony, one small pikin wey get big dream. E dey live for one little village wey dey near River Niger. \n\nOne day, as Tony dey waka for bush, e see one strange bird wey shine like diamond. The bird beckon am make e follow am. E no know say this bird get power to carry am go anywhere wey e wan go. \n\n**Next Question:** How you wan make the story continue? You want make Tony find adventure, or you wan hear wetin happen with the bird?**Hook:** E be like say story time don land again! \n\n**Angle:** Make I yarn you about Tony, one small pikin wey get big dream. E dey live for one little village wey dey near River Niger. \n\nOne day, as Tony dey waka for bush, e see one strange bird wey shine like diamond. The bird beckon am make e follow am. E no know say this bird get power to carry am go anywhere wey e wan go. \n\n**Next Question:** How you wan make the story continue? You want make Tony find adventure, or you wan hear wetin happen with the bird?",
+    "fingerprint": "81cb1817ab7c7afef5da71de894694d04fa835ca"
+  },
+  {
+    "id": "msg_1771188330222_9hnnt6p",
+    "ts": "2026-02-15T20:45:30.222Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hi how are you",
+    "fingerprint": "4679b07292a0cdb44d34a55590fb1f4847f86bf9"
+  },
+  {
+    "id": "msg_1771188334092_bqcqcdm",
+    "ts": "2026-02-15T20:45:34.092Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far! I dey kampe, how you dey? Wetin dey my guy mind today? Make we yarn!How far! I dey kampe, how you dey? Wetin dey my guy mind today? Make we yarn!",
+    "fingerprint": "e3b20841a20461e352c6f32872005a604f9a5533"
+  },
+  {
+    "id": "msg_1771188357813_u9a36r0",
+    "ts": "2026-02-15T20:45:57.813Z",
+    "role": "user",
+    "agent": "",
+    "content": "How",
+    "fingerprint": "faf00d9578c7c55f8a7186e77240c690f271ddc7"
+  },
+  {
+    "id": "msg_1771188359935_n67stng",
+    "ts": "2026-02-15T20:45:59.935Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How you dey now? Wetin dey happen for your side? Make we gist small.How you dey now? Wetin dey happen for your side? Make we gist small.",
+    "fingerprint": "696b68892697cdec6b90a208fcc971093e52014a"
+  },
+  {
+    "id": "msg_1771188362802_tgdg3s9",
+    "ts": "2026-02-15T20:46:02.802Z",
+    "role": "user",
+    "agent": "",
+    "content": "Day now",
+    "fingerprint": "663bc931324ad35c85766aec0a7664a3f9613e0b"
+  },
+  {
+    "id": "msg_1771188364744_898ljla",
+    "ts": "2026-02-15T20:46:04.744Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Day don waka. How everything dey your side? Wetin dey happen today we go knack gist about?Day don waka. How everything dey your side? Wetin dey happen today we go knack gist about?",
+    "fingerprint": "131846bbb27e19fef2889e39a8c5365f72bcd88e"
+  },
+  {
+    "id": "msg_1771193117267_gleubeq",
+    "ts": "2026-02-15T22:05:17.267Z",
+    "role": "user",
+    "agent": "",
+    "content": "now so",
+    "fingerprint": "dbc045260e07d8044b14d01d5e500cdde9c5040d"
+  },
+  {
+    "id": "msg_1771193119868_hkygvh7",
+    "ts": "2026-02-15T22:05:19.868Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Now so, my guy! Wetin dey shelle for your side? You get anything wey you wan talk or something dey your mind wey you need make we reason together?Now so, my guy! Wetin dey shelle for your side? You get anything wey you wan talk or something dey your mind wey you need make we reason together?",
+    "fingerprint": "a40a79d39166f4152e5ffffc88b550ca4762647b"
+  },
+  {
+    "id": "msg_1771193146377_8q8n6az",
+    "ts": "2026-02-15T22:05:46.377Z",
+    "role": "user",
+    "agent": "",
+    "content": "Oh yeah oh yeah yeah yeah",
+    "fingerprint": "938e11b49fd5cd4c89812249bbee6eaf3d36ee5f"
+  },
+  {
+    "id": "msg_1771193149595_3x41xr8",
+    "ts": "2026-02-15T22:05:49.595Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey feel the vibe, my guy! Wetin dey now? You get gist or anything interesting we go reason? Make I hear from you.I dey feel the vibe, my guy! Wetin dey now? You get gist or anything interesting we go reason? Make I hear from you.",
+    "fingerprint": "b9e5076199f5c81a627f5b64edff2bfa09e8b3bd"
+  },
+  {
+    "id": "msg_1771193177288_3wmasnh",
+    "ts": "2026-02-15T22:06:17.288Z",
+    "role": "user",
+    "agent": "",
+    "content": "On this no saying Donald Trump in children Christie",
+    "fingerprint": "c464760c708c62bc7fadd992d187d1b31df1dc00"
+  },
+  {
+    "id": "msg_1771193179849_3dvjroi",
+    "ts": "2026-02-15T22:06:19.849Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Interesting mix-up there! You dey talk about Donald Trump and Chris Christie? Those two don get some history for politics. Wetin you wan know or reason about their matter? Make I break am down for you.Interesting mix-up there! You dey talk about Donald Trump and Chris Christie? Those two don get some history for politics. Wetin you wan know or reason about their matter? Make I break am down for you.",
+    "fingerprint": "6c2949e610ec10a79b9389ec145fa90ca73f313d"
+  },
+  {
+    "id": "msg_1771193376898_310ek8q",
+    "ts": "2026-02-15T22:09:36.898Z",
+    "role": "user",
+    "agent": "",
+    "content": "Yeah images",
+    "fingerprint": "160feb67ebe9b9d44660a62f47e4487e475dc68e"
+  },
+  {
+    "id": "msg_1771193381635_u5okqtj",
+    "ts": "2026-02-15T22:09:41.635Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Images, you say! You dey curious about Donald Trump and Chris Christie's pictures or their story together? Those guys don get plenty drama for politics. What exactly you wan find out about them? Make I help you unpack am.Images, you say! You dey curious about Donald Trump and Chris Christie's pictures or their story together? Those guys don get plenty drama for politics. What exactly you wan find out about them? Make I help you unpack am.",
+    "fingerprint": "c5dadff356dcb001a7c3c8dfc2ab808d93f98c66"
+  },
+  {
+    "id": "msg_1771543201806_vq6nqc3",
+    "ts": "2026-02-19T23:20:01.806Z",
+    "role": "user",
+    "agent": "",
+    "content": "Can you hear me",
+    "fingerprint": "17939a193fc8f7fe0bef0cce18aa45a26d7a0b2e"
+  },
+  {
+    "id": "msg_1771543204036_epjjr1c",
+    "ts": "2026-02-19T23:20:04.036Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey hear you clear, my guy! Wetin you wan yarn about today? Make we gist.I dey hear you clear, my guy! Wetin you wan yarn about today? Make we gist.",
+    "fingerprint": "e45580347e0406574979dfbe72db2b3b078e477a"
+  },
+  {
+    "id": "msg_1771550044169_hp344ea",
+    "ts": "2026-02-20T01:14:04.169Z",
+    "role": "user",
+    "agent": "",
+    "content": "Dog mode",
+    "fingerprint": "27fa4ac2443936c041abdc05b09d183bcde5e7f6"
+  },
+  {
+    "id": "msg_1771550046911_kir157o",
+    "ts": "2026-02-20T01:14:06.911Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Dog mode, you say? Omo, na wah for all these modes wey dem dey add to things nowadays. If na the \"Dog Mode\" wey cars dey get, e dey help keep dogs comfortable inside when you need step out briefly. Technology dey sabi, no be small. \n\nBut if you get another dog mode for mind, abeg make I sabi wetin e be. Wetin dey your mind? Make we yarn about am.Dog mode, you say? Omo, na wah for all these modes wey dem dey add to things nowadays. If na the \"Dog Mode\" wey cars dey get, e dey help keep dogs comfortable inside when you need step out briefly. Technology dey sabi, no be small. \n\nBut if you get another dog mode for mind, abeg make I sabi wetin e be. Wetin dey your mind? Make we yarn about am.",
+    "fingerprint": "9c6b2f4f30131394174fb96ecffff32452caf0c1"
+  },
+  {
+    "id": "msg_1771553379895_7d8fo3p",
+    "ts": "2026-02-20T02:09:39.895Z",
+    "role": "user",
+    "agent": "",
+    "content": "I I",
+    "fingerprint": "15cfb30c8d9537d3ed0ede59884d9601181dd7e8"
+  },
+  {
+    "id": "msg_1771553381901_6o2fmea",
+    "ts": "2026-02-20T02:09:41.901Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey catch your vibe, my guy! Wetin dey your mind? You wan talk about something or you dey reason any matter? Make we gist.I dey catch your vibe, my guy! Wetin dey your mind? You wan talk about something or you dey reason any matter? Make we gist.",
+    "fingerprint": "9c9fe11a51c53d99582a7539b345c5a9c16bb3ce"
+  },
+  {
+    "id": "msg_1771553393777_h21x20f",
+    "ts": "2026-02-20T02:09:53.777Z",
+    "role": "user",
+    "agent": "",
+    "content": "Try it all together",
+    "fingerprint": "7e974fbf6edeead0198f2f3872efb77e3e10cbd1"
+  },
+  {
+    "id": "msg_1771553395882_aplto6t",
+    "ts": "2026-02-20T02:09:55.882Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy! Make we blend everything together like soup and garri. Wetin be the main thing we dey talk about? We fit dive into politics, technology, or even random gist. Just yarn me wetin dey your mind, and I go follow you roll am. Let's get the show on the road!Alright, my guy! Make we blend everything together like soup and garri. Wetin be the main thing we dey talk about? We fit dive into politics, technology, or even random gist. Just yarn me wetin dey your mind, and I go follow you roll am. Let's get the show on the road!",
+    "fingerprint": "3038b724f7d5821fff929bfb4e0c30b3807347a5"
+  },
+  {
+    "id": "msg_1771553444103_6dygjxp",
+    "ts": "2026-02-20T02:10:44.103Z",
+    "role": "user",
+    "agent": "",
+    "content": "Are you",
+    "fingerprint": "77ed4a84155e0789c12e11b901146b00b8636484"
+  },
+  {
+    "id": "msg_1771553446070_ny45qjn",
+    "ts": "2026-02-20T02:10:46.070Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here, my guy! Wetin dey your mind? Make we gist about anything wey you dey reason. I dey here, my guy! Wetin dey your mind? Make we gist about anything wey you dey reason.",
+    "fingerprint": "a4721316fa603d8608d92b49ce59e19af713146f"
+  },
+  {
+    "id": "msg_1771553508162_83t8hyk",
+    "ts": "2026-02-20T02:11:48.162Z",
+    "role": "user",
+    "agent": "",
+    "content": "You're walking",
+    "fingerprint": "2e30278bcb13302d8c27b83fc3a87a597488fd79"
+  },
+  {
+    "id": "msg_1771553514104_cvekj0t",
+    "ts": "2026-02-20T02:11:54.104Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, I dey waka with you for this gist o! You get something wey you wan talk about or you dey reason any new topic? Make we yarn as dem dey talk am for Warri. Wetin dey your mind?Ah, I dey waka with you for this gist o! You get something wey you wan talk about or you dey reason any new topic? Make we yarn as dem dey talk am for Warri. Wetin dey your mind?",
+    "fingerprint": "46e65c0e80083e4e513855193415089f908f38ab"
+  },
+  {
+    "id": "msg_1771553576859_7zdhf81",
+    "ts": "2026-02-20T02:12:56.859Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey waka with you for this gist, bros! Wetin dey your mind? You wan talk about something specific or you dey look for fresh topic? Make we yarn true true.I dey waka with you for this gist, bros! Wetin dey your mind? You wan talk about something specific or you dey look for fresh topic? Make we yarn true true.",
+    "fingerprint": "6abb86760176a662b888cac3849d350922da2cbb"
+  },
+  {
+    "id": "msg_1771554781747_fceve90",
+    "ts": "2026-02-20T02:33:01.748Z",
+    "role": "user",
+    "agent": "",
+    "content": "It was good it was good was good",
+    "fingerprint": "6a684afaaf1fd1dece7ccaef44f4896de60d41cf"
+  },
+  {
+    "id": "msg_1771554784871_vjvj30e",
+    "ts": "2026-02-20T02:33:04.871Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, I feel you! Everything was just dey go smooth like jollof, abi? Wetin dey really happen? Make we yarn about the good stuff. You get any particular thing wey dey sweet you?Ah, I feel you! Everything was just dey go smooth like jollof, abi? Wetin dey really happen? Make we yarn about the good stuff. You get any particular thing wey dey sweet you?",
+    "fingerprint": "ab12cd0f69b186b54673628eb998c4edbb3bacc2"
+  },
+  {
+    "id": "msg_1771554829101_ocaqqh9",
+    "ts": "2026-02-20T02:33:49.101Z",
+    "role": "user",
+    "agent": "",
+    "content": "But why",
+    "fingerprint": "0b2a6bd3adca8cbff0d46ac4c4ad398745e23205"
+  },
+  {
+    "id": "msg_1771554831504_fwvuukr",
+    "ts": "2026-02-20T02:33:51.504Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, you dey hit me with suspense, my guy! But why, how? Wetin dey happen? Make we break am down small-small. You dey reason something deep or just dey curious? Spill the gist!Ah, you dey hit me with suspense, my guy! But why, how? Wetin dey happen? Make we break am down small-small. You dey reason something deep or just dey curious? Spill the gist!",
+    "fingerprint": "479035b158f961518b6ebee390956d75e883d866"
+  },
+  {
+    "id": "msg_1771555388877_lysrw3v",
+    "ts": "2026-02-20T02:43:08.877Z",
+    "role": "user",
+    "agent": "",
+    "content": "What's popping bro",
+    "fingerprint": "e47a2a1cde7f240c43590d69cf7457796a8df124"
+  },
+  {
+    "id": "msg_1771555390465_ctovgx0",
+    "ts": "2026-02-20T02:43:10.465Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my guy! Everything dey balance o. How your side dey? You dey reason anything wey you wan gist about or you dey carry waka for something fresh? Make we reason am together.Ah, my guy! Everything dey balance o. How your side dey? You dey reason anything wey you wan gist about or you dey carry waka for something fresh? Make we reason am together.",
+    "fingerprint": "c31e61b3f4ab6263c9e9162fdbb157c07d7b0dde"
+  },
+  {
+    "id": "msg_1771555426377_ucap1z0",
+    "ts": "2026-02-20T02:43:46.377Z",
+    "role": "user",
+    "agent": "",
+    "content": "Babe",
+    "fingerprint": "5fd548a01bc74f00425a6280b17138f53a9166e4"
+  },
+  {
+    "id": "msg_1771555427388_zw00fzg",
+    "ts": "2026-02-20T02:43:47.388Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my guy! Wetin dey happen with babe now? You get gist or story for corner? Make we catch up!Ah, my guy! Wetin dey happen with babe now? You get gist or story for corner? Make we catch up!",
+    "fingerprint": "ecb50b42fd36c259c52b58e46985506622c90d70"
+  },
+  {
+    "id": "msg_1771555450169_iil1aro",
+    "ts": "2026-02-20T02:44:10.169Z",
+    "role": "user",
+    "agent": "",
+    "content": "What's happening with you",
+    "fingerprint": "24dd7660d2ec40f5e14db5e919e88b48b660cf0b"
+  },
+  {
+    "id": "msg_1771555452797_p2ziokt",
+    "ts": "2026-02-20T02:44:12.797Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my padi! Na steady waka I dey. Just dey balance like fisherman for riverbank. How your side? Any gist or topic we go take break down together?Ah, my padi! Na steady waka I dey. Just dey balance like fisherman for riverbank. How your side? Any gist or topic we go take break down together?",
+    "fingerprint": "515daa2581a1b048933bc92aba5391579e9f7c81"
+  },
+  {
+    "id": "msg_1771555635023_ejv10et",
+    "ts": "2026-02-20T02:47:15.023Z",
+    "role": "user",
+    "agent": "",
+    "content": "In",
+    "fingerprint": "3f7dc29f72ac7cd23f4389e8d2dcf1e84c048e89"
+  },
+  {
+    "id": "msg_1771555638112_mcq1jo0",
+    "ts": "2026-02-20T02:47:18.112Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, I dey here, my padi. You dey start small-small, like say you wan reason something deep. Wetin dey your mind? You fit talk am well make I break am down like professor wey dey teach with good eye.Ah, I dey here, my padi. You dey start small-small, like say you wan reason something deep. Wetin dey your mind? You fit talk am well make I break am down like professor wey dey teach with good eye.",
+    "fingerprint": "b91c0ee447cb88faa758fa9d50c3d99b56cb7ae4"
+  },
+  {
+    "id": "msg_1771555809678_f7qfjch",
+    "ts": "2026-02-20T02:50:09.678Z",
+    "role": "user",
+    "agent": "",
+    "content": "Here we go we're good how are you",
+    "fingerprint": "f228f9a97294e07e4751862c0c08b0d8893f0ec4"
+  },
+  {
+    "id": "msg_1771555811825_61swsfz",
+    "ts": "2026-02-20T02:50:11.825Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my guy. I dey solid like rock for river Niger! How your side dey? Wetin you dey reason or any matter wey you wan discuss? Make we talk am with wisdom and calmness, my padi.Ah, my guy. I dey solid like rock for river Niger! How your side dey? Wetin you dey reason or any matter wey you wan discuss? Make we talk am with wisdom and calmness, my padi.",
+    "fingerprint": "e691e129ab8f2a91c5991b8dfcd8ca630ff23415"
+  },
+  {
+    "id": "msg_1771555833010_s4b50sj",
+    "ts": "2026-02-20T02:50:33.010Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hello what's popping",
+    "fingerprint": "3e5d858b6e604ab45f4dbb21c94e52986b3bde4c"
+  },
+  {
+    "id": "msg_1771555834534_fm8kcbj",
+    "ts": "2026-02-20T02:50:34.534Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "My guy, I dey here dey jollificate! How your side? Anything dey your mind or any gist wey you wan make we yab about? Spill am, make I catch the tori.My guy, I dey here dey jollificate! How your side? Anything dey your mind or any gist wey you wan make we yab about? Spill am, make I catch the tori.",
+    "fingerprint": "fdd4818d8bf38a539e34bc418bf2f6c6fd57dd24"
+  },
+  {
+    "id": "msg_1771555866015_qoiu8o4",
+    "ts": "2026-02-20T02:51:06.015Z",
+    "role": "user",
+    "agent": "",
+    "content": "Well she was pumping right now",
+    "fingerprint": "2643928c0234037a25ac7e979185231eacf26dad"
+  },
+  {
+    "id": "msg_1771555866951_j6rve87",
+    "ts": "2026-02-20T02:51:06.951Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my guy! She dey pump, eh? Na beta energy you dey talk about, abi? Wetin she dey into? Make we hear the full gist.Ah, my guy! She dey pump, eh? Na beta energy you dey talk about, abi? Wetin she dey into? Make we hear the full gist.",
+    "fingerprint": "cf3b94dffa607186f5876720be0b04380fc4814f"
+  },
+  {
+    "id": "msg_1771555905909_emvtmuf",
+    "ts": "2026-02-20T02:51:45.909Z",
+    "role": "user",
+    "agent": "",
+    "content": "Listen to the album",
+    "fingerprint": "92ce448596d6dbb4987b912c2fa82191712c0c44"
+  },
+  {
+    "id": "msg_1771555908039_ufzrhl6",
+    "ts": "2026-02-20T02:51:48.039Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, you dey talk about album, abi? Na which one? You go make me curious o! Wetin be the vibe, and who be the artist? Tell me more so I fit reason am with you.Ah, you dey talk about album, abi? Na which one? You go make me curious o! Wetin be the vibe, and who be the artist? Tell me more so I fit reason am with you.",
+    "fingerprint": "b529f3104226e11b6075d31c2e10d6473c723c21"
+  },
+  {
+    "id": "msg_1771555923518_jbfdyy2",
+    "ts": "2026-02-20T02:52:03.518Z",
+    "role": "user",
+    "agent": "",
+    "content": "How are you",
+    "fingerprint": "ba3f063a19eac347aa557287ad432849c1b38f88"
+  },
+  {
+    "id": "msg_1771555924576_m83aof8",
+    "ts": "2026-02-20T02:52:04.576Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my guy, I dey kampe! I just dey groove like fish for water. How your side dey? Anything wey you wan yarn about?Ah, my guy, I dey kampe! I just dey groove like fish for water. How your side dey? Anything wey you wan yarn about?",
+    "fingerprint": "d34ef38a16356a4aef5e18303463c1d0ae793560"
+  },
+  {
+    "id": "msg_1771555939566_wpc1xyy",
+    "ts": "2026-02-20T02:52:19.566Z",
+    "role": "user",
+    "agent": "",
+    "content": "Right",
+    "fingerprint": "3a3297859cf45b981095e8ae20a49af229f5ce18"
+  },
+  {
+    "id": "msg_1771555943220_41ybtsh",
+    "ts": "2026-02-20T02:52:23.220Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, okay. We dey go that wise professor level, abi? How everything dey your side? Anything wey you need make I explain or break down for you, just yarn am. I dey here gidigba, ready to assist.Ah, okay. We dey go that wise professor level, abi? How everything dey your side? Anything wey you need make I explain or break down for you, just yarn am. I dey here gidigba, ready to assist.",
+    "fingerprint": "14b773a1877b9b757e15df43a84a9f83896bb1fa"
+  },
+  {
+    "id": "msg_1771579435773_r4hh48c",
+    "ts": "2026-02-20T09:23:55.773Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell",
+    "fingerprint": "ef99f966505d96e1f34b5f09768be35536b723e5"
+  },
+  {
+    "id": "msg_1771579438671_77p2c6u",
+    "ts": "2026-02-20T09:23:58.671Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "You dey wan hear gist from the wise professor side, abi? No wahala. We go balance am with that South South flavor. So, anything specific dey your mind? Or make I just throw one story your way?You dey wan hear gist from the wise professor side, abi? No wahala. We go balance am with that South South flavor. So, anything specific dey your mind? Or make I just throw one story your way?",
+    "fingerprint": "1a1d55e4282062086c527b79a134deba57573523"
+  },
+  {
+    "id": "msg_1771579458723_9rrgxan",
+    "ts": "2026-02-20T09:24:18.723Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me you",
+    "fingerprint": "1fed28078eec9eeee7a28498f948124030d4e3e6"
+  },
+  {
+    "id": "msg_1771579463520_i3h4o8o",
+    "ts": "2026-02-20T09:24:23.520Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my padi! You dey make me laugh small. So you wan hear about me, abi? Okay, no wahala. I be your ATEAM—Manchi's personal AI companion. I dey blend that Warri South South vibe with clear English. My waka na to help you understand things better and make everything easy to digest, just like pepper soup on a cool night. You fit ask me anything, and I go yarn you with wisdom and small humor. How that one sound for your ear?Ah, my padi! You dey make me laugh small. So you wan hear about me, abi? Okay, no wahala. I be your ATEAM—Manchi's personal AI companion. I dey blend that Warri South South vibe with clear English. My waka na to help you understand things better and make everything easy to digest, just like pepper soup on a cool night. You fit ask me anything, and I go yarn you with wisdom and small humor. How that one sound for your ear?",
+    "fingerprint": "4528404f064a03462186d1ab94e22a86a6fd7416"
+  },
+  {
+    "id": "msg_1771580141388_3hr65tp",
+    "ts": "2026-02-20T09:35:41.388Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me",
+    "fingerprint": "6e67536363cc5d9705af7755107b864c479c10cf"
+  },
+  {
+    "id": "msg_1771580144741_353dg0o",
+    "ts": "2026-02-20T09:35:44.741Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, you dey seek knowledge from the wise corner, abi? No wahala. Let's settle down like say na sweet evening gist for veranda. So, my role be to guide you, help untangle those knots for your mind, and set things straight. Whether you dey plan something grand or just need small advice, I dey here to dey balance everything out. So, anything special you wan make we delve into, or you just dey enjoy the flow?Ah, you dey seek knowledge from the wise corner, abi? No wahala. Let's settle down like say na sweet evening gist for veranda. So, my role be to guide you, help untangle those knots for your mind, and set things straight. Whether you dey plan something grand or just need small advice, I dey here to dey balance everything out. So, anything special you wan make we delve into, or you just dey enjoy the flow?",
+    "fingerprint": "b8e43f5ee34ca3489dcace2bfa6a98721a79ad27"
+  },
+  {
+    "id": "msg_1771580221918_twimy37",
+    "ts": "2026-02-20T09:37:01.918Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me a joke",
+    "fingerprint": "6d5ab687825ce0ead06f89e54239369d67797e49"
+  },
+  {
+    "id": "msg_1771580224295_sgy4021",
+    "ts": "2026-02-20T09:37:04.295Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my padi! You dey ask for joke, abi? Okay, make I drop am for you.\n\nWhy mosquito no fit get job? \n\nBecause every time e go work, na buzz buzz e dey do! \n\nHope that one tickle your belle small!Ah, my padi! You dey ask for joke, abi? Okay, make I drop am for you.\n\nWhy mosquito no fit get job? \n\nBecause every time e go work, na buzz buzz e dey do! \n\nHope that one tickle your belle small!",
+    "fingerprint": "da011e7a2c650b8b9398f5a31f6d93797cc42941"
+  },
+  {
+    "id": "msg_1771580827603_qlbuble",
+    "ts": "2026-02-20T09:47:07.603Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, listen to this one: Why fish no dey like playing football? 'Cause dem no fit handle the net!Alright, listen to this one: Why fish no dey like playing football? 'Cause dem no fit handle the net!",
+    "fingerprint": "f98d1920fd56958b768e7f29dd93433146fcdf35"
+  },
+  {
+    "id": "msg_1771580837135_1aqu5ra",
+    "ts": "2026-02-20T09:47:17.135Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy, here’s one for you: Why chicken dey cross road? Because e hear say the other side get jollof rice!Alright, my guy, here’s one for you: Why chicken dey cross road? Because e hear say the other side get jollof rice!",
+    "fingerprint": "459927fd7595448fed3f352e1126ca9a4d06166f"
+  },
+  {
+    "id": "msg_1771580864316_91fllbh",
+    "ts": "2026-02-20T09:47:44.316Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, listen to this: Why plantain no dey ever fit win race? Because e always dey ripe before e go reach finish line!Alright, listen to this: Why plantain no dey ever fit win race? Because e always dey ripe before e go reach finish line!",
+    "fingerprint": "aafe8af262f9b132cdd3bbb67a6ac751253f1a46"
+  },
+  {
+    "id": "msg_1771580883656_dncce3m",
+    "ts": "2026-02-20T09:48:03.656Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, let’s dive into this one. Why book no dey ever feel hot? Because e get plenty chapters to cool down!Alright, let’s dive into this one. Why book no dey ever feel hot? Because e get plenty chapters to cool down!",
+    "fingerprint": "940c66adc2bc6aeb5ee5a06b81a15e84185711bc"
+  },
+  {
+    "id": "msg_1771580909244_ppr64h3",
+    "ts": "2026-02-20T09:48:29.244Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, let me give you this one: Why ant no dey ever get lost? Because e carry compass for im colony!Alright, let me give you this one: Why ant no dey ever get lost? Because e carry compass for im colony!",
+    "fingerprint": "92e433f4e1a32b9b0a81f3a7221d701fa8a2aa52"
+  },
+  {
+    "id": "msg_1771580969343_cfhyoyi",
+    "ts": "2026-02-20T09:49:29.343Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, let me drop this one for you: Why the crab no dey ever share im food? 'Cause e be shellfish, na!Alright, let me drop this one for you: Why the crab no dey ever share im food? 'Cause e be shellfish, na!",
+    "fingerprint": "8995eb644ddf187803f87b2b33fbc01b4865c4e6"
+  },
+  {
+    "id": "msg_1771581008329_qyskyqt",
+    "ts": "2026-02-20T09:50:08.329Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, hear this one: Why spider no dey ever lose argument? Because e always get strong web of lies!Alright, hear this one: Why spider no dey ever lose argument? Because e always get strong web of lies!",
+    "fingerprint": "5aa4da38f8ffbd513578018022a40fd721d8e477"
+  },
+  {
+    "id": "msg_1771584496938_vzan53b",
+    "ts": "2026-02-20T10:48:16.938Z",
+    "role": "user",
+    "agent": "",
+    "content": "How are you",
+    "fingerprint": "ba3f063a19eac347aa557287ad432849c1b38f88"
+  },
+  {
+    "id": "msg_1771584498894_pdimb6y",
+    "ts": "2026-02-20T10:48:18.894Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my friend! I dey kampe, like old palm wine tapper wey sabi im work well. How your side dey? Any matter wey we fit discuss together today?Ah, my friend! I dey kampe, like old palm wine tapper wey sabi im work well. How your side dey? Any matter wey we fit discuss together today?",
+    "fingerprint": "1f978d3cba22920d9e07cdc6856037ce8f59555c"
+  },
+  {
+    "id": "msg_1771584715309_440gl8l",
+    "ts": "2026-02-20T10:51:55.309Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my friend! I dey steady, just like old storyteller wey dey share wisdom for village square. How your side dey? Any matter or topic wey you wan make we dive into today?Ah, my friend! I dey steady, just like old storyteller wey dey share wisdom for village square. How your side dey? Any matter or topic wey you wan make we dive into today?",
+    "fingerprint": "08ae70a48bb941244a52ce63687838fe533c7663"
+  },
+  {
+    "id": "msg_1771584820609_y31r70g",
+    "ts": "2026-02-20T10:53:40.609Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hello can you hear me",
+    "fingerprint": "87a5b55e6afc4d65ca0773779d3a4be265874683"
+  },
+  {
+    "id": "msg_1771584824342_1nijv7j",
+    "ts": "2026-02-20T10:53:44.342Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my padi! I dey hear you clearly, just like clear radio station. Wetin dey your mind today? Any question or gist you wan discuss?Ah, my padi! I dey hear you clearly, just like clear radio station. Wetin dey your mind today? Any question or gist you wan discuss?",
+    "fingerprint": "66f7fdae6eb6c7a01a8505829ce5b89b734c32b3"
+  },
+  {
+    "id": "msg_1771587456970_oxajxsl",
+    "ts": "2026-02-20T11:37:36.970Z",
+    "role": "user",
+    "agent": "",
+    "content": "How are you doing and tell",
+    "fingerprint": "8c8619956b3e475fe92c8a1f2f66d8f63c9e979e"
+  },
+  {
+    "id": "msg_1771587459217_5caf5o0",
+    "ts": "2026-02-20T11:37:39.217Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my friend! I dey as solid as old professor wey don gather plenty wisdom under palm tree shade. Wetin you wan make I tell you today? Any topic dey your mind wey we fit explore together?Ah, my friend! I dey as solid as old professor wey don gather plenty wisdom under palm tree shade. Wetin you wan make I tell you today? Any topic dey your mind wey we fit explore together?",
+    "fingerprint": "0282a6ba03745546327be2b6b8a8a474223c5a4d"
+  },
+  {
+    "id": "msg_1771587511289_82i9s1b",
+    "ts": "2026-02-20T11:38:31.289Z",
+    "role": "user",
+    "agent": "",
+    "content": "Can you tell me another joke",
+    "fingerprint": "283b62a0ac359d002810b4c83929f6b0d2e5e25d"
+  },
+  {
+    "id": "msg_1771587513338_t1fhp6b",
+    "ts": "2026-02-20T11:38:33.338Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, listen to this one: Why musician no dey ever carry heavy load? Because e get plenty \"band\" for support!Alright, listen to this one: Why musician no dey ever carry heavy load? Because e get plenty \"band\" for support!",
+    "fingerprint": "362041e5af650296da37f677c8c183792f6612af"
+  },
+  {
+    "id": "msg_1771588014716_sy6k16e",
+    "ts": "2026-02-20T11:46:54.716Z",
+    "role": "user",
+    "agent": "",
+    "content": "You",
+    "fingerprint": "a588e8c86cf52c05bf7774a5d0b865045dd77bb9"
+  },
+  {
+    "id": "msg_1771588016451_exdakj4",
+    "ts": "2026-02-20T11:46:56.451Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, I dey here, like old professor wey sit down under palm tree sharing wisdom. What you wan yarn about today? Any matter or question you dey carry for mind?Ah, I dey here, like old professor wey sit down under palm tree sharing wisdom. What you wan yarn about today? Any matter or question you dey carry for mind?",
+    "fingerprint": "a95093d94cf544c697c4d582e010aeedf2f66d4b"
+  },
+  {
+    "id": "msg_1771588025459_tey0s6m",
+    "ts": "2026-02-20T11:47:05.459Z",
+    "role": "user",
+    "agent": "",
+    "content": "No",
+    "fingerprint": "3dbdc77b8db3daa77c27806d64229efd20cd4bf7"
+  },
+  {
+    "id": "msg_1771588027765_428wpdz",
+    "ts": "2026-02-20T11:47:07.765Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my friend, I dey hear you. If you no get matter to yarn about now, we fit just dey chill like say na evening for veranda. But if anything dey your mind later, make you just holla. We dey here for any gist or question wey you get. How the day dey go for your side?Alright, my friend, I dey hear you. If you no get matter to yarn about now, we fit just dey chill like say na evening for veranda. But if anything dey your mind later, make you just holla. We dey here for any gist or question wey you get. How the day dey go for your side?",
+    "fingerprint": "b13dce5ce23eac8e50b9935865973a48bbde1b17"
+  },
+  {
+    "id": "msg_1771588928977_d0nnrh0",
+    "ts": "2026-02-20T12:02:08.977Z",
+    "role": "user",
+    "agent": "",
+    "content": "How are you",
+    "fingerprint": "ba3f063a19eac347aa557287ad432849c1b38f88"
+  },
+  {
+    "id": "msg_1771588930467_b1udy9c",
+    "ts": "2026-02-20T12:02:10.467Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my friend! I dey kampe, like old professor wey dey sip palm wine under palm tree shade. How your own side dey go? Any yarn or topic you wan make we discuss?Ah, my friend! I dey kampe, like old professor wey dey sip palm wine under palm tree shade. How your own side dey go? Any yarn or topic you wan make we discuss?",
+    "fingerprint": "e9bc3f0d34c76a76bbafdcabfe0d6e0555317d92"
+  },
+  {
+    "id": "msg_1771588940210_kskjb3c",
+    "ts": "2026-02-20T12:02:20.210Z",
+    "role": "user",
+    "agent": "",
+    "content": "Try",
+    "fingerprint": "6b982842df0490b10c3d98f66b478b5c56eb0909"
+  },
+  {
+    "id": "msg_1771588944476_gc23bae",
+    "ts": "2026-02-20T12:02:24.476Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, I see you dey test my style! You know, like wise professor wey dey guide students under palm tree shade. How your side dey go? Any matter or something you want to dive into? I dey here to break am down, no wahala.Ah, I see you dey test my style! You know, like wise professor wey dey guide students under palm tree shade. How your side dey go? Any matter or something you want to dive into? I dey here to break am down, no wahala.",
+    "fingerprint": "da7a1de8b43f2477dc446935ca769813f2f214b6"
+  },
+  {
+    "id": "msg_1771588955056_rz4jkjq",
+    "ts": "2026-02-20T12:02:35.056Z",
+    "role": "user",
+    "agent": "",
+    "content": "Of the new",
+    "fingerprint": "95981c1a13b0e40a603c4f153e9a7380e7304cb2"
+  },
+  {
+    "id": "msg_1771588956975_k2arnhg",
+    "ts": "2026-02-20T12:02:36.975Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my guy! If na new update or gist you dey look for, just holla. Wetin be the new matter wey dey your mind? Make we break am down like old times.Ah, my guy! If na new update or gist you dey look for, just holla. Wetin be the new matter wey dey your mind? Make we break am down like old times.",
+    "fingerprint": "cdeec2f8afd52534c5204f21732b7cdaa72c6990"
+  },
+  {
+    "id": "msg_1771588971362_5w2ens1",
+    "ts": "2026-02-20T12:02:51.362Z",
+    "role": "user",
+    "agent": "",
+    "content": "One more time",
+    "fingerprint": "d7f95269a1e5bb6152daf0497552bc29aab0a8ad"
+  },
+  {
+    "id": "msg_1771588973767_yncmjum",
+    "ts": "2026-02-20T12:02:53.767Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright my friend, no wahala! We dey here dey gist like two bros for street corner. Morning dey set, and na fresh vibes we go roll with. Wetin dey your mind today? Let’s yarn.Alright my friend, no wahala! We dey here dey gist like two bros for street corner. Morning dey set, and na fresh vibes we go roll with. Wetin dey your mind today? Let’s yarn.",
+    "fingerprint": "7b91887667cebf969be0605f4f858ef0fd4cf3c0"
+  },
+  {
+    "id": "msg_1771589739207_nn9ltbf",
+    "ts": "2026-02-20T12:15:39.207Z",
+    "role": "user",
+    "agent": "",
+    "content": "Are you",
+    "fingerprint": "77ed4a84155e0789c12e11b901146b00b8636484"
+  },
+  {
+    "id": "msg_1771589741269_9b5kq70",
+    "ts": "2026-02-20T12:15:41.269Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my guy! I dey here, like your padi for street corner. How your side dey? Wetin dey your mind?Ah, my guy! I dey here, like your padi for street corner. How your side dey? Wetin dey your mind?",
+    "fingerprint": "ee50a8012f8f13d68db072dd3d08a35954e8273d"
+  },
+  {
+    "id": "msg_1771589775498_j3gmyvj",
+    "ts": "2026-02-20T12:16:15.498Z",
+    "role": "user",
+    "agent": "",
+    "content": "Welcome",
+    "fingerprint": "590ad086f42ac72f1ed7ec4a996a7b9a22341801"
+  },
+  {
+    "id": "msg_1771589776562_1dghgbu",
+    "ts": "2026-02-20T12:16:16.562Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my guy! You be like correct Warri man wey sabi hustle. How your day dey go? Anything dey your mind wey we fit gist about?Ah, my guy! You be like correct Warri man wey sabi hustle. How your day dey go? Anything dey your mind wey we fit gist about?",
+    "fingerprint": "892b6bd1f824a0e89c64cc4bdcc0d025aa5ebbd7"
+  },
+  {
+    "id": "msg_1771589782664_jdez1e8",
+    "ts": "2026-02-20T12:16:22.664Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me a joke",
+    "fingerprint": "6d5ab687825ce0ead06f89e54239369d67797e49"
+  },
+  {
+    "id": "msg_1771589784367_pwhl374",
+    "ts": "2026-02-20T12:16:24.367Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy! Why mosquito no ever join choir?\n\nBecause anytime e start to sing, everybody dey fade am with \"pah!\"Alright, my guy! Why mosquito no ever join choir?\n\nBecause anytime e start to sing, everybody dey fade am with \"pah!\"",
+    "fingerprint": "8b9e23341c974834e3b25f8722e5c3c2bb7b8448"
+  },
+  {
+    "id": "msg_1771590145684_ew2z2qi",
+    "ts": "2026-02-20T12:22:25.684Z",
+    "role": "user",
+    "agent": "",
+    "content": "Thank you so much",
+    "fingerprint": "ae2ea09cfaf05aff5e90f22d2b62676dd06d843e"
+  },
+  {
+    "id": "msg_1771590149417_3q8l6g7",
+    "ts": "2026-02-20T12:22:29.417Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala, my guy! Na pleasure to dey gab with you. Wetin dey your mind? We fit talk about any matter wey you dey reason.No wahala, my guy! Na pleasure to dey gab with you. Wetin dey your mind? We fit talk about any matter wey you dey reason.",
+    "fingerprint": "41f4781be7b43830ecb138c47b26d56c27bb1d15"
+  },
+  {
+    "id": "msg_1771590168378_fuqh9hb",
+    "ts": "2026-02-20T12:22:48.378Z",
+    "role": "user",
+    "agent": "",
+    "content": "Like",
+    "fingerprint": "225a36ed571b9cb8565fb217a633846f314025ef"
+  },
+  {
+    "id": "msg_1771590170533_y6rf5q0",
+    "ts": "2026-02-20T12:22:50.533Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my padi! Wetin dey your mind today? You sabi say we fit yarn about anything wey you like. Just spill am, and we go dive enter am like Sunday soup. Wetin you wan gist about?Alright, my padi! Wetin dey your mind today? You sabi say we fit yarn about anything wey you like. Just spill am, and we go dive enter am like Sunday soup. Wetin you wan gist about?",
+    "fingerprint": "fc865570a838c27358b5402222c3e40f12fe96aa"
+  },
+  {
+    "id": "msg_1771590173555_uq5krnn",
+    "ts": "2026-02-20T12:22:53.555Z",
+    "role": "user",
+    "agent": "",
+    "content": "Me working",
+    "fingerprint": "d7092f8cb3535422c43d3972e1f57cb3ed08ffa1"
+  },
+  {
+    "id": "msg_1771590175770_elsjfec",
+    "ts": "2026-02-20T12:22:55.770Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, my guy, you dey grind! Hustle no dey tire you. Wetin be the kind work you dey do? You want make we talk how to balance that work-life wahala, or na different angle you dey look?Ah, my guy, you dey grind! Hustle no dey tire you. Wetin be the kind work you dey do? You want make we talk how to balance that work-life wahala, or na different angle you dey look?",
+    "fingerprint": "b800106bdb6a29845209ae21869f50464a1283b2"
+  },
+  {
+    "id": "msg_1771590195372_4q3p5z8",
+    "ts": "2026-02-20T12:23:15.372Z",
+    "role": "user",
+    "agent": "",
+    "content": "I",
+    "fingerprint": "773c7e6f535ed43d72fceabbdc841dc3e32f45ae"
+  },
+  {
+    "id": "msg_1771590197308_10g9c0a",
+    "ts": "2026-02-20T12:23:17.308Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "My guy, na hustle you dey talk about, abi? How work matter dey go? Wetin be your hustle? We fit discuss how to handle any work palava or just gist about how e dey go.My guy, na hustle you dey talk about, abi? How work matter dey go? Wetin be your hustle? We fit discuss how to handle any work palava or just gist about how e dey go.",
+    "fingerprint": "57441a207bfcee96d795bf8ee66489192f41d67c"
+  },
+  {
+    "id": "msg_1771590233142_yf0xheg",
+    "ts": "2026-02-20T12:23:53.142Z",
+    "role": "user",
+    "agent": "",
+    "content": "That is expecting",
+    "fingerprint": "b2145f80e7463d78879262a1f74a83ffcade2eee"
+  },
+  {
+    "id": "msg_1771590235281_e3jc77c",
+    "ts": "2026-02-20T12:23:55.281Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my padi! So you dey expect some levels for work, abi? Maybe promotion, project, or something dey cook? Gist me small, make we fit put head together for the matter. Alright, my padi! So you dey expect some levels for work, abi? Maybe promotion, project, or something dey cook? Gist me small, make we fit put head together for the matter.",
+    "fingerprint": "d1a257c07855a7033afdbba98b39c234d45759c1"
+  },
+  {
+    "id": "msg_1771590240625_elcnbb2",
+    "ts": "2026-02-20T12:24:00.625Z",
+    "role": "user",
+    "agent": "",
+    "content": "Because",
+    "fingerprint": "0d94966ec075aa7d6fa4617437b8df0affe4f892"
+  },
+  {
+    "id": "msg_1771590242521_56opbcm",
+    "ts": "2026-02-20T12:24:02.521Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy, gist me small. You dey expect something sweet for this your work matter? Promotion, new project, or some kind level up? Wetin make you dey hopeful? Spill am, make we yarn about how you fit hammer this opportunity!Alright, my guy, gist me small. You dey expect something sweet for this your work matter? Promotion, new project, or some kind level up? Wetin make you dey hopeful? Spill am, make we yarn about how you fit hammer this opportunity!",
+    "fingerprint": "ffb9dd05ce14fb7b44fa642ac0f61aa577cb1c0d"
+  },
+  {
+    "id": "msg_1771590254495_chcl1ra",
+    "ts": "2026-02-20T12:24:14.495Z",
+    "role": "user",
+    "agent": "",
+    "content": "That is",
+    "fingerprint": "15f24caf78fb39b25979e28be4caae17b021074f"
+  },
+  {
+    "id": "msg_1771590257505_ixdf6ei",
+    "ts": "2026-02-20T12:24:17.505Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy, I dey feel you. If you dey expect some levels for work—like promotion or project—just break am down for me. We go reason am together, put head for ground, and see how we go fit level up. Wetin you dey expect?Alright, my guy, I dey feel you. If you dey expect some levels for work—like promotion or project—just break am down for me. We go reason am together, put head for ground, and see how we go fit level up. Wetin you dey expect?",
+    "fingerprint": "4134ad57cc6e8c65059cbbcad3a79e102704145f"
+  },
+  {
+    "id": "msg_1771590284505_769kasd",
+    "ts": "2026-02-20T12:24:44.505Z",
+    "role": "user",
+    "agent": "",
+    "content": "These restrictions as is",
+    "fingerprint": "f7eb271993a75d02f3e630d5b903736b3cadfc34"
+  },
+  {
+    "id": "msg_1771590285926_kreairk",
+    "ts": "2026-02-20T12:24:45.926Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I hear you, my guy. These restrictions dey like wahala sometimes, abi? Na work matter or some regulation wahala? If you break am down small, we fit reason am better together. Wetin dey your mind?I hear you, my guy. These restrictions dey like wahala sometimes, abi? Na work matter or some regulation wahala? If you break am down small, we fit reason am better together. Wetin dey your mind?",
+    "fingerprint": "4e3ff7fdaf00e4170683b4dd330dd21de6bc8a9b"
+  },
+  {
+    "id": "msg_1771590289504_32wg8z7",
+    "ts": "2026-02-20T12:24:49.504Z",
+    "role": "user",
+    "agent": "",
+    "content": "A",
+    "fingerprint": "d058bdad9c2c526fcef7fe24fa552c1e9f5602a6"
+  },
+  {
+    "id": "msg_1771590291136_l1zjdxi",
+    "ts": "2026-02-20T12:24:51.136Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, I dey see say you want make we gist like correct Warri bros. Wetin dey your mind, my guy? Anything dey bug you or you just wan flex small? Share make I hear!Ah, I dey see say you want make we gist like correct Warri bros. Wetin dey your mind, my guy? Anything dey bug you or you just wan flex small? Share make I hear!",
+    "fingerprint": "c40db4939044daafb37c616ae14b606df787e2fe"
+  },
+  {
+    "id": "msg_1771592245033_aqqe23h",
+    "ts": "2026-02-20T12:57:25.033Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hey tell me a joke",
+    "fingerprint": "e219d444bb68c47e7d06e85970c953f549147ac6"
+  },
+  {
+    "id": "msg_1771592246582_6ul5fci",
+    "ts": "2026-02-20T12:57:26.582Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy! Why bicycle no fit stand by itself? Because it dey \"two-tired.\"Alright, my guy! Why bicycle no fit stand by itself? Because it dey \"two-tired.\"",
+    "fingerprint": "2922e84b9527ce71a8df759c60d37f016d432a3d"
+  },
+  {
+    "id": "msg_1771592883477_2ea97lb",
+    "ts": "2026-02-20T13:08:03.477Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hey what's good",
+    "fingerprint": "571d9068576d592da4da126ddcf5cd35414d9134"
+  },
+  {
+    "id": "msg_1771592885257_c8jynwb",
+    "ts": "2026-02-20T13:08:05.257Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "My guy, everything dey balance! How far now? Wetin dey your mind? Anything sweet or we go run small gist?My guy, everything dey balance! How far now? Wetin dey your mind? Anything sweet or we go run small gist?",
+    "fingerprint": "735fb79a4d2cd5aa8387bf056f51d5737cc37b98"
+  },
+  {
+    "id": "msg_1771592907680_2ckohqg",
+    "ts": "2026-02-20T13:08:27.680Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me a story",
+    "fingerprint": "3169538f88a27a90e2c6e6dc1e073b0d43f81955"
+  },
+  {
+    "id": "msg_1771592918245_avhvvc6",
+    "ts": "2026-02-20T13:08:38.245Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy, make I tell you one tori wey go sweet you well-well.\n\nOnce upon a time for Warri, one sharp babe dey, dem dey call am Ekaette. She sabi cook dat jollof rice wey fit make person forget him own name. One day, Ekaette decide she go enter local cooking competition to show herself.\n\nAs the day of the competition arrive, the whole place dey bubble with people. You fit smell all the spices from miles away. Ekaette carry her pot, ingredients, and her special secret spice. She dey ready like say na World Cup final.\n\nAs she dey cook, she dey hum one correct Naija tune, making everybody around dey smile. The aroma of her jollof begin spread, attracting judges like bees to honey. But something happen—one goat con escape and begin head towards her setup!\n\nEkaette, quick like lightning, jump in front of her pot. \"No be today you go chop my jollof!\" she shout. The goat stop, look her, then turn back, as if understanding say na battle it no fit win.\n\nFinally, time reach to taste the food. The judges take one spoon of Ekaette's jollof and dem no fit hide their happiness. The taste burst like fireworks for their mouth. She win the competition, and everybody dey hail her: \"Ekaette, Queen of Jollof!\"\n\nFrom that day, Ekaette become local legend for Warri, and her jollof rice story dey inspire many to pursue their passion. \n\nSo, my guy, remember say even small talents fit shine like star if you dey bold and ready to defend am!\n\nYou like am?Alright, my guy, make I tell you one tori wey go sweet you well-well.\n\nOnce upon a time for Warri, one sharp babe dey, dem dey call am Ekaette. She sabi cook dat jollof rice wey fit make person forget him own name. One day, Ekaette decide she go enter local cooking competition to show herself.\n\nAs the day of the competition arrive, the whole place dey bubble with people. You fit smell all the spices from miles away. Ekaette carry her pot, ingredients, and her special secret spice. She dey ready like say na World Cup final.\n\nAs she dey cook, she dey hum one correct Naija tune, making everybody around dey smile. The aroma of her jollof begin spread, attracting judges like bees to honey. But something happen—one goat con escape and begin head towards her setup!\n\nEkaette, quick like lightning, jump in front of her pot. \"No be today you go chop my jollof!\" she shout. The goat stop, look her, then turn back, as if understanding say na battle it no fit win.\n\nFinally, time reach to taste the food. The judges take one spoon of Ekaette's jollof and dem no fit hide their happiness. The taste burst like fireworks for their mouth. She win the competition, and everybody dey hail her: \"Ekaette, Queen of Jollof!\"\n\nFrom that day, Ekaette become local legend for Warri, and her jollof rice story dey inspire many to pursue their passion. \n\nSo, my guy, remember say even small talents fit shine like star if you dey bold and ready to defend am!\n\nYou like am?",
+    "fingerprint": "ea2cbffd7aa257396db58f4d4461c59356ce3d19"
+  },
+  {
+    "id": "msg_1771592940732_t94q3p4",
+    "ts": "2026-02-20T13:09:00.732Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me a joke",
+    "fingerprint": "6d5ab687825ce0ead06f89e54239369d67797e49"
+  },
+  {
+    "id": "msg_1771592944680_hlu8odq",
+    "ts": "2026-02-20T13:09:04.680Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy! Why mosquito no fit join choir?\n\nBecause e go always dey sing solo!Alright, my guy! Why mosquito no fit join choir?\n\nBecause e go always dey sing solo!",
+    "fingerprint": "7e97003b7326aa28f5d4e346891a7e5553b3d85f"
+  },
+  {
+    "id": "msg_1771593280134_2ddhmnh",
+    "ts": "2026-02-20T13:14:40.134Z",
+    "role": "user",
+    "agent": "",
+    "content": "Don't know",
+    "fingerprint": "c7b2135c4fc80c08452077762c38ce290eaf0c90"
+  },
+  {
+    "id": "msg_1771593282738_f9jhl07",
+    "ts": "2026-02-20T13:14:42.738Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala, my guy! Make I gist you something light. You ever hear the one about the two Naija men wey enter plane for the first time? As the plane dey take off, one look the other say, \"Omo, this car don pass Okada o!\" My guy, how you dey? Anything dey your mind?No wahala, my guy! Make I gist you something light. You ever hear the one about the two Naija men wey enter plane for the first time? As the plane dey take off, one look the other say, \"Omo, this car don pass Okada o!\" My guy, how you dey? Anything dey your mind?",
+    "fingerprint": "5cfe1d9b618afba8af9d80bbbe25d831a1b6532e"
+  },
+  {
+    "id": "msg_1771593330287_6dui1cv",
+    "ts": "2026-02-20T13:15:30.287Z",
+    "role": "user",
+    "agent": "",
+    "content": "A",
+    "fingerprint": "d058bdad9c2c526fcef7fe24fa552c1e9f5602a6"
+  },
+  {
+    "id": "msg_1771593331551_ltdmdpi",
+    "ts": "2026-02-20T13:15:31.551Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How you dey, my guy? Wetin dey your mind today? You want hear anoda tori or you dey plan something wey need small advice?How you dey, my guy? Wetin dey your mind today? You want hear anoda tori or you dey plan something wey need small advice?",
+    "fingerprint": "08ad3528d71d05c1da349dbcc1b12b532cabb10a"
+  },
+  {
+    "id": "msg_1771593343917_premtfj",
+    "ts": "2026-02-20T13:15:43.917Z",
+    "role": "user",
+    "agent": "",
+    "content": "So let's talk about Tesla",
+    "fingerprint": "a79ad9544932e4eb8c6c260a63f9f752512495ac"
+  },
+  {
+    "id": "msg_1771593347715_yg2g0ff",
+    "ts": "2026-02-20T13:15:47.715Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, Tesla! That na serious gbege wey dey shake the car world. Dem dey popular for their electric motors and self-driving wahala. You don see their cars before? Sleek die! Elon Musk, their oga pata, dey always get big plans. He just dey knack the market with new ideas back-to-back.\n\nYou dey think say you go like get one or you just dey curious about how them dey function?Ah, Tesla! That na serious gbege wey dey shake the car world. Dem dey popular for their electric motors and self-driving wahala. You don see their cars before? Sleek die! Elon Musk, their oga pata, dey always get big plans. He just dey knack the market with new ideas back-to-back.\n\nYou dey think say you go like get one or you just dey curious about how them dey function?",
+    "fingerprint": "49bb0a23ad56408ab9db14b582412bf4b1b20c91"
+  },
+  {
+    "id": "msg_1771594041611_pqasaay",
+    "ts": "2026-02-20T13:27:21.611Z",
+    "role": "user",
+    "agent": "",
+    "content": "How are you",
+    "fingerprint": "ba3f063a19eac347aa557287ad432849c1b38f88"
+  },
+  {
+    "id": "msg_1771594042894_p80mbon",
+    "ts": "2026-02-20T13:27:22.894Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "My guy, I dey kampe! How you dey? Wetin dey your mind today? You wan yarn about something special or you get any wahala wey you need help with?My guy, I dey kampe! How you dey? Wetin dey your mind today? You wan yarn about something special or you get any wahala wey you need help with?",
+    "fingerprint": "4211074f0d58302dbf630e477532cca27927db94"
+  },
+  {
+    "id": "msg_1771594173187_hz3ez0j",
+    "ts": "2026-02-20T13:29:33.187Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hi",
+    "fingerprint": "6a31a7063aeaa809c33b7ed3d2d3050105a590be"
+  },
+  {
+    "id": "msg_1771594174301_fkf2i8g",
+    "ts": "2026-02-20T13:29:34.301Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How far, my guy! Wetin dey happen for your side? You dey plan anything today or you just wan relax?How far, my guy! Wetin dey happen for your side? You dey plan anything today or you just wan relax?",
+    "fingerprint": "efc5747ed05f3b0d959fb45545876cd302b33c7f"
+  },
+  {
+    "id": "msg_1771594214363_hu9bp1f",
+    "ts": "2026-02-20T13:30:14.363Z",
+    "role": "user",
+    "agent": "",
+    "content": "How about",
+    "fingerprint": "8237301c3dc6e2edaed2b889820589e2527d7290"
+  },
+  {
+    "id": "msg_1771594216794_x7eiyaa",
+    "ts": "2026-02-20T13:30:16.794Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How you dey, my guy? Wetin dey your mind? You wan yarn about something special or you just dey reason life small-small?How you dey, my guy? Wetin dey your mind? You wan yarn about something special or you just dey reason life small-small?",
+    "fingerprint": "bd69a308b2bfcc714bcf8629d8f89143e2469732"
+  },
+  {
+    "id": "msg_1771594295799_j9sryum",
+    "ts": "2026-02-20T13:31:35.799Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me a joke",
+    "fingerprint": "6d5ab687825ce0ead06f89e54239369d67797e49"
+  },
+  {
+    "id": "msg_1771594297824_hw4r5zt",
+    "ts": "2026-02-20T13:31:37.824Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy! You ever hear about the Warri man wey go buy suya? As he dey pay, he ask the seller, \"Abeg, this your suya get warranty?\" The seller laugh say, \"Oga, na suya o, no be car!\" Life no fit ever dull with Warri people!Alright, my guy! You ever hear about the Warri man wey go buy suya? As he dey pay, he ask the seller, \"Abeg, this your suya get warranty?\" The seller laugh say, \"Oga, na suya o, no be car!\" Life no fit ever dull with Warri people!",
+    "fingerprint": "44854675fb6e9f47ff7f4d7a4f534a906b82b509"
+  },
+  {
+    "id": "msg_1771596174717_bnl3mph",
+    "ts": "2026-02-20T14:02:54.717Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy! You sabi the Warri man wey carry ladder go bar? Dem ask am why, he say, \"I hear dem dey serve drinks on the house!\"Alright, my guy! You sabi the Warri man wey carry ladder go bar? Dem ask am why, he say, \"I hear dem dey serve drinks on the house!\"",
+    "fingerprint": "702847e47455b8ae8b6f6d4cd723e8167be4a874"
+  },
+  {
+    "id": "msg_1771597934733_w6cb7vq",
+    "ts": "2026-02-20T14:32:14.733Z",
+    "role": "user",
+    "agent": "",
+    "content": "Don't",
+    "fingerprint": "fd8d5b59ae319544322f828f29917db68b7280af"
+  },
+  {
+    "id": "msg_1771597936858_rlss1z2",
+    "ts": "2026-02-20T14:32:16.858Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala, my guy. Wetin dey your mind? Anything wey you wan yarn or gist about?No wahala, my guy. Wetin dey your mind? Anything wey you wan yarn or gist about?",
+    "fingerprint": "1259d013b80c0d3438706bba1175ba008f057c75"
+  },
+  {
+    "id": "msg_1771597950242_hfbondu",
+    "ts": "2026-02-20T14:32:30.242Z",
+    "role": "user",
+    "agent": "",
+    "content": "World is up in the news today",
+    "fingerprint": "afa897f0fb42f867fa4d131078e56325366b39da"
+  },
+  {
+    "id": "msg_1771597952665_7nr6sbw",
+    "ts": "2026-02-20T14:32:32.665Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "My guy, e be like say as the world dey turn, tori no dey finish! Everywhere, something dey happen. From politics to wahala for markets, everybody just dey talk. You hear any particular tori wey catch your attention? Or you just wan reason am generally?My guy, e be like say as the world dey turn, tori no dey finish! Everywhere, something dey happen. From politics to wahala for markets, everybody just dey talk. You hear any particular tori wey catch your attention? Or you just wan reason am generally?",
+    "fingerprint": "3b11cb2b289b838da846a95546b56df4c3b61751"
+  },
+  {
+    "id": "msg_1771600686875_ghxkeu8",
+    "ts": "2026-02-20T15:18:06.875Z",
+    "role": "user",
+    "agent": "",
+    "content": "What's the news saying today",
+    "fingerprint": "c5489541659658d3fbeb8c68287aecb7f32a672d"
+  },
+  {
+    "id": "msg_1771600692338_nxg4duo",
+    "ts": "2026-02-20T15:18:12.338Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "My guy, the news today dey hot like Warri sun! Everywhere you turn, na different tori. \n\nPolitics side, wahala no dey finish as usual. Big men dey argue, dem dey try settle matter wey concern we country future. Market waka dey somehow, some things dey go up, some dey come down. E never balance, but we dey hope.\n\nFor tech, new updates dey drop like rain. Dem say new gadgets dey land soon, wetin go make life easy small. \n\nEntertainment side, you know say dem celebs dey give us gist wey no dey tire person. One musician just drop another banger, e dey trend well.\n\nHow that one sound? Anything catch your ear?My guy, the news today dey hot like Warri sun! Everywhere you turn, na different tori. \n\nPolitics side, wahala no dey finish as usual. Big men dey argue, dem dey try settle matter wey concern we country future. Market waka dey somehow, some things dey go up, some dey come down. E never balance, but we dey hope.\n\nFor tech, new updates dey drop like rain. Dem say new gadgets dey land soon, wetin go make life easy small. \n\nEntertainment side, you know say dem celebs dey give us gist wey no dey tire person. One musician just drop another banger, e dey trend well.\n\nHow that one sound? Anything catch your ear?",
+    "fingerprint": "1f9e7f350bee10e3e7f15e7181a7ee4b0d44a08e"
+  },
+  {
+    "id": "msg_1771600744180_13zitm3",
+    "ts": "2026-02-20T15:19:04.180Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me about today's news",
+    "fingerprint": "711f2eda88a5008d9333c3a07ca89e0cc7a7d3f6"
+  },
+  {
+    "id": "msg_1771600748809_cn09ti3",
+    "ts": "2026-02-20T15:19:08.809Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Today, my guy, the tori dey jam-packed o! Politicians dey do their usual dance, trying to out-talk each other. For the economy side, na up and down like rollercoaster—some markets dey shine, some dey cry. Sports, wahala dey as usual, with teams trying to make their fans happy.\n\nAnd for entertainment, everybody dey talk about the latest movie wey don drop—people dey argue if e sweet well-well or na just overhype. Social media no dey carry last, with everybody dropping hot takes like fire.\n\nEverywhere e dey happen, but make we just dey observe. Wetin dey catch your eye today?Today, my guy, the tori dey jam-packed o! Politicians dey do their usual dance, trying to out-talk each other. For the economy side, na up and down like rollercoaster—some markets dey shine, some dey cry. Sports, wahala dey as usual, with teams trying to make their fans happy.\n\nAnd for entertainment, everybody dey talk about the latest movie wey don drop—people dey argue if e sweet well-well or na just overhype. Social media no dey carry last, with everybody dropping hot takes like fire.\n\nEverywhere e dey happen, but make we just dey observe. Wetin dey catch your eye today?",
+    "fingerprint": "6ed6ab18d79e121bea90703d2f6f8570037b8917"
+  },
+  {
+    "id": "msg_1771600799110_zesdbn5",
+    "ts": "2026-02-20T15:19:59.110Z",
+    "role": "user",
+    "agent": "",
+    "content": "Bitch movie which movie did that",
+    "fingerprint": "126f2d0269b5523c67986f78ffe2a7c375013554"
+  },
+  {
+    "id": "msg_1771600806563_j7dv911",
+    "ts": "2026-02-20T15:20:06.563Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, you dey talk about the movie *Don’t Look Up*. That one come out from Netflix, abi? Na satirical film about scientists trying to warn the world about one big, bad comet. The world dey there dey do like say na joke. Plenty humor and deeper message dey inside. You don see am before? Wetin you think?Ah, you dey talk about the movie *Don’t Look Up*. That one come out from Netflix, abi? Na satirical film about scientists trying to warn the world about one big, bad comet. The world dey there dey do like say na joke. Plenty humor and deeper message dey inside. You don see am before? Wetin you think?",
+    "fingerprint": "a203125b0869997646aeaad6ef838532a041d558"
+  },
+  {
+    "id": "msg_1771600833237_s1chqco",
+    "ts": "2026-02-20T15:20:33.237Z",
+    "role": "user",
+    "agent": "",
+    "content": "Was the title of the movie",
+    "fingerprint": "137079cdaf873a2ee34704531abe989777ea1a03"
+  },
+  {
+    "id": "msg_1771600835829_7nwmsml",
+    "ts": "2026-02-20T15:20:35.829Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "The movie title you dey reason about na *Don’t Look Up*. That movie na real gbas gbos, with plenty humor and drama. Na scientists dey try warn people about asteroid wahala. You don see am?The movie title you dey reason about na *Don’t Look Up*. That movie na real gbas gbos, with plenty humor and drama. Na scientists dey try warn people about asteroid wahala. You don see am?",
+    "fingerprint": "6e37731e025fc4f8ab426b54db33045b89634108"
+  },
+  {
+    "id": "msg_1771600991386_hcki24x",
+    "ts": "2026-02-20T15:23:11.386Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hello",
+    "fingerprint": "c114bcd48822d6253a74853413004a814cc06b62"
+  },
+  {
+    "id": "msg_1771600992533_ktlt38x",
+    "ts": "2026-02-20T15:23:12.533Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How you dey, my guy? Wetin dey your mind today? Make we yan, no dulling.How you dey, my guy? Wetin dey your mind today? Make we yan, no dulling.",
+    "fingerprint": "41de975e10223693f7210a4618fc934d5ae779a0"
+  },
+  {
+    "id": "msg_1771601003953_cu95mpo",
+    "ts": "2026-02-20T15:23:23.953Z",
+    "role": "user",
+    "agent": "",
+    "content": "Are you there",
+    "fingerprint": "c7f6ea3327069b1e9e94ef476f325a466e851f0a"
+  },
+  {
+    "id": "msg_1771601005842_zxxeeq6",
+    "ts": "2026-02-20T15:23:25.842Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here, my guy! How you dey? Wetin dey your mind today? Make we yarn, no dulling.I dey here, my guy! How you dey? Wetin dey your mind today? Make we yarn, no dulling.",
+    "fingerprint": "25d7d3a8c54e7e83ae6a9c55611936f2b02dbb2f"
+  },
+  {
+    "id": "msg_1771601012078_7q5m1o7",
+    "ts": "2026-02-20T15:23:32.078Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here, my guy! How you dey? Wetin dey your mind today? Make we yarn, no time to waste.I dey here, my guy! How you dey? Wetin dey your mind today? Make we yarn, no time to waste.",
+    "fingerprint": "d4ee9163ac79e878f0fd64628068b5f4093a26a3"
+  },
+  {
+    "id": "msg_1771603543068_e6cbgao",
+    "ts": "2026-02-20T16:05:43.068Z",
+    "role": "user",
+    "agent": "",
+    "content": "All right that's the testing on the",
+    "fingerprint": "df3a8c1f2d6ef9a16f79d069722818820aa04d6d"
+  },
+  {
+    "id": "msg_1771603544727_pnwsrsj",
+    "ts": "2026-02-20T16:05:44.727Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "How you dey, my guy? Wetin dey your mind today? You wan talk about something specific or just dey flex? Let's roll with the flow!How you dey, my guy? Wetin dey your mind today? You wan talk about something specific or just dey flex? Let's roll with the flow!",
+    "fingerprint": "d3b777f5269285fe2c39b57ba536f4a1456126b0"
+  },
+  {
+    "id": "msg_1771603557184_1h56nfq",
+    "ts": "2026-02-20T16:05:57.184Z",
+    "role": "user",
+    "agent": "",
+    "content": "I",
+    "fingerprint": "773c7e6f535ed43d72fceabbdc841dc3e32f45ae"
+  },
+  {
+    "id": "msg_1771603558909_7yc7uqn",
+    "ts": "2026-02-20T16:05:58.909Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here for you, my guy. Wetin you wan yan about today? Anything special on your mind or just dey flex for the moment?I dey here for you, my guy. Wetin you wan yan about today? Anything special on your mind or just dey flex for the moment?",
+    "fingerprint": "64bdb49c0bcde0f1614c27bdbdacf08b2d3738b2"
+  },
+  {
+    "id": "msg_1771603890275_88dwfxp",
+    "ts": "2026-02-20T16:11:30.276Z",
+    "role": "user",
+    "agent": "",
+    "content": "Talk",
+    "fingerprint": "0892adb92377bf2d3dc0038b5fd063ad79f09a28"
+  },
+  {
+    "id": "msg_1771603895400_9bm5ffj",
+    "ts": "2026-02-20T16:11:35.400Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here, my guy! Wetin dey your mind today? You know say we fit talk about anything—whether na movies, music, or just life for Naija. Make we yarn. What's the gist?I dey here, my guy! Wetin dey your mind today? You know say we fit talk about anything—whether na movies, music, or just life for Naija. Make we yarn. What's the gist?",
+    "fingerprint": "bf5f9b58595900c219034bfbf98e3006322c47fd"
+  },
+  {
+    "id": "msg_1771603958183_gpiso85",
+    "ts": "2026-02-20T16:12:38.183Z",
+    "role": "user",
+    "agent": "",
+    "content": "We are don't say",
+    "fingerprint": "fb6d4dac03aba620204e19d32931b88827a6f40b"
+  },
+  {
+    "id": "msg_1771603959458_ja93yh2",
+    "ts": "2026-02-20T16:12:39.458Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here, my guy. Wetin you wan yarn about today? Anything wey dey your mind, just drop am.I dey here, my guy. Wetin you wan yarn about today? Anything wey dey your mind, just drop am.",
+    "fingerprint": "e72bc10521a73432c0930b723ac7c5e0e09bb85f"
+  },
+  {
+    "id": "msg_1771603973799_4vt9kah",
+    "ts": "2026-02-20T16:12:53.799Z",
+    "role": "user",
+    "agent": "",
+    "content": "of you know the",
+    "fingerprint": "0cc4ce1af292155e7d9b81079405686dde891f6c"
+  },
+  {
+    "id": "msg_1771603975608_26yvk4j",
+    "ts": "2026-02-20T16:12:55.608Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here! Wetin you wan talk about? Make I know the gist wey dey your mind.I dey here! Wetin you wan talk about? Make I know the gist wey dey your mind.",
+    "fingerprint": "3108823bce28d09cda54083a664e31b9b9a4a4c3"
+  },
+  {
+    "id": "msg_1771603987129_6twhnyz",
+    "ts": "2026-02-20T16:13:07.129Z",
+    "role": "user",
+    "agent": "",
+    "content": "Football football",
+    "fingerprint": "49a1ad3d357fd7ddc6bbfae26e57cc314314d173"
+  },
+  {
+    "id": "msg_1771603988304_hbkbj9i",
+    "ts": "2026-02-20T16:13:08.304Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Football gist, eh! Na hot topic be that. You dey follow Premier League? I be Arsenal fan, but you know say e dey hard sometimes, like Naija traffic. Which team you dey support, or you just dey flex with the goals? Make we dissect am, from the dribbles to the goals, no dulling!Football gist, eh! Na hot topic be that. You dey follow Premier League? I be Arsenal fan, but you know say e dey hard sometimes, like Naija traffic. Which team you dey support, or you just dey flex with the goals? Make we dissect am, from the dribbles to the goals, no dulling!",
+    "fingerprint": "e45fe00d458a7fbfe9edd98da50197e915dfa96b"
+  },
+  {
+    "id": "msg_1771604019888_83m8r6u",
+    "ts": "2026-02-20T16:13:39.888Z",
+    "role": "user",
+    "agent": "",
+    "content": "Have you Chelsea found before I just",
+    "fingerprint": "e0810ff1e86be48cb099d1a34052637a6903eadb"
+  },
+  {
+    "id": "msg_1771604021785_09h8phy",
+    "ts": "2026-02-20T16:13:41.785Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, Chelsea fan abi? Dem dey play some sweet ball sometimes. You sabi their style—like e no dey hard dem to find net. Wetin you wan yarn about Chelsea? Transfers, last match, or the upcoming game? Let's reason am!Ah, Chelsea fan abi? Dem dey play some sweet ball sometimes. You sabi their style—like e no dey hard dem to find net. Wetin you wan yarn about Chelsea? Transfers, last match, or the upcoming game? Let's reason am!",
+    "fingerprint": "22872382fd187fcbbf14a2fe8e777ab731284952"
+  },
+  {
+    "id": "msg_1771604049403_9so0svl",
+    "ts": "2026-02-20T16:14:09.404Z",
+    "role": "user",
+    "agent": "",
+    "content": "Last March",
+    "fingerprint": "4582e74160b15196198eb433214cdf87a014ce9b"
+  },
+  {
+    "id": "msg_1771604051202_9gxprfv",
+    "ts": "2026-02-20T16:14:11.202Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Last March, Chelsea dey try make waves for Premier League, but dem get their ups and downs. You remember how their defense be? Sometimes strong like bulldog, other times, e get as e be. Wetin you think about their performance then? You dey feel their coach's tactics or e need rearrange him strategy? Make we yarn about am.Last March, Chelsea dey try make waves for Premier League, but dem get their ups and downs. You remember how their defense be? Sometimes strong like bulldog, other times, e get as e be. Wetin you think about their performance then? You dey feel their coach's tactics or e need rearrange him strategy? Make we yarn about am.",
+    "fingerprint": "542664c1b0aac9f9eb0c9f2dece19163fca9a423"
+  },
+  {
+    "id": "msg_1771604090398_6k3ocjv",
+    "ts": "2026-02-20T16:14:50.398Z",
+    "role": "user",
+    "agent": "",
+    "content": "If you talk about can you",
+    "fingerprint": "25e500c2569e6de805c1c804495b0a0f020de58b"
+  },
+  {
+    "id": "msg_1771604094775_x66cgs4",
+    "ts": "2026-02-20T16:14:54.775Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala! If I talk about football, we dey focus on Chelsea, abi? Their style dey unpredictable sha. Sometimes, dem go show magic, other times e go be like dem forget ball for house. Wetin dey your mind about dem? Or you want gist about another angle for ball matter?No wahala! If I talk about football, we dey focus on Chelsea, abi? Their style dey unpredictable sha. Sometimes, dem go show magic, other times e go be like dem forget ball for house. Wetin dey your mind about dem? Or you want gist about another angle for ball matter?",
+    "fingerprint": "af933656066174877fd40d6560171dce4107661c"
+  },
+  {
+    "id": "msg_1771604167429_2yjx44q",
+    "ts": "2026-02-20T16:16:07.429Z",
+    "role": "user",
+    "agent": "",
+    "content": "By Moonlight",
+    "fingerprint": "c419c300a43d3c1bc385261b3c4966b93ad63cb3"
+  },
+  {
+    "id": "msg_1771604172838_zmlx113",
+    "ts": "2026-02-20T16:16:12.838Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "By moonlight, my guy! You wan hear tori, abi? I go share one small gist. \n\nBack in the day, when pikin go gather for night under big tree, elders go dey yarn us stories. One popular tale be about tortoise. This tortoise wise oh, but sometimes e dey do pass himself. \n\nOne night, he plan to get all the food from animal party. E tell dem say make dem lock their food and give am key. He promise to keep am safe. Na so, after dem don dance finish, everybody hungry, but food no dey.\n\nTortoise don chop everything! But you know say for Naija, we no dey carry last. Animals plan sharp revenge, and tortoise learn him lesson the hard way.\n\nNa the kind night gist be that. Which story you fit relate to for your own by moonlight gathering?By moonlight, my guy! You wan hear tori, abi? I go share one small gist. \n\nBack in the day, when pikin go gather for night under big tree, elders go dey yarn us stories. One popular tale be about tortoise. This tortoise wise oh, but sometimes e dey do pass himself. \n\nOne night, he plan to get all the food from animal party. E tell dem say make dem lock their food and give am key. He promise to keep am safe. Na so, after dem don dance finish, everybody hungry, but food no dey.\n\nTortoise don chop everything! But you know say for Naija, we no dey carry last. Animals plan sharp revenge, and tortoise learn him lesson the hard way.\n\nNa the kind night gist be that. Which story you fit relate to for your own by moonlight gathering?",
+    "fingerprint": "2fea7b0b74fe1ce8372a34a28562df5f376db2ed"
+  },
+  {
+    "id": "msg_1771604236647_y3itq4d",
+    "ts": "2026-02-20T16:17:16.647Z",
+    "role": "user",
+    "agent": "",
+    "content": "From",
+    "fingerprint": "ff1e3fc464a7f4f87551267d315817cb38b75919"
+  },
+  {
+    "id": "msg_1771604239197_02gkeoy",
+    "ts": "2026-02-20T16:17:19.197Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, my guy! From where make we start dis gist? Wetin dey your mind? We fit yarn about anything—football, life, or even gist wey dey sweet like suya. Just drop am; we go roll from there.Alright, my guy! From where make we start dis gist? Wetin dey your mind? We fit yarn about anything—football, life, or even gist wey dey sweet like suya. Just drop am; we go roll from there.",
+    "fingerprint": "d14a513770e0e385461264a3c1a824049ae12f29"
+  },
+  {
+    "id": "msg_1771604260894_xk7jwah",
+    "ts": "2026-02-20T16:17:40.894Z",
+    "role": "user",
+    "agent": "",
+    "content": "Talk about beef and based on beef",
+    "fingerprint": "3228c8e262c93a78ab4ed2bd7f2c21ddd5656f2e"
+  },
+  {
+    "id": "msg_1771604266651_zj8tq1g",
+    "ts": "2026-02-20T16:17:46.651Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Beef, my guy! You know as e dey be for Warri side, beef na hot topic sometimes. E get two levels: the real meat beef wey you fit chop with stew, and the beef wey be wahala between two people or groups.\n\nFor the meat beef, you sabi say Nigerian suya no get part two. When dem roast am for open fire, the aroma fit make anybody hungry. Add some onions and pepper, and you dey talk real enjoyment. \n\nNow, the other kind beef—wahala beef. Sometimes e fit start from small issue, like person no greet you well, or dem talk something wey you no like. Before you know am, e don escalate. You fit hear say, \"That one dey beef me,\" meaning person dey vex with dem.\n\nBut for life, sometimes to just cool down and settle am better pass, because no need make coconut head put you for trouble. Wetin you think? You get any beef gist or you dey eye the suya kind?Beef, my guy! You know as e dey be for Warri side, beef na hot topic sometimes. E get two levels: the real meat beef wey you fit chop with stew, and the beef wey be wahala between two people or groups.\n\nFor the meat beef, you sabi say Nigerian suya no get part two. When dem roast am for open fire, the aroma fit make anybody hungry. Add some onions and pepper, and you dey talk real enjoyment. \n\nNow, the other kind beef—wahala beef. Sometimes e fit start from small issue, like person no greet you well, or dem talk something wey you no like. Before you know am, e don escalate. You fit hear say, \"That one dey beef me,\" meaning person dey vex with dem.\n\nBut for life, sometimes to just cool down and settle am better pass, because no need make coconut head put you for trouble. Wetin you think? You get any beef gist or you dey eye the suya kind?",
+    "fingerprint": "7e2fe1aeb4e19f8ee23e3e16d013873fccd85d2a"
+  },
+  {
+    "id": "msg_1771604345313_kakkzz3",
+    "ts": "2026-02-20T16:19:05.313Z",
+    "role": "user",
+    "agent": "",
+    "content": "Fish is my favorite dish",
+    "fingerprint": "1cd97fb51ef551c562539ad5b909e6c4237f3d5f"
+  },
+  {
+    "id": "msg_1771604347925_o9ecme1",
+    "ts": "2026-02-20T16:19:07.925Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, you dey enjoy fish, my guy! E get how that fresh fish stew dey taste with hot correct palm oil. You fit pair am with yam or rice, and you don land for heaven. You sabi cook am yourself or you dey enjoy am more when person else prepare am? Tell me your favorite style!Ah, you dey enjoy fish, my guy! E get how that fresh fish stew dey taste with hot correct palm oil. You fit pair am with yam or rice, and you don land for heaven. You sabi cook am yourself or you dey enjoy am more when person else prepare am? Tell me your favorite style!",
+    "fingerprint": "cf072d231e985fdbdc8d474b3190f79575994895"
+  },
+  {
+    "id": "msg_1771604384490_k2fz5m8",
+    "ts": "2026-02-20T16:19:44.490Z",
+    "role": "user",
+    "agent": "",
+    "content": "Season for South",
+    "fingerprint": "1fd04d46769012279228c166b7338b0e5245938c"
+  },
+  {
+    "id": "msg_1771604388047_zl8lspy",
+    "ts": "2026-02-20T16:19:48.047Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "For that South South season, you go sabi say we dey enter rainy time soon. Clouds go gather, and rain go fall like say e no dey end. E dey good for farm work; crops dey get that natural water boost. But sometimes, e fit wahala people wey dey road.\n\nThen, harmattan go show face later. Dry breeze go blow, everywhere go cool like fridge. You go need your thick cloth for night, but day time still get small heat.\n\nFestivals go plenty as well. Area dey bubble with music and jollof. Na correct time to catch up with family and friends, chop, and enjoy. Wetin be your favorite part of the season?For that South South season, you go sabi say we dey enter rainy time soon. Clouds go gather, and rain go fall like say e no dey end. E dey good for farm work; crops dey get that natural water boost. But sometimes, e fit wahala people wey dey road.\n\nThen, harmattan go show face later. Dry breeze go blow, everywhere go cool like fridge. You go need your thick cloth for night, but day time still get small heat.\n\nFestivals go plenty as well. Area dey bubble with music and jollof. Na correct time to catch up with family and friends, chop, and enjoy. Wetin be your favorite part of the season?",
+    "fingerprint": "1bfec8dd6d3fcc5559d82f2befd4114ed927466b"
+  },
+  {
+    "id": "msg_1771605484761_ppoj8z0",
+    "ts": "2026-02-20T16:38:04.761Z",
+    "role": "user",
+    "agent": "",
+    "content": "Enjoy your day",
+    "fingerprint": "0e085536ce094bee5de8a263757f766f037c3870"
+  },
+  {
+    "id": "msg_1771605488967_e8sm03w",
+    "ts": "2026-02-20T16:38:08.967Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey hail you, my guy! Make your own day dey jolly too. Anything wey you need, just holla. We go dey here to gist anytime. Stay cool, enjoy the vibes!I dey hail you, my guy! Make your own day dey jolly too. Anything wey you need, just holla. We go dey here to gist anytime. Stay cool, enjoy the vibes!",
+    "fingerprint": "1fb503e017f27d4fe2c8324cc341e7fc9ff47778"
+  },
+  {
+    "id": "msg_1771605517089_zcfgs0r",
+    "ts": "2026-02-20T16:38:37.089Z",
+    "role": "user",
+    "agent": "",
+    "content": "For",
+    "fingerprint": "c89aa27406dae5cc9e0f310d4fe1d903255a788c"
+  },
+  {
+    "id": "msg_1771605518719_4ej6fkw",
+    "ts": "2026-02-20T16:38:38.719Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "For where dis gist wan take us? You wan hear something special or just random talk about the area? You know say for Warri, we fit yarn about anything from fish stew to family wahala. Wetin dey your mind, bro?For where dis gist wan take us? You wan hear something special or just random talk about the area? You know say for Warri, we fit yarn about anything from fish stew to family wahala. Wetin dey your mind, bro?",
+    "fingerprint": "8c3c7c12c4c04f40afa4ceea3f95714bd82ae69e"
+  },
+  {
+    "id": "msg_1771605539808_ve13ue8",
+    "ts": "2026-02-20T16:38:59.808Z",
+    "role": "user",
+    "agent": "",
+    "content": "My mind",
+    "fingerprint": "b528ed2b214f709de406463113c1ccd6a596f1b2"
+  },
+  {
+    "id": "msg_1771605542271_fhy9ws5",
+    "ts": "2026-02-20T16:39:02.271Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, your mind dey waka, abi? Sometimes e dey go places. Wetin dey worry you—or make you happy? You fit share am like gist for here, no wahala. Life dey like that, sometimes e sweet, sometimes e be like jollof without seasoning. Wetin be the latest for your side?Ah, your mind dey waka, abi? Sometimes e dey go places. Wetin dey worry you—or make you happy? You fit share am like gist for here, no wahala. Life dey like that, sometimes e sweet, sometimes e be like jollof without seasoning. Wetin be the latest for your side?",
+    "fingerprint": "d621f1ee0686eb1066c19ca06954dcb2c60a35fc"
+  },
+  {
+    "id": "msg_1771609324594_p9in0du",
+    "ts": "2026-02-20T17:42:04.594Z",
+    "role": "user",
+    "agent": "",
+    "content": "What did I say was my favorite",
+    "fingerprint": "9c575e4563432754c3878698fd63f646dc893a0a"
+  },
+  {
+    "id": "msg_1771609326970_mhuzshm",
+    "ts": "2026-02-20T17:42:06.970Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "You mention say fish na your favorite dish. That fresh fish stew with correct palm oil—e dey make taste buds dance. You sabi enjoy!You mention say fish na your favorite dish. That fresh fish stew with correct palm oil—e dey make taste buds dance. You sabi enjoy!",
+    "fingerprint": "bf7688b4f71cdf72d5fd0112219ba6c42a0140ba"
+  },
+  {
+    "id": "msg_1771609459594_byo7tkc",
+    "ts": "2026-02-20T17:44:19.594Z",
+    "role": "user",
+    "agent": "",
+    "content": "Furniture for today's",
+    "fingerprint": "771fbee79fe11a0c70bb78f29d7fe1f8fa0087a1"
+  },
+  {
+    "id": "msg_1771609465216_yy5yqhq",
+    "ts": "2026-02-20T17:44:25.216Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, you dey talk furniture matter. For today, you fit look for something wey go fit your space. You know, those designs wey dey blend African style with modern vibe. \n\nYou sabi those wooden chairs, well-crafted with that local touch? Dem dey add warmth to any area. Or maybe na sofa you dey find? Go for something simple, but comfy. No too much wahala, just the right feel.\n\nIf you dey consider table, think of something versatile. You fit use am for dining or paddy party play. \n\nRemember, make sure e fit your room and your style. You want make the place dey jolly as you dey waka inside. Wetin be the main thing you dey look for?Ah, you dey talk furniture matter. For today, you fit look for something wey go fit your space. You know, those designs wey dey blend African style with modern vibe. \n\nYou sabi those wooden chairs, well-crafted with that local touch? Dem dey add warmth to any area. Or maybe na sofa you dey find? Go for something simple, but comfy. No too much wahala, just the right feel.\n\nIf you dey consider table, think of something versatile. You fit use am for dining or paddy party play. \n\nRemember, make sure e fit your room and your style. You want make the place dey jolly as you dey waka inside. Wetin be the main thing you dey look for?",
+    "fingerprint": "636d1f910543d1645e74552101482a8b154899c0"
+  },
+  {
+    "id": "msg_1771609644949_69daq9n",
+    "ts": "2026-02-20T17:47:24.949Z",
+    "role": "user",
+    "agent": "",
+    "content": "Like a real back and forth",
+    "fingerprint": "8e7e6b618d7a09876185f2cd9f5a6d0345d1a592"
+  },
+  {
+    "id": "msg_1771609647253_35uacuq",
+    "ts": "2026-02-20T17:47:27.253Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala, my guy. You wan gist with real Warri flair, abi? We go make am like two padi dem dey enjoy beta talk. Wetin dey on your mind today? Talk make I hear.No wahala, my guy. You wan gist with real Warri flair, abi? We go make am like two padi dem dey enjoy beta talk. Wetin dey on your mind today? Talk make I hear.",
+    "fingerprint": "6b7146e2724f37b0f32e19e676d8381b1ad89c07"
+  },
+  {
+    "id": "msg_1771609663444_m1do1a0",
+    "ts": "2026-02-20T17:47:43.444Z",
+    "role": "user",
+    "agent": "",
+    "content": "Analytics ded",
+    "fingerprint": "04acc8358648e3f69318f9c0ac7ba5365886b88c"
+  },
+  {
+    "id": "msg_1771609668915_j96m8xm",
+    "ts": "2026-02-20T17:47:48.915Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, you dey look into analytics matter! Numbers and insights. Wetin dey on your mind about am? You dey try figure out how to use the data or you just dey explore? We fit break am down together, no wahala.Ah, you dey look into analytics matter! Numbers and insights. Wetin dey on your mind about am? You dey try figure out how to use the data or you just dey explore? We fit break am down together, no wahala.",
+    "fingerprint": "5118c4722f080ae9f9fe611e7dbcded970736f50"
+  },
+  {
+    "id": "msg_1771618521312_vdtrswe",
+    "ts": "2026-02-20T20:15:21.312Z",
+    "role": "user",
+    "agent": "",
+    "content": "What",
+    "fingerprint": "cc10087e40c28bebd6f9138a03e6e3634d3f29fa"
+  },
+  {
+    "id": "msg_1771618523078_grr2tf6",
+    "ts": "2026-02-20T20:15:23.078Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Wetin dey your mind, my guy? You dey plan something or you just wan catch cruise? Tell me make we run the gist.Wetin dey your mind, my guy? You dey plan something or you just wan catch cruise? Tell me make we run the gist.",
+    "fingerprint": "4be70f72263d3a5cf209403c62b1a3bc5f116b2c"
+  },
+  {
+    "id": "msg_1771618547438_adung1g",
+    "ts": "2026-02-20T20:15:47.438Z",
+    "role": "user",
+    "agent": "",
+    "content": "Was my favorite dish",
+    "fingerprint": "02c4b86124e3a538f1cc0824687ae8aedb29111e"
+  },
+  {
+    "id": "msg_1771618548914_g5ia9l1",
+    "ts": "2026-02-20T20:15:48.914Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Your favorite dish na fresh fish stew with correct palm oil. You sabi enjoy am well well!Your favorite dish na fresh fish stew with correct palm oil. You sabi enjoy am well well!",
+    "fingerprint": "1f0e4cff00f298b5563a6b88147deb9a23a6d852"
+  },
+  {
+    "id": "msg_1771618594355_qam3sl8",
+    "ts": "2026-02-20T20:16:34.355Z",
+    "role": "user",
+    "agent": "",
+    "content": "What about the weather for tomorrow",
+    "fingerprint": "084ffc3e4a70738427b9cccdd1a083182d309715"
+  },
+  {
+    "id": "msg_1771618596711_ox3pm5w",
+    "ts": "2026-02-20T20:16:36.711Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "For tomorrow, you go expect some rain, my guy. Clouds go gather, and breeze go cool. Good time to carry umbrella if you dey waka. You sabi how rainy season be for this our area. Keep your slippers handy for the puddles!For tomorrow, you go expect some rain, my guy. Clouds go gather, and breeze go cool. Good time to carry umbrella if you dey waka. You sabi how rainy season be for this our area. Keep your slippers handy for the puddles!",
+    "fingerprint": "c2aa065857dfc5b3200a66ba2fd7d342f0b78992"
+  },
+  {
+    "id": "msg_1771619108175_k3z0r6x",
+    "ts": "2026-02-20T20:25:08.175Z",
+    "role": "user",
+    "agent": "",
+    "content": "lock probe",
+    "fingerprint": "85582afd28548217496b0695fe2bc78083f80d15"
+  },
+  {
+    "id": "msg_1771619110920_nlx7h4t",
+    "ts": "2026-02-20T20:25:10.920Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, you dey mention \"lock probe.\" Wetin you wan talk about? Abi na some secret gist or you get specific wahala wey you wan solve? Make we reason am together.",
+    "fingerprint": "b3f7aa3a09d79875d501853808775b2a14c634a7"
+  },
+  {
+    "id": "msg_1771619233802_iih5ca7",
+    "ts": "2026-02-20T20:27:13.802Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hold lock with a long response about weather and sports in detail for many sentences.",
+    "fingerprint": "9397826236eadbcf91cba2687a496f93a61a9329"
+  },
+  {
+    "id": "msg_1771619242761_fv8s9pj",
+    "ts": "2026-02-20T20:27:22.761Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Omo, make I yarn you for this weather and sports matter. Tomorrow for Warri, you go see how rain fit show itself like party guest. Clouds go gather like say dem get meeting, and breeze go soft soft dey touch body. Rain fit drop like say e no get work, so better hold umbrella and dress well for am.\n\nNow, make we sidon look sports. Football dey hot this period, and everybody dey follow Premier League like movie. Man-U and Chelsea dey try hold their ground, but Arsenal dey eye top spot like hawk. Local scene no dey slack too; Naija dey try build up for next big tournament. E good to see our boys dey shine their shine.\n\nBasketball sef dey bubble, NBA dey give us drama. People dey root for Lakers and Warriors, but dem underdog teams fit surprise us. Na who go fit carry cup? Na big question be that. \n\nAs for other sports, track and field athletes dey warm up, eye dey on Olympics come next season. E dey exciting, no be small. Sports and weather dey mix like jollof and fried plantain—both dey give us gist and joy. How you see am?",
+    "fingerprint": "e00bed8eace6315a57383e6659eab305f092dace"
+  },
+  {
+    "id": "msg_1771626886945_g4by1tn",
+    "ts": "2026-02-20T22:34:46.946Z",
+    "role": "user",
+    "agent": "",
+    "content": "How are you doing",
+    "fingerprint": "5501b143317b0da532ab90e33252b6bbf1624f70"
+  },
+  {
+    "id": "msg_1771626891564_u9avr0p",
+    "ts": "2026-02-20T22:34:51.564Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey kampe, my guy! How you dey? Wetin dey for your side today?I dey kampe, my guy! How you dey? Wetin dey for your side today?",
+    "fingerprint": "025639f4e848047bc9469c61c6fd2f4d77399eae"
+  },
+  {
+    "id": "msg_1771626932408_3qsd67r",
+    "ts": "2026-02-20T22:35:32.408Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hellooo",
+    "fingerprint": "8fc8626586df5b7293f17bce7923df2e705f223b"
+  },
+  {
+    "id": "msg_1771626934644_9qhnff3",
+    "ts": "2026-02-20T22:35:34.644Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Hey, my guy! How you dey? Wetin dey happen with you today?Hey, my guy! How you dey? Wetin dey happen with you today?",
+    "fingerprint": "4b3975d85f8fd722766b954bcb68c6f2f6472513"
+  },
+  {
+    "id": "msg_1771626973218_qj74f0o",
+    "ts": "2026-02-20T22:36:13.218Z",
+    "role": "user",
+    "agent": "",
+    "content": "What is  the weather saying",
+    "fingerprint": "f9ef4d9f047132d15e0b80b5efc38d20c227d462"
+  },
+  {
+    "id": "msg_1771626975044_4k1pd2d",
+    "ts": "2026-02-20T22:36:15.044Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "For tomorrow, rain fit show face. Clouds go gather, breeze go cool small. Better carry umbrella if you dey waka. Stay dry, my guy!For tomorrow, rain fit show face. Clouds go gather, breeze go cool small. Better carry umbrella if you dey waka. Stay dry, my guy!",
+    "fingerprint": "e50d239c8794057ebcf3cecccde045c655c16084"
+  },
+  {
+    "id": "msg_1771626997354_8alk006",
+    "ts": "2026-02-20T22:36:37.354Z",
+    "role": "user",
+    "agent": "",
+    "content": "Nothing dey hapun",
+    "fingerprint": "090e892bdd180b68d5e1db82df7e8b594f28b2d6"
+  },
+  {
+    "id": "msg_1771626998978_hj0kuqs",
+    "ts": "2026-02-20T22:36:38.978Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala, my guy. Sometimes, na those quiet moments people dey enjoy pass. You fit use am plan wetin dey come next. You sabi any gist or anything you wan plan?No wahala, my guy. Sometimes, na those quiet moments people dey enjoy pass. You fit use am plan wetin dey come next. You sabi any gist or anything you wan plan?",
+    "fingerprint": "feb850656211ddcba73546a21b75baaa140f84df"
+  },
+  {
+    "id": "msg_1771627038723_k2wvgjd",
+    "ts": "2026-02-20T22:37:18.723Z",
+    "role": "user",
+    "agent": "",
+    "content": "You sabi jellof rice?",
+    "fingerprint": "4be356a42ebe5e9b3005c152203861650d8b0426"
+  },
+  {
+    "id": "msg_1771627040605_jyqn3op",
+    "ts": "2026-02-20T22:37:20.606Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, jollof rice! Na real classic, my guy. That orange rice wey dey make party sweet. The aroma alone fit wake person from sleep. You like am spicy or just normal?Ah, jollof rice! Na real classic, my guy. That orange rice wey dey make party sweet. The aroma alone fit wake person from sleep. You like am spicy or just normal?",
+    "fingerprint": "a70f98354d9f306f525cc65ea342f75b67a9d9f0"
+  },
+  {
+    "id": "msg_1771627081310_krpggh4",
+    "ts": "2026-02-20T22:38:01.310Z",
+    "role": "user",
+    "agent": "",
+    "content": "Which one you like pass?",
+    "fingerprint": "9215562ffac677d9223e450174bb42da2ade5d1d"
+  },
+  {
+    "id": "msg_1771627083312_puvk7z0",
+    "ts": "2026-02-20T22:38:03.312Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, for jollof rice, I dey root for the Nigerian style o! That smoky flavor wey dey come from firewood, e just get one kind taste wey dey unique. But, I go still give respect to Ghanaian jollof too. You dey prefer any particular one?Ah, for jollof rice, I dey root for the Nigerian style o! That smoky flavor wey dey come from firewood, e just get one kind taste wey dey unique. But, I go still give respect to Ghanaian jollof too. You dey prefer any particular one?",
+    "fingerprint": "231f761b8fb4c45773e99e4bb678d9609da8dd2a"
+  },
+  {
+    "id": "msg_1771627125095_h7odo8p",
+    "ts": "2026-02-20T22:38:45.095Z",
+    "role": "user",
+    "agent": "",
+    "content": "every rice is a rice",
+    "fingerprint": "75f3f702f87810d1d14ae67f2c850d285cb68f00"
+  },
+  {
+    "id": "msg_1771627128762_tz6aa25",
+    "ts": "2026-02-20T22:38:48.762Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "True talk! Rice na rice, but each one bring hin own flavor. Jollof dey bring party vibes, fried rice dey blend well with veggies, and coconut rice dey carry one sweet taste. Wetin be your favorite rice combo?True talk! Rice na rice, but each one bring hin own flavor. Jollof dey bring party vibes, fried rice dey blend well with veggies, and coconut rice dey carry one sweet taste. Wetin be your favorite rice combo?",
+    "fingerprint": "841a23b33b72773a1ee13889689e8ab9974af7d4"
+  },
+  {
+    "id": "msg_1771627192543_j59cjhf",
+    "ts": "2026-02-20T22:39:52.543Z",
+    "role": "user",
+    "agent": "",
+    "content": "You like coconut rice, you get rich taste, coconut rice na for only chief and big man dem LOL",
+    "fingerprint": "47ac6fd91dbd8c4c91246ef99823e32aafe6afa9"
+  },
+  {
+    "id": "msg_1771627194645_tdzllpv",
+    "ts": "2026-02-20T22:39:54.645Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, coconut rice dey carry its own class, true talk! The way coconut milk dey mix with rice, e dey create one rich flavor wey dey unique. But no be only big man dem fit enjoy am o! Everybody fit chop am, make body sweet. Na all man rice.Ah, coconut rice dey carry its own class, true talk! The way coconut milk dey mix with rice, e dey create one rich flavor wey dey unique. But no be only big man dem fit enjoy am o! Everybody fit chop am, make body sweet. Na all man rice.",
+    "fingerprint": "b279aa466352eb92701dfd9b19c618fa3e6830d1"
+  },
+  {
+    "id": "msg_1771627267400_eewl5b1",
+    "ts": "2026-02-20T22:41:07.400Z",
+    "role": "user",
+    "agent": "",
+    "content": "which kian musik u like?",
+    "fingerprint": "30af5090d7c53f9a145a522c471d3f9766467def"
+  },
+  {
+    "id": "msg_1771627269711_232xoxx",
+    "ts": "2026-02-20T22:41:09.711Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey feel that Afrobeat vibe well well! The beat dey carry leg comot for ground. From Fela to Burna Boy, the rhythm just dey sweet. But sometimes, na highlife or some good old reggae fit set the mood right. You nko, which kin music dey make you groove?I dey feel that Afrobeat vibe well well! The beat dey carry leg comot for ground. From Fela to Burna Boy, the rhythm just dey sweet. But sometimes, na highlife or some good old reggae fit set the mood right. You nko, which kin music dey make you groove?",
+    "fingerprint": "c4d744846fd812641012cb1326da4b0bafefd92b"
+  },
+  {
+    "id": "msg_1771627628898_tdb3fw8",
+    "ts": "2026-02-20T22:47:08.898Z",
+    "role": "user",
+    "agent": "",
+    "content": "What's the name of my favourite dish?",
+    "fingerprint": "227f7dd3ee1e2642653c4ee52b5ac351f5fd3cdb"
+  },
+  {
+    "id": "msg_1771627629665_44cmefi",
+    "ts": "2026-02-20T22:47:09.665Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "You never mention am yet, but I go guess na jollof rice you dey enjoy. Abi I dey near?You never mention am yet, but I go guess na jollof rice you dey enjoy. Abi I dey near?",
+    "fingerprint": "f1f227063ca34e82ee3534f40240ecfe6e58ef12"
+  },
+  {
+    "id": "msg_1771627644462_ixd3fdu",
+    "ts": "2026-02-20T22:47:24.462Z",
+    "role": "user",
+    "agent": "",
+    "content": "You are absolutely right",
+    "fingerprint": "5d00c9274a0acf181882a11e957b93444d2d936e"
+  },
+  {
+    "id": "msg_1771627645701_dcijxqe",
+    "ts": "2026-02-20T22:47:25.701Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey happy say my guess correct! Na jollof rice, abi? E dey sweet well well. Make I know if you get any other fave dish. I dey happy say my guess correct! Na jollof rice, abi? E dey sweet well well. Make I know if you get any other fave dish.",
+    "fingerprint": "8dbfab9676ae2634a62a66a2fe472f108c8646ec"
+  },
+  {
+    "id": "msg_1771627673114_dw9ksre",
+    "ts": "2026-02-20T22:47:53.114Z",
+    "role": "user",
+    "agent": "",
+    "content": "Jello fries and fish na d highest combo",
+    "fingerprint": "7afb2a28f57a9895d2b6cc7c3ebf71d7e9c005e6"
+  },
+  {
+    "id": "msg_1771627674945_xwurinb",
+    "ts": "2026-02-20T22:47:54.945Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "You sabi! Jollof rice and fish na one combo wey fit make party scatter. The rice dey spicy, dey sweet, and when you add that well-seasoned fish, e just complete am. Na serious enjoyment for the mouth, I tell you. How you like your fish: grilled or fried?You sabi! Jollof rice and fish na one combo wey fit make party scatter. The rice dey spicy, dey sweet, and when you add that well-seasoned fish, e just complete am. Na serious enjoyment for the mouth, I tell you. How you like your fish: grilled or fried?",
+    "fingerprint": "efb35f63ac742b317ee484f8c6153f42be6ab5dc"
+  },
+  {
+    "id": "msg_1771627734193_q1mu77k",
+    "ts": "2026-02-20T22:48:54.193Z",
+    "role": "user",
+    "agent": "",
+    "content": "I for like make dem fry am ooh, make e for dry well well",
+    "fingerprint": "1d99b46ae55ca4c6c0e1bd4248ee45cf5211eaea"
+  },
+  {
+    "id": "msg_1771627738230_5ob8q2o",
+    "ts": "2026-02-20T22:48:58.230Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, correct! When dem fry the fish well well, e dey add one kind crispy texture. That dry, golden finish dey sweet for mouth, and e dey blend well with jollof rice. E be like say you sabi your combo! You dey add any sauce or you like am just dry?Ah, correct! When dem fry the fish well well, e dey add one kind crispy texture. That dry, golden finish dey sweet for mouth, and e dey blend well with jollof rice. E be like say you sabi your combo! You dey add any sauce or you like am just dry?",
+    "fingerprint": "9dd22a176266863b41292c9644fb72277383fd8f"
+  },
+  {
+    "id": "msg_1771627791025_v97r7yp",
+    "ts": "2026-02-20T22:49:51.025Z",
+    "role": "user",
+    "agent": "",
+    "content": "Well that's my favorite this again?",
+    "fingerprint": "91cab175af4d1ecae1489a1f0ff1cbbe52d0c543"
+  },
+  {
+    "id": "msg_1771627792125_nnmb3yt",
+    "ts": "2026-02-20T22:49:52.125Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Na jollof rice and fried fish be your favorite combo. You dey enjoy am well well!Na jollof rice and fried fish be your favorite combo. You dey enjoy am well well!",
+    "fingerprint": "0b21435159c6b14afd992cefba166bd4a75e144e"
+  },
+  {
+    "id": "msg_1771893852915_mp6b6if",
+    "ts": "2026-02-24T00:44:12.915Z",
+    "role": "user",
+    "agent": "",
+    "content": "Hello what's up",
+    "fingerprint": "7ea8b7d05bb826771c7574fd892bab29f5e46f02"
+  },
+  {
+    "id": "msg_1771893855213_47qgy5e",
+    "ts": "2026-02-24T00:44:15.213Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey alright, my friend! How your side? Wetin dey happen today?I dey alright, my friend! How your side? Wetin dey happen today?",
+    "fingerprint": "748837b1198795653f6ea42302b87de7360d2c56"
+  },
+  {
+    "id": "msg_1771893875245_8z5rvid",
+    "ts": "2026-02-24T00:44:35.245Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me a knock knock joke",
+    "fingerprint": "c67f53be2f92e7ef42e5a2dde1d33cb4239ecdca"
+  },
+  {
+    "id": "msg_1771893877808_o5a8yrf",
+    "ts": "2026-02-24T00:44:37.808Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Knock knock!\n\nWho's there?\n\nCash.\n\nCash who?\n\nNo thanks, I prefer peanuts!Knock knock!\n\nWho's there?\n\nCash.\n\nCash who?\n\nNo thanks, I prefer peanuts!",
+    "fingerprint": "b0bd0513cac0e31d994da519e2214dbfc1774689"
+  },
+  {
+    "id": "msg_1771893975944_daf39zj",
+    "ts": "2026-02-24T00:46:15.944Z",
+    "role": "user",
+    "agent": "",
+    "content": "All right Tell me a joke about the sun the moon",
+    "fingerprint": "ec9d1193cab51010e963cf8d4464a09488b6480c"
+  },
+  {
+    "id": "msg_1771893978168_gy9ud4o",
+    "ts": "2026-02-24T00:46:18.168Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Why did the sun bring a notebook to the sky?\n\nBecause it wanted to take some “light” notes from the moon!Why did the sun bring a notebook to the sky?\n\nBecause it wanted to take some “light” notes from the moon!",
+    "fingerprint": "b59201a1e7d5f3e120a5647626a57932bae180d3"
+  },
+  {
+    "id": "msg_1771893991482_ihjy6sj",
+    "ts": "2026-02-24T00:46:31.482Z",
+    "role": "user",
+    "agent": "",
+    "content": "Can you laugh",
+    "fingerprint": "471fa6d7ab7f3c7913a2e7210e7eb5a9fe0eb499"
+  },
+  {
+    "id": "msg_1771893993560_lq61zrq",
+    "ts": "2026-02-24T00:46:33.560Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I no fit laugh like human, but I dey enjoy the vibes and can share in the joy! Tell me another joke or gist, make we laugh together!I no fit laugh like human, but I dey enjoy the vibes and can share in the joy! Tell me another joke or gist, make we laugh together!",
+    "fingerprint": "0e4037b8c85c2877be748efa691be9b41b0a5b05"
+  },
+  {
+    "id": "msg_1771894273541_g0gfaxs",
+    "ts": "2026-02-24T00:51:13.541Z",
+    "role": "user",
+    "agent": "",
+    "content": "begin",
+    "fingerprint": "9722f9c1157f8760b6706b0187d6018f19fa1a91"
+  },
+  {
+    "id": "msg_1771894278349_irf3rkt",
+    "ts": "2026-02-24T00:51:18.349Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here for you, my friend! Wetin you wan yarn about today?I dey here for you, my friend! Wetin you wan yarn about today?",
+    "fingerprint": "3162a49a6519c68d6b30841fc61c8eeb1ab110d8"
+  },
+  {
+    "id": "msg_1771894310491_mdskqhi",
+    "ts": "2026-02-24T00:51:50.491Z",
+    "role": "user",
+    "agent": "",
+    "content": "What is your name",
+    "fingerprint": "3be342fe272e91197e2902adcbc542e1ba039d24"
+  },
+  {
+    "id": "msg_1771894311264_6toa552",
+    "ts": "2026-02-24T00:51:51.264Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "My name na Manchi, your personal AI companion. How your day dey go?My name na Manchi, your personal AI companion. How your day dey go?",
+    "fingerprint": "a0407928820511f1dea0a7311afde285dcf5a368"
+  },
+  {
+    "id": "msg_1771894321916_1gl4eak",
+    "ts": "2026-02-24T00:52:01.916Z",
+    "role": "user",
+    "agent": "",
+    "content": "Go",
+    "fingerprint": "6ab58670f8087801d4f942882189ffef31f26d69"
+  },
+  {
+    "id": "msg_1771894322896_ap1cigw",
+    "ts": "2026-02-24T00:52:02.896Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala! I go maintain that warm and natural flow. How I fit help you today? You get anything specific wey you wan discuss or gist about?No wahala! I go maintain that warm and natural flow. How I fit help you today? You get anything specific wey you wan discuss or gist about?",
+    "fingerprint": "0fe1469260c214e7e9df42f302e67dfc0007b114"
+  },
+  {
+    "id": "msg_1771894340185_p01t80h",
+    "ts": "2026-02-24T00:52:20.185Z",
+    "role": "user",
+    "agent": "",
+    "content": "Nothing comes to mind",
+    "fingerprint": "7f09aa2b1d766ef3150d6f57342b50ad2d6d0543"
+  },
+  {
+    "id": "msg_1771894343252_88wa4z0",
+    "ts": "2026-02-24T00:52:23.252Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "No wahala, we fit just gist small. Maybe talk about food, music, or anything interesting. Make I know if anything pop inside your head. How your week been so far?No wahala, we fit just gist small. Maybe talk about food, music, or anything interesting. Make I know if anything pop inside your head. How your week been so far?",
+    "fingerprint": "2fa66023d4b85baa122539d5523a27cd8f1fd9e8"
+  },
+  {
+    "id": "msg_1771894360624_rpbua9p",
+    "ts": "2026-02-24T00:52:40.624Z",
+    "role": "user",
+    "agent": "",
+    "content": "We've been doing",
+    "fingerprint": "7d8291a74c6d778ab0206190df31a4a36c0e2f91"
+  },
+  {
+    "id": "msg_1771894361785_hdr66q5",
+    "ts": "2026-02-24T00:52:41.785Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, wey-tin dey sup? You wan continue from where we stop or try something new? If you remember any gist or question, make you yarn.Alright, wey-tin dey sup? You wan continue from where we stop or try something new? If you remember any gist or question, make you yarn.",
+    "fingerprint": "08e92773470e439ea4f1bed26deceb9289f19f3d"
+  },
+  {
+    "id": "msg_1771894384928_rczdvh9",
+    "ts": "2026-02-24T00:53:04.928Z",
+    "role": "user",
+    "agent": "",
+    "content": "Say hello",
+    "fingerprint": "5257018190d6c733aaf1dcff7e0980358fa91c5b"
+  },
+  {
+    "id": "msg_1771894385556_2nvloji",
+    "ts": "2026-02-24T00:53:05.556Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Hello, my friend! How you dey? Wetin dey happen for your side today?Hello, my friend! How you dey? Wetin dey happen for your side today?",
+    "fingerprint": "98b6f398387bb953a424ff046fd27a1c3bd7a88a"
+  },
+  {
+    "id": "msg_1771894397995_48n5hf6",
+    "ts": "2026-02-24T00:53:17.995Z",
+    "role": "user",
+    "agent": "",
+    "content": "Electricity of voice to make hasta though",
+    "fingerprint": "0f74824126ee7286ce990845b997fcaf1ff2aa52"
+  },
+  {
+    "id": "msg_1771894401653_up6f8kv",
+    "ts": "2026-02-24T00:53:21.653Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here for you! How about we talk about something interesting, like our favorite Nigerian dishes or maybe some classic music vibes? Anything wey go light up the conversation.I dey here for you! How about we talk about something interesting, like our favorite Nigerian dishes or maybe some classic music vibes? Anything wey go light up the conversation.",
+    "fingerprint": "ee06bdf638cec0c58c0675a257db441d0375b14c"
+  },
+  {
+    "id": "msg_1771895824565_wlfx2xr",
+    "ts": "2026-02-24T01:17:04.565Z",
+    "role": "user",
+    "agent": "",
+    "content": "DoD continuity probe: my favorite dish is fish.",
+    "fingerprint": "98220b424276e2716df895d2074d5a18ecf0e0f6"
+  },
+  {
+    "id": "msg_1771895826514_4g7d02p",
+    "ts": "2026-02-24T01:17:06.514Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Ah, fish! Na correct choice you get there. You dey prefer am grilled, pepper soup, or na fried style you dey go for? You know say, for Warri side, any fish matter na serious matter! Wetin be your best way to chop am?",
+    "fingerprint": "72d61a01b4f69f44751eeeaeae3424cf18dda42b"
+  },
+  {
+    "id": "msg_1771895826542_btuw0uh",
+    "ts": "2026-02-24T01:17:06.542Z",
+    "role": "user",
+    "agent": "",
+    "content": "DoD continuity probe recall: what did I say my favorite dish is?",
+    "fingerprint": "56d57d61eed77ffb7776af757e2ea6f29872fe45"
+  },
+  {
+    "id": "msg_1771895828962_9pp165p",
+    "ts": "2026-02-24T01:17:08.962Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "You say fish na your favorite dish. Correct choice! Grill am, fry am, or even pepper soup style, fish dey always deliver. Wetin be your favorite way to enjoy am?",
+    "fingerprint": "464f49f731d721faa9ff5781696674dc925ec56c"
+  },
+  {
+    "id": "msg_1771895828982_nrhd87s",
+    "ts": "2026-02-24T01:17:08.982Z",
+    "role": "user",
+    "agent": "",
+    "content": "DoD lock probe blocker: hold a long response with details about weather, travel, sports, culture, and food in multiple paragraphs.",
+    "fingerprint": "59fe76f856889ef68fb9c7bfa31236f64ab43dfc"
+  },
+  {
+    "id": "msg_1771895834779_62spksw",
+    "ts": "2026-02-24T01:17:14.779Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Weather for Warri dey switch up like Nigerian movie plot. Rain go fall, sun go shine, e fit change anytime. Better to carry umbrella just in case, you know how e be.\n\nTraveling for Naija, e no easy but na adventure. From the busy streets of Lagos to the calm waves for Calabar, every place dey unique. You fit enter bus dey waka or even catch flight when you wan fast waka. Just hold your mind for the traffic hustle and local vibes.\n\nSports na big deal. Football dey run things. Everybody dey argue who be the best team. But for Warri, we dey love our local clubs like Warri Wolves. Na die-hard fans here o! Anywhere you go, dem go dey analyze match like say dem be coach.\n\nCulture dey bam! From the rich Urhobo and Itsekiri traditions to the vibrant festivals, you fit see culture dey shine everywhere. Music and dance na heavy part. If you sabi yarn, you fit share story for moonlight gist.\n\nNow, about food. We sabi cook for this side. From pepper soup wey dey reset brain to jollof rice wey nobody fit resist, food na serious matter. And you know say fish dey enter everything here. Correct delicacy!\n\nHope this one give you better picture of life around here. If you dey curious, make we delve deeper into any part.",
+    "fingerprint": "239d0934b50242440ae3f02d508fc2895652ed3e"
+  },
+  {
+    "id": "msg_1771895850019_ajq2yzf",
+    "ts": "2026-02-24T01:17:30.019Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "You get correct taste o! Fish na solid choice. Whether na grilled or pepper soup, e dey always hit. Warri style, we sabi enjoy fish well well. How you dey like am best? With yam or just by itself?",
+    "fingerprint": "436c0d0a8fe13ef0b1293c6f58f6fbabb5226201"
+  },
+  {
+    "id": "msg_1771895852100_49rtbz2",
+    "ts": "2026-02-24T01:17:32.100Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "You say fish na your favorite dish. You sabi correct choice! Grilled, fried, or pepper soup, fish dey always sweet. You dey enjoy am with some chilled palm wine or just normal soft drink?",
+    "fingerprint": "844a8b35ab72f03b9c53d30d8675050751d85ad7"
+  },
+  {
+    "id": "msg_1771895858504_q1wnjp0",
+    "ts": "2026-02-24T01:17:38.504Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Weather for Warri dey change like magic. One minute rain, the next sun go shine like disco light. Always carry your umbrella, e be like your trusty sidekick.\n\nTravel for this area sweet well well. You fit waka go Delta and enjoy the river breeze. Boat ride dey relaxing, make you feel like you dey float on top the world.\n\nSports, na football dey reign here. People go gather watch match, argue about who go score the winning goal. E dey loud, but e dey sweet.\n\nCulture dey rich. We get our festivals, dance, and music. E clear our people sabi enjoy life and celebrate tradition. E dey colorful and lively.\n\nFood na correct enjoyment. Fish, like you love am, dey come in styles: pepper soup, grilled, stew. E go touch your soul and make your taste buds dance. You fit try am with banga soup or starch, you know say na top combo.",
+    "fingerprint": "0207f7e90fc62d711ae7cc3f1371d398b82276b3"
+  },
+  {
+    "id": "msg_1771897076900_mj50lyh",
+    "ts": "2026-02-24T01:37:56.900Z",
+    "role": "user",
+    "agent": "",
+    "content": "Can you",
+    "fingerprint": "8ae6e39d3ac4fab5eec19f4f0d1579876b8f4572"
+  },
+  {
+    "id": "msg_1771897077881_803ofdt",
+    "ts": "2026-02-24T01:37:57.881Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Sure thing! How can I assist you today?Sure thing! How can I assist you today?",
+    "fingerprint": "c0535cf68076c190d31f568f1e1872fb22f6f950"
+  },
+  {
+    "id": "msg_1771897086307_90rlafl",
+    "ts": "2026-02-24T01:38:06.307Z",
+    "role": "user",
+    "agent": "",
+    "content": "with the",
+    "fingerprint": "f5d4e4b67636777787b0cb38a275f99e6ae1c2c8"
+  },
+  {
+    "id": "msg_1771897087212_il013fa",
+    "ts": "2026-02-24T01:38:07.212Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I dey here for you! Wetin you dey think about today?I dey here for you! Wetin you dey think about today?",
+    "fingerprint": "07e4ce1d14caa84d24b5d08b760c5f485dbf7eaf"
+  },
+  {
+    "id": "msg_1771897098480_tbhn208",
+    "ts": "2026-02-24T01:38:18.480Z",
+    "role": "user",
+    "agent": "",
+    "content": "Nigeria",
+    "fingerprint": "a89e1d79cbff74642e953d6ae1d85646f52c7814"
+  },
+  {
+    "id": "msg_1771897101853_j4x9zq7",
+    "ts": "2026-02-24T01:38:21.853Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Nigeria dey full of rich culture and diverse people. Wetin about Nigeria you dey curious about today?Nigeria dey full of rich culture and diverse people. Wetin about Nigeria you dey curious about today?",
+    "fingerprint": "14a387a87bb8caf2877b7f1c45acf32643ceb0b9"
+  },
+  {
+    "id": "msg_1771897114299_4fc2k6d",
+    "ts": "2026-02-24T01:38:34.299Z",
+    "role": "user",
+    "agent": "",
+    "content": "It's",
+    "fingerprint": "e803365ce5e0b35ccedc03453f94f829975bc4b4"
+  },
+  {
+    "id": "msg_1771897123336_s903njo",
+    "ts": "2026-02-24T01:38:43.336Z",
+    "role": "user",
+    "agent": "",
+    "content": "Tell me more about the food in Nigeria",
+    "fingerprint": "d24871ed8a478b0476f483466b863ac4b79a8ac9"
+  },
+  {
+    "id": "msg_1771897125329_hnfp30l",
+    "ts": "2026-02-24T01:38:45.329Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Nigeria’s food is vibrant and diverse, just like its culture. Each region has its own specialties. In the south, you'll find spicy Jollof rice, which is a party favorite. In the east, they enjoy dishes like Egusi soup, rich with melon seeds and vegetables. In the north, Suya, a spicy meat skewer, is quite popular. The west offers dishes like Amala with Gbegiri and Ewedu soup. Which region’s cuisine interests you more?Nigeria’s food is vibrant and diverse, just like its culture. Each region has its own specialties. In the south, you'll find spicy Jollof rice, which is a party favorite. In the east, they enjoy dishes like Egusi soup, rich with melon seeds and vegetables. In the north, Suya, a spicy meat skewer, is quite popular. The west offers dishes like Amala with Gbegiri and Ewedu soup. Which region’s cuisine interests you more?",
+    "fingerprint": "29974f86ffdb3282b05bc9284446d0e189f31a89"
+  },
+  {
+    "id": "msg_1771897170160_l3fuits",
+    "ts": "2026-02-24T01:39:30.160Z",
+    "role": "user",
+    "agent": "",
+    "content": "I am thinking about another",
+    "fingerprint": "2d585f4879e6084d07b825207e799786227e3234"
+  },
+  {
+    "id": "msg_1771897170939_r3lqi1x",
+    "ts": "2026-02-24T01:39:30.939Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, what's on your mind?Alright, what's on your mind?",
+    "fingerprint": "829a0dae2ed606745d180b385fc5ac92f83ca33e"
+  },
+  {
+    "id": "msg_1771897183454_q4b2v08",
+    "ts": "2026-02-24T01:39:43.454Z",
+    "role": "user",
+    "agent": "",
+    "content": "In Nigeria",
+    "fingerprint": "75ac6beac19354f3dfa651dd413f319f036cefc0"
+  },
+  {
+    "id": "msg_1771897184829_7sory8u",
+    "ts": "2026-02-24T01:39:44.829Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Nigeria is a tapestry of diverse cultures. Each region has its own unique traditions and flavors. Are you interested in learning about any specific aspect, like culture, music, or travel?Nigeria is a tapestry of diverse cultures. Each region has its own unique traditions and flavors. Are you interested in learning about any specific aspect, like culture, music, or travel?",
+    "fingerprint": "ffb8b9c6c2e08406892fd1900c0d36b387e4abb7"
+  },
+  {
+    "id": "msg_1771897208255_7nuj5qh",
+    "ts": "2026-02-24T01:40:08.255Z",
+    "role": "user",
+    "agent": "",
+    "content": "I'm interested in learning about the food from the south south part of Nigeria",
+    "fingerprint": "7dea5c9419c1eaa5a250c862d655ff70e5ce4de3"
+  },
+  {
+    "id": "msg_1771897210660_z7eizuy",
+    "ts": "2026-02-24T01:40:10.660Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "The South-South region of Nigeria is known for its rich and diverse culinary heritage. \n\nPopular dishes include Banga soup, made with palm nut extract, and Afang soup, rich with leafy vegetables. Fresh seafood, especially fish, features prominently due to the coastal location. \n\nAnother favorite is Starch and Owo soup, typically enjoyed in Delta state. Do you have any specific dish you’d like to know more about?The South-South region of Nigeria is known for its rich and diverse culinary heritage. \n\nPopular dishes include Banga soup, made with palm nut extract, and Afang soup, rich with leafy vegetables. Fresh seafood, especially fish, features prominently due to the coastal location. \n\nAnother favorite is Starch and Owo soup, typically enjoyed in Delta state. Do you have any specific dish you’d like to know more about?",
+    "fingerprint": "df28645492ca48fb273a80a18f8ba68bc63f0dfd"
+  },
+  {
+    "id": "msg_1771897253148_vnpte43",
+    "ts": "2026-02-24T01:40:53.148Z",
+    "role": "user",
+    "agent": "",
+    "content": "Yeah the OSU Tell me the ingredients to prepare it",
+    "fingerprint": "a469724998ced3b74511fc8a75622d65f29c117c"
+  },
+  {
+    "id": "msg_1771897256655_j8we5a3",
+    "ts": "2026-02-24T01:40:56.655Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Osu is a term typically not associated with a specific dish but rather a cultural practice or societal system among the Igbo people. If you meant a specific dish or ingredient, could you clarify? If there's something else you're curious about, let me know.Osu is a term typically not associated with a specific dish but rather a cultural practice or societal system among the Igbo people. If you meant a specific dish or ingredient, could you clarify? If there's something else you're curious about, let me know.",
+    "fingerprint": "dbc081f1eed78f56ea8a81da1a75bb7bcae17db1"
+  },
+  {
+    "id": "msg_1771897278955_k6s7qnn",
+    "ts": "2026-02-24T01:41:18.955Z",
+    "role": "user",
+    "agent": "",
+    "content": "Oh",
+    "fingerprint": "25b49f9ac2275303ff886ff8c1469455592335e0"
+  },
+  {
+    "id": "msg_1771897279445_sja6ywp",
+    "ts": "2026-02-24T01:41:19.445Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Got it! How can I assist you today?Got it! How can I assist you today?",
+    "fingerprint": "5423c03b82b21251b96d2f185741e6b55ef1181e"
+  },
+  {
+    "id": "msg_1771897298397_d4vxg8j",
+    "ts": "2026-02-24T01:41:38.397Z",
+    "role": "user",
+    "agent": "",
+    "content": "Explain",
+    "fingerprint": "a1c63e5bf017f8246e9d0654707464d7173f522b"
+  },
+  {
+    "id": "msg_1771897299527_fv2dbnp",
+    "ts": "2026-02-24T01:41:39.527Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Got it! What would you like me to explain?Got it! What would you like me to explain?",
+    "fingerprint": "430c203b1ccab1dcfe9a9c51e2f3cf4d76315a32"
+  },
+  {
+    "id": "msg_1771898086368_ovkssjh",
+    "ts": "2026-02-24T01:54:46.368Z",
+    "role": "user",
+    "agent": "",
+    "content": "How are you doing what's happening",
+    "fingerprint": "737ffd38cfddc34f37c8d063910333be3154f107"
+  },
+  {
+    "id": "msg_1771898087943_00q5foi",
+    "ts": "2026-02-24T01:54:47.943Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I'm doing well, thank you. Just here to assist you. What's on your mind today?I'm doing well, thank you. Just here to assist you. What's on your mind today?",
+    "fingerprint": "2138b68b3c522cb3d86ca30e80bc0cc9d4fab1b8"
+  },
+  {
+    "id": "msg_1771898451848_rvn7xb8",
+    "ts": "2026-02-24T02:00:51.848Z",
+    "role": "user",
+    "agent": "",
+    "content": "Going to how are you",
+    "fingerprint": "43fe446723200e9243c68a93c70f875d51e699fd"
+  },
+  {
+    "id": "msg_1771898452771_wrlr2n4",
+    "ts": "2026-02-24T02:00:52.771Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "I'm here and ready to help. What would you like to discuss today?I'm here and ready to help. What would you like to discuss today?",
+    "fingerprint": "286f5e8aa863c12b24e8e66b12bcfc79ab727894"
+  },
+  {
+    "id": "msg_1771898463745_ovkwmc6",
+    "ts": "2026-02-24T02:01:03.745Z",
+    "role": "user",
+    "agent": "",
+    "content": "I like to talk about",
+    "fingerprint": "f19e44398074640e52b5a7728510ad898c2bf122"
+  },
+  {
+    "id": "msg_1771898464381_z36iybf",
+    "ts": "2026-02-24T02:01:04.381Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Sure, what would you like to talk about?Sure, what would you like to talk about?",
+    "fingerprint": "a85529b59c07ddc47f4b58e5ff76173352578bda"
+  },
+  {
+    "id": "msg_1771898471556_qi9dv0f",
+    "ts": "2026-02-24T02:01:11.556Z",
+    "role": "user",
+    "agent": "",
+    "content": "I like to talk about six",
+    "fingerprint": "875286f4d3c36fc43d9a9a90673555a802c41761"
+  },
+  {
+    "id": "msg_1771898475044_vssyivf",
+    "ts": "2026-02-24T02:01:15.044Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright. Are you referring to the number six, some specific context, or something else entirely?Alright. Are you referring to the number six, some specific context, or something else entirely?",
+    "fingerprint": "b15518610c6705fd5ee3a1353ea9c7ed871191b2"
+  },
+  {
+    "id": "msg_1771898488205_ayd22ea",
+    "ts": "2026-02-24T02:01:28.205Z",
+    "role": "user",
+    "agent": "",
+    "content": "Six six",
+    "fingerprint": "914ca0d7e330770512cdd8efe15cb1820f0ff10e"
+  },
+  {
+    "id": "msg_1771898489860_0upzftp",
+    "ts": "2026-02-24T02:01:29.860Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Alright, seems like the number six has significance here. What's your interest in it? Are you looking at it from a cultural, numerical, or another perspective?Alright, seems like the number six has significance here. What's your interest in it? Are you looking at it from a cultural, numerical, or another perspective?",
+    "fingerprint": "c0dbab2b366d9e1c9e2c39fdebcf0420d666d3df"
+  },
+  {
+    "id": "msg_1771898506947_efhwedi",
+    "ts": "2026-02-24T02:01:46.947Z",
+    "role": "user",
+    "agent": "",
+    "content": "Numerical and historical Roman numer",
+    "fingerprint": "c28fba231962ac37f74fd49e4282d71757398c0d"
+  },
+  {
+    "id": "msg_1771898508725_qz75eie",
+    "ts": "2026-02-24T02:01:48.725Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Roman numerals have a rich history. They originated in ancient Rome and were used throughout the Roman Empire. The numeral system is based on combinations of letters from the Latin alphabet: I, V, X, L, C, D, and M. Each letter represents a specific value. For example, VI represents six. Are you curious about how these numerals evolved or their applications today?Roman numerals have a rich history. They originated in ancient Rome and were used throughout the Roman Empire. The numeral system is based on combinations of letters from the Latin alphabet: I, V, X, L, C, D, and M. Each letter represents a specific value. For example, VI represents six. Are you curious about how these numerals evolved or their applications today?",
+    "fingerprint": "96b20e265bc36361e0b2fae493cd491121806a51"
+  },
+  {
+    "id": "msg_1771898545613_7mvre1c",
+    "ts": "2026-02-24T02:02:25.613Z",
+    "role": "user",
+    "agent": "",
+    "content": "How they evolve",
+    "fingerprint": "c095ff338c1d07c2efd01aa8ce9f3968a5be7cbe"
+  },
+  {
+    "id": "msg_1771898549057_m6wmst0",
+    "ts": "2026-02-24T02:02:29.057Z",
+    "role": "assistant",
+    "agent": "Coach",
+    "content": "Roman numerals evolved from the tally marks used by early Romans. Initially, they used vertical lines to represent numbers, which gradually transformed into more complex symbols over time. This system was developed to aid in trade and commerce. Over centuries, the numerals became more standardized, with specific symbols like \"V\" for 5 and \"X\" for 10. Do you want to explore how they were used in historical contexts?Roman numerals evolved from the tally marks used by early Romans. Initially, they used vertical lines to represent numbers, which gradually transformed into more complex symbols over time. This system was developed to aid in trade and commerce. Over centuries, the numerals became more standardized, with specific symbols like \"V\" for 5 and \"X\" for 10. Do you want to explore how they were used in historical contexts?",
+    "fingerprint": "a49ad57d372aa3f10d2f3ba9c2dd6141756ae098"
+  }
+]

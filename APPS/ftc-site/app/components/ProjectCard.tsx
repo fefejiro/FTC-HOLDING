@@ -6,6 +6,13 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({ project }: ProjectCardProps) {
+  const productHref =
+    project.slug === "peacepad"
+      ? "/peacepad"
+      : project.slug === "saywetin"
+        ? "/saywetin"
+        : "/projects";
+
   const statusLabel =
     project.status === "live"
       ? "Live"
@@ -27,6 +34,9 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           </li>
         ))}
       </ul>
+      <Link href={productHref} className="inline-link">
+        View product
+      </Link>
       <Link
         href={`/work/${project.slug}`}
         className="inline-link"

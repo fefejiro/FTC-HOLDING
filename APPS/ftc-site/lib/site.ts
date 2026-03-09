@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = "https://ftc.peacepad.ca";
+const DEFAULT_SITE_URL = "https://unalabs.cloud";
 const configuredSiteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
   process.env.UNALABS_SITE_URL ||

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "msg_1771542373165_q3joq2q",
+    "ts": "2026-02-19T23:06:13.165Z",
+    "role": "system",
+    "agent": "System",
+    "content": "Task status updated to kill: kill from dashboard",
+    "fingerprint": "cdfcf12ec63b704b9ec8e2d93eb2e27c323cd44b"
+  },
+  {
+    "id": "msg_1771543113268_dw63ndp",
+    "ts": "2026-02-19T23:18:33.268Z",
+    "role": "user",
+    "agent": "",
+    "content": "hi",
+    "fingerprint": "7762e8af567921faabc04ed575d2367b2a72039d"
+  },
+  {
+    "id": "msg_1771543115340_8mqkmya",
+    "ts": "2026-02-19T23:18:35.340Z",
+    "role": "assistant",
+    "agent": "Scout",
+    "content": "Hello! How can I assist you today?",
+    "fingerprint": "2cf84b6b0abb994d350e5d593e19fdf0f436717b"
+  },
+  {
+    "id": "msg_1771579352590_cd2pii7",
+    "ts": "2026-02-20T09:22:32.590Z",
+    "role": "user",
+    "agent": "",
+    "content": "test message with task selected 3",
+    "fingerprint": "f8ef7555045bf5bd98815ff556d5b3e27f7688eb"
+  },
+  {
+    "id": "msg_1771579353501_cjaqt8f",
+    "ts": "2026-02-20T09:22:33.501Z",
+    "role": "assistant",
+    "agent": "Scout",
+    "content": "I understand your request, but I will maintain a formal tone. Please specify the task or information you need assistance with.",
+    "fingerprint": "fb1e39668654104770d90c9ec6c3956dfeb215f1"
+  }
+]

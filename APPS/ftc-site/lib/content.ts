@@ -56,11 +56,11 @@ export interface NetworkingProfile {
 }
 
 export const siteNav = [
-  { label: "Home", href: "/" },
-  { label: "Studio", href: "/capabilities" },
   { label: "Work", href: "/work" },
   { label: "Products", href: "/products" },
-  { label: "About", href: "/about" }
+  { label: "Blog", href: "/blog" },
+  { label: "About", href: "/about" },
+  { label: "Connect", href: "/connect" }
 ] as const;
 
 export const networkingProfile: NetworkingProfile = {

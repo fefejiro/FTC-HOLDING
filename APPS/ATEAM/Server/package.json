@@ -1,0 +1,25 @@
+{
+  "name": "ateam",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:backend": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.js",
+    "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern='unit'",
+    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern='integration'",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:debug": "cross-env NODE_OPTIONS=--experimental-vm-modules node --inspect-brk ./node_modules/.bin/jest --runInBand"
+  },
+  "dependencies": {
+    "dotenv": "^17.0.0",
+    "express": "^5.0.0",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "jest": "^30.2.0"
+  }
+}

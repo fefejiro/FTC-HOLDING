@@ -9,6 +9,11 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
+  function isActivePath(href: string): boolean {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
@@ -30,24 +35,20 @@ export default function Header() {
           </Link>
           <div>
             <p className="brand">Una Labs</p>
-            <p className="brand-subtitle">Technology Studio</p>
+            <p className="brand-subtitle">Creative AI Studio</p>
           </div>
         </div>
 
         <nav className="primary" aria-label="Main navigation">
           {siteNav.map((link) => (
-            <Link key={link.href} href={link.href}>
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`nav-link ${isActivePath(link.href) ? "active" : ""}`}
+            >
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/work-with-ftc"
-            className="cta-btn"
-            data-analytics-event="start_project_click"
-            data-analytics-location="header_desktop"
-          >
-            Start a Project
-          </Link>
         </nav>
 
         <button
@@ -61,20 +62,14 @@ export default function Header() {
 
         <div className={`mobile-panel ${open ? 'open' : ''}`} role="dialog" aria-modal="true">
           {siteNav.map((link) => (
-            <Link key={link.href} href={link.href}>
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`nav-link ${isActivePath(link.href) ? "active" : ""}`}
+            >
               {link.label}
             </Link>
           ))}
-          <div style={{ marginTop: 12 }}>
-            <Link
-              href="/work-with-ftc"
-              className="cta-btn"
-              data-analytics-event="start_project_click"
-              data-analytics-location="header_mobile"
-            >
-              Start a Project
-            </Link>
-          </div>
         </div>
       </div>
     </header>
