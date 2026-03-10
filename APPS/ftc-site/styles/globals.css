@@ -226,6 +226,20 @@ nav.primary {
   color: var(--text);
   font-size: 0.96rem;
   padding: 8px 12px;
+  cursor: pointer;
+}
+
+.mobile-menu {
+  display: none;
+  position: relative;
+}
+
+.mobile-menu summary {
+  list-style: none;
+}
+
+.mobile-menu summary::-webkit-details-marker {
+  display: none;
 }
 
 .mobile-panel {
@@ -241,7 +255,7 @@ nav.primary {
   padding: 12px;
 }
 
-.mobile-panel.open {
+.mobile-menu[open] .mobile-panel {
   display: grid;
   gap: 6px;
 }
@@ -859,6 +873,10 @@ textarea:focus-visible {
   }
 
   .mobile-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-menu {
     display: inline-flex;
   }
 
