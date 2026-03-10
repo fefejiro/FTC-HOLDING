@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ProjectCaseStudy } from "../../lib/content";
-import BrandImagePanel from "./BrandImagePanel";
+import BrandVideoPanel from "./BrandVideoPanel";
 
 interface HeroProps {
   projects: ProjectCaseStudy[];
@@ -41,23 +41,27 @@ export default function Hero({ projects }: HeroProps) {
         </div>
 
         <div className="hero-collage hero-visual-stack">
-          <BrandImagePanel
-            src="/images/brand/unalabs-hero.PNG"
-            alt="Una Labs flagship studio artwork showing the brand's premium AI product direction"
-            priority
+          <BrandVideoPanel
+            src="/images/brand/unalabs-hero.mp4"
+            poster="/images/brand/unalabs-hero.PNG"
+            title="Una Labs ambient hero reel"
             aspect="hero"
-            sizes="(max-width: 980px) 100vw, 44vw"
+            preload="metadata"
             className="hero-feature-media"
             overlay={
               <div className="hero-media-note">
-                <p className="card-kicker">Flagship Direction</p>
+                <p className="card-kicker">Ambient Hero Reel</p>
                 <strong>Calm systems for builders shipping real AI products.</strong>
               </div>
             }
             caption={
-              <p className="muted">
-                A premium studio image framing Una Labs as a focused, product-led AI practice.
-              </p>
+              <>
+                <p className="card-kicker">Flagship Direction</p>
+                <p className="muted">
+                  A subtle brand reel that keeps motion present without overpowering the
+                  message or calls to action.
+                </p>
+              </>
             }
           />
 

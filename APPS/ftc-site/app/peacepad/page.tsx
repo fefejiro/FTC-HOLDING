@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BrandImagePanel from "../components/BrandImagePanel";
+import BrandVideoPanel from "../components/BrandVideoPanel";
 import { getProjectCaseStudy } from "../../lib/content";
 
 const peacePad = getProjectCaseStudy("peacepad");
@@ -29,21 +30,46 @@ export default function PeacePadPage() {
           </p>
           <p className="page-intro">{peacePad.summary}</p>
         </div>
-        <BrandImagePanel
-          src="/images/brand/peacepad-showcase.PNG"
-          alt="PeacePad premium product concept visual"
-          aspect="wide"
-          sizes="(max-width: 980px) 100vw, 44vw"
-          caption={
-            <>
-              <p className="card-kicker">Product Concept</p>
-              <p className="muted">
-                A premium concept treatment positioning PeacePad as a calm intervention layer
-                for difficult conversations.
-              </p>
-            </>
-          }
-        />
+        <div className="product-media-stack">
+          <BrandVideoPanel
+            src="/images/brand/unalabs-hero.mp4"
+            poster="/images/brand/peacepad-showcase.PNG"
+            title="PeacePad product demo reel"
+            aspect="wide"
+            preload="metadata"
+            controls
+            overlay={
+              <div className="hero-media-note">
+                <p className="card-kicker">PeacePad Demo Reel</p>
+                <strong>See the product framed as a calm, premium intervention experience.</strong>
+              </div>
+            }
+            caption={
+              <>
+                <p className="card-kicker">Product Demo</p>
+                <p className="muted">
+                  Motion treatment presenting PeacePad like a product demo surface rather
+                  than a static concept card.
+                </p>
+              </>
+            }
+          />
+          <BrandImagePanel
+            src="/images/brand/peacepad-showcase.PNG"
+            alt="PeacePad premium product concept visual"
+            aspect="wide"
+            sizes="(max-width: 980px) 100vw, 44vw"
+            caption={
+              <>
+                <p className="card-kicker">Support Visual</p>
+                <p className="muted">
+                  A premium concept treatment positioning PeacePad as a calm intervention
+                  layer for difficult conversations.
+                </p>
+              </>
+            }
+          />
+        </div>
       </div>
 
       <section>

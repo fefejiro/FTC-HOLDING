@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BrandImagePanel from "./components/BrandImagePanel";
+import ClientLogoStrip from "./components/ClientLogoStrip";
 import CTABanner from "./components/CTABanner";
 import CapabilityCard from "./components/CapabilityCard";
 import Hero from "./components/Hero";
@@ -28,6 +29,8 @@ export default function HomePage() {
           <Hero projects={projectCaseStudies} />
         </div>
       </section>
+
+      <ClientLogoStrip />
 
       <section className="section fade-on-scroll">
         <div className="container split-feature">

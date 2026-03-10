@@ -11,6 +11,8 @@ interface BrandVideoPanelProps {
   overlay?: ReactNode;
   preload?: "none" | "metadata" | "auto";
   aspect?: MediaAspect;
+  poster?: string;
+  controls?: boolean;
 }
 
 export default function BrandVideoPanel({
@@ -21,7 +23,9 @@ export default function BrandVideoPanel({
   caption,
   overlay,
   preload = "metadata",
-  aspect = "landscape"
+  aspect = "landscape",
+  poster,
+  controls = false
 }: BrandVideoPanelProps) {
   const panelClassName = ["brand-media-panel", className].filter(Boolean).join(" ");
   const resolvedFrameClassName = [
@@ -42,7 +46,9 @@ export default function BrandVideoPanel({
           muted
           loop
           playsInline
+          controls={controls}
           preload={preload}
+          poster={poster}
           aria-label={title}
         >
           <source src={src} type="video/mp4" />

@@ -34,12 +34,19 @@ export default function SayWetinPage() {
           title="SayWetin animated showcase"
           aspect="wide"
           preload="metadata"
+          controls
+          overlay={
+            <div className="hero-media-note">
+              <p className="card-kicker">SayWetin Demo Reel</p>
+              <strong>Watch the product motion treatment directly on the page.</strong>
+            </div>
+          }
           caption={
             <>
-              <p className="card-kicker">Contained Showcase</p>
+              <p className="card-kicker">Product Demo</p>
               <p className="muted">
-                Muted ambient motion preview for the SayWetin product surface, kept contained
-                to avoid distracting from the page copy.
+                Demo-style motion preview for SayWetin, with controls exposed so the product
+                reel is clearly visible and reviewable.
               </p>
             </>
           }
