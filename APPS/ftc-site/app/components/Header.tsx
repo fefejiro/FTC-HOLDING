@@ -30,7 +30,7 @@ export default function Header() {
     <header>
       <div className="container site-header">
         <div className="logo-row">
-          <Link href="/" className="logo-link">
+          <Link href="/" className="logo-link" aria-label="Una Labs homepage">
             <Logo />
           </Link>
           <div>

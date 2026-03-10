@@ -37,7 +37,7 @@ export default function Hero({ projects }: HeroProps) {
           <p className="proof-strip">Featured products: PeacePad | SayWetin | ATEAM</p>
         </div>
         <div className="hero-collage">
-          <p className="collage-label">Product Showcase</p>
+          <h2 className="collage-label">Product Showcase</h2>
           <div className="collage-grid">
             {projects.map((project) => (
               <article key={project.slug} className="collage-card">
