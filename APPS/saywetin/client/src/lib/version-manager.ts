@@ -1,6 +1,6 @@
 import { queryClient } from "./queryClient";
 
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 const VERSION_KEY = "saywetin_app_version";
 const NATIVE_BOOTSTRAP_REFRESH_KEY = "saywetin_native_bootstrap_refresh";
 

@@ -43,11 +43,7 @@ if (shouldRedirectToCanonicalHost && canonicalRedirectTarget) {
 
         if ("caches" in window) {
           const cacheNames = await caches.keys();
-          await Promise.all(
-            cacheNames
-              .filter((name) => name.startsWith("saywetin-"))
-              .map((name) => caches.delete(name)),
-          );
+          await Promise.all(cacheNames.map((name) => caches.delete(name)));
         }
       } catch (error) {
         console.warn("[SW] Failed to unregister existing service workers:", error);
