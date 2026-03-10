@@ -43,6 +43,13 @@ import {
   generatePrepChatCoaching,
   analyzeDraftTone,
 } from "./services/prepChatService";
+import {
+  mapPreviewToLegacyResponse,
+  mapPreviewToPreflight,
+  parsePreflightRequest,
+  resolveConversationIdFromMetadata,
+  type PreviewAnalysisResponse,
+} from "./services/preflightContract";
 
 // Build ID - generated once at module load
 const BUILD_ID = Date.now().toString();
@@ -572,6 +579,110 @@ Respond ONLY with a JSON object.
     console.error("[Tone Analysis] Returned mock result:", JSON.stringify(mockResult));
     return mockResult;
   }
+}
+
+function isExternalPreflightApiEnabled(): boolean {
+  const explicitFlag =
+    process.env.FEATURE_EXTERNAL_PREFLIGHT_API ??
+    process.env.PEACEPAD_EXTERNAL_PREFLIGHT_API ??
+    process.env.PEACEPAD_ENABLE_EXTERNAL_PREFLIGHT_API;
+
+  if (typeof explicitFlag === "string" && explicitFlag.trim()) {
+    const normalized = explicitFlag.trim().toLowerCase();
+    return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  }
+
+  return process.env.NODE_ENV !== "production";
+}
+
+async function buildMessagePreviewPayload(
+  userId: string | undefined,
+  content: string,
+  conversationId?: string,
+): Promise<PreviewAnalysisResponse> {
+  // Fetch user preferences including co-parent personality for personalized AI analysis
+  const userPrefs = userId ? await getUserPreferencesWithCoParent(userId) : undefined;
+
+  // Get recent conversation history for context (for both tone and CES analysis)
+  let conversationHistory: string[] | undefined;
+  let conversationHistoryFull: Array<{
+    content: string;
+    senderId: string;
+    createdAt: string | Date;
+    tone?: string | null;
+  }> = [];
+
+  if (conversationId && userId) {
+    const messages = await storage.getMessagesByUser(userId);
+    const convMessages = messages.filter((m) => m.conversationId === conversationId).slice(-10); // CES trajectory
+
+    conversationHistory = convMessages.map((m) => m.content);
+    conversationHistoryFull = convMessages.map((m) => ({
+      content: m.content,
+      senderId: m.senderId,
+      createdAt: m.createdAt,
+      tone: m.tone,
+    }));
+  }
+
+  // Run tone analysis
+  const {
+    tone,
+    summary,
+    emoji,
+    rewordingSuggestion,
+    manipulationFlags,
+    translationToPlainEnglish,
+  } = await analyzeTone(content, userPrefs, conversationHistory);
+
+  // Calculate Conflict Escalation Score (CES)
+  let cesResult: CESResult | null = null;
+  let deescalationSuggestion: string | null = null;
+
+  const cesActorId = userId || "external-api";
+  if (cesActorId) {
+    cesResult = calculateConflictEscalationScore(content, conversationHistoryFull, cesActorId);
+
+    // Generate de-escalation rewrite if intervention needed
+    if (cesResult.interventionLevel !== "none") {
+      deescalationSuggestion = generateDeescalationRewrite(
+        content,
+        cesResult.score,
+        cesResult.signals,
+        userPrefs
+          ? {
+              personalityType: userPrefs.personalityType,
+              coParentPersonalityType: userPrefs.coParentPersonalityType,
+            }
+          : undefined,
+      );
+    }
+  }
+
+  return {
+    tone,
+    summary,
+    emoji,
+    rewordingSuggestion,
+    manipulationFlags,
+    translationToPlainEnglish,
+    originalMessage: content,
+    ces: cesResult
+      ? {
+          score: cesResult.score,
+          state: cesResult.state,
+          phase: cesResult.phase,
+          interventionLevel: cesResult.interventionLevel,
+          trajectory: cesResult.trajectory,
+          signals: cesResult.signals,
+          suggestedActions: cesResult.suggestedActions,
+          pauseRecommended: cesResult.pauseRecommended,
+          pauseDuration: cesResult.pauseDuration,
+          childImpactReminder: cesResult.childImpactReminder,
+          deescalationSuggestion,
+        }
+      : null,
+  };
 }
 
 async function getTranscribedText(filePath: string): Promise<string> {
@@ -1910,86 +2021,57 @@ Crawl-delay: 1
         return res.status(400).json({ message: "Message content is required" });
       }
 
-      // Fetch user preferences including co-parent personality for personalized AI analysis
-      const userPrefs = userId ? await getUserPreferencesWithCoParent(userId) : undefined;
+      const previewPayload = await buildMessagePreviewPayload(
+        userId || undefined,
+        sanitizeInput(content),
+        typeof conversationId === "string" ? conversationId : undefined,
+      );
 
-      // Get recent conversation history for context (for both tone and CES analysis)
-      let conversationHistory: string[] | undefined;
-      let conversationHistoryFull: Array<{
-        content: string;
-        senderId: string;
-        createdAt: string | Date;
-        tone?: string | null;
-      }> = [];
-      
-      if (conversationId && userId) {
-        const messages = await storage.getMessagesByUser(userId);
-        const convMessages = messages
-          .filter(m => m.conversationId === conversationId)
-          .slice(-10); // Get last 10 for CES trajectory analysis
-        
-        conversationHistory = convMessages.map(m => m.content);
-        conversationHistoryFull = convMessages.map(m => ({
-          content: m.content,
-          senderId: m.senderId,
-          createdAt: m.createdAt,
-          tone: m.tone,
-        }));
-      }
-
-      // Run tone analysis
-      const { tone, summary, emoji, rewordingSuggestion } = await analyzeTone(content, userPrefs, conversationHistory);
-
-      // Calculate Conflict Escalation Score (CES)
-      let cesResult: CESResult | null = null;
-      let deescalationSuggestion: string | null = null;
-      
-      if (userId) {
-        cesResult = calculateConflictEscalationScore(
-          content,
-          conversationHistoryFull,
-          userId
-        );
-        
-        // Generate de-escalation rewrite if intervention needed
-        if (cesResult.interventionLevel !== "none") {
-          deescalationSuggestion = generateDeescalationRewrite(
-            content,
-            cesResult.score,
-            cesResult.signals,
-            userPrefs ? {
-              personalityType: userPrefs.personalityType,
-              coParentPersonalityType: userPrefs.coParentPersonalityType,
-            } : undefined
-          );
-        }
-      }
-
-      res.json({
-        tone,
-        summary,
-        emoji,
-        rewordingSuggestion,
-        originalMessage: content,
-        // CES data for predictive intervention
-        ces: cesResult ? {
-          score: cesResult.score,
-          state: cesResult.state,
-          interventionLevel: cesResult.interventionLevel,
-          trajectory: cesResult.trajectory,
-          signals: cesResult.signals,
-          suggestedActions: cesResult.suggestedActions,
-          pauseRecommended: cesResult.pauseRecommended,
-          pauseDuration: cesResult.pauseDuration,
-          childImpactReminder: cesResult.childImpactReminder,
-          deescalationSuggestion,
-        } : null,
-      });
+      // Preserve existing route contract for current app clients.
+      res.json(mapPreviewToLegacyResponse(previewPayload));
     } catch (error) {
       console.error("Error previewing tone:", error);
       res.status(500).json({ message: "Failed to analyze message tone" });
     }
   });
+
+  // Canonical API wrapper for external integrations (cookie-auth in v1).
+  if (isExternalPreflightApiEnabled()) {
+    app.post("/api/v1/message/preflight", async (req: any, res) => {
+      try {
+        const configuredApiKey = getActionsApiKey();
+        const providedApiKey = extractActionsApiKey(req);
+        const hasValidApiKey =
+          Boolean(configuredApiKey) &&
+          Boolean(providedApiKey) &&
+          providedApiKey === configuredApiKey;
+
+        const userId = getUserId(req);
+        if (!userId && !hasValidApiKey) {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const parsed = parsePreflightRequest(req.body);
+        if (!parsed) {
+          return res.status(400).json({ message: "text is required" });
+        }
+
+        const conversationId = resolveConversationIdFromMetadata(parsed.metadata);
+
+        const previewPayload = await buildMessagePreviewPayload(
+          userId || undefined,
+          sanitizeInput(parsed.text),
+          conversationId,
+        );
+        const preflight = mapPreviewToPreflight(previewPayload);
+
+        res.json(preflight);
+      } catch (error) {
+        console.error("Error in preflight API:", error);
+        res.status(500).json({ message: "Failed to run message preflight analysis" });
+      }
+    });
+  }
 
   app.post("/api/messages", isAuthenticatedEither, rateLimiters.messages, async (req: any, res) => {
     try {

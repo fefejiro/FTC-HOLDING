@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "PeacePad Pre-Send",
+  "version": "0.1.0",
+  "description": "Analyze messages before sending and offer calmer alternatives.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://api.peacepad.ca/*",
+    "http://localhost:5000/*",
+    "http://127.0.0.1:5000/*",
+    "https://web.whatsapp.com/*",
+    "https://mail.google.com/*",
+    "https://app.slack.com/*"
+  ],
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "PeacePad Pre-Send",
+    "default_popup": "dist/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://web.whatsapp.com/*",
+        "https://mail.google.com/*",
+        "https://app.slack.com/*"
+      ],
+      "js": ["dist/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
