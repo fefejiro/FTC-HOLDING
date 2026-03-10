@@ -1,27 +1,5 @@
-import Image from "next/image";
-
-const clientLogos = [
-  {
-    name: "LCBO",
-    alt: "LCBO client logo",
-    src: "/images/clients/lcbo-logo-1097364160.jpg"
-  },
-  {
-    name: "Canadian Tire",
-    alt: "Canadian Tire client logo",
-    src: "/images/clients/Canadian Tire Logo .jpg"
-  },
-  {
-    name: "Home Depot",
-    alt: "Home Depot client logo",
-    src: "/images/clients/The_Home_Depot-Logo .png"
-  },
-  {
-    name: "Ontario Government",
-    alt: "Ontario Government client logo",
-    src: "/images/clients/Ontario Government Logo.png"
-  }
-] as const;
+﻿import Image from "next/image";
+import { clientLogos } from "../../lib/clientLogos";
 
 export default function ClientLogoStrip() {
   return (
@@ -39,9 +17,9 @@ export default function ClientLogoStrip() {
               <Image
                 src={logo.src}
                 alt={logo.alt}
-                width={220}
-                height={88}
-                sizes="(max-width: 640px) 44vw, (max-width: 980px) 28vw, 220px"
+                width={logo.width}
+                height={logo.height}
+                sizes="(max-width: 640px) 72vw, (max-width: 980px) 40vw, 220px"
                 className="client-logo-image"
               />
             </div>

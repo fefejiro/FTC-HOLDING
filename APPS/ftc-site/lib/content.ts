@@ -1,3 +1,4 @@
+﻿import { siteLinks } from "./siteLinks";
 export type CapabilityPillar =
   | "ai-systems"
   | "creative-technology"
@@ -71,7 +72,7 @@ export const networkingProfile: NetworkingProfile = {
   phoneDisplay: "+1 (416) 473-2732",
   phoneE164: "+14164732732",
   email: "fejiro.efiuvwere@gmail.com",
-  linkedInUrl: "https://linkedin.com/in/fejiro-efiuvwere",
+  linkedInUrl: siteLinks.linkedIn,
   networkHubUrl: "https://unalabs.cloud/connect",
   startProjectHref: "/work-with-ftc",
   portfolioLinks: [
@@ -270,3 +271,4 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
 export function getProjectCaseStudy(slug: string): ProjectCaseStudy | undefined {
   return projectCaseStudies.find((item) => item.slug === slug);
 }
+

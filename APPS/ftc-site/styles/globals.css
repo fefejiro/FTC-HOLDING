@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #0b0b0f;
   --bg-soft: #11131a;
   --surface: #151823;
@@ -1245,3 +1245,273 @@ textarea:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* QA hardening overrides */
+.container {
+  max-width: 1248px;
+  padding: 0 clamp(20px, 2.6vw, 32px);
+}
+
+.section {
+  padding: clamp(56px, 7vw, 84px) 0;
+}
+
+.section-hero {
+  padding-top: 22px;
+}
+
+.site-header {
+  position: relative;
+  min-height: 76px;
+}
+
+.mobile-shell {
+  display: none;
+  position: relative;
+}
+
+.mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: rgba(4, 7, 14, 0.58);
+  cursor: pointer;
+  z-index: 78;
+}
+
+.mobile-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  left: auto;
+  width: min(390px, calc(100vw - 32px));
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(9, 12, 20, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(18px);
+  z-index: 79;
+}
+
+.mobile-panel.is-open {
+  display: grid;
+  gap: 14px;
+}
+
+.mobile-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.mobile-panel-close {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.mobile-panel-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-panel-link {
+  display: block;
+  text-decoration: none;
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.mobile-panel-link:hover,
+.mobile-panel-link.active {
+  background: linear-gradient(145deg, rgba(108, 92, 231, 0.16), rgba(0, 212, 255, 0.09));
+  border-color: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+}
+
+.hero {
+  padding: clamp(24px, 3vw, 40px);
+}
+
+.hero-grid {
+  grid-template-columns: minmax(0, 1.04fr) minmax(340px, 0.96fr);
+  gap: clamp(22px, 2.8vw, 34px);
+  align-items: stretch;
+}
+
+.hero-copy {
+  align-content: center;
+  gap: 10px;
+}
+
+.hero-copy h1 {
+  max-width: 11ch;
+}
+
+.lead {
+  max-width: 54ch;
+}
+
+.hero-collage {
+  padding: clamp(14px, 1.8vw, 18px);
+}
+
+.hero-feature-media .brand-media-frame {
+  min-height: clamp(280px, 33vw, 378px);
+}
+
+.client-logo-section {
+  padding-top: 18px;
+}
+
+.client-logo-shell {
+  gap: 20px;
+}
+
+.client-logo-grid {
+  gap: clamp(14px, 1.8vw, 20px);
+}
+
+.client-logo-card {
+  min-height: 104px;
+}
+
+.client-logo-image {
+  max-width: min(100%, 168px);
+  max-height: 38px;
+  object-fit: contain;
+}
+
+.connect-page.container {
+  max-width: 1280px;
+}
+
+.connect-top-grid {
+  grid-template-columns: minmax(0, 1.14fr) minmax(340px, 0.86fr);
+  gap: 24px;
+}
+
+.connect-bottom-grid {
+  gap: 24px;
+}
+
+.connect-card {
+  padding: clamp(20px, 2.4vw, 26px);
+}
+
+.social-links {
+  align-items: center;
+}
+
+.social-links a {
+  width: 38px;
+  height: 38px;
+}
+
+@media (max-width: 1100px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-copy h1 {
+    max-width: 12ch;
+  }
+}
+
+@media (max-width: 980px) {
+  .mobile-shell {
+    display: inline-flex;
+  }
+
+  .mobile-toggle {
+    min-width: 82px;
+    justify-content: center;
+  }
+
+  .mobile-panel {
+    position: fixed;
+    top: 84px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+
+  .hero {
+    padding: 24px 20px;
+  }
+
+  .hero-copy {
+    max-width: 100%;
+  }
+
+  .client-logo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 48px 0;
+  }
+
+  .site-header {
+    min-height: 70px;
+  }
+
+  .hero {
+    padding: 22px 18px;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+  }
+
+  .brand-media-overlay-content {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    padding: 12px 14px;
+  }
+
+  .client-logo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .client-logo-card {
+    min-height: 92px;
+    padding: 16px 14px;
+  }
+
+  .client-logo-image {
+    max-width: min(100%, 154px);
+    max-height: 34px;
+  }
+
+  .connect-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .connect-direct-contact {
+    line-height: 1.8;
+  }
+}
+
