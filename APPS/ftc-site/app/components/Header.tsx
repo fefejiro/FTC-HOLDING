@@ -44,6 +44,7 @@ export default function Header() {
             <Link
               key={link.href}
               href={link.href}
+              prefetch={false}
               className={`nav-link ${isActivePath(link.href) ? "active" : ""}`}
             >
               {link.label}
@@ -65,6 +66,7 @@ export default function Header() {
             <Link
               key={link.href}
               href={link.href}
+              prefetch={false}
               className={`nav-link ${isActivePath(link.href) ? "active" : ""}`}
             >
               {link.label}

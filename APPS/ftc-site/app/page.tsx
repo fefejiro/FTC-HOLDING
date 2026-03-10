@@ -60,10 +60,10 @@ export default function HomePage() {
             ))}
           </div>
           <p className="section-link-row">
-            <Link href="/products" className="inline-link">
+            <Link href="/products" prefetch={false} className="inline-link">
               Explore all products
             </Link>{" "}
-            <Link href="/projects" className="inline-link">
+            <Link href="/projects" prefetch={false} className="inline-link">
               or browse the projects hub
             </Link>
           </p>
@@ -81,7 +81,7 @@ export default function HomePage() {
             </p>
           </div>
           <p className="section-link-row">
-            <Link href="/about" className="inline-link">
+            <Link href="/about" prefetch={false} className="inline-link">
               Learn more about our studio philosophy
             </Link>
           </p>
@@ -122,13 +122,14 @@ export default function HomePage() {
           <p className="section-link-row">
             <Link
               href="/work"
+              prefetch={false}
               className="inline-link"
               data-analytics-event="view_work_click"
               data-analytics-location="home_work_grid"
             >
               Explore all case studies
             </Link>{" "}
-            <Link href="/blog" className="inline-link">
+            <Link href="/blog" prefetch={false} className="inline-link">
               and read product insights on the blog
             </Link>
           </p>
@@ -141,20 +142,20 @@ export default function HomePage() {
             <h2>PeacePad</h2>
             <p>
               PeacePad is an{" "}
-              <Link href="/peacepad" className="inline-link">
+              <Link href="/peacepad" prefetch={false} className="inline-link">
                 AI communication platform
               </Link>{" "}
               designed to help users choose calmer responses in high-stakes conversations.
             </p>
           </div>
           <p className="section-link-row">
-            <Link href="/peacepad" className="inline-link">
+            <Link href="/peacepad" prefetch={false} className="inline-link">
               Read the PeacePad overview
             </Link>
             {peacePadProject ? (
               <>
                 {" "}
-                <Link href={`/work/${peacePadProject.slug}`} className="inline-link">
+                <Link href={`/work/${peacePadProject.slug}`} prefetch={false} className="inline-link">
                   or view the case study
                 </Link>
               </>
@@ -169,20 +170,20 @@ export default function HomePage() {
             <h2>SayWetin</h2>
             <p>
               SayWetin is a{" "}
-              <Link href="/saywetin" className="inline-link">
+              <Link href="/saywetin" prefetch={false} className="inline-link">
                 Nigerian music AI
               </Link>{" "}
               product combining audio recognition with local language and cultural context.
             </p>
           </div>
           <p className="section-link-row">
-            <Link href="/saywetin" className="inline-link">
+            <Link href="/saywetin" prefetch={false} className="inline-link">
               Read the SayWetin overview
             </Link>
             {sayWetinProject ? (
               <>
                 {" "}
-                <Link href={`/work/${sayWetinProject.slug}`} className="inline-link">
+                <Link href={`/work/${sayWetinProject.slug}`} prefetch={false} className="inline-link">
                   or view the case study
                 </Link>
               </>

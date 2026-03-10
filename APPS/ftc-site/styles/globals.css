@@ -53,10 +53,14 @@ a {
 
 .section {
   padding: 72px 0;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 900px;
 }
 
 .section-hero {
   padding-top: 32px;
+  content-visibility: visible;
+  contain-intrinsic-size: auto;
 }
 
 .section-heading {
@@ -845,6 +849,11 @@ textarea:focus-visible {
 }
 
 @media (max-width: 980px) {
+  header {
+    backdrop-filter: none;
+    background: rgba(8, 10, 16, 0.94);
+  }
+
   nav.primary {
     display: none;
   }
@@ -855,6 +864,24 @@ textarea:focus-visible {
 
   .hero-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hero::before {
+    animation: none;
+    filter: blur(36px);
+  }
+
+  .hero-noise {
+    opacity: 0.04;
+  }
+
+  .hero-collage,
+  .card {
+    backdrop-filter: none;
+  }
+
+  .card {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
   }
 
   .cards-grid-3 {
