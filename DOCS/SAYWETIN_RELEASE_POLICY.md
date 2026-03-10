@@ -3,20 +3,28 @@
 ## Hosting Ownership
 
 - Source of truth: GitHub `main`
-- Web + API runtime: Railway service `sunny-acceptance` on `https://saywetin.app`
+- Frontend runtime: Cloudflare Pages on `https://saywetin.app`
+- API runtime: Railway service `sunny-acceptance` on `https://api.saywetin.app`
 - Android Play Store: separate release workflow (Capacitor wrapper)
 
-## When Railway Deploy Is Enough
+## Web/API Deploy Ownership (PeacePad-Style)
 
-Use normal deploy only (no Play Store upload) for:
+Deploy Railway only for:
 - Listen pipeline logic (`/api/listen`)
 - Lyrics/cultural analysis logic
 - API behavior changes
-- Frontend UI/content changes
-- Environment/config changes
+- Backend environment/config changes
 
-Deploy path:
+Deploy path (API):
 - `main` -> Railway (Dockerfile, root `APPS/saywetin`)
+
+Deploy Cloudflare Pages for:
+- Frontend UI/content changes
+- Frontend asset/hash updates
+- Client-side routing/static changes
+
+Deploy path (frontend):
+- `main` -> Cloudflare Pages (`APPS/saywetin` -> `dist/public`)
 
 ## When Play Store Update Is Required
 
@@ -28,10 +36,12 @@ A new AAB is required only for native-shell changes, including:
 
 ## Listen Pipeline Web Release Checklist
 
-1. Deploy Railway from `main`.
+1. Deploy Railway from `main` (API).
+2. Deploy Cloudflare Pages from `main` (frontend).
 2. Verify:
-   - `https://saywetin.app/health` -> `200` JSON
-   - `https://saywetin.app/api/status` -> `200` JSON
+   - `https://api.saywetin.app/health` -> `200` JSON
+   - `https://api.saywetin.app/api/status` -> `200` JSON
+   - `https://www.saywetin.app/` redirects to `https://saywetin.app/`
 3. Confirm `/api/status` flags:
    - `acrcloud.configured=true`
    - `openai.configured=true`
@@ -41,6 +51,13 @@ A new AAB is required only for native-shell changes, including:
    - Confirm lyrics/cultural sections return data for recognized tracks.
 5. Run verifier:
    - `powershell -ExecutionPolicy Bypass -File scripts/verify-saywetin-prod.ps1`
+
+## Temporary Fallback (If API Domain Is Blocked)
+
+If Railway custom-domain limits block `api.saywetin.app`, keep service healthy on Railway and temporarily use:
+- `VITE_API_BASE_URL=https://saywetin.app`
+
+Revert to `https://api.saywetin.app` once API domain/DNS is healthy.
 
 ## Native Release Checklist
 

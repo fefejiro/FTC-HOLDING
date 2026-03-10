@@ -21,6 +21,14 @@ This folder is the current source of truth for SayWetin.
 - Start (prod): `npm run start`
 - Typecheck: `npm run check`
 
+## Production Hosting Contract (PeacePad-Style)
+
+- Frontend runtime: Cloudflare Pages on `https://saywetin.app` and `https://www.saywetin.app`
+- API runtime: Railway service `sunny-acceptance` on `https://api.saywetin.app`
+- Frontend API base: `https://api.saywetin.app` (or relative `/api/*` only when explicitly running single-host fallback)
+- Capacitor production web host remains `https://saywetin.app`
+- `api.saywetin.ca` is not part of the default production contract.
+
 ## Railway Docker Deployment (Strict)
 - Railway root directory: `APPS/saywetin`
 - Dockerfile path: `Dockerfile` (relative to the configured root directory)
@@ -65,7 +73,8 @@ Server/runtime:
 
 Frontend:
 - `VITE_API_BASE_URL`
-  - Recommended for current production routing: `https://saywetin.app` (same-origin web API calls)
+  - Recommended for PeacePad-style split hosting: `https://api.saywetin.app`
+  - Temporary fallback only (if API custom domain is blocked): `https://saywetin.app`
 
 ## Production Database URL Note (Supabase + Railway)
 - Use the Supabase pooler URI shown in your project dashboard (`Connect` -> connection string) for `DATABASE_URL`, with `sslmode=require`.
@@ -102,8 +111,11 @@ Post-deploy verification:
 - Railway root directory and Dockerfile path must match exactly:
   - Root directory: `APPS/saywetin`
   - Dockerfile path: `Dockerfile`
-- `api.saywetin.app` must have healthy DNS/origin if used as a separate API host.
-- If API and frontend share `saywetin.app`, keep frontend API base on same-origin.
+- Split-host domain prerequisites:
+  - `saywetin.app`/`www.saywetin.app` must point to Cloudflare Pages.
+  - `api.saywetin.app` must point to Railway origin and return healthy `/health`.
+  - Browser origin `https://saywetin.app` must be allowed by API CORS.
+- If Railway plan limits block an API custom domain, use temporary single-host fallback (`VITE_API_BASE_URL=https://saywetin.app`) until the API domain can be attached.
 
 ## Migration Readiness Report
 See: `docs/MIGRATION_READINESS.md`
