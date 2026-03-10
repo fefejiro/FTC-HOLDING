@@ -53,6 +53,8 @@ function Router() {
       <Route path="/auth/register" component={Login} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/delete-data" component={DeleteData} />
+      <Route path="/delete-account" component={DeleteData} />
+      <Route path="/account-deletion" component={DeleteData} />
       <Route component={NotFound} />
     </Switch>
   );

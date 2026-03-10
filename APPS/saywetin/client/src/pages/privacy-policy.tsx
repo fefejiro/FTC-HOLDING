@@ -112,7 +112,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-lg font-semibold">Your Rights</h2>
               <p className="text-muted-foreground leading-relaxed">
                 You may request access to, correction of, or deletion of your personal data at any time. 
-                To exercise these rights, please contact us using the information provided below.
+                To exercise these rights, please use our public deletion page or contact us using the information provided below.
               </p>
             </section>
 
@@ -122,11 +122,14 @@ export default function PrivacyPolicy() {
                 You have the right to request deletion of all your personal data from Saywetin. 
                 This includes your account information, listening history, and any saved content.
               </p>
-              <Link href="/delete-data">
+              <Link href="/account-deletion">
                 <span className="inline-block mt-2 text-primary underline font-medium cursor-pointer">
-                  Request Data Deletion
+                  Open Account Deletion Instructions
                 </span>
               </Link>
+              <p className="text-muted-foreground leading-relaxed">
+                You can also email <a className="text-primary underline" href="mailto:support@saywetin.app">support@saywetin.app</a> from the email address linked to your account.
+              </p>
             </section>
 
             <section className="space-y-3">
@@ -141,7 +144,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-lg font-semibold">Contact Us</h2>
               <p className="text-muted-foreground leading-relaxed">
                 If you have questions about this Privacy Policy or our data practices, please contact 
-                us through the Saywetin app or visit our website at saywetin.app.
+                us at <a className="text-primary underline" href="mailto:support@saywetin.app">support@saywetin.app</a> or visit our website at saywetin.app.
               </p>
             </section>
           </CardContent>
