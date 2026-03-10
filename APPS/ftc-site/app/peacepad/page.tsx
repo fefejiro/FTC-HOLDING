@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import BrandImagePanel from "../components/BrandImagePanel";
 import { getProjectCaseStudy } from "../../lib/content";
 
 const peacePad = getProjectCaseStudy("peacepad");
@@ -19,12 +20,31 @@ export default function PeacePadPage() {
 
   return (
     <article className="container page-content case-study">
-      <h1>PeacePad</h1>
-      <p className="lead">
-        PeacePad is an AI communication platform that helps users pause, review tone, and
-        choose better outcomes before sending high-stakes messages.
-      </p>
-      <p className="page-intro">{peacePad.summary}</p>
+      <div className="product-hero-layout fade-on-scroll">
+        <div className="product-hero-copy">
+          <h1>PeacePad</h1>
+          <p className="lead">
+            PeacePad is an AI communication platform that helps users pause, review tone, and
+            choose better outcomes before sending high-stakes messages.
+          </p>
+          <p className="page-intro">{peacePad.summary}</p>
+        </div>
+        <BrandImagePanel
+          src="/images/brand/peacepad-showcase.PNG"
+          alt="PeacePad premium product concept visual"
+          aspect="wide"
+          sizes="(max-width: 980px) 100vw, 44vw"
+          caption={
+            <>
+              <p className="card-kicker">Product Concept</p>
+              <p className="muted">
+                A premium concept treatment positioning PeacePad as a calm intervention layer
+                for difficult conversations.
+              </p>
+            </>
+          }
+        />
+      </div>
 
       <section>
         <h2>What It Solves</h2>

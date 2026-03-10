@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BrandImagePanel from "./components/BrandImagePanel";
 import CTABanner from "./components/CTABanner";
 import CapabilityCard from "./components/CapabilityCard";
 import Hero from "./components/Hero";
@@ -29,6 +30,48 @@ export default function HomePage() {
       </section>
 
       <section className="section fade-on-scroll">
+        <div className="container split-feature">
+          <div className="split-feature-copy">
+            <p className="eyebrow">Studio for builders</p>
+            <h2>We shape AI products, tools, and experiments into deliberate systems.</h2>
+            <p>
+              Una Labs works like a premium studio for founders and teams that want more than
+              a demo. We combine product thinking, architecture, and careful interaction design
+              so AI capabilities become something people can actually use.
+            </p>
+            <ul className="feature-list">
+              <li>Architecture that keeps AI useful inside real workflows.</li>
+              <li>Product execution across web, mobile, automation, and extensions.</li>
+              <li>Capability experiments that mature into durable product surfaces.</li>
+            </ul>
+            <p className="section-link-row">
+              <Link href="/about" prefetch={false} className="inline-link">
+                Learn more about the studio
+              </Link>{" "}
+              <Link href="/work-with-ftc" prefetch={false} className="inline-link">
+                or start a project
+              </Link>
+            </p>
+          </div>
+          <BrandImagePanel
+            src="/images/brand/unalabs-builder-workspace.PNG"
+            alt="Una Labs builder workspace concept image"
+            aspect="wide"
+            sizes="(max-width: 980px) 100vw, 46vw"
+            caption={
+              <>
+                <p className="card-kicker">Builder Workspace</p>
+                <p className="muted">
+                  A product studio environment designed around making AI systems tangible,
+                  elegant, and shippable.
+                </p>
+              </>
+            }
+          />
+        </div>
+      </section>
+
+      <section className="section fade-on-scroll">
         <div className="container">
           <div className="section-heading">
             <h2>AI Product Development</h2>
@@ -41,6 +84,49 @@ export default function HomePage() {
             {capabilities.map((capability) => (
               <CapabilityCard key={capability.slug} capability={capability} />
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section fade-on-scroll">
+        <div className="container split-feature split-feature-ecosystem">
+          <BrandImagePanel
+            src="/images/brand/unalabs-ecosystem.PNG"
+            alt="Una Labs ecosystem diagram showing multiple connected AI product tracks"
+            aspect="wide"
+            sizes="(max-width: 980px) 100vw, 48vw"
+            caption={
+              <>
+                <p className="card-kicker">Connected Product System</p>
+                <p className="muted">
+                  Each product explores a distinct user problem while strengthening a broader
+                  capability system.
+                </p>
+              </>
+            }
+          />
+          <div className="split-feature-copy">
+            <p className="eyebrow">Product ecosystem</p>
+            <h2>One studio. Multiple product surfaces. Shared capability depth.</h2>
+            <p>
+              PeacePad, SayWetin, and ATEAM are not isolated ideas. They prove different
+              layers of communication intelligence, cultural interpretation, and runtime
+              orchestration inside one evolving ecosystem.
+            </p>
+            <div className="ecosystem-link-grid">
+              <Link href="/peacepad" prefetch={false} className="ecosystem-link-card">
+                <strong>PeacePad</strong>
+                <span>AI communication and conflict mediation</span>
+              </Link>
+              <Link href="/saywetin" prefetch={false} className="ecosystem-link-card">
+                <strong>SayWetin</strong>
+                <span>Nigerian music, language, and culture intelligence</span>
+              </Link>
+              <Link href="/work/ateam" prefetch={false} className="ecosystem-link-card">
+                <strong>ATEAM</strong>
+                <span>Internal orchestration runtime and systems layer</span>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
