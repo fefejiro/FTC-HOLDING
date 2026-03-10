@@ -38,23 +38,25 @@ A new AAB is required only for native-shell changes, including:
 
 1. Deploy Railway from `main` (API).
 2. Deploy Cloudflare Pages from `main` (frontend).
-2. Verify:
+3. Verify:
    - `https://api.saywetin.app/health` -> `200` JSON
    - `https://api.saywetin.app/api/status` -> `200` JSON
    - `https://www.saywetin.app/` redirects to `https://saywetin.app/`
-3. Confirm `/api/status` flags:
+4. Confirm `/api/status` flags:
    - `acrcloud.configured=true`
    - `openai.configured=true`
-4. Manual listen smoke (browser/mobile web):
+5. Manual listen smoke (browser/mobile web):
    - Record/upload sample audio.
    - Confirm response includes recognized track or a structured recognition error.
    - Confirm lyrics/cultural sections return data for recognized tracks.
-5. Run verifier:
+6. Run verifier:
    - `powershell -ExecutionPolicy Bypass -File scripts/verify-saywetin-prod.ps1`
 
 ## Temporary Fallback (If API Domain Is Blocked)
 
 If Railway custom-domain limits block `api.saywetin.app`, keep service healthy on Railway and temporarily use:
+- `DEPLOY_ROLE=fullstack`
+- `PUBLIC_BASE_URL=https://saywetin.app`
 - `VITE_API_BASE_URL=https://saywetin.app`
 
 Revert to `https://api.saywetin.app` once API domain/DNS is healthy.

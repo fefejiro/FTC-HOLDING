@@ -10,23 +10,27 @@
 - Railway:
   - Root Directory should be `APPS/saywetin`.
   - Dockerfile path should be `Dockerfile` (relative to that root directory).
+  - API host target should be `api.saywetin.app` in the split-host model.
 - Cloudflare:
-  - If used for frontend, set project root to `APPS/saywetin`.
-  - Set `VITE_API_BASE_URL` to `https://saywetin.app` unless a separate API host is confirmed healthy.
+  - Frontend project root should be `APPS/saywetin`.
+  - Frontend domains should be `saywetin.app` and `www.saywetin.app`.
+  - Set `VITE_API_BASE_URL` to `https://api.saywetin.app`.
 
-## Live Issue Observed During Handover
+## Historical Issue Observed During Handover
 
-- `https://saywetin.app/health` responded healthy.
-- Browser requests to `https://api.saywetin.app/...` failed.
-- `https://api.saywetin.app/health` showed Cloudflare Error 1016 (Origin DNS error), which breaks auth/listen calls from the frontend.
+- API subdomain routing was unhealthy (`api.saywetin.app` Cloudflare Error 1016), causing frontend `/api` failures when `VITE_API_BASE_URL` pointed there.
 
 ## Immediate Operational Guidance
 
-1. If keeping current frontend:
-   - Use a working API origin (or same-origin if API is served from the same host).
-2. If keeping `api.saywetin.app`:
-   - Fix Cloudflare DNS/origin mapping first.
-   - Re-test `/api/auth/user` and `/api/listen` from browser.
-3. If using a separate API domain (`api.saywetin.app`):
-   - Ensure Cloudflare origin/DNS is healthy (no 1016).
-   - Keep CORS aligned for browser origin `https://saywetin.app`.
+1. Preferred architecture (same as PeacePad):
+   - Frontend on Cloudflare Pages (`saywetin.app`, `www.saywetin.app`)
+   - API on Railway (`api.saywetin.app`)
+2. Domain and DNS requirements:
+   - `api.saywetin.app` must resolve and return `200` on `/health`.
+   - CORS must allow `https://saywetin.app`.
+3. If API custom domain is blocked by Railway plan limits:
+   - Only use temporary single-host fallback if Railway is also serving the live web host.
+   - Set `DEPLOY_ROLE=fullstack`
+   - Set `PUBLIC_BASE_URL=https://saywetin.app`
+   - Set frontend `VITE_API_BASE_URL=https://saywetin.app`.
+   - Keep split-host migration pending until API domain can be attached.

@@ -3,7 +3,7 @@
 This folder is the current source of truth for SayWetin.
 
 ## What It Is
-- Type: Full-stack TypeScript app (single runtime)
+- Type: Full-stack TypeScript app that supports PeacePad-style split hosting
 - Frontend: React + Vite (`client`)
 - Backend: Express (`server`)
 - Mobile wrapper: Capacitor Android (`android`)
@@ -28,6 +28,7 @@ This folder is the current source of truth for SayWetin.
 - Frontend API base: `https://api.saywetin.app` (or relative `/api/*` only when explicitly running single-host fallback)
 - Capacitor production web host remains `https://saywetin.app`
 - `api.saywetin.ca` is not part of the default production contract.
+- `www.saywetin.app` should redirect to `https://saywetin.app` at Cloudflare; the Pages `_redirects` file must stay as SPA fallback only.
 
 ## Railway Docker Deployment (Strict)
 - Railway root directory: `APPS/saywetin`
@@ -53,6 +54,8 @@ Non-Docker fallback commands (documentation only):
 Server/runtime:
 - `DATABASE_URL`
 - `DATABASE_SSL_NO_VERIFY` (optional, set `true` only if database TLS chain validation fails in runtime)
+- `DEPLOY_ROLE` (`api` for split-host Railway API, `fullstack` only for intentional single-host fallback)
+- `PUBLIC_BASE_URL` (recommended: `https://api.saywetin.app` on Railway API deploys)
 - `SESSION_SECRET`
 - `PORT`
 - `NODE_ENV`
@@ -74,7 +77,7 @@ Server/runtime:
 Frontend:
 - `VITE_API_BASE_URL`
   - Recommended for PeacePad-style split hosting: `https://api.saywetin.app`
-  - Temporary fallback only (if API custom domain is blocked): `https://saywetin.app`
+  - Temporary single-host fallback only: `https://saywetin.app`
 
 ## Production Database URL Note (Supabase + Railway)
 - Use the Supabase pooler URI shown in your project dashboard (`Connect` -> connection string) for `DATABASE_URL`, with `sslmode=require`.
@@ -115,7 +118,7 @@ Post-deploy verification:
   - `saywetin.app`/`www.saywetin.app` must point to Cloudflare Pages.
   - `api.saywetin.app` must point to Railway origin and return healthy `/health`.
   - Browser origin `https://saywetin.app` must be allowed by API CORS.
-- If Railway plan limits block an API custom domain, use temporary single-host fallback (`VITE_API_BASE_URL=https://saywetin.app`) until the API domain can be attached.
+- If Railway plan limits block an API custom domain, only use temporary single-host fallback when Railway also owns the live web host. Do not point a Pages-served frontend at `https://saywetin.app/api/*` unless that host is actually backed by Railway.
 
 ## Migration Readiness Report
 See: `docs/MIGRATION_READINESS.md`

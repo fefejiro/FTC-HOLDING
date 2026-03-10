@@ -1,12 +1,20 @@
 ﻿# SayWetin Migration Readiness Report
 
-Date: 2026-03-07
+Date: 2026-03-10
 Scope: `APPS/saywetin` only
+
+Update:
+- Production target is now fixed to PeacePad-style split hosting.
+- Frontend owner: Cloudflare Pages on `saywetin.app` / `www.saywetin.app`
+- API owner: Railway on `api.saywetin.app`
+- Single-host Railway serving is now a temporary fallback only, not the default contract.
 
 ## 1) Inventory Summary
 
 ### App type
-- Full-stack monorepo workspace package (`@ftc/saywetin`) with one Node process serving API + SPA.
+- Full-stack monorepo workspace package (`@ftc/saywetin`) whose codebase can run in either:
+  - split-host mode: Cloudflare Pages frontend + Railway API
+  - temporary fallback mode: single Railway runtime serving API + SPA
 
 ### Framework/runtime
 - Frontend: React 18 + Vite + Wouter + TanStack Query.
@@ -69,20 +77,16 @@ From code usage:
 - Replit OIDC in auth integration (`ISSUER_URL`, `REPL_ID`)
 - Replit Vite plugins (`@replit/vite-plugin-*`)
 - `__replit_health` route
-- Replit domain patterns in CORS
-- Replit janeway URL in `capacitor.config.json`
+- Historical migration remnants still being phased out of auth/runtime assumptions
 
 ## 2) What SayWetin Needs for Current Stack
 
 ## Cloudflare (frontend hosting)
 Required:
 - Build static client from this app (`dist/public`).
-- Add SPA fallback (`_redirects` with `/* /index.html 200`) if deployed as separate Pages frontend.
+- Keep SPA fallback (`_redirects` with `/* /index.html 200`) for client routes.
 - Set frontend env `VITE_API_BASE_URL` to API origin.
-
-Decision point:
-- If retaining single Express runtime serving SPA, Cloudflare Pages is optional.
-- If splitting frontend/API (recommended for parity with PeacePad), serve client on Cloudflare Pages and API on Railway.
+- Keep `www.saywetin.app` -> `saywetin.app` as a Cloudflare redirect rule, not as a Pages `_redirects` rule.
 
 ## Railway (API/runtime)
 Required:
@@ -90,6 +94,7 @@ Required:
 - Start command should rely on `PORT` env automatically.
 - Set required env vars listed above.
 - Ensure Postgres `DATABASE_URL` is reachable.
+- Run production with API-only role for split-host deploys (`DEPLOY_ROLE=api`, `PUBLIC_BASE_URL=https://api.saywetin.app`).
 
 ## Supabase
 Current role:
@@ -127,19 +132,20 @@ Needed:
 ### Current state
 - Application is functional as a full-stack TS app.
 - Build pipeline and static serving exist.
+- Split-host frontend/API contract is now the intended production path.
+- Railway runtime now supports API-only mode for the API host.
 - Android project exists.
 - Health endpoints exist.
 
 ### Risks
 - Auth depends on Replit OIDC components.
-- CORS allowlist includes mixed domains (some unrelated).
+- DNS/domain ownership can still drift if Cloudflare Pages and Railway custom domains are attached inconsistently.
 - Replit-specific config can cause migration confusion.
 - Large `attached_assets` may increase repo noise if imported unchanged.
 
 ### Blockers (repo integration)
-- `APPS/saywetin` is currently a nested git repo (`.git` inside folder).
-- Parent repo ignore rule blocks tracking: `C:\FTC HOLDING\.gitignore` contains `APPS/saywetin/`.
-- Because of this, SayWetin is not integrated as a normal tracked monorepo app yet.
+- No repo-integration blocker remains. `APPS/saywetin` is now tracked in the parent monorepo normally.
+- Remaining blockers are operational only: DNS ownership, Cloudflare Pages custom domains, and Railway API custom-domain attachment.
 
 ### Missing files/assumptions
 - No app-level README describing migration state (added in this pass).
@@ -159,24 +165,26 @@ Add/maintain docs:
 - `README.md` (current state + env + blockers)
 - `docs/MIGRATION_READINESS.md` (this report)
 
-Defer structural changes until repo integration step is approved:
-- Remove nested git metadata from `APPS/saywetin`
-- Stop ignoring `APPS/saywetin/` in parent `.gitignore`
+Repo integration changes already completed:
+- Nested git metadata removed from `APPS/saywetin`
+- Parent ignore rule removed so `APPS/saywetin` is tracked normally
 
 ## 6) Recommended Deployment Model
 
-Option A (recommended; PeacePad-aligned):
+Chosen model (PeacePad-aligned):
 - UI: Cloudflare Pages (static client build output)
 - API: Railway service (Express runtime)
 - DB: Supabase Postgres via `DATABASE_URL`
 - Optional R2 only if/when object storage is required
 
-Option B (simpler initial cut):
+Temporary fallback only:
 - Single Railway service serves both API and built SPA
-- Move to Option A after auth and routing are stabilized
+- Use only if API custom-domain attachment is blocked and the live web host is intentionally moved back to Railway
 
 ## 7) Minimal Safe Improvements Applied in This Pass
 - Added `README.md` at app root for current-state clarity.
 - Added this readiness report in `docs/MIGRATION_READINESS.md`.
-- No runtime logic changed.
-- No deployment or destructive changes performed.
+- Added split-host API base resolution for web/native clients.
+- Added PeacePad-style update/cache safeguards and canonical-host refresh behavior.
+- Added API-only Railway deployment mode for split-host production.
+- Normalized Pages SPA fallback to match PeacePad.

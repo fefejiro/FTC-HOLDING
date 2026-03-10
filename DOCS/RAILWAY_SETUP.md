@@ -37,14 +37,17 @@ Required environment variables:
 - Start command: empty
 - Health checks:
   - `/health`
+- Preferred API public domain: `api.saywetin.app`
 
 Required environment variables:
 - `NODE_ENV=production`
+- `DEPLOY_ROLE=api`
+- `PUBLIC_BASE_URL=https://api.saywetin.app`
 - `PORT` (Railway sets this; do not hardcode)
 - `DATABASE_URL` (Supabase pooler URI from project dashboard; username must be `postgres.<project-ref>`)
 - `DATABASE_SSL_NO_VERIFY=true` (optional fallback if runtime reports TLS chain errors like `self-signed certificate in certificate chain`)
 - `SESSION_SECRET`
-- `VITE_API_BASE_URL` (recommended: `https://saywetin.app` for same-origin API routing)
+- `VITE_API_BASE_URL` (recommended split-host value: `https://api.saywetin.app`)
 - `OPENAI_API_KEY`
 - `ACRCLOUD_HOST`
 - `ACRCLOUD_ACCESS_KEY`
@@ -68,6 +71,11 @@ Troubleshooting:
 - If `/api/listen` returns `DATABASE_SCHEMA_MISSING` or `relation "listening_sessions" does not exist`, run migrations against production DB:
   - From repo root: `npm.cmd --prefix APPS/saywetin run db:push`
   - Or in Railway shell (SayWetin service): `npm run db:push`
+- If `api.saywetin.app` is not yet attachable due Railway plan limits, only use temporary single-host fallback when Railway is also serving the live web host:
+  - `DEPLOY_ROLE=fullstack`
+  - `PUBLIC_BASE_URL=https://saywetin.app`
+  - `VITE_API_BASE_URL=https://saywetin.app`
+  - Then switch back to `DEPLOY_ROLE=api` and `https://api.saywetin.app` after domain cutover.
 
 ## Dockerfiles
 
@@ -78,3 +86,5 @@ Troubleshooting:
 
 - Railway custom domain for PeacePad API: `api.peacepad.ca` only.
 - `peacepad.ca` and `www.peacepad.ca` must remain on Cloudflare Pages.
+- Railway custom domain for Saywetin API: `api.saywetin.app` only (split-host model).
+- `saywetin.app` and `www.saywetin.app` must remain on Cloudflare Pages in the split-host model.
