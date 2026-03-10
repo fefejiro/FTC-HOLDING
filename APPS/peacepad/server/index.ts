@@ -246,6 +246,13 @@ const corsOptions: CorsOptions = {
       return;
     }
 
+    // Developer convenience: allow local extension iteration without registering
+    // every temporary extension ID. Keep production explicit.
+    if (process.env.NODE_ENV !== "production" && origin.startsWith("chrome-extension://")) {
+      callback(null, true);
+      return;
+    }
+
     if (allowedOrigins.has(origin)) {
       callback(null, true);
       return;

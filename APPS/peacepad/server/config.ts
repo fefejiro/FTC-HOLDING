@@ -45,6 +45,11 @@ function normalizeOrigin(input: string): string {
     return trimmed;
   }
 
+  // Preserve extension origins exactly so CORS can match a specific extension ID.
+  if (/^(chrome-extension|moz-extension):\/\//i.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+
   if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) {
     const parsed = new URL(trimmed);
     if (parsed.protocol === "capacitor:") {

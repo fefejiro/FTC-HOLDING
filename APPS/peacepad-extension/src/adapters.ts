@@ -1,0 +1,93 @@
+export type SupportedSite = "whatsapp" | "gmail" | "slack";
+
+export interface AdapterConfig {
+  site: SupportedSite;
+  selectors: string[];
+}
+
+const ADAPTERS: AdapterConfig[] = [
+  {
+    site: "whatsapp",
+    selectors: [
+      "div[contenteditable='true'][data-tab='10']",
+      "div[contenteditable='true'][role='textbox']",
+    ],
+  },
+  {
+    site: "gmail",
+    selectors: [
+      "div[role='textbox'][g_editable='true']",
+      "div[aria-label='Message Body'][role='textbox']",
+    ],
+  },
+  {
+    site: "slack",
+    selectors: [
+      "div[data-qa='message_input'] div[contenteditable='true']",
+      "div[contenteditable='true'][data-qa='message_input']",
+    ],
+  },
+];
+
+export function detectSupportedSite(hostname: string): SupportedSite | null {
+  const host = hostname.toLowerCase();
+  if (host.includes("web.whatsapp.com")) return "whatsapp";
+  if (host.includes("mail.google.com")) return "gmail";
+  if (host.includes("app.slack.com")) return "slack";
+  return null;
+}
+
+export function getAdapter(site: SupportedSite): AdapterConfig {
+  const adapter = ADAPTERS.find((item) => item.site === site);
+  if (!adapter) {
+    throw new Error(`Unsupported site: ${site}`);
+  }
+  return adapter;
+}
+
+export function isEditableComposer(element: Element | null): element is HTMLElement {
+  if (!element || !(element instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    return true;
+  }
+
+  return element.isContentEditable;
+}
+
+export function getComposerText(element: HTMLElement): string {
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    return element.value;
+  }
+  return element.textContent || "";
+}
+
+export function setComposerText(element: HTMLElement, value: string): void {
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    element.value = value;
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    return;
+  }
+
+  element.textContent = value;
+  element.dispatchEvent(new InputEvent("input", { bubbles: true, data: value }));
+}
+
+export function resolveActiveComposer(site: SupportedSite): HTMLElement | null {
+  const active = document.activeElement;
+  if (isEditableComposer(active)) {
+    return active;
+  }
+
+  const adapter = getAdapter(site);
+  for (const selector of adapter.selectors) {
+    const candidate = document.querySelector(selector);
+    if (isEditableComposer(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}

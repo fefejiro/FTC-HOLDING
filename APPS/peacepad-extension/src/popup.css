@@ -1,0 +1,78 @@
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  width: 320px;
+}
+
+main {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 16px;
+}
+
+h2 {
+  margin: 0 0 6px 0;
+  font-size: 13px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.site-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.muted {
+  margin: 0;
+  font-size: 11px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+input[type="text"] {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 12px;
+}
+
+button {
+  border: 1px solid #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 12px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.note {
+  padding: 2px;
+}
