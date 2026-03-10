@@ -398,6 +398,70 @@ nav.primary {
   font-size: 0.94rem;
 }
 
+.client-logo-section {
+  padding-top: 28px;
+}
+
+.client-logo-shell {
+  display: grid;
+  gap: 24px;
+  justify-items: center;
+  text-align: center;
+}
+
+.client-logo-copy {
+  display: grid;
+  gap: 10px;
+  max-width: 760px;
+}
+
+.client-logo-copy p:last-child {
+  color: var(--muted);
+}
+
+.client-logo-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  align-items: center;
+}
+
+.client-logo-card {
+  min-height: 108px;
+  display: grid;
+  place-items: center;
+  padding: 22px 18px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.client-logo-card:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+.client-logo-image {
+  width: auto;
+  height: auto;
+  max-width: min(100%, 170px);
+  max-height: 42px;
+  filter: grayscale(1) saturate(0) brightness(1.08) contrast(1.02);
+  opacity: 0.82;
+  transition: filter 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.client-logo-card:hover .client-logo-image {
+  opacity: 0.96;
+  filter: grayscale(1) saturate(0) brightness(1.16) contrast(1.04);
+  transform: scale(1.01);
+}
+
 .hero-collage {
   border: 1px solid var(--glass-border);
   border-radius: 18px;
@@ -605,6 +669,11 @@ nav.primary {
 
 .product-hero-layout {
   margin-bottom: 6px;
+}
+
+.product-media-stack {
+  display: grid;
+  gap: 18px;
 }
 
 /* Cards */
@@ -859,6 +928,24 @@ nav.primary {
   gap: 20px;
 }
 
+.connect-page.container {
+  max-width: 1440px;
+}
+
+.connect-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(380px, 0.82fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.connect-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
 .connect-card {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
@@ -921,9 +1008,12 @@ nav.primary {
 
 .connect-qr-grid {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
   gap: 14px;
+  text-align: center;
+  min-height: 100%;
 }
 
 .connect-qr-grid img {
@@ -931,6 +1021,16 @@ nav.primary {
   border-radius: 10px;
   background: #fff;
   padding: 8px;
+}
+
+.connect-qr {
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.connect-qr-actions {
+  justify-content: center;
 }
 
 /* Footer */
@@ -1053,6 +1153,10 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .client-logo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .hero::before {
     animation: none;
     filter: blur(36px);
@@ -1064,7 +1168,9 @@ textarea:focus-visible {
 
   .split-feature,
   .page-media-banner,
-  .product-hero-layout {
+  .product-hero-layout,
+  .connect-top-grid,
+  .connect-bottom-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1092,6 +1198,11 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .client-logo-card {
+    min-height: 96px;
+    padding: 18px 16px;
+  }
+
   .hero-product-rail,
   .ecosystem-link-grid {
     grid-template-columns: 1fr;
@@ -1101,8 +1212,27 @@ textarea:focus-visible {
     width: 100%;
   }
 
+  .connect-page.container {
+    max-width: 1180px;
+  }
+
+  .connect-qr-actions {
+    width: 100%;
+  }
+
   .page-content {
     padding: 52px 24px 72px;
+  }
+}
+
+@media (max-width: 560px) {
+  .client-logo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .client-logo-image {
+    max-width: min(100%, 180px);
+    max-height: 40px;
   }
 }
 
