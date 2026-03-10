@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BrandImagePanel from "../components/BrandImagePanel";
 import { projectCaseStudies } from "../../lib/content";
 
 export const metadata = {
@@ -9,11 +10,32 @@ export const metadata = {
 export default function ProductsPage() {
   return (
     <div className="container page-content">
-      <h1>Products</h1>
-      <p className="page-intro">
-        Una Labs product tracks are both market-facing tools and capability engines for a
-        broader platform direction.
-      </p>
+      <section className="page-media-banner fade-on-scroll">
+        <div className="page-media-copy">
+          <p className="eyebrow">Product ecosystem</p>
+          <h1>Products</h1>
+          <p className="page-intro">
+            Una Labs product tracks are both market-facing tools and capability engines for a
+            broader platform direction.
+          </p>
+          <p>
+            The product portfolio spans communication intelligence, cultural interpretation,
+            and orchestration runtime systems designed to reinforce one another over time.
+          </p>
+        </div>
+        <BrandImagePanel
+          src="/images/brand/unalabs-ecosystem.PNG"
+          alt="Una Labs product ecosystem image"
+          aspect="wide"
+          sizes="(max-width: 980px) 100vw, 44vw"
+          caption={
+            <p className="muted">
+              A visual summary of how the product lines fit into a broader Una Labs capability
+              stack.
+            </p>
+          }
+        />
+      </section>
 
       <div className="cards-grid cards-grid-3">
         {projectCaseStudies.map((project) => (

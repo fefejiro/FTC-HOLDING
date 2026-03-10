@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import BrandVideoPanel from "../components/BrandVideoPanel";
 import { getProjectCaseStudy } from "../../lib/content";
 
 const sayWetin = getProjectCaseStudy("saywetin");
@@ -19,12 +20,31 @@ export default function SayWetinPage() {
 
   return (
     <article className="container page-content case-study">
-      <h1>SayWetin</h1>
-      <p className="lead">
-        SayWetin is a Nigerian music AI product built by Una Labs to translate lyrics,
-        slang, and cultural context into plain-language insight.
-      </p>
-      <p className="page-intro">{sayWetin.summary}</p>
+      <div className="product-hero-layout fade-on-scroll">
+        <div className="product-hero-copy">
+          <h1>SayWetin</h1>
+          <p className="lead">
+            SayWetin is a Nigerian music AI product built by Una Labs to translate lyrics,
+            slang, and cultural context into plain-language insight.
+          </p>
+          <p className="page-intro">{sayWetin.summary}</p>
+        </div>
+        <BrandVideoPanel
+          src="/images/brand/saywetin-showcase.mp4"
+          title="SayWetin animated showcase"
+          aspect="wide"
+          preload="metadata"
+          caption={
+            <>
+              <p className="card-kicker">Contained Showcase</p>
+              <p className="muted">
+                Muted ambient motion preview for the SayWetin product surface, kept contained
+                to avoid distracting from the page copy.
+              </p>
+            </>
+          }
+        />
+      </div>
 
       <section>
         <h2>What It Solves</h2>

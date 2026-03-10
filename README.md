@@ -1,4 +1,4 @@
-# FTC HOLDING Monorepo
+﻿# FTC HOLDING Monorepo
 
 Canonical repository root: `C:\FTC HOLDING`
 
@@ -73,3 +73,13 @@ See:
 - [REPO_HANDOVER_AUDIT_2026-03-07.md](DOCS/REPO_HANDOVER_AUDIT_2026-03-07.md)
 - [REPO_OWNERSHIP_AND_TRACKING.md](DOCS/REPO_OWNERSHIP_AND_TRACKING.md)
 - [START_HERE.md](START_HERE.md)
+
+## Strategic Architecture Docs
+
+- [Docs Index](DOCS/INDEX.md)
+- [Unalabs Ecosystem Map](DOCS/UNALABS_ECOSYSTEM_MAP.md)
+- [Repo Structure Recommendation](DOCS/REPO_STRUCTURE_RECOMMENDATION.md)
+- [Domain and Ownership Map](DOCS/DOMAIN_AND_OWNERSHIP_MAP.md)
+- [Unalabs Rollout Plan](DOCS/ROLLOUT_PLAN_UNALABS.md)
+
+
