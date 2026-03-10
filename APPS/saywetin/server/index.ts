@@ -3,10 +3,25 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { seedInitialData } from "./seed-data";
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
+import { resolveDeploymentRole, shouldServeFrontend } from "./lib/deploymentMode";
 
 const app = express();
 const httpServer = createServer(app);
+const deploymentRole = resolveDeploymentRole({
+  nodeEnv: process.env.NODE_ENV || "development",
+  explicitRole: process.env.DEPLOY_ROLE,
+  publicBaseUrl:
+    process.env.PUBLIC_BASE_URL ||
+    process.env.APP_ORIGIN ||
+    process.env.VITE_API_BASE_URL ||
+    process.env.RAILWAY_PUBLIC_DOMAIN,
+  railwayEnvPresent: Boolean(
+    process.env.RAILWAY_ENVIRONMENT ||
+      process.env.RAILWAY_PUBLIC_DOMAIN ||
+      process.env.RAILWAY_STATIC_URL,
+  ),
+});
 
 declare module "http" {
   interface IncomingMessage {
@@ -14,27 +29,58 @@ declare module "http" {
   }
 }
 
-// CORS configuration for Android WebView (Capacitor runs from https://localhost)
-app.use(cors({
-  origin: [
-    'https://localhost',
-    'http://localhost',
-    'http://127.0.0.1',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5174',
-    'capacitor://localhost',
-    'ionic://localhost',
-    'https://peacepad.ca',
-    'https://www.peacepad.ca',
-    'https://saywetin.app',
-    'https://www.saywetin.app',
-  ],
+const allowedOrigins = new Set([
+  "https://localhost",
+  "http://localhost",
+  "http://127.0.0.1",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
+  "capacitor://localhost",
+  "ionic://localhost",
+  "https://saywetin.app",
+  "https://www.saywetin.app",
+  "https://saywetin-pages.pages.dev",
+]);
+
+function isAllowedOrigin(origin: string): boolean {
+  if (allowedOrigins.has(origin)) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname.toLowerCase();
+    return host === "saywetin-pages.pages.dev" || host.endsWith(".saywetin-pages.pages.dev");
+  } catch {
+    return false;
+  }
+}
+
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    console.warn(`[CORS] Origin not allowed: ${origin}`);
+    callback(null, false);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-}));
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+app.set("trust proxy", 1);
 
 app.use(
   express.json({
@@ -201,7 +247,27 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
+    if (shouldServeFrontend(deploymentRole)) {
+      serveStatic(app);
+    } else {
+      console.log(`[Deploy] SayWetin API-only mode enabled (role=${deploymentRole}).`);
+      app.use("*", (req, res) => {
+        if (
+          req.path.startsWith("/api/") ||
+          req.path === "/api" ||
+          req.path === "/health" ||
+          req.path === "/api/health" ||
+          req.path === "/__health"
+        ) {
+          sendApiError(res, 404, "API_NOT_FOUND", "API route not found.");
+          return;
+        }
+
+        res.status(404).json({
+          message: "This host only serves the SayWetin API. Use https://saywetin.app for the web app.",
+        });
+      });
+    }
   } else {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
@@ -220,6 +286,7 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      console.log(`[Deploy] SayWetin deployment role: ${deploymentRole}`);
       
       // Seed initial data after server is listening (non-blocking for health checks)
       seedInitialData().catch(err => console.error('Seed failed:', err));
