@@ -1,3 +1,8 @@
 {
-    "chatgpt.openOnStartup": true
+    "chatgpt.openOnStartup": true,
+    "workbench.editor.autoLockGroups": {
+        "vscode.audioPreview": true,
+        "vscode.videoPreview": true,
+        "agentSessionsWelcomePage": true
+    }
 }
