@@ -1,31 +1,8 @@
-"use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import { siteNav } from "../../lib/content";
 
 export default function Header() {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-
-  function isActivePath(href: string): boolean {
-    if (href === "/") return pathname === "/";
-    return pathname === href || pathname.startsWith(`${href}/`);
-  }
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
   return (
     <header>
       <div className="container site-header">
@@ -44,33 +21,26 @@ export default function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className={`nav-link ${isActivePath(link.href) ? "active" : ""}`}
+              prefetch={false}
+              className="nav-link"
             >
               {link.label}
             </Link>
           ))}
         </nav>
 
-        <button
-          aria-label="Toggle menu"
-          aria-expanded={open}
-          className="mobile-toggle"
-          onClick={() => setOpen(v => !v)}
-        >
-          Menu
-        </button>
-
-        <div className={`mobile-panel ${open ? 'open' : ''}`} role="dialog" aria-modal="true">
-          {siteNav.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`nav-link ${isActivePath(link.href) ? "active" : ""}`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
+        <details className="mobile-menu">
+          <summary aria-label="Toggle menu" className="mobile-toggle">
+            Menu
+          </summary>
+          <div className="mobile-panel" role="dialog" aria-modal="true">
+            {siteNav.map((link) => (
+              <Link key={link.href} href={link.href} prefetch={false} className="nav-link">
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </details>
       </div>
     </header>
   );

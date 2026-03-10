@@ -17,10 +17,9 @@ export default function CapabilityCard({ capability }: CapabilityCardProps) {
           </li>
         ))}
       </ul>
-      <Link href={`/work?pillar=${capability.slug}`} className="inline-link">
+      <Link href={`/work?pillar=${capability.slug}`} prefetch={false} className="inline-link">
         See related work
       </Link>
     </article>
   );
 }
-

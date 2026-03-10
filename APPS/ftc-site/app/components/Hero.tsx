@@ -19,6 +19,7 @@ export default function Hero({ projects }: HeroProps) {
           <div className="hero-actions">
             <Link
               href="/work"
+              prefetch={false}
               className="btn btn-primary"
               data-analytics-event="view_work_click"
               data-analytics-location="hero"
@@ -27,6 +28,7 @@ export default function Hero({ projects }: HeroProps) {
             </Link>
             <Link
               href="/products"
+              prefetch={false}
               className="btn btn-secondary"
               data-analytics-event="view_products_click"
               data-analytics-location="hero"
@@ -45,6 +47,7 @@ export default function Hero({ projects }: HeroProps) {
                 <p>{project.tagline}</p>
                 <Link
                   href={project.slug === "ateam" ? "/projects" : `/${project.slug}`}
+                  prefetch={false}
                   className="inline-link"
                 >
                   View product

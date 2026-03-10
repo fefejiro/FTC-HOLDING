@@ -24,6 +24,7 @@ export default function CTABanner({
       <div className="hero-actions">
         <Link
           href={primaryHref}
+          prefetch={false}
           className="btn btn-primary"
           data-analytics-event="start_project_click"
           data-analytics-location="final_cta"
@@ -33,6 +34,7 @@ export default function CTABanner({
         {secondaryLabel && secondaryHref ? (
           <Link
             href={secondaryHref}
+            prefetch={false}
             className="btn btn-secondary"
             data-analytics-event="view_work_click"
             data-analytics-location="final_cta"

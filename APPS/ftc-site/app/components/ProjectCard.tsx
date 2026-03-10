@@ -34,11 +34,12 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           </li>
         ))}
       </ul>
-      <Link href={productHref} className="inline-link">
+      <Link href={productHref} prefetch={false} className="inline-link">
         View product
       </Link>
       <Link
         href={`/work/${project.slug}`}
+        prefetch={false}
         className="inline-link"
         data-analytics-event="case_study_click"
         data-analytics-label={project.slug}
