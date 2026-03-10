@@ -48,9 +48,10 @@ export default function PrivacyPolicy() {
               <div className="space-y-2">
                 <h3 className="font-medium">Account Information</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  If you create an account, we collect your username, email address, and an encrypted 
-                  version of your password. This information is used to provide personalized features 
-                  such as your listening history and saved songs.
+                  If account features are enabled, we collect the email address and basic profile
+                  information provided by your sign-in provider, such as your name or profile image.
+                  We use this information to support personalized features such as your listening
+                  history, saved songs, and profile display.
                 </p>
               </div>
 
