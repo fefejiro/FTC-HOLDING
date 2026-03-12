@@ -1,50 +1,43 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import WorkIntakeForm from "./components/WorkIntakeForm";
-import { projectCaseStudies } from "../lib/content";
 
 const buildAreas = [
   {
     title: "AI Automation",
-    summary: "Automate repetitive business processes with practical AI workflows and triggers."
+    description: "Automate repetitive business workflows using AI systems.",
+    icon: "A"
   },
   {
     title: "AI Internal Tools",
-    summary: "Build private tools that help teams move faster with better context and less manual work."
+    description: "Custom internal tools that help teams work faster and smarter.",
+    icon: "T"
   },
   {
     title: "AI Assistants",
-    summary: "Create assistants that answer, guide, and support users inside real product flows."
+    description: "Chat, voice, and workflow assistants trained for business tasks.",
+    icon: "S"
   },
   {
-    title: "AI Micro-Products",
-    summary: "Launch focused AI products around one problem, one workflow, or one customer need."
+    title: "AI Micro Products",
+    description:
+      "Small AI applications businesses can use internally or offer customers.",
+    icon: "M"
   }
 ] as const;
 
-const workSteps = [
-  "Tell us your idea or problem",
-  "We design and build the AI solution",
-  "Launch and improve together"
+const labItems = [
+  "AI automation systems",
+  "browser extension experiments",
+  "messaging intelligence tools",
+  "cultural language AI models",
+  "AI copilots"
 ] as const;
 
-const labExperiments = [
-  {
-    title: "Prototype Demos",
-    summary: "Quick interactive demos to test whether an idea deserves a full product build."
-  },
-  {
-    title: "Workflow Experiments",
-    summary: "Small AI systems that explore how automation can remove friction from daily operations."
-  },
-  {
-    title: "Labs Concepts",
-    summary: "Early-stage interface and capability experiments that can evolve into real products."
-  }
-] as const;
+const googlePlayUrl = "https://play.google.com/store/apps/details?id=com.saywetin.app";
 
 export const metadata: Metadata = {
-  title: "Una Labs — Creative AI Studio Building AI Products",
+  title: "Una Labs - Creative AI Studio Building AI Products",
   description:
     "Una Labs is a creative AI studio building real-world AI products including PeacePad and SayWetin. Explore our work in automation, AI tools, and product innovation.",
   alternates: {
@@ -53,10 +46,6 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  const featuredProducts = projectCaseStudies.filter(
-    (project) => project.slug === "peacepad" || project.slug === "saywetin"
-  );
-
   return (
     <div className="home-page">
       <section className="section section-hero fade-on-scroll">
@@ -65,15 +54,12 @@ export default function HomePage() {
             <div className="hero-noise" aria-hidden="true" />
             <div className="hero-grid home-hero-grid">
               <div className="hero-copy home-hero-copy">
-                <p className="eyebrow">AI Product Studio</p>
-                <h1>
-                  Unalabs
-                  <br />
-                  AI Product Studio
-                </h1>
-                <p className="lead">
+                <p className="eyebrow">AI Product &amp; Automation Studio</p>
+                <h1>Unalabs</h1>
+                <p className="lead hero-subtitle">AI Product &amp; Automation Studio</p>
+                <p className="hero-description">
                   We design and build AI-powered tools, automations, and digital products
-                  for businesses.
+                  for modern businesses.
                 </p>
                 <div className="hero-actions">
                   <a href="#start-project" className="btn btn-primary">
@@ -83,25 +69,29 @@ export default function HomePage() {
                     Explore Our Products
                   </a>
                 </div>
-                <p className="hero-trust">
-                  Built by the team behind PeacePad and SayWetin.
-                </p>
+                <div className="hero-credibility">
+                  <p className="hero-credibility-title">Products shipped by Unalabs:</p>
+                  <ul className="hero-credibility-list">
+                    <li>PeacePad</li>
+                    <li>SayWetin (Live on Google Play)</li>
+                  </ul>
+                </div>
               </div>
 
               <div className="hero-collage home-hero-panel">
                 <p className="collage-label">Studio Snapshot</p>
                 <div className="home-hero-panel-grid">
                   <article className="collage-card">
-                    <h2>Fast early builds</h2>
-                    <p>Most projects launch within 4-8 weeks with a focused scope and clear outcomes.</p>
+                    <h2>Products in market</h2>
+                    <p>PeacePad and SayWetin show what ships when AI is treated like product, not hype.</p>
                   </article>
                   <article className="collage-card">
-                    <h2>Product-minded delivery</h2>
-                    <p>We combine product strategy, UX, and AI implementation in one studio workflow.</p>
+                    <h2>Clear delivery model</h2>
+                    <p>We scope the problem, build the right tool, and refine it with real-world feedback.</p>
                   </article>
                   <article className="collage-card">
-                    <h2>Real-world AI</h2>
-                    <p>We build tools people can actually use, not demos that stop at the concept stage.</p>
+                    <h2>Fast launch windows</h2>
+                    <p>Most focused builds move from idea to first release in 4-8 weeks.</p>
                   </article>
                 </div>
               </div>
@@ -113,18 +103,21 @@ export default function HomePage() {
       <section className="section fade-on-scroll" id="what-we-build">
         <div className="container">
           <div className="section-heading home-section-heading">
-            <p className="eyebrow">Section 2</p>
-            <h2>What We Build</h2>
+            <p className="eyebrow">What We Build</p>
+            <h2>Practical AI systems for teams and products</h2>
             <p>
-              We focus on practical AI products that help teams automate, decide faster, and
-              launch new digital experiences with less overhead.
+              We focus on narrow, useful AI products that solve operational, workflow, and
+              customer-facing problems without unnecessary complexity.
             </p>
           </div>
           <div className="build-grid">
             {buildAreas.map((area) => (
               <article key={area.title} className="card build-card">
+                <span className="build-icon" aria-hidden="true">
+                  {area.icon}
+                </span>
                 <h3>{area.title}</h3>
-                <p>{area.summary}</p>
+                <p>{area.description}</p>
               </article>
             ))}
           </div>
@@ -134,71 +127,121 @@ export default function HomePage() {
       <section className="section fade-on-scroll" id="products">
         <div className="container">
           <div className="section-heading home-section-heading">
-            <p className="eyebrow">Section 3</p>
-            <h2>Our Products</h2>
+            <p className="eyebrow">Our Products</p>
+            <h2>Products built and shipped by Unalabs</h2>
             <p>
-              PeacePad and SayWetin show how Una Labs turns communication, culture, and AI
-              into usable products.
+              Our product work proves the studio can take AI ideas from concept to usable,
+              market-facing software.
             </p>
           </div>
           <div className="product-grid">
-            {featuredProducts.map((product) => (
-              <article key={product.slug} className="card product-spotlight-card">
-                <p className="card-kicker">{product.status.replace("-", " ")}</p>
-                <h3>{product.name}</h3>
-                <p>{product.summary}</p>
-                <Link
-                  href={`/${product.slug}`}
-                  prefetch={false}
-                  className="btn btn-secondary product-spotlight-link"
-                >
-                  {product.slug === "peacepad" ? "View PeacePad" : "View SayWetin"}
+            <article className="card product-spotlight-card">
+              <p className="status-pill">LIVE</p>
+              <h3>PeacePad</h3>
+              <p>
+                PeacePad intervenes before a message is sent, helping users pause and choose
+                a more constructive next action.
+              </p>
+              <Link href="/peacepad" prefetch={false} className="btn btn-secondary product-spotlight-link">
+                View PeacePad
+              </Link>
+            </article>
+
+            <article className="card product-spotlight-card">
+              <p className="status-pill">LIVE ON GOOGLE PLAY</p>
+              <h3>SayWetin</h3>
+              <p>
+                SayWetin combines audio recognition with cultural interpretation to explain
+                Nigerian music, slang, and context.
+              </p>
+              <ul className="feature-list compact-feature-list">
+                <li>Recognize Nigerian songs</li>
+                <li>Explain slang and cultural meaning</li>
+                <li>Provide contextual interpretation</li>
+              </ul>
+              <div className="product-actions">
+                <Link href="/saywetin" prefetch={false} className="btn btn-secondary product-spotlight-link">
+                  View SayWetin
                 </Link>
-              </article>
-            ))}
+                <a
+                  href={googlePlayUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary product-spotlight-link"
+                >
+                  Get it on Google Play
+                </a>
+              </div>
+              <a
+                href={googlePlayUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="play-badge"
+                aria-label="Get SayWetin on Google Play"
+              >
+                <span className="play-badge-mark" aria-hidden="true">
+                  Play
+                </span>
+                <span className="play-badge-copy">
+                  <span>Available on</span>
+                  <strong>Google Play</strong>
+                </span>
+              </a>
+            </article>
           </div>
         </div>
       </section>
 
-      <section className="section fade-on-scroll" id="how-we-work">
+      <section className="section fade-on-scroll" id="client-work">
         <div className="container">
           <div className="section-heading home-section-heading">
-            <p className="eyebrow">Section 4</p>
-            <h2>How We Work</h2>
+            <p className="eyebrow">Client Work</p>
+            <h2>Visibility and growth work for service businesses</h2>
             <p>
-              Our process is simple: define the problem, build the right AI system, and keep
-              improving it after launch.
+              Beyond studio products, Unalabs also improves digital visibility for client
+              businesses that need better discovery and search performance.
             </p>
           </div>
-          <div className="process-grid">
-            {workSteps.map((step, index) => (
-              <article key={step} className="card process-card">
-                <span className="process-step-number">0{index + 1}</span>
-                <h3>{step}</h3>
-              </article>
-            ))}
-          </div>
-          <p className="process-note">Most projects launch within 4-8 weeks.</p>
+          <article className="card client-work-card">
+            <div className="client-work-header">
+              <div>
+                <p className="status-pill">SEO OPTIMIZATION IN PROGRESS</p>
+                <h3>Emergency Prompt Roadside Assist</h3>
+              </div>
+            </div>
+            <p>
+              SEO optimization and digital visibility improvements for a local roadside
+              assistance service.
+            </p>
+            <div>
+              <p className="client-work-label">Work performed:</p>
+              <ul className="feature-list compact-feature-list">
+                <li>Google Business profile audit</li>
+                <li>SEO visibility improvements</li>
+                <li>content and listing optimization</li>
+                <li>search discoverability improvements</li>
+              </ul>
+            </div>
+            <Link href="/work" prefetch={false} className="inline-link">
+              View Case Study
+            </Link>
+          </article>
         </div>
       </section>
 
-      <section className="section fade-on-scroll" id="experiments">
+      <section className="section fade-on-scroll" id="lab">
         <div className="container">
           <div className="section-heading home-section-heading">
-            <p className="eyebrow">Section 5</p>
-            <h2>Experiments / Labs</h2>
-            <p>
-              We regularly test demos, prototypes, and small AI concepts that can mature into
-              future products or internal tools.
-            </p>
+            <p className="eyebrow">In the Lab</p>
+            <h2>Active experiments and prototype tracks</h2>
+            <p>Experiments and prototypes currently being explored by Unalabs.</p>
           </div>
-          <div className="experiments-grid">
-            {labExperiments.map((experiment) => (
-              <article key={experiment.title} className="card experiment-card">
-                <h3>{experiment.title}</h3>
-                <p>{experiment.summary}</p>
-              </article>
-            ))}
+          <div className="card lab-card">
+            <ul className="lab-list">
+              {labItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
@@ -207,21 +250,20 @@ export default function HomePage() {
         <div className="container start-project-grid">
           <div className="intake-aside">
             <div className="section-heading home-section-heading">
-              <p className="eyebrow">Section 6</p>
-              <h2>Start a Project</h2>
+              <p className="eyebrow">Start a Project</p>
+              <h2>Tell us what you want to build</h2>
               <p>
                 Tell us what you want to build, your budget range, and your ideal timeline.
-                We will reply with the most useful next step.
               </p>
             </div>
-            <p className="intake-lead">
-              Clear inputs help us scope faster and give you a better response.
+            <p className="intake-reassurance">
+              No obligation. We review every request and reply within 24 hours.
             </p>
             <div className="card intake-note-card">
-              <h3>Good fit for Una Labs</h3>
+              <h3>Built by the team behind PeacePad and SayWetin.</h3>
               <p>
-                New product ideas, AI automations, internal tools, assistants, and focused
-                prototypes.
+                Best fit: AI automations, internal tools, assistants, product MVPs, and
+                narrow experiments that need a fast, high-quality launch path.
               </p>
             </div>
           </div>
@@ -234,3 +276,4 @@ export default function HomePage() {
     </div>
   );
 }
+

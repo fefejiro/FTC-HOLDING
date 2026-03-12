@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
 import { trackEvent } from "../../lib/analytics";
 
@@ -81,13 +82,13 @@ export default function WorkIntakeForm() {
       </label>
       <label>
         <span>Budget</span>
-        <select name="budgetRange" defaultValue="not-sure-yet">
+        <select name="budgetRange" defaultValue="not-sure-yet" className="dark-select">
+          <option value="not-sure-yet">Not sure yet</option>
           <option value="0-1000">$0 - $1,000</option>
           <option value="1000-2500">$1,000 - $2,500</option>
           <option value="2500-5000">$2,500 - $5,000</option>
           <option value="5000-10000">$5,000 - $10,000</option>
           <option value="10000-plus">$10,000+</option>
-          <option value="not-sure-yet">Not sure yet</option>
         </select>
         <span className="field-help">Typical early builds range between $1k - $5k.</span>
       </label>
@@ -103,7 +104,7 @@ export default function WorkIntakeForm() {
       </label>
       <label>
         <span>Timeline (optional)</span>
-        <select name="timeline" defaultValue="">
+        <select name="timeline" defaultValue="" className="dark-select">
           <option value="">Not sure yet</option>
           <option value="2-4-weeks">2-4 weeks</option>
           <option value="4-8-weeks">4-8 weeks</option>
@@ -118,6 +119,22 @@ export default function WorkIntakeForm() {
       <button type="submit" className="btn btn-primary" disabled={submitState === "submitting"}>
         {submitState === "submitting" ? "Submitting..." : "Start My Project"}
       </button>
+
+      <div className="intake-next-steps">
+        <p className="intake-next-steps-title">What happens after you submit:</p>
+        <ol className="intake-next-steps-list">
+          <li>We review your idea.</li>
+          <li>We respond with suggestions or questions.</li>
+          <li>If it is a good fit, we schedule a quick call.</li>
+        </ol>
+        <p className="intake-alt-contact">
+          Prefer a quick conversation?{" "}
+          <Link href="/connect" prefetch={false} className="inline-link">
+            Contact us directly.
+          </Link>
+        </p>
+      </div>
+
       {message ? (
         <p
           className={submitState === "error" ? "form-feedback error" : "form-feedback success"}
