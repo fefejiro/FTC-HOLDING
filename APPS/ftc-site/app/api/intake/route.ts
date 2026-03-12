@@ -3,8 +3,21 @@ import { logger } from "../../../lib/logger";
 
 export const runtime = "edge";
 
-const BUDGET_VALUES = new Set(["under-5k", "5k-15k", "15k-50k", "50k-plus"]);
-const TIMELINE_VALUES = new Set(["2-6-weeks", "6-12-weeks", "12-weeks-plus"]);
+const BUDGET_VALUES = new Set([
+  "0-1000",
+  "1000-2500",
+  "2500-5000",
+  "5000-10000",
+  "10000-plus",
+  "not-sure-yet"
+]);
+const TIMELINE_VALUES = new Set([
+  "",
+  "2-4-weeks",
+  "4-8-weeks",
+  "8-12-weeks",
+  "12-weeks-plus"
+]);
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 5;
 
@@ -78,7 +91,8 @@ export async function POST(req: NextRequest) {
     return badRequest("Invalid request payload.");
   }
 
-  const name = normalizeText(payload.name);
+  const providedName = normalizeText(payload.name);
+  const name = providedName || "Website lead";
   const email = normalizeEmail(payload.email);
   const projectIdea = normalizeText(payload.projectIdea);
   const budgetRange = normalizeText(payload.budgetRange);
@@ -91,7 +105,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, message: "Thanks, your intake has been received." }, { status: 202 });
   }
 
-  if (name.length < 2 || name.length > 80) {
+  if (providedName.length > 0 && (providedName.length < 2 || providedName.length > 80)) {
     return badRequest("Please provide a valid name.");
   }
 

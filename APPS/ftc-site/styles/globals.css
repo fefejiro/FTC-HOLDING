@@ -8,6 +8,7 @@
   --glass-border: rgba(255, 255, 255, 0.15);
   --text: #ffffff;
   --muted: #b8b8c0;
+  --copy: #e5e7eb;
   --accent: #6c5ce7;
   --accent-2: #00d4ff;
   --radius: 16px;
@@ -32,7 +33,8 @@ body {
     radial-gradient(1000px 620px at -10% -20%, rgba(108, 92, 231, 0.3) 0%, transparent 60%),
     radial-gradient(900px 560px at 115% -10%, rgba(0, 212, 255, 0.22) 0%, transparent 62%),
     linear-gradient(180deg, #0c0e15 0%, #090b11 100%);
-  font-family: var(--font-inter), "Segoe UI", sans-serif;
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-weight: 500;
   line-height: 1.7;
   letter-spacing: 0.005em;
 }
@@ -321,6 +323,44 @@ nav.primary {
 .hero-copy {
   display: grid;
   gap: 4px;
+}
+
+.home-page h1,
+.home-page h2,
+.home-page h3 {
+  font-family: var(--font-inter), Inter, sans-serif;
+}
+
+.home-page p,
+.home-page li,
+.home-page label,
+.home-page input,
+.home-page textarea,
+.home-page select {
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-weight: 500;
+}
+
+.home-page p,
+.home-page li,
+.home-page label,
+.home-page .lead,
+.home-page .section-heading p,
+.home-page .muted,
+.home-page .field-help {
+  color: var(--copy);
+}
+
+.home-page .eyebrow {
+  color: #a8d7ff;
+}
+
+.home-page .card-kicker {
+  color: #b6e8ff;
+}
+
+.home-page .collage-label {
+  color: var(--muted);
 }
 
 /* Hero */
@@ -706,6 +746,119 @@ nav.primary {
   border-color: rgba(0, 212, 255, 0.35);
 }
 
+.home-section-heading {
+  max-width: 760px;
+}
+
+.home-hero {
+  min-height: 480px;
+}
+
+.home-hero-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
+  align-items: stretch;
+}
+
+.home-hero-copy {
+  align-content: center;
+  gap: 12px;
+}
+
+.home-hero-copy h1 {
+  max-width: 10ch;
+}
+
+.hero-trust {
+  margin-top: 2px;
+  font-size: 0.95rem;
+  color: var(--copy);
+}
+
+.home-hero-panel {
+  display: grid;
+  align-content: center;
+}
+
+.home-hero-panel-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.home-hero-panel .collage-card h2 {
+  font-size: 1.02rem;
+}
+
+.build-grid,
+.product-grid,
+.process-grid,
+.experiments-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.build-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.product-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.process-grid,
+.experiments-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.build-card,
+.product-spotlight-card,
+.process-card,
+.experiment-card,
+.intake-note-card {
+  gap: 12px;
+}
+
+.product-spotlight-link {
+  width: fit-content;
+  margin-top: auto;
+}
+
+.process-step-number {
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(120deg, rgba(108, 92, 231, 0.26), rgba(0, 212, 255, 0.14));
+  color: #ffffff;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
+.process-note {
+  margin-top: 18px;
+  color: var(--copy);
+}
+
+.start-project-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.intake-aside {
+  display: grid;
+  gap: 16px;
+}
+
+.intake-lead {
+  color: var(--copy);
+}
+
+.home-intake-card {
+  margin-top: 0;
+}
+
 .product-showcase-grid .card {
   background: linear-gradient(145deg, rgba(108, 92, 231, 0.13), rgba(0, 212, 255, 0.08));
 }
@@ -889,6 +1042,16 @@ nav.primary {
   font: inherit;
   color: var(--text);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.intake-form textarea::placeholder,
+.intake-form input::placeholder {
+  color: rgba(229, 231, 235, 0.7);
+}
+
+.field-help {
+  font-size: 0.9rem;
+  color: var(--copy);
 }
 
 .hp-field {
@@ -1150,6 +1313,14 @@ textarea:focus-visible {
   }
 
   .hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .build-grid,
+  .product-grid,
+  .process-grid,
+  .experiments-grid,
+  .start-project-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1473,6 +1644,10 @@ textarea:focus-visible {
 
   .hero {
     padding: 22px 18px;
+  }
+
+  .home-hero-copy h1 {
+    max-width: 100%;
   }
 
   .hero-actions {

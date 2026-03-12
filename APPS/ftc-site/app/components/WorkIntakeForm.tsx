@@ -16,11 +16,11 @@ export default function WorkIntakeForm() {
     const formData = new FormData(form);
 
     const payload = {
-      name: String(formData.get("name") || "").trim(),
+      name: "Website lead",
       email: String(formData.get("email") || "").trim(),
       projectIdea: String(formData.get("projectIdea") || "").trim(),
-      budgetRange: String(formData.get("budgetRange") || "under-5k"),
-      timeline: String(formData.get("timeline") || "2-6-weeks"),
+      budgetRange: String(formData.get("budgetRange") || "not-sure-yet"),
+      timeline: String(formData.get("timeline") || "").trim(),
       companyWebsite: String(formData.get("companyWebsite") || "").trim(),
       startedAt: startedAtRef.current
     };
@@ -50,7 +50,7 @@ export default function WorkIntakeForm() {
       setMessage(body.message || "Thanks, your project intake has been received.");
       trackEvent("lead_submit_success", {
         budget_range: payload.budgetRange,
-        timeline: payload.timeline
+        timeline: payload.timeline || "not-specified"
       });
       form.reset();
       startedAtRef.current = Date.now();
@@ -68,31 +68,46 @@ export default function WorkIntakeForm() {
   return (
     <form className="intake-form" onSubmit={onSubmit} noValidate>
       <label>
-        Name
-        <input type="text" name="name" autoComplete="name" required minLength={2} />
+        <span>Project Idea</span>
+        <textarea
+          name="projectIdea"
+          rows={6}
+          required
+          minLength={20}
+          placeholder={
+            "Example:\n- I want to build a mobile app\n- I need AI automation for my business\n- I want a tool similar to X"
+          }
+        />
       </label>
       <label>
-        Email
-        <input type="email" name="email" autoComplete="email" required />
-      </label>
-      <label>
-        Project Idea
-        <textarea name="projectIdea" rows={5} required minLength={20} />
-      </label>
-      <label>
-        Budget Range
-        <select name="budgetRange" defaultValue="under-5k">
-          <option value="under-5k">Under $5k</option>
-          <option value="5k-15k">$5k - $15k</option>
-          <option value="15k-50k">$15k - $50k</option>
-          <option value="50k-plus">$50k+</option>
+        <span>Budget</span>
+        <select name="budgetRange" defaultValue="not-sure-yet">
+          <option value="0-1000">$0 - $1,000</option>
+          <option value="1000-2500">$1,000 - $2,500</option>
+          <option value="2500-5000">$2,500 - $5,000</option>
+          <option value="5000-10000">$5,000 - $10,000</option>
+          <option value="10000-plus">$10,000+</option>
+          <option value="not-sure-yet">Not sure yet</option>
         </select>
+        <span className="field-help">Typical early builds range between $1k - $5k.</span>
       </label>
       <label>
-        Timeline
-        <select name="timeline" defaultValue="2-6-weeks">
-          <option value="2-6-weeks">2-6 weeks</option>
-          <option value="6-12-weeks">6-12 weeks</option>
+        <span>Email</span>
+        <input
+          type="email"
+          name="email"
+          autoComplete="email"
+          placeholder="you@company.com"
+          required
+        />
+      </label>
+      <label>
+        <span>Timeline (optional)</span>
+        <select name="timeline" defaultValue="">
+          <option value="">Not sure yet</option>
+          <option value="2-4-weeks">2-4 weeks</option>
+          <option value="4-8-weeks">4-8 weeks</option>
+          <option value="8-12-weeks">8-12 weeks</option>
           <option value="12-weeks-plus">12+ weeks</option>
         </select>
       </label>
@@ -101,7 +116,7 @@ export default function WorkIntakeForm() {
         <input type="text" name="companyWebsite" tabIndex={-1} autoComplete="off" />
       </label>
       <button type="submit" className="btn btn-primary" disabled={submitState === "submitting"}>
-        {submitState === "submitting" ? "Submitting..." : "Submit Intake"}
+        {submitState === "submitting" ? "Submitting..." : "Start My Project"}
       </button>
       {message ? (
         <p
@@ -114,4 +129,3 @@ export default function WorkIntakeForm() {
     </form>
   );
 }
-
