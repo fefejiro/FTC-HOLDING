@@ -1269,6 +1269,24 @@ nav.primary {
   align-items: stretch;
 }
 
+.drone-hero .lead,
+.drone-hero .hero-description {
+  max-width: 62ch;
+}
+
+.drone-location-line {
+  margin: 2px 0 0;
+  color: #d4ddff;
+  font-weight: 600;
+}
+
+.drone-pricing-signal {
+  margin: 4px 0 0;
+  color: #d9e6ff;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .drone-placeholder-panel {
   display: grid;
   gap: 12px;
@@ -1297,10 +1315,15 @@ nav.primary {
 .drone-deliverables-grid,
 .drone-package-grid,
 .drone-portfolio-grid,
-.drone-faq-grid {
+.drone-faq-grid,
+.drone-use-case-grid {
   display: grid;
   gap: 16px;
   margin-top: 18px;
+}
+
+.drone-use-case-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .drone-service-grid {
@@ -1322,8 +1345,27 @@ nav.primary {
 .drone-package-card,
 .drone-portfolio-card,
 .drone-faq-card,
-.drone-section-card {
+.drone-section-card,
+.drone-use-case-card {
   gap: 12px;
+}
+
+.drone-use-case-card {
+  align-content: start;
+}
+
+.drone-use-case-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.28), rgba(0, 212, 255, 0.18));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f7fbff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
 }
 
 .drone-price {
@@ -1358,6 +1400,15 @@ nav.primary {
     linear-gradient(145deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.05));
 }
 
+.drone-service-card p,
+.drone-deliverable-card p,
+.drone-portfolio-card p,
+.drone-faq-card p,
+.drone-section-card p,
+.drone-use-case-card p {
+  color: var(--copy);
+}
+
 .drone-inquiry-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
@@ -1382,6 +1433,11 @@ nav.primary {
 
 .drone-form-full {
   grid-column: 1 / -1;
+}
+
+.drone-quick-contact {
+  margin: 16px 0 0;
+  color: var(--copy);
 }
 
 .hp-field {
@@ -2034,6 +2090,7 @@ textarea:focus-visible {
   }
 
   .drone-hero-grid,
+  .drone-use-case-grid,
   .drone-service-grid,
   .drone-deliverables-grid,
   .drone-package-grid,

@@ -59,6 +59,7 @@ export interface NetworkingProfile {
 export const siteNav = [
   { label: "Home", href: "/" },
   { label: "Products", href: "/products" },
+  { label: "Drone Services", href: "/services/drone" },
   { label: "Blog", href: "/blog" },
   { label: "Start a Project", href: "/#start-project" }
 ] as const;

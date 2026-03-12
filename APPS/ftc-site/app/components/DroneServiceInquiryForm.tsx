@@ -9,7 +9,7 @@ const serviceOptions = [
   "Real Estate Aerial Photography",
   "Roof & Property Inspection Support",
   "Business Marketing Footage",
-  "Construction / Site Progress Documentation",
+  "Construction / Site Progress Monitoring",
   "Other / Not sure yet"
 ] as const;
 
@@ -107,6 +107,16 @@ export default function DroneServiceInquiryForm() {
           />
         </label>
         <label>
+          <span>Location</span>
+          <input
+            type="text"
+            name="location"
+            autoComplete="street-address"
+            placeholder="City, neighborhood, or property address"
+            required
+          />
+        </label>
+        <label>
           <span>Service Type</span>
           <select name="serviceType" defaultValue="" className="dark-select" required>
             <option value="" disabled>
@@ -118,16 +128,6 @@ export default function DroneServiceInquiryForm() {
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          <span>Location</span>
-          <input
-            type="text"
-            name="location"
-            autoComplete="street-address"
-            placeholder="City, neighborhood, or property address"
-            required
-          />
         </label>
       </div>
 

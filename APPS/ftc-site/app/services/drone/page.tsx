@@ -1,36 +1,40 @@
 import type { Metadata } from "next";
 import DroneServiceInquiryForm from "../../components/DroneServiceInquiryForm";
+import { networkingProfile } from "../../../lib/content";
+
+const useCases = [
+  "Real Estate Listings",
+  "Roof & Property Inspections",
+  "Business Marketing Footage",
+  "Construction Progress Documentation"
+] as const;
 
 const serviceAreas = [
   {
     title: "Real Estate Aerial Photography",
     description:
-      "High-quality aerial images and video for listings, property showcases, and marketing materials."
+      "High-quality aerial photos and video for listings and property showcases."
   },
   {
     title: "Roof & Property Inspection Support",
-    description:
-      "Aerial visuals that help assess roofs, exterior conditions, and hard-to-reach areas safely."
+    description: "Capture exterior visuals of roofs and structures safely."
   },
   {
     title: "Business Marketing Footage",
-    description:
-      "Cinematic aerial footage for websites, social media, and promotional campaigns."
+    description: "Cinematic aerial visuals for websites and social media."
   },
   {
-    title: "Construction / Site Progress Documentation",
-    description:
-      "Track site progress with repeatable aerial photo and video captures over time."
+    title: "Construction / Site Progress Monitoring",
+    description: "Repeatable aerial capture for construction updates."
   }
 ] as const;
 
 const deliverables = [
-  "4K aerial video clips for listings, inspections, and promotions",
-  "High-resolution aerial photos for web, print, and documentation",
-  "Edited highlight footage for websites and campaigns",
-  "Short-form social media clips for fast publishing",
-  "Flyover shots that show access, layout, and surroundings",
-  "Exterior overview coverage for business, site, and property context"
+  "4K aerial video clips",
+  "High-resolution aerial photos",
+  "Edited highlight footage",
+  "Social media ready clips",
+  "Property flyover footage"
 ] as const;
 
 const servicePackages = [
@@ -38,7 +42,7 @@ const servicePackages = [
     name: "Starter Package",
     price: "$150",
     items: [
-      "Short on-site session",
+      "Short on-site aerial session",
       "Up to 10 edited aerial photos",
       "1 short aerial video clip"
     ]
@@ -48,7 +52,7 @@ const servicePackages = [
     price: "$300",
     items: [
       "Extended aerial coverage",
-      "Up to 20 edited aerial photos",
+      "Up to 20 aerial photos",
       "1 edited highlight video"
     ]
   },
@@ -56,16 +60,15 @@ const servicePackages = [
     name: "Premium Package",
     price: "$500",
     items: [
-      "Full aerial coverage session",
+      "Full aerial coverage",
       "Photo + video bundle",
-      "Cinematic edited video",
-      "Expanded deliverables for marketing or documentation"
+      "Cinematic edited highlight video"
     ]
   }
 ] as const;
 
 const reasonsToWorkWithUnalabs = [
-  "High-quality aerial visuals",
+  "Professional aerial visuals",
   "Fast turnaround",
   "Business-focused deliverables",
   "Clean editing and presentation",
@@ -100,17 +103,17 @@ const faqs = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "Professional Drone Photography & Video | Una Labs",
+  title: "Professional Aerial Photo & Video Services | Una Labs",
   description:
-    "Professional aerial photography and video for real estate, inspections, business marketing, and site documentation.",
+    "Professional aerial photography and video for real estate, inspections, business marketing, and site documentation in Ottawa and surrounding areas.",
   alternates: {
-    canonical: "https://unalabs.cloud/drone-services"
+    canonical: "https://unalabs.cloud/services/drone"
   },
   openGraph: {
-    title: "Professional Drone Photography & Video | Una Labs",
+    title: "Professional Aerial Photo & Video Services | Una Labs",
     description:
-      "Aerial visuals for real estate, inspections, business marketing, and property documentation.",
-    url: "https://unalabs.cloud/drone-services"
+      "Aerial visuals for real estate, inspections, business marketing, and property documentation in Ottawa and surrounding areas.",
+    url: "https://unalabs.cloud/services/drone"
   }
 };
 
@@ -122,11 +125,12 @@ export default function DroneServicesPage() {
         <div className="hero-grid drone-hero-grid">
           <div className="hero-copy">
             <p className="eyebrow">Drone Services</p>
-            <h1>Professional Drone Photography &amp; Video</h1>
+            <h1>Professional Aerial Photo &amp; Video Services</h1>
             <p className="lead">
               Aerial visuals for real estate, inspections, business marketing, and property
               documentation.
             </p>
+            <p className="drone-location-line">Serving Ottawa and surrounding areas.</p>
             <p className="hero-description">
               Fast, professional aerial imagery for businesses, listings, inspections, and
               promotional content.
@@ -139,22 +143,39 @@ export default function DroneServicesPage() {
                 View Service Packages
               </a>
             </div>
+            <p className="drone-pricing-signal">Packages starting at $150.</p>
           </div>
 
           <div className="drone-placeholder-panel" aria-label="Drone service media placeholder">
             <div className="drone-placeholder-frame">
-              <p className="card-kicker">Media Placeholder</p>
-              <h2>Future aerial reel or featured still</h2>
+              <p className="card-kicker">Aerial Portfolio</p>
+              <h2>Published project previews coming soon</h2>
               <p>
-                This area is reserved for real portfolio footage once approved media is ready
-                to publish.
+                Real stills, highlight clips, and featured project media will be shown here
+                as approved aerial work becomes available for publishing.
               </p>
             </div>
             <p className="drone-placeholder-note">
-              Prepared for future image or short video insertion without changing the page
-              structure.
+              Portfolio samples will be added once release approval is available.
             </p>
           </div>
+        </div>
+      </section>
+
+      <section className="section drone-use-case-section fade-on-scroll">
+        <div className="section-heading home-section-heading">
+          <p className="eyebrow">Best For</p>
+          <h2>Local aerial service use cases</h2>
+        </div>
+        <div className="drone-use-case-grid">
+          {useCases.map((item, index) => (
+            <article key={item} className="card drone-use-case-card">
+              <span className="drone-use-case-icon" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3>{item}</h3>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -180,7 +201,7 @@ export default function DroneServicesPage() {
       <section className="section fade-on-scroll">
         <div className="section-heading home-section-heading">
           <p className="eyebrow">What You Receive</p>
-          <h2>Deliverables prepared for business use</h2>
+          <h2>What You Receive</h2>
           <p>
             Every session is structured around usable marketing, inspection, or documentation
             outputs rather than raw, unorganized files.
@@ -198,10 +219,10 @@ export default function DroneServicesPage() {
       <section className="section fade-on-scroll" id="service-packages">
         <div className="section-heading home-section-heading">
           <p className="eyebrow">Service Packages</p>
-          <h2>Startup-friendly pricing for local traction</h2>
+          <h2>Service packages with clear starting points</h2>
           <p>
-            These public packages give clients a clear starting point. Custom quotes are
-            available for larger sites, repeat visits, and ongoing work.
+            Startup-friendly pricing for local work, with room to quote larger or repeat
+            engagements separately.
           </p>
         </div>
         <div className="drone-package-grid">
@@ -219,8 +240,7 @@ export default function DroneServicesPage() {
           ))}
         </div>
         <p className="drone-package-note">
-          Custom quotes are available for larger properties, repeat documentation, and
-          broader marketing campaigns.
+          Custom quotes available for larger projects or repeat work.
         </p>
       </section>
 
@@ -245,10 +265,9 @@ export default function DroneServicesPage() {
       <section className="section fade-on-scroll">
         <div className="section-heading home-section-heading">
           <p className="eyebrow">Recent Aerial Work</p>
-          <h2>Portfolio placeholders ready for real media</h2>
+          <h2>Sample aerial portfolio coming soon.</h2>
           <p>
-            Real media will be connected here once approved stills and clips are ready to
-            publish.
+            Real project footage will appear here once media is approved for publishing.
           </p>
         </div>
         <div className="drone-portfolio-grid">
@@ -256,7 +275,7 @@ export default function DroneServicesPage() {
             <article key={item} className="card drone-portfolio-card">
               <div className="drone-portfolio-slot" aria-hidden="true" />
               <h3>{item}</h3>
-              <p>Placeholder slot reserved for future real photo or video assets.</p>
+              <p>Reserved slot for approved aerial photos or short edited clips.</p>
             </article>
           ))}
         </div>
@@ -267,10 +286,10 @@ export default function DroneServicesPage() {
           <div className="drone-inquiry-copy">
             <div className="section-heading home-section-heading">
               <p className="eyebrow">Request Drone Service</p>
-              <h2>Start with the job details</h2>
+              <h2>Request Drone Service</h2>
               <p>
-                Tell us what you need, where the property or site is located, and the kind
-                of footage or inspection support you are looking for.
+                Tell us where the property or site is located and the type of aerial footage
+                you need.
               </p>
             </div>
             <article className="card drone-section-card">
@@ -291,6 +310,12 @@ export default function DroneServicesPage() {
               request and reply with the next step.
             </p>
             <DroneServiceInquiryForm />
+            <p className="drone-quick-contact">
+              Need a quick quote?{" "}
+              <a className="inline-link" href={`mailto:${networkingProfile.email}`}>
+                Email us directly.
+              </a>
+            </p>
           </section>
         </div>
       </section>
