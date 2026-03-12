@@ -104,13 +104,13 @@ export const metadata: Metadata = {
   description:
     "Professional aerial photography and video for real estate, inspections, business marketing, and site documentation.",
   alternates: {
-    canonical: "https://unalabs.cloud/services/drone"
+    canonical: "https://unalabs.cloud/drone-services"
   },
   openGraph: {
     title: "Professional Drone Photography & Video | Una Labs",
     description:
       "Aerial visuals for real estate, inspections, business marketing, and property documentation.",
-    url: "https://unalabs.cloud/services/drone"
+    url: "https://unalabs.cloud/drone-services"
   }
 };
 
