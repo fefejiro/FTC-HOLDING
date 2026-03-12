@@ -17,6 +17,7 @@ export default function Footer() {
           <div className="footer-links">
             <a href="/peacepad">PeacePad</a>
             <a href="/saywetin">SayWetin</a>
+            <a href="/services/drone">Drone Services</a>
             <a href="/blog">Blog</a>
             <a href="/projects">Projects</a>
             <a href="/connect">Connect</a>
