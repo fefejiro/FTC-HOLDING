@@ -53,7 +53,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6
     },
     {
-      url: `${SITE_URL}/drone-services`,
+      url: `${SITE_URL}/services/drone`,
       lastModified,
       priority: 0.6
     },
