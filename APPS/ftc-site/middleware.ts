@@ -4,6 +4,7 @@ import { LEGACY_CANONICAL_HOSTS, SITE_HOST } from "./lib/site";
 
 const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
   "/services": "/capabilities",
+  "/services/drone": "/drone-services",
   "/case-studies": "/work",
   "/contact": "/work-with-ftc",
   "/c": "/connect"
