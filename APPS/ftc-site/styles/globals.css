@@ -475,6 +475,16 @@ nav.primary {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.hero-credibility-link {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.hero-credibility-link:hover {
+  color: #d9eeff;
+}
+
 .hero-credibility-list li::before {
   content: "";
   width: 8px;
@@ -893,6 +903,10 @@ nav.primary {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.product-hero-copy .status-pill {
+  margin-bottom: 4px;
 }
 
 .compact-feature-list {

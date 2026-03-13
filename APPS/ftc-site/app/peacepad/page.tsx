@@ -23,12 +23,28 @@ export default function PeacePadPage() {
     <article className="container page-content case-study">
       <div className="product-hero-layout fade-on-scroll">
         <div className="product-hero-copy">
+          {peacePad.availabilityLabel ? <span className="status-pill">{peacePad.availabilityLabel}</span> : null}
           <h1>PeacePad</h1>
           <p className="lead">
             PeacePad is an AI communication platform that helps users pause, review tone, and
             choose better outcomes before sending high-stakes messages.
           </p>
           <p className="page-intro">{peacePad.summary}</p>
+          <div className="hero-actions">
+            {peacePad.googlePlayUrl ? (
+              <a
+                href={peacePad.googlePlayUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary"
+              >
+                Get it on Google Play
+              </a>
+            ) : null}
+            <Link href="/work/peacepad" className="btn btn-secondary">
+              Read case study
+            </Link>
+          </div>
         </div>
         <div className="product-media-stack">
           <BrandVideoPanel
@@ -96,7 +112,7 @@ export default function PeacePadPage() {
           </Link>.
         </p>
         <p className="section-link-row">
-          <Link href="/work/peacepad" className="inline-link">
+          <Link href="/work/peacepad" prefetch={false} className="inline-link">
             Read full PeacePad case study
           </Link>
         </p>

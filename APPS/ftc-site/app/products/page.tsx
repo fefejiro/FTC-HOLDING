@@ -1,11 +1,28 @@
 import Link from "next/link";
 import BrandImagePanel from "../components/BrandImagePanel";
-import { projectCaseStudies } from "../../lib/content";
+import GooglePlayBadge from "../components/GooglePlayBadge";
+import { projectCaseStudies, type ProjectCaseStudy } from "../../lib/content";
 
 export const metadata = {
   title: "Products | Una Labs",
   description: "Internal Una Labs products and capability engines."
 };
+
+function getProductOverviewHref(project: ProjectCaseStudy): string {
+  return project.slug === "peacepad"
+    ? "/peacepad"
+    : project.slug === "saywetin"
+      ? "/saywetin"
+      : `/work/${project.slug}`;
+}
+
+function getLifecycleStatusLabel(project: ProjectCaseStudy): string {
+  return project.status === "live"
+    ? "Live"
+    : project.status === "active-development"
+      ? "Active Development"
+      : "Internal Runtime";
+}
 
 export default function ProductsPage() {
   return (
@@ -39,24 +56,45 @@ export default function ProductsPage() {
 
       <div className="cards-grid cards-grid-3">
         {projectCaseStudies.map((project) => (
-          <article key={project.slug} className="card">
+          <article key={project.slug} className="card product-spotlight-card">
+            <p className="status-pill">
+              {project.availabilityLabel ?? getLifecycleStatusLabel(project)}
+            </p>
             <h2>{project.name}</h2>
             <p className="muted">{project.tagline}</p>
             <p>{project.summary}</p>
-            <p className="status-pill">{project.status.replace("-", " ")}</p>
-            <Link
-              href={
-                project.slug === "peacepad"
-                  ? "/peacepad"
-                  : project.slug === "saywetin"
-                    ? "/saywetin"
-                    : `/work/${project.slug}`
-              }
-              className="inline-link"
-            >
-              View product overview
-            </Link>
-            <Link href={`/work/${project.slug}`} className="inline-link">
+            {project.marketingBullets?.length ? (
+              <ul className="feature-list compact-feature-list">
+                {project.marketingBullets.map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="product-actions">
+              <Link
+                href={getProductOverviewHref(project)}
+                prefetch={false}
+                className="btn btn-secondary product-spotlight-link"
+              >
+                {project.slug === "peacepad" || project.slug === "saywetin"
+                  ? `View ${project.name}`
+                  : "View product overview"}
+              </Link>
+              {project.googlePlayUrl ? (
+                <a
+                  href={project.googlePlayUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary product-spotlight-link"
+                >
+                  Get it on Google Play
+                </a>
+              ) : null}
+            </div>
+            {project.googlePlayUrl ? (
+              <GooglePlayBadge href={project.googlePlayUrl} title={project.name} />
+            ) : null}
+            <Link href={`/work/${project.slug}`} prefetch={false} className="inline-link">
               Read project case study
             </Link>
           </article>

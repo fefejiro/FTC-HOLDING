@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import GooglePlayBadge from "./components/GooglePlayBadge";
 import WorkIntakeForm from "./components/WorkIntakeForm";
+import { getProjectCaseStudy, type ProjectCaseStudy } from "../lib/content";
 
 const buildAreas = [
   {
@@ -34,7 +36,14 @@ const labItems = [
   "AI copilots"
 ] as const;
 
-const googlePlayUrl = "https://play.google.com/store/apps/details?id=com.saywetin.app";
+const featuredProductSlugs = ["peacepad", "saywetin"] as const;
+const featuredProducts = featuredProductSlugs
+  .map((slug) => getProjectCaseStudy(slug))
+  .filter((project): project is ProjectCaseStudy => Boolean(project));
+
+function getProductHref(project: ProjectCaseStudy): string {
+  return project.slug === "peacepad" ? "/peacepad" : "/saywetin";
+}
 
 export const metadata: Metadata = {
   title: "Una Labs - Creative AI Studio Building AI Products",
@@ -72,8 +81,18 @@ export default function HomePage() {
                 <div className="hero-credibility">
                   <p className="hero-credibility-title">Products shipped by Unalabs:</p>
                   <ul className="hero-credibility-list">
-                    <li>PeacePad</li>
-                    <li>SayWetin (Live on Google Play)</li>
+                    {featuredProducts.map((project) => (
+                      <li key={project.slug}>
+                        <Link
+                          href={getProductHref(project)}
+                          prefetch={false}
+                          className="hero-credibility-link"
+                        >
+                          {project.name}
+                          {project.availabilityLabel ? ` (${project.availabilityLabel})` : ""}
+                        </Link>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -135,59 +154,44 @@ export default function HomePage() {
             </p>
           </div>
           <div className="product-grid">
-            <article className="card product-spotlight-card">
-              <p className="status-pill">LIVE</p>
-              <h3>PeacePad</h3>
-              <p>
-                PeacePad intervenes before a message is sent, helping users pause and choose
-                a more constructive next action.
-              </p>
-              <Link href="/peacepad" prefetch={false} className="btn btn-secondary product-spotlight-link">
-                View PeacePad
-              </Link>
-            </article>
-
-            <article className="card product-spotlight-card">
-              <p className="status-pill">LIVE ON GOOGLE PLAY</p>
-              <h3>SayWetin</h3>
-              <p>
-                SayWetin combines audio recognition with cultural interpretation to explain
-                Nigerian music, slang, and context.
-              </p>
-              <ul className="feature-list compact-feature-list">
-                <li>Recognize Nigerian songs</li>
-                <li>Explain slang and cultural meaning</li>
-                <li>Provide contextual interpretation</li>
-              </ul>
-              <div className="product-actions">
-                <Link href="/saywetin" prefetch={false} className="btn btn-secondary product-spotlight-link">
-                  View SayWetin
-                </Link>
-                <a
-                  href={googlePlayUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary product-spotlight-link"
-                >
-                  Get it on Google Play
-                </a>
-              </div>
-              <a
-                href={googlePlayUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="play-badge"
-                aria-label="Get SayWetin on Google Play"
-              >
-                <span className="play-badge-mark" aria-hidden="true">
-                  Play
-                </span>
-                <span className="play-badge-copy">
-                  <span>Available on</span>
-                  <strong>Google Play</strong>
-                </span>
-              </a>
-            </article>
+            {featuredProducts.map((project) => (
+              <article key={project.slug} className="card product-spotlight-card">
+                {project.availabilityLabel ? (
+                  <p className="status-pill">{project.availabilityLabel}</p>
+                ) : null}
+                <h3>{project.name}</h3>
+                <p>{project.summary}</p>
+                {project.marketingBullets?.length ? (
+                  <ul className="feature-list compact-feature-list">
+                    {project.marketingBullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                <div className="product-actions">
+                  <Link
+                    href={getProductHref(project)}
+                    prefetch={false}
+                    className="btn btn-secondary product-spotlight-link"
+                  >
+                    {`View ${project.name}`}
+                  </Link>
+                  {project.googlePlayUrl ? (
+                    <a
+                      href={project.googlePlayUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary product-spotlight-link"
+                    >
+                      Get it on Google Play
+                    </a>
+                  ) : null}
+                </div>
+                {project.googlePlayUrl ? (
+                  <GooglePlayBadge href={project.googlePlayUrl} title={project.name} />
+                ) : null}
+              </article>
+            ))}
           </div>
         </div>
       </section>

@@ -26,6 +26,9 @@ export interface ProjectCaseStudy {
   tags: string[];
   summary: string;
   status: "live" | "active-development" | "internal-runtime";
+  availabilityLabel?: string;
+  googlePlayUrl?: string;
+  marketingBullets?: string[];
   sections: {
     problem: string;
     insight: string;
@@ -182,6 +185,8 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     summary:
       "PeacePad intervenes before a message is sent, helping users pause and choose a more constructive next action.",
     status: "live",
+    availabilityLabel: "Live on Google Play",
+    googlePlayUrl: "https://play.google.com/store/apps/details?id=ca.peacepad.family",
     sections: {
       problem:
         "High-stakes conversations often escalate because most messaging tools react only after a message is already sent.",
@@ -212,7 +217,14 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     tags: ["Audio", "Culture", "AI"],
     summary:
       "SayWetin combines audio recognition with cultural interpretation to explain meaning, slang, and context.",
-    status: "active-development",
+    status: "live",
+    availabilityLabel: "Live on Google Play",
+    googlePlayUrl: "https://play.google.com/store/apps/details?id=com.saywetin.app",
+    marketingBullets: [
+      "Recognize Nigerian songs",
+      "Explain slang and cultural meaning",
+      "Provide contextual interpretation"
+    ],
     sections: {
       problem:
         "Global audio tools identify tracks but rarely explain Nigerian nuance, slang, or local cultural references.",

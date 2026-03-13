@@ -22,12 +22,28 @@ export default function SayWetinPage() {
     <article className="container page-content case-study">
       <div className="product-hero-layout fade-on-scroll">
         <div className="product-hero-copy">
+          {sayWetin.availabilityLabel ? <span className="status-pill">{sayWetin.availabilityLabel}</span> : null}
           <h1>SayWetin</h1>
           <p className="lead">
             SayWetin is a Nigerian music AI product built by Una Labs to translate lyrics,
             slang, and cultural context into plain-language insight.
           </p>
           <p className="page-intro">{sayWetin.summary}</p>
+          <div className="hero-actions">
+            {sayWetin.googlePlayUrl ? (
+              <a
+                href={sayWetin.googlePlayUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary"
+              >
+                Get it on Google Play
+              </a>
+            ) : null}
+            <Link href="/work/saywetin" className="btn btn-secondary">
+              Read case study
+            </Link>
+          </div>
         </div>
         <BrandVideoPanel
           src="/images/brand/saywetin-showcase.mp4"
@@ -74,7 +90,7 @@ export default function SayWetinPage() {
           learn more on the <Link href="/about" className="inline-link">about page</Link>.
         </p>
         <p className="section-link-row">
-          <Link href="/work/saywetin" className="inline-link">
+          <Link href="/work/saywetin" prefetch={false} className="inline-link">
             Read full SayWetin case study
           </Link>
         </p>
