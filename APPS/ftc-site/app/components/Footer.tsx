@@ -1,6 +1,41 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { gardenCleanersConfig } from "../../lib/gardenCleaners";
 import SocialIcons from "./SocialIcons";
 
 export default function Footer() {
+  const pathname = usePathname();
+  const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
+
+  if (isGardenSite) {
+    return (
+      <footer className="garden-site-footer">
+        <div className="container">
+          <div className="footer-grid">
+            <div className="footer-brand">
+              <p className="footer-title">{gardenCleanersConfig.companyName}</p>
+              <p className="footer-subtitle">Professional cleaning services</p>
+              <p className="footer-copy">
+                Reliable residential and commercial cleaning for Oshawa, Durham Region, and surrounding areas.
+              </p>
+            </div>
+            <div className="footer-links">
+              {gardenCleanersConfig.nav.map((item) => (
+                <a key={item.href} href={item.href}>{item.label}</a>
+              ))}
+            </div>
+            <div className="footer-links">
+              <a href={gardenCleanersConfig.phoneHref}>{gardenCleanersConfig.phoneDisplay}</a>
+              <a href={gardenCleanersConfig.emailHref}>{gardenCleanersConfig.email}</a>
+              <span>{gardenCleanersConfig.addressLine}</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer>
       <div className="container">
@@ -9,8 +44,7 @@ export default function Footer() {
             <p className="footer-title">Una Labs</p>
             <p className="footer-subtitle">Creative AI Studio</p>
             <p className="footer-copy">
-              Building real-world AI products across communication, automation, and
-              cultural intelligence.
+              Building real-world AI products across communication, automation, and cultural intelligence.
             </p>
             <SocialIcons />
           </div>

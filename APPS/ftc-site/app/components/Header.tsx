@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import Logo from "./Logo";
+import { useEffect, useMemo, useState } from "react";
+import { gardenCleanersConfig } from "../../lib/gardenCleaners";
 import { siteNav } from "../../lib/content";
+import GardenBrandMark from "./garden-cleaners/GardenBrandMark";
+import Logo from "./Logo";
 
 export default function Header() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
 
   useEffect(() => {
     setIsOpen(false);
@@ -37,21 +40,33 @@ export default function Header() {
 
   const closeMenu = () => setIsOpen(false);
 
+  const navLinks = useMemo(
+    () =>
+      isGardenSite
+        ? gardenCleanersConfig.nav
+        : siteNav.map((link) => ({ label: link.label, href: link.href })),
+    [isGardenSite]
+  );
+
+  const homeHref = isGardenSite ? "/garden-cleaners" : "/";
+  const brandName = isGardenSite ? gardenCleanersConfig.companyName : "Una Labs";
+  const brandSubtitle = isGardenSite ? "Professional cleaning services" : "Creative AI Studio";
+
   return (
-    <header>
+    <header className={isGardenSite ? "garden-site-header" : undefined}>
       <div className="container site-header">
         <div className="logo-row">
-          <Link href="/" className="logo-link" aria-label="Una Labs homepage">
-            <Logo />
+          <Link href={homeHref} className="logo-link" aria-label={`${brandName} homepage`}>
+            {isGardenSite ? <GardenBrandMark /> : <Logo />}
           </Link>
           <div>
-            <p className="brand">Una Labs</p>
-            <p className="brand-subtitle">Creative AI Studio</p>
+            <p className="brand">{brandName}</p>
+            <p className="brand-subtitle">{brandSubtitle}</p>
           </div>
         </div>
 
         <nav className="primary" aria-label="Main navigation">
-          {siteNav.map((link) => {
+          {navLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
               <Link
@@ -78,14 +93,7 @@ export default function Header() {
             Menu
           </button>
 
-          {isOpen ? (
-            <button
-              type="button"
-              className="mobile-backdrop"
-              aria-label="Close menu"
-              onClick={closeMenu}
-            />
-          ) : null}
+          {isOpen ? <button type="button" className="mobile-backdrop" aria-label="Close menu" onClick={closeMenu} /> : null}
 
           <div
             id="mobile-nav-panel"
@@ -95,14 +103,14 @@ export default function Header() {
             aria-label="Mobile navigation"
           >
             <div className="mobile-panel-header">
-              <span>Navigation</span>
+              <span>{brandName}</span>
               <button type="button" className="mobile-panel-close" onClick={closeMenu}>
                 Close
               </button>
             </div>
 
             <nav className="mobile-panel-nav" aria-label="Mobile navigation links">
-              {siteNav.map((link) => {
+              {navLinks.map((link) => {
                 const isActive = pathname === link.href;
                 return (
                   <Link
