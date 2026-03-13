@@ -8,6 +8,40 @@ export const metadata = {
   description: "Internal Una Labs products and capability engines."
 };
 
+const productOfferContent: Record<
+  string,
+  {
+    offerCopy: string;
+    secondaryLabel: string;
+    caseStudyLabel: string;
+    supportPoints?: string[];
+  }
+> = {
+  peacepad: {
+    offerCopy:
+      "Install the Android app now or review how PeacePad handles difficult conversations before delivery.",
+    secondaryLabel: "See PeacePad overview",
+    caseStudyLabel: "Read launch case study",
+    supportPoints: [
+      "Pause before sending",
+      "Review tone before delivery",
+      "Choose a calmer next action"
+    ]
+  },
+  saywetin: {
+    offerCopy:
+      "Install the Android app now or explore how SayWetin explains songs, slang, and cultural context.",
+    secondaryLabel: "See SayWetin overview",
+    caseStudyLabel: "Read launch case study"
+  },
+  ateam: {
+    offerCopy:
+      "Internal orchestration runtime used inside the Una Labs stack, not a public app-store product.",
+    secondaryLabel: "Review runtime overview",
+    caseStudyLabel: "Read system case study"
+  }
+};
+
 function getProductOverviewHref(project: ProjectCaseStudy): string {
   return project.slug === "peacepad"
     ? "/peacepad"
@@ -55,50 +89,56 @@ export default function ProductsPage() {
       </section>
 
       <div className="cards-grid cards-grid-3">
-        {projectCaseStudies.map((project) => (
-          <article key={project.slug} className="card product-spotlight-card">
-            <p className="status-pill">
-              {project.availabilityLabel ?? getLifecycleStatusLabel(project)}
-            </p>
-            <h2>{project.name}</h2>
-            <p className="muted">{project.tagline}</p>
-            <p>{project.summary}</p>
-            {project.marketingBullets?.length ? (
-              <ul className="feature-list compact-feature-list">
-                {project.marketingBullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="product-actions">
-              <Link
-                href={getProductOverviewHref(project)}
-                prefetch={false}
-                className="btn btn-secondary product-spotlight-link"
-              >
-                {project.slug === "peacepad" || project.slug === "saywetin"
-                  ? `View ${project.name}`
-                  : "View product overview"}
-              </Link>
-              {project.googlePlayUrl ? (
-                <a
-                  href={project.googlePlayUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary product-spotlight-link"
-                >
-                  Get it on Google Play
-                </a>
+        {projectCaseStudies.map((project) => {
+          const offer = productOfferContent[project.slug];
+          const supportPoints = project.marketingBullets ?? offer?.supportPoints;
+
+          return (
+            <article key={project.slug} className="card product-spotlight-card">
+              <p className="status-pill">
+                {project.availabilityLabel ?? getLifecycleStatusLabel(project)}
+              </p>
+              <h2>{project.name}</h2>
+              <p className="muted">{project.tagline}</p>
+              <p>{project.summary}</p>
+              {supportPoints?.length ? (
+                <ul className="feature-list compact-feature-list">
+                  {supportPoints.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
               ) : null}
-            </div>
-            {project.googlePlayUrl ? (
-              <GooglePlayBadge href={project.googlePlayUrl} title={project.name} />
-            ) : null}
-            <Link href={`/work/${project.slug}`} prefetch={false} className="inline-link">
-              Read project case study
-            </Link>
-          </article>
-        ))}
+              <p className="product-offer-copy">{offer?.offerCopy ?? project.summary}</p>
+              <div className="product-card-cta-stack">
+                <div className="product-actions product-actions-stack">
+                  {project.googlePlayUrl ? (
+                    <a
+                      href={project.googlePlayUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary product-spotlight-link"
+                    >
+                      Install on Google Play
+                    </a>
+                  ) : null}
+                  <Link
+                    href={getProductOverviewHref(project)}
+                    prefetch={false}
+                    className="btn btn-secondary product-spotlight-link"
+                  >
+                    {offer?.secondaryLabel ?? "View product overview"}
+                  </Link>
+                </div>
+                {project.googlePlayUrl ? (
+                  <GooglePlayBadge href={project.googlePlayUrl} title={project.name} />
+                ) : null}
+              </div>
+              <Link href={`/work/${project.slug}`} prefetch={false} className="inline-link">
+                {offer?.caseStudyLabel ?? "Read project case study"}
+              </Link>
+            </article>
+          );
+        })}
       </div>
     </div>
   );

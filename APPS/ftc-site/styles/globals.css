@@ -905,6 +905,28 @@ nav.primary {
   gap: 10px;
 }
 
+.product-actions-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.product-actions-stack .product-spotlight-link {
+  width: 100%;
+  justify-content: center;
+}
+
+.product-card-cta-stack {
+  display: grid;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.product-offer-copy {
+  margin: 0;
+  color: #d9e7ff;
+  font-size: 0.95rem;
+}
+
 .product-hero-copy .status-pill {
   margin-bottom: 4px;
 }
