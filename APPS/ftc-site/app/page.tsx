@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ClientLogoStrip from "./components/ClientLogoStrip";
 import GooglePlayBadge from "./components/GooglePlayBadge";
 import WorkIntakeForm from "./components/WorkIntakeForm";
 import { getProjectCaseStudy, type ProjectCaseStudy } from "../lib/content";
@@ -164,6 +165,8 @@ export default function HomePage() {
           </section>
         </div>
       </section>
+
+      <ClientLogoStrip />
 
       <section className="section fade-on-scroll" id="what-we-build">
         <div className="container">

@@ -1,5 +1,6 @@
 ﻿export const siteLinks = {
-  linkedIn: "https://linkedin.com/in/fejiro-efiuvwere"
+  linkedIn: "https://linkedin.com/in/fejiro-efiuvwere",
+  instagram: "https://instagram.com/unalabs"
 } as const;
 
 export const socialLinks = [

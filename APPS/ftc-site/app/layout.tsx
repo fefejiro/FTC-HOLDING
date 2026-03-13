@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { Inter, Space_Grotesk } from "next/font/google";
 import React from "react";
 import { SITE_URL } from "../lib/site";
+import { siteLinks } from "../lib/siteLinks";
 import "../styles/globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -36,8 +37,8 @@ const organizationStructuredData = {
   url: "https://unalabs.cloud",
   logo: "https://unalabs.cloud/logo.png",
   sameAs: [
-    "https://instagram.com/unalabs",
-    "https://linkedin.com/company/unalabs"
+    siteLinks.instagram,
+    siteLinks.linkedIn
   ],
   description: "Creative AI studio building real-world AI tools."
 };

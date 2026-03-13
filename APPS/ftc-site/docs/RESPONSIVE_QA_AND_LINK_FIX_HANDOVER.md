@@ -9,6 +9,8 @@
 - Tuned connect page width and panel sizing so it reads cleanly at standard desktop zoom.
 
 ## 2. Files modified
+- `app/page.tsx`
+- `app/layout.tsx`
 - `app/components/ClientLogoStrip.tsx`
 - `app/components/Header.tsx`
 - `app/components/SocialIcons.tsx`
@@ -29,12 +31,14 @@
 - Centralized social links in `lib/siteLinks.ts`.
 - Footer social icons now render only for configured, valid links.
 - LinkedIn now points to `https://linkedin.com/in/fejiro-efiuvwere`.
+- Organization structured data now uses the same LinkedIn URL instead of the broken company link.
 
 ## 5. Exact fixes for client logos
 - Added clean filename copies for all four client logos under `public/images/clients/`.
 - Replaced space-heavy filenames with stable slugged paths.
 - Moved logo mapping into `lib/clientLogos.ts` for simpler maintenance.
 - Updated `ClientLogoStrip.tsx` to consume the centralized mapping.
+- Inserted the `Selected clients` strip into the real homepage route in `app/page.tsx` directly below the hero.
 
 ## 6. Mobile nav fixes summary
 - Replaced the native `details` dropdown with a controlled mobile panel.
@@ -55,7 +59,8 @@
 
 ## 9. SEO preserved confirmation
 - No routes were renamed.
-- No metadata, canonical, sitemap, robots, or blog routing logic were changed.
+- Metadata, canonical, sitemap, robots, and blog routing logic were preserved.
+- Structured data was only corrected to use the valid LinkedIn profile URL.
 - This pass focused on layout, asset wiring, and shared UI behavior only.
 
 ## 10. Follow-up visual QA recommendations
