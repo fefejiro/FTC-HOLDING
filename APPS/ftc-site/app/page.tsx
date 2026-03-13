@@ -36,6 +36,58 @@ const labItems = [
   "AI copilots"
 ] as const;
 
+const heroSnapshotCards = [
+  {
+    title: "Products in market",
+    copy: "PeacePad and SayWetin are both live on Google Play, showing real shipped product work."
+  },
+  {
+    title: "Service + product delivery",
+    copy: "Una Labs supports both install-ready products and client delivery work that improves growth or operations."
+  },
+  {
+    title: "Fast decision cycles",
+    copy: "Focused projects usually move from brief to a clear implementation path within days, not months."
+  }
+] as const;
+
+const homeProductOfferContent: Record<
+  string,
+  {
+    offerCopy: string;
+    supportPoints: string[];
+    caseStudyLabel: string;
+  }
+> = {
+  peacepad: {
+    offerCopy:
+      "Install PeacePad now or review how the product handles difficult conversations before delivery.",
+    supportPoints: [
+      "Pause before sending",
+      "Review tone before delivery",
+      "Choose a calmer next action"
+    ],
+    caseStudyLabel: "Read launch case study"
+  },
+  saywetin: {
+    offerCopy:
+      "Install SayWetin now or explore how the app explains Nigerian songs, slang, and cultural context.",
+    supportPoints: [
+      "Recognize Nigerian songs",
+      "Explain slang and cultural meaning",
+      "Provide contextual interpretation"
+    ],
+    caseStudyLabel: "Read launch case study"
+  }
+} as const;
+
+const projectFitPoints = [
+  "AI product MVPs and install-ready apps",
+  "Workflow automations and internal tools",
+  "Service-business visibility and conversion work",
+  "Narrow experiments that need a fast, high-quality launch path"
+] as const;
+
 const featuredProductSlugs = ["peacepad", "saywetin"] as const;
 const featuredProducts = featuredProductSlugs
   .map((slug) => getProjectCaseStudy(slug))
@@ -100,18 +152,12 @@ export default function HomePage() {
               <div className="hero-collage home-hero-panel">
                 <p className="collage-label">Studio Snapshot</p>
                 <div className="home-hero-panel-grid">
-                  <article className="collage-card">
-                    <h2>Products in market</h2>
-                    <p>PeacePad and SayWetin show what ships when AI is treated like product, not hype.</p>
-                  </article>
-                  <article className="collage-card">
-                    <h2>Clear delivery model</h2>
-                    <p>We scope the problem, build the right tool, and refine it with real-world feedback.</p>
-                  </article>
-                  <article className="collage-card">
-                    <h2>Fast launch windows</h2>
-                    <p>Most focused builds move from idea to first release in 4-8 weeks.</p>
-                  </article>
+                  {heroSnapshotCards.map((card) => (
+                    <article key={card.title} className="collage-card">
+                      <h2>{card.title}</h2>
+                      <p>{card.copy}</p>
+                    </article>
+                  ))}
                 </div>
               </div>
             </div>
@@ -149,49 +195,59 @@ export default function HomePage() {
             <p className="eyebrow">Our Products</p>
             <h2>Products built and shipped by Unalabs</h2>
             <p>
-              Our product work proves the studio can take AI ideas from concept to usable,
-              market-facing software.
+              Explore the products, install the live apps, or review the case studies behind
+              the build decisions.
             </p>
           </div>
           <div className="product-grid">
-            {featuredProducts.map((project) => (
-              <article key={project.slug} className="card product-spotlight-card">
-                {project.availabilityLabel ? (
-                  <p className="status-pill">{project.availabilityLabel}</p>
-                ) : null}
-                <h3>{project.name}</h3>
-                <p>{project.summary}</p>
-                {project.marketingBullets?.length ? (
-                  <ul className="feature-list compact-feature-list">
-                    {project.marketingBullets.map((bullet) => (
-                      <li key={bullet}>{bullet}</li>
-                    ))}
-                  </ul>
-                ) : null}
-                <div className="product-actions">
-                  <Link
-                    href={getProductHref(project)}
-                    prefetch={false}
-                    className="btn btn-secondary product-spotlight-link"
-                  >
-                    {`View ${project.name}`}
-                  </Link>
-                  {project.googlePlayUrl ? (
-                    <a
-                      href={project.googlePlayUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-primary product-spotlight-link"
-                    >
-                      Get it on Google Play
-                    </a>
+            {featuredProducts.map((project) => {
+              const offer = homeProductOfferContent[project.slug];
+
+              return (
+                <article key={project.slug} className="card product-spotlight-card">
+                  {project.availabilityLabel ? (
+                    <p className="status-pill">{project.availabilityLabel}</p>
                   ) : null}
-                </div>
-                {project.googlePlayUrl ? (
-                  <GooglePlayBadge href={project.googlePlayUrl} title={project.name} />
-                ) : null}
-              </article>
-            ))}
+                  <h3>{project.name}</h3>
+                  <p>{project.summary}</p>
+                  {offer?.supportPoints.length ? (
+                    <ul className="feature-list compact-feature-list">
+                      {offer.supportPoints.map((bullet) => (
+                        <li key={bullet}>{bullet}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <p className="product-offer-copy">{offer?.offerCopy ?? project.summary}</p>
+                  <div className="product-card-cta-stack">
+                    <div className="product-actions product-actions-stack">
+                      {project.googlePlayUrl ? (
+                        <a
+                          href={project.googlePlayUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary product-spotlight-link"
+                        >
+                          Install on Google Play
+                        </a>
+                      ) : null}
+                      <Link
+                        href={getProductHref(project)}
+                        prefetch={false}
+                        className="btn btn-secondary product-spotlight-link"
+                      >
+                        {`See ${project.name} overview`}
+                      </Link>
+                    </div>
+                    {project.googlePlayUrl ? (
+                      <GooglePlayBadge href={project.googlePlayUrl} title={project.name} />
+                    ) : null}
+                  </div>
+                  <Link href={`/work/${project.slug}`} prefetch={false} className="inline-link">
+                    {offer?.caseStudyLabel ?? "Read product case study"}
+                  </Link>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -200,10 +256,10 @@ export default function HomePage() {
         <div className="container">
           <div className="section-heading home-section-heading">
             <p className="eyebrow">Client Work</p>
-            <h2>Visibility and growth work for service businesses</h2>
+            <h2>Client delivery for businesses that need visibility or launch support</h2>
             <p>
-              Beyond studio products, Unalabs also improves digital visibility for client
-              businesses that need better discovery and search performance.
+              Not every engagement is a new app. Some clients need stronger search visibility,
+              better positioning, or a faster path to inbound inquiries.
             </p>
           </div>
           <article className="card client-work-card">
@@ -226,9 +282,18 @@ export default function HomePage() {
                 <li>search discoverability improvements</li>
               </ul>
             </div>
-            <Link href="/work" prefetch={false} className="inline-link">
-              View Case Study
-            </Link>
+            <p className="product-offer-copy">
+              Best fit for local service businesses that need better search presence before
+              investing in a larger build.
+            </p>
+            <div className="product-actions">
+              <Link href="/work" prefetch={false} className="btn btn-secondary product-spotlight-link">
+                View Case Study
+              </Link>
+              <a href="#start-project" className="btn btn-primary product-spotlight-link">
+                Start a Project
+              </a>
+            </div>
           </article>
         </div>
       </section>
@@ -255,19 +320,25 @@ export default function HomePage() {
           <div className="intake-aside">
             <div className="section-heading home-section-heading">
               <p className="eyebrow">Start a Project</p>
-              <h2>Tell us what you want to build</h2>
+              <h2>Start with the business problem or product idea</h2>
               <p>
-                Tell us what you want to build, your budget range, and your ideal timeline.
+                Tell us what you need to launch, automate, or improve. Una Labs will tell you
+                quickly if it is a fit and what the next step should be.
               </p>
             </div>
             <p className="intake-reassurance">
               No obligation. We review every request and reply within 24 hours.
             </p>
             <div className="card intake-note-card">
-              <h3>Built by the team behind PeacePad and SayWetin.</h3>
-              <p>
-                Best fit: AI automations, internal tools, assistants, product MVPs, and
-                narrow experiments that need a fast, high-quality launch path.
+              <h3>Good fit right now</h3>
+              <ul className="feature-list compact-feature-list intake-fit-list">
+                {projectFitPoints.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+              <p className="product-offer-copy">
+                Built by the team behind PeacePad and SayWetin, with room for both market-facing
+                products and practical client delivery work.
               </p>
             </div>
           </div>

@@ -921,10 +921,19 @@ nav.primary {
   margin-top: auto;
 }
 
+.product-card-cta-stack .play-badge {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 .product-offer-copy {
   margin: 0;
   color: #d9e7ff;
   font-size: 0.95rem;
+}
+
+.intake-fit-list {
+  gap: 10px;
 }
 
 .product-hero-copy .status-pill {
