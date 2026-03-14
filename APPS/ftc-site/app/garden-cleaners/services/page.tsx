@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import CTABanner from "../../components/CTABanner";
 import GardenServiceCard from "../../components/garden-cleaners/GardenServiceCard";
-import { gardenServices } from "../../../lib/gardenCleaners";
+import GardenServiceShowcase from "../../components/garden-cleaners/GardenServiceShowcase";
+import { gardenCleanersConfig, gardenServices } from "../../../lib/gardenCleaners";
 
 export const metadata: Metadata = {
-  title: 'Cleaning Services | Garden Cleaners Oshawa',
+  title: "Cleaning Services | Garden Cleaners Oshawa",
   description:
-    'Explore residential, commercial, deep cleaning, move-in, move-out, office, and post-construction cleaning services from Garden Cleaners in Oshawa, Ontario.',
-  alternates: { canonical: 'https://unalabs.cloud/garden-cleaners/services' }
+    "Explore residential, commercial, deep cleaning, move-in, move-out, office, and post-construction cleaning services from Garden Cleaners in Oshawa, Ontario.",
+  alternates: { canonical: "https://unalabs.cloud/garden-cleaners/services" }
 };
 
 export default function GardenServicesPage() {
@@ -16,6 +17,16 @@ export default function GardenServicesPage() {
       <div className="container page-content garden-page-content">
         <h1>Cleaning Services</h1>
         <p className="page-intro">Garden Cleaners offers practical, professional cleaning support for residential and commercial clients in Oshawa and surrounding areas.</p>
+
+        <GardenServiceShowcase
+          eyebrow="Deep cleaning and reset work"
+          title="A detailed clean for move-related, seasonal, and first-visit service needs."
+          body="Deep cleaning is ideal when the space needs more than a standard recurring visit. It gives homes, offices, and managed properties a more polished reset before the next rhythm starts."
+          linkHref="/garden-cleaners/quote"
+          linkLabel="Book a deep cleaning quote"
+          asset={gardenCleanersConfig.media.deepCleaning}
+        />
+
         <div className="cards-grid cards-grid-3">
           {gardenServices.map((service) => (
             <GardenServiceCard key={service.slug} service={service} />

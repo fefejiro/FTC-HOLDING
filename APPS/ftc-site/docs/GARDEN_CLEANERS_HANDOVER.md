@@ -1,4 +1,4 @@
-# Garden Cleaners Demo Build Handover
+﻿# Garden Cleaners Demo Build Handover
 
 ## Summary of changes
 - Added a new isolated Garden Cleaners subsite under `/garden-cleaners` inside the existing ftc-site app.
@@ -6,6 +6,8 @@
 - Added route-aware header and footer behavior so Garden Cleaners gets its own brand chrome within the subsite.
 - Added a dedicated quote request form and API route for demo-ready client presentation.
 - Added local SEO metadata for each Garden Cleaners page and updated the sitemap.
+- Upgraded the homepage with a more client-facing deep-cleaning structure inspired by a local-services landing page pattern.
+- Added local Garden Cleaners media assets under `public/images/garden-cleaners` and wired them into the homepage and services experience.
 
 ## New routes
 - `/garden-cleaners`
@@ -23,18 +25,25 @@
 - `app/garden-cleaners/quote/page.tsx`
 - `app/api/garden-cleaners-quote/route.ts`
 - `app/components/garden-cleaners/GardenHero.tsx`
+- `app/components/garden-cleaners/GardenDeepCleaningFeature.tsx`
+- `app/components/garden-cleaners/GardenServiceShowcase.tsx`
+- `app/components/garden-cleaners/GardenImagePanel.tsx`
 - `app/components/garden-cleaners/GardenTrustStrip.tsx`
 - `app/components/garden-cleaners/GardenServiceCard.tsx`
 - `app/components/garden-cleaners/GardenTestimonials.tsx`
 - `app/components/garden-cleaners/GardenFaqList.tsx`
 - `app/components/garden-cleaners/GardenQuoteForm.tsx`
 - `lib/gardenCleaners.ts`
+- `public/images/garden-cleaners/hero-cleaning-team.svg`
+- `public/images/garden-cleaners/deep-cleaning-kitchen.svg`
+- `public/images/garden-cleaners/commercial-cleaning-office.svg`
 
 ## Files modified
 - `app/components/Header.tsx`
 - `app/components/Footer.tsx`
 - `app/sitemap.ts`
 - `styles/globals.css`
+- `docs/GARDEN_CLEANERS_HANDOVER.md`
 
 ## Placeholder content requiring replacement later
 - Phone: `(905) 000-0000`
@@ -46,6 +55,16 @@
 - Quote form validates required fields and submits to `/api/garden-cleaners-quote`.
 - If `GARDEN_CLEANERS_QUOTE_WEBHOOK_URL` is configured, submissions forward there.
 - If not configured, the form still returns a clean success message so the demo remains functional.
+
+## Visual refinement notes
+- The homepage now has a dedicated deep-cleaning feature section with stronger local-services copy and a right-side media panel.
+- The hero now uses a cleaning image panel and small proof pills so the page feels more like a real local-services landing page.
+- Services now include an additional showcase section to make the subsite feel more complete and less text-only.
+
+## Image generation note
+- I checked the local OpenAI image generation workflow, but `OPENAI_API_KEY` is not set in this environment, so photoreal AI image generation could not be executed safely in this pass.
+- To avoid blocking the build, I added polished local SVG service illustrations under `public/images/garden-cleaners`.
+- Once `OPENAI_API_KEY` is available locally, those image paths can be swapped for generated photoreal assets without changing layout code.
 
 ## SEO confirmation
 - Root Una Labs metadata was left intact.
@@ -61,3 +80,4 @@
 - Replace placeholder contact details with client-provided data.
 - Replace placeholder testimonials with approved proof.
 - If the client wants real lead delivery, set `GARDEN_CLEANERS_QUOTE_WEBHOOK_URL` in the deployment environment.
+- If photoreal marketing images are required, set `OPENAI_API_KEY` locally and regenerate the Garden Cleaners media set.

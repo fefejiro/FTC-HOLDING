@@ -1,4 +1,4 @@
-export type GardenNavLink = {
+﻿export type GardenNavLink = {
   label: string;
   href: string;
 };
@@ -20,6 +20,14 @@ export type GardenTestimonial = {
 export type GardenFaq = {
   question: string;
   answer: string;
+};
+
+export type GardenMediaAsset = {
+  src: string;
+  alt: string;
+  badge: string;
+  title: string;
+  caption: string;
 };
 
 export const gardenCleanersConfig = {
@@ -51,6 +59,7 @@ export const gardenCleanersConfig = {
     'Attention to detail',
     'Locally serving Oshawa and surrounding area'
   ],
+  heroHighlights: ['One-time deep cleaning', 'Recurring cleaning plans', 'Move-in and move-out support'],
   serviceAreas: ['Oshawa', 'Whitby', 'Ajax', 'Pickering', 'Courtice', 'Durham Region'],
   businessHours: [
     'Monday - Friday: 8:00 AM - 6:00 PM',
@@ -98,7 +107,43 @@ export const gardenCleanersConfig = {
       answer:
         'Submit the quote form with your property details and required service. We will follow up with the next step and a tailored estimate path.'
     }
-  ] satisfies GardenFaq[]
+  ] satisfies GardenFaq[],
+  deepCleaningFeature: {
+    eyebrow: 'Deep Cleaning Services Oshawa',
+    title: 'Trusted deep cleaning experts near you in Oshawa.',
+    body:
+      'Discover detailed deep cleaning support for homes, apartments, offices, and managed properties. Garden Cleaners handles one-time resets, move-related cleaning, and high-attention service when a standard clean is not enough.',
+    bullets: [
+      'Ideal for first-time visits and seasonal resets',
+      'Detailed focus on kitchens, bathrooms, and high-touch surfaces',
+      'Flexible for one-time deep cleans or recurring plans'
+    ],
+    primaryCta: { label: 'Request a Deep Cleaning Quote', href: '/garden-cleaners/quote' },
+    secondaryCta: { label: 'See All Services', href: '/garden-cleaners/services' }
+  },
+  media: {
+    hero: {
+      src: '/images/garden-cleaners/hero-cleaning-team.svg',
+      alt: 'Illustration of a bright kitchen with a professional cleaning team preparing a polished finish.',
+      badge: 'Residential and commercial cleaning',
+      title: 'Bright, organized cleaning support for homes and workplaces.',
+      caption: 'Built for one-time deep cleans, recurring schedules, and property reset work in Oshawa.'
+    },
+    deepCleaning: {
+      src: '/images/garden-cleaners/deep-cleaning-kitchen.svg',
+      alt: 'Illustration of a carefully cleaned kitchen with supplies arranged and surfaces shining.',
+      badge: 'One-time deep cleaning',
+      title: 'A more detailed clean when presentation and reset matter.',
+      caption: 'Designed for move-related, seasonal, and pre-listing cleaning needs.'
+    },
+    commercial: {
+      src: '/images/garden-cleaners/commercial-cleaning-office.svg',
+      alt: 'Illustration of a tidy office space set up for professional commercial cleaning.',
+      badge: 'Office and commercial cleaning',
+      title: 'Reliable cleaning plans for offices, managed spaces, and shared environments.',
+      caption: 'Low-disruption scheduling for teams that need consistency and a polished space.'
+    }
+  } satisfies Record<'hero' | 'deepCleaning' | 'commercial', GardenMediaAsset>
 } as const;
 
 export const gardenServices: GardenService[] = [

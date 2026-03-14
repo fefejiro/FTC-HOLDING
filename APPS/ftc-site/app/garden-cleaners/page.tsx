@@ -1,18 +1,20 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import CTABanner from "../components/CTABanner";
+import GardenDeepCleaningFeature from "../components/garden-cleaners/GardenDeepCleaningFeature";
 import GardenFaqList from "../components/garden-cleaners/GardenFaqList";
 import GardenHero from "../components/garden-cleaners/GardenHero";
 import GardenServiceCard from "../components/garden-cleaners/GardenServiceCard";
+import GardenServiceShowcase from "../components/garden-cleaners/GardenServiceShowcase";
 import GardenTestimonials from "../components/garden-cleaners/GardenTestimonials";
 import GardenTrustStrip from "../components/garden-cleaners/GardenTrustStrip";
-import { gardenServices } from "../../lib/gardenCleaners";
+import { gardenCleanersConfig, gardenServices } from "../../lib/gardenCleaners";
 
 export const metadata: Metadata = {
-  title: 'Garden Cleaners | Professional Cleaning Services in Oshawa, Ontario',
+  title: "Garden Cleaners | Professional Cleaning Services in Oshawa, Ontario",
   description:
-    'Garden Cleaners provides reliable residential and commercial cleaning services in Oshawa, Ontario. Get a free quote for professional, spotless cleaning.',
-  alternates: { canonical: 'https://unalabs.cloud/garden-cleaners' }
+    "Garden Cleaners provides reliable residential and commercial cleaning services in Oshawa, Ontario. Get a free quote for professional, spotless cleaning.",
+  alternates: { canonical: "https://unalabs.cloud/garden-cleaners" }
 };
 
 export default function GardenCleanersHomePage() {
@@ -21,6 +23,7 @@ export default function GardenCleanersHomePage() {
       <div className="container page-content garden-page-content">
         <GardenHero />
         <GardenTrustStrip />
+        <GardenDeepCleaningFeature />
 
         <section className="section garden-section">
           <div className="section-heading">
@@ -57,6 +60,15 @@ export default function GardenCleanersHomePage() {
             </article>
           </div>
         </section>
+
+        <GardenServiceShowcase
+          eyebrow="Commercial and office support"
+          title="Consistent cleaning for offices, teams, and client-facing spaces."
+          body="Office, retail, and managed-property cleaning plans are designed to fit real schedules, reduce friction, and keep the space presentable between visits."
+          linkHref="/garden-cleaners/services"
+          linkLabel="Explore commercial services"
+          asset={gardenCleanersConfig.media.commercial}
+        />
 
         <section className="section garden-section">
           <div className="section-heading">

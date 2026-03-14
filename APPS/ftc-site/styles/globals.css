@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #0b0b0f;
   --bg-soft: #11131a;
   --surface: #151823;
@@ -2220,8 +2220,8 @@ textarea:focus-visible {
 
 .garden-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  gap: 28px;
   align-items: stretch;
 }
 
@@ -2236,16 +2236,26 @@ textarea:focus-visible {
 .garden-testimonial-card,
 .garden-faq-item,
 .garden-service-card,
-.garden-copy-stack .card {
+.garden-copy-stack .card,
+.garden-feature-copy,
+.garden-showcase-copy,
+.garden-image-panel {
   background: rgba(255, 255, 255, 0.88);
   border-color: rgba(23, 61, 49, 0.1);
   box-shadow: 0 14px 30px rgba(23, 61, 49, 0.08);
 }
 
 .garden-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 32px;
+  justify-content: center;
+}
+
+.garden-hero-panel-stack {
   display: grid;
-  gap: 14px;
-  padding: 8px 0;
+  gap: 18px;
 }
 
 .garden-hero-panel {
@@ -2253,6 +2263,69 @@ textarea:focus-visible {
   gap: 14px;
   padding: 28px;
   align-content: start;
+}
+
+.garden-mini-proof-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.garden-mini-proof-pill {
+  border-radius: 999px;
+  padding: 9px 14px;
+  background: rgba(26, 123, 98, 0.08);
+  border: 1px solid rgba(26, 123, 98, 0.12);
+  color: #26584a;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.garden-image-panel {
+  overflow: hidden;
+  padding: 14px;
+}
+
+.garden-image-shell {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 26px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f4fbf8 0%, #dff3ec 100%);
+}
+
+.garden-image {
+  object-fit: cover;
+}
+
+.garden-image-copy {
+  display: grid;
+  gap: 10px;
+  padding: 16px 8px 4px;
+}
+
+.garden-image-copy strong {
+  color: #173d31;
+  font-size: 1.05rem;
+}
+
+.garden-image-copy p {
+  color: #4d5f58;
+}
+
+.garden-image-badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: rgba(26, 123, 98, 0.1);
+  border: 1px solid rgba(26, 123, 98, 0.14);
+  color: #195745;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .garden-check-list,
@@ -2274,6 +2347,33 @@ textarea:focus-visible {
   color: #2e4a42;
   font-weight: 600;
   box-shadow: 0 10px 22px rgba(23, 61, 49, 0.05);
+}
+
+.garden-feature-grid,
+.garden-showcase-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.92fr);
+  gap: 28px;
+  align-items: stretch;
+}
+
+.garden-feature-copy,
+.garden-showcase-copy {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+}
+
+.garden-feature-media,
+.garden-showcase-media,
+.garden-hero-media {
+  height: 100%;
+}
+
+.garden-feature-list {
+  margin-top: 4px;
 }
 
 .garden-split-grid,
@@ -2350,20 +2450,31 @@ textarea:focus-visible {
   border-top: 1px solid rgba(23, 61, 49, 0.1);
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1100px) {
   .garden-hero,
+  .garden-feature-grid,
+  .garden-showcase-grid,
   .garden-split-grid,
   .garden-proof-grid,
   .garden-contact-grid,
   .garden-quote-grid,
   .garden-copy-stack { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 960px) {
   .garden-trust-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .garden-hero-copy,
+  .garden-feature-copy,
+  .garden-showcase-copy { padding: 26px; }
 }
 
 @media (max-width: 720px) {
   .garden-page-content { padding-top: 32px; padding-bottom: 64px; }
   .garden-trust-strip { grid-template-columns: 1fr; }
+  .garden-hero-copy,
   .garden-hero-panel,
+  .garden-feature-copy,
+  .garden-showcase-copy,
   .garden-proof-card,
   .garden-split-card,
   .garden-contact-card,
@@ -2371,6 +2482,9 @@ textarea:focus-visible {
   .garden-quote-side-card,
   .garden-quote-form-shell,
   .garden-testimonial-card { padding: 20px; }
+  .garden-image-panel { padding: 12px; }
+  .garden-mini-proof-row { gap: 8px; }
+  .garden-mini-proof-pill { width: 100%; justify-content: center; text-align: center; }
 }
 
 .garden-brand-mark {
@@ -2411,3 +2525,5 @@ textarea:focus-visible {
   background: rgba(23, 61, 49, 0.34);
   transform: translateY(6px);
 }
+
+
