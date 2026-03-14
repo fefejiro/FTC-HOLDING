@@ -2,13 +2,14 @@ import type { PreflightResponse } from "@ftc/peacepad-sdk";
 import {
   detectSupportedSite,
   getComposerText,
-  isEditableComposer,
+  resolveComposerFromTarget,
   setComposerText,
   type SupportedSite,
 } from "./adapters";
 import { canUseAuto, getSettings } from "./storage";
 
 const site = detectSupportedSite(window.location.hostname);
+const LOG_PREFIX = "[PeacePad]";
 
 const MIN_CHARS_FOR_ANALYSIS = 18;
 const BACKGROUND_DEBOUNCE_MS = 900;
@@ -26,10 +27,12 @@ let lastDismissedFingerprint = "";
 let lastErrorToastAt = 0;
 
 if (site) {
+  log("content script loaded", { site, host: window.location.hostname });
   bootstrap(site);
 }
 
 function bootstrap(currentSite: SupportedSite): void {
+  log("bootstrapping monitor", { site: currentSite });
   installPassiveWatcher(currentSite);
   installSendGate(currentSite);
 }
@@ -42,12 +45,16 @@ function installPassiveWatcher(currentSite: SupportedSite): void {
         return;
       }
 
-      const target = event.target as Element | null;
-      if (!isEditableComposer(target)) {
+      const composer = resolveComposerFromTarget(currentSite, event.target);
+      if (!composer) {
         return;
       }
 
-      scheduleBackgroundCheck(target, currentSite);
+      log("draft detected", {
+        site: currentSite,
+        chars: getComposerText(composer).trim().length,
+      });
+      scheduleBackgroundCheck(composer, currentSite);
     },
     true,
   );
@@ -76,11 +83,13 @@ async function runBackgroundCheck(currentSite: SupportedSite): Promise<void> {
 
   const settings = await getSettings();
   if (!canUseAuto(settings, currentSite)) {
+    log("background check skipped", { site: currentSite, reason: "auto_disabled" });
     return;
   }
 
   const text = getComposerText(composer).trim();
   if (text.length < MIN_CHARS_FOR_ANALYSIS) {
+    log("background check skipped", { site: currentSite, reason: "too_short", chars: text.length });
     return;
   }
 
@@ -109,23 +118,24 @@ function installSendGate(currentSite: SupportedSite): void {
         return;
       }
 
-      const target = event.target as Element | null;
-      if (!isEditableComposer(target)) {
+      const composer = resolveComposerFromTarget(currentSite, event.target);
+      if (!composer) {
         return;
       }
 
-      const text = getComposerText(target).trim();
+      const text = getComposerText(composer).trim();
       if (!text || text.length < MIN_CHARS_FOR_ANALYSIS) {
         return;
       }
 
       const draftFingerprint = fingerprint(text);
       if (draftFingerprint === lastSafeFingerprint) {
+        log("send gate bypassed", { site: currentSite, reason: "already_cleared", chars: text.length });
         return;
       }
 
       event.preventDefault();
-      void runPreflight(target, currentSite, "send_gate");
+      void runPreflight(composer, currentSite, "send_gate");
     },
     true,
   );
@@ -153,6 +163,7 @@ async function runPreflight(
 
   const settings = await getSettings();
   if (!canUseAuto(settings, currentSite)) {
+    log("preflight skipped", { site: currentSite, intent, reason: "auto_disabled" });
     if (intent === "send_gate") {
       triggerSend(composer);
     }
@@ -160,6 +171,11 @@ async function runPreflight(
   }
 
   const draftFingerprint = fingerprint(text);
+  log("preflight triggered", {
+    site: currentSite,
+    intent,
+    chars: text.length,
+  });
   analysisInFlight = true;
   try {
     const response = await requestPreflight({
@@ -174,6 +190,12 @@ async function runPreflight(
     });
 
     if (!response.ok) {
+      log("preflight failed", {
+        site: currentSite,
+        intent,
+        status: response.error?.status ?? null,
+        message: response.error?.message ?? "unknown_error",
+      });
       if (response.error?.status === 401) {
         showToastThrottled("Please sign in to PeacePad first.");
       } else {
@@ -186,7 +208,15 @@ async function runPreflight(
     }
 
     const preflight = response.data;
-    if (!shouldIntervene(preflight)) {
+    const intervene = shouldIntervene(preflight);
+    log("intervention decision returned", {
+      site: currentSite,
+      intent,
+      risk: preflight.risk_level,
+      score: preflight.conflict_score,
+      intervene,
+    });
+    if (!intervene) {
       lastSafeFingerprint = draftFingerprint;
       if (intent === "send_gate") {
         suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
@@ -207,6 +237,7 @@ async function runPreflight(
     }
 
     lastIntervenedFingerprint = draftFingerprint;
+    log("showing intervention modal", { site: currentSite, intent });
     showPreflightModal(preflight, composer, draftFingerprint);
   } finally {
     analysisInFlight = false;
@@ -236,6 +267,11 @@ async function requestPreflight(payload: {
   | { ok: false; error?: { message?: string; status?: number } }
 > {
   return new Promise((resolve) => {
+    log("API call attempted", {
+      channel: payload.channel,
+      mode: payload.mode,
+      chars: payload.text.length,
+    });
     chrome.runtime.sendMessage(
       {
         type: "PEACEPAD_PREFLIGHT",
@@ -431,6 +467,15 @@ function showToast(message: string): void {
 
   document.body.appendChild(toast);
   window.setTimeout(() => toast.remove(), 2800);
+}
+
+function log(message: string, data?: Record<string, unknown>): void {
+  if (data) {
+    console.debug(LOG_PREFIX, message, data);
+    return;
+  }
+
+  console.debug(LOG_PREFIX, message);
 }
 
 function normalizeDraft(text: string): string {

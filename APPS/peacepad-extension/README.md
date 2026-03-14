@@ -28,5 +28,29 @@ npm run test
 3. Load unpacked -> `APPS/peacepad-extension`
 
 ## Runtime assumptions
-- Session-cookie auth mode in v1.
-- User must be signed into PeacePad API session for preflight checks.
+- Session-cookie auth or API-key auth.
+
+## WhatsApp test flow
+1. Run `npm run build` from `APPS/peacepad-extension`.
+2. In `chrome://extensions`, click **Reload** on `PeacePad Pre-Send`.
+3. Open the extension popup on `https://web.whatsapp.com`.
+4. Confirm:
+   - `Current Site` shows `whatsapp`
+   - `Enable automatic monitoring` is on
+   - API settings are correct for your machine
+5. Type one of these messages in a WhatsApp chat:
+   - Safe control: `Hey, I am outside.`
+   - Soft escalation: `You always pick up the kid late.`
+   - Strong escalation: `Fuck you. You never care about the kids.`
+6. Open WhatsApp DevTools and check the **Console** for `[PeacePad]` logs.
+
+## Debug logs to expect
+- `content script loaded`
+- `draft detected`
+- `preflight triggered`
+- `API call attempted`
+- `intervention decision returned`
+
+## Notes
+- WhatsApp host access is declared directly in `manifest.json`; you do not need to manually toggle the site row in Chrome.
+- If nothing happens, inspect the extension **service worker** console and the WhatsApp page console.

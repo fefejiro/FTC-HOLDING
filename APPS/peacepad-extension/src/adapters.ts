@@ -54,7 +54,33 @@ export function isEditableComposer(element: Element | null): element is HTMLElem
     return true;
   }
 
-  return element.isContentEditable;
+  return element.isContentEditable || element.getAttribute("contenteditable") === "true";
+}
+
+function findEditableAncestor(element: Element | null): HTMLElement | null {
+  if (!element) {
+    return null;
+  }
+
+  if (isEditableComposer(element)) {
+    return element;
+  }
+
+  if (!(element instanceof HTMLElement)) {
+    return null;
+  }
+
+  const contentEditableAncestor = element.closest("[contenteditable='true']");
+  if (isEditableComposer(contentEditableAncestor)) {
+    return contentEditableAncestor;
+  }
+
+  const textboxAncestor = element.closest("[role='textbox'], textarea, input");
+  if (isEditableComposer(textboxAncestor)) {
+    return textboxAncestor;
+  }
+
+  return null;
 }
 
 export function getComposerText(element: HTMLElement): string {
@@ -75,10 +101,24 @@ export function setComposerText(element: HTMLElement, value: string): void {
   element.dispatchEvent(new InputEvent("input", { bubbles: true, data: value }));
 }
 
+export function resolveComposerFromTarget(
+  site: SupportedSite,
+  target: EventTarget | null,
+): HTMLElement | null {
+  const element = target instanceof Element ? target : null;
+  const directMatch = findEditableAncestor(element);
+  if (directMatch) {
+    return directMatch;
+  }
+
+  return resolveActiveComposer(site);
+}
+
 export function resolveActiveComposer(site: SupportedSite): HTMLElement | null {
   const active = document.activeElement;
-  if (isEditableComposer(active)) {
-    return active;
+  const activeComposer = findEditableAncestor(active);
+  if (activeComposer) {
+    return activeComposer;
   }
 
   const adapter = getAdapter(site);

@@ -1,5 +1,7 @@
+// @vitest-environment jsdom
+
 import { describe, expect, it } from "vitest";
-import { detectSupportedSite } from "../src/adapters";
+import { detectSupportedSite, resolveComposerFromTarget } from "../src/adapters";
 import { canEnableAuto, canUseAuto } from "../src/storage";
 
 describe("site adapter detection", () => {
@@ -17,6 +19,20 @@ describe("site adapter detection", () => {
 
   it("returns null for unsupported host", () => {
     expect(detectSupportedSite("example.com")).toBeNull();
+  });
+
+  it("resolves whatsapp composer from a nested editable child", () => {
+    document.body.innerHTML = `
+      <div contenteditable="true" role="textbox" data-tab="10">
+        <span id="inner">draft</span>
+      </div>
+    `;
+
+    const inner = document.getElementById("inner");
+    const composer = resolveComposerFromTarget("whatsapp", inner);
+
+    expect(composer?.getAttribute("role")).toBe("textbox");
+    expect(composer?.getAttribute("contenteditable")).toBe("true");
   });
 });
 

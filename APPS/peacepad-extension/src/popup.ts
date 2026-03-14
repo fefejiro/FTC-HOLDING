@@ -60,7 +60,9 @@ async function bootstrap(): Promise<void> {
     setText(
       "site-status",
       autoAvailable
-        ? "Silent background checks are active when auto-check is enabled."
+        ? Boolean(settings.autoBySite[site])
+          ? "Monitoring is ON. Type 18+ characters and pause briefly, or press Enter to trigger the send gate."
+          : "Monitoring is OFF. Turn it on below for WhatsApp testing."
         : "Auto-check unavailable on this page.",
     );
   }
