@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import CTABanner from "../../components/CTABanner";
+import GardenImagePanel from "../../components/garden-cleaners/GardenImagePanel";
 import { gardenCleanersConfig } from "../../../lib/gardenCleaners";
 
 export const metadata: Metadata = {
@@ -13,10 +14,15 @@ export default function GardenAboutPage() {
   return (
     <div className="garden-site-shell">
       <div className="container page-content garden-page-content">
-        <h1>About Garden Cleaners</h1>
-        <p className="page-intro">
-          Garden Cleaners is a professional cleaning service focused on dependable work, practical communication, and spotless results for clients across Oshawa and nearby areas.
-        </p>
+        <div className="garden-showcase-grid garden-about-intro-grid">
+          <section>
+            <h1>About Garden Cleaners</h1>
+            <p className="page-intro">
+              Garden Cleaners is a professional cleaning service focused on dependable work, practical communication, and spotless results for clients across Oshawa and nearby areas.
+            </p>
+          </section>
+          <GardenImagePanel asset={gardenCleanersConfig.media.about} className="garden-showcase-media" />
+        </div>
 
         <section className="garden-copy-stack">
           <article className="card"><h2>Who we are</h2><p>Garden Cleaners serves homeowners, offices, property managers, and move-related projects with cleaning support designed to be reliable, straightforward, and easy to book.</p></article>

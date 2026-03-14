@@ -32,6 +32,16 @@ export default function GardenServicesPage() {
             <GardenServiceCard key={service.slug} service={service} />
           ))}
         </div>
+
+        <GardenServiceShowcase
+          eyebrow="Sanitization and janitorial support"
+          title="Washrooms, shared zones, and touch points maintained with a cleaner, more professional standard."
+          body="For offices, shared environments, and recurring upkeep, Garden Cleaners can support washroom cleaning, janitorial resets, and hygiene-focused service where detail matters."
+          linkHref="/garden-cleaners/contact"
+          linkLabel="Discuss janitorial support"
+          asset={gardenCleanersConfig.media.sanitization}
+        />
+
         <CTABanner title="Need help choosing the right cleaning service?" description="Share a few details about the property and timing and we will recommend the right cleaning plan." primaryLabel="Get a Free Quote" primaryHref="/garden-cleaners/quote" secondaryLabel="Contact Garden Cleaners" secondaryHref="/garden-cleaners/contact" />
       </div>
     </div>

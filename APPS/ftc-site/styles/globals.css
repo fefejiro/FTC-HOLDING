@@ -2338,6 +2338,26 @@ textarea:focus-visible {
   margin-top: 24px;
 }
 
+.garden-trust-section {
+  display: grid;
+  gap: 18px;
+}
+
+.garden-trust-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(320px, 1.08fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.garden-trust-copy {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+
 .garden-trust-pill {
   padding: 14px 16px;
   border-radius: 999px;
@@ -2389,6 +2409,16 @@ textarea:focus-visible {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+}
+
+.garden-about-intro-grid {
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.garden-contact-media,
+.garden-quote-media {
+  margin-top: 20px;
 }
 
 .garden-proof-card,
@@ -2452,6 +2482,7 @@ textarea:focus-visible {
 
 @media (max-width: 1100px) {
   .garden-hero,
+  .garden-trust-grid,
   .garden-feature-grid,
   .garden-showcase-grid,
   .garden-split-grid,
@@ -2463,6 +2494,7 @@ textarea:focus-visible {
 
 @media (max-width: 960px) {
   .garden-trust-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .garden-trust-copy,
   .garden-hero-copy,
   .garden-feature-copy,
   .garden-showcase-copy { padding: 26px; }
@@ -2471,6 +2503,7 @@ textarea:focus-visible {
 @media (max-width: 720px) {
   .garden-page-content { padding-top: 32px; padding-bottom: 64px; }
   .garden-trust-strip { grid-template-columns: 1fr; }
+  .garden-trust-copy,
   .garden-hero-copy,
   .garden-hero-panel,
   .garden-feature-copy,

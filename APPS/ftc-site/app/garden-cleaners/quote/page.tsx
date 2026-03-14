@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GardenImagePanel from "../../components/garden-cleaners/GardenImagePanel";
 import GardenQuoteForm from "../../components/garden-cleaners/GardenQuoteForm";
 import { gardenCleanersConfig } from "../../../lib/gardenCleaners";
 
@@ -32,6 +33,7 @@ export default function GardenQuotePage() {
                 Prefer to talk first? Call <a href={gardenCleanersConfig.phoneHref}>{gardenCleanersConfig.phoneDisplay}</a> or email <a href={gardenCleanersConfig.emailHref}>{gardenCleanersConfig.email}</a>.
               </p>
             </div>
+            <GardenImagePanel asset={gardenCleanersConfig.media.quote} className="garden-quote-media" />
           </section>
 
           <section className="card garden-quote-form-shell">

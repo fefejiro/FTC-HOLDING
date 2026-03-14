@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GardenImagePanel from "../../components/garden-cleaners/GardenImagePanel";
 import GardenQuoteForm from "../../components/garden-cleaners/GardenQuoteForm";
 import { gardenCleanersConfig } from "../../../lib/gardenCleaners";
 
@@ -34,6 +35,7 @@ export default function GardenContactPage() {
               </div>
               <p className="muted">Service area includes Oshawa, Durham Region, and nearby communities based on scheduling availability.</p>
             </div>
+            <GardenImagePanel asset={gardenCleanersConfig.media.contact} className="garden-contact-media" />
           </section>
 
           <section className="card garden-contact-form-card">
