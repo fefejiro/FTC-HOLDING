@@ -10,8 +10,10 @@ import { canUseAuto, getSettings } from "./storage";
 
 const site = detectSupportedSite(window.location.hostname);
 const LOG_PREFIX = "[PeacePad]";
+const CONTENT_SENTINEL = "__peacepadPreSendContentLoaded__";
 
-const MIN_CHARS_FOR_ANALYSIS = 18;
+const MIN_CHARS_FOR_BACKGROUND_ANALYSIS = 18;
+const MIN_CHARS_FOR_SEND_GATE = 5;
 const BACKGROUND_DEBOUNCE_MS = 900;
 const SUPPRESS_AFTER_SEND_MS = 1200;
 
@@ -27,8 +29,14 @@ let lastDismissedFingerprint = "";
 let lastErrorToastAt = 0;
 
 if (site) {
-  log("content script loaded", { site, host: window.location.hostname });
-  bootstrap(site);
+  const bootstrapState = window as typeof window & { [CONTENT_SENTINEL]?: boolean };
+  if (bootstrapState[CONTENT_SENTINEL]) {
+    log("content script already active", { site, host: window.location.hostname });
+  } else {
+    bootstrapState[CONTENT_SENTINEL] = true;
+    log("content script loaded", { site, host: window.location.hostname });
+    bootstrap(site);
+  }
 }
 
 function bootstrap(currentSite: SupportedSite): void {
@@ -88,7 +96,7 @@ async function runBackgroundCheck(currentSite: SupportedSite): Promise<void> {
   }
 
   const text = getComposerText(composer).trim();
-  if (text.length < MIN_CHARS_FOR_ANALYSIS) {
+  if (text.length < MIN_CHARS_FOR_BACKGROUND_ANALYSIS) {
     log("background check skipped", { site: currentSite, reason: "too_short", chars: text.length });
     return;
   }
@@ -124,7 +132,7 @@ function installSendGate(currentSite: SupportedSite): void {
       }
 
       const text = getComposerText(composer).trim();
-      if (!text || text.length < MIN_CHARS_FOR_ANALYSIS) {
+      if (!text || text.length < MIN_CHARS_FOR_SEND_GATE) {
         return;
       }
 
@@ -208,6 +216,13 @@ async function runPreflight(
     }
 
     const preflight = response.data;
+    const localRulesResult = preflight.model_or_ruleset_version.escalation_ruleset.startsWith("extension-local-rules");
+    log(localRulesResult ? "local preflight result received" : "api preflight result received", {
+      site: currentSite,
+      intent,
+      ruleset: preflight.model_or_ruleset_version.escalation_ruleset,
+      summary: preflight.source.summary,
+    });
     const intervene = shouldIntervene(preflight);
     log("intervention decision returned", {
       site: currentSite,
@@ -267,7 +282,7 @@ async function requestPreflight(payload: {
   | { ok: false; error?: { message?: string; status?: number } }
 > {
   return new Promise((resolve) => {
-    log("API call attempted", {
+    log("preflight request sent", {
       channel: payload.channel,
       mode: payload.mode,
       chars: payload.text.length,

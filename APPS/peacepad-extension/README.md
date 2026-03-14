@@ -12,6 +12,8 @@ Extension-first integration surface for PeacePad pre-send mediation.
 - Silent background monitoring of active compose fields.
 - Debounced checks after typing pauses.
 - Pre-send gate on Enter for uncached drafts.
+- Local rules classify clear safe / mild / strong cases first.
+- Live API fallback is used only for ambiguous drafts or richer remote analysis.
 - Threshold-based intervention modal only when risk warrants it.
 - Per-site auto-check can be toggled in extension popup.
 
@@ -37,20 +39,31 @@ npm run test
 4. Confirm:
    - `Current Site` shows `whatsapp`
    - `Enable automatic monitoring` is on
-   - API settings are correct for your machine
+   - popup says the tab is ready
+   - API settings are correct for your machine if you want ambiguous fallback tests
 5. Type one of these messages in a WhatsApp chat:
    - Safe control: `Hey, I am outside.`
    - Soft escalation: `You always pick up the kid late.`
    - Strong escalation: `Fuck you. You never care about the kids.`
+   - Ambiguous API fallback: `When are you going to send money for the kids' school supplies? It's been weeks.`
 6. Open WhatsApp DevTools and check the **Console** for `[PeacePad]` logs.
 
 ## Debug logs to expect
 - `content script loaded`
 - `draft detected`
 - `preflight triggered`
-- `API call attempted`
+- `preflight request sent`
+- `local preflight result received`
 - `intervention decision returned`
+
+## Service worker logs to expect
+- `local rule matched: safe`
+- `local rule matched: mild`
+- `local rule matched: strong`
+- `local rule score ambiguous, using api fallback`
+- `api fallback success`
 
 ## Notes
 - WhatsApp host access is declared directly in `manifest.json`; you do not need to manually toggle the site row in Chrome.
+- Opening the popup on a supported site now forces content-script injection for the current tab, so you do not need a manual page refresh after every extension reload.
 - If nothing happens, inspect the extension **service worker** console and the WhatsApp page console.

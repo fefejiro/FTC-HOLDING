@@ -48,6 +48,8 @@ async function bootstrap(): Promise<void> {
     setText("site-name", site);
     const autoAvailable = canEnableAuto(settings, site);
 
+    const ensureResult = await chrome.runtime.sendMessage({ type: "PEACEPAD_ENSURE_INJECTED" }).catch(() => null);
+
     if (autoToggle) {
       autoToggle.checked = Boolean(settings.autoBySite[site]);
       autoToggle.disabled = !autoAvailable;
@@ -61,7 +63,9 @@ async function bootstrap(): Promise<void> {
       "site-status",
       autoAvailable
         ? Boolean(settings.autoBySite[site])
-          ? "Monitoring is ON. Type 18+ characters and pause briefly, or press Enter to trigger the send gate."
+          ? ensureResult?.ok
+            ? "Monitoring is ON. This tab is ready. Type 18+ characters and pause briefly, or press Enter to trigger the send gate."
+            : "Monitoring is ON, but this tab may need a refresh if logs do not appear."
           : "Monitoring is OFF. Turn it on below for WhatsApp testing."
         : "Auto-check unavailable on this page.",
     );
