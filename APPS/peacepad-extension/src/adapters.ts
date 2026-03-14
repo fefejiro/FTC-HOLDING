@@ -3,6 +3,7 @@ export type SupportedSite = "whatsapp" | "gmail" | "slack";
 export interface AdapterConfig {
   site: SupportedSite;
   selectors: string[];
+  sendSelectors: string[];
 }
 
 const ADAPTERS: AdapterConfig[] = [
@@ -12,6 +13,12 @@ const ADAPTERS: AdapterConfig[] = [
       "div[contenteditable='true'][data-tab='10']",
       "div[contenteditable='true'][role='textbox']",
     ],
+    sendSelectors: [
+      "button[aria-label='Send']",
+      "div[role='button'][aria-label='Send']",
+      "span[data-icon='send']",
+      "span[data-icon='send-filled']",
+    ],
   },
   {
     site: "gmail",
@@ -19,12 +26,20 @@ const ADAPTERS: AdapterConfig[] = [
       "div[role='textbox'][g_editable='true']",
       "div[aria-label='Message Body'][role='textbox']",
     ],
+    sendSelectors: [
+      "div[role='button'][aria-label*='Send']",
+      "button[aria-label*='Send']",
+    ],
   },
   {
     site: "slack",
     selectors: [
       "div[data-qa='message_input'] div[contenteditable='true']",
       "div[contenteditable='true'][data-qa='message_input']",
+    ],
+    sendSelectors: [
+      "button[data-qa='texty_send_button']",
+      "button[aria-label*='Send message']",
     ],
   },
 ];
@@ -83,6 +98,25 @@ function findEditableAncestor(element: Element | null): HTMLElement | null {
   return null;
 }
 
+function findMatchingAncestor(element: Element | null, selectors: string[]): HTMLElement | null {
+  if (!element || !(element instanceof HTMLElement)) {
+    return null;
+  }
+
+  for (const selector of selectors) {
+    if (element.matches(selector)) {
+      return element;
+    }
+
+    const ancestor = element.closest(selector);
+    if (ancestor instanceof HTMLElement) {
+      return ancestor;
+    }
+  }
+
+  return null;
+}
+
 export function getComposerText(element: HTMLElement): string {
   if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
     return element.value;
@@ -130,4 +164,17 @@ export function resolveActiveComposer(site: SupportedSite): HTMLElement | null {
   }
 
   return null;
+}
+
+export function resolveSendTriggerFromTarget(
+  site: SupportedSite,
+  target: EventTarget | null,
+): HTMLElement | null {
+  const element = target instanceof Element ? target : null;
+  if (!element) {
+    return null;
+  }
+
+  const adapter = getAdapter(site);
+  return findMatchingAncestor(element, adapter.sendSelectors);
 }

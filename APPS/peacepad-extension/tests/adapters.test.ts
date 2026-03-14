@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { detectSupportedSite, resolveComposerFromTarget } from "../src/adapters";
+import { detectSupportedSite, resolveComposerFromTarget, resolveSendTriggerFromTarget } from "../src/adapters";
 import { canEnableAuto, canUseAuto } from "../src/storage";
 
 describe("site adapter detection", () => {
@@ -33,6 +33,19 @@ describe("site adapter detection", () => {
 
     expect(composer?.getAttribute("role")).toBe("textbox");
     expect(composer?.getAttribute("contenteditable")).toBe("true");
+  });
+
+  it("resolves whatsapp send trigger from nested icon target", () => {
+    document.body.innerHTML = `
+      <button aria-label="Send" id="send-button">
+        <span data-icon="send" id="send-icon"></span>
+      </button>
+    `;
+
+    const sendIcon = document.getElementById("send-icon");
+    const sendTrigger = resolveSendTriggerFromTarget("whatsapp", sendIcon);
+
+    expect(sendTrigger?.id).toBe("send-button");
   });
 });
 

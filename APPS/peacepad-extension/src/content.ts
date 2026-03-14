@@ -3,6 +3,7 @@ import {
   detectSupportedSite,
   getComposerText,
   resolveComposerFromTarget,
+  resolveSendTriggerFromTarget,
   setComposerText,
   type SupportedSite,
 } from "./adapters";
@@ -21,6 +22,13 @@ let suppressAutoUntil = 0;
 let debounceHandle: number | null = null;
 let pendingComposer: HTMLElement | null = null;
 let analysisInFlight = false;
+let pendingSendGate:
+  | {
+      composer: HTMLElement;
+      site: SupportedSite;
+      fingerprint: string;
+    }
+  | null = null;
 
 let lastAnalyzedFingerprint = "";
 let lastSafeFingerprint = "";
@@ -43,6 +51,7 @@ function bootstrap(currentSite: SupportedSite): void {
   log("bootstrapping monitor", { site: currentSite });
   installPassiveWatcher(currentSite);
   installSendGate(currentSite);
+  installClickSendGate(currentSite);
 }
 
 function installPassiveWatcher(currentSite: SupportedSite): void {
@@ -142,7 +151,46 @@ function installSendGate(currentSite: SupportedSite): void {
         return;
       }
 
-      event.preventDefault();
+      log("send gate intercepted", { site: currentSite, source: "enter_key", chars: text.length });
+      blockSendEvent(event, currentSite, "enter_key");
+      void runPreflight(composer, currentSite, "send_gate");
+    },
+    true,
+  );
+}
+
+function installClickSendGate(currentSite: SupportedSite): void {
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (Date.now() < suppressAutoUntil) {
+        return;
+      }
+
+      const sendTrigger = resolveSendTriggerFromTarget(currentSite, event.target);
+      if (!sendTrigger) {
+        return;
+      }
+
+      const composer = resolveComposerFromTarget(currentSite, event.target);
+      if (!composer) {
+        log("send trigger found without composer", { site: currentSite, source: "send_button_click" });
+        return;
+      }
+
+      const text = getComposerText(composer).trim();
+      if (!text || text.length < MIN_CHARS_FOR_SEND_GATE) {
+        return;
+      }
+
+      const draftFingerprint = fingerprint(text);
+      if (draftFingerprint === lastSafeFingerprint) {
+        log("send click bypassed", { site: currentSite, reason: "already_cleared", chars: text.length });
+        return;
+      }
+
+      log("send gate intercepted", { site: currentSite, source: "send_button_click", chars: text.length });
+      blockSendEvent(event, currentSite, "send_button_click");
       void runPreflight(composer, currentSite, "send_gate");
     },
     true,
@@ -154,9 +202,20 @@ async function runPreflight(
   currentSite: SupportedSite,
   intent: "background" | "send_gate",
 ): Promise<void> {
+  const initialText = getComposerText(composer).trim();
+  const initialFingerprint = fingerprint(initialText);
+
   if (analysisInFlight) {
     if (intent === "send_gate") {
-      triggerSend(composer);
+      pendingSendGate = {
+        composer,
+        site: currentSite,
+        fingerprint: initialFingerprint,
+      };
+      log("send gate queued while analysis is in flight", {
+        site: currentSite,
+        chars: initialText.length,
+      });
     }
     return;
   }
@@ -179,9 +238,21 @@ async function runPreflight(
   }
 
   const draftFingerprint = fingerprint(text);
+  const pendingMatchesCurrentDraft =
+    Boolean(pendingSendGate) &&
+    pendingSendGate?.composer === composer &&
+    pendingSendGate?.fingerprint === draftFingerprint;
+  const effectiveIntent: "background" | "send_gate" = pendingMatchesCurrentDraft ? "send_gate" : intent;
+  if (pendingMatchesCurrentDraft && intent === "background") {
+    log("background analysis promoted to send gate", {
+      site: currentSite,
+      chars: text.length,
+    });
+  }
+
   log("preflight triggered", {
     site: currentSite,
-    intent,
+    intent: effectiveIntent,
     chars: text.length,
   });
   analysisInFlight = true;
@@ -189,7 +260,7 @@ async function runPreflight(
     const response = await requestPreflight({
       text,
       channel: currentSite,
-      mode: intent === "background" ? "auto_background" : "auto_send_gate",
+      mode: effectiveIntent === "background" ? "auto_background" : "auto_send_gate",
       metadata: {
         site: currentSite,
         path: window.location.pathname,
@@ -200,7 +271,7 @@ async function runPreflight(
     if (!response.ok) {
       log("preflight failed", {
         site: currentSite,
-        intent,
+        intent: effectiveIntent,
         status: response.error?.status ?? null,
         message: response.error?.message ?? "unknown_error",
       });
@@ -209,7 +280,7 @@ async function runPreflight(
       } else {
         showToastThrottled(response.error?.message || "Preflight failed.");
       }
-      if (intent === "send_gate") {
+      if (effectiveIntent === "send_gate") {
         triggerSend(composer);
       }
       return;
@@ -219,21 +290,21 @@ async function runPreflight(
     const localRulesResult = preflight.model_or_ruleset_version.escalation_ruleset.startsWith("extension-local-rules");
     log(localRulesResult ? "local preflight result received" : "api preflight result received", {
       site: currentSite,
-      intent,
+      intent: effectiveIntent,
       ruleset: preflight.model_or_ruleset_version.escalation_ruleset,
       summary: preflight.source.summary,
     });
     const intervene = shouldIntervene(preflight);
     log("intervention decision returned", {
       site: currentSite,
-      intent,
+      intent: effectiveIntent,
       risk: preflight.risk_level,
       score: preflight.conflict_score,
       intervene,
     });
     if (!intervene) {
       lastSafeFingerprint = draftFingerprint;
-      if (intent === "send_gate") {
+      if (effectiveIntent === "send_gate") {
         suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
         triggerSend(composer);
       }
@@ -244,7 +315,7 @@ async function runPreflight(
       !hasMaterialChange(draftFingerprint, lastIntervenedFingerprint) ||
       !hasMaterialChange(draftFingerprint, lastDismissedFingerprint)
     ) {
-      if (intent === "send_gate") {
+      if (effectiveIntent === "send_gate") {
         suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
         triggerSend(composer);
       }
@@ -252,10 +323,20 @@ async function runPreflight(
     }
 
     lastIntervenedFingerprint = draftFingerprint;
-    log("showing intervention modal", { site: currentSite, intent });
+    log("showing intervention modal", { site: currentSite, intent: effectiveIntent });
     showPreflightModal(preflight, composer, draftFingerprint);
   } finally {
     analysisInFlight = false;
+    if (pendingMatchesCurrentDraft) {
+      pendingSendGate = null;
+      return;
+    }
+
+    const queuedSendGate = pendingSendGate;
+    if (queuedSendGate) {
+      pendingSendGate = null;
+      void runPreflight(queuedSendGate.composer, queuedSendGate.site, "send_gate");
+    }
   }
 }
 
@@ -455,6 +536,27 @@ function triggerSend(composer: HTMLElement): void {
       cancelable: true,
     }),
   );
+}
+
+function blockSendEvent(event: Event, currentSite: SupportedSite, source: string): void {
+  event.preventDefault();
+  event.stopPropagation();
+  if (typeof event.stopImmediatePropagation === "function") {
+    event.stopImmediatePropagation();
+  }
+
+  const mutableEvent = event as Event & {
+    cancelBubble?: boolean;
+    returnValue?: boolean;
+  };
+  mutableEvent.cancelBubble = true;
+  mutableEvent.returnValue = false;
+
+  log("send event blocked", {
+    site: currentSite,
+    source,
+    type: event.type,
+  });
 }
 
 function showToastThrottled(message: string): void {
