@@ -3,6 +3,7 @@ import {
   getApprovedActionLabel,
   getEffectivePreflightIntent,
   getModalActionOutcome,
+  getPreflightExplanation,
   getReviewNote,
   getRiskBadgeTheme,
   resolveInFlightSendAction,
@@ -136,5 +137,40 @@ describe("WhatsApp guarded handoff helpers", () => {
         "you are always late",
       ),
     ).toBe("changed_message");
+  });
+
+  it("derives compact explanation labels from conflict signals", () => {
+    expect(
+      getPreflightExplanation({
+        conflict_score: 84,
+        risk_level: "high",
+        recommendation: "pause_before_send",
+        calm_version: "I'm upset right now. Let's pause and focus on what needs to happen for the kids.",
+        moderation_flags: ["hostile_tone"],
+        model_or_ruleset_version: {
+          contract: "preflight-v1",
+          tone_model: "local",
+          escalation_ruleset: "local",
+        },
+        send_policy: {
+          allow_send_original: true,
+          requires_acknowledgement: true,
+          recommended_action: "pause_before_send",
+          pause_minutes: 10,
+        },
+        source: {
+          tone: "hostile",
+          summary: "local rule matched: strong",
+        },
+        signals: [
+          { category: "linguistic", code: "hostile_language", weight: 18, description: "Profanity detected" },
+          { category: "linguistic", code: "accusatory", weight: 10, description: "Blaming statement" },
+          { category: "linguistic", code: "emotional_charge", weight: 6, description: "Escalating punctuation" },
+        ],
+      }),
+    ).toEqual({
+      flaggedFor: ["hostility", "blame", "escalation"],
+      saferBecause: ["clearer", "calmer", "more actionable"],
+    });
   });
 });

@@ -11,6 +11,7 @@ import {
 import {
   getApprovedActionLabel,
   getEffectivePreflightIntent,
+  getPreflightExplanation,
   getReviewNote,
   getRiskBadgeTheme,
   resolveInFlightSendAction,
@@ -1410,14 +1411,72 @@ function showPreflightModal(
   const finalMessageInput = finalMessageSection.querySelector("textarea") as HTMLTextAreaElement;
   wrapper.appendChild(finalMessageSection);
 
-  const signalText = preflight.signals.slice(0, 3).map((item) => item.code.replace(/_/g, " "));
-  if (signalText.length > 0) {
-    const signals = document.createElement("p");
-    signals.style.margin = "0 0 10px 0";
-    signals.style.fontSize = "11px";
-    signals.style.color = "#334155";
-    signals.textContent = `Signals: ${signalText.join(", ")}`;
-    wrapper.appendChild(signals);
+  const explanation = getPreflightExplanation(preflight);
+  if (explanation.flaggedFor.length > 0 || explanation.saferBecause.length > 0) {
+    const explanationCard = document.createElement("div");
+    explanationCard.style.margin = "0 0 12px 0";
+    explanationCard.style.padding = "10px 12px";
+    explanationCard.style.borderRadius = "12px";
+    explanationCard.style.border = "1px solid #dbe7f5";
+    explanationCard.style.background = "linear-gradient(180deg, #f8fbff 0%, #f8fafc 100%)";
+    explanationCard.style.display = "flex";
+    explanationCard.style.flexDirection = "column";
+    explanationCard.style.gap = "8px";
+
+    const createExplanationRow = (
+      label: string,
+      values: string[],
+      tone: "flagged" | "safer",
+    ): HTMLDivElement => {
+      const row = document.createElement("div");
+      row.style.display = "flex";
+      row.style.alignItems = "flex-start";
+      row.style.gap = "8px";
+      row.style.flexWrap = "wrap";
+
+      const title = document.createElement("span");
+      title.textContent = `${label}:`;
+      title.style.fontSize = "11px";
+      title.style.fontWeight = "700";
+      title.style.color = tone === "flagged" ? "#7f1d1d" : "#065f46";
+      title.style.minWidth = "84px";
+      row.appendChild(title);
+
+      const chips = document.createElement("div");
+      chips.style.display = "flex";
+      chips.style.flexWrap = "wrap";
+      chips.style.gap = "6px";
+      chips.style.flex = "1";
+
+      for (const value of values) {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        chip.style.display = "inline-flex";
+        chip.style.alignItems = "center";
+        chip.style.padding = "4px 8px";
+        chip.style.borderRadius = "999px";
+        chip.style.fontSize = "11px";
+        chip.style.fontWeight = "600";
+        chip.style.lineHeight = "1.2";
+        chip.style.border = tone === "flagged" ? "1px solid #fecaca" : "1px solid #bbf7d0";
+        chip.style.background = tone === "flagged" ? "#fff1f2" : "#ecfdf5";
+        chip.style.color = tone === "flagged" ? "#b91c1c" : "#047857";
+        chips.appendChild(chip);
+      }
+
+      row.appendChild(chips);
+      return row;
+    };
+
+    if (explanation.flaggedFor.length > 0) {
+      explanationCard.appendChild(createExplanationRow("Flagged for", explanation.flaggedFor, "flagged"));
+    }
+
+    if (explanation.saferBecause.length > 0) {
+      explanationCard.appendChild(createExplanationRow("Safer because", explanation.saferBecause, "safer"));
+    }
+
+    wrapper.appendChild(explanationCard);
   }
 
   const reviewNote = document.createElement("p");

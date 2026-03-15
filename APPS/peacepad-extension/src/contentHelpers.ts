@@ -24,6 +24,11 @@ export interface WhatsappApprovedHandoffLike {
 
 export type WhatsappHandoffDecision = "none" | "block_original" | "allow_approved" | "changed_message";
 
+export interface PreflightExplanation {
+  flaggedFor: string[];
+  saferBecause: string[];
+}
+
 export function resolveInFlightSendAction(
   intent: "background" | "send_gate",
 ): { queueSendGate: boolean; releaseImmediately: boolean } {
@@ -106,6 +111,89 @@ export function getReviewNote(site: SupportedSite): string {
   return site === "whatsapp"
     ? "WhatsApp safe mode keeps the review flow inside PeacePad. When you use an approved message here, PeacePad will copy it, select the blocked draft, and guide you to press Ctrl+V to replace it. Once the approved text is detected, send unlocks."
     : "PeacePad will try to send your approved message after review. If the site will not accept the direct send safely, the approved message will be copied so you can paste it manually.";
+}
+
+function hasSignal(preflight: PreflightResponse, ...codes: string[]): boolean {
+  return preflight.signals.some((signal) => signal.weight > 0 && codes.includes(signal.code));
+}
+
+function addUnique(target: string[], value: string): void {
+  if (!target.includes(value)) {
+    target.push(value);
+  }
+}
+
+export function getPreflightExplanation(preflight: PreflightResponse): PreflightExplanation {
+  const flaggedFor: string[] = [];
+  const saferBecause: string[] = [];
+  const tone = String(preflight.source?.tone || "").toLowerCase();
+
+  if (hasSignal(preflight, "hostile_language", "dismissive_attack") || tone === "hostile") {
+    addUnique(flaggedFor, "hostility");
+  }
+
+  if (hasSignal(preflight, "accusatory")) {
+    addUnique(flaggedFor, "blame");
+  }
+
+  if (
+    hasSignal(preflight, "legal_escalation", "emotional_charge")
+    || preflight.recommendation === "pause_before_send"
+    || tone === "defensive"
+    || tone === "frustrated"
+  ) {
+    addUnique(flaggedFor, "escalation");
+  }
+
+  if (hasSignal(preflight, "pressure_control")) {
+    addUnique(flaggedFor, "pressure");
+  }
+
+  if (hasSignal(preflight, "evasion")) {
+    addUnique(flaggedFor, "avoidance");
+  }
+
+  if (!flaggedFor.length && (preflight.risk_level === "high" || preflight.risk_level === "critical")) {
+    addUnique(flaggedFor, "conflict risk");
+  }
+
+  if (
+    hasSignal(preflight, "accusatory", "pressure_control", "evasion", "legal_escalation")
+    || Boolean(preflight.calm_version)
+    || preflight.recommendation === "review_and_rewrite"
+    || preflight.recommendation === "pause_before_send"
+  ) {
+    addUnique(saferBecause, "clearer");
+  }
+
+  if (
+    hasSignal(preflight, "hostile_language", "dismissive_attack", "emotional_charge")
+    || Boolean(preflight.calm_version)
+    || tone === "hostile"
+    || tone === "frustrated"
+    || tone === "defensive"
+  ) {
+    addUnique(saferBecause, "calmer");
+  }
+
+  if (
+    Boolean(preflight.calm_version)
+    || hasSignal(preflight, "legal_escalation", "child_focus", "evasion")
+    || preflight.recommendation === "review_and_rewrite"
+    || preflight.recommendation === "pause_before_send"
+  ) {
+    addUnique(saferBecause, "more actionable");
+  }
+
+  if (!saferBecause.length) {
+    addUnique(saferBecause, "clearer");
+    addUnique(saferBecause, "calmer");
+  }
+
+  return {
+    flaggedFor: flaggedFor.slice(0, 3),
+    saferBecause: saferBecause.slice(0, 3),
+  };
 }
 
 export function resolveWhatsappHandoffDecision(
