@@ -6,6 +6,17 @@ export interface AdapterConfig {
   sendSelectors: string[];
 }
 
+export interface ComposerReplacementResult {
+  success: boolean;
+  actualText: string;
+  method: "input_value" | "dom_replace" | "range_insert" | "exec_command" | "text_content";
+}
+
+export interface TriggerSendResult {
+  success: boolean;
+  method: "send_button_click" | "enter_key";
+}
+
 const ADAPTERS: AdapterConfig[] = [
   {
     site: "whatsapp",
@@ -117,6 +128,141 @@ function findMatchingAncestor(element: Element | null, selectors: string[]): HTM
   return null;
 }
 
+function createInputLikeEvent(
+  type: "beforeinput" | "input",
+  value: string,
+  cancelable: boolean,
+): Event {
+  if (typeof InputEvent !== "undefined") {
+    return new InputEvent(type, {
+      bubbles: true,
+      cancelable,
+      data: value,
+      inputType: "insertReplacementText",
+    });
+  }
+
+  return new Event(type, {
+    bubbles: true,
+    cancelable,
+  });
+}
+
+function normalizeComposerText(text: string): string {
+  return text
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function selectNodeContents(element: HTMLElement): Selection | null {
+  const selection = element.ownerDocument.defaultView?.getSelection() || null;
+  if (!selection) {
+    return null;
+  }
+
+  const range = element.ownerDocument.createRange();
+  range.selectNodeContents(element);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  return selection;
+}
+
+function collapseSelectionToEnd(element: HTMLElement): void {
+  const selection = element.ownerDocument.defaultView?.getSelection() || null;
+  if (!selection) {
+    return;
+  }
+
+  const range = element.ownerDocument.createRange();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function replaceContentWithDomReset(element: HTMLElement, value: string): ComposerReplacementResult {
+  const doc = element.ownerDocument;
+  if (typeof (element as HTMLElement & { replaceChildren?: (...nodes: Node[]) => void }).replaceChildren === "function") {
+    (element as HTMLElement & { replaceChildren: (...nodes: Node[]) => void }).replaceChildren(doc.createTextNode(value));
+  } else {
+    while (element.firstChild) {
+      element.removeChild(element.firstChild);
+    }
+    element.appendChild(doc.createTextNode(value));
+  }
+
+  collapseSelectionToEnd(element);
+  element.dispatchEvent(createInputLikeEvent("input", value, false));
+  element.dispatchEvent(new Event("change", { bubbles: true }));
+
+  const actualText = getComposerText(element);
+  return {
+    success: normalizeComposerText(actualText) === normalizeComposerText(value),
+    actualText,
+    method: "dom_replace",
+  };
+}
+
+function replaceContentEditableText(site: SupportedSite, element: HTMLElement, value: string): ComposerReplacementResult {
+  element.focus();
+  element.dispatchEvent(createInputLikeEvent("beforeinput", value, true));
+
+  if (site === "whatsapp") {
+    return replaceContentWithDomReset(element, value);
+  }
+
+  let method: ComposerReplacementResult["method"] = "range_insert";
+  let actualText = getComposerText(element);
+  const doc = element.ownerDocument as Document & {
+    execCommand?: (commandId: string, showUI?: boolean, value?: string) => boolean;
+  };
+
+  if (typeof doc.execCommand === "function") {
+    method = "exec_command";
+    element.focus();
+    selectNodeContents(element);
+    doc.execCommand("insertText", false, value);
+    actualText = getComposerText(element);
+  }
+
+  if (normalizeComposerText(actualText) !== normalizeComposerText(value)) {
+    const selection = selectNodeContents(element);
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(element.ownerDocument.createTextNode(value));
+      selection.removeAllRanges();
+      collapseSelectionToEnd(element);
+      method = "range_insert";
+    } else {
+      element.textContent = value;
+      method = "text_content";
+    }
+  }
+
+  element.dispatchEvent(createInputLikeEvent("input", value, false));
+  element.dispatchEvent(new Event("change", { bubbles: true }));
+  actualText = getComposerText(element);
+
+  return {
+    success: normalizeComposerText(actualText) === normalizeComposerText(value),
+    actualText,
+    method,
+  };
+}
+
+function findSendTriggerWithin(scope: ParentNode, selectors: string[]): HTMLElement | null {
+  for (const selector of selectors) {
+    const candidate = scope.querySelector(selector);
+    if (candidate instanceof HTMLElement) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 export function getComposerText(element: HTMLElement): string {
   if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
     return element.value;
@@ -135,10 +281,7 @@ export function setComposerText(element: HTMLElement, value: string): void {
   element.dispatchEvent(new InputEvent("input", { bubbles: true, data: value }));
 }
 
-export function resolveComposerFromTarget(
-  site: SupportedSite,
-  target: EventTarget | null,
-): HTMLElement | null {
+export function resolveComposerFromTarget(site: SupportedSite, target: EventTarget | null): HTMLElement | null {
   const element = target instanceof Element ? target : null;
   const directMatch = findEditableAncestor(element);
   if (directMatch) {
@@ -146,6 +289,16 @@ export function resolveComposerFromTarget(
   }
 
   return resolveActiveComposer(site);
+}
+
+export function resolveSendTriggerFromTarget(site: SupportedSite, target: EventTarget | null): HTMLElement | null {
+  const element = target instanceof Element ? target : null;
+  if (!element) {
+    return null;
+  }
+
+  const adapter = getAdapter(site);
+  return findMatchingAncestor(element, adapter.sendSelectors);
 }
 
 export function resolveActiveComposer(site: SupportedSite): HTMLElement | null {
@@ -166,15 +319,74 @@ export function resolveActiveComposer(site: SupportedSite): HTMLElement | null {
   return null;
 }
 
-export function resolveSendTriggerFromTarget(
+export function replaceComposerText(
   site: SupportedSite,
-  target: EventTarget | null,
-): HTMLElement | null {
-  const element = target instanceof Element ? target : null;
-  if (!element) {
-    return null;
+  element: HTMLElement,
+  value: string,
+): ComposerReplacementResult {
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    element.focus();
+    element.dispatchEvent(createInputLikeEvent("beforeinput", value, true));
+    element.value = value;
+    element.dispatchEvent(createInputLikeEvent("input", value, false));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+    const actualText = getComposerText(element);
+    return {
+      success: normalizeComposerText(actualText) === normalizeComposerText(value),
+      actualText,
+      method: "input_value",
+    };
   }
 
+  return replaceContentEditableText(site, element, value);
+}
+
+export function triggerSend(site: SupportedSite, composer: HTMLElement): TriggerSendResult {
+  composer.focus();
+
   const adapter = getAdapter(site);
-  return findMatchingAncestor(element, adapter.sendSelectors);
+  const scopes: ParentNode[] = [];
+  const footer = composer.closest("footer");
+  if (footer) {
+    scopes.push(footer);
+  }
+  if (composer.parentElement) {
+    scopes.push(composer.parentElement);
+  }
+  scopes.push(document);
+
+  for (const scope of scopes) {
+    const sendTrigger = findSendTriggerWithin(scope, adapter.sendSelectors);
+    if (sendTrigger) {
+      sendTrigger.click();
+      return { success: true, method: "send_button_click" };
+    }
+  }
+
+  if (composer instanceof HTMLTextAreaElement || composer instanceof HTMLInputElement) {
+    const form = composer.closest("form");
+    if (form) {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    }
+  }
+
+  composer.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "Enter",
+      code: "Enter",
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+
+  composer.dispatchEvent(
+    new KeyboardEvent("keyup", {
+      key: "Enter",
+      code: "Enter",
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+
+  return { success: true, method: "enter_key" };
 }

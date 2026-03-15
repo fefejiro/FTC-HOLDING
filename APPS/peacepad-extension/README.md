@@ -11,11 +11,12 @@ Extension-first integration surface for PeacePad pre-send mediation.
 ## Behavior (current)
 - Silent background monitoring of active compose fields.
 - Debounced checks after typing pauses.
-- Pre-send gate on Enter for uncached drafts.
-- Local rules classify clear safe / mild / strong cases first.
-- Live API fallback is used only for ambiguous drafts or richer remote analysis.
+- Pre-send gate on Enter and send button for uncached drafts.
+- Live API preflight analysis is the decision source for this pass.
 - Threshold-based intervention modal only when risk warrants it.
+- WhatsApp uses **Apply Suggested** to safely replace the composer draft without auto-sending.
 - Per-site auto-check can be toggled in extension popup.
+- Popup includes build stamp plus debug trace export and clear actions.
 
 ## Development
 ```powershell
@@ -39,31 +40,33 @@ npm run test
 4. Confirm:
    - `Current Site` shows `whatsapp`
    - `Enable automatic monitoring` is on
-   - popup says the tab is ready
-   - API settings are correct for your machine if you want ambiguous fallback tests
+   - popup shows the `root-apps` build stamp
+   - popup says WhatsApp uses Apply Suggested for safe review before sending
 5. Type one of these messages in a WhatsApp chat:
    - Safe control: `Hey, I am outside.`
    - Soft escalation: `You always pick up the kid late.`
-   - Strong escalation: `Fuck you. You never care about the kids.`
-   - Ambiguous API fallback: `When are you going to send money for the kids' school supplies? It's been weeks.`
-6. Open WhatsApp DevTools and check the **Console** for `[PeacePad]` logs.
+   - Strong escalation: `Fuck you.`
+6. For `Fuck you.`:
+   - the modal should appear
+   - the primary button should say **Apply Suggested**
+   - clicking it should replace the composer draft and keep it unsent
+   - you should manually press send after review
+7. If behavior is wrong, click **Copy Debug Trace** in the popup and paste the trace back into the thread.
 
 ## Debug logs to expect
-- `content script loaded`
-- `draft detected`
-- `preflight triggered`
-- `preflight request sent`
-- `local preflight result received`
-- `intervention decision returned`
-
-## Service worker logs to expect
-- `local rule matched: safe`
-- `local rule matched: mild`
-- `local rule matched: strong`
-- `local rule score ambiguous, using api fallback`
-- `api fallback success`
+- `content_loaded`
+- `draft_detected`
+- `background_check_scheduled`
+- `send_gate_intercepted`
+- `preflight_requested`
+- `preflight_result_api`
+- `intervention_decision`
+- `modal_opened`
+- `apply_suggested_clicked`
+- `composer_replace_verified`
+- `trace_exported`
 
 ## Notes
 - WhatsApp host access is declared directly in `manifest.json`; you do not need to manually toggle the site row in Chrome.
-- Opening the popup on a supported site now forces content-script injection for the current tab, so you do not need a manual page refresh after every extension reload.
-- If nothing happens, inspect the extension **service worker** console and the WhatsApp page console.
+- Opening the popup on a supported site forces content-script injection for the current tab.
+- If nothing happens, inspect the extension service worker console, the WhatsApp page console, and use the popup trace export.

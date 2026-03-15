@@ -9,6 +9,7 @@
   <body>
     <main>
       <h1>PeacePad Pre-Send</h1>
+      <p class="muted note" id="build-stamp"></p>
 
       <section class="card">
         <h2>Current Site</h2>
@@ -30,9 +31,16 @@
         <p id="save-status" class="muted"></p>
       </section>
 
-      <p class="muted note">
-        Use session cookie (logged in) or optional API key.
-      </p>
+      <section class="card">
+        <h2>Debug</h2>
+        <div class="row stack-row">
+          <button id="copy-trace" type="button">Copy Debug Trace</button>
+          <button id="clear-trace" type="button" class="secondary">Clear Debug Trace</button>
+        </div>
+        <p id="trace-status" class="muted"></p>
+      </section>
+
+      <p class="muted note">WhatsApp uses Apply Suggested for safe draft review before sending.</p>
     </main>
     <script type="module" src="./popup.js"></script>
   </body>
