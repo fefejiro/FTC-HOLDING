@@ -22,7 +22,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/garden-cleaners/about`, lastModified, priority: 0.7 },
     { url: `${SITE_URL}/garden-cleaners/services`, lastModified, priority: 0.8 },
     { url: `${SITE_URL}/garden-cleaners/contact`, lastModified, priority: 0.7 },
-    { url: `${SITE_URL}/garden-cleaners/quote`, lastModified, priority: 0.8 }
+    { url: `${SITE_URL}/garden-cleaners/quote`, lastModified, priority: 0.8 },
+    { url: `${SITE_URL}/polar-anchor`, lastModified, priority: 0.8 },
+    { url: `${SITE_URL}/polar-anchor/about`, lastModified, priority: 0.7 },
+    { url: `${SITE_URL}/polar-anchor/services`, lastModified, priority: 0.8 },
+    { url: `${SITE_URL}/polar-anchor/contact`, lastModified, priority: 0.7 },
+    { url: `${SITE_URL}/polar-anchor/quote`, lastModified, priority: 0.8 }
   ];
 
   const workEntries = projectCaseStudies.map((project) => ({ url: `${SITE_URL}/work/${project.slug}`, lastModified, priority: 0.8 }));

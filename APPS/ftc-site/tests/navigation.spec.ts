@@ -1,15 +1,23 @@
 import { expect, test } from "@playwright/test";
 import { SITE_URL } from "../lib/site";
 
-test.describe("Una Labs site routes", () => {
+test.describe("Site routes", () => {
   const routeChecks = [
-    { path: "/", title: "Intelligent software. Creative AI. Real-world systems." },
+    { path: "/", title: "Unalabs" },
+    { path: "/about", title: "About Una Labs" },
     { path: "/capabilities", title: "Studio" },
     { path: "/work", title: "Work" },
     { path: "/products", title: "Products" },
-    { path: "/about", title: "About Una Labs" },
     { path: "/work-with-ftc", title: "Start a Project" },
     { path: "/connect", title: "Fejiro Efiuvwere" }
+  ];
+
+  const polarRouteChecks = [
+    { path: "/polar-anchor", title: "End-to-End Freight and Logistics Solutions You Can Rely On" },
+    { path: "/polar-anchor/about", title: "About Polar Anchor" },
+    { path: "/polar-anchor/services", title: "Logistics Services" },
+    { path: "/polar-anchor/contact", title: "Contact Polar Anchor" },
+    { path: "/polar-anchor/quote", title: "Tell us what needs to move." }
   ];
 
   routeChecks.forEach((route) => {
@@ -19,29 +27,81 @@ test.describe("Una Labs site routes", () => {
     });
   });
 
-  test("header links hit the new IA routes", async ({ page }) => {
-    await page.goto("/");
+  polarRouteChecks.forEach((route) => {
+    test(`visiting ${route.path}`, async ({ page }) => {
+      await page.goto(route.path);
+      await expect(page.locator("h1")).toHaveText(route.title);
+    });
+  });
+
+  test("header links hit the polar anchor IA routes", async ({ page }) => {
+    await page.goto("/polar-anchor");
     const navTargets: Array<{ label: string; expectedPath: string }> = [
-      { label: "Home", expectedPath: "/" },
-      { label: "Studio", expectedPath: "/capabilities" },
-      { label: "Work", expectedPath: "/work" },
-      { label: "Products", expectedPath: "/products" },
-      { label: "About", expectedPath: "/about" },
-      { label: "Start a Project", expectedPath: "/work-with-ftc" }
+      { label: "Home", expectedPath: "/polar-anchor" },
+      { label: "About", expectedPath: "/polar-anchor/about" },
+      { label: "Services", expectedPath: "/polar-anchor/services" },
+      { label: "Contact", expectedPath: "/polar-anchor/contact" },
+      { label: "Request Quote", expectedPath: "/polar-anchor/quote" }
     ];
 
     for (const target of navTargets) {
-      await page.goto("/");
+      await page.goto("/polar-anchor");
       await page.locator("header").getByRole("link", { name: target.label }).first().click();
       await expect(page).toHaveURL(target.expectedPath);
     }
   });
 
+  test("polar routes expose Polar Anchor page titles", async ({ page }) => {
+    const titleChecks = [
+      "/polar-anchor",
+      "/polar-anchor/about",
+      "/polar-anchor/services",
+      "/polar-anchor/contact",
+      "/polar-anchor/quote"
+    ];
+
+    for (const path of titleChecks) {
+      await page.goto(path);
+      await expect(page).toHaveTitle(/Polar Anchor/);
+    }
+  });
+
+  test("mobile navigation opens and closes on polar routes", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/polar-anchor");
+
+    const menuButton = page.getByRole("button", { name: "Menu" });
+    await expect(menuButton).toBeVisible();
+    await menuButton.click();
+
+    const mobileDialog = page.getByRole("dialog", { name: "Mobile navigation" });
+    await expect(mobileDialog).toBeVisible();
+    await mobileDialog.getByRole("link", { name: "Services" }).click();
+    await expect(page).toHaveURL("/polar-anchor/services");
+
+    await page.goto("/polar-anchor");
+    await menuButton.click();
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Mobile navigation" })).not.toBeVisible();
+  });
+
+  test("polar footer keeps quote and contact details visible", async ({ page }) => {
+    await page.goto("/polar-anchor");
+    const footer = page.locator("footer");
+
+    await expect(footer.getByText("Polar Anchor")).toBeVisible();
+    await expect(footer.getByRole("link", { name: "Request Quote" })).toBeVisible();
+    await expect(footer.getByRole("link", { name: "+1 (647) 000-0000" })).toBeVisible();
+    await expect(footer.getByRole("link", { name: "hello@polaranchor.ca" })).toBeVisible();
+    await expect(footer.getByText("Serving Canada logistics clients")).toBeVisible();
+  });
+
   test("legacy routes redirect to new routes", async ({ page }) => {
     const redirects: Array<{ from: string; to: string }> = [
       { from: "/services", to: "/capabilities" },
-      { from: "/case-studies", to: "/work" },
-      { from: "/contact", to: "/work-with-ftc" }
+      { from: "/contact", to: "/work-with-ftc" },
+      { from: "/quote", to: "/polar-anchor/quote" },
+      { from: "/case-studies", to: "/work" }
     ];
 
     for (const redirect of redirects) {
@@ -82,7 +142,7 @@ test.describe("Una Labs site routes", () => {
     await page.goto("/connect");
     const cta = page.getByRole("link", { name: "Start a Project" }).first();
     await expect(cta).toBeVisible();
-    await expect(cta).toHaveAttribute("href", "/work-with-ftc");
+    await expect(cta).toHaveAttribute("href", "/#start-project");
   });
 
   test("case study detail route works", async ({ page }) => {
@@ -102,14 +162,59 @@ test.describe("Una Labs site routes", () => {
     expect(sitemap?.status()).toBe(200);
     const sitemapText = await sitemap?.text();
     expect(sitemapText || "").toContain(`${SITE_URL}/work/peacepad`);
+    expect(sitemapText || "").toContain(`${SITE_URL}/polar-anchor`);
   });
 
-  test("homepage keeps Start a Project as primary conversion action", async ({ page }) => {
-    await page.goto("/");
-    const ctas = page.getByRole("link", { name: "Start a Project" });
+  test("polar homepage keeps Request a Quote as primary conversion action", async ({ page }) => {
+    await page.goto("/polar-anchor");
+    const ctas = page.getByRole("link", { name: "Request a Quote" });
     const count = await ctas.count();
-    expect(count).toBeGreaterThanOrEqual(3);
+    expect(count).toBeGreaterThanOrEqual(2);
     await expect(ctas.first()).toBeVisible();
+  });
+
+  test("polar anchor quote API accepts valid lead payload", async ({ page }) => {
+    const response = await page.request.post("/api/polar-anchor-quote", {
+      data: {
+        fullName: "Integration Test",
+        email: "integration-test@example.com",
+        phone: "+1 (647) 000-0000",
+        companyName: "Polar Anchor Prospect",
+        shipmentType: "Commercial goods",
+        serviceNeeded: "Freight Forwarding",
+        origin: "Shanghai",
+        destination: "Toronto",
+        preferredDate: "2026-04-01",
+        preferredTimeline: "This month",
+        message:
+          "Need freight forwarding and customs support for a commercial shipment moving into Canada.",
+        website: "",
+        startedAt: Date.now() - 3_000
+      }
+    });
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.ok).toBeTruthy();
+  });
+
+  test("quote form submits successfully", async ({ page }) => {
+    await page.goto("/polar-anchor/quote");
+    await page.getByLabel("Full Name").fill("Integration Test");
+    await page.getByLabel("Email").fill("integration-test@example.com");
+    await page.getByLabel("Phone").fill("+1 (647) 000-0000");
+    await page.getByLabel("Company Name").fill("Northern Trade Co.");
+    await page.getByLabel("Shipment Type").selectOption("Commercial goods");
+    await page.getByLabel("Service Needed").selectOption("Freight Forwarding");
+    await page.getByLabel("Origin").fill("Shanghai");
+    await page.getByLabel("Destination").fill("Toronto");
+    await page.getByLabel("Preferred Date").fill("2026-04-01");
+    await page.getByLabel("Preferred Timeline").selectOption("This month");
+    await page
+      .getByLabel("Message")
+      .fill("Need support coordinating freight forwarding, customs, and inland delivery for a commercial shipment.");
+    await page.waitForTimeout(900);
+    await page.getByRole("button", { name: "Request Quote" }).click();
+    await expect(page.getByText("Polar Anchor received your quote request")).toBeVisible();
   });
 
   test("intake API accepts valid lead payload", async ({ page }) => {
@@ -119,8 +224,8 @@ test.describe("Una Labs site routes", () => {
         email: "integration-test@example.com",
         projectIdea:
           "Need an AI-assisted workflow to route intake requests and automate status updates.",
-        budgetRange: "5k-15k",
-        timeline: "6-12-weeks",
+        budgetRange: "5000-10000",
+        timeline: "8-12-weeks",
         companyWebsite: "",
         startedAt: Date.now() - 3_000
       }

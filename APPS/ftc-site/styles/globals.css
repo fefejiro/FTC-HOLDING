@@ -2559,4 +2559,462 @@ textarea:focus-visible {
   transform: translateY(6px);
 }
 
+.polar-site-header {
+  background: rgba(6, 12, 24, 0.9);
+  border-bottom: 1px solid rgba(130, 151, 181, 0.18);
+}
+
+.polar-site-header .brand,
+.polar-site-header .nav-link.active,
+.polar-site-header .mobile-panel-header,
+.polar-site-header .mobile-panel-link.active,
+.polar-site-footer .footer-title,
+.polar-site-shell h1,
+.polar-site-shell h2,
+.polar-site-shell h3 {
+  color: #eff5ff;
+}
+
+.polar-site-header .brand-subtitle,
+.polar-site-header .nav-link,
+.polar-site-shell .page-intro,
+.polar-site-shell .muted,
+.polar-site-shell p,
+.polar-site-shell li,
+.polar-site-shell .section-heading p,
+.polar-site-footer .footer-copy,
+.polar-site-footer .footer-subtitle,
+.polar-site-footer .footer-links a,
+.polar-site-footer .footer-links span {
+  color: #b7c5d8;
+}
+
+.polar-site-header .logo-mark {
+  background: linear-gradient(150deg, rgba(123, 102, 255, 0.22), rgba(53, 198, 174, 0.16));
+}
+
+.polar-site-header .nav-link:hover,
+.polar-site-header .nav-link.active,
+.polar-site-header .mobile-toggle,
+.polar-site-header .mobile-panel {
+  border-color: rgba(133, 160, 214, 0.24);
+}
+
+.polar-site-header .nav-link.active {
+  background: linear-gradient(120deg, rgba(123, 102, 255, 0.28), rgba(63, 139, 255, 0.22));
+}
+
+.polar-site-shell {
+  --polar-bg-1: #07121f;
+  --polar-bg-2: #0c2137;
+  --polar-border: rgba(139, 164, 194, 0.18);
+  --polar-text: #ecf3ff;
+  --polar-muted: #b8c9dd;
+  --polar-kicker: #8db6ff;
+  --polar-accent: #7b66ff;
+  --polar-accent-2: #35c6ae;
+  background:
+    radial-gradient(1000px 620px at -10% -20%, rgba(123, 102, 255, 0.24) 0%, transparent 60%),
+    radial-gradient(900px 560px at 112% -10%, rgba(53, 198, 174, 0.16) 0%, transparent 60%),
+    linear-gradient(180deg, var(--polar-bg-1) 0%, var(--polar-bg-2) 100%);
+}
+
+.polar-site-shell .section,
+.polar-site-shell .polar-section {
+  padding: 56px 0 0;
+}
+
+.polar-site-shell .card {
+  background: linear-gradient(150deg, rgba(13, 28, 46, 0.9), rgba(15, 35, 58, 0.96));
+  border-color: var(--polar-border);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+}
+
+.polar-site-shell .card:hover {
+  border-color: rgba(133, 160, 214, 0.32);
+}
+
+.polar-panel-kicker,
+.polar-site-shell .eyebrow,
+.polar-kicker {
+  color: var(--polar-kicker);
+  font-size: 0.83rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.polar-site-shell .btn-primary {
+  background: linear-gradient(120deg, var(--polar-accent), #4d8dff 70%, var(--polar-accent-2));
+  box-shadow: 0 12px 28px rgba(72, 113, 255, 0.32);
+}
+
+.polar-site-shell .btn-secondary {
+  border-color: rgba(155, 177, 207, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.polar-site-shell .inline-link {
+  color: #9fc3ff;
+}
+
+.polar-site-shell .inline-link:hover {
+  color: #d4f0ff;
+}
+
+.polar-hero,
+.polar-trust-grid,
+.polar-showcase-grid,
+.polar-feature-grid,
+.polar-split-grid,
+.polar-contact-grid,
+.polar-quote-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+
+.polar-hero-copy,
+.polar-hero-panel,
+.polar-showcase-copy,
+.polar-contact-card,
+.polar-contact-form-card,
+.polar-quote-side-card,
+.polar-quote-form-shell,
+.polar-testimonial-card,
+.polar-faq-item,
+.polar-service-card,
+.polar-copy-stack .card,
+.polar-why-card,
+.polar-process-card,
+.polar-capability-card,
+.polar-split-card,
+.polar-feature-copy,
+.polar-image-panel {
+  padding: 24px;
+}
+
+.polar-hero-copy {
+  gap: 14px;
+}
+
+.polar-lead {
+  color: var(--polar-muted);
+  font-size: 1.03rem;
+}
+
+.polar-hero-panel-stack,
+.polar-copy-stack,
+.polar-split-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.polar-check-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.polar-mini-proof-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.polar-mini-proof-pill,
+.polar-trust-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(155, 177, 207, 0.18);
+  color: var(--polar-text);
+  font-size: 0.94rem;
+}
+
+.polar-image-panel {
+  gap: 0;
+  overflow: hidden;
+}
+
+.polar-image-shell {
+  position: relative;
+  min-height: 280px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #0e2238 0%, #102943 100%);
+}
+
+.polar-image {
+  object-fit: cover;
+}
+
+.polar-image-copy {
+  display: grid;
+  gap: 10px;
+  padding-top: 18px;
+}
+
+.polar-image-copy strong {
+  color: var(--polar-text);
+  font-size: 1.04rem;
+}
+
+.polar-image-copy p {
+  color: var(--polar-muted);
+}
+
+.polar-image-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(123, 102, 255, 0.14);
+  color: #dcd3ff;
+  font-size: 0.82rem;
+  border: 1px solid rgba(123, 102, 255, 0.24);
+}
+
+.polar-trust-section {
+  gap: 18px;
+}
+
+.polar-trust-copy {
+  justify-content: center;
+}
+
+.polar-trust-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.polar-copy-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.polar-feature-list,
+.polar-why-grid,
+.polar-process-grid,
+.polar-capability-grid {
+  margin-top: 0;
+}
+
+.polar-showcase-grid-reverse .polar-image-panel {
+  order: 2;
+}
+
+.polar-showcase-grid-reverse .polar-showcase-copy {
+  order: 1;
+}
+
+.polar-process-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(123, 102, 255, 0.18), rgba(53, 198, 174, 0.16));
+  border: 1px solid rgba(123, 102, 255, 0.26);
+  color: #f5f8ff;
+  font-family: var(--font-space-grotesk), var(--font-inter), sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.polar-quote-mark {
+  font-size: 2rem;
+  line-height: 1;
+  color: #8db6ff;
+}
+
+.polar-testimonial-meta {
+  display: grid;
+  gap: 2px;
+  margin-top: auto;
+}
+
+.polar-testimonial-meta span {
+  color: #9fb2ca;
+  font-size: 0.94rem;
+}
+
+.polar-faq-list {
+  display: grid;
+  gap: 14px;
+}
+
+.polar-faq-item {
+  padding: 0;
+}
+
+.polar-faq-item summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 22px;
+  font-weight: 700;
+  color: var(--polar-text);
+}
+
+.polar-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.polar-faq-item p {
+  padding: 0 22px 22px;
+}
+
+.polar-quote-form .dark-select,
+.polar-quote-form input,
+.polar-quote-form textarea {
+  border-color: rgba(139, 164, 194, 0.2);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.polar-hours-block ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.polar-site-footer {
+  background: linear-gradient(180deg, rgba(7, 18, 31, 0.94), rgba(8, 17, 29, 0.98));
+  border-top: 1px solid rgba(139, 164, 194, 0.12);
+}
+
+.polar-sticky-cta {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(760px, calc(100vw - 28px));
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: rgba(7, 17, 29, 0.9);
+  border: 1px solid rgba(139, 164, 194, 0.18);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(14px);
+}
+
+.polar-sticky-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.polar-sticky-copy strong {
+  color: #eff5ff;
+}
+
+.polar-sticky-kicker {
+  color: #8db6ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.polar-sticky-actions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+@media (max-width: 1100px) {
+  .polar-hero,
+  .polar-trust-grid,
+  .polar-feature-grid,
+  .polar-showcase-grid,
+  .polar-split-grid,
+  .polar-contact-grid,
+  .polar-quote-grid,
+  .polar-copy-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .polar-showcase-grid-reverse .polar-image-panel,
+  .polar-showcase-grid-reverse .polar-showcase-copy {
+    order: initial;
+  }
+}
+
+@media (max-width: 960px) {
+  .polar-trust-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .polar-trust-copy,
+  .polar-hero-copy,
+  .polar-feature-copy,
+  .polar-showcase-copy {
+    padding: 26px;
+  }
+}
+
+@media (max-width: 720px) {
+  .polar-page-content {
+    padding-top: 32px;
+    padding-bottom: 96px;
+  }
+
+  .polar-trust-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .polar-hero-copy,
+  .polar-hero-panel,
+  .polar-feature-copy,
+  .polar-showcase-copy,
+  .polar-contact-card,
+  .polar-contact-form-card,
+  .polar-quote-side-card,
+  .polar-quote-form-shell,
+  .polar-testimonial-card,
+  .polar-service-card,
+  .polar-why-card,
+  .polar-process-card,
+  .polar-capability-card,
+  .polar-split-card,
+  .polar-copy-stack .card {
+    padding: 20px;
+  }
+
+  .polar-image-panel {
+    padding: 12px;
+  }
+
+  .polar-mini-proof-row {
+    gap: 8px;
+  }
+
+  .polar-mini-proof-pill,
+  .polar-trust-pill {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .polar-sticky-cta {
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .polar-sticky-actions {
+    margin-left: 0;
+    flex-direction: column;
+  }
+}
+
 
