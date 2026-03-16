@@ -9,6 +9,7 @@ import {
   resolveInFlightSendAction,
   resolveWhatsappHandoffDecision,
   shouldSuppressDismissedIntervention,
+  shouldSuppressSendOriginalLoop,
 } from "../src/contentHelpers";
 
 describe("send gate helpers", () => {
@@ -61,6 +62,22 @@ describe("dismissal suppression", () => {
     expect(shouldSuppressDismissedIntervention("background", false)).toBe(true);
     expect(shouldSuppressDismissedIntervention("send_gate", false)).toBe(false);
   });
+
+  it("suppresses repeat interruption for an unchanged Send Original draft", () => {
+    expect(
+      shouldSuppressSendOriginalLoop("fuck you", {
+        fingerprint: "fuck you",
+        until: Date.now() + 10_000,
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldSuppressSendOriginalLoop("updated draft", {
+        fingerprint: "fuck you",
+        until: Date.now() + 10_000,
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("risk badge theme", () => {
@@ -90,14 +107,14 @@ describe("risk badge theme", () => {
 });
 
 describe("WhatsApp guarded handoff helpers", () => {
-  it("uses a dedicated approved action label on WhatsApp", () => {
-    expect(getApprovedActionLabel("whatsapp")).toBe("Use Approved Message");
-    expect(getApprovedActionLabel("gmail")).toBe("Send Approved Message");
+  it("uses the Guardian suggestion action label", () => {
+    expect(getApprovedActionLabel("whatsapp")).toBe("Use Suggestion");
+    expect(getApprovedActionLabel("gmail")).toBe("Use Suggestion");
   });
 
-  it("explains the guarded handoff note on WhatsApp", () => {
-    expect(getReviewNote("whatsapp")).toContain("press Ctrl+V to replace");
-    expect(getReviewNote("whatsapp")).toContain("send unlocks");
+  it("explains the automatic replace flow on WhatsApp", () => {
+    expect(getReviewNote("whatsapp")).toContain("place the suggestion into WhatsApp");
+    expect(getReviewNote("whatsapp")).toContain("safe manual replace flow");
   });
 
   it("blocks the original draft while handoff is armed", () => {

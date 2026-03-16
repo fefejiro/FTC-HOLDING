@@ -29,6 +29,11 @@ export interface PreflightExplanation {
   saferBecause: string[];
 }
 
+export interface SendOriginalLoopSuppressionState {
+  fingerprint: string;
+  until: number;
+}
+
 export function resolveInFlightSendAction(
   intent: "background" | "send_gate",
 ): { queueSendGate: boolean; releaseImmediately: boolean } {
@@ -104,13 +109,29 @@ export function shouldSuppressDismissedIntervention(
 }
 
 export function getApprovedActionLabel(site: SupportedSite): string {
-  return site === "whatsapp" ? "Use Approved Message" : "Send Approved Message";
+  return site === "whatsapp" ? "Use Suggestion" : "Use Suggestion";
 }
 
 export function getReviewNote(site: SupportedSite): string {
   return site === "whatsapp"
-    ? "WhatsApp safe mode keeps the review flow inside PeacePad. When you use an approved message here, PeacePad will copy it, select the blocked draft, and guide you to press Ctrl+V to replace it. Once the approved text is detected, send unlocks."
+    ? "SendSmart Guardian will place the suggestion into WhatsApp for you and leave it editable. If direct replacement is blocked, Guardian falls back to a safe manual replace flow."
     : "PeacePad will try to send your approved message after review. If the site will not accept the direct send safely, the approved message will be copied so you can paste it manually.";
+}
+
+export function shouldSuppressSendOriginalLoop(
+  currentFingerprint: string,
+  state: SendOriginalLoopSuppressionState | null,
+  now = Date.now(),
+): boolean {
+  if (!state?.fingerprint) {
+    return false;
+  }
+
+  if (now > state.until) {
+    return false;
+  }
+
+  return currentFingerprint === state.fingerprint;
 }
 
 function hasSignal(preflight: PreflightResponse, ...codes: string[]): boolean {

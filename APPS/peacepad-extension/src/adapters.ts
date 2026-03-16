@@ -181,6 +181,18 @@ function collapseSelectionToEnd(element: HTMLElement): void {
   selection.addRange(range);
 }
 
+export function focusComposerForEditing(element: HTMLElement): void {
+  element.focus();
+
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    const end = element.value.length;
+    element.setSelectionRange(end, end);
+    return;
+  }
+
+  collapseSelectionToEnd(element);
+}
+
 function replaceContentWithDomReset(element: HTMLElement, value: string): ComposerReplacementResult {
   const doc = element.ownerDocument;
   if (typeof (element as HTMLElement & { replaceChildren?: (...nodes: Node[]) => void }).replaceChildren === "function") {
@@ -192,7 +204,7 @@ function replaceContentWithDomReset(element: HTMLElement, value: string): Compos
     element.appendChild(doc.createTextNode(value));
   }
 
-  collapseSelectionToEnd(element);
+  focusComposerForEditing(element);
   element.dispatchEvent(createInputLikeEvent("input", value, false));
   element.dispatchEvent(new Event("change", { bubbles: true }));
 
@@ -205,7 +217,7 @@ function replaceContentWithDomReset(element: HTMLElement, value: string): Compos
 }
 
 function replaceContentEditableText(site: SupportedSite, element: HTMLElement, value: string): ComposerReplacementResult {
-  element.focus();
+  focusComposerForEditing(element);
   element.dispatchEvent(createInputLikeEvent("beforeinput", value, true));
 
   if (site === "whatsapp") {
@@ -233,7 +245,7 @@ function replaceContentEditableText(site: SupportedSite, element: HTMLElement, v
       range.deleteContents();
       range.insertNode(element.ownerDocument.createTextNode(value));
       selection.removeAllRanges();
-      collapseSelectionToEnd(element);
+      focusComposerForEditing(element);
       method = "range_insert";
     } else {
       element.textContent = value;
@@ -325,9 +337,10 @@ export function replaceComposerText(
   value: string,
 ): ComposerReplacementResult {
   if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
-    element.focus();
+    focusComposerForEditing(element);
     element.dispatchEvent(createInputLikeEvent("beforeinput", value, true));
     element.value = value;
+    focusComposerForEditing(element);
     element.dispatchEvent(createInputLikeEvent("input", value, false));
     element.dispatchEvent(new Event("change", { bubbles: true }));
     const actualText = getComposerText(element);

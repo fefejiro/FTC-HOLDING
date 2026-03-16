@@ -1,6 +1,7 @@
 import type { PreflightResponse } from "@ftc/peacepad-sdk";
 import {
   detectSupportedSite,
+  focusComposerForEditing,
   getComposerText,
   replaceComposerText,
   resolveComposerFromTarget,
@@ -15,6 +16,7 @@ import {
   getReviewNote,
   getRiskBadgeTheme,
   resolveInFlightSendAction,
+  shouldSuppressSendOriginalLoop,
   resolveWhatsappHandoffDecision,
 } from "./contentHelpers";
 import { canUseAuto, getSettings } from "./storage";
@@ -27,6 +29,7 @@ const MIN_CHARS_FOR_BACKGROUND_ANALYSIS = 18;
 const MIN_CHARS_FOR_SEND_GATE = 5;
 const BACKGROUND_DEBOUNCE_MS = 900;
 const SUPPRESS_AFTER_SEND_MS = 1200;
+const SEND_ORIGINAL_LOOP_SUPPRESSION_MS = 15000;
 const SEND_RELEASE_SETTLE_MS = 120;
 const MAX_SUGGESTED_SEND_ATTEMPTS = 3;
 
@@ -76,6 +79,12 @@ let lastAnalyzedFingerprint = "";
 let lastSafeFingerprint = "";
 let lastDismissedFingerprint = "";
 let lastErrorToastAt = 0;
+let sendOriginalLoopSuppression:
+  | {
+      fingerprint: string;
+      until: number;
+    }
+  | null = null;
 
 if (site) {
   const bootstrapState = window as typeof window & { [CONTENT_SENTINEL]?: boolean };
@@ -131,6 +140,9 @@ function installPassiveWatcher(currentSite: SupportedSite): void {
         site: currentSite,
         chars: currentText.length,
       });
+      if (currentSite === "whatsapp") {
+        return;
+      }
       scheduleBackgroundCheck(composer, currentSite);
     },
     true,
@@ -211,6 +223,15 @@ async function runBackgroundCheck(currentSite: SupportedSite): Promise<void> {
     return;
   }
 
+  if (shouldBypassSendOriginalLoop(draftFingerprint)) {
+    log("send original loop suppression active", {
+      site: currentSite,
+      reason: "background_same_draft",
+      chars: text.length,
+    });
+    return;
+  }
+
   if (!hasMaterialChange(draftFingerprint, lastDismissedFingerprint)) {
     return;
   }
@@ -252,6 +273,15 @@ function installSendGate(currentSite: SupportedSite): void {
       }
 
       const draftFingerprint = fingerprint(text);
+      if (shouldBypassSendOriginalLoop(draftFingerprint)) {
+        log("send original loop suppression active", {
+          site: currentSite,
+          source: "enter_key",
+          chars: text.length,
+        });
+        return;
+      }
+
       if (handleWhatsappApprovedHandoffBeforeSend(event, currentSite, composer, draftFingerprint, "enter_key", text.length)) {
         return;
       }
@@ -273,7 +303,7 @@ function installSendGate(currentSite: SupportedSite): void {
       }
 
       blockSendEvent(event, currentSite, "enter_key");
-      log("send gate intercepted", { site: currentSite, source: "enter_key", chars: text.length });
+      log("draft intercepted", { site: currentSite, source: "enter_key", chars: text.length });
       void runPreflight(composer, currentSite, "send_gate", "enter_key");
     },
     true,
@@ -315,6 +345,15 @@ function installClickSendGate(currentSite: SupportedSite): void {
       }
 
       const draftFingerprint = fingerprint(text);
+      if (shouldBypassSendOriginalLoop(draftFingerprint)) {
+        log("send original loop suppression active", {
+          site: currentSite,
+          source: "send_button_click",
+          chars: text.length,
+        });
+        return;
+      }
+
       if (handleWhatsappApprovedHandoffBeforeSend(event, currentSite, composer, draftFingerprint, "send_button_click", text.length)) {
         return;
       }
@@ -336,7 +375,7 @@ function installClickSendGate(currentSite: SupportedSite): void {
       }
 
       blockSendEvent(event, currentSite, "send_button_click");
-      log("send gate intercepted", { site: currentSite, source: "send_button_click", chars: text.length });
+      log("draft intercepted", { site: currentSite, source: "send_button_click", chars: text.length });
       void runPreflight(composer, currentSite, "send_gate", "send_button_click");
     },
     true,
@@ -465,6 +504,16 @@ async function runPreflight(
       }
       return;
     }
+
+    log("trigger matched", {
+      site: currentSite,
+      source,
+      risk: preflight.risk_level,
+      score: preflight.conflict_score,
+      recommendation: preflight.recommendation,
+      chars: text.length,
+      ruleset: preflight.model_or_ruleset_version.escalation_ruleset,
+    });
 
     if (!hasMaterialChange(draftFingerprint, lastDismissedFingerprint) && effectiveIntent === "background") {
       return;
@@ -1121,7 +1170,8 @@ function showWhatsappApprovedHandoffBanner(): void {
       source: "manual_after_apply",
       entry: "handoff_banner",
     });
-    lastDismissedFingerprint = "";
+    armSendOriginalLoopSuppression(current.blockedOriginalFingerprint);
+    lastDismissedFingerprint = current.blockedOriginalFingerprint;
     sendReleaseInFlight = true;
     suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
     releaseSend(current.composer, "whatsapp", "approved_handoff_send_original_release", current.blockedOriginalText, 1);
@@ -1328,7 +1378,7 @@ function showPreflightModal(
   wrapper.style.borderRadius = "14px";
   wrapper.style.boxShadow = "0 16px 40px rgba(15, 23, 42, 0.25)";
   wrapper.style.padding = "16px";
-  wrapper.style.fontFamily = "Arial, sans-serif";
+  wrapper.style.fontFamily = "\"Segoe UI\", Arial, sans-serif";
   wrapper.style.color = "#0f172a";
 
   const riskLabel = preflight.risk_level.toUpperCase();
@@ -1389,11 +1439,11 @@ function showPreflightModal(
   const summary = document.createElement("div");
   summary.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-      <strong>PeacePad Pre-Send Check</strong>
+      <strong>SendSmart Guardian</strong>
       <span style="font-size:11px;padding:4px 8px;border-radius:999px;background:${riskTheme.background};color:${riskTheme.text};border:1px solid ${riskTheme.border};font-weight:700;">${riskLabel}</span>
     </div>
     <p style="margin:8px 0 4px 0;font-size:12px;line-height:1.4;">
-      Recommendation: <strong>${preflight.recommendation.replace(/_/g, " ")}</strong>
+      Recommendation: <strong>pause before sending</strong>
     </p>
     <p style="margin:0 0 10px 0;font-size:12px;line-height:1.4;">
       Conflict score: <strong>${preflight.conflict_score}</strong>
@@ -1486,42 +1536,6 @@ function showPreflightModal(
   reviewNote.textContent = getReviewNote(currentSite);
   wrapper.appendChild(reviewNote);
 
-  const selectionRow = document.createElement("div");
-  selectionRow.style.display = "flex";
-  selectionRow.style.flexWrap = "wrap";
-  selectionRow.style.gap = "8px";
-  selectionRow.style.marginBottom = "12px";
-
-  const syncFinalMessage = (nextValue: string, selection: string): void => {
-    finalMessageInput.value = nextValue;
-    log("approved text selected", {
-      site: currentSite,
-      source: "manual_after_apply",
-      selection,
-      chars: nextValue.length,
-      sameAsOriginal: normalizeDraft(nextValue) === originalNormalized,
-      sameAsSuggestion: normalizeDraft(nextValue) === suggestionNormalized,
-    });
-    finalMessageInput.focus();
-    finalMessageInput.setSelectionRange(finalMessageInput.value.length, finalMessageInput.value.length);
-  };
-
-  const keepOriginal = makeButton("Keep Original", "#ffffff", "#0f172a", () => {
-    syncFinalMessage(originalDraft, "original");
-  });
-  keepOriginal.style.border = "1px solid #cbd5e1";
-  selectionRow.appendChild(keepOriginal);
-
-  if (preflight.calm_version) {
-    const acceptSuggestion = makeButton("Accept Suggestion", "#eff6ff", "#1d4ed8", () => {
-      syncFinalMessage(preflight.calm_version as string, "suggestion");
-    });
-    acceptSuggestion.style.border = "1px solid #bfdbfe";
-    selectionRow.appendChild(acceptSuggestion);
-  }
-
-  wrapper.appendChild(selectionRow);
-
   const buttonRow = document.createElement("div");
   buttonRow.style.display = "grid";
   buttonRow.style.gridTemplateColumns = "1fr 1fr";
@@ -1536,57 +1550,35 @@ function showPreflightModal(
         return;
       }
 
-      log("approved send attempted", {
+      log("suggestion accepted", {
         site: currentSite,
         source: "manual_after_apply",
         chars: approvedText.length,
-        mode: currentSite === "whatsapp" ? "whatsapp_guarded_handoff" : "direct_then_fallback",
         sameAsOriginal: normalizeDraft(approvedText) === originalNormalized,
         sameAsSuggestion: normalizeDraft(approvedText) === suggestionNormalized,
       });
 
-      if (currentSite === "whatsapp") {
-        const copied = await copyTextToClipboard(approvedText);
-        if (!copied) {
-          log("approved send fallback", {
-            site: currentSite,
-            source: "manual_after_apply",
-            action: "approved_send",
-            fallback: "clipboard_copy_failed",
-            success: false,
-            reason: "whatsapp_guarded_handoff",
-          });
-          showToastThrottled("Could not copy the approved message. Review it in the modal and try again.");
-          finalMessageInput.focus();
-          return;
-        }
+      log("approved send attempted", {
+        site: currentSite,
+        source: "manual_after_apply",
+        chars: approvedText.length,
+        mode: currentSite === "whatsapp" ? "whatsapp_direct_replace" : "direct_then_fallback",
+        sameAsOriginal: normalizeDraft(approvedText) === originalNormalized,
+        sameAsSuggestion: normalizeDraft(approvedText) === suggestionNormalized,
+      });
 
-        closeModal();
-        armWhatsappApprovedHandoff(composer, preflight, draftFingerprint, originalDraft, approvedText);
-        const prepareResult = prepareWhatsappComposerForPaste(composer, "manual_after_apply", "approved_action");
-        log("approved send result", {
-          site: currentSite,
-          source: "manual_after_apply",
-          success: true,
-          path: "guarded_handoff_copy",
-          mode: "whatsapp_guarded_handoff",
-          prepareMethod: prepareResult.method,
-          selected: prepareResult.selected,
-        });
-        showToastThrottled(
-          prepareResult.selected
-            ? "Approved message copied. Press Ctrl+V to replace."
-            : "Approved message copied. Composer focused. Press Ctrl+V to replace.",
-        );
-        return;
-      }
-
+      log("replacement attempted", {
+        site: currentSite,
+        source: "manual_after_apply",
+        chars: approvedText.length,
+        mode: currentSite === "whatsapp" ? "automatic_replace" : "review_surface",
+      });
       log("composer replacement start", {
         site: currentSite,
         source: "manual_after_apply",
         action: "approved_send",
         chars: approvedText.length,
-        mode: "review_surface",
+        mode: currentSite === "whatsapp" ? "automatic_replace" : "review_surface",
       });
       const replacement = replaceComposerText(currentSite, composer, approvedText);
 
@@ -1600,7 +1592,66 @@ function showPreflightModal(
           method: replacement.method,
         });
 
+        if (currentSite === "whatsapp") {
+          const copied = await copyTextToClipboard(approvedText);
+          log("replacement fallback used", {
+            site: currentSite,
+            source: "manual_after_apply",
+            method: replacement.method,
+            fallback: copied ? "guarded_handoff_copy" : "clipboard_copy_failed",
+            success: copied,
+          });
+          log("approved send fallback", {
+            site: currentSite,
+            source: "manual_after_apply",
+            action: "approved_send",
+            method: replacement.method,
+            fallback: copied ? "guarded_handoff_copy" : "clipboard_copy_failed",
+            success: copied,
+          });
+
+          if (!copied) {
+            showToastThrottled("Could not replace or copy the suggestion. Review it and try again.");
+            finalMessageInput.focus();
+            return;
+          }
+
+          const fallbackBlockedText = getComposerText(composer).trim() || originalDraft;
+          const fallbackBlockedFingerprint = fingerprint(fallbackBlockedText) || draftFingerprint;
+          closeModal();
+          armWhatsappApprovedHandoff(
+            composer,
+            preflight,
+            fallbackBlockedFingerprint,
+            fallbackBlockedText,
+            approvedText,
+          );
+          const prepareResult = prepareWhatsappComposerForPaste(composer, "manual_after_apply", "approved_action");
+          log("approved send result", {
+            site: currentSite,
+            source: "manual_after_apply",
+            success: true,
+            path: "guarded_handoff_fallback",
+            mode: "whatsapp_direct_replace",
+            prepareMethod: prepareResult.method,
+            selected: prepareResult.selected,
+          });
+          showToastThrottled(
+            prepareResult.selected
+              ? "Automatic replace unavailable. Suggestion copied. Press Ctrl+V to replace."
+              : "Automatic replace unavailable. Suggestion copied. Composer focused. Press Ctrl+V to replace.",
+          );
+          return;
+        }
+
         const copied = await copyTextToClipboard(approvedText);
+        log("replacement fallback used", {
+          site: currentSite,
+          source: "manual_after_apply",
+          method: replacement.method,
+          fallback: copied ? "clipboard_copy" : "clipboard_copy_failed",
+          success: copied,
+        });
         log("approved send fallback", {
           site: currentSite,
           source: "manual_after_apply",
@@ -1624,6 +1675,12 @@ function showPreflightModal(
         return;
       }
 
+      log("replacement succeeded", {
+        site: currentSite,
+        source: "manual_after_apply",
+        actual: replacement.actualText,
+        method: replacement.method,
+      });
       log("replacement verification success", {
         site: currentSite,
         source: "manual_after_apply",
@@ -1632,8 +1689,29 @@ function showPreflightModal(
         method: replacement.method,
       });
 
+      if (currentSite === "whatsapp") {
+        lastSafeFingerprint = fingerprint(replacement.actualText);
+        lastAnalyzedFingerprint = lastSafeFingerprint;
+        lastDismissedFingerprint = "";
+        sendOriginalLoopSuppression = null;
+        closeModal();
+        suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
+        log("approved send result", {
+          site: currentSite,
+          source: "manual_after_apply",
+          method: replacement.method,
+          success: true,
+          path: "composer_replace_edit",
+        });
+        window.setTimeout(() => {
+          focusComposerForEditing(composer);
+        }, 0);
+        return;
+      }
+
       lastSafeFingerprint = fingerprint(replacement.actualText);
       lastDismissedFingerprint = "";
+      sendOriginalLoopSuppression = null;
       closeModal();
       sendReleaseInFlight = true;
       suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
@@ -1661,7 +1739,8 @@ function showPreflightModal(
         entry: "modal",
       });
     }
-    lastDismissedFingerprint = "";
+    armSendOriginalLoopSuppression(draftFingerprint);
+    lastDismissedFingerprint = draftFingerprint;
     closeModal();
     sendReleaseInFlight = true;
     suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
@@ -1924,14 +2003,17 @@ function log(message: string, data?: Record<string, unknown>): void {
     "content script already active": "content_loaded",
     "draft detected": "draft_detected",
     "background check skipped": "background_check_scheduled",
+    "draft intercepted": "send_gate_intercepted",
     "send gate intercepted": "send_gate_intercepted",
     "send blocked while modal is unresolved": "send_blocked_modal_open",
     "preflight request sent": "preflight_requested",
     "local preflight result received": "preflight_result_local",
     "api preflight result received": "preflight_result_api",
     "intervention decision returned": "intervention_decision",
+    "trigger matched": "trigger_matched",
     "showing intervention modal": "modal_opened",
     "apply suggested clicked": "apply_suggested_clicked",
+    "suggestion accepted": "suggestion_accepted",
     "approved text selected": "approved_text_selected",
     "approved send attempted": "approved_send_attempted",
     "approved send result": "approved_send_result",
@@ -1949,9 +2031,12 @@ function log(message: string, data?: Record<string, unknown>): void {
     "final send allowed": "approved_handoff_send_allowed",
     "approved handoff cleared": "approved_handoff_cleared",
     "composer replacement start": "composer_replace_started",
+    "replacement attempted": "replacement_attempted",
     "composer replacement retry": "composer_replace_retry",
     "replacement verification success": "composer_replace_verified",
+    "replacement succeeded": "replacement_succeeded",
     "replacement verification failed": "composer_replace_failed",
+    "replacement fallback used": "replacement_fallback_used",
     "manual send after apply detected": "manual_send_after_apply_detected",
     "send original clicked": "send_original_clicked",
     "cancel clicked": "cancel_clicked",
@@ -2007,6 +2092,36 @@ function fingerprint(text: string): string {
   return normalizeDraft(text).slice(0, 600);
 }
 
+function armSendOriginalLoopSuppression(draftFingerprint: string): void {
+  if (!draftFingerprint) {
+    sendOriginalLoopSuppression = null;
+    return;
+  }
+
+  sendOriginalLoopSuppression = {
+    fingerprint: draftFingerprint,
+    until: Date.now() + SEND_ORIGINAL_LOOP_SUPPRESSION_MS,
+  };
+}
+
+function clearSendOriginalLoopSuppressionIfChanged(draftFingerprint: string): void {
+  if (!sendOriginalLoopSuppression) {
+    return;
+  }
+
+  if (!shouldSuppressSendOriginalLoop(draftFingerprint, sendOriginalLoopSuppression)) {
+    sendOriginalLoopSuppression = null;
+  }
+}
+
+function shouldBypassSendOriginalLoop(draftFingerprint: string): boolean {
+  const bypass = shouldSuppressSendOriginalLoop(draftFingerprint, sendOriginalLoopSuppression);
+  if (!bypass) {
+    clearSendOriginalLoopSuppressionIfChanged(draftFingerprint);
+  }
+  return bypass;
+}
+
 function hasMaterialChange(current: string, previous: string): boolean {
   if (!previous) return true;
   if (current === previous) return false;
@@ -2029,7 +2144,3 @@ function hasMaterialChange(current: string, previous: string): boolean {
   const overlapRatio = overlap / denominator;
   return overlapRatio < 0.9;
 }
-
-
-
-

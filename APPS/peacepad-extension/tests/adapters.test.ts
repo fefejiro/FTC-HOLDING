@@ -487,6 +487,8 @@ describe("whatsapp adapter helpers", () => {
     expect(result.success).toBe(true);
     expect(result.method).toBe("dom_replace");
     expect(getComposerText(composer as unknown as HTMLElement)).toBe("Pickup has been running late recently.");
+    expect(document.activeElement).toBe(composer);
+    expect(document.defaultView.getSelection().getTarget()).toBe(composer);
   });
 
   it("prefers the real send button when releasing the send action", () => {
