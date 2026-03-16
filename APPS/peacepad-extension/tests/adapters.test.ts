@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  detectSendAttempt,
   detectSupportedSite,
   getComposerText,
   replaceComposerText,
   resolveComposerFromTarget,
+  resolveSendShortcut,
   resolveSendTriggerFromTarget,
   triggerSend,
 } from "../src/adapters";
@@ -409,6 +411,11 @@ describe("site adapter detection", () => {
     expect(detectSupportedSite("app.slack.com")).toBe("slack");
   });
 
+  it("detects linkedin host", () => {
+    expect(detectSupportedSite("www.linkedin.com")).toBe("linkedin");
+    expect(detectSupportedSite("linkedin.com")).toBe("linkedin");
+  });
+
   it("returns null for unsupported host", () => {
     expect(detectSupportedSite("example.com")).toBeNull();
   });
@@ -568,5 +575,48 @@ describe("whatsapp adapter helpers", () => {
       method: "send_button_click",
     });
     expect(sendButton.clickCount).toBe(1);
+  });
+
+  it("resolves LinkedIn send shortcut as click-only when no hint is available", () => {
+    const document = globalThis.document as unknown as MockDocument;
+    const composer = document.createElement("div");
+    composer.setAttribute("contenteditable", "true");
+    composer.setAttribute("role", "textbox");
+    composer.setAttribute("class", "msg-form__contenteditable");
+    document.body.appendChild(composer);
+
+    expect(resolveSendShortcut("linkedin", composer as unknown as HTMLElement)).toBe("click-only");
+  });
+
+  it("detects LinkedIn send attempt on Enter when hint is present", () => {
+    const document = globalThis.document as unknown as MockDocument;
+    const composer = document.createElement("div");
+    composer.setAttribute("contenteditable", "true");
+    composer.setAttribute("role", "textbox");
+    composer.setAttribute("class", "msg-form__contenteditable");
+    composer.setAttribute("data-send-on-enter", "true");
+    document.body.appendChild(composer);
+
+    const event = new MockKeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    Object.defineProperty(event, "target", { value: composer });
+
+    const attempt = detectSendAttempt("linkedin", event as unknown as KeyboardEvent);
+    expect(attempt?.source).toBe("enter_key");
+  });
+
+  it("allows Ctrl+Enter when shortcut is Ctrl+Enter", () => {
+    const document = globalThis.document as unknown as MockDocument;
+    const composer = document.createElement("div");
+    composer.setAttribute("contenteditable", "true");
+    composer.setAttribute("role", "textbox");
+    document.body.appendChild(composer);
+
+    const event = new MockKeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    Object.defineProperty(event, "target", { value: composer });
+    (event as unknown as { ctrlKey?: boolean }).ctrlKey = true;
+
+    expect(resolveSendShortcut("gmail", composer as unknown as HTMLElement)).toBe("Ctrl+Enter");
+    const attempt = detectSendAttempt("gmail", event as unknown as KeyboardEvent);
+    expect(attempt?.source).toBe("enter_key");
   });
 });

@@ -1,9 +1,10 @@
-export type SupportedSite = "whatsapp" | "gmail" | "slack";
+export type SupportedSite = "whatsapp" | "gmail" | "slack" | "linkedin";
 
 export interface AdapterConfig {
   site: SupportedSite;
   selectors: string[];
   sendSelectors: string[];
+  sendShortcut?: "Enter" | "Ctrl+Enter" | "detect";
 }
 
 // Site profiles for the universal composer engine. Keep platform selectors here.
@@ -64,6 +65,18 @@ const ADAPTERS: AdapterConfig[] = [
       "button[aria-label*='Send message']",
     ],
   },
+  {
+    site: "linkedin",
+    selectors: [
+      "div.msg-form__contenteditable[contenteditable='true']",
+      "div.msg-form__msg-content-container [role='textbox'][contenteditable='true']",
+    ],
+    sendSelectors: [
+      "button.msg-form__send-button",
+      "button[aria-label*='Send']",
+    ],
+    sendShortcut: "detect",
+  },
 ];
 
 export const SITE_PROFILES: SiteProfile[] = ADAPTERS;
@@ -73,6 +86,7 @@ export function detectSupportedSite(hostname: string): SupportedSite | null {
   if (host.includes("web.whatsapp.com")) return "whatsapp";
   if (host.includes("mail.google.com")) return "gmail";
   if (host.includes("app.slack.com")) return "slack";
+  if (host.includes("linkedin.com")) return "linkedin";
   return null;
 }
 
@@ -420,6 +434,70 @@ export function resolveActiveComposer(site: SupportedSite): HTMLElement | null {
   return null;
 }
 
+function detectLinkedInSendOnEnter(composer: HTMLElement | null): boolean | null {
+  if (!composer) {
+    return null;
+  }
+
+  const datasetValue = composer.getAttribute("data-send-on-enter");
+  if (datasetValue === "true") {
+    return true;
+  }
+  if (datasetValue === "false") {
+    return false;
+  }
+
+  const container = composer.closest(".msg-form__contenteditable, .msg-form__msg-content-container") || composer.parentElement;
+  if (container instanceof HTMLElement) {
+    const ariaHint = container.getAttribute("aria-label") || "";
+    if (/press\s+enter\s+to\s+send/i.test(ariaHint)) {
+      return true;
+    }
+  }
+
+  const hint = composer.closest(".msg-form__msg-content-container")?.querySelector(
+    ".msg-form__hint-text, .msg-form__footer-hint-text, [data-control-name='message_send_on_enter']",
+  );
+  if (hint instanceof HTMLElement) {
+    const text = hint.textContent || "";
+    if (/press\s+enter\s+to\s+send/i.test(text)) {
+      return true;
+    }
+    if (/enter\s+to\s+send/i.test(text)) {
+      return true;
+    }
+  }
+
+  return null;
+}
+
+export function resolveSendShortcut(site: SupportedSite, composer: HTMLElement | null): "Enter" | "Ctrl+Enter" | "click-only" {
+  const adapter = getAdapter(site);
+  const shortcut = adapter.sendShortcut;
+
+  if (site === "gmail") {
+    return "Ctrl+Enter";
+  }
+
+  if (!shortcut || shortcut === "Enter") {
+    return "Enter";
+  }
+
+  if (shortcut === "Ctrl+Enter") {
+    return "Ctrl+Enter";
+  }
+
+  if (site === "linkedin") {
+    const detected = detectLinkedInSendOnEnter(composer);
+    if (detected === true) {
+      return "Enter";
+    }
+    return "click-only";
+  }
+
+  return "click-only";
+}
+
 export async function replaceComposerText(
   site: SupportedSite,
   element: HTMLElement,
@@ -521,7 +599,19 @@ export function detectSendAttempt(site: SupportedSite, event: Event): SendAttemp
     if (!composer) {
       return null;
     }
-    return { composer, source: "enter_key" };
+
+    const shortcut = resolveSendShortcut(site, composer);
+    if (shortcut === "Ctrl+Enter") {
+      if (event.ctrlKey || event.metaKey) {
+        return { composer, source: "enter_key" };
+      }
+      return null;
+    }
+
+    if (shortcut === "Enter") {
+      return { composer, source: "enter_key" };
+    }
+    return null;
   }
 
   if (event.type === "click") {
