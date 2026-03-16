@@ -263,6 +263,10 @@ function installSendGate(currentSite: SupportedSite): void {
         const composerForHint = attempt?.composer || resolveComposerFromTarget(currentSite, event.target);
         const composerSnapshot = getLinkedInComposerSnapshot();
         const hintSnapshot = getLinkedInSendHintSnapshot(composerForHint);
+        const trimmedHintText = hintSnapshot.hintText
+          .map((text) => text.replace(/\s+/g, " ").trim())
+          .filter(Boolean)
+          .slice(0, 3);
         log("linkedin send hint", {
           site: currentSite,
           source: "enter_key",
@@ -278,7 +282,11 @@ function installSendGate(currentSite: SupportedSite): void {
           activeTag: activeElement?.tagName?.toLowerCase() || "unknown",
           activeRole: activeElement?.getAttribute?.("role") || "",
           activeEditable: activeElement?.getAttribute?.("contenteditable") || "",
-          ...hintSnapshot,
+          hintSource: hintSnapshot.hintSource,
+          decision: hintSnapshot.decision,
+          attributeDecision: hintSnapshot.attributeDecision,
+          toggleState: hintSnapshot.toggleState,
+          hintText: trimmedHintText,
         });
       }
 

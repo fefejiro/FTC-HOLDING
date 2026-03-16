@@ -81,6 +81,9 @@ const ADAPTERS: AdapterConfig[] = [
     sendSelectors: [
       "button.msg-form__send-button",
       "button[aria-label*='Send']",
+      "button[aria-label*='send']",
+      "button[data-control-name='send']",
+      "button[data-control-name*='send']",
     ],
     sendShortcut: "detect",
   },
@@ -467,7 +470,7 @@ type LinkedInSendHintSource = "attribute" | "toggle" | "hint" | "ctrl_enter_hint
 
 export interface LinkedInSendHintSnapshot {
   decision: boolean | null;
-  source: LinkedInSendHintSource;
+  hintSource: LinkedInSendHintSource;
   attributeDecision: boolean | null;
   toggleState: string | null;
   hintText: string[];
@@ -555,7 +558,7 @@ function evaluateLinkedInSendOnEnter(composer: HTMLElement | null): LinkedInSend
   if (!composer) {
     return {
       decision: null,
-      source: "none",
+      hintSource: "none",
       attributeDecision: null,
       toggleState: null,
       hintText: [],
@@ -582,7 +585,7 @@ function evaluateLinkedInSendOnEnter(composer: HTMLElement | null): LinkedInSend
       || composer;
     return {
       decision: attributeDecision,
-      source: "attribute",
+      hintSource: "attribute",
       attributeDecision,
       toggleState: null,
       hintText: collectLinkedInHintText(composer, container, hintScope),
@@ -605,7 +608,7 @@ function evaluateLinkedInSendOnEnter(composer: HTMLElement | null): LinkedInSend
       if (parsed !== null) {
         return {
           decision: parsed,
-          source: "toggle",
+          hintSource: "toggle",
           attributeDecision: null,
           toggleState,
           hintText: collectLinkedInHintText(composer, container, hintScope),
@@ -621,7 +624,7 @@ function evaluateLinkedInSendOnEnter(composer: HTMLElement | null): LinkedInSend
   if (ctrlEnterHint) {
     return {
       decision: false,
-      source: "ctrl_enter_hint",
+      hintSource: "ctrl_enter_hint",
       attributeDecision: null,
       toggleState,
       hintText,
@@ -634,7 +637,7 @@ function evaluateLinkedInSendOnEnter(composer: HTMLElement | null): LinkedInSend
   if (enterHint) {
     return {
       decision: true,
-      source: "hint",
+      hintSource: "hint",
       attributeDecision: null,
       toggleState,
       hintText,
@@ -647,7 +650,7 @@ function evaluateLinkedInSendOnEnter(composer: HTMLElement | null): LinkedInSend
   if (shiftEnterHint) {
     return {
       decision: true,
-      source: "hint",
+      hintSource: "hint",
       attributeDecision: null,
       toggleState,
       hintText,
@@ -656,7 +659,7 @@ function evaluateLinkedInSendOnEnter(composer: HTMLElement | null): LinkedInSend
 
   return {
     decision: null,
-    source: "none",
+    hintSource: "none",
     attributeDecision: null,
     toggleState,
     hintText,
