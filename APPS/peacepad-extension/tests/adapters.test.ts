@@ -237,6 +237,24 @@ class MockElement {
       return false;
     }
 
+    const idMatch = selector.match(/#([a-z0-9_-]+)/i);
+    if (idMatch) {
+      const actualId = this.getAttribute("id");
+      if (actualId !== idMatch[1]) {
+        return false;
+      }
+    }
+
+    const classMatches = [...selector.matchAll(/\.([a-z0-9_-]+)/gi)].map((match) => match[1]);
+    if (classMatches.length > 0) {
+      const classAttr = this.getAttribute("class") || "";
+      const classList = classAttr.split(/\s+/).filter(Boolean);
+      const hasAllClasses = classMatches.every((className) => classList.includes(className));
+      if (!hasAllClasses) {
+        return false;
+      }
+    }
+
     const attributeMatchers = parseAttributeMatchers(selector);
     for (const matcher of attributeMatchers) {
       const actual = this.getAttribute(matcher.name);
@@ -286,6 +304,25 @@ class MockDocument {
 
   querySelector(selector: string): MockElement | null {
     return this.body.querySelector(selector);
+  }
+
+  getElementById(id: string): MockElement | null {
+    return this.findById(this.body, id);
+  }
+
+  private findById(element: MockElement, id: string): MockElement | null {
+    if (element.getAttribute("id") === id) {
+      return element;
+    }
+
+    for (const child of element.children) {
+      const found = this.findById(child, id);
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
   }
 
   createElement(tagName: string): MockElement {
@@ -584,6 +621,44 @@ describe("whatsapp adapter helpers", () => {
     composer.setAttribute("role", "textbox");
     composer.setAttribute("class", "msg-form__contenteditable");
     document.body.appendChild(composer);
+
+    expect(resolveSendShortcut("linkedin", composer as unknown as HTMLElement)).toBe("click-only");
+  });
+
+  it("detects LinkedIn send shortcut from hint text when Enter to send is shown", () => {
+    const document = globalThis.document as unknown as MockDocument;
+    const container = document.createElement("div");
+    container.setAttribute("class", "msg-form__msg-content-container");
+    const composer = document.createElement("div");
+    composer.setAttribute("contenteditable", "true");
+    composer.setAttribute("role", "textbox");
+    composer.setAttribute("class", "msg-form__contenteditable");
+    const hint = document.createElement("div");
+    hint.setAttribute("data-control-name", "message_send_on_enter");
+    hint.textContent = "Press Enter to send";
+
+    container.appendChild(composer);
+    container.appendChild(hint);
+    document.body.appendChild(container);
+
+    expect(resolveSendShortcut("linkedin", composer as unknown as HTMLElement)).toBe("Enter");
+  });
+
+  it("does not treat Ctrl+Enter hints as Enter send on LinkedIn", () => {
+    const document = globalThis.document as unknown as MockDocument;
+    const container = document.createElement("div");
+    container.setAttribute("class", "msg-form__msg-content-container");
+    const composer = document.createElement("div");
+    composer.setAttribute("contenteditable", "true");
+    composer.setAttribute("role", "textbox");
+    composer.setAttribute("class", "msg-form__contenteditable");
+    const hint = document.createElement("div");
+    hint.setAttribute("data-control-name", "message_send_on_enter");
+    hint.textContent = "Press Ctrl+Enter to send";
+
+    container.appendChild(composer);
+    container.appendChild(hint);
+    document.body.appendChild(container);
 
     expect(resolveSendShortcut("linkedin", composer as unknown as HTMLElement)).toBe("click-only");
   });

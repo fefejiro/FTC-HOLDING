@@ -3,7 +3,9 @@ import {
   detectSendAttempt,
   detectSupportedSite,
   focusComposerForEditing,
+  getAdapter,
   getComposerText,
+  getLinkedInSendHintSnapshot,
   preventSend,
   replaceComposerText,
   resumeSend,
@@ -255,6 +257,31 @@ function installSendGate(currentSite: SupportedSite): void {
       }
 
       const attempt = detectSendAttempt(currentSite, event);
+      if (currentSite === "linkedin" && event.key === "Enter" && !event.isComposing) {
+        const targetElement = event.target instanceof Element ? event.target : null;
+        const activeElement = document.activeElement instanceof Element ? document.activeElement : null;
+        const composerForHint = attempt?.composer || resolveComposerFromTarget(currentSite, event.target);
+        const composerSnapshot = getLinkedInComposerSnapshot();
+        const hintSnapshot = getLinkedInSendHintSnapshot(composerForHint);
+        log("linkedin send hint", {
+          site: currentSite,
+          source: "enter_key",
+          composerFound: Boolean(composerForHint),
+          candidateCount: composerSnapshot.count,
+          candidateSample: composerSnapshot.sample,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          shiftKey: event.shiftKey,
+          targetTag: targetElement?.tagName?.toLowerCase() || "unknown",
+          targetRole: targetElement?.getAttribute?.("role") || "",
+          targetEditable: targetElement?.getAttribute?.("contenteditable") || "",
+          activeTag: activeElement?.tagName?.toLowerCase() || "unknown",
+          activeRole: activeElement?.getAttribute?.("role") || "",
+          activeEditable: activeElement?.getAttribute?.("contenteditable") || "",
+          ...hintSnapshot,
+        });
+      }
+
       if (!attempt || attempt.source !== "enter_key") {
         return;
       }
@@ -310,6 +337,32 @@ function installSendGate(currentSite: SupportedSite): void {
   );
 }
 
+function getLinkedInComposerSnapshot(): { count: number; sample: string[] } {
+  try {
+    const adapter = getAdapter("linkedin");
+    const seen = new Set<Element>();
+    const sample: string[] = [];
+    for (const selector of adapter.selectors) {
+      const matches = document.querySelectorAll(selector);
+      matches.forEach((element) => {
+        if (seen.has(element)) {
+          return;
+        }
+        seen.add(element);
+        if (sample.length < 3) {
+          const role = element.getAttribute("role") || "";
+          const editable = element.getAttribute("contenteditable") || "";
+          const classes = element.getAttribute("class") || "";
+          sample.push(`${element.tagName.toLowerCase()} role=${role} editable=${editable} class=${classes}`.trim());
+        }
+      });
+    }
+    return { count: seen.size, sample };
+  } catch {
+    return { count: 0, sample: [] };
+  }
+}
+
 function installClickSendGate(currentSite: SupportedSite): void {
   document.addEventListener(
     "click",
@@ -325,6 +378,15 @@ function installClickSendGate(currentSite: SupportedSite): void {
       const attempt = detectSendAttempt(currentSite, event);
       if (!attempt || attempt.source !== "send_button_click") {
         return;
+      }
+
+      if (currentSite === "linkedin") {
+        const hintSnapshot = getLinkedInSendHintSnapshot(attempt.composer);
+        log("linkedin send hint", {
+          site: currentSite,
+          source: attempt.source,
+          ...hintSnapshot,
+        });
       }
 
       if (sendReleaseInFlight) {
@@ -2363,6 +2425,7 @@ function log(message: string, data?: Record<string, unknown>): void {
     "intervention decision returned": "intervention_decision",
     "trigger matched": "trigger_matched",
     "guardian triggered": "guardian_triggered",
+    "linkedin send hint": "linkedin_send_hint",
     "showing intervention modal": "modal_opened",
     "apply suggested clicked": "apply_suggested_clicked",
     "suggestion used": "suggestion_used",

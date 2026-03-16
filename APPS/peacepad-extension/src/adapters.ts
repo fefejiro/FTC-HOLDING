@@ -69,8 +69,14 @@ const ADAPTERS: AdapterConfig[] = [
   {
     site: "linkedin",
     selectors: [
+      "div.msg-form__contenteditable[role='textbox']",
       "div.msg-form__contenteditable[contenteditable='true']",
-      "div.msg-form__msg-content-container [role='textbox'][contenteditable='true']",
+      "div.msg-form__contenteditable",
+      "div.msg-form__msg-content-container [role='textbox']",
+      "div[role='textbox'][contenteditable='plaintext-only']",
+      "div[role='textbox'][contenteditable='true']",
+      "div[role='textbox'][data-placeholder*='Write a message']",
+      "div[role='textbox'][aria-label*='Write a message']",
     ],
     sendSelectors: [
       "button.msg-form__send-button",
@@ -435,41 +441,234 @@ export function resolveActiveComposer(site: SupportedSite): HTMLElement | null {
   return null;
 }
 
-function detectLinkedInSendOnEnter(composer: HTMLElement | null): boolean | null {
-  if (!composer) {
+const LINKEDIN_SEND_ON_ENTER_ATTRS = [
+  "data-send-on-enter",
+  "data-msg-send-on-enter",
+  "data-allow-enter-send",
+  "data-enter-to-send",
+];
+
+const LINKEDIN_SEND_HINT_SELECTORS = [
+  ".msg-form__hint-text",
+  ".msg-form__footer-hint-text",
+  ".msg-form__footer",
+  ".msg-form__footer-text",
+  ".msg-form__helper-text",
+  ".msg-form__msg-content-container__footer",
+  "[data-control-name='message_send_on_enter']",
+  "[data-control-name*='send_on_enter']",
+  "[data-control-name*='enter']",
+];
+
+const LINKEDIN_TOGGLE_SELECTOR =
+  "[role='switch'][aria-label*='Enter'], [role='checkbox'][aria-label*='Enter'], button[aria-pressed][aria-label*='Enter'], [data-control-name*='enter'][aria-checked]";
+
+type LinkedInSendHintSource = "attribute" | "toggle" | "hint" | "ctrl_enter_hint" | "none";
+
+export interface LinkedInSendHintSnapshot {
+  decision: boolean | null;
+  source: LinkedInSendHintSource;
+  attributeDecision: boolean | null;
+  toggleState: string | null;
+  hintText: string[];
+}
+
+function parseBooleanAttribute(value: string | null): boolean | null {
+  if (value === null) {
     return null;
   }
-
-  const datasetValue = composer.getAttribute("data-send-on-enter");
-  if (datasetValue === "true") {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
     return true;
   }
-  if (datasetValue === "false") {
+  if (["true", "1", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no", "off"].includes(normalized)) {
     return false;
   }
-
-  const container = composer.closest(".msg-form__contenteditable, .msg-form__msg-content-container") || composer.parentElement;
-  if (container instanceof HTMLElement) {
-    const ariaHint = container.getAttribute("aria-label") || "";
-    if (/press\s+enter\s+to\s+send/i.test(ariaHint)) {
-      return true;
-    }
-  }
-
-  const hint = composer.closest(".msg-form__msg-content-container")?.querySelector(
-    ".msg-form__hint-text, .msg-form__footer-hint-text, [data-control-name='message_send_on_enter']",
-  );
-  if (hint instanceof HTMLElement) {
-    const text = hint.textContent || "";
-    if (/press\s+enter\s+to\s+send/i.test(text)) {
-      return true;
-    }
-    if (/enter\s+to\s+send/i.test(text)) {
-      return true;
-    }
-  }
-
   return null;
+}
+
+function readBooleanAttributes(targets: Array<HTMLElement | null>, names: string[]): boolean | null {
+  for (const target of targets) {
+    if (!target) {
+      continue;
+    }
+    for (const name of names) {
+      const parsed = parseBooleanAttribute(target.getAttribute(name));
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+  }
+  return null;
+}
+
+function addHintText(target: string[], value: string | null | undefined): void {
+  const text = (value || "").trim();
+  if (text && !target.includes(text)) {
+    target.push(text);
+  }
+}
+
+function collectLinkedInHintText(
+  composer: HTMLElement,
+  container: HTMLElement | null,
+  hintScope: ParentNode | null,
+): string[] {
+  const hints: string[] = [];
+  addHintText(hints, composer.getAttribute("aria-label"));
+  addHintText(hints, composer.getAttribute("title"));
+  if (container) {
+    addHintText(hints, container.getAttribute("aria-label"));
+    addHintText(hints, container.getAttribute("title"));
+  }
+
+  const describedBy = composer.getAttribute("aria-describedby") || container?.getAttribute("aria-describedby");
+  if (describedBy) {
+    for (const id of describedBy.split(/\s+/)) {
+      const element = document.getElementById(id);
+      if (element instanceof HTMLElement) {
+        addHintText(hints, element.textContent);
+        addHintText(hints, element.getAttribute("aria-label"));
+        addHintText(hints, element.getAttribute("title"));
+      }
+    }
+  }
+
+  if (hintScope) {
+    for (const selector of LINKEDIN_SEND_HINT_SELECTORS) {
+      const element = hintScope.querySelector(selector);
+      if (element instanceof HTMLElement) {
+        addHintText(hints, element.textContent);
+        addHintText(hints, element.getAttribute("aria-label"));
+        addHintText(hints, element.getAttribute("title"));
+      }
+    }
+  }
+
+  return hints;
+}
+
+function evaluateLinkedInSendOnEnter(composer: HTMLElement | null): LinkedInSendHintSnapshot {
+  if (!composer) {
+    return {
+      decision: null,
+      source: "none",
+      attributeDecision: null,
+      toggleState: null,
+      hintText: [],
+    };
+  }
+
+  const container =
+    composer.closest(".msg-form__msg-content-container")
+    || composer.closest(".msg-form__contenteditable")
+    || composer.closest("form")
+    || composer.parentElement;
+
+  const attributeDecision = readBooleanAttributes(
+    [composer, container, container?.parentElement || null],
+    LINKEDIN_SEND_ON_ENTER_ATTRS,
+  );
+  if (attributeDecision !== null) {
+    const hintScope =
+      container?.closest("form")
+      || container?.closest(".msg-form__composer")
+      || container?.closest(".msg-form__message")
+      || container
+      || composer.parentElement
+      || composer;
+    return {
+      decision: attributeDecision,
+      source: "attribute",
+      attributeDecision,
+      toggleState: null,
+      hintText: collectLinkedInHintText(composer, container, hintScope),
+    };
+  }
+
+  let toggleState: string | null = null;
+  const hintScope =
+    container?.closest("form")
+    || container?.closest(".msg-form__composer")
+    || container?.closest(".msg-form__message")
+    || container
+    || composer.parentElement
+    || composer;
+  if (container) {
+    const toggle = container.querySelector(LINKEDIN_TOGGLE_SELECTOR);
+    if (toggle instanceof HTMLElement) {
+      toggleState = toggle.getAttribute("aria-checked") ?? toggle.getAttribute("aria-pressed");
+      const parsed = parseBooleanAttribute(toggleState);
+      if (parsed !== null) {
+        return {
+          decision: parsed,
+          source: "toggle",
+          attributeDecision: null,
+          toggleState,
+          hintText: collectLinkedInHintText(composer, container, hintScope),
+        };
+      }
+    }
+  }
+
+  const hintText = collectLinkedInHintText(composer, container, hintScope);
+  const ctrlEnterHint = hintText.some((text) =>
+    /ctrl\s*\+?\s*enter\s+to\s+send|press\s+ctrl\s*\+?\s*enter|cmd\s*\+?\s*enter\s+to\s+send/i.test(text),
+  );
+  if (ctrlEnterHint) {
+    return {
+      decision: false,
+      source: "ctrl_enter_hint",
+      attributeDecision: null,
+      toggleState,
+      hintText,
+    };
+  }
+
+  const enterHint = hintText.some((text) =>
+    /press\s+enter\s+to\s+send|enter\s+to\s+send|use\s+enter\s+to\s+send/i.test(text),
+  );
+  if (enterHint) {
+    return {
+      decision: true,
+      source: "hint",
+      attributeDecision: null,
+      toggleState,
+      hintText,
+    };
+  }
+
+  const shiftEnterHint = hintText.some((text) =>
+    /shift\s*\+?\s*enter.*new\s+line/i.test(text),
+  );
+  if (shiftEnterHint) {
+    return {
+      decision: true,
+      source: "hint",
+      attributeDecision: null,
+      toggleState,
+      hintText,
+    };
+  }
+
+  return {
+    decision: null,
+    source: "none",
+    attributeDecision: null,
+    toggleState,
+    hintText,
+  };
+}
+
+function detectLinkedInSendOnEnter(composer: HTMLElement | null): boolean | null {
+  return evaluateLinkedInSendOnEnter(composer).decision;
+}
+
+export function getLinkedInSendHintSnapshot(composer: HTMLElement | null): LinkedInSendHintSnapshot {
+  return evaluateLinkedInSendOnEnter(composer);
 }
 
 export function resolveSendShortcut(site: SupportedSite, composer: HTMLElement | null): "Enter" | "Ctrl+Enter" | "click-only" {

@@ -10,7 +10,9 @@
     "http://127.0.0.1:5000/*",
     "https://web.whatsapp.com/*",
     "https://mail.google.com/*",
-    "https://app.slack.com/*"
+    "https://app.slack.com/*",
+    "https://www.linkedin.com/*",
+    "https://linkedin.com/*"
   ],
   "background": {
     "service_worker": "dist/background.js",
@@ -25,8 +27,11 @@
       "matches": [
         "https://web.whatsapp.com/*",
         "https://mail.google.com/*",
-        "https://app.slack.com/*"
+        "https://app.slack.com/*",
+        "https://www.linkedin.com/*",
+        "https://linkedin.com/*"
       ],
+      "all_frames": true,
       "js": ["dist/content.js"],
       "run_at": "document_idle"
     }
