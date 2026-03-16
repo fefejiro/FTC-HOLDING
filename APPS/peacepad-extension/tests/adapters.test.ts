@@ -604,6 +604,21 @@ describe("whatsapp adapter helpers", () => {
     expect(attempt?.source).toBe("enter_key");
   });
 
+  it("does not detect LinkedIn send attempt on Enter when hint is missing", () => {
+    const document = globalThis.document as unknown as MockDocument;
+    const composer = document.createElement("div");
+    composer.setAttribute("contenteditable", "true");
+    composer.setAttribute("role", "textbox");
+    composer.setAttribute("class", "msg-form__contenteditable");
+    document.body.appendChild(composer);
+
+    const event = new MockKeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    Object.defineProperty(event, "target", { value: composer });
+
+    const attempt = detectSendAttempt("linkedin", event as unknown as KeyboardEvent);
+    expect(attempt).toBeNull();
+  });
+
   it("allows Ctrl+Enter when shortcut is Ctrl+Enter", () => {
     const document = globalThis.document as unknown as MockDocument;
     const composer = document.createElement("div");
@@ -617,6 +632,22 @@ describe("whatsapp adapter helpers", () => {
 
     expect(resolveSendShortcut("gmail", composer as unknown as HTMLElement)).toBe("Ctrl+Enter");
     const attempt = detectSendAttempt("gmail", event as unknown as KeyboardEvent);
+    expect(attempt?.source).toBe("enter_key");
+  });
+
+  it("treats Ctrl+Enter as a send attempt for LinkedIn", () => {
+    const document = globalThis.document as unknown as MockDocument;
+    const composer = document.createElement("div");
+    composer.setAttribute("contenteditable", "true");
+    composer.setAttribute("role", "textbox");
+    composer.setAttribute("class", "msg-form__contenteditable");
+    document.body.appendChild(composer);
+
+    const event = new MockKeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    Object.defineProperty(event, "target", { value: composer });
+    (event as unknown as { ctrlKey?: boolean }).ctrlKey = true;
+
+    const attempt = detectSendAttempt("linkedin", event as unknown as KeyboardEvent);
     expect(attempt?.source).toBe("enter_key");
   });
 });

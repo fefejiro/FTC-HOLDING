@@ -101,6 +101,8 @@ These are the parts that will eventually move into a reusable engine:
 5. User confirms
 6. Send resumes
 
+LinkedIn uses a "detect" send shortcut: Enter-to-send only when UI hints are present; otherwise click-only.
+
 ## Strategic Product Insight (Future)
 The long-term value is not only message rewriting but **conversation -> structured business memory**.
 Example: chat becomes structured order data, reducing chaos and preventing lost deals.

@@ -53,6 +53,7 @@ const ADAPTERS: AdapterConfig[] = [
       "div[role='button'][aria-label*='Send']",
       "button[aria-label*='Send']",
     ],
+    sendShortcut: "Ctrl+Enter",
   },
   {
     site: "slack",
@@ -601,10 +602,10 @@ export function detectSendAttempt(site: SupportedSite, event: Event): SendAttemp
     }
 
     const shortcut = resolveSendShortcut(site, composer);
+    if (event.ctrlKey || event.metaKey) {
+      return { composer, source: "enter_key" };
+    }
     if (shortcut === "Ctrl+Enter") {
-      if (event.ctrlKey || event.metaKey) {
-        return { composer, source: "enter_key" };
-      }
       return null;
     }
 
