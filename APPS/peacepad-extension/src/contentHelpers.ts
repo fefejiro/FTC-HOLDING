@@ -225,10 +225,15 @@ export function getGuardianInterpretationLine(preflight: PreflightResponse): str
     || hasModerationFlag(preflight, "profanity", "abusive_language", "harassment")
     || tone === "hostile";
   const hasPressure = hasSignal(preflight, "pressure_control", "legal_escalation");
+  const hasUrgencyPressure = hasSignalDescription(preflight, /urgency pressure/);
   const hasAccusatory = hasSignal(preflight, "accusatory");
 
   if (hasHostility) {
     return "This may come across as hostile.";
+  }
+
+  if (hasUrgencyPressure) {
+    return "This message may create unnecessary friction.";
   }
 
   if (hasCoparentingContext) {

@@ -108,6 +108,19 @@ describe("local preflight rules", () => {
     expect(result.response.recommendation).toBe("pause_before_send");
   });
 
+  it("classifies urgency pressure as mild", () => {
+    const result = evaluateLocalPreflight({ text: "Answer me now." });
+
+    expect(result.kind).toBe("resolved");
+    if (result.kind !== "resolved") {
+      return;
+    }
+
+    expect(result.classification).toBe("mild");
+    expect(result.response.risk_level).toBe("medium");
+    expect(result.response.recommendation).toBe("review_and_rewrite");
+  });
+
   it("treats contextual frustration as mild", () => {
     const result = evaluateLocalPreflight({ text: "Right now I'm really frustrated about this." });
 

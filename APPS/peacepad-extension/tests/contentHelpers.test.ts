@@ -254,6 +254,22 @@ describe("guardian interpretation line", () => {
       }),
     ).toBe("This may make co-parenting coordination harder.");
   });
+
+  it("uses the friction line for urgency pressure signals", () => {
+    expect(
+      getGuardianInterpretationLine({
+        ...basePreflight,
+        signals: [
+          {
+            category: "behavioral",
+            code: "pressure_control",
+            weight: 11,
+            description: "Urgency pressure detected",
+          },
+        ],
+      }),
+    ).toBe("This message may create unnecessary friction.");
+  });
 });
 
 

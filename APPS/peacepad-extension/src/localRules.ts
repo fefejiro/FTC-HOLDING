@@ -459,13 +459,16 @@ const PROFESSIONAL_BLAME_PHRASES = [
 
 const PROFESSIONAL_PRESSURE_PHRASES = [
   "fix this right now",
-  "answer me now",
   "if you can't handle this",
   "if you cant handle this",
   "i'll go with another agent",
   "i will go with another agent",
   "i'll go with another vendor",
   "i will go with another vendor",
+] as const;
+
+const URGENCY_PRESSURE_PHRASES = [
+  "answer me now",
 ] as const;
 
 const CHILD_DIRECTED_ATTACK_PHRASES = [
@@ -690,6 +693,15 @@ function createDataset(): LocalRuleSeed[] {
     category: "behavioral",
     weight: 12,
     description: "Professional pressure or ultimatum detected",
+  });
+
+  pushPhrases(URGENCY_PRESSURE_PHRASES, {
+    group: "urgency_pressure",
+    severity: "mild",
+    code: "pressure_control",
+    category: "behavioral",
+    weight: 11,
+    description: "Urgency pressure detected",
   });
 
   pushPhrases(buildTemplatePhrases(LEGAL_THREAT_TEMPLATES, LEGAL_THREAT_ACTIONS), {

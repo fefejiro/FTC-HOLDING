@@ -12,16 +12,19 @@ Preserve the working WhatsApp demo and evolve toward a reusable core engine with
 - **Preflight mapping** in `src/preflightCompat.ts` (legacy/compat mapping to preflight).
 - **Telemetry/trace** in `src/debugTrace.ts`.
 
-## Target Architecture
+## SendSmart Architecture
 ```
 SendSmart Core
-    ↓
+    ->
 Universal Web Composer Engine
-    ↓
+    ->
 Site Profiles
-    ↓
+    ->
 Platform Adapters
 ```
+
+## Core Engine
+SendSmart Core is the reusable reasoning layer.
 
 ### SendSmart Core (Reasoning)
 Communication intelligence that should be reusable across all platforms:
@@ -31,6 +34,9 @@ Communication intelligence that should be reusable across all platforms:
 - explanation generation
 - event logging semantics (product telemetry)
 - dataset/rules (local or model-assisted)
+
+## Universal Composer Engine
+Shared browser messaging mechanics. See `src/universalComposerEngine.ts` (stub, not wired).
 
 ### Universal Web Composer Engine (Browser Mechanics)
 Shared browser behavior across messaging platforms:
@@ -43,22 +49,31 @@ Shared browser behavior across messaging platforms:
 - restore cursor
 - return focus
 
-### Site Profiles (Configuration)
+## Site Profiles
 Per-site configuration with selectors and interaction details.
 Current implementation lives in `src/adapters.ts` as `ADAPTERS` (exported as `SITE_PROFILES`).
 
-### Platform Adapters (Thin)
+## Platform Adapters
 Small wrappers that connect site-specific DOM to the universal engine:
 - WhatsApp Web
 - Gmail
 - Slack
 - LinkedIn (future)
 - Teams (future)
+- Email (future)
+- CRM systems (future)
+
+## Guardian UI
+The Guardian modal is a UI layer that should remain stable across platforms. It renders the
+reasoning output, allows user control, and drives the apply/send flow without blocking typing.
+
+## Rules Engine
+Local rules provide a deterministic fallback and demo-ready behavior when API preflight is unavailable.
 
 ## Current Module Classification
 **Core candidate (reasoning):**
 - `src/localRules.ts` (rules, scoring, suggestions, context)
-- `src/preflightCompat.ts` (mapping legacy → preflight)
+- `src/preflightCompat.ts` (mapping legacy -> preflight)
 - `src/contentHelpers.ts` (explanations, interpretation lines, labels)
 
 **Adapter/UI:**
@@ -79,7 +94,7 @@ These are the parts that will eventually move into a reusable engine:
 - Modal injection + actions (in `src/content.ts`)
 
 ## Strategic Product Insight (Future)
-The long-term value is not only message rewriting but **conversation → structured business memory**.
+The long-term value is not only message rewriting but **conversation -> structured business memory**.
 Example: chat becomes structured order data, reducing chaos and preventing lost deals.
 This aligns with a core engine that can extract structure and intent across platforms.
 

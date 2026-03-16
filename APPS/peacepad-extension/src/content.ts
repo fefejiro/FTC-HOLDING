@@ -1405,10 +1405,20 @@ function showPreflightModal(
   wrapper.style.color = "#06281f";
   wrapper.style.pointerEvents = "auto";
 
-  const riskLabel = preflight.risk_level.toUpperCase();
+  const formatRiskLabel = (riskLevel: PreflightResponse["risk_level"]): string => {
+    if (riskLevel === "critical") {
+      return "High";
+    }
+    const normalized = String(riskLevel || "low");
+    return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;
+  };
+
+  const riskLabel = formatRiskLabel(preflight.risk_level);
   const riskTheme = getRiskBadgeTheme(preflight.risk_level);
   const modalCopy = getGuardianModalCopy(currentSite, preflight.recommendation);
+  const modalOpenedAt = performance.now();
   const suggestionText = initialApprovedText?.trim() || preflight.calm_version?.trim() || originalDraft;
+  const suggestionLoadMs = Math.round(performance.now() - modalOpenedAt);
   const originalNormalized = normalizeDraft(originalDraft);
   const suggestionNormalized = normalizeDraft(suggestionText);
 
@@ -1541,7 +1551,7 @@ function showPreflightModal(
     const preview = document.createElement("div");
     preview.textContent = value;
     preview.style.fontSize = "11.5px";
-    preview.style.lineHeight = "1.42";
+    preview.style.lineHeight = "1.5";
     preview.style.color = "#06281f";
     preview.style.display = "-webkit-box";
     preview.style.webkitBoxOrient = "vertical";
@@ -1576,7 +1586,7 @@ function showPreflightModal(
     body.style.width = "100%";
     body.style.boxSizing = "border-box";
     body.style.fontSize = editable ? "12.5px" : "11.5px";
-    body.style.lineHeight = "1.5";
+    body.style.lineHeight = "1.55";
     body.style.background =
       tone === "accent"
         ? "linear-gradient(180deg, rgba(220,252,231,0.66) 0%, rgba(255,255,255,0.48) 100%)"
@@ -1649,6 +1659,13 @@ function showPreflightModal(
     </div>
   `;
   wrapper.appendChild(summary);
+  log("guardian triggered", {
+    site: currentSite,
+    risk: preflight.risk_level,
+    score: preflight.conflict_score,
+    recommendation: preflight.recommendation,
+    suggestionLoadMs,
+  });
 
   const interpretationLine = getGuardianInterpretationLine(preflight);
   const interpretation = document.createElement("div");
@@ -1673,6 +1690,24 @@ function showPreflightModal(
 
   const finalMessageSection = createSection(modalCopy.editableLabel, suggestionText, true, "editable");
   const finalMessageInput = finalMessageSection.querySelector("textarea") as HTMLTextAreaElement;
+  let suggestionEdited = false;
+  finalMessageInput.addEventListener("input", () => {
+    if (suggestionEdited) {
+      return;
+    }
+
+    const normalized = normalizeDraft(finalMessageInput.value);
+    if (!normalized || normalized === suggestionNormalized) {
+      return;
+    }
+
+    suggestionEdited = true;
+    log("suggestion edited", {
+      site: currentSite,
+      chars: finalMessageInput.value.trim().length,
+      sameAsOriginal: normalized === originalNormalized,
+    });
+  });
   wrapper.appendChild(finalMessageSection);
 
   const explanation = getPreflightExplanation(preflight);
@@ -1893,6 +1928,13 @@ function showPreflightModal(
         sameAsSuggestion: normalizeDraft(approvedText) === suggestionNormalized,
       });
 
+      log("suggestion used", {
+        site: currentSite,
+        source: "manual_after_apply",
+        chars: approvedText.length,
+        edited: suggestionEdited,
+      });
+
       await playSuggestionAcceptedAnimation();
       
       const liveComposer = ("isConnected" in composer && typeof composer.isConnected === "boolean" && !composer.isConnected)
@@ -1983,6 +2025,7 @@ function showPreflightModal(
 
   sendOriginal = makeButton("Send Original", "rgba(255,255,255,0.72)", "#0b3b2f", () => {
     log("send original clicked", { site: currentSite, source: "manual_after_apply", entry: "modal" });
+    log("original sent", { site: currentSite, source: "manual_after_apply" });
     if (currentSite === "whatsapp") {
       clearWhatsappApprovedHandoff("explicit_original_release", {
         site: currentSite,
@@ -2074,10 +2117,10 @@ function showPreflightModal(
       return;
     }
 
-    if (
-      event.key === "Enter"
-      && !(event.target instanceof HTMLTextAreaElement && !event.shiftKey)
-    ) {
+    if (event.key === "Enter") {
+      if (event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
       event.preventDefault();
       sendApproved.click();
       return;
@@ -2343,8 +2386,12 @@ function log(message: string, data?: Record<string, unknown>): void {
     "api preflight result received": "preflight_result_api",
     "intervention decision returned": "intervention_decision",
     "trigger matched": "trigger_matched",
+    "guardian triggered": "guardian_triggered",
     "showing intervention modal": "modal_opened",
     "apply suggested clicked": "apply_suggested_clicked",
+    "suggestion used": "suggestion_used",
+    "suggestion edited": "suggestion_edited",
+    "original sent": "original_sent",
     "suggestion accepted": "suggestion_accepted",
     "approved text selected": "approved_text_selected",
     "approved send attempted": "approved_send_attempted",
