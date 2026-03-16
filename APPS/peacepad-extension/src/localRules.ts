@@ -360,6 +360,25 @@ const ESCALATION_OPENERS = [
   "right now",
 ] as const;
 
+const FRUSTRATION_TARGETS = [
+  "i'm really frustrated",
+  "i am really frustrated",
+  "i'm frustrated",
+  "i am frustrated",
+] as const;
+
+const FRUSTRATION_CONTEXT_PREFIXES = [
+  "again",
+  "once again",
+  "at this point",
+  "right now",
+] as const;
+
+const FRUSTRATION_CONTEXT_SUFFIXES = [
+  "you always",
+  "you never",
+] as const;
+
 const EMOTIONAL_ENDINGS = [
   "this nonsense",
   "this mess",
@@ -690,6 +709,24 @@ function createDataset(): LocalRuleSeed[] {
     category: "linguistic",
     weight: 9,
     description: "Escalating frustration phrasing detected",
+  });
+
+  pushPhrases(buildJoinedPhrases(FRUSTRATION_CONTEXT_PREFIXES, FRUSTRATION_TARGETS), {
+    group: "escalation",
+    severity: "mild",
+    code: "emotional_charge",
+    category: "linguistic",
+    weight: 8,
+    description: "Contextual frustration phrasing detected",
+  });
+
+  pushPhrases(buildJoinedPhrases(FRUSTRATION_TARGETS, FRUSTRATION_CONTEXT_SUFFIXES), {
+    group: "escalation",
+    severity: "mild",
+    code: "emotional_charge",
+    category: "linguistic",
+    weight: 8,
+    description: "Contextual frustration phrasing detected",
   });
 
   pushPhrases(buildJoinedPhrases(EMOTIONAL_OPENERS, EMOTIONAL_ENDINGS), {

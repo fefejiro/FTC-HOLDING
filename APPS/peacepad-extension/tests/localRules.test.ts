@@ -108,6 +108,32 @@ describe("local preflight rules", () => {
     expect(result.response.recommendation).toBe("pause_before_send");
   });
 
+  it("treats contextual frustration as mild", () => {
+    const result = evaluateLocalPreflight({ text: "Right now I'm really frustrated about this." });
+
+    expect(result.kind).toBe("resolved");
+    if (result.kind !== "resolved") {
+      return;
+    }
+
+    expect(result.classification).toBe("mild");
+    expect(result.response.risk_level).toBe("medium");
+    expect(result.response.recommendation).toBe("review_and_rewrite");
+  });
+
+  it("does not flag neutral frustration without escalation context", () => {
+    const result = evaluateLocalPreflight({ text: "I'm really frustrated about this." });
+
+    expect(result.kind).toBe("resolved");
+    if (result.kind !== "resolved") {
+      return;
+    }
+
+    expect(result.classification).toBe("safe");
+    expect(result.response.risk_level).toBe("low");
+    expect(result.response.recommendation).toBe("send_as_is");
+  });
+
   it("marks child expense disputes as ambiguous for api fallback", () => {
     const result = evaluateLocalPreflight({
       text: "When are you going to send money for the kids' school supplies? It's been weeks.",
