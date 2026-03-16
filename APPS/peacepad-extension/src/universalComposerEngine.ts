@@ -11,6 +11,12 @@ export interface ComposerEngineSiteProfile {
   insertionStrategy?: "auto" | "manual";
 }
 
+export interface ComposerEngineInput {
+  platform: SupportedSite;
+  message: string;
+  context?: Record<string, unknown>;
+}
+
 export type ComposerEngineResult<T> = {
   success: boolean;
   data?: T;
@@ -21,3 +27,11 @@ export const UNIVERSAL_COMPOSER_ENGINE_STATE = {
   status: "draft" as const,
   notes: "Placeholder module for future extraction from content/adapters.",
 };
+
+export function runComposerEngine(input: ComposerEngineInput): ComposerEngineResult<null> {
+  void input;
+  return {
+    success: false,
+    error: "Universal composer engine not implemented yet.",
+  };
+}

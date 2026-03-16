@@ -22,6 +22,12 @@ export interface TriggerSendResult {
   method: "send_button_click" | "enter_key";
 }
 
+export interface SendAttempt {
+  composer: HTMLElement;
+  source: TriggerSendResult["method"];
+  trigger?: HTMLElement | null;
+}
+
 const ADAPTERS: AdapterConfig[] = [
   {
     site: "whatsapp",
@@ -504,4 +510,50 @@ export function triggerSend(site: SupportedSite, composer: HTMLElement): Trigger
   );
 
   return { success: true, method: "enter_key" };
+}
+
+export function detectSendAttempt(site: SupportedSite, event: Event): SendAttempt | null {
+  if (event instanceof KeyboardEvent) {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
+      return null;
+    }
+    const composer = resolveComposerFromTarget(site, event.target);
+    if (!composer) {
+      return null;
+    }
+    return { composer, source: "enter_key" };
+  }
+
+  if (event.type === "click") {
+    const trigger = resolveSendTriggerFromTarget(site, event.target);
+    if (!trigger) {
+      return null;
+    }
+    const composer = resolveComposerFromTarget(site, event.target) || resolveActiveComposer(site);
+    if (!composer) {
+      return null;
+    }
+    return { composer, source: "send_button_click", trigger };
+  }
+
+  return null;
+}
+
+export function preventSend(event: Event): void {
+  event.preventDefault();
+  event.stopPropagation();
+  if (typeof event.stopImmediatePropagation === "function") {
+    event.stopImmediatePropagation();
+  }
+
+  const mutableEvent = event as Event & {
+    cancelBubble?: boolean;
+    returnValue?: boolean;
+  };
+  mutableEvent.cancelBubble = true;
+  mutableEvent.returnValue = false;
+}
+
+export function resumeSend(site: SupportedSite, composer: HTMLElement): TriggerSendResult {
+  return triggerSend(site, composer);
 }

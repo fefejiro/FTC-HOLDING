@@ -1,12 +1,13 @@
 ﻿import type { PreflightResponse } from "@ftc/peacepad-sdk";
 import {
+  detectSendAttempt,
   detectSupportedSite,
   focusComposerForEditing,
   getComposerText,
+  preventSend,
   replaceComposerText,
+  resumeSend,
   resolveComposerFromTarget,
-  resolveSendTriggerFromTarget,
-  triggerSend,
   type SupportedSite,
 } from "./adapters";
 import {
@@ -143,10 +144,8 @@ function installPassiveWatcher(currentSite: SupportedSite): void {
         site: currentSite,
         chars: currentText.length,
       });
-      if (currentSite === "whatsapp") {
-        return;
-      }
-      scheduleBackgroundCheck(composer, currentSite);
+      // Demo mode stabilization: only run Guardian on explicit send attempts.
+      return;
     },
     true,
   );
@@ -247,10 +246,6 @@ function installSendGate(currentSite: SupportedSite): void {
   document.addEventListener(
     "keydown",
     (event) => {
-      if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
-        return;
-      }
-
       if (Date.now() < suppressAutoUntil) {
         return;
       }
@@ -259,16 +254,18 @@ function installSendGate(currentSite: SupportedSite): void {
         return;
       }
 
+      const attempt = detectSendAttempt(currentSite, event);
+      if (!attempt || attempt.source !== "enter_key") {
+        return;
+      }
+
       if (sendReleaseInFlight) {
-        blockSendEvent(event, currentSite, "enter_key");
+        preventSend(event);
         log("send blocked while release is in progress", { site: currentSite, source: "enter_key" });
         return;
       }
 
-      const composer = resolveComposerFromTarget(currentSite, event.target);
-      if (!composer) {
-        return;
-      }
+      const composer = attempt.composer;
 
       const text = getComposerText(composer).trim();
       if (!text || text.length < MIN_CHARS_FOR_SEND_GATE) {
@@ -300,12 +297,12 @@ function installSendGate(currentSite: SupportedSite): void {
       }
 
       if (isComposerBlockedByModal(composer, draftFingerprint)) {
-        blockSendEvent(event, currentSite, "enter_key");
+        preventSend(event);
         log("send blocked while modal is unresolved", { site: currentSite, source: "enter_key" });
         return;
       }
 
-      blockSendEvent(event, currentSite, "enter_key");
+      preventSend(event);
       log("draft intercepted", { site: currentSite, source: "enter_key", chars: text.length });
       void runPreflight(composer, currentSite, "send_gate", "enter_key");
     },
@@ -325,18 +322,18 @@ function installClickSendGate(currentSite: SupportedSite): void {
         return;
       }
 
+      const attempt = detectSendAttempt(currentSite, event);
+      if (!attempt || attempt.source !== "send_button_click") {
+        return;
+      }
+
       if (sendReleaseInFlight) {
-        blockSendEvent(event, currentSite, "send_button_click");
+        preventSend(event);
         log("send blocked while release is in progress", { site: currentSite, source: "send_button_click" });
         return;
       }
 
-      const sendTrigger = resolveSendTriggerFromTarget(currentSite, event.target);
-      if (!sendTrigger) {
-        return;
-      }
-
-      const composer = resolveComposerFromTarget(currentSite, event.target);
+      const composer = attempt.composer;
       if (!composer) {
         log("send trigger found without composer", { site: currentSite, source: "send_button_click" });
         return;
@@ -372,12 +369,12 @@ function installClickSendGate(currentSite: SupportedSite): void {
       }
 
       if (isComposerBlockedByModal(composer, draftFingerprint)) {
-        blockSendEvent(event, currentSite, "send_button_click");
+        preventSend(event);
         log("send blocked while modal is unresolved", { site: currentSite, source: "send_button_click" });
         return;
       }
 
-      blockSendEvent(event, currentSite, "send_button_click");
+      preventSend(event);
       log("draft intercepted", { site: currentSite, source: "send_button_click", chars: text.length });
       void runPreflight(composer, currentSite, "send_gate", "send_button_click");
     },
@@ -1281,7 +1278,7 @@ function handleWhatsappApprovedHandoffBeforeSend(
   }, draftFingerprint);
 
   if (decision === "block_original") {
-    blockSendEvent(event, currentSite, source);
+    preventSend(event);
     handoff.state = "blocked";
     handoff.readyBannerCollapsed = false;
     handoff.readyBannerPinned = false;
@@ -2211,27 +2208,6 @@ function makeButton(label: string, background: string, color: string, onClick: (
   return button;
 }
 
-function blockSendEvent(event: Event, currentSite: SupportedSite, source: SendSource): void {
-  event.preventDefault();
-  event.stopPropagation();
-  if (typeof event.stopImmediatePropagation === "function") {
-    event.stopImmediatePropagation();
-  }
-
-  const mutableEvent = event as Event & {
-    cancelBubble?: boolean;
-    returnValue?: boolean;
-  };
-  mutableEvent.cancelBubble = true;
-  mutableEvent.returnValue = false;
-
-  log("send event blocked", {
-    site: currentSite,
-    source,
-    type: event.type,
-  });
-}
-
 function isComposerBlockedByModal(composer: HTMLElement, draftFingerprint?: string): boolean {
   if (!activeModal) {
     return false;
@@ -2296,7 +2272,7 @@ async function releaseSend(
   }
 
   suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
-  const sendResult = triggerSend(currentSite, composer);
+  const sendResult = resumeSend(currentSite, composer);
   sendReleaseInFlight = false;
   log("final send release", {
     site: currentSite,

@@ -93,6 +93,14 @@ These are the parts that will eventually move into a reusable engine:
 - `installPassiveWatcher`, `installSendGate`, `installClickSendGate` (in `src/content.ts`)
 - Modal injection + actions (in `src/content.ts`)
 
+## Send Attempt Interception Model
+1. User presses send
+2. Adapter intercepts
+3. Core evaluates
+4. Guardian decides
+5. User confirms
+6. Send resumes
+
 ## Strategic Product Insight (Future)
 The long-term value is not only message rewriting but **conversation -> structured business memory**.
 Example: chat becomes structured order data, reducing chaos and preventing lost deals.
