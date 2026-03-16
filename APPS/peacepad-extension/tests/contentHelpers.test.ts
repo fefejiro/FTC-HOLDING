@@ -2,6 +2,7 @@
 import {
   getApprovedActionLabel,
   getEffectivePreflightIntent,
+  getGuardianInterpretationLine,
   getModalActionOutcome,
   getPreflightExplanation,
   getReviewNote,
@@ -190,6 +191,68 @@ describe("WhatsApp guarded handoff helpers", () => {
       flaggedFor: ["hostility", "blame"],
       saferBecause: ["clearer", "calmer", "more actionable"],
     });
+  });
+});
+
+describe("guardian interpretation line", () => {
+  const basePreflight = {
+    conflict_score: 42,
+    risk_level: "medium",
+    recommendation: "review_and_rewrite",
+    calm_version: null,
+    moderation_flags: [],
+    model_or_ruleset_version: {
+      contract: "preflight-v1",
+      tone_model: "local",
+      escalation_ruleset: "local",
+    },
+    send_policy: {
+      allow_send_original: true,
+      requires_acknowledgement: false,
+      recommended_action: "review_and_rewrite",
+      pause_minutes: null,
+    },
+    source: {
+      tone: "neutral",
+      summary: "local rule matched: mild",
+    },
+    signals: [],
+  };
+
+  it("uses the business-friendly friction line for professional risk signals", () => {
+    expect(
+      getGuardianInterpretationLine({
+        ...basePreflight,
+        signals: [
+          {
+            category: "linguistic",
+            code: "accusatory",
+            weight: 12,
+            description: "Deal-risk blame statement detected",
+          },
+        ],
+      }),
+    ).toBe("This message may create unnecessary friction.");
+  });
+
+  it("uses a co-parenting line when child context is present without hostility", () => {
+    expect(
+      getGuardianInterpretationLine({
+        ...basePreflight,
+        signals: [
+          {
+            category: "contextual",
+            code: "child_focus",
+            weight: 6,
+            description: "Child focus reminder",
+          },
+        ],
+        source: {
+          tone: "neutral",
+          summary: "remember the kids",
+        },
+      }),
+    ).toBe("This may make co-parenting coordination harder.");
   });
 });
 

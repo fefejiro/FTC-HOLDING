@@ -6,6 +6,9 @@ export interface AdapterConfig {
   sendSelectors: string[];
 }
 
+// Site profiles for the universal composer engine. Keep platform selectors here.
+export type SiteProfile = AdapterConfig;
+
 export interface ComposerReplacementResult {
   success: boolean;
   actualText: string;
@@ -56,6 +59,8 @@ const ADAPTERS: AdapterConfig[] = [
     ],
   },
 ];
+
+export const SITE_PROFILES: SiteProfile[] = ADAPTERS;
 
 export function detectSupportedSite(hostname: string): SupportedSite | null {
   const host = hostname.toLowerCase();

@@ -199,6 +199,63 @@ function addUnique(target: string[], value: string): void {
   }
 }
 
+export function getGuardianInterpretationLine(preflight: PreflightResponse): string {
+  const tone = String(preflight.source?.tone || "").toLowerCase();
+  const summary = String(preflight.source?.summary || "").toLowerCase();
+  const hasCoparentingContext =
+    hasSignalDescription(preflight, /parenting|child|custody|kids?|children|pickup|drop ?off/)
+    || /kid|child|custody|co-?parent|parenting|pickup|drop ?off/.test(summary);
+  const hasBusinessContext =
+    hasSignalDescription(
+      preflight,
+      /professional|deal-risk|deal\b|client\b|vendor\b|listing|offer|closing|inspection|contract|broker|agent/,
+    )
+    || /client|vendor|deal|listing|offer|closing|inspection|contract|broker|agent/.test(summary);
+  const hasDealRisk = hasSignalDescription(preflight, /deal-risk|deal\b|client\b|vendor\b/);
+  const hasCondescension = hasSignalDescription(
+    preflight,
+    /professional put-down|taunting put-down/,
+  );
+  const hasProfessionalRisk = hasSignalDescription(
+    preflight,
+    /professional|taunting|deal-risk/,
+  );
+  const hasHostility =
+    hasSignal(preflight, "hostile_language", "dismissive_attack", "emotional_charge")
+    || hasModerationFlag(preflight, "profanity", "abusive_language", "harassment")
+    || tone === "hostile";
+  const hasPressure = hasSignal(preflight, "pressure_control", "legal_escalation");
+  const hasAccusatory = hasSignal(preflight, "accusatory");
+
+  if (hasHostility) {
+    return "This may come across as hostile.";
+  }
+
+  if (hasCoparentingContext) {
+    if (hasAccusatory) {
+      return "This may shift the conversation away from the actual issue.";
+    }
+    if (hasPressure || tone === "frustrated" || tone === "defensive") {
+      return "This message may escalate the conversation.";
+    }
+    return "This may make co-parenting coordination harder.";
+  }
+
+  if (hasDealRisk || hasProfessionalRisk || hasCondescension || hasBusinessContext) {
+    return "This message may create unnecessary friction.";
+  }
+
+  if (hasAccusatory) {
+    return "This may shift the conversation away from the actual issue.";
+  }
+
+  if (hasPressure || tone === "frustrated" || tone === "defensive") {
+    return "This message may escalate the conversation.";
+  }
+
+  return "This message may escalate the conversation.";
+}
+
 export function getPreflightExplanation(preflight: PreflightResponse): PreflightExplanation {
   const flaggedFor: string[] = [];
   const saferBecause: string[] = [];
@@ -338,4 +395,5 @@ export function getRiskBadgeTheme(
       };
   }
 }
+
 
