@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WhatsApp Editor Fixture</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        margin: 24px;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+
+      .frame {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 24px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+
+      p {
+        margin: 0 0 16px;
+        color: #cbd5e1;
+      }
+
+      #composer {
+        min-height: 88px;
+        padding: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.65);
+        color: #f8fafc;
+        outline: none;
+        white-space: pre-wrap;
+      }
+
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+
+      button {
+        height: 38px;
+        padding: 0 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: #e2e8f0;
+        color: #0f172a;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      code {
+        display: block;
+        margin-top: 16px;
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.78);
+        color: #93c5fd;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <h1>WhatsApp Editor Fixture</h1>
+      <p>
+        This fixture mimics a contenteditable editor that rejects raw DOM rewrites but accepts
+        browser-native text insertion.
+      </p>
+
+      <div id="composer" contenteditable="true" role="textbox"></div>
+
+      <div class="row">
+        <button id="reset">Reset Draft</button>
+        <button id="dom-reset">Raw DOM Replace</button>
+        <button id="exec-insert">Browser Insert</button>
+      </div>
+
+      <code id="status"></code>
+    </div>
+
+    <script>
+      (() => {
+        const composer = document.getElementById("composer");
+        const status = document.getElementById("status");
+        const initialDraft = "fuck you";
+        let editorState = initialDraft;
+        let allowMutationCommit = false;
+        let duplicateOnValueInput = false;
+
+        function render(value) {
+          composer.textContent = value;
+          placeCaretAtEnd();
+          updateStatus();
+        }
+
+        function updateStatus() {
+          status.textContent = JSON.stringify(
+            {
+              text: composer.textContent,
+              editorState,
+              caretOffset: window.fixtureApi.getCaretOffset(),
+              focused: document.activeElement === composer,
+            },
+            null,
+            2,
+          );
+        }
+
+        function selectAll() {
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(composer);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+
+        function placeCaretAtEnd() {
+          composer.focus();
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(composer);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+
+        function dispatchInput(value) {
+          composer.dispatchEvent(
+            new InputEvent("input", {
+              bubbles: true,
+              data: value,
+              inputType: "insertReplacementText",
+            }),
+          );
+        }
+
+        composer.addEventListener("beforeinput", (event) => {
+          if (event.inputType && event.inputType.startsWith("insert")) {
+            allowMutationCommit = true;
+          }
+        });
+
+        composer.addEventListener("input", (event) => {
+          if (duplicateOnValueInput && event instanceof InputEvent && event.data) {
+            duplicateOnValueInput = false;
+            editorState = `${composer.textContent || ""}${event.data}`;
+            composer.textContent = editorState;
+            placeCaretAtEnd();
+            updateStatus();
+            return;
+          }
+
+          editorState = composer.textContent || "";
+          updateStatus();
+        });
+
+        const observer = new MutationObserver(() => {
+          if (allowMutationCommit) {
+            allowMutationCommit = false;
+            editorState = composer.textContent || "";
+            updateStatus();
+            return;
+          }
+
+          const current = composer.textContent || "";
+          if (current !== editorState) {
+            window.setTimeout(() => {
+              composer.textContent = editorState;
+              placeCaretAtEnd();
+              updateStatus();
+            }, 0);
+          } else {
+            updateStatus();
+          }
+        });
+
+        observer.observe(composer, {
+          childList: true,
+          characterData: true,
+          subtree: true,
+        });
+
+        const originalExecCommand = document.execCommand?.bind(document);
+        document.execCommand = (commandId, showUi, value) => {
+          if (commandId === "insertText") {
+            allowMutationCommit = true;
+            composer.textContent = value || "";
+            dispatchInput(value || "");
+            placeCaretAtEnd();
+            updateStatus();
+            return true;
+          }
+
+          if (originalExecCommand) {
+            return originalExecCommand(commandId, showUi, value);
+          }
+
+          return false;
+        };
+
+        window.fixtureApi = {
+          resetDraft() {
+            editorState = initialDraft;
+            render(editorState);
+          },
+          getText() {
+            return composer.textContent || "";
+          },
+          getCaretOffset() {
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) {
+              return 0;
+            }
+
+            const range = selection.getRangeAt(0);
+            const preCaretRange = range.cloneRange();
+            preCaretRange.selectNodeContents(composer);
+            preCaretRange.setEnd(range.endContainer, range.endOffset);
+            return preCaretRange.toString().length;
+          },
+          rawDomReplace(value) {
+            composer.replaceChildren(document.createTextNode(value));
+            updateStatus();
+          },
+          rangeInsertWithValueInput(value) {
+            composer.focus();
+            selectAll();
+            duplicateOnValueInput = true;
+
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(composer);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            range.deleteContents();
+            range.insertNode(document.createTextNode(value));
+            selection.removeAllRanges();
+            placeCaretAtEnd();
+            composer.dispatchEvent(
+              new InputEvent("input", {
+                bubbles: true,
+                data: value,
+                inputType: "insertReplacementText",
+              }),
+            );
+            updateStatus();
+          },
+          rangeInsertWithPlainInput(value) {
+            composer.focus();
+            selectAll();
+
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(composer);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            range.deleteContents();
+            range.insertNode(document.createTextNode(value));
+            selection.removeAllRanges();
+            placeCaretAtEnd();
+            composer.dispatchEvent(new Event("input", { bubbles: true }));
+            updateStatus();
+          },
+          browserInsert(value) {
+            composer.focus();
+            selectAll();
+            document.execCommand("insertText", false, value);
+            updateStatus();
+          },
+        };
+
+        document.getElementById("reset").addEventListener("click", () => {
+          window.fixtureApi.resetDraft();
+        });
+
+        document.getElementById("dom-reset").addEventListener("click", () => {
+          window.fixtureApi.rawDomReplace("I'm upset right now. Let's pause and focus on what needs to happen for the kids.");
+        });
+
+        document.getElementById("exec-insert").addEventListener("click", () => {
+          window.fixtureApi.browserInsert("I'm upset right now. Let's pause and focus on what needs to happen for the kids.");
+        });
+
+        render(initialDraft);
+      })();
+    </script>
+  </body>
+</html>

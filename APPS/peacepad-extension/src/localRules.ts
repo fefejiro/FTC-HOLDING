@@ -2,7 +2,17 @@
 
 type RiskLevel = PreflightResponse["risk_level"];
 type SignalCategory = PreflightSignal["category"];
-type LocalRuleGroup = "profanity" | "insult" | "hostility" | "escalation" | "threat" | "dismissive" | "accusatory" | "parenting";
+type LocalRuleGroup =
+  | "profanity"
+  | "insult"
+  | "hostility"
+  | "escalation"
+  | "threat"
+  | "dismissive"
+  | "accusatory"
+  | "parenting"
+  | "taunt"
+  | "professional_risk";
 type LocalRuleSeverity = "strong" | "mild";
 
 interface LocalRuleSeed {
@@ -18,6 +28,7 @@ interface LocalRuleSeed {
 
 interface RuleDefinition {
   pattern: RegExp;
+  group: LocalRuleGroup;
   code: string;
   category: SignalCategory;
   weight: number;
@@ -39,9 +50,11 @@ interface EvaluationState {
   signals: PreflightSignal[];
   moderationFlags: Set<string>;
   matchedCodes: Set<string>;
+  matchedGroups: Set<LocalRuleGroup>;
   positiveSignals: number;
   sensitiveContext: boolean;
   childContext: boolean;
+  businessContext: boolean;
 }
 
 interface LocalResolvedDecision {
@@ -67,6 +80,7 @@ export const LOCAL_RULESET_SOURCE =
 
 const PROFANITY_TERMS = [
   "motherfucker",
+  "bitch",
   "fuckface",
   "piece of shit",
   "bastard",
@@ -148,6 +162,7 @@ const INSULT_NOUNS = [
 ] as const;
 
 const INSULT_ADJECTIVES = [
+  "stupid",
   "pathetic",
   "worthless",
   "useless",
@@ -177,6 +192,8 @@ const ADJECTIVE_ATTACK_TEMPLATES = [
   "youre so {term}",
   "acting so {term}",
   "always so {term}",
+  "that was {term} of you",
+  "that was so {term} of you",
 ] as const;
 
 const PARENTING_INSULTS = [
@@ -395,6 +412,43 @@ const DISMISSIVE_DIRECT_PHRASES = [
   "stop talking",
 ] as const;
 
+const TAUNT_PHRASES = [
+  "your mama",
+  "yo mama",
+  "ya mama",
+  "ya papa",
+] as const;
+
+const PROFESSIONAL_DISMISSIVE_PHRASES = [
+  "do your job",
+  "use common sense",
+  "get it together",
+  "stop wasting my time",
+  "this is amateur",
+  "you should know better",
+] as const;
+
+const PROFESSIONAL_BLAME_PHRASES = [
+  "you're costing us this deal",
+  "you are costing us this deal",
+  "you're making us lose the client",
+  "you are making us lose the client",
+  "you're making us lose the vendor",
+  "you are making us lose the vendor",
+  "this is why deals fall apart",
+] as const;
+
+const PROFESSIONAL_PRESSURE_PHRASES = [
+  "fix this right now",
+  "answer me now",
+  "if you can't handle this",
+  "if you cant handle this",
+  "i'll go with another agent",
+  "i will go with another agent",
+  "i'll go with another vendor",
+  "i will go with another vendor",
+] as const;
+
 const CHILD_DIRECTED_ATTACK_PHRASES = [
   "you never care about the kids",
   "you never care about your kids",
@@ -535,6 +589,15 @@ function createDataset(): LocalRuleSeed[] {
     moderationFlag: "harassment",
   });
 
+  pushPhrases(TAUNT_PHRASES, {
+    group: "taunt",
+    severity: "mild",
+    code: "dismissive_attack",
+    category: "linguistic",
+    weight: 12,
+    description: "Taunting put-down detected",
+  });
+
   pushPhrases(buildTemplatePhrases(PARENTING_ATTACK_TEMPLATES, PARENTING_INSULTS), {
     group: "parenting",
     severity: "strong",
@@ -572,6 +635,15 @@ function createDataset(): LocalRuleSeed[] {
     description: "Direct blame statement detected",
   });
 
+  pushPhrases(PROFESSIONAL_BLAME_PHRASES, {
+    group: "professional_risk",
+    severity: "mild",
+    code: "accusatory",
+    category: "linguistic",
+    weight: 12,
+    description: "Deal-risk blame statement detected",
+  });
+
   pushPhrases(CHILD_DIRECTED_ATTACK_PHRASES, {
     group: "hostility",
     severity: "strong",
@@ -590,6 +662,15 @@ function createDataset(): LocalRuleSeed[] {
     weight: 20,
     description: "Ultimatum or pressure language detected",
     moderationFlag: "threat",
+  });
+
+  pushPhrases(PROFESSIONAL_PRESSURE_PHRASES, {
+    group: "professional_risk",
+    severity: "mild",
+    code: "pressure_control",
+    category: "behavioral",
+    weight: 12,
+    description: "Professional pressure or ultimatum detected",
   });
 
   pushPhrases(buildTemplatePhrases(LEGAL_THREAT_TEMPLATES, LEGAL_THREAT_ACTIONS), {
@@ -629,6 +710,15 @@ function createDataset(): LocalRuleSeed[] {
     description: "Dismissive or evasive phrasing detected",
   });
 
+  pushPhrases(PROFESSIONAL_DISMISSIVE_PHRASES, {
+    group: "professional_risk",
+    severity: "mild",
+    code: "dismissive_attack",
+    category: "linguistic",
+    weight: 12,
+    description: "Professional put-down detected",
+  });
+
   return dedupeSeeds(seeds);
 }
 
@@ -639,6 +729,7 @@ const STRONG_RULES: RuleDefinition[] = LOCAL_RULESET_DATASET
   .filter((seed) => seed.severity === "strong")
   .map((seed) => ({
     pattern: buildPhrasePattern(seed.phrase),
+    group: seed.group,
     code: seed.code,
     category: seed.category,
     weight: seed.weight,
@@ -650,6 +741,7 @@ const MILD_RULES: RuleDefinition[] = LOCAL_RULESET_DATASET
   .filter((seed) => seed.severity === "mild")
   .map((seed) => ({
     pattern: buildPhrasePattern(seed.phrase),
+    group: seed.group,
     code: seed.code,
     category: seed.category,
     weight: seed.weight,
@@ -701,6 +793,9 @@ const SENSITIVE_CONTEXT_PATTERN =
 const CHILD_CONTEXT_PATTERN =
   /\b(kids?|children|son|daughter|school\s*supplies?|pickup|pick up|dropoff|drop off)\b/;
 
+const BUSINESS_CONTEXT_PATTERN =
+  /\b(agent|buyer|seller|client|vendor|deal|listing|offer|closing|contract|realtor)\b/;
+
 const SIMPLE_SAFE_PATTERN =
   /\b(hi|hello|hey|outside|on\s+my\s+way|please|thanks|tomorrow|today|pick(?:ing)?\s+(him|her|them)\s+up|drop(?:ping)?\s+(him|her|them)\s+off)\b/;
 
@@ -709,12 +804,13 @@ function addSignal(
   rule: RuleDefinition,
   overrideWeight?: number,
 ): void {
-  const signalKey = `${rule.code}:${rule.description}`;
+  const signalKey = `${rule.code}:${rule.description}:${rule.pattern.source}`;
   if (state.matchedCodes.has(signalKey)) {
     return;
   }
 
   state.matchedCodes.add(signalKey);
+  state.matchedGroups.add(rule.group);
   state.score += overrideWeight ?? rule.weight;
   state.signals.push({
     category: rule.category,
@@ -725,6 +821,93 @@ function addSignal(
   if (rule.moderationFlag) {
     state.moderationFlags.add(rule.moderationFlag);
   }
+}
+
+function addContextualSignals(state: EvaluationState): void {
+  const text = state.normalized;
+  const targetedStupidPattern =
+    /\b(?:you\s+are\s+stupid|you'?re\s+stupid|youre\s+stupid|that\s+was\s+(?:so\s+)?stupid\s+of\s+you)\b/;
+
+  if (/\bstupid\b/.test(text) && !targetedStupidPattern.test(text)) {
+    addSignal(state, {
+      pattern: /\bstupid\b/,
+      group: "insult",
+      code: "dismissive_attack",
+      category: "linguistic",
+      weight: 12,
+      description: "Belittling phrasing detected",
+    });
+  }
+}
+
+function hasPositiveSignal(state: EvaluationState, ...codes: string[]): boolean {
+  return state.signals.some((signal) => signal.weight > 0 && codes.includes(signal.code));
+}
+
+function hasPositiveSignalDescription(state: EvaluationState, pattern: RegExp): boolean {
+  return state.signals.some(
+    (signal) => signal.weight > 0 && pattern.test(signal.description.toLowerCase()),
+  );
+}
+
+function generateProfessionalCalmVersion(text: string): string | null {
+  if (
+    /\byou(?:'|’)re\s+costing\s+us\s+this\s+deal\b|\byou\s+are\s+costing\s+us\s+this\s+deal\b|\bthis\s+is\s+why\s+deals\s+fall\s+apart\b/.test(text)
+  ) {
+    return "I'm concerned this could affect the deal. Can we align on the next step so we keep it moving?";
+  }
+
+  if (/\bmaking\s+us\s+lose\s+the\s+client\b/.test(text)) {
+    return "I'm concerned this could affect the client relationship. Can we align on the next step so we keep things moving professionally?";
+  }
+
+  if (/\bmaking\s+us\s+lose\s+the\s+vendor\b/.test(text)) {
+    return "I'm concerned this could affect the vendor relationship. Can we align on the next step so we keep things moving professionally?";
+  }
+
+  if (/\bstop\s+wasting\s+my\s+time\b|\banswer\s+me\s+now\b|\bfix\s+this\s+right\s+now\b/.test(text)) {
+    return "Can you send me an update as soon as possible so we can keep this moving?";
+  }
+
+  if (
+    /\bdo\s+your\s+job\b|\buse\s+common\s+sense\b|\bget\s+it\s+together\b|\bthis\s+is\s+amateur\b|\byou\s+should\s+know\s+better\b/.test(text)
+  ) {
+    return "Can we reset on expectations and confirm the next step so we stay aligned?";
+  }
+
+  if (
+    /\bi(?:'|’)ll\s+go\s+with\s+another\s+agent\b|\bi\s+will\s+go\s+with\s+another\s+agent\b|\bi(?:'|’)ll\s+go\s+with\s+another\s+vendor\b|\bi\s+will\s+go\s+with\s+another\s+vendor\b/.test(text)
+  ) {
+    return "If this timeline is not workable, let's clarify responsibilities and next steps so we can decide how to move forward professionally.";
+  }
+
+  if (/\bya\s+(?:mama|papa)\b|\byo\s+mama\b|\byour\s+mama\b/.test(text)) {
+    return "Let's keep this professional and focus on the issue we need to resolve.";
+  }
+
+  if (/\bthis\s+is\s+stupid\b|\bstupid\b/.test(text)) {
+    return "I don't think this approach is working. Can we revisit the next step and keep this moving?";
+  }
+
+  return null;
+}
+
+function generateHostilityCalmVersion(text: string): string {
+  if (
+    /\bfuck\s+you\b|\bfuck\s+off\b|\bshut\s+the\s+fuck\s+up\b|\bgo\s+to\s+hell\b|\bdrop\s+dead\b/.test(text)
+  ) {
+    return "I want to keep this professional. Can we pause and focus on the next step?";
+  }
+
+  if (/\bbitch\b|\basshole\b|\bbastard\b|\bmotherfucker\b/.test(text)) {
+    return "I want to keep this professional. Can we reset and focus on the issue we need to resolve?";
+  }
+
+  if (/\byou\s+are\s+stupid\b|\byou'?re\s+stupid\b|\byoure\s+stupid\b/.test(text)) {
+    return "I don't think this tone will help us solve it. Can we reset and focus on the next step?";
+  }
+
+  return "I want to keep this professional. Can we pause and focus on the next step?";
 }
 
 function addReduction(state: EvaluationState, rule: ReductionRule): void {
@@ -748,6 +931,7 @@ function addDynamicSignals(state: EvaluationState, originalText: string): void {
   if (/!{2,}|\?{2,}|!\?|\?!/.test(originalText)) {
     addSignal(state, {
       pattern: /!/, 
+      group: "escalation",
       code: "emotional_charge",
       category: "linguistic",
       weight: 6,
@@ -760,6 +944,7 @@ function addDynamicSignals(state: EvaluationState, originalText: string): void {
   if (letters.length >= 8 && upperLetters.length / Math.max(letters.length, 1) >= 0.65) {
     addSignal(state, {
       pattern: /[A-Z]/,
+      group: "escalation",
       code: "emotional_charge",
       category: "linguistic",
       weight: 12,
@@ -770,17 +955,24 @@ function addDynamicSignals(state: EvaluationState, originalText: string): void {
 
 function generateLocalCalmVersion(state: EvaluationState): string | null {
   const text = state.normalized;
-
-  if (
+  const hasHostility =
     state.moderationFlags.has("profanity") ||
     state.moderationFlags.has("harassment") ||
-    state.signals.some((signal) => signal.code === "dismissive_attack" && signal.weight > 0)
-  ) {
-    return "I'm upset right now. Let's pause and focus on what needs to happen for the kids.";
-  }
+    hasPositiveSignal(state, "dismissive_attack");
+  const hasThreat = state.moderationFlags.has("threat");
+  const hasAccusation = hasPositiveSignal(state, "accusatory");
+  const hasPressure = hasPositiveSignal(state, "pressure_control");
+  const hasEmotionalCharge = hasPositiveSignal(state, "emotional_charge");
+  const hasProfessionalRisk =
+    state.matchedGroups.has("professional_risk") ||
+    state.matchedGroups.has("taunt") ||
+    state.businessContext;
+  const hasDealRisk = hasPositiveSignalDescription(state, /deal-risk/i);
 
-  if (state.moderationFlags.has("threat")) {
-    return "I'd like to resolve this calmly. Can we agree on the next step for the kids without escalating it further right now?";
+  if (hasThreat) {
+    return state.childContext
+      ? "I'd like to resolve this calmly. Can we agree on the next step for the kids without escalating it further right now?"
+      : "I'd like to keep this constructive. Can we agree on the next step without escalating the conversation?";
   }
 
   if (/\bpickup|pick up|dropoff|drop off\b/.test(text) && /\blate\b/.test(text)) {
@@ -791,19 +983,58 @@ function generateLocalCalmVersion(state: EvaluationState): string | null {
     return "I'm worried about consistency for the kids. Can we focus on what they need right now and agree on the next step?";
   }
 
+  if (state.childContext && hasHostility) {
+    return "I'm upset right now. Let's pause and focus on what needs to happen for the kids.";
+  }
+
+  if (hasProfessionalRisk) {
+    const professionalVersion = generateProfessionalCalmVersion(text);
+    if (professionalVersion) {
+      return professionalVersion;
+    }
+  }
+
+  if (hasDealRisk) {
+    return "I want to keep this moving professionally. Can we align on the next step so the deal stays on track?";
+  }
+
+  if (hasProfessionalRisk && hasPressure) {
+    return "I want to keep this constructive. Can we align on the next step and keep communication clear?";
+  }
+
+  if (hasProfessionalRisk && hasAccusation) {
+    return "I want to keep this professional. Can we focus on the issue and agree on the next step?";
+  }
+
+  if (hasProfessionalRisk) {
+    return "I want to keep this professional. Can we restate the issue clearly and agree on the next step?";
+  }
+
   if (/\btired\s+of\s+reminding\b|\bas\s+usual\b.*\blate\b|\blate\s+again\b/.test(text)) {
     return "I've had to follow up a few times. Can we agree on a clear plan going forward?";
   }
 
-  if (state.signals.some((signal) => signal.code === "accusatory" && signal.weight > 0)) {
-    return "I'm concerned about this pattern. Can we reset expectations and focus on a workable plan?";
+  if (hasAccusation) {
+    return state.businessContext
+      ? "I want to keep this constructive. Can we focus on the issue and agree on the next step?"
+      : "I'm concerned about this pattern. Can we reset expectations and focus on a workable plan?";
   }
 
-  if (state.signals.some((signal) => signal.code === "emotional_charge" && signal.weight > 0)) {
-    return "I'm finding this frustrating. Can we slow this down and focus on the next step for the kids?";
+  if (hasHostility) {
+    return state.businessContext
+      ? "I'm frustrated with how this is going. Can we reset and focus on the next step to keep this moving professionally?"
+      : generateHostilityCalmVersion(text);
   }
 
-  return "Can we focus on the issue and work out a clear plan together?";
+  if (hasEmotionalCharge) {
+    return state.childContext
+      ? "I'm finding this frustrating. Can we slow this down and focus on the next step for the kids?"
+      : "I'm finding this frustrating. Can we slow this down and focus on the next step?";
+  }
+
+  return state.businessContext
+    ? "Can we keep this professional and align on the next step together?"
+    : "Can we focus on the issue and work out a clear plan together?";
 }
 
 function buildResponse(
@@ -864,9 +1095,11 @@ export function evaluateLocalPreflight(input: AnalyzeMessageRequest): LocalPrefl
     signals: [],
     moderationFlags: new Set<string>(),
     matchedCodes: new Set<string>(),
+    matchedGroups: new Set<LocalRuleGroup>(),
     positiveSignals: 0,
     sensitiveContext: SENSITIVE_CONTEXT_PATTERN.test(normalized),
     childContext: CHILD_CONTEXT_PATTERN.test(normalized),
+    businessContext: BUSINESS_CONTEXT_PATTERN.test(normalized),
   };
 
   if (!normalized) {
@@ -888,6 +1121,8 @@ export function evaluateLocalPreflight(input: AnalyzeMessageRequest): LocalPrefl
       addSignal(state, rule);
     }
   }
+
+  addContextualSignals(state);
 
   for (const rule of REDUCTION_RULES) {
     if (rule.pattern.test(normalized)) {

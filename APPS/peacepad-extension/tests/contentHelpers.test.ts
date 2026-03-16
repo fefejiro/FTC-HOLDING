@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getApprovedActionLabel,
   getEffectivePreflightIntent,
+  getGuardianModalCopy,
   getModalActionOutcome,
   getPreflightExplanation,
   getReviewNote,
@@ -112,9 +113,24 @@ describe("WhatsApp guarded handoff helpers", () => {
     expect(getApprovedActionLabel("gmail")).toBe("Use Suggestion");
   });
 
-  it("explains the automatic replace flow on WhatsApp", () => {
-    expect(getReviewNote("whatsapp")).toContain("place the suggestion into WhatsApp");
-    expect(getReviewNote("whatsapp")).toContain("safe manual replace flow");
+  it("returns simplified Guardian modal copy without a visible score", () => {
+    expect(getGuardianModalCopy("whatsapp", "pause_before_send")).toEqual({
+      title: "SendSmart Guardian",
+      recommendationLabel: "pause before sending",
+      originalLabel: "Original message",
+      suggestedLabel: "Suggested reply",
+      editableLabel: "Edit before sending",
+      flaggedLabel: "Why flagged",
+      saferLabel: "Why safer",
+      helperNote: "Use Suggestion inserts the reply into WhatsApp and leaves it editable.",
+      showConflictScore: false,
+    });
+  });
+
+  it("uses the shorter WhatsApp helper note", () => {
+    expect(getReviewNote("whatsapp")).toBe(
+      "Use Suggestion inserts the reply into WhatsApp and leaves it editable.",
+    );
   });
 
   it("blocks the original draft while handoff is armed", () => {
@@ -186,8 +202,42 @@ describe("WhatsApp guarded handoff helpers", () => {
         ],
       }),
     ).toEqual({
-      flaggedFor: ["hostility", "blame", "escalation"],
+      flaggedFor: ["hostility", "blame"],
       saferBecause: ["clearer", "calmer", "more actionable"],
+    });
+  });
+
+  it("maps business-risk signals to professional explanation chips", () => {
+    expect(
+      getPreflightExplanation({
+        conflict_score: 42,
+        risk_level: "medium",
+        recommendation: "review_and_rewrite",
+        calm_version: "I want to keep this moving professionally. Can we align on the next step so the deal stays on track?",
+        moderation_flags: [],
+        model_or_ruleset_version: {
+          contract: "preflight-v1",
+          tone_model: "local",
+          escalation_ruleset: "local",
+        },
+        send_policy: {
+          allow_send_original: true,
+          requires_acknowledgement: false,
+          recommended_action: "review_and_rewrite",
+          pause_minutes: null,
+        },
+        source: {
+          tone: "frustrated",
+          summary: "local rule matched: mild",
+        },
+        signals: [
+          { category: "linguistic", code: "dismissive_attack", weight: 12, description: "Professional put-down detected" },
+          { category: "linguistic", code: "accusatory", weight: 12, description: "Deal-risk blame statement detected" },
+        ],
+      }),
+    ).toEqual({
+      flaggedFor: ["blame", "condescension", "deal risk"],
+      saferBecause: ["clearer", "calmer", "more professional"],
     });
   });
 });

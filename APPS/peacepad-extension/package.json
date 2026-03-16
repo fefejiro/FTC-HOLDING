@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:smoke:editor": "npx -y -p playwright node tests/smoke/whatsapp-editor.smoke.mjs"
   },
   "dependencies": {
     "@ftc/peacepad-sdk": "0.1.0"

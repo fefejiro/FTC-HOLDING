@@ -29,6 +29,18 @@ export interface PreflightExplanation {
   saferBecause: string[];
 }
 
+export interface GuardianModalCopy {
+  title: string;
+  recommendationLabel: string;
+  originalLabel: string;
+  suggestedLabel: string;
+  editableLabel: string;
+  flaggedLabel: string;
+  saferLabel: string;
+  helperNote: string;
+  showConflictScore: boolean;
+}
+
 export interface SendOriginalLoopSuppressionState {
   fingerprint: string;
   until: number;
@@ -112,10 +124,40 @@ export function getApprovedActionLabel(site: SupportedSite): string {
   return site === "whatsapp" ? "Use Suggestion" : "Use Suggestion";
 }
 
+function getRecommendationLabel(recommendation?: string): string {
+  switch (recommendation) {
+    case "pause_before_send":
+      return "pause before sending";
+    case "send_as_is":
+      return "ready to send";
+    case "review_and_rewrite":
+    case "consider_rephrase":
+    default:
+      return "review before sending";
+  }
+}
+
+export function getGuardianModalCopy(
+  site: SupportedSite,
+  recommendation?: string,
+): GuardianModalCopy {
+  return {
+    title: "SendSmart Guardian",
+    recommendationLabel: getRecommendationLabel(recommendation),
+    originalLabel: "Original message",
+    suggestedLabel: "Suggested reply",
+    editableLabel: "Edit before sending",
+    flaggedLabel: "Why flagged",
+    saferLabel: "Why safer",
+    helperNote: site === "whatsapp"
+      ? "Use Suggestion inserts the reply into WhatsApp and leaves it editable."
+      : "Use Suggestion applies the reply and leaves it editable when the site allows it.",
+    showConflictScore: false,
+  };
+}
+
 export function getReviewNote(site: SupportedSite): string {
-  return site === "whatsapp"
-    ? "SendSmart Guardian will place the suggestion into WhatsApp for you and leave it editable. If direct replacement is blocked, Guardian falls back to a safe manual replace flow."
-    : "PeacePad will try to send your approved message after review. If the site will not accept the direct send safely, the approved message will be copied so you can paste it manually.";
+  return getGuardianModalCopy(site).helperNote;
 }
 
 export function shouldSuppressSendOriginalLoop(
@@ -138,6 +180,19 @@ function hasSignal(preflight: PreflightResponse, ...codes: string[]): boolean {
   return preflight.signals.some((signal) => signal.weight > 0 && codes.includes(signal.code));
 }
 
+function hasSignalDescription(preflight: PreflightResponse, pattern: RegExp): boolean {
+  return preflight.signals.some(
+    (signal) => signal.weight > 0 && pattern.test(signal.description.toLowerCase()),
+  );
+}
+
+function hasModerationFlag(preflight: PreflightResponse, ...flags: string[]): boolean {
+  const activeFlags = new Set(
+    (preflight.moderation_flags || []).map((flag) => String(flag || "").toLowerCase()),
+  );
+  return flags.some((flag) => activeFlags.has(flag));
+}
+
 function addUnique(target: string[], value: string): void {
   if (!target.includes(value)) {
     target.push(value);
@@ -148,8 +203,22 @@ export function getPreflightExplanation(preflight: PreflightResponse): Preflight
   const flaggedFor: string[] = [];
   const saferBecause: string[] = [];
   const tone = String(preflight.source?.tone || "").toLowerCase();
+  const hasDealRisk = hasSignalDescription(preflight, /deal-risk|deal\b|client\b|vendor\b/);
+  const hasCondescension = hasSignalDescription(
+    preflight,
+    /professional put-down|taunting put-down/,
+  );
+  const hasProfessionalRisk = hasSignalDescription(
+    preflight,
+    /professional|taunting|deal-risk/,
+  );
 
-  if (hasSignal(preflight, "hostile_language", "dismissive_attack") || tone === "hostile") {
+  if (
+    hasSignal(preflight, "hostile_language")
+    || hasModerationFlag(preflight, "profanity", "abusive_language")
+    || (hasSignal(preflight, "dismissive_attack") && !hasCondescension)
+    || tone === "hostile"
+  ) {
     addUnique(flaggedFor, "hostility");
   }
 
@@ -157,21 +226,16 @@ export function getPreflightExplanation(preflight: PreflightResponse): Preflight
     addUnique(flaggedFor, "blame");
   }
 
-  if (
-    hasSignal(preflight, "legal_escalation", "emotional_charge")
-    || preflight.recommendation === "pause_before_send"
-    || tone === "defensive"
-    || tone === "frustrated"
-  ) {
-    addUnique(flaggedFor, "escalation");
-  }
-
   if (hasSignal(preflight, "pressure_control")) {
     addUnique(flaggedFor, "pressure");
   }
 
-  if (hasSignal(preflight, "evasion")) {
-    addUnique(flaggedFor, "avoidance");
+  if (hasCondescension) {
+    addUnique(flaggedFor, "condescension");
+  }
+
+  if (hasDealRisk) {
+    addUnique(flaggedFor, "deal risk");
   }
 
   if (!flaggedFor.length && (preflight.risk_level === "high" || preflight.risk_level === "critical")) {
@@ -180,6 +244,7 @@ export function getPreflightExplanation(preflight: PreflightResponse): Preflight
 
   if (
     hasSignal(preflight, "accusatory", "pressure_control", "evasion", "legal_escalation")
+    || hasProfessionalRisk
     || Boolean(preflight.calm_version)
     || preflight.recommendation === "review_and_rewrite"
     || preflight.recommendation === "pause_before_send"
@@ -189,12 +254,17 @@ export function getPreflightExplanation(preflight: PreflightResponse): Preflight
 
   if (
     hasSignal(preflight, "hostile_language", "dismissive_attack", "emotional_charge")
+    || hasModerationFlag(preflight, "profanity", "abusive_language", "harassment")
     || Boolean(preflight.calm_version)
     || tone === "hostile"
     || tone === "frustrated"
     || tone === "defensive"
   ) {
     addUnique(saferBecause, "calmer");
+  }
+
+  if (hasProfessionalRisk) {
+    addUnique(saferBecause, "more professional");
   }
 
   if (

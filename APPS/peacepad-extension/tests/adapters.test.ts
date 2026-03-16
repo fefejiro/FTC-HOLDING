@@ -470,7 +470,7 @@ describe("whatsapp adapter helpers", () => {
     expect(resolveSendTriggerFromTarget("whatsapp", icon)).toBe(sendButton);
   });
 
-  it("replaces contenteditable composer text and verifies the result", () => {
+  it("replaces whatsapp composer text with a settled browser-native strategy", async () => {
     const document = globalThis.document as unknown as MockDocument;
     const composer = document.createElement("div");
     composer.setAttribute("contenteditable", "true");
@@ -478,17 +478,73 @@ describe("whatsapp adapter helpers", () => {
     composer.textContent = "Fuck you.";
     document.body.appendChild(composer);
 
-    const result = replaceComposerText(
+    const result = await replaceComposerText(
       "whatsapp",
       composer as unknown as HTMLElement,
       "Pickup has been running late recently.",
     );
 
     expect(result.success).toBe(true);
-    expect(result.method).toBe("dom_replace");
+    expect(result.method).toBe("exec_command");
     expect(getComposerText(composer as unknown as HTMLElement)).toBe("Pickup has been running late recently.");
+    expect(result.settledText).toBe("Pickup has been running late recently.");
+    expect(result.reacquired).toBe(false);
     expect(document.activeElement).toBe(composer);
     expect(document.defaultView.getSelection().getTarget()).toBe(composer);
+  });
+
+  it("falls back to range insertion when execCommand is unavailable", async () => {
+    const document = globalThis.document as unknown as MockDocument & { execCommand?: unknown };
+    document.execCommand = undefined;
+
+    const composer = document.createElement("div");
+    composer.setAttribute("contenteditable", "true");
+    composer.setAttribute("role", "textbox");
+    composer.textContent = "Fuck you.";
+    document.body.appendChild(composer);
+
+    const result = await replaceComposerText(
+      "whatsapp",
+      composer as unknown as HTMLElement,
+      "Pickup has been running late recently.",
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.method).toBe("range_insert");
+    expect(result.settledText).toBe("Pickup has been running late recently.");
+  });
+
+  it("does not duplicate whatsapp text when range insertion dispatches a plain input event", async () => {
+    const document = globalThis.document as unknown as MockDocument & { execCommand?: unknown };
+    document.execCommand = undefined;
+
+    const composer = document.createElement("div");
+    composer.setAttribute("contenteditable", "true");
+    composer.setAttribute("role", "textbox");
+    composer.textContent = "Fuck you.";
+    document.body.appendChild(composer);
+
+    const originalDispatchEvent = composer.dispatchEvent.bind(composer);
+    composer.dispatchEvent = ((event: MockEvent) => {
+      const result = originalDispatchEvent(event);
+
+      if (event.type === "input" && event.data) {
+        composer.textContent += event.data;
+      }
+
+      return result;
+    }) as typeof composer.dispatchEvent;
+
+    const result = await replaceComposerText(
+      "whatsapp",
+      composer as unknown as HTMLElement,
+      "Pickup has been running late recently.",
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.method).toBe("range_insert");
+    expect(result.settledText).toBe("Pickup has been running late recently.");
+    expect(getComposerText(composer as unknown as HTMLElement)).toBe("Pickup has been running late recently.");
   });
 
   it("prefers the real send button when releasing the send action", () => {

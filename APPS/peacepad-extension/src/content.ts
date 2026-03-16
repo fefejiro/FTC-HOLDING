@@ -12,8 +12,8 @@ import {
 import {
   getApprovedActionLabel,
   getEffectivePreflightIntent,
+  getGuardianModalCopy,
   getPreflightExplanation,
-  getReviewNote,
   getRiskBadgeTheme,
   resolveInFlightSendAction,
   shouldSuppressSendOriginalLoop,
@@ -1363,26 +1363,42 @@ function showPreflightModal(
     fingerprint: draftFingerprint,
   };
 
+  const modalRoot = document.createElement("div");
+  modalRoot.id = "peacepad-preflight-modal";
+  modalRoot.style.position = "fixed";
+  modalRoot.style.inset = "0";
+  modalRoot.style.zIndex = "2147483647";
+  modalRoot.style.display = "flex";
+  modalRoot.style.justifyContent = "center";
+  modalRoot.style.alignItems = "flex-end";
+  modalRoot.style.padding = "14px";
+  modalRoot.style.background = "linear-gradient(180deg, rgba(3, 17, 13, 0.02) 0%, rgba(3, 17, 13, 0.18) 100%)";
+  modalRoot.style.backdropFilter = "blur(6px)";
+  modalRoot.style.setProperty("-webkit-backdrop-filter", "blur(6px)");
+
   const wrapper = document.createElement("div");
-  wrapper.id = "peacepad-preflight-modal";
-  wrapper.style.position = "fixed";
-  wrapper.style.top = "20px";
-  wrapper.style.right = "20px";
-  wrapper.style.zIndex = "2147483647";
-  wrapper.style.width = "420px";
-  wrapper.style.maxWidth = "92vw";
-  wrapper.style.maxHeight = "calc(100vh - 40px)";
+  wrapper.style.position = "relative";
+  wrapper.style.width = "356px";
+  wrapper.style.maxWidth = "100%";
+  wrapper.style.maxHeight = "min(72vh, calc(100vh - 28px))";
   wrapper.style.overflowY = "auto";
-  wrapper.style.background = "#ffffff";
-  wrapper.style.border = "1px solid #cbd5e1";
-  wrapper.style.borderRadius = "14px";
-  wrapper.style.boxShadow = "0 16px 40px rgba(15, 23, 42, 0.25)";
-  wrapper.style.padding = "16px";
-  wrapper.style.fontFamily = "\"Segoe UI\", Arial, sans-serif";
-  wrapper.style.color = "#0f172a";
+  wrapper.style.overflowX = "hidden";
+  wrapper.style.background =
+    "linear-gradient(180deg, rgba(255,255,255,0.74) 0%, rgba(240,255,247,0.64) 100%)";
+  wrapper.style.border = "1px solid rgba(255,255,255,0.48)";
+  wrapper.style.borderRadius = "26px";
+  wrapper.style.boxShadow =
+    "0 26px 72px rgba(2, 22, 19, 0.34), inset 0 1px 0 rgba(255,255,255,0.52)";
+  wrapper.style.backdropFilter = "blur(24px) saturate(180%)";
+  wrapper.style.setProperty("-webkit-backdrop-filter", "blur(24px) saturate(180%)");
+  wrapper.style.padding = "10px 10px 11px";
+  wrapper.style.fontFamily = "\"SF Pro Text\", \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif";
+  wrapper.style.color = "#06281f";
+  wrapper.style.pointerEvents = "auto";
 
   const riskLabel = preflight.risk_level.toUpperCase();
   const riskTheme = getRiskBadgeTheme(preflight.risk_level);
+  const modalCopy = getGuardianModalCopy(currentSite, preflight.recommendation);
   const suggestionText = initialApprovedText?.trim() || preflight.calm_version?.trim() || originalDraft;
   const originalNormalized = normalizeDraft(originalDraft);
   const suggestionNormalized = normalizeDraft(suggestionText);
@@ -1391,45 +1407,155 @@ function showPreflightModal(
     if (activeModal?.fingerprint === draftFingerprint) {
       activeModal = null;
     }
-    wrapper.remove();
+    modalRoot.remove();
   };
 
   const focusComposer = () => {
     window.setTimeout(() => composer.focus(), 0);
   };
 
-  const createSection = (label: string, value: string, editable = false): HTMLDivElement => {
+  const applyButtonTheme = (
+    button: HTMLButtonElement,
+    theme: {
+      height: string;
+      border: string;
+      borderRadius: string;
+      fontSize: string;
+      fontWeight: string;
+      background: string;
+      color: string;
+      restShadow: string;
+      hoverShadow: string;
+      pressShadow: string;
+      focusShadow: string;
+    },
+  ): void => {
+    button.style.height = theme.height;
+    button.style.border = theme.border;
+    button.style.borderRadius = theme.borderRadius;
+    button.style.fontSize = theme.fontSize;
+    button.style.fontWeight = theme.fontWeight;
+    button.style.background = theme.background;
+    button.style.color = theme.color;
+    button.style.boxShadow = theme.restShadow;
+    button.dataset.restShadow = theme.restShadow;
+    button.dataset.hoverShadow = theme.hoverShadow;
+    button.dataset.pressShadow = theme.pressShadow;
+    button.dataset.focusShadow = theme.focusShadow;
+  };
+
+  const createCompactPreviewSection = (
+    label: string,
+    value: string,
+    tone: "neutral" | "accent" = "neutral",
+  ): HTMLDivElement => {
     const section = document.createElement("div");
-    section.style.marginBottom = "10px";
+    section.style.marginBottom = "6px";
+
+    const card = document.createElement("div");
+    card.style.padding = "9px 11px";
+    card.style.borderRadius = "18px";
+    card.style.border =
+      tone === "accent"
+        ? "1px solid rgba(16,185,129,0.20)"
+        : "1px solid rgba(255,255,255,0.40)";
+    card.style.background =
+      tone === "accent"
+        ? "linear-gradient(180deg, rgba(221,252,236,0.76) 0%, rgba(255,255,255,0.44) 100%)"
+        : "linear-gradient(180deg, rgba(255,255,255,0.62) 0%, rgba(248,250,252,0.42) 100%)";
+    card.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.42)";
+    card.style.backdropFilter = "blur(12px)";
+    card.style.setProperty("-webkit-backdrop-filter", "blur(12px)");
 
     const heading = document.createElement("div");
     heading.textContent = label;
-    heading.style.fontSize = "11px";
+    heading.style.fontSize = "10px";
     heading.style.fontWeight = "700";
-    heading.style.color = "#334155";
+    heading.style.letterSpacing = "0.02em";
+    heading.style.marginBottom = "4px";
+    heading.style.color = tone === "accent" ? "#0f766e" : "#27453d";
+    card.appendChild(heading);
+
+    const preview = document.createElement("div");
+    preview.textContent = value;
+    preview.style.fontSize = "11.5px";
+    preview.style.lineHeight = "1.42";
+    preview.style.color = "#06281f";
+    preview.style.display = "-webkit-box";
+    preview.style.webkitBoxOrient = "vertical";
+    preview.style.webkitLineClamp = "2";
+    preview.style.overflow = "hidden";
+    preview.style.wordBreak = "break-word";
+    card.appendChild(preview);
+
+    section.appendChild(card);
+    return section;
+  };
+
+  const createSection = (
+    label: string,
+    value: string,
+    editable = false,
+    tone: "neutral" | "accent" | "editable" = editable ? "editable" : "neutral",
+  ): HTMLDivElement => {
+    const section = document.createElement("div");
+    section.style.marginBottom = "7px";
+
+    const heading = document.createElement("div");
+    heading.textContent = label;
+    heading.style.fontSize = "10px";
+    heading.style.fontWeight = "700";
+    heading.style.letterSpacing = "0.02em";
+    heading.style.color = tone === "accent" ? "#0f766e" : "#27453d";
     heading.style.marginBottom = "4px";
     section.appendChild(heading);
 
     const body = editable ? document.createElement("textarea") : document.createElement("div");
     body.style.width = "100%";
     body.style.boxSizing = "border-box";
-    body.style.fontSize = "12px";
-    body.style.lineHeight = "1.45";
-    body.style.background = editable ? "#ffffff" : "#f8fafc";
-    body.style.border = "1px solid #e2e8f0";
-    body.style.borderRadius = "10px";
-    body.style.padding = "10px";
-    body.style.color = "#0f172a";
+    body.style.fontSize = editable ? "12.5px" : "11.5px";
+    body.style.lineHeight = "1.5";
+    body.style.background =
+      tone === "accent"
+        ? "linear-gradient(180deg, rgba(220,252,231,0.66) 0%, rgba(255,255,255,0.48) 100%)"
+        : tone === "editable"
+          ? "linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(243,255,248,0.72) 100%)"
+          : "linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(248,250,252,0.48) 100%)";
+    body.style.border =
+      tone === "accent"
+        ? "1px solid rgba(16,185,129,0.18)"
+        : tone === "editable"
+          ? "1px solid rgba(16,185,129,0.22)"
+          : "1px solid rgba(148,163,184,0.20)";
+    body.style.borderRadius = "17px";
+    body.style.padding = editable ? "11px 12px" : "9px 11px";
+    body.style.color = "#06281f";
     body.style.wordBreak = "break-word";
+    body.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.42)";
+    body.style.backdropFilter = "blur(14px)";
+    body.style.setProperty("-webkit-backdrop-filter", "blur(14px)");
 
     if (body instanceof HTMLTextAreaElement) {
       body.value = value;
-      body.rows = 5;
+      body.rows = 3;
       body.style.resize = "vertical";
-      body.style.minHeight = "110px";
+      body.style.minHeight = "72px";
+      body.style.maxHeight = "128px";
+      body.style.outline = "none";
+      body.addEventListener("focus", () => {
+        body.style.border = "1px solid rgba(16,185,129,0.42)";
+        body.style.boxShadow =
+          "0 0 0 3px rgba(16,185,129,0.14), inset 0 1px 0 rgba(255,255,255,0.52)";
+      });
+      body.addEventListener("blur", () => {
+        body.style.border = "1px solid rgba(16,185,129,0.22)";
+        body.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.42)";
+      });
     } else {
       body.textContent = value;
       body.style.whiteSpace = "pre-wrap";
+      body.style.maxHeight = "66px";
+      body.style.overflowY = "auto";
     }
 
     section.appendChild(body);
@@ -1437,41 +1563,93 @@ function showPreflightModal(
   };
 
   const summary = document.createElement("div");
+  summary.style.marginBottom = "8px";
+  summary.style.padding = "12px 12px 10px";
+  summary.style.borderRadius = "20px";
+  summary.style.border = "1px solid rgba(255,255,255,0.42)";
+  summary.style.background =
+    "linear-gradient(135deg, rgba(18,140,126,0.20) 0%, rgba(255,255,255,0.30) 52%, rgba(37,211,102,0.14) 100%)";
+  summary.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.42)";
   summary.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-      <strong>SendSmart Guardian</strong>
-      <span style="font-size:11px;padding:4px 8px;border-radius:999px;background:${riskTheme.background};color:${riskTheme.text};border:1px solid ${riskTheme.border};font-weight:700;">${riskLabel}</span>
+      <div style="min-width:0;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#0f766e;opacity:0.92;">Protected Send Review</div>
+        <strong style="display:block;margin-top:3px;font-size:20px;line-height:1.05;color:#06281f;">${modalCopy.title}</strong>
+      </div>
+      <span style="font-size:10px;padding:5px 9px;border-radius:999px;background:${riskTheme.background};color:${riskTheme.text};border:1px solid ${riskTheme.border};font-weight:700;letter-spacing:0.04em;">${riskLabel}</span>
     </div>
-    <p style="margin:8px 0 4px 0;font-size:12px;line-height:1.4;">
-      Recommendation: <strong>pause before sending</strong>
-    </p>
-    <p style="margin:0 0 10px 0;font-size:12px;line-height:1.4;">
-      Conflict score: <strong>${preflight.conflict_score}</strong>
-    </p>
+    <div style="margin:8px 0 0 0;display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.52);border:1px solid rgba(255,255,255,0.36);font-size:11px;line-height:1.3;color:#134e4a;">
+      <span style="display:inline-block;width:7px;height:7px;border-radius:999px;background:#25d366;box-shadow:0 0 0 5px rgba(37,211,102,0.12);"></span>
+      <span>Recommendation: <strong style="color:#06281f;">${modalCopy.recommendationLabel}</strong></span>
+    </div>
   `;
   wrapper.appendChild(summary);
 
-  wrapper.appendChild(createSection("Original message", originalDraft));
+  wrapper.appendChild(createCompactPreviewSection(modalCopy.originalLabel, originalDraft, "neutral"));
 
   if (preflight.calm_version) {
-    wrapper.appendChild(createSection("Suggested calmer version", preflight.calm_version));
+    wrapper.appendChild(createCompactPreviewSection(modalCopy.suggestedLabel, preflight.calm_version, "accent"));
   }
 
-  const finalMessageSection = createSection("Final message to send", suggestionText, true);
+  const finalMessageSection = createSection(modalCopy.editableLabel, suggestionText, true, "editable");
   const finalMessageInput = finalMessageSection.querySelector("textarea") as HTMLTextAreaElement;
   wrapper.appendChild(finalMessageSection);
 
   const explanation = getPreflightExplanation(preflight);
-  if (explanation.flaggedFor.length > 0 || explanation.saferBecause.length > 0) {
+  if (explanation.flaggedFor.length > 0 || explanation.saferBecause.length > 0 || modalCopy.helperNote) {
+    const detailsWrap = document.createElement("div");
+    detailsWrap.style.margin = "2px 0 10px 0";
+
+    const detailsToggle = document.createElement("button");
+    detailsToggle.type = "button";
+    detailsToggle.style.width = "100%";
+    detailsToggle.style.display = "flex";
+    detailsToggle.style.alignItems = "center";
+    detailsToggle.style.justifyContent = "space-between";
+    detailsToggle.style.gap = "10px";
+    detailsToggle.style.padding = "9px 11px";
+    detailsToggle.style.borderRadius = "16px";
+    detailsToggle.style.border = "1px solid rgba(255,255,255,0.40)";
+    detailsToggle.style.background =
+      "linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(240,255,247,0.38) 100%)";
+    detailsToggle.style.color = "#0f766e";
+    detailsToggle.style.fontSize = "11px";
+    detailsToggle.style.fontWeight = "700";
+    detailsToggle.style.cursor = "pointer";
+    detailsToggle.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.36)";
+
+    const detailsLabel = document.createElement("span");
+    detailsLabel.textContent = "Why this change";
+    detailsToggle.appendChild(detailsLabel);
+
+    const detailsChevron = document.createElement("span");
+    detailsChevron.textContent = "Show";
+    detailsChevron.style.fontSize = "10px";
+    detailsChevron.style.fontWeight = "700";
+    detailsChevron.style.color = "#4b635c";
+    detailsToggle.appendChild(detailsChevron);
+
+    const detailsPanel = document.createElement("div");
+    detailsPanel.style.display = "none";
+    detailsPanel.style.marginTop = "7px";
+
+    detailsToggle.addEventListener("click", () => {
+      const open = detailsPanel.style.display !== "none";
+      detailsPanel.style.display = open ? "none" : "block";
+      detailsChevron.textContent = open ? "Show" : "Hide";
+    });
+
     const explanationCard = document.createElement("div");
-    explanationCard.style.margin = "0 0 12px 0";
-    explanationCard.style.padding = "10px 12px";
-    explanationCard.style.borderRadius = "12px";
-    explanationCard.style.border = "1px solid #dbe7f5";
-    explanationCard.style.background = "linear-gradient(180deg, #f8fbff 0%, #f8fafc 100%)";
+    explanationCard.style.margin = "0";
+    explanationCard.style.padding = "8px 9px";
+    explanationCard.style.borderRadius = "18px";
+    explanationCard.style.border = "1px solid rgba(255,255,255,0.38)";
+    explanationCard.style.background =
+      "linear-gradient(180deg, rgba(255,255,255,0.46) 0%, rgba(240,255,247,0.40) 100%)";
     explanationCard.style.display = "flex";
     explanationCard.style.flexDirection = "column";
-    explanationCard.style.gap = "8px";
+    explanationCard.style.gap = "5px";
+    explanationCard.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.36)";
 
     const createExplanationRow = (
       label: string,
@@ -1481,15 +1659,15 @@ function showPreflightModal(
       const row = document.createElement("div");
       row.style.display = "flex";
       row.style.alignItems = "flex-start";
-      row.style.gap = "8px";
+      row.style.gap = "6px";
       row.style.flexWrap = "wrap";
 
       const title = document.createElement("span");
       title.textContent = `${label}:`;
-      title.style.fontSize = "11px";
+      title.style.fontSize = "10px";
       title.style.fontWeight = "700";
       title.style.color = tone === "flagged" ? "#7f1d1d" : "#065f46";
-      title.style.minWidth = "84px";
+      title.style.minWidth = "66px";
       row.appendChild(title);
 
       const chips = document.createElement("div");
@@ -1503,13 +1681,13 @@ function showPreflightModal(
         chip.textContent = value;
         chip.style.display = "inline-flex";
         chip.style.alignItems = "center";
-        chip.style.padding = "4px 8px";
+        chip.style.padding = "3px 8px";
         chip.style.borderRadius = "999px";
-        chip.style.fontSize = "11px";
+        chip.style.fontSize = "10px";
         chip.style.fontWeight = "600";
         chip.style.lineHeight = "1.2";
-        chip.style.border = tone === "flagged" ? "1px solid #fecaca" : "1px solid #bbf7d0";
-        chip.style.background = tone === "flagged" ? "#fff1f2" : "#ecfdf5";
+        chip.style.border = tone === "flagged" ? "1px solid rgba(248,113,113,0.26)" : "1px solid rgba(74,222,128,0.24)";
+        chip.style.background = tone === "flagged" ? "rgba(255,241,242,0.82)" : "rgba(236,253,245,0.82)";
         chip.style.color = tone === "flagged" ? "#b91c1c" : "#047857";
         chips.appendChild(chip);
       }
@@ -1519,29 +1697,40 @@ function showPreflightModal(
     };
 
     if (explanation.flaggedFor.length > 0) {
-      explanationCard.appendChild(createExplanationRow("Flagged for", explanation.flaggedFor, "flagged"));
+      explanationCard.appendChild(createExplanationRow(modalCopy.flaggedLabel, explanation.flaggedFor, "flagged"));
     }
 
     if (explanation.saferBecause.length > 0) {
-      explanationCard.appendChild(createExplanationRow("Safer because", explanation.saferBecause, "safer"));
+      explanationCard.appendChild(createExplanationRow(modalCopy.saferLabel, explanation.saferBecause, "safer"));
     }
 
-    wrapper.appendChild(explanationCard);
-  }
+    detailsPanel.appendChild(explanationCard);
 
-  const reviewNote = document.createElement("p");
-  reviewNote.style.margin = "0 0 12px 0";
-  reviewNote.style.fontSize = "11px";
-  reviewNote.style.color = "#475569";
-  reviewNote.textContent = getReviewNote(currentSite);
-  wrapper.appendChild(reviewNote);
+    const reviewNote = document.createElement("p");
+    reviewNote.style.margin = "7px 2px 0 2px";
+    reviewNote.style.padding = "0";
+    reviewNote.style.fontSize = "10.5px";
+    reviewNote.style.lineHeight = "1.35";
+    reviewNote.style.color = "#4b635c";
+    reviewNote.textContent = modalCopy.helperNote;
+    detailsPanel.appendChild(reviewNote);
+
+    detailsWrap.appendChild(detailsToggle);
+    detailsWrap.appendChild(detailsPanel);
+    wrapper.appendChild(detailsWrap);
+  }
 
   const buttonRow = document.createElement("div");
   buttonRow.style.display = "grid";
   buttonRow.style.gridTemplateColumns = "1fr 1fr";
-  buttonRow.style.gap = "8px";
+  buttonRow.style.gap = "7px";
+  buttonRow.style.marginTop = "2px";
 
-  const sendApproved = makeButton(getApprovedActionLabel(currentSite), "#1d4ed8", "#ffffff", () => {
+  const sendApproved = makeButton(
+    getApprovedActionLabel(currentSite),
+    "linear-gradient(135deg, #128c7e 0%, #25d366 100%)",
+    "#ffffff",
+    () => {
     void (async () => {
       const approvedText = finalMessageInput.value.trim();
       if (!approvedText) {
@@ -1580,7 +1769,7 @@ function showPreflightModal(
         chars: approvedText.length,
         mode: currentSite === "whatsapp" ? "automatic_replace" : "review_surface",
       });
-      const replacement = replaceComposerText(currentSite, composer, approvedText);
+      const replacement = await replaceComposerText(currentSite, composer, approvedText);
 
       if (!replacement.success) {
         log("replacement verification failed", {
@@ -1588,8 +1777,10 @@ function showPreflightModal(
           source: "manual_after_apply",
           action: "approved_send",
           expected: approvedText,
-          actual: replacement.actualText,
+          actual: replacement.settledText || replacement.actualText,
           method: replacement.method,
+          settledText: replacement.settledText,
+          reacquired: replacement.reacquired,
         });
 
         if (currentSite === "whatsapp") {
@@ -1616,17 +1807,20 @@ function showPreflightModal(
             return;
           }
 
-          const fallbackBlockedText = getComposerText(composer).trim() || originalDraft;
+          const liveComposer = ("isConnected" in composer && typeof composer.isConnected === "boolean" && !composer.isConnected)
+            ? (resolveActiveComposer(currentSite) || composer)
+            : composer;
+          const fallbackBlockedText = getComposerText(liveComposer).trim() || originalDraft;
           const fallbackBlockedFingerprint = fingerprint(fallbackBlockedText) || draftFingerprint;
           closeModal();
           armWhatsappApprovedHandoff(
-            composer,
+            liveComposer,
             preflight,
             fallbackBlockedFingerprint,
             fallbackBlockedText,
             approvedText,
           );
-          const prepareResult = prepareWhatsappComposerForPaste(composer, "manual_after_apply", "approved_action");
+          const prepareResult = prepareWhatsappComposerForPaste(liveComposer, "manual_after_apply", "approved_action");
           log("approved send result", {
             site: currentSite,
             source: "manual_after_apply",
@@ -1635,6 +1829,8 @@ function showPreflightModal(
             mode: "whatsapp_direct_replace",
             prepareMethod: prepareResult.method,
             selected: prepareResult.selected,
+            settledText: replacement.settledText,
+            reacquired: replacement.reacquired,
           });
           showToastThrottled(
             prepareResult.selected
@@ -1678,19 +1874,24 @@ function showPreflightModal(
       log("replacement succeeded", {
         site: currentSite,
         source: "manual_after_apply",
-        actual: replacement.actualText,
+        actual: replacement.settledText || replacement.actualText,
         method: replacement.method,
+        settledText: replacement.settledText,
+        reacquired: replacement.reacquired,
       });
       log("replacement verification success", {
         site: currentSite,
         source: "manual_after_apply",
         action: "approved_send",
-        actual: replacement.actualText,
+        actual: replacement.settledText || replacement.actualText,
         method: replacement.method,
+        settledText: replacement.settledText,
+        reacquired: replacement.reacquired,
       });
 
       if (currentSite === "whatsapp") {
-        lastSafeFingerprint = fingerprint(replacement.actualText);
+        const successfulText = replacement.settledText || replacement.actualText;
+        lastSafeFingerprint = fingerprint(successfulText);
         lastAnalyzedFingerprint = lastSafeFingerprint;
         lastDismissedFingerprint = "";
         sendOriginalLoopSuppression = null;
@@ -1702,14 +1903,19 @@ function showPreflightModal(
           method: replacement.method,
           success: true,
           path: "composer_replace_edit",
+          settledText: successfulText,
+          reacquired: replacement.reacquired,
         });
         window.setTimeout(() => {
-          focusComposerForEditing(composer);
+          const liveComposer = ("isConnected" in composer && typeof composer.isConnected === "boolean" && !composer.isConnected)
+            ? (resolveActiveComposer(currentSite) || composer)
+            : composer;
+          focusComposerForEditing(liveComposer);
         }, 0);
         return;
       }
 
-      lastSafeFingerprint = fingerprint(replacement.actualText);
+      lastSafeFingerprint = fingerprint(replacement.settledText || replacement.actualText);
       lastDismissedFingerprint = "";
       sendOriginalLoopSuppression = null;
       closeModal();
@@ -1727,10 +1933,23 @@ function showPreflightModal(
       }, SEND_RELEASE_SETTLE_MS);
     })();
   });
+  applyButtonTheme(sendApproved, {
+    height: "42px",
+    border: "1px solid rgba(255,255,255,0.18)",
+    borderRadius: "16px",
+    fontSize: "13px",
+    fontWeight: "700",
+    background: "linear-gradient(135deg, #128c7e 0%, #25d366 100%)",
+    color: "#ffffff",
+    restShadow: "0 14px 28px rgba(18,140,126,0.24), inset 0 1px 0 rgba(255,255,255,0.20)",
+    hoverShadow: "0 18px 34px rgba(18,140,126,0.30), inset 0 1px 0 rgba(255,255,255,0.24)",
+    pressShadow: "0 8px 18px rgba(18,140,126,0.24), inset 0 1px 0 rgba(255,255,255,0.18)",
+    focusShadow: "0 0 0 3px rgba(37,211,102,0.18), 0 14px 28px rgba(18,140,126,0.24)",
+  });
   sendApproved.style.gridColumn = "1 / span 2";
   buttonRow.appendChild(sendApproved);
 
-  const sendOriginal = makeButton("Send Original", "#ffffff", "#0f172a", () => {
+  const sendOriginal = makeButton("Send Original", "rgba(255,255,255,0.72)", "#0b3b2f", () => {
     log("send original clicked", { site: currentSite, source: "manual_after_apply", entry: "modal" });
     if (currentSite === "whatsapp") {
       clearWhatsappApprovedHandoff("explicit_original_release", {
@@ -1746,10 +1965,22 @@ function showPreflightModal(
     suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
     releaseSend(composer, currentSite, "send_original_release", originalDraft, 1);
   });
-  sendOriginal.style.border = "1px solid #cbd5e1";
+  applyButtonTheme(sendOriginal, {
+    height: "40px",
+    border: "1px solid rgba(255,255,255,0.44)",
+    borderRadius: "16px",
+    fontSize: "12.5px",
+    fontWeight: "600",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(242,255,248,0.64) 100%)",
+    color: "#0b3b2f",
+    restShadow: "0 10px 22px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.30)",
+    hoverShadow: "0 14px 24px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.32)",
+    pressShadow: "0 6px 14px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.28)",
+    focusShadow: "0 0 0 3px rgba(16,185,129,0.12), 0 10px 22px rgba(15,23,42,0.10)",
+  });
   buttonRow.appendChild(sendOriginal);
 
-  const cancel = makeButton("Cancel", "#ffffff", "#0f172a", () => {
+  const cancel = makeButton("Cancel", "rgba(255,255,255,0.72)", "#334155", () => {
     log("cancel clicked", { site: currentSite, source: "manual_after_apply" });
     const activeHandoff = getWhatsappApprovedHandoffForComposer(currentSite, composer);
     if (activeHandoff && activeHandoff.blockedOriginalFingerprint === draftFingerprint) {
@@ -1765,11 +1996,33 @@ function showPreflightModal(
     sendReleaseInFlight = false;
     focusComposer();
   });
-  cancel.style.border = "1px solid #cbd5e1";
+  applyButtonTheme(cancel, {
+    height: "40px",
+    border: "1px solid rgba(255,255,255,0.44)",
+    borderRadius: "16px",
+    fontSize: "12.5px",
+    fontWeight: "600",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(248,250,252,0.60) 100%)",
+    color: "#334155",
+    restShadow: "0 10px 22px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.28)",
+    hoverShadow: "0 14px 24px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.30)",
+    pressShadow: "0 6px 14px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.26)",
+    focusShadow: "0 0 0 3px rgba(148,163,184,0.14), 0 10px 22px rgba(15,23,42,0.08)",
+  });
   buttonRow.appendChild(cancel);
 
   wrapper.appendChild(buttonRow);
-  document.body.appendChild(wrapper);
+  modalRoot.appendChild(wrapper);
+  modalRoot.addEventListener("click", (event) => {
+    if (event.target !== modalRoot) {
+      return;
+    }
+    lastDismissedFingerprint = draftFingerprint;
+    closeModal();
+    sendReleaseInFlight = false;
+    focusComposer();
+  });
+  document.body.appendChild(modalRoot);
 
   const initialApprovedNormalized = initialApprovedText ? normalizeDraft(initialApprovedText) : "";
   const initialFinalNormalized = normalizeDraft(finalMessageInput.value);
@@ -1809,29 +2062,35 @@ function makeButton(label: string, background: string, color: string, onClick: (
   button.style.background = background;
   button.style.color = color;
   button.style.boxShadow = "0 1px 2px rgba(15, 23, 42, 0.10)";
+  button.dataset.restShadow = "0 1px 2px rgba(15, 23, 42, 0.10)";
+  button.dataset.hoverShadow = "0 10px 22px rgba(15, 23, 42, 0.18)";
+  button.dataset.pressShadow = "0 4px 10px rgba(15, 23, 42, 0.16)";
+  button.dataset.focusShadow =
+    "0 0 0 3px rgba(59, 130, 246, 0.20), 0 8px 18px rgba(15, 23, 42, 0.14)";
   button.style.transition =
     "transform 120ms ease, box-shadow 140ms ease, border-color 140ms ease, background-color 140ms ease, filter 140ms ease";
   button.style.outline = "none";
   button.addEventListener("mouseenter", () => {
     button.style.transform = "translateY(-1px)";
-    button.style.boxShadow = "0 10px 22px rgba(15, 23, 42, 0.18)";
+    button.style.boxShadow = button.dataset.hoverShadow || "0 10px 22px rgba(15, 23, 42, 0.18)";
     button.style.filter = background === "#ffffff" ? "brightness(0.99)" : "brightness(1.03)";
   });
   button.addEventListener("mouseleave", () => {
     button.style.transform = "translateY(0)";
-    button.style.boxShadow = "0 1px 2px rgba(15, 23, 42, 0.10)";
+    button.style.boxShadow = button.dataset.restShadow || "0 1px 2px rgba(15, 23, 42, 0.10)";
     button.style.filter = "none";
   });
   button.addEventListener("mousedown", () => {
     button.style.transform = "translateY(0)";
-    button.style.boxShadow = "0 4px 10px rgba(15, 23, 42, 0.16)";
+    button.style.boxShadow = button.dataset.pressShadow || "0 4px 10px rgba(15, 23, 42, 0.16)";
   });
   button.addEventListener("focus", () => {
-    button.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.20), 0 8px 18px rgba(15, 23, 42, 0.14)";
+    button.style.boxShadow =
+      button.dataset.focusShadow || "0 0 0 3px rgba(59, 130, 246, 0.20), 0 8px 18px rgba(15, 23, 42, 0.14)";
   });
   button.addEventListener("blur", () => {
     button.style.transform = "translateY(0)";
-    button.style.boxShadow = "0 1px 2px rgba(15, 23, 42, 0.10)";
+    button.style.boxShadow = button.dataset.restShadow || "0 1px 2px rgba(15, 23, 42, 0.10)";
     button.style.filter = "none";
   });
   button.addEventListener("click", onClick);
@@ -1875,13 +2134,13 @@ function isComposerBlockedByModal(composer: HTMLElement, draftFingerprint?: stri
   return activeModal.fingerprint === draftFingerprint;
 }
 
-function releaseSend(
+async function releaseSend(
   composer: HTMLElement,
   currentSite: SupportedSite,
   reason: string,
   expectedText?: string,
   attemptsRemaining = 1,
-): void {
+): Promise<void> {
   if (expectedText) {
     const currentText = getComposerText(composer).trim();
     if (normalizeDraft(currentText) !== normalizeDraft(expectedText)) {
@@ -1893,16 +2152,18 @@ function releaseSend(
           expected: expectedText,
           actual: currentText,
         });
-        const retryResult = replaceComposerText(currentSite, composer, expectedText);
+        const retryResult = await replaceComposerText(currentSite, composer, expectedText);
         log("composer replacement retry", {
           site: currentSite,
           reason,
           success: retryResult.success,
           method: retryResult.method,
-          actual: retryResult.actualText,
+          actual: retryResult.settledText || retryResult.actualText,
+          settledText: retryResult.settledText,
+          reacquired: retryResult.reacquired,
         });
         window.setTimeout(() => {
-          releaseSend(composer, currentSite, reason, expectedText, attemptsRemaining - 1);
+          void releaseSend(composer, currentSite, reason, expectedText, attemptsRemaining - 1);
         }, SEND_RELEASE_SETTLE_MS);
         return;
       }
