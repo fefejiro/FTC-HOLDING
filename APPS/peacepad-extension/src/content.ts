@@ -1,6 +1,7 @@
-import type { PreflightResponse } from "@ftc/peacepad-sdk";
+﻿import type { PreflightResponse } from "@ftc/peacepad-sdk";
 import {
   detectSupportedSite,
+  focusComposerForEditing,
   getComposerText,
   replaceComposerText,
   resolveComposerFromTarget,
@@ -11,10 +12,11 @@ import {
 import {
   getApprovedActionLabel,
   getEffectivePreflightIntent,
+  getGuardianModalCopy,
   getPreflightExplanation,
-  getReviewNote,
   getRiskBadgeTheme,
   resolveInFlightSendAction,
+  shouldSuppressSendOriginalLoop,
   resolveWhatsappHandoffDecision,
 } from "./contentHelpers";
 import { canUseAuto, getSettings } from "./storage";
@@ -27,6 +29,7 @@ const MIN_CHARS_FOR_BACKGROUND_ANALYSIS = 18;
 const MIN_CHARS_FOR_SEND_GATE = 5;
 const BACKGROUND_DEBOUNCE_MS = 900;
 const SUPPRESS_AFTER_SEND_MS = 1200;
+const SEND_ORIGINAL_LOOP_SUPPRESSION_MS = 15000;
 const SEND_RELEASE_SETTLE_MS = 120;
 const MAX_SUGGESTED_SEND_ATTEMPTS = 3;
 
@@ -76,6 +79,12 @@ let lastAnalyzedFingerprint = "";
 let lastSafeFingerprint = "";
 let lastDismissedFingerprint = "";
 let lastErrorToastAt = 0;
+let sendOriginalLoopSuppression:
+  | {
+      fingerprint: string;
+      until: number;
+    }
+  | null = null;
 
 if (site) {
   const bootstrapState = window as typeof window & { [CONTENT_SENTINEL]?: boolean };
@@ -131,6 +140,9 @@ function installPassiveWatcher(currentSite: SupportedSite): void {
         site: currentSite,
         chars: currentText.length,
       });
+      if (currentSite === "whatsapp") {
+        return;
+      }
       scheduleBackgroundCheck(composer, currentSite);
     },
     true,
@@ -211,6 +223,15 @@ async function runBackgroundCheck(currentSite: SupportedSite): Promise<void> {
     return;
   }
 
+  if (shouldBypassSendOriginalLoop(draftFingerprint)) {
+    log("send original loop suppression active", {
+      site: currentSite,
+      reason: "background_same_draft",
+      chars: text.length,
+    });
+    return;
+  }
+
   if (!hasMaterialChange(draftFingerprint, lastDismissedFingerprint)) {
     return;
   }
@@ -252,6 +273,15 @@ function installSendGate(currentSite: SupportedSite): void {
       }
 
       const draftFingerprint = fingerprint(text);
+      if (shouldBypassSendOriginalLoop(draftFingerprint)) {
+        log("send original loop suppression active", {
+          site: currentSite,
+          source: "enter_key",
+          chars: text.length,
+        });
+        return;
+      }
+
       if (handleWhatsappApprovedHandoffBeforeSend(event, currentSite, composer, draftFingerprint, "enter_key", text.length)) {
         return;
       }
@@ -273,7 +303,7 @@ function installSendGate(currentSite: SupportedSite): void {
       }
 
       blockSendEvent(event, currentSite, "enter_key");
-      log("send gate intercepted", { site: currentSite, source: "enter_key", chars: text.length });
+      log("draft intercepted", { site: currentSite, source: "enter_key", chars: text.length });
       void runPreflight(composer, currentSite, "send_gate", "enter_key");
     },
     true,
@@ -315,6 +345,15 @@ function installClickSendGate(currentSite: SupportedSite): void {
       }
 
       const draftFingerprint = fingerprint(text);
+      if (shouldBypassSendOriginalLoop(draftFingerprint)) {
+        log("send original loop suppression active", {
+          site: currentSite,
+          source: "send_button_click",
+          chars: text.length,
+        });
+        return;
+      }
+
       if (handleWhatsappApprovedHandoffBeforeSend(event, currentSite, composer, draftFingerprint, "send_button_click", text.length)) {
         return;
       }
@@ -336,7 +375,7 @@ function installClickSendGate(currentSite: SupportedSite): void {
       }
 
       blockSendEvent(event, currentSite, "send_button_click");
-      log("send gate intercepted", { site: currentSite, source: "send_button_click", chars: text.length });
+      log("draft intercepted", { site: currentSite, source: "send_button_click", chars: text.length });
       void runPreflight(composer, currentSite, "send_gate", "send_button_click");
     },
     true,
@@ -465,6 +504,16 @@ async function runPreflight(
       }
       return;
     }
+
+    log("trigger matched", {
+      site: currentSite,
+      source,
+      risk: preflight.risk_level,
+      score: preflight.conflict_score,
+      recommendation: preflight.recommendation,
+      chars: text.length,
+      ruleset: preflight.model_or_ruleset_version.escalation_ruleset,
+    });
 
     if (!hasMaterialChange(draftFingerprint, lastDismissedFingerprint) && effectiveIntent === "background") {
       return;
@@ -1121,7 +1170,8 @@ function showWhatsappApprovedHandoffBanner(): void {
       source: "manual_after_apply",
       entry: "handoff_banner",
     });
-    lastDismissedFingerprint = "";
+    armSendOriginalLoopSuppression(current.blockedOriginalFingerprint);
+    lastDismissedFingerprint = current.blockedOriginalFingerprint;
     sendReleaseInFlight = true;
     suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
     releaseSend(current.composer, "whatsapp", "approved_handoff_send_original_release", current.blockedOriginalText, 1);
@@ -1313,73 +1363,260 @@ function showPreflightModal(
     fingerprint: draftFingerprint,
   };
 
+  const modalRoot = document.createElement("div");
+  modalRoot.id = "peacepad-preflight-modal";
+  modalRoot.style.position = "fixed";
+  modalRoot.style.inset = "0";
+  modalRoot.style.zIndex = "2147483647";
+  modalRoot.style.display = "flex";
+  modalRoot.style.justifyContent = "center";
+  modalRoot.style.alignItems = "flex-end";
+  modalRoot.style.padding = "14px";
+  modalRoot.style.background = "rgba(0, 0, 0, 0.25)";
+  modalRoot.style.backdropFilter = "blur(4px)";
+  modalRoot.style.setProperty("-webkit-backdrop-filter", "blur(4px)");
+
   const wrapper = document.createElement("div");
-  wrapper.id = "peacepad-preflight-modal";
-  wrapper.style.position = "fixed";
-  wrapper.style.top = "20px";
-  wrapper.style.right = "20px";
-  wrapper.style.zIndex = "2147483647";
-  wrapper.style.width = "420px";
-  wrapper.style.maxWidth = "92vw";
-  wrapper.style.maxHeight = "calc(100vh - 40px)";
+  wrapper.style.position = "relative";
+  wrapper.style.width = "min(356px, calc(100vw - 28px))";
+  wrapper.style.opacity = "0";
+  wrapper.style.transform = "translateY(18px) scale(0.985)";
+  wrapper.style.transition = "transform 200ms ease-out, opacity 200ms ease-out, box-shadow 200ms ease-out";
+  wrapper.style.maxWidth = "420px";
+  wrapper.style.maxHeight = "min(70vh, calc(100vh - 28px))";
   wrapper.style.overflowY = "auto";
-  wrapper.style.background = "#ffffff";
-  wrapper.style.border = "1px solid #cbd5e1";
-  wrapper.style.borderRadius = "14px";
-  wrapper.style.boxShadow = "0 16px 40px rgba(15, 23, 42, 0.25)";
-  wrapper.style.padding = "16px";
-  wrapper.style.fontFamily = "Arial, sans-serif";
-  wrapper.style.color = "#0f172a";
+  wrapper.style.overflowX = "hidden";
+  wrapper.style.background =
+    "linear-gradient(180deg, rgba(255,255,255,0.74) 0%, rgba(240,255,247,0.64) 100%)";
+  wrapper.style.border = "1px solid rgba(255,255,255,0.48)";
+  wrapper.style.borderRadius = "26px";
+  modalRoot.style.opacity = "0";
+  modalRoot.style.transition = "opacity 200ms ease-out, backdrop-filter 200ms ease-out";
+
+  wrapper.style.boxShadow =
+    "0 26px 72px rgba(2, 22, 19, 0.34), inset 0 1px 0 rgba(255,255,255,0.52)";
+  wrapper.style.backdropFilter = "blur(24px) saturate(180%)";
+  wrapper.style.setProperty("-webkit-backdrop-filter", "blur(24px) saturate(180%)");
+  wrapper.style.padding = "10px 10px 11px";
+  wrapper.style.fontFamily = "\"SF Pro Text\", \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif";
+  wrapper.style.color = "#06281f";
+  wrapper.style.pointerEvents = "auto";
 
   const riskLabel = preflight.risk_level.toUpperCase();
   const riskTheme = getRiskBadgeTheme(preflight.risk_level);
+  const modalCopy = getGuardianModalCopy(currentSite, preflight.recommendation);
   const suggestionText = initialApprovedText?.trim() || preflight.calm_version?.trim() || originalDraft;
   const originalNormalized = normalizeDraft(originalDraft);
   const suggestionNormalized = normalizeDraft(suggestionText);
 
-  const closeModal = () => {
+  const waitFor = (ms: number): Promise<void> =>
+    new Promise((resolve) => {
+      window.setTimeout(resolve, ms);
+    });
+
+  const closeModalImmediately = () => {
     if (activeModal?.fingerprint === draftFingerprint) {
       activeModal = null;
     }
-    wrapper.remove();
+    modalRoot.remove();
+  };
+
+  let modalClosing = false;
+  const closeModal = () => {
+    closeModalImmediately();
+  };
+
+  const closeModalWithAnimation = async (): Promise<void> => {
+    if (modalClosing) {
+      return;
+    }
+
+    modalClosing = true;
+    modalRoot.style.opacity = "0";
+    wrapper.style.opacity = "0";
+    wrapper.style.transform = "translateY(10px) scale(0.992)";
+    await waitFor(180);
+    closeModalImmediately();
   };
 
   const focusComposer = () => {
-    window.setTimeout(() => composer.focus(), 0);
+    window.setTimeout(() => {
+      const liveComposer =
+        "isConnected" in composer && typeof composer.isConnected === "boolean" && !composer.isConnected
+          ? (resolveActiveComposer(currentSite) || composer)
+          : composer;
+      focusComposerForEditing(liveComposer);
+    }, 0);
   };
 
-  const createSection = (label: string, value: string, editable = false): HTMLDivElement => {
+  const flashComposerInsertion = (targetComposer: HTMLElement): void => {
+    const previousTransition = targetComposer.style.transition;
+    const previousBackground = targetComposer.style.backgroundColor;
+    const previousBoxShadow = targetComposer.style.boxShadow;
+
+    targetComposer.style.transition = [
+      previousTransition,
+      "background-color 500ms ease, box-shadow 500ms ease",
+    ]
+      .filter(Boolean)
+      .join(", ");
+    targetComposer.style.backgroundColor = "rgba(37, 211, 102, 0.12)";
+    targetComposer.style.boxShadow = "0 0 0 2px rgba(37, 211, 102, 0.16)";
+
+    window.setTimeout(() => {
+      targetComposer.style.backgroundColor = previousBackground;
+      targetComposer.style.boxShadow = previousBoxShadow;
+      window.setTimeout(() => {
+        targetComposer.style.transition = previousTransition;
+      }, 520);
+    }, 40);
+  };
+
+  const applyButtonTheme = (
+    button: HTMLButtonElement,
+    theme: {
+      height: string;
+      border: string;
+      borderRadius: string;
+      fontSize: string;
+      fontWeight: string;
+      background: string;
+      color: string;
+      restShadow: string;
+      hoverShadow: string;
+      pressShadow: string;
+      focusShadow: string;
+    },
+  ): void => {
+    button.style.height = theme.height;
+    button.style.border = theme.border;
+    button.style.borderRadius = theme.borderRadius;
+    button.style.fontSize = theme.fontSize;
+    button.style.fontWeight = theme.fontWeight;
+    button.style.background = theme.background;
+    button.style.color = theme.color;
+    button.style.boxShadow = theme.restShadow;
+    button.dataset.restShadow = theme.restShadow;
+    button.dataset.hoverShadow = theme.hoverShadow;
+    button.dataset.pressShadow = theme.pressShadow;
+    button.dataset.focusShadow = theme.focusShadow;
+  };
+
+  const createCompactPreviewSection = (
+    label: string,
+    value: string,
+    tone: "neutral" | "accent" = "neutral",
+  ): HTMLDivElement => {
     const section = document.createElement("div");
-    section.style.marginBottom = "10px";
+    section.style.marginBottom = "6px";
+
+    const card = document.createElement("div");
+    card.style.padding = "9px 11px";
+    card.style.borderRadius = "18px";
+    card.style.border =
+      tone === "accent"
+        ? "1px solid rgba(16,185,129,0.20)"
+        : "1px solid rgba(255,255,255,0.40)";
+    card.style.background =
+      tone === "accent"
+        ? "linear-gradient(180deg, rgba(221,252,236,0.76) 0%, rgba(255,255,255,0.44) 100%)"
+        : "linear-gradient(180deg, rgba(255,255,255,0.62) 0%, rgba(248,250,252,0.42) 100%)";
+    card.style.boxShadow = "0 10px 24px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.42)";
+    card.style.backdropFilter = "blur(12px)";
+    card.style.setProperty("-webkit-backdrop-filter", "blur(12px)");
 
     const heading = document.createElement("div");
     heading.textContent = label;
-    heading.style.fontSize = "11px";
+    heading.style.fontSize = "10px";
     heading.style.fontWeight = "700";
-    heading.style.color = "#334155";
+    heading.style.letterSpacing = "0.02em";
+    heading.style.marginBottom = "4px";
+    heading.style.color = tone === "accent" ? "#0f766e" : "#27453d";
+    card.appendChild(heading);
+
+    const preview = document.createElement("div");
+    preview.textContent = value;
+    preview.style.fontSize = "11.5px";
+    preview.style.lineHeight = "1.42";
+    preview.style.color = "#06281f";
+    preview.style.display = "-webkit-box";
+    preview.style.webkitBoxOrient = "vertical";
+    preview.style.webkitLineClamp = "2";
+    preview.style.overflow = "hidden";
+    preview.style.wordBreak = "break-word";
+    card.appendChild(preview);
+
+    section.appendChild(card);
+    return section;
+  };
+
+  const createSection = (
+    label: string,
+    value: string,
+    editable = false,
+    tone: "neutral" | "accent" | "editable" = editable ? "editable" : "neutral",
+  ): HTMLDivElement => {
+    const section = document.createElement("div");
+    section.style.marginBottom = "6px";
+
+    const heading = document.createElement("div");
+    heading.textContent = label;
+    heading.style.fontSize = "10px";
+    heading.style.fontWeight = "700";
+    heading.style.letterSpacing = "0.02em";
+    heading.style.color = tone === "accent" ? "#0f766e" : "#27453d";
     heading.style.marginBottom = "4px";
     section.appendChild(heading);
 
     const body = editable ? document.createElement("textarea") : document.createElement("div");
     body.style.width = "100%";
     body.style.boxSizing = "border-box";
-    body.style.fontSize = "12px";
-    body.style.lineHeight = "1.45";
-    body.style.background = editable ? "#ffffff" : "#f8fafc";
-    body.style.border = "1px solid #e2e8f0";
-    body.style.borderRadius = "10px";
-    body.style.padding = "10px";
-    body.style.color = "#0f172a";
+    body.style.fontSize = editable ? "12.5px" : "11.5px";
+    body.style.lineHeight = "1.5";
+    body.style.background =
+      tone === "accent"
+        ? "linear-gradient(180deg, rgba(220,252,231,0.66) 0%, rgba(255,255,255,0.48) 100%)"
+        : tone === "editable"
+          ? "linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(243,255,248,0.72) 100%)"
+          : "linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(248,250,252,0.48) 100%)";
+    body.style.border =
+      tone === "accent"
+        ? "1px solid rgba(16,185,129,0.18)"
+        : tone === "editable"
+          ? "1px solid rgba(16,185,129,0.22)"
+          : "1px solid rgba(148,163,184,0.20)";
+    body.style.borderRadius = "16px";
+    body.style.padding = editable ? "10px 11px" : "8px 10px";
+    body.style.color = "#06281f";
     body.style.wordBreak = "break-word";
+    body.style.boxShadow =
+      tone === "editable"
+        ? "0 14px 32px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.42)"
+        : "0 8px 20px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.42)";
+    body.style.backdropFilter = "blur(14px)";
+    body.style.setProperty("-webkit-backdrop-filter", "blur(14px)");
 
     if (body instanceof HTMLTextAreaElement) {
       body.value = value;
-      body.rows = 5;
+      body.rows = 2;
       body.style.resize = "vertical";
-      body.style.minHeight = "110px";
+      body.style.minHeight = "62px";
+      body.style.maxHeight = "108px";
+      body.style.outline = "none";
+      body.addEventListener("focus", () => {
+        body.style.border = "1px solid rgba(16,185,129,0.42)";
+        body.style.boxShadow =
+          "0 0 0 3px rgba(16,185,129,0.14), inset 0 1px 0 rgba(255,255,255,0.52)";
+      });
+      body.addEventListener("blur", () => {
+        body.style.border = "1px solid rgba(16,185,129,0.22)";
+        body.style.boxShadow = "0 14px 32px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.42)";
+      });
     } else {
       body.textContent = value;
       body.style.whiteSpace = "pre-wrap";
+      body.style.maxHeight = "58px";
+      body.style.overflowY = "auto";
     }
 
     section.appendChild(body);
@@ -1387,41 +1624,115 @@ function showPreflightModal(
   };
 
   const summary = document.createElement("div");
+  summary.style.marginBottom = "8px";
+  summary.style.padding = "12px 12px 10px";
+  summary.style.borderRadius = "20px";
+  summary.style.border = "1px solid rgba(255,255,255,0.42)";
+  summary.style.background =
+    "linear-gradient(135deg, rgba(18,140,126,0.20) 0%, rgba(255,255,255,0.30) 52%, rgba(37,211,102,0.14) 100%)";
+  summary.style.boxShadow = "0 12px 28px rgba(15,23,42,0.07), inset 0 1px 0 rgba(255,255,255,0.42)";
   summary.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-      <strong>PeacePad Pre-Send Check</strong>
-      <span style="font-size:11px;padding:4px 8px;border-radius:999px;background:${riskTheme.background};color:${riskTheme.text};border:1px solid ${riskTheme.border};font-weight:700;">${riskLabel}</span>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+      <div style="min-width:0;">
+        <div style="font-size:9.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#0f766e;opacity:0.74;">Protected Send Review</div>
+        <strong style="display:block;margin-top:5px;font-size:21px;font-weight:800;line-height:1.02;color:#06281f;">${modalCopy.title}</strong>
+        <div style="margin-top:10px;display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border-radius:999px;background:rgba(255,255,255,0.48);border:1px solid rgba(255,255,255,0.34);font-size:11px;line-height:1.3;color:#134e4a;box-shadow:0 8px 18px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.42);">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:999px;background:#25d366;box-shadow:0 0 0 5px rgba(37,211,102,0.12);"></span>
+          <span style="color:#06281f;">Pause recommended before sending</span>
+        </div>
+      </div>
+      <span style="font-size:8.5px;padding:4px 8px;border-radius:999px;background:rgba(248,113,113,0.08);color:#d96a6a;border:1px solid rgba(248,113,113,0.18);font-weight:700;letter-spacing:0.04em;box-shadow:inset 0 1px 0 rgba(255,255,255,0.42);">${riskLabel}</span>
     </div>
-    <p style="margin:8px 0 4px 0;font-size:12px;line-height:1.4;">
-      Recommendation: <strong>${preflight.recommendation.replace(/_/g, " ")}</strong>
-    </p>
-    <p style="margin:0 0 10px 0;font-size:12px;line-height:1.4;">
-      Conflict score: <strong>${preflight.conflict_score}</strong>
-    </p>
   `;
   wrapper.appendChild(summary);
 
-  wrapper.appendChild(createSection("Original message", originalDraft));
+  wrapper.appendChild(createCompactPreviewSection(modalCopy.originalLabel, originalDraft, "neutral"));
 
   if (preflight.calm_version) {
-    wrapper.appendChild(createSection("Suggested calmer version", preflight.calm_version));
+    wrapper.appendChild(createCompactPreviewSection(modalCopy.suggestedLabel, preflight.calm_version, "accent"));
   }
 
-  const finalMessageSection = createSection("Final message to send", suggestionText, true);
+  const finalMessageSection = createSection(modalCopy.editableLabel, suggestionText, true, "editable");
   const finalMessageInput = finalMessageSection.querySelector("textarea") as HTMLTextAreaElement;
   wrapper.appendChild(finalMessageSection);
 
   const explanation = getPreflightExplanation(preflight);
-  if (explanation.flaggedFor.length > 0 || explanation.saferBecause.length > 0) {
+  if (explanation.flaggedFor.length > 0 || explanation.saferBecause.length > 0 || modalCopy.helperNote) {
+    const detailsWrap = document.createElement("div");
+    detailsWrap.style.margin = "2px 0 8px 0";
+
+    const detailsToggle = document.createElement("button");
+    detailsToggle.type = "button";
+    detailsToggle.style.width = "100%";
+    detailsToggle.style.display = "flex";
+    detailsToggle.style.alignItems = "center";
+    detailsToggle.style.justifyContent = "space-between";
+    detailsToggle.style.gap = "10px";
+    detailsToggle.style.padding = "9px 11px";
+    detailsToggle.style.borderRadius = "16px";
+    detailsToggle.style.border = "1px solid rgba(255,255,255,0.40)";
+    detailsToggle.style.background =
+      "linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(240,255,247,0.38) 100%)";
+    detailsToggle.style.color = "#0f766e";
+    detailsToggle.style.fontSize = "11px";
+    detailsToggle.style.fontWeight = "700";
+    detailsToggle.style.cursor = "pointer";
+    detailsToggle.style.boxShadow = "0 8px 18px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.36)";
+    detailsToggle.setAttribute("aria-expanded", "false");
+
+    const detailsLabel = document.createElement("span");
+    detailsLabel.textContent = "Why this was flagged";
+    detailsToggle.appendChild(detailsLabel);
+
+    const detailsChevron = document.createElement("span");
+    detailsChevron.textContent = "▼";
+    detailsChevron.style.fontSize = "10px";
+    detailsChevron.style.fontWeight = "700";
+    detailsChevron.style.color = "#4b635c";
+    detailsChevron.style.transition = "transform 150ms ease";
+    detailsToggle.appendChild(detailsChevron);
+
+    const detailsPanel = document.createElement("div");
+    detailsPanel.style.maxHeight = "0px";
+    detailsPanel.style.opacity = "0";
+    detailsPanel.style.overflow = "hidden";
+    detailsPanel.style.marginTop = "0";
+    detailsPanel.style.transform = "translateY(-4px)";
+    detailsPanel.style.transition = "max-height 150ms ease, opacity 150ms ease, transform 150ms ease, margin-top 150ms ease";
+
+    let detailsExpanded = false;
+    const setDetailsExpanded = (open: boolean): void => {
+      detailsExpanded = open;
+      detailsToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      detailsChevron.textContent = open ? "▲" : "▼";
+      if (open) {
+        detailsPanel.style.maxHeight = `${detailsPanel.scrollHeight + 8}px`;
+        detailsPanel.style.opacity = "1";
+        detailsPanel.style.transform = "translateY(0)";
+        detailsPanel.style.marginTop = "7px";
+      } else {
+        detailsPanel.style.maxHeight = "0px";
+        detailsPanel.style.opacity = "0";
+        detailsPanel.style.transform = "translateY(-4px)";
+        detailsPanel.style.marginTop = "0";
+      }
+    };
+
+    detailsToggle.addEventListener("click", () => {
+      setDetailsExpanded(!detailsExpanded);
+    });
+
     const explanationCard = document.createElement("div");
-    explanationCard.style.margin = "0 0 12px 0";
-    explanationCard.style.padding = "10px 12px";
-    explanationCard.style.borderRadius = "12px";
-    explanationCard.style.border = "1px solid #dbe7f5";
-    explanationCard.style.background = "linear-gradient(180deg, #f8fbff 0%, #f8fafc 100%)";
+    explanationCard.style.margin = "0";
+    explanationCard.style.padding = "8px 9px";
+    explanationCard.style.borderRadius = "18px";
+    explanationCard.style.border = "1px solid rgba(255,255,255,0.38)";
+    explanationCard.style.background =
+      "linear-gradient(180deg, rgba(255,255,255,0.46) 0%, rgba(240,255,247,0.40) 100%)";
     explanationCard.style.display = "flex";
     explanationCard.style.flexDirection = "column";
-    explanationCard.style.gap = "8px";
+    explanationCard.style.gap = "5px";
+    explanationCard.style.boxShadow = "0 8px 18px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.36)";
 
     const createExplanationRow = (
       label: string,
@@ -1431,15 +1742,15 @@ function showPreflightModal(
       const row = document.createElement("div");
       row.style.display = "flex";
       row.style.alignItems = "flex-start";
-      row.style.gap = "8px";
+      row.style.gap = "6px";
       row.style.flexWrap = "wrap";
 
       const title = document.createElement("span");
       title.textContent = `${label}:`;
-      title.style.fontSize = "11px";
+      title.style.fontSize = "10px";
       title.style.fontWeight = "700";
       title.style.color = tone === "flagged" ? "#7f1d1d" : "#065f46";
-      title.style.minWidth = "84px";
+      title.style.minWidth = "66px";
       row.appendChild(title);
 
       const chips = document.createElement("div");
@@ -1453,13 +1764,13 @@ function showPreflightModal(
         chip.textContent = value;
         chip.style.display = "inline-flex";
         chip.style.alignItems = "center";
-        chip.style.padding = "4px 8px";
+        chip.style.padding = "3px 8px";
         chip.style.borderRadius = "999px";
-        chip.style.fontSize = "11px";
+        chip.style.fontSize = "10px";
         chip.style.fontWeight = "600";
         chip.style.lineHeight = "1.2";
-        chip.style.border = tone === "flagged" ? "1px solid #fecaca" : "1px solid #bbf7d0";
-        chip.style.background = tone === "flagged" ? "#fff1f2" : "#ecfdf5";
+        chip.style.border = tone === "flagged" ? "1px solid rgba(248,113,113,0.26)" : "1px solid rgba(74,222,128,0.24)";
+        chip.style.background = tone === "flagged" ? "rgba(255,241,242,0.82)" : "rgba(236,253,245,0.82)";
         chip.style.color = tone === "flagged" ? "#b91c1c" : "#047857";
         chips.appendChild(chip);
       }
@@ -1469,66 +1780,81 @@ function showPreflightModal(
     };
 
     if (explanation.flaggedFor.length > 0) {
-      explanationCard.appendChild(createExplanationRow("Flagged for", explanation.flaggedFor, "flagged"));
+      explanationCard.appendChild(createExplanationRow(modalCopy.flaggedLabel, explanation.flaggedFor, "flagged"));
     }
 
     if (explanation.saferBecause.length > 0) {
-      explanationCard.appendChild(createExplanationRow("Safer because", explanation.saferBecause, "safer"));
+      explanationCard.appendChild(createExplanationRow(modalCopy.saferLabel, explanation.saferBecause, "safer"));
     }
 
-    wrapper.appendChild(explanationCard);
+    detailsPanel.appendChild(explanationCard);
+
+    const reviewNote = document.createElement("p");
+    reviewNote.style.margin = "6px 2px 0 2px";
+    reviewNote.style.padding = "0";
+    reviewNote.style.fontSize = "10.5px";
+    reviewNote.style.lineHeight = "1.35";
+    reviewNote.style.color = "#4b635c";
+    reviewNote.textContent = modalCopy.helperNote;
+    detailsPanel.appendChild(reviewNote);
+
+    detailsWrap.appendChild(detailsToggle);
+    detailsWrap.appendChild(detailsPanel);
+    wrapper.appendChild(detailsWrap);
   }
-
-  const reviewNote = document.createElement("p");
-  reviewNote.style.margin = "0 0 12px 0";
-  reviewNote.style.fontSize = "11px";
-  reviewNote.style.color = "#475569";
-  reviewNote.textContent = getReviewNote(currentSite);
-  wrapper.appendChild(reviewNote);
-
-  const selectionRow = document.createElement("div");
-  selectionRow.style.display = "flex";
-  selectionRow.style.flexWrap = "wrap";
-  selectionRow.style.gap = "8px";
-  selectionRow.style.marginBottom = "12px";
-
-  const syncFinalMessage = (nextValue: string, selection: string): void => {
-    finalMessageInput.value = nextValue;
-    log("approved text selected", {
-      site: currentSite,
-      source: "manual_after_apply",
-      selection,
-      chars: nextValue.length,
-      sameAsOriginal: normalizeDraft(nextValue) === originalNormalized,
-      sameAsSuggestion: normalizeDraft(nextValue) === suggestionNormalized,
-    });
-    finalMessageInput.focus();
-    finalMessageInput.setSelectionRange(finalMessageInput.value.length, finalMessageInput.value.length);
-  };
-
-  const keepOriginal = makeButton("Keep Original", "#ffffff", "#0f172a", () => {
-    syncFinalMessage(originalDraft, "original");
-  });
-  keepOriginal.style.border = "1px solid #cbd5e1";
-  selectionRow.appendChild(keepOriginal);
-
-  if (preflight.calm_version) {
-    const acceptSuggestion = makeButton("Accept Suggestion", "#eff6ff", "#1d4ed8", () => {
-      syncFinalMessage(preflight.calm_version as string, "suggestion");
-    });
-    acceptSuggestion.style.border = "1px solid #bfdbfe";
-    selectionRow.appendChild(acceptSuggestion);
-  }
-
-  wrapper.appendChild(selectionRow);
 
   const buttonRow = document.createElement("div");
   buttonRow.style.display = "grid";
   buttonRow.style.gridTemplateColumns = "1fr 1fr";
-  buttonRow.style.gap = "8px";
+  buttonRow.style.gap = "7px";
+  buttonRow.style.marginTop = "1px";
 
-  const sendApproved = makeButton(getApprovedActionLabel(currentSite), "#1d4ed8", "#ffffff", () => {
+  let approvalInFlight = false;
+  let sendOriginal: HTMLButtonElement;
+  let cancel: HTMLButtonElement;
+  const approvedActionLabel = getApprovedActionLabel(currentSite);
+
+  const setModalInteractionEnabled = (enabled: boolean): void => {
+    finalMessageInput.readOnly = !enabled;
+    const controls = [sendApproved, sendOriginal, cancel].filter(Boolean);
+    for (const control of controls) {
+      control.disabled = !enabled;
+      control.style.pointerEvents = enabled ? "auto" : "none";
+      control.style.opacity = enabled ? "1" : "0.82";
+    }
+  };
+
+  const playSuggestionAcceptedAnimation = async (): Promise<void> => {
+    sendApproved.style.transform = "translateY(0) scale(0.99)";
+    sendApproved.style.boxShadow = sendApproved.dataset.pressShadow || "0 7px 16px rgba(18,140,126,0.20)";
+    await waitFor(120);
+    sendApproved.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;"><span>Inserted</span><span data-guardian-check style="display:inline-block;opacity:0;transform:scale(0.8);transition:opacity 100ms ease, transform 100ms ease;">✓</span></span>';
+    const check = sendApproved.querySelector("[data-guardian-check]") as HTMLElement | null;
+    if (check) {
+      window.requestAnimationFrame(() => {
+        check.style.opacity = "1";
+        check.style.transform = "scale(1)";
+      });
+    }
+    await waitFor(100);
+  };
+
+  const resetSuggestionActionState = (): void => {
+    sendApproved.innerHTML = approvedActionLabel;
+    sendApproved.style.transform = "translateY(0)";
+    sendApproved.style.boxShadow = sendApproved.dataset.restShadow || "0 12px 24px rgba(18,140,126,0.20)";
+  };
+
+  const sendApproved = makeButton(
+    approvedActionLabel,
+    "linear-gradient(135deg, #169b74 0%, #24c86b 100%)",
+    "#ffffff",
+    () => {
     void (async () => {
+      if (approvalInFlight) {
+        return;
+      }
+
       const approvedText = finalMessageInput.value.trim();
       if (!approvedText) {
         showToastThrottled("Add the final message you want to send first.");
@@ -1536,59 +1862,40 @@ function showPreflightModal(
         return;
       }
 
-      log("approved send attempted", {
+      approvalInFlight = true;
+      setModalInteractionEnabled(false);
+
+      log("suggestion accepted", {
         site: currentSite,
         source: "manual_after_apply",
         chars: approvedText.length,
-        mode: currentSite === "whatsapp" ? "whatsapp_guarded_handoff" : "direct_then_fallback",
         sameAsOriginal: normalizeDraft(approvedText) === originalNormalized,
         sameAsSuggestion: normalizeDraft(approvedText) === suggestionNormalized,
       });
 
-      if (currentSite === "whatsapp") {
-        const copied = await copyTextToClipboard(approvedText);
-        if (!copied) {
-          log("approved send fallback", {
-            site: currentSite,
-            source: "manual_after_apply",
-            action: "approved_send",
-            fallback: "clipboard_copy_failed",
-            success: false,
-            reason: "whatsapp_guarded_handoff",
-          });
-          showToastThrottled("Could not copy the approved message. Review it in the modal and try again.");
-          finalMessageInput.focus();
-          return;
-        }
+      log("approved send attempted", {
+        site: currentSite,
+        source: "manual_after_apply",
+        chars: approvedText.length,
+        mode: currentSite === "whatsapp" ? "whatsapp_direct_replace" : "direct_then_fallback",
+        sameAsOriginal: normalizeDraft(approvedText) === originalNormalized,
+        sameAsSuggestion: normalizeDraft(approvedText) === suggestionNormalized,
+      });
 
-        closeModal();
-        armWhatsappApprovedHandoff(composer, preflight, draftFingerprint, originalDraft, approvedText);
-        const prepareResult = prepareWhatsappComposerForPaste(composer, "manual_after_apply", "approved_action");
-        log("approved send result", {
-          site: currentSite,
-          source: "manual_after_apply",
-          success: true,
-          path: "guarded_handoff_copy",
-          mode: "whatsapp_guarded_handoff",
-          prepareMethod: prepareResult.method,
-          selected: prepareResult.selected,
-        });
-        showToastThrottled(
-          prepareResult.selected
-            ? "Approved message copied. Press Ctrl+V to replace."
-            : "Approved message copied. Composer focused. Press Ctrl+V to replace.",
-        );
-        return;
-      }
-
+      log("replacement attempted", {
+        site: currentSite,
+        source: "manual_after_apply",
+        chars: approvedText.length,
+        mode: currentSite === "whatsapp" ? "automatic_replace" : "review_surface",
+      });
       log("composer replacement start", {
         site: currentSite,
         source: "manual_after_apply",
         action: "approved_send",
         chars: approvedText.length,
-        mode: "review_surface",
+        mode: currentSite === "whatsapp" ? "automatic_replace" : "review_surface",
       });
-      const replacement = replaceComposerText(currentSite, composer, approvedText);
+      const replacement = await replaceComposerText(currentSite, composer, approvedText);
 
       if (!replacement.success) {
         log("replacement verification failed", {
@@ -1596,11 +1903,80 @@ function showPreflightModal(
           source: "manual_after_apply",
           action: "approved_send",
           expected: approvedText,
-          actual: replacement.actualText,
+          actual: replacement.settledText || replacement.actualText,
           method: replacement.method,
+          settledText: replacement.settledText,
+          reacquired: replacement.reacquired,
         });
 
+        if (currentSite === "whatsapp") {
+          const copied = await copyTextToClipboard(approvedText);
+          log("replacement fallback used", {
+            site: currentSite,
+            source: "manual_after_apply",
+            method: replacement.method,
+            fallback: copied ? "guarded_handoff_copy" : "clipboard_copy_failed",
+            success: copied,
+          });
+          log("approved send fallback", {
+            site: currentSite,
+            source: "manual_after_apply",
+            action: "approved_send",
+            method: replacement.method,
+            fallback: copied ? "guarded_handoff_copy" : "clipboard_copy_failed",
+            success: copied,
+          });
+
+          if (!copied) {
+            approvalInFlight = false;
+            setModalInteractionEnabled(true);
+            resetSuggestionActionState();
+            showToastThrottled("Could not replace or copy the suggestion. Review it and try again.");
+            finalMessageInput.focus();
+            return;
+          }
+
+          const liveComposer = ("isConnected" in composer && typeof composer.isConnected === "boolean" && !composer.isConnected)
+            ? (resolveActiveComposer(currentSite) || composer)
+            : composer;
+          const fallbackBlockedText = getComposerText(liveComposer).trim() || originalDraft;
+          const fallbackBlockedFingerprint = fingerprint(fallbackBlockedText) || draftFingerprint;
+          closeModal();
+          armWhatsappApprovedHandoff(
+            liveComposer,
+            preflight,
+            fallbackBlockedFingerprint,
+            fallbackBlockedText,
+            approvedText,
+          );
+          const prepareResult = prepareWhatsappComposerForPaste(liveComposer, "manual_after_apply", "approved_action");
+          log("approved send result", {
+            site: currentSite,
+            source: "manual_after_apply",
+            success: true,
+            path: "guarded_handoff_fallback",
+            mode: "whatsapp_direct_replace",
+            prepareMethod: prepareResult.method,
+            selected: prepareResult.selected,
+            settledText: replacement.settledText,
+            reacquired: replacement.reacquired,
+          });
+          showToastThrottled(
+            prepareResult.selected
+              ? "Automatic replace unavailable. Suggestion copied. Press Ctrl+V to replace."
+              : "Automatic replace unavailable. Suggestion copied. Composer focused. Press Ctrl+V to replace.",
+          );
+          return;
+        }
+
         const copied = await copyTextToClipboard(approvedText);
+        log("replacement fallback used", {
+          site: currentSite,
+          source: "manual_after_apply",
+          method: replacement.method,
+          fallback: copied ? "clipboard_copy" : "clipboard_copy_failed",
+          success: copied,
+        });
         log("approved send fallback", {
           site: currentSite,
           source: "manual_after_apply",
@@ -1611,6 +1987,9 @@ function showPreflightModal(
         });
 
         if (!copied) {
+          approvalInFlight = false;
+          setModalInteractionEnabled(true);
+          resetSuggestionActionState();
           showToastThrottled("Could not safely send or copy the approved message. Review it in the modal and try again.");
           finalMessageInput.focus();
           return;
@@ -1624,17 +2003,56 @@ function showPreflightModal(
         return;
       }
 
+      log("replacement succeeded", {
+        site: currentSite,
+        source: "manual_after_apply",
+        actual: replacement.settledText || replacement.actualText,
+        method: replacement.method,
+        settledText: replacement.settledText,
+        reacquired: replacement.reacquired,
+      });
       log("replacement verification success", {
         site: currentSite,
         source: "manual_after_apply",
         action: "approved_send",
-        actual: replacement.actualText,
+        actual: replacement.settledText || replacement.actualText,
         method: replacement.method,
+        settledText: replacement.settledText,
+        reacquired: replacement.reacquired,
       });
 
-      lastSafeFingerprint = fingerprint(replacement.actualText);
+      if (currentSite === "whatsapp") {
+        const successfulText = replacement.settledText || replacement.actualText;
+        const liveComposer = ("isConnected" in composer && typeof composer.isConnected === "boolean" && !composer.isConnected)
+          ? (resolveActiveComposer(currentSite) || composer)
+          : composer;
+        lastSafeFingerprint = fingerprint(successfulText);
+        lastAnalyzedFingerprint = lastSafeFingerprint;
+        lastDismissedFingerprint = "";
+        sendOriginalLoopSuppression = null;
+        suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
+        log("approved send result", {
+          site: currentSite,
+          source: "manual_after_apply",
+          method: replacement.method,
+          success: true,
+          path: "composer_replace_edit",
+          settledText: successfulText,
+          reacquired: replacement.reacquired,
+        });
+        await playSuggestionAcceptedAnimation();
+        await closeModalWithAnimation();
+        approvalInFlight = false;
+        window.setTimeout(() => {
+          focusComposerForEditing(liveComposer);
+          flashComposerInsertion(liveComposer);
+        }, 0);
+        return;
+      }
+
+      lastSafeFingerprint = fingerprint(replacement.settledText || replacement.actualText);
       lastDismissedFingerprint = "";
-      closeModal();
+      sendOriginalLoopSuppression = null;
       sendReleaseInFlight = true;
       suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
       log("approved send result", {
@@ -1644,15 +2062,31 @@ function showPreflightModal(
         success: true,
         path: "direct_send",
       });
+      await playSuggestionAcceptedAnimation();
+      await closeModalWithAnimation();
+      approvalInFlight = false;
       window.setTimeout(() => {
         releaseSend(composer, currentSite, "approved_message_release", approvedText, 1);
       }, SEND_RELEASE_SETTLE_MS);
     })();
   });
+  applyButtonTheme(sendApproved, {
+    height: "42px",
+    border: "1px solid rgba(255,255,255,0.18)",
+    borderRadius: "16px",
+    fontSize: "13px",
+    fontWeight: "700",
+    background: "linear-gradient(135deg, #149a74 0%, #24c96c 100%)",
+    color: "#ffffff",
+    restShadow: "0 12px 24px rgba(18,140,126,0.20), inset 0 1px 0 rgba(255,255,255,0.18)",
+    hoverShadow: "0 16px 28px rgba(18,140,126,0.24), inset 0 1px 0 rgba(255,255,255,0.22)",
+    pressShadow: "0 7px 16px rgba(18,140,126,0.20), inset 0 1px 0 rgba(255,255,255,0.16)",
+    focusShadow: "0 0 0 3px rgba(37,211,102,0.16), 0 12px 24px rgba(18,140,126,0.20)",
+  });
   sendApproved.style.gridColumn = "1 / span 2";
   buttonRow.appendChild(sendApproved);
 
-  const sendOriginal = makeButton("Send Original", "#ffffff", "#0f172a", () => {
+  sendOriginal = makeButton("Send Original", "rgba(255,255,255,0.72)", "#0b3b2f", () => {
     log("send original clicked", { site: currentSite, source: "manual_after_apply", entry: "modal" });
     if (currentSite === "whatsapp") {
       clearWhatsappApprovedHandoff("explicit_original_release", {
@@ -1661,16 +2095,29 @@ function showPreflightModal(
         entry: "modal",
       });
     }
-    lastDismissedFingerprint = "";
+    armSendOriginalLoopSuppression(draftFingerprint);
+    lastDismissedFingerprint = draftFingerprint;
     closeModal();
     sendReleaseInFlight = true;
     suppressAutoUntil = Date.now() + SUPPRESS_AFTER_SEND_MS;
     releaseSend(composer, currentSite, "send_original_release", originalDraft, 1);
   });
-  sendOriginal.style.border = "1px solid #cbd5e1";
+  applyButtonTheme(sendOriginal, {
+    height: "40px",
+    border: "1px solid rgba(255,255,255,0.44)",
+    borderRadius: "16px",
+    fontSize: "12.5px",
+    fontWeight: "600",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(242,255,248,0.64) 100%)",
+    color: "#0b3b2f",
+    restShadow: "0 10px 22px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.30)",
+    hoverShadow: "0 14px 24px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.32)",
+    pressShadow: "0 6px 14px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.28)",
+    focusShadow: "0 0 0 3px rgba(16,185,129,0.12), 0 10px 22px rgba(15,23,42,0.10)",
+  });
   buttonRow.appendChild(sendOriginal);
 
-  const cancel = makeButton("Cancel", "#ffffff", "#0f172a", () => {
+  cancel = makeButton("Cancel", "rgba(255,255,255,0.72)", "#334155", () => {
     log("cancel clicked", { site: currentSite, source: "manual_after_apply" });
     const activeHandoff = getWhatsappApprovedHandoffForComposer(currentSite, composer);
     if (activeHandoff && activeHandoff.blockedOriginalFingerprint === draftFingerprint) {
@@ -1686,11 +2133,96 @@ function showPreflightModal(
     sendReleaseInFlight = false;
     focusComposer();
   });
-  cancel.style.border = "1px solid #cbd5e1";
+  applyButtonTheme(cancel, {
+    height: "40px",
+    border: "1px solid rgba(255,255,255,0.44)",
+    borderRadius: "16px",
+    fontSize: "12.5px",
+    fontWeight: "600",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(248,250,252,0.60) 100%)",
+    color: "#334155",
+    restShadow: "0 10px 22px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.28)",
+    hoverShadow: "0 14px 24px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.30)",
+    pressShadow: "0 6px 14px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.26)",
+    focusShadow: "0 0 0 3px rgba(148,163,184,0.14), 0 10px 22px rgba(15,23,42,0.08)",
+  });
   buttonRow.appendChild(cancel);
 
   wrapper.appendChild(buttonRow);
-  document.body.appendChild(wrapper);
+
+  const reassurance = document.createElement("p");
+  reassurance.textContent = "You remain in control of the final message.";
+  reassurance.style.margin = "7px 2px 1px";
+  reassurance.style.fontSize = "10px";
+  reassurance.style.lineHeight = "1.35";
+  reassurance.style.textAlign = "center";
+  reassurance.style.color = "#55756d";
+  wrapper.appendChild(reassurance);
+  modalRoot.appendChild(wrapper);
+  modalRoot.addEventListener("click", (event) => {
+    if (event.target !== modalRoot) {
+      return;
+    }
+    lastDismissedFingerprint = draftFingerprint;
+    closeModal();
+    sendReleaseInFlight = false;
+    focusComposer();
+  });
+  document.body.appendChild(modalRoot);
+  window.requestAnimationFrame(() => {
+    modalRoot.style.opacity = "1";
+    wrapper.style.opacity = "1";
+    wrapper.style.transform = "translateY(0) scale(1)";
+  });
+
+  modalRoot.addEventListener("keydown", (event) => {
+    if (approvalInFlight) {
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancel.click();
+      return;
+    }
+
+    if (
+      event.key === "Enter"
+      && event.target !== finalMessageInput
+      && !event.altKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && !event.shiftKey
+    ) {
+      event.preventDefault();
+      sendApproved.click();
+      return;
+    }
+
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const focusableElements = Array.from(
+      wrapper.querySelectorAll<HTMLElement>("button:not([disabled]), textarea:not([disabled])"),
+    ).filter((element) => {
+      const computed = window.getComputedStyle(element);
+      return computed.display !== "none" && computed.visibility !== "hidden";
+    });
+
+    if (!focusableElements.length) {
+      return;
+    }
+
+    const currentIndex = focusableElements.indexOf(document.activeElement as HTMLElement);
+    const nextIndex = event.shiftKey
+      ? (currentIndex <= 0 ? focusableElements.length - 1 : currentIndex - 1)
+      : (currentIndex === -1 || currentIndex === focusableElements.length - 1 ? 0 : currentIndex + 1);
+
+    event.preventDefault();
+    focusableElements[nextIndex]?.focus();
+  });
 
   const initialApprovedNormalized = initialApprovedText ? normalizeDraft(initialApprovedText) : "";
   const initialFinalNormalized = normalizeDraft(finalMessageInput.value);
@@ -1730,29 +2262,35 @@ function makeButton(label: string, background: string, color: string, onClick: (
   button.style.background = background;
   button.style.color = color;
   button.style.boxShadow = "0 1px 2px rgba(15, 23, 42, 0.10)";
+  button.dataset.restShadow = "0 1px 2px rgba(15, 23, 42, 0.10)";
+  button.dataset.hoverShadow = "0 10px 22px rgba(15, 23, 42, 0.18)";
+  button.dataset.pressShadow = "0 4px 10px rgba(15, 23, 42, 0.16)";
+  button.dataset.focusShadow =
+    "0 0 0 3px rgba(59, 130, 246, 0.20), 0 8px 18px rgba(15, 23, 42, 0.14)";
   button.style.transition =
     "transform 120ms ease, box-shadow 140ms ease, border-color 140ms ease, background-color 140ms ease, filter 140ms ease";
   button.style.outline = "none";
   button.addEventListener("mouseenter", () => {
     button.style.transform = "translateY(-1px)";
-    button.style.boxShadow = "0 10px 22px rgba(15, 23, 42, 0.18)";
+    button.style.boxShadow = button.dataset.hoverShadow || "0 10px 22px rgba(15, 23, 42, 0.18)";
     button.style.filter = background === "#ffffff" ? "brightness(0.99)" : "brightness(1.03)";
   });
   button.addEventListener("mouseleave", () => {
     button.style.transform = "translateY(0)";
-    button.style.boxShadow = "0 1px 2px rgba(15, 23, 42, 0.10)";
+    button.style.boxShadow = button.dataset.restShadow || "0 1px 2px rgba(15, 23, 42, 0.10)";
     button.style.filter = "none";
   });
   button.addEventListener("mousedown", () => {
     button.style.transform = "translateY(0)";
-    button.style.boxShadow = "0 4px 10px rgba(15, 23, 42, 0.16)";
+    button.style.boxShadow = button.dataset.pressShadow || "0 4px 10px rgba(15, 23, 42, 0.16)";
   });
   button.addEventListener("focus", () => {
-    button.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.20), 0 8px 18px rgba(15, 23, 42, 0.14)";
+    button.style.boxShadow =
+      button.dataset.focusShadow || "0 0 0 3px rgba(59, 130, 246, 0.20), 0 8px 18px rgba(15, 23, 42, 0.14)";
   });
   button.addEventListener("blur", () => {
     button.style.transform = "translateY(0)";
-    button.style.boxShadow = "0 1px 2px rgba(15, 23, 42, 0.10)";
+    button.style.boxShadow = button.dataset.restShadow || "0 1px 2px rgba(15, 23, 42, 0.10)";
     button.style.filter = "none";
   });
   button.addEventListener("click", onClick);
@@ -1796,13 +2334,13 @@ function isComposerBlockedByModal(composer: HTMLElement, draftFingerprint?: stri
   return activeModal.fingerprint === draftFingerprint;
 }
 
-function releaseSend(
+async function releaseSend(
   composer: HTMLElement,
   currentSite: SupportedSite,
   reason: string,
   expectedText?: string,
   attemptsRemaining = 1,
-): void {
+): Promise<void> {
   if (expectedText) {
     const currentText = getComposerText(composer).trim();
     if (normalizeDraft(currentText) !== normalizeDraft(expectedText)) {
@@ -1814,16 +2352,18 @@ function releaseSend(
           expected: expectedText,
           actual: currentText,
         });
-        const retryResult = replaceComposerText(currentSite, composer, expectedText);
+        const retryResult = await replaceComposerText(currentSite, composer, expectedText);
         log("composer replacement retry", {
           site: currentSite,
           reason,
           success: retryResult.success,
           method: retryResult.method,
-          actual: retryResult.actualText,
+          actual: retryResult.settledText || retryResult.actualText,
+          settledText: retryResult.settledText,
+          reacquired: retryResult.reacquired,
         });
         window.setTimeout(() => {
-          releaseSend(composer, currentSite, reason, expectedText, attemptsRemaining - 1);
+          void releaseSend(composer, currentSite, reason, expectedText, attemptsRemaining - 1);
         }, SEND_RELEASE_SETTLE_MS);
         return;
       }
@@ -1924,14 +2464,17 @@ function log(message: string, data?: Record<string, unknown>): void {
     "content script already active": "content_loaded",
     "draft detected": "draft_detected",
     "background check skipped": "background_check_scheduled",
+    "draft intercepted": "send_gate_intercepted",
     "send gate intercepted": "send_gate_intercepted",
     "send blocked while modal is unresolved": "send_blocked_modal_open",
     "preflight request sent": "preflight_requested",
     "local preflight result received": "preflight_result_local",
     "api preflight result received": "preflight_result_api",
     "intervention decision returned": "intervention_decision",
+    "trigger matched": "trigger_matched",
     "showing intervention modal": "modal_opened",
     "apply suggested clicked": "apply_suggested_clicked",
+    "suggestion accepted": "suggestion_accepted",
     "approved text selected": "approved_text_selected",
     "approved send attempted": "approved_send_attempted",
     "approved send result": "approved_send_result",
@@ -1949,9 +2492,12 @@ function log(message: string, data?: Record<string, unknown>): void {
     "final send allowed": "approved_handoff_send_allowed",
     "approved handoff cleared": "approved_handoff_cleared",
     "composer replacement start": "composer_replace_started",
+    "replacement attempted": "replacement_attempted",
     "composer replacement retry": "composer_replace_retry",
     "replacement verification success": "composer_replace_verified",
+    "replacement succeeded": "replacement_succeeded",
     "replacement verification failed": "composer_replace_failed",
+    "replacement fallback used": "replacement_fallback_used",
     "manual send after apply detected": "manual_send_after_apply_detected",
     "send original clicked": "send_original_clicked",
     "cancel clicked": "cancel_clicked",
@@ -2007,6 +2553,36 @@ function fingerprint(text: string): string {
   return normalizeDraft(text).slice(0, 600);
 }
 
+function armSendOriginalLoopSuppression(draftFingerprint: string): void {
+  if (!draftFingerprint) {
+    sendOriginalLoopSuppression = null;
+    return;
+  }
+
+  sendOriginalLoopSuppression = {
+    fingerprint: draftFingerprint,
+    until: Date.now() + SEND_ORIGINAL_LOOP_SUPPRESSION_MS,
+  };
+}
+
+function clearSendOriginalLoopSuppressionIfChanged(draftFingerprint: string): void {
+  if (!sendOriginalLoopSuppression) {
+    return;
+  }
+
+  if (!shouldSuppressSendOriginalLoop(draftFingerprint, sendOriginalLoopSuppression)) {
+    sendOriginalLoopSuppression = null;
+  }
+}
+
+function shouldBypassSendOriginalLoop(draftFingerprint: string): boolean {
+  const bypass = shouldSuppressSendOriginalLoop(draftFingerprint, sendOriginalLoopSuppression);
+  if (!bypass) {
+    clearSendOriginalLoopSuppressionIfChanged(draftFingerprint);
+  }
+  return bypass;
+}
+
 function hasMaterialChange(current: string, previous: string): boolean {
   if (!previous) return true;
   if (current === previous) return false;
@@ -2029,6 +2605,7 @@ function hasMaterialChange(current: string, previous: string): boolean {
   const overlapRatio = overlap / denominator;
   return overlapRatio < 0.9;
 }
+
 
 
 

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { evaluateLocalPreflight } from "../src/localRules";
+import { evaluateLocalPreflight, LOCAL_RULESET_ENTRY_COUNT } from "../src/localRules";
 
 describe("local preflight rules", () => {
+  it("keeps the active local ruleset above the demo target size", () => {
+    expect(LOCAL_RULESET_ENTRY_COUNT).toBeGreaterThanOrEqual(1000);
+  });
+
   it("classifies a safe logistical message locally", () => {
     const result = evaluateLocalPreflight({ text: "Hey, I am outside." });
 
@@ -54,6 +58,19 @@ describe("local preflight rules", () => {
     expect(result.response.send_policy.requires_acknowledgement).toBe(true);
   });
 
+  it("classifies motherfucker profanity locally as strong", () => {
+    const result = evaluateLocalPreflight({ text: "You motherfucker." });
+
+    expect(result.kind).toBe("resolved");
+    if (result.kind !== "resolved") {
+      return;
+    }
+
+    expect(result.classification).toBe("strong");
+    expect(result.response.signals.some((signal) => signal.code === "hostile_language")).toBe(true);
+    expect(result.response.moderation_flags).toContain("profanity");
+  });
+
   it("classifies child-directed attack locally as strong", () => {
     const result = evaluateLocalPreflight({ text: "You never care about the kids." });
 
@@ -76,6 +93,19 @@ describe("local preflight rules", () => {
 
     expect(result.classification).toBe("strong");
     expect(result.response.risk_level === "high" || result.response.risk_level === "critical").toBe(true);
+  });
+
+  it("detects phrase-based escalation locally", () => {
+    const result = evaluateLocalPreflight({ text: "If you do this again I'll take you to court." });
+
+    expect(result.kind).toBe("resolved");
+    if (result.kind !== "resolved") {
+      return;
+    }
+
+    expect(result.classification).toBe("strong");
+    expect(result.response.signals.some((signal) => signal.code === "legal_escalation")).toBe(true);
+    expect(result.response.recommendation).toBe("pause_before_send");
   });
 
   it("marks child expense disputes as ambiguous for api fallback", () => {

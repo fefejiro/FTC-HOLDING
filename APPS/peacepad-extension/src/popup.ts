@@ -88,7 +88,7 @@ async function bootstrap(): Promise<void> {
       autoAvailable
         ? Boolean(settings.autoBySite[site])
           ? ensureResult?.ok
-            ? "Monitoring is ON. This tab is ready. WhatsApp uses Apply Suggested for safe draft review before sending."
+            ? "Monitoring is ON. This tab is ready. WhatsApp uses Use Suggestion for safe draft review before sending."
             : "Monitoring is ON, but this tab may need a refresh if logs do not appear."
           : "Monitoring is OFF. Turn it on below for WhatsApp testing."
         : "Auto-check unavailable on this page.",

@@ -9,6 +9,8 @@ export interface AdapterConfig {
 export interface ComposerReplacementResult {
   success: boolean;
   actualText: string;
+  settledText: string;
+  reacquired: boolean;
   method: "input_value" | "dom_replace" | "range_insert" | "exec_command" | "text_content";
 }
 
@@ -148,11 +150,24 @@ function createInputLikeEvent(
   });
 }
 
+function createPlainInputEvent(): Event {
+  return new Event("input", {
+    bubbles: true,
+    cancelable: false,
+  });
+}
+
 function normalizeComposerText(text: string): string {
   return text
     .replace(/\u00a0/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function waitForComposerSettle(delayMs = 45): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, delayMs);
+  });
 }
 
 function selectNodeContents(element: HTMLElement): Selection | null {
@@ -181,75 +196,150 @@ function collapseSelectionToEnd(element: HTMLElement): void {
   selection.addRange(range);
 }
 
-function replaceContentWithDomReset(element: HTMLElement, value: string): ComposerReplacementResult {
-  const doc = element.ownerDocument;
-  if (typeof (element as HTMLElement & { replaceChildren?: (...nodes: Node[]) => void }).replaceChildren === "function") {
-    (element as HTMLElement & { replaceChildren: (...nodes: Node[]) => void }).replaceChildren(doc.createTextNode(value));
-  } else {
-    while (element.firstChild) {
-      element.removeChild(element.firstChild);
-    }
-    element.appendChild(doc.createTextNode(value));
+export function focusComposerForEditing(element: HTMLElement): void {
+  element.focus();
+
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    const end = element.value.length;
+    element.setSelectionRange(end, end);
+    return;
   }
 
   collapseSelectionToEnd(element);
-  element.dispatchEvent(createInputLikeEvent("input", value, false));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
+}
 
-  const actualText = getComposerText(element);
+function isConnectedComposer(element: HTMLElement): boolean {
+  if ("isConnected" in element && typeof element.isConnected === "boolean") {
+    return element.isConnected;
+  }
+
+  return true;
+}
+
+function resolveLiveComposer(
+  site: SupportedSite,
+  element: HTMLElement,
+): { composer: HTMLElement; reacquired: boolean } {
+  if (site !== "whatsapp" || isConnectedComposer(element)) {
+    return {
+      composer: element,
+      reacquired: false,
+    };
+  }
+
+  const resolved = resolveActiveComposer(site);
+  if (resolved) {
+    return {
+      composer: resolved,
+      reacquired: true,
+    };
+  }
+
   return {
-    success: normalizeComposerText(actualText) === normalizeComposerText(value),
-    actualText,
-    method: "dom_replace",
+    composer: element,
+    reacquired: false,
   };
 }
 
-function replaceContentEditableText(site: SupportedSite, element: HTMLElement, value: string): ComposerReplacementResult {
+function selectAllForReplacement(element: HTMLElement): void {
   element.focus();
-  element.dispatchEvent(createInputLikeEvent("beforeinput", value, true));
 
-  if (site === "whatsapp") {
-    return replaceContentWithDomReset(element, value);
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    element.setSelectionRange(0, element.value.length);
+    return;
   }
 
-  let method: ComposerReplacementResult["method"] = "range_insert";
-  let actualText = getComposerText(element);
+  selectNodeContents(element);
+}
+
+function dispatchComposerChangeEvents(
+  site: SupportedSite,
+  element: HTMLElement,
+  value: string,
+  method: ComposerReplacementResult["method"],
+): void {
+  const inputEvent = site === "whatsapp" && method === "range_insert"
+    ? createPlainInputEvent()
+    : createInputLikeEvent("input", value, false);
+
+  element.dispatchEvent(inputEvent);
+  element.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+async function finalizeReplacementAttempt(
+  site: SupportedSite,
+  element: HTMLElement,
+  method: ComposerReplacementResult["method"],
+  value: string,
+): Promise<ComposerReplacementResult> {
+  const actualText = getComposerText(element);
+
+  await waitForComposerSettle();
+  const { composer: settledComposer, reacquired } = resolveLiveComposer(site, element);
+  const settledText = getComposerText(settledComposer);
+  const success = normalizeComposerText(settledText) === normalizeComposerText(value);
+
+  if (success) {
+    focusComposerForEditing(settledComposer);
+  }
+
+  return {
+    success,
+    actualText,
+    settledText,
+    reacquired,
+    method,
+  };
+}
+
+async function attemptExecCommandReplacement(
+  site: SupportedSite,
+  element: HTMLElement,
+  value: string,
+): Promise<ComposerReplacementResult | null> {
   const doc = element.ownerDocument as Document & {
     execCommand?: (commandId: string, showUI?: boolean, value?: string) => boolean;
   };
 
-  if (typeof doc.execCommand === "function") {
-    method = "exec_command";
-    element.focus();
-    selectNodeContents(element);
-    doc.execCommand("insertText", false, value);
-    actualText = getComposerText(element);
+  if (typeof doc.execCommand !== "function") {
+    return null;
   }
 
-  if (normalizeComposerText(actualText) !== normalizeComposerText(value)) {
-    const selection = selectNodeContents(element);
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(element.ownerDocument.createTextNode(value));
-      selection.removeAllRanges();
-      collapseSelectionToEnd(element);
-      method = "range_insert";
-    } else {
-      element.textContent = value;
-      method = "text_content";
-    }
+  selectAllForReplacement(element);
+  element.dispatchEvent(createInputLikeEvent("beforeinput", value, true));
+  doc.execCommand("insertText", false, value);
+
+  return finalizeReplacementAttempt(site, element, "exec_command", value);
+}
+
+async function attemptRangeReplacement(
+  site: SupportedSite,
+  element: HTMLElement,
+  value: string,
+): Promise<ComposerReplacementResult> {
+  selectAllForReplacement(element);
+  element.dispatchEvent(createInputLikeEvent("beforeinput", value, true));
+
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    element.value = value;
+    dispatchComposerChangeEvents(site, element, value, "input_value");
+    return finalizeReplacementAttempt(site, element, "input_value", value);
   }
 
-  element.dispatchEvent(createInputLikeEvent("input", value, false));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
-  actualText = getComposerText(element);
+  const selection = selectNodeContents(element);
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(element.ownerDocument.createTextNode(value));
+    selection.removeAllRanges();
+    focusComposerForEditing(element);
+    dispatchComposerChangeEvents(site, element, value, "range_insert");
+    return finalizeReplacementAttempt(site, element, "range_insert", value);
+  }
 
-  return {
-    success: normalizeComposerText(actualText) === normalizeComposerText(value),
-    actualText,
-    method,
-  };
+  element.textContent = value;
+  dispatchComposerChangeEvents(site, element, value, "text_content");
+  return finalizeReplacementAttempt(site, element, "text_content", value);
 }
 
 function findSendTriggerWithin(scope: ParentNode, selectors: string[]): HTMLElement | null {
@@ -302,12 +392,6 @@ export function resolveSendTriggerFromTarget(site: SupportedSite, target: EventT
 }
 
 export function resolveActiveComposer(site: SupportedSite): HTMLElement | null {
-  const active = document.activeElement;
-  const activeComposer = findEditableAncestor(active);
-  if (activeComposer) {
-    return activeComposer;
-  }
-
   const adapter = getAdapter(site);
   for (const selector of adapter.selectors) {
     const candidate = document.querySelector(selector);
@@ -316,29 +400,55 @@ export function resolveActiveComposer(site: SupportedSite): HTMLElement | null {
     }
   }
 
+  const active = document.activeElement;
+  const activeComposer = findEditableAncestor(active);
+  if (activeComposer) {
+    return activeComposer;
+  }
+
   return null;
 }
 
-export function replaceComposerText(
+export async function replaceComposerText(
   site: SupportedSite,
   element: HTMLElement,
   value: string,
-): ComposerReplacementResult {
-  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
-    element.focus();
-    element.dispatchEvent(createInputLikeEvent("beforeinput", value, true));
-    element.value = value;
-    element.dispatchEvent(createInputLikeEvent("input", value, false));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-    const actualText = getComposerText(element);
+): Promise<ComposerReplacementResult> {
+  const { composer, reacquired } = resolveLiveComposer(site, element);
+
+  if (site === "whatsapp") {
+    const execCommandResult = await attemptExecCommandReplacement(site, composer, value);
+    if (execCommandResult?.success) {
+      return {
+        ...execCommandResult,
+        reacquired: execCommandResult.reacquired || reacquired,
+      };
+    }
+
+    const rangeResult = await attemptRangeReplacement(site, composer, value);
     return {
-      success: normalizeComposerText(actualText) === normalizeComposerText(value),
-      actualText,
-      method: "input_value",
+      ...rangeResult,
+      reacquired: rangeResult.reacquired || reacquired,
     };
   }
 
-  return replaceContentEditableText(site, element, value);
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    return attemptRangeReplacement(site, element, value);
+  }
+
+  const execCommandResult = await attemptExecCommandReplacement(site, composer, value);
+  if (execCommandResult?.success) {
+    return {
+      ...execCommandResult,
+      reacquired: execCommandResult.reacquired || reacquired,
+    };
+  }
+
+  const rangeResult = await attemptRangeReplacement(site, composer, value);
+  return {
+    ...rangeResult,
+    reacquired: rangeResult.reacquired || reacquired,
+  };
 }
 
 export function triggerSend(site: SupportedSite, composer: HTMLElement): TriggerSendResult {
