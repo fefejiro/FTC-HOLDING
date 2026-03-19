@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import missionControlData from "@/data/mission-control.json";
+import { notFound } from "next/navigation";
 
 type FollowUpItem = {
   title: string;
@@ -55,8 +56,9 @@ export const metadata: Metadata = {
   title: "Mission Control | Una Labs",
   description:
     "Visible mission control for current priorities, calendar blocks, weekly rhythm, job lane, client lane, and follow-ups.",
-  alternates: {
-    canonical: "https://unalabs.cloud/mission-control"
+  robots: {
+    index: false,
+    follow: false
   }
 };
 
@@ -66,28 +68,12 @@ type MissionControlPageProps = {
 
 export default function MissionControlPage({ searchParams }: MissionControlPageProps) {
   const accessKey = process.env.MISSION_CONTROL_ACCESS_KEY;
-  const hasAccess = !accessKey || searchParams?.key === accessKey;
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const hasAccess =
+    (isDevelopment && !accessKey) || (accessKey && searchParams?.key === accessKey);
 
   if (!hasAccess) {
-    return (
-      <div className="container page-content mission-control-page">
-        <section className="hero mission-control-hero">
-          <div className="hero-noise" aria-hidden="true" />
-          <div className="card mission-control-summary-card">
-            <p className="status-pill">LOCKED</p>
-            <h2>Mission Control is private</h2>
-            <p className="hero-description">
-              Add your access key as a query parameter to view this page.
-            </p>
-            <code className="mission-control-code">/mission-control?key=YOUR_KEY</code>
-            <p className="hero-description">
-              Set <strong>MISSION_CONTROL_ACCESS_KEY</strong> in your deployment environment to
-              enable this lock.
-            </p>
-          </div>
-        </section>
-      </div>
-    );
+    notFound();
   }
 
   return (
