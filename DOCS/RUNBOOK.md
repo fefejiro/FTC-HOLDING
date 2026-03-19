@@ -77,7 +77,16 @@ Ownership reference:
 3. SayWetin typecheck may fail even when frontend build passes.
 4. PeacePad E2E reliability should remain in release gate checks.
 
-## 5. Escalation / Handover Artifacts
+## 5. Operator Clarity Docs
+
+For onboarding, prioritization, and safe publishing, read:
+
+- [BUSINESS_ALIGNMENT_MAP.md](BUSINESS_ALIGNMENT_MAP.md)
+- [PROJECT_CLASSIFICATION_MATRIX.md](PROJECT_CLASSIFICATION_MATRIX.md)
+- [NEW_EMPLOYEE_OPERATOR_GUIDE.md](NEW_EMPLOYEE_OPERATOR_GUIDE.md)
+- [GIT_AND_PUBLISH_PATH_GUIDE.md](GIT_AND_PUBLISH_PATH_GUIDE.md)
+
+## 6. Escalation / Handover Artifacts
 
 When handing over, include:
 

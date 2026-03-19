@@ -77,6 +77,10 @@ See:
 ## Strategic Architecture Docs
 
 - [Docs Index](DOCS/INDEX.md)
+- [Business Alignment Map](DOCS/BUSINESS_ALIGNMENT_MAP.md)
+- [Project Classification Matrix](DOCS/PROJECT_CLASSIFICATION_MATRIX.md)
+- [New Employee / Operator Guide](DOCS/NEW_EMPLOYEE_OPERATOR_GUIDE.md)
+- [Git and Publish Path Guide](DOCS/GIT_AND_PUBLISH_PATH_GUIDE.md)
 - [Unalabs Ecosystem Map](DOCS/UNALABS_ECOSYSTEM_MAP.md)
 - [Repo Structure Recommendation](DOCS/REPO_STRUCTURE_RECOMMENDATION.md)
 - [Domain and Ownership Map](DOCS/DOMAIN_AND_OWNERSHIP_MAP.md)
