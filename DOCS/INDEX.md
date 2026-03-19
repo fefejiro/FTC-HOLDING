@@ -1,4 +1,4 @@
-﻿# Docs Index
+# Docs Index
 
 Canonical repo root: `C:\FTC HOLDING`
 
@@ -6,12 +6,21 @@ This index organizes the highest-signal documentation currently in the repo with
 
 ## Strategic Architecture
 
+- [Business Alignment Map](BUSINESS_ALIGNMENT_MAP.md)
+- [Project Classification Matrix](PROJECT_CLASSIFICATION_MATRIX.md)
 - [Unalabs Ecosystem Map](UNALABS_ECOSYSTEM_MAP.md)
 - [Repo Structure Recommendation](REPO_STRUCTURE_RECOMMENDATION.md)
 - [Domain and Ownership Map](DOMAIN_AND_OWNERSHIP_MAP.md)
 - [Unalabs Rollout Plan](ROLLOUT_PLAN_UNALABS.md)
 - [Repo Ownership and Tracking](REPO_OWNERSHIP_AND_TRACKING.md)
 - [Repo Handover Audit 2026-03-07](REPO_HANDOVER_AUDIT_2026-03-07.md)
+
+## Operator Clarity
+
+- [New Employee / Operator Guide](NEW_EMPLOYEE_OPERATOR_GUIDE.md)
+- [Git and Publish Path Guide](GIT_AND_PUBLISH_PATH_GUIDE.md)
+- [Founder Dashboard](FOUNDER_DASHBOARD.md)
+- [Founder Dashboard Quickstart](FOUNDER_DASHBOARD_QUICKSTART.md)
 
 ## Operations And Runbooks
 
