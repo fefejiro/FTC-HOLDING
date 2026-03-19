@@ -54,12 +54,12 @@ Detailed pipeline support: see `DUAL_LANE_TRACKER.md`.
 ### Sales pipeline snapshot
 | Stage | Count | Notes |
 |---|---:|---|
-| New prospects | 0 | |
-| Contacted | 0 | |
+| New prospects | 0 | List build starts next |
+| Contacted | 0 | Outreach starts after list build |
 | Replied | 0 | |
 | Calls booked | 0 | |
 | Proposals sent | 0 | |
-| Closed | 0 | |
+| Closed | 0 | Goal: first paid client from lead-response offer |
 
 ---
 
@@ -84,7 +84,7 @@ Detailed pipeline support: see `DUAL_LANE_TRACKER.md`.
 ### Job pipeline snapshot
 | Stage | Count | Notes |
 |---|---:|---|
-| Roles identified | 0 | |
+| Roles identified | 0 | Build shortlist next |
 | Applications sent | 0 | |
 | Recruiter outreach | 0 | |
 | Conversations | 0 | |
@@ -137,9 +137,9 @@ If too many items are here, execution quality drops.
 
 | Build / Task | Lane | Status | Next step | Owner |
 |---|---|---|---|---|
-| Una Labs lead-response offer | Revenue | Active | Outreach and refinement | Mike |
+| Una Labs lead-response offer | Revenue | Active | Build prospect list and start outreach | Mike |
 | PeacePad current milestone | Product | Pending | Define exact next milestone | Mike |
-| Operator docs / execution system | Leverage | Active | Continue C-system buildout | Manchi |
+| Execution OS foundation | Leverage | Active | Start daily use of dashboard + trackers | Mike + Manchi |
 
 ---
 
@@ -147,10 +147,10 @@ If too many items are here, execution quality drops.
 
 | Item | Type | Due | Next action |
 |---|---|---|---|
-| Prospect follow-up | Sales | | |
-| Job application follow-up | Job | | |
-| Client intake reply | Sales | | |
-| Product dependency / question | Product | | |
+| Prospect list build | Sales | This week | Add first 30 targets |
+| First outreach batch | Sales | This week | Send first 10 direct messages |
+| Role shortlist | Job | This week | Identify 10 aligned roles |
+| PeacePad milestone definition | Product | This week | Name one narrow next milestone |
 
 ---
 
@@ -158,7 +158,8 @@ If too many items are here, execution quality drops.
 
 | Blocker | Lane | Waiting on | Next check |
 |---|---|---|---|
-| | | | |
+| Clean revenue motion not started yet | Revenue | Prospect list and first outreach batch | End of this week |
+| Product move still too abstract | Product | Exact PeacePad milestone choice | End of this week |
 
 ---
 
@@ -166,10 +167,10 @@ If too many items are here, execution quality drops.
 
 Use this section to stop drift.
 
-- [ ] no new brands without deliberate decision
-- [ ] no random experiments taking prime time
-- [ ] no overbuilding before payment
-- [ ] no broad repo cleanup during revenue work unless it reduces real risk
+- [x] no new brands without deliberate decision
+- [x] no random experiments taking prime time
+- [x] no overbuilding before payment
+- [x] no broad repo cleanup during revenue work unless it reduces real risk
 
 ---
 
@@ -178,13 +179,13 @@ Use this section to stop drift.
 Only three live priorities at once:
 
 ### Money move
-- [ ]
+- [ ] Get first 30 prospects into tracker and send first outreach batch
 
 ### Product move
-- [ ]
+- [ ] Define one narrow PeacePad milestone for this week
 
 ### Leverage move
-- [ ]
+- [ ] Use the new dashboard + trackers with real data, not templates
 
 Everything else is parked, delegated, or deferred.
 
