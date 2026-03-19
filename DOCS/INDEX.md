@@ -27,6 +27,8 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Dual-Lane Tracker Quickstart](DUAL_LANE_TRACKER_QUICKSTART.md)
 - [Weekly Execution Cadence](WEEKLY_EXECUTION_CADENCE.md)
 - [Weekly Execution Cadence Quickstart](WEEKLY_EXECUTION_CADENCE_QUICKSTART.md)
+- [Mission Control v1](MISSION_CONTROL_V1.md)
+- [Mission Control Quickstart](MISSION_CONTROL_QUICKSTART.md)
 
 ## Operations And Runbooks
 
