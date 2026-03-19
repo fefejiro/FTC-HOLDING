@@ -23,6 +23,8 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Founder Dashboard Quickstart](FOUNDER_DASHBOARD_QUICKSTART.md)
 - [Idea Triage Matrix](IDEA_TRIAGE_MATRIX.md)
 - [Idea Triage Quickstart](IDEA_TRIAGE_QUICKSTART.md)
+- [Dual-Lane Tracker](DUAL_LANE_TRACKER.md)
+- [Dual-Lane Tracker Quickstart](DUAL_LANE_TRACKER_QUICKSTART.md)
 
 ## Operations And Runbooks
 

@@ -29,6 +29,8 @@ If a task does not fit a current lane, it waits.
 
 ## 1. Money Now
 
+Detailed pipeline support: see `DUAL_LANE_TRACKER.md`.
+
 ### Primary offer this week
 - 48-Hour Lead Response System
 
