@@ -48,7 +48,7 @@ Use it to answer:
 ## Relationship to future Priority C pieces
 
 This dashboard is the top layer.
-Below it, future systems should include:
+Below it, supporting systems include:
 - idea triage matrix
 - dual-lane tracker (clients + jobs)
 - weekly execution cadence
