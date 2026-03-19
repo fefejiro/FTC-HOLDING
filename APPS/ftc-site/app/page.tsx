@@ -177,7 +177,24 @@ export default function HomePage() {
                   <p className="collage-label">Studio Snapshot</p>
                   <p className="hero-panel-caption">Built to help clients buy faster and trust faster.</p>
                 </div>
-                <div className="home-hero-panel-grid">
+                <article className="hero-proof-frame">
+                  <div className="hero-proof-copy">
+                    <p className="hero-insight-label">Product proof</p>
+                    <h2>PeacePad in action</h2>
+                    <p>
+                      A live product surface that shows how Una Labs turns AI messaging ideas
+                      into interfaces people can actually use.
+                    </p>
+                  </div>
+                  <div className="hero-proof-image-shell">
+                    <img
+                      src="/images/peacepad-chat-proof.jpg"
+                      alt="PeacePad conversation interface showing a calmer rewrite suggestion before sending a message"
+                      className="hero-proof-image"
+                    />
+                  </div>
+                </article>
+                <div className="home-hero-panel-grid hero-panel-grid-secondary">
                   {heroSnapshotCards.map((card) => (
                     <article key={card.title} className="collage-card hero-insight-card">
                       <p className="hero-insight-label">Signal</p>
