@@ -4,17 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { gardenCleanersConfig } from "../../lib/gardenCleaners";
-import { polarAnchorBasePath, polarAnchorConfig } from "../../lib/polarAnchor";
 import { siteNav } from "../../lib/content";
 import GardenBrandMark from "./garden-cleaners/GardenBrandMark";
 import Logo from "./Logo";
-import PolarBrandMark from "./polar-anchor/PolarBrandMark";
 
 export default function Header() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
-  const isPolarSite = pathname?.startsWith(polarAnchorBasePath) ?? false;
 
   useEffect(() => {
     setIsOpen(false);
@@ -47,30 +44,20 @@ export default function Header() {
     () =>
       isGardenSite
         ? gardenCleanersConfig.nav
-        : isPolarSite
-          ? polarAnchorConfig.nav
         : siteNav.map((link) => ({ label: link.label, href: link.href })),
-    [isGardenSite, isPolarSite]
+    [isGardenSite]
   );
 
-  const homeHref = isGardenSite ? "/garden-cleaners" : isPolarSite ? polarAnchorBasePath : "/";
-  const brandName = isGardenSite
-    ? gardenCleanersConfig.companyName
-    : isPolarSite
-      ? polarAnchorConfig.companyName
-      : "Una Labs";
-  const brandSubtitle = isGardenSite
-    ? "Professional cleaning services"
-    : isPolarSite
-      ? polarAnchorConfig.tagline
-      : "Creative AI Studio";
+  const homeHref = isGardenSite ? "/garden-cleaners" : "/";
+  const brandName = isGardenSite ? gardenCleanersConfig.companyName : "Una Labs";
+  const brandSubtitle = isGardenSite ? "Professional cleaning services" : "Fast websites • lead automation";
 
   return (
-    <header className={isGardenSite ? "garden-site-header" : isPolarSite ? "polar-site-header" : undefined}>
+    <header className={isGardenSite ? "garden-site-header" : undefined}>
       <div className="container site-header">
         <div className="logo-row">
           <Link href={homeHref} className="logo-link" aria-label={`${brandName} homepage`}>
-            {isGardenSite ? <GardenBrandMark /> : isPolarSite ? <PolarBrandMark /> : <Logo />}
+            {isGardenSite ? <GardenBrandMark /> : <Logo />}
           </Link>
           <div>
             <p className="brand">{brandName}</p>
