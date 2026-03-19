@@ -192,6 +192,8 @@ Everything else is parked, delegated, or deferred.
 
 ## 10. End-of-Day Reset
 
+Weekly rhythm support: see `WEEKLY_EXECUTION_CADENCE.md`.
+
 Before ending the day:
 - [ ] update sales counts
 - [ ] update job counts

@@ -53,3 +53,4 @@ If a lane is not being tracked, it will drift.
 - Dashboard = what matters today
 - Triage Matrix = where new ideas go
 - Dual-Lane Tracker = where pipeline details live
+- Weekly Execution Cadence = how the whole system runs over time
