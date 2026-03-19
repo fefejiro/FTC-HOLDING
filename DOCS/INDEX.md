@@ -40,6 +40,7 @@ This index organizes the highest-signal documentation currently in the repo with
 ## Umbrella Site / Unalabs Site
 
 - [Una Labs Site Handover 2026-03-10](UNALABS_SITE_HANDOVER_2026-03-10.md)
+- [LinkedIn Positioning Update 2026-03-19](..\APPS\ftc-site\docs\LINKEDIN_POSITIONING_UPDATE_2026-03-19.md)
 
 ## Working Rule
 
