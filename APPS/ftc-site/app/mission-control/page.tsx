@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import missionControlData from "@/data/mission-control.json";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 
 type FollowUpItem = {
   title: string;
@@ -62,6 +64,13 @@ export const metadata: Metadata = {
 };
 
 export default function MissionControlPage() {
+  if (process.env.NODE_ENV !== "development") {
+    const accessJwt = headers().get("cf-access-jwt-assertion");
+    if (!accessJwt) {
+      notFound();
+    }
+  }
+
   return (
     <div className="container page-content mission-control-page">
       <section className="hero mission-control-hero">
