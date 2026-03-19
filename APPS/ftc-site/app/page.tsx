@@ -52,6 +52,12 @@ const heroSnapshotCards = [
   }
 ] as const;
 
+const heroSignalItems = [
+  "Fast websites and lead systems without long build cycles",
+  "Shipped products in market, not just pitch decks",
+  "Operator-led delivery for businesses that need movement now"
+] as const;
+
 const serviceOfferBullets = [
   "Lead capture forms that route every inquiry into one simple workflow",
   "Instant email or text replies so prospects hear back right away",
@@ -124,22 +130,31 @@ export default function HomePage() {
             <div className="hero-grid home-hero-grid">
               <div className="hero-copy home-hero-copy">
                 <p className="eyebrow">Fast Websites, Lead Automation, and AI Delivery</p>
-                <h1>Unalabs</h1>
-                <p className="lead hero-subtitle">Fast websites, lead automation, and AI product execution</p>
+                <div className="hero-heading-block">
+                  <span className="hero-kicker">Operator-led execution for businesses that need movement</span>
+                  <h1>Una Labs</h1>
+                </div>
+                <p className="lead hero-subtitle">Fast websites, lead automation, and AI product execution with sharper positioning and less overbuild.</p>
                 <p className="hero-description">
                   We help businesses launch fast websites, instant lead follow-up systems,
-                  and practical AI tools without months of overbuilding.
+                  and practical AI tools with a tighter delivery path, clearer priorities,
+                  and a more premium execution standard.
                 </p>
-                <div className="hero-actions">
+                <ul className="hero-signal-list" aria-label="Studio strengths">
+                  {heroSignalItems.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+                <div className="hero-actions hero-actions-elevated">
                   <a href="#start-project" className="btn btn-primary">
                     Get a 48-Hour Setup
                   </a>
                   <a href="#offer" className="btn btn-secondary">
-                    See the Offer
+                    Review the Offer
                   </a>
                 </div>
-                <div className="hero-credibility">
-                  <p className="hero-credibility-title">Products shipped by Unalabs:</p>
+                <div className="hero-credibility hero-credibility-elevated">
+                  <p className="hero-credibility-title">Products shipped by Una Labs</p>
                   <ul className="hero-credibility-list">
                     {featuredProducts.map((project) => (
                       <li key={project.slug}>
@@ -157,11 +172,15 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="hero-collage home-hero-panel">
-                <p className="collage-label">Studio Snapshot</p>
+              <div className="hero-collage home-hero-panel hero-panel-elevated">
+                <div className="hero-panel-header">
+                  <p className="collage-label">Studio Snapshot</p>
+                  <p className="hero-panel-caption">Built to help clients buy faster and trust faster.</p>
+                </div>
                 <div className="home-hero-panel-grid">
                   {heroSnapshotCards.map((card) => (
-                    <article key={card.title} className="collage-card">
+                    <article key={card.title} className="collage-card hero-insight-card">
+                      <p className="hero-insight-label">Signal</p>
                       <h2>{card.title}</h2>
                       <p>{card.copy}</p>
                     </article>
@@ -185,30 +204,44 @@ export default function HomePage() {
               missed calls, and scattered follow-up.
             </p>
           </div>
-          <article className="card client-work-card">
-            <div className="client-work-header">
+          <article className="card client-work-card featured-offer-card">
+            <div className="client-work-header featured-offer-header">
               <div>
-                <p className="status-pill">FASTEST PATH TO VALUE</p>
+                <p className="status-pill featured-status-pill">FASTEST PATH TO VALUE</p>
                 <h3>Launch-ready lead capture and follow-up</h3>
+                <p className="featured-offer-summary">
+                  Best for local service businesses, consultants, and owner-led teams that need a
+                  cleaner way to capture inquiries and respond right away.
+                </p>
+              </div>
+              <div className="featured-offer-meta">
+                <span>48-hour setup window</span>
+                <span>Built for speed, not bloat</span>
               </div>
             </div>
-            <p>
-              Best for local service businesses, consultants, and owner-led teams that need a
-              cleaner way to capture inquiries and respond right away.
-            </p>
-            <div>
-              <p className="client-work-label">What is included:</p>
-              <ul className="feature-list compact-feature-list">
-                {serviceOfferBullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
+            <div className="featured-offer-grid">
+              <div>
+                <p className="client-work-label">What is included:</p>
+                <ul className="feature-list compact-feature-list">
+                  {serviceOfferBullets.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="featured-offer-aside">
+                <p className="client-work-label">Why it sells</p>
+                <ul className="feature-list compact-feature-list">
+                  <li>Easy to understand before a long technical conversation</li>
+                  <li>Clear ROI story for owner-led businesses</li>
+                  <li>Fast enough to install before momentum disappears</li>
+                </ul>
+              </div>
             </div>
-            <p className="product-offer-copy">
+            <p className="product-offer-copy featured-offer-copy">
               Typical setup: fast website contact flow, instant confirmation, owner alerts, and
               lightweight tracking that is easy to manage.
             </p>
-            <div className="product-actions">
+            <div className="product-actions featured-offer-actions">
               <a href="#start-project" className="btn btn-primary product-spotlight-link">
                 Request This Setup
               </a>
