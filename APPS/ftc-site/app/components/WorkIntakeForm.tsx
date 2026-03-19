@@ -69,7 +69,7 @@ export default function WorkIntakeForm() {
   return (
     <form className="intake-form" onSubmit={onSubmit} noValidate>
       <label>
-        <span>Project Idea</span>
+        <span>What do you need help with?</span>
         <textarea
           name="projectIdea"
           rows={6}
@@ -90,7 +90,7 @@ export default function WorkIntakeForm() {
           <option value="5000-10000">$5,000 - $10,000</option>
           <option value="10000-plus">$10,000+</option>
         </select>
-        <span className="field-help">Typical early builds range between $1k - $5k.</span>
+        <span className="field-help">Fast setup work often starts with a scoped lead system or website improvement.</span>
       </label>
       <label>
         <span>Email</span>
@@ -117,15 +117,15 @@ export default function WorkIntakeForm() {
         <input type="text" name="companyWebsite" tabIndex={-1} autoComplete="off" />
       </label>
       <button type="submit" className="btn btn-primary" disabled={submitState === "submitting"}>
-        {submitState === "submitting" ? "Submitting..." : "Start My Project"}
+        {submitState === "submitting" ? "Submitting..." : "Request My Setup"}
       </button>
 
       <div className="intake-next-steps">
         <p className="intake-next-steps-title">What happens after you submit:</p>
         <ol className="intake-next-steps-list">
-          <li>We review your idea.</li>
-          <li>We respond with suggestions or questions.</li>
-          <li>If it is a good fit, we schedule a quick call.</li>
+          <li>We review your request.</li>
+          <li>We reply with a scoped next step or clarifying questions.</li>
+          <li>If it is a fit, we move quickly into setup or a short call.</li>
         </ol>
         <p className="intake-alt-contact">
           Prefer a quick conversation?{" "}

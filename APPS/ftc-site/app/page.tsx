@@ -39,17 +39,24 @@ const labItems = [
 
 const heroSnapshotCards = [
   {
-    title: "Products in market",
-    copy: "PeacePad and SayWetin are both live on Google Play, showing real shipped product work."
+    title: "48-hour service installs",
+    copy: "Fast-launch lead capture, instant follow-up, and missed-call recovery systems for local businesses."
   },
   {
-    title: "Service + product delivery",
-    copy: "Una Labs supports both install-ready products and client delivery work that improves growth or operations."
+    title: "Products in market",
+    copy: "PeacePad and SayWetin are both live on Google Play, showing real shipped product work."
   },
   {
     title: "Fast decision cycles",
     copy: "Focused projects usually move from brief to a clear implementation path within days, not months."
   }
+] as const;
+
+const serviceOfferBullets = [
+  "Lead capture forms that route every inquiry into one simple workflow",
+  "Instant email or text replies so prospects hear back right away",
+  "Missed-call text-back for after-hours or busy business owners",
+  "Owner alerts and lightweight tracking so follow-up does not slip"
 ] as const;
 
 const homeProductOfferContent: Record<
@@ -99,9 +106,9 @@ function getProductHref(project: ProjectCaseStudy): string {
 }
 
 export const metadata: Metadata = {
-  title: "Una Labs - Creative AI Studio Building AI Products",
+  title: "Una Labs - Fast Websites, Lead Automation, and AI Product Delivery",
   description:
-    "Una Labs is a creative AI studio building real-world AI products including PeacePad and SayWetin. Explore our work in automation, AI tools, and product innovation.",
+    "Una Labs builds fast websites, instant lead follow-up systems, and practical AI products for businesses that need execution fast.",
   alternates: {
     canonical: "https://unalabs.cloud"
   }
@@ -116,19 +123,19 @@ export default function HomePage() {
             <div className="hero-noise" aria-hidden="true" />
             <div className="hero-grid home-hero-grid">
               <div className="hero-copy home-hero-copy">
-                <p className="eyebrow">AI Product &amp; Automation Studio</p>
+                <p className="eyebrow">Fast Websites, Lead Automation, and AI Delivery</p>
                 <h1>Unalabs</h1>
-                <p className="lead hero-subtitle">AI Product &amp; Automation Studio</p>
+                <p className="lead hero-subtitle">Fast websites, lead automation, and AI product execution</p>
                 <p className="hero-description">
-                  We design and build AI-powered tools, automations, and digital products
-                  for modern businesses.
+                  We help businesses launch fast websites, instant lead follow-up systems,
+                  and practical AI tools without months of overbuilding.
                 </p>
                 <div className="hero-actions">
                   <a href="#start-project" className="btn btn-primary">
-                    Start a Project
+                    Get a 48-Hour Setup
                   </a>
-                  <a href="#products" className="btn btn-secondary">
-                    Explore Our Products
+                  <a href="#offer" className="btn btn-secondary">
+                    See the Offer
                   </a>
                 </div>
                 <div className="hero-credibility">
@@ -167,6 +174,51 @@ export default function HomePage() {
       </section>
 
       <ClientLogoStrip />
+
+      <section className="section fade-on-scroll" id="offer">
+        <div className="container">
+          <div className="section-heading home-section-heading">
+            <p className="eyebrow">Featured Offer</p>
+            <h2>48-Hour Lead Response System</h2>
+            <p>
+              A simple install for businesses that want to stop losing leads from slow replies,
+              missed calls, and scattered follow-up.
+            </p>
+          </div>
+          <article className="card client-work-card">
+            <div className="client-work-header">
+              <div>
+                <p className="status-pill">FASTEST PATH TO VALUE</p>
+                <h3>Launch-ready lead capture and follow-up</h3>
+              </div>
+            </div>
+            <p>
+              Best for local service businesses, consultants, and owner-led teams that need a
+              cleaner way to capture inquiries and respond right away.
+            </p>
+            <div>
+              <p className="client-work-label">What is included:</p>
+              <ul className="feature-list compact-feature-list">
+                {serviceOfferBullets.map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
+            </div>
+            <p className="product-offer-copy">
+              Typical setup: fast website contact flow, instant confirmation, owner alerts, and
+              lightweight tracking that is easy to manage.
+            </p>
+            <div className="product-actions">
+              <a href="#start-project" className="btn btn-primary product-spotlight-link">
+                Request This Setup
+              </a>
+              <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary product-spotlight-link">
+                See How We Scope Projects
+              </Link>
+            </div>
+          </article>
+        </div>
+      </section>
 
       <section className="section fade-on-scroll" id="what-we-build">
         <div className="container">
@@ -259,10 +311,10 @@ export default function HomePage() {
         <div className="container">
           <div className="section-heading home-section-heading">
             <p className="eyebrow">Client Work</p>
-            <h2>Client delivery for businesses that need visibility or launch support</h2>
+            <h2>Client delivery for businesses that need visibility, faster response, or launch support</h2>
             <p>
               Not every engagement is a new app. Some clients need stronger search visibility,
-              better positioning, or a faster path to inbound inquiries.
+              better positioning, or a faster path from inquiry to booked work.
             </p>
           </div>
           <article className="card client-work-card">
@@ -286,8 +338,8 @@ export default function HomePage() {
               </ul>
             </div>
             <p className="product-offer-copy">
-              Best fit for local service businesses that need better search presence before
-              investing in a larger build.
+              Best fit for local service businesses that need stronger search presence,
+              cleaner lead handling, and a better conversion path before investing in a larger build.
             </p>
             <div className="product-actions">
               <Link href="/work" prefetch={false} className="btn btn-secondary product-spotlight-link">
@@ -323,17 +375,17 @@ export default function HomePage() {
           <div className="intake-aside">
             <div className="section-heading home-section-heading">
               <p className="eyebrow">Start a Project</p>
-              <h2>Start with the business problem or product idea</h2>
+              <h2>Tell us what you need to launch, automate, or fix fast</h2>
               <p>
-                Tell us what you need to launch, automate, or improve. Una Labs will tell you
-                quickly if it is a fit and what the next step should be.
+                If you need a fast website, lead response workflow, or practical AI system,
+                Una Labs will review it quickly and reply with a scoped next step.
               </p>
             </div>
             <p className="intake-reassurance">
               No obligation. We review every request and reply within 24 hours.
             </p>
             <div className="card intake-note-card">
-              <h3>Good fit right now</h3>
+              <h3>Best fit right now</h3>
               <ul className="feature-list compact-feature-list intake-fit-list">
                 {projectFitPoints.map((point) => (
                   <li key={point}>{point}</li>

@@ -3,17 +3,17 @@ import ServiceCard from "../components/ServiceCard";
 import WorkIntakeForm from "../components/WorkIntakeForm";
 
 export const metadata = {
-  title: "Start a Project | Una Labs",
-  description: "Engage Una Labs for AI systems, automation, and product execution."
+  title: "Request a Website or Lead Automation Setup | Una Labs",
+  description: "Start a project with Una Labs for fast websites, lead follow-up systems, and practical AI execution."
 };
 
 export default function WorkWithFtcPage() {
   return (
     <div className="container page-content">
-      <h1>Start a Project</h1>
+      <h1>Request a Fast Setup</h1>
       <p className="page-intro">
-        If you have an idea, workflow, or product to build, we can scope a practical
-        execution path with clear milestones.
+        If you need a fast website, stronger lead capture, or practical automation, Una Labs
+        can scope the shortest path to a working setup.
       </p>
 
       <div className="cards-grid cards-grid-3">
@@ -23,9 +23,9 @@ export default function WorkWithFtcPage() {
       </div>
 
       <section className="intake-card">
-        <h2>Project Intake</h2>
+        <h2>Setup Intake</h2>
         <p className="muted">
-          Submit your project details and Una Labs will respond with a scoped next step.
+          Submit your request and Una Labs will respond with a scoped next step quickly.
         </p>
         <WorkIntakeForm />
       </section>
