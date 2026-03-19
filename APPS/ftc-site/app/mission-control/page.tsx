@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import missionControlData from "@/data/mission-control.json";
-import { notFound } from "next/navigation";
 
 type FollowUpItem = {
   title: string;
@@ -62,20 +61,7 @@ export const metadata: Metadata = {
   }
 };
 
-type MissionControlPageProps = {
-  searchParams?: { key?: string };
-};
-
-export default function MissionControlPage({ searchParams }: MissionControlPageProps) {
-  const accessKey = process.env.MISSION_CONTROL_ACCESS_KEY;
-  const isDevelopment = process.env.NODE_ENV === "development";
-  const hasAccess =
-    (isDevelopment && !accessKey) || (accessKey && searchParams?.key === accessKey);
-
-  if (!hasAccess) {
-    notFound();
-  }
-
+export default function MissionControlPage() {
   return (
     <div className="container page-content mission-control-page">
       <section className="hero mission-control-hero">
