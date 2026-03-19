@@ -51,6 +51,11 @@ No destructive repo restructuring was performed.
 - Confirm whether `C:\FTC HOLDING\FTC-HOLDING` should be deleted/archived outside repo root.
 - Current safe default is to keep it ignored and untouched.
 
+3. Temp publish worktree decision (recommended)
+- Multiple temp worktrees may exist during isolated production promotion flows.
+- Do not remove them casually during active work.
+- If cleanup is desired, handle it as a deliberate hygiene pass after confirming no release work depends on them.
+
 ## Verification Commands
 
 Run from `C:\FTC HOLDING`:

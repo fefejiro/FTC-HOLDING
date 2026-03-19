@@ -61,6 +61,20 @@ npm --prefix APPS/saywetin run check
 npm --prefix APPS/ATEAM/Server run test:backend
 ```
 
+### 2.4 Publish hygiene checks
+
+Before production promotion for a frontend surface:
+
+```powershell
+git status -sb
+git worktree list
+```
+
+Check for:
+- unrelated in-progress work on current branch
+- temp worktrees that indicate recent or active release handling
+- whether the target deployment uses preview-by-branch or production-from-main behavior
+
 ## 3. Repo Ownership and Tracking Rules
 
 1. Always operate from `C:\FTC HOLDING` unless explicitly switching.

@@ -83,6 +83,11 @@ git push origin promote-change:main
 Cloudflare Pages project behavior may differ by branch.
 Do not assume a branch push updates production.
 
+Observed during the March 19 pass:
+- production for `ftc-site-pages` is mapped to `main`
+- pushes to `chore/gemini-handoff-sendsmart` created preview behavior, not production promotion
+- preview deployments were not a reliable publish signal during this pass
+
 Check:
 - which branch is mapped to production
 - whether your push created only a preview deployment
