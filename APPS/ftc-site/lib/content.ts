@@ -69,9 +69,9 @@ export const siteNav = [
 
 export const networkingProfile: NetworkingProfile = {
   fullName: "Fejiro Efiuvwere",
-  title: "Systems & Architecture Consultant",
+  title: "AI Product Builder | Technical Product Manager | Automation Systems Lead",
   studioName: "Una Labs",
-  studioLine: "Technology Studio",
+  studioLine: "Fast websites, lead automation, and practical AI systems",
   phoneDisplay: "+1 (416) 473-2732",
   phoneE164: "+14164732732",
   email: "fejiro.efiuvwere@gmail.com",

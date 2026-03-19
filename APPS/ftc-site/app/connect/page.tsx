@@ -158,10 +158,10 @@ export default function ConnectPage() {
       </div>
 
       <CTABanner
-        title="Need help building your next system?"
-        description="If this connection came through networking, share a quick project brief and Una Labs will respond with practical next steps."
-        primaryLabel="Start a Project"
-        primaryHref={networkingProfile.startProjectHref}
+        title="Need a fast website or lead response setup?"
+        description="If this connection came through networking, use the fast-setup intake and Una Labs will respond with a practical next step quickly."
+        primaryLabel="Request a Fast Setup"
+        primaryHref="/lead-response-system"
         secondaryLabel="View Work"
         secondaryHref="/work"
       />
