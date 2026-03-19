@@ -90,7 +90,7 @@ export default function Header() {
             aria-controls="mobile-nav-panel"
             onClick={() => setIsOpen((current) => !current)}
           >
-            Menu
+            {isOpen ? "Close" : "Menu"}
           </button>
 
           {isOpen ? <button type="button" className="mobile-backdrop" aria-label="Close menu" onClick={closeMenu} /> : null}
