@@ -1201,12 +1201,13 @@ nav.primary {
 }
 
 @media (max-width: 980px) {
-  nav.primary {
-    display: none;
+  nav.primary,
+  .desktop-nav {
+    display: none !important;
   }
 
   .mobile-shell {
-    display: inline-flex;
+    display: inline-flex !important;
     margin-left: auto;
   }
 
