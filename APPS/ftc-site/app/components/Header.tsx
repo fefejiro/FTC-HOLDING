@@ -50,7 +50,7 @@ export default function Header() {
 
   const homeHref = isGardenSite ? "/garden-cleaners" : "/";
   const brandName = isGardenSite ? gardenCleanersConfig.companyName : "Una Labs";
-  const brandSubtitle = isGardenSite ? "Professional cleaning services" : "Creative AI Studio";
+  const brandSubtitle = isGardenSite ? "Professional cleaning services" : "Fast websites • lead automation";
 
   return (
     <header className={isGardenSite ? "garden-site-header" : undefined}>
