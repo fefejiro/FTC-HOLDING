@@ -59,6 +59,10 @@ a {
   contain-intrinsic-size: 1px 900px;
 }
 
+.anchor-offset {
+  scroll-margin-top: 120px;
+}
+
 .section-hero {
   padding-top: 32px;
   content-visibility: visible;
@@ -1525,6 +1529,10 @@ nav.primary {
   .process-grid,
   .experiments-grid {
     grid-template-columns: 1fr;
+  }
+
+  .anchor-offset {
+    scroll-margin-top: 96px;
   }
 }
 

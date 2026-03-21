@@ -142,7 +142,7 @@ export default function HomePage() {
 
       <ClientLogoStrip />
 
-      <section className="section fade-on-scroll" id="services">
+      <section className="section fade-on-scroll anchor-offset" id="services">
         <div className="container">
           <div className="section-heading home-section-heading">
             <p className="eyebrow">Services</p>
@@ -164,7 +164,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section fade-on-scroll" id="work">
+      <section className="section fade-on-scroll anchor-offset" id="work">
         <div className="container">
           <div className="section-heading home-section-heading">
             <p className="eyebrow">Proof / Work</p>
@@ -205,7 +205,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section fade-on-scroll" id="process">
+      <section className="section fade-on-scroll anchor-offset" id="process">
         <div className="container">
           <div className="section-heading home-section-heading">
             <p className="eyebrow">Process</p>
@@ -224,7 +224,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section fade-on-scroll" id="about">
+      <section className="section fade-on-scroll anchor-offset" id="about">
         <div className="container">
           <article className="card studio-strip">
             <div className="studio-strip-content">
@@ -243,7 +243,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section fade-on-scroll" id="start-project">
+      <section className="section fade-on-scroll anchor-offset" id="start-project">
         <div className="container">
           <article className="card final-cta-card">
             <div>
