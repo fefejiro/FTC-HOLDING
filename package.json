@@ -26,6 +26,7 @@
     "dev:peacepad": "npm --workspace=@ftc/peacepad run dev || echo 'peacepad has no dev'",
     "dev:saywetin": "npm --workspace=@ftc/saywetin run dev || echo 'saywetin has no dev'",
     "doctor": "node -v && npm -v && (test -d APPS && echo APPS ok)",
+    "postinstall": "node scripts/cf-pages-postinstall.mjs",
     "audit:secrets": "node scripts/audit-secrets.cjs",
     "verify:peacepad:prod": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-prod.ps1",
     "verify:peacepad:local": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-local.ps1",
