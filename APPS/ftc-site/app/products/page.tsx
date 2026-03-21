@@ -44,7 +44,7 @@ const productOfferContent: Record<
 
 function getProductOverviewHref(project: ProjectCaseStudy): string {
   return project.slug === "peacepad"
-    ? "/peacepad"
+    ? "/products/peacepad"
     : project.slug === "saywetin"
       ? "/saywetin"
       : `/work/${project.slug}`;
@@ -59,6 +59,12 @@ function getLifecycleStatusLabel(project: ProjectCaseStudy): string {
 }
 
 export default function ProductsPage() {
+  const sortedProducts = [...projectCaseStudies].sort((a, b) => {
+    if (a.slug === "peacepad") return -1;
+    if (b.slug === "peacepad") return 1;
+    return 0;
+  });
+
   return (
     <div className="container page-content">
       <section className="page-media-banner fade-on-scroll">
@@ -67,7 +73,7 @@ export default function ProductsPage() {
           <h1>Products</h1>
           <p className="page-intro">
             Una Labs product tracks are both market-facing tools and capability engines for a
-            broader platform direction.
+            broader studio delivery system. PeacePad leads the lineup.
           </p>
           <p>
             The product portfolio spans communication intelligence, cultural interpretation,
@@ -89,7 +95,7 @@ export default function ProductsPage() {
       </section>
 
       <div className="cards-grid cards-grid-3">
-        {projectCaseStudies.map((project) => {
+        {sortedProducts.map((project) => {
           const offer = productOfferContent[project.slug];
           const supportPoints = project.marketingBullets ?? offer?.supportPoints;
 

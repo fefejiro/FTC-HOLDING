@@ -10,7 +10,7 @@ export const metadata = {
 export default function WorkWithFtcPage() {
   return (
     <div className="container page-content">
-      <h1>Request a Fast Setup</h1>
+      <h1>Start a Project</h1>
       <p className="page-intro">
         If you need a fast website, stronger lead capture, or practical automation, Una Labs
         can scope the shortest path to a working setup.

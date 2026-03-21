@@ -4,14 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { gardenCleanersConfig } from "../../lib/gardenCleaners";
+import { polarAnchorConfig } from "../../lib/polarAnchor";
 import { siteNav } from "../../lib/content";
 import GardenBrandMark from "./garden-cleaners/GardenBrandMark";
+import PolarBrandMark from "./polar-anchor/PolarBrandMark";
 import Logo from "./Logo";
 
 export default function Header() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
+  const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
 
   useEffect(() => {
     setIsOpen(false);
@@ -40,24 +43,34 @@ export default function Header() {
 
   const closeMenu = () => setIsOpen(false);
 
-  const navLinks = useMemo(
-    () =>
-      isGardenSite
-        ? gardenCleanersConfig.nav
-        : siteNav.map((link) => ({ label: link.label, href: link.href })),
-    [isGardenSite]
-  );
+  const navLinks = useMemo(() => {
+    if (isGardenSite) {
+      return gardenCleanersConfig.nav;
+    }
+    if (isPolarSite) {
+      return polarAnchorConfig.nav;
+    }
+    return siteNav.map((link) => ({ label: link.label, href: link.href }));
+  }, [isGardenSite, isPolarSite]);
 
-  const homeHref = isGardenSite ? "/garden-cleaners" : "/";
-  const brandName = isGardenSite ? gardenCleanersConfig.companyName : "Una Labs";
-  const brandSubtitle = isGardenSite ? "Professional cleaning services" : "Fast websites • lead automation";
+  const homeHref = isGardenSite ? "/garden-cleaners" : isPolarSite ? "/polar-anchor" : "/";
+  const brandName = isGardenSite
+    ? gardenCleanersConfig.companyName
+    : isPolarSite
+      ? polarAnchorConfig.companyName
+      : "Una Labs";
+  const brandSubtitle = isGardenSite
+    ? "Professional cleaning services"
+    : isPolarSite
+      ? polarAnchorConfig.tagline
+      : "Fast websites • lead automation";
 
   return (
     <header className={isGardenSite ? "garden-site-header" : undefined}>
       <div className="container site-header">
         <div className="logo-row">
           <Link href={homeHref} className="logo-link" aria-label={`${brandName} homepage`}>
-            {isGardenSite ? <GardenBrandMark /> : <Logo />}
+            {isGardenSite ? <GardenBrandMark /> : isPolarSite ? <PolarBrandMark /> : <Logo />}
           </Link>
           <div>
             <p className="brand">{brandName}</p>
@@ -88,6 +101,7 @@ export default function Header() {
             className="mobile-toggle"
             aria-expanded={isOpen}
             aria-controls="mobile-nav-panel"
+            aria-label={isOpen ? "Close menu" : "Menu"}
             onClick={() => setIsOpen((current) => !current)}
           >
             {isOpen ? "Close" : "Menu"}
