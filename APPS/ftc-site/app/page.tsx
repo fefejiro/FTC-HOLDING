@@ -52,7 +52,7 @@ const proofTiles = [
     description: "Automation, operations, reliability.",
     proof: "Production-grade reliability",
     href: "/services/intelligent-systems-automation",
-    visualType: "standard"
+    visualType: "saywetin"
   },
   {
     label: "Flagship Product: PeacePad",
@@ -175,14 +175,19 @@ export default function HomePage() {
             {proofTiles.map((tile) => (
               <article key={tile.title} className="card proof-card">
                 {tile.visualType === "peacepad" ? (
-                  <div className="proof-thumb proof-thumb-peacepad" aria-hidden="true">
-                    <span className="peacepad-mark">PeacePad</span>
-                    <div className="peacepad-ui-hint">
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                  </div>
+                  <img
+                    className="proof-thumb proof-thumb-image"
+                    src="/images/brand/peacepad-directory-03-compose.png"
+                    alt="PeacePad product preview"
+                    loading="lazy"
+                  />
+                ) : tile.visualType === "saywetin" ? (
+                  <img
+                    className="proof-thumb proof-thumb-image"
+                    src="/images/brand/saywetin-og.png"
+                    alt="SayWetin product preview"
+                    loading="lazy"
+                  />
                 ) : (
                   <div className="proof-thumb proof-thumb-neutral" aria-hidden="true">
                     <div className="neutral-bars">

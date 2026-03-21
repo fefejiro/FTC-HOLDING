@@ -51,7 +51,7 @@ export default function PeacePadProductPage() {
           </div>
         </div>
         <BrandImagePanel
-          src="/images/brand/peacepad-showcase.PNG"
+          src="/images/brand/peacepad-directory-03-compose.png"
           alt="PeacePad product preview"
           aspect="portrait"
           sizes="(max-width: 980px) 100vw, 42vw"

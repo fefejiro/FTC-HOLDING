@@ -49,7 +49,7 @@ export default function PeacePadPage() {
         <div className="product-media-stack">
           <BrandVideoPanel
             src="/images/brand/unalabs-hero.mp4"
-            poster="/images/brand/peacepad-showcase.PNG"
+            poster="/images/brand/peacepad-directory-03-compose.png"
             title="PeacePad product demo reel"
             aspect="wide"
             preload="metadata"
@@ -71,7 +71,7 @@ export default function PeacePadPage() {
             }
           />
           <BrandImagePanel
-            src="/images/brand/peacepad-showcase.PNG"
+            src="/images/brand/peacepad-directory-03-compose.png"
             alt="PeacePad premium product concept visual"
             aspect="wide"
             sizes="(max-width: 980px) 100vw, 44vw"
