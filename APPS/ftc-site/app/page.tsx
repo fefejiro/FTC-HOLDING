@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ClientLogoStrip from "./components/ClientLogoStrip";
+import { emergencyPromptCaseStudy } from "../lib/recentWork";
 
 const heroCredibilityBullets = [
   "Launch fast with production-grade foundations (performance, SEO, analytics).",
@@ -29,14 +30,24 @@ const serviceTiles = [
   }
 ] as const;
 
-const proofTiles = [
+const recentWorkTiles = [
+  {
+    label: emergencyPromptCaseStudy.tileTitle,
+    title: emergencyPromptCaseStudy.tileTitle,
+    description: emergencyPromptCaseStudy.subtitle,
+    proof: emergencyPromptCaseStudy.service,
+    href: `/work/${emergencyPromptCaseStudy.slug}`,
+    visualType: "standard",
+    tags: emergencyPromptCaseStudy.tags
+  },
   {
     label: "Lead Engine for Local Services",
     title: "Lead Engine for Local Services",
     description: "YouTube SEO, local intent, conversion tracking.",
     proof: "Local services growth track",
     href: "/work",
-    visualType: "standard"
+    visualType: "standard",
+    tags: []
   },
   {
     label: "Fast Website Launch",
@@ -44,7 +55,8 @@ const proofTiles = [
     description: "Performance, SEO basics, conversion layout.",
     proof: "Launch-ready foundation",
     href: "/work-with-ftc",
-    visualType: "standard"
+    visualType: "standard",
+    tags: []
   },
   {
     label: "Automation Workflow",
@@ -52,7 +64,8 @@ const proofTiles = [
     description: "Automation, operations, reliability.",
     proof: "Production-grade reliability",
     href: "/services/intelligent-systems-automation",
-    visualType: "saywetin"
+    visualType: "saywetin",
+    tags: []
   },
   {
     label: "Flagship Product: PeacePad",
@@ -60,7 +73,8 @@ const proofTiles = [
     description: "Workflow design, AI assist, compliance mindset.",
     proof: "Flagship product",
     href: "/products/peacepad",
-    visualType: "peacepad"
+    visualType: "peacepad",
+    tags: []
   }
 ] as const;
 
@@ -167,12 +181,12 @@ export default function HomePage() {
       <section className="section fade-on-scroll anchor-offset" id="work">
         <div className="container">
           <div className="section-heading home-section-heading">
-            <p className="eyebrow">Proof / Work</p>
-            <h2>Proof of execution across products and client delivery</h2>
-            <p>Flagship products and delivery tracks that show how Una Labs operates.</p>
+            <p className="eyebrow">Recent Work</p>
+            <h2>Recent Work</h2>
+            <p>Selected builds focused on systems-first delivery and measurable outcomes.</p>
           </div>
           <div className="proof-grid">
-            {proofTiles.map((tile) => (
+            {recentWorkTiles.map((tile) => (
               <article key={tile.title} className="card proof-card">
                 {tile.visualType === "peacepad" ? (
                   <img
@@ -200,6 +214,15 @@ export default function HomePage() {
                 <p className="proof-label">{tile.label}</p>
                 <h3>{tile.title}</h3>
                 <p>{tile.description}</p>
+                {tile.tags.length > 0 ? (
+                  <div className="proof-tags" aria-label={`${tile.title} tags`}>
+                    {tile.tags.map((tag) => (
+                      <span key={tag} className="proof-tag">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <p className="proof-proof">{tile.proof}</p>
                 <Link href={tile.href} prefetch={false} className="inline-link">
                   View detail
