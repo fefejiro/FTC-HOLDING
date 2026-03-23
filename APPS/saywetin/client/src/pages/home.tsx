@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,14 +13,29 @@ import { User, LogOut, UserCircle, Mic, PenLine, Music, Headphones, Radio } from
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
 import { AudioRecorder } from '@/components/audio-recorder';
+import { isListenModeLocation, LISTEN_MODE_PATH } from '@/lib/navigation';
 
 type ListenState = 'idle' | 'listening';
 
 export default function Home() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
   
-  const [listenState, setListenState] = useState<ListenState>('idle');
+  const [listenState, setListenState] = useState<ListenState>(() =>
+    isListenModeLocation() ? 'listening' : 'idle'
+  );
+
+  useEffect(() => {
+    setListenState(isListenModeLocation(location) ? 'listening' : 'idle');
+  }, [location]);
+
+  const openListenMode = () => {
+    navigate(LISTEN_MODE_PATH);
+  };
+
+  const closeListenMode = () => {
+    navigate('/');
+  };
 
   const handleRecognitionSuccess = (result: any) => {
     if (result.recognizedTrack?.id) {
@@ -117,8 +132,8 @@ export default function Home() {
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={() => setListenState('listening')}
-                  onKeyDown={(e) => e.key === 'Enter' && setListenState('listening')}
+                  onClick={openListenMode}
+                  onKeyDown={(e) => e.key === 'Enter' && openListenMode()}
                   className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 flex items-center justify-center shadow-2xl shadow-orange-500/25 cursor-pointer transition-shadow duration-300 hover-elevate active-elevate-2"
                   data-testid="button-listen-main"
                 >
@@ -167,7 +182,7 @@ export default function Home() {
                   <Mic className="h-5 w-5 text-primary" />
                   Dey hear am...
                 </h3>
-                <Button variant="ghost" size="sm" onClick={() => setListenState('idle')} data-testid="button-back">
+                <Button variant="ghost" size="sm" onClick={closeListenMode} data-testid="button-back">
                   Back
                 </Button>
               </div>

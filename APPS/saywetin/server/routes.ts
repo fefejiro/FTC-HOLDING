@@ -11,13 +11,34 @@ import {
   generateUserLyricMeaningRequestSchema,
   voteRequestSchema,
 } from "@shared/schema";
-import { generateLyricTranslation, generateBatchCulturalAnalysis, generateSectionCulturalAnalysis, generateSingleLineAnalysis, streamSingleLineAnalysis, generateArtistSongInfo, extractSongDNA, generateFragmentInterpretation } from "./openai-service";
+import {
+  buildUnavailableArtistInfo,
+  buildUnavailableFragmentInterpretation,
+  extractSongDNA,
+  generateArtistSongInfo,
+  generateBatchCulturalAnalysis,
+  generateFragmentInterpretation,
+  generateLyricTranslation,
+  generateSectionCulturalAnalysis,
+  generateSingleLineAnalysis,
+  streamSingleLineAnalysis,
+} from "./openai-service";
 import { ExportService } from "./export-service";
 import multer from "multer";
 import crypto from "crypto";
 import { recognizeSong, isACRCloudConfigured } from "./acrcloud-service";
-import { fetchLyrics, isMusixmatchConfigured } from "./musixmatch-service";
+import {
+  fetchLyrics,
+  getLyricsServiceStatus,
+  isLyricsServiceAvailable,
+} from "./musixmatch-service";
 import { resolveTrackArtwork } from "./artwork-service";
+import {
+  getAiProviderConfig,
+  getAiUnavailableMessage,
+  isAiConfigured,
+} from "./lib/ai-config";
+import { getBackendBuildInfo } from "./lib/build-info";
 
 interface InfrastructureIssue {
   statusCode: number;
@@ -162,6 +183,113 @@ async function withDatabaseRetry<T>(
   throw lastError;
 }
 
+type PublicAsyncStatus = "pending" | "complete" | "unavailable" | "failed";
+
+function toPublicLyricsStatus(status?: string): PublicAsyncStatus {
+  if (status === "completed") {
+    return "complete";
+  }
+
+  if (status === "no_lyrics") {
+    return "unavailable";
+  }
+
+  if (status === "failed") {
+    return "failed";
+  }
+
+  return "pending";
+}
+
+function toPublicAnalysisStatus(
+  analysisStatus: string | undefined,
+  lyricsStatus: string | undefined,
+  analysisCount: number,
+  aiConfigured: boolean,
+): PublicAsyncStatus {
+  if (analysisCount > 0) {
+    return "complete";
+  }
+
+  if (lyricsStatus === "no_lyrics") {
+    return "unavailable";
+  }
+
+  if (!aiConfigured) {
+    return "unavailable";
+  }
+
+  if (analysisStatus === "completed") {
+    return "failed";
+  }
+
+  if (analysisStatus === "failed") {
+    return "failed";
+  }
+
+  return "pending";
+}
+
+async function buildRecognizedTrackResponse(trackId: string) {
+  const track = await storage.getRecognizedTrackById(trackId);
+  if (!track) {
+    return null;
+  }
+
+  const coverArtUrl = await resolveTrackArtwork({
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    spotifyId: track.spotifyId,
+    isrc: track.isrc,
+  });
+
+  let lyrics: { text: string; language: string; source: string } | null = null;
+  const transientLyrics = await storage.getTransientLyricsByTrackId(trackId);
+  if (transientLyrics && transientLyrics.length > 0) {
+    const lyric = transientLyrics[0];
+    lyrics = {
+      text: lyric.fullLyrics,
+      language: lyric.language,
+      source: lyric.source,
+    };
+  }
+
+  const culturalAnalysis = await storage.getAiTranslationsByRecognizedTrackId(trackId);
+  const aiConfig = getAiProviderConfig();
+  const lyricsServiceStatus = getLyricsServiceStatus();
+
+  const lyricsStatus = toPublicLyricsStatus(track.lyricsStatus || undefined);
+  const analysisStatus = toPublicAnalysisStatus(
+    track.analysisStatus || undefined,
+    track.lyricsStatus || undefined,
+    culturalAnalysis?.length || 0,
+    aiConfig.configured,
+  );
+
+  return {
+    track: {
+      ...track,
+      coverArtUrl,
+    },
+    lyrics,
+    culturalAnalysis,
+    status: {
+      lyrics: lyricsStatus,
+      analysis: analysisStatus,
+      aiConfigured: aiConfig.configured,
+      aiProvider: aiConfig.provider,
+      lyricsProvider: lyricsServiceStatus.service,
+      analysisMessage:
+        analysisStatus === "unavailable"
+          ? getAiUnavailableMessage("Deeper breakdown")
+          : analysisStatus === "failed"
+            ? "We recognized the song, but the deeper breakdown did not finish this time."
+            : undefined,
+    },
+  };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -269,15 +397,19 @@ export async function registerRoutes(
         service: 'Audio Recognition',
       },
       lyrics: {
-        configured: isMusixmatchConfigured(),
-        service: 'Lyrics.ovh (Free API)',
+        ...getLyricsServiceStatus(),
       },
       openai: {
-        configured: !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY || !!process.env.OPENAI_API_KEY,
+        configured: isAiConfigured(),
+        provider: getAiProviderConfig().provider,
         service: 'AI Cultural Context',
       },
       database,
     });
+  });
+
+  app.get("/api/version", (_req, res) => {
+    res.json(getBackendBuildInfo());
   });
 
   app.get("/api/diag/acrcloud", (_req, res) => {
@@ -458,7 +590,7 @@ export async function registerRoutes(
           
           lyricsText = cachedLyrics.text;
           lyricsLanguage = cachedLyrics.language;
-        } else if (isMusixmatchConfigured()) {
+        } else if (isLyricsServiceAvailable()) {
           try {
             const lyricsResult = await fetchLyrics(track.title, track.artist);
             
@@ -504,6 +636,22 @@ export async function registerRoutes(
         console.log(`⏱️ [PIPELINE] Lyrics phase completed in ${lyricsElapsed}ms (${lyricsText ? 'found' : 'not found'})`);
 
         if (lyricsText) {
+          if (!isAiConfigured()) {
+            console.log(`[AI] Skipping deeper analysis for "${track.title}" - no AI provider configured`);
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              analysisStatus: 'failed',
+              processingCompletedAt: new Date(),
+            });
+
+            await artistInfoWarmup;
+            await storage.updateListeningSession(sessionId!, {
+              status: 'success',
+              recognitionTime: Date.now() - startTime,
+            });
+
+            return;
+          }
+
           await storage.updateRecognizedTrack(recognizedTrack.id, {
             analysisStatus: 'generating_analysis',
           });
@@ -549,7 +697,7 @@ export async function registerRoutes(
             console.log(`📝 Saved ${batchResults.length} lines for "${track.title}"`);
           };
 
-          await generateSectionCulturalAnalysis(
+          const sectionResults = await generateSectionCulturalAnalysis(
             lyricsData,
             track.title,
             track.artist,
@@ -561,34 +709,40 @@ export async function registerRoutes(
           );
 
           await storage.updateRecognizedTrack(recognizedTrack.id, {
-            analysisStatus: 'completed',
+            analysisStatus: sectionResults.length > 0 ? 'completed' : 'failed',
             processingCompletedAt: new Date(),
           });
           
           const analysisElapsed = Date.now() - bgStartTime;
-          console.log(`✅ [PIPELINE] Analysis complete in ${analysisElapsed}ms. Remaining ${Math.max(0, lyricsData.length - 4)} lines on-demand.`);
+          if (sectionResults.length > 0) {
+            console.log(`✅ [PIPELINE] Analysis complete in ${analysisElapsed}ms. Remaining ${Math.max(0, lyricsData.length - 4)} lines on-demand.`);
+          } else {
+            console.warn(`⚠️ [PIPELINE] Analysis returned no results for "${track.title}" after ${analysisElapsed}ms.`);
+          }
 
           // Song DNA extraction runs fire-and-forget (non-blocking)
-          extractSongDNA(
-            track.title,
-            track.artist,
-            lyricsText!,
-            track.genre,
-            track.releaseYear
-          ).then(async (songDNA) => {
-            if (songDNA) {
-              await storage.updateRecognizedTrack(recognizedTrack.id, {
-                emotionalTone: songDNA.emotionalTone,
-                emotionalToneConfidence: String(songDNA.emotionalToneConfidence),
-                culturalThemes: JSON.stringify(songDNA.culturalThemes),
-                culturalThemeConfidence: String(songDNA.culturalThemeConfidence),
-                region: songDNA.region,
-                era: songDNA.era,
-                songDnaGeneratedAt: new Date(),
-              });
-              console.log(`🧬 [DNA] Saved song DNA for "${track.title}"`);
-            }
-          }).catch(err => console.error('❌ [DNA] Failed:', err.message));
+          if (sectionResults.length > 0) {
+            extractSongDNA(
+              track.title,
+              track.artist,
+              lyricsText!,
+              track.genre,
+              track.releaseYear
+            ).then(async (songDNA) => {
+              if (songDNA) {
+                await storage.updateRecognizedTrack(recognizedTrack.id, {
+                  emotionalTone: songDNA.emotionalTone,
+                  emotionalToneConfidence: String(songDNA.emotionalToneConfidence),
+                  culturalThemes: JSON.stringify(songDNA.culturalThemes),
+                  culturalThemeConfidence: String(songDNA.culturalThemeConfidence),
+                  region: songDNA.region,
+                  era: songDNA.era,
+                  songDnaGeneratedAt: new Date(),
+                });
+                console.log(`🧬 [DNA] Saved song DNA for "${track.title}"`);
+              }
+            }).catch(err => console.error('❌ [DNA] Failed:', err.message));
+          }
         }
 
         // Wait for artist info warmup to finish (should already be done)
@@ -740,7 +894,7 @@ export async function registerRoutes(
         let lyricsText: string | null = null;
         let lyricsLanguage = 'en';
 
-        if (isMusixmatchConfigured()) {
+        if (isLyricsServiceAvailable()) {
           try {
             const lyricsResult = await fetchLyrics(title, artist);
             
@@ -880,21 +1034,20 @@ export async function registerRoutes(
       
       const userId = getUserId(req);
 
-      // Use OpenAI to identify the song from the text query
-      const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-      if (!apiKey) {
+      // Use the configured OpenAI-compatible provider to identify the song from text
+      const aiConfig = getAiProviderConfig();
+      if (!aiConfig.configured) {
         return res.status(503).json({
           success: false,
-          error: "Text identification requires OpenAI API configuration.",
+          error: getAiUnavailableMessage("Text identification"),
         });
       }
 
       const { default: OpenAI } = await import("openai");
       const openai = new OpenAI({
-        apiKey,
-        baseURL: process.env.OPENAI_API_KEY
-          ? undefined
-          : process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        apiKey: aiConfig.apiKey!,
+        baseURL: aiConfig.baseURL,
+        defaultHeaders: aiConfig.defaultHeaders,
       });
       
       const completion = await openai.chat.completions.create({
@@ -989,7 +1142,7 @@ Rules:
           let lyricsText: string | null = null;
           let lyricsLanguage = 'en';
 
-          if (isMusixmatchConfigured()) {
+          if (isLyricsServiceAvailable()) {
             try {
               const lyricsResult = await fetchLyrics(identified.title, identified.artist);
               if (lyricsResult.success && lyricsResult.lyrics) {
@@ -1205,7 +1358,7 @@ Rules:
           let lyricsText: string | null = null;
           let lyricsLanguage = 'en';
 
-          if (isMusixmatchConfigured()) {
+          if (isLyricsServiceAvailable()) {
             try {
               const lyricsResult = await fetchLyrics(title, artist);
               
@@ -1333,56 +1486,30 @@ Rules:
     }
   });
 
-  // Get recognized track by ID with lyrics and translations
-  app.get("/api/recognized-tracks/:id", async (req, res) => {
+  const sendRecognizedTrack = async (req: any, res: any) => {
     try {
-      const track = await storage.getRecognizedTrackById(req.params.id);
-      
-      if (!track) {
+      const responsePayload = await buildRecognizedTrackResponse(req.params.id);
+
+      if (!responsePayload) {
         return res.status(404).json({ error: "Track not found" });
       }
 
-      const coverArtUrl = await resolveTrackArtwork({
-        title: track.title,
-        artist: track.artist,
-        album: track.album,
-        spotifyId: track.spotifyId,
-        isrc: track.isrc,
-      });
-      const trackWithArtwork = {
-        ...track,
-        coverArtUrl,
-      };
-
-      // Fetch transient lyrics if available
-      let lyrics = null;
-      const transientLyrics = await storage.getTransientLyricsByTrackId(req.params.id);
-      if (transientLyrics && transientLyrics.length > 0) {
-        const lyric = transientLyrics[0];
-        lyrics = {
-          text: lyric.fullLyrics,
-          language: lyric.language,
-          source: lyric.source,
-        };
-      }
-
-      // Fetch AI translations
-      const aiTranslations = await storage.getAiTranslationsByRecognizedTrackId(req.params.id);
-
-      res.json({
-        track: trackWithArtwork,
-        lyrics,
-        culturalAnalysis: aiTranslations,
-      });
+      res.json(responsePayload);
     } catch (error) {
       console.error("Error fetching recognized track:", error);
       res.status(500).json({ error: "Failed to fetch track details" });
     }
-  });
+  };
+
+  // Get recognized track by ID with lyrics and translations
+  app.get("/api/recognized-tracks/:id", sendRecognizedTrack);
+
+  // Backward compatibility alias for older frontend bundles.
+  app.get("/api/recognized-track/:id", sendRecognizedTrack);
 
   // SSE endpoint for real-time track processing updates
   // Eliminates polling - client gets instant updates as processing progresses
-  app.get("/api/recognized-tracks/:id/stream", async (req, res) => {
+  const streamRecognizedTrack = async (req: any, res: any) => {
     const trackId = req.params.id;
     
     res.writeHead(200, {
@@ -1401,37 +1528,17 @@ Rules:
     
     const fetchAndSend = async () => {
       try {
-        const track = await storage.getRecognizedTrackById(trackId);
-        if (!track) {
+        const payload = await buildRecognizedTrackResponse(trackId);
+        if (!payload) {
           sendEvent('error', { message: 'Track not found' });
           res.end();
           return;
         }
-        const coverArtUrl = await resolveTrackArtwork({
-          title: track.title,
-          artist: track.artist,
-          album: track.album,
-          spotifyId: track.spotifyId,
-          isrc: track.isrc,
-        });
-        const trackWithArtwork = {
-          ...track,
-          coverArtUrl,
-        };
+
+        sendEvent('update', payload);
         
-        let lyrics = null;
-        const transientLyrics = await storage.getTransientLyricsByTrackId(trackId);
-        if (transientLyrics && transientLyrics.length > 0) {
-          const lyric = transientLyrics[0];
-          lyrics = { text: lyric.fullLyrics, language: lyric.language, source: lyric.source };
-        }
-        
-        const aiTranslations = await storage.getAiTranslationsByRecognizedTrackId(trackId);
-        
-        sendEvent('update', { track: trackWithArtwork, lyrics, culturalAnalysis: aiTranslations });
-        
-        const lyricsComplete = ['completed', 'failed', 'no_lyrics'].includes(trackWithArtwork.lyricsStatus || '');
-        const analysisComplete = ['completed', 'failed', 'no_lyrics'].includes(trackWithArtwork.analysisStatus || '');
+        const lyricsComplete = ['complete', 'failed', 'unavailable'].includes(payload.status.lyrics);
+        const analysisComplete = ['complete', 'failed', 'unavailable'].includes(payload.status.analysis);
         
         if (lyricsComplete && analysisComplete) {
           sendEvent('complete', { message: 'Processing complete' });
@@ -1466,7 +1573,12 @@ Rules:
         res.end();
       }
     }, 60000);
-  });
+  };
+
+  app.get("/api/recognized-tracks/:id/stream", streamRecognizedTrack);
+
+  // Backward compatibility alias for older frontend bundles.
+  app.get("/api/recognized-track/:id/stream", streamRecognizedTrack);
 
   // X-Ray style artist and song info
   app.get("/api/artist-info/:trackId", async (req, res) => {
@@ -1474,6 +1586,20 @@ Rules:
       const track = await storage.getRecognizedTrackById(req.params.trackId);
       if (!track) {
         return res.status(404).json({ error: "Track not found" });
+      }
+
+      if (!isAiConfigured()) {
+        return res.json({
+          ...buildUnavailableArtistInfo(
+            track.artist,
+            track.title,
+            track.album || undefined,
+            track.genre || undefined,
+            track.releaseYear || undefined,
+          ),
+          status: "unavailable",
+          message: getAiUnavailableMessage("Artist background"),
+        });
       }
 
       const info = await generateArtistSongInfo(
@@ -1490,13 +1616,34 @@ Rules:
       );
 
       if (!info) {
-        return res.status(500).json({ error: "Failed to generate artist info" });
+        return res.json({
+          ...buildUnavailableArtistInfo(
+            track.artist,
+            track.title,
+            track.album || undefined,
+            track.genre || undefined,
+            track.releaseYear || undefined,
+          ),
+          status: "failed",
+          message: "We recognized the song, but we could not load artist background right now.",
+        });
       }
 
-      res.json(info);
+      res.json({
+        ...info,
+        status: info.verification === "unverified" ? "unavailable" : "complete",
+      });
     } catch (error) {
       console.error("Error generating artist info:", error);
-      res.status(500).json({ error: "Failed to generate artist info" });
+      res.json({
+        artistBio: "We recognized the song, but the richer artist background did not load this time.",
+        artistOrigin: "",
+        musicStyle: "Artist style details are unavailable right now.",
+        songBackground: "Try again later after the AI provider is available.",
+        verification: "unverified",
+        status: "failed",
+        message: "We recognized the song, but we could not load artist background right now.",
+      });
     }
   });
 
@@ -1508,6 +1655,19 @@ Rules:
         return res.status(404).json({ error: "Track not found" });
       }
 
+      if (!isAiConfigured()) {
+        return res.json({
+          ...buildUnavailableFragmentInterpretation(
+            track.title,
+            track.artist,
+            track.genre || undefined,
+            track.region || undefined,
+          ),
+          status: "unavailable",
+          message: getAiUnavailableMessage("Title interpretation"),
+        });
+      }
+
       const interpretation = await generateFragmentInterpretation(
         track.title,
         track.artist,
@@ -1516,13 +1676,31 @@ Rules:
       );
 
       if (!interpretation) {
-        return res.status(500).json({ error: "Failed to generate interpretation" });
+        return res.json({
+          ...buildUnavailableFragmentInterpretation(
+            track.title,
+            track.artist,
+            track.genre || undefined,
+            track.region || undefined,
+          ),
+          status: "failed",
+          message: "We recognized the song, but deeper title interpretation did not finish this time.",
+        });
       }
 
-      res.json(interpretation);
+      res.json({
+        ...interpretation,
+        status: "complete",
+      });
     } catch (error) {
       console.error("Error generating fragment interpretation:", error);
-      res.status(500).json({ error: "Failed to generate interpretation" });
+      res.json({
+        detectedPhrases: [],
+        likelyThemes: [],
+        culturalNote: "We recognized the song, but deeper title interpretation did not finish this time.",
+        status: "failed",
+        message: "We recognized the song, but deeper title interpretation did not finish this time.",
+      });
     }
   });
 
@@ -1533,6 +1711,14 @@ Rules:
       
       if (!lyricText || lyricText.trim().length < 3) {
         return res.status(400).json({ error: 'Lyric text is required' });
+      }
+
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          success: false,
+          status: 'unavailable',
+          message: getAiUnavailableMessage("Line-by-line breakdown"),
+        });
       }
 
       console.log(`🔍 [LAZY] On-demand analysis requested for: "${lyricText.substring(0, 40)}..."`);
@@ -1563,7 +1749,11 @@ Rules:
       );
 
       if (!analysis) {
-        return res.status(500).json({ error: 'Failed to generate analysis' });
+        return res.status(503).json({
+          success: false,
+          status: 'failed',
+          message: 'We could not generate the line-by-line breakdown right now.',
+        });
       }
 
       // Save the analysis if trackId provided
@@ -1599,7 +1789,11 @@ Rules:
       });
     } catch (error: any) {
       console.error('❌ [LAZY] Error:', error);
-      res.status(500).json({ error: 'Failed to analyze line' });
+      res.status(500).json({
+        success: false,
+        status: 'failed',
+        message: 'Failed to analyze line',
+      });
     }
   });
 
@@ -1617,6 +1811,12 @@ Rules:
     try {
       if (!lyricText || String(lyricText).trim().length < 3) {
         res.write(`data: ${JSON.stringify({ type: 'error', data: 'Lyric text is required' })}\n\n`);
+        res.end();
+        return;
+      }
+
+      if (!isAiConfigured()) {
+        res.write(`data: ${JSON.stringify({ type: 'error', data: getAiUnavailableMessage("Line-by-line breakdown") })}\n\n`);
         res.end();
         return;
       }
@@ -1733,6 +1933,15 @@ Rules:
       // Generate AI analysis in background with progressive saving
       (async () => {
         try {
+          if (!isAiConfigured()) {
+            await storage.updateRecognizedTrack(trackId, {
+              analysisStatus: 'failed',
+              processingCompletedAt: new Date(),
+            });
+            console.log(`⚠️ [CONTRIBUTE] Skipped deeper analysis for "${track.title}" - no AI provider configured`);
+            return;
+          }
+
           const lines = lyricsText.split('\n').filter((line: string) => line.trim());
           const lyricsData = lines.map((text: string, idx: number) => ({
             text,
@@ -1766,7 +1975,7 @@ Rules:
             console.log(`📝 [CONTRIBUTE] Saved batch (${batchResults.length} lines)`);
           };
 
-          await generateBatchCulturalAnalysis(
+          const batchResults = await generateBatchCulturalAnalysis(
             lyricsData,
             track.title,
             track.artist,
@@ -1776,11 +1985,15 @@ Rules:
           );
 
           await storage.updateRecognizedTrack(trackId, {
-            analysisStatus: 'completed',
+            analysisStatus: batchResults.length > 0 ? 'completed' : 'failed',
             processingCompletedAt: new Date(),
           });
 
-          console.log(`✅ [CONTRIBUTE] Analysis complete for "${track.title}"`);
+          if (batchResults.length > 0) {
+            console.log(`✅ [CONTRIBUTE] Analysis complete for "${track.title}"`);
+          } else {
+            console.warn(`⚠️ [CONTRIBUTE] Analysis returned no results for "${track.title}"`);
+          }
         } catch (error: any) {
           console.error('❌ [CONTRIBUTE] Analysis failed:', error.message);
           await storage.updateRecognizedTrack(trackId, {
@@ -2153,6 +2366,13 @@ Rules:
   // Generate meaning for a lyric line
   app.post("/api/lyrics/generate-meaning", async (req, res) => {
     try {
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          error: getAiUnavailableMessage("Lyric meaning"),
+          status: "unavailable",
+        });
+      }
+
       const validatedData = generateMeaningRequestSchema.parse(req.body);
       const { lyricLineId, language } = validatedData;
 
@@ -2197,6 +2417,13 @@ Rules:
     }
 
     try {
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          error: getAiUnavailableMessage("Lyric meaning"),
+          status: "unavailable",
+        });
+      }
+
       const validatedData = generateUserLyricMeaningRequestSchema.parse(req.body);
       const { lyricText, language, languageName, songId } = validatedData;
       const userId = getUserId(req)!;

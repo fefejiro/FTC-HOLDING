@@ -1,22 +1,12 @@
-import OpenAI from "openai";
 import { findMatchingPhrases, NIGERIAN_PHRASES, type NigerianPhrase } from "./nigerian-phrases";
+import { getAiClient, getAiProviderConfig, isAiConfigured } from "./lib/ai-config";
 
 // This is using OpenAI's API directly with your own API key for reliable cultural analysis
 // Using gpt-4o-mini for cost efficiency (user requested to save tokens)
-const openAiApiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-const openAiBaseUrl = process.env.OPENAI_API_KEY
-  ? undefined
-  : process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-const openai = openAiApiKey
-  ? new OpenAI({ apiKey: openAiApiKey, baseURL: openAiBaseUrl })
-  : null;
-const MODEL = "gpt-4o-mini"; // Cost-efficient model for cultural analysis
+const MODEL = getAiProviderConfig().model;
 
-function getOpenAIClient(): OpenAI {
-  if (!openai) {
-    throw new Error("OPENAI_API_KEY (or AI_INTEGRATIONS_OPENAI_API_KEY) is not configured");
-  }
-  return openai;
+function getOpenAIClient() {
+  return getAiClient();
 }
 
 interface TranslationResult {
@@ -215,6 +205,11 @@ export async function generateSectionCulturalAnalysis(
   onBatchComplete?: (results: CulturalAnalysisResult[], startIndex: number, originalLines: string[]) => Promise<void>
 ): Promise<CulturalAnalysisResult[]> {
   const startTime = Date.now();
+
+  if (!isAiConfigured()) {
+    console.log("[AI] Section analysis skipped - no AI provider configured");
+    return [];
+  }
   
   // Filter out empty lines and very short lines
   const meaningfulLyrics = lyrics.filter(l => l.text.trim().length > 3);
@@ -290,6 +285,11 @@ export async function generateSingleLineAnalysis(
   knownLanguage?: string
 ): Promise<CulturalAnalysisResult | null> {
   const startTime = Date.now();
+
+  if (!isAiConfigured()) {
+    console.log("[AI] Single-line analysis skipped - no AI provider configured");
+    return null;
+  }
   
   if (lyricText.trim().length < 3) {
     return null;
@@ -353,6 +353,11 @@ export async function generateBatchCulturalAnalysis(
   onBatchComplete?: (results: CulturalAnalysisResult[], startIndex: number, originalLines: string[]) => Promise<void>
 ): Promise<CulturalAnalysisResult[]> {
   const startTime = Date.now();
+
+  if (!isAiConfigured()) {
+    console.log("[AI] Batch analysis skipped - no AI provider configured");
+    return [];
+  }
   
   // Filter out empty lines and very short lines
   const meaningfulLyrics = lyrics.filter(l => l.text.trim().length > 3);
@@ -434,6 +439,11 @@ export async function* streamSingleLineAnalysis(
   knownLanguage?: string
 ): AsyncGenerator<{ type: 'chunk' | 'complete' | 'error'; data: string }> {
   const startTime = Date.now();
+
+  if (!isAiConfigured()) {
+    yield { type: 'error', data: 'Deeper breakdown is unavailable right now.' };
+    return;
+  }
   
   if (lyricText.trim().length < 3) {
     yield { type: 'error', data: 'Line too short to analyze' };
@@ -649,6 +659,16 @@ function buildUnverifiedArtistInfo(
   };
 }
 
+export function buildUnavailableArtistInfo(
+  artistName: string,
+  songTitle: string,
+  album?: string,
+  genre?: string,
+  releaseYear?: number
+): ArtistSongInfo {
+  return buildUnverifiedArtistInfo(artistName, songTitle, album, genre, releaseYear);
+}
+
 export async function generateArtistSongInfo(
   artistName: string,
   songTitle: string,
@@ -657,6 +677,10 @@ export async function generateArtistSongInfo(
   releaseYear?: number,
   options?: ArtistInfoGenerationOptions
 ): Promise<ArtistSongInfo | null> {
+  if (!isAiConfigured()) {
+    return buildUnverifiedArtistInfo(artistName, songTitle, album, genre, releaseYear);
+  }
+
   try {
     const cacheKey = `${artistName.toLowerCase()}|${songTitle.toLowerCase()}|${options?.spotifyId || ''}|${options?.isrc || ''}`;
     const cached = artistInfoCache.get(cacheKey);
@@ -749,12 +773,42 @@ export interface FragmentInterpretation {
 
 const fragmentCache = new Map<string, { data: FragmentInterpretation; timestamp: number }>();
 
+export function buildUnavailableFragmentInterpretation(
+  songTitle: string,
+  artistName: string,
+  genre?: string,
+  region?: string
+): FragmentInterpretation {
+  const matchedPhrases = findMatchingPhrases(`${songTitle} ${artistName}`);
+
+  return {
+    titleMeaning: matchedPhrases[0]
+      ? `"${songTitle}" includes "${matchedPhrases[0].phrase}", which usually means ${matchedPhrases[0].meaning}.`
+      : undefined,
+    detectedPhrases: matchedPhrases.map((phrase) => ({
+      phrase: phrase.phrase,
+      meaning: phrase.meaning,
+      culturalContext: phrase.culturalUsage,
+      emotionalIntent: phrase.emotionalIntent,
+    })),
+    likelyThemes: [genre, region].filter((value): value is string => Boolean(value && value.trim().length > 0)),
+    culturalNote:
+      matchedPhrases.length > 0
+        ? "We recognized the song and matched a few known phrases, but deeper title breakdown is unavailable right now."
+        : "We recognized the song, but deeper title breakdown is unavailable right now.",
+  };
+}
+
 export async function generateFragmentInterpretation(
   songTitle: string,
   artistName: string,
   genre?: string,
   region?: string
 ): Promise<FragmentInterpretation | null> {
+  if (!isAiConfigured()) {
+    return buildUnavailableFragmentInterpretation(songTitle, artistName, genre, region);
+  }
+
   try {
     const fragCacheKey = `${songTitle.toLowerCase()}|${artistName.toLowerCase()}`;
     const cachedFrag = fragmentCache.get(fragCacheKey);

@@ -4,8 +4,7 @@ import { isAuthenticated } from "./replitAuth";
 
 // Register auth-specific routes
 export function registerAuthRoutes(app: Express): void {
-  // Get current authenticated user
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
+  const sendAuthenticatedUser = async (req: any, res: any) => {
     try {
       const userId = req.user.claims.sub;
       const user = await authStorage.getUser(userId);
@@ -14,5 +13,11 @@ export function registerAuthRoutes(app: Express): void {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
-  });
+  };
+
+  // Get current authenticated user
+  app.get("/api/auth/user", isAuthenticated, sendAuthenticatedUser);
+
+  // Backward compatibility alias for older frontend bundles.
+  app.get("/api/auth/me", isAuthenticated, sendAuthenticatedUser);
 }

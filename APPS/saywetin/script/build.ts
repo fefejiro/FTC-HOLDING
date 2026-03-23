@@ -36,6 +36,7 @@ const allowlist = [
 
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
+  const pkg = JSON.parse(await readFile("package.json", "utf-8"));
 
   console.log("building client...");
   await viteBuild();
@@ -60,6 +61,8 @@ async function buildAll() {
     buildMetaPath,
     `${JSON.stringify(
       {
+        appName: pkg.name || "saywetin-web",
+        version: pkg.version || "0.0.0",
         webBuildId,
         deployedAt: deployedAt.toISOString(),
         gitSha: gitSha || undefined,
@@ -73,7 +76,6 @@ async function buildAll() {
   console.log(`[build-meta] webBuildId=${webBuildId}`);
 
   console.log("building server...");
-  const pkg = JSON.parse(await readFile("package.json", "utf-8"));
   const allDeps = [
     ...Object.keys(pkg.dependencies || {}),
     ...Object.keys(pkg.devDependencies || {}),

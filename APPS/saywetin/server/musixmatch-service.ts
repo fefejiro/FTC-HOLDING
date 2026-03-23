@@ -1,14 +1,7 @@
 import axios from 'axios';
-import OpenAI from 'openai';
+import { getAiClient, getAiProviderConfig, isAiConfigured } from './lib/ai-config';
 
 const LYRICS_OVH_BASE_URL = 'https://api.lyrics.ovh/v1';
-const openAiApiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-const openAiBaseUrl = process.env.OPENAI_API_KEY
-  ? undefined
-  : process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-const openai = openAiApiKey
-  ? new OpenAI({ apiKey: openAiApiKey, baseURL: openAiBaseUrl })
-  : null;
 
 function getGeniusApiKey(): string | undefined {
   return process.env.GENIUS_API_KEY;
@@ -289,8 +282,8 @@ async function searchAZLyrics(title: string, artist: string): Promise<string | n
 }
 
 async function recallLyricsWithAI(title: string, artist: string): Promise<string | null> {
-  if (!openai) {
-    console.log(`🧠 [AI Recall] Skipped - no OpenAI API key configured`);
+  if (!isAiConfigured()) {
+    console.log(`🧠 [AI Recall] Skipped - no AI provider configured`);
     return null;
   }
   
@@ -301,7 +294,7 @@ async function recallLyricsWithAI(title: string, artist: string): Promise<string
     console.log(`🧠 [AI Recall] Attempting lyrics recall for: "${baseTitleNoFeat}" by ${mainArtist}`);
     const startTime = Date.now();
     
-    const response = await openai.chat.completions.create({
+    const response = await getAiClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -491,9 +484,27 @@ export function isMusixmatchConfigured(): boolean {
 }
 
 export function getMusixmatchStatus() {
+  const aiProvider = getAiProviderConfig();
+
   return {
     configured: true,
-    service: 'Multi-source (Lyrics.ovh, Genius, AZLyrics)',
-    apiKey: getGeniusApiKey() ? 'Configured' : 'Not set',
+    service: 'LRCLIB + Lyrics.ovh + optional fallbacks',
+    providers: [
+      'LRCLIB',
+      'Lyrics.ovh',
+      ...(getGeniusApiKey() ? ['Genius'] : []),
+      'AZLyrics',
+      ...(aiProvider.configured ? ['AI recall fallback'] : []),
+    ],
+    geniusApiKey: getGeniusApiKey() ? 'Configured' : 'Not set',
+    aiFallback: aiProvider.configured ? `${aiProvider.provider} configured` : 'Disabled',
   };
+}
+
+export function isLyricsServiceAvailable(): boolean {
+  return isMusixmatchConfigured();
+}
+
+export function getLyricsServiceStatus() {
+  return getMusixmatchStatus();
 }

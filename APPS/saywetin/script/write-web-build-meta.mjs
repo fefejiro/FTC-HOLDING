@@ -6,6 +6,9 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, "..");
 const outputDir = path.join(projectRoot, "dist", "public", "_saywetin");
 const outputFile = path.join(outputDir, "build-meta.json");
+const packageJson = JSON.parse(
+  await fs.readFile(path.join(projectRoot, "package.json"), "utf8"),
+);
 
 const deployedAt = new Date();
 const timestampId = `ts-${deployedAt.getTime()}`;
@@ -24,6 +27,8 @@ const webBuildId =
   timestampId;
 
 const payload = {
+  appName: packageJson.name || "saywetin-web",
+  version: packageJson.version || "0.0.0",
   webBuildId,
   deployedAt: deployedAt.toISOString(),
   gitSha: gitSha || undefined,

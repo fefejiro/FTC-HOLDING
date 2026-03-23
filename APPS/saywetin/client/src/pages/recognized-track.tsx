@@ -46,6 +46,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { SlangMatchGame } from '@/components/slang-match-game';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { getApiUrl } from '@/lib/api-config';
+import { LISTEN_MODE_PATH } from '@/lib/navigation';
 import { useToast } from '@/hooks/use-toast';
 import {
   parseAnalysesWithSlang,
@@ -86,6 +87,8 @@ interface ArtistSongInfo {
   funFact?: string;
   verification?: 'verified' | 'unverified';
   verificationNote?: string;
+  status?: 'complete' | 'unavailable' | 'failed';
+  message?: string;
 }
 
 interface FragmentInterpretation {
@@ -98,6 +101,8 @@ interface FragmentInterpretation {
   }>;
   likelyThemes: string[];
   culturalNote: string;
+  status?: 'complete' | 'unavailable' | 'failed';
+  message?: string;
 }
 
 interface RecognizedTrackDetail {
@@ -125,6 +130,14 @@ interface RecognizedTrackDetail {
     source: string;
   };
   culturalAnalysis?: AiTranslation[];
+  status?: {
+    lyrics: 'pending' | 'complete' | 'unavailable' | 'failed';
+    analysis: 'pending' | 'complete' | 'unavailable' | 'failed';
+    aiConfigured: boolean;
+    aiProvider: 'openai' | 'openrouter' | 'none';
+    lyricsProvider?: string;
+    analysisMessage?: string;
+  };
 }
 
 interface ProgressBarProps {
@@ -132,6 +145,11 @@ interface ProgressBarProps {
   analysisStatus?: ProcessingStatus;
   analysisCount?: number;
 }
+
+const INITIAL_DOCUMENT_LOCATION =
+  typeof window !== 'undefined'
+    ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+    : null;
 
 function ProgressBar({ lyricsStatus, analysisStatus, analysisCount = 0 }: ProgressBarProps) {
   const getProgress = () => {
@@ -248,6 +266,7 @@ export default function RecognizedTrack() {
   // Streaming state - tracks partial content for typing effect
   const [streamingContent, setStreamingContent] = useState<Map<string, string>>(new Map());
   const [artworkLoadFailed, setArtworkLoadFailed] = useState(false);
+  const directEntryFallbackSeeded = useRef(false);
 
   // Anonymous interaction logging for behavioral analytics
   const { logInteraction } = useInteractionLogger(trackId, undefined);
@@ -283,7 +302,16 @@ export default function RecognizedTrack() {
         }),
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        let failureMessage = 'Could not analyze this line.';
+        try {
+          const payload = await response.json();
+          failureMessage = payload?.message || payload?.error || failureMessage;
+        } catch {
+          failureMessage = `HTTP ${response.status}`;
+        }
+        throw new Error(failureMessage);
+      }
       
       const result = await response.json();
       if (result.success) {
@@ -291,7 +319,7 @@ export default function RecognizedTrack() {
       } else {
         toast({
           title: 'Analysis failed',
-          description: 'Could not analyze this line.',
+          description: result.message || 'Could not analyze this line.',
           variant: 'destructive',
         });
       }
@@ -299,7 +327,7 @@ export default function RecognizedTrack() {
       console.error('[ANALYZE] Fetch fallback failed:', err);
       toast({
         title: 'Analysis failed',
-        description: 'Could not analyze this line. Please try again.',
+        description: err instanceof Error ? err.message : 'Could not analyze this line. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -470,6 +498,37 @@ export default function RecognizedTrack() {
       eventSourceRef.current = null;
     };
   }, [trackId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !trackId || directEntryFallbackSeeded.current) {
+      return;
+    }
+
+    const currentLocation = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const openedDirectlyOnCurrentTrack = INITIAL_DOCUMENT_LOCATION === currentLocation;
+
+    if (!openedDirectlyOnCurrentTrack) {
+      return;
+    }
+
+    const currentState = window.history.state || {};
+    if ((currentState as { __saywetinFallbackSeeded?: boolean }).__saywetinFallbackSeeded) {
+      directEntryFallbackSeeded.current = true;
+      return;
+    }
+
+    window.history.replaceState(
+      { ...(currentState as Record<string, unknown>), __saywetinListenFallback: true },
+      '',
+      LISTEN_MODE_PATH,
+    );
+    window.history.pushState(
+      { ...(currentState as Record<string, unknown>), __saywetinFallbackSeeded: true },
+      '',
+      currentLocation,
+    );
+    directEntryFallbackSeeded.current = true;
+  }, [trackId]);
   
   // Regular query as fallback (used when SSE is done or for cached data)
   const { data: queryData, isLoading: queryLoading, error } = useQuery<RecognizedTrackDetail>({
@@ -489,6 +548,29 @@ export default function RecognizedTrack() {
   // Use SSE data while streaming, then switch to query data
   const data = sseData || queryData;
   const isLoading = !data && queryLoading && !sseData;
+  const analysisViewState = data?.status?.analysis;
+  const analysisUnavailableMessage =
+    data?.status?.analysisMessage || 'Song recognized. Deeper breakdown unavailable right now.';
+
+  const handleBackNavigation = () => {
+    if (typeof window !== 'undefined') {
+      const currentLocation = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      const currentHistoryState = (window.history.state || {}) as { __saywetinFallbackSeeded?: boolean };
+      const hasUsefulHistoryTarget =
+        window.history.length > 1 &&
+        (
+          INITIAL_DOCUMENT_LOCATION !== currentLocation ||
+          currentHistoryState.__saywetinFallbackSeeded === true
+        );
+
+      if (hasUsefulHistoryTarget) {
+        window.history.back();
+        return;
+      }
+    }
+
+    navigate(LISTEN_MODE_PATH);
+  };
 
   useEffect(() => {
     setArtworkLoadFailed(false);
@@ -706,7 +788,7 @@ export default function RecognizedTrack() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/')}
+              onClick={handleBackNavigation}
               data-testid="button-back"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -731,7 +813,7 @@ export default function RecognizedTrack() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/')}
+              onClick={handleBackNavigation}
               data-testid="button-back"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -747,7 +829,7 @@ export default function RecognizedTrack() {
               <p className="text-sm text-muted-foreground mb-6">
                 The song you're looking for doesn't exist or has expired.
               </p>
-              <Button onClick={() => navigate('/')}>
+              <Button onClick={() => navigate(LISTEN_MODE_PATH)}>
                 Return Home
               </Button>
             </CardContent>
@@ -766,7 +848,7 @@ export default function RecognizedTrack() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/')}
+            onClick={handleBackNavigation}
             data-testid="button-back"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -998,6 +1080,16 @@ export default function RecognizedTrack() {
                   </div>
                 ) : artistInfo ? (
                   <div className="grid gap-4 sm:grid-cols-2">
+                    {artistInfo.status && artistInfo.status !== 'complete' && (
+                      <div className="sm:col-span-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                        <p className="text-xs font-semibold text-primary">
+                          Artist background limited right now
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {artistInfo.message || 'We recognized the song, but the richer artist breakdown is unavailable right now.'}
+                        </p>
+                      </div>
+                    )}
                     {artistInfo.verification === 'unverified' && (
                       <div className="sm:col-span-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10">
                         <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
@@ -1046,7 +1138,7 @@ export default function RecognizedTrack() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No wahala, e no fit load artist info.</p>
+                  <p className="text-sm text-muted-foreground">No wahala, richer artist info no load this time.</p>
                 )}
               </CardContent>
             </Card>
@@ -1105,7 +1197,7 @@ export default function RecognizedTrack() {
                 </div>
 
                 {/* X-Ray Artist Info - shown during loading to make wait engaging */}
-                {artistInfo && artistInfo.verification !== 'unverified' && (
+                {artistInfo && artistInfo.verification !== 'unverified' && artistInfo.status === 'complete' && (
                   <div className="mt-6 pt-5 border-t border-primary/10">
                     <div className="flex items-center gap-2 mb-3 text-sm font-medium text-primary">
                       <User className="h-4 w-4" />
@@ -1168,6 +1260,13 @@ export default function RecognizedTrack() {
                       </div>
                     ) : fragmentInterpretation ? (
                       <div className="space-y-4">
+                        {fragmentInterpretation.status && fragmentInterpretation.status !== 'complete' && (
+                          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                            <p className="text-sm text-muted-foreground">
+                              {fragmentInterpretation.message || 'We recognized the song, but deeper title interpretation is unavailable right now.'}
+                            </p>
+                          </div>
+                        )}
                         {/* Title Meaning */}
                         {fragmentInterpretation.titleMeaning && (
                           <div className="space-y-2">
@@ -1540,6 +1639,16 @@ export default function RecognizedTrack() {
                       );
                     })()}
                   </div>
+                ) : analysisViewState === 'unavailable' ? (
+                  <div className="text-center py-12 space-y-3">
+                    <AlertCircle className="h-5 w-5 text-primary mx-auto" />
+                    <p className="font-medium">
+                      Song recognized
+                    </p>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                      {analysisUnavailableMessage}
+                    </p>
+                  </div>
                 ) : track.analysisStatus === 'generating_analysis' || track.analysisStatus === 'pending' ? (
                   <div className="text-center py-12 space-y-3">
                     <div className="flex items-center justify-center gap-2">
@@ -1555,7 +1664,7 @@ export default function RecognizedTrack() {
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">
-                      Lyrics are available. The story behind the words is coming soon.
+                      We found the song and lyrics, but the deeper breakdown did not finish this time.
                     </p>
                   </div>
                 )}

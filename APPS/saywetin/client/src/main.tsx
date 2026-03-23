@@ -11,6 +11,11 @@ const shouldRedirectToCanonicalHost = Boolean(
 
 installApiFetchPatch();
 
+console.info("[Saywetin] Frontend build", {
+  ...__SAYWETIN_FRONTEND_BUILD__,
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || "auto",
+});
+
 if (shouldRedirectToCanonicalHost && canonicalRedirectTarget) {
   window.location.replace(canonicalRedirectTarget);
 } else {
