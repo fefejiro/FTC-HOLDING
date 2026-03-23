@@ -7,6 +7,8 @@ export type ClientLaunch = {
   status: string;
   tags: string[];
   summary: string;
+  currentFocus?: string[];
+  nextMilestone?: string[];
   websiteUrl: string;
   youtubeUrl: string;
 };
@@ -21,6 +23,16 @@ export const emergencyPromptCaseStudy: ClientLaunch = {
   tags: ["Local SEO", "Content pipeline", "Conversion"],
   summary:
     "Newly onboarded local service client. Launch-ready web presence with service clarity, local search structure, and conversion-focused lead flow.",
+  currentFocus: [
+    "Service clarity",
+    "Local search structure",
+    "Lead capture path"
+  ],
+  nextMilestone: [
+    "Launch-ready homepage draft",
+    "Inbound call flow setup",
+    "Local SEO baseline"
+  ],
   websiteUrl: "https://emergencyprompt.com",
   youtubeUrl: "https://www.youtube.com/@EmergencyPromptOttawa"
 };

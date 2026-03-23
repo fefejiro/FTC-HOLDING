@@ -70,6 +70,9 @@ export default function ProductsPage() {
     return 0;
   });
 
+  const featuredAteam = sortedProducts.find((item) => item.slug === "ateam");
+  const primaryProducts = sortedProducts.filter((item) => item.slug !== "ateam");
+
   return (
     <div className="container page-content">
       <section className="page-media-banner fade-on-scroll">
@@ -100,8 +103,8 @@ export default function ProductsPage() {
         />
       </section>
 
-      <div className="cards-grid cards-grid-3">
-        {sortedProducts.map((project) => {
+      <div className="cards-grid cards-grid-2">
+        {primaryProducts.map((project) => {
           const offer = productOfferContent[project.slug];
           const supportPoints = project.marketingBullets ?? offer?.supportPoints;
 
@@ -145,13 +148,54 @@ export default function ProductsPage() {
                   <GooglePlayBadge href={project.googlePlayUrl} title={project.name} />
                 ) : null}
               </div>
-              <Link href={`/work/${project.slug}`} prefetch={false} className="inline-link">
-                {offer?.caseStudyLabel ?? "Read project case study"}
+              <Link href={getProductOverviewHref(project)} prefetch={false} className="inline-link">
+                See how it works
               </Link>
             </article>
           );
         })}
       </div>
+
+      {featuredAteam ? (
+        <article className="card product-spotlight-card product-spotlight-card--featured">
+          <div className="product-spotlight-feature">
+            <div className="product-spotlight-feature-copy">
+              <p className="status-pill">{featuredAteam.availabilityLabel ?? getLifecycleStatusLabel(featuredAteam)}</p>
+              <h2>{featuredAteam.name}</h2>
+              <p className="muted">{featuredAteam.tagline}</p>
+              <p>{featuredAteam.summary}</p>
+              <ul className="feature-list compact-feature-list">
+                {(
+                  featuredAteam.marketingBullets ??
+                  productOfferContent.ateam.supportPoints ??
+                  featuredAteam.sections.capabilities
+                )
+                  .slice(0, 4)
+                  .map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+              </ul>
+              <p className="product-offer-copy">{productOfferContent.ateam.offerCopy}</p>
+              <div className="product-actions">
+                <Link href="/ateam" prefetch={false} className="btn btn-primary">
+                  Try ATEAM demo
+                </Link>
+                <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
+                  Start a Project
+                </Link>
+              </div>
+            </div>
+            <BrandImagePanel
+              src="/images/brand/Calender Ateam.png"
+              alt="ATEAM mission control preview"
+              aspect="wide"
+              fit="cover"
+              sizes="(max-width: 980px) 100vw, 42vw"
+              caption={<p className="muted">Mission Control-style output: brief → workflow → next step.</p>}
+            />
+          </div>
+        </article>
+      ) : null}
 
       <article className="card final-cta-card">
         <div>

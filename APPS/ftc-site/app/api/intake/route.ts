@@ -29,6 +29,7 @@ type IntakePayload = {
   timeline?: unknown;
   companyWebsite?: unknown;
   startedAt?: unknown;
+  ateamDemo?: unknown;
 };
 
 type RateLimitStore = Map<string, number[]>;
@@ -78,6 +79,13 @@ function badRequest(message: string, status = 400) {
   return NextResponse.json({ ok: false, message }, { status });
 }
 
+function makeRequestId(): string {
+  const date = new Date();
+  const ymd = date.toISOString().slice(0, 10).replace(/-/g, "");
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `UL-${ymd}-${rand}`;
+}
+
 export async function POST(req: NextRequest) {
   const clientKey = getClientKey(req);
   if (isRateLimited(clientKey)) {
@@ -99,6 +107,7 @@ export async function POST(req: NextRequest) {
   const timeline = normalizeText(payload.timeline);
   const companyWebsite = normalizeText(payload.companyWebsite);
   const startedAtValue = Number(payload.startedAt || 0);
+  const ateamDemo = payload.ateamDemo ?? null;
 
   // Honeypot field intentionally accepts silently to reduce bot noise.
   if (companyWebsite.length > 0) {
@@ -130,6 +139,7 @@ export async function POST(req: NextRequest) {
   }
 
   const lead = {
+    requestId: makeRequestId(),
     source: "ftc-site",
     receivedAt: new Date().toISOString(),
     clientKey,
@@ -137,15 +147,18 @@ export async function POST(req: NextRequest) {
     email,
     projectIdea,
     budgetRange,
-    timeline
+    timeline,
+    ateamDemo
   };
 
   logger.info("intake_submission_received", {
     source: lead.source,
     receivedAt: lead.receivedAt,
+    requestId: lead.requestId,
     clientKey: lead.clientKey,
     budgetRange: lead.budgetRange,
-    timeline: lead.timeline
+    timeline: lead.timeline,
+    ateamAttached: Boolean(ateamDemo)
   });
 
   const webhookUrl =
@@ -177,11 +190,45 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  let confirmationSent = false;
+  const confirmationWebhookUrl = process.env.UNALABS_CONFIRMATION_EMAIL_WEBHOOK_URL;
+  if (confirmationWebhookUrl) {
+    try {
+      const emailResponse = await fetch(confirmationWebhookUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-ftc-source": "ftc-site",
+          "x-unalabs-source": "unalabs-site"
+        },
+        body: JSON.stringify({
+          type: "ftc_intake_confirmation_email",
+          requestId: lead.requestId,
+          email: lead.email,
+          summary: lead.projectIdea,
+          receivedAt: lead.receivedAt
+        })
+      });
+      confirmationSent = emailResponse.ok;
+      if (!emailResponse.ok) {
+        logger.warn("intake_confirmation_email_failed", {
+          status: emailResponse.status
+        });
+      }
+    } catch (error) {
+      logger.error("intake_confirmation_email_error", {
+        message: error instanceof Error ? error.message : "unknown"
+      });
+    }
+  }
+
   return NextResponse.json(
     {
       ok: true,
       message:
-        "Thanks. Una Labs received your intake and will respond with a scoped next step."
+        "Request received. Una Labs has your setup brief and will respond with a scoped next step.",
+      requestId: lead.requestId,
+      confirmationSent: confirmationSent || undefined
     },
     { status: 200 }
   );

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import { saveAteamDemoHandoff } from "../../lib/ateamHandoff";
 
 type DemoOutput = {
   summary: string;
@@ -28,6 +29,27 @@ export default function AteamDemoClient() {
   const [output, setOutput] = useState<DemoOutput | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
+
+  const selectedCategoryLabel = useMemo(() => {
+    return categories.find((item) => item.value === category)?.label ?? category;
+  }, [category]);
+
+  const handoffPayload = useMemo(() => {
+    if (!output) return null;
+    return {
+      version: 1 as const,
+      createdAtMs: Date.now(),
+      idea,
+      categoryValue: category,
+      categoryLabel: selectedCategoryLabel,
+      output
+    };
+  }, [category, idea, output, selectedCategoryLabel]);
+
+  const handleContinue = () => {
+    if (!handoffPayload) return;
+    saveAteamDemoHandoff(handoffPayload);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -108,53 +130,68 @@ export default function AteamDemoClient() {
       <div className="ateam-demo-output">
         {output ? (
           <>
-            <div className="ateam-demo-output-grid">
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Summary</p>
-                <p>{output.summary}</p>
-                <p className="muted">{output.recommendedDirection}</p>
+            <article className="card ateam-demo-brief-card">
+              <div className="ateam-demo-brief-top">
+                <p className="card-kicker">Generated brief</p>
+                <span className="ateam-demo-pill">{selectedCategoryLabel}</span>
               </div>
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Phases</p>
-                <ul className="ateam-demo-list">
-                  {output.phases.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+              <div className="ateam-demo-idea">
+                <p className="ateam-demo-idea-label">Project idea</p>
+                <p className="ateam-demo-idea-text">{idea}</p>
               </div>
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Suggested stack</p>
-                <ul className="ateam-demo-list">
-                  {output.stack.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+              <div className="ateam-demo-brief-grid">
+                <section className="ateam-demo-brief-section ateam-demo-brief-section--summary">
+                  <h4>Summary</h4>
+                  <p>{output.summary}</p>
+                  <p className="muted">{output.recommendedDirection}</p>
+                </section>
+                <section className="ateam-demo-brief-section">
+                  <h4>Phases</h4>
+                  <ul className="ateam-demo-list">
+                    {output.phases.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </section>
+                <section className="ateam-demo-brief-section">
+                  <h4>Deliverables</h4>
+                  <ul className="ateam-demo-list">
+                    {output.deliverables.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </section>
+                <section className="ateam-demo-brief-section">
+                  <h4>Suggested stack</h4>
+                  <ul className="ateam-demo-list">
+                    {output.stack.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </section>
+                <section className="ateam-demo-brief-section">
+                  <h4>Next steps</h4>
+                  <ul className="ateam-demo-list">
+                    {output.nextSteps.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </section>
               </div>
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Deliverables</p>
-                <ul className="ateam-demo-list">
-                  {output.deliverables.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+              <div className="ateam-demo-next-cta">
+                <Link
+                  href="/work-with-ftc?from=ateam"
+                  prefetch={false}
+                  className="btn btn-primary"
+                  onClick={handleContinue}
+                >
+                  Continue with this brief
+                </Link>
+                <Link href="/work" prefetch={false} className="btn btn-secondary">
+                  View Client Launches
+                </Link>
               </div>
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Next steps</p>
-                <ul className="ateam-demo-list">
-                  {output.nextSteps.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-                <div className="ateam-demo-next-cta">
-                  <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
-                    Start a Project
-                  </Link>
-                  <Link href="/work" prefetch={false} className="btn btn-secondary">
-                    View Client Launches
-                  </Link>
-                </div>
-              </div>
-            </div>
+            </article>
           </>
         ) : (
           <div className="card ateam-demo-placeholder">

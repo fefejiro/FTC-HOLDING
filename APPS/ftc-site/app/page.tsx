@@ -186,7 +186,7 @@ export default function HomePage() {
                 ) : null}
                 <p className="proof-proof">{tile.proof}</p>
                 <Link href={tile.href} prefetch={false} className="inline-link">
-                  View detail
+                  View onboarding snapshot
                 </Link>
               </article>
             ))}
@@ -232,7 +232,7 @@ export default function HomePage() {
                 <p>{tile.description}</p>
                 <p className="proof-proof">{tile.proof}</p>
                 <Link href={tile.href} prefetch={false} className="inline-link">
-                  View detail
+                  {tile.title === "ATEAM" ? "Try ATEAM demo" : "See product overview"}
                 </Link>
               </article>
             ))}
