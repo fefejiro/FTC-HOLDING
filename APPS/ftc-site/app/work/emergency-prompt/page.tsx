@@ -1,18 +1,15 @@
 import Link from "next/link";
-import {
-  emergencyPromptCaseStudy,
-  emergencyPromptHasPermission
-} from "../../../lib/recentWork";
+import { emergencyPromptCaseStudy } from "../../../lib/recentWork";
 
 export const metadata = {
-  title: `${emergencyPromptCaseStudy.tileTitle} | Una Labs Work`,
+  title: `${emergencyPromptCaseStudy.tileTitle} | Client Launch`,
   description: "Lead engine setup case study focused on local intent and inbound conversions."
 };
 
 const phaseOneDeliverables = [
   "YouTube channel setup",
   "Asset intake pipeline (Drive)",
-  "First uploads (2–3 videos)",
+  "First uploads (2-3 videos)",
   "Title, description, keywords optimized for local intent",
   "Clear call-to-action and contact placement"
 ];
@@ -27,7 +24,7 @@ const phaseTwoNextSteps = [
 export default function EmergencyPromptCaseStudy() {
   return (
     <article className="container page-content case-study">
-      <p className="eyebrow">Recent Work</p>
+      <p className="eyebrow">Client Launch</p>
       <h1>{emergencyPromptCaseStudy.tileTitle}</h1>
       <span className="status-pill">{emergencyPromptCaseStudy.status}</span>
       <p className="lead">{emergencyPromptCaseStudy.subtitle}</p>
@@ -38,9 +35,6 @@ export default function EmergencyPromptCaseStudy() {
           <div className="card overview-card">
             <p className="eyebrow">Client</p>
             <h3>{emergencyPromptCaseStudy.clientName}</h3>
-            {!emergencyPromptHasPermission ? (
-              <p className="muted">Permission pending for public attribution.</p>
-            ) : null}
           </div>
           <div className="card overview-card">
             <p className="eyebrow">Service</p>
@@ -80,21 +74,25 @@ export default function EmergencyPromptCaseStudy() {
       </section>
 
       <section className="case-study-section">
-        <h2>Link out</h2>
-        {emergencyPromptHasPermission ? (
+        <h2>External links</h2>
+        <div className="hero-actions">
           <a
             className="btn btn-secondary"
-            href={emergencyPromptCaseStudy.externalUrl}
+            href={emergencyPromptCaseStudy.websiteUrl}
             target="_blank"
             rel="noopener noreferrer"
           >
             Visit Emergency Prompt
           </a>
-        ) : (
-          <p className="muted">
-            External link available after client permission is confirmed.
-          </p>
-        )}
+          <a
+            className="btn btn-secondary"
+            href={emergencyPromptCaseStudy.youtubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View YouTube channel
+          </a>
+        </div>
       </section>
 
       <section className="case-study-section">
@@ -119,7 +117,7 @@ export default function EmergencyPromptCaseStudy() {
             data-analytics-event="view_work_click"
             data-analytics-location="case_study"
           >
-            Back to Work
+            Back to Client Launches
           </Link>
         </div>
       </section>

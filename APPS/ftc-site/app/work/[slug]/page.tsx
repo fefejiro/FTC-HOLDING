@@ -92,12 +92,12 @@ export default function WorkDetailPage({ params }: { params: { slug: string } })
             Start a Project
           </Link>
           <Link
-            href="/work"
+            href="/products"
             className="btn btn-secondary"
             data-analytics-event="view_work_click"
             data-analytics-location="case_study"
           >
-            Back to Work
+            Back to Products
           </Link>
         </div>
       </section>

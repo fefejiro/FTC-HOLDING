@@ -68,24 +68,24 @@ export default function Footer() {
   }
 
   return (
-    <footer>
+      <footer>
       <div className="container">
         <div className="footer-grid">
           <div className="footer-brand">
             <p className="footer-title">Una Labs</p>
-            <p className="footer-subtitle">Creative AI Studio</p>
+            <p className="footer-subtitle">Operator-led studio</p>
             <p className="footer-copy">
-              Building real-world AI products across communication, automation, and cultural intelligence.
+              Systems-first digital delivery for fast websites, lead automation, and AI-assisted workflows.
             </p>
             <SocialIcons />
           </div>
           <div className="footer-links">
+            <a href="/products">Products</a>
+            <a href="/work">Client Launches</a>
+            <a href="/ateam">ATEAM Demo</a>
             <a href="/peacepad">PeacePad</a>
             <a href="/saywetin">SayWetin</a>
-            <a href="/services/drone">Drone Services</a>
-            <a href="/blog">Blog</a>
-            <a href="/projects">Projects</a>
-            <a href="/connect">Connect</a>
+            <a href="/work-with-ftc">Start a Project</a>
           </div>
         </div>
       </div>

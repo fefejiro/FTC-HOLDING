@@ -1,14 +1,28 @@
-export const emergencyPromptHasPermission = false;
+export type ClientLaunch = {
+  slug: string;
+  clientName: string;
+  tileTitle: string;
+  subtitle: string;
+  service: string;
+  status: string;
+  tags: string[];
+  summary: string;
+  websiteUrl: string;
+  youtubeUrl: string;
+};
 
-export const emergencyPromptCaseStudy = {
+export const emergencyPromptCaseStudy: ClientLaunch = {
   slug: "emergency-prompt",
-  clientName: emergencyPromptHasPermission
-    ? "Emergency Prompt"
-    : "Local Services Lead Engine (Client)",
-  tileTitle: emergencyPromptHasPermission ? "Emergency Prompt" : "Local Services Lead Engine",
+  clientName: "Emergency Prompt",
+  tileTitle: "Emergency Prompt",
   subtitle: "Lead engine setup (YouTube SEO + inbound call flow)",
   service: "Lead engine setup",
   status: "In progress (Phase 1)",
   tags: ["Local SEO", "Content pipeline", "Conversion"],
-  externalUrl: "https://emergencyprompt.com"
-} as const;
+  summary:
+    "Newly onboarded local service client. Launch-ready web presence with service clarity, local search structure, and conversion-focused lead flow.",
+  websiteUrl: "https://emergencyprompt.com",
+  youtubeUrl: "https://www.youtube.com/@EmergencyPromptOttawa"
+};
+
+export const clientLaunches = [emergencyPromptCaseStudy] as const;

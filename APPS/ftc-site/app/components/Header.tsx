@@ -63,7 +63,7 @@ export default function Header() {
     ? "Professional cleaning services"
     : isPolarSite
       ? polarAnchorConfig.tagline
-      : "Fast websites • lead automation";
+      : "Fast websites • lead automation • AI delivery";
 
   return (
     <header className={isGardenSite ? "garden-site-header" : undefined}>

@@ -62,8 +62,8 @@ export interface NetworkingProfile {
 export const siteNav = [
   { label: "Home", href: "/" },
   { label: "Products", href: "/products" },
-  { label: "Drone Services", href: "/services/drone" },
-  { label: "Blog", href: "/blog" },
+  { label: "Client Launches", href: "/work" },
+  { label: "ATEAM", href: "/ateam" },
   { label: "Start a Project", href: "/#start-project" }
 ] as const;
 
@@ -80,9 +80,9 @@ export const networkingProfile: NetworkingProfile = {
   startProjectHref: "/work-with-ftc",
   portfolioLinks: [
     {
-      label: "Una Labs Work",
+      label: "Client Launches",
       url: "https://unalabs.cloud/work",
-      description: "Studio projects and case studies."
+      description: "Recently onboarded client delivery proof."
     },
     {
       label: "PeacePad",

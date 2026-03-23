@@ -36,9 +36,14 @@ const productOfferContent: Record<
   },
   ateam: {
     offerCopy:
-      "Internal orchestration runtime used inside the Una Labs stack, not a public app-store product.",
-    secondaryLabel: "Review runtime overview",
-    caseStudyLabel: "Read system case study"
+      "Interactive lab system for turning rough ideas into structured execution plans and build-ready direction.",
+    secondaryLabel: "Try ATEAM demo",
+    caseStudyLabel: "Read system case study",
+    supportPoints: [
+      "Guided project intake",
+      "Workflow routing and planning",
+      "Demo and prototype preparation"
+    ]
   }
 };
 
@@ -47,7 +52,7 @@ function getProductOverviewHref(project: ProjectCaseStudy): string {
     ? "/products/peacepad"
     : project.slug === "saywetin"
       ? "/saywetin"
-      : `/work/${project.slug}`;
+      : "/ateam";
 }
 
 function getLifecycleStatusLabel(project: ProjectCaseStudy): string {
@@ -146,6 +151,24 @@ export default function ProductsPage() {
           );
         })}
       </div>
+
+      <article className="card final-cta-card">
+        <div>
+          <p className="eyebrow">Next step</p>
+          <h2>Want a product or system like these?</h2>
+          <p className="muted">
+            Una Labs can scope a fast build path that keeps delivery measurable and aligned.
+          </p>
+        </div>
+        <div className="product-actions">
+          <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
+            Start a Project
+          </Link>
+          <Link href="/work" prefetch={false} className="btn btn-secondary">
+            View Client Launches
+          </Link>
+        </div>
+      </article>
     </div>
   );
 }

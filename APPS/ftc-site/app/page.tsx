@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import ClientLogoStrip from "./components/ClientLogoStrip";
 import { emergencyPromptCaseStudy } from "../lib/recentWork";
 
 const heroCredibilityBullets = [
@@ -30,71 +29,51 @@ const serviceTiles = [
   }
 ] as const;
 
-const recentWorkTiles = [
+const clientLaunchTiles = [
   {
     label: emergencyPromptCaseStudy.tileTitle,
     title: emergencyPromptCaseStudy.tileTitle,
-    description: emergencyPromptCaseStudy.subtitle,
-    proof: emergencyPromptCaseStudy.service,
+    description: emergencyPromptCaseStudy.summary,
+    proof: emergencyPromptCaseStudy.status,
     href: `/work/${emergencyPromptCaseStudy.slug}`,
     visualType: "standard",
     tags: emergencyPromptCaseStudy.tags
-  },
-  {
-    label: "Lead Engine for Local Services",
-    title: "Lead Engine for Local Services",
-    description: "YouTube SEO, local intent, conversion tracking.",
-    proof: "Local services growth track",
-    href: "/work",
-    visualType: "standard",
-    tags: []
-  },
-  {
-    label: "Fast Website Launch",
-    title: "Fast Website Launch",
-    description: "Performance, SEO basics, conversion layout.",
-    proof: "Launch-ready foundation",
-    href: "/work-with-ftc",
-    visualType: "standard",
-    tags: []
-  },
-  {
-    label: "Automation Workflow",
-    title: "Automation Workflow",
-    description: "Automation, operations, reliability.",
-    proof: "Production-grade reliability",
-    href: "/services/intelligent-systems-automation",
-    visualType: "saywetin",
-    tags: []
-  },
-  {
-    label: "Flagship Product: PeacePad",
-    title: "PeacePad",
-    description: "Workflow design, AI assist, compliance mindset.",
-    proof: "Flagship product",
-    href: "/products/peacepad",
-    visualType: "peacepad",
-    tags: []
   }
 ] as const;
 
-const processSteps = [
+const productTiles = [
   {
-    title: "Signal",
-    description: "Align on the objective, constraints, and success signal."
+    label: "Flagship Product",
+    title: "PeacePad",
+    description: "Pre-send communication safety with AI-assisted rewrite choices.",
+    proof: "Live on Google Play",
+    href: "/products/peacepad",
+    visualType: "peacepad"
   },
   {
-    title: "Build",
-    description: "Ship the smallest premium system that solves the core need."
+    label: "Product: SayWetin",
+    title: "SayWetin",
+    description: "Nigerian music and language context intelligence.",
+    proof: "Live on Google Play",
+    href: "/saywetin",
+    visualType: "saywetin"
   },
   {
-    title: "Launch",
-    description: "Deploy, instrument, and make the workflow operational."
-  },
-  {
-    title: "Improve",
-    description: "Iterate with feedback, metrics, and operator insight."
+    label: "ATEAM",
+    title: "ATEAM",
+    description: "Guided lab system that turns ideas into structured execution.",
+    proof: "Interactive demo",
+    href: "/ateam",
+    visualType: "standard"
   }
+] as const;
+
+const ateamPreviewSteps = [
+  "Submit an idea",
+  "Select a build category",
+  "Watch the lab route the work",
+  "Review a structured output",
+  "Start a scoped project"
 ] as const;
 
 export const metadata: Metadata = {
@@ -116,7 +95,7 @@ export default function HomePage() {
             <div className="hero-grid premium-hero-grid">
               <div className="hero-copy premium-hero-copy">
                 <p className="eyebrow">Operator-led studio</p>
-                <h1>Unalabs</h1>
+                <h1>Una Labs</h1>
                 <h2 className="hero-headline">
                   Systems-first digital delivery: websites, automation, AI.
                 </h2>
@@ -129,7 +108,7 @@ export default function HomePage() {
                     Start a Project
                   </Link>
                   <Link href="/work" prefetch={false} className="btn btn-secondary">
-                    See Work
+                    Client Launches
                   </Link>
                 </div>
                 <ul className="hero-credibility-bullets" aria-label="Quick credibility points">
@@ -154,8 +133,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <ClientLogoStrip />
-
       <section className="section fade-on-scroll anchor-offset" id="services">
         <div className="container">
           <div className="section-heading home-section-heading">
@@ -178,15 +155,54 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section fade-on-scroll anchor-offset" id="work">
+      <section className="section fade-on-scroll anchor-offset" id="client-launches">
         <div className="container">
           <div className="section-heading home-section-heading">
-            <p className="eyebrow">Recent Work</p>
-            <h2>Recent Work</h2>
+            <p className="eyebrow">Client Launches</p>
+            <h2>Client Launches</h2>
             <p>Selected builds focused on systems-first delivery and measurable outcomes.</p>
           </div>
           <div className="proof-grid">
-            {recentWorkTiles.map((tile) => (
+            {clientLaunchTiles.map((tile) => (
+              <article key={tile.title} className="card proof-card">
+                <div className="proof-thumb proof-thumb-neutral" aria-hidden="true">
+                  <div className="neutral-bars">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
+                <p className="proof-label">{tile.label}</p>
+                <h3>{tile.title}</h3>
+                <p>{tile.description}</p>
+                {tile.tags.length > 0 ? (
+                  <div className="proof-tags" aria-label={`${tile.title} tags`}>
+                    {tile.tags.map((tag) => (
+                      <span key={tag} className="proof-tag">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <p className="proof-proof">{tile.proof}</p>
+                <Link href={tile.href} prefetch={false} className="inline-link">
+                  View detail
+                </Link>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section fade-on-scroll anchor-offset" id="products">
+        <div className="container">
+          <div className="section-heading home-section-heading">
+            <p className="eyebrow">Products</p>
+            <h2>Products & internal IP</h2>
+            <p>Products show what Una Labs builds and the systems that power client work.</p>
+          </div>
+          <div className="proof-grid">
+            {productTiles.map((tile) => (
               <article key={tile.title} className="card proof-card">
                 {tile.visualType === "peacepad" ? (
                   <img
@@ -214,15 +230,6 @@ export default function HomePage() {
                 <p className="proof-label">{tile.label}</p>
                 <h3>{tile.title}</h3>
                 <p>{tile.description}</p>
-                {tile.tags.length > 0 ? (
-                  <div className="proof-tags" aria-label={`${tile.title} tags`}>
-                    {tile.tags.map((tag) => (
-                      <span key={tag} className="proof-tag">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
                 <p className="proof-proof">{tile.proof}</p>
                 <Link href={tile.href} prefetch={false} className="inline-link">
                   View detail
@@ -233,41 +240,38 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section fade-on-scroll anchor-offset" id="process">
+      <section className="section fade-on-scroll anchor-offset" id="ateam">
         <div className="container">
           <div className="section-heading home-section-heading">
-            <p className="eyebrow">Process</p>
-            <h2>Signal to shipped delivery in four steps</h2>
-            <p>A consistent pipeline that keeps strategy, build, and launch aligned.</p>
+            <p className="eyebrow">ATEAM</p>
+            <h2>ATEAM public demo</h2>
+            <p>
+              A curated lab experience that turns raw ideas into structured execution plans.
+            </p>
           </div>
-          <div className="process-grid">
-            {processSteps.map((step, index) => (
-              <article key={step.title} className="card process-card">
-                <span className="process-step-number">0{index + 1}</span>
-                <h3>{step.title}</h3>
-                <p>{step.description}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section fade-on-scroll anchor-offset" id="about">
-        <div className="container">
-          <article className="card studio-strip">
-            <div className="studio-strip-content">
-              <p className="eyebrow">Studio credibility</p>
-              <h3>Operator-led, product-first, delivery-focused.</h3>
+          <div className="ateam-preview-grid">
+            <article className="card ateam-preview-card">
+              <h3>Guided lab flow</h3>
+              <ul className="ateam-preview-steps">
+                {ateamPreviewSteps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ul>
+              <Link href="/ateam" prefetch={false} className="btn btn-secondary">
+                Try ATEAM demo
+              </Link>
+            </article>
+            <article className="card ateam-preview-card">
+              <p className="eyebrow">What you get</p>
+              <h3>Structured output</h3>
               <p>
-                Operator-led delivery informed by enterprise and public-sector systems thinking:
-                governance, integrations, reliability, and measurable execution. Built for real
-                operations, not demos.
+                A project summary, recommended direction, and clear next steps you can act on.
               </p>
-            </div>
-            <Link href="/about" prefetch={false} className="btn btn-secondary">
-              View background and portfolio
-            </Link>
-          </article>
+              <p className="muted">
+                No internal admin view. Just the curated experience clients should see.
+              </p>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -286,7 +290,7 @@ export default function HomePage() {
                 Start a Project
               </Link>
               <Link href="/work" prefetch={false} className="btn btn-secondary">
-                See Work
+                View Client Launches
               </Link>
             </div>
           </article>
