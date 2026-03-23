@@ -2528,8 +2528,9 @@ function renderTeamPage() {
     const agent = agentById(agentId);
     const meta = CARD_META[agentId] || {};
     const accent = accentFor(agent);
-    const name = agent?.canonicalName || agentId;
-    const alias = agent?.displayName && agent.displayName !== name ? agent.displayName : "";
+    const name = agent?.displayName || agent?.canonicalName || agentId;
+    const canonical = agent?.canonicalName || "";
+    const alias = canonical && canonical !== name ? canonical : "";
     const role = meta.titleRole || agent?.role || "";
     const icon = agent?.emoji || "";
 
@@ -3052,6 +3053,22 @@ const OFFICE2_AGENT_DIRECTORY = [
     emoji: "🧪"
   }
 ];
+
+function mcAgentById(agentId) {
+  const id = String(agentId || "").trim();
+  if (!id) return null;
+  return OFFICE2_AGENT_DIRECTORY.find((a) => a.id === id) || null;
+}
+
+function mcDisplayName(agentId) {
+  const agent = mcAgentById(agentId);
+  return String(agent?.displayName || agent?.canonicalName || agentId || "").trim();
+}
+
+function mcCanonicalName(agentId) {
+  const agent = mcAgentById(agentId);
+  return String(agent?.canonicalName || agentId || "").trim();
+}
 
 const OFFICE2_ZONE_ANCHORS = {
   cooler: { x: 14, y: 56 },
@@ -3865,21 +3882,17 @@ function renderFactoryBelt(items) {
 function renderFactoryBuildAgents() {
   if (!factoryBuildAgents) return;
   factoryBuildAgents.innerHTML = "";
-  const buildRoster = [
-    { id: "charlie", name: "Charlie" },
-    { id: "codex", name: "Codex" },
-    { id: "henry", name: "Henry" }
-  ];
-  buildRoster.forEach((agent) => {
+  const buildRoster = ["charlie", "codex", "henry"];
+  buildRoster.forEach((agentId) => {
     const wrap = document.createElement("div");
     wrap.className = "fx-px-agent";
     const canvas = document.createElement("canvas");
     canvas.width = 16;
     canvas.height = 16;
-    drawPixelPerson(canvas, agent.id);
+    drawPixelPerson(canvas, agentId);
     const label = document.createElement("div");
     label.className = "fx-px-agent-name";
-    label.textContent = agent.name;
+    label.textContent = mcDisplayName(agentId) || agentId;
     wrap.appendChild(canvas);
     wrap.appendChild(label);
     factoryBuildAgents.appendChild(wrap);
@@ -8747,7 +8760,7 @@ function handleOfficeAgentAction(agentId) {
 
   if (agentId === "codex") {
     setView("dashboard");
-    showToast("Check Codex output in the dashboard thread.", "ok");
+    showToast(`Check ${mcDisplayName("codex") || "Codex"} output in the dashboard thread.`, "ok");
     return;
   }
 
@@ -9442,10 +9455,14 @@ function bindEvents() {
   // Top bar controls.
   if (mcPauseBtn) mcPauseBtn.addEventListener("click", pauseAllOfficeAgents);
   if (mcPingBtn) {
+    const pingName = mcDisplayName("henry") || "Henry";
+    const pingCanonical = mcCanonicalName("henry") || "Henry";
+    mcPingBtn.textContent = `Ping ${pingName || pingCanonical}`;
+    mcPingBtn.title = `Ping ${pingCanonical}`;
     mcPingBtn.addEventListener("click", () => {
       setView("agents");
       setOfficeActiveAgent("henry");
-      showToast("Pinged Henry.", "ok");
+      showToast(`Pinged ${pingName || pingCanonical}.`, "ok");
     });
   }
   if (mcRefreshBtn) {
