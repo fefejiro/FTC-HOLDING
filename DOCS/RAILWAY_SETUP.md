@@ -2,9 +2,9 @@
 
 ## Service: peacepad-api (in-repo)
 
-- Root directory: `APPS/peacepad`
+- Recommended root directory: `APPS/peacepad`
 - Install command: `npm install --legacy-peer-deps`
-- Build command: `npm run build`
+- Build command: `npm run build:api`
 - Start command: `npm run start`
 - Health checks:
   - `/health`
@@ -80,7 +80,7 @@ Troubleshooting:
 ## Dockerfiles
 
 - SayWetin API: Dockerfile deploy is required (`APPS/saywetin/Dockerfile` with root directory `APPS/saywetin`).
-- PeacePad API: script-based Railway deploy remains valid (`npm install --legacy-peer-deps`, `npm run build`, `npm run start`).
+- PeacePad API: script-based Railway deploy remains valid (`npm install --legacy-peer-deps`, `npm run build:api`, `npm run start`).
 
 ## Domain ownership rule (critical)
 

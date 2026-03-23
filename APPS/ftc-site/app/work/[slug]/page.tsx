@@ -1,5 +1,7 @@
 import { notFound, permanentRedirect } from "next/navigation";
 
+export const runtime = "edge";
+
 // This route exists as a safety net for legacy /work/<slug> links used across the site.
 // Client launches live under /work and products live under /products (or their dedicated route).
 export default function WorkSlugPage({ params }: { params: { slug: string } }) {
@@ -19,4 +21,3 @@ export default function WorkSlugPage({ params }: { params: { slug: string } }) {
 
   notFound();
 }
-

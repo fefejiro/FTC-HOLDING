@@ -11,18 +11,18 @@ Commands in this repository run from app roots (`APPS/peacepad`, `APPS/ftc-site`
 
 ## PeacePad API (Railway)
 
-- Root directory: `APPS/peacepad`
-- Install: `npm install --legacy-peer-deps`
-- Build: `npm run build`
+- Root directory: repository root or `APPS/peacepad`
+- Install: `npm install --legacy-peer-deps` (if rooted at `APPS/peacepad`) or `npm ci` (if rooted at repo)
+- Build: `npm run build:api` (or `npm --workspace=@ftc/peacepad run build:api` from repo root)
 - Start: `npm run start`
 - Deploy trigger: GitHub `main` -> Railway
 
 ## PeacePad Frontend (Cloudflare Pages)
 
-- Root directory: `APPS/peacepad`
-- Install command: `npm install --legacy-peer-deps`
-- Build command: `npm exec vite build`
-- Output directory: `dist/public`
+- Build root: repository root
+- Install command: `npm ci`
+- Build command: `npm --prefix APPS/peacepad run build:frontend`
+- Output directory: `APPS/peacepad/dist/public`
 - Deploy trigger: GitHub `main` -> Cloudflare Pages
 
 ## SayWetin API (Railway)
@@ -41,10 +41,10 @@ Commands in this repository run from app roots (`APPS/peacepad`, `APPS/ftc-site`
 ## SayWetin Frontend (Cloudflare Pages)
 
 - Gate 1 (must pass before Pages setup): `npm --workspace=@ftc/saywetin run verify:frontend-build`
-- Root directory: `APPS/saywetin`
+- Build root: repository root
 - Install command: `npm ci`
-- Build command: `npm run build:frontend`
-- Output directory: `dist/public`
+- Build command: `npm --prefix APPS/saywetin run build:frontend`
+- Output directory: `APPS/saywetin/dist/public`
 - Env var: `VITE_API_BASE_URL=https://api.saywetin.app`
 - Live frontend domains: `saywetin.app`, `www.saywetin.app`
 - Deploy trigger: GitHub `main` -> Cloudflare Pages

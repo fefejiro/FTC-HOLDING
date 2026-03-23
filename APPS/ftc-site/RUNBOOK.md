@@ -76,11 +76,13 @@ Expected project binding for V1:
 
 - Pages project: `ftc-site-pages`
 - Custom domain: `ftc.peacepad.ca`
-- Monorepo source root: `APPS/ftc-site`
+- Build root: repository root
+- Build command: `npm --prefix APPS/ftc-site run build && cd APPS/ftc-site && npx @cloudflare/next-on-pages@1`
+- Output directory: `APPS/ftc-site/.vercel/output/static`
 - Production branch: `main`
 
 If production is still showing legacy pages, trigger a production redeploy from the
-Cloudflare Pages dashboard after confirming the source root is `APPS/ftc-site`.
+Cloudflare Pages dashboard after confirming the build command and output path above.
 
 ## DNS, TLS, and canonical verification
 
