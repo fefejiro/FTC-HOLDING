@@ -9,10 +9,10 @@ This setup makes `peacepad.ca` and `www.peacepad.ca` serve the PeacePad frontend
 
 ## Pages Build Settings (Copy/Paste)
 - Production branch: `main`
-- Root directory (monorepo): `APPS/peacepad`
+- Root directory (monorepo): repository root
 - Framework preset: `None`
-- Build command: `npm run build`
-- Build output directory: `dist/public`
+- Build command: `npm --prefix APPS/peacepad run build:frontend`
+- Build output directory: `APPS/peacepad/dist/public`
 - Node.js version: `20.x`
 - Git submodules: `Disabled`
 

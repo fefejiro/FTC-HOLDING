@@ -23,16 +23,21 @@ This repo contains multiple apps plus shared packages. Use this as the top-level
 1. PeacePad
 - Frontend production owner: Cloudflare Pages (`https://peacepad.ca`, `https://www.peacepad.ca`)
 - Backend production owner: Railway (`https://api.peacepad.ca`)
+- Frontend Pages build root: repository root -> `npm --prefix APPS/peacepad run build:frontend`
+- Backend Railway build root: `APPS/peacepad` -> `npm run build:api`
 - Primary checks:
   - `npm --prefix APPS/peacepad run verify:deployment-ownership`
   - `npm run verify:peacepad:prod`
   - `npm --prefix APPS/peacepad run smoke:guest-auth`
 
 2. ftc-site
-- Deployed separately (Cloudflare Pages flow) from `APPS/ftc-site`.
+- Frontend production owner: Cloudflare Pages (`https://unalabs.cloud`)
+- Pages build root: repository root -> `npm --prefix APPS/ftc-site run build && cd APPS/ftc-site && npx @cloudflare/next-on-pages@1`
 
 3. SayWetin
 - Frontend and API are separate deployment surfaces.
+- Frontend Pages build root: repository root -> `npm --prefix APPS/saywetin run build:frontend`
+- Backend Railway root: `APPS/saywetin` -> Dockerfile runtime
 - Use `npm --prefix APPS/saywetin run verify:frontend-build` before frontend cutover.
 - Runtime/domain notes: `DOCS/SAYWETIN_HANDOVER.md`
 

@@ -9,10 +9,10 @@ This setup makes Railway host only the API at `api.peacepad.ca`.
 3. Open the created service -> `Settings`.
 
 ## Service Settings (Copy/Paste)
-- Root Directory: repository root
-- Install Command: `npm ci`
-- Build Command: `npm --workspace=@ftc/peacepad run build`
-- Start Command: `npm --workspace=@ftc/peacepad run start`
+- Root Directory: `APPS/peacepad`
+- Install Command: `npm install --legacy-peer-deps`
+- Build Command: `npm run build:api`
+- Start Command: `npm run start`
 
 Start command must not include `-p`. The app already reads `process.env.PORT` in `server/index.ts`.
 

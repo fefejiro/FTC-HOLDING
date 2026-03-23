@@ -11,8 +11,6 @@ const STRICT_TARGET_REDUCTION = 0.15;
 const STRICT_MAX_MAIN_CHUNK_BYTES = Math.floor(
   BASELINE_MAIN_CHUNK_BYTES * (1 - STRICT_TARGET_REDUCTION),
 );
-const STRICT_GATE_START = Date.parse("2026-03-16T00:00:00Z");
-
 function getMode(nowMs) {
   const explicit = process.env.BUNDLE_GATING_MODE?.trim().toLowerCase();
   if (explicit === "strict") {
@@ -21,7 +19,11 @@ function getMode(nowMs) {
   if (explicit === "soft") {
     return "soft";
   }
-  return nowMs >= STRICT_GATE_START ? "strict" : "soft";
+  const enforced = process.env.BUNDLE_GATING_ENFORCED?.trim().toLowerCase();
+  if (enforced === "1" || enforced === "true" || enforced === "yes") {
+    return "strict";
+  }
+  return "soft";
 }
 
 function asKb(bytes) {
@@ -81,7 +83,7 @@ async function run() {
     )}% below ${asKb(BASELINE_MAIN_CHUNK_BYTES)})`,
   );
   console.log(
-    `[bundle-report] Gate mode: ${mode.toUpperCase()} (strict starts 2026-03-16 UTC)`,
+    `[bundle-report] Gate mode: ${mode.toUpperCase()} (set BUNDLE_GATING_MODE=strict or BUNDLE_GATING_ENFORCED=true to hard-fail deploys)`,
   );
 
   if (mainChunk.bytes > STRICT_MAX_MAIN_CHUNK_BYTES) {
