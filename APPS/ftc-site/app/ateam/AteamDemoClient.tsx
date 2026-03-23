@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 type DemoOutput = {
@@ -106,45 +107,55 @@ export default function AteamDemoClient() {
 
       <div className="ateam-demo-output">
         {output ? (
-          <div className="ateam-demo-output-grid">
-            <div className="card ateam-demo-output-card">
-              <p className="card-kicker">Summary</p>
-              <p>{output.summary}</p>
-              <p className="muted">{output.recommendedDirection}</p>
+          <>
+            <div className="ateam-demo-output-grid">
+              <div className="card ateam-demo-output-card">
+                <p className="card-kicker">Summary</p>
+                <p>{output.summary}</p>
+                <p className="muted">{output.recommendedDirection}</p>
+              </div>
+              <div className="card ateam-demo-output-card">
+                <p className="card-kicker">Phases</p>
+                <ul className="ateam-demo-list">
+                  {output.phases.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card ateam-demo-output-card">
+                <p className="card-kicker">Suggested stack</p>
+                <ul className="ateam-demo-list">
+                  {output.stack.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card ateam-demo-output-card">
+                <p className="card-kicker">Deliverables</p>
+                <ul className="ateam-demo-list">
+                  {output.deliverables.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card ateam-demo-output-card">
+                <p className="card-kicker">Next steps</p>
+                <ul className="ateam-demo-list">
+                  {output.nextSteps.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <div className="card ateam-demo-output-card">
-              <p className="card-kicker">Phases</p>
-              <ul className="ateam-demo-list">
-                {output.phases.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+            <div className="ateam-demo-actions">
+              <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
+                Start a Project
+              </Link>
+              <Link href="/work" prefetch={false} className="btn btn-secondary">
+                View Client Launches
+              </Link>
             </div>
-            <div className="card ateam-demo-output-card">
-              <p className="card-kicker">Suggested stack</p>
-              <ul className="ateam-demo-list">
-                {output.stack.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="card ateam-demo-output-card">
-              <p className="card-kicker">Deliverables</p>
-              <ul className="ateam-demo-list">
-                {output.deliverables.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="card ateam-demo-output-card">
-              <p className="card-kicker">Next steps</p>
-              <ul className="ateam-demo-list">
-                {output.nextSteps.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          </>
         ) : (
           <div className="card ateam-demo-placeholder">
             <p className="card-kicker">Demo output</p>

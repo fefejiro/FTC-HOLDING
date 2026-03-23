@@ -1303,6 +1303,12 @@ nav.primary {
   gap: 12px;
 }
 
+.ateam-demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .ateam-demo-output-grid {
   display: grid;
   gap: 12px;
@@ -1339,6 +1345,104 @@ nav.primary {
 
 .ateam-output-card {
   align-items: flex-start;
+}
+
+.intake-card {
+  margin-top: 28px;
+  padding: clamp(24px, 3vw, 34px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(150deg, rgba(16, 20, 31, 0.96), rgba(10, 14, 24, 0.95));
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.28);
+}
+
+.intake-form {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.intake-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--copy);
+}
+
+.intake-form label span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.intake-form textarea,
+.intake-form input,
+.intake-form select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(9, 12, 20, 0.7);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.intake-form textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.intake-form .field-help {
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.intake-next-steps {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+  color: var(--copy);
+}
+
+.intake-next-steps-title {
+  font-weight: 700;
+}
+
+.intake-next-steps-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.intake-alt-contact {
+  color: var(--muted);
+  margin: 0;
+}
+
+.form-feedback {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.form-feedback.success {
+  color: #c8ffe4;
+  border: 1px solid rgba(72, 227, 164, 0.4);
+  background: rgba(72, 227, 164, 0.12);
+}
+
+.form-feedback.error {
+  color: #ffb4b4;
+  border: 1px solid rgba(255, 120, 120, 0.4);
+  background: rgba(255, 120, 120, 0.12);
+}
+
+.hp-field {
+  display: none;
 }
 
 .process-step-number {
