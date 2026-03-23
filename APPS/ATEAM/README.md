@@ -24,6 +24,38 @@ This README reflects the current source of truth in `APPS/ATEAM` as audited on M
 - Backend entrypoint: `Server/server.js`
 - Backend start command: `npm start` (from `Server/`)
 
+## Mission Control UI
+
+ATEAM now ships with a **Mission Control** UI shell (left nav + top bar) and SPA-style routes (served by the Express catch-all in `Server/server.js`).
+
+Key files:
+
+- Shell + routes + pages: `Public/index.html`
+- Theme + layout styling: `Public/style.css`
+- Page renderers + seeded demo stores: `Public/app.js` (search for `Mission Control:` sections)
+
+Seeded local-first demo data (safe to replace later) is stored in `localStorage`:
+
+- Memory journal: `MC_MEMORY_JOURNAL_V1`, UI state: `MC_MEMORY_JOURNAL_UI_V1`
+- Scheduled tasks: `MC_SCHEDULED_TASKS_V1`
+- Pixel office layout: `MC_OFFICE2_V1`
+- Pixel factory items: `MC_FACTORY_V1`
+
+Integration note:
+
+- The Office pixel room (`/office`) opens a **Command Station drawer** that reuses the existing Command Station panel from the Agents page (`/agents`) by temporarily re-parenting that DOM subtree (no duplicated logic / no duplicate IDs).
+
+## Telegram Remote Control
+
+ATEAM includes a companion service that connects Telegram to the local event log + orchestrator:
+
+- Service: `APPS/ATEAM/telegram-gateway`
+- Long polling only (no webhooks)
+- Allowlist-based (single Telegram user ID)
+- Writes inbound/outbound Telegram messages into SQLite via `POST /events/:sessionId`
+
+See `APPS/ATEAM/telegram-gateway/README.md` for setup and run instructions.
+
 ## API Surface (current)
 
 - Health/config: `GET /health`

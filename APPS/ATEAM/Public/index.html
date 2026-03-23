@@ -6,17 +6,109 @@
   <title>ATEAM Local</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-  <header class="top-bar">
+<body class="mc-body">
+  <header class="top-bar legacy-top-bar" aria-hidden="true">
     <div class="brand">ATEAM Local MVP</div>
     <div class="top-actions">
       <button id="go-dashboard" class="top-btn active">Dashboard</button>
+      <button id="go-office" class="top-btn">Office</button>
+      <button id="go-content" class="top-btn">Content</button>
       <button id="go-talk" class="top-btn">Talk Mode</button>
       <button id="go-speech" class="top-btn">Speech</button>
     </div>
   </header>
 
-  <main id="dashboard-view" class="view dashboard-view">
+  <div class="mc-shell">
+    <aside class="mc-nav" aria-label="Mission Control navigation">
+      <div class="mc-nav-head">
+        <div class="mc-nav-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2.5L20 6.5V17.5L12 21.5L4 17.5V6.5L12 2.5Z" stroke="rgba(226,241,255,0.7)" stroke-width="1.4"/>
+            <path d="M12 7.5V16.5" stroke="rgba(226,241,255,0.35)" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M8 9.5H16" stroke="rgba(226,241,255,0.35)" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="mc-nav-title">Mission Control</div>
+      </div>
+
+      <nav class="mc-nav-list" id="mc-nav-list">
+        <button class="mc-nav-item active" type="button" data-route="/tasks" data-view="tasks">
+          <span class="mc-nav-ico" aria-hidden="true">⌁</span><span class="mc-nav-label">Tasks</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/agents" data-view="agents">
+          <span class="mc-nav-ico" aria-hidden="true">⎔</span><span class="mc-nav-label">Agents</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/content" data-view="content">
+          <span class="mc-nav-ico" aria-hidden="true">▦</span><span class="mc-nav-label">Content</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/approvals" data-view="approvals">
+          <span class="mc-nav-ico" aria-hidden="true">✓</span><span class="mc-nav-label">Approvals</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/council" data-view="council">
+          <span class="mc-nav-ico" aria-hidden="true">⌂</span><span class="mc-nav-label">Council</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/calendar" data-view="calendar">
+          <span class="mc-nav-ico" aria-hidden="true">▣</span><span class="mc-nav-label">Calendar</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/projects" data-view="projects">
+          <span class="mc-nav-ico" aria-hidden="true">▤</span><span class="mc-nav-label">Projects</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/memory" data-view="memory">
+          <span class="mc-nav-ico" aria-hidden="true">◎</span><span class="mc-nav-label">Memory</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/docs" data-view="docs">
+          <span class="mc-nav-ico" aria-hidden="true">⌗</span><span class="mc-nav-label">Docs</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/people" data-view="people">
+          <span class="mc-nav-ico" aria-hidden="true">⎇</span><span class="mc-nav-label">People</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/office" data-view="office">
+          <span class="mc-nav-ico" aria-hidden="true">⌬</span><span class="mc-nav-label">Office</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/team" data-view="team">
+          <span class="mc-nav-ico" aria-hidden="true">⟟</span><span class="mc-nav-label">Team</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/system" data-view="system">
+          <span class="mc-nav-ico" aria-hidden="true">⟐</span><span class="mc-nav-label">System</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/radar" data-view="radar">
+          <span class="mc-nav-ico" aria-hidden="true">◌</span><span class="mc-nav-label">Radar</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/factory" data-view="factory">
+          <span class="mc-nav-ico" aria-hidden="true">▥</span><span class="mc-nav-label">Factory</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/pipeline" data-view="pipeline">
+          <span class="mc-nav-ico" aria-hidden="true">⇢</span><span class="mc-nav-label">Pipeline</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/ai-lab" data-view="ai_lab">
+          <span class="mc-nav-ico" aria-hidden="true">◍</span><span class="mc-nav-label">AI Lab</span>
+        </button>
+      </nav>
+
+      <button id="mc-feedback" class="mc-feedback" type="button">Feedback</button>
+    </aside>
+
+    <div class="mc-main">
+      <header class="mc-topbar" aria-label="Top bar">
+        <div class="mc-search" role="search">
+          <span class="mc-search-ico" aria-hidden="true">⌕</span>
+          <input id="mc-search-input" class="mc-search-input" type="text" placeholder="Search" />
+          <span class="mc-search-hint" aria-hidden="true">⌘ K</span>
+        </div>
+        <div class="mc-top-actions">
+          <button id="mc-pause" class="mc-top-btn" type="button"><span aria-hidden="true">⏸</span> Pause</button>
+          <button id="mc-ping" class="mc-top-btn" type="button">Ping Henry</button>
+          <button id="mc-status" class="mc-icon-btn" type="button" aria-label="Status">
+            <span class="mc-status-dot" aria-hidden="true"></span>
+          </button>
+          <button id="mc-refresh" class="mc-icon-btn" type="button" aria-label="Refresh">↻</button>
+        </div>
+      </header>
+
+      <div class="mc-frame">
+        <div class="mc-frame-inner">
+
+  <main id="dashboard-view" class="view dashboard-view" data-mc-page="tasks">
     <aside class="team-roster">
       <h2>Team</h2>
       <div class="agent-row" data-agent="Coach"><span class="agent-name">Coach</span><span class="agent-role">Coordinator</span><span class="agent-runtime-status" id="agent-status-coach">Idle</span></div>
@@ -62,7 +154,7 @@
     </aside>
   </main>
 
-  <section class="console-wrap view" id="dashboard-console">
+  <section class="console-wrap view" id="dashboard-console" data-mc-page="tasks">
     <div class="console-header">
       <div class="chip" id="chip-task">Task: none</div>
       <div class="chip" id="chip-agent">Agent: Coach</div>
@@ -80,7 +172,489 @@
     </div>
   </section>
 
-  <main id="talk-view" class="view talk-view hidden">
+  <main id="content-view" class="view content-view hidden" data-mc-page="content">
+    <div class="content-header">
+      <div>
+        <div class="content-title">Content Pipeline</div>
+        <div class="content-subtitle">Una Labs Output (LinkedIn) — internal workflow</div>
+      </div>
+      <div class="content-stats">
+        <div class="chip">Signals <span id="content-signal-count">0</span></div>
+        <div class="chip">Topics <span id="content-topic-count">0</span></div>
+        <div class="chip">Drafts <span id="content-draft-count">0</span></div>
+        <div class="chip">Pending <span id="content-pending-count">0</span></div>
+      </div>
+    </div>
+
+    <section class="content-grid">
+      <div class="content-panel">
+        <div class="content-panel-head">
+          <h2>Radar</h2>
+        </div>
+        <div class="content-form">
+          <input id="content-signal-title" type="text" placeholder="Signal title" />
+          <input id="content-signal-source" type="text" placeholder="Source (optional)" />
+          <input id="content-signal-url" type="text" placeholder="URL (optional)" />
+          <textarea id="content-signal-summary" rows="3" placeholder="Summary / raw signal notes"></textarea>
+          <div class="content-form-actions">
+            <button id="content-signal-save" class="top-btn">Save Signal</button>
+            <button id="content-signal-clear" class="top-btn">Clear</button>
+          </div>
+        </div>
+        <div id="content-radar-list" class="content-list"></div>
+      </div>
+
+      <div class="content-panel">
+        <div class="content-panel-head">
+          <h2>Scout</h2>
+        </div>
+        <div class="content-form">
+          <input id="content-topic-title" type="text" placeholder="Topic title" />
+          <textarea id="content-topic-rationale" rows="3" placeholder="Why this matters"></textarea>
+          <div class="content-form-actions">
+            <button id="content-topic-save" class="top-btn">Save Topic</button>
+            <button id="content-topic-clear" class="top-btn">Clear</button>
+          </div>
+        </div>
+        <div id="content-scout-list" class="content-list"></div>
+      </div>
+
+      <div class="content-panel">
+        <div class="content-panel-head">
+          <h2>Quill Drafts</h2>
+        </div>
+        <div id="content-draft-list" class="content-list"></div>
+      </div>
+    </section>
+
+    <section class="content-panel content-editor-panel">
+      <div class="content-panel-head">
+        <h2>Draft Editor</h2>
+        <div id="content-draft-active" class="content-editor-meta">No draft selected</div>
+      </div>
+      <div class="content-form content-form-grid">
+        <label for="content-draft-topic">Topic Title</label>
+        <input id="content-draft-topic" type="text" placeholder="Topic title" />
+        <label for="content-draft-hook">Hook</label>
+        <textarea id="content-draft-hook" rows="2" placeholder="Lead hook for LinkedIn"></textarea>
+        <label for="content-draft-explanation">Explanation</label>
+        <textarea id="content-draft-explanation" rows="3" placeholder="What happened?"></textarea>
+        <label for="content-draft-insight">Insight</label>
+        <textarea id="content-draft-insight" rows="3" placeholder="Why it matters"></textarea>
+        <label for="content-draft-cta">CTA</label>
+        <textarea id="content-draft-cta" rows="2" placeholder="Call to action"></textarea>
+        <div class="content-form-row">
+          <label for="content-draft-status">Status</label>
+          <select id="content-draft-status">
+            <option value="draft">Draft</option>
+            <option value="pending_approval">Pending Approval</option>
+            <option value="approved">Approved</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="content-form-row">
+          <label for="content-draft-schedule">Schedule</label>
+          <input id="content-draft-schedule" type="datetime-local" />
+        </div>
+        <div class="content-form-actions">
+          <button id="content-draft-save" class="top-btn">Save Draft</button>
+          <button id="content-draft-request" class="top-btn">Request Approval</button>
+          <button id="content-draft-approve" class="top-btn">Approve</button>
+          <button id="content-draft-reject" class="top-btn">Reject</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-panel">
+      <div class="content-panel-head">
+        <h2>Pipeline Queue</h2>
+      </div>
+      <div id="content-pipeline-list" class="content-list"></div>
+    </section>
+  </main>
+
+  <main id="office-view" class="view office-view hidden" data-mc-page="agents">
+    <div class="office-header office-header-command">
+      <div class="office-brand">ATEAM</div>
+      <div class="office-header-meta">
+        <div id="office-mode-chip" class="office-mode-chip">Mode: Flow</div>
+        <div id="office-attention-chip" class="office-attention-chip hidden">Attention: -</div>
+      </div>
+      <div class="office-header-actions">
+        <button id="office-studio-toggle" class="top-btn office-studio-toggle" type="button">Studio Mode: Off</button>
+      </div>
+    </div>
+
+    <div class="office-layout">
+      <section class="office-panel office-panel-agents">
+        <div class="panel-title">Agent Pool</div>
+        <div id="office-agent-pool" class="office-agent-pool"></div>
+        <div id="office-pool-status" class="panel-footer">Status: Idle</div>
+      </section>
+
+      <section class="office-panel office-panel-command">
+        <div class="panel-title">Command Station</div>
+        <div id="office-command-empty" class="office-command-empty">
+          <div class="empty-title">No active agent</div>
+          <div class="empty-subtitle">Select an agent to assign a task.</div>
+        </div>
+        <div id="office-command-active" class="office-command-active hidden">
+          <div class="command-active-header">
+            <div>
+              <div id="office-command-name" class="command-active-name">-</div>
+              <div id="office-command-role" class="command-active-role">-</div>
+            </div>
+            <div id="office-command-status" class="command-active-status">Idle</div>
+          </div>
+          <div class="command-section">
+            <div class="command-section-title">Task</div>
+            <div id="office-command-task" class="command-task">-</div>
+          </div>
+          <div class="command-section">
+            <div class="command-section-title">Logs</div>
+            <ul id="office-command-logs" class="command-logs"></ul>
+          </div>
+          <div class="command-actions">
+            <button id="office-action-approve" class="top-btn" type="button">Approve</button>
+            <button id="office-action-edit" class="top-btn" type="button">Edit</button>
+            <button id="office-action-retry" class="top-btn" type="button">Retry</button>
+            <button id="office-action-cancel" class="top-btn" type="button">Cancel</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="office-panel office-panel-control">
+        <div class="panel-title">Commander</div>
+        <div class="commander-status">Status: Online</div>
+        <div class="control-section">
+          <div class="control-title">Active Decisions</div>
+          <div id="office-control-decisions" class="control-list"></div>
+        </div>
+        <div class="control-section">
+          <div class="control-title">Quick Actions</div>
+          <div class="control-actions">
+            <button id="office-action-pause" class="top-btn" type="button">Pause All</button>
+            <button id="office-action-override" class="top-btn" type="button">Override Agent</button>
+            <button id="office-action-viewlogs" class="top-btn" type="button">View Logs</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <main id="approvals-view" class="view mc-page hidden" data-mc-page="approvals">
+    <div class="approvals-layout" aria-label="Approvals layout">
+      <section class="approvals-panel approvals-panel-list" aria-label="Approvals list">
+        <div class="approvals-head">
+          <div>
+            <div class="approvals-title">Approvals</div>
+            <div class="approvals-subtitle">Review and approve queued items</div>
+          </div>
+          <div id="approvals-count" class="approvals-count">0</div>
+        </div>
+        <div id="approvals-list" class="approvals-list"></div>
+      </section>
+
+      <section class="approvals-panel approvals-panel-detail" aria-label="Approval detail">
+        <div class="approvals-detail-head">
+          <div class="approvals-detail-title">Approval</div>
+          <div id="approvals-detail-status" class="approvals-detail-status">—</div>
+        </div>
+        <div id="approvals-detail" class="approvals-detail"></div>
+      </section>
+    </div>
+  </main>
+
+  <main id="council-view" class="view mc-page hidden" data-mc-page="council">
+    <div class="mc-page-title">
+      <div class="mc-title">Council</div>
+      <div class="mc-subtitle">Strategy and governance</div>
+    </div>
+    <div class="mc-placeholder">Council UI coming soon.</div>
+  </main>
+
+  <main id="calendar-view" class="view mc-page hidden" data-mc-page="calendar">
+    <div class="cal-header">
+      <div>
+        <div class="cal-title">Scheduled Tasks</div>
+        <div class="cal-subtitle">Henry's automated routines</div>
+      </div>
+      <div class="cal-controls">
+        <button id="cal-week-btn" class="cal-pill cal-pill-active" type="button">Week</button>
+        <button id="cal-today-btn" class="cal-pill" type="button">Today</button>
+        <button id="cal-refresh-btn" class="cal-icon-btn" type="button" aria-label="Refresh calendar">↻</button>
+      </div>
+    </div>
+
+    <section class="cal-banner" aria-label="Always running routines">
+      <div class="cal-banner-head">
+        <span class="cal-banner-ico" aria-hidden="true">⚡</span>
+        <div class="cal-banner-title">Always Running</div>
+      </div>
+      <div class="cal-banner-pills">
+        <div class="cal-banner-pill">Playbook Scanner • 4x daily</div>
+        <div class="cal-banner-pill">Opportunity Scanner • 2x daily</div>
+        <div class="cal-banner-pill">Competitor Scanner • 2x daily</div>
+      </div>
+    </section>
+
+    <section class="cal-week" aria-label="Scheduled tasks week grid">
+      <div id="cal-week-grid" class="cal-week-grid"></div>
+    </section>
+  </main>
+
+  <main id="projects-view" class="view mc-page hidden" data-mc-page="projects">
+    <div class="mc-page-title">
+      <div class="mc-title">Projects</div>
+      <div class="mc-subtitle">Workspaces and initiatives</div>
+    </div>
+    <div class="mc-placeholder">Projects UI coming soon.</div>
+  </main>
+
+  <main id="memory-view" class="view mc-page hidden" data-mc-page="memory">
+    <div class="memory-layout" aria-label="Memory journal layout">
+      <aside class="memory-sidebar" aria-label="Memory sidebar">
+        <div class="memory-search">
+          <span class="memory-search-ico" aria-hidden="true">⌕</span>
+          <input id="memory-search-input" class="memory-search-input" type="text" placeholder="Search memory…" />
+        </div>
+
+        <div class="memory-ltm-card" role="button" tabindex="0" aria-label="Long-term memory summary">
+          <div class="memory-ltm-head">
+            <div class="memory-ltm-title">Long-Term Memory ✨</div>
+            <div id="memory-ltm-meta" class="memory-ltm-meta">0 words • updated —</div>
+          </div>
+          <div class="memory-ltm-desc">Pinned context and durable notes.</div>
+        </div>
+
+        <div class="memory-section-head">
+          <div class="memory-section-label">DAILY JOURNAL</div>
+          <div id="memory-journal-count" class="memory-count-badge">0 entries</div>
+        </div>
+
+        <div id="memory-journal-groups" class="memory-groups" aria-label="Journal groups"></div>
+      </aside>
+
+      <section class="memory-viewer" aria-label="Journal viewer">
+        <div class="journal-head">
+          <div>
+            <div id="journal-title" class="journal-title">Journal: —</div>
+            <div id="journal-subhead" class="journal-subhead">—</div>
+          </div>
+          <div id="journal-modified" class="journal-modified">Modified —</div>
+        </div>
+        <div id="journal-body" class="journal-body"></div>
+      </section>
+    </div>
+  </main>
+
+  <main id="docs-view" class="view mc-page hidden" data-mc-page="docs">
+    <div class="mc-page-title">
+      <div class="mc-title">Docs</div>
+      <div class="mc-subtitle">Operating docs and references</div>
+    </div>
+    <div class="mc-placeholder">Docs UI coming soon.</div>
+  </main>
+
+  <main id="people-view" class="view mc-page hidden" data-mc-page="people">
+    <div class="mc-page-title">
+      <div class="mc-title">People</div>
+      <div class="mc-subtitle">Contacts and network</div>
+    </div>
+    <div class="mc-placeholder">People UI coming soon.</div>
+  </main>
+
+  <main id="office-room-view" class="view mc-page hidden" data-mc-page="office">
+    <div class="office2-layout" aria-label="Office room layout">
+      <section class="office2-room-panel" aria-label="Office room">
+        <div class="office2-room-topbar">
+          <button id="office2-start-chat" class="office2-start-chat" type="button">+ Start Chat</button>
+          <div class="office2-slots" aria-label="Chat slots">
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <button id="office2-toggle-labels" class="office2-slot office2-slot-btn" type="button" title="Toggle labels">Aa</button>
+          </div>
+        </div>
+
+        <div id="office2-room" class="office2-room" aria-label="Pixel office room">
+          <div class="office2-floor" aria-hidden="true"></div>
+          <div class="office2-props" aria-hidden="true">
+            <div class="px-desk px-desk-a"><div class="px-monitor"></div></div>
+            <div class="px-desk px-desk-b"><div class="px-monitor"></div></div>
+            <div class="px-desk px-desk-c"><div class="px-monitor"></div></div>
+            <div class="px-desk px-desk-d"><div class="px-monitor"></div></div>
+            <div class="px-water px-water-left"></div>
+            <div class="px-water px-water-right"></div>
+            <div class="px-plant px-plant-left"></div>
+            <div class="px-plant px-plant-right"></div>
+            <div class="px-table"></div>
+          </div>
+          <div id="office2-entities" class="office2-entities" aria-label="Agents"></div>
+          <div id="office2-tooltip" class="office2-tooltip hidden" role="tooltip"></div>
+        </div>
+      </section>
+
+      <aside class="office2-activity-panel" aria-label="Live Activity panel">
+        <div class="office2-activity-head">
+          <div class="office2-activity-title">Live Activity</div>
+          <div class="office2-activity-range">Last hour</div>
+        </div>
+        <div id="office2-activity-empty" class="office2-activity-empty">
+          <div class="office2-activity-empty-graph" aria-hidden="true"></div>
+          <div class="office2-activity-empty-title">No recent activity</div>
+          <div class="office2-activity-empty-sub">Events will appear here</div>
+        </div>
+        <div id="office2-activity-list" class="office2-activity-list hidden"></div>
+      </aside>
+    </div>
+
+    <section class="office2-agentbar" aria-label="Agent cards">
+      <div id="office2-agent-cards" class="office2-agent-cards"></div>
+    </section>
+  </main>
+
+  <main id="team-view" class="view mc-page hidden" data-mc-page="team">
+    <div id="team-canvas" class="team-canvas" aria-label="Team map"></div>
+  </main>
+
+  <main id="system-view" class="view mc-page hidden" data-mc-page="system">
+    <div class="mc-page-title">
+      <div class="mc-title">System</div>
+      <div class="mc-subtitle">Runtime controls</div>
+    </div>
+    <div class="mc-placeholder">System UI coming soon.</div>
+  </main>
+
+  <main id="radar-view" class="view mc-page hidden" data-mc-page="radar">
+    <div class="mc-page-title">
+      <div class="mc-title">Radar</div>
+      <div class="mc-subtitle">Signals and scans</div>
+    </div>
+    <div class="mc-placeholder">Radar UI coming soon.</div>
+  </main>
+
+  <main id="factory-view" class="view mc-page hidden" data-mc-page="factory">
+    <div class="factory-wrap" aria-label="Pixel factory layout">
+      <section class="factory-floor-panel" aria-label="Pixel factory floor">
+        <div id="factory-floor" class="factory-floor">
+          <div class="factory-stations" aria-label="Factory stations">
+            <div class="factory-station" data-stage="break">
+              <div class="factory-station-label">BREAK ROOM</div>
+              <div class="factory-station-box">
+                <div class="fx-breakroom" aria-hidden="true">
+                  <div class="fx-bottle"></div>
+                  <div class="fx-cooler"></div>
+                </div>
+              </div>
+            </div>
+            <div class="factory-station" data-stage="build">
+              <div class="factory-station-label">BUILD</div>
+              <div class="factory-station-box">
+                <div id="factory-build-agents" class="fx-agent-cluster"></div>
+              </div>
+            </div>
+            <div class="factory-station" data-stage="qa">
+              <div class="factory-station-label">QA</div>
+              <div class="factory-station-box">
+                <div class="fx-qa" aria-hidden="true">
+                  <div class="fx-qa-agent"></div>
+                  <div class="fx-qa-squares">
+                    <span></span><span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="factory-station" data-stage="review">
+              <div class="factory-station-label">REVIEW</div>
+              <div class="factory-station-box">
+                <div class="fx-review" aria-hidden="true">
+                  <div class="fx-doc fx-doc-a"></div>
+                  <div class="fx-doc fx-doc-b"></div>
+                  <div class="fx-doc fx-doc-c"></div>
+                </div>
+              </div>
+            </div>
+            <div class="factory-station" data-stage="ship">
+              <div class="factory-station-label">SHIP</div>
+              <div class="factory-station-box">
+                <div class="fx-ship" aria-hidden="true">
+                  <div class="fx-ship-sign"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="factory-belt" aria-label="Conveyor belt">
+            <div class="factory-belt-track"></div>
+            <div id="factory-belt-items" class="factory-belt-items"></div>
+          </div>
+
+          <div class="factory-backlog-area" aria-label="Backlog">
+            <div class="factory-backlog-label">BACKLOG</div>
+            <div class="factory-backlog-card">
+              <div class="factory-backlog-title">PIXEL FACTORY FLOOR</div>
+              <div class="factory-backlog-meta">
+                <span class="factory-backlog-folder" aria-hidden="true"></span>
+                <span class="factory-backlog-note" aria-hidden="true"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="factory-hud" aria-label="Factory stats">
+        <div class="factory-metrics">
+          <div class="factory-metric" data-metric="shipped">
+            <div class="factory-metric-label">SHIPPED TODAY</div>
+            <div id="factory-metric-shipped" class="factory-metric-value">0</div>
+          </div>
+          <div class="factory-metric" data-metric="inprogress">
+            <div class="factory-metric-label">IN PROGRESS</div>
+            <div id="factory-metric-inprogress" class="factory-metric-value">0</div>
+          </div>
+          <div class="factory-metric" data-metric="backlog">
+            <div class="factory-metric-label">BACKLOG</div>
+            <div id="factory-metric-backlog" class="factory-metric-value">0</div>
+          </div>
+          <div class="factory-metric" data-metric="blocked">
+            <div class="factory-metric-label">BLOCKED</div>
+            <div id="factory-metric-blocked" class="factory-metric-value">0</div>
+          </div>
+          <div class="factory-metric" data-metric="avgtime">
+            <div class="factory-metric-label">AVG. PIPELINE TIME</div>
+            <div id="factory-metric-avgtime" class="factory-metric-value">—</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <main id="pipeline-view" class="view mc-page hidden" data-mc-page="pipeline">
+    <div class="mc-page-title">
+      <div class="mc-title">Pipeline</div>
+      <div class="mc-subtitle">Queued outputs</div>
+    </div>
+    <div class="mc-placeholder">Pipeline UI coming soon.</div>
+  </main>
+
+  <main id="ai-lab-view" class="view mc-page hidden" data-mc-page="ai_lab">
+    <div class="mc-page-title">
+      <div class="mc-title">AI Lab</div>
+      <div class="mc-subtitle">Talk + Speech modules</div>
+    </div>
+    <div class="mc-placeholder">AI Lab UI coming soon.</div>
+  </main>
+
+  <main id="talk-view" class="view mc-page talk-view hidden" data-mc-page="talk">
     <div class="talk-top">
       <div class="talk-meta">
         <div class="talk-mode-label">Talk Mode</div>
@@ -95,7 +669,7 @@
             <option value="michael">Michael</option>
             <option value="mark">Mark</option>
             <option value="guest">Guest</option>
-            <option value="ai_podcast">AI</option>
+            <option value="ai_podcast">Manchi AI</option>
           </select>
         </label>
         <button
@@ -113,51 +687,9 @@
             <option value="nigerian_professor_ss">Nigerian Professor (South South vibe)</option>
           </select>
         </label>
+        <button id="talk-ui-mode-btn" class="top-btn talk-ui-mode-btn" type="button" aria-label="Toggle Talk focus mode">Focus</button>
       </div>
     </div>
-
-    <section class="talk-core">
-      <button id="talk-orb-button" class="talk-orb-wrap" aria-label="Toggle listening">
-        <canvas id="talk-orb" width="620" height="620"></canvas>
-        <div class="talk-state" id="talk-state">
-          <div id="talk-state-label">Idle</div>
-          <div id="talk-subtitle" class="talk-subtitle"></div>
-        </div>
-      </button>
-      <div id="talk-hint" class="talk-hint">Tap to talk</div>
-
-      <div class="subtitle-overlay" id="subtitle-overlay" aria-live="polite">
-        <div id="subtitle-user" class="subtitle-line subtitle-user"></div>
-        <div id="subtitle-agent" class="subtitle-line subtitle-agent"></div>
-      </div>
-
-      <div id="vision-controls" class="vision-controls hidden" aria-label="Vision controls">
-        <button id="screen-share-btn" class="vision-btn" title="Start screen share" aria-label="Start screen share">🖥</button>
-        <button id="camera-view-btn" class="vision-btn" title="Start camera view" aria-label="Start camera view">📷</button>
-        <div id="vision-indicator" class="vision-indicator hidden">Vision ON</div>
-      </div>
-
-      <div id="screen-preview-wrap" class="vision-preview hidden">
-        <video id="screen-preview" autoplay muted playsinline></video>
-        <button id="screen-stop-btn" class="vision-stop-btn">Stop Screen</button>
-      </div>
-
-      <div id="camera-preview-wrap" class="vision-preview hidden">
-        <video id="camera-preview" autoplay muted playsinline></video>
-        <button id="camera-stop-btn" class="vision-stop-btn">Stop Camera</button>
-      </div>
-
-      <div id="fallback-composer" class="fallback-composer hidden">
-        <input id="fallback-input" type="text" placeholder="Type your message and press Enter" />
-        <div id="fallback-suggestions" class="fallback-suggestions hidden" aria-label="Transcript suggestions"></div>
-        <div class="fallback-actions">
-          <button id="fallback-send-btn" type="button" class="top-btn fallback-action-btn">Send</button>
-          <button id="fallback-retry-btn" type="button" class="top-btn fallback-action-btn">Retry</button>
-          <button id="fallback-cancel-btn" type="button" class="top-btn fallback-action-btn">Cancel</button>
-        </div>
-        <div class="fallback-help">Enter to send, Esc to cancel</div>
-      </div>
-    </section>
 
     <section id="talk-transcript-wrap" class="talk-transcript-wrap">
       <div class="talk-transcript-head">
@@ -165,7 +697,7 @@
         <button id="talk-transcript-toggle" class="top-btn transcript-toggle">Expand</button>
       </div>
       <div class="talk-transcript" id="talk-transcript">
-        <div class="talk-empty">Tap the orb to start.</div>
+        <div class="talk-empty">No transcript yet.</div>
       </div>
     </section>
 
@@ -205,7 +737,7 @@
             <option value="michael">Michael</option>
             <option value="mark">Mark</option>
             <option value="guest">Guest</option>
-            <option value="ai_podcast">AI</option>
+            <option value="ai_podcast">Manchi AI</option>
             <option value="unknown">Unknown</option>
           </select>
         </label>
@@ -223,20 +755,27 @@
       <div id="talk-chapters" class="talk-chapters">
         <div class="timeline-empty">No chapters yet.</div>
       </div>
-      <div class="talk-speaker-analytics-head">Speaker Analytics</div>
-      <div class="talk-speaker-analytics-note">Talk time uses measured audio windows only.</div>
-      <div id="talk-speaker-analytics-controls" class="talk-speaker-analytics-controls" aria-label="Speaker analytics sort controls">
-        <span class="talk-speaker-analytics-controls-label">Sort</span>
-        <button type="button" class="speaker-analytics-sort-btn active" data-sort="turns">Turns</button>
-        <button type="button" class="speaker-analytics-sort-btn" data-sort="talk_time">Talk Time</button>
-        <button type="button" class="speaker-analytics-sort-btn" data-sort="longest_gap">Longest Gap</button>
+    </section>
+
+    <section id="talk-composer" class="talk-composer" aria-label="Talk composer">
+      <div class="talk-composer-row">
+        <textarea
+          id="talk-chat-input"
+          class="talk-chat-input"
+          rows="1"
+          placeholder="Message ATEAM…"
+          aria-label="Message ATEAM"></textarea>
+        <button id="talk-chat-send" class="top-btn talk-chat-send" type="button">Send</button>
       </div>
-      <div id="talk-speaker-analytics" class="talk-speaker-analytics">
-        <div class="timeline-empty">No speaker data yet.</div>
+      <div class="talk-composer-sub">
+        <div id="talk-state" class="talk-state-pill" data-state="idle" aria-label="Talk state">
+          <span id="talk-state-label">Idle</span>
+        </div>
+        <div id="talk-hint" class="talk-hint-compact">Ready.</div>
       </div>
     </section>
   </main>
-  <main id="speech-view" class="view speech-view hidden">
+  <main id="speech-view" class="view speech-view hidden" data-mc-page="speech">
     <div class="speech-header">
       <h1>Speech Clarity Trainer</h1>
       <p class="speech-subtitle">Personal oral communication clarity trainer</p>
@@ -320,7 +859,7 @@
           </label>
         </div>
         <div class="reflection-prompts">
-          <div>" id="speech-reflection-prompt">What did you notice about your clarity?</div>
+          <div id="speech-reflection-prompt">What did you notice about your clarity?</div>
           <textarea id="speech-reflection-notes" placeholder="Enter your observations..." rows="4"></textarea>
         </div>
         <div class="reflection-actions">
@@ -330,6 +869,20 @@
       </div>
     </section>
   </main>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="mc-command-drawer-backdrop" class="mc-drawer-backdrop hidden" aria-hidden="true"></div>
+  <aside id="mc-command-drawer" class="mc-drawer hidden" aria-label="Command Station Drawer">
+    <div class="mc-drawer-head">
+      <div class="mc-drawer-title">Command Station</div>
+      <button id="mc-command-drawer-close" class="mc-icon-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="mc-command-drawer-body" class="mc-drawer-body"></div>
+  </aside>
 
 
   <div id="toast-container" class="toast-container"></div>

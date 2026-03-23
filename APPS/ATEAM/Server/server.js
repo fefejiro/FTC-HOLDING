@@ -12,7 +12,10 @@ import { createElevenLabsTts } from "./lib/elevenlabsTts.js";
 import { routeAgentCommand } from "./lib/agentRouter.js";
 import { createSpeechClarityAnalyze } from "./lib/speechClarity/speechClarityAnalyze.js";
 import { createSpeechClarityRoutes } from "./lib/speechClarity/speechClarityRoutes.js";
-import { sanitizeSessionId, createEvent, appendEvent, getEvents } from "./lib/eventLog.js";
+import { sanitizeSessionId, createEvent, appendEvent, getEvents, getEventsAfterTimestamp } from "./lib/eventLog.js";
+import { createApprovalStore } from "./lib/approvalStore.js";
+import { createWorkItemStore } from "./lib/workItemStore.js";
+import { planOrchestration } from "./lib/orchestrator.js";
 import { createRepositories } from "./lib/storage/repositories.js";
 import { createPrincipalScopeMiddleware, normalizeScopedResourceId } from "./lib/auth/principalScope.js";
 import { createCapabilityRoutes } from "./lib/capability/routes.js";
@@ -46,9 +49,16 @@ const MEMORY_DIR = path.join(PROJECT_ROOT, "memory");
 const STORAGE_BACKEND = String(process.env.ATEAM_STORAGE_BACKEND || "local").trim().toLowerCase();
 const AUTH_MODE = String(process.env.ATEAM_AUTH_MODE || "local").trim().toLowerCase();
 const principalScopeMiddleware = createPrincipalScopeMiddleware({ mode: AUTH_MODE });
-app.use(["/task", "/tasks", "/agent", "/command", "/voice", "/events", "/speech", "/capability"], principalScopeMiddleware);
+app.use(["/task", "/tasks", "/agent", "/command", "/voice", "/events", "/speech", "/capability", "/content", "/api"], principalScopeMiddleware);
 
-const { backend: resolvedStorageBackend, threadStore, taskStore, memoryStore, speechClarityStore } = createRepositories({
+const {
+  backend: resolvedStorageBackend,
+  threadStore,
+  taskStore,
+  memoryStore,
+  speechClarityStore,
+  contentPipelineStore
+} = createRepositories({
   backend: STORAGE_BACKEND,
   memoryDir: MEMORY_DIR
 });
@@ -56,6 +66,8 @@ const voice = createVoiceModule();
 const toolRegistry = createToolRegistry({ taskStore, threadStore, voice });
 const llmAdapter = createLlmAdapter({ mode: process.env.LLM_MODE || "auto" });
 const agentLaneLocks = new Map();
+const approvalStore = createApprovalStore();
+const workItemStore = createWorkItemStore();
 const elevenlabsTts = createElevenLabsTts({
   apiKey: process.env.ELEVENLABS_API_KEY || "",
   modelId: process.env.ELEVENLABS_MODEL_ID || "eleven_multilingual_v2",
@@ -69,7 +81,7 @@ const elevenlabsTts = createElevenLabsTts({
   timeoutMs: Number(process.env.ELEVENLABS_TIMEOUT_MS || 20000)
 });
 
-await Promise.all([threadStore.ensure(), taskStore.ensure(), memoryStore.ensure()]);
+await Promise.all([threadStore.ensure(), taskStore.ensure(), memoryStore.ensure(), contentPipelineStore.ensure()]);
 
 const speechClarityAnalyze = createSpeechClarityAnalyze();
 const speechClarityRoutes = createSpeechClarityRoutes({
@@ -331,7 +343,10 @@ function createAgentRequestLifecycle(req, res, lock, body = {}) {
     });
   };
 
-  req.on("close", onClose);
+  // NOTE: IncomingMessage ("req") emits "close" when its readable stream ends,
+  // which happens on normal requests. We only want to treat premature connection
+  // termination as a cancel signal, so we listen on the response.
+  res.on("close", onClose);
   req.on("aborted", onClose);
   return {
     isClosed() {
@@ -343,8 +358,8 @@ function createAgentRequestLifecycle(req, res, lock, body = {}) {
     complete() {
       if (completed) return;
       completed = true;
-      if (typeof req.off === "function") req.off("close", onClose);
-      else req.removeListener("close", onClose);
+      if (typeof res.off === "function") res.off("close", onClose);
+      else res.removeListener("close", onClose);
       if (typeof req.off === "function") req.off("aborted", onClose);
       else req.removeListener("aborted", onClose);
       releaseAgentLaneLock(lock);
@@ -620,6 +635,14 @@ app.post("/task/update", async (req, res) => {
 });
 
 app.get("/tasks", async (req, res) => {
+  // UI route + API route share "/tasks". When the browser navigates here, we want the Mission Control shell
+  // (index.html). When JS fetches tasks, we want JSON. Use request headers to distinguish.
+  const accept = String(req.headers.accept || "");
+  const fetchDest = String(req.headers["sec-fetch-dest"] || "");
+  const wantsHtml = fetchDest === "document" || accept.includes("text/html") || accept.includes("application/xhtml+xml");
+  if (wantsHtml) {
+    return res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+  }
   try {
     const store = await taskStore.listTasks();
     res.json({ ok: true, ...store });
@@ -636,6 +659,88 @@ app.get("/task/status/:taskId", async (req, res) => {
   } catch (err) {
     if (scopeError(res, err)) return;
     serverError(res, "failed_to_get_task_status", err);
+  }
+});
+
+// Content Pipeline (Una Labs Output)
+app.get("/content/pipeline", async (req, res) => {
+  try {
+    const store = await contentPipelineStore.listStore();
+    res.json({ ok: true, store });
+  } catch (err) {
+    serverError(res, "failed_to_get_content_pipeline", err);
+  }
+});
+
+app.post("/content/radar", async (req, res) => {
+  try {
+    const title = String(req.body?.title || "").trim();
+    const summary = String(req.body?.summary || "").trim();
+    const source = String(req.body?.source || "").trim();
+    const url = String(req.body?.url || "").trim();
+    if (!title) return badRequest(res, "title required");
+    const signal = await contentPipelineStore.addSignal({ title, summary, source, url });
+    res.json({ ok: true, signal });
+  } catch (err) {
+    if (err.code === "INVALID_SIGNAL") {
+      return badRequest(res, "invalid_signal", err.message);
+    }
+    serverError(res, "failed_to_add_radar_signal", err);
+  }
+});
+
+app.post("/content/scout", async (req, res) => {
+  try {
+    const title = String(req.body?.title || "").trim();
+    const rationale = String(req.body?.rationale || "").trim();
+    const signalIds = Array.isArray(req.body?.signalIds) ? req.body.signalIds : [];
+    if (!title) return badRequest(res, "title required");
+    const topic = await contentPipelineStore.addTopic({ title, rationale, signalIds });
+    res.json({ ok: true, topic });
+  } catch (err) {
+    if (err.code === "INVALID_TOPIC") {
+      return badRequest(res, "invalid_topic", err.message);
+    }
+    serverError(res, "failed_to_add_scout_topic", err);
+  }
+});
+
+app.post("/content/draft", async (req, res) => {
+  try {
+    const draft = await contentPipelineStore.addDraft({
+      topicId: String(req.body?.topicId || "").trim(),
+      topicTitle: String(req.body?.topicTitle || "").trim(),
+      hook: String(req.body?.hook || "").trim(),
+      explanation: String(req.body?.explanation || "").trim(),
+      insight: String(req.body?.insight || "").trim(),
+      cta: String(req.body?.cta || "").trim(),
+      status: String(req.body?.status || "").trim(),
+      scheduledFor: String(req.body?.scheduledFor || "").trim()
+    });
+    res.json({ ok: true, draft });
+  } catch (err) {
+    if (err.code === "INVALID_DRAFT" || err.code === "INVALID_DRAFT_STATUS") {
+      return badRequest(res, "invalid_draft", err.message);
+    }
+    serverError(res, "failed_to_add_quill_draft", err);
+  }
+});
+
+app.post("/content/draft/:draftId", async (req, res) => {
+  try {
+    const draftId = String(req.params.draftId || "").trim();
+    if (!draftId) return badRequest(res, "draftId required");
+    const patch = req.body && typeof req.body === "object" ? req.body : {};
+    const updated = await contentPipelineStore.updateDraft(draftId, patch);
+    res.json({ ok: true, draft: updated });
+  } catch (err) {
+    if (err.code === "DRAFT_NOT_FOUND") {
+      return res.status(404).json({ ok: false, error: "draft_not_found" });
+    }
+    if (err.code === "INVALID_DRAFT_STATUS" || err.code === "INVALID_DRAFT") {
+      return badRequest(res, "invalid_draft", err.message);
+    }
+    serverError(res, "failed_to_update_draft", err);
   }
 });
 
@@ -659,10 +764,10 @@ app.post("/agent/command", async (req, res) => {
   const lifecycle = createAgentRequestLifecycle(req, res, lock, body);
   try {
     const result = await handleAgentCommand(body);
-    if (lifecycle.isCompleted() || lifecycle.isClosed() || res.writableEnded || req.destroyed) return;
+    if (lifecycle.isCompleted() || lifecycle.isClosed() || res.writableEnded || res.destroyed) return;
     res.json(result);
   } catch (err) {
-    if (lifecycle.isCompleted() || lifecycle.isClosed() || res.writableEnded || req.destroyed) return;
+    if (lifecycle.isCompleted() || lifecycle.isClosed() || res.writableEnded || res.destroyed) return;
     if (err.code === "BAD_REQUEST") {
       return badRequest(res, err.message);
     }
@@ -692,7 +797,7 @@ app.post("/agent/command/stream", async (req, res) => {
   }
   const lifecycle = createAgentRequestLifecycle(req, res, lock, body);
   try {
-    if (lifecycle.isCompleted() || lifecycle.isClosed() || res.writableEnded || req.destroyed) return;
+    if (lifecycle.isCompleted() || lifecycle.isClosed() || res.writableEnded || res.destroyed) return;
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
@@ -821,7 +926,24 @@ app.get("/voice/capabilities", async (req, res) => {
 app.get("/events/:sessionId", async (req, res) => {
   try {
     const safeSessionId = resolveScopedSessionId(req, req.params.sessionId, "global");
-    const events = getEvents(safeSessionId);
+    const after = String(req.query?.after || req.query?.since || "").trim();
+    const typesRaw = String(req.query?.types || "").trim();
+    const limit = Math.max(0, Number(req.query?.limit || 0));
+
+    let events = after
+      ? getEventsAfterTimestamp(safeSessionId, after, { limit })
+      : getEvents(safeSessionId, { limit });
+    if (typesRaw) {
+      const types = new Set(
+        typesRaw
+          .split(",")
+          .map((t) => String(t || "").trim())
+          .filter(Boolean)
+      );
+      if (types.size) {
+        events = events.filter((event) => types.has(String(event?.type || "")));
+      }
+    }
     res.json({ ok: true, sessionId: safeSessionId, events });
   } catch (err) {
     if (scopeError(res, err)) return;
@@ -844,6 +966,207 @@ app.post("/events/:sessionId", async (req, res) => {
   } catch (err) {
     if (scopeError(res, err)) return;
     res.status(500).json({ ok: false, error: "failed_to_log_event" });
+  }
+});
+
+// Mission Control (API-only endpoints; do not collide with SPA routes)
+app.post("/api/orchestrator/plan", async (req, res) => {
+  try {
+    const input = req.body && typeof req.body === "object" ? req.body : {};
+    const output = planOrchestration(input);
+    res.json({ ok: true, output });
+  } catch (err) {
+    serverError(res, "failed_to_plan_orchestration", err);
+  }
+});
+
+app.get("/api/approvals", async (req, res) => {
+  try {
+    const status = String(req.query?.status || "").trim();
+    const limit = Math.max(1, Math.min(200, Number(req.query?.limit || 50)));
+    const approvals = approvalStore.list({ status: status || undefined, limit });
+    res.json({ ok: true, approvals });
+  } catch (err) {
+    serverError(res, "failed_to_list_approvals", err);
+  }
+});
+
+app.post("/api/approvals", async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const policy = String(body.policy || "").trim();
+    const summary = String(body.summary || "").trim();
+    const requestedBy = String(body.requestedBy || body.requested_by || "system").trim();
+    const payload = body.payload && typeof body.payload === "object" ? body.payload : {};
+    const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
+
+    if (!policy) return badRequest(res, "policy required");
+    if (!summary) return badRequest(res, "summary required");
+
+    const approval = approvalStore.create({ policy, summary, requestedBy, payload });
+    const event = createEvent("approval_requested", requestedBy || "system", "system", summary, {
+      approvalId: approval.id,
+      policy,
+      status: approval.status,
+      payload
+    });
+    appendEvent(sessionId, event);
+
+    res.json({ ok: true, approval, sessionId, event });
+  } catch (err) {
+    if (scopeError(res, err)) return;
+    serverError(res, "failed_to_create_approval", err);
+  }
+});
+
+app.post("/api/approvals/:approvalId/decision", async (req, res) => {
+  try {
+    const approvalId = String(req.params.approvalId || "").trim();
+    if (!approvalId) return badRequest(res, "approvalId required");
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const decision = String(body.decision || body.status || "").trim().toLowerCase();
+    const actor = String(body.actor || body.requestedBy || "user").trim();
+    const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
+
+    if (!decision) return badRequest(res, "decision required");
+
+    const updated = approvalStore.setStatus(approvalId, decision);
+    if (!updated) return res.status(404).json({ ok: false, error: "approval_not_found" });
+
+    const event = createEvent("approval_decision", actor || "user", "system", `Approval ${decision}`, {
+      approvalId,
+      decision,
+      policy: updated.policy
+    });
+    appendEvent(sessionId, event);
+
+    res.json({ ok: true, approval: updated, sessionId, event });
+  } catch (err) {
+    if (scopeError(res, err)) return;
+    serverError(res, "failed_to_decide_approval", err);
+  }
+});
+
+// Work Items API (Factory truth)
+app.get("/api/work-items", async (req, res) => {
+  try {
+    const stage = String(req.query?.stage || "").trim();
+    const limit = Math.max(1, Math.min(200, Number(req.query?.limit || 50)));
+    const items = workItemStore.list({ stage: stage || undefined, limit });
+    res.json({ ok: true, items });
+  } catch (err) {
+    serverError(res, "failed_to_list_work_items", err);
+  }
+});
+
+app.post("/api/work-items", async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const title = String(body.title || "").trim();
+    const objective = String(body.objective || "").trim();
+    const stage = String(body.stage || "").trim();
+    const risk = String(body.risk || "").trim();
+    const ownerAgentId = String(body.owner_agent_id || body.ownerAgentId || "").trim();
+    const data = body.data && typeof body.data === "object" ? body.data : {};
+
+    const requestedBy = String(body.actor || body.requestedBy || "user").trim() || "user";
+    const reason = String(body.reason || "created").trim();
+    const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
+
+    if (!title) return badRequest(res, "title required");
+
+    const item = workItemStore.create({ title, objective, stage, risk, ownerAgentId, data });
+
+    const event = createEvent("state_snapshot", requestedBy, "factory", `Work item created: ${item.title}`, {
+      source: { kind: "api", actor: requestedBy },
+      targets: { page: "factory", workItemId: item.id },
+      severity: "info",
+      data: { stage: item.stage, reason }
+    });
+    appendEvent(sessionId, event);
+
+    // If created straight into SHIP, create approval gate (no outbound automation).
+    if (String(item.stage || "").toUpperCase() === "SHIP") {
+      const approval = approvalStore.create({
+        policy: "factory_ship",
+        summary: `Ship work item: ${item.title}`,
+        requestedBy: requestedBy || "system",
+        payload: { workItemId: item.id, stage: item.stage, title: item.title, objective: item.objective }
+      });
+      const approvalEvent = createEvent("approval_requested", requestedBy || "system", "system", approval.summary, {
+        source: { kind: "api", actor: requestedBy },
+        targets: { page: "factory", workItemId: item.id, approvalId: approval.id },
+        severity: "info",
+        data: { approvalId: approval.id, policy: approval.policy, status: approval.status, payload: approval.payload }
+      });
+      appendEvent(sessionId, approvalEvent);
+      // Persist link back onto the work item record.
+      const updated = workItemStore.setStage(item.id, item.stage, { dataPatch: { approvalId: approval.id } });
+      return res.json({ ok: true, item: updated || item, sessionId, event, approval, approvalEvent });
+    }
+
+    res.json({ ok: true, item, sessionId, event });
+  } catch (err) {
+    if (scopeError(res, err)) return;
+    serverError(res, "failed_to_create_work_item", err);
+  }
+});
+
+app.post("/api/work-items/:workItemId/stage", async (req, res) => {
+  try {
+    const workItemId = String(req.params.workItemId || "").trim();
+    if (!workItemId) return badRequest(res, "workItemId required");
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const stage = String(body.stage || "").trim();
+    if (!stage) return badRequest(res, "stage required");
+
+    const actor = String(body.actor || body.requestedBy || "user").trim() || "user";
+    const reason = String(body.reason || "stage_update").trim();
+    const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
+
+    const current = workItemStore.get(workItemId);
+    if (!current) return res.status(404).json({ ok: false, error: "work_item_not_found" });
+
+    const updated = workItemStore.setStage(workItemId, stage);
+    if (!updated) return res.status(500).json({ ok: false, error: "failed_to_update_stage" });
+
+    const event = createEvent("decision", actor, "factory", `Stage: ${updated.stage}`, {
+      source: { kind: "api", actor },
+      targets: { page: "factory", workItemId: updated.id },
+      severity: "info",
+      data: { fromStage: current.stage, toStage: updated.stage, reason }
+    });
+    appendEvent(sessionId, event);
+
+    // Approval gate when entering SHIP.
+    if (String(updated.stage || "").toUpperCase() === "SHIP") {
+      const existingApprovalId = String(updated.data?.approvalId || "").trim();
+      const existingApproval = existingApprovalId ? approvalStore.get(existingApprovalId) : null;
+      if (!existingApproval || String(existingApproval.status || "") !== "pending") {
+        const approval = approvalStore.create({
+          policy: "factory_ship",
+          summary: `Ship work item: ${updated.title}`,
+          requestedBy: actor || "system",
+          payload: { workItemId: updated.id, stage: updated.stage, title: updated.title, objective: updated.objective }
+        });
+        const approvalEvent = createEvent("approval_requested", actor || "system", "system", approval.summary, {
+          source: { kind: "api", actor },
+          targets: { page: "factory", workItemId: updated.id, approvalId: approval.id },
+          severity: "info",
+          data: { approvalId: approval.id, policy: approval.policy, status: approval.status, payload: approval.payload }
+        });
+        appendEvent(sessionId, approvalEvent);
+        const relinked = workItemStore.setStage(updated.id, updated.stage, { dataPatch: { approvalId: approval.id } });
+        return res.json({ ok: true, item: relinked || updated, sessionId, event, approval, approvalEvent });
+      }
+    }
+
+    res.json({ ok: true, item: updated, sessionId, event });
+  } catch (err) {
+    if (scopeError(res, err)) return;
+    serverError(res, "failed_to_update_work_item_stage", err);
   }
 });
 

@@ -39,3 +39,10 @@ FTC-HOLDING/
 
 # local ATEAM temp artifacts
 APPS/ATEAM/tmpclaude-*
+
+# ATEAM local runtime data (keep private / avoid noisy diffs)
+APPS/ATEAM/memory/**
+!APPS/ATEAM/memory/.gitkeep
+output/playwright/**
+.tmp-agent.json
+.tmp-cap.json

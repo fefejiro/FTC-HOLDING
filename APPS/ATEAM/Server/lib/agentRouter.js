@@ -1,11 +1,23 @@
-﻿const AGENT_PROFILES = {
+const AGENT_PROFILES = {
+  Henry: {
+    role: "Coordinator",
+    focus: "meaning, direction, and decision framing"
+  },
   Coach: {
     role: "Coordinator",
     focus: "priorities, sequencing, and decision framing"
   },
+  Quill: {
+    role: "Writer",
+    focus: "narrative clarity, tone, and creative delivery"
+  },
   Builder: {
     role: "Implementation",
     focus: "code, fixes, and delivery steps"
+  },
+  Codex: {
+    role: "Implementation",
+    focus: "logic, efficiency, and precise execution"
   },
   Scout: {
     role: "Research",
@@ -23,7 +35,10 @@
 
 const ALIASES = {
   coach: "Coach",
+  henry: "Henry",
+  quill: "Quill",
   builder: "Builder",
+  codex: "Codex",
   scout: "Scout",
   thinker: "Think Tank",
   thinktank: "Think Tank",
@@ -42,6 +57,7 @@ function normalizeAgent(input) {
 function inferAgentFromMessage(message) {
   const text = String(message || "").toLowerCase();
   if (/\b(code|bug|fix|endpoint|server|build)\b/.test(text)) return "Builder";
+  if (/\b(write|draft|copy|content|linkedin|post|story)\b/.test(text)) return "Quill";
   if (/\b(research|market|compare|jobs|salary|trend|podcast|social|youtube|tiktok|instagram)\b/.test(text)) return "Scout";
   if (/\b(strategy|roadmap|architecture|sequence|plan)\b/.test(text)) return "Strategist";
   if (/\b(learn|explain|tradeoff|risk|unknown|think)\b/.test(text)) return "Think Tank";
@@ -134,3 +150,4 @@ export async function routeAgentCommand({
     }
   };
 }
+

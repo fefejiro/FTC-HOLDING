@@ -34,13 +34,15 @@ export function createSupabaseRepositories() {
     const taskStore = createPlaceholderStore("taskStore");
     const memoryStore = createPlaceholderStore("memoryStore");
     const speechClarityStore = createPlaceholderStore("speechClarityStore");
+    const contentPipelineStore = createPlaceholderStore("contentPipelineStore");
     return {
       backend: "supabase",
       capability,
       threadStore,
       taskStore,
       memoryStore,
-      speechClarityStore
+      speechClarityStore,
+      contentPipelineStore
     };
   }
 

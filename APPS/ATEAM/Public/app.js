@@ -9,6 +9,7 @@ const API_BASE =
 const GLOBAL_TASK_ID = "global";
 const GLOBAL_PODCAST_ID = "global_podcast";
 const LOCAL_THREAD_KEY = `talk_thread_${GLOBAL_PODCAST_ID}`;
+const LOCAL_EVENTS_KEY = `talk_events_${GLOBAL_PODCAST_ID}`;
 
 const TTS_CONFIG = {
   rate: 0.98,
@@ -17,6 +18,7 @@ const TTS_CONFIG = {
 };
 
 const TAP_COOLDOWN_MS = 200;
+const OFFICE_STUDIO_KEY = "ATEAM_OFFICE_STUDIO";
 
 const state = {
   view: localStorage.getItem("ATEAM_VIEW") || "dashboard",
@@ -36,7 +38,7 @@ const state = {
   supportsRecognition: Boolean(window.SpeechRecognition || window.webkitSpeechRecognition),
   supportsTTS: "speechSynthesis" in window,
   preferredVoiceURI: localStorage.getItem("ATEAM_VOICE_URI") || "",
-  voiceStyle: localStorage.getItem("ATEAM_VOICE_STYLE") || "male_assistant",
+  voiceStyle: localStorage.getItem("ATEAM_VOICE_STYLE") || "female_assistant",
   availableVoices: [],
   speaking: false,
   sessionActive: false,
@@ -95,7 +97,7 @@ const state = {
   ttsAudioUrl: "",
   voiceInfoShown: false,
   lastPickedVoiceName: "",
-  currentSpeakerId: localStorage.getItem("ATEAM_SPEAKER_ID") || "unknown",
+  currentSpeakerId: localStorage.getItem("ATEAM_SPEAKER_ID") || "ai_podcast",
   reviewMode: localStorage.getItem("ATEAM_REVIEW_MODE") === "1",
   lastOrbTapTs: 0,
   pendingRequestController: null,
@@ -116,7 +118,72 @@ const dashboardView = document.getElementById("dashboard-view");
 const dashboardConsole = document.getElementById("dashboard-console");
 const talkView = document.getElementById("talk-view");
 const goDashboardBtn = document.getElementById("go-dashboard");
+const goOfficeBtn = document.getElementById("go-office");
+const goContentBtn = document.getElementById("go-content");
 const goTalkBtn = document.getElementById("go-talk");
+const contentView = document.getElementById("content-view");
+const officeView = document.getElementById("office-view");
+const approvalsView = document.getElementById("approvals-view");
+const approvalsCountNode = document.getElementById("approvals-count");
+const approvalsListNode = document.getElementById("approvals-list");
+const approvalsDetailStatusNode = document.getElementById("approvals-detail-status");
+const approvalsDetailNode = document.getElementById("approvals-detail");
+const councilView = document.getElementById("council-view");
+const calendarView = document.getElementById("calendar-view");
+const projectsView = document.getElementById("projects-view");
+const memoryView = document.getElementById("memory-view");
+const docsView = document.getElementById("docs-view");
+const peopleView = document.getElementById("people-view");
+const officeRoomView = document.getElementById("office-room-view");
+const teamView = document.getElementById("team-view");
+const teamCanvas = document.getElementById("team-canvas");
+const systemView = document.getElementById("system-view");
+const radarView = document.getElementById("radar-view");
+const factoryView = document.getElementById("factory-view");
+const pipelineView = document.getElementById("pipeline-view");
+const aiLabView = document.getElementById("ai-lab-view");
+
+const mcNavList = document.getElementById("mc-nav-list");
+const mcSearchInput = document.getElementById("mc-search-input");
+const mcPauseBtn = document.getElementById("mc-pause");
+const mcPingBtn = document.getElementById("mc-ping");
+const mcRefreshBtn = document.getElementById("mc-refresh");
+const mcFeedbackBtn = document.getElementById("mc-feedback");
+
+const mcCommandDrawer = document.getElementById("mc-command-drawer");
+const mcCommandDrawerBackdrop = document.getElementById("mc-command-drawer-backdrop");
+const mcCommandDrawerBody = document.getElementById("mc-command-drawer-body");
+const mcCommandDrawerClose = document.getElementById("mc-command-drawer-close");
+
+const memorySearchInput = document.getElementById("memory-search-input");
+const memoryJournalCount = document.getElementById("memory-journal-count");
+const memoryJournalGroups = document.getElementById("memory-journal-groups");
+const memoryLtmMeta = document.getElementById("memory-ltm-meta");
+const journalTitle = document.getElementById("journal-title");
+const journalSubhead = document.getElementById("journal-subhead");
+const journalModified = document.getElementById("journal-modified");
+const journalBody = document.getElementById("journal-body");
+
+const calWeekGrid = document.getElementById("cal-week-grid");
+const calWeekBtn = document.getElementById("cal-week-btn");
+const calTodayBtn = document.getElementById("cal-today-btn");
+const calRefreshBtn = document.getElementById("cal-refresh-btn");
+
+const office2Room = document.getElementById("office2-room");
+const office2Entities = document.getElementById("office2-entities");
+const office2Tooltip = document.getElementById("office2-tooltip");
+const office2ActivityEmpty = document.getElementById("office2-activity-empty");
+const office2ActivityList = document.getElementById("office2-activity-list");
+const office2AgentCards = document.getElementById("office2-agent-cards");
+const office2StartChatBtn = document.getElementById("office2-start-chat");
+
+const factoryBeltItems = document.getElementById("factory-belt-items");
+const factoryBuildAgents = document.getElementById("factory-build-agents");
+const factoryMetricShipped = document.getElementById("factory-metric-shipped");
+const factoryMetricInProgress = document.getElementById("factory-metric-inprogress");
+const factoryMetricBacklog = document.getElementById("factory-metric-backlog");
+const factoryMetricBlocked = document.getElementById("factory-metric-blocked");
+const factoryMetricAvgTime = document.getElementById("factory-metric-avgtime");
 
 const chipTask = document.getElementById("chip-task");
 const chipAgent = document.getElementById("chip-agent");
@@ -141,6 +208,9 @@ const talkTimeline = document.getElementById("talk-timeline");
 const talkChapters = document.getElementById("talk-chapters");
 const talkSpeakerAnalytics = document.getElementById("talk-speaker-analytics");
 const talkSpeakerAnalyticsControls = document.getElementById("talk-speaker-analytics-controls");
+const talkUiModeBtn = document.getElementById("talk-ui-mode-btn");
+const talkChatInput = document.getElementById("talk-chat-input");
+const talkChatSendBtn = document.getElementById("talk-chat-send");
 const timelineFilters = document.getElementById("timeline-filters");
 const timelineRefreshBtn = document.getElementById("timeline-refresh-btn");
 const timelinePauseBtn = document.getElementById("timeline-pause-btn");
@@ -189,6 +259,78 @@ const orbWrap = document.getElementById("talk-orb-button");
 const orbCanvas = document.getElementById("talk-orb");
 const orbCtx = orbCanvas ? orbCanvas.getContext("2d") : null;
 const toastContainer = document.getElementById("toast-container");
+
+const contentSignalCount = document.getElementById("content-signal-count");
+const contentTopicCount = document.getElementById("content-topic-count");
+const contentDraftCount = document.getElementById("content-draft-count");
+const contentPendingCount = document.getElementById("content-pending-count");
+
+const contentSignalTitle = document.getElementById("content-signal-title");
+const contentSignalSource = document.getElementById("content-signal-source");
+const contentSignalUrl = document.getElementById("content-signal-url");
+const contentSignalSummary = document.getElementById("content-signal-summary");
+const contentSignalSave = document.getElementById("content-signal-save");
+const contentSignalClear = document.getElementById("content-signal-clear");
+
+const contentTopicTitle = document.getElementById("content-topic-title");
+const contentTopicRationale = document.getElementById("content-topic-rationale");
+const contentTopicSave = document.getElementById("content-topic-save");
+const contentTopicClear = document.getElementById("content-topic-clear");
+
+const contentRadarList = document.getElementById("content-radar-list");
+const contentScoutList = document.getElementById("content-scout-list");
+const contentDraftList = document.getElementById("content-draft-list");
+const contentPipelineList = document.getElementById("content-pipeline-list");
+
+const contentDraftActive = document.getElementById("content-draft-active");
+const contentDraftTopic = document.getElementById("content-draft-topic");
+const contentDraftHook = document.getElementById("content-draft-hook");
+const contentDraftExplanation = document.getElementById("content-draft-explanation");
+const contentDraftInsight = document.getElementById("content-draft-insight");
+const contentDraftCta = document.getElementById("content-draft-cta");
+const contentDraftStatus = document.getElementById("content-draft-status");
+const contentDraftSchedule = document.getElementById("content-draft-schedule");
+const contentDraftSave = document.getElementById("content-draft-save");
+const contentDraftRequest = document.getElementById("content-draft-request");
+const contentDraftApprove = document.getElementById("content-draft-approve");
+const contentDraftReject = document.getElementById("content-draft-reject");
+
+const officeCoolerList = document.getElementById("office-cooler-list");
+const officeCoolerSummary = document.getElementById("office-cooler-summary");
+const officeStage = document.getElementById("office-stage");
+const officeStudioToggle = document.getElementById("office-studio-toggle");
+const officeAttentionChip = document.getElementById("office-attention-chip");
+const officeCommandStation = document.querySelector(".office-command");
+const officeCommandZone = document.getElementById("office-command-zone");
+const officeBlockedZone = document.getElementById("office-blocked-zone");
+const officeDeskSeats = {
+  henry: document.getElementById("office-seat-henry"),
+  scout: document.getElementById("office-seat-scout"),
+  quill: document.getElementById("office-seat-quill"),
+  codex: document.getElementById("office-seat-codex")
+};
+const officeUserZone = document.getElementById("office-user-zone");
+const officeModeChip = document.getElementById("office-mode-chip");
+const officeHumorAgent = document.getElementById("office-humor-agent");
+const officeHumorText = document.getElementById("office-humor-text");
+const officeHumorAdd = document.getElementById("office-humor-add");
+const officeAgentPool = document.getElementById("office-agent-pool");
+const officePoolStatus = document.getElementById("office-pool-status");
+const officeCommandEmpty = document.getElementById("office-command-empty");
+const officeCommandActive = document.getElementById("office-command-active");
+const officeCommandName = document.getElementById("office-command-name");
+const officeCommandRole = document.getElementById("office-command-role");
+const officeCommandStatus = document.getElementById("office-command-status");
+const officeCommandTask = document.getElementById("office-command-task");
+const officeCommandLogs = document.getElementById("office-command-logs");
+const officeControlDecisions = document.getElementById("office-control-decisions");
+const officeActionApprove = document.getElementById("office-action-approve");
+const officeActionEdit = document.getElementById("office-action-edit");
+const officeActionRetry = document.getElementById("office-action-retry");
+const officeActionCancel = document.getElementById("office-action-cancel");
+const officeActionPause = document.getElementById("office-action-pause");
+const officeActionOverride = document.getElementById("office-action-override");
+const officeActionViewLogs = document.getElementById("office-action-viewlogs");
 
 const map = document.getElementById("map");
 const rooms = {
@@ -262,6 +404,35 @@ const segmentState = {
   currentSegmentId: "",
   currentSegmentStartAtMs: 0
 };
+const contentState = {
+  store: { signals: [], topics: [], drafts: [] },
+  selectedDraftId: ""
+};
+const officeState = {
+  active: false,
+  activeAgentId: "",
+  lastActiveAgentId: "",
+  agents: {},
+  overrides: {},
+  tasks: [],
+  nodes: {},
+  timer: null,
+  doneTimers: {},
+  moveTimers: {},
+  pulseTimers: {},
+  mode: "flow",
+  attentionLeaderId: "",
+  waitingActive: false,
+  studio: (() => {
+    const stored = localStorage.getItem(OFFICE_STUDIO_KEY);
+    if (stored === null || stored === undefined || stored === "") return true;
+    return stored === "1";
+  })(),
+  humorMemory: null,
+  chatterTimer: null,
+  lastSpeakerId: "",
+  speechTimers: {}
+};
 let timelinePollTimer = null;
 let timelineFetchInFlight = false;
 const reviewPlaybackState = {
@@ -286,9 +457,49 @@ const SPEAKER_OPTIONS = [
   { id: "michael", label: "Michael" },
   { id: "mark", label: "Mark" },
   { id: "guest", label: "Guest" },
-  { id: "ai_podcast", label: "AI" }
+  { id: "ai_podcast", label: "Manchi AI" }
 ];
 const SPEAKER_REGISTRY_KEY = "ATEAM_SPEAKER_REGISTRY";
+const CONTENT_STATUS_LABELS = {
+  draft: "Draft",
+  pending_approval: "Pending Approval",
+  approved: "Approved",
+  scheduled: "Scheduled",
+  rejected: "Rejected"
+};
+const OFFICE_AGENTS = [
+  { id: "scout", name: "Bosco", role: "Signals", initials: "BS", mapsTo: "Scout" },
+  { id: "quill", name: "Bob", role: "Writer", initials: "BO", mapsTo: "Quill" },
+  { id: "codex", name: "Billy", role: "Builder", initials: "BI", mapsTo: "Builder" },
+  { id: "henry", name: "Bobby", role: "Coordinator", initials: "BY", mapsTo: "Coach" }
+];
+const OFFICE_COOLER_OFFSETS = [
+  { x: -26, y: -18 },
+  { x: 22, y: -20 },
+  { x: -28, y: 18 },
+  { x: 26, y: 20 }
+];
+const HUMOR_MEMORY_KEY = "ATEAM_HUMOR_MEMORY_V2";
+const HUMOR_MEMORY_LEGACY_KEY = "ATEAM_HUMOR_MEMORY_V1";
+const OFFICE_MODES = {
+  flow: "FLOW",
+  pulse: "PULSE",
+  open_mic: "OPEN MIC"
+};
+const DEFAULT_HUMOR_LINES = [
+  { text: "Same mission, different moods.", type: "line", tone: "witty", source: "agent", agent: "all" },
+  { text: "We can be playful and still ship.", type: "line", tone: "witty", source: "agent", agent: "all" },
+  { text: "If it looks calm, it is.", type: "line", tone: "witty", source: "agent", agent: "all" },
+  { text: "Yes, it works. No, it will not explain itself.", type: "line", tone: "sarcastic", source: "agent", agent: "all" },
+  { text: "Depth first, speed second.", type: "idea", tone: "reflective", source: "agent", agent: "henry" },
+  { text: "Meaning before movement.", type: "idea", tone: "reflective", source: "agent", agent: "henry" },
+  { text: "I followed the thread. It multiplied.", type: "line", tone: "witty", source: "agent", agent: "scout" },
+  { text: "Curiosity just opened a new tab.", type: "line", tone: "witty", source: "agent", agent: "scout" },
+  { text: "Give me a hook and I will lift the room.", type: "line", tone: "dramatic", source: "agent", agent: "quill" },
+  { text: "Drama, but make it useful.", type: "line", tone: "dramatic", source: "agent", agent: "quill" },
+  { text: "Constraints set. Output pending.", type: "line", tone: "sarcastic", source: "agent", agent: "codex" },
+  { text: "Minimal words. Maximum fix.", type: "line", tone: "sarcastic", source: "agent", agent: "codex" }
+];
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
@@ -335,6 +546,29 @@ async function emitEvent(type, actor, lane, summary, meta = {}) {
     console.error("[Event Emit Error]", err);
     return false;
   }
+}
+
+async function apiListWorkItems({ stage = "", limit = 80 } = {}) {
+  const qs = new URLSearchParams();
+  if (stage) qs.set("stage", stage);
+  if (limit) qs.set("limit", String(limit));
+  const data = await apiRequest(`/api/work-items?${qs.toString()}`);
+  return Array.isArray(data?.items) ? data.items : [];
+}
+
+async function apiCreateWorkItem(payload) {
+  const data = await apiRequest("/api/work-items", { method: "POST", body: payload });
+  return data?.item || null;
+}
+
+async function apiSetWorkItemStage(workItemId, stage, extra = {}) {
+  const id = String(workItemId || "").trim();
+  if (!id) return null;
+  const data = await apiRequest(`/api/work-items/${encodeURIComponent(id)}/stage`, {
+    method: "POST",
+    body: { stage, ...extra }
+  });
+  return data?.item || null;
 }
 
 function isRequestInFlightError(err) {
@@ -428,6 +662,8 @@ function loadSpeakerRegistry() {
           : typeof incoming?.label === "string"
             ? incoming.label.trim()
             : "";
+      // Migrate older default label for the podcast assistant.
+      if (option.id === "ai_podcast" && String(label || "").trim().toLowerCase() === "ai") continue;
       if (label) registry[option.id] = { id: option.id, label };
     }
   } catch {}
@@ -714,6 +950,9 @@ async function runRuntimeHeartbeatTick(emitOnChange = true) {
   try {
     const nextStatuses = deriveAgentStatuses();
     applyAgentStatusesToUi(nextStatuses);
+    if (officeState.active) {
+      updateOfficeSimulation();
+    }
 
     const changes = collectStatusChanges(runtimeAgentStatuses, nextStatuses);
     const shouldEmit = emitOnChange && (!runtimeHasEmittedStatus || changes.length);
@@ -856,6 +1095,130 @@ function loadLocalThread() {
     return JSON.parse(localStorage.getItem(LOCAL_THREAD_KEY) || "[]");
   } catch {
     return [];
+  }
+}
+
+function saveLocalEvents(events) {
+  try {
+    localStorage.setItem(LOCAL_EVENTS_KEY, JSON.stringify(events || []));
+  } catch {}
+}
+
+function loadLocalEvents() {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_EVENTS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function buildTalkDemoThread() {
+  return [
+    {
+      role: "user",
+      agent: "",
+      content: "What is your name",
+      ts: "2026-03-20T19:03:40-04:00"
+    },
+    {
+      role: "assistant",
+      agent: "Coach",
+      content:
+        "My name na Manchi, your personal AI companion. How your day dey go? My name na Manchi, your personal AI companion. How your day dey go?",
+      ts: "2026-03-20T19:03:46-04:00"
+    }
+  ];
+}
+
+function buildTalkDemoEvents() {
+  const statusSummary =
+    "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle";
+  const statuses = {
+    Coach: "Idle",
+    Strategist: "Idle",
+    Builder: "Idle",
+    Scout: "Idle",
+    "Think Tank": "Idle",
+    Podcast: "Idle"
+  };
+  const demoTurnId = "seed_turn_1";
+  const assistantReply = "My name na Manchi, your personal AI companion. How your day dey go?";
+
+  return [
+    {
+      id: "seed_evt_chapter_20",
+      type: "chapter_created",
+      actor: "system",
+      lane: "talk",
+      summary: "Chapter created",
+      meta: {
+        chapterId: "chapter_20_silence",
+        reason: "long_silence",
+        title: "Chapter 20 - Silence",
+        summary: "Long silence break (00:08)",
+        startAtMs: 0,
+        endAtMs: 183000,
+        turnIds: []
+      },
+      timestamp: "2026-03-20T19:02:00-04:00"
+    },
+    {
+      id: "seed_evt_chapter_21",
+      type: "chapter_created",
+      actor: "system",
+      lane: "talk",
+      summary: "Chapter created",
+      meta: {
+        chapterId: "chapter_21_highlight",
+        reason: "highlight",
+        title: "Highlight 21",
+        summary: "",
+        startAtMs: 183000,
+        endAtMs: 217000,
+        turnIds: []
+      },
+      timestamp: "2026-03-20T19:02:40-04:00"
+    },
+    {
+      id: "seed_evt_status_1",
+      type: "agent_status_updated",
+      actor: "system",
+      lane: "system",
+      summary: statusSummary,
+      meta: { statuses },
+      timestamp: "2026-03-20T19:03:55-04:00"
+    },
+    {
+      id: "seed_evt_turn_1",
+      type: "talk_turn_committed",
+      actor: "user",
+      lane: "talk",
+      summary: "What is your name",
+      turnId: demoTurnId,
+      meta: { text: "What is your name", speakerId: "ai_podcast", turnId: demoTurnId },
+      timestamp: "2026-03-20T19:04:05-04:00"
+    },
+    {
+      id: "seed_evt_assistant_1",
+      type: "assistant_response_completed",
+      actor: "podcast",
+      lane: "talk",
+      summary: `Agent (Coach): ${assistantReply}`,
+      turnId: demoTurnId,
+      meta: { agent: "Coach", agentReply: assistantReply, speakerId: "ai_podcast", turnId: demoTurnId },
+      timestamp: "2026-03-20T19:04:12-04:00"
+    }
+  ];
+}
+
+function ensureTalkDemoSeeded() {
+  const thread = loadLocalThread();
+  if (!Array.isArray(thread) || thread.length === 0) {
+    saveLocalThread(buildTalkDemoThread());
+  }
+  const events = loadLocalEvents();
+  if (!Array.isArray(events) || events.length === 0) {
+    saveLocalEvents(buildTalkDemoEvents());
   }
 }
 
@@ -1038,8 +1401,11 @@ async function runSubtitleQueue(kind) {
             }, displayMs);
           }
         };
-        if (cfg.node.classList.contains("visible")) {
-          cfg.node.classList.remove("visible");
+        const nodeVisible = Boolean(cfg.node && cfg.node.classList && cfg.node.classList.contains("visible"));
+        if (nodeVisible) {
+          try {
+            cfg.node.classList.remove("visible");
+          } catch {}
           clearSubtitleTimer(cfg.timerKind);
           if (cfg.timerKind === "user") {
             state.subtitleTimerUser = setTimeout(() => {
@@ -1470,42 +1836,2062 @@ function cancelPendingThinking() {
   updateStopVoiceBtnUi();
 }
 
-function setView(view) {
-  view = String(view || "dashboard").toLowerCase();
-  if (!["dashboard", "talk", "speech"].includes(view)) view = "dashboard";
-  state.view = view;
-  localStorage.setItem("ATEAM_VIEW", state.view);
+const MC_ROUTE_BY_VIEW = {
+  tasks: "/tasks",
+  agents: "/agents",
+  content: "/content",
+  approvals: "/approvals",
+  council: "/council",
+  calendar: "/calendar",
+  projects: "/projects",
+  memory: "/memory",
+  docs: "/docs",
+  people: "/people",
+  office: "/office",
+  team: "/team",
+  system: "/system",
+  radar: "/radar",
+  factory: "/factory",
+  pipeline: "/pipeline",
+  ai_lab: "/ai-lab",
+  talk: "/talk",
+  speech: "/speech"
+};
 
-  const dashboardOn = state.view === "dashboard";
+function mcViewFromPath(pathname) {
+  const raw = String(pathname || "/").toLowerCase();
+  const path = raw === "/index.html" ? "/" : raw;
+  if (path === "/") return "tasks";
+  const hit = Object.entries(MC_ROUTE_BY_VIEW).find(([, route]) => route === path);
+  if (hit) return hit[0];
+  const prefix = Object.entries(MC_ROUTE_BY_VIEW).find(([, route]) => path.startsWith(route + "/"));
+  return prefix ? prefix[0] : "";
+}
+
+// ===== Talk UI modes (Focus vs Console) =====
+const MC_TALK_UI_KEY = "MC_TALK_UI_V1";
+
+function talkFocusFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    if (!params.has("focus")) return null;
+    const raw = String(params.get("focus") || "").trim().toLowerCase();
+    if (raw === "1" || raw === "true" || raw === "yes" || raw === "on") return true;
+    return false;
+  } catch {
+    return null;
+  }
+}
+
+function loadTalkUiPrefs() {
+  const stored = safeJsonParse(localStorage.getItem(MC_TALK_UI_KEY), {});
+  return {
+    focus: Boolean(stored?.focus)
+  };
+}
+
+function saveTalkUiPrefs(next = {}) {
+  try {
+    localStorage.setItem(MC_TALK_UI_KEY, safeJsonStringify({ focus: Boolean(next?.focus) }));
+  } catch {}
+}
+
+function setTalkFocusMode(on, opts = {}) {
+  const enabled = Boolean(on);
+  if (talkView) talkView.classList.toggle("talk-focus", enabled);
+  // When Focus is on, hide Mission Control chrome for a clean "listen" view.
+  if (document?.body) document.body.classList.toggle("mc-talk-focus", enabled && state.view === "talk");
+  if (talkUiModeBtn) talkUiModeBtn.textContent = enabled ? "Details" : "Focus";
+  if (opts.persist !== false) saveTalkUiPrefs({ focus: enabled });
+
+  // Focus mode is intentionally minimal; pause timeline polling (and extra noise) while it is active.
+  if (state.view === "talk") {
+    setTimelinePollingPaused(enabled);
+  }
+
+  if (opts.updateUrl) {
+    const route = MC_ROUTE_BY_VIEW.talk || "/talk";
+    const query = enabled ? "?focus=1" : "";
+    try {
+      history.replaceState({}, "", `${route}${query}`);
+    } catch {}
+  }
+}
+
+function applyTalkUiModeFromLocation() {
+  const fromUrl = talkFocusFromUrl();
+  if (fromUrl === true || fromUrl === false) {
+    setTalkFocusMode(fromUrl, { persist: true });
+    return;
+  }
+  const prefs = loadTalkUiPrefs();
+  setTalkFocusMode(Boolean(prefs.focus), { persist: false });
+}
+
+function setView(view, options = {}) {
+  view = String(view || "tasks").toLowerCase();
+  if (view === "dashboard") view = "tasks";
+  const allowed = Object.keys(MC_ROUTE_BY_VIEW);
+  if (!allowed.includes(view)) view = "tasks";
+
+  state.view = view;
+  try {
+    localStorage.setItem("ATEAM_VIEW", state.view);
+  } catch {}
+
+  const silent = Boolean(options.silent);
+  const replace = Boolean(options.replace);
+  let query = "";
+  if (typeof options.query === "string") {
+    query = String(options.query || "").trim();
+    if (query && !query.startsWith("?")) query = `?${query.replace(/^\?+/, "")}`;
+  }
+  const route = MC_ROUTE_BY_VIEW[view] || "/tasks";
+  const nextUrl = `${route}${query}`;
+  if (!silent && (window.location.pathname !== route || window.location.search !== query)) {
+    try {
+      history[replace ? "replaceState" : "pushState"]({}, "", nextUrl);
+    } catch {}
+  }
+
+  const pageNodes = Array.from(document.querySelectorAll("[data-mc-page]"));
+  pageNodes.forEach((node) => {
+    const page = String(node.dataset.mcPage || "").trim().toLowerCase();
+    node.classList.toggle("hidden", page !== view);
+  });
+
+  if (mcNavList) {
+    mcNavList.querySelectorAll(".mc-nav-item").forEach((btn) => {
+      btn.classList.toggle("active", String(btn.dataset.view || "") === view);
+    });
+  }
+
   const talkOn = state.view === "talk";
   const speechOn = state.view === "speech";
+  const contentOn = state.view === "content";
+  const tasksOn = state.view === "tasks";
 
-  dashboardView.classList.toggle("hidden", !dashboardOn);
-  dashboardConsole.classList.toggle("hidden", !dashboardOn);
-  talkView.classList.toggle("hidden", !talkOn);
-  const speechView = document.getElementById("speech-view");
-  if (speechView) speechView.classList.toggle("hidden", !speechOn);
+  // Ensure we never leave the chrome hidden when navigating away from Talk.
+  if (!talkOn && document?.body) document.body.classList.remove("mc-talk-focus");
 
-  goDashboardBtn.classList.toggle("active", dashboardOn);
-  goTalkBtn.classList.toggle("active", talkOn);
+  if (goDashboardBtn) goDashboardBtn.classList.toggle("active", tasksOn);
+  if (goTalkBtn) goTalkBtn.classList.toggle("active", talkOn);
+  if (goContentBtn) goContentBtn.classList.toggle("active", contentOn);
+  if (goOfficeBtn) goOfficeBtn.classList.toggle("active", state.view === "office");
   const goSpeechBtn = document.getElementById("go-speech");
   if (goSpeechBtn) goSpeechBtn.classList.toggle("active", speechOn);
 
-  if (dashboardOn && state.sessionActive) {
+  if (tasksOn && state.sessionActive) {
     endSession();
+  }
+
+  if (!talkOn) {
+    stopTimelinePolling();
   }
 
   if (talkOn) {
     loadTalkSession();
+    applyTalkUiModeFromLocation();
     scheduleTimelinePoll(0);
     requestAnimationFrame(() => {
       resizeOrbCanvas();
+      if (talkChatInput && talkView && talkView.classList.contains("talk-focus")) {
+        talkChatInput.focus();
+      }
     });
   }
 
   if (speechOn) {
     initSpeechClarity();
   }
+
+  if (contentOn) {
+    void loadContentPipeline();
+  }
+
+  const needsOfficeSync = ["agents", "office", "factory", "pipeline", "approvals"].includes(state.view);
+  if (needsOfficeSync) {
+    startOfficeSync();
+    scheduleOfficeScale();
+  } else {
+    stopOfficeSync();
+  }
+
+  applyOfficeStudioMode();
+  if (view !== "office") {
+    closeCommandDrawer();
+    stopOffice2LiveSync();
+    stopOffice2HudSync();
+  }
+  renderMissionControlView(view);
+}
+
+// ===== Mission Control: Drawer + Pages =====
+const MC_MEMORY_KEY = "MC_MEMORY_JOURNAL_V1";
+const MC_MEMORY_UI_KEY = "MC_MEMORY_JOURNAL_UI_V1";
+const MC_CALENDAR_KEY = "MC_SCHEDULED_TASKS_V1";
+const MC_FACTORY_KEY = "MC_FACTORY_V1";
+const MC_OFFICE2_KEY = "MC_OFFICE2_V1";
+
+const missionControlState = {
+  memory: {
+    filter: "",
+    selectedId: ""
+  },
+  approvals: {
+    selectedId: "",
+    items: []
+  },
+  calendar: {
+    selectedDay: 2
+  },
+  office2: {
+    selectedId: "",
+    roster: [],
+    positions: {}
+  },
+  factory: {
+    items: [],
+    workItems: []
+  }
+};
+
+const commandDrawerState = {
+  node: null,
+  homeParent: null,
+  homeNext: null
+};
+
+function safeJsonParse(raw, fallback) {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function safeJsonStringify(value) {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+
+function rememberCommandDrawerHome(node) {
+  if (!node || commandDrawerState.homeParent) return;
+  commandDrawerState.homeParent = node.parentElement;
+  commandDrawerState.homeNext = node.nextElementSibling;
+}
+
+function getPortableCommandNode() {
+  if (commandDrawerState.node && document.contains(commandDrawerState.node)) {
+    return commandDrawerState.node;
+  }
+  const node = document.querySelector(".office-panel-command");
+  if (!node) return null;
+  commandDrawerState.node = node;
+  rememberCommandDrawerHome(node);
+  return node;
+}
+
+function openCommandDrawer() {
+  if (!mcCommandDrawer || !mcCommandDrawerBody || !mcCommandDrawerBackdrop) return;
+  const node = getPortableCommandNode();
+  if (!node) return;
+  rememberCommandDrawerHome(node);
+  mcCommandDrawerBody.appendChild(node);
+  mcCommandDrawer.classList.remove("hidden");
+  mcCommandDrawerBackdrop.classList.remove("hidden");
+}
+
+function closeCommandDrawer() {
+  if (!mcCommandDrawer || !mcCommandDrawerBody || !mcCommandDrawerBackdrop) return;
+  mcCommandDrawer.classList.add("hidden");
+  mcCommandDrawerBackdrop.classList.add("hidden");
+
+  const node = getPortableCommandNode();
+  if (!node) return;
+  const parent = commandDrawerState.homeParent;
+  if (!parent) return;
+  if (commandDrawerState.homeNext && parent.contains(commandDrawerState.homeNext)) {
+    parent.insertBefore(node, commandDrawerState.homeNext);
+  } else {
+    parent.appendChild(node);
+  }
+}
+
+function renderMissionControlView(view) {
+  if (view === "memory") {
+    renderMemoryPage();
+    return;
+  }
+  if (view === "calendar") {
+    renderCalendarPage();
+    return;
+  }
+  if (view === "office") {
+    renderOffice2Page();
+    return;
+  }
+  if (view === "approvals") {
+    void renderApprovalsPage();
+    return;
+  }
+  if (view === "team") {
+    renderTeamPage();
+    return;
+  }
+  if (view === "factory") {
+    void renderFactoryPage();
+  }
+}
+
+// ===== Mission Control: Approvals Page =====
+const MC_APPROVALS_UI_KEY = "MC_APPROVALS_UI_V1";
+
+function approvalsLoadUiPrefs() {
+  const stored = safeJsonParse(localStorage.getItem(MC_APPROVALS_UI_KEY), {});
+  const selectedId = typeof stored?.selectedId === "string" ? stored.selectedId : "";
+  if (selectedId) missionControlState.approvals.selectedId = selectedId;
+  return { selectedId };
+}
+
+function approvalsSaveUiPrefs(next = {}) {
+  const selectedId = typeof next?.selectedId === "string" ? next.selectedId : "";
+  try {
+    localStorage.setItem(MC_APPROVALS_UI_KEY, safeJsonStringify({ selectedId }));
+  } catch {}
+  missionControlState.approvals.selectedId = selectedId;
+}
+
+function approvalStatusLabel(status) {
+  const raw = String(status || "").trim().toLowerCase();
+  if (raw === "approved") return "Approved";
+  if (raw === "rejected") return "Rejected";
+  if (raw === "cancelled") return "Cancelled";
+  return "Pending";
+}
+
+function approvalStatusTone(status) {
+  const raw = String(status || "").trim().toLowerCase();
+  if (raw === "approved") return "ok";
+  if (raw === "rejected") return "error";
+  if (raw === "cancelled") return "muted";
+  return "pending";
+}
+
+function formatApprovalTime(iso) {
+  try {
+    const d = new Date(String(iso || ""));
+    if (!Number.isFinite(d.getTime())) return "";
+    return d.toLocaleString(undefined, {
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  } catch {
+    return "";
+  }
+}
+
+function prettyJson(value) {
+  try {
+    return JSON.stringify(value ?? {}, null, 2);
+  } catch {
+    return "{}";
+  }
+}
+
+async function apiListApprovals({ status = "", limit = 80 } = {}) {
+  const qs = new URLSearchParams();
+  if (status) qs.set("status", status);
+  if (limit) qs.set("limit", String(limit));
+  const data = await apiRequest(`/api/approvals?${qs.toString()}`);
+  return Array.isArray(data?.approvals) ? data.approvals : [];
+}
+
+async function apiDecideApproval(approvalId, decision, { sessionId = GLOBAL_PODCAST_ID, actor = "user" } = {}) {
+  const safeId = String(approvalId || "").trim();
+  if (!safeId) return null;
+  const data = await apiRequest(`/api/approvals/${encodeURIComponent(safeId)}/decision`, {
+    method: "POST",
+    body: { sessionId, decision, actor }
+  });
+  return data?.approval || null;
+}
+
+function renderApprovalsEmpty() {
+  if (approvalsCountNode) approvalsCountNode.textContent = "0";
+  if (approvalsListNode) approvalsListNode.innerHTML = `<div class="control-empty">No approvals.</div>`;
+  if (approvalsDetailStatusNode) approvalsDetailStatusNode.textContent = "—";
+  if (approvalsDetailNode) approvalsDetailNode.innerHTML = `<div class="control-empty">Select an approval to review.</div>`;
+}
+
+function renderApprovalsList(items, selectedId) {
+  if (!approvalsListNode) return;
+  approvalsListNode.innerHTML = "";
+
+  if (!items.length) {
+    approvalsListNode.innerHTML = `<div class="control-empty">No approvals.</div>`;
+    return;
+  }
+
+  items.forEach((approval) => {
+    const id = String(approval?.id || "");
+    const status = String(approval?.status || "pending");
+    const policy = String(approval?.policy || "").trim();
+    const summary = String(approval?.summary || "").trim();
+    const requestedBy = String(approval?.requestedBy || "").trim();
+    const createdTs = String(approval?.createdTs || approval?.created_ts || "");
+
+    const row = document.createElement("div");
+    row.className = `approval-row${id === selectedId ? " active" : ""}`;
+    row.dataset.approvalId = id;
+    row.innerHTML = `
+      <div class="approval-row-top">
+        <div class="approval-policy">${escapeHtml(policy || "approval")}</div>
+        <div class="approval-status-pill" data-tone="${escapeHtml(approvalStatusTone(status))}">${escapeHtml(approvalStatusLabel(status))}</div>
+      </div>
+      <div class="approval-summary">${escapeHtml(summary || "Approval requested")}</div>
+      <div class="approval-meta">${escapeHtml(requestedBy ? `Requested by ${requestedBy}` : "Requested")}${createdTs ? ` · ${escapeHtml(formatApprovalTime(createdTs))}` : ""}</div>
+    `;
+    row.addEventListener("click", () => {
+      approvalsSaveUiPrefs({ selectedId: id });
+      renderApprovalsList(items, id);
+      renderApprovalDetail(items.find((a) => String(a?.id || "") === id) || null);
+    });
+    approvalsListNode.appendChild(row);
+  });
+}
+
+function renderApprovalDetail(approval) {
+  if (!approvalsDetailNode || !approvalsDetailStatusNode) return;
+  if (!approval) {
+    approvalsDetailStatusNode.textContent = "—";
+    approvalsDetailNode.innerHTML = `<div class="control-empty">Select an approval to review.</div>`;
+    return;
+  }
+
+  const id = String(approval?.id || "");
+  const status = String(approval?.status || "pending");
+  const policy = String(approval?.policy || "").trim();
+  const summary = String(approval?.summary || "").trim();
+  const requestedBy = String(approval?.requestedBy || "").trim();
+  const createdTs = String(approval?.createdTs || approval?.created_ts || "");
+  const payload = approval?.payload && typeof approval.payload === "object" ? approval.payload : {};
+
+  approvalsDetailStatusNode.textContent = approvalStatusLabel(status);
+
+  const blocks = [];
+  blocks.push(`
+    <div class="approval-detail-block">
+      <div class="approval-detail-label">Summary</div>
+      <div class="approval-detail-value">${escapeHtml(summary || "Approval requested")}</div>
+    </div>
+  `);
+  blocks.push(`
+    <div class="approval-detail-block">
+      <div class="approval-detail-label">Policy</div>
+      <div class="approval-detail-value">${escapeHtml(policy || "approval")}</div>
+    </div>
+  `);
+  blocks.push(`
+    <div class="approval-detail-block">
+      <div class="approval-detail-label">Requested By</div>
+      <div class="approval-detail-value">${escapeHtml(requestedBy || "system")}</div>
+    </div>
+  `);
+  blocks.push(`
+    <div class="approval-detail-block">
+      <div class="approval-detail-label">Created</div>
+      <div class="approval-detail-value">${escapeHtml(createdTs ? formatApprovalTime(createdTs) : "")}</div>
+    </div>
+  `);
+  blocks.push(`
+    <div class="approval-detail-block">
+      <div class="approval-detail-label">Payload</div>
+      <div class="approval-detail-value">${escapeHtml(prettyJson(payload))}</div>
+    </div>
+  `);
+
+  const canDecide = String(status || "").toLowerCase() === "pending";
+  const actions = canDecide
+    ? `
+      <div class="approval-actions">
+        <button class="approval-btn approve" type="button" data-decision="approved">Approve</button>
+        <button class="approval-btn reject" type="button" data-decision="rejected">Reject</button>
+      </div>
+    `
+    : "";
+
+  approvalsDetailNode.innerHTML = `${blocks.join("")}${actions}`;
+
+  if (canDecide) {
+    approvalsDetailNode.querySelectorAll(".approval-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const decision = String(btn.dataset.decision || "").trim();
+        if (!decision) return;
+        btn.disabled = true;
+        try {
+          await apiDecideApproval(id, decision, { sessionId: GLOBAL_PODCAST_ID, actor: "user" });
+          showToast(`Approval ${decision}.`, decision === "approved" ? "ok" : "error");
+          void renderApprovalsPage({ preserveSelection: true });
+        } catch (err) {
+          showToast("Approval decision failed.", "error");
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+}
+
+async function renderApprovalsPage(opts = {}) {
+  if (!approvalsView || approvalsView.classList.contains("hidden")) return;
+  if (!approvalsCountNode || !approvalsListNode || !approvalsDetailNode || !approvalsDetailStatusNode) return;
+
+  approvalsLoadUiPrefs();
+
+  try {
+    const approvals = await apiListApprovals({ limit: 120 });
+    const items = (Array.isArray(approvals) ? approvals : []).slice();
+    // Sort with pending first, then newest first.
+    items.sort((a, b) => {
+      const aPending = String(a?.status || "").toLowerCase() === "pending" ? 0 : 1;
+      const bPending = String(b?.status || "").toLowerCase() === "pending" ? 0 : 1;
+      if (aPending !== bPending) return aPending - bPending;
+      const at = Date.parse(String(a?.createdTs || a?.created_ts || "")) || 0;
+      const bt = Date.parse(String(b?.createdTs || b?.created_ts || "")) || 0;
+      return bt - at;
+    });
+
+    missionControlState.approvals.items = items;
+    const pendingCount = items.filter((a) => String(a?.status || "").toLowerCase() === "pending").length;
+    approvalsCountNode.textContent = String(pendingCount);
+
+    const currentSelected = String(missionControlState.approvals.selectedId || "").trim();
+    const hasSelected = currentSelected && items.some((a) => String(a?.id || "") === currentSelected);
+    const selectedId = hasSelected ? currentSelected : String(items[0]?.id || "");
+    if (!opts.preserveSelection && selectedId && selectedId !== currentSelected) {
+      approvalsSaveUiPrefs({ selectedId });
+    } else if (!hasSelected && selectedId) {
+      approvalsSaveUiPrefs({ selectedId });
+    }
+
+    renderApprovalsList(items, String(missionControlState.approvals.selectedId || selectedId));
+    renderApprovalDetail(items.find((a) => String(a?.id || "") === String(missionControlState.approvals.selectedId || selectedId)) || null);
+  } catch (err) {
+    renderApprovalsEmpty();
+  }
+}
+
+function countWords(text = "") {
+  const cleaned = String(text || "").trim();
+  if (!cleaned) return 0;
+  return cleaned.split(/\s+/).filter(Boolean).length;
+}
+
+function formatBytes(bytes) {
+  const n = Number(bytes || 0);
+  if (!Number.isFinite(n) || n <= 0) return "0 B";
+  if (n < 1024) return `${n} B`;
+  const kb = n / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(1)} MB`;
+}
+
+function isoDateToHuman(dateStr) {
+  try {
+    const d = new Date(dateStr + "T12:00:00");
+    const weekday = d.toLocaleDateString(undefined, { weekday: "long" });
+    const month = d.toLocaleDateString(undefined, { month: "long" });
+    const day = d.getDate();
+    const year = d.getFullYear();
+    return `${weekday} • ${month} ${day}, ${year}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;");
+}
+
+function renderMiniMarkdown(text = "") {
+  const src = String(text || "");
+  const lines = src.split(/\r?\n/);
+  let html = "";
+  let listOpen = false;
+  const flushList = () => {
+    if (!listOpen) return;
+    html += "</ul>";
+    listOpen = false;
+  };
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) {
+      flushList();
+      continue;
+    }
+    if (line.startsWith("## ")) {
+      flushList();
+      html += `<h3>${escapeHtml(line.slice(3))}</h3>`;
+      continue;
+    }
+    if (line.startsWith("- ")) {
+      if (!listOpen) {
+        html += "<ul>";
+        listOpen = true;
+      }
+      html += `<li>${escapeHtml(line.slice(2))}</li>`;
+      continue;
+    }
+    flushList();
+    const safe = escapeHtml(line).replace(
+      /^(What|Decisions|Key Insight|Next|Notes):/i,
+      (_, label) => `<strong>${label}:</strong>`
+    );
+    html += `<p>${safe}</p>`;
+  }
+  flushList();
+  return html;
+}
+
+// ===== Mission Control: Team =====
+function renderTeamPage() {
+  if (!teamCanvas) return;
+
+  const agentById = (id) => OFFICE2_AGENT_DIRECTORY.find((a) => a.id === id) || null;
+  const accentFor = (agent) => OFFICE2_LANE_ACCENTS[String(agent?.lane || "")] || "rgba(226, 241, 255, 0.7)";
+
+  const CARD_META = {
+    henry: {
+      titleRole: "Chief of Staff",
+      blurb: "Coordinates, delegates, and keeps the map tight. First point of contact between tools and the commander.",
+      tags: ["Orchestration", "Clarity", "Delegation"]
+    },
+    charlie: {
+      titleRole: "Infrastructure Engineer",
+      blurb: "Keeps runtime stable. Builds the rails so shipping feels boring (in a good way).",
+      tags: ["testing", "infrastructure", "automation"]
+    },
+    ralph: {
+      titleRole: "Foreman / QA Manager",
+      blurb: "Checks the work, signs off on results, and blocks nonsense quality control.",
+      tags: ["Quality Assurance", "Monitoring", "Demo Recording"]
+    },
+    scout: {
+      titleRole: "Trend Analyst",
+      blurb: "Finds leads, tracks signals, surfaces opportunities.",
+      tags: ["Speed", "Radar", "Vibrant"]
+    },
+    quill: {
+      titleRole: "Content Writer",
+      blurb: "Turns raw signal into clear output. Keeps tone sharp and human.",
+      tags: ["Voice", "Clarity", "Design"]
+    },
+    pixel: {
+      titleRole: "Thumbnail Designer",
+      blurb: "Designs visuals that grab attention and stay on-brand.",
+      tags: ["Visual", "Attention", "Style"]
+    },
+    echo: {
+      titleRole: "Social Media Manager",
+      blurb: "Posts, engages, and keeps the channel alive without getting banned.",
+      tags: ["Voice", "Speed", "Speech"]
+    },
+    codex: {
+      titleRole: "Lead Engineer",
+      blurb: "Builds the system: code, runtime, and reliability.",
+      tags: ["Code", "Systems", "Reliability"]
+    },
+    violet: {
+      titleRole: "Research Analyst",
+      blurb: "Deep research and analysis. Turns ambiguity into options.",
+      tags: ["research", "analysis", "trends"]
+    }
+  };
+
+  const renderTags = (tags = []) =>
+    Array.isArray(tags) && tags.length
+      ? `<div class="team-card-tags">${tags.map((t) => `<span class="team-tag">${escapeHtml(t)}</span>`).join("")}</div>`
+      : "";
+
+  const renderCard = (agentId, variant = "") => {
+    const agent = agentById(agentId);
+    const meta = CARD_META[agentId] || {};
+    const accent = accentFor(agent);
+    const name = agent?.canonicalName || agentId;
+    const alias = agent?.displayName && agent.displayName !== name ? agent.displayName : "";
+    const role = meta.titleRole || agent?.role || "";
+    const icon = agent?.emoji || "";
+
+    return `
+      <div class="team-card ${variant}" data-agent-id="${escapeHtml(agentId)}" style="--accent:${accent}">
+        <div class="team-card-head">
+          <div class="team-card-avatar" aria-hidden="true">${escapeHtml(icon)}</div>
+          <div class="team-card-head-meta">
+            <div class="team-card-name">${escapeHtml(name)}${alias ? ` <span class="team-card-alias">(${escapeHtml(alias)})</span>` : ""}</div>
+            <div class="team-card-role">${escapeHtml(role)}</div>
+          </div>
+        </div>
+        <div class="team-card-desc">${escapeHtml(meta.blurb || "")}</div>
+        ${renderTags(meta.tags)}
+        <div class="team-card-foot">ROLE CARD →</div>
+      </div>
+    `;
+  };
+
+  const henry = renderCard("henry", "team-card--primary");
+  const charlie = renderCard("charlie");
+  const ralph = renderCard("ralph");
+  const scout = renderCard("scout", "team-card--signal");
+  const quill = renderCard("quill", "team-card--signal");
+  const pixel = renderCard("pixel", "team-card--action");
+  const echo = renderCard("echo", "team-card--action");
+  const codex = renderCard("codex", "team-card--meta");
+  const violet = renderCard("violet", "team-card--meta");
+
+  teamCanvas.innerHTML = `
+    <section class="team-map-panel">
+      <div class="team-map">
+        <div class="team-row team-row--top">${henry}</div>
+        <div class="team-connector team-connector--down" aria-hidden="true"></div>
+        <div class="team-divider"><span>FTC OPERATIONS (via Studio 2)</span></div>
+        <div class="team-row team-row--ops">${charlie}${ralph}</div>
+        <div class="team-divider team-divider--split" aria-hidden="true">
+          <div class="team-divider-col"><span>INPUT SIGNAL</span></div>
+          <div class="team-divider-col"><span>OUTPUT ACTION</span></div>
+        </div>
+        <div class="team-row team-row--io">${scout}${quill}${pixel}${echo}</div>
+        <div class="team-divider"><span>META LAYER</span></div>
+        <div class="team-row team-row--meta">${codex}${violet}</div>
+      </div>
+    </section>
+  `;
+}
+
+// ===== Memory Page =====
+function seedMemoryStore() {
+  const stored = safeJsonParse(localStorage.getItem(MC_MEMORY_KEY), null);
+  if (stored && Array.isArray(stored.entries) && stored.entries.length) return stored;
+
+  const mk = (date, body) => ({
+    id: date,
+    date,
+    modifiedAt: new Date(date + "T18:12:00").toISOString(),
+    body: String(body || "")
+  });
+
+  const entries = [];
+  entries.push(
+    mk(
+      "2026-03-20",
+      `## What\n- Ran ATEAM as Mission Control.\n- Captured a few decisions from the day.\n\n## Decisions\n- Keep the system private and approval-first.\n\n## Next\n- Tighten the Office + Calendar flows.`
+    )
+  );
+  entries.push(
+    mk(
+      "2026-03-19",
+      `## What\n- Reviewed queued approvals.\n- Cleaned up agent priorities.\n\n## Key Insight\n- Attention should be visible before it is readable.`
+    )
+  );
+  entries.push(
+    mk(
+      "2026-03-17",
+      `## What\n- Started the Mission Control UI shell.\n- Mapped ATEAM agents into a live Office + Factory view.\n\n## Decisions\n- Reuse existing logic; wrap it in a new chrome.\n- Seed mock data where backend does not exist yet.\n\n## Key Insight\n- Behavior should be readable without labels.\n\n## Next\n- Memory → Office → Calendar → Factory.`
+    )
+  );
+  for (let day = 14; day >= 1; day--) {
+    const dd = String(day).padStart(2, "0");
+    entries.push(
+      mk(
+        `2026-03-${dd}`,
+        `## What\n- Journal seed entry.\n\n## Notes\n- Replace with real journal content when memory store is wired.`
+      )
+    );
+  }
+  for (let day = 25; day >= 1; day--) {
+    const dd = String(day).padStart(2, "0");
+    entries.push(
+      mk(
+        `2026-02-${dd}`,
+        `## What\n- Journal seed entry.\n\n## Notes\n- Replace with real journal content when memory store is wired.`
+      )
+    );
+  }
+  for (let day = 10; day >= 1; day--) {
+    const dd = String(day).padStart(2, "0");
+    entries.push(
+      mk(
+        `2026-01-${dd}`,
+        `## What\n- Journal seed entry.\n\n## Notes\n- Replace with real journal content when memory store is wired.`
+      )
+    );
+  }
+  entries.push(
+    mk(
+      "2025-12-31",
+      `## What\n- Journal seed entry.\n\n## Notes\n- Replace with real journal content when memory store is wired.`
+    )
+  );
+
+  const seed = {
+    version: 1,
+    selectedId: "2026-03-17",
+    entries
+  };
+  localStorage.setItem(MC_MEMORY_KEY, safeJsonStringify(seed));
+  return seed;
+}
+
+function loadMemoryStore() {
+  const seed = seedMemoryStore();
+  const stored = safeJsonParse(localStorage.getItem(MC_MEMORY_KEY), seed);
+  if (!stored || !Array.isArray(stored.entries)) return seed;
+  return stored;
+}
+
+function saveMemoryStore(next) {
+  if (!next) return;
+  localStorage.setItem(MC_MEMORY_KEY, safeJsonStringify(next));
+}
+
+function loadMemoryUiState() {
+  return safeJsonParse(localStorage.getItem(MC_MEMORY_UI_KEY), { collapsed: {} });
+}
+
+function saveMemoryUiState(next) {
+  localStorage.setItem(MC_MEMORY_UI_KEY, safeJsonStringify(next));
+}
+
+function groupJournalEntries(entries, filter = "") {
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const yesterdayIso = yesterday.toISOString().slice(0, 10);
+
+  const match = (entry) => {
+    if (!filter) return true;
+    const q = filter.toLowerCase();
+    return String(entry.id || "").toLowerCase().includes(q) || String(entry.body || "").toLowerCase().includes(q);
+  };
+
+  const groups = [
+    { id: "today", label: "Today", items: [] },
+    { id: "yesterday", label: "Yesterday", items: [] },
+    { id: "this_week", label: "This Week", items: [] },
+    { id: "this_month", label: "This Month", items: [] },
+    { id: "2026-02", label: "February 2026", items: [] },
+    { id: "2026-01", label: "January 2026", items: [] },
+    { id: "2025-12", label: "December 2025", items: [] }
+  ];
+
+  const startOfWeek = new Date(today);
+  startOfWeek.setHours(0, 0, 0, 0);
+  startOfWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  entries
+    .slice()
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+    .forEach((entry) => {
+      if (!match(entry)) return;
+      const iso = String(entry.date || entry.id || "");
+      if (!iso) return;
+      if (iso === todayIso) {
+        groups[0].items.push(entry);
+        return;
+      }
+      if (iso === yesterdayIso) {
+        groups[1].items.push(entry);
+        return;
+      }
+      const dt = new Date(iso + "T12:00:00");
+      if (dt >= startOfWeek) {
+        groups[2].items.push(entry);
+        return;
+      }
+      if (dt >= startOfMonth) {
+        groups[3].items.push(entry);
+        return;
+      }
+      const prefix = iso.slice(0, 7);
+      const monthGroup = groups.find((g) => g.id === prefix);
+      if (monthGroup) monthGroup.items.push(entry);
+    });
+
+  return groups;
+}
+
+function selectJournalEntry(entryId) {
+  const store = loadMemoryStore();
+  const exists = store.entries.some((entry) => entry.id === entryId);
+  if (!exists) return;
+  store.selectedId = entryId;
+  saveMemoryStore(store);
+  missionControlState.memory.selectedId = entryId;
+  renderMemoryPage();
+}
+
+function renderJournalViewer(entry) {
+  if (!entry) return;
+  const body = String(entry.body || "");
+  const wordCount = countWords(body);
+  const bytes =
+    typeof TextEncoder !== "undefined" ? new TextEncoder().encode(body).length : Math.max(body.length, 0);
+  if (journalTitle) journalTitle.textContent = `Journal: ${entry.id}`;
+  if (journalSubhead) journalSubhead.textContent = `${isoDateToHuman(entry.id)} • ${formatBytes(bytes)} • ${wordCount} words`;
+  if (journalModified) journalModified.textContent = `Modified about ${formatRelativeTime(entry.modifiedAt)}`;
+  if (journalBody) journalBody.innerHTML = renderMiniMarkdown(body);
+}
+
+function renderMemoryPage() {
+  if (!memoryView || !memoryJournalGroups || !journalBody) return;
+  const store = loadMemoryStore();
+  const ui = loadMemoryUiState();
+  const filter = String(missionControlState.memory.filter || "").trim();
+  const selectedId = missionControlState.memory.selectedId || store.selectedId || store.entries[0]?.id || "";
+  missionControlState.memory.selectedId = selectedId;
+
+  if (memoryJournalCount) {
+    memoryJournalCount.textContent = `${store.entries.length} entries`;
+  }
+  if (memoryLtmMeta) {
+    memoryLtmMeta.textContent = `1,942 words • updated ${formatRelativeTime(new Date().toISOString())}`;
+  }
+
+  const groups = groupJournalEntries(store.entries, filter);
+  memoryJournalGroups.innerHTML = "";
+  for (const group of groups) {
+    const collapsed = ui?.collapsed?.[group.id] ? "1" : "0";
+    const wrap = document.createElement("div");
+    wrap.className = "memory-group";
+    wrap.dataset.groupId = group.id;
+    wrap.dataset.collapsed = collapsed;
+
+    const head = document.createElement("div");
+    head.className = "memory-group-head";
+    head.innerHTML = `
+      <div class="memory-group-title"><span class="memory-caret">▾</span>${escapeHtml(group.label)}</div>
+      <div class="memory-group-count">${group.items.length}</div>
+    `;
+    head.addEventListener("click", () => {
+      const next = loadMemoryUiState();
+      next.collapsed = next.collapsed || {};
+      next.collapsed[group.id] = !next.collapsed[group.id];
+      saveMemoryUiState(next);
+      renderMemoryPage();
+    });
+
+    const bodyNode = document.createElement("div");
+    bodyNode.className = "memory-group-body";
+    for (const entry of group.items) {
+      const bytes =
+        typeof TextEncoder !== "undefined"
+          ? new TextEncoder().encode(String(entry.body || "")).length
+          : Math.max(String(entry.body || "").length, 0);
+      const words = countWords(entry.body || "");
+      const row = document.createElement("div");
+      row.className = "memory-entry" + (entry.id === selectedId ? " active" : "");
+      row.dataset.entryId = entry.id;
+      row.innerHTML = `
+        <div class="memory-entry-main">
+          <div class="memory-entry-day">${escapeHtml(entry.id)}</div>
+          <div class="memory-entry-meta">${escapeHtml(formatRelativeTime(entry.modifiedAt))} • ${words} words</div>
+        </div>
+        <div class="memory-entry-size">${escapeHtml(formatBytes(bytes))}</div>
+      `;
+      row.addEventListener("click", () => selectJournalEntry(entry.id));
+      bodyNode.appendChild(row);
+    }
+
+    wrap.appendChild(head);
+    wrap.appendChild(bodyNode);
+    memoryJournalGroups.appendChild(wrap);
+  }
+
+  const active = store.entries.find((entry) => entry.id === selectedId) || store.entries[0];
+  if (active) renderJournalViewer(active);
+}
+
+// ===== Calendar Page =====
+function seedCalendarStore() {
+  const stored = safeJsonParse(localStorage.getItem(MC_CALENDAR_KEY), null);
+  if (stored && Array.isArray(stored.tasks) && stored.tasks.length) return stored;
+
+  const tasks = [];
+  const add = (day, title, time, variant, recurringLabel = "") => {
+    tasks.push({
+      id: `${day}_${title}_${time}`.replace(/\s+/g, "_").toLowerCase(),
+      day,
+      title,
+      time,
+      variant,
+      recurringLabel
+    });
+  };
+
+  for (let d = 0; d < 7; d++) {
+    add(d, "Reaction Poller", "", "neutral", "Recurring");
+    add(d, "Trend Radar", "12:00 PM", "orange");
+    add(d, "Morning Kickoff", "6:55 AM", "neutral");
+    add(d, "YouTube OpenC…", "7:00 AM", "red");
+    add(d, "Scout Morning …", "8:00 AM", "green");
+    add(d, "Morning Brief", "8:00 AM", "yellow");
+    add(d, "Quill Script Writer", "8:30 AM", "blue");
+    add(d, "Daily Digest", "9:00 AM", "purple");
+  }
+  // A little screenshot-specific spice.
+  add(1, "Stock Scarcity R…", "7:30 AM", "neutral");
+  add(2, "Trend Radar Daily…", "8:00 AM", "neutral");
+  add(4, "Trend Radar Daily…", "8:00 AM", "neutral");
+
+  const seed = { version: 1, tasks };
+  localStorage.setItem(MC_CALENDAR_KEY, safeJsonStringify(seed));
+  return seed;
+}
+
+function loadCalendarStore() {
+  const seed = seedCalendarStore();
+  const stored = safeJsonParse(localStorage.getItem(MC_CALENDAR_KEY), seed);
+  if (!stored || !Array.isArray(stored.tasks)) return seed;
+  return stored;
+}
+
+function renderCalendarPage() {
+  if (!calendarView || !calWeekGrid) return;
+  const store = loadCalendarStore();
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const selected = Number.isFinite(missionControlState.calendar.selectedDay) ? missionControlState.calendar.selectedDay : 2;
+
+  calWeekGrid.innerHTML = "";
+  for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+    const col = document.createElement("div");
+    col.className = "cal-day" + (dayIndex === selected ? " active" : "");
+    col.dataset.dayIndex = String(dayIndex);
+
+    const head = document.createElement("div");
+    head.className = "cal-day-head";
+    head.textContent = days[dayIndex];
+
+    const body = document.createElement("div");
+    body.className = "cal-day-body";
+
+    store.tasks
+      .filter((t) => t.day === dayIndex)
+      .forEach((task) => {
+        const leftMeta = task.time || task.recurringLabel || "";
+        const rightMeta = task.time ? task.recurringLabel || "" : "";
+        const card = document.createElement("div");
+        card.className = "cal-event";
+        card.dataset.variant = task.variant;
+        card.innerHTML = `
+          <div class="cal-event-title">${escapeHtml(task.title)}</div>
+          <div class="cal-event-meta">
+            <span>${escapeHtml(leftMeta)}</span>
+            <span>${escapeHtml(rightMeta)}</span>
+          </div>
+        `;
+        body.appendChild(card);
+      });
+
+    col.appendChild(head);
+    col.appendChild(body);
+    calWeekGrid.appendChild(col);
+  }
+}
+
+// ===== Pixel Office Page =====
+const MC_OFFICE2_UI_KEY = "MC_OFFICE2_UI_V1";
+const OFFICE2_HIDE_LABELS_KEY = "hideLabels";
+
+const OFFICE2_LANES = {
+  COORDINATION: "coordination",
+  SIGNALS: "signals",
+  CONTENT: "content",
+  BUILD: "build",
+  QA: "qa",
+  THINK_TANK: "think_tank",
+  VOICE: "voice",
+  DESIGN: "design",
+  OPS: "ops"
+};
+
+const OFFICE2_LANE_ACCENTS = {
+  [OFFICE2_LANES.COORDINATION]: "rgba(248, 113, 113, 0.95)",
+  [OFFICE2_LANES.SIGNALS]: "rgba(34, 197, 94, 0.95)",
+  [OFFICE2_LANES.CONTENT]: "rgba(250, 204, 21, 0.95)",
+  [OFFICE2_LANES.BUILD]: "rgba(96, 165, 250, 0.95)",
+  [OFFICE2_LANES.QA]: "rgba(251, 113, 133, 0.95)",
+  [OFFICE2_LANES.THINK_TANK]: "rgba(192, 132, 252, 0.95)",
+  [OFFICE2_LANES.VOICE]: "rgba(56, 189, 248, 0.95)",
+  [OFFICE2_LANES.DESIGN]: "rgba(244, 114, 182, 0.95)",
+  [OFFICE2_LANES.OPS]: "rgba(148, 163, 184, 0.9)"
+};
+
+const OFFICE2_ROLE_ICONS = {
+  coordinator: "coordinator",
+  signals: "signals",
+  writer: "writer",
+  builder: "builder",
+  qa: "qa",
+  think_tank: "think_tank",
+  voice: "voice",
+  design: "design",
+  ops: "ops"
+};
+
+const OFFICE2_AGENT_DIRECTORY = [
+  {
+    id: "alex",
+    canonicalName: "Alex",
+    displayName: "Alex",
+    role: "Ops",
+    lane: OFFICE2_LANES.OPS,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.ops,
+    mapsTo: "",
+    emoji: "🧑‍💻"
+  },
+  {
+    id: "henry",
+    canonicalName: "Henry",
+    displayName: "Bobby",
+    role: "Coordinator",
+    lane: OFFICE2_LANES.COORDINATION,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.coordinator,
+    mapsTo: "henry",
+    emoji: "🧠"
+  },
+  {
+    id: "scout",
+    canonicalName: "Scout",
+    displayName: "Bosco",
+    role: "Signals",
+    lane: OFFICE2_LANES.SIGNALS,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.signals,
+    mapsTo: "scout",
+    emoji: "🔎"
+  },
+  {
+    id: "quill",
+    canonicalName: "Quill",
+    displayName: "Bob",
+    role: "Writer",
+    lane: OFFICE2_LANES.CONTENT,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.writer,
+    mapsTo: "quill",
+    emoji: "✍️"
+  },
+  {
+    id: "pixel",
+    canonicalName: "Pixel",
+    displayName: "Pixel",
+    role: "Design",
+    lane: OFFICE2_LANES.DESIGN,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.design,
+    mapsTo: "",
+    emoji: "🎨"
+  },
+  {
+    id: "echo",
+    canonicalName: "Echo",
+    displayName: "Echo",
+    role: "Voice",
+    lane: OFFICE2_LANES.VOICE,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.voice,
+    mapsTo: "",
+    emoji: "🔊"
+  },
+  {
+    id: "codex",
+    canonicalName: "Codex",
+    displayName: "Billy",
+    role: "Builder",
+    lane: OFFICE2_LANES.BUILD,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.builder,
+    mapsTo: "codex",
+    emoji: "🛠"
+  },
+  {
+    id: "charlie",
+    canonicalName: "Charlie",
+    displayName: "Charlie",
+    role: "Build Support",
+    lane: OFFICE2_LANES.BUILD,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.builder,
+    mapsTo: "",
+    emoji: "🧩"
+  },
+  {
+    id: "violet",
+    canonicalName: "Violet",
+    displayName: "Violet",
+    role: "Think Tank",
+    lane: OFFICE2_LANES.THINK_TANK,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.think_tank,
+    mapsTo: "",
+    emoji: "🟣"
+  },
+  {
+    id: "ralph",
+    canonicalName: "Ralph",
+    displayName: "Ralph",
+    role: "QA",
+    lane: OFFICE2_LANES.QA,
+    silhouetteIcon: OFFICE2_ROLE_ICONS.qa,
+    mapsTo: "",
+    emoji: "🧪"
+  }
+];
+
+const OFFICE2_ZONE_ANCHORS = {
+  cooler: { x: 14, y: 56 },
+  user: { x: 50, y: 88 },
+  blocked: { x: 78, y: 78 },
+  lane: {
+    [OFFICE2_LANES.COORDINATION]: { idle: { x: 62, y: 22 }, working: { x: 60, y: 18 } },
+    [OFFICE2_LANES.SIGNALS]: { idle: { x: 22, y: 56 }, working: { x: 30, y: 50 } },
+    [OFFICE2_LANES.CONTENT]: { idle: { x: 34, y: 44 }, working: { x: 40, y: 32 } },
+    [OFFICE2_LANES.BUILD]: { idle: { x: 58, y: 68 }, working: { x: 72, y: 54 } },
+    [OFFICE2_LANES.QA]: { idle: { x: 26, y: 26 }, working: { x: 18, y: 18 } },
+    [OFFICE2_LANES.THINK_TANK]: { idle: { x: 50, y: 18 }, working: { x: 48, y: 14 } },
+    [OFFICE2_LANES.VOICE]: { idle: { x: 86, y: 56 }, working: { x: 84, y: 52 } },
+    [OFFICE2_LANES.DESIGN]: { idle: { x: 78, y: 78 }, working: { x: 74, y: 72 } },
+    [OFFICE2_LANES.OPS]: { idle: { x: 28, y: 34 }, working: { x: 24, y: 30 } }
+  }
+};
+
+const OFFICE2_COOLER_CLUSTER = [
+  { x: -4.2, y: -3.6 },
+  { x: 3.8, y: -3.4 },
+  { x: -4.4, y: 3.6 },
+  { x: 4.2, y: 3.8 },
+  { x: 0.2, y: -5.2 },
+  { x: 0.6, y: 5.2 },
+  { x: -7.2, y: 0.4 },
+  { x: 7.2, y: 0.2 },
+  { x: -2.2, y: 0.2 },
+  { x: 2.2, y: -0.2 }
+];
+
+let office2LiveTimer = null;
+let office2HudTimer = null;
+
+function office2IconSvg(kind) {
+  const safe = String(kind || "");
+  const common = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+
+  if (safe === OFFICE2_ROLE_ICONS.coordinator) {
+    return `<svg ${common}><path d="M9 5h6"/><path d="M9 3h6v4H9z"/><path d="M8 7h8a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/></svg>`;
+  }
+  if (safe === OFFICE2_ROLE_ICONS.signals) {
+    return `<svg ${common}><path d="M4 20h4"/><path d="M6 20V10"/><path d="M6 10c0-4 6-4 6 0"/><path d="M12 10c0-6 8-6 8 0"/><path d="M20 20h-4"/><circle cx="6" cy="8" r="1"/></svg>`;
+  }
+  if (safe === OFFICE2_ROLE_ICONS.writer) {
+    return `<svg ${common}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5z"/></svg>`;
+  }
+  if (safe === OFFICE2_ROLE_ICONS.builder) {
+    return `<svg ${common}><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-2-2 2.4-2.4z"/></svg>`;
+  }
+  if (safe === OFFICE2_ROLE_ICONS.qa) {
+    return `<svg ${common}><path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z"/><path d="M8 12l2 2 6-6"/></svg>`;
+  }
+  if (safe === OFFICE2_ROLE_ICONS.think_tank) {
+    return `<svg ${common}><path d="M9 18h6"/><path d="M10 22h4"/><path d="M8 14a6 6 0 1 1 8 0c-1 1-1 2-1 3H9c0-1 0-2-1-3z"/></svg>`;
+  }
+  if (safe === OFFICE2_ROLE_ICONS.voice) {
+    return `<svg ${common}><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>`;
+  }
+  if (safe === OFFICE2_ROLE_ICONS.design) {
+    return `<svg ${common}><path d="M12 3c5 0 9 3 9 7s-3 7-7 7h-1a2 2 0 0 0-2 2v1h-1c-4 0-7-3-7-7s4-10 9-10z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="13.5" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/></svg>`;
+  }
+  if (safe === OFFICE2_ROLE_ICONS.ops) {
+    return `<svg ${common}><path d="M10 6h10"/><path d="M10 18h10"/><path d="M4 10h16"/><path d="M4 14h16"/><path d="M6 6v12"/></svg>`;
+  }
+  return `<svg ${common}><circle cx="12" cy="12" r="9"/></svg>`;
+}
+
+function office2GetAccent(agent) {
+  return OFFICE2_LANE_ACCENTS[String(agent?.lane || "")] || "rgba(226, 241, 255, 0.75)";
+}
+
+function office2HashUnit(input = "") {
+  const str = String(input || "");
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) / 4294967295;
+}
+
+function office2ComputeStatus(agent) {
+  const derived = missionControlState.office2?.derivedStatus || {};
+  const agentId = String(agent?.id || "").trim();
+  if (agentId && derived[agentId]) return String(derived[agentId] || "idle");
+
+  const mapsTo = String(agent?.mapsTo || "").trim();
+  if (mapsTo && derived[mapsTo]) return String(derived[mapsTo] || "idle");
+  if (mapsTo && officeState.agents[mapsTo] && officeState.agents[mapsTo].status) {
+    return String(officeState.agents[mapsTo].status || "idle");
+  }
+  return "idle";
+}
+
+function office2ShouldGatherAtCooler() {
+  // Gather when the core 4 are idle (Open Mic vibe) and nobody needs attention.
+  const core = ["henry", "scout", "quill", "codex"];
+  const derived = missionControlState.office2?.derivedStatus || {};
+  const statuses = core.map((id) => String(derived[id] || officeState.agents[id]?.status || "idle"));
+  return statuses.every((s) => s === "idle");
+}
+
+function office2DesiredPosition(agent, status, indexInRoster) {
+  const lane = String(agent?.lane || "");
+  const laneAnchors = OFFICE2_ZONE_ANCHORS.lane[lane] || { idle: { x: 50, y: 50 }, working: { x: 50, y: 50 } };
+
+  // Stable micro-offset so agents don't perfectly stack when sharing a lane.
+  const laneJx = (office2HashUnit(agent.id + "_lx") - 0.5) * 3.2;
+  const laneJy = (office2HashUnit(agent.id + "_ly") - 0.5) * 2.6;
+
+  const gather = office2ShouldGatherAtCooler();
+  // Only cluster the canonical "core 4" at the cooler for the open-mic vibe.
+  // Everyone else stays in their lane so the scene doesn't become a pile-up.
+  const coreIds = ["henry", "scout", "quill", "codex"];
+  const mapsTo = String(agent?.mapsTo || agent?.id || "").trim().toLowerCase();
+  const isCore = coreIds.includes(mapsTo);
+  if (gather && status === "idle" && isCore) {
+    const anchor = OFFICE2_ZONE_ANCHORS.cooler;
+    const coreIndex = coreIds.indexOf(mapsTo);
+    const off = OFFICE2_COOLER_CLUSTER[coreIndex % OFFICE2_COOLER_CLUSTER.length] || { x: 0, y: 0 };
+    const jx = (office2HashUnit(agent.id + "_cx") - 0.5) * 0.9;
+    const jy = (office2HashUnit(agent.id + "_cy") - 0.5) * 0.9;
+    return {
+      x: anchor.x + off.x + jx,
+      y: anchor.y + off.y + jy
+    };
+  }
+
+  if (status === "waiting_for_you") return { x: OFFICE2_ZONE_ANCHORS.user.x + laneJx * 0.25, y: OFFICE2_ZONE_ANCHORS.user.y + laneJy * 0.25 };
+  if (status === "blocked") return { x: OFFICE2_ZONE_ANCHORS.blocked.x + laneJx, y: OFFICE2_ZONE_ANCHORS.blocked.y + laneJy };
+  if (status === "working") {
+    const base = laneAnchors.working || laneAnchors.idle;
+    return { x: base.x + laneJx, y: base.y + laneJy };
+  }
+  return { x: laneAnchors.idle.x + laneJx, y: laneAnchors.idle.y + laneJy };
+}
+
+function clampPct(value, min, max) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, n));
+}
+
+function office2LoadUiPrefs() {
+  const stored = safeJsonParse(localStorage.getItem(MC_OFFICE2_UI_KEY), {});
+  const hideLabels = Boolean(stored?.[OFFICE2_HIDE_LABELS_KEY]);
+  missionControlState.office2.hideLabels = hideLabels;
+  return { hideLabels };
+}
+
+function office2SaveUiPrefs(prefs) {
+  const next = {
+    [OFFICE2_HIDE_LABELS_KEY]: Boolean(prefs?.hideLabels)
+  };
+  try {
+    localStorage.setItem(MC_OFFICE2_UI_KEY, safeJsonStringify(next));
+  } catch {}
+  missionControlState.office2.hideLabels = Boolean(next[OFFICE2_HIDE_LABELS_KEY]);
+}
+
+function office2ApplyLabelMode() {
+  if (!officeRoomView) return;
+  officeRoomView.classList.toggle("office2-hide-labels", Boolean(missionControlState.office2.hideLabels));
+}
+
+function office2ToggleLabels() {
+  const on = !Boolean(missionControlState.office2.hideLabels);
+  office2SaveUiPrefs({ hideLabels: on });
+  office2ApplyLabelMode();
+}
+
+function startOffice2LiveSync() {
+  if (office2LiveTimer) return;
+  office2LiveTimer = setInterval(() => {
+    if (!officeRoomView || officeRoomView.classList.contains("hidden")) return;
+    office2SyncEntities();
+  }, 900);
+}
+
+function stopOffice2LiveSync() {
+  if (!office2LiveTimer) return;
+  clearInterval(office2LiveTimer);
+  office2LiveTimer = null;
+}
+
+async function refreshOffice2Hud() {
+  if (!officeRoomView || officeRoomView.classList.contains("hidden")) return;
+  const [approvals, workItems] = await Promise.all([
+    apiRequest("/api/approvals?status=pending&limit=50").then((d) => (Array.isArray(d?.approvals) ? d.approvals : [])).catch(() => []),
+    apiListWorkItems({ limit: 120 }).catch(() => [])
+  ]);
+
+  missionControlState.factory.workItems = Array.isArray(workItems) ? workItems : [];
+
+  const pendingApprovals = approvals.filter((a) => String(a?.status || "") === "pending");
+  const isSeed = (it) => String(it?.id || "").startsWith("wi_seed_");
+  const reviewItems = (workItems || []).filter((it) => String(it?.stage || "").toUpperCase() === "REVIEW" && !isSeed(it));
+  const buildItems = (workItems || []).filter((it) => String(it?.stage || "").toUpperCase() === "BUILD" && !isSeed(it));
+  const qaItems = (workItems || []).filter((it) => String(it?.stage || "").toUpperCase() === "QA" && !isSeed(it));
+  const backlogItems = (workItems || []).filter((it) => String(it?.stage || "").toUpperCase() === "BACKLOG" && !isSeed(it));
+
+  const textOf = (it) => `${String(it?.title || "")} ${String(it?.objective || "")}`.toLowerCase();
+  const anyKeyword = (text, keywords) => keywords.some((k) => text.includes(k));
+  const researchKeys = ["research", "scan", "radar", "trend", "news", "competitor", "opportunity", "find", "source", "job"];
+  const writeKeys = ["write", "draft", "post", "linkedin", "script", "content", "reply", "message", "comment", "dm"];
+
+  const researchBacklog = backlogItems.filter((it) => anyKeyword(textOf(it), researchKeys));
+  const writeBacklog = backlogItems.filter((it) => anyKeyword(textOf(it), writeKeys));
+
+  const derived = {};
+  const meta = {};
+
+  const setDerived = (id, status, lastTask = "", nextAction = "") => {
+    derived[id] = status;
+    meta[id] = { lastTask, nextAction };
+  };
+
+  const needsAttention = pendingApprovals.length > 0 || reviewItems.length > 0;
+  if (needsAttention) {
+    const attentionTask = pendingApprovals.length
+      ? `Approval needed (${pendingApprovals.length})`
+      : `Review queue (${reviewItems.length})`;
+    setDerived("henry", "waiting_for_you", attentionTask, "Review with you");
+  } else {
+    setDerived("henry", "idle", "No recent task", "");
+  }
+
+  setDerived(
+    "codex",
+    buildItems.length ? "working" : "idle",
+    buildItems.length ? String(buildItems[0]?.title || "Build in progress") : "No recent task",
+    buildItems.length ? "Build" : ""
+  );
+  setDerived(
+    "charlie",
+    buildItems.length ? "working" : "idle",
+    buildItems.length ? String(buildItems[0]?.title || "Build support") : "No recent task",
+    buildItems.length ? "Support build" : ""
+  );
+  setDerived(
+    "ralph",
+    qaItems.length ? "working" : "idle",
+    qaItems.length ? String(qaItems[0]?.title || "QA checks") : "No recent task",
+    qaItems.length ? "Verify" : ""
+  );
+  setDerived(
+    "scout",
+    researchBacklog.length ? "working" : "idle",
+    researchBacklog.length ? String(researchBacklog[0]?.title || "Scanning signals") : "No recent task",
+    researchBacklog.length ? "Scan" : ""
+  );
+  setDerived(
+    "quill",
+    writeBacklog.length ? "working" : "idle",
+    writeBacklog.length ? String(writeBacklog[0]?.title || "Writing") : "No recent task",
+    writeBacklog.length ? "Draft" : ""
+  );
+
+  missionControlState.office2.derivedStatus = derived;
+  missionControlState.office2.derivedMeta = meta;
+
+  office2SyncEntities();
+  void renderOffice2Activity();
+}
+
+function startOffice2HudSync() {
+  if (office2HudTimer) return;
+  void refreshOffice2Hud();
+  office2HudTimer = setInterval(() => {
+    void refreshOffice2Hud();
+  }, 2500);
+}
+
+function stopOffice2HudSync() {
+  if (!office2HudTimer) return;
+  clearInterval(office2HudTimer);
+  office2HudTimer = null;
+}
+
+function office2SeedRoster() {
+  if (missionControlState.office2.roster.length) return missionControlState.office2.roster;
+  const roster = OFFICE2_AGENT_DIRECTORY.map((agent) => ({ ...agent }));
+  missionControlState.office2.roster = roster;
+  return roster;
+}
+
+function office2EnsureSelected() {
+  const stored = safeJsonParse(localStorage.getItem(MC_OFFICE2_KEY), null);
+  if (stored && typeof stored.selectedId === "string" && stored.selectedId) {
+    missionControlState.office2.selectedId = stored.selectedId;
+    return stored.selectedId;
+  }
+  const seed = { version: 2, selectedId: "henry" };
+  localStorage.setItem(MC_OFFICE2_KEY, safeJsonStringify(seed));
+  missionControlState.office2.selectedId = "henry";
+  return "henry";
+}
+
+function pixelPalette(agentId = "") {
+  const id = String(agentId || "").toLowerCase();
+  if (id === "henry") return { skin: "#f3d7c6", body: "#3b82f6", pants: "#1e293b" };
+  if (id === "scout") return { skin: "#f3d7c6", body: "#10b981", pants: "#1e293b" };
+  if (id === "quill") return { skin: "#f3d7c6", body: "#a855f7", pants: "#1e293b" };
+  if (id === "codex") return { skin: "#f3d7c6", body: "#f97316", pants: "#1e293b" };
+  if (id === "pixel") return { skin: "#f3d7c6", body: "#ec4899", pants: "#1e293b" };
+  if (id === "echo") return { skin: "#f3d7c6", body: "#22c55e", pants: "#1e293b" };
+  if (id === "violet") return { skin: "#f3d7c6", body: "#8b5cf6", pants: "#1e293b" };
+  if (id === "ralph") return { skin: "#f3d7c6", body: "#f59e0b", pants: "#1e293b" };
+  return { skin: "#f3d7c6", body: "#64748b", pants: "#1e293b" };
+}
+
+function drawPixelPerson(canvas, agentId) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const { skin, body, pants } = pixelPalette(agentId);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Head
+  ctx.fillStyle = skin;
+  ctx.fillRect(5, 2, 6, 6);
+  // Eyes
+  ctx.fillStyle = "#0b1020";
+  ctx.fillRect(7, 4, 1, 1);
+  ctx.fillRect(9, 4, 1, 1);
+  // Body
+  ctx.fillStyle = body;
+  ctx.fillRect(4, 8, 8, 5);
+  // Arms
+  ctx.fillRect(3, 9, 1, 3);
+  ctx.fillRect(12, 9, 1, 3);
+  // Legs
+  ctx.fillStyle = pants;
+  ctx.fillRect(5, 13, 2, 3);
+  ctx.fillRect(9, 13, 2, 3);
+}
+
+function office2StatusLabel(mapsTo) {
+  const id = String(mapsTo || "");
+  const derived = missionControlState.office2?.derivedStatus || {};
+  const status = derived[id] || (id && officeState.agents[id] ? officeState.agents[id].status : "idle");
+  if (status === "waiting_for_you") return "Waiting";
+  if (status === "working") return "Active";
+  if (status === "blocked") return "Blocked";
+  if (status === "done") return "Done";
+  return "Idle";
+}
+
+function office2TaskLabel(mapsTo) {
+  const id = String(mapsTo || "");
+  const derivedMeta = missionControlState.office2?.derivedMeta || {};
+  const derivedLast = derivedMeta?.[id]?.lastTask ? String(derivedMeta[id].lastTask || "") : "";
+  const last = derivedLast || (id && officeState.agents[id] ? String(officeState.agents[id].lastTask || "") : "");
+  if (!last) return "";
+  if (last.trim().toLowerCase() === "no recent task") return "";
+  return last;
+}
+
+function setOffice2Selected(agentId) {
+  missionControlState.office2.selectedId = agentId;
+  const stored = safeJsonParse(localStorage.getItem(MC_OFFICE2_KEY), { version: 2, selectedId: agentId });
+  stored.selectedId = agentId;
+  localStorage.setItem(MC_OFFICE2_KEY, safeJsonStringify(stored));
+}
+
+function renderOffice2Entities() {
+  if (!office2Entities) return;
+  const roster = office2SeedRoster();
+  office2EnsureSelected();
+
+  if (!missionControlState.office2.nodes) missionControlState.office2.nodes = {};
+
+  roster.forEach((agent, idx) => {
+    let el = missionControlState.office2.nodes[agent.id];
+    if (!el || !office2Entities.contains(el)) {
+      el = document.createElement("div");
+      el.className = "office2-entity";
+      el.dataset.agentId = agent.id;
+      el.dataset.canonicalName = agent.canonicalName || agent.displayName || agent.id;
+      el.dataset.displayName = agent.displayName || agent.canonicalName || agent.id;
+      el.dataset.lane = agent.lane || "";
+      el.dataset.role = agent.role || "";
+
+      const badge = document.createElement("div");
+      badge.className = "office2-role-badge";
+      badge.innerHTML = office2IconSvg(agent.silhouetteIcon);
+      el.appendChild(badge);
+
+      const spriteWrap = document.createElement("div");
+      spriteWrap.className = "office2-sprite-wrap";
+      const spriteRole = document.createElement("div");
+      spriteRole.className = "office2-sprite-role";
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 16;
+      canvas.height = 16;
+      drawPixelPerson(canvas, agent.id);
+      spriteRole.appendChild(canvas);
+      spriteWrap.appendChild(spriteRole);
+
+      const shadow = document.createElement("div");
+      shadow.className = "office2-ground-shadow";
+
+      const label = document.createElement("div");
+      label.className = "office2-entity-label";
+      label.innerHTML = `
+        <div class="office2-entity-display">${escapeHtml(agent.displayName || agent.canonicalName || agent.id)}</div>
+      `;
+
+      el.appendChild(spriteWrap);
+      el.appendChild(shadow);
+      el.appendChild(label);
+
+      el.style.setProperty("--lane-accent", office2GetAccent(agent));
+      el.style.setProperty("--blink-delay", `${Math.floor(office2HashUnit(agent.id + "_blink") * 2400)}ms`);
+
+      el.addEventListener("mouseenter", () => {
+        if (!office2Tooltip) return;
+        const display = String(agent.displayName || agent.canonicalName || "").trim();
+        const canonical = String(agent.canonicalName || "").trim();
+        const role = String(agent.role || "").trim();
+        const task = office2TaskLabel(agent.mapsTo || agent.id);
+
+        const nameLine = canonical && display && display !== canonical ? `${display} (${canonical}) \u2013 ${role}` : `${display || canonical} \u2013 ${role}`;
+        const safeName = escapeHtml(nameLine.trim());
+        const safeTask = task ? `<div class="office2-tip-task">${escapeHtml(task)}</div>` : "";
+        office2Tooltip.innerHTML = `<div class="office2-tip-name">${safeName}</div>${safeTask}`;
+
+        const rect = el.getBoundingClientRect();
+        const roomRect = office2Room?.getBoundingClientRect();
+        if (!roomRect) return;
+        office2Tooltip.style.left = `${rect.left - roomRect.left + rect.width / 2}px`;
+        office2Tooltip.style.top = `${rect.top - roomRect.top}px`;
+        office2Tooltip.classList.remove("hidden");
+      });
+
+      el.addEventListener("mouseleave", () => {
+        if (office2Tooltip) office2Tooltip.classList.add("hidden");
+      });
+
+      el.addEventListener("click", () => {
+        if (office2Tooltip) office2Tooltip.classList.add("hidden");
+        setOffice2Selected(agent.id);
+        renderOffice2AgentCards();
+        if (agent.mapsTo) {
+          setOfficeActiveAgent(agent.mapsTo);
+          openCommandDrawer();
+        } else {
+          showToast("Demo agent selected.", "ok");
+        }
+      });
+
+      missionControlState.office2.nodes[agent.id] = el;
+      office2Entities.appendChild(el);
+    }
+
+    // Keep label content consistent across hot reloads / incremental updates.
+    const labelNode = el.querySelector(".office2-entity-label");
+    if (labelNode) {
+      const displayNode = labelNode.querySelector(".office2-entity-display");
+      if (displayNode) {
+        displayNode.textContent = agent.displayName || agent.canonicalName || agent.id;
+      }
+      const roleNode = labelNode.querySelector(".office2-entity-role");
+      if (roleNode) roleNode.remove();
+    }
+
+    const status = office2ComputeStatus(agent);
+    el.dataset.status = status;
+    el.dataset.lane = agent.lane || "";
+    el.style.setProperty("--lane-accent", office2GetAccent(agent));
+
+    const desired = office2DesiredPosition(agent, status, idx);
+    const x = clampPct(desired.x, 6, 94);
+    const y = clampPct(desired.y, 10, 92);
+
+    const prevX = Number(el.dataset.px || "");
+    const prevY = Number(el.dataset.py || "");
+    const moved = Number.isFinite(prevX) && Number.isFinite(prevY) ? Math.hypot(prevX - x, prevY - y) > 1.2 : true;
+    el.dataset.px = String(x);
+    el.dataset.py = String(y);
+
+    if (moved) {
+      el.classList.add("moving");
+      clearTimeout(officeState.moveTimers[`office2_${agent.id}`]);
+      officeState.moveTimers[`office2_${agent.id}`] = setTimeout(() => {
+        el.classList.remove("moving");
+      }, 520);
+    }
+
+    el.style.left = `${x}%`;
+    el.style.top = `${y}%`;
+  });
+}
+
+function syncOffice2AgentCards() {
+  if (!office2AgentCards) return;
+  const roster = office2SeedRoster();
+  const byId = Object.fromEntries(roster.map((agent) => [agent.id, agent]));
+  const selected = missionControlState.office2.selectedId || office2EnsureSelected() || "henry";
+  missionControlState.office2.selectedId = selected;
+
+  Array.from(office2AgentCards.querySelectorAll(".office2-agent-card")).forEach((card) => {
+    const agentId = String(card.dataset.agentId || "");
+    const agent = byId[agentId];
+    card.classList.toggle("active", agentId === selected);
+    const statusNode = card.querySelector(".office2-agent-status");
+    if (statusNode && agent) statusNode.textContent = office2StatusLabel(agent.mapsTo || agent.id);
+  });
+}
+
+function office2SyncEntities() {
+  if (!officeRoomView || officeRoomView.classList.contains("hidden")) return;
+  renderOffice2Entities();
+  syncOffice2AgentCards();
+}
+
+function renderOffice2AgentCards() {
+  if (!office2AgentCards) return;
+  const roster = office2SeedRoster();
+  const selected = missionControlState.office2.selectedId || office2EnsureSelected() || "henry";
+  missionControlState.office2.selectedId = selected;
+
+  office2AgentCards.innerHTML = "";
+  roster.slice(0, 7).forEach((agent) => {
+    const card = document.createElement("div");
+    card.className = "office2-agent-card" + (agent.id === selected ? " active" : "");
+    card.dataset.agentId = agent.id;
+    card.title = agent.canonicalName && agent.displayName && agent.canonicalName !== agent.displayName ? `${agent.displayName} (${agent.canonicalName}) \u00b7 ${agent.role}` : `${agent.displayName || agent.canonicalName} \u00b7 ${agent.role}`;
+    card.innerHTML = `
+      <div class="office2-agent-avatar">${escapeHtml(agent.emoji || "•")}</div>
+      <div class="office2-agent-meta">
+        <div class="office2-agent-name">${escapeHtml(agent.displayName || agent.canonicalName || agent.id)}</div>
+        <div class="office2-agent-hint">Click for memory</div>
+      </div>
+      <div class="office2-agent-status">${escapeHtml(office2StatusLabel(agent.mapsTo || agent.id))}</div>
+    `;
+    card.addEventListener("click", () => {
+      setOffice2Selected(agent.id);
+      renderOffice2AgentCards();
+      if (agent.mapsTo) {
+        setOfficeActiveAgent(agent.mapsTo);
+        openCommandDrawer();
+      } else {
+        showToast("Demo agent selected.", "ok");
+      }
+    });
+    office2AgentCards.appendChild(card);
+  });
+}
+
+async function renderOffice2Activity() {
+  if (!office2ActivityEmpty || !office2ActivityList) return;
+  const afterIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  let events = [];
+  try {
+    const data = await apiRequest(`/events/${encodeURIComponent(GLOBAL_PODCAST_ID)}?after=${encodeURIComponent(afterIso)}&limit=80`);
+    events = Array.isArray(data?.events) ? data.events : [];
+  } catch (err) {
+    // Keep calm: if events endpoint is offline, show empty state.
+    events = [];
+  }
+
+  // Default to a "signal" feed (not firehose). We keep Talk turns + decisions + approvals + errors.
+  const noisyTypes = new Set(["agent_status_updated", "speaker_analytics_generated", "segment_started", "speaker_labeled"]);
+  events = events.filter((evt) => !noisyTypes.has(String(evt?.type || "")));
+
+  if (!events.length) {
+    office2ActivityEmpty.classList.remove("hidden");
+    office2ActivityList.classList.add("hidden");
+    return;
+  }
+
+  office2ActivityEmpty.classList.add("hidden");
+  office2ActivityList.classList.remove("hidden");
+
+  office2ActivityList.innerHTML = "";
+  events
+    .slice(-28)
+    .forEach((event) => {
+      const row = document.createElement("div");
+      row.className = "office2-activity-row";
+      const ts = event?.timestamp ? new Date(event.timestamp) : null;
+      const timeLabel = ts
+        ? ts.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+        : "--:--:--";
+      const source = `${String(event?.actor || "system")} \u2022 ${String(event?.lane || "")}`.trim();
+      const summary = String(event?.summary || "").trim() || String(event?.type || "").trim();
+      const type = String(event?.type || "").trim();
+      row.innerHTML = `
+        <div class="office2-activity-time">${escapeHtml(timeLabel)}</div>
+        <div class="office2-activity-main">
+          <div class="office2-activity-src">${escapeHtml(source)}</div>
+          <div class="office2-activity-msg">${escapeHtml(summary)}</div>
+        </div>
+        <div class="office2-activity-type">${escapeHtml(type)}</div>
+      `;
+      office2ActivityList.appendChild(row);
+    });
+}
+
+function renderOffice2Page() {
+  if (!officeRoomView || !office2Entities || !office2AgentCards) return;
+  office2SeedRoster();
+  office2LoadUiPrefs();
+  office2ApplyLabelMode();
+
+  const labelsBtn = document.getElementById("office2-toggle-labels");
+  if (labelsBtn && !labelsBtn.dataset.bound) {
+    labelsBtn.dataset.bound = "1";
+    labelsBtn.addEventListener("click", () => {
+      office2ToggleLabels();
+      labelsBtn.classList.toggle("active", Boolean(missionControlState.office2.hideLabels));
+    });
+  }
+  if (labelsBtn) labelsBtn.classList.toggle("active", Boolean(missionControlState.office2.hideLabels));
+
+  renderOffice2Entities();
+  renderOffice2AgentCards();
+  void renderOffice2Activity();
+  startOffice2LiveSync();
+  startOffice2HudSync();
+}
+
+// ===== Factory Page =====
+function seedFactoryStore() {
+  const stored = safeJsonParse(localStorage.getItem(MC_FACTORY_KEY), null);
+  if (stored && Array.isArray(stored.items) && stored.items.length) return stored;
+
+  const now = Date.now();
+  const mk = (id, stage, ageMins, blocked = false) => ({
+    id,
+    stage,
+    createdAt: new Date(now - ageMins * 60 * 1000).toISOString(),
+    blocked
+  });
+
+  const items = [
+    mk("pkg_council", "build", 92),
+    mk("pkg_factory", "qa", 48),
+    mk("pkg_calendar", "review", 28),
+    mk("pkg_memory", "backlog", 180),
+    mk("pkg_office", "backlog", 210),
+    mk("pkg_pipeline", "build", 62),
+    mk("pkg_integrations", "review", 120, true)
+  ];
+
+  const seed = { version: 1, items };
+  localStorage.setItem(MC_FACTORY_KEY, safeJsonStringify(seed));
+  return seed;
+}
+
+function loadFactoryStore() {
+  const seed = seedFactoryStore();
+  const stored = safeJsonParse(localStorage.getItem(MC_FACTORY_KEY), seed);
+  if (!stored || !Array.isArray(stored.items)) return seed;
+  return stored;
+}
+
+function saveFactoryStore(next) {
+  localStorage.setItem(MC_FACTORY_KEY, safeJsonStringify(next));
+}
+
+function factoryStageIndex(stage) {
+  const order = ["backlog", "build", "qa", "review", "ship"];
+  const idx = order.indexOf(stage);
+  return idx === -1 ? 0 : idx;
+}
+
+function normalizeFactoryStage(stage) {
+  const raw = String(stage || "").trim().toLowerCase();
+  if (raw === "backlog" || raw === "build" || raw === "qa" || raw === "review" || raw === "ship") return raw;
+  const up = String(stage || "").trim().toUpperCase();
+  if (up === "BACKLOG") return "backlog";
+  if (up === "BUILD") return "build";
+  if (up === "QA") return "qa";
+  if (up === "REVIEW") return "review";
+  if (up === "SHIP") return "ship";
+  return "backlog";
+}
+
+function mapWorkItemToFactoryItem(item) {
+  if (!item) return null;
+  const stage = normalizeFactoryStage(item.stage);
+  const blocked = Boolean(item?.data?.blocked) || String(item?.risk || "").toLowerCase() === "high";
+  return {
+    id: String(item.id),
+    stage,
+    createdAt: String(item.createdTs || item.created_at || item.createdAt || new Date().toISOString()),
+    blocked,
+    title: String(item.title || ""),
+    objective: String(item.objective || ""),
+    approvalId: String(item?.data?.approvalId || "").trim() || null
+  };
+}
+
+async function loadFactoryItems() {
+  try {
+    const items = await apiListWorkItems({ limit: 200 });
+    const mapped = (items || []).map(mapWorkItemToFactoryItem).filter(Boolean);
+    missionControlState.factory.items = mapped;
+    missionControlState.factory.workItems = items;
+    return mapped;
+  } catch {
+    const store = loadFactoryStore();
+    const mapped = (store.items || []).map((it) => ({
+      id: it.id,
+      stage: normalizeFactoryStage(it.stage),
+      createdAt: String(it.createdAt || new Date().toISOString()),
+      blocked: Boolean(it.blocked),
+      title: it.id,
+      objective: "",
+      approvalId: null
+    }));
+    missionControlState.factory.items = mapped;
+    return mapped;
+  }
+}
+
+async function advanceFactoryItem(itemId) {
+  const id = String(itemId || "").trim();
+  if (!id) return;
+  const order = ["backlog", "build", "qa", "review", "ship"];
+
+  const current = (missionControlState.factory.items || []).find((it) => it.id === id);
+  const currentStage = current ? normalizeFactoryStage(current.stage) : "backlog";
+  const idx = order.indexOf(currentStage);
+  const nextStage = order[(idx + 1) % order.length];
+
+  try {
+    await apiSetWorkItemStage(id, nextStage.toUpperCase(), { actor: "user", reason: "ui_click_advance", sessionId: GLOBAL_PODCAST_ID });
+  } catch {
+    // Fallback: localStorage mode
+    const store = loadFactoryStore();
+    const item = store.items.find((it) => it.id === id);
+    if (!item) return;
+    const i2 = order.indexOf(normalizeFactoryStage(item.stage));
+    item.stage = order[(i2 + 1) % order.length];
+    if (item.stage === "ship") item.shippedAt = new Date().toISOString();
+    saveFactoryStore(store);
+  }
+  void renderFactoryPage();
+}
+
+function renderFactoryMetrics(items) {
+  const shippedToday = items.filter((it) => it.stage === "ship").length;
+  const inProgress = items.filter((it) => ["build", "qa", "review"].includes(it.stage)).length;
+  const backlog = items.filter((it) => it.stage === "backlog").length;
+  const blocked = items.filter((it) => Boolean(it.blocked)).length;
+
+  if (factoryMetricShipped) factoryMetricShipped.textContent = String(shippedToday);
+  if (factoryMetricInProgress) factoryMetricInProgress.textContent = String(inProgress);
+  if (factoryMetricBacklog) factoryMetricBacklog.textContent = String(backlog);
+  if (factoryMetricBlocked) factoryMetricBlocked.textContent = String(blocked);
+  if (factoryMetricAvgTime) factoryMetricAvgTime.textContent = "2h 14m";
+}
+
+function renderFactoryBelt(items) {
+  if (!factoryBeltItems) return;
+  factoryBeltItems.innerHTML = "";
+
+  const width = factoryBeltItems.getBoundingClientRect().width || 600;
+  const stages = ["backlog", "build", "qa", "review", "ship"];
+  const pkgSize = 20;
+  const margin = 28;
+  const span = Math.max(0, width - margin * 2);
+  const step = stages.length > 1 ? span / (stages.length - 1) : 0;
+  const anchors = Object.fromEntries(stages.map((stage, idx) => [stage, margin + idx * step]));
+
+  const offsetsForCount = (count) => {
+    if (count <= 1) return [0];
+    if (count === 2) return [-10, 10];
+    if (count === 3) return [-12, 0, 12];
+    if (count === 4) return [-18, -6, 6, 18];
+    if (count === 5) return [-24, -12, 0, 12, 24];
+    const out = [];
+    const half = Math.floor(count / 2);
+    for (let i = -half; i <= half; i++) out.push(i * 10);
+    return out;
+  };
+
+  const byStage = Object.fromEntries(stages.map((stage) => [stage, []]));
+  (items || []).forEach((item) => {
+    const stage = stages.includes(item.stage) ? item.stage : "backlog";
+    byStage[stage].push(item);
+  });
+
+  stages.forEach((stage) => {
+    const stageItems = byStage[stage]
+      .slice()
+      .sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+    const offsets = offsetsForCount(stageItems.length);
+    stageItems.forEach((item, idx) => {
+      const xCenter = (anchors[stage] || margin) + (offsets[idx] || 0);
+      const xLeft = Math.max(0, Math.min(width - pkgSize, Math.round(xCenter - pkgSize / 2)));
+
+      const node = document.createElement("div");
+      node.className = "factory-package";
+      node.dataset.itemId = item.id;
+      node.style.left = `${xLeft}px`;
+      if (item.blocked) {
+        node.style.borderColor = "rgba(239, 68, 68, 0.45)";
+        node.style.background = "rgba(239, 68, 68, 0.22)";
+      }
+      factoryBeltItems.appendChild(node);
+    });
+  });
+}
+
+function renderFactoryBuildAgents() {
+  if (!factoryBuildAgents) return;
+  factoryBuildAgents.innerHTML = "";
+  const buildRoster = [
+    { id: "charlie", name: "Charlie" },
+    { id: "codex", name: "Codex" },
+    { id: "henry", name: "Henry" }
+  ];
+  buildRoster.forEach((agent) => {
+    const wrap = document.createElement("div");
+    wrap.className = "fx-px-agent";
+    const canvas = document.createElement("canvas");
+    canvas.width = 16;
+    canvas.height = 16;
+    drawPixelPerson(canvas, agent.id);
+    const label = document.createElement("div");
+    label.className = "fx-px-agent-name";
+    label.textContent = agent.name;
+    wrap.appendChild(canvas);
+    wrap.appendChild(label);
+    factoryBuildAgents.appendChild(wrap);
+  });
+}
+
+async function renderFactoryPage() {
+  if (!factoryView) return;
+  renderFactoryBuildAgents();
+  const items = await loadFactoryItems();
+  requestAnimationFrame(() => renderFactoryBelt(items));
+  renderFactoryMetrics(items);
 }
 
 function updateSelectionUi() {
@@ -1615,12 +4001,16 @@ function renderTalkTranscript(thread) {
   if (!thread || !thread.length) {
     const empty = document.createElement("div");
     empty.className = "talk-empty";
-    empty.textContent = "Tap the orb to start.";
+    empty.textContent = "No transcript yet.";
     talkTranscript.appendChild(empty);
     return;
   }
 
-  thread.forEach((msg) => {
+  const focusEnabled = Boolean(talkView && talkView.classList.contains("talk-focus"));
+  const maxLines = focusEnabled ? 60 : thread.length;
+  const visible = focusEnabled && thread.length > maxLines ? thread.slice(-maxLines) : thread;
+
+  visible.forEach((msg) => {
     const role = String(msg.role || "assistant").toLowerCase();
     const kind = role === "user" ? "you" : role === "system" ? "system" : "agent";
     const agentName = msg.agent ? String(msg.agent).trim() : null;
@@ -1636,7 +4026,9 @@ function renderTalkTranscript(thread) {
       label = agentName ? `Agent (${agentName})` : "Agent";
     }
 
-    row.textContent = `${label}: ${msg.content || ""}`;
+    const rawContent = msg.content || "";
+    const content = kind === "agent" ? normalizeAssistantReplyText(rawContent) : rawContent;
+    row.textContent = `${label}: ${content}`;
     row.dataset.agent = agentName || "";
     talkTranscript.appendChild(row);
   });
@@ -1655,7 +4047,8 @@ function appendTranscriptLine(kind, text, agentName = null) {
   const empty = talkTranscript.querySelector(".talk-empty");
   if (empty) empty.remove();
 
-  const content = String(text || "");
+  const rawContent = String(text || "");
+  const content = kind === "agent" ? normalizeAssistantReplyText(rawContent) : rawContent;
   const label = labelForKind(kind, agentName);
   const row = document.createElement("div");
   row.className = `talk-line ${kind}`;
@@ -1683,11 +4076,27 @@ function appendTranscriptAttachment(kind, label, imageUrl) {
   talkTranscript.scrollTop = talkTranscript.scrollHeight;
 }
 
+function handleTalkComposerSend() {
+  if (!talkChatInput) return;
+  const text = String(talkChatInput.value || "").trim();
+  if (!text) return;
+  talkChatInput.value = "";
+  try {
+    talkChatInput.style.height = "40px";
+  } catch {}
+  void processTalkMessage(text, { speakerId: state.currentSpeakerId });
+}
+
 async function loadThread(taskId) {
   try {
     const data = await apiRequest(`/task/thread/${encodeURIComponent(taskId)}`);
     setApiOnline(true);
-    return Array.isArray(data.thread) ? data.thread : [];
+    const thread = Array.isArray(data.thread) ? data.thread : [];
+    if (taskId === GLOBAL_PODCAST_ID && (!thread || thread.length === 0)) {
+      const local = loadLocalThread();
+      if (local && local.length) return local;
+    }
+    return thread;
   } catch {
     setApiOnline(false);
     if (taskId === GLOBAL_PODCAST_ID) return loadLocalThread();
@@ -2041,12 +4450,14 @@ function renderChapters() {
     top.appendChild(title);
     top.appendChild(duration);
 
-    const summary = document.createElement("div");
-    summary.className = "chapter-card-summary";
-    summary.textContent = truncateTimelineSummary(chapter.summary || "", 120);
-
     card.appendChild(top);
-    card.appendChild(summary);
+    const summaryText = truncateTimelineSummary(chapter.summary || "", 120).trim();
+    if (summaryText) {
+      const summary = document.createElement("div");
+      summary.className = "chapter-card-summary";
+      summary.textContent = summaryText;
+      card.appendChild(summary);
+    }
     talkChapters.appendChild(card);
   }
 }
@@ -2570,8 +4981,28 @@ function renderTimeline() {
 
 async function fetchTimelineEvents(sessionId, force = false) {
   const sid = String(sessionId || GLOBAL_PODCAST_ID).trim() || GLOBAL_PODCAST_ID;
-  const data = await apiRequest(`/events/${encodeURIComponent(sid)}`);
-  const events = Array.isArray(data?.events) ? data.events : [];
+  let events = [];
+  let fetchedFromApi = false;
+  try {
+    const limit = 420;
+    const data = await apiRequest(`/events/${encodeURIComponent(sid)}?limit=${limit}`);
+    events = Array.isArray(data?.events) ? data.events : [];
+    fetchedFromApi = true;
+    setApiOnline(true);
+  } catch {
+    setApiOnline(false);
+    events = loadLocalEvents();
+    if (!events.length && sid === GLOBAL_PODCAST_ID) {
+      ensureTalkDemoSeeded();
+      events = loadLocalEvents();
+    }
+  }
+
+  if (fetchedFromApi && (!events || events.length === 0) && sid === GLOBAL_PODCAST_ID) {
+    const local = loadLocalEvents();
+    if (local && local.length) events = local;
+  }
+
   const count = events.length;
   const lastEvent = count ? events[count - 1] : null;
   const lastId = String(lastEvent?.id || "");
@@ -2674,7 +5105,17 @@ function clearTimelineView() {
 
 async function exportTimelineJson() {
   try {
-    const data = await apiRequest(`/events/${encodeURIComponent(GLOBAL_PODCAST_ID)}`);
+    let data = null;
+    try {
+      data = await apiRequest(`/events/${encodeURIComponent(GLOBAL_PODCAST_ID)}`);
+    } catch {
+      // Fall back to local/demo events if the API is unavailable.
+      data = { sessionId: GLOBAL_PODCAST_ID, events: loadLocalEvents() };
+      if (!Array.isArray(data.events) || data.events.length === 0) {
+        data.events = Array.isArray(timelineState.events) ? timelineState.events : [];
+      }
+    }
+
     const payload = JSON.stringify(data || { sessionId: GLOBAL_PODCAST_ID, events: [] }, null, 2);
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -2695,7 +5136,17 @@ async function exportTimelineJson() {
 
 async function exportSessionPackJson() {
   try {
-    const data = await apiRequest(`/events/${encodeURIComponent(GLOBAL_PODCAST_ID)}`);
+    let data = null;
+    try {
+      data = await apiRequest(`/events/${encodeURIComponent(GLOBAL_PODCAST_ID)}`);
+    } catch {
+      // Fall back to local/demo events if the API is unavailable.
+      data = { sessionId: GLOBAL_PODCAST_ID, events: loadLocalEvents() };
+      if (!Array.isArray(data.events) || data.events.length === 0) {
+        data.events = Array.isArray(timelineState.events) ? timelineState.events : [];
+      }
+    }
+
     const events = Array.isArray(data?.events) ? data.events : [];
     const typeCountsRaw = events.reduce((acc, event) => {
       const key = String(event?.type || "unknown");
@@ -3245,7 +5696,10 @@ function speakViaBrowserTts(clean, sessionId, resolve) {
         showToast("Voice playback failed. I will keep text replies active.", "error");
         state.ttsWarningShown = true;
       }
-      console.error("tts_error", { style: state.voiceStyle, voice: selectedVoice?.name || "default" });
+      // Disable TTS after a hard failure to prevent repeated console noise / user confusion.
+      runtimeState.ttsDisabled = true;
+      updateTtsToggleUi();
+      console.warn("tts_error", { style: state.voiceStyle, voice: selectedVoice?.name || "default" });
       finalize();
     };
 
@@ -3383,6 +5837,11 @@ function ttsSpeak(text) {
 
       let serverTtsAttempted = false;
       try {
+        if (!state.serverTtsConfigured) {
+          // Free fallback: browser TTS. (ElevenLabs subscription not required.)
+          speakViaBrowserTts(clean, sessionId, resolve);
+          return;
+        }
         const profile = mapVoiceStyleToServerProfile(state.voiceStyle);
         serverTtsAttempted = true;
         await speakViaServerTts(clean, profile, sessionId);
@@ -3401,7 +5860,7 @@ function ttsSpeak(text) {
           return;
         }
         setRuntimeStateIdle(runtimeState.lastTurnId);
-        console.error("[TTS Error]", {
+        console.warn("[TTS Error]", {
           status: err?.status,
           error: err?.error,
           details: err?.details,
@@ -3423,14 +5882,11 @@ function ttsSpeak(text) {
           state.ttsServerWarningShown = true;
         }
       }
-      // If server TTS was attempted but failed, finalize silently (no browser fallback to prevent mic feedback loop)
+
+      // Free fallback: if server TTS fails, switch to browser TTS and remember it.
       if (serverTtsAttempted && sessionId === state.speechSession) {
-        finalizeTtsSession(sessionId, state.ttsResolve);
-        if (state.ttsResolve === resolve) state.ttsResolve = null;
-        // Restart recognition to listen for next user input
-        if (state.sessionActive) {
-          setTimeout(() => startRecognition(), 150);
-        }
+        state.serverTtsConfigured = false;
+        speakViaBrowserTts(clean, sessionId, resolve);
       }
     })();
   });
@@ -3964,6 +6420,68 @@ async function runAgentCommandStream(message, signal, onPhrase, extra = {}) {
   return resultFromStream(donePayload, fullText, metaPayload);
 }
 
+function parseTalkWorkItemPrefix(text) {
+  const raw = String(text || "").trim();
+  const match = raw.match(/^(factory|build|qa|review|ship)\s*:\s*(.*)$/i);
+  if (!match) return null;
+  const cmd = String(match[1] || "").trim().toLowerCase();
+  const body = String(match[2] || "").trim();
+
+  const stageMap = {
+    factory: "BACKLOG",
+    build: "BUILD",
+    qa: "QA",
+    review: "REVIEW",
+    ship: "SHIP"
+  };
+  const stage = stageMap[cmd] || "BACKLOG";
+  return { cmd, stage, body };
+}
+
+async function maybeCreateWorkItemFromTalk(text, { turnId, segmentId } = {}) {
+  const parsed = parseTalkWorkItemPrefix(text);
+  if (!parsed) return null;
+
+  const title = parsed.body ? parsed.body.slice(0, 120) : `${parsed.cmd.toUpperCase()} item`;
+  const objective = parsed.body || "";
+  const payload = {
+    title,
+    objective,
+    stage: parsed.stage,
+    risk: "low",
+    owner_agent_id: "",
+    data: {
+      createdFrom: "talk_prefix",
+      command: parsed.cmd,
+      rawText: String(text || ""),
+      turnId: normalizeTurnId(turnId) || null,
+      segmentId: String(segmentId || "").trim() || null
+    },
+    sessionId: GLOBAL_PODCAST_ID,
+    actor: "user",
+    reason: `talk_prefix:${parsed.cmd}`
+  };
+
+  try {
+    const item = await apiCreateWorkItem(payload);
+    if (!item) return null;
+
+    await emitEvent("decision", "user", "talk", `Created work item: ${item.title}`, {
+      source: { kind: "talk" },
+      targets: { page: "factory", workItemId: item.id },
+      severity: "info",
+      data: { stage: item.stage, command: parsed.cmd, turnId: normalizeTurnId(turnId) || null }
+    });
+
+    showToast(`Factory: ${item.title}`, "ok");
+    return item;
+  } catch (err) {
+    console.error("[Talk->Factory] Failed to create work item", err);
+    showToast("Factory item failed to create.", "error");
+    return null;
+  }
+}
+
 async function processTalkMessage(message, opts = {}) {
   const text = String(message || "").trim();
   if (!text) return;
@@ -4011,7 +6529,16 @@ async function processTalkMessage(message, opts = {}) {
     speakerId,
     speakerLabel
   });
+
+  const createdWorkItem = await maybeCreateWorkItemFromTalk(text, { turnId, segmentId });
   const contextPack = buildTalkContextPack(text, { turnId, segmentId, speakerId });
+  if (createdWorkItem) {
+    contextPack.createdWorkItem = {
+      id: createdWorkItem.id,
+      stage: createdWorkItem.stage,
+      title: createdWorkItem.title
+    };
+  }
 
   const requestToken = state.pendingRequestToken + 1;
   state.pendingRequestToken = requestToken;
@@ -4066,6 +6593,15 @@ async function processTalkMessage(message, opts = {}) {
       markTurnAborted(turnId);
       if (normalizeTurnId(state.activeAssistantTurnId) === turnId) state.activeAssistantTurnId = "";
       setRuntimeStateIdle(turnId);
+      state.assistantThinking = false;
+      state.assistantSpeaking = false;
+      setOrbSubtitle("");
+      // If a stream is aborted (navigation, interruption), do not leave the UI stuck in "Thinking".
+      if (state.sessionActive) {
+        await enterListeningState(true);
+      } else {
+        setTalkState("idle");
+      }
       return;
     }
     if (isRequestInFlightError(err)) {
@@ -4947,6 +7483,13 @@ async function handleDashboardSend() {
   const text = String(dashboardInput?.value || "").trim();
   if (!text) return;
 
+  const officeAgentId = mapDashboardAgentToOffice(state.activeAgent);
+  recordOfficeNote(officeAgentId, { lastTask: text, nextAction: "Awaiting response" });
+  setOfficeOverride(officeAgentId, "working", 12000, {
+    lastTask: text,
+    nextAction: "Awaiting response"
+  });
+
   // Show user message immediately
   const userMsg = { role: "user", content: text, agent: state.activeAgent };
   let currentThread = [];
@@ -4973,6 +7516,10 @@ async function handleDashboardSend() {
 
     if (data?.reply) {
       showToast("Agent replied.", "ok");
+      setOfficeOverride(officeAgentId, "done", 4000, {
+        lastTask: text,
+        nextAction: "Review output"
+      });
       // Reload and display the full thread after response
       let updatedThread = [];
       try {
@@ -4985,6 +7532,10 @@ async function handleDashboardSend() {
     setApiOnline(true);
   } catch (err) {
     setApiOnline(false);
+    setOfficeOverride(officeAgentId, "blocked", 6000, {
+      lastTask: text,
+      nextAction: "Retry or revise"
+    });
     showToast("Dashboard request failed.", "error");
   }
 }
@@ -5006,6 +7557,12 @@ async function handleDecision(action) {
     });
 
     updateTaskCardStatus(state.activeTaskId, result.task?.status || action);
+    recordOfficeNote("henry", { lastTask: `Decision: ${action}`, nextAction: "Monitor outcomes" });
+    setOfficeOverride("henry", action === "kill" ? "blocked" : "done", 4000, {
+      lastTask: `Decision: ${action}`,
+      nextAction: "Monitor outcomes"
+    });
+    void loadOfficeTasks().then(updateOfficeSimulation);
     showToast(`Task updated: ${action}`, "ok");
   } catch {
     showToast("Failed to update task status.", "error");
@@ -5025,10 +7582,1561 @@ async function initHealth() {
     const data = await apiRequest("/health");
     setApiOnline(Boolean(data?.ok));
     state.talkStreamEnabled = Boolean(data?.config?.llm?.streamTalk ?? true);
+    // If ElevenLabs isn't configured, fall back to free browser TTS automatically.
+    state.serverTtsConfigured = Boolean(data?.config?.voice?.ttsConfigured);
+    state.serverTtsProvider = String(data?.config?.voice?.provider || "");
   } catch {
     setApiOnline(false);
     state.talkStreamEnabled = false;
+    state.serverTtsConfigured = false;
+    state.serverTtsProvider = "";
   }
+}
+
+// ===== CONTENT PIPELINE MODULE =====
+function formatContentTimestamp(timestamp) {
+  if (!timestamp) return "";
+  try {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString();
+  } catch {
+    return "";
+  }
+}
+
+function formatContentMeta(...parts) {
+  return parts.filter(Boolean).join(" • ");
+}
+
+function normalizeContentStatus(status) {
+  const key = String(status || "draft").trim().toLowerCase();
+  return CONTENT_STATUS_LABELS[key] ? key : "draft";
+}
+
+function clearContentSignalForm() {
+  if (contentSignalTitle) contentSignalTitle.value = "";
+  if (contentSignalSource) contentSignalSource.value = "";
+  if (contentSignalUrl) contentSignalUrl.value = "";
+  if (contentSignalSummary) contentSignalSummary.value = "";
+}
+
+function clearContentTopicForm() {
+  if (contentTopicTitle) contentTopicTitle.value = "";
+  if (contentTopicRationale) contentTopicRationale.value = "";
+}
+
+function clearContentDraftEditor() {
+  contentState.selectedDraftId = "";
+  if (contentDraftActive) contentDraftActive.textContent = "No draft selected";
+  if (contentDraftTopic) contentDraftTopic.value = "";
+  if (contentDraftHook) contentDraftHook.value = "";
+  if (contentDraftExplanation) contentDraftExplanation.value = "";
+  if (contentDraftInsight) contentDraftInsight.value = "";
+  if (contentDraftCta) contentDraftCta.value = "";
+  if (contentDraftStatus) contentDraftStatus.value = "draft";
+  if (contentDraftSchedule) contentDraftSchedule.value = "";
+}
+
+function setContentDraftEditor(draft) {
+  if (!draft) {
+    clearContentDraftEditor();
+    return;
+  }
+  contentState.selectedDraftId = draft.id;
+  if (contentDraftActive) {
+    const label = draft.topicTitle || draft.hook || draft.id;
+    contentDraftActive.textContent = `Editing: ${label}`;
+  }
+  if (contentDraftTopic) contentDraftTopic.value = draft.topicTitle || "";
+  if (contentDraftHook) contentDraftHook.value = draft.hook || "";
+  if (contentDraftExplanation) contentDraftExplanation.value = draft.explanation || "";
+  if (contentDraftInsight) contentDraftInsight.value = draft.insight || "";
+  if (contentDraftCta) contentDraftCta.value = draft.cta || "";
+  if (contentDraftStatus) contentDraftStatus.value = normalizeContentStatus(draft.status);
+  if (contentDraftSchedule) contentDraftSchedule.value = toLocalDateInput(draft.scheduledFor);
+}
+
+function toLocalDateInput(timestamp) {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset() * 60000;
+  const local = new Date(date.getTime() - offset);
+  return local.toISOString().slice(0, 16);
+}
+
+function parseScheduleInput(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString();
+}
+
+function renderContentStats(store) {
+  const signals = store?.signals || [];
+  const topics = store?.topics || [];
+  const drafts = store?.drafts || [];
+  const pendingCount = drafts.filter((draft) => draft.status === "pending_approval").length;
+  if (contentSignalCount) contentSignalCount.textContent = String(signals.length);
+  if (contentTopicCount) contentTopicCount.textContent = String(topics.length);
+  if (contentDraftCount) contentDraftCount.textContent = String(drafts.length);
+  if (contentPendingCount) contentPendingCount.textContent = String(pendingCount);
+}
+
+function renderRadarSignals(signals = []) {
+  if (!contentRadarList) return;
+  contentRadarList.innerHTML = "";
+
+  if (!signals.length) {
+    const empty = document.createElement("div");
+    empty.className = "timeline-empty";
+    empty.textContent = "No radar signals yet.";
+    contentRadarList.appendChild(empty);
+    return;
+  }
+
+  signals.forEach((signal) => {
+    const card = document.createElement("div");
+    card.className = "content-card";
+    card.dataset.id = signal.id;
+
+    const top = document.createElement("div");
+    top.className = "content-card-top";
+
+    const title = document.createElement("div");
+    title.className = "content-card-title";
+    title.textContent = signal.title || "Untitled signal";
+
+    const meta = document.createElement("div");
+    meta.className = "content-card-meta";
+    meta.textContent = formatContentMeta(signal.source, formatRelativeTime(signal.createdAt));
+
+    top.appendChild(title);
+    top.appendChild(meta);
+
+    const summary = document.createElement("div");
+    summary.className = "content-card-meta";
+    summary.textContent = signal.summary || "No summary added.";
+
+    const actions = document.createElement("div");
+    actions.className = "content-card-actions";
+    const promoteBtn = document.createElement("button");
+    promoteBtn.className = "content-action-btn";
+    promoteBtn.dataset.action = "promote";
+    promoteBtn.dataset.id = signal.id;
+    promoteBtn.textContent = "Promote to Scout";
+    actions.appendChild(promoteBtn);
+
+    card.appendChild(top);
+    card.appendChild(summary);
+    if (signal.url) {
+      const url = document.createElement("div");
+      url.className = "content-card-meta";
+      url.textContent = signal.url;
+      card.appendChild(url);
+    }
+    card.appendChild(actions);
+    contentRadarList.appendChild(card);
+  });
+}
+
+function renderScoutTopics(topics = []) {
+  if (!contentScoutList) return;
+  contentScoutList.innerHTML = "";
+
+  if (!topics.length) {
+    const empty = document.createElement("div");
+    empty.className = "timeline-empty";
+    empty.textContent = "No scout topics yet.";
+    contentScoutList.appendChild(empty);
+    return;
+  }
+
+  topics.forEach((topic) => {
+    const card = document.createElement("div");
+    card.className = "content-card";
+    card.dataset.id = topic.id;
+
+    const top = document.createElement("div");
+    top.className = "content-card-top";
+
+    const title = document.createElement("div");
+    title.className = "content-card-title";
+    title.textContent = topic.title || "Untitled topic";
+
+    const meta = document.createElement("div");
+    meta.className = "content-card-meta";
+    const signalCount = Array.isArray(topic.signalIds) ? topic.signalIds.length : 0;
+    meta.textContent = formatContentMeta(
+      signalCount ? `${signalCount} signal${signalCount > 1 ? "s" : ""}` : "",
+      formatRelativeTime(topic.createdAt)
+    );
+
+    top.appendChild(title);
+    top.appendChild(meta);
+
+    const rationale = document.createElement("div");
+    rationale.className = "content-card-meta";
+    rationale.textContent = topic.rationale || "No rationale added.";
+
+    const actions = document.createElement("div");
+    actions.className = "content-card-actions";
+    const draftBtn = document.createElement("button");
+    draftBtn.className = "content-action-btn";
+    draftBtn.dataset.action = "draft";
+    draftBtn.dataset.id = topic.id;
+    draftBtn.textContent = "Create Draft";
+    actions.appendChild(draftBtn);
+
+    card.appendChild(top);
+    card.appendChild(rationale);
+    card.appendChild(actions);
+    contentScoutList.appendChild(card);
+  });
+}
+
+function renderDrafts(drafts = []) {
+  if (!contentDraftList) return;
+  contentDraftList.innerHTML = "";
+
+  if (!drafts.length) {
+    const empty = document.createElement("div");
+    empty.className = "timeline-empty";
+    empty.textContent = "No drafts yet.";
+    contentDraftList.appendChild(empty);
+    return;
+  }
+
+  drafts.forEach((draft) => {
+    const card = document.createElement("div");
+    card.className = "content-card";
+    card.dataset.id = draft.id;
+
+    const top = document.createElement("div");
+    top.className = "content-card-top";
+
+    const title = document.createElement("div");
+    title.className = "content-card-title";
+    title.textContent = draft.topicTitle || draft.hook || "Untitled draft";
+
+    const status = document.createElement("div");
+    status.className = "content-status";
+    status.dataset.status = normalizeContentStatus(draft.status);
+    status.textContent = CONTENT_STATUS_LABELS[normalizeContentStatus(draft.status)];
+
+    top.appendChild(title);
+    top.appendChild(status);
+
+    const meta = document.createElement("div");
+    meta.className = "content-card-meta";
+    meta.textContent = formatContentMeta(formatRelativeTime(draft.updatedAt || draft.createdAt));
+
+    const preview = document.createElement("div");
+    preview.className = "content-card-meta";
+    preview.textContent = draft.hook || draft.insight || "No hook added yet.";
+
+    const actions = document.createElement("div");
+    actions.className = "content-card-actions";
+    const editBtn = document.createElement("button");
+    editBtn.className = "content-action-btn";
+    editBtn.dataset.action = "edit";
+    editBtn.dataset.id = draft.id;
+    editBtn.textContent = "Edit";
+    actions.appendChild(editBtn);
+
+    if (draft.status === "draft") {
+      const requestBtn = document.createElement("button");
+      requestBtn.className = "content-action-btn";
+      requestBtn.dataset.action = "request";
+      requestBtn.dataset.id = draft.id;
+      requestBtn.textContent = "Request Approval";
+      actions.appendChild(requestBtn);
+    } else if (draft.status === "pending_approval") {
+      const approveBtn = document.createElement("button");
+      approveBtn.className = "content-action-btn";
+      approveBtn.dataset.action = "approve";
+      approveBtn.dataset.id = draft.id;
+      approveBtn.textContent = "Approve";
+      actions.appendChild(approveBtn);
+
+      const rejectBtn = document.createElement("button");
+      rejectBtn.className = "content-action-btn";
+      rejectBtn.dataset.action = "reject";
+      rejectBtn.dataset.id = draft.id;
+      rejectBtn.textContent = "Reject";
+      actions.appendChild(rejectBtn);
+    }
+
+    card.appendChild(top);
+    card.appendChild(meta);
+    card.appendChild(preview);
+    card.appendChild(actions);
+    contentDraftList.appendChild(card);
+  });
+}
+
+function renderPipelineQueue(drafts = []) {
+  if (!contentPipelineList) return;
+  contentPipelineList.innerHTML = "";
+
+  const queued = drafts.filter((draft) => ["approved", "scheduled"].includes(draft.status));
+  if (!queued.length) {
+    const empty = document.createElement("div");
+    empty.className = "timeline-empty";
+    empty.textContent = "No approved or scheduled posts yet.";
+    contentPipelineList.appendChild(empty);
+    return;
+  }
+
+  queued.forEach((draft) => {
+    const card = document.createElement("div");
+    card.className = "content-card";
+
+    const top = document.createElement("div");
+    top.className = "content-card-top";
+
+    const title = document.createElement("div");
+    title.className = "content-card-title";
+    title.textContent = draft.topicTitle || draft.hook || "Untitled draft";
+
+    const status = document.createElement("div");
+    status.className = "content-status";
+    status.dataset.status = normalizeContentStatus(draft.status);
+    status.textContent = CONTENT_STATUS_LABELS[normalizeContentStatus(draft.status)];
+
+    top.appendChild(title);
+    top.appendChild(status);
+
+    const meta = document.createElement("div");
+    meta.className = "content-card-meta";
+    const schedule = draft.scheduledFor ? `Scheduled: ${formatContentTimestamp(draft.scheduledFor)}` : "Not scheduled";
+    meta.textContent = formatContentMeta(schedule);
+
+    card.appendChild(top);
+    card.appendChild(meta);
+    contentPipelineList.appendChild(card);
+  });
+}
+
+function renderContentPipeline() {
+  const store = contentState.store || { signals: [], topics: [], drafts: [] };
+  renderContentStats(store);
+  renderRadarSignals(store.signals || []);
+  renderScoutTopics(store.topics || []);
+  renderDrafts(store.drafts || []);
+  renderPipelineQueue(store.drafts || []);
+
+  if (contentState.selectedDraftId) {
+    const active = (store.drafts || []).find((draft) => draft.id === contentState.selectedDraftId);
+    if (active) {
+      setContentDraftEditor(active);
+      return;
+    }
+  }
+  clearContentDraftEditor();
+}
+
+async function loadContentPipeline() {
+  try {
+    const res = await apiRequest("/content/pipeline");
+    if (res?.ok && res.store) {
+      contentState.store = res.store;
+      renderContentPipeline();
+      updateOfficeSimulation();
+    }
+  } catch (err) {
+    showToast("Failed to load content pipeline.", "error");
+  }
+}
+
+async function handleContentSignalSave() {
+  const title = String(contentSignalTitle?.value || "").trim();
+  const summary = String(contentSignalSummary?.value || "").trim();
+  const source = String(contentSignalSource?.value || "").trim();
+  const url = String(contentSignalUrl?.value || "").trim();
+
+  if (!title) {
+    showToast("Signal title is required.", "error");
+    return;
+  }
+
+  try {
+    await apiRequest("/content/radar", {
+      method: "POST",
+      body: { title, summary, source, url }
+    });
+    clearContentSignalForm();
+    await loadContentPipeline();
+    recordOfficeNote("scout", { lastTask: "Logged radar signal", nextAction: "Filter top topics" });
+    setOfficeOverride("scout", "done", 3000, { lastTask: "Logged radar signal", nextAction: "Filter top topics" });
+    showToast("Radar signal saved.", "ok");
+  } catch {
+    showToast("Failed to save radar signal.", "error");
+  }
+}
+
+async function handleContentTopicSave() {
+  const title = String(contentTopicTitle?.value || "").trim();
+  const rationale = String(contentTopicRationale?.value || "").trim();
+
+  if (!title) {
+    showToast("Topic title is required.", "error");
+    return;
+  }
+
+  try {
+    await apiRequest("/content/scout", {
+      method: "POST",
+      body: { title, rationale, signalIds: [] }
+    });
+    clearContentTopicForm();
+    await loadContentPipeline();
+    recordOfficeNote("scout", { lastTask: "Promoted topic", nextAction: "Hand off to Quill" });
+    setOfficeOverride("scout", "done", 3000, { lastTask: "Promoted topic", nextAction: "Hand off to Quill" });
+    showToast("Scout topic saved.", "ok");
+  } catch {
+    showToast("Failed to save scout topic.", "error");
+  }
+}
+
+function getDraftEditorPayload() {
+  return {
+    topicTitle: String(contentDraftTopic?.value || "").trim(),
+    hook: String(contentDraftHook?.value || "").trim(),
+    explanation: String(contentDraftExplanation?.value || "").trim(),
+    insight: String(contentDraftInsight?.value || "").trim(),
+    cta: String(contentDraftCta?.value || "").trim(),
+    status: normalizeContentStatus(contentDraftStatus?.value || "draft"),
+    scheduledFor: parseScheduleInput(contentDraftSchedule?.value || "")
+  };
+}
+
+async function handleContentDraftSave() {
+  const payload = getDraftEditorPayload();
+  if (!payload.topicTitle && !payload.hook) {
+    showToast("Add a topic title or hook before saving.", "error");
+    return;
+  }
+  if (payload.status === "scheduled" && !payload.scheduledFor) {
+    showToast("Pick a schedule time before marking as scheduled.", "error");
+    return;
+  }
+
+  try {
+    if (contentState.selectedDraftId) {
+      await apiRequest(`/content/draft/${encodeURIComponent(contentState.selectedDraftId)}`, {
+        method: "POST",
+        body: payload
+      });
+      await loadContentPipeline();
+      showToast("Draft updated.", "ok");
+    } else {
+      const res = await apiRequest("/content/draft", {
+        method: "POST",
+        body: payload
+      });
+      contentState.selectedDraftId = res?.draft?.id || "";
+      await loadContentPipeline();
+      recordOfficeNote("quill", { lastTask: "Created draft", nextAction: "Refine hook and insight" });
+      setOfficeOverride("quill", "done", 3000, { lastTask: "Created draft", nextAction: "Refine hook and insight" });
+      showToast("Draft created.", "ok");
+    }
+  } catch {
+    showToast("Failed to save draft.", "error");
+  }
+}
+
+async function handleContentDraftStatusChange(status) {
+  if (!contentState.selectedDraftId) {
+    showToast("Select a draft first.", "error");
+    return;
+  }
+  try {
+    await apiRequest(`/content/draft/${encodeURIComponent(contentState.selectedDraftId)}`, {
+      method: "POST",
+      body: { status }
+    });
+    await loadContentPipeline();
+    recordOfficeNote("quill", {
+      lastTask: `Status set to ${CONTENT_STATUS_LABELS[normalizeContentStatus(status)]}`,
+      nextAction: status === "pending_approval" ? "Awaiting approval" : "Finalize for pipeline"
+    });
+    if (status === "approved" || status === "scheduled") {
+      setOfficeOverride("quill", "done", 3000, {
+        lastTask: `Approved: ${CONTENT_STATUS_LABELS[normalizeContentStatus(status)]}`,
+        nextAction: "Return to idle"
+      });
+    }
+    showToast(`Draft marked ${CONTENT_STATUS_LABELS[normalizeContentStatus(status)]}.`, "ok");
+  } catch {
+    showToast("Failed to update draft status.", "error");
+  }
+}
+
+async function promoteSignalToTopic(signalId) {
+  const signal = (contentState.store?.signals || []).find((item) => item.id === signalId);
+  if (!signal) return;
+  try {
+    await apiRequest("/content/scout", {
+      method: "POST",
+      body: { title: signal.title, rationale: signal.summary, signalIds: [signal.id] }
+    });
+    await loadContentPipeline();
+    recordOfficeNote("scout", { lastTask: "Signal promoted to topic", nextAction: "Draft with Quill" });
+    setOfficeOverride("scout", "done", 3000, { lastTask: "Signal promoted to topic", nextAction: "Draft with Quill" });
+    showToast("Signal promoted to Scout topic.", "ok");
+  } catch {
+    showToast("Failed to promote signal.", "error");
+  }
+}
+
+async function createDraftFromTopic(topicId) {
+  const topic = (contentState.store?.topics || []).find((item) => item.id === topicId);
+  if (!topic) return;
+  try {
+    const res = await apiRequest("/content/draft", {
+      method: "POST",
+      body: {
+        topicId: topic.id,
+        topicTitle: topic.title,
+        hook: "",
+        explanation: "",
+        insight: "",
+        cta: "",
+        status: "draft"
+      }
+    });
+    contentState.selectedDraftId = res?.draft?.id || "";
+    await loadContentPipeline();
+    recordOfficeNote("quill", { lastTask: "Draft created from topic", nextAction: "Write hook" });
+    setOfficeOverride("quill", "done", 3000, { lastTask: "Draft created from topic", nextAction: "Write hook" });
+    showToast("Draft created from topic.", "ok");
+  } catch {
+    showToast("Failed to create draft.", "error");
+  }
+}
+
+function handleContentRadarListClick(event) {
+  const btn = event.target?.closest?.("button");
+  if (!btn) return;
+  const action = String(btn.dataset.action || "");
+  const id = String(btn.dataset.id || "");
+  if (action === "promote" && id) {
+    void promoteSignalToTopic(id);
+  }
+}
+
+function handleContentScoutListClick(event) {
+  const btn = event.target?.closest?.("button");
+  if (!btn) return;
+  const action = String(btn.dataset.action || "");
+  const id = String(btn.dataset.id || "");
+  if (action === "draft" && id) {
+    void createDraftFromTopic(id);
+  }
+}
+
+function handleContentDraftListClick(event) {
+  const btn = event.target?.closest?.("button");
+  const card = event.target?.closest?.(".content-card");
+  const id = String(btn?.dataset?.id || card?.dataset?.id || "");
+  const action = String(btn?.dataset?.action || "");
+
+  if (action === "edit" && id) {
+    const draft = (contentState.store?.drafts || []).find((item) => item.id === id);
+    setContentDraftEditor(draft);
+    return;
+  }
+  if (action === "request" && id) {
+    contentState.selectedDraftId = id;
+    void handleContentDraftStatusChange("pending_approval");
+    return;
+  }
+  if (action === "approve" && id) {
+    contentState.selectedDraftId = id;
+    void handleContentDraftStatusChange("approved");
+    return;
+  }
+  if (action === "reject" && id) {
+    contentState.selectedDraftId = id;
+    void handleContentDraftStatusChange("rejected");
+    return;
+  }
+
+  if (!action && id) {
+    const draft = (contentState.store?.drafts || []).find((item) => item.id === id);
+    setContentDraftEditor(draft);
+  }
+}
+
+// ===== OFFICE SIMULATION MODULE =====
+function initOfficeSimulation() {
+  if (!officeView || !officeAgentPool) return;
+  officeAgentPool.innerHTML = "";
+  OFFICE_AGENTS.forEach((agent) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "office-agent-row";
+    row.dataset.agent = agent.id;
+    row.dataset.status = "idle";
+    row.title = `${agent.role} \u00b7 ${agent.mapsTo}`;
+
+    const dot = document.createElement("span");
+    dot.className = "agent-dot";
+
+    const meta = document.createElement("div");
+    meta.className = "agent-meta";
+    meta.innerHTML = `
+      <div class="agent-name">${agent.name}</div>
+      <div class="agent-role">${agent.role}</div>
+    `;
+
+    const status = document.createElement("div");
+    status.className = "agent-status";
+    status.textContent = "IDLE";
+
+    row.appendChild(dot);
+    row.appendChild(meta);
+    row.appendChild(status);
+
+    row.addEventListener("click", () => {
+      setOfficeActiveAgent(agent.id);
+      if (row.dataset.status === "waiting_for_you") {
+        handleOfficeAgentAction(agent.id);
+      }
+    });
+
+    officeAgentPool.appendChild(row);
+
+    officeState.nodes[agent.id] = {
+      card: row,
+      row,
+      dot,
+      status
+    };
+
+     if (!officeState.agents[agent.id]) {
+       officeState.agents[agent.id] = {
+         lastTask: "No recent task",
+         nextAction: "Standing by",
+         status: "idle"
+       };
+     }
+     if (agent.id === "henry" && officeState.agents[agent.id]?.lastTask === "No recent task") {
+       officeState.agents[agent.id].lastTask = "Build Council - S…";
+       officeState.agents[agent.id].nextAction = "Review with you";
+     }
+   });
+}
+
+function closeOfficeInfo() {
+  return;
+}
+
+function recordOfficeNote(agentId, { lastTask, nextAction } = {}) {
+  if (!agentId) return;
+  const entry = officeState.agents[agentId] || { lastTask: "", nextAction: "", status: "idle" };
+  if (lastTask !== undefined) entry.lastTask = lastTask;
+  if (nextAction !== undefined) entry.nextAction = nextAction;
+  officeState.agents[agentId] = entry;
+}
+
+function normalizeHumorEntry(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const text = String(entry.text || "").trim();
+  if (!text) return null;
+  return {
+    id: String(entry.id || `humor_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
+    text,
+    type: String(entry.type || "line").trim().toLowerCase() || "line",
+    tone: String(entry.tone || "witty").trim().toLowerCase() || "witty",
+    source: String(entry.source || "user").trim().toLowerCase() || "user",
+    agent: String(entry.agent || "all").trim().toLowerCase() || "all",
+    createdAt: String(entry.createdAt || new Date().toISOString())
+  };
+}
+
+function migrateLegacyHumor(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+  const entries = [];
+  Object.entries(raw).forEach(([key, lines]) => {
+    if (!Array.isArray(lines)) return;
+    lines.forEach((line) => {
+      const text = String(line || "").trim();
+      if (!text) return;
+      entries.push({
+        text,
+        type: "line",
+        tone: "witty",
+        source: "user",
+        agent: key || "all"
+      });
+    });
+  });
+  return entries.map(normalizeHumorEntry).filter(Boolean);
+}
+
+function ensureHumorMemory() {
+  if (officeState.humorMemory) return officeState.humorMemory;
+  let stored = null;
+  try {
+    const raw = localStorage.getItem(HUMOR_MEMORY_KEY);
+    stored = raw ? JSON.parse(raw) : null;
+  } catch {
+    stored = null;
+  }
+
+  let entries = [];
+  if (stored && Array.isArray(stored.entries)) {
+    entries = stored.entries.map(normalizeHumorEntry).filter(Boolean);
+  } else {
+    let legacy = null;
+    try {
+      const rawLegacy = localStorage.getItem(HUMOR_MEMORY_LEGACY_KEY);
+      legacy = rawLegacy ? JSON.parse(rawLegacy) : null;
+    } catch {
+      legacy = null;
+    }
+    entries = migrateLegacyHumor(legacy);
+  }
+
+  const baseEntries = DEFAULT_HUMOR_LINES.map(normalizeHumorEntry).filter(Boolean);
+  const combined = [...baseEntries, ...entries];
+  officeState.humorMemory = { entries: combined.slice(-220) };
+  return officeState.humorMemory;
+}
+
+function saveHumorMemory() {
+  if (!officeState.humorMemory) return;
+  try {
+    localStorage.setItem(HUMOR_MEMORY_KEY, JSON.stringify(officeState.humorMemory));
+  } catch {}
+}
+
+function addHumorEntry({ agent = "all", text, type = "line", tone = "witty", source = "user" } = {}) {
+  const clean = String(text || "").trim();
+  if (!clean) return false;
+  const entry = normalizeHumorEntry({ agent, text: clean, type, tone, source });
+  if (!entry) return false;
+  const memory = ensureHumorMemory();
+  memory.entries.push(entry);
+  memory.entries = memory.entries.slice(-220);
+  saveHumorMemory();
+  return true;
+}
+
+function getHumorSummary() {
+  const memory = ensureHumorMemory();
+  const entries = memory.entries || [];
+  const byAgent = entries.reduce((acc, entry) => {
+    const key = entry.agent || "all";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  return { total: entries.length, byAgent };
+}
+
+function handleOfficeHumorAdd() {
+  if (!officeHumorText) return;
+  const agentId = String(officeHumorAgent?.value || "all").trim().toLowerCase();
+  const line = String(officeHumorText.value || "").trim();
+  if (!line) {
+    showToast("Add a humor line first.", "error");
+    return;
+  }
+  const ok = addHumorEntry({ agent: agentId, text: line, type: "line", tone: "witty", source: "user" });
+  if (ok) {
+    officeHumorText.value = "";
+    const summary = getHumorSummary();
+    showToast(`Humor memory updated (${summary.total}).`, "ok");
+  }
+}
+
+function pickRandom(list) {
+  if (!list || !list.length) return "";
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function generateHumorLine(agentId) {
+  if (agentId === "henry") {
+    const noun = pickRandom(["signal", "decision", "pattern", "tradeoff"]);
+    const meaning = pickRandom(["a lesson", "a cost", "a consequence", "a direction"]);
+    return { text: `Every ${noun} has ${meaning}.`, tone: "reflective", type: "idea" };
+  }
+  if (agentId === "scout") {
+    const count = pickRandom(["two", "three", "five", "ten"]);
+    const noun = pickRandom(["threads", "angles", "rabbit holes", "questions"]);
+    return { text: `Pulled one thread. Found ${count} more ${noun}.`, tone: "witty", type: "line" };
+  }
+  if (agentId === "quill") {
+    const style = pickRandom(["sharp", "poetic", "lean", "dramatic"]);
+    const finish = pickRandom(["and still true", "without losing the point", "with a clean hook", "but grounded"]);
+    return { text: `We can make it ${style} ${finish}.`, tone: "dramatic", type: "line" };
+  }
+  if (agentId === "codex") {
+    const verb = pickRandom(["optimizing", "compiling", "reducing", "shipping"]);
+    const noun = pickRandom(["latency", "diffs", "risk", "noise"]);
+    return { text: `${verb.charAt(0).toUpperCase() + verb.slice(1)} ${noun}. Humor optional.`, tone: "sarcastic", type: "line" };
+  }
+  return { text: "Quiet room, loud focus.", tone: "witty", type: "line" };
+}
+
+function pickHumorLine(agentId) {
+  const memory = ensureHumorMemory();
+  const pool = (memory.entries || []).filter((entry) => {
+    if (!entry || !entry.text) return false;
+    if (entry.agent === "all") return true;
+    return entry.agent === agentId;
+  });
+  if (pool.length && Math.random() < 0.75) {
+    return pickRandom(pool);
+  }
+  const generated = generateHumorLine(agentId);
+  if (generated?.text) {
+    addHumorEntry({ agent: agentId, text: generated.text, type: generated.type, tone: generated.tone, source: "agent" });
+  }
+  return generated;
+}
+
+function mapDashboardAgentToOffice(agent) {
+  const normalized = String(agent || "").trim().toLowerCase();
+  if (normalized === "coach") return "henry";
+  if (normalized === "scout") return "scout";
+  if (normalized === "builder") return "codex";
+  if (normalized === "strategist") return "henry";
+  if (normalized === "think tank" || normalized === "thinktank") return "henry";
+  return "henry";
+}
+
+function setOfficeOverride(agentId, status, ttlMs = 0, meta = {}) {
+  if (!agentId) return;
+  const expiresAt = ttlMs ? Date.now() + ttlMs : null;
+  officeState.overrides[agentId] = { status, expiresAt, meta };
+  updateOfficeSimulation();
+}
+
+function getOfficeOverride(agentId) {
+  const entry = officeState.overrides[agentId];
+  if (!entry) return null;
+  if (entry.expiresAt && Date.now() > entry.expiresAt) {
+    delete officeState.overrides[agentId];
+    return null;
+  }
+  return entry;
+}
+
+function deriveHenryStatus() {
+  const tasks = officeState.tasks || [];
+  const statuses = tasks.map((task) => String(task?.status || "").toLowerCase());
+  if (statuses.some((status) => ["kill", "rejected"].includes(status))) return "blocked";
+  if (statuses.some((status) => ["awaiting_approval", "approve"].includes(status))) return "waiting_for_you";
+  if (statuses.some((status) => ["assigned", "proposed", "created", "revise"].includes(status))) return "working";
+  return "idle";
+}
+
+function deriveScoutStatus() {
+  const store = contentState.store || { signals: [], topics: [] };
+  const signalCount = store.signals?.length || 0;
+  const topicCount = store.topics?.length || 0;
+  if (!signalCount && !topicCount) return "idle";
+  return signalCount > topicCount ? "working" : "idle";
+}
+
+function deriveQuillStatus() {
+  const drafts = contentState.store?.drafts || [];
+  if (!drafts.length) return "idle";
+  if (drafts.some((draft) => draft.status === "pending_approval")) return "waiting_for_you";
+  if (drafts.some((draft) => draft.status === "rejected")) return "blocked";
+  if (drafts.some((draft) => draft.status === "draft")) return "working";
+  return "idle";
+}
+
+function deriveDefaultStatus(agentConfig) {
+  if (!agentConfig) return "idle";
+  if (agentConfig.id === "henry") return deriveHenryStatus();
+  if (agentConfig.id === "scout") return deriveScoutStatus();
+  if (agentConfig.id === "quill") return deriveQuillStatus();
+
+  const runtimeStatus = String(runtimeAgentStatuses?.[agentConfig.mapsTo] || "").toLowerCase();
+  if (runtimeStatus === "thinking" || runtimeStatus === "speaking" || runtimeStatus === "listening") return "working";
+  return "idle";
+}
+
+function applyOfficeCoolerCluster(node, agentState, enabled) {
+  if (!node?.card) return;
+  if (enabled && officeCoolerList) {
+    if (!agentState.clusterOffset) {
+      const agentId = node.card.dataset.agent || "";
+      const index = OFFICE_AGENTS.findIndex((agent) => agent.id === agentId);
+      const base = OFFICE_COOLER_OFFSETS[index >= 0 ? index : 0] || { x: 0, y: 0 };
+      const jitter = {
+        x: Math.round((Math.random() - 0.5) * 10),
+        y: Math.round((Math.random() - 0.5) * 10)
+      };
+      agentState.clusterOffset = {
+        x: base.x + jitter.x,
+        y: base.y + jitter.y
+      };
+    }
+    node.card.classList.add("in-cooler");
+    node.card.style.setProperty("--cluster-x", `${agentState.clusterOffset.x}px`);
+    node.card.style.setProperty("--cluster-y", `${agentState.clusterOffset.y}px`);
+  } else {
+    node.card.classList.remove("in-cooler");
+    node.card.style.removeProperty("--cluster-x");
+    node.card.style.removeProperty("--cluster-y");
+  }
+}
+
+function animateOfficeMove(card, fromRect, toRect, agentId) {
+  if (!card || !fromRect || !toRect) return;
+  const deltaX = fromRect.left - toRect.left;
+  const deltaY = fromRect.top - toRect.top;
+  if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+  card.style.transition = "transform 600ms ease";
+  card.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+  card.getBoundingClientRect();
+  requestAnimationFrame(() => {
+    card.classList.add("moving");
+    card.style.transform = "";
+  });
+  if (officeState.moveTimers[agentId]) {
+    clearTimeout(officeState.moveTimers[agentId]);
+  }
+  officeState.moveTimers[agentId] = setTimeout(() => {
+    card.classList.remove("moving");
+    card.style.transition = "";
+    card.style.transform = "";
+  }, 650);
+}
+
+function updateOfficeAgent(agentConfig) {
+  if (!agentConfig) return;
+  const node = officeState.nodes[agentConfig.id];
+  if (!node) return;
+
+  const override = getOfficeOverride(agentConfig.id);
+  const status = override?.status || deriveDefaultStatus(agentConfig);
+  const meta = override?.meta || {};
+  const agentState = officeState.agents[agentConfig.id] || { lastTask: "", nextAction: "" };
+  const prevStatus = agentState.status;
+  const lastTask = meta.lastTask ?? agentState.lastTask ?? "";
+  let nextAction = meta.nextAction ?? agentState.nextAction ?? "";
+  if (!nextAction && status === "waiting_for_you") nextAction = "Needs your input";
+  if (!nextAction && status === "blocked") nextAction = "Unblock or revise";
+
+  agentState.status = status;
+  agentState.lastTask = lastTask;
+  agentState.nextAction = nextAction;
+  officeState.agents[agentConfig.id] = agentState;
+
+  if (prevStatus && prevStatus !== status) {
+    node.card.classList.add("pulse");
+    if (officeState.pulseTimers[agentConfig.id]) {
+      clearTimeout(officeState.pulseTimers[agentConfig.id]);
+    }
+    officeState.pulseTimers[agentConfig.id] = setTimeout(() => {
+      node.card.classList.remove("pulse");
+    }, 900);
+  }
+
+  node.card.dataset.status = status;
+  node.card.dataset.priority = "false";
+  const label = status.replace(/_/g, " ").toUpperCase();
+  if (node.status) node.status.textContent = label;
+  if (node.row) node.row.dataset.status = status;
+}
+
+function formatOfficeStatus(status = "") {
+  return status.replace(/_/g, " ");
+}
+
+function setOfficeActiveAgent(agentId) {
+  if (!agentId) return;
+  officeState.activeAgentId = agentId;
+  updateOfficeCommandPanel();
+  updateOfficeControlPanel();
+}
+
+function syncOfficeActiveAgent() {
+  const active = officeState.activeAgentId;
+  const exists = OFFICE_AGENTS.some((agent) => agent.id === active);
+  if (exists) return;
+  const waiting = OFFICE_AGENTS.find((agent) => officeState.agents[agent.id]?.status === "waiting_for_you");
+  const working = OFFICE_AGENTS.find((agent) => officeState.agents[agent.id]?.status === "working");
+  officeState.activeAgentId = waiting?.id || working?.id || OFFICE_AGENTS[0]?.id || "";
+}
+
+function updateOfficeCommandPanel() {
+  if (!officeCommandActive || !officeCommandEmpty) return;
+  const agentId = officeState.activeAgentId;
+  const agent = OFFICE_AGENTS.find((item) => item.id === agentId);
+  if (!agent) {
+    officeCommandActive.classList.add("hidden");
+    officeCommandEmpty.classList.remove("hidden");
+    return;
+  }
+
+  Object.values(officeState.nodes).forEach((node) => {
+    if (!node?.card) return;
+    node.card.classList.toggle("active", node.card.dataset.agent === agentId);
+  });
+
+  const agentState = officeState.agents[agentId] || {};
+  const status = agentState.status || "idle";
+  const statusLabel = formatOfficeStatus(status);
+  const task = agentState.lastTask && agentState.lastTask !== "No recent task" ? agentState.lastTask : "No active task";
+  const nextAction = agentState.nextAction || "";
+
+  if (officeCommandName) officeCommandName.textContent = agent.name;
+  if (officeCommandRole) officeCommandRole.textContent = agent.role;
+  if (officeCommandStatus) officeCommandStatus.textContent = statusLabel.toUpperCase();
+  if (officeCommandTask) officeCommandTask.textContent = task;
+  officeCommandActive.dataset.status = status;
+
+  if (officeCommandLogs) {
+    const logs = [];
+    if (status === "working") logs.push("Status: Processing task");
+    if (status === "waiting_for_you") logs.push("Status: Awaiting approval");
+    if (status === "blocked") logs.push("Status: Blocked");
+    if (status === "done") logs.push("Status: Completed");
+    if (task && task !== "No active task") logs.push(`Task: ${task}`);
+    if (nextAction) logs.push(`Next: ${nextAction}`);
+    if (!logs.length) logs.push("Standing by.");
+    officeCommandLogs.innerHTML = logs.map((line) => `<li>${line}</li>`).join("");
+  }
+
+  officeCommandEmpty.classList.add("hidden");
+  officeCommandActive.classList.remove("hidden");
+
+  if (officeState.lastActiveAgentId !== agentId) {
+    officeState.lastActiveAgentId = agentId;
+    officeCommandActive.classList.remove("arrive");
+    requestAnimationFrame(() => {
+      officeCommandActive.classList.add("arrive");
+    });
+    setTimeout(() => {
+      officeCommandActive.classList.remove("arrive");
+    }, 520);
+  }
+}
+
+function updateOfficeControlPanel() {
+  if (!officeControlDecisions) return;
+  const waitingAgents = OFFICE_AGENTS.filter((agent) => officeState.agents[agent.id]?.status === "waiting_for_you");
+  if (!waitingAgents.length) {
+    officeControlDecisions.innerHTML = `<div class="control-empty">No pending approvals.</div>`;
+    return;
+  }
+  officeControlDecisions.innerHTML = waitingAgents
+    .map(
+      (agent) => `
+        <div class="control-item" data-agent="${agent.id}">
+          <span class="control-dot"></span>
+          <span class="control-name">${agent.name}</span>
+          <button class="top-btn control-review" type="button" data-agent="${agent.id}">Review</button>
+        </div>
+      `
+    )
+    .join("");
+  officeControlDecisions.querySelectorAll(".control-review").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      const id = event.currentTarget?.dataset?.agent;
+      if (!id) return;
+      setOfficeActiveAgent(id);
+      handleOfficeAgentAction(id);
+    });
+  });
+}
+
+function updateOfficePoolStatus() {
+  if (!officePoolStatus) return;
+  const statuses = OFFICE_AGENTS.map((agent) => officeState.agents[agent.id]?.status || "idle");
+  const idle = statuses.filter((status) => status === "idle").length;
+  const working = statuses.filter((status) => status === "working").length;
+  const waiting = statuses.filter((status) => status === "waiting_for_you").length;
+  const blocked = statuses.filter((status) => status === "blocked").length;
+  officePoolStatus.textContent = `Idle: ${idle} • Working: ${working} • Waiting: ${waiting} • Blocked: ${blocked}`;
+}
+
+function updateOfficeSimulation() {
+  if (!officeView) return;
+  OFFICE_AGENTS.forEach((agent) => updateOfficeAgent(agent));
+  applyOfficeAttentionBalance();
+  syncOfficeActiveAgent();
+  updateOfficeCommandPanel();
+  updateOfficeControlPanel();
+  updateOfficePoolStatus();
+  const nextMode = computeOfficeMode();
+  if (nextMode !== officeState.mode) {
+    updateOfficeMode(nextMode);
+    scheduleOfficeChatter();
+  }
+  if (state.view === "office") {
+    renderOffice2AgentCards();
+  }
+}
+
+function applyOfficeAttentionBalance() {
+  const waitingAgents = OFFICE_AGENTS.filter((agent) => officeState.agents[agent.id]?.status === "waiting_for_you");
+  const waitingNow = waitingAgents.length > 0;
+  let primary = officeState.attentionLeaderId;
+  if (!primary || !waitingAgents.some((agent) => agent.id === primary)) {
+    primary = waitingAgents.length ? waitingAgents[0].id : "";
+  }
+  officeState.attentionLeaderId = primary;
+  if (waitingNow !== officeState.waitingActive) {
+    officeState.waitingActive = waitingNow;
+    scheduleOfficeChatter();
+  }
+  if (officeView) {
+    if (primary) {
+      officeView.dataset.attention = "true";
+    } else {
+      delete officeView.dataset.attention;
+    }
+  }
+  OFFICE_AGENTS.forEach((agent) => {
+    const node = officeState.nodes[agent.id];
+    if (!node?.card) return;
+    const isPrimary = primary && agent.id === primary;
+    if (primary && !isPrimary) {
+      node.card.classList.add("subtle");
+    } else {
+      node.card.classList.remove("subtle");
+    }
+    node.card.dataset.priority = isPrimary ? "true" : "false";
+  });
+  updateOfficeModeChip();
+  if (waitingAgents.length > 1) {
+    waitingAgents.slice(1).forEach((agent) => {
+      if (officeState.overrides[agent.id]?.status === "idle") return;
+      setOfficeOverride(agent.id, "idle", 4000, {
+        lastTask: "Queued for attention",
+        nextAction: "Stand by",
+        queuedForAttention: true
+      });
+    });
+  }
+}
+
+function handleOfficeAgentAction(agentId) {
+  if (!agentId) return;
+  setOfficeOverride(agentId, "working", 5000, {
+    lastTask: "Reviewing with you",
+    nextAction: "Complete review"
+  });
+  if (agentId === "quill") {
+    setView("content");
+    const pending = contentState.store?.drafts?.find((draft) => draft.status === "pending_approval");
+    if (pending) {
+      contentState.selectedDraftId = pending.id;
+      renderContentPipeline();
+    }
+    showToast("Review pending drafts for approval.", "ok");
+    return;
+  }
+
+  if (agentId === "henry") {
+    setView("dashboard");
+    showToast("Pending tasks need a decision.", "ok");
+    return;
+  }
+
+  if (agentId === "codex") {
+    setView("dashboard");
+    showToast("Check Codex output in the dashboard thread.", "ok");
+    return;
+  }
+
+  if (agentId === "scout") {
+    setView("content");
+    showToast("Review signals and promote topics.", "ok");
+  }
+}
+
+function handleOfficeCommandAction(action) {
+  const agentId = officeState.activeAgentId;
+  if (!agentId) {
+    showToast("Select an agent first.", "error");
+    return;
+  }
+  const agentState = officeState.agents[agentId] || {};
+  const status = agentState.status || "idle";
+  if (action === "approve") {
+    if (status === "waiting_for_you") {
+      handleOfficeAgentAction(agentId);
+      showToast("Approval sent.", "ok");
+      return;
+    }
+    setOfficeOverride(agentId, "done", 3000, {
+      lastTask: agentState.lastTask || "Approved task",
+      nextAction: "Return to pool"
+    });
+    showToast("Approved.", "ok");
+    return;
+  }
+  if (action === "edit") {
+    setOfficeOverride(agentId, "working", 6000, {
+      lastTask: agentState.lastTask || "Editing task",
+      nextAction: "Review edits"
+    });
+    showToast("Editing queued.", "ok");
+    return;
+  }
+  if (action === "retry") {
+    setOfficeOverride(agentId, "working", 6000, {
+      lastTask: agentState.lastTask || "Retrying task",
+      nextAction: "Await output"
+    });
+    showToast("Retry started.", "ok");
+    return;
+  }
+  if (action === "cancel") {
+    setOfficeOverride(agentId, "blocked", 4000, {
+      lastTask: agentState.lastTask || "Canceled",
+      nextAction: "Await new task"
+    });
+    showToast("Canceled.", "ok");
+  }
+}
+
+function pauseAllOfficeAgents() {
+  OFFICE_AGENTS.forEach((agent) => {
+    setOfficeOverride(agent.id, "idle", 6000, {
+      lastTask: "Paused",
+      nextAction: "Awaiting resume"
+    });
+  });
+  showToast("All agents paused.", "ok");
+}
+
+function overrideActiveOfficeAgent() {
+  const agentId = officeState.activeAgentId;
+  if (!agentId) {
+    showToast("Select an agent first.", "error");
+    return;
+  }
+  setOfficeOverride(agentId, "blocked", 5000, {
+    lastTask: "Override issued",
+    nextAction: "Awaiting your input"
+  });
+  showToast("Override applied.", "ok");
+}
+
+function hasPendingApprovals() {
+  const drafts = contentState.store?.drafts || [];
+  const pendingDrafts = drafts.some((draft) => draft.status === "pending_approval");
+  const tasks = officeState.tasks || [];
+  const pendingTasks = tasks.some((task) => ["awaiting_approval", "approve"].includes(String(task?.status || "").toLowerCase()));
+  return pendingDrafts || pendingTasks;
+}
+
+function hasUrgentTasks() {
+  const tasks = officeState.tasks || [];
+  const urgentTask = tasks.some((task) => ["kill", "rejected"].includes(String(task?.status || "").toLowerCase()));
+  const drafts = contentState.store?.drafts || [];
+  const urgentDraft = drafts.some((draft) => draft.status === "rejected");
+  return urgentTask || urgentDraft;
+}
+
+function getQueuedAttentionCount() {
+  const waitingAgents = OFFICE_AGENTS.filter((agent) => officeState.agents[agent.id]?.status === "waiting_for_you");
+  const waitingQueue = Math.max(0, waitingAgents.length - 1);
+  const queuedOverrides = Object.values(officeState.overrides || {}).filter(
+    (entry) => entry?.meta?.queuedForAttention
+  ).length;
+  return waitingQueue + queuedOverrides;
+}
+
+function updateOfficeCoolerSummary() {
+  if (!officeCoolerSummary) return;
+  const statuses = OFFICE_AGENTS.map((agent) => officeState.agents[agent.id]?.status || "idle");
+  const idleCount = statuses.filter((status) => status === "idle").length;
+  const workingCount = statuses.filter((status) => status === "working").length;
+  const blockedCount = statuses.filter((status) => status === "blocked").length;
+  const doneCount = statuses.filter((status) => status === "done").length;
+  const waitingCount = statuses.filter((status) => status === "waiting_for_you").length;
+  const queuedCount = getQueuedAttentionCount();
+  const lines = [];
+  if (officeState.attentionLeaderId) {
+    lines.push({
+      label: "Attention",
+      value: getOfficeAgentName(officeState.attentionLeaderId)
+    });
+  }
+  if (queuedCount) {
+    lines.push({ label: "Queued", value: `${queuedCount} waiting` });
+  }
+  if (hasPendingApprovals()) {
+    lines.push({ label: "Approvals", value: "Pending" });
+  }
+  if (hasUrgentTasks()) {
+    lines.push({ label: "Urgent", value: "Blockers" });
+  }
+  lines.push({ label: "Idle", value: String(idleCount) });
+  lines.push({ label: "Working", value: String(workingCount) });
+  if (waitingCount) lines.push({ label: "Waiting", value: String(waitingCount) });
+  if (blockedCount) lines.push({ label: "Blocked", value: String(blockedCount) });
+  if (doneCount) lines.push({ label: "Done", value: String(doneCount) });
+
+  officeCoolerSummary.innerHTML = lines
+    .map(
+      (line) =>
+        `<div class="cooler-line"><span class="cooler-label">${line.label}</span><span class="cooler-value">${line.value}</span></div>`
+    )
+    .join("");
+}
+
+function isOpenMicEligible() {
+  const statuses = OFFICE_AGENTS.map((agent) => officeState.agents[agent.id]?.status || "idle");
+  const allIdle = statuses.every((status) => status === "idle");
+  return allIdle && !hasPendingApprovals() && !hasUrgentTasks();
+}
+
+function computeOfficeMode() {
+  const statuses = OFFICE_AGENTS.map((agent) => officeState.agents[agent.id]?.status || "idle");
+  const idleCount = statuses.filter((status) => status === "idle").length;
+  if (isOpenMicEligible()) return "open_mic";
+  if (idleCount > 0) return "pulse";
+  return "flow";
+}
+
+function readOfficeBaseSize() {
+  if (!officeStage) return { width: 1200, height: 720 };
+  const styles = getComputedStyle(officeStage);
+  const baseW = parseFloat(styles.getPropertyValue("--office-base-w")) || 1200;
+  const baseH = parseFloat(styles.getPropertyValue("--office-base-h")) || 720;
+  return { width: baseW, height: baseH };
+}
+
+function setOfficeScale() {
+  if (!officeStage || !officeView || officeView.classList.contains("hidden")) return;
+  const rect = officeStage.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const { width: baseW, height: baseH } = readOfficeBaseSize();
+  const padding = 16;
+  const availableW = Math.max(0, rect.width - padding);
+  const availableH = Math.max(0, rect.height - padding);
+  let scale = Math.min(availableW / baseW, availableH / baseH);
+  scale = Math.max(0.95, Math.min(scale, 1.6));
+  officeStage.style.setProperty("--office-scale", scale.toFixed(3));
+}
+
+let officeScaleRaf = null;
+function scheduleOfficeScale() {
+  if (officeScaleRaf) cancelAnimationFrame(officeScaleRaf);
+  officeScaleRaf = requestAnimationFrame(() => {
+    setOfficeScale();
+    officeScaleRaf = null;
+  });
+}
+
+function getOfficeAgentName(agentId) {
+  const match = OFFICE_AGENTS.find((agent) => agent.id === agentId);
+  return match?.name || "Agent";
+}
+
+function applyOfficeStudioMode() {
+  const enabled = Boolean(officeState.studio);
+  const active = enabled && state.view === "office";
+  if (officeView) {
+    if (active) {
+      officeView.dataset.studio = "true";
+    } else {
+      delete officeView.dataset.studio;
+    }
+  }
+  if (document.body) {
+    if (active) {
+      document.body.dataset.officeStudio = "true";
+    } else {
+      delete document.body.dataset.officeStudio;
+    }
+  }
+  if (officeStudioToggle) {
+    officeStudioToggle.textContent = `Studio Mode: ${enabled ? "On" : "Off"}`;
+    officeStudioToggle.dataset.active = enabled ? "true" : "false";
+  }
+  scheduleOfficeScale();
+}
+
+function updateOfficeModeChip() {
+  const modeLabel = OFFICE_MODES[officeState.mode] || OFFICE_MODES.flow;
+  const attentionLabel = officeState.attentionLeaderId
+    ? ` \u00b7 Attention: ${getOfficeAgentName(officeState.attentionLeaderId)}`
+    : "";
+  if (officeModeChip) {
+    officeModeChip.textContent = `Mode: ${modeLabel}${attentionLabel}`;
+    officeModeChip.dataset.mode = officeState.mode;
+    officeModeChip.dataset.attention = officeState.attentionLeaderId ? "true" : "false";
+  }
+  if (officeAttentionChip) {
+    if (officeState.attentionLeaderId) {
+      officeAttentionChip.textContent = `Attention: ${getOfficeAgentName(officeState.attentionLeaderId)}`;
+      officeAttentionChip.classList.remove("hidden");
+    } else {
+      officeAttentionChip.classList.add("hidden");
+    }
+  }
+}
+
+function updateOfficeMode(nextMode) {
+  const normalized = OFFICE_MODES[nextMode] ? nextMode : "flow";
+  officeState.mode = normalized;
+  updateOfficeModeChip();
+  if (normalized !== "open_mic") {
+    clearOfficeSpeech();
+  }
+}
+
+function hasWaitingForYou() {
+  return OFFICE_AGENTS.some((agent) => officeState.agents[agent.id]?.status === "waiting_for_you");
+}
+
+function computeChatterDelay() {
+  const waiting = hasWaitingForYou();
+  const mode = officeState.mode;
+  let min = 30000;
+  let max = 45000;
+  if (mode === "pulse") {
+    min = 18000;
+    max = 26000;
+  }
+  if (mode === "open_mic") {
+    min = 6500;
+    max = 9500;
+  }
+  if (waiting) {
+    min += 12000;
+    max += 16000;
+  }
+  return Math.floor(min + Math.random() * (max - min));
+}
+
+function chooseAgentForChatter(mode) {
+  const waiting = hasWaitingForYou();
+  const candidates = OFFICE_AGENTS.filter((agent) => !waiting || officeState.agents[agent.id]?.status !== "waiting_for_you");
+  if (!candidates.length) return "";
+
+  const weighted = [];
+  candidates.forEach((agent) => {
+    const status = officeState.agents[agent.id]?.status || "idle";
+    const weight = status === "idle" ? 4 : 1;
+    for (let i = 0; i < weight; i += 1) {
+      weighted.push(agent.id);
+    }
+  });
+
+  let pick = pickRandom(weighted);
+  if (officeState.lastSpeakerId && weighted.length > 1 && pick === officeState.lastSpeakerId) {
+    pick = pickRandom(weighted.filter((id) => id !== officeState.lastSpeakerId));
+  }
+  officeState.lastSpeakerId = pick;
+  return pick;
+}
+
+function showOfficeSpeech(agentId, line, options = {}) {
+  const node = officeState.nodes[agentId];
+  if (!node?.speech) return;
+  clearOfficeSpeech();
+  const text = String(line || "").trim();
+  if (!text) return;
+  const maxLen = options.maxLen || 120;
+  const clipped = text.length > maxLen ? `${text.slice(0, maxLen - 3)}...` : text;
+  node.speech.textContent = clipped;
+  node.speech.classList.add("show");
+  const tone = options.tone || (options.subtle ? "background" : "primary");
+  node.speech.dataset.tone = tone;
+  if (officeState.speechTimers[agentId]) {
+    clearTimeout(officeState.speechTimers[agentId]);
+  }
+  officeState.speechTimers[agentId] = setTimeout(() => {
+    node.speech.classList.remove("show");
+    delete node.speech.dataset.tone;
+  }, 5200);
+}
+
+function clearOfficeSpeech() {
+  Object.values(officeState.nodes).forEach((node) => {
+    if (!node?.speech) return;
+    node.speech.classList.remove("show");
+    delete node.speech.dataset.tone;
+  });
+}
+
+function emitOfficeChatter() {
+  if (!officeState.active || !officeView || officeView.classList.contains("hidden")) return;
+  if (officeState.mode === "open_mic" && !isOpenMicEligible()) return;
+  const agentId = chooseAgentForChatter(officeState.mode);
+  if (!agentId) return;
+  const entry = pickHumorLine(agentId);
+  if (entry?.text) {
+    const waiting = hasWaitingForYou();
+    const subtle = officeState.mode !== "open_mic" || waiting;
+    showOfficeSpeech(agentId, entry.text, { subtle, maxLen: 120 });
+  }
+}
+
+function scheduleOfficeChatter() {
+  if (officeState.chatterTimer) {
+    clearTimeout(officeState.chatterTimer);
+    officeState.chatterTimer = null;
+  }
+  if (!officeState.active) return;
+  const delay = computeChatterDelay();
+  officeState.chatterTimer = setTimeout(() => {
+    emitOfficeChatter();
+    scheduleOfficeChatter();
+  }, delay);
+}
+
+async function loadOfficeTasks() {
+  try {
+    const res = await apiRequest("/tasks");
+    const tasks = res?.tasks && typeof res.tasks === "object" ? Object.values(res.tasks) : [];
+    officeState.tasks = tasks || [];
+  } catch {
+    officeState.tasks = [];
+  }
+}
+
+async function refreshOfficeData() {
+  await Promise.all([loadOfficeTasks(), loadContentPipeline()]);
+  updateOfficeSimulation();
+}
+
+function startOfficeSync() {
+  officeState.active = true;
+  ensureHumorMemory();
+  updateOfficeMode(computeOfficeMode());
+  updateOfficeSimulation();
+  if (officeState.timer) {
+    clearInterval(officeState.timer);
+    officeState.timer = null;
+  }
+  void refreshOfficeData();
+  officeState.timer = setInterval(() => {
+    void refreshOfficeData();
+  }, 6000);
+  scheduleOfficeChatter();
+}
+
+function stopOfficeSync() {
+  officeState.active = false;
+  if (officeState.timer) {
+    clearInterval(officeState.timer);
+    officeState.timer = null;
+  }
+  if (officeState.chatterTimer) {
+    clearTimeout(officeState.chatterTimer);
+    officeState.chatterTimer = null;
+  }
+  Object.values(officeState.speechTimers).forEach((timer) => clearTimeout(timer));
+  officeState.speechTimers = {};
+  clearOfficeSpeech();
 }
 
 // ===== SPEECH CLARITY MODULE =====
@@ -5316,7 +9424,134 @@ async function viewSession(id) {
 }
 
 function bindEvents() {
+  // Mission Control routing.
+  if (mcNavList) {
+    mcNavList.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.(".mc-nav-item");
+      if (!btn) return;
+      const view = String(btn.dataset.view || "tasks");
+      setView(view);
+    });
+  }
+
+  window.addEventListener("popstate", () => {
+    const view = mcViewFromPath(window.location.pathname) || "tasks";
+    setView(view, { silent: true, replace: true });
+  });
+
+  // Top bar controls.
+  if (mcPauseBtn) mcPauseBtn.addEventListener("click", pauseAllOfficeAgents);
+  if (mcPingBtn) {
+    mcPingBtn.addEventListener("click", () => {
+      setView("agents");
+      setOfficeActiveAgent("henry");
+      showToast("Pinged Henry.", "ok");
+    });
+  }
+  if (mcRefreshBtn) {
+    mcRefreshBtn.addEventListener("click", () => {
+      const route = window.location.pathname || "/tasks";
+      window.location.href = `${route}?ts=${Date.now()}`;
+    });
+  }
+  if (mcFeedbackBtn) {
+    mcFeedbackBtn.addEventListener("click", () => {
+      showToast("Feedback captured. (Wire this later.)", "ok");
+    });
+  }
+
+  if (mcCommandDrawerClose) mcCommandDrawerClose.addEventListener("click", closeCommandDrawer);
+  if (mcCommandDrawerBackdrop) mcCommandDrawerBackdrop.addEventListener("click", closeCommandDrawer);
+
+  if (mcSearchInput) {
+    mcSearchInput.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const value = String(mcSearchInput.value || "").trim();
+      if (!value) return;
+      showToast(`Search: ${value}`, "ok");
+    });
+  }
+  window.addEventListener("keydown", (e) => {
+    if (!mcSearchInput) return;
+    const isK = String(e.key || "").toLowerCase() === "k";
+    const hasMeta = e.metaKey || e.ctrlKey;
+    if (!isK || !hasMeta) return;
+    e.preventDefault();
+    mcSearchInput.focus();
+    mcSearchInput.select();
+  });
+
+  // Page controls.
+  if (memorySearchInput) {
+    memorySearchInput.addEventListener("input", (e) => {
+      missionControlState.memory.filter = String(e.target?.value || "");
+      renderMemoryPage();
+    });
+  }
+  const ltmCard = document.querySelector(".memory-ltm-card");
+  if (ltmCard) {
+    const trigger = () => showToast("Long-term memory (demo).", "ok");
+    ltmCard.addEventListener("click", trigger);
+    ltmCard.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      trigger();
+    });
+  }
+
+  if (calTodayBtn) {
+    calTodayBtn.addEventListener("click", () => {
+      missionControlState.calendar.selectedDay = new Date().getDay();
+      renderCalendarPage();
+    });
+  }
+  if (calRefreshBtn) calRefreshBtn.addEventListener("click", renderCalendarPage);
+  if (calWeekBtn) calWeekBtn.addEventListener("click", renderCalendarPage);
+
+  if (office2StartChatBtn) office2StartChatBtn.addEventListener("click", () => setView("talk", { query: "?focus=1" }));
+
+  if (talkUiModeBtn && !talkUiModeBtn.dataset.bound) {
+    talkUiModeBtn.dataset.bound = "1";
+    talkUiModeBtn.addEventListener("click", () => {
+      const enabled = !(talkView && talkView.classList.contains("talk-focus"));
+      setTalkFocusMode(enabled, { persist: true, updateUrl: true });
+      if (enabled && talkChatInput) talkChatInput.focus();
+    });
+  }
+
+  if (talkChatSendBtn && !talkChatSendBtn.dataset.bound) {
+    talkChatSendBtn.dataset.bound = "1";
+    talkChatSendBtn.addEventListener("click", handleTalkComposerSend);
+  }
+  if (talkChatInput && !talkChatInput.dataset.bound) {
+    talkChatInput.dataset.bound = "1";
+    talkChatInput.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || e.shiftKey) return;
+      e.preventDefault();
+      handleTalkComposerSend();
+    });
+    talkChatInput.addEventListener("input", () => {
+      // Auto-grow up to a gentle max height for a ChatGPT-like feel.
+      try {
+        talkChatInput.style.height = "auto";
+        const next = Math.min(140, Math.max(40, talkChatInput.scrollHeight));
+        talkChatInput.style.height = `${next}px`;
+      } catch {}
+    });
+  }
+
+  if (factoryBeltItems) {
+    factoryBeltItems.addEventListener("click", (e) => {
+      const pkg = e.target?.closest?.(".factory-package");
+      const itemId = String(pkg?.dataset?.itemId || "");
+      if (!itemId) return;
+      advanceFactoryItem(itemId);
+    });
+  }
+
   goDashboardBtn.addEventListener("click", () => setView("dashboard"));
+  if (goOfficeBtn) goOfficeBtn.addEventListener("click", () => setView("office"));
+  if (goContentBtn) goContentBtn.addEventListener("click", () => setView("content"));
   goTalkBtn.addEventListener("click", () => setView("talk"));
   const goSpeechBtn = document.getElementById("go-speech");
   if (goSpeechBtn) goSpeechBtn.addEventListener("click", () => setView("speech"));
@@ -5333,6 +9568,46 @@ function bindEvents() {
   decisionButtons.forEach((btn) => {
     btn.addEventListener("click", () => handleDecision(btn.dataset.action));
   });
+
+  if (contentSignalSave) contentSignalSave.addEventListener("click", handleContentSignalSave);
+  if (contentSignalClear) contentSignalClear.addEventListener("click", clearContentSignalForm);
+  if (contentTopicSave) contentTopicSave.addEventListener("click", handleContentTopicSave);
+  if (contentTopicClear) contentTopicClear.addEventListener("click", clearContentTopicForm);
+  if (contentDraftSave) contentDraftSave.addEventListener("click", handleContentDraftSave);
+  if (contentDraftRequest)
+    contentDraftRequest.addEventListener("click", () => handleContentDraftStatusChange("pending_approval"));
+  if (contentDraftApprove)
+    contentDraftApprove.addEventListener("click", () => handleContentDraftStatusChange("approved"));
+  if (contentDraftReject) contentDraftReject.addEventListener("click", () => handleContentDraftStatusChange("rejected"));
+  if (contentRadarList) contentRadarList.addEventListener("click", handleContentRadarListClick);
+  if (contentScoutList) contentScoutList.addEventListener("click", handleContentScoutListClick);
+  if (contentDraftList) contentDraftList.addEventListener("click", handleContentDraftListClick);
+  if (officeHumorAdd) officeHumorAdd.addEventListener("click", handleOfficeHumorAdd);
+  if (officeHumorText) {
+    officeHumorText.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleOfficeHumorAdd();
+      }
+    });
+  }
+  if (officeStudioToggle) {
+    officeStudioToggle.addEventListener("click", () => {
+      officeState.studio = !officeState.studio;
+      try {
+        localStorage.setItem(OFFICE_STUDIO_KEY, officeState.studio ? "1" : "0");
+      } catch {}
+      applyOfficeStudioMode();
+    });
+  }
+  if (officeActionApprove) officeActionApprove.addEventListener("click", () => handleOfficeCommandAction("approve"));
+  if (officeActionEdit) officeActionEdit.addEventListener("click", () => handleOfficeCommandAction("edit"));
+  if (officeActionRetry) officeActionRetry.addEventListener("click", () => handleOfficeCommandAction("retry"));
+  if (officeActionCancel) officeActionCancel.addEventListener("click", () => handleOfficeCommandAction("cancel"));
+  if (officeActionPause) officeActionPause.addEventListener("click", pauseAllOfficeAgents);
+  if (officeActionOverride) officeActionOverride.addEventListener("click", overrideActiveOfficeAgent);
+  if (officeActionViewLogs)
+    officeActionViewLogs.addEventListener("click", () => showToast("Logs appear in the command station.", "ok"));
 
   if (talkOrbButton) talkOrbButton.addEventListener("click", onOrbTap);
   if (talkTranscriptToggle) {
@@ -5637,6 +9912,7 @@ function bindEvents() {
   });
 
   window.addEventListener("resize", resizeOrbCanvas);
+  window.addEventListener("resize", scheduleOfficeScale);
   window.addEventListener("beforeunload", () => {
     stopReviewAutoplayTimer();
     stopTimelinePolling();
@@ -5647,6 +9923,7 @@ function bindEvents() {
 
 async function bootstrap() {
   bindEvents();
+  initOfficeSimulation();
   setSpeakerAnalyticsSort(speakerAnalyticsState.sortBy);
   renderSpeakerControlOptions();
   if (talkVoiceStyle) talkVoiceStyle.value = state.voiceStyle;
@@ -5661,8 +9938,11 @@ async function bootstrap() {
   setTranscriptExpanded(false);
   setVisionControlsVisible(false);
   setApiOnline(false);
+  ensureTalkDemoSeeded();
 
-  setView(state.view);
+  const initialFromPath = mcViewFromPath(window.location.pathname);
+  if (initialFromPath) state.view = initialFromPath;
+  setView(state.view, { silent: true, replace: true });
   requestAnimationFrame(() => {
     resizeOrbCanvas();
     requestAnimationFrame(drawOrb);
@@ -5672,9 +9952,9 @@ async function bootstrap() {
   updateTimelineControlUi();
   updateTtsToggleUi();
   updateStopVoiceBtnUi();
+  await refreshTimelineNow();
   renderChapters();
   renderSpeakerAnalytics();
-  await refreshTimelineNow();
   startTimelinePolling();
   await hydrateRuntimeStateFromLatestEvent();
   startRuntimeHeartbeat();

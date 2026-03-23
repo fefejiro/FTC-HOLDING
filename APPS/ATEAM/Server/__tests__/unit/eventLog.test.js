@@ -9,12 +9,14 @@ import {
   appendEvent,
   getEvents
 } from "../../lib/eventLog.js";
+import { resetDb } from "../../lib/sqliteDb.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const testRoot = path.join(__dirname, "..", "__event_log_tmp__");
 
 let previousEventLogDir = "";
+let previousSqlitePath = "";
 let currentCaseDir = "";
 
 function nextCaseDir() {
@@ -24,15 +26,19 @@ function nextCaseDir() {
 describe("eventLog", () => {
   beforeAll(() => {
     previousEventLogDir = process.env.ATEAM_EVENT_LOG_DIR || "";
+    previousSqlitePath = process.env.ATEAM_SQLITE_PATH || "";
     fs.mkdirSync(testRoot, { recursive: true });
   });
 
   beforeEach(() => {
     currentCaseDir = nextCaseDir();
     process.env.ATEAM_EVENT_LOG_DIR = currentCaseDir;
+    process.env.ATEAM_SQLITE_PATH = path.join(currentCaseDir, "mission_control.test.sqlite");
+    resetDb();
   });
 
   afterEach(() => {
+    resetDb();
     if (currentCaseDir && fs.existsSync(currentCaseDir)) {
       fs.rmSync(currentCaseDir, { recursive: true, force: true });
     }
@@ -42,6 +48,9 @@ describe("eventLog", () => {
   afterAll(() => {
     if (previousEventLogDir) process.env.ATEAM_EVENT_LOG_DIR = previousEventLogDir;
     else delete process.env.ATEAM_EVENT_LOG_DIR;
+
+    if (previousSqlitePath) process.env.ATEAM_SQLITE_PATH = previousSqlitePath;
+    else delete process.env.ATEAM_SQLITE_PATH;
 
     if (fs.existsSync(testRoot)) {
       fs.rmSync(testRoot, { recursive: true, force: true });
@@ -72,7 +81,7 @@ describe("eventLog", () => {
     expect(result.event.deduped).toBe(false);
     expect(result.event.duplicateCount).toBe(0);
     expect(fs.existsSync(path.resolve(currentCaseDir))).toBe(true);
-    expect(fs.existsSync(path.join(path.resolve(currentCaseDir), `${sessionId}.json`))).toBe(true);
+    expect(fs.existsSync(path.resolve(process.env.ATEAM_SQLITE_PATH))).toBe(true);
   });
 
   test("append then get returns events in order", () => {
