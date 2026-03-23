@@ -50,6 +50,11 @@ npm run smoke:prod
 
 The site runs on port `3001` (via `@ftc/config`).
 
+Cloudflare Pages / Vercel-style build note:
+
+- the build now includes a small compatibility step that mirrors `.next` into the monorepo path expected by the hosted build pipeline
+- this keeps the existing stack intact and avoids introducing a new deployment service
+
 ## Core public journey
 
 1. Visitor lands on the public site and learns what Una Labs offers.

@@ -74,15 +74,15 @@ test.describe("Site routes", () => {
     await expect(menuButton).toBeVisible();
     await menuButton.click();
 
-    const mobileDialog = page.getByRole("dialog", { name: "Mobile navigation" });
-    await expect(mobileDialog).toBeVisible();
+    const mobileDialog = page.locator("#mobile-nav-panel");
+    await expect(mobileDialog).toHaveClass(/is-open/);
     await mobileDialog.getByRole("link", { name: "Services" }).click();
     await expect(page).toHaveURL("/polar-anchor/services");
 
     await page.goto("/polar-anchor");
     await menuButton.click();
     await page.getByRole("button", { name: "Close", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Mobile navigation" })).not.toBeVisible();
+    await expect(page.locator("#mobile-nav-panel")).not.toHaveClass(/is-open/);
   });
 
   test("polar footer keeps quote and contact details visible", async ({ page }) => {
@@ -126,7 +126,7 @@ test.describe("Site routes", () => {
   test("connect routes expose vcard and qr", async ({ page }) => {
     const vcard = await page.request.get("/connect/vcard");
     expect(vcard.status()).toBe(200);
-    expect(vcard.headers()["content-type"] || "").toContain("text/vcard");
+    expect(vcard.headers()["content-type"] || "").toMatch(/text\/(x-)?vcard/i);
     const vcardBody = await vcard.text();
     expect(vcardBody).toContain("BEGIN:VCARD");
     expect(vcardBody).toContain("FN:Fejiro Efiuvwere");

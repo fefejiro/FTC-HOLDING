@@ -80,11 +80,11 @@ export default function ConnectPage() {
         <section className="connect-card">
           <h2>Quick Actions</h2>
           <div className="connect-actions">
-            <a
-              href="/connect/vcard"
-              className="btn btn-primary"
-              download="fejiro-efiuvwere.vcf"
-              data-analytics-event="connect_action_click"
+              <a
+                href="/connect/fejiro-efiuvwere.vcf"
+                className="btn btn-primary"
+                download="fejiro-efiuvwere.vcf"
+                data-analytics-event="connect_action_click"
               data-analytics-location="connect_quick_actions"
               data-analytics-label="save_contact"
             >

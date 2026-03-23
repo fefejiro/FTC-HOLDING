@@ -9,7 +9,7 @@ test.describe("Public journey", () => {
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Try ATEAM Demo" }).first()).toBeVisible();
 
-    await page.getByRole("link", { name: "Products" }).first().click();
+    await page.getByRole("banner").getByRole("link", { name: "Products" }).click();
     await expect(page).toHaveURL("/products");
     await expect(page.getByRole("heading", { name: "ATEAM" }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Try ATEAM demo", exact: true })).toBeVisible();
