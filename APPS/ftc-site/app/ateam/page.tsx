@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import AteamDemoClient from "./AteamDemoClient";
 
 export const metadata: Metadata = {
@@ -41,6 +42,15 @@ export default function AteamPage() {
   return (
     <article className="container page-content ateam-page">
       <section className="ateam-section ateam-hero">
+        <div className="ateam-hero-mark" aria-hidden="true">
+          <Image
+            src="/images/brand/ATeam Logo.png"
+            alt=""
+            width={64}
+            height={64}
+            priority
+          />
+        </div>
         <p className="eyebrow">ATEAM Public Demo</p>
         <h1>ATEAM</h1>
         <p className="lead">

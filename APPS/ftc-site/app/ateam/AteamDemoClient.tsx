@@ -55,7 +55,11 @@ export default function AteamDemoClient() {
     event.preventDefault();
     setError("");
 
-    if (idea.trim().length < 12) {
+    const submitIdea = idea;
+    const submitCategory = category;
+    const submitCategoryLabel = selectedCategoryLabel;
+
+    if (submitIdea.trim().length < 12) {
       setStatus("error");
       setError("Share a bit more detail so the demo can respond properly.");
       return;
@@ -68,7 +72,7 @@ export default function AteamDemoClient() {
       const response = await fetch("/api/ateam-demo", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ idea, category })
+        body: JSON.stringify({ idea: submitIdea, category: submitCategory })
       });
 
       const payload = await response.json();
@@ -78,8 +82,19 @@ export default function AteamDemoClient() {
         return;
       }
 
-      setOutput(payload.output as DemoOutput);
+      const resolvedOutput = payload.output as DemoOutput;
+      setOutput(resolvedOutput);
       setStatus("idle");
+
+      // Persist the latest successful output so "Start a Project" (nav or CTA) can prefill the intake.
+      saveAteamDemoHandoff({
+        version: 1 as const,
+        createdAtMs: Date.now(),
+        idea: submitIdea,
+        categoryValue: submitCategory,
+        categoryLabel: submitCategoryLabel,
+        output: resolvedOutput
+      });
     } catch (requestError) {
       setStatus("error");
       setError(

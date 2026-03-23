@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import BrandImagePanel from "../components/BrandImagePanel";
 import GooglePlayBadge from "../components/GooglePlayBadge";
 import { projectCaseStudies, type ProjectCaseStudy } from "../../lib/content";
@@ -191,6 +192,11 @@ export default function ProductsPage() {
               aspect="wide"
               fit="cover"
               sizes="(max-width: 980px) 100vw, 42vw"
+              overlay={
+                <div className="ateam-logo-overlay" aria-hidden="true">
+                  <Image src="/images/brand/ATeam Logo.png" alt="" width={52} height={52} />
+                </div>
+              }
               caption={<p className="muted">Mission Control-style output: brief → workflow → next step.</p>}
             />
           </div>
