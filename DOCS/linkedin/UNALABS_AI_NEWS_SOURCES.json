@@ -1,0 +1,67 @@
+[
+  {
+    "name": "OpenAI Blog",
+    "url": "https://openai.com/blog/rss.xml",
+    "priority": 3
+  },
+  {
+    "name": "Anthropic News",
+    "url": "https://www.anthropic.com/news/rss.xml",
+    "priority": 3
+  },
+  {
+    "name": "Google AI Blog",
+    "url": "https://ai.googleblog.com/feeds/posts/default?alt=rss",
+    "priority": 3
+  },
+  {
+    "name": "Hugging Face Blog",
+    "url": "https://huggingface.co/blog/feed.xml",
+    "priority": 3
+  },
+  {
+    "name": "NVIDIA Blog",
+    "url": "https://blogs.nvidia.com/blog/feed/",
+    "priority": 3
+  },
+  {
+    "name": "Microsoft Research",
+    "url": "https://www.microsoft.com/en-us/research/feed/",
+    "priority": 3
+  },
+  {
+    "name": "AWS ML Blog",
+    "url": "https://aws.amazon.com/blogs/machine-learning/feed/",
+    "priority": 3
+  },
+  {
+    "name": "Papers with Code",
+    "url": "https://paperswithcode.com/rss",
+    "priority": 2
+  },
+  {
+    "name": "arXiv cs.AI",
+    "url": "https://arxiv.org/rss/cs.AI",
+    "priority": 2
+  },
+  {
+    "name": "arXiv cs.LG",
+    "url": "https://arxiv.org/rss/cs.LG",
+    "priority": 2
+  },
+  {
+    "name": "arXiv stat.ML",
+    "url": "https://arxiv.org/rss/stat.ML",
+    "priority": 2
+  },
+  {
+    "name": "TechCrunch AI",
+    "url": "https://techcrunch.com/tag/artificial-intelligence/feed/",
+    "priority": 2
+  },
+  {
+    "name": "MIT Technology Review",
+    "url": "https://www.technologyreview.com/feed/",
+    "priority": 2
+  }
+]

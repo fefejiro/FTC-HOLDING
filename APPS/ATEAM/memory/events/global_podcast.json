@@ -28758,13 +28758,13 @@
     "lane": "system",
     "summary": "Agent prompt updated: manchi_voice_v2",
     "deduped": true,
-    "duplicateCount": 3,
+    "duplicateCount": 11,
     "meta": {
       "version": "manchi_voice_v2",
       "reason": "humanize_tone_reduce_robotic_voice",
       "dedupeKey": "agent_prompt_updated:manchi_voice_v2"
     },
-    "lastDuplicateAt": "2026-02-24T02:00:42.711Z"
+    "lastDuplicateAt": "2026-03-22T05:36:17.623Z"
   },
   {
     "id": "f80ffb89-00c1-4f86-aaa5-5e5aeea8d652",
@@ -34674,7 +34674,7 @@
     "lane": "talk",
     "summary": "Speaker analytics: 4 speakers, measured 04:15",
     "deduped": true,
-    "duplicateCount": 2,
+    "duplicateCount": 8,
     "meta": {
       "sessionId": "global_podcast",
       "dedupeKey": "analytics_afa50243",
@@ -34733,7 +34733,7 @@
         }
       ]
     },
-    "lastDuplicateAt": "2026-02-25T00:19:34.335Z"
+    "lastDuplicateAt": "2026-03-22T05:41:30.698Z"
   },
   {
     "id": "f4d01994-fc83-4974-beef-e125a3d03a7f",
@@ -34881,6 +34881,295 @@
   {
     "id": "be36973f-6540-4cde-91b7-719651765161",
     "timestamp": "2026-02-25T00:19:34.446Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "ae5fd111-5d84-4b78-9fe0-b0032bddc198",
+    "timestamp": "2026-03-20T06:33:43.935Z",
+    "type": "speaker_analytics_generated",
+    "actor": "system",
+    "lane": "talk",
+    "summary": "Speaker analytics: 4 speakers, measured 04:15",
+    "deduped": true,
+    "duplicateCount": 3,
+    "meta": {
+      "sessionId": "global_podcast",
+      "dedupeKey": "analytics_47ebd51a",
+      "analyticsKey": "analytics_47ebd51a",
+      "source": "refresh",
+      "generatedAtMs": 1773988423879,
+      "timing": {
+        "measuredTurns": 89,
+        "unmeasuredTurns": 26,
+        "measuredTalkMs": 255737
+      },
+      "bySpeaker": [
+        {
+          "speakerId": "ai_podcast",
+          "speakerLabel": "AI",
+          "turns": 67,
+          "measuredTalkMs": 233088,
+          "avgTurnMsMeasured": 3479,
+          "maxTurnMsMeasured": 42582,
+          "longestGapMs": 266061736,
+          "rapidSwitchCount": 0,
+          "avgConfidence": 0.985
+        },
+        {
+          "speakerId": "mark",
+          "speakerLabel": "Mark",
+          "turns": 9,
+          "measuredTalkMs": 11554,
+          "avgTurnMsMeasured": 1284,
+          "maxTurnMsMeasured": 2661,
+          "longestGapMs": 2736647,
+          "rapidSwitchCount": 0,
+          "avgConfidence": 1
+        },
+        {
+          "speakerId": "michael",
+          "speakerLabel": "Michael",
+          "turns": 1,
+          "measuredTalkMs": 0,
+          "avgTurnMsMeasured": 0,
+          "maxTurnMsMeasured": 0,
+          "longestGapMs": 41193,
+          "rapidSwitchCount": 0,
+          "avgConfidence": 1
+        },
+        {
+          "speakerId": "unknown",
+          "speakerLabel": "Unknown",
+          "turns": 38,
+          "measuredTalkMs": 11095,
+          "avgTurnMsMeasured": 925,
+          "maxTurnMsMeasured": 1591,
+          "longestGapMs": 1955537,
+          "rapidSwitchCount": 0,
+          "avgConfidence": 1
+        }
+      ]
+    },
+    "lastDuplicateAt": "2026-03-20T06:44:52.906Z"
+  },
+  {
+    "id": "0ed722d7-75a0-4eba-8fb3-a965f85c3261",
+    "timestamp": "2026-03-20T06:33:44.078Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "ae81e749-a416-47f7-a103-507eab6aad63",
+    "timestamp": "2026-03-20T06:42:02.874Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "b5a2cf2e-27c8-4f89-ad02-01ff457eeaa7",
+    "timestamp": "2026-03-20T06:44:46.952Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "381e08c6-63f6-4cc1-9c56-c68a1e5eb9c5",
+    "timestamp": "2026-03-20T06:44:53.002Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "69019a20-cea2-4cae-a682-5254e1b81218",
+    "timestamp": "2026-03-20T06:45:13.753Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "cacbca44-7338-4a79-83d8-d6c261e3a1f8",
+    "timestamp": "2026-03-22T05:36:25.879Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "d089f3e4-f347-4346-8045-3e298a10c18b",
+    "timestamp": "2026-03-22T05:36:32.375Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "0c7bd7d5-d72c-4757-80ed-af1bb40f1b9c",
+    "timestamp": "2026-03-22T05:36:44.103Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "d2c2f10c-f915-4d5e-b5db-6b4b2f0c45be",
+    "timestamp": "2026-03-22T05:38:22.076Z",
+    "type": "agent_status_updated",
+    "actor": "system",
+    "lane": "system",
+    "summary": "Status update: Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+    "deduped": false,
+    "duplicateCount": 0,
+    "meta": {
+      "statusKey": "Coach:Idle|Strategist:Idle|Builder:Idle|Scout:Idle|Think Tank:Idle|Podcast:Idle",
+      "statuses": {
+        "Coach": "Idle",
+        "Strategist": "Idle",
+        "Builder": "Idle",
+        "Scout": "Idle",
+        "Think Tank": "Idle",
+        "Podcast": "Idle"
+      },
+      "changes": []
+    }
+  },
+  {
+    "id": "a4ecbf7b-a152-4a68-95fa-9f2bd502de7f",
+    "timestamp": "2026-03-22T05:41:30.757Z",
     "type": "agent_status_updated",
     "actor": "system",
     "lane": "system",
