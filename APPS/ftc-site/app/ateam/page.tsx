@@ -2,41 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import AteamDemoClient from "./AteamDemoClient";
+import { ateamModeHighlights, ateamModeStages, ateamModeSummary } from "../../lib/ateamMode";
 
 export const metadata: Metadata = {
   title: "ATEAM | Una Labs",
   description:
-    "ATEAM is the AI lab where rough ideas become clear next steps. Test an idea, get a structured output, and continue it into a real project request.",
+    "ATEAM is the AI lab where Memory, Office, Team, and Factory turn rough ideas into clear next steps.",
   alternates: {
     canonical: "/ateam"
   }
 };
-
-const workflowStages = [
-  {
-    title: "Idea in",
-    description: "You describe the concept, lane, and outcome you want to move toward."
-  },
-  {
-    title: "Lab review",
-    description: "ATEAM frames the scope, surfaces the likely direction, and keeps the ask practical."
-  },
-  {
-    title: "Build path",
-    description: "The lab turns the idea into phases, deliverables, and a believable next step."
-  },
-  {
-    title: "Next step",
-    description: "You continue the structured brief into a real Una Labs project request."
-  }
-] as const;
-
-const ateamHighlights = [
-  "Guided idea intake without exposing internal operator tooling",
-  "Believable workflow preview that helps visitors understand what is feasible",
-  "Structured output with phases, deliverables, and clear next steps",
-  "Clean handoff into Start a Project without retyping the idea"
-] as const;
 
 export default function AteamPage() {
   return (
@@ -53,11 +28,11 @@ export default function AteamPage() {
             />
           </div>
           <div className="ateam-hero-heading">
-            <p className="eyebrow">ATEAM public demo</p>
-            <h1>ATEAM is the AI lab where rough ideas become clear next steps.</h1>
+            <p className="eyebrow">ATEAM mode preview</p>
+            <h1>ATEAM shows how Memory, Office, Team, and Factory turn rough ideas into next steps.</h1>
             <p className="lead">
-              Test an idea, see the build path it suggests, and continue that output into a real
-              project request for Una Labs.
+              Test an idea, see the ATEAM-mode path it suggests, and continue that output into a
+              real project request for Una Labs.
             </p>
           </div>
         </div>
@@ -66,11 +41,11 @@ export default function AteamPage() {
           <div className="card ateam-hero-story">
             <p className="card-kicker">Why it exists</p>
             <p>
-              ATEAM gives first-time visitors a safe, curated way to understand how Una Labs thinks
-              about scope, sequencing, and delivery before any build starts.
+              {ateamModeSummary} Una Labs exposes that path publicly in a controlled way so people
+              can understand the system before any build starts.
             </p>
             <ul className="ateam-hero-list">
-              {ateamHighlights.map((item) => (
+              {ateamModeHighlights.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
@@ -88,9 +63,9 @@ export default function AteamPage() {
             <div className="ateam-demo-card-head">
               <div>
                 <p className="card-kicker">Interactive demo</p>
-                <h2>Run a guided lab pass on your idea</h2>
+                <h2>Run an ATEAM-mode pass on your idea</h2>
               </div>
-              <span className="ateam-demo-hint">Visible output, compact workflow, clear handoff</span>
+              <span className="ateam-demo-hint">Memory, Office, Team, Factory, then a clear handoff</span>
             </div>
             <AteamDemoClient />
           </article>
@@ -99,15 +74,15 @@ export default function AteamPage() {
 
       <section className="ateam-section">
         <div className="section-heading">
-          <p className="eyebrow">Workflow preview</p>
-          <h2>Short, understandable, and built for first-time visitors</h2>
+          <p className="eyebrow">ATEAM mode</p>
+          <h2>The four public-facing stages now match the real runtime language</h2>
           <p>
-            The public demo stays compact on purpose. It shows how Una Labs structures an idea
-            without exposing internal runtime detail.
+            The public preview stays compact on purpose, but it now names the same operating
+            surfaces people will hear about inside ATEAM itself.
           </p>
         </div>
         <div className="ateam-flow-grid">
-          {workflowStages.map((stage, index) => (
+          {ateamModeStages.map((stage, index) => (
             <article key={stage.title} className="card ateam-flow-card">
               <span className="process-step-number">{index + 1}</span>
               <h3>{stage.title}</h3>

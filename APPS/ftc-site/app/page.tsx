@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../lib/recentWork";
+import { ateamModeStageLabels, ateamModeSummary, ateamModeSupportPoints } from "../lib/ateamMode";
 
 const serviceLanes = [
   {
@@ -60,13 +61,6 @@ const productTiles = [
   }
 ] as const;
 
-const ateamPreviewSteps = [
-  "Idea in",
-  "Lab review",
-  "Build path",
-  "Next step"
-] as const;
-
 export const metadata: Metadata = {
   title: "Una Labs - Fast websites, lead systems, and AI-assisted workflows",
   description:
@@ -119,7 +113,8 @@ export default function HomePage() {
                   <p className="proof-label">ATEAM</p>
                   <h2>The AI lab where rough ideas become clear next steps.</h2>
                   <p className="hero-media-caption">
-                    Public-facing demo, structured output, then a clean handoff into a real project request.
+                    {ateamModeSummary} Public-facing preview, then a clean handoff into a real
+                    project request.
                   </p>
                 </div>
               </div>
@@ -241,12 +236,14 @@ export default function HomePage() {
               <p className="proof-label">ATEAM</p>
               <h3>The AI lab where rough ideas become clear next steps.</h3>
               <p>
-                Guided idea intake, structured output, and a real handoff into Start a Project.
+                {ateamModeSummary}
               </p>
               <div className="proof-tags">
-                <span className="proof-tag">Guided intake</span>
-                <span className="proof-tag">Scoped direction</span>
-                <span className="proof-tag">Next-step brief</span>
+                {ateamModeSupportPoints.map((point) => (
+                  <span key={point} className="proof-tag">
+                    {point}
+                  </span>
+                ))}
               </div>
               <Link href="/ateam" prefetch={false} className="btn btn-primary">
                 Try ATEAM Demo
@@ -261,13 +258,14 @@ export default function HomePage() {
           <article className="card ateam-preview-band">
             <div className="ateam-preview-band-copy">
               <p className="eyebrow">ATEAM preview</p>
-              <h2>Test an idea, see what it could become, then continue with a real brief.</h2>
+              <h2>See the ATEAM-mode path from memory to delivery before you ever start a build.</h2>
               <p className="muted">
-                ATEAM is public as a curated lab demo. It does not expose internal operator tooling.
+                ATEAM is public as a curated mode preview. It surfaces Memory, Office, Team, and
+                Factory without exposing every internal operator control.
               </p>
             </div>
             <div className="ateam-preview-band-steps" aria-label="ATEAM preview steps">
-              {ateamPreviewSteps.map((step, index) => (
+              {ateamModeStageLabels.map((step, index) => (
                 <div key={step} className="ateam-preview-band-step">
                   <span>{index + 1}</span>
                   <strong>{step}</strong>

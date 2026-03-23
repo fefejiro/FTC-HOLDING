@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import GooglePlayBadge from "../components/GooglePlayBadge";
+import { ateamModeSummary, ateamModeSupportPoints } from "../../lib/ateamMode";
 import { projectCaseStudies, type ProjectCaseStudy } from "../../lib/content";
 
 export const metadata = {
@@ -38,13 +39,9 @@ const productOfferContent: Record<
   },
   ateam: {
     offerCopy:
-      "ATEAM is the AI lab where rough ideas become clear next steps.",
+      ateamModeSummary,
     secondaryLabel: "Try ATEAM demo",
-    supportPoints: [
-      "Guided idea intake",
-      "Structured project direction",
-      "Phased output and next steps"
-    ]
+    supportPoints: [...ateamModeSupportPoints]
   }
 };
 
@@ -70,8 +67,8 @@ export default function ProductsPage() {
         <p className="eyebrow">Products</p>
         <h1>Products</h1>
         <p className="page-intro">
-          PeacePad and SayWetin are public products. ATEAM is the guided AI lab that helps move
-          a rough idea into a believable next step.
+          PeacePad and SayWetin are public products. ATEAM is the operating-mode preview that helps
+          move a rough idea into a believable next step.
         </p>
       </section>
 
@@ -127,7 +124,7 @@ export default function ProductsPage() {
               <p className="status-pill">{getLifecycleStatusLabel(featuredAteam)}</p>
               <h2>ATEAM</h2>
               <p className="muted">The AI lab where rough ideas become clear next steps.</p>
-              <p>Guided idea intake, structured project direction, and a clean handoff into a real project request.</p>
+              <p>{ateamModeSummary} It ends in a clean handoff into a real project request.</p>
               <ul className="feature-list compact-feature-list">
                 {(featuredAteam.marketingBullets ?? productOfferContent.ateam.supportPoints ?? []).map((bullet) => (
                   <li key={bullet}>{bullet}</li>
@@ -151,7 +148,10 @@ export default function ProductsPage() {
                 alt="ATEAM mission control preview"
                 className="product-ateam-preview"
               />
-              <p className="muted">Guided intake, structured output, then a clean handoff into real project scope.</p>
+              <p className="muted">
+                Memory, Office, Team, and Factory are visible in the public preview before the real
+                project scope begins.
+              </p>
             </div>
           </div>
         </article>

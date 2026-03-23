@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { saveAteamDemoHandoff } from "../../lib/ateamHandoff";
+import { ateamModeStageLabels } from "../../lib/ateamMode";
 
 type DemoOutput = {
   summary: string;
@@ -22,8 +23,6 @@ const categories = [
   { value: "ai-feature", label: "AI workflow" }
 ] as const;
 
-const labStages = ["Idea in", "Lab review", "Build path", "Next step"] as const;
-
 type CategoryValue = (typeof categories)[number]["value"];
 
 export default function AteamDemoClient() {
@@ -41,7 +40,7 @@ export default function AteamDemoClient() {
     }
 
     const interval = window.setInterval(() => {
-      setStageIndex((current) => (current + 1) % labStages.length);
+      setStageIndex((current) => (current + 1) % ateamModeStageLabels.length);
     }, 700);
 
     return () => window.clearInterval(interval);
@@ -158,7 +157,7 @@ export default function AteamDemoClient() {
         </div>
 
         <div className="ateam-demo-stage-rail" aria-label="ATEAM workflow stages">
-          {labStages.map((stage, index) => {
+          {ateamModeStageLabels.map((stage, index) => {
             const isActive = status === "loading" && index <= stageIndex;
             const isComplete = status !== "loading" && output;
             return (
@@ -192,14 +191,16 @@ export default function AteamDemoClient() {
             </div>
             <h3>Reviewing your idea and building a scoped next step</h3>
             <p className="muted">
-              The lab is checking fit, tightening the delivery path, and preparing a practical
-              brief you can continue into intake.
+              ATEAM is grounding the brief in Memory, routing it through Office, aligning Team
+              context, and preparing the Factory handoff you can continue into intake.
             </p>
             <div className="ateam-demo-loading-bar" aria-hidden="true">
-              <span style={{ width: `${((stageIndex + 1) / labStages.length) * 100}%` }} />
+              <span
+                style={{ width: `${((stageIndex + 1) / ateamModeStageLabels.length) * 100}%` }}
+              />
             </div>
             <div className="ateam-demo-loading-grid">
-              {labStages.map((stage, index) => (
+              {ateamModeStageLabels.map((stage, index) => (
                 <div
                   key={stage}
                   className={`ateam-demo-loading-card ${index === stageIndex ? "is-current" : ""}`}
@@ -280,10 +281,11 @@ export default function AteamDemoClient() {
         ) : (
           <div className="card ateam-demo-placeholder">
             <p className="card-kicker">Demo output</p>
-            <h3>Run a guided lab pass on the idea</h3>
+            <h3>Run an ATEAM-mode pass on the idea</h3>
             <p className="muted">
-              ATEAM will return a recommended lane, structured summary, phases, likely
-              deliverables, and the next step you can continue into intake.
+              ATEAM mode will walk through Memory, Office, Team, and Factory, then return a
+              recommended lane, structured summary, phases, likely deliverables, and the next step
+              you can continue into intake.
             </p>
           </div>
         )}

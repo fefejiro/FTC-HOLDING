@@ -1,4 +1,6 @@
 ﻿import { siteLinks } from "./siteLinks";
+import { ateamModeSupportPoints, ateamModeSummary } from "./ateamMode";
+
 export type CapabilityPillar =
   | "ai-systems"
   | "creative-technology"
@@ -251,34 +253,30 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     pillar: "business-intelligence",
     tags: ["Guided demo", "Scoping", "Systems"],
     summary:
-      "ATEAM is Una Labs' guided AI lab for structured idea intake, phased project direction, and clear next-step recommendations.",
+      "ATEAM is Una Labs' public-facing view into a Memory -> Office -> Team -> Factory operating path for structured idea intake, coordination, and delivery.",
     status: "internal-runtime",
-    availabilityLabel: "Public demo",
-    marketingBullets: [
-      "Guided idea intake",
-      "Structured project direction",
-      "Phased output and next steps"
-    ],
+    availabilityLabel: "ATEAM mode preview",
+    marketingBullets: [...ateamModeSupportPoints],
     sections: {
       problem:
         "Early project ideas are usually too fuzzy to estimate, prioritize, or move into clean execution.",
       insight:
-        "People move faster when an idea is translated into a clear lane, scope, and next action before build work begins.",
+        "People move faster when they can see how context, ownership, and delivery stages line up before build work begins.",
       solution:
-        "ATEAM turns rough concepts into a compact project brief with a recommended lane, likely deliverables, and a handoff into real intake.",
+        "ATEAM turns rough concepts into a compact project brief by exposing the same Memory, Office, Team, and Factory language that shapes the internal runtime.",
       capabilities: [
-        "Guided intake and clarification",
-        "Lane recommendation and scoping",
-        "Structured output generation",
-        "CTA-ready project handoff"
+        "Memory-first intake and clarification",
+        "Office routing and scoping",
+        "Team visibility and handoff framing",
+        "Factory-oriented delivery path"
       ],
       technology: [
-        "Public demo shell",
+        "Public ATEAM mode shell",
         "Safe structured prompting",
         "Scoped handoff into intake"
       ],
       outcome:
-        "ATEAM gives visitors a believable, useful preview of how Una Labs thinks before a project formally begins."
+        `${ateamModeSummary} It gives visitors a believable preview of how Una Labs thinks before a project formally begins.`
     }
   }
 ];
