@@ -10,6 +10,7 @@ type SubmitState = "idle" | "submitting" | "success" | "error";
 
 type AteamDemoOutput = {
   summary: string;
+  recommendedLane?: string;
   recommendedDirection: string;
   phases: string[];
   stack: string[];
@@ -17,15 +18,49 @@ type AteamDemoOutput = {
   nextSteps: string[];
 };
 
+const projectTypeOptions = [
+  "Fast Website Launch",
+  "Local Services Lead Engine",
+  "AI Workflow / Product Direction",
+  "Product / App Build Path",
+  "Internal Tool / Ops System",
+  "Not sure yet"
+] as const;
+
+function buildPrefilledBrief(prefill: AteamDemoHandoffPayload<AteamDemoOutput>) {
+  const lines = [
+    `Idea: ${prefill.idea}`,
+    `Category: ${prefill.categoryLabel}`,
+    `Recommended lane: ${prefill.output?.recommendedLane ?? prefill.categoryLabel}`,
+    "",
+    `Summary: ${prefill.output?.summary ?? ""}`,
+    `Direction: ${prefill.output?.recommendedDirection ?? ""}`,
+    "",
+    "Suggested phases:",
+    ...(prefill.output?.phases ?? []).map((item) => `- ${item}`),
+    "",
+    "Likely deliverables:",
+    ...(prefill.output?.deliverables ?? []).map((item) => `- ${item}`),
+    "",
+    "Suggested stack:",
+    ...(prefill.output?.stack ?? []).map((item) => `- ${item}`)
+  ];
+
+  return lines.join("\n").trim();
+}
+
 export default function WorkIntakeForm() {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
-  const [projectIdea, setProjectIdea] = useState("");
+  const [projectBrief, setProjectBrief] = useState("");
+  const [projectType, setProjectType] = useState<string>("Not sure yet");
   const [prefill, setPrefill] = useState<AteamDemoHandoffPayload<AteamDemoOutput> | null>(null);
   const [successSummary, setSuccessSummary] = useState<{
     requestId: string;
     email: string;
-    projectIdea: string;
+    projectName: string;
+    projectBrief: string;
+    projectType: string;
     budgetRange: string;
     timeline: string;
     confirmationSent?: boolean;
@@ -36,7 +71,8 @@ export default function WorkIntakeForm() {
     const handoff = loadAteamDemoHandoff<AteamDemoOutput>();
     if (!handoff) return;
     setPrefill(handoff);
-    setProjectIdea((existing) => (existing ? existing : handoff.idea || ""));
+    setProjectType(handoff.output?.recommendedLane ?? handoff.categoryLabel ?? "Not sure yet");
+    setProjectBrief((existing) => (existing ? existing : buildPrefilledBrief(handoff)));
   }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -44,20 +80,26 @@ export default function WorkIntakeForm() {
     const form = event.currentTarget;
     const formData = new FormData(form);
 
-    const trimmedIdea = String(projectIdea || "").trim();
-    if (trimmedIdea.length < 20) {
+    const trimmedBrief = String(projectBrief || "").trim();
+    const projectName = String(formData.get("projectName") || "").trim();
+    const trimmedProjectType = String(projectType || "Not sure yet").trim();
+
+    if (trimmedBrief.length < 20) {
       setSubmitState("error");
       setMessage("Add a bit more detail so we can scope the fastest next step (20+ characters).");
-      trackEvent("lead_submit_error", { reason: "client_validation_projectIdea" });
+      trackEvent("lead_submit_error", { reason: "client_validation_projectBrief" });
       return;
     }
 
     const payload = {
-      name: "Website lead",
+      name: String(formData.get("name") || "").trim(),
       email: String(formData.get("email") || "").trim(),
-      projectIdea: trimmedIdea,
+      projectName,
+      projectType: trimmedProjectType,
+      projectIdea: trimmedBrief,
       budgetRange: String(formData.get("budgetRange") || "not-sure-yet"),
       timeline: String(formData.get("timeline") || "").trim(),
+      notes: String(formData.get("notes") || "").trim(),
       companyWebsite: String(formData.get("companyWebsite") || "").trim(),
       startedAt: startedAtRef.current,
       ateamDemo: prefill
@@ -103,23 +145,28 @@ export default function WorkIntakeForm() {
         setSuccessSummary({
           requestId,
           email: payload.email,
-          projectIdea: payload.projectIdea,
+          projectName: payload.projectName,
+          projectBrief: payload.projectIdea,
+          projectType: payload.projectType,
           budgetRange: payload.budgetRange,
           timeline: payload.timeline,
           confirmationSent: body.confirmationSent
         });
       }
       trackEvent("lead_submit_success", {
+        project_type: payload.projectType || "not-specified",
         budget_range: payload.budgetRange,
         timeline: payload.timeline || "not-specified"
       });
-      // Clear ATEAM handoff once we have a successful submission.
+
       if (prefill) {
         clearAteamDemoHandoff();
         setPrefill(null);
       }
+
       form.reset();
-      setProjectIdea("");
+      setProjectBrief("");
+      setProjectType("Not sure yet");
       startedAtRef.current = Date.now();
     } catch (error) {
       setSubmitState("error");
@@ -137,7 +184,7 @@ export default function WorkIntakeForm() {
       <div className="intake-success" role="status" aria-live="polite">
         <div className="intake-success-card">
           <p className="eyebrow">Request received</p>
-          <h3>Una Labs has your setup brief.</h3>
+          <h3>Una Labs has your project brief.</h3>
           <p className="muted">Expected reply: within 1 business day.</p>
           <div className="intake-success-meta">
             <div>
@@ -148,14 +195,30 @@ export default function WorkIntakeForm() {
               <span className="intake-success-label">Email</span>
               <span className="intake-success-value">{successSummary.email}</span>
             </div>
+            <div>
+              <span className="intake-success-label">Project type</span>
+              <span className="intake-success-value">{successSummary.projectType}</span>
+            </div>
+            <div>
+              <span className="intake-success-label">Budget</span>
+              <span className="intake-success-value">{successSummary.budgetRange}</span>
+            </div>
           </div>
           <div className="intake-success-brief">
-            <p className="intake-success-label">Summary</p>
-            <p>{successSummary.projectIdea}</p>
+            <p className="intake-success-label">Submitted summary</p>
+            <p>{successSummary.projectName ? `${successSummary.projectName}: ` : ""}{successSummary.projectBrief}</p>
           </div>
           {successSummary.confirmationSent ? (
             <p className="muted">Confirmation email sent.</p>
-          ) : null}
+          ) : (
+            <p className="muted">
+              Need to add context before we reply? Email{" "}
+              <a href="mailto:hello@unalabs.cloud" className="inline-link">
+                hello@unalabs.cloud
+              </a>
+              .
+            </p>
+          )}
           <div className="intake-success-actions">
             <button
               type="button"
@@ -180,8 +243,51 @@ export default function WorkIntakeForm() {
 
   return (
     <form className="intake-form" onSubmit={onSubmit} noValidate>
-      <label>
-        <span>What do you need help with?</span>
+      <div className="intake-form-grid">
+        <label>
+          <span>Name</span>
+          <input type="text" name="name" autoComplete="name" placeholder="Your name" required />
+        </label>
+        <label>
+          <span>Email</span>
+          <input
+            type="email"
+            name="email"
+            autoComplete="email"
+            placeholder="hello@company.com"
+            required
+          />
+        </label>
+        <label>
+          <span>Company or project name</span>
+          <input
+            type="text"
+            name="projectName"
+            autoComplete="organization"
+            placeholder="Business name, product, or project title"
+          />
+        </label>
+        <label>
+          <span>Project type</span>
+          <select
+            name="projectType"
+            value={projectType}
+            onChange={(event) => setProjectType(event.target.value)}
+            className="dark-select"
+          >
+            {projectTypeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="intake-field-group">
+        <label htmlFor="project-brief">
+          <span>Project brief</span>
+        </label>
         {prefill ? (
           <div className="intake-prefill-note">
             Prefilled from your ATEAM demo. Edit anything before submitting.
@@ -198,22 +304,27 @@ export default function WorkIntakeForm() {
           </div>
         ) : null}
         <textarea
+          id="project-brief"
           name="projectIdea"
-          rows={6}
+          rows={8}
           required
           minLength={20}
-          value={projectIdea}
-          onChange={(event) => setProjectIdea(event.target.value)}
+          value={projectBrief}
+          onChange={(event) => setProjectBrief(event.target.value)}
           placeholder={
-            "Example:\n- I want to build a mobile app\n- I need AI automation for my business\n- I want a tool similar to X"
+            "Describe the project, what success looks like, and anything that should happen next."
           }
         />
-      </label>
+      </div>
+
       {prefill ? (
         <details className="ateam-brief-details">
           <summary>ATEAM demo brief attached</summary>
           <div className="ateam-brief-body">
-            <p className="muted">Category: {prefill.categoryLabel}</p>
+            <p className="muted">
+              Category: {prefill.categoryLabel}
+              {prefill.output?.recommendedLane ? ` · Recommended lane: ${prefill.output.recommendedLane}` : ""}
+            </p>
             <div className="ateam-brief-grid">
               <div>
                 <p className="ateam-brief-title">Summary</p>
@@ -248,42 +359,48 @@ export default function WorkIntakeForm() {
           </div>
         </details>
       ) : null}
+
+      <div className="intake-form-grid">
+        <label>
+          <span>Timeline</span>
+          <select name="timeline" defaultValue="" className="dark-select">
+            <option value="">Not sure yet</option>
+            <option value="2-4-weeks">2-4 weeks</option>
+            <option value="4-8-weeks">4-8 weeks</option>
+            <option value="8-12-weeks">8-12 weeks</option>
+            <option value="12-weeks-plus">12+ weeks</option>
+          </select>
+        </label>
+        <label>
+          <span>Budget range</span>
+          <select name="budgetRange" defaultValue="not-sure-yet" className="dark-select">
+            <option value="not-sure-yet">Not sure yet</option>
+            <option value="0-1000">$0 - $1,000</option>
+            <option value="1000-2500">$1,000 - $2,500</option>
+            <option value="2500-5000">$2,500 - $5,000</option>
+            <option value="5000-10000">$5,000 - $10,000</option>
+            <option value="10000-plus">$10,000+</option>
+          </select>
+          <span className="field-help">
+            Small, sharply scoped launches often start with a credible phase-one build.
+          </span>
+        </label>
+      </div>
+
       <label>
-        <span>Budget</span>
-        <select name="budgetRange" defaultValue="not-sure-yet" className="dark-select">
-          <option value="not-sure-yet">Not sure yet</option>
-          <option value="0-1000">$0 - $1,000</option>
-          <option value="1000-2500">$1,000 - $2,500</option>
-          <option value="2500-5000">$2,500 - $5,000</option>
-          <option value="5000-10000">$5,000 - $10,000</option>
-          <option value="10000-plus">$10,000+</option>
-        </select>
-        <span className="field-help">Fast setup work often starts with a scoped lead system or website improvement.</span>
-      </label>
-      <label>
-        <span>Email</span>
-        <input
-          type="email"
-          name="email"
-          autoComplete="email"
-          placeholder="you@company.com"
-          required
+        <span>Optional notes</span>
+        <textarea
+          name="notes"
+          rows={4}
+          placeholder="Anything else we should know about urgency, constraints, approvals, or existing tools?"
         />
       </label>
-      <label>
-        <span>Timeline (optional)</span>
-        <select name="timeline" defaultValue="" className="dark-select">
-          <option value="">Not sure yet</option>
-          <option value="2-4-weeks">2-4 weeks</option>
-          <option value="4-8-weeks">4-8 weeks</option>
-          <option value="8-12-weeks">8-12 weeks</option>
-          <option value="12-weeks-plus">12+ weeks</option>
-        </select>
-      </label>
+
       <label className="hp-field" aria-hidden="true">
         Company Website
         <input type="text" name="companyWebsite" tabIndex={-1} autoComplete="off" />
       </label>
+
       <button type="submit" className="btn btn-primary" disabled={submitState === "submitting"}>
         {submitState === "submitting" ? "Submitting..." : "Submit project request"}
       </button>
@@ -291,15 +408,15 @@ export default function WorkIntakeForm() {
       <div className="intake-next-steps">
         <p className="intake-next-steps-title">What happens after you submit:</p>
         <ol className="intake-next-steps-list">
-          <li>We review your request quickly (typically within 1 business day).</li>
-          <li>We reply with a scoped next step, timeline, and any clarifying questions.</li>
-          <li>If it is a fit, we move into setup or a short kickoff call.</li>
+          <li>We review the request and attached context, usually within 1 business day.</li>
+          <li>We reply with a scoped next step, recommended phase one, and any clarifying questions.</li>
+          <li>If the fit is right, we move into setup or a short kickoff call.</li>
         </ol>
         <p className="intake-alt-contact">
-          Prefer a quick conversation?{" "}
-          <Link href="/connect" prefetch={false} className="inline-link">
-            Contact us directly.
-          </Link>
+          Prefer direct email?{" "}
+          <a href="mailto:hello@unalabs.cloud" className="inline-link">
+            hello@unalabs.cloud
+          </a>
         </p>
       </div>
 

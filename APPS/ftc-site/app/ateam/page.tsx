@@ -6,7 +6,7 @@ import AteamDemoClient from "./AteamDemoClient";
 export const metadata: Metadata = {
   title: "ATEAM | Una Labs",
   description:
-    "ATEAM is the guided lab system behind Una Labs, turning rough ideas into structured execution plans.",
+    "ATEAM is the AI lab where rough ideas become clear next steps. Test an idea, get a structured output, and continue it into a real project request.",
   alternates: {
     canonical: "/ateam"
   }
@@ -14,54 +14,60 @@ export const metadata: Metadata = {
 
 const workflowStages = [
   {
-    title: "Project Intake",
-    description: "Capture goals, constraints, and success metrics before scope drifts."
+    title: "Idea in",
+    description: "You describe the concept, lane, and outcome you want to move toward."
   },
   {
-    title: "Routing & Scope",
-    description: "Match the request to the right build lane and sequence the work."
+    title: "Lab review",
+    description: "ATEAM frames the scope, surfaces the likely direction, and keeps the ask practical."
   },
   {
-    title: "Specialist Pass",
-    description: "Assign research, UX, and execution planning to the right roles."
+    title: "Build path",
+    description: "The lab turns the idea into phases, deliverables, and a believable next step."
   },
   {
-    title: "Structured Output",
-    description: "Deliver a clear plan, stack recommendation, and next-step checklist."
+    title: "Next step",
+    description: "You continue the structured brief into a real Una Labs project request."
   }
-];
+] as const;
 
 const ateamHighlights = [
-  "Guided intake and brief structuring",
-  "Workflow routing across specialized roles",
-  "Build-ready outputs instead of vague notes",
-  "CTA-ready handoff into a scoped project"
-];
+  "Guided idea intake without exposing internal operator tooling",
+  "Believable workflow preview that helps visitors understand what is feasible",
+  "Structured output with phases, deliverables, and clear next steps",
+  "Clean handoff into Start a Project without retyping the idea"
+] as const;
 
 export default function AteamPage() {
   return (
     <article className="container page-content ateam-page">
-      <section className="ateam-section ateam-hero">
-        <div className="ateam-hero-mark" aria-hidden="true">
-          <Image
-            src="/images/brand/ATeam Logo.png"
-            alt=""
-            width={64}
-            height={64}
-            priority
-          />
+      <section className="ateam-section ateam-section--hero">
+        <div className="ateam-hero-topline">
+          <div className="ateam-hero-mark" aria-hidden="true">
+            <Image
+              src="/images/brand/ATeam Logo.png"
+              alt=""
+              width={64}
+              height={64}
+              priority
+            />
+          </div>
+          <div className="ateam-hero-heading">
+            <p className="eyebrow">ATEAM public demo</p>
+            <h1>ATEAM is the AI lab where rough ideas become clear next steps.</h1>
+            <p className="lead">
+              Test an idea, see the build path it suggests, and continue that output into a real
+              project request for Una Labs.
+            </p>
+          </div>
         </div>
-        <p className="eyebrow">ATEAM Public Demo</p>
-        <h1>ATEAM</h1>
-        <p className="lead">
-          ATEAM is the guided lab system behind Una Labs. It turns raw ideas into
-          structured execution plans without exposing internal admin tooling.
-        </p>
+
         <div className="ateam-hero-grid">
-          <div className="ateam-hero-copy">
+          <div className="card ateam-hero-story">
+            <p className="card-kicker">Why it exists</p>
             <p>
-              Use this demo to see how Una Labs frames scope, routes work, and prepares
-              delivery-ready outputs before any build starts.
+              ATEAM gives first-time visitors a safe, curated way to understand how Una Labs thinks
+              about scope, sequencing, and delivery before any build starts.
             </p>
             <ul className="ateam-hero-list">
               {ateamHighlights.map((item) => (
@@ -77,22 +83,33 @@ export default function AteamPage() {
               </Link>
             </div>
           </div>
-          <div className="card ateam-demo-card">
-            <p className="card-kicker">Interactive demo</p>
+
+          <article className="card ateam-demo-card">
+            <div className="ateam-demo-card-head">
+              <div>
+                <p className="card-kicker">Interactive demo</p>
+                <h2>Run a guided lab pass on your idea</h2>
+              </div>
+              <span className="ateam-demo-hint">Visible output, compact workflow, clear handoff</span>
+            </div>
             <AteamDemoClient />
-          </div>
+          </article>
         </div>
       </section>
 
       <section className="ateam-section">
         <div className="section-heading">
-          <p className="eyebrow">Workflow Preview</p>
-          <h2>How the lab routes work</h2>
-          <p>ATEAM keeps delivery clear by moving ideas through a consistent flow.</p>
+          <p className="eyebrow">Workflow preview</p>
+          <h2>Short, understandable, and built for first-time visitors</h2>
+          <p>
+            The public demo stays compact on purpose. It shows how Una Labs structures an idea
+            without exposing internal runtime detail.
+          </p>
         </div>
         <div className="ateam-flow-grid">
-          {workflowStages.map((stage) => (
+          {workflowStages.map((stage, index) => (
             <article key={stage.title} className="card ateam-flow-card">
+              <span className="process-step-number">{index + 1}</span>
               <h3>{stage.title}</h3>
               <p>{stage.description}</p>
             </article>
@@ -101,24 +118,13 @@ export default function AteamPage() {
       </section>
 
       <section className="ateam-section">
-        <article className="card ateam-output-card">
-          <p className="eyebrow">What you get</p>
-          <h2>Structured output you can act on</h2>
-          <p className="muted">
-            Expect a clear summary, suggested stack, phased plan, and next steps
-            that reduce ambiguity for decision-makers and builders.
-          </p>
-        </article>
-      </section>
-
-      <section className="ateam-section">
         <article className="card final-cta-card">
           <div>
             <p className="eyebrow">Next step</p>
-            <h2>Ready to move an idea into execution?</h2>
+            <h2>Want to turn the demo output into a real scoped request?</h2>
             <p className="muted">
-              ATEAM becomes even sharper once your scope, constraints, and delivery
-              windows are defined with the studio.
+              Continue with the idea after the demo, or jump straight into intake if you already
+              know the project you want to launch.
             </p>
           </div>
           <div className="product-actions">

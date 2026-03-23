@@ -3,30 +3,39 @@ import ServiceCard from "../components/ServiceCard";
 import WorkIntakeForm from "../components/WorkIntakeForm";
 
 export const metadata = {
-  title: "Request a Website or Lead Automation Setup | Una Labs",
-  description: "Start a project with Una Labs for fast websites, lead follow-up systems, and practical AI execution."
+  title: "Start a Project | Una Labs",
+  description:
+    "Send a project request to Una Labs for fast websites, lead systems, and AI-assisted workflow direction."
 };
 
 export default function WorkWithFtcPage() {
   return (
-    <div className="container page-content">
-      <h1>Start a Project</h1>
-      <p className="page-intro">
-        If you need a fast website, stronger lead capture, or practical automation, Una Labs
-        can scope the shortest path to a working setup.
-      </p>
+    <div className="container page-content work-intake-page">
+      <section className="work-intake-hero">
+        <p className="eyebrow">Start a Project</p>
+        <h1>Turn the idea into a scoped next step.</h1>
+        <p className="page-intro">
+          If you need a fast website, stronger lead capture, or a practical AI-assisted workflow,
+          Una Labs can scope the shortest credible path to a working setup.
+        </p>
+      </section>
 
-      <div className="cards-grid cards-grid-3">
+      <div className="cards-grid cards-grid-3 work-intake-track-grid">
         {serviceTracks.map((track) => (
           <ServiceCard key={track.audience} track={track} />
         ))}
       </div>
 
-      <section className="intake-card">
-        <h2>Setup Intake</h2>
-        <p className="muted">
-          Submit your request and Una Labs will respond with a scoped next step quickly.
-        </p>
+      <section className="intake-card work-intake-shell">
+        <div className="work-intake-shell-head">
+          <div>
+            <p className="card-kicker">Project request</p>
+            <h2>Send a setup request</h2>
+          </div>
+          <p className="muted">
+            If you arrived from ATEAM, the form will carry your demo output automatically.
+          </p>
+        </div>
         <WorkIntakeForm />
       </section>
     </div>

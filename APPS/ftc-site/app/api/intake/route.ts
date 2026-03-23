@@ -24,9 +24,12 @@ const MAX_REQUESTS_PER_WINDOW = 5;
 type IntakePayload = {
   name?: unknown;
   email?: unknown;
+  projectName?: unknown;
+  projectType?: unknown;
   projectIdea?: unknown;
   budgetRange?: unknown;
   timeline?: unknown;
+  notes?: unknown;
   companyWebsite?: unknown;
   startedAt?: unknown;
   ateamDemo?: unknown;
@@ -102,9 +105,12 @@ export async function POST(req: NextRequest) {
   const providedName = normalizeText(payload.name);
   const name = providedName || "Website lead";
   const email = normalizeEmail(payload.email);
+  const projectName = normalizeText(payload.projectName);
+  const projectType = normalizeText(payload.projectType) || "Not sure yet";
   const projectIdea = normalizeText(payload.projectIdea);
   const budgetRange = normalizeText(payload.budgetRange);
   const timeline = normalizeText(payload.timeline);
+  const notes = normalizeText(payload.notes);
   const companyWebsite = normalizeText(payload.companyWebsite);
   const startedAtValue = Number(payload.startedAt || 0);
   const ateamDemo = payload.ateamDemo ?? null;
@@ -122,8 +128,20 @@ export async function POST(req: NextRequest) {
     return badRequest("Please provide a valid email address.");
   }
 
+  if (projectName.length > 140) {
+    return badRequest("Please keep the company or project name under 140 characters.");
+  }
+
+  if (projectType.length < 2 || projectType.length > 120) {
+    return badRequest("Please provide a valid project type.");
+  }
+
   if (projectIdea.length < 20 || projectIdea.length > 2000) {
     return badRequest("Please provide a concise project summary (20-2000 characters).");
+  }
+
+  if (notes.length > 1200) {
+    return badRequest("Optional notes should stay under 1200 characters.");
   }
 
   if (!BUDGET_VALUES.has(budgetRange)) {
@@ -145,9 +163,12 @@ export async function POST(req: NextRequest) {
     clientKey,
     name,
     email,
+    projectName,
+    projectType,
     projectIdea,
     budgetRange,
     timeline,
+    notes,
     ateamDemo
   };
 
@@ -158,6 +179,7 @@ export async function POST(req: NextRequest) {
     clientKey: lead.clientKey,
     budgetRange: lead.budgetRange,
     timeline: lead.timeline,
+    projectType: lead.projectType,
     ateamAttached: Boolean(ateamDemo)
   });
 
@@ -206,6 +228,7 @@ export async function POST(req: NextRequest) {
           requestId: lead.requestId,
           email: lead.email,
           summary: lead.projectIdea,
+          projectType: lead.projectType,
           receivedAt: lead.receivedAt
         })
       });

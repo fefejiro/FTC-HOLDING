@@ -3,12 +3,12 @@ import { SITE_URL } from "../lib/site";
 
 test.describe("Site routes", () => {
   const routeChecks = [
-    { path: "/", title: "Unalabs" },
+    { path: "/", title: "Fast websites, lead systems, and AI-assisted workflows." },
     { path: "/about", title: "About Una Labs" },
     { path: "/capabilities", title: "Studio" },
-    { path: "/work", title: "Work" },
+    { path: "/work", title: "Live delivery snapshots, kept separate from products." },
     { path: "/products", title: "Products" },
-    { path: "/work-with-ftc", title: "Start a Project" },
+    { path: "/work-with-ftc", title: "Turn the idea into a scoped next step." },
     { path: "/connect", title: "Fejiro Efiuvwere" }
   ];
 
@@ -142,14 +142,17 @@ test.describe("Site routes", () => {
     await page.goto("/connect");
     const cta = page.getByRole("link", { name: "Start a Project" }).first();
     await expect(cta).toBeVisible();
-    await expect(cta).toHaveAttribute("href", "/#start-project");
+    await expect(cta).toHaveAttribute("href", "/work-with-ftc");
   });
 
   test("case study detail route works", async ({ page }) => {
     await page.goto("/work/peacepad");
+    await expect(page).toHaveURL("/products/peacepad");
     await expect(page.locator("h1")).toHaveText("PeacePad");
-    await expect(page.getByRole("heading", { name: "Problem" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Outcome" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "PeacePad keeps high-stakes communication calm before it is sent." })
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Install on Google Play" }).first()).toBeVisible();
   });
 
   test("robots and sitemap are exposed", async ({ page }) => {

@@ -1,12 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import BrandImagePanel from "../components/BrandImagePanel";
 import GooglePlayBadge from "../components/GooglePlayBadge";
 import { projectCaseStudies, type ProjectCaseStudy } from "../../lib/content";
 
 export const metadata = {
   title: "Products | Una Labs",
-  description: "Internal Una Labs products and capability engines."
+  description: "Public products and guided systems from Una Labs."
 };
 
 const productOfferContent: Record<
@@ -14,15 +13,13 @@ const productOfferContent: Record<
   {
     offerCopy: string;
     secondaryLabel: string;
-    caseStudyLabel: string;
     supportPoints?: string[];
   }
 > = {
   peacepad: {
     offerCopy:
-      "Install the Android app now or review how PeacePad handles difficult conversations before delivery.",
+      "A communication product built to slow escalation before a message is sent.",
     secondaryLabel: "See PeacePad overview",
-    caseStudyLabel: "Read launch case study",
     supportPoints: [
       "Pause before sending",
       "Review tone before delivery",
@@ -31,19 +28,22 @@ const productOfferContent: Record<
   },
   saywetin: {
     offerCopy:
-      "Install the Android app now or explore how SayWetin explains songs, slang, and cultural context.",
+      "A cultural interpretation product that helps users understand Nigerian music and language context.",
     secondaryLabel: "See SayWetin overview",
-    caseStudyLabel: "Read launch case study"
+    supportPoints: [
+      "Recognize songs",
+      "Explain slang and references",
+      "Add context, not just metadata"
+    ]
   },
   ateam: {
     offerCopy:
-      "Interactive lab system for turning rough ideas into structured execution plans and build-ready direction.",
+      "ATEAM is the AI lab where rough ideas become clear next steps.",
     secondaryLabel: "Try ATEAM demo",
-    caseStudyLabel: "Read system case study",
     supportPoints: [
-      "Guided project intake",
-      "Workflow routing and planning",
-      "Demo and prototype preparation"
+      "Guided idea intake",
+      "Structured project direction",
+      "Phased output and next steps"
     ]
   }
 };
@@ -57,74 +57,40 @@ function getProductOverviewHref(project: ProjectCaseStudy): string {
 }
 
 function getLifecycleStatusLabel(project: ProjectCaseStudy): string {
-  return project.status === "live"
-    ? "Live"
-    : project.status === "active-development"
-      ? "Active Development"
-      : "Internal Runtime";
+  return project.availabilityLabel ?? (project.status === "live" ? "Live" : "Public demo");
 }
 
 export default function ProductsPage() {
-  const sortedProducts = [...projectCaseStudies].sort((a, b) => {
-    if (a.slug === "peacepad") return -1;
-    if (b.slug === "peacepad") return 1;
-    return 0;
-  });
-
-  const featuredAteam = sortedProducts.find((item) => item.slug === "ateam");
-  const primaryProducts = sortedProducts.filter((item) => item.slug !== "ateam");
+  const featuredAteam = projectCaseStudies.find((item) => item.slug === "ateam");
+  const primaryProducts = projectCaseStudies.filter((item) => item.slug !== "ateam");
 
   return (
-    <div className="container page-content">
-      <section className="page-media-banner fade-on-scroll">
-        <div className="page-media-copy">
-          <p className="eyebrow">Product ecosystem</p>
-          <h1>Products</h1>
-          <p className="page-intro">
-            Una Labs product tracks are both market-facing tools and capability engines for a
-            broader studio delivery system. PeacePad leads the lineup.
-          </p>
-          <p>
-            The product portfolio spans communication intelligence, cultural interpretation,
-            and orchestration runtime systems designed to reinforce one another over time.
-          </p>
-        </div>
-        <BrandImagePanel
-          src="/images/brand/unalabs-ecosystem.PNG"
-          alt="Una Labs product ecosystem image"
-          aspect="wide"
-          sizes="(max-width: 980px) 100vw, 44vw"
-          fit="contain"
-          caption={
-            <p className="muted">
-              A visual summary of how the product lines fit into a broader Una Labs capability
-              stack.
-            </p>
-          }
-        />
+    <div className="container page-content products-page">
+      <section className="products-intro">
+        <p className="eyebrow">Products</p>
+        <h1>Products</h1>
+        <p className="page-intro">
+          PeacePad and SayWetin are public products. ATEAM is the guided AI lab that helps move
+          a rough idea into a believable next step.
+        </p>
       </section>
 
-      <div className="cards-grid cards-grid-2">
+      <div className="cards-grid cards-grid-2 products-primary-grid">
         {primaryProducts.map((project) => {
           const offer = productOfferContent[project.slug];
-          const supportPoints = project.marketingBullets ?? offer?.supportPoints;
+          const supportPoints = project.marketingBullets ?? offer?.supportPoints ?? [];
 
           return (
             <article key={project.slug} className="card product-spotlight-card">
-              <p className="status-pill">
-                {project.availabilityLabel ?? getLifecycleStatusLabel(project)}
-              </p>
+              <p className="status-pill">{getLifecycleStatusLabel(project)}</p>
               <h2>{project.name}</h2>
               <p className="muted">{project.tagline}</p>
-              <p>{project.summary}</p>
-              {supportPoints?.length ? (
-                <ul className="feature-list compact-feature-list">
-                  {supportPoints.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
-              ) : null}
-              <p className="product-offer-copy">{offer?.offerCopy ?? project.summary}</p>
+              <p>{offer?.offerCopy ?? project.summary}</p>
+              <ul className="feature-list compact-feature-list">
+                {supportPoints.map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
               <div className="product-card-cta-stack">
                 <div className="product-actions product-actions-stack">
                   {project.googlePlayUrl ? (
@@ -142,16 +108,13 @@ export default function ProductsPage() {
                     prefetch={false}
                     className="btn btn-secondary product-spotlight-link"
                   >
-                    {offer?.secondaryLabel ?? "View product overview"}
+                    {offer?.secondaryLabel ?? "See product overview"}
                   </Link>
                 </div>
                 {project.googlePlayUrl ? (
                   <GooglePlayBadge href={project.googlePlayUrl} title={project.name} />
                 ) : null}
               </div>
-              <Link href={getProductOverviewHref(project)} prefetch={false} className="inline-link">
-                See how it works
-              </Link>
             </article>
           );
         })}
@@ -159,24 +122,17 @@ export default function ProductsPage() {
 
       {featuredAteam ? (
         <article className="card product-spotlight-card product-spotlight-card--featured">
-          <div className="product-spotlight-feature">
+          <div className="product-spotlight-feature product-spotlight-feature--ateam">
             <div className="product-spotlight-feature-copy">
-              <p className="status-pill">{featuredAteam.availabilityLabel ?? getLifecycleStatusLabel(featuredAteam)}</p>
-              <h2>{featuredAteam.name}</h2>
-              <p className="muted">{featuredAteam.tagline}</p>
-              <p>{featuredAteam.summary}</p>
+              <p className="status-pill">{getLifecycleStatusLabel(featuredAteam)}</p>
+              <h2>ATEAM</h2>
+              <p className="muted">The AI lab where rough ideas become clear next steps.</p>
+              <p>Guided idea intake, structured project direction, and a clean handoff into a real project request.</p>
               <ul className="feature-list compact-feature-list">
-                {(
-                  featuredAteam.marketingBullets ??
-                  productOfferContent.ateam.supportPoints ??
-                  featuredAteam.sections.capabilities
-                )
-                  .slice(0, 4)
-                  .map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
+                {(featuredAteam.marketingBullets ?? productOfferContent.ateam.supportPoints ?? []).map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
               </ul>
-              <p className="product-offer-copy">{productOfferContent.ateam.offerCopy}</p>
               <div className="product-actions">
                 <Link href="/ateam" prefetch={false} className="btn btn-primary">
                   Try ATEAM demo
@@ -186,19 +142,17 @@ export default function ProductsPage() {
                 </Link>
               </div>
             </div>
-            <BrandImagePanel
-              src="/images/brand/Calender Ateam.png"
-              alt="ATEAM mission control preview"
-              aspect="wide"
-              fit="cover"
-              sizes="(max-width: 980px) 100vw, 42vw"
-              overlay={
-                <div className="ateam-logo-overlay" aria-hidden="true">
-                  <Image src="/images/brand/ATeam Logo.png" alt="" width={52} height={52} />
-                </div>
-              }
-              caption={<p className="muted">Mission Control-style output: brief → workflow → next step.</p>}
-            />
+            <div className="product-ateam-visual">
+              <div className="product-ateam-visual-mark" aria-hidden="true">
+                <Image src="/images/brand/ATeam Logo.png" alt="" width={58} height={58} />
+              </div>
+              <img
+                src="/images/brand/Calender Ateam.png"
+                alt="ATEAM mission control preview"
+                className="product-ateam-preview"
+              />
+              <p className="muted">Guided intake, structured output, then a clean handoff into real project scope.</p>
+            </div>
           </div>
         </article>
       ) : null}
@@ -206,17 +160,17 @@ export default function ProductsPage() {
       <article className="card final-cta-card">
         <div>
           <p className="eyebrow">Next step</p>
-          <h2>Want a product or system like these?</h2>
+          <h2>Want one of these products, or a similar system for your team?</h2>
           <p className="muted">
-            Una Labs can scope a fast build path that keeps delivery measurable and aligned.
+            Una Labs can scope the shortest credible path from idea to launch-ready delivery.
           </p>
         </div>
         <div className="product-actions">
           <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
             Start a Project
           </Link>
-          <Link href="/work" prefetch={false} className="btn btn-secondary">
-            View Client Launches
+          <Link href="/ateam" prefetch={false} className="btn btn-secondary">
+            Try ATEAM Demo
           </Link>
         </div>
       </article>

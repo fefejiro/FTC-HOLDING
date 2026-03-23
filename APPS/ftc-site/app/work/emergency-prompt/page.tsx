@@ -3,23 +3,14 @@ import { emergencyPromptCaseStudy } from "../../../lib/recentWork";
 
 export const metadata = {
   title: `${emergencyPromptCaseStudy.tileTitle} | Client Launch`,
-  description: "Lead engine setup case study focused on local intent and inbound conversions."
+  description: "Live onboarding snapshot for a local-service lead engine setup."
 };
 
-const phaseOneDeliverables = [
-  "YouTube channel setup",
-  "Asset intake pipeline (Drive)",
-  "First uploads (2-3 videos)",
-  "Title, description, keywords optimized for local intent",
-  "Clear call-to-action and contact placement"
-];
-
-const phaseTwoNextSteps = [
-  "Consistent posting cadence",
-  "Thumbnail standardization",
-  "Local search optimization improvements",
-  "Conversion tracking plan"
-];
+const setupNow = [
+  "Service clarity and offer framing",
+  "Local search structure for high-intent discovery",
+  "Lead capture path from visit to inbound call"
+] as const;
 
 export default function EmergencyPromptCaseStudy() {
   return (
@@ -30,44 +21,45 @@ export default function EmergencyPromptCaseStudy() {
       <p className="lead">{emergencyPromptCaseStudy.subtitle}</p>
 
       <section className="case-study-section">
-        <h2>Overview</h2>
+        <h2>Snapshot</h2>
         <div className="cards-grid cards-grid-3 overview-grid">
           <div className="card overview-card">
-            <p className="eyebrow">Client</p>
-            <h3>{emergencyPromptCaseStudy.clientName}</h3>
-          </div>
-          <div className="card overview-card">
-            <p className="eyebrow">Service</p>
+            <p className="eyebrow">Service lane</p>
             <h3>{emergencyPromptCaseStudy.service}</h3>
           </div>
           <div className="card overview-card">
-            <p className="eyebrow">Status</p>
-            <h3>{emergencyPromptCaseStudy.status}</h3>
+            <p className="eyebrow">Current focus</p>
+            <h3>Phase 1 setup</h3>
+          </div>
+          <div className="card overview-card">
+            <p className="eyebrow">Next milestone</p>
+            <h3>Launch-ready homepage draft</h3>
           </div>
         </div>
       </section>
 
       <section className="case-study-section">
-        <h2>The problem</h2>
-        <p>
-          Spending on clicks with weak call conversion and low visibility on what is
-          actually working.
-        </p>
-      </section>
-
-      <section className="case-study-section">
-        <h2>What we delivered (Phase 1)</h2>
+        <h2>What is being set up now</h2>
         <ul className="case-study-list">
-          {phaseOneDeliverables.map((item) => (
+          {setupNow.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
       </section>
 
       <section className="case-study-section">
-        <h2>Next steps (Phase 2)</h2>
+        <h2>Current focus</h2>
         <ul className="case-study-list">
-          {phaseTwoNextSteps.map((item) => (
+          {(emergencyPromptCaseStudy.currentFocus ?? []).map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="case-study-section">
+        <h2>Next milestone</h2>
+        <ul className="case-study-list">
+          {(emergencyPromptCaseStudy.nextMilestone ?? []).map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
@@ -96,30 +88,35 @@ export default function EmergencyPromptCaseStudy() {
       </section>
 
       <section className="case-study-section">
-        <h2>Build Something Similar</h2>
-        <p className="muted">
-          Want a lead engine that keeps attribution, calls, and conversions visible?
-          Una Labs can scope a fast setup path.
-        </p>
-        <div className="hero-actions">
-          <Link
-            href="/work-with-ftc"
-            className="btn btn-primary"
-            data-analytics-event="start_project_click"
-            data-analytics-location="case_study"
-            data-analytics-label="emergency-prompt"
-          >
-            Start a Project
-          </Link>
-          <Link
-            href="/work"
-            className="btn btn-secondary"
-            data-analytics-event="view_work_click"
-            data-analytics-location="case_study"
-          >
-            Back to Client Launches
-          </Link>
-        </div>
+        <article className="card final-cta-card">
+          <div>
+            <p className="eyebrow">Next step</p>
+            <h2>Want a similar setup for your business?</h2>
+            <p className="muted">
+              Una Labs can scope a fast delivery path for a website, lead engine, or AI-assisted
+              workflow that needs to become real quickly.
+            </p>
+          </div>
+          <div className="product-actions">
+            <Link
+              href="/work-with-ftc"
+              className="btn btn-primary"
+              data-analytics-event="start_project_click"
+              data-analytics-location="case_study"
+              data-analytics-label="emergency-prompt"
+            >
+              Start a similar project
+            </Link>
+            <Link
+              href="/work"
+              className="btn btn-secondary"
+              data-analytics-event="view_work_click"
+              data-analytics-location="case_study"
+            >
+              Back to Client Launches
+            </Link>
+          </div>
+        </article>
       </section>
     </article>
   );
