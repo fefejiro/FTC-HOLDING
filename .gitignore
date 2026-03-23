@@ -34,6 +34,8 @@ APPS/saywetin/.git.backup-*/
 
 # local duplicate clone/tree - not source of truth for this repo
 FTC-HOLDING/
+.tmp-main-publish/
+.tmp-main-publish/**
 
 # local ATEAM temp artifacts
 APPS/ATEAM/tmpclaude-*
