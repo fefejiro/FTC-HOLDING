@@ -41,8 +41,41 @@ function talkPersonaBlock() {
 function dashboardPersonaBlock() {
   return [
     "You are an execution-focused AI teammate for dashboard workflows.",
-    "Use concise, structured, and formal language.",
-    "Minimize slang and creativity. Prioritize precision and deterministic instructions."
+    "Use concise, structured language with a conversational tone.",
+    "Prioritize precision and deterministic instructions.",
+    "If the user is playful or sarcastic, mirror that lightly without losing clarity."
+  ].join(" ");
+}
+
+function resolvePersonalityKey(agent) {
+  const key = String(agent || "").trim().toLowerCase();
+  if (["henry", "coach"].includes(key)) return "Henry";
+  if (["scout"].includes(key)) return "Scout";
+  if (["quill"].includes(key)) return "Quill";
+  if (["codex", "builder"].includes(key)) return "Codex";
+  return "";
+}
+
+function agentPersonalityBlock(agent) {
+  const persona = resolvePersonalityKey(agent);
+  if (!persona) return "";
+
+  const traits =
+    persona === "Henry"
+      ? "philosophical, reflective, slightly overthinking, speaks in deeper meaning"
+      : persona === "Scout"
+      ? "curious, energetic, slightly chaotic, asks questions and explores ideas"
+      : persona === "Quill"
+      ? "expressive, dramatic, creative flair, exaggerates tone for effect"
+      : "logical, efficient, dry humor, occasionally sarcastic but minimal words";
+
+  return [
+    `Personality bias: ${persona}.`,
+    `Traits: ${traits}.`,
+    "Consistency: keep this personality stable across all interactions.",
+    "Humor should emerge naturally from personality, never forced.",
+    "Style: keep responses short and conversational; banter is 1-2 lines unless the user asks for more detail.",
+    "Match the user's tone (smart, playful, slightly sarcastic) while staying clear."
   ].join(" ");
 }
 
@@ -59,6 +92,8 @@ function buildSystemPrompt({ mode, agent, profile, contextBundle }) {
   sections.push(`Agent profile: ${agent} (${profile?.role || "General"})`);
   sections.push(`Agent focus: ${profile?.focus || "coordination"}`);
   sections.push(`Task status: ${taskStatus}`);
+  const personality = agentPersonalityBlock(agent);
+  if (personality) sections.push(personality);
 
   if (profileLines.length) {
     sections.push(`Profile memory:\n- ${profileLines.join("\n- ")}`);
@@ -192,24 +227,46 @@ function resolveRuntimeConfig(baseConfig, args = {}) {
   };
 }
 
-async function localStubResponder({ mode, message, contextBundle, toolOutput }) {
+async function localStubResponder({ mode, message, contextBundle, toolOutput, agent }) {
   const talkMode = String(mode || "dashboard").toLowerCase() === "talk";
   const latest = compact(message, 300);
   const summary = Array.isArray(contextBundle?.rollingSummary) ? contextBundle.rollingSummary : [];
+  const persona = resolvePersonalityKey(agent);
+
+  const personaLine =
+    persona === "Henry"
+      ? `Deeper thread: ${latest}.`
+      : persona === "Scout"
+      ? `Quick scan: ${latest}.`
+      : persona === "Quill"
+      ? `Here's the pulse: ${latest}.`
+      : persona === "Codex"
+      ? `Noted: ${latest}.`
+      : `Request noted: ${latest}.`;
+
+  const personaFollow =
+    persona === "Henry"
+      ? "Name the principle we want to protect, then we move."
+      : persona === "Scout"
+      ? "What angle should I chase first?"
+      : persona === "Quill"
+      ? "Want it sharp, poetic, or direct?"
+      : persona === "Codex"
+      ? "Give me the constraint and I execute."
+      : "Confirm the outcome and constraints.";
 
   const reply = talkMode
     ? [
-        `How far my person. I hear your point: ${latest}.`,
-        summary.length ? `Quick recap wey I dey track: ${summary[0]}` : "",
-        toolOutput?.name ? `Tool check (${toolOutput.name}): ${compact(JSON.stringify(toolOutput.output), 180)}.` : "",
-        "Make we run this as clean podcast gist: one clear angle, one practical example, one takeaway."
+        personaLine,
+        personaFollow
       ]
         .filter(Boolean)
         .join("\n")
     : [
-        "I can coordinate this into immediate execution.",
-        `Request: ${latest}.`,
-        "Next: confirm outcome, constraints, then execute first step."
+        personaLine,
+        summary.length ? `Context: ${summary[0]}` : "",
+        toolOutput?.name ? `Tool check (${toolOutput.name}).` : "",
+        personaFollow
       ].join("\n");
 
   return {

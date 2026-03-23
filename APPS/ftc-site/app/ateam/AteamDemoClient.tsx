@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { saveAteamDemoHandoff } from "../../lib/ateamHandoff";
 
 type DemoOutput = {
   summary: string;
+  recommendedLane: string;
   recommendedDirection: string;
   phases: string[];
   stack: string[];
@@ -13,12 +15,14 @@ type DemoOutput = {
 };
 
 const categories = [
-  { value: "website", label: "Website / marketing site" },
-  { value: "lead-automation", label: "Lead automation / follow-up" },
-  { value: "product-app", label: "Product or mobile app" },
-  { value: "internal-tool", label: "Internal tool / ops system" },
-  { value: "ai-feature", label: "AI feature or assistant" }
+  { value: "website", label: "Website" },
+  { value: "lead-automation", label: "Lead automation" },
+  { value: "product-app", label: "App" },
+  { value: "internal-tool", label: "Internal tool" },
+  { value: "ai-feature", label: "AI workflow" }
 ] as const;
+
+const labStages = ["Idea in", "Lab review", "Build path", "Next step"] as const;
 
 type CategoryValue = (typeof categories)[number]["value"];
 
@@ -28,25 +32,65 @@ export default function AteamDemoClient() {
   const [output, setOutput] = useState<DemoOutput | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
+  const [stageIndex, setStageIndex] = useState(0);
+
+  useEffect(() => {
+    if (status !== "loading") {
+      setStageIndex(0);
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setStageIndex((current) => (current + 1) % labStages.length);
+    }, 700);
+
+    return () => window.clearInterval(interval);
+  }, [status]);
+
+  const selectedCategoryLabel = useMemo(() => {
+    return categories.find((item) => item.value === category)?.label ?? category;
+  }, [category]);
+
+  const handoffPayload = useMemo(() => {
+    if (!output) return null;
+    return {
+      version: 1 as const,
+      createdAtMs: Date.now(),
+      idea,
+      categoryValue: category,
+      categoryLabel: selectedCategoryLabel,
+      output
+    };
+  }, [category, idea, output, selectedCategoryLabel]);
+
+  const handleContinue = () => {
+    if (!handoffPayload) return;
+    saveAteamDemoHandoff(handoffPayload);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
 
-    if (idea.trim().length < 12) {
+    const submitIdea = idea;
+    const submitCategory = category;
+    const submitCategoryLabel = selectedCategoryLabel;
+
+    if (submitIdea.trim().length < 12) {
       setStatus("error");
-      setError("Share a bit more detail so the demo can respond properly.");
+      setError("Share a bit more detail so the demo can frame a believable next step.");
       return;
     }
 
     setStatus("loading");
     setOutput(null);
+    const loadingStartedAtMs = Date.now();
 
     try {
       const response = await fetch("/api/ateam-demo", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ idea, category })
+        body: JSON.stringify({ idea: submitIdea, category: submitCategory })
       });
 
       const payload = await response.json();
@@ -56,8 +100,25 @@ export default function AteamDemoClient() {
         return;
       }
 
-      setOutput(payload.output as DemoOutput);
+      const resolvedOutput = payload.output as DemoOutput;
+
+      const elapsedMs = Date.now() - loadingStartedAtMs;
+      const minLoadingMs = 3200;
+      if (elapsedMs < minLoadingMs) {
+        await new Promise((resolve) => setTimeout(resolve, minLoadingMs - elapsedMs));
+      }
+
+      setOutput(resolvedOutput);
       setStatus("idle");
+
+      saveAteamDemoHandoff({
+        version: 1 as const,
+        createdAtMs: Date.now(),
+        idea: submitIdea,
+        categoryValue: submitCategory,
+        categoryLabel: submitCategoryLabel,
+        output: resolvedOutput
+      });
     } catch (requestError) {
       setStatus("error");
       setError(
@@ -72,7 +133,7 @@ export default function AteamDemoClient() {
     <div className="ateam-demo">
       <form className="ateam-demo-form" onSubmit={handleSubmit}>
         <div className="ateam-demo-field">
-          <label htmlFor="ateam-idea">Project idea</label>
+          <label htmlFor="ateam-idea">Describe the idea</label>
           <textarea
             id="ateam-idea"
             value={idea}
@@ -95,6 +156,23 @@ export default function AteamDemoClient() {
             ))}
           </select>
         </div>
+
+        <div className="ateam-demo-stage-rail" aria-label="ATEAM workflow stages">
+          {labStages.map((stage, index) => {
+            const isActive = status === "loading" && index <= stageIndex;
+            const isComplete = status !== "loading" && output;
+            return (
+              <div
+                key={stage}
+                className={`ateam-demo-stage ${isActive || isComplete ? "is-active" : ""}`}
+              >
+                <span>{index + 1}</span>
+                <strong>{stage}</strong>
+              </div>
+            );
+          })}
+        </div>
+
         <button
           type="submit"
           className="btn btn-primary"
@@ -106,62 +184,106 @@ export default function AteamDemoClient() {
       </form>
 
       <div className="ateam-demo-output">
-        {output ? (
-          <>
-            <div className="ateam-demo-output-grid">
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Summary</p>
+        {status === "loading" ? (
+          <div className="card ateam-demo-loading">
+            <div className="ateam-demo-loading-top">
+              <p className="card-kicker">ATEAM processing</p>
+              <span className="ateam-demo-pill">{selectedCategoryLabel}</span>
+            </div>
+            <h3>Reviewing your idea and building a scoped next step</h3>
+            <p className="muted">
+              The lab is checking fit, tightening the delivery path, and preparing a practical
+              brief you can continue into intake.
+            </p>
+            <div className="ateam-demo-loading-bar" aria-hidden="true">
+              <span style={{ width: `${((stageIndex + 1) / labStages.length) * 100}%` }} />
+            </div>
+            <div className="ateam-demo-loading-grid">
+              {labStages.map((stage, index) => (
+                <div
+                  key={stage}
+                  className={`ateam-demo-loading-card ${index === stageIndex ? "is-current" : ""}`}
+                >
+                  <span>{index + 1}</span>
+                  <p>{stage}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : output ? (
+          <article className="card ateam-demo-brief-card">
+            <div className="ateam-demo-brief-top">
+              <div>
+                <p className="card-kicker">Generated brief</p>
+                <h3>Clear next step for your idea</h3>
+              </div>
+              <span className="ateam-demo-pill">{selectedCategoryLabel}</span>
+            </div>
+            <div className="ateam-demo-idea">
+              <p className="ateam-demo-idea-label">Idea</p>
+              <p className="ateam-demo-idea-text">{idea}</p>
+            </div>
+            <div className="ateam-demo-brief-grid">
+              <section className="ateam-demo-brief-section ateam-demo-brief-section--summary">
+                <h4>Recommended lane</h4>
+                <p className="ateam-demo-lane">{output.recommendedLane}</p>
                 <p>{output.summary}</p>
                 <p className="muted">{output.recommendedDirection}</p>
-              </div>
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Phases</p>
+              </section>
+              <section className="ateam-demo-brief-section">
+                <h4>Suggested phases</h4>
                 <ul className="ateam-demo-list">
                   {output.phases.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
-              </div>
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Suggested stack</p>
-                <ul className="ateam-demo-list">
-                  {output.stack.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Deliverables</p>
+              </section>
+              <section className="ateam-demo-brief-section">
+                <h4>Likely deliverables</h4>
                 <ul className="ateam-demo-list">
                   {output.deliverables.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
-              </div>
-              <div className="card ateam-demo-output-card">
-                <p className="card-kicker">Next steps</p>
+              </section>
+              <section className="ateam-demo-brief-section">
+                <h4>Suggested stack</h4>
+                <ul className="ateam-demo-list">
+                  {output.stack.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+              <section className="ateam-demo-brief-section">
+                <h4>Clear next step</h4>
                 <ul className="ateam-demo-list">
                   {output.nextSteps.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
-                <div className="ateam-demo-next-cta">
-                  <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
-                    Start a Project
-                  </Link>
-                  <Link href="/work" prefetch={false} className="btn btn-secondary">
-                    View Client Launches
-                  </Link>
-                </div>
-              </div>
+              </section>
             </div>
-          </>
+            <div className="ateam-demo-next-cta">
+              <Link
+                href="/work-with-ftc?from=ateam"
+                prefetch={false}
+                className="btn btn-primary"
+                onClick={handleContinue}
+              >
+                Continue with this idea
+              </Link>
+              <Link href="/work" prefetch={false} className="btn btn-secondary">
+                View Client Launches
+              </Link>
+            </div>
+          </article>
         ) : (
           <div className="card ateam-demo-placeholder">
             <p className="card-kicker">Demo output</p>
+            <h3>Run a guided lab pass on the idea</h3>
             <p className="muted">
-              Submit an idea to see the structured execution summary and suggested
-              delivery plan.
+              ATEAM will return a recommended lane, structured summary, phases, likely
+              deliverables, and the next step you can continue into intake.
             </p>
           </div>
         )}

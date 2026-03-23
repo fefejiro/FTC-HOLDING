@@ -62,7 +62,10 @@ function deterministicSummary(olderMessages) {
 
 async function maybeLlmSummary(olderMessages) {
   const apiKey = process.env.OPENAI_API_KEY || "";
-  if (!apiKey) return null;
+  // If the server is explicitly running in stub mode, never call external APIs here.
+  // This keeps Talk Mode responsive in local/offline setups and avoids hanging fetches.
+  const llmMode = String(process.env.LLM_MODE || "auto").trim().toLowerCase();
+  if (!apiKey || llmMode === "stub") return null;
 
   const model =
     process.env.OPENAI_MODEL_DASH_FALLBACK ||
@@ -84,28 +87,38 @@ async function maybeLlmSummary(olderMessages) {
   ].join("\n");
 
   try {
-    const res = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        max_output_tokens: 180,
-        input: [
-          {
-            role: "system",
-            content: [{ type: "input_text", text: "Create compact memory summaries for dialogue systems." }]
-          },
-          {
-            role: "user",
-            content: [{ type: "input_text", text: prompt }]
-          }
-        ]
-      })
-    });
+    const timeoutMsRaw = Number(process.env.OPENAI_TIMEOUT_MS || 12_000);
+    const timeoutMs = Number.isFinite(timeoutMsRaw) ? Math.max(2500, Math.min(45_000, timeoutMsRaw)) : 12_000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort("timeout"), timeoutMs);
+    let res;
+    try {
+      res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          temperature: 0.2,
+          max_output_tokens: 180,
+          input: [
+            {
+              role: "system",
+              content: [{ type: "input_text", text: "Create compact memory summaries for dialogue systems." }]
+            },
+            {
+              role: "user",
+              content: [{ type: "input_text", text: prompt }]
+            }
+          ]
+        })
+      });
+    } finally {
+      clearTimeout(timer);
+    }
     if (!res.ok) return null;
     const data = await res.json();
     const text = String(data?.output_text || "").trim();

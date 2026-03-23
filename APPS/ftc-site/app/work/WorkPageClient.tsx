@@ -2,47 +2,75 @@ import Link from "next/link";
 import { clientLaunches } from "../../lib/recentWork";
 
 export default function WorkPageClient() {
+  const featuredLaunch = clientLaunches[0];
+
   return (
     <div className="container page-content client-launches-page">
-      <h1>Client Launches</h1>
-      <p className="page-intro">
-        Recently onboarded clients and delivery snapshots. Live projects are labeled
-        clearly so you can see what is in progress.
-      </p>
+      <section className="client-launches-hero">
+        <p className="eyebrow">Client Launches</p>
+        <h1>Live delivery snapshots, kept separate from products.</h1>
+        <p className="page-intro">
+          Client Launches shows real onboarding and setup work in progress. Products stays reserved
+          for Una Labs-owned tools like PeacePad, SayWetin, and ATEAM.
+        </p>
+      </section>
 
-      <div className="cards-grid cards-grid-3">
-        {clientLaunches.map((launch) => (
-          <article key={launch.slug} className="card client-launch-card">
-            <span className="status-pill">{launch.status}</span>
-            <p className="card-kicker">{launch.service}</p>
-            <h2>{launch.tileTitle}</h2>
-            <p className="muted">{launch.subtitle}</p>
-            <p>{launch.summary}</p>
-            {launch.tags.length ? (
-              <div className="proof-tags" aria-label={`${launch.tileTitle} tags`}>
-                {launch.tags.map((tag) => (
-                  <span key={tag} className="proof-tag">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-            <div className="client-launch-actions">
-              <Link href={`/work/${launch.slug}`} prefetch={false} className="inline-link">
-                View onboarding snapshot
-              </Link>
+      {featuredLaunch ? (
+        <article className="card client-launch-card client-launch-card--featured">
+          <div className="featured-launch-head">
+            <div>
+              <p className="status-pill">{featuredLaunch.status}</p>
+              <h2>{featuredLaunch.tileTitle}</h2>
+              <p className="muted">{featuredLaunch.service}</p>
             </div>
-          </article>
-        ))}
-      </div>
+            <div className="proof-tags" aria-label={`${featuredLaunch.tileTitle} tags`}>
+              {featuredLaunch.tags.map((tag) => (
+                <span key={tag} className="proof-tag">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <p className="client-launch-summary">{featuredLaunch.summary}</p>
+
+          <div className="featured-launch-grid">
+            <div className="client-launch-signal">
+              <p className="client-launch-signal-title">Current focus</p>
+              <ul className="client-launch-signal-list">
+                {(featuredLaunch.currentFocus ?? []).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="client-launch-signal">
+              <p className="client-launch-signal-title">Next milestone</p>
+              <ul className="client-launch-signal-list">
+                {(featuredLaunch.nextMilestone ?? []).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="client-launch-actions">
+            <Link href={`/work/${featuredLaunch.slug}`} prefetch={false} className="btn btn-secondary">
+              View onboarding snapshot
+            </Link>
+            <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
+              Start a similar project
+            </Link>
+          </div>
+        </article>
+      ) : null}
 
       <article className="card final-cta-card">
         <div>
           <p className="eyebrow">Next step</p>
-          <h2>Need a launch like this?</h2>
+          <h2>Need a launch path like this for your own business?</h2>
           <p className="muted">
-            Una Labs can scope a fast delivery path with clear milestones and measurable
-            outcomes.
+            Una Labs can scope the shortest credible setup for your website, lead path, or
+            AI-assisted workflow.
           </p>
         </div>
         <div className="product-actions">
@@ -50,7 +78,7 @@ export default function WorkPageClient() {
             Start a Project
           </Link>
           <Link href="/ateam" prefetch={false} className="btn btn-secondary">
-            Try ATEAM demo
+            Try ATEAM Demo
           </Link>
         </div>
       </article>

@@ -7,6 +7,8 @@ export type ClientLaunch = {
   status: string;
   tags: string[];
   summary: string;
+  currentFocus?: string[];
+  nextMilestone?: string[];
   websiteUrl: string;
   youtubeUrl: string;
 };
@@ -15,12 +17,22 @@ export const emergencyPromptCaseStudy: ClientLaunch = {
   slug: "emergency-prompt",
   clientName: "Emergency Prompt",
   tileTitle: "Emergency Prompt",
-  subtitle: "Lead engine setup (YouTube SEO + inbound call flow)",
+  subtitle: "Live onboarding snapshot for a local-service lead engine",
   service: "Lead engine setup",
-  status: "In progress (Phase 1)",
+  status: "New client · Setup phase",
   tags: ["Local SEO", "Content pipeline", "Conversion"],
   summary:
-    "Newly onboarded local service client. Launch-ready web presence with service clarity, local search structure, and conversion-focused lead flow.",
+    "Lead engine setup for a newly onboarded local service client, with service clarity, local search structure, and a cleaner path from discovery to inbound call.",
+  currentFocus: [
+    "Service clarity",
+    "Local search structure",
+    "Lead capture path"
+  ],
+  nextMilestone: [
+    "Launch-ready homepage draft",
+    "Inbound call flow setup",
+    "Local SEO baseline"
+  ],
   websiteUrl: "https://emergencyprompt.com",
   youtubeUrl: "https://www.youtube.com/@EmergencyPromptOttawa"
 };

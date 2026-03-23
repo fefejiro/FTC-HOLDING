@@ -1,20 +1,17 @@
 /**
  * Event Log for ATEAM
- * Persists all events to disk by session
+ * Local-first, SQLite-backed (with JSON import for backward compatibility).
  */
 
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
+import { getDb } from "./sqliteDb.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_EVENTS_DIR = path.join(__dirname, "..", "..", "memory", "events");
-const RENAME_RETRY_CODES = new Set(["EPERM", "EACCES", "EBUSY"]);
-const RENAME_RETRY_MAX = Math.max(0, Number(process.env.ATEAM_EVENT_LOG_RENAME_RETRIES || 4));
-const RENAME_RETRY_BACKOFF_MS = Math.max(1, Number(process.env.ATEAM_EVENT_LOG_RENAME_BACKOFF_MS || 8));
-const WAIT_ARRAY = new Int32Array(new SharedArrayBuffer(4));
 
 function resolveEventsDir() {
   const overrideDir = String(process.env.ATEAM_EVENT_LOG_DIR || "").trim();
@@ -58,140 +55,242 @@ function createEvent(type, actor, lane, summary, meta = {}) {
   };
 }
 
-function sleepMsSync(ms) {
-  Atomics.wait(WAIT_ARRAY, 0, 0, Math.max(0, Number(ms) || 0));
-}
-
-function isRetryableRenameError(err) {
-  return Boolean(err && typeof err === "object" && RENAME_RETRY_CODES.has(String(err.code || "")));
-}
-
-function writeEventsAtomic(filePath, events) {
-  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tmpPath, JSON.stringify(events, null, 2), "utf-8");
-  let lastErr = null;
-  for (let attempt = 0; attempt <= RENAME_RETRY_MAX; attempt += 1) {
-    try {
-      fs.renameSync(tmpPath, filePath);
-      lastErr = null;
-      break;
-    } catch (err) {
-      lastErr = err;
-      if (!isRetryableRenameError(err) || attempt >= RENAME_RETRY_MAX) break;
-      sleepMsSync(RENAME_RETRY_BACKOFF_MS * (attempt + 1));
-    }
+function parseMetaJson(metaJson) {
+  try {
+    const parsed = JSON.parse(String(metaJson || "{}"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
   }
-  if (lastErr) {
+}
+
+function normalizeEventRow(row) {
+  if (!row) return null;
+  const meta = parseMetaJson(row.meta_json);
+  const turnId = String(row.turn_id || meta?.turnId || meta?.turn_id || "").trim();
+  return {
+    id: String(row.id),
+    timestamp: String(row.timestamp),
+    type: String(row.type),
+    actor: String(row.actor),
+    lane: String(row.lane),
+    summary: String(row.summary || ""),
+    turnId: turnId || undefined,
+    deduped: Boolean(row.deduped),
+    duplicateCount: Number(row.duplicate_count || 0),
+    lastDuplicateAt: row.last_duplicate_at ? String(row.last_duplicate_at) : undefined,
+    meta
+  };
+}
+
+let cachedDb = null;
+let cachedStatements = null;
+
+function getStatements(db) {
+  if (cachedDb === db && cachedStatements) return cachedStatements;
+  cachedDb = db;
+  cachedStatements = {
+    countSession: db.prepare("SELECT COUNT(*) as c FROM events WHERE session_id = ?"),
+    selectAllAsc: db.prepare("SELECT * FROM events WHERE session_id = ? ORDER BY timestamp ASC"),
+    selectLatestDescLimit: db.prepare("SELECT * FROM events WHERE session_id = ? ORDER BY timestamp DESC LIMIT ?"),
+    selectAfterAsc: db.prepare("SELECT * FROM events WHERE session_id = ? AND timestamp > ? ORDER BY timestamp ASC"),
+    selectAfterAscLimit: db.prepare(
+      "SELECT * FROM events WHERE session_id = ? AND timestamp > ? ORDER BY timestamp ASC LIMIT ?"
+    ),
+    selectTurnDedupe: db.prepare(
+      "SELECT * FROM events WHERE session_id = ? AND type = ? AND turn_id = ? AND IFNULL(status_key,'') = IFNULL(?, '') LIMIT 1"
+    ),
+    selectMetaDedupe: db.prepare(
+      "SELECT * FROM events WHERE session_id = ? AND type = ? AND meta_dedupe_key = ? LIMIT 1"
+    ),
+    updateDuplicate: db.prepare(
+      "UPDATE events SET deduped = 1, duplicate_count = ?, last_duplicate_at = ? WHERE id = ?"
+    ),
+    insertEvent: db.prepare(
+      `INSERT INTO events (
+        id, session_id, timestamp, type, actor, lane, summary, turn_id, status_key, meta_dedupe_key,
+        meta_json, deduped, duplicate_count, last_duplicate_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+  };
+  return cachedStatements;
+}
+
+function ensureSessionImported(sessionId) {
+  const safeSessionId = sanitizeSessionId(sessionId);
+  const db = getDb();
+  const { countSession, insertEvent } = getStatements(db);
+  const countRow = countSession.get(safeSessionId);
+  const count = Number(countRow?.c || 0);
+  if (count > 0) return;
+
+  const filePath = getSessionEventFile(safeSessionId);
+  if (!fs.existsSync(filePath)) return;
+
+  try {
+    const raw = fs.readFileSync(filePath, "utf-8");
+    const parsed = JSON.parse(raw);
+    const events = Array.isArray(parsed) ? parsed : [];
+    if (!events.length) return;
+
+    db.exec("BEGIN");
+    for (const item of events) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+      const meta = item.meta && typeof item.meta === "object" && !Array.isArray(item.meta) ? item.meta : {};
+      const turnId = String(item.turnId || meta.turnId || "").trim() || null;
+      const statusKey = String(meta.statusKey || "").trim() || null;
+      const metaDedupeKey = String(meta.dedupeKey || "").trim() || null;
+
+      insertEvent.run(
+        String(item.id || crypto.randomUUID()),
+        safeSessionId,
+        String(item.timestamp || new Date().toISOString()),
+        String(item.type || ""),
+        String(item.actor || ""),
+        String(item.lane || ""),
+        String(item.summary || ""),
+        turnId,
+        statusKey,
+        metaDedupeKey,
+        JSON.stringify(meta),
+        item.deduped ? 1 : 0,
+        Number(item.duplicateCount || item.duplicate_count || 0),
+        item.lastDuplicateAt ? String(item.lastDuplicateAt) : null
+      );
+    }
+    db.exec("COMMIT");
+  } catch (err) {
     try {
-      if (fs.existsSync(tmpPath)) fs.rmSync(tmpPath, { force: true });
+      db.exec("ROLLBACK");
     } catch {}
-    throw lastErr;
+    console.error(`[EventLog] Failed to import legacy events for ${safeSessionId}:`, err);
   }
 }
 
 function appendEvent(sessionId, event) {
   const safeSessionId = sanitizeSessionId(sessionId);
-  const filePath = getSessionEventFile(safeSessionId);
   try {
-    const events = getEvents(safeSessionId);
-    const eventWithDebug = { ...(event || {}) };
-    const incomingType = String(eventWithDebug?.type || "").trim();
-    const incomingTurnId = String(eventWithDebug?.turnId || eventWithDebug?.meta?.turnId || "").trim();
-    const incomingStatusKey = String(eventWithDebug?.meta?.statusKey || "").trim();
-    const incomingDedupeKey = String(eventWithDebug?.meta?.dedupeKey || "").trim();
-    const turnBasedDedupeKey = incomingType && incomingTurnId ? `${incomingType}|turn:${incomingTurnId}|status:${incomingStatusKey}` : "";
-    const fallbackDedupeKey =
-      !incomingTurnId && incomingType && incomingDedupeKey ? `${incomingType}|dedupe:${incomingDedupeKey}` : "";
-    eventWithDebug._dedupeKey = turnBasedDedupeKey || fallbackDedupeKey || "";
+    ensureSessionImported(safeSessionId);
+    const db = getDb();
+    const stmts = getStatements(db);
+
+    const incoming = event && typeof event === "object" ? { ...event } : {};
+    const incomingType = String(incoming?.type || "").trim();
+    const incomingMeta = incoming?.meta && typeof incoming.meta === "object" && !Array.isArray(incoming.meta) ? incoming.meta : {};
+    const incomingTurnId = String(incoming?.turnId || incomingMeta?.turnId || "").trim();
+    const incomingStatusKey = String(incomingMeta?.statusKey || "").trim();
+    const incomingDedupeKey = String(incomingMeta?.dedupeKey || "").trim();
 
     if (incomingType && incomingTurnId) {
-      const existingIndex = events.findIndex(
-        (item) =>
-          String(item?.type || "").trim() === incomingType &&
-          String(item?.turnId || item?.meta?.turnId || "").trim() === incomingTurnId &&
-          String(item?.meta?.statusKey || "").trim() === incomingStatusKey
-      );
-      const existing = existingIndex >= 0 ? events[existingIndex] : null;
+      const existingRow = stmts.selectTurnDedupe.get(safeSessionId, incomingType, incomingTurnId, incomingStatusKey || "");
+      const existing = normalizeEventRow(existingRow);
       if (existing) {
-        const nextDuplicateCount = Number(existing?.duplicateCount || 0) + 1;
-        const updated = {
-          ...existing,
-          turnId: String(existing?.turnId || existing?.meta?.turnId || incomingTurnId).trim() || undefined,
+        const nextDuplicateCount = Number(existing.duplicateCount || 0) + 1;
+        const nowIso = new Date().toISOString();
+        stmts.updateDuplicate.run(nextDuplicateCount, nowIso, existing.id);
+        return {
+          event: { ...existing, deduped: true, duplicateCount: nextDuplicateCount, lastDuplicateAt: nowIso },
           deduped: true,
-          duplicateCount: nextDuplicateCount,
-          lastDuplicateAt: new Date().toISOString(),
+          sessionId: safeSessionId
         };
-        events[existingIndex] = updated;
-        writeEventsAtomic(filePath, events);
-        return { event: updated, deduped: true, sessionId: safeSessionId };
       }
     }
 
     if (!incomingTurnId && incomingType && incomingDedupeKey) {
-      const existingIndex = events.findIndex(
-        (item) => String(item?.type || "").trim() === incomingType && String(item?.meta?.dedupeKey || "").trim() === incomingDedupeKey
-      );
-      const existing = existingIndex >= 0 ? events[existingIndex] : null;
+      const existingRow = stmts.selectMetaDedupe.get(safeSessionId, incomingType, incomingDedupeKey);
+      const existing = normalizeEventRow(existingRow);
       if (existing) {
-        const nextDuplicateCount = Number(existing?.duplicateCount || 0) + 1;
-        const updated = {
-          ...existing,
-          turnId: String(existing?.turnId || existing?.meta?.turnId || "").trim() || undefined,
+        const nextDuplicateCount = Number(existing.duplicateCount || 0) + 1;
+        const nowIso = new Date().toISOString();
+        stmts.updateDuplicate.run(nextDuplicateCount, nowIso, existing.id);
+        return {
+          event: { ...existing, deduped: true, duplicateCount: nextDuplicateCount, lastDuplicateAt: nowIso },
           deduped: true,
-          duplicateCount: nextDuplicateCount,
-          lastDuplicateAt: new Date().toISOString(),
+          sessionId: safeSessionId
         };
-        events[existingIndex] = updated;
-        writeEventsAtomic(filePath, events);
-        return { event: updated, deduped: true, sessionId: safeSessionId };
       }
     }
 
+    const normalizedTurnId = String(incomingTurnId || "").trim() || undefined;
     const normalized = {
-      ...eventWithDebug,
-      turnId: String(eventWithDebug?.turnId || eventWithDebug?.meta?.turnId || "").trim() || undefined,
+      id: String(incoming.id || crypto.randomUUID()),
+      timestamp: String(incoming.timestamp || new Date().toISOString()),
+      type: incomingType,
+      actor: String(incoming.actor || ""),
+      lane: String(incoming.lane || ""),
+      summary: String(incoming.summary || ""),
+      turnId: normalizedTurnId,
       deduped: false,
-      duplicateCount: Number(eventWithDebug?.duplicateCount || 0),
+      duplicateCount: Number(incoming.duplicateCount || 0),
+      lastDuplicateAt: incoming.lastDuplicateAt ? String(incoming.lastDuplicateAt) : undefined,
+      meta: incomingMeta
     };
-    delete normalized._dedupeKey;
-    events.push(normalized);
-    writeEventsAtomic(filePath, events);
-    return { event: normalized, deduped: false, sessionId: safeSessionId };
+
+    stmts.insertEvent.run(
+      normalized.id,
+      safeSessionId,
+      normalized.timestamp,
+      normalized.type,
+      normalized.actor,
+      normalized.lane,
+      normalized.summary,
+      normalized.turnId || null,
+      incomingStatusKey || null,
+      incomingDedupeKey || null,
+      JSON.stringify(normalized.meta || {}),
+      0,
+      Number(normalized.duplicateCount || 0),
+      normalized.lastDuplicateAt || null
+    );
+
+  return { event: normalized, deduped: false, sessionId: safeSessionId };
   } catch (err) {
     console.error(`[EventLog] Failed to append event to ${safeSessionId}:`, err);
     throw err;
   }
 }
 
-function getEvents(sessionId) {
+function getEvents(sessionId, options = {}) {
   const safeSessionId = sanitizeSessionId(sessionId);
-  const filePath = getSessionEventFile(safeSessionId);
   try {
-    if (!fs.existsSync(filePath)) {
-      return [];
+    ensureSessionImported(safeSessionId);
+    const db = getDb();
+    const stmts = getStatements(db);
+    const limitRaw = Number(options?.limit || 0);
+    const limit = Number.isFinite(limitRaw) ? Math.max(0, Math.min(5000, limitRaw)) : 0;
+    let rows = [];
+    if (limit > 0) {
+      // Query the most recent N rows efficiently, then return them in ascending time order.
+      rows = stmts.selectLatestDescLimit.all(safeSessionId, limit) || [];
+      rows = rows.slice().reverse();
+    } else {
+      rows = stmts.selectAllAsc.all(safeSessionId) || [];
     }
-    const data = fs.readFileSync(filePath, "utf-8");
-    const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((item) => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
-      const turnId = String(item.turnId || item?.meta?.turnId || "").trim();
-      return {
-        ...item,
-        turnId: turnId || undefined,
-        deduped: Boolean(item.deduped),
-        duplicateCount: Number(item.duplicateCount || 0),
-      };
-    });
+    return rows.map(normalizeEventRow).filter(Boolean);
   } catch (err) {
     console.error(`[EventLog] Failed to read events for ${safeSessionId}:`, err);
     return [];
   }
 }
 
-function getEventsAfterTimestamp(sessionId, timestamp) {
-  const events = getEvents(sessionId);
-  return events.filter((e) => new Date(e.timestamp) > new Date(timestamp));
+function getEventsAfterTimestamp(sessionId, timestamp, options = {}) {
+  const safeSessionId = sanitizeSessionId(sessionId);
+  try {
+    ensureSessionImported(safeSessionId);
+    const db = getDb();
+    const stmts = getStatements(db);
+    const limitRaw = Number(options?.limit || 0);
+    const limit = Number.isFinite(limitRaw) ? Math.max(0, Math.min(5000, limitRaw)) : 0;
+    const after = String(timestamp || "");
+    const rows =
+      limit > 0
+        ? stmts.selectAfterAscLimit.all(safeSessionId, after, limit) || []
+        : stmts.selectAfterAsc.all(safeSessionId, after) || [];
+    return rows.map(normalizeEventRow).filter(Boolean);
+  } catch (err) {
+    console.error(`[EventLog] Failed to read events after timestamp for ${safeSessionId}:`, err);
+    return [];
+  }
 }
 
 export { sanitizeSessionId, getSessionEventFile, createEvent, appendEvent, getEvents, getEventsAfterTimestamp };

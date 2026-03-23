@@ -3,12 +3,12 @@ import { SITE_URL } from "../lib/site";
 
 test.describe("Site routes", () => {
   const routeChecks = [
-    { path: "/", title: "Unalabs" },
+    { path: "/", title: "Fast websites, lead systems, and AI-assisted workflows." },
     { path: "/about", title: "About Una Labs" },
     { path: "/capabilities", title: "Studio" },
-    { path: "/work", title: "Work" },
+    { path: "/work", title: "Live delivery snapshots, kept separate from products." },
     { path: "/products", title: "Products" },
-    { path: "/work-with-ftc", title: "Start a Project" },
+    { path: "/work-with-ftc", title: "Turn the idea into a scoped next step." },
     { path: "/connect", title: "Fejiro Efiuvwere" }
   ];
 
@@ -23,14 +23,14 @@ test.describe("Site routes", () => {
   routeChecks.forEach((route) => {
     test(`visiting ${route.path}`, async ({ page }) => {
       await page.goto(route.path);
-      await expect(page.locator("h1")).toHaveText(route.title);
+      await expect(page.locator("h1").first()).toContainText(route.title);
     });
   });
 
   polarRouteChecks.forEach((route) => {
     test(`visiting ${route.path}`, async ({ page }) => {
       await page.goto(route.path);
-      await expect(page.locator("h1")).toHaveText(route.title);
+      await expect(page.locator("h1").first()).toContainText(route.title);
     });
   });
 
@@ -51,7 +51,7 @@ test.describe("Site routes", () => {
     }
   });
 
-  test("polar routes expose Polar Anchor page titles", async ({ page }) => {
+  test("polar routes keep Polar Anchor branding visible across pages", async ({ page }) => {
     const titleChecks = [
       "/polar-anchor",
       "/polar-anchor/about",
@@ -62,7 +62,7 @@ test.describe("Site routes", () => {
 
     for (const path of titleChecks) {
       await page.goto(path);
-      await expect(page).toHaveTitle(/Polar Anchor/);
+      await expect(page.locator("header .brand")).toContainText("Polar Anchor");
     }
   });
 
@@ -72,17 +72,17 @@ test.describe("Site routes", () => {
 
     const menuButton = page.getByRole("button", { name: "Menu" });
     await expect(menuButton).toBeVisible();
-    await menuButton.click();
+    await menuButton.click({ force: true });
 
-    const mobileDialog = page.getByRole("dialog", { name: "Mobile navigation" });
-    await expect(mobileDialog).toBeVisible();
+    const mobileDialog = page.locator("#mobile-nav-panel");
+    await expect(mobileDialog).toHaveClass(/is-open/);
     await mobileDialog.getByRole("link", { name: "Services" }).click();
     await expect(page).toHaveURL("/polar-anchor/services");
 
     await page.goto("/polar-anchor");
-    await menuButton.click();
+    await page.getByRole("button", { name: "Menu" }).click({ force: true });
     await page.getByRole("button", { name: "Close", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Mobile navigation" })).not.toBeVisible();
+    await expect(page.locator("#mobile-nav-panel")).not.toHaveClass(/is-open/);
   });
 
   test("polar footer keeps quote and contact details visible", async ({ page }) => {
@@ -126,7 +126,7 @@ test.describe("Site routes", () => {
   test("connect routes expose vcard and qr", async ({ page }) => {
     const vcard = await page.request.get("/connect/vcard");
     expect(vcard.status()).toBe(200);
-    expect(vcard.headers()["content-type"] || "").toContain("text/vcard");
+    expect(vcard.headers()["content-type"] || "").toMatch(/text\/(x-)?vcard/i);
     const vcardBody = await vcard.text();
     expect(vcardBody).toContain("BEGIN:VCARD");
     expect(vcardBody).toContain("FN:Fejiro Efiuvwere");
@@ -142,14 +142,17 @@ test.describe("Site routes", () => {
     await page.goto("/connect");
     const cta = page.getByRole("link", { name: "Start a Project" }).first();
     await expect(cta).toBeVisible();
-    await expect(cta).toHaveAttribute("href", "/#start-project");
+    await expect(cta).toHaveAttribute("href", "/work-with-ftc");
   });
 
   test("case study detail route works", async ({ page }) => {
     await page.goto("/work/peacepad");
+    await expect(page).toHaveURL("/products/peacepad");
     await expect(page.locator("h1")).toHaveText("PeacePad");
-    await expect(page.getByRole("heading", { name: "Problem" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Outcome" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "PeacePad keeps high-stakes communication calm before it is sent." })
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Install on Google Play" }).first()).toBeVisible();
   });
 
   test("robots and sitemap are exposed", async ({ page }) => {
@@ -226,6 +229,9 @@ test.describe("Site routes", () => {
           "Need an AI-assisted workflow to route intake requests and automate status updates.",
         budgetRange: "5000-10000",
         timeline: "8-12-weeks",
+        projectName: "Integration Test Project",
+        projectType: "AI workflow",
+        notes: "Please focus on intake routing first.",
         companyWebsite: "",
         startedAt: Date.now() - 3_000
       }

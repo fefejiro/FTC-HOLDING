@@ -64,7 +64,7 @@ export const siteNav = [
   { label: "Products", href: "/products" },
   { label: "Client Launches", href: "/work" },
   { label: "ATEAM", href: "/ateam" },
-  { label: "Start a Project", href: "/#start-project" }
+  { label: "Start a Project", href: "/work-with-ftc" }
 ] as const;
 
 export const networkingProfile: NetworkingProfile = {
@@ -74,7 +74,7 @@ export const networkingProfile: NetworkingProfile = {
   studioLine: "Fast websites, lead automation, and practical AI systems",
   phoneDisplay: "+1 (416) 473-2732",
   phoneE164: "+14164732732",
-  email: "fejiro.efiuvwere@gmail.com",
+  email: "hello@unalabs.cloud",
   linkedInUrl: siteLinks.linkedIn,
   networkHubUrl: "https://unalabs.cloud/connect",
   startProjectHref: "/work-with-ftc",
@@ -139,38 +139,35 @@ export const capabilities: CapabilityItem[] = [
 export const serviceTracks: ServiceTrack[] = [
   {
     audience: "businesses",
-    title: "Businesses",
+    title: "Fast Website Launch",
     summary:
-      "We help teams automate operations, reduce manual risk, and improve decision quality with practical systems.",
+      "Launch a clear, conversion-focused site quickly without sacrificing structure, performance, or trust.",
     examples: [
-      "AI assistants for internal ops",
-      "Automation workflows",
-      "Analytics dashboards",
-      "Custom operational tooling"
+      "Messaging and structure that makes the offer obvious",
+      "High-performance build, mobile polish, SEO foundation",
+      "Clear calls-to-action and intake path"
     ]
   },
   {
     audience: "creators",
-    title: "Creators",
+    title: "Local Services Lead Engine",
     summary:
-      "We design creative technology stacks for media production, storytelling, and audience-ready automation.",
+      "Turn clicks and calls into a visible lead flow with routing, follow-up, and cleaner attribution.",
     examples: [
-      "AI storytelling systems",
-      "Content workflow automation",
-      "Media intelligence tooling",
-      "Interactive experience design"
+      "Lead capture forms and qualification logic",
+      "Follow-up automation and response timing",
+      "Local search and inbound conversion setup"
     ]
   },
   {
     audience: "startups",
-    title: "Startups",
+    title: "AI Workflow / Product Direction",
     summary:
-      "We collaborate on architecture and product execution for founders building modern AI-enabled products.",
+      "Shape an idea into a believable build path with practical AI-assisted workflows and scoped next steps.",
     examples: [
-      "MVP architecture",
-      "Capability-first API design",
-      "Product workflow systems",
-      "Execution roadmaps"
+      "Guided intake and concept clarification",
+      "Phased deliverables and likely stack",
+      "Prototype, workflow, or product-direction planning"
     ]
   }
 ];
@@ -250,32 +247,38 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
   {
     slug: "ateam",
     name: "ATEAM",
-    tagline: "AI orchestration runtime for tools, context, and workflows.",
+    tagline: "The AI lab where rough ideas become clear next steps.",
     pillar: "business-intelligence",
-    tags: ["Automation", "Runtime", "Systems"],
+    tags: ["Guided demo", "Scoping", "Systems"],
     summary:
-      "ATEAM coordinates agent behavior, context bundling, memory, and workflow routing across capability modules.",
+      "ATEAM is Una Labs' guided AI lab for structured idea intake, phased project direction, and clear next-step recommendations.",
     status: "internal-runtime",
+    availabilityLabel: "Public demo",
+    marketingBullets: [
+      "Guided idea intake",
+      "Structured project direction",
+      "Phased output and next steps"
+    ],
     sections: {
       problem:
-        "Most AI app stacks become brittle when orchestration, memory, and tool routing are tightly coupled.",
+        "Early project ideas are usually too fuzzy to estimate, prioritize, or move into clean execution.",
       insight:
-        "A modular orchestration runtime can stabilize behavior and make capability extraction possible.",
+        "People move faster when an idea is translated into a clear lane, scope, and next action before build work begins.",
       solution:
-        "ATEAM provides route-level orchestration, context assembly, event and task handling, plus speech and voice capability surfaces under one backend shell.",
+        "ATEAM turns rough concepts into a compact project brief with a recommended lane, likely deliverables, and a handoff into real intake.",
       capabilities: [
-        "Agent orchestration",
-        "Context bundling",
-        "Event and task flow handling",
-        "Storage and scope abstraction scaffolding"
+        "Guided intake and clarification",
+        "Lane recommendation and scoping",
+        "Structured output generation",
+        "CTA-ready project handoff"
       ],
       technology: [
-        "Node/Express runtime",
-        "Modular backend libraries",
-        "Progressive storage and auth decoupling"
+        "Public demo shell",
+        "Safe structured prompting",
+        "Scoped handoff into intake"
       ],
       outcome:
-        "ATEAM is frozen at Phase 0 hardening and staged for phased capability extraction."
+        "ATEAM gives visitors a believable, useful preview of how Una Labs thinks before a project formally begins."
     }
   }
 ];

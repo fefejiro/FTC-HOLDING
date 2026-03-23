@@ -1,20 +1,19 @@
-const path = require("path");
-const isCloudflarePages = process.env.CF_PAGES === "1" || Boolean(process.env.CF_PAGES_BRANCH);
-
 module.exports = {
   reactStrictMode: true,
   swcMinify: true,
-  transpilePackages: ["@ftc/logger", "@ftc/supabase", "@ftc/config", "@ftc/types", "@ftc/auth"],
-  experimental: Object.assign(
-    {
-      externalDir: true,
-    },
-    isCloudflarePages
-      ? {}
-      : {
-          outputFileTracingRoot: path.join(__dirname, "../../"),
-        }
-  ),
+  transpilePackages: ["@ftc/supabase", "@ftc/config", "@ftc/types", "@ftc/auth"],
+  async redirects() {
+    return [
+      {
+        source: "/connect/vcard",
+        destination: "/connect/fejiro-efiuvwere.vcf",
+        permanent: false
+      }
+    ];
+  },
+  experimental: {
+    externalDir: true
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

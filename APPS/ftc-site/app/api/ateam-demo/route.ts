@@ -9,6 +9,7 @@ type DemoPayload = {
 
 type DemoPreset = {
   label: string;
+  lane: string;
   direction: string;
   phases: string[];
   stack: string[];
@@ -19,6 +20,7 @@ type DemoPreset = {
 const presets: Record<string, DemoPreset> = {
   website: {
     label: "fast website launch",
+    lane: "Fast Website Launch",
     direction: "Lead with a conversion-focused site and measurable intake flow.",
     phases: ["Scope & messaging", "Design system", "Build & QA", "Launch & monitor"],
     stack: ["Next.js", "Tailwind", "Analytics + SEO tooling", "Cloudflare Pages"],
@@ -32,6 +34,7 @@ const presets: Record<string, DemoPreset> = {
   },
   "lead-automation": {
     label: "lead automation workflow",
+    lane: "Local Services Lead Engine",
     direction: "Capture, qualify, route, and follow up without manual babysitting.",
     phases: ["Intake mapping", "Routing logic", "Automation build", "Monitoring & QA"],
     stack: ["Webhook intake", "CRM-ready pipeline", "Email/SMS automation", "Dashboards"],
@@ -45,6 +48,7 @@ const presets: Record<string, DemoPreset> = {
   },
   "product-app": {
     label: "product or mobile app",
+    lane: "Product / App Build Path",
     direction: "Start with a scoped MVP and clear feature sequencing.",
     phases: ["Product brief", "UX flow", "Prototype", "Build plan"],
     stack: ["Cross-platform UI", "API layer", "Analytics instrumentation", "Deployment plan"],
@@ -58,6 +62,7 @@ const presets: Record<string, DemoPreset> = {
   },
   "internal-tool": {
     label: "internal operations tool",
+    lane: "Internal Tool / Ops System",
     direction: "Remove manual steps and make execution observable.",
     phases: ["Process audit", "Workflow design", "Build & automate", "Training"],
     stack: ["Internal dashboard", "Role-based access", "Automation hooks", "Audit trail"],
@@ -71,6 +76,7 @@ const presets: Record<string, DemoPreset> = {
   },
   "ai-feature": {
     label: "AI feature",
+    lane: "AI Workflow / Product Direction",
     direction: "Add AI where it removes friction and improves decision quality.",
     phases: ["Use-case selection", "Prompt + guardrails", "Integration", "QA + monitoring"],
     stack: ["LLM integration", "Policy guardrails", "Feedback loop", "Observability"],
@@ -121,6 +127,7 @@ export async function POST(req: NextRequest) {
       input: { idea, category },
       output: {
         summary,
+        recommendedLane: preset.lane,
         recommendedDirection: preset.direction,
         phases: preset.phases,
         stack: preset.stack,

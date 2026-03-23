@@ -1,16 +1,17 @@
 # Una Labs Site
 
-Next.js App Router site for Una Labs studio identity, portfolio, and client conversion flow.
+Next.js App Router site for the public-facing Una Labs build lab: products, client launches, the curated ATEAM demo, and project intake.
 
-## Route contract
+## Public route contract
 
 - `/` Home
-- `/capabilities` (Studio)
-- `/work`
-- `/work/[slug]`
 - `/products`
+- `/work` (Client Launches)
+- `/work/[slug]`
+- `/ateam`
+- `/work-with-ftc` (Start a Project)
+- `/capabilities` (Studio)
 - `/about`
-- `/work-with-ftc`
 
 Legacy compatibility redirects:
 
@@ -49,6 +50,19 @@ npm run smoke:prod
 
 The site runs on port `3001` (via `@ftc/config`).
 
+Cloudflare Pages / Vercel-style build note:
+
+- the build now includes a small compatibility step that mirrors `.next` into the monorepo path expected by the hosted build pipeline
+- this keeps the existing stack intact and avoids introducing a new deployment service
+
+## Core public journey
+
+1. Visitor lands on the public site and learns what Una Labs offers.
+2. Visitor opens `/ateam` and runs a guided demo on an idea.
+3. The ATEAM demo generates a structured brief and persists the handoff locally.
+4. `Continue with this idea` opens `/work-with-ftc?from=ateam` with the brief prefilled.
+5. Submitting the intake returns a success state with a request reference and response expectation.
+
 ## Current launch mode
 
 - Phase A canonical URL: `https://ftc.peacepad.ca`
@@ -64,8 +78,18 @@ Optional environment variables:
 - `GOOGLE_SITE_VERIFICATION` (Search Console verification meta tag)
 - `UNALABS_INTAKE_WEBHOOK_URL` (preferred webhook sink for intake submissions)
 - `FTC_INTAKE_WEBHOOK_URL` (fallback webhook sink for compatibility)
+- `UNALABS_CONFIRMATION_EMAIL_WEBHOOK_URL` (optional webhook for acknowledgment emails after intake submission)
 - `UNALABS_SITE_URL` (preferred canonical URL override, for Phase B switch)
 - `FTC_SITE_URL` (fallback canonical URL override)
 - `UNALABS_REDIRECT_FROM_HOSTS` (comma-separated legacy hosts to 308 to canonical)
 - `UNALABS_SMOKE_BASE_URL` and `UNALABS_SMOKE_PAGES_URL` (preferred smoke script vars)
 - `FTC_SMOKE_BASE_URL` and `FTC_SMOKE_PAGES_URL` (fallback smoke vars)
+
+Recommended public contact address:
+
+- `hello@unalabs.cloud`
+
+Recommended production secret setup:
+
+- Point `UNALABS_INTAKE_WEBHOOK_URL` to your internal lead sink / automation.
+- Point `UNALABS_CONFIRMATION_EMAIL_WEBHOOK_URL` to the endpoint that sends the user acknowledgment email.

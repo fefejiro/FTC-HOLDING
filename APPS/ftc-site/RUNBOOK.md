@@ -36,6 +36,24 @@ npm --workspace=@ftc/ftc-site run test:e2e
 npm --workspace=@ftc/ftc-site run smoke:prod
 ```
 
+## Intake webhooks / trust loop
+
+Set these in Cloudflare Pages project settings or your deployment environment:
+
+- `UNALABS_INTAKE_WEBHOOK_URL`
+- `UNALABS_CONFIRMATION_EMAIL_WEBHOOK_URL`
+
+Recommended public contact address:
+
+- `hello@unalabs.cloud`
+
+Expected intake behavior in production:
+
+1. project request is accepted by `/api/intake`
+2. internal lead capture webhook receives the payload
+3. acknowledgment email webhook is called when configured
+4. the visitor sees a success state with a request reference
+
 Optional overrides:
 
 ```powershell

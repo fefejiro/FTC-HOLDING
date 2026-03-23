@@ -6,7 +6,7 @@
     "dev": "next dev -p 3001",
     "build:deps": "npm run build --workspace=@ftc/config && npm run build --workspace=@ftc/types && npm run build --workspace=@ftc/logger && npm run build --workspace=@ftc/supabase && npm run build --workspace=@ftc/auth",
     "prebuild": "npm run build:deps",
-    "build": "next build",
+    "build": "next build && node scripts/fix-vercel-monorepo-output.mjs",
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test",
