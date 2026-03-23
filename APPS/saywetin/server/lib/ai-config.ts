@@ -10,6 +10,11 @@ interface ResolvedEnvValue {
   value: string;
 }
 
+type ApiKeySource =
+  | "AI_INTEGRATIONS_OPENAI_API_KEY"
+  | "OPENAI_API_KEY"
+  | "OPENROUTER_API_KEY";
+
 export interface AiProviderConfig {
   configured: boolean;
   provider: AiProvider;
@@ -37,6 +42,28 @@ function firstNonEmptyEnv(names: string[], env: NodeJS.ProcessEnv): ResolvedEnvV
   return null;
 }
 
+function getProviderForApiKeySource(source: ApiKeySource): AiProvider {
+  return source === "OPENROUTER_API_KEY" ? "openrouter" : "openai";
+}
+
+function resolveBaseUrlEntry(
+  apiKeySource: ApiKeySource,
+  env: NodeJS.ProcessEnv,
+): ResolvedEnvValue | null {
+  if (apiKeySource === "AI_INTEGRATIONS_OPENAI_API_KEY") {
+    return firstNonEmptyEnv(
+      ["AI_INTEGRATIONS_OPENAI_BASE_URL", "OPENAI_BASE_URL"],
+      env,
+    );
+  }
+
+  if (apiKeySource === "OPENAI_API_KEY") {
+    return firstNonEmptyEnv(["OPENAI_BASE_URL"], env);
+  }
+
+  return firstNonEmptyEnv(["OPENROUTER_BASE_URL"], env);
+}
+
 function shouldUseOpenRouterHeaders(provider: AiProvider, baseURL?: string): boolean {
   if (provider === "openrouter") {
     return true;
@@ -55,15 +82,6 @@ export function getAiProviderConfig(env: NodeJS.ProcessEnv = process.env): AiPro
     env,
   );
 
-  const baseUrlEntry = firstNonEmptyEnv(
-    [
-      "AI_INTEGRATIONS_OPENAI_BASE_URL",
-      "OPENAI_BASE_URL",
-      "OPENROUTER_BASE_URL",
-    ],
-    env,
-  );
-
   if (!apiKeyEntry) {
     return {
       configured: false,
@@ -74,10 +92,9 @@ export function getAiProviderConfig(env: NodeJS.ProcessEnv = process.env): AiPro
     };
   }
 
-  const provider: AiProvider =
-    apiKeyEntry.name === "OPENROUTER_API_KEY" || shouldUseOpenRouterHeaders("openai", baseUrlEntry?.value)
-      ? "openrouter"
-      : "openai";
+  const apiKeySource = apiKeyEntry.name as ApiKeySource;
+  const provider = getProviderForApiKeySource(apiKeySource);
+  const baseUrlEntry = resolveBaseUrlEntry(apiKeySource, env);
 
   const baseURL =
     provider === "openrouter"

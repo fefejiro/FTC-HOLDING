@@ -367,11 +367,82 @@
   </main>
 
   <main id="council-view" class="view mc-page hidden" data-mc-page="council">
-    <div class="mc-page-title">
-      <div class="mc-title">Council</div>
-      <div class="mc-subtitle">Strategy and governance</div>
+    <div class="ops-page council-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Council</div>
+          <h1 class="ops-title">Strategy and governance</h1>
+          <p id="council-summary" class="ops-subtitle">Pulling together decisions, pressure, and recent notes.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="council-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="council-open-approvals-btn" class="mc-top-btn" type="button">Open Approvals</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Pending Decisions</div>
+          <div id="council-metric-pending" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Blocked Items</div>
+          <div id="council-metric-blocked" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Active Work</div>
+          <div id="council-metric-active" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Signals Waiting</div>
+          <div id="council-metric-signals" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Council Seats</div>
+              <div class="ops-panel-copy">Who is carrying which concern right now.</div>
+            </div>
+          </div>
+          <div id="council-seats" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Decision Queue</div>
+              <div class="ops-panel-copy">Approval requests that still need a call.</div>
+            </div>
+          </div>
+          <div id="council-decision-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Lane Pressure</div>
+              <div class="ops-panel-copy">Where attention is building across the system.</div>
+            </div>
+          </div>
+          <div id="council-lane-pressure" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Recent Journal</div>
+              <div class="ops-panel-copy">Context pulled from the memory journal.</div>
+            </div>
+          </div>
+          <div id="council-journal-list" class="ops-card-stack"></div>
+        </article>
+      </section>
     </div>
-    <div class="mc-placeholder">Council UI coming soon.</div>
   </main>
 
   <main id="calendar-view" class="view mc-page hidden" data-mc-page="calendar">
@@ -405,11 +476,114 @@
   </main>
 
   <main id="projects-view" class="view mc-page hidden" data-mc-page="projects">
-    <div class="mc-page-title">
-      <div class="mc-title">Projects</div>
-      <div class="mc-subtitle">Workspaces and initiatives</div>
+    <div class="ops-page projects-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Projects</div>
+          <h1 class="ops-title">Workspaces and initiatives</h1>
+          <p id="projects-summary" class="ops-subtitle">Loading active initiatives and linked work items.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="projects-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="projects-open-factory-btn" class="mc-top-btn" type="button">Open Factory</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Initiatives</div>
+          <div id="projects-metric-count" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Linked Work</div>
+          <div id="projects-metric-work" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Blocked</div>
+          <div id="projects-metric-blocked" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Pending Ship</div>
+          <div id="projects-metric-ship" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Portfolio</div>
+              <div class="ops-panel-copy">Initiatives mapped onto live delivery items.</div>
+            </div>
+          </div>
+          <div id="projects-portfolio-list" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Create Work Item</div>
+              <div class="ops-panel-copy">Drop a new item into the delivery system and link it to a project.</div>
+            </div>
+          </div>
+          <div class="ops-form-grid">
+            <label class="ops-field">
+              <span>Title</span>
+              <input id="projects-work-title" type="text" placeholder="Ship mission control docs browser" />
+            </label>
+            <label class="ops-field">
+              <span>Objective</span>
+              <textarea id="projects-work-objective" rows="4" placeholder="Short outcome and why it matters"></textarea>
+            </label>
+            <div class="ops-form-row">
+              <label class="ops-field">
+                <span>Project</span>
+                <select id="projects-work-project"></select>
+              </label>
+              <label class="ops-field">
+                <span>Stage</span>
+                <select id="projects-work-stage">
+                  <option value="BACKLOG">Backlog</option>
+                  <option value="BUILD">Build</option>
+                  <option value="QA">QA</option>
+                  <option value="REVIEW">Review</option>
+                  <option value="SHIP">Ship</option>
+                </select>
+              </label>
+              <label class="ops-field">
+                <span>Owner</span>
+                <select id="projects-work-owner"></select>
+              </label>
+            </div>
+            <div class="ops-form-actions">
+              <button id="projects-work-create-btn" class="mc-top-btn" type="button">Create Item</button>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Selected Initiative</div>
+              <div class="ops-panel-copy">Summary, linked docs, and current posture.</div>
+            </div>
+          </div>
+          <div id="projects-detail" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Delivery Ledger</div>
+              <div class="ops-panel-copy">Live items tied to the selected initiative.</div>
+            </div>
+          </div>
+          <div id="projects-ledger" class="ops-card-stack"></div>
+        </article>
+      </section>
     </div>
-    <div class="mc-placeholder">Projects UI coming soon.</div>
   </main>
 
   <main id="memory-view" class="view mc-page hidden" data-mc-page="memory">
@@ -450,19 +624,130 @@
   </main>
 
   <main id="docs-view" class="view mc-page hidden" data-mc-page="docs">
-    <div class="mc-page-title">
-      <div class="mc-title">Docs</div>
-      <div class="mc-subtitle">Operating docs and references</div>
+    <div class="ops-page docs-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Docs</div>
+          <h1 class="ops-title">Operating docs and references</h1>
+          <p id="docs-summary" class="ops-subtitle">A curated local library for the parts of ATEAM that matter most.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="docs-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Docs Indexed</div>
+          <div id="docs-metric-count" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Architecture</div>
+          <div id="docs-metric-architecture" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Platform</div>
+          <div id="docs-metric-platform" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Operations</div>
+          <div id="docs-metric-operations" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-docs-layout">
+        <aside class="ops-panel ops-docs-list-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Library</div>
+              <div class="ops-panel-copy">Filter and open the core ATEAM references.</div>
+            </div>
+          </div>
+          <label class="ops-field">
+            <span>Search</span>
+            <input id="docs-search-input" type="text" placeholder="architecture, runbook, migration..." />
+          </label>
+          <div id="docs-list" class="ops-card-stack"></div>
+        </aside>
+
+        <section class="ops-panel ops-docs-preview-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div id="docs-detail-title" class="ops-panel-title">Select a document</div>
+              <div id="docs-detail-meta" class="ops-panel-copy">Preview will appear here.</div>
+            </div>
+          </div>
+          <div id="docs-detail-body" class="docs-preview-body"></div>
+        </section>
+      </section>
     </div>
-    <div class="mc-placeholder">Docs UI coming soon.</div>
   </main>
 
   <main id="people-view" class="view mc-page hidden" data-mc-page="people">
-    <div class="mc-page-title">
-      <div class="mc-title">People</div>
-      <div class="mc-subtitle">Contacts and network</div>
+    <div class="ops-page people-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">People</div>
+          <h1 class="ops-title">Contacts and network</h1>
+          <p id="people-summary" class="ops-subtitle">Conversation speakers, internal operators, and likely handoffs.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="people-open-talk-btn" class="mc-top-btn" type="button">Open Talk</button>
+          <button id="people-open-team-btn" class="mc-top-btn" type="button">Open Team</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Contacts</div>
+          <div id="people-metric-contacts" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Operators</div>
+          <div id="people-metric-operators" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Active Speakers</div>
+          <div id="people-metric-active" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Suggested Handoffs</div>
+          <div id="people-metric-handoffs" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Conversation Contacts</div>
+              <div class="ops-panel-copy">Speakers detected from the talk timeline.</div>
+            </div>
+          </div>
+          <div id="people-contacts-list" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Operators</div>
+              <div class="ops-panel-copy">Internal agents and their current lanes.</div>
+            </div>
+          </div>
+          <div id="people-operators-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-panel">
+        <div class="ops-panel-head">
+          <div>
+            <div class="ops-panel-title">Recommended Handoffs</div>
+            <div class="ops-panel-copy">Who should pick up the next move for each active contact.</div>
+          </div>
+        </div>
+        <div id="people-handoff-list" class="ops-card-stack"></div>
+      </section>
     </div>
-    <div class="mc-placeholder">People UI coming soon.</div>
   </main>
 
   <main id="office-room-view" class="view mc-page hidden" data-mc-page="office">
@@ -527,19 +812,148 @@
   </main>
 
   <main id="system-view" class="view mc-page hidden" data-mc-page="system">
-    <div class="mc-page-title">
-      <div class="mc-title">System</div>
-      <div class="mc-subtitle">Runtime controls</div>
+    <div class="ops-page system-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">System</div>
+          <h1 class="ops-title">Runtime controls</h1>
+          <p id="system-summary" class="ops-subtitle">Reading health, providers, tools, and live state counts.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="system-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">LLM Mode</div>
+          <div id="system-metric-mode" class="ops-metric-value">-</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Storage</div>
+          <div id="system-metric-storage" class="ops-metric-value">-</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Voice</div>
+          <div id="system-metric-voice" class="ops-metric-value">-</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Tools</div>
+          <div id="system-metric-tools" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Runtime</div>
+              <div class="ops-panel-copy">Primary/fallback models and service posture.</div>
+            </div>
+          </div>
+          <div id="system-runtime-cards" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">State Counts</div>
+              <div class="ops-panel-copy">What the system is currently carrying.</div>
+            </div>
+          </div>
+          <div id="system-counts-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Tools</div>
+              <div class="ops-panel-copy">Capabilities registered on the local server.</div>
+            </div>
+          </div>
+          <div id="system-tools-list" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Alerts</div>
+              <div class="ops-panel-copy">Derived warnings from the current operating state.</div>
+            </div>
+          </div>
+          <div id="system-alerts-list" class="ops-card-stack"></div>
+        </article>
+      </section>
     </div>
-    <div class="mc-placeholder">System UI coming soon.</div>
   </main>
 
   <main id="radar-view" class="view mc-page hidden" data-mc-page="radar">
-    <div class="mc-page-title">
-      <div class="mc-title">Radar</div>
-      <div class="mc-subtitle">Signals and scans</div>
+    <div class="ops-page radar-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Radar</div>
+          <h1 class="ops-title">Signals and scans</h1>
+          <p id="radar-summary" class="ops-subtitle">Signals, promoted topics, and what looks worth moving on next.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="radar-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="radar-open-content-btn" class="mc-top-btn" type="button">Open Content</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Signals</div>
+          <div id="radar-metric-signals" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Topics</div>
+          <div id="radar-metric-topics" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Drafts</div>
+          <div id="radar-metric-drafts" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Pending Approval</div>
+          <div id="radar-metric-pending" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Live Signals</div>
+              <div class="ops-panel-copy">Fresh intake waiting for Scout.</div>
+            </div>
+          </div>
+          <div id="radar-signals-list" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Scout Topics</div>
+              <div class="ops-panel-copy">Ideas already promoted out of raw signal.</div>
+            </div>
+          </div>
+          <div id="radar-topics-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-panel">
+        <div class="ops-panel-head">
+          <div>
+            <div class="ops-panel-title">Opportunity Clusters</div>
+            <div class="ops-panel-copy">A quick grouping of where the energy currently is.</div>
+          </div>
+        </div>
+        <div id="radar-clusters" class="ops-card-stack"></div>
+      </section>
     </div>
-    <div class="mc-placeholder">Radar UI coming soon.</div>
   </main>
 
   <main id="factory-view" class="view mc-page hidden" data-mc-page="factory">
@@ -639,19 +1053,130 @@
   </main>
 
   <main id="pipeline-view" class="view mc-page hidden" data-mc-page="pipeline">
-    <div class="mc-page-title">
-      <div class="mc-title">Pipeline</div>
-      <div class="mc-subtitle">Queued outputs</div>
+    <div class="ops-page pipeline-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Pipeline</div>
+          <h1 class="ops-title">Queued outputs</h1>
+          <p id="pipeline-summary" class="ops-subtitle">From raw signal to approval to shipped work.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="pipeline-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="pipeline-open-factory-btn" class="mc-top-btn" type="button">Open Factory</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Signals</div>
+          <div id="pipeline-metric-signals" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Drafts in Motion</div>
+          <div id="pipeline-metric-drafts" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Pending Decisions</div>
+          <div id="pipeline-metric-approvals" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Delivery Items</div>
+          <div id="pipeline-metric-delivery" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section id="pipeline-board" class="pipeline-board" aria-label="Unified pipeline board"></section>
+
+      <section class="ops-panel">
+        <div class="ops-panel-head">
+          <div>
+            <div class="ops-panel-title">Stalled Items</div>
+            <div class="ops-panel-copy">Anything blocked, aging, or waiting on a call.</div>
+          </div>
+        </div>
+        <div id="pipeline-stalled-list" class="ops-card-stack"></div>
+      </section>
     </div>
-    <div class="mc-placeholder">Pipeline UI coming soon.</div>
   </main>
 
   <main id="ai-lab-view" class="view mc-page hidden" data-mc-page="ai_lab">
-    <div class="mc-page-title">
-      <div class="mc-title">AI Lab</div>
-      <div class="mc-subtitle">Talk + Speech modules</div>
+    <div class="ops-page ai-lab-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">AI Lab</div>
+          <h1 class="ops-title">Talk and speech modules</h1>
+          <p id="ai-lab-summary" class="ops-subtitle">The conversation lab, voice stack, and speech clarity workflows in one place.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="ai-lab-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="ai-lab-open-talk-btn" class="mc-top-btn" type="button">Open Talk</button>
+          <button id="ai-lab-open-speech-btn" class="mc-top-btn" type="button">Open Speech</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Talk Turns</div>
+          <div id="ai-lab-metric-turns" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Speech Sessions</div>
+          <div id="ai-lab-metric-sessions" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Voice Profiles</div>
+          <div id="ai-lab-metric-voices" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Recognition</div>
+          <div id="ai-lab-metric-recognition" class="ops-metric-value">-</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Lab Modules</div>
+              <div class="ops-panel-copy">High-level access to the core AI-facing surfaces.</div>
+            </div>
+          </div>
+          <div id="ai-lab-modules" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Recent Speech Sessions</div>
+              <div class="ops-panel-copy">Clarity sessions already recorded in the speech module.</div>
+            </div>
+          </div>
+          <div id="ai-lab-sessions" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Recent Conversation</div>
+              <div class="ops-panel-copy">Latest turns from the live talk timeline.</div>
+            </div>
+          </div>
+          <div id="ai-lab-turns" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Capabilities</div>
+              <div class="ops-panel-copy">What the current browser and server configuration expose.</div>
+            </div>
+          </div>
+          <div id="ai-lab-capabilities" class="ops-card-stack"></div>
+        </article>
+      </section>
     </div>
-    <div class="mc-placeholder">AI Lab UI coming soon.</div>
   </main>
 
   <main id="talk-view" class="view mc-page talk-view hidden" data-mc-page="talk">

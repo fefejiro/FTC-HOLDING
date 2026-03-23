@@ -286,6 +286,24 @@ export default function RecognizedTrack() {
     });
   };
 
+  const getAnalysisIssuePresentation = (message?: string) => {
+    const normalized = (message || '').toLowerCase();
+    const isUnavailable =
+      normalized.includes('unavailable') ||
+      normalized.includes('service unavailable') ||
+      normalized.includes('503') ||
+      normalized.includes('failed to generate analysis');
+
+    return {
+      title: isUnavailable ? 'Deeper breakdown unavailable' : 'Analysis failed',
+      description:
+        message ||
+        (isUnavailable
+          ? 'Deeper breakdown is unavailable right now. Please try again shortly.'
+          : 'Could not analyze this line. Please try again.'),
+    };
+  };
+
   const analyzeFallback = async (lyricText: string) => {
     try {
       const response = await fetch(getApiUrl('/api/analyze-line'), {
@@ -317,17 +335,21 @@ export default function RecognizedTrack() {
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
       } else {
+        const issue = getAnalysisIssuePresentation(result.message);
         toast({
-          title: 'Analysis failed',
-          description: result.message || 'Could not analyze this line.',
+          title: issue.title,
+          description: issue.description,
           variant: 'destructive',
         });
       }
     } catch (err) {
       console.error('[ANALYZE] Fetch fallback failed:', err);
+      const issue = getAnalysisIssuePresentation(
+        err instanceof Error ? err.message : undefined,
+      );
       toast({
-        title: 'Analysis failed',
-        description: err instanceof Error ? err.message : 'Could not analyze this line. Please try again.',
+        title: issue.title,
+        description: issue.description,
         variant: 'destructive',
       });
     } finally {
@@ -386,9 +408,10 @@ export default function RecognizedTrack() {
         } else if (parsed.type === 'error') {
           clearTimeout(sseTimeout);
           clearLineState(lyricText);
+          const issue = getAnalysisIssuePresentation(parsed.data);
           toast({
-            title: 'Analysis failed',
-            description: parsed.data || 'Could not analyze this line.',
+            title: issue.title,
+            description: issue.description,
             variant: 'destructive',
           });
           eventSource.close();

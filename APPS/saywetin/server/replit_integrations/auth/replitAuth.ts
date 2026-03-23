@@ -3,7 +3,7 @@ import { Strategy, type VerifyFunction } from "openid-client/passport";
 
 import passport from "passport";
 import session from "express-session";
-import type { Express, RequestHandler } from "express";
+import type { Express, Request, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
@@ -359,31 +359,44 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export const isAuthenticated: RequestHandler = async (req, res, next) => {
+async function resolveAuthenticatedSessionUser(req: Request): Promise<any | null> {
   const user = req.user as any;
   const isSessionAuthenticated =
     typeof req.isAuthenticated === "function" && req.isAuthenticated();
 
   if (!isSessionAuthenticated || !user?.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return null;
   }
 
   const now = Math.floor(Date.now() / 1000);
   if (now <= user.expires_at) {
-    return next();
+    return user;
   }
 
   const refreshToken = user.refresh_token;
   if (!refreshToken || !oidcEnabled) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return null;
   }
 
   try {
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
-    return next();
+    return user;
   } catch (_error) {
+    return null;
+  }
+};
+
+export async function getAuthenticatedSessionUser(req: Request): Promise<any | null> {
+  return resolveAuthenticatedSessionUser(req);
+}
+
+export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  const user = await resolveAuthenticatedSessionUser(req);
+  if (!user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
+
+  return next();
 };

@@ -3,13 +3,10 @@ import { getApiUrl } from "@/lib/api-config";
 import type { User } from "@shared/schema";
 
 async function fetchUser(): Promise<User | null> {
-  const response = await fetch(getApiUrl("/api/auth/user"), {
+  const response = await fetch(getApiUrl("/api/auth/session"), {
     credentials: "include",
+    cache: "no-store",
   });
-
-  if (response.status === 401) {
-    return null;
-  }
 
   if (!response.ok) {
     throw new Error(`${response.status}: ${response.statusText}`);
@@ -21,7 +18,7 @@ async function fetchUser(): Promise<User | null> {
 export function useAuth() {
   const queryClient = useQueryClient();
   const { data: user, isLoading } = useQuery<User | null>({
-    queryKey: ["/api/auth/user"],
+    queryKey: ["/api/auth/session"],
     queryFn: fetchUser,
     retry: false,
     staleTime: 1000 * 60 * 5,
@@ -32,7 +29,7 @@ export function useAuth() {
       window.location.href = getApiUrl("/api/logout");
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData(["/api/auth/session"], null);
     },
   });
 

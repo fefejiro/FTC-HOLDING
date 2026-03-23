@@ -500,7 +500,7 @@ For lyricBreakdown: break key words/phrases with their meanings. Be concise. Foc
     }
   } catch (error) {
     console.error(`❌ [AI] Error in streaming analysis:`, error);
-    yield { type: 'error', data: 'Failed to generate analysis' };
+    yield { type: 'error', data: 'Deeper breakdown is unavailable right now. Please try again shortly.' };
   }
 }
 

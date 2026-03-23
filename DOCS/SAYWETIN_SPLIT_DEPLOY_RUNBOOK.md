@@ -25,6 +25,10 @@ Required runtime vars:
 - `ACRCLOUD_ACCESS_KEY=<key>`
 - `ACRCLOUD_ACCESS_SECRET=<secret>`
 
+Important AI env note:
+- If Railway is using `OPENAI_API_KEY`, do not leave a stale `AI_INTEGRATIONS_OPENAI_BASE_URL` set from older Replit-style deployments.
+- Use `AI_INTEGRATIONS_OPENAI_BASE_URL` only when Railway is also using `AI_INTEGRATIONS_OPENAI_API_KEY`.
+
 ## 2) Cloudflare Pages Frontend (saywetin-pages)
 
 Set in Pages build settings:

@@ -39,6 +39,11 @@ import {
   isAiConfigured,
 } from "./lib/ai-config";
 import { getBackendBuildInfo } from "./lib/build-info";
+import {
+  buildGlossaryAnalysesFromLyrics,
+  buildGlossaryLineAnalysis,
+  buildStreamingGlossaryPayload,
+} from "./glossary-analysis";
 
 interface InfrastructureIssue {
   statusCode: number;
@@ -255,7 +260,13 @@ async function buildRecognizedTrackResponse(trackId: string) {
     };
   }
 
-  const culturalAnalysis = await storage.getAiTranslationsByRecognizedTrackId(trackId);
+  const storedCulturalAnalysis = await storage.getAiTranslationsByRecognizedTrackId(trackId);
+  const fallbackCulturalAnalysis =
+    storedCulturalAnalysis.length === 0 && lyrics?.text
+      ? buildGlossaryAnalysesFromLyrics(lyrics.text)
+      : [];
+  const culturalAnalysis =
+    storedCulturalAnalysis.length > 0 ? storedCulturalAnalysis : fallbackCulturalAnalysis;
   const aiConfig = getAiProviderConfig();
   const lyricsServiceStatus = getLyricsServiceStatus();
 
@@ -282,7 +293,9 @@ async function buildRecognizedTrackResponse(trackId: string) {
       lyricsProvider: lyricsServiceStatus.service,
       analysisMessage:
         analysisStatus === "unavailable"
-          ? getAiUnavailableMessage("Deeper breakdown")
+          ? culturalAnalysis.length === 0 && !aiConfig.configured
+            ? "AI breakdown is off right now. We can still show local glossary matches when a lyric contains known phrases."
+            : getAiUnavailableMessage("Deeper breakdown")
           : analysisStatus === "failed"
             ? "We recognized the song, but the deeper breakdown did not finish this time."
             : undefined,
@@ -391,6 +404,8 @@ export async function registerRoutes(
       }
     }
 
+    const aiConfig = getAiProviderConfig();
+
     res.json({
       acrcloud: {
         configured: isACRCloudConfigured(),
@@ -400,8 +415,11 @@ export async function registerRoutes(
         ...getLyricsServiceStatus(),
       },
       openai: {
-        configured: isAiConfigured(),
-        provider: getAiProviderConfig().provider,
+        configured: aiConfig.configured,
+        provider: aiConfig.provider,
+        model: aiConfig.model,
+        apiKeySource: aiConfig.apiKeySource,
+        baseURLSource: aiConfig.baseURLSource,
         service: 'AI Cultural Context',
       },
       database,
@@ -1713,14 +1731,6 @@ Rules:
         return res.status(400).json({ error: 'Lyric text is required' });
       }
 
-      if (!isAiConfigured()) {
-        return res.status(503).json({
-          success: false,
-          status: 'unavailable',
-          message: getAiUnavailableMessage("Line-by-line breakdown"),
-        });
-      }
-
       console.log(`🔍 [LAZY] On-demand analysis requested for: "${lyricText.substring(0, 40)}..."`);
 
       // Check if analysis already exists for this line
@@ -1739,6 +1749,34 @@ Rules:
         });
       }
 
+      const fallbackAnalysis = buildGlossaryLineAnalysis(lyricText.trim());
+
+      if (!isAiConfigured()) {
+        if (!fallbackAnalysis) {
+          return res.status(503).json({
+            success: false,
+            status: 'unavailable',
+            message: 'No local glossary match yet for this line. Try another lyric or add a community meaning.',
+          });
+        }
+
+        return res.json({
+          success: true,
+          cached: false,
+          fallback: true,
+          analysis: {
+            originalText: lyricText.trim(),
+            translation: fallbackAnalysis.translation,
+            culturalContext: fallbackAnalysis.culturalContext,
+            artistIntent: fallbackAnalysis.artistIntent,
+            deeperMeaning: fallbackAnalysis.deeperMeaning,
+            languageNotes: fallbackAnalysis.languageNotes,
+            detectedLanguage: fallbackAnalysis.detectedLanguage,
+            slangTerms: fallbackAnalysis.slangTerms ? JSON.stringify(fallbackAnalysis.slangTerms) : null,
+          },
+        });
+      }
+
       // Generate new analysis for this line
       const analysis = await generateSingleLineAnalysis(
         lyricText.trim(),
@@ -1749,10 +1787,28 @@ Rules:
       );
 
       if (!analysis) {
+        if (fallbackAnalysis) {
+          return res.json({
+            success: true,
+            cached: false,
+            fallback: true,
+            analysis: {
+              originalText: lyricText.trim(),
+              translation: fallbackAnalysis.translation,
+              culturalContext: fallbackAnalysis.culturalContext,
+              artistIntent: fallbackAnalysis.artistIntent,
+              deeperMeaning: fallbackAnalysis.deeperMeaning,
+              languageNotes: fallbackAnalysis.languageNotes,
+              detectedLanguage: fallbackAnalysis.detectedLanguage,
+              slangTerms: fallbackAnalysis.slangTerms ? JSON.stringify(fallbackAnalysis.slangTerms) : null,
+            },
+          });
+        }
+
         return res.status(503).json({
           success: false,
-          status: 'failed',
-          message: 'We could not generate the line-by-line breakdown right now.',
+          status: 'unavailable',
+          message: 'Deeper breakdown is unavailable right now. Please try again shortly.',
         });
       }
 
@@ -1792,7 +1848,7 @@ Rules:
       res.status(500).json({
         success: false,
         status: 'failed',
-        message: 'Failed to analyze line',
+        message: 'We hit a problem while analyzing this line. Please try again.',
       });
     }
   });
@@ -1815,12 +1871,6 @@ Rules:
         return;
       }
 
-      if (!isAiConfigured()) {
-        res.write(`data: ${JSON.stringify({ type: 'error', data: getAiUnavailableMessage("Line-by-line breakdown") })}\n\n`);
-        res.end();
-        return;
-      }
-
       const text = String(lyricText).trim();
       console.log(`🔄 [STREAM] Streaming analysis for: "${text.substring(0, 40)}..."`);
 
@@ -1832,6 +1882,18 @@ Rules:
         console.log(`✅ [STREAM] Found cached analysis, sending immediately`);
         res.write(`data: ${JSON.stringify({ type: 'cached', data: JSON.stringify(existingAnalysis) })}\n\n`);
         res.write(`data: ${JSON.stringify({ type: 'complete', data: JSON.stringify(existingAnalysis) })}\n\n`);
+        res.end();
+        return;
+      }
+
+      const fallbackPayload = buildStreamingGlossaryPayload(text);
+
+      if (!isAiConfigured()) {
+        if (fallbackPayload) {
+          res.write(`data: ${JSON.stringify({ type: 'complete', data: fallbackPayload })}\n\n`);
+        } else {
+          res.write(`data: ${JSON.stringify({ type: 'error', data: 'No local glossary match yet for this line. Try another lyric or add a community meaning.' })}\n\n`);
+        }
         res.end();
         return;
       }

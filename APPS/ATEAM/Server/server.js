@@ -46,6 +46,64 @@ app.use((req, res, next) => {
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const PUBLIC_DIR = path.join(PROJECT_ROOT, "Public");
 const MEMORY_DIR = path.join(PROJECT_ROOT, "memory");
+const DOCS_CATALOG = [
+  {
+    id: "readme",
+    title: "ATEAM README",
+    category: "overview",
+    summary: "Current runtime, entrypoints, Mission Control surface area, and deployment assumptions.",
+    relativePath: "README.md"
+  },
+  {
+    id: "runbook",
+    title: "Runbook",
+    category: "operations",
+    summary: "Practical startup, verification, and repo-handling guidance for operating ATEAM safely.",
+    relativePath: "RUNBOOK.md"
+  },
+  {
+    id: "architecture",
+    title: "Architecture",
+    category: "architecture",
+    summary: "System structure, frontend/backend split, storage choices, and integration shape.",
+    relativePath: "Docs/ARCHITECTURE.md"
+  },
+  {
+    id: "migration_readiness",
+    title: "Migration Readiness",
+    category: "platform",
+    summary: "What is ready for extraction, what is still app-coupled, and the main migration blockers.",
+    relativePath: "Docs/MIGRATION_READINESS.md"
+  },
+  {
+    id: "capability_extraction",
+    title: "Capability Extraction",
+    category: "platform",
+    summary: "Analysis of reusable modules inside ATEAM and what still needs separation.",
+    relativePath: "Docs/CAPABILITY_EXTRACTION.md"
+  },
+  {
+    id: "extraction_roadmap",
+    title: "Extraction Roadmap",
+    category: "platform",
+    summary: "Phased roadmap for turning ATEAM internals into reusable capabilities.",
+    relativePath: "Docs/EXTRACTION_ROADMAP.md"
+  },
+  {
+    id: "handover_baseline",
+    title: "Handover Baseline",
+    category: "handover",
+    summary: "Current implementation baseline, guardrails, and priorities for safe evolution.",
+    relativePath: "Docs/HANDOVER_PHASE0_BASELINE.md"
+  },
+  {
+    id: "telegram_gateway",
+    title: "Telegram Gateway",
+    category: "integrations",
+    summary: "Remote-control setup that connects Telegram long-polling to the local orchestrator and approvals.",
+    relativePath: "telegram-gateway/README.md"
+  }
+];
 const STORAGE_BACKEND = String(process.env.ATEAM_STORAGE_BACKEND || "local").trim().toLowerCase();
 const AUTH_MODE = String(process.env.ATEAM_AUTH_MODE || "local").trim().toLowerCase();
 const principalScopeMiddleware = createPrincipalScopeMiddleware({ mode: AUTH_MODE });
@@ -274,6 +332,30 @@ function sseWrite(res, event, rawData) {
 
 function compactText(text, limit = 240) {
   return String(text || "").replace(/\s+/g, " ").trim().slice(0, limit);
+}
+
+function readDocCatalogItem(entry) {
+  const relativePath = String(entry?.relativePath || "").trim();
+  const absolutePath = path.join(PROJECT_ROOT, relativePath);
+  const body = fs.readFileSync(absolutePath, "utf8");
+  const stat = fs.statSync(absolutePath);
+  const excerpt = compactText(
+    body
+      .replace(/^#\s+/gm, "")
+      .replace(/^##\s+/gm, "")
+      .replace(/[`*_>#-]/g, " "),
+    360
+  );
+  return {
+    id: String(entry.id || ""),
+    title: String(entry.title || entry.id || ""),
+    category: String(entry.category || "reference"),
+    summary: String(entry.summary || ""),
+    relativePath,
+    updatedTs: stat.mtime.toISOString(),
+    excerpt,
+    body
+  };
 }
 
 function normalizeLane(mode) {
@@ -920,6 +1002,40 @@ app.get("/voice/capabilities", async (req, res) => {
       }
     }
   });
+});
+
+app.get("/api/docs", async (req, res) => {
+  try {
+    const docs = DOCS_CATALOG.map((entry) => {
+      const item = readDocCatalogItem(entry);
+      return {
+        id: item.id,
+        title: item.title,
+        category: item.category,
+        summary: item.summary,
+        relativePath: item.relativePath,
+        updatedTs: item.updatedTs,
+        excerpt: item.excerpt
+      };
+    });
+    res.json({ ok: true, docs });
+  } catch (err) {
+    serverError(res, "failed_to_list_docs", err);
+  }
+});
+
+app.get("/api/docs/:docId", async (req, res) => {
+  try {
+    const docId = String(req.params.docId || "").trim();
+    const entry = DOCS_CATALOG.find((item) => String(item.id || "").trim() === docId);
+    if (!entry) {
+      return res.status(404).json({ ok: false, error: "doc_not_found" });
+    }
+    const doc = readDocCatalogItem(entry);
+    res.json({ ok: true, doc });
+  } catch (err) {
+    serverError(res, "failed_to_get_doc", err);
+  }
 });
 
 // Event log endpoints

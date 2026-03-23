@@ -284,7 +284,8 @@ export const NIGERIAN_PHRASES: NigerianPhrase[] = [
     phrase: "paddy",
     meaning: "Friend / Close companion",
     culturalUsage: "Term for trusted friend",
-    emotionalIntent: "Loyalty, brotherhood"
+    emotionalIntent: "Loyalty, brotherhood",
+    variations: ["padi", "padi mi"]
   },
   {
     phrase: "geng",
@@ -335,6 +336,25 @@ export const NIGERIAN_PHRASES: NigerianPhrase[] = [
     meaning: "Party hard / Get lit",
     culturalUsage: "Party culture",
     emotionalIntent: "Excitement, release"
+  },
+  {
+    phrase: "meji",
+    meaning: "Two / twice / in pairs (Yoruba)",
+    culturalUsage: "Common Yoruba counting word often repeated in hooks for rhythm or emphasis",
+    emotionalIntent: "Rhythmic emphasis, playful repetition"
+  },
+  {
+    phrase: "jaiye",
+    meaning: "Enjoy life / live well (Yoruba slang)",
+    culturalUsage: "Used in Nigerian music to celebrate soft life, fun, and spending on enjoyment",
+    emotionalIntent: "Celebration, freedom, enjoyment",
+    variations: ["jaye", "jaiye lo", "jaye lo"]
+  },
+  {
+    phrase: "gbadun",
+    meaning: "Enjoy / take pleasure in (Yoruba)",
+    culturalUsage: "Used to describe savoring good company, fun, or comfort",
+    emotionalIntent: "Pleasure, warmth, appreciation"
   }
 ];
 
