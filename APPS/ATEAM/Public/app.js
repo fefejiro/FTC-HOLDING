@@ -143,10 +143,108 @@ const factoryView = document.getElementById("factory-view");
 const pipelineView = document.getElementById("pipeline-view");
 const aiLabView = document.getElementById("ai-lab-view");
 
+const councilSummary = document.getElementById("council-summary");
+const councilMetricPending = document.getElementById("council-metric-pending");
+const councilMetricBlocked = document.getElementById("council-metric-blocked");
+const councilMetricActive = document.getElementById("council-metric-active");
+const councilMetricSignals = document.getElementById("council-metric-signals");
+const councilSeats = document.getElementById("council-seats");
+const councilDecisionList = document.getElementById("council-decision-list");
+const councilLanePressure = document.getElementById("council-lane-pressure");
+const councilJournalList = document.getElementById("council-journal-list");
+const councilRefreshBtn = document.getElementById("council-refresh-btn");
+const councilOpenApprovalsBtn = document.getElementById("council-open-approvals-btn");
+
+const projectsSummary = document.getElementById("projects-summary");
+const projectsMetricCount = document.getElementById("projects-metric-count");
+const projectsMetricWork = document.getElementById("projects-metric-work");
+const projectsMetricBlocked = document.getElementById("projects-metric-blocked");
+const projectsMetricShip = document.getElementById("projects-metric-ship");
+const projectsPortfolioList = document.getElementById("projects-portfolio-list");
+const projectsDetail = document.getElementById("projects-detail");
+const projectsLedger = document.getElementById("projects-ledger");
+const projectsRefreshBtn = document.getElementById("projects-refresh-btn");
+const projectsOpenFactoryBtn = document.getElementById("projects-open-factory-btn");
+const projectsWorkTitle = document.getElementById("projects-work-title");
+const projectsWorkObjective = document.getElementById("projects-work-objective");
+const projectsWorkProject = document.getElementById("projects-work-project");
+const projectsWorkStage = document.getElementById("projects-work-stage");
+const projectsWorkOwner = document.getElementById("projects-work-owner");
+const projectsWorkCreateBtn = document.getElementById("projects-work-create-btn");
+
+const docsSummary = document.getElementById("docs-summary");
+const docsMetricCount = document.getElementById("docs-metric-count");
+const docsMetricArchitecture = document.getElementById("docs-metric-architecture");
+const docsMetricPlatform = document.getElementById("docs-metric-platform");
+const docsMetricOperations = document.getElementById("docs-metric-operations");
+const docsSearchInput = document.getElementById("docs-search-input");
+const docsList = document.getElementById("docs-list");
+const docsDetailTitle = document.getElementById("docs-detail-title");
+const docsDetailMeta = document.getElementById("docs-detail-meta");
+const docsDetailBody = document.getElementById("docs-detail-body");
+const docsRefreshBtn = document.getElementById("docs-refresh-btn");
+
+const peopleSummary = document.getElementById("people-summary");
+const peopleMetricContacts = document.getElementById("people-metric-contacts");
+const peopleMetricOperators = document.getElementById("people-metric-operators");
+const peopleMetricActive = document.getElementById("people-metric-active");
+const peopleMetricHandoffs = document.getElementById("people-metric-handoffs");
+const peopleContactsList = document.getElementById("people-contacts-list");
+const peopleOperatorsList = document.getElementById("people-operators-list");
+const peopleHandoffList = document.getElementById("people-handoff-list");
+const peopleOpenTalkBtn = document.getElementById("people-open-talk-btn");
+const peopleOpenTeamBtn = document.getElementById("people-open-team-btn");
+
+const systemSummary = document.getElementById("system-summary");
+const systemMetricMode = document.getElementById("system-metric-mode");
+const systemMetricStorage = document.getElementById("system-metric-storage");
+const systemMetricVoice = document.getElementById("system-metric-voice");
+const systemMetricTools = document.getElementById("system-metric-tools");
+const systemRuntimeCards = document.getElementById("system-runtime-cards");
+const systemCountsList = document.getElementById("system-counts-list");
+const systemToolsList = document.getElementById("system-tools-list");
+const systemAlertsList = document.getElementById("system-alerts-list");
+const systemRefreshBtn = document.getElementById("system-refresh-btn");
+
+const radarSummary = document.getElementById("radar-summary");
+const radarMetricSignals = document.getElementById("radar-metric-signals");
+const radarMetricTopics = document.getElementById("radar-metric-topics");
+const radarMetricDrafts = document.getElementById("radar-metric-drafts");
+const radarMetricPending = document.getElementById("radar-metric-pending");
+const radarSignalsList = document.getElementById("radar-signals-list");
+const radarTopicsList = document.getElementById("radar-topics-list");
+const radarClusters = document.getElementById("radar-clusters");
+const radarRefreshBtn = document.getElementById("radar-refresh-btn");
+const radarOpenContentBtn = document.getElementById("radar-open-content-btn");
+
+const pipelineSummary = document.getElementById("pipeline-summary");
+const pipelineMetricSignals = document.getElementById("pipeline-metric-signals");
+const pipelineMetricDrafts = document.getElementById("pipeline-metric-drafts");
+const pipelineMetricApprovals = document.getElementById("pipeline-metric-approvals");
+const pipelineMetricDelivery = document.getElementById("pipeline-metric-delivery");
+const pipelineBoard = document.getElementById("pipeline-board");
+const pipelineStalledList = document.getElementById("pipeline-stalled-list");
+const pipelineRefreshBtn = document.getElementById("pipeline-refresh-btn");
+const pipelineOpenFactoryBtn = document.getElementById("pipeline-open-factory-btn");
+
+const aiLabSummary = document.getElementById("ai-lab-summary");
+const aiLabMetricTurns = document.getElementById("ai-lab-metric-turns");
+const aiLabMetricSessions = document.getElementById("ai-lab-metric-sessions");
+const aiLabMetricVoices = document.getElementById("ai-lab-metric-voices");
+const aiLabMetricRecognition = document.getElementById("ai-lab-metric-recognition");
+const aiLabModules = document.getElementById("ai-lab-modules");
+const aiLabSessions = document.getElementById("ai-lab-sessions");
+const aiLabTurns = document.getElementById("ai-lab-turns");
+const aiLabCapabilities = document.getElementById("ai-lab-capabilities");
+const aiLabRefreshBtn = document.getElementById("ai-lab-refresh-btn");
+const aiLabOpenTalkBtn = document.getElementById("ai-lab-open-talk-btn");
+const aiLabOpenSpeechBtn = document.getElementById("ai-lab-open-speech-btn");
+
 const mcNavList = document.getElementById("mc-nav-list");
 const mcSearchInput = document.getElementById("mc-search-input");
 const mcPauseBtn = document.getElementById("mc-pause");
 const mcPingBtn = document.getElementById("mc-ping");
+const mcStatusBtn = document.getElementById("mc-status");
 const mcRefreshBtn = document.getElementById("mc-refresh");
 const mcFeedbackBtn = document.getElementById("mc-feedback");
 
@@ -1858,6 +1956,28 @@ const MC_ROUTE_BY_VIEW = {
   speech: "/speech"
 };
 
+const MC_SEARCH_SHORTCUTS = [
+  { view: "tasks", label: "Tasks", terms: ["task", "tasks", "dashboard", "home"] },
+  { view: "agents", label: "Agents", terms: ["agent", "agents", "manchi", "coordinator"] },
+  { view: "content", label: "Content", terms: ["content", "draft", "drafts", "radar"] },
+  { view: "approvals", label: "Approvals", terms: ["approval", "approvals"] },
+  { view: "council", label: "Council", terms: ["council", "governance", "strategy"] },
+  { view: "calendar", label: "Calendar", terms: ["calendar", "schedule"] },
+  { view: "projects", label: "Projects", terms: ["project", "projects", "initiative", "initiatives", "review", "ledger"] },
+  { view: "memory", label: "Memory", terms: ["memory", "journal"] },
+  { view: "docs", label: "Docs", terms: ["doc", "docs", "document", "documents", "runbook", "architecture"] },
+  { view: "people", label: "People", terms: ["people", "contacts", "handoff", "handoffs"] },
+  { view: "office", label: "Office", terms: ["office", "maker", "makers", "avatar", "avatars"] },
+  { view: "team", label: "Team", terms: ["team", "roster"] },
+  { view: "system", label: "System", terms: ["system", "status", "health"] },
+  { view: "radar", label: "Radar", terms: ["signal", "signals", "topic", "topics"] },
+  { view: "factory", label: "Factory", terms: ["factory", "build", "qa", "ship"] },
+  { view: "pipeline", label: "Pipeline", terms: ["pipeline", "queue"] },
+  { view: "ai_lab", label: "AI Lab", terms: ["ai lab", "lab", "voice", "speech"] },
+  { view: "talk", label: "Talk", terms: ["talk", "chat", "conversation"] },
+  { view: "speech", label: "Speech", terms: ["speech", "recording", "clarity"] }
+];
+
 function mcViewFromPath(pathname) {
   const raw = String(pathname || "/").toLowerCase();
   const path = raw === "/index.html" ? "/" : raw;
@@ -1866,6 +1986,30 @@ function mcViewFromPath(pathname) {
   if (hit) return hit[0];
   const prefix = Object.entries(MC_ROUTE_BY_VIEW).find(([, route]) => path.startsWith(route + "/"));
   return prefix ? prefix[0] : "";
+}
+
+function resolveMissionControlSearch(query) {
+  const normalized = String(query || "").trim().toLowerCase();
+  if (!normalized) return null;
+  return MC_SEARCH_SHORTCUTS.find((entry) =>
+    entry.terms.some((term) => normalized === term || normalized.includes(term))
+  ) || null;
+}
+
+function handleMissionControlSearch(query) {
+  const value = String(query || "").trim();
+  if (!value) return;
+  const match = resolveMissionControlSearch(value);
+  if (!match) {
+    showToast(`Search ready: ${value}`, "ok");
+    return;
+  }
+  setView(match.view);
+  if (match.view === "agents" && value.toLowerCase().includes("manchi")) {
+    setOfficeActiveAgent("henry");
+    openCommandDrawer();
+  }
+  showToast(`Opened ${match.label}.`, "ok");
 }
 
 // ===== Talk UI modes (Focus vs Console) =====
@@ -2045,6 +2189,24 @@ const missionControlState = {
   calendar: {
     selectedDay: 2
   },
+  overview: {
+    loadedAt: 0,
+    health: null,
+    voice: null,
+    approvals: [],
+    workItems: [],
+    content: { signals: [], topics: [], drafts: [] },
+    speechSessions: []
+  },
+  projects: {
+    selectedId: "mission_control"
+  },
+  docs: {
+    filter: "",
+    selectedId: "",
+    items: [],
+    detailById: {}
+  },
   office2: {
     selectedId: "",
     roster: [],
@@ -2123,12 +2285,36 @@ function closeCommandDrawer() {
 }
 
 function renderMissionControlView(view) {
+  if (view === "council") {
+    void renderCouncilPage();
+    return;
+  }
+  if (view === "projects") {
+    void renderProjectsPage();
+    return;
+  }
   if (view === "memory") {
     renderMemoryPage();
     return;
   }
+  if (view === "docs") {
+    void renderDocsPage();
+    return;
+  }
+  if (view === "people") {
+    renderPeoplePage();
+    return;
+  }
   if (view === "calendar") {
     renderCalendarPage();
+    return;
+  }
+  if (view === "system") {
+    void renderSystemPage();
+    return;
+  }
+  if (view === "radar") {
+    void renderRadarPage();
     return;
   }
   if (view === "office") {
@@ -2145,6 +2331,14 @@ function renderMissionControlView(view) {
   }
   if (view === "factory") {
     void renderFactoryPage();
+    return;
+  }
+  if (view === "pipeline") {
+    void renderPipelinePage();
+    return;
+  }
+  if (view === "ai_lab") {
+    void renderAiLabPage();
   }
 }
 
@@ -3054,6 +3248,54 @@ const OFFICE2_AGENT_DIRECTORY = [
   }
 ];
 
+const PROJECT_PORTFOLIO = [
+  {
+    id: "mission_control",
+    name: "Mission Control",
+    ownerAgentId: "henry",
+    summary: "Finish the operator shell so every major route is usable and connected to live state.",
+    outcome: "A complete command surface for running ATEAM locally.",
+    linkedWorkItemIds: ["wi_seed_council", "wi_seed_calendar", "wi_seed_memory", "wi_seed_office"],
+    docIds: ["readme", "architecture", "runbook"]
+  },
+  {
+    id: "content_engine",
+    name: "Content Engine",
+    ownerAgentId: "scout",
+    summary: "Turn raw radar signals into topics, drafts, approvals, and scheduled output.",
+    outcome: "A believable signal-to-publish operating loop.",
+    linkedWorkItemIds: ["wi_seed_pipeline"],
+    docIds: ["readme", "extraction_roadmap"]
+  },
+  {
+    id: "factory_ops",
+    name: "Factory Ops",
+    ownerAgentId: "ralph",
+    summary: "Keep delivery moving through build, QA, review, and ship with visible gates.",
+    outcome: "Lower friction from backlog to approved release.",
+    linkedWorkItemIds: ["wi_seed_factory"],
+    docIds: ["architecture", "handover_baseline"]
+  },
+  {
+    id: "integrations",
+    name: "Integrations",
+    ownerAgentId: "charlie",
+    summary: "Extend ATEAM beyond the local shell through gateways, approvals, and external touchpoints.",
+    outcome: "Operational integrations that still respect the approval-first model.",
+    linkedWorkItemIds: ["wi_seed_integrations"],
+    docIds: ["telegram_gateway", "migration_readiness"]
+  },
+  {
+    id: "ai_lab",
+    name: "AI Lab",
+    ownerAgentId: "henry",
+    summary: "Unify live talk, speech clarity, and voice capabilities into one experimentation hub.",
+    outcome: "A practical lab for conversation and speech workflows.",
+    linkedWorkItemIds: [],
+    docIds: ["readme", "handover_baseline"]
+  }
+];
+
 function mcAgentById(agentId) {
   const id = String(agentId || "").trim();
   if (!id) return null;
@@ -3071,33 +3313,33 @@ function mcCanonicalName(agentId) {
 }
 
 const OFFICE2_ZONE_ANCHORS = {
-  cooler: { x: 14, y: 56 },
+  cooler: { x: 24, y: 54 },
   user: { x: 50, y: 88 },
-  blocked: { x: 78, y: 78 },
+  blocked: { x: 82, y: 76 },
   lane: {
-    [OFFICE2_LANES.COORDINATION]: { idle: { x: 62, y: 22 }, working: { x: 60, y: 18 } },
-    [OFFICE2_LANES.SIGNALS]: { idle: { x: 22, y: 56 }, working: { x: 30, y: 50 } },
-    [OFFICE2_LANES.CONTENT]: { idle: { x: 34, y: 44 }, working: { x: 40, y: 32 } },
-    [OFFICE2_LANES.BUILD]: { idle: { x: 58, y: 68 }, working: { x: 72, y: 54 } },
-    [OFFICE2_LANES.QA]: { idle: { x: 26, y: 26 }, working: { x: 18, y: 18 } },
-    [OFFICE2_LANES.THINK_TANK]: { idle: { x: 50, y: 18 }, working: { x: 48, y: 14 } },
-    [OFFICE2_LANES.VOICE]: { idle: { x: 86, y: 56 }, working: { x: 84, y: 52 } },
-    [OFFICE2_LANES.DESIGN]: { idle: { x: 78, y: 78 }, working: { x: 74, y: 72 } },
-    [OFFICE2_LANES.OPS]: { idle: { x: 28, y: 34 }, working: { x: 24, y: 30 } }
+    [OFFICE2_LANES.COORDINATION]: { idle: { x: 60, y: 20 }, working: { x: 58, y: 17 } },
+    [OFFICE2_LANES.SIGNALS]: { idle: { x: 18, y: 61 }, working: { x: 24, y: 53 } },
+    [OFFICE2_LANES.CONTENT]: { idle: { x: 35, y: 58 }, working: { x: 40, y: 35 } },
+    [OFFICE2_LANES.BUILD]: { idle: { x: 56, y: 70 }, working: { x: 70, y: 55 } },
+    [OFFICE2_LANES.QA]: { idle: { x: 24, y: 23 }, working: { x: 18, y: 18 } },
+    [OFFICE2_LANES.THINK_TANK]: { idle: { x: 50, y: 18 }, working: { x: 49, y: 14 } },
+    [OFFICE2_LANES.VOICE]: { idle: { x: 84, y: 55 }, working: { x: 82, y: 50 } },
+    [OFFICE2_LANES.DESIGN]: { idle: { x: 74, y: 80 }, working: { x: 72, y: 72 } },
+    [OFFICE2_LANES.OPS]: { idle: { x: 24, y: 39 }, working: { x: 26, y: 32 } }
   }
 };
 
 const OFFICE2_COOLER_CLUSTER = [
-  { x: -4.2, y: -3.6 },
-  { x: 3.8, y: -3.4 },
-  { x: -4.4, y: 3.6 },
-  { x: 4.2, y: 3.8 },
-  { x: 0.2, y: -5.2 },
-  { x: 0.6, y: 5.2 },
-  { x: -7.2, y: 0.4 },
-  { x: 7.2, y: 0.2 },
-  { x: -2.2, y: 0.2 },
-  { x: 2.2, y: -0.2 }
+  { x: -9.2, y: -7.2 },
+  { x: 9.2, y: -7.0 },
+  { x: -9.0, y: 7.0 },
+  { x: 9.0, y: 7.2 },
+  { x: 0.2, y: -7.4 },
+  { x: 0.4, y: 7.4 },
+  { x: -9.4, y: 0.3 },
+  { x: 9.4, y: 0.2 },
+  { x: -3.4, y: 0.4 },
+  { x: 3.4, y: -0.3 }
 ];
 
 let office2LiveTimer = null;
@@ -3370,41 +3612,108 @@ function office2EnsureSelected() {
 
 function pixelPalette(agentId = "") {
   const id = String(agentId || "").toLowerCase();
-  if (id === "henry") return { skin: "#f3d7c6", body: "#3b82f6", pants: "#1e293b" };
-  if (id === "scout") return { skin: "#f3d7c6", body: "#10b981", pants: "#1e293b" };
-  if (id === "quill") return { skin: "#f3d7c6", body: "#a855f7", pants: "#1e293b" };
-  if (id === "codex") return { skin: "#f3d7c6", body: "#f97316", pants: "#1e293b" };
-  if (id === "pixel") return { skin: "#f3d7c6", body: "#ec4899", pants: "#1e293b" };
-  if (id === "echo") return { skin: "#f3d7c6", body: "#22c55e", pants: "#1e293b" };
-  if (id === "violet") return { skin: "#f3d7c6", body: "#8b5cf6", pants: "#1e293b" };
-  if (id === "ralph") return { skin: "#f3d7c6", body: "#f59e0b", pants: "#1e293b" };
-  return { skin: "#f3d7c6", body: "#64748b", pants: "#1e293b" };
+  if (id === "henry") {
+    return { skin: "#8f5b3d", body: "#3b82f6", pants: "#182235", hair: "#111827", accent: "#bfdcff", glasses: true, hat: "" };
+  }
+  if (id === "scout") {
+    return { skin: "#6f472e", body: "#10b981", pants: "#1b2338", hair: "#16181f", accent: "#7cecc6", glasses: false, hat: "" };
+  }
+  if (id === "quill") {
+    return { skin: "#4f2c1f", body: "#a855f7", pants: "#20263d", hair: "#20111d", accent: "#d8b4fe", glasses: true, hat: "" };
+  }
+  if (id === "codex") {
+    return { skin: "#c18a62", body: "#f97316", pants: "#1d2638", hair: "#6b3418", accent: "#fed7aa", glasses: false, hat: "cap" };
+  }
+  if (id === "pixel") {
+    return { skin: "#7b4a33", body: "#ec4899", pants: "#1f2138", hair: "#3a1026", accent: "#f9a8d4", glasses: false, hat: "beanie" };
+  }
+  if (id === "echo") {
+    return { skin: "#9c6845", body: "#22c55e", pants: "#17263a", hair: "#221f1f", accent: "#93c5fd", glasses: false, hat: "headset" };
+  }
+  if (id === "violet") {
+    return { skin: "#d9b39b", body: "#8b5cf6", pants: "#252649", hair: "#342356", accent: "#ddd6fe", glasses: false, hat: "" };
+  }
+  if (id === "ralph") {
+    return { skin: "#a56a48", body: "#f59e0b", pants: "#21273b", hair: "#50311a", accent: "#fde68a", glasses: true, hat: "cap" };
+  }
+  if (id === "charlie") {
+    return { skin: "#7c5639", body: "#64748b", pants: "#1a2236", hair: "#1f2433", accent: "#cbd5f5", glasses: true, hat: "" };
+  }
+  if (id === "alex") {
+    return { skin: "#85543b", body: "#4f8cff", pants: "#1d2438", hair: "#0f172a", accent: "#bfdbfe", glasses: false, hat: "cap" };
+  }
+  return { skin: "#b88362", body: "#64748b", pants: "#1e293b", hair: "#111827", accent: "#dbeafe", glasses: false, hat: "" };
 }
 
 function drawPixelPerson(canvas, agentId) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const { skin, body, pants } = pixelPalette(agentId);
+  const { skin, body, pants, hair, accent, glasses, hat } = pixelPalette(agentId);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
 
-  // Head
+  if (hat === "beanie") {
+    ctx.fillStyle = accent;
+    ctx.fillRect(4, 1, 8, 2);
+    ctx.fillRect(5, 3, 6, 1);
+  } else if (hat === "cap") {
+    ctx.fillStyle = accent;
+    ctx.fillRect(4, 1, 8, 2);
+    ctx.fillRect(9, 3, 4, 1);
+  }
+
+  ctx.fillStyle = hair;
+  ctx.fillRect(5, 1, 6, 2);
+  ctx.fillRect(4, 3, 1, 2);
+  ctx.fillRect(11, 3, 1, 2);
+
   ctx.fillStyle = skin;
-  ctx.fillRect(5, 2, 6, 6);
-  // Eyes
-  ctx.fillStyle = "#0b1020";
-  ctx.fillRect(7, 4, 1, 1);
-  ctx.fillRect(9, 4, 1, 1);
-  // Body
+  ctx.fillRect(5, 3, 6, 6);
+
+  ctx.fillStyle = "#101827";
+  ctx.fillRect(7, 5, 1, 1);
+  ctx.fillRect(9, 5, 1, 1);
+  ctx.fillRect(8, 7, 1, 1);
+
+  if (glasses) {
+    ctx.fillStyle = "#dbeafe";
+    ctx.fillRect(6, 5, 3, 1);
+    ctx.fillRect(8, 5, 1, 1);
+    ctx.fillRect(9, 5, 3, 1);
+  }
+
+  if (hat === "headset") {
+    ctx.fillStyle = accent;
+    ctx.fillRect(4, 4, 1, 3);
+    ctx.fillRect(11, 4, 1, 3);
+    ctx.fillRect(5, 3, 6, 1);
+  }
+
   ctx.fillStyle = body;
-  ctx.fillRect(4, 8, 8, 5);
-  // Arms
-  ctx.fillRect(3, 9, 1, 3);
-  ctx.fillRect(12, 9, 1, 3);
-  // Legs
+  ctx.fillRect(4, 9, 8, 5);
+  ctx.fillRect(3, 10, 1, 3);
+  ctx.fillRect(12, 10, 1, 3);
+  ctx.fillStyle = accent;
+  ctx.fillRect(7, 9, 2, 2);
   ctx.fillStyle = pants;
-  ctx.fillRect(5, 13, 2, 3);
-  ctx.fillRect(9, 13, 2, 3);
+  ctx.fillRect(5, 14, 2, 3);
+  ctx.fillRect(9, 14, 2, 3);
+  ctx.fillStyle = "#0f172a";
+  ctx.fillRect(5, 17, 2, 1);
+  ctx.fillRect(9, 17, 2, 1);
+}
+
+function office2AgentHint(agent) {
+  return agent?.mapsTo ? "Open agent panel" : "Select crew member";
+}
+
+function office2AgentAriaLabel(agent) {
+  const display = String(agent?.displayName || agent?.canonicalName || agent?.id || "").trim();
+  const role = String(agent?.role || "Operator").trim();
+  const status = office2StatusLabel(agent?.mapsTo || agent?.id);
+  const task = office2TaskLabel(agent?.mapsTo || agent?.id);
+  return [display, role, status, task].filter(Boolean).join(". ");
 }
 
 function office2StatusLabel(mapsTo) {
@@ -3445,7 +3754,8 @@ function renderOffice2Entities() {
   roster.forEach((agent, idx) => {
     let el = missionControlState.office2.nodes[agent.id];
     if (!el || !office2Entities.contains(el)) {
-      el = document.createElement("div");
+      el = document.createElement("button");
+      el.type = "button";
       el.className = "office2-entity";
       el.dataset.agentId = agent.id;
       el.dataset.canonicalName = agent.canonicalName || agent.displayName || agent.id;
@@ -3464,8 +3774,8 @@ function renderOffice2Entities() {
       spriteRole.className = "office2-sprite-role";
 
       const canvas = document.createElement("canvas");
-      canvas.width = 16;
-      canvas.height = 16;
+      canvas.width = 20;
+      canvas.height = 20;
       drawPixelPerson(canvas, agent.id);
       spriteRole.appendChild(canvas);
       spriteWrap.appendChild(spriteRole);
@@ -3485,6 +3795,7 @@ function renderOffice2Entities() {
 
       el.style.setProperty("--lane-accent", office2GetAccent(agent));
       el.style.setProperty("--blink-delay", `${Math.floor(office2HashUnit(agent.id + "_blink") * 2400)}ms`);
+      el.setAttribute("aria-label", office2AgentAriaLabel(agent));
 
       el.addEventListener("mouseenter", () => {
         if (!office2Tooltip) return;
@@ -3541,6 +3852,7 @@ function renderOffice2Entities() {
     el.dataset.status = status;
     el.dataset.lane = agent.lane || "";
     el.style.setProperty("--lane-accent", office2GetAccent(agent));
+    el.setAttribute("aria-label", office2AgentAriaLabel(agent));
 
     const desired = office2DesiredPosition(agent, status, idx);
     const x = clampPct(desired.x, 6, 94);
@@ -3576,6 +3888,7 @@ function syncOffice2AgentCards() {
     const agentId = String(card.dataset.agentId || "");
     const agent = byId[agentId];
     card.classList.toggle("active", agentId === selected);
+    card.setAttribute("aria-pressed", agentId === selected ? "true" : "false");
     const statusNode = card.querySelector(".office2-agent-status");
     if (statusNode && agent) statusNode.textContent = office2StatusLabel(agent.mapsTo || agent.id);
   });
@@ -3595,18 +3908,22 @@ function renderOffice2AgentCards() {
 
   office2AgentCards.innerHTML = "";
   roster.slice(0, 7).forEach((agent) => {
-    const card = document.createElement("div");
+    const card = document.createElement("button");
+    card.type = "button";
     card.className = "office2-agent-card" + (agent.id === selected ? " active" : "");
     card.dataset.agentId = agent.id;
     card.title = agent.canonicalName && agent.displayName && agent.canonicalName !== agent.displayName ? `${agent.displayName} (${agent.canonicalName}) \u00b7 ${agent.role}` : `${agent.displayName || agent.canonicalName} \u00b7 ${agent.role}`;
+    card.setAttribute("aria-pressed", agent.id === selected ? "true" : "false");
+    card.setAttribute("aria-label", office2AgentAriaLabel(agent));
     card.innerHTML = `
-      <div class="office2-agent-avatar">${escapeHtml(agent.emoji || "•")}</div>
+      <div class="office2-agent-avatar" aria-hidden="true"><canvas width="20" height="20"></canvas></div>
       <div class="office2-agent-meta">
         <div class="office2-agent-name">${escapeHtml(agent.displayName || agent.canonicalName || agent.id)}</div>
-        <div class="office2-agent-hint">Click for memory</div>
+        <div class="office2-agent-hint">${escapeHtml(office2AgentHint(agent))}</div>
       </div>
       <div class="office2-agent-status">${escapeHtml(office2StatusLabel(agent.mapsTo || agent.id))}</div>
     `;
+    drawPixelPerson(card.querySelector("canvas"), agent.id);
     card.addEventListener("click", () => {
       setOffice2Selected(agent.id);
       renderOffice2AgentCards();
@@ -3905,6 +4222,1275 @@ async function renderFactoryPage() {
   const items = await loadFactoryItems();
   requestAnimationFrame(() => renderFactoryBelt(items));
   renderFactoryMetrics(items);
+}
+
+function mcBlockedWorkItem(item) {
+  return Boolean(item?.data?.blocked) || String(item?.risk || "").toLowerCase() === "high";
+}
+
+function mcStatusTone(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw === "approved" || raw === "ok" || raw === "ship" || raw === "done") return "ok";
+  if (raw === "pending" || raw === "review" || raw === "qa" || raw === "attention") return "warn";
+  if (raw === "blocked" || raw === "rejected" || raw === "high") return "danger";
+  if (raw === "build" || raw === "active" || raw === "working") return "info";
+  return "muted";
+}
+
+function mcStageBadge(stage = "") {
+  const raw = String(stage || "").trim();
+  const lower = raw.toLowerCase();
+  const isFactoryStage = ["backlog", "build", "qa", "review", "ship"].includes(lower);
+  const label = isFactoryStage ? normalizeFactoryStage(raw).toUpperCase() : raw.toUpperCase();
+  const tone = isFactoryStage ? mcStatusTone(lower) : mcStatusTone(raw);
+  return `<span class="ops-badge" data-tone="${tone}">${escapeHtml(label || "STATUS")}</span>`;
+}
+
+function mcEmptyHtml(message) {
+  return `<div class="ops-empty">${escapeHtml(message)}</div>`;
+}
+
+function compactText(text, limit = 180) {
+  return String(text || "").replace(/\s+/g, " ").trim().slice(0, limit);
+}
+
+function mcOverviewContentFallback() {
+  return { signals: [], topics: [], drafts: [] };
+}
+
+async function mcLoadOverview({ force = false, includeSpeech = true } = {}) {
+  const lastLoadedAt = Number(missionControlState.overview.loadedAt || 0);
+  const isFresh = !force && lastLoadedAt && Date.now() - lastLoadedAt < 5000;
+  if (isFresh && missionControlState.overview.health) {
+    return missionControlState.overview;
+  }
+
+  const speechPromise = includeSpeech
+    ? apiRequest("/speech/sessions")
+        .then((res) => (Array.isArray(res?.sessions) ? res.sessions : []))
+        .catch(() => [])
+    : Promise.resolve(missionControlState.overview.speechSessions || []);
+
+  const [health, voiceRes, approvals, workItems, contentRes, speechSessions] = await Promise.all([
+    apiRequest("/health").catch(() => null),
+    apiRequest("/voice/capabilities").catch(() => null),
+    apiListApprovals({ limit: 120 }).catch(() => []),
+    apiListWorkItems({ limit: 120 }).catch(() => []),
+    apiRequest("/content/pipeline").catch(() => ({ ok: false, store: mcOverviewContentFallback() })),
+    speechPromise
+  ]);
+
+  const content = contentRes?.store && typeof contentRes.store === "object" ? contentRes.store : mcOverviewContentFallback();
+  missionControlState.overview = {
+    loadedAt: Date.now(),
+    health,
+    voice: voiceRes?.capabilities || null,
+    approvals: Array.isArray(approvals) ? approvals : [],
+    workItems: Array.isArray(workItems) ? workItems : [],
+    content,
+    speechSessions: Array.isArray(speechSessions) ? speechSessions : []
+  };
+
+  if (content && typeof content === "object") {
+    contentState.store = content;
+  }
+
+  return missionControlState.overview;
+}
+
+function mcInvalidateOverview() {
+  missionControlState.overview.loadedAt = 0;
+}
+
+function mcProjectById(projectId) {
+  return PROJECT_PORTFOLIO.find((project) => project.id === projectId) || PROJECT_PORTFOLIO[0] || null;
+}
+
+function mcProjectItems(project, workItems = []) {
+  if (!project) return [];
+  const linkedIds = new Set(project.linkedWorkItemIds || []);
+  return (Array.isArray(workItems) ? workItems : []).filter((item) => {
+    const projectId = String(item?.data?.projectId || "").trim();
+    return linkedIds.has(String(item?.id || "").trim()) || projectId === project.id;
+  });
+}
+
+function mcProjectStatus(items = []) {
+  if (!items.length) return { label: "Queued", tone: "muted" };
+  if (items.some((item) => mcBlockedWorkItem(item))) return { label: "Needs Attention", tone: "danger" };
+  if (items.some((item) => normalizeFactoryStage(item.stage) === "review")) return { label: "Awaiting Review", tone: "warn" };
+  if (items.some((item) => normalizeFactoryStage(item.stage) === "ship")) return { label: "Shipping", tone: "ok" };
+  if (items.some((item) => ["build", "qa"].includes(normalizeFactoryStage(item.stage)))) return { label: "In Motion", tone: "info" };
+  return { label: "Backlog", tone: "muted" };
+}
+
+function mcDocTitle(docId) {
+  const match = (missionControlState.docs.items || []).find((doc) => String(doc?.id || "") === String(docId || ""));
+  return match?.title || String(docId || "").replaceAll("_", " ");
+}
+
+function mcScrollIntoView(node) {
+  if (!node || typeof node.scrollIntoView !== "function") return;
+  requestAnimationFrame(() => {
+    node.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+  });
+}
+
+async function mcFocusProject(projectId, { scrollTarget = "" } = {}) {
+  const project = mcProjectById(projectId);
+  if (!project) return;
+  missionControlState.projects.selectedId = project.id;
+  await renderProjectsPage();
+  if (scrollTarget === "detail") mcScrollIntoView(projectsDetail);
+  if (scrollTarget === "ledger") mcScrollIntoView(projectsLedger);
+}
+
+function mcOpenDoc(docId, projectId = "") {
+  const safeDocId = String(docId || "").trim();
+  if (!safeDocId) return;
+  if (projectId) {
+    const project = mcProjectById(projectId);
+    if (project) missionControlState.projects.selectedId = project.id;
+  }
+  missionControlState.docs.selectedId = safeDocId;
+  setView("docs");
+}
+
+function renderCouncilPageJournal() {
+  const memory = loadMemoryStore();
+  const entries = (memory.entries || [])
+    .slice()
+    .sort((a, b) => String(b?.date || "").localeCompare(String(a?.date || "")))
+    .slice(0, 3);
+  if (!councilJournalList) return;
+  if (!entries.length) {
+    councilJournalList.innerHTML = mcEmptyHtml("No journal entries yet.");
+    return;
+  }
+  councilJournalList.innerHTML = entries
+    .map((entry) => {
+      const excerpt = compactText(String(entry.body || "").replace(/[#>*`-]/g, " "), 160);
+      return `
+        <article class="ops-card">
+          <div class="ops-card-head">
+            <div class="ops-card-title">${escapeHtml(entry.date || "Journal")}</div>
+            <div class="ops-card-meta">${escapeHtml(formatRelativeTime(entry.modifiedAt) || "Recently updated")}</div>
+          </div>
+          <div class="ops-card-copy">${escapeHtml(excerpt || "No preview available.")}</div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+async function renderCouncilPage({ force = false } = {}) {
+  if (!councilView || councilView.classList.contains("hidden")) return;
+  const overview = await mcLoadOverview({ force, includeSpeech: false });
+  const approvals = (overview.approvals || []).filter((item) => String(item?.status || "").toLowerCase() === "pending");
+  const workItems = overview.workItems || [];
+  const activeItems = workItems.filter((item) => ["build", "qa", "review"].includes(normalizeFactoryStage(item.stage)));
+  const blockedItems = workItems.filter((item) => mcBlockedWorkItem(item));
+  const signals = overview.content?.signals || [];
+  const topics = overview.content?.topics || [];
+  const drafts = overview.content?.drafts || [];
+
+  if (councilMetricPending) councilMetricPending.textContent = String(approvals.length);
+  if (councilMetricBlocked) councilMetricBlocked.textContent = String(blockedItems.length);
+  if (councilMetricActive) councilMetricActive.textContent = String(activeItems.length);
+  if (councilMetricSignals) councilMetricSignals.textContent = String(signals.length);
+
+  if (councilSummary) {
+    councilSummary.textContent =
+      approvals.length || blockedItems.length || activeItems.length || signals.length
+        ? `ATEAM is carrying ${approvals.length} pending decisions, ${activeItems.length} active delivery items, and ${signals.length} live signals.`
+        : "ATEAM is quiet right now. No urgent decisions or visible delivery pressure.";
+  }
+
+  if (councilSeats) {
+    const seatCards = [
+      {
+        seat: `${mcDisplayName("henry")} / Coordinator`,
+        focus: approvals.length ? `Clear ${approvals.length} pending decision${approvals.length === 1 ? "" : "s"}.` : "Keep delivery lanes aligned.",
+        note: activeItems.length ? `${activeItems.length} work item${activeItems.length === 1 ? "" : "s"} moving right now.` : "No active delivery pressure."
+      },
+      {
+        seat: `${mcDisplayName("violet")} / Research`,
+        focus: signals.length ? `Signals are stacking. ${signals.length} intake item${signals.length === 1 ? "" : "s"} need framing.` : "No new external signal pressure.",
+        note: topics.length ? `${topics.length} topic${topics.length === 1 ? "" : "s"} already promoted into direction.` : "Scout has room to look wider."
+      },
+      {
+        seat: `${mcDisplayName("ralph")} / QA`,
+        focus: blockedItems.length ? `${blockedItems.length} item${blockedItems.length === 1 ? "" : "s"} need unblock or explicit rejection.` : "Quality gate is clear enough to keep flow moving.",
+        note: drafts.filter((draft) => draft.status === "pending_approval").length
+          ? `${drafts.filter((draft) => draft.status === "pending_approval").length} content draft decision${drafts.filter((draft) => draft.status === "pending_approval").length === 1 ? "" : "s"} are waiting.`
+          : "No content decisions are bottlenecking review."
+      }
+    ];
+    councilSeats.innerHTML = seatCards
+      .map(
+        (seat) => `
+          <article class="ops-card">
+            <div class="ops-card-head">
+              <div class="ops-card-title">${escapeHtml(seat.seat)}</div>
+            </div>
+            <div class="ops-card-copy">${escapeHtml(seat.focus)}</div>
+            <div class="ops-card-meta">${escapeHtml(seat.note)}</div>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  if (councilDecisionList) {
+    councilDecisionList.innerHTML = approvals.length
+      ? approvals
+          .slice(0, 8)
+          .map(
+            (approval) => `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(approval.summary || "Pending approval")}</div>
+                  <div class="ops-card-meta">${escapeHtml(approval.policy || "policy")}</div>
+                </div>
+                <div class="ops-card-copy">${escapeHtml(formatRelativeTime(approval.createdTs) || "Just created")}</div>
+                <div class="ops-action-row">
+                  <button class="ops-action-btn" type="button" data-action="approve-approval" data-approval-id="${escapeHtml(approval.id)}">Approve</button>
+                  <button class="ops-action-btn" type="button" data-action="reject-approval" data-approval-id="${escapeHtml(approval.id)}">Reject</button>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : mcEmptyHtml("No decisions are waiting right now.");
+  }
+
+  if (councilLanePressure) {
+    const cards = [
+      {
+        title: "Signals",
+        value: `${signals.length} live`,
+        note: topics.length ? `${topics.length} already promoted` : "Scout can sift these next"
+      },
+      {
+        title: "Delivery",
+        value: `${activeItems.length} active`,
+        note: blockedItems.length ? `${blockedItems.length} blocked / high-risk` : "No visible blockers"
+      },
+      {
+        title: "Approvals",
+        value: `${approvals.length} pending`,
+        note: approvals.length ? "Human decision is the bottleneck." : "Decision lane is clear"
+      },
+      {
+        title: "Publishing",
+        value: `${drafts.filter((draft) => ["approved", "scheduled"].includes(draft.status)).length} ready`,
+        note: drafts.filter((draft) => draft.status === "pending_approval").length ? "Content review still active" : "No content queue pressure"
+      }
+    ];
+    councilLanePressure.innerHTML = cards
+      .map(
+        (card) => `
+          <article class="ops-card">
+            <div class="ops-card-head">
+              <div class="ops-card-title">${escapeHtml(card.title)}</div>
+              <div class="ops-card-meta">${escapeHtml(card.value)}</div>
+            </div>
+            <div class="ops-card-copy">${escapeHtml(card.note)}</div>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  renderCouncilPageJournal();
+}
+
+function renderProjectsFormOptions(selectedProjectId) {
+  if (projectsWorkProject) {
+    projectsWorkProject.innerHTML = PROJECT_PORTFOLIO.map(
+      (project) => `<option value="${escapeHtml(project.id)}">${escapeHtml(project.name)}</option>`
+    ).join("");
+    projectsWorkProject.value = selectedProjectId || PROJECT_PORTFOLIO[0]?.id || "";
+  }
+
+  if (projectsWorkOwner) {
+    projectsWorkOwner.innerHTML = OFFICE2_AGENT_DIRECTORY.map(
+      (agent) => `<option value="${escapeHtml(agent.id)}">${escapeHtml(mcDisplayName(agent.id) || agent.id)} (${escapeHtml(agent.role || "Agent")})</option>`
+    ).join("");
+  }
+}
+
+async function renderProjectsPage({ force = false } = {}) {
+  if (!projectsView || projectsView.classList.contains("hidden")) return;
+  const overview = await mcLoadOverview({ force, includeSpeech: false });
+  const selectedProject = mcProjectById(missionControlState.projects.selectedId) || PROJECT_PORTFOLIO[0] || null;
+  if (selectedProject) missionControlState.projects.selectedId = selectedProject.id;
+  renderProjectsFormOptions(missionControlState.projects.selectedId);
+  if (projectsWorkOwner && selectedProject?.ownerAgentId) {
+    projectsWorkOwner.value = selectedProject.ownerAgentId;
+  }
+
+  const workItems = overview.workItems || [];
+  const portfolioRows = PROJECT_PORTFOLIO.map((project) => {
+    const items = mcProjectItems(project, workItems);
+    return { project, items, status: mcProjectStatus(items) };
+  });
+  const blockedCount = portfolioRows.reduce((sum, row) => sum + row.items.filter((item) => mcBlockedWorkItem(item)).length, 0);
+  const shipCount = portfolioRows.reduce((sum, row) => sum + row.items.filter((item) => normalizeFactoryStage(item.stage) === "ship").length, 0);
+  const linkedWorkCount = portfolioRows.reduce((sum, row) => sum + row.items.length, 0);
+  const activeRow = portfolioRows.find((row) => row.project.id === missionControlState.projects.selectedId) || portfolioRows[0] || null;
+
+  if (projectsSummary) {
+    projectsSummary.textContent = linkedWorkCount
+      ? `${linkedWorkCount} linked work item${linkedWorkCount === 1 ? "" : "s"} are currently mapped across ${portfolioRows.length} initiatives.`
+      : "No linked work items yet. Create one to seed the project ledger.";
+  }
+  if (projectsMetricCount) projectsMetricCount.textContent = String(portfolioRows.length);
+  if (projectsMetricWork) projectsMetricWork.textContent = String(linkedWorkCount);
+  if (projectsMetricBlocked) projectsMetricBlocked.textContent = String(blockedCount);
+  if (projectsMetricShip) projectsMetricShip.textContent = String(shipCount);
+
+  if (projectsPortfolioList) {
+    projectsPortfolioList.innerHTML = portfolioRows
+      .map(({ project, items, status }) => {
+        const linkedLabel = `${items.length} linked item${items.length === 1 ? "" : "s"}`;
+        const linkedActionLabel = items.length ? `Open ${linkedLabel}` : "No linked items";
+        const docCount = Array.isArray(project.docIds) ? project.docIds.length : 0;
+        const firstDocId = docCount ? project.docIds[0] : "";
+        return `
+          <article
+            class="ops-card ops-card-interactive ${project.id === missionControlState.projects.selectedId ? "ops-card-active" : ""}"
+            data-project-id="${escapeHtml(project.id)}"
+            tabindex="0">
+            <div class="ops-card-head">
+              <div class="ops-card-title">${escapeHtml(project.name)}</div>
+              <div class="ops-card-meta">${mcStageBadge(status.label)}</div>
+            </div>
+            <div class="ops-card-copy">${escapeHtml(project.summary)}</div>
+            <div class="ops-inline-meta">
+              <span>${escapeHtml(mcDisplayName(project.ownerAgentId) || project.ownerAgentId)}</span>
+              <span>${escapeHtml(linkedLabel)}</span>
+            </div>
+            <div class="ops-action-row ops-action-row-compact">
+              <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="select-project" data-project-id="${escapeHtml(project.id)}" data-scroll-target="detail">Open overview</button>
+              <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-project-ledger" data-project-id="${escapeHtml(project.id)}"${items.length ? "" : " disabled"}>${escapeHtml(linkedActionLabel)}</button>
+              ${firstDocId
+                ? `<button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-doc" data-doc-id="${escapeHtml(firstDocId)}" data-project-id="${escapeHtml(project.id)}">Open ${escapeHtml(String(docCount))} doc${docCount === 1 ? "" : "s"}</button>`
+                : ""}
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  if (projectsDetail) {
+    if (!activeRow) {
+      projectsDetail.innerHTML = mcEmptyHtml("No initiative selected.");
+    } else {
+      const project = activeRow.project;
+      const docs = (project.docIds || []).map((docId) => ({ id: docId, title: mcDocTitle(docId) }));
+      const stageSummary = ["backlog", "build", "qa", "review", "ship"]
+        .map((stage) => {
+          const count = activeRow.items.filter((item) => normalizeFactoryStage(item.stage) === stage).length;
+          return count ? `${stage.toUpperCase()}: ${count}` : "";
+        })
+        .filter(Boolean)
+        .join(" | ");
+      const docChips = docs.length
+        ? docs
+            .map(
+              (doc) =>
+                `<button class="ops-chip-btn" type="button" data-action="open-doc" data-doc-id="${escapeHtml(doc.id)}" data-project-id="${escapeHtml(project.id)}">${escapeHtml(doc.title)}</button>`
+            )
+            .join("")
+        : `<span class="ops-inline-empty">None</span>`;
+      projectsDetail.innerHTML = `
+        <article class="ops-card">
+          <div class="ops-card-head">
+            <div class="ops-card-title">${escapeHtml(project.name)}</div>
+            <div class="ops-card-meta">${mcStageBadge(activeRow.status.label)}</div>
+          </div>
+          <div class="ops-card-copy">${escapeHtml(project.outcome)}</div>
+          <div class="ops-key-value-list">
+            <div class="ops-key-value-row"><span>Owner</span><strong>${escapeHtml(mcDisplayName(project.ownerAgentId) || project.ownerAgentId)}</strong></div>
+            <div class="ops-key-value-row ops-key-value-row-stack">
+              <span>Linked Docs</span>
+              <div class="ops-chip-row">${docChips}</div>
+            </div>
+            <div class="ops-key-value-row"><span>Stage Mix</span><strong>${escapeHtml(stageSummary || "No linked work yet")}</strong></div>
+          </div>
+          <div class="ops-action-row ops-action-row-compact">
+            <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-project-ledger" data-project-id="${escapeHtml(project.id)}">View linked items</button>
+          </div>
+        </article>
+      `;
+    }
+  }
+
+  if (projectsLedger) {
+    if (!activeRow || !activeRow.items.length) {
+      projectsLedger.innerHTML = mcEmptyHtml("No work items linked to this initiative yet.");
+    } else {
+      projectsLedger.innerHTML = activeRow.items
+        .slice()
+        .sort((a, b) => String(b?.createdTs || "").localeCompare(String(a?.createdTs || "")))
+        .map(
+          (item) => `
+            <article class="ops-card">
+              <div class="ops-card-head">
+                <div class="ops-card-title">${escapeHtml(item.title || item.id)}</div>
+                <div class="ops-card-meta">${mcStageBadge(item.stage)}</div>
+              </div>
+              <div class="ops-card-copy">${escapeHtml(item.objective || "No objective captured yet.")}</div>
+              <div class="ops-inline-meta">
+                <span>${escapeHtml(formatRelativeTime(item.createdTs) || "New")}</span>
+                <span>${escapeHtml(item.ownerAgentId ? mcDisplayName(item.ownerAgentId) : "Unassigned")}</span>
+              </div>
+              <div class="ops-action-row">
+                <button class="ops-action-btn" type="button" data-action="advance-work-item" data-item-id="${escapeHtml(item.id)}">Advance</button>
+              </div>
+            </article>
+          `
+        )
+        .join("");
+    }
+  }
+}
+
+async function mcLoadDocs({ force = false } = {}) {
+  const hasDocs = Array.isArray(missionControlState.docs.items) && missionControlState.docs.items.length;
+  if (hasDocs && !force) return missionControlState.docs.items;
+  const res = await apiRequest("/api/docs");
+  const docs = Array.isArray(res?.docs) ? res.docs : [];
+  missionControlState.docs.items = docs;
+  if (!missionControlState.docs.selectedId && docs[0]?.id) {
+    missionControlState.docs.selectedId = docs[0].id;
+  }
+  return docs;
+}
+
+function mcInvalidateDocs() {
+  missionControlState.docs.items = [];
+  missionControlState.docs.detailById = {};
+}
+
+async function mcLoadDocDetail(docId, { force = false } = {}) {
+  const safeId = String(docId || "").trim();
+  if (!safeId) return null;
+  if (!force && missionControlState.docs.detailById?.[safeId]) {
+    return missionControlState.docs.detailById[safeId];
+  }
+  const res = await apiRequest(`/api/docs/${encodeURIComponent(safeId)}`);
+  const doc = res?.doc || null;
+  if (doc) missionControlState.docs.detailById[safeId] = doc;
+  return doc;
+}
+
+function renderDocsList(filteredDocs) {
+  if (!docsList) return;
+  docsList.innerHTML = filteredDocs.length
+    ? filteredDocs
+        .map(
+          (doc) => `
+            <article
+              class="ops-card ops-card-interactive ${doc.id === missionControlState.docs.selectedId ? "ops-card-active" : ""}"
+              data-doc-id="${escapeHtml(doc.id)}"
+              role="button"
+              tabindex="0"
+              aria-pressed="${doc.id === missionControlState.docs.selectedId ? "true" : "false"}">
+              <div class="ops-card-head">
+                <div class="ops-card-title">${escapeHtml(doc.title)}</div>
+                <div class="ops-card-meta">${escapeHtml(doc.category)}</div>
+              </div>
+              <div class="ops-card-copy">${escapeHtml(doc.summary || doc.excerpt || "")}</div>
+              <div class="ops-inline-meta">
+                <span>${escapeHtml(doc.relativePath || "")}</span>
+                <span>${escapeHtml(formatRelativeTime(doc.updatedTs) || "")}</span>
+              </div>
+            </article>
+          `
+        )
+        .join("")
+    : mcEmptyHtml("No docs match that search.");
+}
+
+function renderDocsDetail(doc) {
+  if (docsDetailTitle) docsDetailTitle.textContent = doc?.title || "Select a document";
+  if (docsDetailMeta) {
+    docsDetailMeta.textContent = doc
+      ? `${doc.relativePath || ""} | ${formatRelativeTime(doc.updatedTs) || "updated"}`
+      : "Preview will appear here.";
+  }
+  if (docsDetailBody) {
+    docsDetailBody.innerHTML = doc
+      ? renderMiniMarkdown(String(doc.body || "").slice(0, 24000))
+      : mcEmptyHtml("Choose a document from the library.");
+  }
+}
+
+async function renderDocsPage({ force = false } = {}) {
+  if (!docsView || docsView.classList.contains("hidden")) return;
+  let docs = [];
+  try {
+    docs = await mcLoadDocs({ force });
+  } catch {
+    if (docsSummary) docsSummary.textContent = "Docs could not be loaded from the local server.";
+    if (docsList) docsList.innerHTML = mcEmptyHtml("Docs are unavailable right now.");
+    renderDocsDetail(null);
+    return;
+  }
+  const filter = String(missionControlState.docs.filter || "").trim().toLowerCase();
+  if (docsSearchInput && docsSearchInput.value !== missionControlState.docs.filter) {
+    docsSearchInput.value = missionControlState.docs.filter;
+  }
+  const filteredDocs = docs.filter((doc) => {
+    if (!filter) return true;
+    const haystack = `${doc.title} ${doc.category} ${doc.summary} ${doc.relativePath} ${doc.excerpt}`.toLowerCase();
+    return haystack.includes(filter);
+  });
+
+  if (!filteredDocs.some((doc) => doc.id === missionControlState.docs.selectedId)) {
+    missionControlState.docs.selectedId = filteredDocs[0]?.id || "";
+  }
+
+  if (docsSummary) {
+    docsSummary.textContent = `${docs.length} curated document${docs.length === 1 ? "" : "s"} are indexed for the operating core of ATEAM.`;
+  }
+  if (docsMetricCount) docsMetricCount.textContent = String(docs.length);
+  if (docsMetricArchitecture) docsMetricArchitecture.textContent = String(docs.filter((doc) => doc.category === "architecture").length);
+  if (docsMetricPlatform) docsMetricPlatform.textContent = String(docs.filter((doc) => doc.category === "platform").length);
+  if (docsMetricOperations) docsMetricOperations.textContent = String(docs.filter((doc) => doc.category === "operations" || doc.category === "handover" || doc.category === "integrations").length);
+
+  renderDocsList(filteredDocs);
+  if (!missionControlState.docs.selectedId) {
+    renderDocsDetail(null);
+    return;
+  }
+  const detail = await mcLoadDocDetail(missionControlState.docs.selectedId, { force });
+  renderDocsDetail(detail);
+}
+
+function buildPeopleContacts(events = []) {
+  const lastSeenBySpeaker = {};
+  for (const event of events) {
+    const type = String(event?.type || "");
+    if (type !== "talk_turn_committed") continue;
+    const speakerId = getEffectiveSpeakerId(event);
+    lastSeenBySpeaker[speakerId] = String(event?.timestamp || "");
+  }
+
+  const analyticsRows = Array.isArray(speakerAnalyticsState.rows) ? speakerAnalyticsState.rows : [];
+  const rows = analyticsRows.length
+    ? analyticsRows
+    : SPEAKER_OPTIONS.filter((option) => option.id !== "ai_podcast").map((option) => ({
+        speakerId: option.id,
+        speakerLabel: speakerLabelById(option.id),
+        turns: 0,
+        measuredTalkMs: 0,
+        rapidSwitchCount: 0
+      }));
+
+  return rows
+    .filter((row) => row.speakerId !== "ai_podcast")
+    .map((row) => ({
+      speakerId: row.speakerId,
+      speakerLabel: row.speakerLabel,
+      turns: Number(row.turns || 0),
+      measuredTalkMs: Number(row.measuredTalkMs || 0),
+      rapidSwitchCount: Number(row.rapidSwitchCount || 0),
+      lastSeen: lastSeenBySpeaker[row.speakerId] || ""
+    }))
+    .sort((a, b) => b.turns - a.turns || String(b.lastSeen || "").localeCompare(String(a.lastSeen || "")));
+}
+
+function buildPeopleHandoffs(contacts = []) {
+  return contacts
+    .filter((contact) => contact.turns > 0 || contact.speakerId === "unknown")
+    .slice(0, 5)
+    .map((contact) => {
+      let ownerAgentId = "henry";
+      let note = "Coordinator should keep context tight and route the next action.";
+      if (contact.speakerId === "unknown") {
+        ownerAgentId = "scout";
+        note = "Identity or intent is still fuzzy. Scout should clarify before build starts.";
+      } else if (contact.turns >= 3) {
+        ownerAgentId = "quill";
+        note = "There is enough conversational signal to turn into a clearer brief or summary.";
+      }
+      return {
+        speakerLabel: contact.speakerLabel,
+        ownerAgentId,
+        note,
+        turns: contact.turns
+      };
+    });
+}
+
+function renderPeoplePage() {
+  if (!peopleView || peopleView.classList.contains("hidden")) return;
+  const contacts = buildPeopleContacts(timelineState.events || []);
+  const operators = OFFICE2_AGENT_DIRECTORY.filter((agent) => agent.id !== "alex");
+  const activeContacts = contacts.filter((contact) => contact.turns > 0);
+  const handoffs = buildPeopleHandoffs(contacts);
+  const derived = missionControlState.office2?.derivedStatus || {};
+
+  if (peopleSummary) {
+    peopleSummary.textContent = activeContacts.length
+      ? `${activeContacts.length} speaker${activeContacts.length === 1 ? "" : "s"} have recent talk activity, and ${handoffs.length} useful handoff${handoffs.length === 1 ? "" : "s"} can be made from that context.`
+      : "No conversation pressure detected yet. The team is ready when the next speaker shows up.";
+  }
+  if (peopleMetricContacts) peopleMetricContacts.textContent = String(contacts.length);
+  if (peopleMetricOperators) peopleMetricOperators.textContent = String(operators.length);
+  if (peopleMetricActive) peopleMetricActive.textContent = String(activeContacts.length);
+  if (peopleMetricHandoffs) peopleMetricHandoffs.textContent = String(handoffs.length);
+
+  if (peopleContactsList) {
+    peopleContactsList.innerHTML = contacts.length
+      ? contacts
+          .map(
+            (contact) => `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(contact.speakerLabel)}</div>
+                  <div class="ops-card-meta">${escapeHtml(`${contact.turns} turn${contact.turns === 1 ? "" : "s"}`)}</div>
+                </div>
+                <div class="ops-inline-meta">
+                  <span>${escapeHtml(contact.lastSeen ? formatRelativeTime(contact.lastSeen) : "No recent turn")}</span>
+                  <span>${escapeHtml(contact.rapidSwitchCount ? `${contact.rapidSwitchCount} rapid switch${contact.rapidSwitchCount === 1 ? "" : "es"}` : "Stable pace")}</span>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : mcEmptyHtml("No conversation contacts yet.");
+  }
+
+  if (peopleOperatorsList) {
+    peopleOperatorsList.innerHTML = operators
+      .map((agent) => {
+        const status = String(derived?.[agent.id]?.status || "idle");
+        return `
+          <article class="ops-card">
+            <div class="ops-card-head">
+              <div class="ops-card-title">${escapeHtml(mcDisplayName(agent.id) || agent.canonicalName || agent.id)}</div>
+              <div class="ops-card-meta">${mcStageBadge(status)}</div>
+            </div>
+            <div class="ops-card-copy">${escapeHtml(agent.role || "Operator")}</div>
+            <div class="ops-inline-meta">
+              <span>${escapeHtml(agent.lane || "")}</span>
+              <span>${escapeHtml(agent.canonicalName || "")}</span>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  if (peopleHandoffList) {
+    peopleHandoffList.innerHTML = handoffs.length
+      ? handoffs
+          .map(
+            (handoff) => `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(handoff.speakerLabel)}</div>
+                  <div class="ops-card-meta">${escapeHtml(mcDisplayName(handoff.ownerAgentId) || handoff.ownerAgentId)}</div>
+                </div>
+                <div class="ops-card-copy">${escapeHtml(handoff.note)}</div>
+                <div class="ops-inline-meta">
+                  <span>${escapeHtml(`${handoff.turns} turn${handoff.turns === 1 ? "" : "s"}`)}</span>
+                  <span>${escapeHtml(mcCanonicalName(handoff.ownerAgentId) || handoff.ownerAgentId)}</span>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : mcEmptyHtml("No handoffs recommended yet.");
+  }
+}
+
+async function renderSystemPage({ force = false } = {}) {
+  if (!systemView || systemView.classList.contains("hidden")) return;
+  const overview = await mcLoadOverview({ force, includeSpeech: true });
+  const health = overview.health || {};
+  const config = health.config || {};
+  const tools = Array.isArray(health.tools) ? health.tools : [];
+  const approvals = overview.approvals || [];
+  const workItems = overview.workItems || [];
+  const content = overview.content || mcOverviewContentFallback();
+  const alerts = [];
+
+  if (!config?.voice?.ttsConfigured) alerts.push("Voice synthesis is not configured, so browser fallback is the active path.");
+  if ((approvals || []).some((item) => String(item?.status || "").toLowerCase() === "pending")) alerts.push("There are pending approvals waiting on a human decision.");
+  if ((workItems || []).some((item) => mcBlockedWorkItem(item))) alerts.push("At least one delivery item is blocked or marked high risk.");
+  if (!tools.length) alerts.push("No tools were reported by /health.");
+  if (!alerts.length) alerts.push("No urgent system alerts detected.");
+
+  if (systemSummary) {
+    systemSummary.textContent = health?.ok
+      ? `Local server is responding. Talk model: ${config?.llm?.talkPrimary || "unknown"} | Dashboard model: ${config?.llm?.dashboardPrimary || "unknown"}.`
+      : "Health data could not be loaded from the local server.";
+  }
+  if (systemMetricMode) systemMetricMode.textContent = String(health.mode || "unknown");
+  if (systemMetricStorage) systemMetricStorage.textContent = String(config?.storage?.backend || "unknown");
+  if (systemMetricVoice) systemMetricVoice.textContent = config?.voice?.ttsConfigured ? "Ready" : "Fallback";
+  if (systemMetricTools) systemMetricTools.textContent = String(tools.length);
+
+  if (systemRuntimeCards) {
+    systemRuntimeCards.innerHTML = [
+      {
+        title: "LLM Routing",
+        copy: `Talk: ${config?.llm?.talkPrimary || "n/a"} -> ${config?.llm?.talkFallback || "n/a"} | Dashboard: ${config?.llm?.dashboardPrimary || "n/a"} -> ${config?.llm?.dashboardFallback || "n/a"}`
+      },
+      {
+        title: "Voice",
+        copy: `${config?.voice?.provider || "unknown"} | profiles: ${(config?.voice?.availableProfiles || []).join(", ") || "none"}`
+      },
+      {
+        title: "Scope",
+        copy: `Auth: ${config?.auth?.mode || "unknown"} | Storage: ${config?.storage?.backend || "unknown"}`
+      }
+    ]
+      .map(
+        (card) => `
+          <article class="ops-card">
+            <div class="ops-card-head"><div class="ops-card-title">${escapeHtml(card.title)}</div></div>
+            <div class="ops-card-copy">${escapeHtml(card.copy)}</div>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  if (systemCountsList) {
+    const counts = [
+      { label: "Approvals", value: approvals.length },
+      { label: "Work Items", value: workItems.length },
+      { label: "Signals", value: (content.signals || []).length },
+      { label: "Topics", value: (content.topics || []).length },
+      { label: "Drafts", value: (content.drafts || []).length },
+      { label: "Speech Sessions", value: (overview.speechSessions || []).length },
+      { label: "Memory Entries", value: (loadMemoryStore().entries || []).length }
+    ];
+    systemCountsList.innerHTML = counts
+      .map(
+        (row) => `
+          <article class="ops-card">
+            <div class="ops-card-head">
+              <div class="ops-card-title">${escapeHtml(row.label)}</div>
+              <div class="ops-card-meta">${escapeHtml(String(row.value))}</div>
+            </div>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  if (systemToolsList) {
+    systemToolsList.innerHTML = tools.length
+      ? tools
+          .map(
+            (tool) => `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(tool.name || "tool")}</div>
+                  <div class="ops-card-meta">${escapeHtml(tool.category || "capability")}</div>
+                </div>
+                <div class="ops-card-copy">${escapeHtml(tool.description || "No description available.")}</div>
+              </article>
+            `
+          )
+          .join("")
+      : mcEmptyHtml("No tools reported.");
+  }
+
+  if (systemAlertsList) {
+    systemAlertsList.innerHTML = alerts
+      .map(
+        (alert) => `
+          <article class="ops-card">
+            <div class="ops-card-copy">${escapeHtml(alert)}</div>
+          </article>
+        `
+      )
+      .join("");
+  }
+}
+
+async function renderRadarPage({ force = false } = {}) {
+  if (!radarView || radarView.classList.contains("hidden")) return;
+  const overview = await mcLoadOverview({ force, includeSpeech: false });
+  const content = overview.content || mcOverviewContentFallback();
+  const signals = content.signals || [];
+  const topics = content.topics || [];
+  const drafts = content.drafts || [];
+  const pendingDrafts = drafts.filter((draft) => draft.status === "pending_approval");
+  const bySource = {};
+  signals.forEach((signal) => {
+    const source = String(signal.source || "Unsorted").trim() || "Unsorted";
+    bySource[source] = (bySource[source] || 0) + 1;
+  });
+  const clusters = Object.entries(bySource)
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source));
+
+  if (radarSummary) {
+    radarSummary.textContent = signals.length
+      ? `${signals.length} signal${signals.length === 1 ? "" : "s"} are live. ${topics.length} topic${topics.length === 1 ? "" : "s"} have already been promoted.`
+      : "No live signals yet. Use the Content page to start feeding the radar.";
+  }
+  if (radarMetricSignals) radarMetricSignals.textContent = String(signals.length);
+  if (radarMetricTopics) radarMetricTopics.textContent = String(topics.length);
+  if (radarMetricDrafts) radarMetricDrafts.textContent = String(drafts.length);
+  if (radarMetricPending) radarMetricPending.textContent = String(pendingDrafts.length);
+
+  if (radarSignalsList) {
+    radarSignalsList.innerHTML = signals.length
+      ? signals
+          .slice()
+          .sort((a, b) => String(b?.createdAt || "").localeCompare(String(a?.createdAt || "")))
+          .slice(0, 10)
+          .map(
+            (signal) => `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(signal.title || "Signal")}</div>
+                  <div class="ops-card-meta">${escapeHtml(signal.source || "source unknown")}</div>
+                </div>
+                <div class="ops-card-copy">${escapeHtml(signal.summary || "No summary added.")}</div>
+                <div class="ops-action-row">
+                  <button class="ops-action-btn" type="button" data-action="promote-signal" data-signal-id="${escapeHtml(signal.id)}">Promote</button>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : mcEmptyHtml("No radar signals yet.");
+  }
+
+  if (radarTopicsList) {
+    radarTopicsList.innerHTML = topics.length
+      ? topics
+          .slice()
+          .sort((a, b) => String(b?.createdAt || "").localeCompare(String(a?.createdAt || "")))
+          .slice(0, 10)
+          .map(
+            (topic) => `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(topic.title || "Topic")}</div>
+                  <div class="ops-card-meta">${escapeHtml(`${Array.isArray(topic.signalIds) ? topic.signalIds.length : 0} signal link${Array.isArray(topic.signalIds) && topic.signalIds.length === 1 ? "" : "s"}`)}</div>
+                </div>
+                <div class="ops-card-copy">${escapeHtml(topic.rationale || "No rationale added.")}</div>
+                <div class="ops-action-row">
+                  <button class="ops-action-btn" type="button" data-action="draft-topic" data-topic-id="${escapeHtml(topic.id)}">Create Draft</button>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : mcEmptyHtml("No promoted topics yet.");
+  }
+
+  if (radarClusters) {
+    radarClusters.innerHTML = clusters.length
+      ? clusters
+          .slice(0, 6)
+          .map(
+            (cluster) => `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(cluster.source)}</div>
+                  <div class="ops-card-meta">${escapeHtml(`${cluster.count} signal${cluster.count === 1 ? "" : "s"}`)}</div>
+                </div>
+                <div class="ops-card-copy">${escapeHtml(cluster.count > 1 ? "This source is showing repeated activity." : "This source is still early but worth tracking.")}</div>
+              </article>
+            `
+          )
+          .join("")
+      : mcEmptyHtml("No opportunity clusters yet.");
+  }
+}
+
+async function renderPipelinePage({ force = false } = {}) {
+  if (!pipelineView || pipelineView.classList.contains("hidden")) return;
+  const overview = await mcLoadOverview({ force, includeSpeech: false });
+  const content = overview.content || mcOverviewContentFallback();
+  const signals = content.signals || [];
+  const topics = content.topics || [];
+  const drafts = content.drafts || [];
+  const approvals = (overview.approvals || []).filter((item) => String(item?.status || "").toLowerCase() === "pending");
+  const workItems = overview.workItems || [];
+
+  if (pipelineSummary) {
+    pipelineSummary.textContent = `Signal ${signals.length} -> Topic ${topics.length} -> Draft ${drafts.length} -> Approval ${approvals.length} -> Delivery ${workItems.length}.`;
+  }
+  if (pipelineMetricSignals) pipelineMetricSignals.textContent = String(signals.length);
+  if (pipelineMetricDrafts) pipelineMetricDrafts.textContent = String(drafts.filter((draft) => ["draft", "pending_approval", "approved", "scheduled"].includes(draft.status)).length);
+  if (pipelineMetricApprovals) pipelineMetricApprovals.textContent = String(approvals.length);
+  if (pipelineMetricDelivery) pipelineMetricDelivery.textContent = String(workItems.length);
+
+  if (pipelineBoard) {
+    const columns = [
+      {
+        title: "Signal Intake",
+        items: signals.slice(0, 8).map((signal) => ({
+          title: signal.title || "Signal",
+          meta: signal.source || "Unsorted",
+          body: signal.summary || "No summary added.",
+          actions: `<button class="ops-action-btn" type="button" data-action="promote-signal" data-signal-id="${escapeHtml(signal.id)}">Promote</button>`
+        }))
+      },
+      {
+        title: "Scout Direction",
+        items: topics.slice(0, 8).map((topic) => ({
+          title: topic.title || "Topic",
+          meta: `${Array.isArray(topic.signalIds) ? topic.signalIds.length : 0} signal link${Array.isArray(topic.signalIds) && topic.signalIds.length === 1 ? "" : "s"}`,
+          body: topic.rationale || "No rationale added.",
+          actions: `<button class="ops-action-btn" type="button" data-action="draft-topic" data-topic-id="${escapeHtml(topic.id)}">Create Draft</button>`
+        }))
+      },
+      {
+        title: "Drafts",
+        items: drafts
+          .filter((draft) => ["draft", "pending_approval", "approved", "scheduled"].includes(draft.status))
+          .slice(0, 8)
+          .map((draft) => ({
+            title: draft.topicTitle || draft.hook || "Draft",
+            meta: CONTENT_STATUS_LABELS[normalizeContentStatus(draft.status)],
+            body: draft.hook || draft.insight || "No preview yet.",
+            actions:
+              normalizeContentStatus(draft.status) === "draft"
+                ? `<button class="ops-action-btn" type="button" data-action="request-draft" data-draft-id="${escapeHtml(draft.id)}">Request Approval</button>`
+                : `<button class="ops-action-btn" type="button" data-action="open-content">Open Content</button>`
+          }))
+      },
+      {
+        title: "Decision Gate",
+        items: approvals.slice(0, 8).map((approval) => ({
+          title: approval.summary || "Approval",
+          meta: approval.policy || "policy",
+          body: formatRelativeTime(approval.createdTs) || "Pending",
+          actions: `
+            <div class="ops-action-row">
+              <button class="ops-action-btn" type="button" data-action="approve-approval" data-approval-id="${escapeHtml(approval.id)}">Approve</button>
+              <button class="ops-action-btn" type="button" data-action="reject-approval" data-approval-id="${escapeHtml(approval.id)}">Reject</button>
+            </div>
+          `
+        }))
+      },
+      {
+        title: "Delivery",
+        items: workItems.slice(0, 8).map((item) => ({
+          title: item.title || item.id,
+          meta: normalizeFactoryStage(item.stage).toUpperCase(),
+          body: item.objective || "No objective added.",
+          actions: `<button class="ops-action-btn" type="button" data-action="advance-work-item" data-item-id="${escapeHtml(item.id)}">Advance</button>`
+        }))
+      }
+    ];
+
+    pipelineBoard.innerHTML = columns
+      .map(
+        (column) => `
+          <section class="pipeline-column">
+            <div class="pipeline-column-head">
+              <div class="pipeline-column-title">${escapeHtml(column.title)}</div>
+              <div class="pipeline-column-count">${escapeHtml(String(column.items.length))}</div>
+            </div>
+            <div class="pipeline-column-body">
+              ${
+                column.items.length
+                  ? column.items
+                      .map(
+                        (item) => `
+                          <article class="ops-card pipeline-card">
+                            <div class="ops-card-head">
+                              <div class="ops-card-title">${escapeHtml(item.title)}</div>
+                              <div class="ops-card-meta">${escapeHtml(item.meta)}</div>
+                            </div>
+                            <div class="ops-card-copy">${escapeHtml(item.body)}</div>
+                            ${item.actions || ""}
+                          </article>
+                        `
+                      )
+                      .join("")
+                  : mcEmptyHtml("Nothing in this lane.")
+              }
+            </div>
+          </section>
+        `
+      )
+      .join("");
+  }
+
+  if (pipelineStalledList) {
+    const stalled = [
+      ...workItems.filter((item) => mcBlockedWorkItem(item)),
+      ...approvals.filter((approval) => String(approval?.status || "").toLowerCase() === "pending")
+    ];
+    pipelineStalledList.innerHTML = stalled.length
+      ? stalled
+          .slice(0, 8)
+          .map((item) => {
+            const isApproval = String(item?.id || "").startsWith("apr_");
+            return `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(isApproval ? item.summary || item.id : item.title || item.id)}</div>
+                  <div class="ops-card-meta">${escapeHtml(isApproval ? "Approval" : normalizeFactoryStage(item.stage).toUpperCase())}</div>
+                </div>
+                <div class="ops-card-copy">${escapeHtml(isApproval ? item.policy || "Pending decision" : item.objective || "Blocked work item")}</div>
+              </article>
+            `;
+          })
+          .join("")
+      : mcEmptyHtml("No stalled items detected.");
+  }
+}
+
+async function renderAiLabPage({ force = false } = {}) {
+  if (!aiLabView || aiLabView.classList.contains("hidden")) return;
+  const overview = await mcLoadOverview({ force, includeSpeech: true });
+  const talkTurns = (timelineState.events || []).filter((event) => String(event?.type || "") === "talk_turn_committed");
+  const recentTurns = (timelineState.events || [])
+    .filter((event) => ["talk_turn_committed", "assistant_response_completed"].includes(String(event?.type || "")))
+    .slice(-8)
+    .reverse();
+  const speechSessions = overview.speechSessions || [];
+  const availableProfiles = overview.voice?.synthesis?.availableProfiles || overview.health?.config?.voice?.availableProfiles || [];
+
+  if (aiLabSummary) {
+    aiLabSummary.textContent = `Talk turns: ${talkTurns.length}. Speech sessions: ${speechSessions.length}. Voice profiles: ${availableProfiles.length}.`;
+  }
+  if (aiLabMetricTurns) aiLabMetricTurns.textContent = String(talkTurns.length);
+  if (aiLabMetricSessions) aiLabMetricSessions.textContent = String(speechSessions.length);
+  if (aiLabMetricVoices) aiLabMetricVoices.textContent = String(availableProfiles.length);
+  if (aiLabMetricRecognition) aiLabMetricRecognition.textContent = state.supportsRecognition ? "Ready" : "Fallback";
+
+  if (aiLabModules) {
+    const modules = [
+      {
+        title: "Talk Mode",
+        copy: "Live conversation surface with timeline, chapters, and review controls.",
+        action: `<button class="ops-action-btn" type="button" data-action="open-talk-focus">Open Focus</button>`
+      },
+      {
+        title: "Speech Clarity",
+        copy: "Record sessions, analyze transcript quality, and review reflections.",
+        action: `<button class="ops-action-btn" type="button" data-action="open-speech">Open Speech</button>`
+      },
+      {
+        title: "Voice Stack",
+        copy: `${overview.health?.config?.voice?.provider || "unknown"} | ${(availableProfiles || []).join(", ") || "browser fallback"}`,
+        action: ""
+      },
+      {
+        title: "Vision + Context",
+        copy: state.screenStream || state.cameraStream ? "Capture is active right now." : "Screen/camera capture is available from Talk Mode.",
+        action: `<button class="ops-action-btn" type="button" data-action="open-talk">Open Talk</button>`
+      }
+    ];
+    aiLabModules.innerHTML = modules
+      .map(
+        (module) => `
+          <article class="ops-card">
+            <div class="ops-card-head"><div class="ops-card-title">${escapeHtml(module.title)}</div></div>
+            <div class="ops-card-copy">${escapeHtml(module.copy)}</div>
+            ${module.action || ""}
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  if (aiLabSessions) {
+    aiLabSessions.innerHTML = speechSessions.length
+      ? speechSessions
+          .slice(0, 8)
+          .map(
+            (session) => `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(session.title || "Speech session")}</div>
+                  <div class="ops-card-meta">${escapeHtml(session.mode || "session")}</div>
+                </div>
+                <div class="ops-inline-meta">
+                  <span>${escapeHtml(formatRelativeTime(session.updatedAt || session.createdAt) || "Recently")}</span>
+                  <span>${escapeHtml(session.status || "saved")}</span>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : mcEmptyHtml("No speech sessions yet.");
+  }
+
+  if (aiLabTurns) {
+    aiLabTurns.innerHTML = recentTurns.length
+      ? recentTurns
+          .map((event) => {
+            const type = String(event?.type || "");
+            const speakerId = getEffectiveSpeakerId(event);
+            const label = type === "talk_turn_committed" ? speakerLabelById(speakerId) : event?.meta?.agent || "Assistant";
+            const body = type === "talk_turn_committed" ? event?.meta?.text || event?.summary || "" : event?.meta?.agentReply || event?.summary || "";
+            return `
+              <article class="ops-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">${escapeHtml(label)}</div>
+                  <div class="ops-card-meta">${escapeHtml(formatRelativeTime(event?.timestamp) || "")}</div>
+                </div>
+                <div class="ops-card-copy">${escapeHtml(compactText(body, 180) || "No preview available.")}</div>
+              </article>
+            `;
+          })
+          .join("")
+      : mcEmptyHtml("No recent conversation turns yet.");
+  }
+
+  if (aiLabCapabilities) {
+    const capabilities = [
+      `Speech recognition: ${state.supportsRecognition ? "browser-supported" : "not available in this browser"}`,
+      `Browser TTS: ${state.supportsTTS ? "available" : "unavailable"}`,
+      `Server voice: ${overview.health?.config?.voice?.ttsConfigured ? "configured" : "fallback only"}`,
+      `Timeline review mode: ${state.reviewMode ? "on" : "off"}`,
+      `Vision capture: ${navigator.mediaDevices ? "available" : "browser-limited"}`
+    ];
+    aiLabCapabilities.innerHTML = capabilities
+      .map(
+        (line) => `
+          <article class="ops-card">
+            <div class="ops-card-copy">${escapeHtml(line)}</div>
+          </article>
+        `
+      )
+      .join("");
+  }
+}
+
+async function mcHandleApprovalDecision(approvalId, decision) {
+  const safeId = String(approvalId || "").trim();
+  const safeDecision = String(decision || "").trim().toLowerCase();
+  if (!safeId || !safeDecision) return;
+  await apiDecideApproval(safeId, safeDecision, { sessionId: GLOBAL_PODCAST_ID, actor: "user" });
+  mcInvalidateOverview();
+  showToast(`Approval ${safeDecision}.`, safeDecision === "approved" ? "ok" : "error");
+  if (state.view === "approvals") {
+    void renderApprovalsPage({ preserveSelection: true });
+    return;
+  }
+  renderMissionControlView(state.view);
+}
+
+async function mcHandleAdvanceWorkItem(itemId) {
+  const safeId = String(itemId || "").trim();
+  if (!safeId) return;
+  await advanceFactoryItem(safeId);
+  mcInvalidateOverview();
+  renderMissionControlView(state.view);
+}
+
+async function mcHandleRequestDraft(draftId) {
+  const safeId = String(draftId || "").trim();
+  if (!safeId) return;
+  contentState.selectedDraftId = safeId;
+  await handleContentDraftStatusChange("pending_approval");
+  mcInvalidateOverview();
+  renderMissionControlView(state.view);
+}
+
+async function handleProjectsCreateItem() {
+  const title = String(projectsWorkTitle?.value || "").trim();
+  const objective = String(projectsWorkObjective?.value || "").trim();
+  const projectId = String(projectsWorkProject?.value || missionControlState.projects.selectedId || "").trim();
+  const stage = String(projectsWorkStage?.value || "BACKLOG").trim();
+  const ownerAgentId = String(projectsWorkOwner?.value || "").trim();
+
+  if (!title) {
+    showToast("Work item title is required.", "error");
+    return;
+  }
+
+  try {
+    await apiCreateWorkItem({
+      title,
+      objective,
+      stage,
+      ownerAgentId,
+      actor: "user",
+      reason: "project_board_create",
+      sessionId: GLOBAL_PODCAST_ID,
+      data: { projectId }
+    });
+    if (projectsWorkTitle) projectsWorkTitle.value = "";
+    if (projectsWorkObjective) projectsWorkObjective.value = "";
+    mcInvalidateOverview();
+    showToast("Work item created.", "ok");
+    void renderProjectsPage({ force: true });
+  } catch {
+    showToast("Failed to create work item.", "error");
+  }
+}
+
+async function handleMissionAction(action, dataset = {}) {
+  const safeAction = String(action || "").trim();
+  if (!safeAction) return;
+  if (safeAction === "select-project") {
+    await mcFocusProject(dataset.projectId, { scrollTarget: String(dataset.scrollTarget || "detail") });
+    return;
+  }
+  if (safeAction === "open-project-ledger") {
+    await mcFocusProject(dataset.projectId, { scrollTarget: "ledger" });
+    return;
+  }
+  if (safeAction === "open-doc") {
+    mcOpenDoc(dataset.docId, dataset.projectId);
+    return;
+  }
+  if (safeAction === "approve-approval") {
+    await mcHandleApprovalDecision(dataset.approvalId, "approved");
+    return;
+  }
+  if (safeAction === "reject-approval") {
+    await mcHandleApprovalDecision(dataset.approvalId, "rejected");
+    return;
+  }
+  if (safeAction === "advance-work-item") {
+    await mcHandleAdvanceWorkItem(dataset.itemId);
+    return;
+  }
+  if (safeAction === "promote-signal") {
+    await promoteSignalToTopic(dataset.signalId);
+    mcInvalidateOverview();
+    renderMissionControlView(state.view);
+    return;
+  }
+  if (safeAction === "draft-topic") {
+    await createDraftFromTopic(dataset.topicId);
+    mcInvalidateOverview();
+    renderMissionControlView(state.view);
+    return;
+  }
+  if (safeAction === "request-draft") {
+    await mcHandleRequestDraft(dataset.draftId);
+    return;
+  }
+  if (safeAction === "open-content") {
+    setView("content");
+    return;
+  }
+  if (safeAction === "open-talk") {
+    setView("talk");
+    return;
+  }
+  if (safeAction === "open-talk-focus") {
+    setView("talk", { query: "?focus=1" });
+    return;
+  }
+  if (safeAction === "open-speech") {
+    setView("speech");
+  }
 }
 
 function updateSelectionUi() {
@@ -9453,12 +11039,15 @@ function bindEvents() {
   });
 
   // Top bar controls.
-  if (mcPauseBtn) mcPauseBtn.addEventListener("click", pauseAllOfficeAgents);
+  if (mcPauseBtn) {
+    mcPauseBtn.title = "Pause all agents briefly";
+    mcPauseBtn.addEventListener("click", pauseAllOfficeAgents);
+  }
   if (mcPingBtn) {
     const pingName = mcDisplayName("henry") || "Henry";
     const pingCanonical = mcCanonicalName("henry") || "Henry";
     mcPingBtn.textContent = `Ping ${pingName || pingCanonical}`;
-    mcPingBtn.title = `Ping ${pingCanonical}`;
+    mcPingBtn.title = `Open ${pingCanonical}'s command panel`;
     mcPingBtn.addEventListener("click", () => {
       setView("agents");
       setOfficeActiveAgent("henry");
@@ -9466,9 +11055,17 @@ function bindEvents() {
     });
   }
   if (mcRefreshBtn) {
+    mcRefreshBtn.title = "Reload the current page";
     mcRefreshBtn.addEventListener("click", () => {
       const route = window.location.pathname || "/tasks";
       window.location.href = `${route}?ts=${Date.now()}`;
+    });
+  }
+  if (mcStatusBtn) {
+    mcStatusBtn.title = "Open system status";
+    mcStatusBtn.addEventListener("click", () => {
+      setView("system");
+      showToast("Opened System.", "ok");
     });
   }
   if (mcFeedbackBtn) {
@@ -9481,11 +11078,12 @@ function bindEvents() {
   if (mcCommandDrawerBackdrop) mcCommandDrawerBackdrop.addEventListener("click", closeCommandDrawer);
 
   if (mcSearchInput) {
+    mcSearchInput.placeholder = "Search pages and commands";
     mcSearchInput.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
       const value = String(mcSearchInput.value || "").trim();
       if (!value) return;
-      showToast(`Search: ${value}`, "ok");
+      handleMissionControlSearch(value);
     });
   }
   window.addEventListener("keydown", (e) => {
@@ -9524,6 +11122,164 @@ function bindEvents() {
   }
   if (calRefreshBtn) calRefreshBtn.addEventListener("click", renderCalendarPage);
   if (calWeekBtn) calWeekBtn.addEventListener("click", renderCalendarPage);
+
+  if (councilRefreshBtn) {
+    councilRefreshBtn.addEventListener("click", () => {
+      mcInvalidateOverview();
+      void renderCouncilPage({ force: true });
+    });
+  }
+  if (councilOpenApprovalsBtn) councilOpenApprovalsBtn.addEventListener("click", () => setView("approvals"));
+  if (councilDecisionList) {
+    councilDecisionList.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+
+  if (projectsRefreshBtn) {
+    projectsRefreshBtn.addEventListener("click", () => {
+      mcInvalidateOverview();
+      void renderProjectsPage({ force: true });
+    });
+  }
+  if (projectsOpenFactoryBtn) projectsOpenFactoryBtn.addEventListener("click", () => setView("factory"));
+  if (projectsWorkCreateBtn) projectsWorkCreateBtn.addEventListener("click", handleProjectsCreateItem);
+  if (projectsWorkProject) {
+    projectsWorkProject.addEventListener("change", () => {
+      missionControlState.projects.selectedId = String(projectsWorkProject.value || "");
+      void renderProjectsPage();
+    });
+  }
+  if (projectsPortfolioList) {
+    projectsPortfolioList.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (btn) {
+        void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+        return;
+      }
+      const card = e.target?.closest?.("[data-project-id]");
+      if (!card) return;
+      missionControlState.projects.selectedId = String(card.dataset.projectId || "");
+      void renderProjectsPage();
+    });
+    projectsPortfolioList.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      if (e.target?.closest?.("[data-action]")) return;
+      const card = e.target?.closest?.("[data-project-id]");
+      if (!card) return;
+      e.preventDefault();
+      missionControlState.projects.selectedId = String(card.dataset.projectId || "");
+      void renderProjectsPage();
+    });
+  }
+  if (projectsDetail) {
+    projectsDetail.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+  if (projectsLedger) {
+    projectsLedger.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+
+  if (docsRefreshBtn) {
+    docsRefreshBtn.addEventListener("click", () => {
+      mcInvalidateDocs();
+      void renderDocsPage({ force: true });
+    });
+  }
+  if (docsSearchInput) {
+    docsSearchInput.addEventListener("input", (e) => {
+      missionControlState.docs.filter = String(e.target?.value || "");
+      void renderDocsPage();
+    });
+  }
+  if (docsList) {
+    docsList.addEventListener("click", (e) => {
+      const card = e.target?.closest?.("[data-doc-id]");
+      if (!card) return;
+      missionControlState.docs.selectedId = String(card.dataset.docId || "");
+      void renderDocsPage();
+    });
+    docsList.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const card = e.target?.closest?.("[data-doc-id]");
+      if (!card) return;
+      e.preventDefault();
+      missionControlState.docs.selectedId = String(card.dataset.docId || "");
+      void renderDocsPage();
+    });
+  }
+
+  if (peopleOpenTalkBtn) peopleOpenTalkBtn.addEventListener("click", () => setView("talk"));
+  if (peopleOpenTeamBtn) peopleOpenTeamBtn.addEventListener("click", () => setView("team"));
+
+  if (systemRefreshBtn) {
+    systemRefreshBtn.addEventListener("click", () => {
+      mcInvalidateOverview();
+      void renderSystemPage({ force: true });
+    });
+  }
+
+  if (radarRefreshBtn) {
+    radarRefreshBtn.addEventListener("click", () => {
+      mcInvalidateOverview();
+      void renderRadarPage({ force: true });
+    });
+  }
+  if (radarOpenContentBtn) radarOpenContentBtn.addEventListener("click", () => setView("content"));
+  if (radarSignalsList) {
+    radarSignalsList.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+  if (radarTopicsList) {
+    radarTopicsList.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+
+  if (pipelineRefreshBtn) {
+    pipelineRefreshBtn.addEventListener("click", () => {
+      mcInvalidateOverview();
+      void renderPipelinePage({ force: true });
+    });
+  }
+  if (pipelineOpenFactoryBtn) pipelineOpenFactoryBtn.addEventListener("click", () => setView("factory"));
+  if (pipelineBoard) {
+    pipelineBoard.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+
+  if (aiLabRefreshBtn) {
+    aiLabRefreshBtn.addEventListener("click", () => {
+      mcInvalidateOverview();
+      void renderAiLabPage({ force: true });
+    });
+  }
+  if (aiLabOpenTalkBtn) aiLabOpenTalkBtn.addEventListener("click", () => setView("talk"));
+  if (aiLabOpenSpeechBtn) aiLabOpenSpeechBtn.addEventListener("click", () => setView("speech"));
+  if (aiLabModules) {
+    aiLabModules.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
 
   if (office2StartChatBtn) office2StartChatBtn.addEventListener("click", () => setView("talk", { query: "?focus=1" }));
 
