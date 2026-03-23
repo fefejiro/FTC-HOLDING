@@ -2465,6 +2465,12 @@ nav.primary {
 .mobile-shell {
   display: none;
   position: relative;
+  z-index: 82;
+}
+
+.mobile-toggle {
+  position: relative;
+  z-index: 83;
 }
 
 .mobile-backdrop {

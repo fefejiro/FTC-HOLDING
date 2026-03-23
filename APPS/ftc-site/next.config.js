@@ -1,7 +1,7 @@
 module.exports = {
   reactStrictMode: true,
   swcMinify: true,
-  transpilePackages: ["@ftc/logger", "@ftc/supabase", "@ftc/config", "@ftc/types", "@ftc/auth"],
+  transpilePackages: ["@ftc/supabase", "@ftc/config", "@ftc/types", "@ftc/auth"],
   async redirects() {
     return [
       {

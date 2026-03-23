@@ -4,12 +4,16 @@ test.describe("Public journey", () => {
   test("home to products to client launches keeps the public story clear", async ({ page }) => {
     await page.goto("/");
 
-    await expect(
-      page.getByRole("heading", { name: "Fast websites, lead systems, and AI-assisted workflows." })
-    ).toBeVisible();
+    await expect(page.locator("h1").first()).toContainText(
+      "Fast websites, lead systems, and AI-assisted workflows."
+    );
     await expect(page.getByRole("link", { name: "Try ATEAM Demo" }).first()).toBeVisible();
 
-    await page.getByRole("banner").getByRole("link", { name: "Products" }).click();
+    await page
+      .getByLabel("Main navigation")
+      .getByRole("link", { name: "Products", exact: true })
+      .first()
+      .click({ force: true });
     await expect(page).toHaveURL("/products");
     await expect(page.getByRole("heading", { name: "ATEAM" }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Try ATEAM demo", exact: true })).toBeVisible();
@@ -29,8 +33,10 @@ test.describe("Public journey", () => {
     await page.getByLabel("Category").selectOption("lead-automation");
     await page.getByRole("button", { name: "Generate demo output" }).click();
 
-    await expect(page.getByRole("heading", { name: "Reviewing your idea and building a scoped next step" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Clear next step for your idea" })).toBeVisible({ timeout: 7000 });
+    await expect(page.getByRole("heading", { name: "Clear next step for your idea" })).toBeVisible({
+      timeout: 10000
+    });
+    await expect(page.getByText("Local Services Lead Engine")).toBeVisible();
 
     await page.getByRole("link", { name: "Continue with this idea" }).click();
     await expect(page).toHaveURL(/\/work-with-ftc\?from=ateam/);

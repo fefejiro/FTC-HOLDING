@@ -6,6 +6,7 @@ export const runtime = "edge";
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 5;
+const RATE_LIMIT_ENABLED = process.env.NODE_ENV === "production";
 const PROPERTY_TYPE_VALUES = new Set(gardenPropertyTypes);
 const SERVICE_VALUES = new Set(gardenServiceOptions);
 const FREQUENCY_VALUES = new Set(gardenFrequencies);
@@ -68,7 +69,7 @@ function badRequest(message: string, status = 400) {
 
 export async function POST(req: NextRequest) {
   const clientKey = getClientKey(req);
-  if (isRateLimited(clientKey)) {
+  if (RATE_LIMIT_ENABLED && isRateLimited(clientKey)) {
     return badRequest("Too many quote attempts. Please try again later.", 429);
   }
 

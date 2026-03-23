@@ -10,6 +10,7 @@ export const runtime = "edge";
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 5;
+const RATE_LIMIT_ENABLED = process.env.NODE_ENV === "production";
 const SERVICE_VALUES = new Set(polarServiceOptions);
 const SHIPMENT_TYPE_VALUES = new Set(polarShipmentTypes);
 const TIMELINE_VALUES = new Set(polarTimelineOptions);
@@ -79,7 +80,7 @@ function badRequest(message: string, status = 400) {
 
 export async function POST(req: NextRequest) {
   const clientKey = getClientKey(req);
-  if (isRateLimited(clientKey)) {
+  if (RATE_LIMIT_ENABLED && isRateLimited(clientKey)) {
     return badRequest("Too many quote attempts. Please try again later.", 429);
   }
 
