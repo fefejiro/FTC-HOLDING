@@ -77,6 +77,9 @@ export default function Footer() {
             <p className="footer-copy">
               Systems-first digital delivery for fast websites, lead automation, and AI-assisted workflows.
             </p>
+            <a className="footer-email" href="mailto:hello@unalabs.cloud">
+              hello@unalabs.cloud
+            </a>
             <SocialIcons />
           </div>
           <div className="footer-links">

@@ -825,6 +825,18 @@ nav.primary {
   max-width: 48ch;
 }
 
+.footer-email {
+  display: inline-flex;
+  margin-top: 14px;
+  color: var(--copy);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.footer-email:hover {
+  color: var(--text);
+}
+
 .footer-links {
   display: grid;
   gap: 10px;

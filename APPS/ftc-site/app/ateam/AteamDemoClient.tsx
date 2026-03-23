@@ -67,6 +67,7 @@ export default function AteamDemoClient() {
 
     setStatus("loading");
     setOutput(null);
+    const loadingStartedAtMs = Date.now();
 
     try {
       const response = await fetch("/api/ateam-demo", {
@@ -83,6 +84,14 @@ export default function AteamDemoClient() {
       }
 
       const resolvedOutput = payload.output as DemoOutput;
+
+      // Ensure the UI shows a visible "running" state (avoids feeling like a no-op on fast responses).
+      const elapsedMs = Date.now() - loadingStartedAtMs;
+      const minLoadingMs = 450;
+      if (elapsedMs < minLoadingMs) {
+        await new Promise((resolve) => setTimeout(resolve, minLoadingMs - elapsedMs));
+      }
+
       setOutput(resolvedOutput);
       setStatus("idle");
 
