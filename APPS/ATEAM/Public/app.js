@@ -468,10 +468,10 @@ const CONTENT_STATUS_LABELS = {
   rejected: "Rejected"
 };
 const OFFICE_AGENTS = [
-  { id: "scout", name: "Bosco", role: "Signals", initials: "BS", mapsTo: "Scout" },
-  { id: "quill", name: "Bob", role: "Writer", initials: "BO", mapsTo: "Quill" },
+  { id: "scout", name: "Tinye isi", role: "Signals", initials: "TI", mapsTo: "Scout" },
+  { id: "quill", name: "Eze", role: "Writer", initials: "EZ", mapsTo: "Quill" },
   { id: "codex", name: "Billy", role: "Builder", initials: "BI", mapsTo: "Builder" },
-  { id: "henry", name: "Bobby", role: "Coordinator", initials: "BY", mapsTo: "Coach" }
+  { id: "henry", name: "Manchi", role: "Coordinator", initials: "MA", mapsTo: "Coach" }
 ];
 const OFFICE_COOLER_OFFSETS = [
   { x: -26, y: -18 },
@@ -2965,7 +2965,7 @@ const OFFICE2_AGENT_DIRECTORY = [
   {
     id: "henry",
     canonicalName: "Henry",
-    displayName: "Bobby",
+    displayName: "Manchi",
     role: "Coordinator",
     lane: OFFICE2_LANES.COORDINATION,
     silhouetteIcon: OFFICE2_ROLE_ICONS.coordinator,
@@ -2975,7 +2975,7 @@ const OFFICE2_AGENT_DIRECTORY = [
   {
     id: "scout",
     canonicalName: "Scout",
-    displayName: "Bosco",
+    displayName: "Tinye isi",
     role: "Signals",
     lane: OFFICE2_LANES.SIGNALS,
     silhouetteIcon: OFFICE2_ROLE_ICONS.signals,
@@ -2985,7 +2985,7 @@ const OFFICE2_AGENT_DIRECTORY = [
   {
     id: "quill",
     canonicalName: "Quill",
-    displayName: "Bob",
+    displayName: "Eze",
     role: "Writer",
     lane: OFFICE2_LANES.CONTENT,
     silhouetteIcon: OFFICE2_ROLE_ICONS.writer,
@@ -2995,7 +2995,7 @@ const OFFICE2_AGENT_DIRECTORY = [
   {
     id: "pixel",
     canonicalName: "Pixel",
-    displayName: "Pixel",
+    displayName: "Nwa Baby",
     role: "Design",
     lane: OFFICE2_LANES.DESIGN,
     silhouetteIcon: OFFICE2_ROLE_ICONS.design,
@@ -3005,7 +3005,7 @@ const OFFICE2_AGENT_DIRECTORY = [
   {
     id: "echo",
     canonicalName: "Echo",
-    displayName: "Echo",
+    displayName: "Otota",
     role: "Voice",
     lane: OFFICE2_LANES.VOICE,
     silhouetteIcon: OFFICE2_ROLE_ICONS.voice,
@@ -3025,7 +3025,7 @@ const OFFICE2_AGENT_DIRECTORY = [
   {
     id: "charlie",
     canonicalName: "Charlie",
-    displayName: "Charlie",
+    displayName: "Abobis",
     role: "Build Support",
     lane: OFFICE2_LANES.BUILD,
     silhouetteIcon: OFFICE2_ROLE_ICONS.builder,
@@ -3045,7 +3045,7 @@ const OFFICE2_AGENT_DIRECTORY = [
   {
     id: "ralph",
     canonicalName: "Ralph",
-    displayName: "Ralph",
+    displayName: "Go Well Daughter",
     role: "QA",
     lane: OFFICE2_LANES.QA,
     silhouetteIcon: OFFICE2_ROLE_ICONS.qa,
