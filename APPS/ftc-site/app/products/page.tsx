@@ -90,6 +90,7 @@ export default function ProductsPage() {
           alt="Una Labs product ecosystem image"
           aspect="wide"
           sizes="(max-width: 980px) 100vw, 44vw"
+          fit="contain"
           caption={
             <p className="muted">
               A visual summary of how the product lines fit into a broader Una Labs capability

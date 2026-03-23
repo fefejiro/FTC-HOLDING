@@ -145,15 +145,15 @@ export default function AteamDemoClient() {
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
+                <div className="ateam-demo-next-cta">
+                  <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
+                    Start a Project
+                  </Link>
+                  <Link href="/work" prefetch={false} className="btn btn-secondary">
+                    View Client Launches
+                  </Link>
+                </div>
               </div>
-            </div>
-            <div className="ateam-demo-actions">
-              <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
-                Start a Project
-              </Link>
-              <Link href="/work" prefetch={false} className="btn btn-secondary">
-                View Client Launches
-              </Link>
             </div>
           </>
         ) : (

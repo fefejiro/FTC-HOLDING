@@ -768,6 +768,12 @@ nav.primary {
   object-fit: cover;
 }
 
+.brand-media-fit-contain {
+  object-fit: contain;
+  padding: 12px;
+  background: rgba(8, 12, 20, 0.6);
+}
+
 .brand-media-tint {
   position: absolute;
   inset: 0;
@@ -1319,6 +1325,18 @@ nav.primary {
   gap: 8px;
 }
 
+.ateam-demo-next-cta {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ateam-demo-next-cta .btn {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
 .ateam-demo-list {
   margin: 0;
   padding-left: 18px;
@@ -1363,7 +1381,9 @@ nav.primary {
 }
 
 .intake-form label {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 6px;
   color: var(--copy);
 }
@@ -1374,12 +1394,15 @@ nav.primary {
   letter-spacing: 0.12em;
   color: var(--muted);
   font-weight: 600;
+  display: block;
 }
 
 .intake-form textarea,
 .intake-form input,
 .intake-form select {
   width: 100%;
+  display: block;
+  min-width: 0;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(9, 12, 20, 0.7);
@@ -1397,6 +1420,8 @@ nav.primary {
 .intake-form .field-help {
   font-size: 0.86rem;
   color: var(--muted);
+  display: block;
+  margin-top: 6px;
 }
 
 .intake-next-steps {
