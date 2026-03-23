@@ -19,9 +19,11 @@ const categories = [
   { value: "ai-feature", label: "AI feature or assistant" }
 ] as const;
 
+type CategoryValue = (typeof categories)[number]["value"];
+
 export default function AteamDemoClient() {
   const [idea, setIdea] = useState("");
-  const [category, setCategory] = useState(categories[0].value);
+  const [category, setCategory] = useState<CategoryValue>(categories[0].value);
   const [output, setOutput] = useState<DemoOutput | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
@@ -83,7 +85,7 @@ export default function AteamDemoClient() {
           <select
             id="ateam-category"
             value={category}
-            onChange={(event) => setCategory(event.target.value)}
+            onChange={(event) => setCategory(event.target.value as CategoryValue)}
           >
             {categories.map((item) => (
               <option key={item.value} value={item.value}>
