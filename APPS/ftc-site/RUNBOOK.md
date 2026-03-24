@@ -18,6 +18,24 @@ npm install
 npm --workspace=@ftc/ftc-site run dev
 ```
 
+Real ATEAM integration during local dev:
+
+1. start ATEAM separately from `APPS/ATEAM/Server`
+2. start Una Labs on port `3001`
+3. open `http://localhost:3001/ateam`
+
+Deep-link checks:
+
+- `http://localhost:3001/ateam/office`
+- `http://localhost:3001/ateam/factory`
+
+Optional proxy override:
+
+```powershell
+$env:ATEAM_UPSTREAM_ORIGIN="http://127.0.0.1:3000"
+npm --workspace=@ftc/ftc-site run dev
+```
+
 ## Build
 
 ```powershell

@@ -1,3 +1,11 @@
+const trimTrailingSlash = (value = "") => String(value || "").replace(/\/+$/, "");
+
+const getAteamUpstreamOrigin = () => {
+  const configuredOrigin = trimTrailingSlash(process.env.ATEAM_UPSTREAM_ORIGIN || "");
+  if (configuredOrigin) return configuredOrigin;
+  return process.env.NODE_ENV === "development" ? "http://127.0.0.1:3000" : "";
+};
+
 module.exports = {
   reactStrictMode: true,
   swcMinify: true,
@@ -10,6 +18,27 @@ module.exports = {
         permanent: false
       }
     ];
+  },
+  async rewrites() {
+    const ateamUpstreamOrigin = getAteamUpstreamOrigin();
+    const beforeFiles = ateamUpstreamOrigin
+      ? [
+          {
+            source: "/ateam",
+            destination: `${ateamUpstreamOrigin}/`
+          },
+          {
+            source: "/ateam/:path*",
+            destination: `${ateamUpstreamOrigin}/:path*`
+          }
+        ]
+      : [];
+
+    return {
+      beforeFiles,
+      afterFiles: [],
+      fallback: []
+    };
   },
   experimental: {
     externalDir: true

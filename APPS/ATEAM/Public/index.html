@@ -4,6 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ATEAM Local</title>
+  <script>
+    (function () {
+      const path = window.location.pathname || "/";
+      const isIntegrated = path === "/ateam" || path.indexOf("/ateam/") === 0;
+      const basePath = isIntegrated ? "/ateam" : "";
+      const baseHref = basePath ? basePath + "/" : "/";
+      window.ATEAM_BASE_PATH = basePath;
+      if (basePath && !window.ATEAM_API_BASE) {
+        window.ATEAM_API_BASE = basePath;
+      }
+      document.write('<base href="' + baseHref + '">');
+    })();
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body class="mc-body">
@@ -30,6 +43,7 @@
         </div>
         <div class="mc-nav-title">Mission Control</div>
       </div>
+      <a id="mc-unalabs-link" class="mc-unalabs-link hidden" href="/">Back to Una Labs</a>
 
       <nav class="mc-nav-list" id="mc-nav-list">
         <button class="mc-nav-item active" type="button" data-route="/tasks" data-view="tasks">

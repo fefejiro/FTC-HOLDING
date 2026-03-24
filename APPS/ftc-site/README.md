@@ -1,6 +1,6 @@
 # Una Labs Site
 
-Next.js App Router site for the public-facing Una Labs build lab: products, client launches, the curated ATEAM demo, and project intake.
+Next.js App Router site for the public-facing Una Labs build lab: products, client launches, the real ATEAM route handoff, and project intake.
 
 ## Public route contract
 
@@ -49,6 +49,28 @@ npm run smoke:prod
 ```
 
 The site runs on port `3001` (via `@ftc/config`).
+
+## Local ATEAM integration
+
+The real ATEAM app runs separately on port `3000` from `APPS/ATEAM`.
+
+When Una Labs is running locally, `/ateam` proxies the live ATEAM app by default:
+
+- Una Labs: `http://localhost:3001`
+- Real ATEAM upstream: `http://127.0.0.1:3000`
+- Integrated route: `http://localhost:3001/ateam`
+- Deep links also proxy through: `/ateam/office`, `/ateam/factory`, `/ateam/memory`, `/ateam/team`
+
+Optional override:
+
+- `ATEAM_UPSTREAM_ORIGIN` lets you point the Una Labs proxy at a different ATEAM origin.
+
+Example:
+
+```powershell
+$env:ATEAM_UPSTREAM_ORIGIN="http://127.0.0.1:3000"
+npm run dev
+```
 
 Cloudflare Pages / Vercel-style build note:
 

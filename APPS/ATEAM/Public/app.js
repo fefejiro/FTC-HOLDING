@@ -1,10 +1,49 @@
 ﻿const ORIGIN = window.location.origin;
+function normalizeBasePath(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw || raw === "/") return "";
+  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
+  return withLeadingSlash.replace(/\/+$/, "");
+}
+
+function detectAteamBasePath(pathname = "") {
+  const normalized = String(pathname || "/").toLowerCase();
+  if (normalized === "/ateam" || normalized.startsWith("/ateam/")) {
+    return "/ateam";
+  }
+  return "";
+}
+
+const ATEAM_BASE_PATH = normalizeBasePath(
+  window.ATEAM_BASE_PATH || detectAteamBasePath(window.location.pathname)
+);
+
+function withBasePath(route = "/") {
+  const normalizedRoute = String(route || "/").startsWith("/")
+    ? String(route || "/")
+    : `/${route}`;
+  if (!ATEAM_BASE_PATH) return normalizedRoute;
+  return normalizedRoute === "/" ? ATEAM_BASE_PATH : `${ATEAM_BASE_PATH}${normalizedRoute}`;
+}
+
+function stripBasePath(pathname = "") {
+  const normalizedPath = String(pathname || "/") || "/";
+  if (!ATEAM_BASE_PATH) return normalizedPath;
+  if (normalizedPath === ATEAM_BASE_PATH) return "/";
+  if (normalizedPath.startsWith(`${ATEAM_BASE_PATH}/`)) {
+    return normalizedPath.slice(ATEAM_BASE_PATH.length) || "/";
+  }
+  return normalizedPath;
+}
+
+const apiBaseOverride = typeof window.ATEAM_API_BASE === "string" ? String(window.ATEAM_API_BASE).trim() : "";
+const storedApiBase = ATEAM_BASE_PATH ? "" : (localStorage.getItem("ATEAM_API_BASE") || "");
 const API_BASE =
-  window.ATEAM_API_BASE ||
-  localStorage.getItem("ATEAM_API_BASE") ||
-  (ORIGIN.includes("localhost:3000") || ORIGIN.includes("127.0.0.1:3000")
+  apiBaseOverride ||
+  storedApiBase ||
+  (ATEAM_BASE_PATH || (ORIGIN.includes("localhost:3000") || ORIGIN.includes("127.0.0.1:3000")
     ? ORIGIN
-    : "http://localhost:3000");
+    : "http://localhost:3000"));
 
 const GLOBAL_TASK_ID = "global";
 const GLOBAL_PODCAST_ID = "global_podcast";
@@ -142,6 +181,14 @@ const radarView = document.getElementById("radar-view");
 const factoryView = document.getElementById("factory-view");
 const pipelineView = document.getElementById("pipeline-view");
 const aiLabView = document.getElementById("ai-lab-view");
+const unaLabsLink = document.getElementById("mc-unalabs-link");
+
+if (ATEAM_BASE_PATH) {
+  document.documentElement.classList.add("ateam-integrated");
+  if (document.body) document.body.classList.add("ateam-integrated");
+  if (unaLabsLink) unaLabsLink.classList.remove("hidden");
+  document.title = "ATEAM | Una Labs";
+}
 
 const councilSummary = document.getElementById("council-summary");
 const councilMetricPending = document.getElementById("council-metric-pending");
@@ -1979,13 +2026,17 @@ const MC_SEARCH_SHORTCUTS = [
 ];
 
 function mcViewFromPath(pathname) {
-  const raw = String(pathname || "/").toLowerCase();
+  const raw = String(stripBasePath(pathname) || "/").toLowerCase();
   const path = raw === "/index.html" ? "/" : raw;
   if (path === "/") return "tasks";
   const hit = Object.entries(MC_ROUTE_BY_VIEW).find(([, route]) => route === path);
   if (hit) return hit[0];
   const prefix = Object.entries(MC_ROUTE_BY_VIEW).find(([, route]) => path.startsWith(route + "/"));
   return prefix ? prefix[0] : "";
+}
+
+function routeForView(view) {
+  return withBasePath(MC_ROUTE_BY_VIEW[view] || "/tasks");
 }
 
 function resolveMissionControlSearch(query) {
@@ -2054,7 +2105,7 @@ function setTalkFocusMode(on, opts = {}) {
   }
 
   if (opts.updateUrl) {
-    const route = MC_ROUTE_BY_VIEW.talk || "/talk";
+    const route = routeForView("talk");
     const query = enabled ? "?focus=1" : "";
     try {
       history.replaceState({}, "", `${route}${query}`);
@@ -2090,7 +2141,7 @@ function setView(view, options = {}) {
     query = String(options.query || "").trim();
     if (query && !query.startsWith("?")) query = `?${query.replace(/^\?+/, "")}`;
   }
-  const route = MC_ROUTE_BY_VIEW[view] || "/tasks";
+  const route = routeForView(view);
   const nextUrl = `${route}${query}`;
   if (!silent && (window.location.pathname !== route || window.location.search !== query)) {
     try {

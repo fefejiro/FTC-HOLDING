@@ -227,47 +227,139 @@ function resolveRuntimeConfig(baseConfig, args = {}) {
   };
 }
 
+function normalizeText(text) {
+  return String(text || "").replace(/\s+/g, " ").trim();
+}
+
+function stripPunctuation(text) {
+  return normalizeText(text).replace(/[^\p{L}\p{N}\s]/gu, "").trim();
+}
+
+function isShortAcknowledgement(text) {
+  const normalized = stripPunctuation(text).toLowerCase();
+  return [
+    "ok",
+    "okay",
+    "kk",
+    "cool",
+    "nice",
+    "alright",
+    "all right",
+    "na so",
+    "true",
+    "exactly",
+    "lol",
+    "yes",
+    "yep"
+  ].includes(normalized);
+}
+
+function isGreeting(text) {
+  const normalized = stripPunctuation(text).toLowerCase();
+  return ["hi", "hello", "hey", "yo", "sup", "good morning", "good afternoon", "good evening"].includes(normalized);
+}
+
+function isReminder(text) {
+  const normalized = normalizeText(text).toLowerCase();
+  return /^remember\b/.test(normalized) || /\bremind me\b/.test(normalized);
+}
+
+function isMeaningQuestion(text) {
+  const normalized = normalizeText(text).toLowerCase();
+  return (
+    /\bwhat do (you|u) mean\b/.test(normalized) ||
+    /\bwhat does .* mean\b/.test(normalized) ||
+    /\bmeaning of\b/.test(normalized)
+  );
+}
+
+function mentionsPrinciple(text) {
+  return /\bprinciple\b/i.test(String(text || ""));
+}
+
+function isStatusOrProgressPrompt(text) {
+  const normalized = normalizeText(text).toLowerCase();
+  return /\bupdate\b/.test(normalized) || /\bstatus\b/.test(normalized) || /\bprogress\b/.test(normalized);
+}
+
+function buildTalkStubReply({ latest, persona }) {
+  if (!latest) {
+    return "I’m here. Tell me what you want to work on.";
+  }
+
+  if (isMeaningQuestion(latest) && mentionsPrinciple(latest)) {
+    return "I meant the main goal or priority we should protect. In plain terms, just tell me what matters most and I will work from there.";
+  }
+
+  if (isGreeting(latest)) {
+    return persona === "Scout"
+      ? "I’m here. What should I check first?"
+      : "I’m here. What do you want to tackle?";
+  }
+
+  if (isShortAcknowledgement(latest)) {
+    return persona === "Quill" ? "Fair. We keep it moving." : "Yeah, I get you.";
+  }
+
+  if (isReminder(latest)) {
+    return "Noted. I’ll keep that in mind.";
+  }
+
+  if (isStatusOrProgressPrompt(latest)) {
+    return "I can help with that. Tell me what you want updated and I’ll keep it short and clear.";
+  }
+
+  if (/\?$/.test(latest)) {
+    if (persona === "Scout") {
+      return "Good question. Point me at the part you want unpacked first and I’ll keep it practical.";
+    }
+    if (persona === "Codex") {
+      return "Good question. Give me the exact piece you want clarified and I’ll answer directly.";
+    }
+    return "Good question. Tell me the part you want clarified and I’ll answer it directly.";
+  }
+
+  if (persona === "Scout") {
+    return "Got it. Tell me which angle you want me to check first.";
+  }
+  if (persona === "Quill") {
+    return "Understood. Tell me whether you want it sharp, creative, or direct.";
+  }
+  if (persona === "Codex") {
+    return "Understood. Tell me the goal and any constraint, and I’ll work from there.";
+  }
+  return "Understood. Tell me the outcome you want and I’ll help you move it forward.";
+}
+
+function buildDashboardStubReply({ latest, summary, toolOutput, persona }) {
+  const lines = [];
+  if (latest) {
+    lines.push(persona === "Codex" ? "Request captured." : "Understood.");
+  }
+  if (summary.length) {
+    lines.push(`Context: ${summary[0]}`);
+  }
+  if (toolOutput?.name) {
+    lines.push(`Tool check: ${toolOutput.name}.`);
+  }
+  lines.push(
+    persona === "Scout"
+      ? "Tell me which angle to inspect first."
+      : persona === "Codex"
+      ? "Send the goal and constraints."
+      : "Send the next task when you are ready."
+  );
+  return lines.filter(Boolean).join("\n");
+}
+
 async function localStubResponder({ mode, message, contextBundle, toolOutput, agent }) {
   const talkMode = String(mode || "dashboard").toLowerCase() === "talk";
   const latest = compact(message, 300);
   const summary = Array.isArray(contextBundle?.rollingSummary) ? contextBundle.rollingSummary : [];
   const persona = resolvePersonalityKey(agent);
-
-  const personaLine =
-    persona === "Henry"
-      ? `I hear you: ${latest}.`
-      : persona === "Scout"
-      ? `Quick read: ${latest}.`
-      : persona === "Quill"
-      ? `Here is the pulse: ${latest}.`
-      : persona === "Codex"
-      ? `Noted: ${latest}.`
-      : `Request noted: ${latest}.`;
-
-  const personaFollow =
-    persona === "Henry"
-      ? "Tell me the outcome you want, and I will help you move it forward."
-      : persona === "Scout"
-      ? "Tell me which angle you want me to check first."
-      : persona === "Quill"
-      ? "Do you want the answer sharp, creative, or direct?"
-      : persona === "Codex"
-      ? "Tell me the goal and constraints, and I will work from there."
-      : "Tell me the goal and any constraint I should respect.";
-
   const reply = talkMode
-    ? [
-        personaLine,
-        personaFollow
-      ]
-        .filter(Boolean)
-        .join("\n")
-    : [
-        personaLine,
-        summary.length ? `Context: ${summary[0]}` : "",
-        toolOutput?.name ? `Tool check (${toolOutput.name}).` : "",
-        personaFollow
-      ].join("\n");
+    ? buildTalkStubReply({ latest, persona })
+    : buildDashboardStubReply({ latest, summary, toolOutput, persona });
 
   return {
     reply,

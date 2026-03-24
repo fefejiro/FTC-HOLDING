@@ -44,6 +44,7 @@ Seeded local-first demo data (safe to replace later) is stored in `localStorage`
 Integration note:
 
 - The Office pixel room (`/office`) opens a **Command Station drawer** that reuses the existing Command Station panel from the Agents page (`/agents`) by temporarily re-parenting that DOM subtree (no duplicated logic / no duplicate IDs).
+- The frontend also supports being proxied under `/ateam` so Una Labs can expose the real app at `/ateam`, `/ateam/office`, `/ateam/factory`, and related routes without changing standalone localhost behavior.
 
 ## Telegram Remote Control
 
