@@ -50,9 +50,13 @@ loadDotEnvIfPresent();
 const TELEGRAM_BOT_TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || "").trim();
 const TELEGRAM_ALLOWED_USER_ID_RAW = String(process.env.TELEGRAM_ALLOWED_USER_ID || "").trim();
 const TELEGRAM_ALLOWED_USER_ID = TELEGRAM_ALLOWED_USER_ID_RAW ? Number(TELEGRAM_ALLOWED_USER_ID_RAW) : NaN;
+const TELEGRAM_ALLOWED_CHAT_ID_RAW = String(
+  process.env.TELEGRAM_ALLOWED_CHAT_ID || process.env.TELEGRAM_CHAT_ID || ""
+).trim();
+const TELEGRAM_ALLOWED_CHAT_ID = TELEGRAM_ALLOWED_CHAT_ID_RAW ? Number(TELEGRAM_ALLOWED_CHAT_ID_RAW) : NaN;
 const ATEAM_BASE_URL = String(process.env.ATEAM_BASE_URL || "http://localhost:3000").trim().replace(/\/+$/, "");
 const TELEGRAM_POLL_TIMEOUT_SEC = Math.max(5, Math.min(60, Number(process.env.TELEGRAM_POLL_TIMEOUT_SEC || 45)));
-const ATEAM_REQUEST_TIMEOUT_MS = Math.max(2000, Math.min(60000, Number(process.env.ATEAM_REQUEST_TIMEOUT_MS || 15000)));
+const ATEAM_REQUEST_TIMEOUT_MS = Math.max(5000, Math.min(120000, Number(process.env.ATEAM_REQUEST_TIMEOUT_MS || 60000)));
 // IMPORTANT: getUpdates is long-polling; timeout must be > poll timeout or we'll abort constantly.
 const TELEGRAM_DEFAULT_REQ_TIMEOUT_MS = (TELEGRAM_POLL_TIMEOUT_SEC + 10) * 1000;
 const TELEGRAM_REQUEST_TIMEOUT_MS = Math.max(
@@ -86,14 +90,10 @@ if (!looksLikeTelegramToken(TELEGRAM_BOT_TOKEN)) {
   );
   process.exit(1);
 }
-if (!Number.isFinite(TELEGRAM_ALLOWED_USER_ID)) {
-  console.error("[telegram-gateway] TELEGRAM_ALLOWED_USER_ID is required (numeric).");
-  process.exit(1);
-}
-
 // Use .local so offsets never get committed (repo .gitignore already covers **/.local/).
 const DATA_DIR = path.join(__dirname, ".local");
 const OFFSET_FILE = path.join(DATA_DIR, "offset.json");
+const ALLOWLIST_FILE = path.join(DATA_DIR, "allowlist.json");
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -118,6 +118,73 @@ function writeOffset(offset) {
   } catch (err) {
     console.warn("[telegram-gateway] Failed to persist offset:", err?.message || err);
   }
+}
+
+function numericIdOrNaN(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return NaN;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function readAllowlist() {
+  try {
+    if (!fs.existsSync(ALLOWLIST_FILE)) return null;
+    const raw = fs.readFileSync(ALLOWLIST_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    return {
+      allowedUserId: numericIdOrNaN(parsed?.allowedUserId),
+      allowedChatId: numericIdOrNaN(parsed?.allowedChatId),
+      linkedAt: parsed?.linkedAt ? String(parsed.linkedAt) : null
+    };
+  } catch (err) {
+    console.warn("[telegram-gateway] Failed to read allowlist:", err?.message || err);
+    return null;
+  }
+}
+
+function writeAllowlist(next) {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(ALLOWLIST_FILE, JSON.stringify(next, null, 2));
+  } catch (err) {
+    console.warn("[telegram-gateway] Failed to persist allowlist:", err?.message || err);
+  }
+}
+
+function resolveAllowlistState() {
+  const persisted = readAllowlist();
+  const allowedUserId = Number.isFinite(TELEGRAM_ALLOWED_USER_ID)
+    ? TELEGRAM_ALLOWED_USER_ID
+    : numericIdOrNaN(persisted?.allowedUserId);
+  const allowedChatId = Number.isFinite(TELEGRAM_ALLOWED_CHAT_ID)
+    ? TELEGRAM_ALLOWED_CHAT_ID
+    : numericIdOrNaN(persisted?.allowedChatId);
+
+  let source = "bootstrap";
+  if (Number.isFinite(TELEGRAM_ALLOWED_USER_ID) || Number.isFinite(TELEGRAM_ALLOWED_CHAT_ID)) {
+    source = "environment";
+  } else if (persisted && (Number.isFinite(allowedUserId) || Number.isFinite(allowedChatId))) {
+    source = "persisted";
+  }
+
+  return {
+    allowedUserId,
+    allowedChatId,
+    source,
+    bootstrapMode: !Number.isFinite(allowedUserId) && !Number.isFinite(allowedChatId)
+  };
+}
+
+let allowlistState = resolveAllowlistState();
+
+if (TELEGRAM_ALLOWED_USER_ID_RAW && !Number.isFinite(TELEGRAM_ALLOWED_USER_ID)) {
+  console.error("[telegram-gateway] TELEGRAM_ALLOWED_USER_ID must be numeric.");
+  process.exit(1);
+}
+if (TELEGRAM_ALLOWED_CHAT_ID_RAW && !Number.isFinite(TELEGRAM_ALLOWED_CHAT_ID)) {
+  console.error("[telegram-gateway] TELEGRAM_ALLOWED_CHAT_ID / TELEGRAM_CHAT_ID must be numeric.");
+  process.exit(1);
 }
 
 async function fetchJson(url, { method = "GET", headers = {}, body, timeoutMs = 15000 } = {}) {
@@ -236,6 +303,24 @@ async function ateamPlanOrchestration(input) {
   });
 }
 
+async function ateamAgentCommand({ taskId, message, agent = "", mode = "talk" }) {
+  const url = `${ATEAM_BASE_URL}/agent/command`;
+  return fetchJson(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      taskId,
+      message,
+      agent,
+      mode,
+      contextPack: {
+        sessionId: taskId
+      }
+    }),
+    timeoutMs: ATEAM_REQUEST_TIMEOUT_MS
+  });
+}
+
 async function ateamCreateApproval({ sessionId, policy, summary, requestedBy, payload }) {
   const url = `${ATEAM_BASE_URL}/api/approvals`;
   return fetchJson(url, {
@@ -268,6 +353,75 @@ async function ateamDecisionApproval({ sessionId, approvalId, decision, actor })
 
 function safeString(value, limit = 4000) {
   return String(value ?? "").trim().slice(0, limit);
+}
+
+function summarizeError(err) {
+  const status = Number(err?.status || 0);
+  const msg = safeString(err?.message || err || "", 240);
+  return status ? `${msg} (HTTP ${status})` : msg;
+}
+
+function buildRelayFailureMessage(err) {
+  const status = Number(err?.status || 0);
+  const msg = String(err?.message || "");
+  if (msg.includes("AbortError") || msg.includes("The operation was aborted")) {
+    return "ATEAM is taking longer than expected to answer right now. Please try again in a moment.";
+  }
+  if (status >= 500) {
+    return "ATEAM hit a server error while preparing the reply. Please try again in a moment.";
+  }
+  if (status === 404) {
+    return "ATEAM's reply route is unavailable on this machine right now. Please check the local server.";
+  }
+  return "I hit a relay problem talking to ATEAM. Please try again in a moment.";
+}
+
+function isAllowedTelegramSource({ fromId, chatId }) {
+  return (
+    (Number.isFinite(allowlistState.allowedUserId) && Number(fromId) === allowlistState.allowedUserId) ||
+    (Number.isFinite(allowlistState.allowedChatId) && Number(chatId) === allowlistState.allowedChatId)
+  );
+}
+
+function currentAllowlistLabel() {
+  const labels = [];
+  if (Number.isFinite(allowlistState.allowedUserId)) labels.push(`user=${allowlistState.allowedUserId}`);
+  if (Number.isFinite(allowlistState.allowedChatId)) labels.push(`chat=${allowlistState.allowedChatId}`);
+  if (!labels.length) labels.push("unlinked");
+  return `${labels.join(" ")} (${allowlistState.source})`;
+}
+
+async function maybeBootstrapTelegramLink(message) {
+  if (!allowlistState.bootstrapMode) return false;
+
+  const chatId = numericIdOrNaN(message?.chat?.id);
+  const userId = numericIdOrNaN(message?.from?.id);
+  const chatType = String(message?.chat?.type || "").trim().toLowerCase();
+  const text = safeString(message?.text || "", 240).toLowerCase();
+
+  if (!Number.isFinite(chatId) || !Number.isFinite(userId) || chatType !== "private") {
+    return false;
+  }
+  if (!(text.startsWith("/link") || text.startsWith("/start"))) {
+    return false;
+  }
+
+  writeAllowlist({
+    allowedUserId: userId,
+    allowedChatId: chatId,
+    linkedAt: new Date().toISOString()
+  });
+  allowlistState = resolveAllowlistState();
+
+  await telegramSendMessage(
+    chatId,
+    "Linked this private Telegram chat to ATEAM remote control.\n" +
+      `User id: ${userId}\n` +
+      `Chat id: ${chatId}\n` +
+      "You can now send messages here and receive replies remotely."
+  );
+  console.log(`[telegram-gateway] Linked private chat ${chatId} to user ${userId}.`);
+  return true;
 }
 
 function buildTelegramMeta(update, messageText) {
@@ -334,82 +488,94 @@ function buildApprovalKeyboard(approvalId) {
 }
 
 async function handleTelegramMessage(message) {
-  if (!message?.from?.id || message.from.id !== TELEGRAM_ALLOWED_USER_ID) return;
   if (!message?.chat?.id) return;
+
+  const bootstrapped = await maybeBootstrapTelegramLink(message);
+  if (
+    !isAllowedTelegramSource({
+      fromId: message?.from?.id,
+      chatId: message?.chat?.id
+    })
+  ) {
+    return;
+  }
 
   const chatId = message.chat.id;
   const sessionId = `tg_${chatId}`;
   const text = safeString(message.text || "");
   if (!text) return;
 
-  console.log(`[telegram-gateway] IN chat=${chatId} session=${sessionId}: ${text.slice(0, 140)}`);
-
-  await ateamAppendEvent(sessionId, {
-    type: "user_message",
-    actor: "telegram",
-    lane: "telegram",
-    summary: text,
-    meta: buildTelegramMeta(message, text)
-  });
-
-  const { output } = await ateamPlanOrchestration({
-    session_id: sessionId,
-    thread_id: "telegram",
-    page: "telegram",
-    user_goal: text,
-    latest_message: {
-      text,
-      telegram: buildTelegramMeta(message, text)
-    }
-  });
-
-  const emitEvents = Array.isArray(output?.emit_events) ? output.emit_events : [];
-  for (const evt of emitEvents) {
-    if (!evt || typeof evt !== "object") continue;
-    if (evt.type === "agent_message") {
-      await ateamAppendEvent(sessionId, {
-        type: "agent_message",
-        actor: safeString(evt?.source?.display || evt?.source?.agent_id || "agent", 80) || "agent",
-        lane: "telegram",
-        summary: safeString(evt?.text || evt?.title || ""),
-        meta: { ...evt, threadId: "telegram", transport: { kind: "telegram", chatId } }
-      });
-    }
+  if (text === "/whoami") {
+    await telegramSendMessage(
+      chatId,
+      `Allowed route: ${currentAllowlistLabel()}\n` +
+        `Your user id: ${numericIdOrNaN(message?.from?.id)}\n` +
+        `This chat id: ${numericIdOrNaN(message?.chat?.id)}`
+    );
+    return;
+  }
+  if (text === "/start" || text === "/help" || (bootstrapped && text === "/link")) {
+    await telegramSendMessage(
+      chatId,
+      "ATEAM Telegram remote control is online.\n" +
+        "Send a task, question, or update and I will route it through ATEAM.\n" +
+        "Commands: /help, /whoami"
+    );
+    return;
   }
 
-  const approvals = findApprovalRequests(output);
-  for (const req of approvals) {
-    const policy = safeString(req?.data?.policy || req?.policy || "manual", 120) || "manual";
-    const summary = safeString(req?.text || req?.title || "Approval requested", 240) || "Approval requested";
-    const requestedBy = safeString(req?.source?.display || req?.source?.agent_id || "orchestrator", 80) || "orchestrator";
-    const payload = req?.data?.payload && typeof req.data.payload === "object" ? req.data.payload : (req?.data || {});
-
-    const created = await ateamCreateApproval({
-      sessionId,
-      policy,
-      summary,
-      requestedBy,
-      payload
+  console.log(`[telegram-gateway] IN chat=${chatId} session=${sessionId}: ${text.slice(0, 140)}`);
+  try {
+    await ateamAppendEvent(sessionId, {
+      type: "user_message",
+      actor: "telegram",
+      lane: "telegram",
+      summary: text,
+      meta: buildTelegramMeta(message, text)
     });
 
-    const approvalId = created?.approval?.id;
-    if (!approvalId) continue;
+    const result = await ateamAgentCommand({
+      taskId: sessionId,
+      message: text,
+      mode: "talk"
+    });
 
-    const msgText = `Approval requested:\n${summary}`;
-    await telegramSendMessage(chatId, msgText, { replyMarkup: buildApprovalKeyboard(approvalId) });
+    const reply = safeString(result?.reply || "", 4000);
+    if (!reply) {
+      await telegramSendMessage(
+        chatId,
+        "ATEAM received your message but returned an empty reply. Please try again in a moment."
+      );
+      console.warn(`[telegram-gateway] Empty reply chat=${chatId} session=${sessionId}`);
+      return;
+    }
+
     await ateamAppendEvent(sessionId, {
       type: "agent_message",
-      actor: "telegram_gateway",
+      actor: safeString(result?.agent || "Coach", 80) || "Coach",
       lane: "telegram",
-      summary: msgText,
-      meta: { approvalId, policy, summary, threadId: "telegram", transport: { kind: "telegram", chatId } }
+      summary: reply,
+      meta: {
+        source: "agent_command",
+        taskId: sessionId,
+        agent: result?.agent || "Coach",
+        mode: "talk",
+        transport: { kind: "telegram", chatId }
+      }
     });
-  }
-
-  const reply = extractOrchestratorReply(output);
-  if (reply) {
     await telegramSendMessage(chatId, reply);
     console.log(`[telegram-gateway] OUT chat=${chatId} session=${sessionId}: ${reply.slice(0, 140)}`);
+  } catch (err) {
+    console.warn(
+      `[telegram-gateway] Message handling error chat=${chatId} session=${sessionId}: ${summarizeError(err)}`
+    );
+    try {
+      await telegramSendMessage(chatId, buildRelayFailureMessage(err));
+    } catch (sendErr) {
+      console.warn(
+        `[telegram-gateway] Failed to send relay error chat=${chatId} session=${sessionId}: ${summarizeError(sendErr)}`
+      );
+    }
   }
 }
 
@@ -426,9 +592,16 @@ function parseApprovalCallback(data) {
 }
 
 async function handleCallbackQuery(callbackQuery) {
-  if (!callbackQuery?.from?.id || callbackQuery.from.id !== TELEGRAM_ALLOWED_USER_ID) return;
   const chatId = callbackQuery?.message?.chat?.id;
   if (!chatId) return;
+  if (
+    !isAllowedTelegramSource({
+      fromId: callbackQuery?.from?.id,
+      chatId
+    })
+  ) {
+    return;
+  }
   const sessionId = `tg_${chatId}`;
 
   const parsed = parseApprovalCallback(callbackQuery?.data);
@@ -564,7 +737,7 @@ async function assertAteamApiReady() {
       );
       console.error(
         "[telegram-gateway] Fix: make sure you started ATEAM from the same repo copy as this gateway " +
-          "(C:\\FTC HOLDING\\FTC-HOLDING\\APPS\\ATEAM\\Server), and that it's listening on ATEAM_BASE_URL."
+          `(${path.resolve(__dirname, "..", "Server")}), and that it's listening on ATEAM_BASE_URL.`
       );
       return false;
     }
@@ -582,7 +755,7 @@ async function run() {
     if (me?.username) {
       console.log(`[telegram-gateway] Bot: @${me.username}`);
     }
-    if (Number.isFinite(Number(me?.id)) && Number(me.id) === TELEGRAM_ALLOWED_USER_ID) {
+    if (Number.isFinite(Number(me?.id)) && Number(me.id) === allowlistState.allowedUserId) {
       console.warn(
         "[telegram-gateway] WARNING: TELEGRAM_ALLOWED_USER_ID matches the bot's id. " +
           "This is usually wrong — allowlist should be YOUR Telegram user id (the human), not the bot id."
@@ -601,7 +774,11 @@ async function run() {
 
   let offset = readOffset();
   console.log("[telegram-gateway] Starting long polling.");
-  console.log(`[telegram-gateway] Allowed user id: ${TELEGRAM_ALLOWED_USER_ID}`);
+  if (allowlistState.bootstrapMode) {
+    console.log("[telegram-gateway] No Telegram allowlist configured. Send /link from your private chat to claim this bot.");
+  } else {
+    console.log(`[telegram-gateway] Allowed route: ${currentAllowlistLabel()}`);
+  }
   console.log(`[telegram-gateway] ATEAM base url: ${ATEAM_BASE_URL}`);
 
   let backoffMs = 750;

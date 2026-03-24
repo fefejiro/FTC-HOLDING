@@ -235,25 +235,25 @@ async function localStubResponder({ mode, message, contextBundle, toolOutput, ag
 
   const personaLine =
     persona === "Henry"
-      ? `Deeper thread: ${latest}.`
+      ? `I hear you: ${latest}.`
       : persona === "Scout"
-      ? `Quick scan: ${latest}.`
+      ? `Quick read: ${latest}.`
       : persona === "Quill"
-      ? `Here's the pulse: ${latest}.`
+      ? `Here is the pulse: ${latest}.`
       : persona === "Codex"
       ? `Noted: ${latest}.`
       : `Request noted: ${latest}.`;
 
   const personaFollow =
     persona === "Henry"
-      ? "Name the principle we want to protect, then we move."
+      ? "Tell me the outcome you want, and I will help you move it forward."
       : persona === "Scout"
-      ? "What angle should I chase first?"
+      ? "Tell me which angle you want me to check first."
       : persona === "Quill"
-      ? "Want it sharp, poetic, or direct?"
+      ? "Do you want the answer sharp, creative, or direct?"
       : persona === "Codex"
-      ? "Give me the constraint and I execute."
-      : "Confirm the outcome and constraints.";
+      ? "Tell me the goal and constraints, and I will work from there."
+      : "Tell me the goal and any constraint I should respect.";
 
   const reply = talkMode
     ? [

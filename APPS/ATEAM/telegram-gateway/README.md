@@ -10,14 +10,17 @@ This service enables **Telegram remote control** for ATEAM Local using **long po
 ## Environment Variables
 
 - `TELEGRAM_BOT_TOKEN` (required)
-- `TELEGRAM_ALLOWED_USER_ID` (required) (your personal Telegram user id, not the bot id)
+- `TELEGRAM_ALLOWED_USER_ID` (preferred) (your personal Telegram user id, not the bot id)
+- `TELEGRAM_ALLOWED_CHAT_ID` or `TELEGRAM_CHAT_ID` (optional compatibility fallback)
 - `ATEAM_BASE_URL` (optional, default `http://localhost:3000`)
 
 Optional:
 
 - `TELEGRAM_POLL_TIMEOUT_SEC` (default `45`)
-- `ATEAM_REQUEST_TIMEOUT_MS` (default `15000`)
+- `ATEAM_REQUEST_TIMEOUT_MS` (default `60000`)
 - `TELEGRAM_REQUEST_TIMEOUT_MS` (default `15000`)
+
+If no allowlist is configured, the gateway can bootstrap itself from the first private chat that sends `/link`.
 
 You can set them in your shell, or create `APPS/ATEAM/telegram-gateway/.env` (simple `KEY=value` format).
 
@@ -45,11 +48,13 @@ npm start
 ## Behavior
 
 - Uses long polling only (no webhooks).
-- Ignores messages from any Telegram user ID except `TELEGRAM_ALLOWED_USER_ID`.
-- Maps `chat_id` → `session_id = "tg_<chat_id>"`, `thread_id = "telegram"`.
-- Logs all inbound/outbound messages as events in ATEAM SQLite via `POST /events/:sessionId`.
-- Calls ATEAM orchestrator `POST /api/orchestrator/plan` with `page="telegram"`.
-- Sends the last `agent_message` from orchestrator output back to Telegram.
+- Accepts the configured Telegram allowlist, or lets the first private `/link` bootstrap the allowlist when none is set.
+- Supports `TELEGRAM_CHAT_ID` compatibility for private-chat setups already used elsewhere in this repo.
+- Maps `chat_id` -> `session_id = "tg_<chat_id>"`, `thread_id = "telegram"`.
+- Logs all inbound and outbound messages as events in ATEAM via `POST /events/:sessionId`.
+- Calls ATEAM assistant `POST /agent/command` for normal Telegram chat replies.
+- Sends a user-visible fallback message when ATEAM times out or returns an empty reply, instead of failing silent.
+- Supports `/help` and `/whoami` for quick remote verification.
 - If orchestrator emits an `approval_requested` event:
   - Creates an approval via `POST /api/approvals`
   - Sends an inline keyboard (Approve / Reject)
@@ -57,7 +62,8 @@ npm start
 
 ## Local State
 
-- The gateway stores the Telegram `getUpdates` offset in `APPS/ATEAM/telegram-gateway/.local/offset.json` so restarts don't replay old updates.
+- The gateway stores the Telegram `getUpdates` offset in `APPS/ATEAM/telegram-gateway/.local/offset.json` so restarts do not replay old updates.
+- When bootstrapped from Telegram, the linked operator/chat is persisted in `APPS/ATEAM/telegram-gateway/.local/allowlist.json`.
 
 ## Notes
 
