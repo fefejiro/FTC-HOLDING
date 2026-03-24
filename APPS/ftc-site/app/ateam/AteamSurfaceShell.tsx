@@ -20,8 +20,9 @@ export default function AteamSurfaceShell({ surfaceKey }: { surfaceKey: AteamLoc
             <p className="eyebrow">Real ATEAM route</p>
             <h1>ATEAM inside Una Labs opens the actual local product, not a fake demo.</h1>
             <p className="lead">
-              This route keeps the Una Labs wrapper at the top, then hands you into the real ATEAM{" "}
-              {surface.label} surface running on this machine.
+              This route keeps the Una Labs wrapper at the top. Open it locally to embed the live
+              ATEAM {surface.label} surface, or use the public page as a clean handoff into that same
+              runtime on your machine.
             </p>
           </div>
         </div>
@@ -32,9 +33,9 @@ export default function AteamSurfaceShell({ surfaceKey }: { surfaceKey: AteamLoc
             <h2>{surface.label}</h2>
             <p>{surface.detail}</p>
             <ul className="ateam-hero-list">
-              <li>Loads the real ATEAM runtime from <code>localhost:3000</code>.</li>
+              <li>Uses the real ATEAM runtime from <code>localhost:3000</code> when Una Labs is opened locally.</li>
               <li>Keeps Office, Memory, Team, Factory, and Pipeline reachable from Una Labs routes.</li>
-              <li>Shows a clear recovery state instead of pretending the product is live when the app is off.</li>
+              <li>Shows a clear local handoff instead of pretending the public site can embed your machine automatically.</li>
             </ul>
           </div>
 

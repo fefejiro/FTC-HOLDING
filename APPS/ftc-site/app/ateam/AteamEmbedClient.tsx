@@ -17,9 +17,24 @@ function joinOrigin(origin: string, route: string) {
   return `${safeOrigin}${safeRoute}`;
 }
 
+function canProbeLoopbackFromCurrentPage() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const hostname = String(window.location.hostname || "").toLowerCase();
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname === "[::1]"
+  );
+}
+
 export default function AteamEmbedClient({ surfaceKey }: { surfaceKey: AteamLocalSurfaceKey }) {
   const currentSurface = getAteamLocalSurface(surfaceKey);
   const probeOrigins = useMemo(() => Array.from(new Set(ATEAM_LOCAL_EMBED_ORIGINS)), []);
+  const [canProbeLoopback, setCanProbeLoopback] = useState(false);
   const [status, setStatus] = useState<ProbeStatus>("checking");
   const [activeOrigin, setActiveOrigin] = useState("");
   const [probeNonce, setProbeNonce] = useState(0);
@@ -50,6 +65,15 @@ export default function AteamEmbedClient({ surfaceKey }: { surfaceKey: AteamLoca
   }, [probeOrigins]);
 
   useEffect(() => {
+    const shouldProbeLoopback = canProbeLoopbackFromCurrentPage();
+    setCanProbeLoopback(shouldProbeLoopback);
+
+    if (!shouldProbeLoopback) {
+      setStatus("unavailable");
+      setActiveOrigin("");
+      return;
+    }
+
     const controller = new AbortController();
     void probeLocalAteam(controller.signal);
     return () => controller.abort();
@@ -71,7 +95,9 @@ export default function AteamEmbedClient({ surfaceKey }: { surfaceKey: AteamLoca
             ? `Connected to ${activeOrigin}`
             : status === "checking"
               ? "Checking for local ATEAM on this machine"
-              : "Local ATEAM is not reachable yet"}
+              : canProbeLoopback
+                ? "Local ATEAM is not reachable yet"
+                : "Public site cannot auto-embed localhost"}
         </p>
       </div>
 
@@ -96,15 +122,17 @@ export default function AteamEmbedClient({ surfaceKey }: { surfaceKey: AteamLoca
         </nav>
 
         <div className="ateam-embed-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setProbeNonce((value) => value + 1)}
-          >
-            Retry local ATEAM
-          </button>
+          {canProbeLoopback ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setProbeNonce((value) => value + 1)}
+            >
+              Retry local ATEAM
+            </button>
+          ) : null}
           <a href={openHref} target="_blank" rel="noreferrer" className="btn btn-primary">
-            Open this surface
+            {canProbeLoopback ? "Open this surface" : "Open local ATEAM"}
           </a>
         </div>
       </div>
@@ -130,16 +158,30 @@ export default function AteamEmbedClient({ surfaceKey }: { surfaceKey: AteamLoca
         <div className="ateam-embed-fallback" role="status" aria-live="polite">
           <div>
             <p className="card-kicker">Local handoff required</p>
-            <h3>Start the real ATEAM runtime, then reload this route.</h3>
-            <p>
-              This Una Labs route is ready to embed the actual local product once ATEAM is running on
-              port <code>3000</code> on this same machine.
-            </p>
+            <h3>
+              {canProbeLoopback
+                ? "Start the real ATEAM runtime, then reload this route."
+                : "Open the real ATEAM runtime from this machine."}
+            </h3>
+            {canProbeLoopback ? (
+              <p>
+                This Una Labs route is ready to embed the actual local product once ATEAM is running on
+                port <code>3000</code> on this same machine.
+              </p>
+            ) : (
+              <p>
+                This public Una Labs page can preview ATEAM, but the browser will not let a public
+                origin auto-embed <code>localhost:3000</code>. Open the local surface directly, or run
+                Una Labs locally to get the embedded view.
+              </p>
+            )}
           </div>
           <div className="ateam-embed-fallback-meta">
             <p className="ateam-embed-command">npm --prefix APPS/ATEAM/Server start</p>
             <p className="muted">
-              When that server comes up, this page will load the real {currentSurface.label} surface.
+              {canProbeLoopback
+                ? `When that server comes up, this page will load the real ${currentSurface.label} surface.`
+                : `When ATEAM is running locally, the button above opens the real ${currentSurface.label} surface on this machine.`}
             </p>
           </div>
         </div>
