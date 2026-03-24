@@ -16,6 +16,8 @@ import { sanitizeSessionId, createEvent, appendEvent, getEvents, getEventsAfterT
 import { createApprovalStore } from "./lib/approvalStore.js";
 import { createWorkItemStore } from "./lib/workItemStore.js";
 import { planOrchestration } from "./lib/orchestrator.js";
+import { createWorkflowRunStore } from "./lib/workflowRunStore.js";
+import { createWorkflowService } from "./lib/workflowService.js";
 import { createRepositories } from "./lib/storage/repositories.js";
 import { createPrincipalScopeMiddleware, normalizeScopedResourceId } from "./lib/auth/principalScope.js";
 import { createCapabilityRoutes } from "./lib/capability/routes.js";
@@ -126,6 +128,7 @@ const llmAdapter = createLlmAdapter({ mode: process.env.LLM_MODE || "auto" });
 const agentLaneLocks = new Map();
 const approvalStore = createApprovalStore();
 const workItemStore = createWorkItemStore();
+const workflowRunStore = createWorkflowRunStore();
 const elevenlabsTts = createElevenLabsTts({
   apiKey: process.env.ELEVENLABS_API_KEY || "",
   modelId: process.env.ELEVENLABS_MODEL_ID || "eleven_multilingual_v2",
@@ -166,6 +169,16 @@ const capabilityRoutes = createCapabilityRoutes({
   scopeErrorResponder: scopeErrorCapability
 });
 
+const workflowService = createWorkflowService({
+  workflowRunStore,
+  approvalStore,
+  workItemStore,
+  emitEvent: ({ sessionId, type, actor, lane, summary, meta }) => {
+    const event = createEvent(type, actor || "system", lane || "office", summary, meta);
+    appendEvent(sanitizeSessionId(sessionId || "global_podcast"), event);
+  }
+});
+
 await speechClarityStore.ensure();
 
 const PROMPT_UPDATE_REASON = "humanize_tone_reduce_robotic_voice";
@@ -201,6 +214,25 @@ function badRequest(res, message, details = null) {
     error: String(message || "bad_request"),
     details
   });
+}
+
+function workflowError(res, err) {
+  const status = Number(err?.status || 0);
+  const code = String(err?.code || "workflow_error");
+  const message = String(err?.message || "workflow_error");
+  if (status === 404) {
+    res.status(404).json({ ok: false, error: code, message });
+    return true;
+  }
+  if (status === 409) {
+    res.status(409).json({ ok: false, error: code, message });
+    return true;
+  }
+  if (status === 400) {
+    badRequest(res, code, message);
+    return true;
+  }
+  return false;
 }
 
 function scopeError(res, err) {
@@ -1086,6 +1118,97 @@ app.post("/events/:sessionId", async (req, res) => {
 });
 
 // Mission Control (API-only endpoints; do not collide with SPA routes)
+app.get("/api/workflow/runs", async (req, res) => {
+  try {
+    const phase = String(req.query?.phase || "").trim();
+    const limit = Math.max(1, Math.min(120, Number(req.query?.limit || 40)));
+    const runs = workflowService.listRuns({ phase, limit });
+    res.json({ ok: true, runs });
+  } catch (err) {
+    serverError(res, "failed_to_list_workflow_runs", err);
+  }
+});
+
+app.post("/api/workflow/runs", async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
+    const run = workflowService.startRun({
+      idea: body.idea,
+      category: body.category,
+      requestedBy: String(body.actor || body.requestedBy || "public").trim() || "public",
+      sessionId,
+      meta: body.meta && typeof body.meta === "object" ? body.meta : {}
+    });
+    res.status(201).json({ ok: true, run });
+  } catch (err) {
+    if (scopeError(res, err)) return;
+    if (workflowError(res, err)) return;
+    serverError(res, "failed_to_start_workflow_run", err);
+  }
+});
+
+app.get("/api/workflow/runs/:runId", async (req, res) => {
+  try {
+    const run = workflowService.getRun(String(req.params.runId || "").trim());
+    res.json({ ok: true, run });
+  } catch (err) {
+    if (workflowError(res, err)) return;
+    serverError(res, "failed_to_get_workflow_run", err);
+  }
+});
+
+app.post("/api/workflow/runs/:runId/answers", async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
+    const run = workflowService.captureAnswers(String(req.params.runId || "").trim(), {
+      answers: body.answers,
+      actor: String(body.actor || body.requestedBy || "public").trim() || "public",
+      sessionId
+    });
+    res.json({ ok: true, run });
+  } catch (err) {
+    if (scopeError(res, err)) return;
+    if (workflowError(res, err)) return;
+    serverError(res, "failed_to_save_workflow_answers", err);
+  }
+});
+
+app.post("/api/workflow/runs/:runId/approve", async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
+    const run = workflowService.approveRun(String(req.params.runId || "").trim(), {
+      gate: body.gate,
+      decision: body.decision || body.status,
+      actor: String(body.actor || body.requestedBy || "operator").trim() || "operator",
+      sessionId
+    });
+    res.json({ ok: true, run });
+  } catch (err) {
+    if (scopeError(res, err)) return;
+    if (workflowError(res, err)) return;
+    serverError(res, "failed_to_apply_workflow_decision", err);
+  }
+});
+
+app.post("/api/workflow/runs/:runId/generate-pack", async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
+    const run = workflowService.generatePack(String(req.params.runId || "").trim(), {
+      actor: String(body.actor || body.requestedBy || "operator").trim() || "operator",
+      sessionId
+    });
+    res.json({ ok: true, run });
+  } catch (err) {
+    if (scopeError(res, err)) return;
+    if (workflowError(res, err)) return;
+    serverError(res, "failed_to_generate_workflow_pack", err);
+  }
+});
+
 app.post("/api/orchestrator/plan", async (req, res) => {
   try {
     const input = req.body && typeof req.body === "object" ? req.body : {};

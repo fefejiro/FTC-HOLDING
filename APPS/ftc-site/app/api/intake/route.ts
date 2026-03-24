@@ -34,6 +34,7 @@ type IntakePayload = {
   companyWebsite?: unknown;
   startedAt?: unknown;
   ateamDemo?: unknown;
+  ateamWorkflow?: unknown;
 };
 
 type RateLimitStore = Map<string, number[]>;
@@ -115,6 +116,7 @@ export async function POST(req: NextRequest) {
   const companyWebsite = normalizeText(payload.companyWebsite);
   const startedAtValue = Number(payload.startedAt || 0);
   const ateamDemo = payload.ateamDemo ?? null;
+  const ateamWorkflow = payload.ateamWorkflow ?? null;
 
   // Honeypot field intentionally accepts silently to reduce bot noise.
   if (companyWebsite.length > 0) {
@@ -170,7 +172,8 @@ export async function POST(req: NextRequest) {
     budgetRange,
     timeline,
     notes,
-    ateamDemo
+    ateamDemo,
+    ateamWorkflow
   };
 
   logger.info("intake_submission_received", {
@@ -181,7 +184,8 @@ export async function POST(req: NextRequest) {
     budgetRange: lead.budgetRange,
     timeline: lead.timeline,
     projectType: lead.projectType,
-    ateamAttached: Boolean(ateamDemo)
+    ateamAttached: Boolean(ateamWorkflow || ateamDemo),
+    ateamWorkflowAttached: Boolean(ateamWorkflow)
   });
 
   const webhookUrl =

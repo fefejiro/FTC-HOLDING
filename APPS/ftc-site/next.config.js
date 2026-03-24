@@ -24,11 +24,11 @@ module.exports = {
     const beforeFiles = ateamUpstreamOrigin
       ? [
           {
-            source: "/ateam",
+            source: "/ateam/operator",
             destination: `${ateamUpstreamOrigin}/`
           },
           {
-            source: "/ateam/:path*",
+            source: "/ateam/operator/:path*",
             destination: `${ateamUpstreamOrigin}/:path*`
           }
         ]

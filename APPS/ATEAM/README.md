@@ -64,6 +64,8 @@ See `APPS/ATEAM/telegram-gateway/README.md` for setup and run instructions.
 - Task/thread: `GET /task/thread/:taskId`, `POST /task/thread`, `POST /task/update`, `GET /tasks`, `GET /task/status/:taskId`
 - Voice: `POST /voice/speak`, `GET /voice/capabilities`
 - Event log: `GET /events/:sessionId`, `POST /events/:sessionId`
+- Workflow runs: `GET /api/workflow/runs`, `POST /api/workflow/runs`, `GET /api/workflow/runs/:runId`
+- Workflow actions: `POST /api/workflow/runs/:runId/answers`, `POST /api/workflow/runs/:runId/approve`, `POST /api/workflow/runs/:runId/generate-pack`
 - Speech clarity: `/speech/*` routes for session creation, transcript save, audio upload, analysis, and reflection
 
 ## Environment Variables

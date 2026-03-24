@@ -8,6 +8,9 @@ function normalizeBasePath(value = "") {
 
 function detectAteamBasePath(pathname = "") {
   const normalized = String(pathname || "/").toLowerCase();
+  if (normalized === "/ateam/operator" || normalized.startsWith("/ateam/operator/")) {
+    return "/ateam/operator";
+  }
   if (normalized === "/ateam" || normalized.startsWith("/ateam/")) {
     return "/ateam";
   }
@@ -699,6 +702,14 @@ async function apiListWorkItems({ stage = "", limit = 80 } = {}) {
   if (limit) qs.set("limit", String(limit));
   const data = await apiRequest(`/api/work-items?${qs.toString()}`);
   return Array.isArray(data?.items) ? data.items : [];
+}
+
+async function apiListWorkflowRuns({ phase = "", limit = 80 } = {}) {
+  const qs = new URLSearchParams();
+  if (phase) qs.set("phase", phase);
+  if (limit) qs.set("limit", String(limit));
+  const data = await apiRequest(`/api/workflow/runs?${qs.toString()}`);
+  return Array.isArray(data?.runs) ? data.runs : [];
 }
 
 async function apiCreateWorkItem(payload) {
@@ -2246,6 +2257,7 @@ const missionControlState = {
     voice: null,
     approvals: [],
     workItems: [],
+    workflowRuns: [],
     content: { signals: [], topics: [], drafts: [] },
     speechSessions: []
   },
@@ -4322,11 +4334,12 @@ async function mcLoadOverview({ force = false, includeSpeech = true } = {}) {
         .catch(() => [])
     : Promise.resolve(missionControlState.overview.speechSessions || []);
 
-  const [health, voiceRes, approvals, workItems, contentRes, speechSessions] = await Promise.all([
+  const [health, voiceRes, approvals, workItems, workflowRuns, contentRes, speechSessions] = await Promise.all([
     apiRequest("/health").catch(() => null),
     apiRequest("/voice/capabilities").catch(() => null),
     apiListApprovals({ limit: 120 }).catch(() => []),
     apiListWorkItems({ limit: 120 }).catch(() => []),
+    apiListWorkflowRuns({ limit: 80 }).catch(() => []),
     apiRequest("/content/pipeline").catch(() => ({ ok: false, store: mcOverviewContentFallback() })),
     speechPromise
   ]);
@@ -4338,6 +4351,7 @@ async function mcLoadOverview({ force = false, includeSpeech = true } = {}) {
     voice: voiceRes?.capabilities || null,
     approvals: Array.isArray(approvals) ? approvals : [],
     workItems: Array.isArray(workItems) ? workItems : [],
+    workflowRuns: Array.isArray(workflowRuns) ? workflowRuns : [],
     content,
     speechSessions: Array.isArray(speechSessions) ? speechSessions : []
   };
@@ -4353,8 +4367,61 @@ function mcInvalidateOverview() {
   missionControlState.overview.loadedAt = 0;
 }
 
+function mcWorkflowProjectFromRun(run) {
+  if (!run || typeof run !== "object") return null;
+  const workflowRunId = String(run.id || "").trim();
+  if (!workflowRunId) return null;
+  const brief = run.brief && typeof run.brief === "object" ? run.brief : {};
+  const artifacts = run.artifacts && typeof run.artifacts === "object" ? run.artifacts : {};
+  const links = run.links && typeof run.links === "object" ? run.links : {};
+  const approvals = run.approvals && typeof run.approvals === "object" ? run.approvals : {};
+  const risks = Array.isArray(run.risks) ? run.risks : [];
+  const nextSteps = Array.isArray(artifacts.nextSteps) ? artifacts.nextSteps : [];
+
+  return {
+    id: String(links.projectId || `workflow_${workflowRunId}`).trim(),
+    name: String(brief.title || run.title || compactText(run.idea, 72) || "Workflow Run").trim(),
+    ownerAgentId: String(links.ownerAgentId || "henry").trim() || "henry",
+    summary: String(brief.summary || `ATEAM workflow run in ${run.phase || "analysis"}.`).trim(),
+    outcome: String(
+      artifacts?.prototype?.summary ||
+        brief.primaryGoal ||
+        brief.scope ||
+        "Generated workflow pack ready for operator review."
+    ).trim(),
+    linkedWorkItemIds: Array.isArray(links.workItemIds) ? links.workItemIds : [],
+    docIds: [],
+    workflowRunId,
+    workflow: {
+      phase: String(run.phase || "analysis").trim(),
+      recommendedLane: String(run.recommendedLane || brief.recommendedLane || "").trim(),
+      risks,
+      nextSteps,
+      mockupTitle: String(artifacts?.mockup?.title || "").trim(),
+      prototypeTitle: String(artifacts?.prototype?.title || "").trim(),
+      smokeSummary: String(artifacts?.smoke?.summary || "").trim(),
+      handoffStatus: String(run?.handoff?.status || "").trim(),
+      audience: String(brief.audience || "").trim(),
+      constraints: Array.isArray(brief.constraints) ? brief.constraints : [],
+      successCriteria: Array.isArray(brief.successCriteria) ? brief.successCriteria : [],
+      approvals
+    }
+  };
+}
+
+function mcProjectPortfolio() {
+  const workflowRuns = Array.isArray(missionControlState.overview.workflowRuns)
+    ? missionControlState.overview.workflowRuns
+    : [];
+  const workflowProjects = workflowRuns
+    .map((run) => mcWorkflowProjectFromRun(run))
+    .filter(Boolean);
+  return [...workflowProjects, ...PROJECT_PORTFOLIO];
+}
+
 function mcProjectById(projectId) {
-  return PROJECT_PORTFOLIO.find((project) => project.id === projectId) || PROJECT_PORTFOLIO[0] || null;
+  const portfolio = mcProjectPortfolio();
+  return portfolio.find((project) => project.id === projectId) || portfolio[0] || null;
 }
 
 function mcProjectItems(project, workItems = []) {
@@ -4557,11 +4624,12 @@ async function renderCouncilPage({ force = false } = {}) {
 }
 
 function renderProjectsFormOptions(selectedProjectId) {
+  const portfolio = mcProjectPortfolio();
   if (projectsWorkProject) {
-    projectsWorkProject.innerHTML = PROJECT_PORTFOLIO.map(
-      (project) => `<option value="${escapeHtml(project.id)}">${escapeHtml(project.name)}</option>`
+    projectsWorkProject.innerHTML = portfolio.map(
+      (project) => `<option value="${escapeHtml(project.id)}">${escapeHtml(project.name)}${project.workflowRunId ? " [workflow]" : ""}</option>`
     ).join("");
-    projectsWorkProject.value = selectedProjectId || PROJECT_PORTFOLIO[0]?.id || "";
+    projectsWorkProject.value = selectedProjectId || portfolio[0]?.id || "";
   }
 
   if (projectsWorkOwner) {
@@ -4574,7 +4642,9 @@ function renderProjectsFormOptions(selectedProjectId) {
 async function renderProjectsPage({ force = false } = {}) {
   if (!projectsView || projectsView.classList.contains("hidden")) return;
   const overview = await mcLoadOverview({ force, includeSpeech: false });
-  const selectedProject = mcProjectById(missionControlState.projects.selectedId) || PROJECT_PORTFOLIO[0] || null;
+  const portfolio = mcProjectPortfolio();
+  const workflowProjectCount = portfolio.filter((project) => Boolean(project.workflowRunId)).length;
+  const selectedProject = mcProjectById(missionControlState.projects.selectedId) || portfolio[0] || null;
   if (selectedProject) missionControlState.projects.selectedId = selectedProject.id;
   renderProjectsFormOptions(missionControlState.projects.selectedId);
   if (projectsWorkOwner && selectedProject?.ownerAgentId) {
@@ -4582,7 +4652,7 @@ async function renderProjectsPage({ force = false } = {}) {
   }
 
   const workItems = overview.workItems || [];
-  const portfolioRows = PROJECT_PORTFOLIO.map((project) => {
+  const portfolioRows = portfolio.map((project) => {
     const items = mcProjectItems(project, workItems);
     return { project, items, status: mcProjectStatus(items) };
   });
@@ -4593,8 +4663,10 @@ async function renderProjectsPage({ force = false } = {}) {
 
   if (projectsSummary) {
     projectsSummary.textContent = linkedWorkCount
-      ? `${linkedWorkCount} linked work item${linkedWorkCount === 1 ? "" : "s"} are currently mapped across ${portfolioRows.length} initiatives.`
-      : "No linked work items yet. Create one to seed the project ledger.";
+      ? `${linkedWorkCount} linked work item${linkedWorkCount === 1 ? "" : "s"} are currently mapped across ${portfolioRows.length} initiatives${workflowProjectCount ? `, including ${workflowProjectCount} workflow-generated project${workflowProjectCount === 1 ? "" : "s"}` : ""}.`
+      : workflowProjectCount
+        ? `${workflowProjectCount} workflow-generated project${workflowProjectCount === 1 ? "" : "s"} are ready for operator review, but no linked work has been created yet.`
+        : "No linked work items yet. Create one to seed the project ledger.";
   }
   if (projectsMetricCount) projectsMetricCount.textContent = String(portfolioRows.length);
   if (projectsMetricWork) projectsMetricWork.textContent = String(linkedWorkCount);
@@ -4621,6 +4693,7 @@ async function renderProjectsPage({ force = false } = {}) {
             <div class="ops-inline-meta">
               <span>${escapeHtml(mcDisplayName(project.ownerAgentId) || project.ownerAgentId)}</span>
               <span>${escapeHtml(linkedLabel)}</span>
+              ${project.workflowRunId ? `<span>${escapeHtml(String(project?.workflow?.phase || "analysis").replaceAll("_", " "))}</span>` : ""}
             </div>
             <div class="ops-action-row ops-action-row-compact">
               <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="select-project" data-project-id="${escapeHtml(project.id)}" data-scroll-target="detail">Open overview</button>
@@ -4656,6 +4729,23 @@ async function renderProjectsPage({ force = false } = {}) {
             )
             .join("")
         : `<span class="ops-inline-empty">None</span>`;
+      const workflowDetails = project.workflowRunId
+        ? `
+            <div class="ops-key-value-row"><span>Workflow phase</span><strong>${escapeHtml(String(project?.workflow?.phase || "analysis").replaceAll("_", " "))}</strong></div>
+            <div class="ops-key-value-row"><span>Recommended lane</span><strong>${escapeHtml(project?.workflow?.recommendedLane || "Pending")}</strong></div>
+            <div class="ops-key-value-row"><span>Handoff status</span><strong>${escapeHtml(project?.workflow?.handoffStatus || "Not ready")}</strong></div>
+            <div class="ops-key-value-row"><span>Prototype pack</span><strong>${escapeHtml(project?.workflow?.prototypeTitle || project?.workflow?.mockupTitle || "Not generated yet")}</strong></div>
+            <div class="ops-key-value-row ops-key-value-row-stack">
+              <span>Next steps</span>
+              <div class="ops-chip-row">${
+                (Array.isArray(project?.workflow?.nextSteps) ? project.workflow.nextSteps : [])
+                  .slice(0, 3)
+                  .map((step) => `<span class="ops-chip-btn">${escapeHtml(step)}</span>`)
+                  .join("") || '<span class="ops-inline-empty">Generate the pack to see next steps</span>'
+              }</div>
+            </div>
+          `
+        : "";
       projectsDetail.innerHTML = `
         <article class="ops-card">
           <div class="ops-card-head">
@@ -4670,6 +4760,7 @@ async function renderProjectsPage({ force = false } = {}) {
               <div class="ops-chip-row">${docChips}</div>
             </div>
             <div class="ops-key-value-row"><span>Stage Mix</span><strong>${escapeHtml(stageSummary || "No linked work yet")}</strong></div>
+            ${workflowDetails}
           </div>
           <div class="ops-action-row ops-action-row-compact">
             <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-project-ledger" data-project-id="${escapeHtml(project.id)}">View linked items</button>
@@ -4680,10 +4771,25 @@ async function renderProjectsPage({ force = false } = {}) {
   }
 
   if (projectsLedger) {
-    if (!activeRow || !activeRow.items.length) {
+    if (!activeRow || (!activeRow.items.length && !activeRow.project?.workflowRunId)) {
       projectsLedger.innerHTML = mcEmptyHtml("No work items linked to this initiative yet.");
     } else {
-      projectsLedger.innerHTML = activeRow.items
+      const workflowCard = activeRow.project?.workflowRunId
+        ? `
+            <article class="ops-card">
+              <div class="ops-card-head">
+                <div class="ops-card-title">Workflow pack</div>
+                <div class="ops-card-meta">${escapeHtml(String(activeRow.project?.workflow?.phase || "analysis").replaceAll("_", " ").toUpperCase())}</div>
+              </div>
+              <div class="ops-card-copy">${escapeHtml(activeRow.project?.workflow?.smokeSummary || activeRow.project?.summary || "Workflow pack not generated yet.")}</div>
+              <div class="ops-inline-meta">
+                <span>${escapeHtml(activeRow.project?.workflow?.mockupTitle || "Mockup pending")}</span>
+                <span>${escapeHtml(activeRow.project?.workflow?.prototypeTitle || "Prototype pending")}</span>
+              </div>
+            </article>
+          `
+        : "";
+      const itemCards = activeRow.items
         .slice()
         .sort((a, b) => String(b?.createdTs || "").localeCompare(String(a?.createdTs || "")))
         .map(
@@ -4705,6 +4811,7 @@ async function renderProjectsPage({ force = false } = {}) {
           `
         )
         .join("");
+      projectsLedger.innerHTML = `${workflowCard}${itemCards}`;
     }
   }
 }
@@ -5171,11 +5278,12 @@ async function renderPipelinePage({ force = false } = {}) {
   const signals = content.signals || [];
   const topics = content.topics || [];
   const drafts = content.drafts || [];
+  const workflowRuns = overview.workflowRuns || [];
   const approvals = (overview.approvals || []).filter((item) => String(item?.status || "").toLowerCase() === "pending");
   const workItems = overview.workItems || [];
 
   if (pipelineSummary) {
-    pipelineSummary.textContent = `Signal ${signals.length} -> Topic ${topics.length} -> Draft ${drafts.length} -> Approval ${approvals.length} -> Delivery ${workItems.length}.`;
+    pipelineSummary.textContent = `Workflow ${workflowRuns.length} | Signal ${signals.length} -> Topic ${topics.length} -> Draft ${drafts.length} -> Approval ${approvals.length} -> Delivery ${workItems.length}.`;
   }
   if (pipelineMetricSignals) pipelineMetricSignals.textContent = String(signals.length);
   if (pipelineMetricDrafts) pipelineMetricDrafts.textContent = String(drafts.filter((draft) => ["draft", "pending_approval", "approved", "scheduled"].includes(draft.status)).length);
@@ -5184,6 +5292,15 @@ async function renderPipelinePage({ force = false } = {}) {
 
   if (pipelineBoard) {
     const columns = [
+      {
+        title: "Workflow Intake",
+        items: workflowRuns.slice(0, 8).map((run) => ({
+          title: run?.brief?.title || run?.title || compactText(run?.idea, 80) || "Workflow run",
+          meta: String(run?.phase || "analysis").replaceAll("_", " "),
+          body: run?.brief?.summary || run?.idea || "No workflow summary yet.",
+          actions: `<button class="ops-action-btn" type="button" data-action="select-project" data-project-id="${escapeHtml(String(run?.links?.projectId || `workflow_${run?.id || ""}`))}" data-scroll-target="detail">Open project</button>`
+        }))
+      },
       {
         title: "Signal Intake",
         items: signals.slice(0, 8).map((signal) => ({

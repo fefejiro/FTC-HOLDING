@@ -1,6 +1,6 @@
 # Una Labs Site
 
-Next.js App Router site for the public-facing Una Labs build lab: products, client launches, the real ATEAM route handoff, and project intake.
+Next.js App Router site for the public-facing Una Labs build lab: products, client launches, the public ATEAM workflow, operator handoff, and project intake.
 
 ## Public route contract
 
@@ -54,12 +54,13 @@ The site runs on port `3001` (via `@ftc/config`).
 
 The real ATEAM app runs separately on port `3000` from `APPS/ATEAM`.
 
-When Una Labs is running locally, `/ateam` proxies the live ATEAM app by default:
+When Una Labs is running locally:
 
 - Una Labs: `http://localhost:3001`
 - Real ATEAM upstream: `http://127.0.0.1:3000`
-- Integrated route: `http://localhost:3001/ateam`
-- Deep links also proxy through: `/ateam/office`, `/ateam/factory`, `/ateam/memory`, `/ateam/team`
+- Public workflow route: `http://localhost:3001/ateam`
+- Operator Mission Control proxy: `http://localhost:3001/ateam/operator`
+- Deep links also proxy through: `/ateam/operator/office`, `/ateam/operator/factory`, `/ateam/operator/memory`, `/ateam/operator/team`
 
 Optional override:
 
@@ -80,10 +81,11 @@ Cloudflare Pages / Vercel-style build note:
 ## Core public journey
 
 1. Visitor lands on the public site and learns what Una Labs offers.
-2. Visitor opens `/ateam` and runs a guided demo on an idea.
-3. The ATEAM demo generates a structured brief and persists the handoff locally.
-4. `Continue with this idea` opens `/work-with-ftc?from=ateam` with the brief prefilled.
-5. Submitting the intake returns a success state with a request reference and response expectation.
+2. Visitor opens `/ateam` and starts a real workflow run on an idea.
+3. ATEAM asks follow-up questions, produces a brief, waits for approval, and generates a richer pack.
+4. Approved runs create linked operator work in the proxied ATEAM Mission Control surface.
+5. `Send to Una Labs` opens `/work-with-ftc?from=ateam` with the workflow pack prefilled.
+6. Submitting the intake returns a success state with a request reference and response expectation.
 
 ## Current launch mode
 
@@ -101,6 +103,7 @@ Optional environment variables:
 - `UNALABS_INTAKE_WEBHOOK_URL` (preferred webhook sink for intake submissions)
 - `FTC_INTAKE_WEBHOOK_URL` (fallback webhook sink for compatibility)
 - `UNALABS_CONFIRMATION_EMAIL_WEBHOOK_URL` (optional webhook for acknowledgment emails after intake submission)
+- `ATEAM_UPSTREAM_ORIGIN` (origin for the real ATEAM runtime and workflow API proxy; defaults to `http://127.0.0.1:3000` in local dev)
 - `UNALABS_SITE_URL` (preferred canonical URL override, for Phase B switch)
 - `FTC_SITE_URL` (fallback canonical URL override)
 - `UNALABS_REDIRECT_FROM_HOSTS` (comma-separated legacy hosts to 308 to canonical)
