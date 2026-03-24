@@ -253,15 +253,15 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     pillar: "business-intelligence",
     tags: ["Guided demo", "Scoping", "Systems"],
     summary:
-      "ATEAM is Una Labs' public-facing view into a Memory -> Office -> Team -> Factory operating path for structured idea intake, coordination, and delivery.",
+      "ATEAM is Una Labs' public window into the same Memory, Office, Team, and Factory system used to route, coordinate, and deliver work.",
     status: "internal-runtime",
-    availabilityLabel: "ATEAM mode preview",
+    availabilityLabel: "Guided public demo",
     marketingBullets: [...ateamModeSupportPoints],
     sections: {
       problem:
         "Early project ideas are usually too fuzzy to estimate, prioritize, or move into clean execution.",
       insight:
-        "People move faster when they can see how context, ownership, and delivery stages line up before build work begins.",
+        "People move faster when they can see how context, ownership, and delivery surfaces line up before build work begins.",
       solution:
         "ATEAM turns rough concepts into a compact project brief by exposing the same Memory, Office, Team, and Factory language that shapes the internal runtime.",
       capabilities: [
@@ -271,7 +271,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
         "Factory-oriented delivery path"
       ],
       technology: [
-        "Public ATEAM mode shell",
+        "Public ATEAM shell",
         "Safe structured prompting",
         "Scoped handoff into intake"
       ],

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../lib/recentWork";
-import { ateamModeStageLabels, ateamModeSummary, ateamModeSupportPoints } from "../lib/ateamMode";
+import { ateamModeStages, ateamModeSummary, ateamModeSupportPoints } from "../lib/ateamMode";
 
 const serviceLanes = [
   {
@@ -110,11 +110,11 @@ export default function HomePage() {
                   className="hero-media-image"
                 />
                 <div className="home-hero-side-note">
-                  <p className="proof-label">ATEAM</p>
-                  <h2>The AI lab where rough ideas become clear next steps.</h2>
+                  <p className="proof-label">Inside ATEAM</p>
+                  <h2>The AI lab inside Una Labs where rough ideas become clear next steps.</h2>
                   <p className="hero-media-caption">
-                    {ateamModeSummary} Public-facing preview, then a clean handoff into a real
-                    project request.
+                    {ateamModeSummary} Public shell first, then a clean handoff into a real project
+                    request.
                   </p>
                 </div>
               </div>
@@ -257,18 +257,20 @@ export default function HomePage() {
         <div className="container">
           <article className="card ateam-preview-band">
             <div className="ateam-preview-band-copy">
-              <p className="eyebrow">ATEAM preview</p>
-              <h2>See the ATEAM-mode path from memory to delivery before you ever start a build.</h2>
+              <p className="eyebrow">Inside ATEAM</p>
+              <h2>See the ATEAM surfaces that drive Una Labs before you ever start a build.</h2>
               <p className="muted">
-                ATEAM is public as a curated mode preview. It surfaces Memory, Office, Team, and
-                Factory without exposing every internal operator control.
+                ATEAM is part of Una Labs, not a detached step explainer. The public demo exposes
+                Memory, Office, Team, and Factory in a lighter shell without giving away every
+                internal operator control.
               </p>
             </div>
-            <div className="ateam-preview-band-steps" aria-label="ATEAM preview steps">
-              {ateamModeStageLabels.map((step) => (
-                <div key={step} className="ateam-preview-band-step">
-                  <p className="card-kicker">ATEAM stage</p>
-                  <strong>{step}</strong>
+            <div className="ateam-preview-band-steps" aria-label="ATEAM inside Una Labs">
+              {ateamModeStages.map((step) => (
+                <div key={step.title} className="ateam-preview-band-step">
+                  <p className="ateam-surface-eyebrow">{step.eyebrow}</p>
+                  <strong>{step.title}</strong>
+                  <span className="ateam-surface-caption">{step.detail}</span>
                 </div>
               ))}
             </div>

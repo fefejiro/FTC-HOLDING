@@ -7,7 +7,7 @@ import { ateamModeHighlights, ateamModeStages, ateamModeSummary } from "../../li
 export const metadata: Metadata = {
   title: "ATEAM | Una Labs",
   description:
-    "ATEAM is the AI lab where Memory, Office, Team, and Factory turn rough ideas into clear next steps.",
+    "ATEAM inside Una Labs keeps Memory, Office, Team, and Factory visible from the first idea to the build handoff.",
   alternates: {
     canonical: "/ateam"
   }
@@ -28,21 +28,27 @@ export default function AteamPage() {
             />
           </div>
           <div className="ateam-hero-heading">
-            <p className="eyebrow">ATEAM mode preview</p>
-            <h1>ATEAM shows how Memory, Office, Team, and Factory turn rough ideas into next steps.</h1>
+            <p className="eyebrow">Inside ATEAM</p>
+            <h1>ATEAM inside Una Labs keeps the path from idea to handoff visible.</h1>
             <p className="lead">
-              Test an idea, see the ATEAM-mode path it suggests, and continue that output into a
-              real project request for Una Labs.
+              This is not a generic four-step explainer. It is the public-facing shell of the same
+              Memory, Office, Team, and Factory surfaces that shape ATEAM itself inside Una Labs.
             </p>
           </div>
         </div>
 
         <div className="ateam-hero-grid">
           <div className="card ateam-hero-story">
-            <p className="card-kicker">Why it exists</p>
+            <p className="card-kicker">Inside Una Labs</p>
+            <div className="ateam-hero-surface-preview">
+              <img
+                src="/images/brand/Calender Ateam.png"
+                alt="ATEAM calendar and routing surface inside Una Labs"
+              />
+            </div>
             <p>
-              {ateamModeSummary} Una Labs exposes that path publicly in a controlled way so people
-              can understand the system before any build starts.
+              {ateamModeSummary} Una Labs exposes a controlled version of that system publicly so
+              people can feel the product, not just read a step list about it.
             </p>
             <ul className="ateam-hero-list">
               {ateamModeHighlights.map((item) => (
@@ -63,9 +69,9 @@ export default function AteamPage() {
             <div className="ateam-demo-card-head">
               <div>
                 <p className="card-kicker">Interactive demo</p>
-                <h2>Run an ATEAM-mode pass on your idea</h2>
+                <h2>Run an ATEAM pass on your idea</h2>
               </div>
-              <span className="ateam-demo-hint">Memory, Office, Team, Factory, then a clear handoff</span>
+              <span className="ateam-demo-hint">Inside one system: Memory, Office, Team, Factory</span>
             </div>
             <AteamDemoClient />
           </article>
@@ -74,21 +80,32 @@ export default function AteamPage() {
 
       <section className="ateam-section">
         <div className="section-heading">
-          <p className="eyebrow">ATEAM mode</p>
-          <h2>The four public-facing stages now match the real runtime language</h2>
+          <p className="eyebrow">ATEAM inside Una Labs</p>
+          <h2>Memory, Office, Team, and Factory are product surfaces, not stage labels.</h2>
           <p>
-            The public preview stays compact on purpose, but it now names the same operating
-            surfaces people will hear about inside ATEAM itself.
+            The public demo stays lighter than the private runtime, but the language and the feel
+            now follow the real ATEAM surfaces instead of generic numbered steps.
           </p>
         </div>
         <div className="ateam-flow-grid">
-          {ateamModeStages.map((stage) => (
-            <article key={stage.title} className="card ateam-flow-card">
-              <p className="card-kicker">ATEAM stage</p>
-              <h3>{stage.title}</h3>
-              <p>{stage.description}</p>
-            </article>
-          ))}
+          {ateamModeStages.map((stage) => {
+            const tone = stage.title.toLowerCase();
+
+            return (
+              <article key={stage.title} className={`card ateam-flow-card ateam-flow-card--${tone}`}>
+                <div className={`ateam-surface-visual ateam-surface-visual--${tone}`} aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <p className="ateam-surface-eyebrow">{stage.eyebrow}</p>
+                <h3>{stage.title}</h3>
+                <p>{stage.description}</p>
+                <p className="ateam-surface-note">{stage.detail}</p>
+              </article>
+            );
+          })}
         </div>
       </section>
 

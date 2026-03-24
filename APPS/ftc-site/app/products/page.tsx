@@ -67,7 +67,7 @@ export default function ProductsPage() {
         <p className="eyebrow">Products</p>
         <h1>Products</h1>
         <p className="page-intro">
-          PeacePad and SayWetin are public products. ATEAM is the operating-mode preview that helps
+          PeacePad and SayWetin are public products. ATEAM is the AI lab inside Una Labs that helps
           move a rough idea into a believable next step.
         </p>
       </section>
@@ -149,7 +149,7 @@ export default function ProductsPage() {
                 className="product-ateam-preview"
               />
               <p className="muted">
-                Memory, Office, Team, and Factory are visible in the public preview before the real
+                Memory, Office, Team, and Factory stay visible in the public shell before the real
                 project scope begins.
               </p>
             </div>

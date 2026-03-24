@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { saveAteamDemoHandoff } from "../../lib/ateamHandoff";
-import { ateamModeStageLabels } from "../../lib/ateamMode";
+import { ateamModeStages } from "../../lib/ateamMode";
 
 type DemoOutput = {
   summary: string;
@@ -40,7 +40,7 @@ export default function AteamDemoClient() {
     }
 
     const interval = window.setInterval(() => {
-      setStageIndex((current) => (current + 1) % ateamModeStageLabels.length);
+      setStageIndex((current) => (current + 1) % ateamModeStages.length);
     }, 700);
 
     return () => window.clearInterval(interval);
@@ -156,17 +156,18 @@ export default function AteamDemoClient() {
           </select>
         </div>
 
-        <div className="ateam-demo-stage-rail" aria-label="ATEAM workflow stages">
-          {ateamModeStageLabels.map((stage, index) => {
+        <div className="ateam-demo-stage-rail" aria-label="ATEAM workflow surfaces">
+          {ateamModeStages.map((stage, index) => {
             const isActive = status === "loading" && index <= stageIndex;
             const isComplete = status !== "loading" && output;
             return (
               <div
-                key={stage}
+                key={stage.title}
                 className={`ateam-demo-stage ${isActive || isComplete ? "is-active" : ""}`}
               >
-                <p className="card-kicker">ATEAM stage</p>
-                <strong>{stage}</strong>
+                <p className="ateam-surface-eyebrow">{stage.eyebrow}</p>
+                <strong>{stage.title}</strong>
+                <span className="ateam-surface-caption">{stage.detail}</span>
               </div>
             );
           })}
@@ -186,7 +187,7 @@ export default function AteamDemoClient() {
         {status === "loading" ? (
           <div className="card ateam-demo-loading">
             <div className="ateam-demo-loading-top">
-              <p className="card-kicker">ATEAM processing</p>
+              <p className="card-kicker">Inside ATEAM</p>
               <span className="ateam-demo-pill">{selectedCategoryLabel}</span>
             </div>
             <h3>Reviewing your idea and building a scoped next step</h3>
@@ -196,17 +197,18 @@ export default function AteamDemoClient() {
             </p>
             <div className="ateam-demo-loading-bar" aria-hidden="true">
               <span
-                style={{ width: `${((stageIndex + 1) / ateamModeStageLabels.length) * 100}%` }}
+                style={{ width: `${((stageIndex + 1) / ateamModeStages.length) * 100}%` }}
               />
             </div>
             <div className="ateam-demo-loading-grid">
-              {ateamModeStageLabels.map((stage, index) => (
+              {ateamModeStages.map((stage, index) => (
                 <div
-                  key={stage}
+                  key={stage.title}
                   className={`ateam-demo-loading-card ${index === stageIndex ? "is-current" : ""}`}
                 >
-                  <p className="card-kicker">ATEAM stage</p>
-                  <strong>{stage}</strong>
+                  <p className="ateam-surface-eyebrow">{stage.eyebrow}</p>
+                  <strong>{stage.title}</strong>
+                  <span className="ateam-surface-caption">{stage.detail}</span>
                 </div>
               ))}
             </div>
@@ -281,11 +283,10 @@ export default function AteamDemoClient() {
         ) : (
           <div className="card ateam-demo-placeholder">
             <p className="card-kicker">Demo output</p>
-            <h3>Run an ATEAM-mode pass on the idea</h3>
+            <h3>Run an ATEAM pass on the idea</h3>
             <p className="muted">
-              ATEAM mode will walk through Memory, Office, Team, and Factory, then return a
-              recommended lane, structured summary, phases, likely deliverables, and the next step
-              you can continue into intake.
+              ATEAM will ground the idea in Memory, route it through Office, keep Team ownership
+              visible, and prepare a Factory handoff you can continue into intake.
             </p>
           </div>
         )}
