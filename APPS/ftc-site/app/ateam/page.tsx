@@ -82,9 +82,9 @@ export default function AteamPage() {
           </p>
         </div>
         <div className="ateam-flow-grid">
-          {ateamModeStages.map((stage, index) => (
+          {ateamModeStages.map((stage) => (
             <article key={stage.title} className="card ateam-flow-card">
-              <span className="process-step-number">{index + 1}</span>
+              <p className="card-kicker">ATEAM stage</p>
               <h3>{stage.title}</h3>
               <p>{stage.description}</p>
             </article>

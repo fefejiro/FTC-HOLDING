@@ -165,7 +165,7 @@ export default function AteamDemoClient() {
                 key={stage}
                 className={`ateam-demo-stage ${isActive || isComplete ? "is-active" : ""}`}
               >
-                <span>{index + 1}</span>
+                <p className="card-kicker">ATEAM stage</p>
                 <strong>{stage}</strong>
               </div>
             );
@@ -205,8 +205,8 @@ export default function AteamDemoClient() {
                   key={stage}
                   className={`ateam-demo-loading-card ${index === stageIndex ? "is-current" : ""}`}
                 >
-                  <span>{index + 1}</span>
-                  <p>{stage}</p>
+                  <p className="card-kicker">ATEAM stage</p>
+                  <strong>{stage}</strong>
                 </div>
               ))}
             </div>

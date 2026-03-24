@@ -1068,19 +1068,18 @@ nav.primary {
   background: rgba(8, 12, 21, 0.55);
 }
 
-.ateam-preview-band-step span,
-.ateam-demo-stage span,
-.ateam-demo-loading-card span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #dff7ff;
-  background: linear-gradient(120deg, rgba(108, 92, 231, 0.75), rgba(0, 212, 255, 0.75));
+.ateam-preview-band-step .card-kicker,
+.ateam-demo-stage .card-kicker,
+.ateam-demo-loading-card .card-kicker,
+.ateam-flow-card .card-kicker {
+  margin-bottom: 2px;
+}
+
+.ateam-preview-band-step strong,
+.ateam-demo-loading-card strong {
+  font-size: 0.98rem;
+  line-height: 1.2;
+  color: rgba(232, 245, 255, 0.96);
 }
 
 .home-hero-copy h1 {
@@ -1736,6 +1735,11 @@ nav.primary {
   margin: 0;
   color: rgba(226, 241, 255, 0.78);
   font-weight: 600;
+}
+
+.ateam-demo-loading-card .card-kicker {
+  color: #a8d7ff;
+  font-weight: 700;
 }
 
 .ateam-demo-loading-card.is-current {

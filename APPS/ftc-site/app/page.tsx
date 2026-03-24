@@ -265,9 +265,9 @@ export default function HomePage() {
               </p>
             </div>
             <div className="ateam-preview-band-steps" aria-label="ATEAM preview steps">
-              {ateamModeStageLabels.map((step, index) => (
+              {ateamModeStageLabels.map((step) => (
                 <div key={step} className="ateam-preview-band-step">
-                  <span>{index + 1}</span>
+                  <p className="card-kicker">ATEAM stage</p>
                   <strong>{step}</strong>
                 </div>
               ))}
