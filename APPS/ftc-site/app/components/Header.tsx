@@ -80,7 +80,7 @@ export default function Header() {
 
         <nav className="primary" aria-label="Main navigation">
           {navLinks.map((link) => {
-            const isActive = pathname === link.href;
+            const isActive = pathname === link.href || pathname?.startsWith(`${link.href}/`);
             return (
               <Link
                 key={link.href}
@@ -125,7 +125,7 @@ export default function Header() {
 
             <nav className="mobile-panel-nav" aria-label="Mobile navigation links">
               {navLinks.map((link) => {
-                const isActive = pathname === link.href;
+                const isActive = pathname === link.href || pathname?.startsWith(`${link.href}/`);
                 return (
                   <Link
                     key={link.href}

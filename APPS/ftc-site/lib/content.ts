@@ -251,11 +251,11 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     name: "ATEAM",
     tagline: "The AI lab where rough ideas become clear next steps.",
     pillar: "business-intelligence",
-    tags: ["Guided demo", "Scoping", "Systems"],
+    tags: ["Local runtime", "Scoping", "Systems"],
     summary:
-      "ATEAM is Una Labs' public window into the same Memory, Office, Team, and Factory system used to route, coordinate, and deliver work.",
+      "ATEAM is Una Labs' route into the same Memory, Office, Team, Factory, and Pipeline system used to route, coordinate, and deliver work.",
     status: "internal-runtime",
-    availabilityLabel: "Guided public demo",
+    availabilityLabel: "Real local runtime",
     marketingBullets: [...ateamModeSupportPoints],
     sections: {
       problem:
@@ -263,20 +263,21 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
       insight:
         "People move faster when they can see how context, ownership, and delivery surfaces line up before build work begins.",
       solution:
-        "ATEAM turns rough concepts into a compact project brief by exposing the same Memory, Office, Team, and Factory language that shapes the internal runtime.",
+        "ATEAM keeps the real local surfaces reachable from Una Labs so people can move inside Office, Memory, Team, Factory, and Pipeline instead of reading a simulated walkthrough.",
       capabilities: [
         "Memory-first intake and clarification",
         "Office routing and scoping",
         "Team visibility and handoff framing",
-        "Factory-oriented delivery path"
+        "Factory-oriented delivery path",
+        "Pipeline visibility inside the same runtime"
       ],
       technology: [
-        "Public ATEAM shell",
-        "Safe structured prompting",
+        "Real localhost-backed ATEAM embed",
+        "Static Una Labs shell + local runtime handoff",
         "Scoped handoff into intake"
       ],
       outcome:
-        `${ateamModeSummary} It gives visitors a believable preview of how Una Labs thinks before a project formally begins.`
+        `${ateamModeSummary} It keeps the real local runtime reachable from Una Labs instead of falling back to a brochure page.`
     }
   }
 ];

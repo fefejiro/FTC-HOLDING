@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import GooglePlayBadge from "../components/GooglePlayBadge";
+import { ATEAM_BRAND_LOGO_PATH, ATEAM_MISSION_CONTROL_PREVIEW_PATH } from "../../lib/ateamEmbed";
 import { ateamModeSummary, ateamModeSupportPoints } from "../../lib/ateamMode";
 import { projectCaseStudies, type ProjectCaseStudy } from "../../lib/content";
 
@@ -40,7 +40,7 @@ const productOfferContent: Record<
   ateam: {
     offerCopy:
       ateamModeSummary,
-    secondaryLabel: "Try ATEAM demo",
+    secondaryLabel: "Open ATEAM",
     supportPoints: [...ateamModeSupportPoints]
   }
 };
@@ -67,8 +67,9 @@ export default function ProductsPage() {
         <p className="eyebrow">Products</p>
         <h1>Products</h1>
         <p className="page-intro">
-          PeacePad and SayWetin are public products. ATEAM is the AI lab inside Una Labs that helps
-          move a rough idea into a believable next step.
+          PeacePad and SayWetin are public products. ATEAM is the local AI lab inside Una Labs, and
+          this route opens the real Office, Memory, Team, and Factory surfaces when ATEAM is running
+          on the same machine.
         </p>
       </section>
 
@@ -132,7 +133,7 @@ export default function ProductsPage() {
               </ul>
               <div className="product-actions">
                 <Link href="/ateam" prefetch={false} className="btn btn-primary">
-                  Try ATEAM demo
+                  Open ATEAM
                 </Link>
                 <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
                   Start a Project
@@ -141,16 +142,16 @@ export default function ProductsPage() {
             </div>
             <div className="product-ateam-visual">
               <div className="product-ateam-visual-mark" aria-hidden="true">
-                <Image src="/images/brand/ATeam Logo.png" alt="" width={58} height={58} />
+                <img src={ATEAM_BRAND_LOGO_PATH} alt="" width={58} height={58} />
               </div>
               <img
-                src="/images/brand/Calender Ateam.png"
+                src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
                 alt="ATEAM mission control preview"
                 className="product-ateam-preview"
               />
               <p className="muted">
-                Memory, Office, Team, and Factory stay visible in the public shell before the real
-                project scope begins.
+                Memory, Office, Team, and Factory stay visible inside the real local ATEAM shell
+                instead of being reduced to a fake public walkthrough.
               </p>
             </div>
           </div>
@@ -170,7 +171,7 @@ export default function ProductsPage() {
             Start a Project
           </Link>
           <Link href="/ateam" prefetch={false} className="btn btn-secondary">
-            Try ATEAM Demo
+            Open ATEAM
           </Link>
         </div>
       </article>

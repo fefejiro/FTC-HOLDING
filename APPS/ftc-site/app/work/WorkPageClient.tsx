@@ -78,7 +78,7 @@ export default function WorkPageClient() {
             Start a Project
           </Link>
           <Link href="/ateam" prefetch={false} className="btn btn-secondary">
-            Try ATEAM Demo
+            Open ATEAM
           </Link>
         </div>
       </article>

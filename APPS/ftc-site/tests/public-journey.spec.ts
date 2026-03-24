@@ -7,7 +7,7 @@ test.describe("Public journey", () => {
     await expect(page.locator("h1").first()).toContainText(
       "Fast websites, lead systems, and AI-assisted workflows."
     );
-    await expect(page.getByRole("link", { name: "Try ATEAM Demo" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open ATEAM" }).first()).toBeVisible();
 
     await page
       .getByLabel("Main navigation")
@@ -16,7 +16,7 @@ test.describe("Public journey", () => {
       .click({ force: true });
     await expect(page).toHaveURL("/products");
     await expect(page.getByRole("heading", { name: "ATEAM" }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Try ATEAM demo", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open ATEAM", exact: true })).toBeVisible();
 
     await page.getByRole("link", { name: "Client Launches" }).first().click();
     await expect(page).toHaveURL("/work");
@@ -24,45 +24,21 @@ test.describe("Public journey", () => {
     await expect(page.getByRole("link", { name: "View onboarding snapshot" })).toBeVisible();
   });
 
-  test("ATEAM demo carries output into Start a Project and submits successfully", async ({ page }) => {
+  test("ATEAM route exposes the real local surface shell", async ({ page }) => {
     await page.goto("/ateam");
 
-    await page.getByRole("textbox", { name: "Describe the idea" }).fill(
-      "Build a fast website and lead follow-up system for a home services business that needs more booked calls."
-    );
-    await page.getByLabel("Category").selectOption("lead-automation");
-    await page.getByRole("button", { name: "Generate demo output" }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "ATEAM inside Una Labs opens the actual local product, not a fake demo."
+      })
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /Memory/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Factory/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retry local ATEAM" })).toBeVisible();
 
-    await expect(page.getByRole("heading", { name: "Clear next step for your idea" })).toBeVisible({
-      timeout: 10000
-    });
-    await expect(page.getByText("Local Services Lead Engine")).toBeVisible();
-
-    await page.getByRole("link", { name: "Continue with this idea" }).click();
-    await expect(page).toHaveURL(/\/work-with-ftc\?from=ateam/);
-
-    await expect(page.getByText("Prefilled from your ATEAM demo. Edit anything before submitting.")).toBeVisible();
-    await expect(page.getByLabel("Project brief")).toContainText(
-      "Recommended lane: Local Services Lead Engine"
-    );
-
-    await page.getByLabel("Name", { exact: true }).fill("Integration Tester");
-    await page.getByLabel("Email", { exact: true }).fill("hello@unalabs.cloud");
-    await page.getByLabel("Company or project name", { exact: true }).fill("Home Service Growth");
-    await page.getByLabel("Timeline").selectOption("2-4-weeks");
-    await page.getByLabel("Budget range").selectOption("2500-5000");
-    await page.getByRole("textbox", { name: "Optional notes" }).fill(
-      "Need the first phase to focus on booked-call conversion."
-    );
-
-    await page.waitForTimeout(900);
-    await page.getByRole("button", { name: "Submit project request" }).click();
-
-    const successCard = page.getByRole("status");
-    await expect(successCard.getByRole("heading", { name: "Una Labs has your project brief." })).toBeVisible();
-    await expect(successCard.getByText("Expected reply: within 1 business day.")).toBeVisible();
-    await expect(successCard.getByText(/^UL-\d{8}-/)).toBeVisible();
-    await expect(successCard.getByText("Local Services Lead Engine", { exact: true })).toBeVisible();
+    await page.goto("/ateam/factory");
+    await expect(page).toHaveURL("/ateam/factory");
+    await expect(page.getByRole("link", { name: /Factory/i })).toHaveAttribute("aria-current", "page");
   });
 
   test("mobile navigation still exposes the core public routes", async ({ page }) => {
@@ -76,7 +52,9 @@ test.describe("Public journey", () => {
     await mobileDialog.getByRole("link", { name: "ATEAM" }).click();
     await expect(page).toHaveURL("/ateam");
     await expect(
-      page.getByRole("heading", { name: "ATEAM is the AI lab where rough ideas become clear next steps." })
+      page.getByRole("heading", {
+        name: "ATEAM inside Una Labs opens the actual local product, not a fake demo."
+      })
     ).toBeVisible();
   });
 });

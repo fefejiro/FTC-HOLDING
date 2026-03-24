@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../lib/recentWork";
+import { ATEAM_BRAND_LOGO_PATH, ATEAM_MISSION_CONTROL_PREVIEW_PATH } from "../lib/ateamEmbed";
 import { ateamModeStages, ateamModeSummary, ateamModeSupportPoints } from "../lib/ateamMode";
 
 const serviceLanes = [
@@ -38,7 +39,7 @@ const serviceLanes = [
       "Clear next step before build begins"
     ],
     href: "/ateam",
-    cta: "Try ATEAM demo"
+    cta: "Open ATEAM"
   }
 ] as const;
 
@@ -90,7 +91,7 @@ export default function HomePage() {
                     Start a Project
                   </Link>
                   <Link href="/ateam" prefetch={false} className="btn btn-secondary">
-                    Try ATEAM Demo
+                    Open ATEAM
                   </Link>
                   <Link href="/work" prefetch={false} className="inline-link">
                     See how it works
@@ -105,7 +106,7 @@ export default function HomePage() {
               <div className="hero-media-card hero-media-card--ateam">
                 <p className="collage-label">Mission Control preview</p>
                 <img
-                  src="/images/brand/Calender Ateam.png"
+                  src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
                   alt="ATEAM mission control preview"
                   className="hero-media-image"
                 />
@@ -113,8 +114,8 @@ export default function HomePage() {
                   <p className="proof-label">Inside ATEAM</p>
                   <h2>The AI lab inside Una Labs where rough ideas become clear next steps.</h2>
                   <p className="hero-media-caption">
-                    {ateamModeSummary} Public shell first, then a clean handoff into a real project
-                    request.
+                    {ateamModeSummary} Open the real local product surfaces from here instead of a
+                    recreated demo shell.
                   </p>
                 </div>
               </div>
@@ -231,7 +232,7 @@ export default function HomePage() {
             ))}
             <article className="card proof-card proof-card--featured-ateam">
               <div className="proof-card-ateam-visual" aria-hidden="true">
-                <img src="/images/brand/ATeam Logo.png" alt="" />
+                <img src={ATEAM_BRAND_LOGO_PATH} alt="" />
               </div>
               <p className="proof-label">ATEAM</p>
               <h3>The AI lab where rough ideas become clear next steps.</h3>
@@ -246,7 +247,7 @@ export default function HomePage() {
                 ))}
               </div>
               <Link href="/ateam" prefetch={false} className="btn btn-primary">
-                Try ATEAM Demo
+                Open ATEAM
               </Link>
             </article>
           </div>
@@ -258,11 +259,11 @@ export default function HomePage() {
           <article className="card ateam-preview-band">
             <div className="ateam-preview-band-copy">
               <p className="eyebrow">Inside ATEAM</p>
-              <h2>See the ATEAM surfaces that drive Una Labs before you ever start a build.</h2>
+              <h2>Open the real ATEAM surfaces that drive Una Labs from this route.</h2>
               <p className="muted">
-                ATEAM is part of Una Labs, not a detached step explainer. The public demo exposes
-                Memory, Office, Team, and Factory in a lighter shell without giving away every
-                internal operator control.
+                ATEAM is part of Una Labs, not a detached step explainer. This route is meant to
+                hand you into the real local ATEAM surfaces instead of replacing them with marketing
+                cards.
               </p>
             </div>
             <div className="ateam-preview-band-steps" aria-label="ATEAM inside Una Labs">
@@ -276,7 +277,7 @@ export default function HomePage() {
             </div>
             <div className="product-actions">
               <Link href="/ateam" prefetch={false} className="btn btn-primary">
-                Try ATEAM Demo
+                Open ATEAM
               </Link>
               <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
                 Start a Project
@@ -302,7 +303,7 @@ export default function HomePage() {
                 Start a Project
               </Link>
               <Link href="/ateam" prefetch={false} className="btn btn-secondary">
-                Try ATEAM Demo
+                Open ATEAM
               </Link>
             </div>
           </article>
