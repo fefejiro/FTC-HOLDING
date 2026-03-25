@@ -6,7 +6,6 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Write-Info($msg) { Write-Host "[info] $msg" -ForegroundColor Cyan }
-function Write-Warn($msg) { Write-Host "[warn] $msg" -ForegroundColor Yellow }
 function Write-Err($msg) { Write-Host "[error] $msg" -ForegroundColor Red }
 
 function Resolve-RepoRoot {
@@ -19,29 +18,6 @@ function Resolve-RepoRoot {
   }
   if (-not $candidate) { throw "Repo root not found (expected DOCS\\linkedin)." }
   return $candidate
-}
-
-function Assert-DedicatedBot {
-  param([string]$Token)
-  if (-not $Token) { return }
-  if ($env:OPENCLAW_TELEGRAM_BOT_TOKEN -and $env:OPENCLAW_TELEGRAM_BOT_TOKEN -eq $Token) {
-    Write-Err "TELEGRAM_BOT_TOKEN matches OPENCLAW_TELEGRAM_BOT_TOKEN. Use a dedicated bot for LinkedIn automation."
-    exit 1
-  }
-  if ($env:OPENCLAW_BOT_TOKEN -and $env:OPENCLAW_BOT_TOKEN -eq $Token) {
-    Write-Err "TELEGRAM_BOT_TOKEN matches OPENCLAW_BOT_TOKEN. Use a dedicated bot for LinkedIn automation."
-    exit 1
-  }
-  $openclawConfigPath = Join-Path $env:USERPROFILE ".openclaw\\openclaw.json"
-  if (Test-Path $openclawConfigPath) {
-    try {
-      $raw = Get-Content $openclawConfigPath -Raw
-      if ($raw -match [regex]::Escape($Token)) {
-        Write-Err "TELEGRAM_BOT_TOKEN appears in OpenClaw config. Use a dedicated bot for LinkedIn automation."
-        exit 1
-      }
-    } catch {}
-  }
 }
 
 function Ensure-LocalDir($path) {
@@ -89,7 +65,6 @@ $queuePath = Join-Path $RepoRoot "DOCS\\linkedin\\UNALABS_POST_QUEUE_LOG.md"
 Ensure-LocalDir $localStateDir
 
 if (-not $TelegramToken) { Write-Err "Missing TELEGRAM_BOT_TOKEN"; exit 1 }
-Assert-DedicatedBot -Token $TelegramToken
 if (-not (Test-Path $lastDigestPath)) { Write-Err "Missing last digest state: $lastDigestPath"; exit 1 }
 
 $lastDigest = Get-Content $lastDigestPath | ConvertFrom-Json

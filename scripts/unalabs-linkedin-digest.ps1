@@ -9,7 +9,6 @@ param(
   [int]$RetryDelaySec = 1,
   [string]$TelegramToken = $env:TELEGRAM_BOT_TOKEN,
   [string]$TelegramChatId = $env:TELEGRAM_CHAT_ID,
-  [string]$OpenClawProfile = $env:OPENCLAW_PROFILE,
   [switch]$NoTelegram,
   [switch]$DryRun
 )
@@ -34,29 +33,6 @@ function Resolve-RepoRoot {
   return $candidate
 }
 
-function Assert-DedicatedBot {
-  param([string]$Token)
-  if (-not $Token) { return }
-  if ($env:OPENCLAW_TELEGRAM_BOT_TOKEN -and $env:OPENCLAW_TELEGRAM_BOT_TOKEN -eq $Token) {
-    Write-Err "TELEGRAM_BOT_TOKEN matches OPENCLAW_TELEGRAM_BOT_TOKEN. Use a dedicated bot for LinkedIn automation."
-    exit 1
-  }
-  if ($env:OPENCLAW_BOT_TOKEN -and $env:OPENCLAW_BOT_TOKEN -eq $Token) {
-    Write-Err "TELEGRAM_BOT_TOKEN matches OPENCLAW_BOT_TOKEN. Use a dedicated bot for LinkedIn automation."
-    exit 1
-  }
-  $openclawConfigPath = Join-Path $env:USERPROFILE ".openclaw\\openclaw.json"
-  if (Test-Path $openclawConfigPath) {
-    try {
-      $raw = Get-Content $openclawConfigPath -Raw
-      if ($raw -match [regex]::Escape($Token)) {
-        Write-Err "TELEGRAM_BOT_TOKEN appears in OpenClaw config. Use a dedicated bot for LinkedIn automation."
-        exit 1
-      }
-    } catch {}
-  }
-}
-
 function Get-TextOrEmpty($value) {
   if ($null -eq $value) { return "" }
   return "$value"
@@ -65,6 +41,22 @@ function Get-TextOrEmpty($value) {
 function Strip-Html($text) {
   if (-not $text) { return "" }
   return ($text -replace "<[^>]+>", " " -replace "\s+", " ").Trim()
+}
+
+function Limit-Text {
+  param(
+    [string]$Text,
+    [int]$MaxLength = 220
+  )
+
+  $trimmed = ($Text -replace "\s+", " ").Trim()
+  if ([string]::IsNullOrWhiteSpace($trimmed)) {
+    return ""
+  }
+  if ($trimmed.Length -le $MaxLength) {
+    return $trimmed
+  }
+  return ($trimmed.Substring(0, $MaxLength - 1).TrimEnd() + "...")
 }
 
 function Get-RssItems {
@@ -163,37 +155,6 @@ function Ensure-LocalDir($path) {
   if (-not (Test-Path $path)) { New-Item -ItemType Directory -Path $path -Force | Out-Null }
 }
 
-function Invoke-OpenClawDrafts {
-  param(
-    [string]$Prompt,
-    [string]$Profile
-  )
-
-  $args = @()
-  if ($Profile) {
-    $args += "--profile"
-    $args += $Profile
-  }
-  $args += @("agent","--message",$Prompt,"--json","--thinking","minimal")
-
-  $raw = & openclaw @args 2>&1
-  try {
-    $obj = $raw | ConvertFrom-Json -ErrorAction Stop
-    if ($obj.drafts) { return $obj }
-    if ($obj.reply -and $obj.reply.content) {
-      $inner = $obj.reply.content | ConvertFrom-Json -ErrorAction Stop
-      return $inner
-    }
-    if ($obj.content) {
-      $inner = $obj.content | ConvertFrom-Json -ErrorAction Stop
-      return $inner
-    }
-  } catch {
-    return @{ raw = $raw }
-  }
-  return @{ raw = $raw }
-}
-
 function Send-Telegram {
   param(
     [string]$Token,
@@ -228,10 +189,88 @@ function Split-Text($text, [int]$maxLen = 3500) {
   return $chunks
 }
 
+function Get-OperatorTakeaway {
+  param(
+    [int]$Index,
+    [pscustomobject]$Item
+  )
+
+  $summary = Limit-Text -Text $Item.Summary -MaxLength 140
+  switch ($Index) {
+    0 { return "Use this to frame the main shift operators should care about this week: $summary" }
+    1 { return "Translate the signal into a concrete delivery or automation implication for clients: $summary" }
+    default { return "Keep the post practical and decision-oriented instead of hype-heavy: $summary" }
+  }
+}
+
+function Build-LocalDrafts {
+  param(
+    [pscustomobject[]]$Items,
+    [switch]$DryRun
+  )
+
+  if ($DryRun) {
+    return @(
+      @{
+        topic = "Dry run"
+        headline = "Dry run headline"
+        post = "REVIEW REQUIRED`n`nDry run content."
+        alt = "Dry run alt"
+        imageIdea = "Dry run image idea"
+      }
+    )
+  }
+
+  $draftCount = [Math]::Min(3, $Items.Count)
+  $drafts = @()
+  for ($idx = 0; $idx -lt $draftCount; $idx++) {
+    $item = $Items[$idx]
+    $headline = Limit-Text -Text $item.Title -MaxLength 90
+    $summary = Limit-Text -Text $item.Summary -MaxLength 180
+    if ([string]::IsNullOrWhiteSpace($summary)) {
+      $summary = "A meaningful shift is happening here, and the operator takeaway is worth a quick review."
+    }
+    $takeaway = Get-OperatorTakeaway -Index $idx -Item $item
+    $post = @"
+REVIEW REQUIRED
+
+$headline
+
+Why it matters:
+$summary
+
+Operator takeaway:
+$takeaway
+
+Source: $($item.Link)
+"@.Trim()
+
+    $drafts += @{
+      topic = $item.Title
+      headline = $headline
+      post = $post
+      alt = "Editorial card summarizing '$headline' for the Una Labs LinkedIn feed."
+      imageIdea = "Clean editorial card with the headline, source label '$($item.Source)', and a restrained AI operations visual."
+    }
+  }
+
+  return $drafts
+}
+
+function Score-And-Select($items, $nowValue, $topNValue) {
+  $scored = $items | ForEach-Object {
+    $text = "$($_.Title) $($_.Summary)"
+    $ageHours = [math]::Max(0, ($nowValue - $_.Published).TotalHours)
+    $score = (Get-KeywordScore $text) * 2 + (Get-RecencyScore $ageHours) * 2 + $_.Priority
+    $_ | Add-Member -NotePropertyName Score -NotePropertyValue $score -Force
+    $_
+  }
+  return $scored | Sort-Object Score -Descending | Select-Object -First $topNValue
+}
+
 $RepoRoot = Resolve-RepoRoot -StartPath $PSScriptRoot
 
 $sourcesPath = Join-Path $RepoRoot "DOCS\\linkedin\\UNALABS_AI_NEWS_SOURCES.json"
-$templatePath = Join-Path $RepoRoot "DOCS\\linkedin\\UNALABS_LINKEDIN_PROMPT_TEMPLATE.md"
 $dailyDir = Join-Path $RepoRoot "DOCS\\linkedin\\daily"
 $localStateDir = Join-Path $RepoRoot "DOCS\\linkedin\\.local"
 $lastDigestPath = Join-Path $localStateDir "last_digest.json"
@@ -239,14 +278,9 @@ $lastSuccessPath = Join-Path $localStateDir "last_success.json"
 $approvalsStatePath = Join-Path $localStateDir "approvals_state.json"
 
 if (-not (Test-Path $sourcesPath)) { Write-Err "Missing sources file: $sourcesPath"; exit 1 }
-if (-not (Test-Path $templatePath)) { Write-Err "Missing template file: $templatePath"; exit 1 }
 
 Ensure-LocalDir $dailyDir
 Ensure-LocalDir $localStateDir
-
-if (-not $NoTelegram -and -not $DryRun) {
-  Assert-DedicatedBot -Token $TelegramToken
-}
 
 $sources = Get-Content $sourcesPath | ConvertFrom-Json
 if ($MaxSources -gt 0) {
@@ -277,17 +311,6 @@ foreach ($item in $itemsWithDates) {
   }
 }
 
-function Score-And-Select($items, $nowValue, $topNValue) {
-  $scored = $items | ForEach-Object {
-    $text = "$($_.Title) $($_.Summary)"
-    $ageHours = [math]::Max(0, ($nowValue - $_.Published).TotalHours)
-    $score = (Get-KeywordScore $text) * 2 + (Get-RecencyScore $ageHours) * 2 + $_.Priority
-    $_ | Add-Member -NotePropertyName Score -NotePropertyValue $score -Force
-    $_
-  }
-  return $scored | Sort-Object Score -Descending | Select-Object -First $topNValue
-}
-
 $cutoffPrimary = $now.AddHours(-1 * $LookbackHours)
 $primaryItems = $unique | Where-Object { $_.Published -ge $cutoffPrimary }
 $selected = Score-And-Select $primaryItems $now $TopN
@@ -304,7 +327,6 @@ if ($selected.Count -lt $MinItems) {
 $usedLastSuccess = $false
 $fallbackFrom = $null
 $drafts = $null
-$rawOutput = $null
 
 if (-not $selected -or $selected.Count -eq 0) {
   if (Test-Path $lastSuccessPath) {
@@ -325,31 +347,8 @@ if (-not $selected -or $selected.Count -eq 0) {
 }
 
 if (-not $drafts) {
-  if ($DryRun) {
-    $drafts = @(
-      @{
-        topic = "Dry run"
-        headline = "Dry run headline"
-        post = "REVIEW REQUIRED`n`nDry run content."
-        alt = "Dry run alt"
-        imageIdea = "Dry run image idea"
-      }
-    )
-  } else {
-    try { & openclaw agent --help | Out-Null } catch {
-      Write-Err "OpenClaw agent command not available. Make sure OpenClaw is installed and the gateway is running."
-      exit 1
-    }
-    Write-Info "Generating drafts with OpenClaw..."
-    $draftResult = Invoke-OpenClawDrafts -Prompt (Get-Content $templatePath -Raw).Replace("{{ITEMS}}", ($selected | ForEach-Object {
-      "Title: $($_.Title)`nSource: $($_.Source)`nPublished: $($_.Published.ToString("yyyy-MM-dd HH:mm"))`nLink: $($_.Link)`nSummary: $($_.Summary)`n"
-    } | Out-String)) -Profile $OpenClawProfile
-    if ($draftResult.drafts) {
-      $drafts = @($draftResult.drafts)
-    } else {
-      $rawOutput = $draftResult.raw
-    }
-  }
+  Write-Info "Generating drafts with the local digest drafter..."
+  $drafts = Build-LocalDrafts -Items $selected -DryRun:$DryRun
 }
 
 $dateStr = $now.ToString("yyyy-MM-dd")
@@ -365,19 +364,14 @@ $archive += "## Selected topics`n"
 $archive += ($selected | ForEach-Object { "- $($_.Title) - $($_.Source) ($($_.Link))" }) -join "`n"
 $archive += "`n`n## Drafts`n"
 
-if ($drafts) {
-  $idx = 1
-  foreach ($d in $drafts) {
-    $archive += "### Draft $idx`n"
-    $archive += "**Headline:** $($d.headline)`n`n"
-    $archive += "**Post:**`n$($d.post)`n`n"
-    if ($d.alt) { $archive += "**Alt:**`n$($d.alt)`n`n" }
-    if ($d.imageIdea) { $archive += "**Image idea:** $($d.imageIdea)`n`n" }
-    $idx++
-  }
-} else {
-  $archive += "OpenClaw output could not be parsed.`n`n"
-  $archive += $rawOutput
+$idx = 1
+foreach ($d in $drafts) {
+  $archive += "### Draft $idx`n"
+  $archive += "**Headline:** $($d.headline)`n`n"
+  $archive += "**Post:**`n$($d.post)`n`n"
+  if ($d.alt) { $archive += "**Alt:**`n$($d.alt)`n`n" }
+  if ($d.imageIdea) { $archive += "**Image idea:** $($d.imageIdea)`n`n" }
+  $idx++
 }
 
 Set-Content -Path $dailyPath -Value $archive -Encoding UTF8
@@ -425,34 +419,29 @@ DRAFTS - REVIEW REQUIRED
     } elseif ($usedFallbackLookback) {
       $digest = "Used extended lookback window for this digest.`n`n" + $digest
     }
-    if ($drafts) {
-      $idx = 1
-      foreach ($d in $drafts) {
-        $digest += "`nDraft $idx`n"
-        $digest += "Headline: $($d.headline)`n"
-        $digest += "$($d.post)`n"
-        if ($d.alt) { $digest += "`nAlt: $($d.alt)`n" }
-        if ($d.imageIdea) { $digest += "`nImage idea: $($d.imageIdea)`n" }
-        $idx++
-      }
-    } else {
-      $digest += "`nOpenClaw output could not be parsed. Check daily archive."
+
+    $idx = 1
+    foreach ($d in $drafts) {
+      $digest += "`nDraft $idx`n"
+      $digest += "Headline: $($d.headline)`n"
+      $digest += "$($d.post)`n"
+      if ($d.alt) { $digest += "`nAlt: $($d.alt)`n" }
+      if ($d.imageIdea) { $digest += "`nImage idea: $($d.imageIdea)`n" }
+      $idx++
     }
 
     foreach ($chunk in (Split-Text $digest)) {
       Send-Telegram -Token $TelegramToken -ChatId $TelegramChatId -Text $chunk
     }
 
-    if ($drafts) {
-      $replyMarkup = @{ inline_keyboard = @() }
-      for ($idx = 1; $idx -le $drafts.Count; $idx++) {
-        $replyMarkup.inline_keyboard += ,@(
-          @{ text = "Approve $idx"; callback_data = "approve:$idx" },
-          @{ text = "Hold $idx"; callback_data = "hold:$idx" }
-        )
-      }
-      Send-Telegram -Token $TelegramToken -ChatId $TelegramChatId -Text "Review actions for ${dateStr}:" -ReplyMarkup $replyMarkup
+    $replyMarkup = @{ inline_keyboard = @() }
+    for ($idx = 1; $idx -le $drafts.Count; $idx++) {
+      $replyMarkup.inline_keyboard += ,@(
+        @{ text = "Approve $idx"; callback_data = "approve:$idx" },
+        @{ text = "Hold $idx"; callback_data = "hold:$idx" }
+      )
     }
+    Send-Telegram -Token $TelegramToken -ChatId $TelegramChatId -Text "Review actions for ${dateStr}:" -ReplyMarkup $replyMarkup
   }
 }
 
