@@ -1,8 +1,5 @@
 import { redirect } from "next/navigation";
-<<<<<<< HEAD
-=======
 import { isAteamOperatorEnabled } from "../../../lib/ateamOperator";
->>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
 
 type RouteProps = {
   params: {
@@ -17,11 +14,8 @@ export default function AteamSurfacePage({ params }: RouteProps) {
   if (!safeSurface) {
     redirect("/ateam");
   }
-<<<<<<< HEAD
-=======
   if (!isAteamOperatorEnabled()) {
     redirect("/ateam");
   }
->>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
   redirect(`/ateam/operator/${safeSurface}`);
 }

@@ -40,20 +40,10 @@ const projectTypeOptions = [
 function buildDemoPrefilledBrief(prefill: AteamDemoHandoffPayload<AteamDemoOutput>) {
   const lines = [
     `Idea: ${prefill.idea}`,
-    `Category: ${prefill.categoryLabel}`,
-    `Recommended lane: ${prefill.output?.recommendedLane ?? prefill.categoryLabel}`,
-    "",
+    `Lane: ${prefill.output?.recommendedLane ?? prefill.categoryLabel}`,
     `Summary: ${prefill.output?.summary ?? ""}`,
     `Direction: ${prefill.output?.recommendedDirection ?? ""}`,
-    "",
-    "Suggested phases:",
-    ...(prefill.output?.phases ?? []).map((item) => `- ${item}`),
-    "",
-    "Likely deliverables:",
-    ...(prefill.output?.deliverables ?? []).map((item) => `- ${item}`),
-    "",
-    "Suggested stack:",
-    ...(prefill.output?.stack ?? []).map((item) => `- ${item}`)
+    `Deliverables: ${(prefill.output?.deliverables ?? []).slice(0, 3).join(", ")}`
   ];
 
   return lines.join("\n").trim();
@@ -62,43 +52,15 @@ function buildDemoPrefilledBrief(prefill: AteamDemoHandoffPayload<AteamDemoOutpu
 function buildWorkflowPrefilledBrief(prefill: AteamWorkflowHandoffPayload) {
   const lines = [
     `Idea: ${prefill.idea}`,
-<<<<<<< HEAD
-    `ATEAM workflow run: ${prefill.runId}`,
-    `Category: ${prefill.categoryLabel}`,
-    `Recommended lane: ${prefill.recommendedLane}`,
-    "",
-    `Summary: ${prefill.brief.summary}`,
-    `Audience: ${prefill.brief.audience}`,
-    `Primary goal: ${prefill.brief.primaryGoal}`,
-    "",
-    "Goals:",
-    ...(prefill.brief.goals ?? []).map((item) => `- ${item}`),
-    "",
-    "Constraints:",
-    ...(prefill.brief.constraints ?? []).map((item) => `- ${item}`),
-    "",
-    "Success criteria:",
-    ...(prefill.brief.successCriteria ?? []).map((item) => `- ${item}`),
-    "",
-    "Phased plan:",
-    ...(prefill.brief.phasedPlan ?? []).map((item) => `- ${item}`),
-    "",
-    "Generated pack:",
-    `- Mockup: ${prefill.artifacts.mockupTitle}`,
-    `- Prototype: ${prefill.artifacts.prototypeTitle}`,
-    `- Smoke summary: ${prefill.artifacts.smokeSummary}`,
-    `- Operator note: ${prefill.artifacts.docTitle}`,
-    "",
-    "Suggested next steps:",
-    ...(prefill.nextSteps ?? []).map((item) => `- ${item}`)
-=======
     `ATEAM run: ${prefill.runId}`,
     `Lane: ${prefill.recommendedLane}`,
+    `Quick read: ${prefill.brief.quickVerdict || "Go for a scoped first pass"}`,
     `Summary: ${prefill.brief.summary}`,
     `Primary goal: ${prefill.brief.primaryGoal}`,
+    `Likely value: ${prefill.brief.likelyUserValue || ""}`,
+    `Recommended direction: ${prefill.brief.recommendedDirection || ""}`,
     `Output pack: ${prefill.artifacts.mockupTitle}; ${prefill.artifacts.prototypeTitle}.`,
     `Next step: ${(prefill.nextSteps ?? [])[0] || "Review the pack and decide the fastest scoped next move."}`
->>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
   ];
 
   return lines.join("\n").trim();
@@ -276,7 +238,10 @@ export default function WorkIntakeForm() {
           </div>
           <div className="intake-success-brief">
             <p className="intake-success-label">Submitted summary</p>
-            <p>{successSummary.projectName ? `${successSummary.projectName}: ` : ""}{successSummary.projectBrief}</p>
+            <p>
+              {successSummary.projectName ? `${successSummary.projectName}: ` : ""}
+              {successSummary.projectBrief}
+            </p>
           </div>
           {successSummary.confirmationSent ? (
             <p className="muted">Confirmation email sent.</p>
@@ -316,7 +281,7 @@ export default function WorkIntakeForm() {
       <div className="intake-form-grid">
         <label>
           <span>Name</span>
-          <input type="text" name="name" autoComplete="name" placeholder="Your name" required />
+          <input type="text" name="name" autoComplete="name" placeholder="Your name" />
         </label>
         <label>
           <span>Email</span>
@@ -328,210 +293,191 @@ export default function WorkIntakeForm() {
             required
           />
         </label>
-        <label>
-          <span>Company or project name</span>
-          <input
-            type="text"
-            name="projectName"
-            autoComplete="organization"
-            placeholder="Business name, product, or project title"
-          />
-        </label>
-        {isWorkflowPrefill ? (
-          <label>
-            <span>ATEAM lane</span>
-            <input type="text" value={projectType} readOnly />
-            <input type="hidden" name="projectType" value={projectType} />
-          </label>
-        ) : (
-          <label>
-            <span>Project type</span>
-            <select
-              name="projectType"
-              value={projectType}
-              onChange={(event) => setProjectType(event.target.value)}
-              className="dark-select"
-            >
-              {projectTypeOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        {!isWorkflowPrefill ? (
+          <>
+            <label>
+              <span>Company or project name</span>
+              <input
+                type="text"
+                name="projectName"
+                autoComplete="organization"
+                placeholder="Business name, product, or project title"
+              />
+            </label>
+            <label>
+              <span>Project type</span>
+              <select
+                name="projectType"
+                value={projectType}
+                onChange={(event) => setProjectType(event.target.value)}
+                className="dark-select"
+              >
+                {projectTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        ) : null}
       </div>
 
-      <div className="intake-field-group">
-        <label htmlFor="project-brief">
-          <span>Project brief</span>
-        </label>
-        {prefill ? (
-          <div className="intake-prefill-note">
-<<<<<<< HEAD
-            Prefilled from your ATEAM {prefill.kind === "workflow" ? "workflow run" : "demo"}. Edit anything before submitting.
-=======
-            {prefill.kind === "workflow"
-              ? "ATEAM fast pass is attached. You only need your contact details and a quick check before sending."
-              : "ATEAM demo output is attached. Edit anything before submitting."}
->>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
+      {isWorkflowPrefill && prefill?.kind === "workflow" ? (
+        <div className="intake-prefill-card">
+          <div className="intake-prefill-card-head">
+            <div>
+              <p className="card-kicker">ATEAM fast pass attached</p>
+              <h3>{prefill.value.recommendedLane}</h3>
+              <p className="muted">
+                {prefill.value.brief.quickVerdict || "Go for a scoped first pass"}.
+                {" "}
+                {prefill.value.brief.recommendedDirection || prefill.value.brief.summary}
+              </p>
+            </div>
             <button
               type="button"
               className="intake-prefill-clear"
               onClick={() => {
-                if (prefill.kind === "workflow") {
-                  clearAteamWorkflowHandoff();
-                } else {
-                  clearAteamDemoHandoff();
-                }
+                clearAteamWorkflowHandoff();
                 setPrefill(null);
               }}
             >
               Clear
             </button>
           </div>
-        ) : null}
-        <textarea
-          id="project-brief"
-          name="projectIdea"
-          rows={isWorkflowPrefill ? 4 : 8}
-          required
-          minLength={20}
-          value={projectBrief}
-          onChange={(event) => setProjectBrief(event.target.value)}
-          placeholder={
-            "Describe the project, what success looks like, and anything that should happen next."
-          }
-        />
-      </div>
 
-      {prefill ? (
-        <details className="ateam-brief-details">
-<<<<<<< HEAD
-          <summary>ATEAM {prefill.kind === "workflow" ? "workflow pack" : "demo brief"} attached</summary>
-=======
-          <summary>View attached ATEAM {prefill.kind === "workflow" ? "workflow pack" : "demo brief"}</summary>
->>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
-          <div className="ateam-brief-body">
-            {prefill.kind === "workflow" ? (
-              <>
-                <p className="muted">
-                  Run: {prefill.value.runId} · Category: {prefill.value.categoryLabel} · Recommended lane: {prefill.value.recommendedLane}
-                </p>
-                <div className="ateam-brief-grid">
-                  <div>
-                    <p className="ateam-brief-title">Summary</p>
-                    <p>{prefill.value.brief.summary}</p>
-                    <p className="muted">Audience: {prefill.value.brief.audience}</p>
-                  </div>
-                  <div>
-                    <p className="ateam-brief-title">Goals</p>
-                    <ul className="ateam-brief-list">
-                      {(prefill.value.brief.goals ?? []).slice(0, 4).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="ateam-brief-title">Constraints</p>
-                    <ul className="ateam-brief-list">
-                      {(prefill.value.brief.constraints ?? []).slice(0, 4).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="ateam-brief-title">Generated pack</p>
-                    <ul className="ateam-brief-list">
-                      <li>{prefill.value.artifacts.mockupTitle}</li>
-                      <li>{prefill.value.artifacts.prototypeTitle}</li>
-                      <li>{prefill.value.artifacts.docTitle}</li>
-                    </ul>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="muted">
-                  Category: {prefill.value.categoryLabel}
-                  {prefill.value.output?.recommendedLane ? ` · Recommended lane: ${prefill.value.output.recommendedLane}` : ""}
-                </p>
-                <div className="ateam-brief-grid">
-                  <div>
-                    <p className="ateam-brief-title">Summary</p>
-                    <p>{prefill.value.output?.summary}</p>
-                    <p className="muted">{prefill.value.output?.recommendedDirection}</p>
-                  </div>
-                  <div>
-                    <p className="ateam-brief-title">Phases</p>
-                    <ul className="ateam-brief-list">
-                      {(prefill.value.output?.phases ?? []).slice(0, 4).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="ateam-brief-title">Deliverables</p>
-                    <ul className="ateam-brief-list">
-                      {(prefill.value.output?.deliverables ?? []).slice(0, 4).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="ateam-brief-title">Suggested stack</p>
-                    <ul className="ateam-brief-list">
-                      {(prefill.value.output?.stack ?? []).slice(0, 4).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </>
-            )}
+          <div className="intake-prefill-chip-row" aria-label="Attached ATEAM pack summary">
+            <span className="intake-prefill-chip">{prefill.value.categoryLabel}</span>
+            <span className="intake-prefill-chip">{prefill.value.artifacts.mockupTitle}</span>
+            <span className="intake-prefill-chip">{prefill.value.artifacts.prototypeTitle}</span>
           </div>
-        </details>
+        </div>
       ) : null}
 
-      {isWorkflowPrefill ? (
-        <details className="ateam-brief-details">
-          <summary>Add timeline, budget, or extra notes</summary>
-          <div className="ateam-brief-body">
-            <div className="intake-form-grid">
-              <label>
-                <span>Timeline</span>
-                <select name="timeline" defaultValue="" className="dark-select">
-                  <option value="">Not sure yet</option>
-                  <option value="2-4-weeks">2-4 weeks</option>
-                  <option value="4-8-weeks">4-8 weeks</option>
-                  <option value="8-12-weeks">8-12 weeks</option>
-                  <option value="12-weeks-plus">12+ weeks</option>
-                </select>
+      {!isWorkflowPrefill ? (
+        <div className="intake-field-group">
+          <label htmlFor="project-brief">
+            <span>Project brief</span>
+          </label>
+          {prefill && prefill.kind === "demo" ? (
+            <div className="intake-prefill-note">
+              ATEAM demo output is attached. Edit anything before submitting.
+              <button
+                type="button"
+                className="intake-prefill-clear"
+                onClick={() => {
+                  clearAteamDemoHandoff();
+                  setPrefill(null);
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          ) : null}
+          <textarea
+            id="project-brief"
+            name="projectIdea"
+            rows={8}
+            required
+            minLength={20}
+            value={projectBrief}
+            onChange={(event) => setProjectBrief(event.target.value)}
+            placeholder="Describe the project, what success looks like, and anything that should happen next."
+          />
+        </div>
+      ) : (
+        <>
+          <input type="hidden" name="projectType" value={projectType} />
+          <details className="ateam-brief-details" open>
+            <summary>Review attached ATEAM pack</summary>
+            <div className="ateam-brief-body">
+              <p className="muted">
+                Run: {prefill?.value.runId} / Category: {prefill?.value.categoryLabel} / Lane:{" "}
+                {prefill?.value.recommendedLane}
+              </p>
+              <div className="ateam-brief-grid">
+                <div>
+                  <p className="ateam-brief-title">Quick read</p>
+                  <p>{prefill?.value.brief.summary}</p>
+                  <p className="muted">{prefill?.value.brief.likelyUserValue}</p>
+                </div>
+                <div>
+                  <p className="ateam-brief-title">Generated pack</p>
+                  <ul className="ateam-brief-list">
+                    <li>{prefill?.value.artifacts.mockupTitle}</li>
+                    <li>{prefill?.value.artifacts.prototypeTitle}</li>
+                    <li>{prefill?.value.artifacts.docTitle}</li>
+                  </ul>
+                </div>
+              </div>
+
+              <label className="intake-workflow-edit" htmlFor="project-brief">
+                <span>Edit attached brief if needed</span>
               </label>
+              <textarea
+                id="project-brief"
+                name="projectIdea"
+                rows={6}
+                required
+                minLength={20}
+                value={projectBrief}
+                onChange={(event) => setProjectBrief(event.target.value)}
+                placeholder="ATEAM prefilled this brief. Tweak anything before sending."
+              />
+            </div>
+          </details>
+
+          <details className="ateam-brief-details">
+            <summary>Add project name, timeline, budget, or notes</summary>
+            <div className="ateam-brief-body">
+              <div className="intake-form-grid">
+                <label>
+                  <span>Company or project name</span>
+                  <input
+                    type="text"
+                    name="projectName"
+                    autoComplete="organization"
+                    placeholder="Optional project or company name"
+                  />
+                </label>
+                <label>
+                  <span>Timeline</span>
+                  <select name="timeline" defaultValue="" className="dark-select">
+                    <option value="">Not sure yet</option>
+                    <option value="2-4-weeks">2-4 weeks</option>
+                    <option value="4-8-weeks">4-8 weeks</option>
+                    <option value="8-12-weeks">8-12 weeks</option>
+                    <option value="12-weeks-plus">12+ weeks</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Budget range</span>
+                  <select name="budgetRange" defaultValue="not-sure-yet" className="dark-select">
+                    <option value="not-sure-yet">Not sure yet</option>
+                    <option value="0-1000">$0 - $1,000</option>
+                    <option value="1000-2500">$1,000 - $2,500</option>
+                    <option value="2500-5000">$2,500 - $5,000</option>
+                    <option value="5000-10000">$5,000 - $10,000</option>
+                    <option value="10000-plus">$10,000+</option>
+                  </select>
+                </label>
+              </div>
+
               <label>
-                <span>Budget range</span>
-                <select name="budgetRange" defaultValue="not-sure-yet" className="dark-select">
-                  <option value="not-sure-yet">Not sure yet</option>
-                  <option value="0-1000">$0 - $1,000</option>
-                  <option value="1000-2500">$1,000 - $2,500</option>
-                  <option value="2500-5000">$2,500 - $5,000</option>
-                  <option value="5000-10000">$5,000 - $10,000</option>
-                  <option value="10000-plus">$10,000+</option>
-                </select>
+                <span>Optional notes</span>
+                <textarea
+                  name="notes"
+                  rows={4}
+                  placeholder="Anything else we should know about urgency, approvals, constraints, or existing systems?"
+                />
               </label>
             </div>
+          </details>
+        </>
+      )}
 
-            <label>
-              <span>Optional notes</span>
-              <textarea
-                name="notes"
-                rows={4}
-                placeholder="Anything else we should know about urgency, constraints, approvals, or existing tools?"
-              />
-            </label>
-          </div>
-        </details>
-      ) : (
+      {!isWorkflowPrefill ? (
         <>
           <div className="intake-form-grid">
             <label>
@@ -569,7 +515,7 @@ export default function WorkIntakeForm() {
             />
           </label>
         </>
-      )}
+      ) : null}
 
       <label className="hp-field" aria-hidden="true">
         Company Website
@@ -580,7 +526,7 @@ export default function WorkIntakeForm() {
         {submitState === "submitting"
           ? "Submitting..."
           : isWorkflowPrefill
-            ? "Send to Una Labs"
+            ? "Continue with Una Labs"
             : "Submit project request"}
       </button>
 
@@ -600,12 +546,7 @@ export default function WorkIntakeForm() {
       </div>
 
       {message ? (
-        <p
-          className={submitState === "error" ? "form-feedback error" : "form-feedback success"}
-          role={submitState === "error" ? "alert" : "status"}
-        >
-          {message}
-        </p>
+        <p className={`intake-message ${submitState === "error" ? "error" : "success"}`}>{message}</p>
       ) : null}
     </form>
   );

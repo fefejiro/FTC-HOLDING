@@ -16,11 +16,7 @@ describe("workflowEngine", () => {
     });
 
     expect(category).toBe("product-app");
-<<<<<<< HEAD
-    expect(questions).toHaveLength(4);
-=======
     expect(questions).toHaveLength(2);
->>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
     expect(questions[0].id).toBe("audience");
   });
 
@@ -31,11 +27,7 @@ describe("workflowEngine", () => {
       category: "internal-tool",
       answers: {
         audience: "field operators handling incoming maintenance requests",
-<<<<<<< HEAD
-        coreOutcome: "let a team receive a ticket, assign it, and report status back quickly",
-=======
         firstWin: "let a team receive a ticket, assign it, and report status back quickly",
->>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
         constraints: "needs a phase-one version in two weeks with low setup overhead",
         signals: "the team already handles requests manually and keeps losing track of updates"
       }
@@ -69,6 +61,7 @@ describe("workflowEngine", () => {
 
     expect(brief.title).toContain("Build");
     expect(brief.recommendedLane).toBe("Internal Tool / Ops System");
+    expect(brief.quickVerdict).toBeTruthy();
     expect(pack.mockup.screens.length).toBeGreaterThanOrEqual(3);
     expect(pack.prototype.frames.length).toBe(3);
     expect(pack.smoke.checks).toHaveLength(3);

@@ -40,8 +40,6 @@ export async function proxyAteamJson(path: string, init: RequestInit = {}) {
     });
     const bodyText = await response.text();
     const contentType = response.headers.get("content-type") || "application/json";
-<<<<<<< HEAD
-=======
     const looksLikeHtml = /^\s*</.test(bodyText);
 
     if (!contentType.toLowerCase().includes("application/json") || looksLikeHtml) {
@@ -54,8 +52,6 @@ export async function proxyAteamJson(path: string, init: RequestInit = {}) {
         { status: 502 }
       );
     }
-
->>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
     return new NextResponse(bodyText, {
       status: response.status,
       headers: {

@@ -67,7 +67,7 @@ export function createWorkflowService({
     if (safeIdea.length < 12) {
       throw createError("INVALID_WORKFLOW_IDEA", "Share a bit more detail so ATEAM can shape the run.");
     }
-    const normalizedCategory = normalizeWorkflowCategory(category);
+    const normalizedCategory = normalizeWorkflowCategory(category, safeIdea);
     const preset = getWorkflowCategoryPreset(normalizedCategory);
     const questions = buildWorkflowQuestions({ idea: safeIdea, category: normalizedCategory });
 
