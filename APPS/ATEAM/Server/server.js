@@ -35,13 +35,53 @@ for (const envPath of dotenvCandidates) {
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+const PUBLIC_SERVICE_MODE = ["1", "true", "yes", "on"].includes(
+  String(process.env.ATEAM_PUBLIC_SERVICE_MODE || "").trim().toLowerCase()
+);
+
+function isPublicWorkflowRoute(pathname = "") {
+  const route = String(pathname || "/").trim();
+  if (route === "/health") return true;
+  return route === "/api/workflow" || route.startsWith("/api/workflow/");
+}
 
 app.use(express.json({ limit: "2mb" }));
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  const configuredOrigins = String(process.env.ATEAM_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+  const defaultOrigins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001"
+  ];
+  const allowedOrigins = new Set([...defaultOrigins, ...configuredOrigins]);
+  const requestOrigin = String(req.headers.origin || "").trim();
+  if (requestOrigin && allowedOrigins.has(requestOrigin)) {
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.sendStatus(204);
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-ATEAM-TENANT-ID, X-ATEAM-WORKSPACE-ID, X-ATEAM-USER-ID"
+  );
+  if (req.method === "OPTIONS") {
+    if (!requestOrigin || allowedOrigins.has(requestOrigin)) return res.sendStatus(204);
+    return res.status(403).json({ ok: false, error: "origin_not_allowed" });
+  }
+  next();
+});
+
+app.use((req, res, next) => {
+  if (PUBLIC_SERVICE_MODE && !isPublicWorkflowRoute(req.path)) {
+    return res.status(404).json({
+      ok: false,
+      error: "not_found"
+    });
+  }
   next();
 });
 
@@ -109,7 +149,14 @@ const DOCS_CATALOG = [
 const STORAGE_BACKEND = String(process.env.ATEAM_STORAGE_BACKEND || "local").trim().toLowerCase();
 const AUTH_MODE = String(process.env.ATEAM_AUTH_MODE || "local").trim().toLowerCase();
 const principalScopeMiddleware = createPrincipalScopeMiddleware({ mode: AUTH_MODE });
-app.use(["/task", "/tasks", "/agent", "/command", "/voice", "/events", "/speech", "/capability", "/content", "/api"], principalScopeMiddleware);
+app.use(["/task", "/tasks", "/agent", "/command", "/voice", "/events", "/speech", "/capability", "/content"], principalScopeMiddleware);
+app.use((req, res, next) => {
+  if (isPublicWorkflowRoute(req.path)) return next();
+  if (String(req.path || "").startsWith("/api")) {
+    return principalScopeMiddleware(req, res, next);
+  }
+  return next();
+});
 
 const {
   backend: resolvedStorageBackend,

@@ -124,31 +124,17 @@ export function buildWorkflowQuestions({ idea = "", category = "website" } = {})
   return [
     {
       id: "audience",
-      label: "Audience",
+      label: "Who it is for",
       prompt: `Who is this mainly for in "${ideaTitle}"?`,
       hint: `Keep it practical: ${preset.audienceHint}.`,
-      placeholder: "Example: restaurant owners managing table bookings on WhatsApp."
+      placeholder: "Example: busy restaurant staff handling rush-hour orders on WhatsApp."
     },
     {
-      id: "coreOutcome",
-      label: "Core outcome",
-      prompt: "What is the one thing this should definitely make easier in v1?",
-      hint: "Describe the first believable win, not the whole future product.",
-      placeholder: "Example: let someone submit a request, get a clear response, and track the status."
-    },
-    {
-      id: "constraints",
-      label: "Constraints",
-      prompt: "What constraint matters most right now: time, budget, team bandwidth, or risk?",
-      hint: "Name the constraint and why it matters.",
-      placeholder: "Example: needs a first version in two weeks with minimal setup."
-    },
-    {
-      id: "signals",
-      label: "Signals",
-      prompt: "What proof or signal tells us this is worth building now?",
-      hint: "Think demand, current pain, stakeholder push, or repeated manual work.",
-      placeholder: "Example: we already handle this manually every day and keep missing leads."
+      id: "firstWin",
+      label: "First win",
+      prompt: "What should this make clearly easier in the first version?",
+      hint: "Name the one useful win, plus the main limit if there is one.",
+      placeholder: "Example: take an order, route it to staff, and show status back fast. Keep v1 simple."
     }
   ];
 }
@@ -159,7 +145,7 @@ export function buildWorkflowBrief({ idea = "", category = "website", answers = 
   const audience = answerText(answers, "audience", preset.audienceHint, 220);
   const coreOutcome = answerText(
     answers,
-    "coreOutcome",
+    "firstWin",
     `Create a first version that can ${preset.problemFrame}.`,
     220
   );
@@ -172,7 +158,7 @@ export function buildWorkflowBrief({ idea = "", category = "website", answers = 
   const signals = answerText(
     answers,
     "signals",
-    "There is enough demand or internal pressure to justify a fast, credible first pass.",
+    "There is enough demand or repeated friction to justify a fast, credible first pass.",
     220
   );
 

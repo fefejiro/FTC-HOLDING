@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isAteamOperatorEnabled } from "../../../lib/ateamOperator";
 
 type RouteProps = {
   params: {
@@ -11,6 +12,9 @@ export const dynamicParams = true;
 export default function AteamSurfacePage({ params }: RouteProps) {
   const safeSurface = String(params.surface || "").trim().toLowerCase();
   if (!safeSurface) {
+    redirect("/ateam");
+  }
+  if (!isAteamOperatorEnabled()) {
     redirect("/ateam");
   }
   redirect(`/ateam/operator/${safeSurface}`);

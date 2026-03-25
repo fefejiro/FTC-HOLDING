@@ -16,7 +16,7 @@ describe("workflowEngine", () => {
     });
 
     expect(category).toBe("product-app");
-    expect(questions).toHaveLength(4);
+    expect(questions).toHaveLength(2);
     expect(questions[0].id).toBe("audience");
   });
 
@@ -27,7 +27,7 @@ describe("workflowEngine", () => {
       category: "internal-tool",
       answers: {
         audience: "field operators handling incoming maintenance requests",
-        coreOutcome: "let a team receive a ticket, assign it, and report status back quickly",
+        firstWin: "let a team receive a ticket, assign it, and report status back quickly",
         constraints: "needs a phase-one version in two weeks with low setup overhead",
         signals: "the team already handles requests manually and keeps losing track of updates"
       }
