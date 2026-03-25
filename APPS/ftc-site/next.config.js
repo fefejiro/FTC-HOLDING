@@ -1,10 +1,16 @@
 const trimTrailingSlash = (value = "") => String(value || "").replace(/\/+$/, "");
+const truthy = (value = "") => ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
 
 const getAteamUpstreamOrigin = () => {
   const configuredOrigin = trimTrailingSlash(process.env.ATEAM_UPSTREAM_ORIGIN || "");
   if (configuredOrigin) return configuredOrigin;
   return process.env.NODE_ENV === "development" ? "http://127.0.0.1:3000" : "";
 };
+
+const isAteamOperatorEnabled = () =>
+  process.env.NODE_ENV === "development" ||
+  truthy(process.env.ATEAM_OPERATOR_PROXY_ENABLED) ||
+  truthy(process.env.NEXT_PUBLIC_ATEAM_OPERATOR_ENABLED);
 
 module.exports = {
   reactStrictMode: true,
@@ -21,7 +27,7 @@ module.exports = {
   },
   async rewrites() {
     const ateamUpstreamOrigin = getAteamUpstreamOrigin();
-    const beforeFiles = ateamUpstreamOrigin
+    const beforeFiles = ateamUpstreamOrigin && isAteamOperatorEnabled()
       ? [
           {
             source: "/ateam/operator",

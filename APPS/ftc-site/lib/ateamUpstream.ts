@@ -40,6 +40,22 @@ export async function proxyAteamJson(path: string, init: RequestInit = {}) {
     });
     const bodyText = await response.text();
     const contentType = response.headers.get("content-type") || "application/json";
+<<<<<<< HEAD
+=======
+    const looksLikeHtml = /^\s*</.test(bodyText);
+
+    if (!contentType.toLowerCase().includes("application/json") || looksLikeHtml) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "ATEAM returned HTML instead of the workflow API. Restart the local ATEAM server on port 3000 from C:\\FTC HOLDING\\FTC-HOLDING\\APPS\\ATEAM\\Server."
+        },
+        { status: 502 }
+      );
+    }
+
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
     return new NextResponse(bodyText, {
       status: response.status,
       headers: {

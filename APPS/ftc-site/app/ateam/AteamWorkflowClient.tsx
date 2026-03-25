@@ -7,6 +7,10 @@ import {
   ATEAM_BRAND_LOGO_PATH,
   ATEAM_MISSION_CONTROL_PREVIEW_PATH
 } from "../../lib/ateamEmbed";
+<<<<<<< HEAD
+=======
+import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
 import {
   ateamWorkflowCategories,
   ateamWorkflowSteps,
@@ -20,6 +24,10 @@ import {
 } from "../../lib/ateamHandoff";
 
 type BusyState = "idle" | "starting" | "answers" | "brief" | "pack" | "handoff" | "loading";
+<<<<<<< HEAD
+=======
+type WorkflowServiceState = "checking" | "ready" | "unavailable";
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -69,10 +77,31 @@ export default function AteamWorkflowClient() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [activePrototypeFrameId, setActivePrototypeFrameId] = useState("");
+<<<<<<< HEAD
+=======
+  const [workflowServiceState, setWorkflowServiceState] = useState<WorkflowServiceState>("checking");
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
 
   const runId = String(searchParams.get("run") || "").trim();
 
   useEffect(() => {
+<<<<<<< HEAD
+=======
+    let cancelled = false;
+    requestJson<{ ok: true; runs?: WorkflowRun[] }>("/api/ateam/workflow/runs?limit=1")
+      .then(() => {
+        if (!cancelled) setWorkflowServiceState("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setWorkflowServiceState("unavailable");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
     if (!runId) return;
     let cancelled = false;
     setBusy("loading");
@@ -120,6 +149,7 @@ export default function AteamWorkflowClient() {
     [category]
   );
 
+<<<<<<< HEAD
   const briefReady = Boolean(run?.brief?.summary);
   const briefApproved = String(run?.approvals?.brief?.status || "").toLowerCase() === "approved";
   const packReady = Boolean(run?.artifacts?.prototype?.frames?.length);
@@ -127,10 +157,26 @@ export default function AteamWorkflowClient() {
   const operatorHref = run?.links?.projectId
     ? `/ateam/operator/projects?workflowRunId=${encodeURIComponent(run.id)}`
     : "/ateam/operator/projects";
+=======
+  const operatorEnabled = isAteamOperatorEnabled();
+  const packReady = Boolean(run?.artifacts?.prototype?.frames?.length);
+  const packApproved = String(run?.approvals?.pack?.status || "").toLowerCase() === "approved";
+  const workflowReady = packApproved && Number(run?.handoff?.version || 0) === 2;
+  const operatorHref = run?.id
+    ? `/ateam/operator/office?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`
+    : "/ateam/operator/office?shell=workflow";
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
   const activePrototypeFrame =
     run?.artifacts?.prototype?.frames?.find((frame) => frame.id === activePrototypeFrameId) ||
     run?.artifacts?.prototype?.frames?.[0] ||
     null;
+<<<<<<< HEAD
+=======
+  const compactMockupScreens = (run?.artifacts?.mockup?.screens || []).slice(0, 3);
+  const compactNextSteps = (run?.handoff?.nextSteps || run?.artifacts?.nextSteps || []).slice(0, 3);
+  const hasQuestions = Boolean(run?.questions?.length);
+  const quickQuestionLabel = run?.questions?.length === 1 ? "1 quick answer" : `${run?.questions?.length || 0} quick answers`;
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
 
   async function syncRun(nextRun: WorkflowRun) {
     setRun(nextRun);
@@ -145,6 +191,13 @@ export default function AteamWorkflowClient() {
   async function handleStartRun() {
     setError("");
     setNotice("");
+<<<<<<< HEAD
+=======
+    if (workflowServiceState !== "ready") {
+      setError("ATEAM fast pass is not connected on this environment yet. Use Start a Project while the hosted workflow service is being wired.");
+      return;
+    }
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
     if (idea.trim().length < 12) {
       setError("Share a bit more detail so ATEAM can shape a believable first pass.");
       return;
@@ -160,7 +213,11 @@ export default function AteamWorkflowClient() {
         })
       });
       await syncRun(payload.run);
+<<<<<<< HEAD
       setNotice("ATEAM opened a workflow run and generated the first follow-up questions.");
+=======
+      setNotice("ATEAM opened the run and asked for the last quick clarifiers.");
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -178,13 +235,18 @@ export default function AteamWorkflowClient() {
     setNotice("");
     setBusy("answers");
     try {
+<<<<<<< HEAD
       const payload = await requestJson<{ ok: true; run: WorkflowRun }>(
+=======
+      const answersPayload = await requestJson<{ ok: true; run: WorkflowRun }>(
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/answers`,
         {
           method: "POST",
           body: JSON.stringify({ answers })
         }
       );
+<<<<<<< HEAD
       await syncRun(payload.run);
       setNotice("Brief ready. Review it, then approve the lane and scope.");
     } catch (requestError) {
@@ -205,11 +267,18 @@ export default function AteamWorkflowClient() {
     setBusy("brief");
     try {
       const payload = await requestJson<{ ok: true; run: WorkflowRun }>(
+=======
+      await syncRun(answersPayload.run);
+
+      setBusy("brief");
+      const briefPayload = await requestJson<{ ok: true; run: WorkflowRun }>(
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
         {
           method: "POST",
           body: JSON.stringify({
             gate: "brief",
+<<<<<<< HEAD
             decision
           })
         }
@@ -238,12 +307,23 @@ export default function AteamWorkflowClient() {
     setBusy("pack");
     try {
       const payload = await requestJson<{ ok: true; run: WorkflowRun }>(
+=======
+            decision: "approved"
+          })
+        }
+      );
+      await syncRun(briefPayload.run);
+
+      setBusy("pack");
+      const packPayload = await requestJson<{ ok: true; run: WorkflowRun }>(
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/generate-pack`,
         {
           method: "POST",
           body: JSON.stringify({})
         }
       );
+<<<<<<< HEAD
       await syncRun(payload.run);
       setNotice("Prototype pack generated. Review the concept screens, clickable flow, smoke summary, and operator note.");
     } catch (requestError) {
@@ -264,11 +344,18 @@ export default function AteamWorkflowClient() {
     setBusy("handoff");
     try {
       const payload = await requestJson<{ ok: true; run: WorkflowRun }>(
+=======
+      await syncRun(packPayload.run);
+
+      setBusy("handoff");
+      const handoffPayload = await requestJson<{ ok: true; run: WorkflowRun }>(
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
         {
           method: "POST",
           body: JSON.stringify({
             gate: "pack",
+<<<<<<< HEAD
             decision
           })
         }
@@ -278,12 +365,27 @@ export default function AteamWorkflowClient() {
         decision === "approved"
           ? "Pack approved. You can now carry this run straight into Una Labs intake."
           : "Pack sent back for another pass. Adjust the scope or regenerate once the brief is tighter."
+=======
+            decision: "approved"
+          })
+        }
+      );
+      await syncRun(handoffPayload.run);
+      setNotice(
+        operatorEnabled
+          ? "ATEAM fast pass is ready. Review the output, send it to Una Labs, or open the operator workflow."
+          : "ATEAM fast pass is ready. Review the output and send it to Una Labs."
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
       );
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
+<<<<<<< HEAD
           : "Unable to record the pack decision."
+=======
+          : "Unable to save workflow answers."
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
       );
     } finally {
       setBusy("idle");
@@ -304,23 +406,44 @@ export default function AteamWorkflowClient() {
             <img src={ATEAM_BRAND_LOGO_PATH} alt="" width={64} height={64} />
           </div>
           <div className="ateam-hero-heading">
+<<<<<<< HEAD
             <p className="eyebrow">Public to operator workflow</p>
             <h1>ATEAM now runs a real intake-to-handoff pass inside Una Labs.</h1>
             <p className="lead">
               Start with one idea. ATEAM will ask focused follow-ups, shape the brief, wait for
               human approval, generate a prototype pack, and carry that run into Una Labs intake.
+=======
+            <p className="eyebrow">ATEAM fast pass</p>
+            <h1>Type one idea. ATEAM turns it into a quick output.</h1>
+            <p className="lead">
+              Keep it tight. Give ATEAM the idea, answer a couple of clarifiers, and get a compact
+              brief, concept direction, and the fastest next move.
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
             </p>
           </div>
         </div>
 
         <section className="card ateam-workflow-hero-card">
           <div className="ateam-workflow-hero-copy">
+<<<<<<< HEAD
             <p className="card-kicker">How this run works</p>
             <h2>Public workflow in front. Operator Mission Control behind it.</h2>
             <ul className="ateam-hero-list">
               <li>The public route no longer depends on localhost.</li>
               <li>Brief approval and pack approval stay human-gated.</li>
               <li>Approved runs create real operator work inside Projects, Office, Pipeline, and Factory.</li>
+=======
+            <p className="card-kicker">What happens</p>
+            <h2>Public input in front. Office and Factory behind it.</h2>
+            <ul className="ateam-hero-list">
+              <li>ATEAM asks only the shortest clarifiers it needs.</li>
+              <li>The brief and pack are built automatically in one fast pass.</li>
+              <li>
+                {operatorEnabled
+                  ? "Operator follow-through stays linked in Office, Team, Factory, and Pipeline."
+                  : "Operator follow-through stays inside the internal ATEAM operator system."}
+              </li>
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
             </ul>
           </div>
           <div className="ateam-workflow-hero-visual">
@@ -337,8 +460,13 @@ export default function AteamWorkflowClient() {
             <section className="card ateam-workflow-step-card">
               <div className="ateam-workflow-step-head">
                 <div>
+<<<<<<< HEAD
                   <p className="card-kicker">Workflow map</p>
                   <h2>Move one idea from intake to handoff</h2>
+=======
+                  <p className="card-kicker">Fast path</p>
+                  <h2>Move one idea from prompt to output</h2>
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
                 </div>
                 <span className="ateam-demo-pill">
                   {run ? formatWorkflowPhaseLabel(run.phase) : "Not started"}
@@ -349,6 +477,7 @@ export default function AteamWorkflowClient() {
                   const isActive =
                     (!run && step.key === "idea") ||
                     (run &&
+<<<<<<< HEAD
                       ((step.key === "analysis" && !briefReady) ||
                         (step.key === "brief" && briefReady && !briefApproved) ||
                         (step.key === "pack" && briefApproved && !packApproved) ||
@@ -359,6 +488,16 @@ export default function AteamWorkflowClient() {
                     (step.key === "brief" && briefApproved) ||
                     (step.key === "pack" && packReady) ||
                     (step.key === "handoff" && packApproved);
+=======
+                      ((step.key === "analysis" && hasQuestions && !workflowReady) ||
+                        (step.key === "brief" && !hasQuestions && !workflowReady) ||
+                        (step.key === "pack" && workflowReady)));
+                  const isComplete =
+                    (step.key === "idea" && Boolean(run)) ||
+                    (step.key === "analysis" && Boolean(run?.brief?.summary)) ||
+                    (step.key === "brief" && packReady) ||
+                    (step.key === "pack" && workflowReady);
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
                   return (
                     <div
                       key={step.key}
@@ -379,6 +518,14 @@ export default function AteamWorkflowClient() {
                   <h2>Start with the idea</h2>
                 </div>
               </div>
+<<<<<<< HEAD
+=======
+              {workflowServiceState === "unavailable" ? (
+                <div className="ateam-workflow-offline-note" role="status">
+                  Hosted ATEAM workflow is not connected on this environment yet. You can still send the idea straight to Una Labs.
+                </div>
+              ) : null}
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
               <div className="ateam-workflow-form-grid">
                 <label className="ateam-demo-field">
                   <span>Idea prompt</span>
@@ -405,10 +552,30 @@ export default function AteamWorkflowClient() {
                   type="button"
                   className="btn btn-primary"
                   onClick={handleStartRun}
+<<<<<<< HEAD
                   disabled={busy !== "idle" && busy !== "loading"}
                 >
                   {busy === "starting" ? "Starting run..." : run ? "Restart run from this idea" : "Start ATEAM workflow"}
                 </button>
+=======
+                  disabled={workflowServiceState !== "ready" || (busy !== "idle" && busy !== "loading")}
+                >
+                  {workflowServiceState === "checking"
+                    ? "Checking ATEAM..."
+                    : workflowServiceState === "unavailable"
+                      ? "Fast pass coming online"
+                      : busy === "starting"
+                        ? "Starting..."
+                        : run
+                          ? "Restart fast pass"
+                          : "Start fast pass"}
+                </button>
+                {workflowServiceState === "unavailable" ? (
+                  <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
+                    Start a Project
+                  </Link>
+                ) : null}
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
               </div>
             </section>
 
@@ -417,7 +584,11 @@ export default function AteamWorkflowClient() {
                 <div className="ateam-workflow-step-head">
                   <div>
                     <p className="card-kicker">Step 2</p>
+<<<<<<< HEAD
                     <h2>Answer ATEAM's follow-up questions</h2>
+=======
+                    <h2>Answer {quickQuestionLabel}</h2>
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
                   </div>
                 </div>
                 <div className="ateam-workflow-question-list">
@@ -446,12 +617,19 @@ export default function AteamWorkflowClient() {
                     onClick={handleSubmitAnswers}
                     disabled={!run || busy !== "idle" || !run.questions.every((question) => String(answers[question.id] || "").trim())}
                   >
+<<<<<<< HEAD
                     {busy === "answers" ? "Building brief..." : "Build the brief"}
+=======
+                    {busy === "answers" || busy === "brief" || busy === "pack" || busy === "handoff"
+                      ? "Building fast pass..."
+                      : "Build fast pass"}
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
                   </button>
                 </div>
               </section>
             ) : null}
 
+<<<<<<< HEAD
             {briefReady ? (
               <section className="card ateam-workflow-step-card">
                 <div className="ateam-workflow-step-head">
@@ -460,6 +638,31 @@ export default function AteamWorkflowClient() {
                     <h2>Review the generated brief</h2>
                   </div>
                   <span className="ateam-demo-pill">{run?.brief?.recommendedLane || run?.recommendedLane}</span>
+=======
+            {run && !workflowReady && !hasQuestions ? (
+              <section className="card ateam-workflow-step-card">
+                <div className="ateam-workflow-step-head">
+                  <div>
+                    <p className="card-kicker">ATEAM is working</p>
+                    <h2>Office is shaping the brief. Factory is packaging the output.</h2>
+                  </div>
+                </div>
+                <p className="muted">
+                  ATEAM is auto-running the brief, pack, and handoff so you do not have to click
+                  through every operator gate manually.
+                </p>
+              </section>
+            ) : null}
+
+            {workflowReady ? (
+              <section className="card ateam-workflow-step-card">
+                <div className="ateam-workflow-step-head">
+                  <div>
+                    <p className="card-kicker">Output</p>
+                    <h2>ATEAM fast pass ready</h2>
+                  </div>
+                  <span className="ateam-demo-pill">{run?.recommendedLane || run?.brief?.recommendedLane}</span>
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
                 </div>
                 <div className="ateam-workflow-brief-grid">
                   <article className="ateam-workflow-brief-panel">
@@ -469,6 +672,7 @@ export default function AteamWorkflowClient() {
                     <p className="muted">Audience: {run?.brief?.audience}</p>
                   </article>
                   <article className="ateam-workflow-brief-panel">
+<<<<<<< HEAD
                     <p className="ateam-workflow-brief-label">Goals</p>
                     <ul className="ateam-demo-list">
                       {(run?.brief?.goals || []).map((item) => (
@@ -488,11 +692,17 @@ export default function AteamWorkflowClient() {
                     <p className="ateam-workflow-brief-label">Success criteria</p>
                     <ul className="ateam-demo-list">
                       {(run?.brief?.successCriteria || []).map((item) => (
+=======
+                    <p className="ateam-workflow-brief-label">First move</p>
+                    <ul className="ateam-demo-list">
+                      {compactNextSteps.map((item) => (
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
                   </article>
                 </div>
+<<<<<<< HEAD
                 <div className="ateam-workflow-actions">
                   <button
                     type="button"
@@ -563,6 +773,37 @@ export default function AteamWorkflowClient() {
 
                       <article className="ateam-workflow-pack-panel">
                         <p className="ateam-workflow-brief-label">Clickable prototype</p>
+=======
+                <div className="ateam-workflow-screen-grid">
+                  {compactMockupScreens.map((screen) => (
+                    <div key={screen.id} className="ateam-workflow-screen-card">
+                      <strong>{screen.title}</strong>
+                      <p>{screen.caption}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="ateam-workflow-actions">
+                  <Link
+                    href="/work-with-ftc?from=ateam"
+                    prefetch={false}
+                    className="btn btn-primary"
+                    onClick={handleContinueToIntake}
+                  >
+                    Send to Una Labs
+                  </Link>
+                  {operatorEnabled ? (
+                    <Link href={operatorHref} prefetch={false} className="btn btn-secondary">
+                      Open operator workflow
+                    </Link>
+                  ) : null}
+                </div>
+                <details className="ateam-brief-details">
+                  <summary>View full pack</summary>
+                  <div className="ateam-brief-body">
+                    <div className="ateam-workflow-pack-grid">
+                      <article className="ateam-workflow-pack-panel">
+                        <p className="ateam-workflow-brief-label">Prototype</p>
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
                         <h3>{run?.artifacts?.prototype?.title}</h3>
                         <p>{run?.artifacts?.prototype?.summary}</p>
                         <div className="ateam-workflow-prototype-shell">
@@ -618,6 +859,7 @@ export default function AteamWorkflowClient() {
                           ))}
                         </div>
                       </article>
+<<<<<<< HEAD
 
                       <article className="ateam-workflow-pack-panel">
                         <p className="ateam-workflow-brief-label">Operator note</p>
@@ -686,6 +928,11 @@ export default function AteamWorkflowClient() {
                     Open operator Mission Control
                   </Link>
                 </div>
+=======
+                    </div>
+                  </div>
+                </details>
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
               </section>
             ) : null}
 
@@ -724,14 +971,22 @@ export default function AteamWorkflowClient() {
               </section>
             ) : null}
 
+<<<<<<< HEAD
             {run?.links?.workItemIds?.length ? (
+=======
+            {operatorEnabled && run?.links?.workItemIds?.length ? (
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
               <section className="card ateam-workflow-sidebar-card">
                 <p className="card-kicker">Operator linkage</p>
                 <p className="muted">
                   {run.links.workItemIds.length} work item{run.links.workItemIds.length === 1 ? "" : "s"} already created in the operator system.
                 </p>
                 <Link href={operatorHref} prefetch={false} className="btn btn-secondary">
+<<<<<<< HEAD
                   Open Projects / Factory
+=======
+                  Open Office / Team / Factory / Pipeline
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
                 </Link>
               </section>
             ) : null}

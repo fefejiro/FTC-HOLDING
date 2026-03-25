@@ -7,8 +7,9 @@
   <script>
     (function () {
       const path = window.location.pathname || "/";
-      const isIntegrated = path === "/ateam" || path.indexOf("/ateam/") === 0;
-      const basePath = isIntegrated ? "/ateam" : "";
+      const isOperatorIntegrated = path === "/ateam/operator" || path.indexOf("/ateam/operator/") === 0;
+      const isIntegrated = isOperatorIntegrated || path === "/ateam" || path.indexOf("/ateam/") === 0;
+      const basePath = isOperatorIntegrated ? "/ateam/operator" : (isIntegrated ? "/ateam" : "");
       const baseHref = basePath ? basePath + "/" : "/";
       window.ATEAM_BASE_PATH = basePath;
       if (basePath && !window.ATEAM_API_BASE) {

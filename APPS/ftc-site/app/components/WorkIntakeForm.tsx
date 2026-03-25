@@ -62,6 +62,7 @@ function buildDemoPrefilledBrief(prefill: AteamDemoHandoffPayload<AteamDemoOutpu
 function buildWorkflowPrefilledBrief(prefill: AteamWorkflowHandoffPayload) {
   const lines = [
     `Idea: ${prefill.idea}`,
+<<<<<<< HEAD
     `ATEAM workflow run: ${prefill.runId}`,
     `Category: ${prefill.categoryLabel}`,
     `Recommended lane: ${prefill.recommendedLane}`,
@@ -90,6 +91,14 @@ function buildWorkflowPrefilledBrief(prefill: AteamWorkflowHandoffPayload) {
     "",
     "Suggested next steps:",
     ...(prefill.nextSteps ?? []).map((item) => `- ${item}`)
+=======
+    `ATEAM run: ${prefill.runId}`,
+    `Lane: ${prefill.recommendedLane}`,
+    `Summary: ${prefill.brief.summary}`,
+    `Primary goal: ${prefill.brief.primaryGoal}`,
+    `Output pack: ${prefill.artifacts.mockupTitle}; ${prefill.artifacts.prototypeTitle}.`,
+    `Next step: ${(prefill.nextSteps ?? [])[0] || "Review the pack and decide the fastest scoped next move."}`
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
   ];
 
   return lines.join("\n").trim();
@@ -112,6 +121,7 @@ export default function WorkIntakeForm() {
     confirmationSent?: boolean;
   } | null>(null);
   const startedAtRef = useRef<number>(Date.now());
+  const isWorkflowPrefill = prefill?.kind === "workflow";
 
   useEffect(() => {
     const workflowHandoff = loadAteamWorkflowHandoff();
@@ -327,21 +337,29 @@ export default function WorkIntakeForm() {
             placeholder="Business name, product, or project title"
           />
         </label>
-        <label>
-          <span>Project type</span>
-          <select
-            name="projectType"
-            value={projectType}
-            onChange={(event) => setProjectType(event.target.value)}
-            className="dark-select"
-          >
-            {projectTypeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
+        {isWorkflowPrefill ? (
+          <label>
+            <span>ATEAM lane</span>
+            <input type="text" value={projectType} readOnly />
+            <input type="hidden" name="projectType" value={projectType} />
+          </label>
+        ) : (
+          <label>
+            <span>Project type</span>
+            <select
+              name="projectType"
+              value={projectType}
+              onChange={(event) => setProjectType(event.target.value)}
+              className="dark-select"
+            >
+              {projectTypeOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <div className="intake-field-group">
@@ -350,7 +368,13 @@ export default function WorkIntakeForm() {
         </label>
         {prefill ? (
           <div className="intake-prefill-note">
+<<<<<<< HEAD
             Prefilled from your ATEAM {prefill.kind === "workflow" ? "workflow run" : "demo"}. Edit anything before submitting.
+=======
+            {prefill.kind === "workflow"
+              ? "ATEAM fast pass is attached. You only need your contact details and a quick check before sending."
+              : "ATEAM demo output is attached. Edit anything before submitting."}
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
             <button
               type="button"
               className="intake-prefill-clear"
@@ -370,7 +394,7 @@ export default function WorkIntakeForm() {
         <textarea
           id="project-brief"
           name="projectIdea"
-          rows={8}
+          rows={isWorkflowPrefill ? 4 : 8}
           required
           minLength={20}
           value={projectBrief}
@@ -383,7 +407,11 @@ export default function WorkIntakeForm() {
 
       {prefill ? (
         <details className="ateam-brief-details">
+<<<<<<< HEAD
           <summary>ATEAM {prefill.kind === "workflow" ? "workflow pack" : "demo brief"} attached</summary>
+=======
+          <summary>View attached ATEAM {prefill.kind === "workflow" ? "workflow pack" : "demo brief"}</summary>
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
           <div className="ateam-brief-body">
             {prefill.kind === "workflow" ? (
               <>
@@ -465,41 +493,83 @@ export default function WorkIntakeForm() {
         </details>
       ) : null}
 
-      <div className="intake-form-grid">
-        <label>
-          <span>Timeline</span>
-          <select name="timeline" defaultValue="" className="dark-select">
-            <option value="">Not sure yet</option>
-            <option value="2-4-weeks">2-4 weeks</option>
-            <option value="4-8-weeks">4-8 weeks</option>
-            <option value="8-12-weeks">8-12 weeks</option>
-            <option value="12-weeks-plus">12+ weeks</option>
-          </select>
-        </label>
-        <label>
-          <span>Budget range</span>
-          <select name="budgetRange" defaultValue="not-sure-yet" className="dark-select">
-            <option value="not-sure-yet">Not sure yet</option>
-            <option value="0-1000">$0 - $1,000</option>
-            <option value="1000-2500">$1,000 - $2,500</option>
-            <option value="2500-5000">$2,500 - $5,000</option>
-            <option value="5000-10000">$5,000 - $10,000</option>
-            <option value="10000-plus">$10,000+</option>
-          </select>
-          <span className="field-help">
-            Small, sharply scoped launches often start with a credible phase-one build.
-          </span>
-        </label>
-      </div>
+      {isWorkflowPrefill ? (
+        <details className="ateam-brief-details">
+          <summary>Add timeline, budget, or extra notes</summary>
+          <div className="ateam-brief-body">
+            <div className="intake-form-grid">
+              <label>
+                <span>Timeline</span>
+                <select name="timeline" defaultValue="" className="dark-select">
+                  <option value="">Not sure yet</option>
+                  <option value="2-4-weeks">2-4 weeks</option>
+                  <option value="4-8-weeks">4-8 weeks</option>
+                  <option value="8-12-weeks">8-12 weeks</option>
+                  <option value="12-weeks-plus">12+ weeks</option>
+                </select>
+              </label>
+              <label>
+                <span>Budget range</span>
+                <select name="budgetRange" defaultValue="not-sure-yet" className="dark-select">
+                  <option value="not-sure-yet">Not sure yet</option>
+                  <option value="0-1000">$0 - $1,000</option>
+                  <option value="1000-2500">$1,000 - $2,500</option>
+                  <option value="2500-5000">$2,500 - $5,000</option>
+                  <option value="5000-10000">$5,000 - $10,000</option>
+                  <option value="10000-plus">$10,000+</option>
+                </select>
+              </label>
+            </div>
 
-      <label>
-        <span>Optional notes</span>
-        <textarea
-          name="notes"
-          rows={4}
-          placeholder="Anything else we should know about urgency, constraints, approvals, or existing tools?"
-        />
-      </label>
+            <label>
+              <span>Optional notes</span>
+              <textarea
+                name="notes"
+                rows={4}
+                placeholder="Anything else we should know about urgency, constraints, approvals, or existing tools?"
+              />
+            </label>
+          </div>
+        </details>
+      ) : (
+        <>
+          <div className="intake-form-grid">
+            <label>
+              <span>Timeline</span>
+              <select name="timeline" defaultValue="" className="dark-select">
+                <option value="">Not sure yet</option>
+                <option value="2-4-weeks">2-4 weeks</option>
+                <option value="4-8-weeks">4-8 weeks</option>
+                <option value="8-12-weeks">8-12 weeks</option>
+                <option value="12-weeks-plus">12+ weeks</option>
+              </select>
+            </label>
+            <label>
+              <span>Budget range</span>
+              <select name="budgetRange" defaultValue="not-sure-yet" className="dark-select">
+                <option value="not-sure-yet">Not sure yet</option>
+                <option value="0-1000">$0 - $1,000</option>
+                <option value="1000-2500">$1,000 - $2,500</option>
+                <option value="2500-5000">$2,500 - $5,000</option>
+                <option value="5000-10000">$5,000 - $10,000</option>
+                <option value="10000-plus">$10,000+</option>
+              </select>
+              <span className="field-help">
+                Small, sharply scoped launches often start with a credible phase-one build.
+              </span>
+            </label>
+          </div>
+
+          <label>
+            <span>Optional notes</span>
+            <textarea
+              name="notes"
+              rows={4}
+              placeholder="Anything else we should know about urgency, constraints, approvals, or existing tools?"
+            />
+          </label>
+        </>
+      )}
 
       <label className="hp-field" aria-hidden="true">
         Company Website
@@ -507,7 +577,11 @@ export default function WorkIntakeForm() {
       </label>
 
       <button type="submit" className="btn btn-primary" disabled={submitState === "submitting"}>
-        {submitState === "submitting" ? "Submitting..." : "Submit project request"}
+        {submitState === "submitting"
+          ? "Submitting..."
+          : isWorkflowPrefill
+            ? "Send to Una Labs"
+            : "Submit project request"}
       </button>
 
       <div className="intake-next-steps">

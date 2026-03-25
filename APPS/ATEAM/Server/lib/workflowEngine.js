@@ -124,6 +124,7 @@ export function buildWorkflowQuestions({ idea = "", category = "website" } = {})
   return [
     {
       id: "audience",
+<<<<<<< HEAD
       label: "Audience",
       prompt: `Who is this mainly for in "${ideaTitle}"?`,
       hint: `Keep it practical: ${preset.audienceHint}.`,
@@ -149,6 +150,19 @@ export function buildWorkflowQuestions({ idea = "", category = "website" } = {})
       prompt: "What proof or signal tells us this is worth building now?",
       hint: "Think demand, current pain, stakeholder push, or repeated manual work.",
       placeholder: "Example: we already handle this manually every day and keep missing leads."
+=======
+      label: "Who it is for",
+      prompt: `Who is this mainly for in "${ideaTitle}"?`,
+      hint: `Keep it practical: ${preset.audienceHint}.`,
+      placeholder: "Example: busy restaurant staff handling rush-hour orders on WhatsApp."
+    },
+    {
+      id: "firstWin",
+      label: "First win",
+      prompt: "What should this make clearly easier in the first version?",
+      hint: "Name the one useful win, plus the main limit if there is one.",
+      placeholder: "Example: take an order, route it to staff, and show status back fast. Keep v1 simple."
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
     }
   ];
 }
@@ -159,7 +173,11 @@ export function buildWorkflowBrief({ idea = "", category = "website", answers = 
   const audience = answerText(answers, "audience", preset.audienceHint, 220);
   const coreOutcome = answerText(
     answers,
+<<<<<<< HEAD
     "coreOutcome",
+=======
+    "firstWin",
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
     `Create a first version that can ${preset.problemFrame}.`,
     220
   );
@@ -172,7 +190,11 @@ export function buildWorkflowBrief({ idea = "", category = "website", answers = 
   const signals = answerText(
     answers,
     "signals",
+<<<<<<< HEAD
     "There is enough demand or internal pressure to justify a fast, credible first pass.",
+=======
+    "There is enough demand or repeated friction to justify a fast, credible first pass.",
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
     220
   );
 

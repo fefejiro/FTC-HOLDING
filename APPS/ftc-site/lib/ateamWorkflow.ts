@@ -166,6 +166,7 @@ export const ateamWorkflowCategories = [
 export const ateamWorkflowSteps = [
   {
     key: "idea",
+<<<<<<< HEAD
     label: "Idea input",
     detail: "Start with one clear problem or concept."
   },
@@ -188,6 +189,25 @@ export const ateamWorkflowSteps = [
     key: "handoff",
     label: "Handoff",
     detail: "Carry the run into Una Labs intake with the pack attached."
+=======
+    label: "Idea in",
+    detail: "Start with one clear problem."
+  },
+  {
+    key: "analysis",
+    label: "Office pass",
+    detail: "ATEAM shapes the fast brief."
+  },
+  {
+    key: "brief",
+    label: "Factory output",
+    detail: "ATEAM turns it into a visible pack."
+  },
+  {
+    key: "pack",
+    label: "Send on",
+    detail: "Carry it into Una Labs or operator view."
+>>>>>>> e0043d3766030189eb9f193464e8bdacbb67235b
   }
 ] as const;
 

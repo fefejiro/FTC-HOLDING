@@ -15,6 +15,23 @@ function resolveRequestHost(req: NextRequest): string {
   return host.toLowerCase();
 }
 
+function truthy(value?: string): boolean {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+function isLocalHost(host: string): boolean {
+  return host === "localhost:3001" || host === "localhost" || host === "127.0.0.1:3001" || host === "127.0.0.1";
+}
+
+function isAteamOperatorEnabled(): boolean {
+  return (
+    process.env.NODE_ENV === "development" ||
+    truthy(process.env.ATEAM_OPERATOR_PROXY_ENABLED) ||
+    truthy(process.env.NEXT_PUBLIC_ATEAM_OPERATOR_ENABLED)
+  );
+}
+
 function shouldRedirectToCanonical(host: string): boolean {
   if (!host) return false;
   if (host === SITE_HOST) return false;
@@ -25,6 +42,12 @@ function shouldRedirectToCanonical(host: string): boolean {
 
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
+  const host = resolveRequestHost(req);
+
+  if ((pathname === "/ateam/operator" || pathname.startsWith("/ateam/operator/")) && !isLocalHost(host) && !isAteamOperatorEnabled()) {
+    return new NextResponse("Not Found", { status: 404 });
+  }
+
   const redirectPath = LEGACY_ROUTE_REDIRECTS[pathname];
   if (redirectPath) {
     const url = req.nextUrl.clone();
@@ -32,7 +55,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  const host = resolveRequestHost(req);
   if (!shouldRedirectToCanonical(host)) {
     return NextResponse.next();
   }

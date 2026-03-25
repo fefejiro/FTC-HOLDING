@@ -2036,6 +2036,53 @@ const MC_SEARCH_SHORTCUTS = [
   { view: "speech", label: "Speech", terms: ["speech", "recording", "clarity"] }
 ];
 
+const WORKFLOW_SHELL_VIEWS = ["office", "team", "factory", "pipeline"];
+
+function workflowShellModeFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    return String(params.get("shell") || "").trim().toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function workflowRunIdFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    return String(params.get("workflowRunId") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function isWorkflowShellActive() {
+  return Boolean(ATEAM_BASE_PATH) && workflowShellModeFromUrl() === "workflow";
+}
+
+function isWorkflowShellView(view) {
+  return WORKFLOW_SHELL_VIEWS.includes(String(view || "").trim().toLowerCase());
+}
+
+function applyWorkflowShellChrome() {
+  if (!mcNavList) return;
+  const active = isWorkflowShellActive();
+  mcNavList.querySelectorAll(".mc-nav-item").forEach((btn) => {
+    const view = String(btn.dataset.view || "").trim().toLowerCase();
+    const allowed = !active || isWorkflowShellView(view);
+    btn.classList.toggle("hidden", !allowed);
+    btn.disabled = !allowed;
+  });
+
+  if (unaLabsLink && active) {
+    const workflowRunId = workflowRunIdFromUrl();
+    unaLabsLink.textContent = "Back to ATEAM output";
+    unaLabsLink.href = workflowRunId
+      ? `/ateam?run=${encodeURIComponent(workflowRunId)}`
+      : "/ateam";
+  }
+}
+
 function mcViewFromPath(pathname) {
   const raw = String(stripBasePath(pathname) || "/").toLowerCase();
   const path = raw === "/index.html" ? "/" : raw;
@@ -2139,6 +2186,7 @@ function setView(view, options = {}) {
   if (view === "dashboard") view = "tasks";
   const allowed = Object.keys(MC_ROUTE_BY_VIEW);
   if (!allowed.includes(view)) view = "tasks";
+  if (isWorkflowShellActive() && !isWorkflowShellView(view)) view = "office";
 
   state.view = view;
   try {
@@ -2171,6 +2219,7 @@ function setView(view, options = {}) {
       btn.classList.toggle("active", String(btn.dataset.view || "") === view);
     });
   }
+  applyWorkflowShellChrome();
 
   const talkOn = state.view === "talk";
   const speechOn = state.view === "speech";
@@ -11883,6 +11932,7 @@ async function bootstrap() {
 
   const initialFromPath = mcViewFromPath(window.location.pathname);
   if (initialFromPath) state.view = initialFromPath;
+  applyWorkflowShellChrome();
   setView(state.view, { silent: true, replace: true });
   requestAnimationFrame(() => {
     resizeOrbCanvas();
