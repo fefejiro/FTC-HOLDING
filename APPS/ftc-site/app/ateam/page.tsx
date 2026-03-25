@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
-import AteamSurfaceShell from "./AteamSurfaceShell";
+import { Suspense } from "react";
+import AteamWorkflowClient from "./AteamWorkflowClient";
 
 export const metadata: Metadata = {
   title: "ATEAM | Una Labs",
   description:
-    "Open the real local ATEAM Office, Memory, Team, Factory, and Pipeline surfaces from inside Una Labs.",
+    "Run the public ATEAM workflow inside Una Labs, then hand the approved pack into real operator Mission Control.",
   alternates: {
     canonical: "/ateam"
   }
 };
 
 export default function AteamPage() {
-  return <AteamSurfaceShell surfaceKey="office" />;
+  return (
+    <Suspense fallback={<div className="container page-content ateam-page">Loading ATEAM workflow...</div>}>
+      <AteamWorkflowClient />
+    </Suspense>
+  );
 }

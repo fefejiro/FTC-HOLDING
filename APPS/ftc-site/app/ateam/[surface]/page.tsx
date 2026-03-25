@@ -1,7 +1,4 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import AteamSurfaceShell from "../AteamSurfaceShell";
-import { ateamLocalSurfaceKeys, getAteamLocalSurface, resolveAteamLocalSurface } from "../../../lib/ateamEmbed";
+import { redirect } from "next/navigation";
 
 type RouteProps = {
   params: {
@@ -9,30 +6,12 @@ type RouteProps = {
   };
 };
 
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return ateamLocalSurfaceKeys.map((surface) => ({ surface }));
-}
-
-export function generateMetadata({ params }: RouteProps): Metadata {
-  const resolvedKey = resolveAteamLocalSurface(params.surface);
-  const surface = getAteamLocalSurface(resolvedKey);
-
-  return {
-    title: `${surface.label} | ATEAM | Una Labs`,
-    description: surface.summary,
-    alternates: {
-      canonical: surface.href
-    }
-  };
-}
+export const dynamicParams = true;
 
 export default function AteamSurfacePage({ params }: RouteProps) {
-  const requested = String(params.surface || "").trim().toLowerCase();
-  if (!ateamLocalSurfaceKeys.includes(requested as (typeof ateamLocalSurfaceKeys)[number])) {
-    notFound();
+  const safeSurface = String(params.surface || "").trim().toLowerCase();
+  if (!safeSurface) {
+    redirect("/ateam");
   }
-
-  return <AteamSurfaceShell surfaceKey={requested as (typeof ateamLocalSurfaceKeys)[number]} />;
+  redirect(`/ateam/operator/${safeSurface}`);
 }

@@ -7,8 +7,8 @@
     "start": "node server.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "test:backend": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.js",
-    "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern='unit'",
-    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern='integration'",
+    "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathPatterns=unit",
+    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathPatterns=integration",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:debug": "cross-env NODE_OPTIONS=--experimental-vm-modules node --inspect-brk ./node_modules/.bin/jest --runInBand"

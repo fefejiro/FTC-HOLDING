@@ -3601,3 +3601,312 @@ nav.primary {
     flex-direction: column;
   }
 }
+
+.ateam-page--workflow {
+  gap: 32px;
+}
+
+.ateam-workflow-hero-card {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1.2fr 0.8fr;
+  align-items: center;
+}
+
+.ateam-workflow-hero-copy {
+  display: grid;
+  gap: 16px;
+}
+
+.ateam-workflow-hero-visual {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ateam-workflow-layout {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+  align-items: start;
+}
+
+.ateam-workflow-main,
+.ateam-workflow-sidebar {
+  display: grid;
+  gap: 20px;
+}
+
+.ateam-workflow-step-card,
+.ateam-workflow-sidebar-card {
+  display: grid;
+  gap: 18px;
+}
+
+.ateam-workflow-step-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.ateam-workflow-step-rail {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.ateam-workflow-step {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(13, 18, 29, 0.72);
+}
+
+.ateam-workflow-step strong {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.ateam-workflow-step span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.ateam-workflow-step.is-active {
+  border-color: rgba(110, 212, 255, 0.38);
+  box-shadow: 0 0 0 1px rgba(110, 212, 255, 0.18) inset;
+  background: linear-gradient(180deg, rgba(18, 36, 54, 0.96), rgba(12, 17, 28, 0.92));
+}
+
+.ateam-workflow-step.is-complete {
+  border-color: rgba(99, 230, 190, 0.28);
+}
+
+.ateam-workflow-form-grid,
+.ateam-workflow-brief-grid,
+.ateam-workflow-pack-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.ateam-workflow-form-grid {
+  grid-template-columns: 1.2fr 0.8fr;
+}
+
+.ateam-workflow-question-list {
+  display: grid;
+  gap: 16px;
+}
+
+.ateam-workflow-field-hint {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.ateam-workflow-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ateam-workflow-brief-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ateam-workflow-brief-panel,
+.ateam-workflow-pack-panel {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(12, 16, 27, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ateam-workflow-brief-label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.ateam-workflow-pack-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ateam-workflow-screen-grid,
+.ateam-workflow-doc-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.ateam-workflow-screen-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.ateam-workflow-screen-card,
+.ateam-workflow-doc-section,
+.ateam-workflow-smoke-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ateam-workflow-screen-card p,
+.ateam-workflow-screen-card ul,
+.ateam-workflow-doc-section ul,
+.ateam-workflow-smoke-item p {
+  margin: 0;
+}
+
+.ateam-workflow-screen-card ul,
+.ateam-workflow-doc-section ul {
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.ateam-workflow-prototype-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.ateam-workflow-prototype-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ateam-workflow-prototype-tab {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.ateam-workflow-prototype-tab.is-active,
+.ateam-workflow-prototype-tab:hover {
+  color: var(--text);
+  border-color: rgba(110, 212, 255, 0.32);
+  background: rgba(110, 212, 255, 0.08);
+}
+
+.ateam-workflow-prototype-stage {
+  border-radius: 24px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(110, 212, 255, 0.16), transparent 40%),
+    linear-gradient(180deg, rgba(14, 19, 30, 0.98), rgba(10, 13, 22, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ateam-workflow-prototype-window {
+  overflow: hidden;
+  border-radius: 20px;
+  background: rgba(8, 11, 18, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ateam-workflow-prototype-window-bar {
+  display: flex;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ateam-workflow-prototype-window-bar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.ateam-workflow-prototype-window-body {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+}
+
+.ateam-workflow-prototype-window-body h4,
+.ateam-workflow-pack-panel h3,
+.ateam-workflow-brief-panel h3,
+.ateam-workflow-sidebar-card h3 {
+  margin: 0;
+}
+
+.ateam-workflow-prototype-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ateam-workflow-smoke-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ateam-workflow-smoke-item span {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.ateam-workflow-sidebar-meta {
+  display: grid;
+  gap: 12px;
+}
+
+.ateam-workflow-sidebar-meta div {
+  display: grid;
+  gap: 4px;
+}
+
+.ateam-workflow-sidebar-meta span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.ateam-workflow-sidebar-meta strong {
+  color: var(--text);
+  font-size: 0.96rem;
+}
+
+@media (max-width: 1100px) {
+  .ateam-workflow-layout,
+  .ateam-workflow-hero-card,
+  .ateam-workflow-form-grid,
+  .ateam-workflow-pack-grid,
+  .ateam-workflow-brief-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .ateam-workflow-step-rail,
+  .ateam-workflow-screen-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ateam-workflow-step-head,
+  .ateam-workflow-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ateam-workflow-actions .btn {
+    width: 100%;
+  }
+}

@@ -33,7 +33,7 @@ export default function WorkWithFtcPage() {
             <h2>Send a setup request</h2>
           </div>
           <p className="muted">
-            If you arrived from ATEAM, the form will carry your demo output automatically.
+            If you arrived from ATEAM, the form will carry your workflow pack or demo output automatically.
           </p>
         </div>
         <WorkIntakeForm />

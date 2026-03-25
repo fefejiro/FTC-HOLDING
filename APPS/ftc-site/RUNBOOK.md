@@ -26,8 +26,9 @@ Real ATEAM integration during local dev:
 
 Deep-link checks:
 
-- `http://localhost:3001/ateam/office`
-- `http://localhost:3001/ateam/factory`
+- public workflow: `http://localhost:3001/ateam`
+- operator office: `http://localhost:3001/ateam/operator/office`
+- operator factory: `http://localhost:3001/ateam/operator/factory`
 
 Optional proxy override:
 

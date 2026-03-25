@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { trackEvent } from "../../lib/analytics";
-import type { AteamDemoHandoffPayload } from "../../lib/ateamHandoff";
-import { clearAteamDemoHandoff, loadAteamDemoHandoff } from "../../lib/ateamHandoff";
+import type { AteamDemoHandoffPayload, AteamWorkflowHandoffPayload } from "../../lib/ateamHandoff";
+import {
+  clearAteamDemoHandoff,
+  clearAteamWorkflowHandoff,
+  loadAteamDemoHandoff,
+  loadAteamWorkflowHandoff
+} from "../../lib/ateamHandoff";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
@@ -18,6 +23,11 @@ type AteamDemoOutput = {
   nextSteps: string[];
 };
 
+type PrefillState =
+  | { kind: "workflow"; value: AteamWorkflowHandoffPayload }
+  | { kind: "demo"; value: AteamDemoHandoffPayload<AteamDemoOutput> }
+  | null;
+
 const projectTypeOptions = [
   "Fast Website Launch",
   "Local Services Lead Engine",
@@ -27,7 +37,7 @@ const projectTypeOptions = [
   "Not sure yet"
 ] as const;
 
-function buildPrefilledBrief(prefill: AteamDemoHandoffPayload<AteamDemoOutput>) {
+function buildDemoPrefilledBrief(prefill: AteamDemoHandoffPayload<AteamDemoOutput>) {
   const lines = [
     `Idea: ${prefill.idea}`,
     `Category: ${prefill.categoryLabel}`,
@@ -49,12 +59,48 @@ function buildPrefilledBrief(prefill: AteamDemoHandoffPayload<AteamDemoOutput>) 
   return lines.join("\n").trim();
 }
 
+function buildWorkflowPrefilledBrief(prefill: AteamWorkflowHandoffPayload) {
+  const lines = [
+    `Idea: ${prefill.idea}`,
+    `ATEAM workflow run: ${prefill.runId}`,
+    `Category: ${prefill.categoryLabel}`,
+    `Recommended lane: ${prefill.recommendedLane}`,
+    "",
+    `Summary: ${prefill.brief.summary}`,
+    `Audience: ${prefill.brief.audience}`,
+    `Primary goal: ${prefill.brief.primaryGoal}`,
+    "",
+    "Goals:",
+    ...(prefill.brief.goals ?? []).map((item) => `- ${item}`),
+    "",
+    "Constraints:",
+    ...(prefill.brief.constraints ?? []).map((item) => `- ${item}`),
+    "",
+    "Success criteria:",
+    ...(prefill.brief.successCriteria ?? []).map((item) => `- ${item}`),
+    "",
+    "Phased plan:",
+    ...(prefill.brief.phasedPlan ?? []).map((item) => `- ${item}`),
+    "",
+    "Generated pack:",
+    `- Mockup: ${prefill.artifacts.mockupTitle}`,
+    `- Prototype: ${prefill.artifacts.prototypeTitle}`,
+    `- Smoke summary: ${prefill.artifacts.smokeSummary}`,
+    `- Operator note: ${prefill.artifacts.docTitle}`,
+    "",
+    "Suggested next steps:",
+    ...(prefill.nextSteps ?? []).map((item) => `- ${item}`)
+  ];
+
+  return lines.join("\n").trim();
+}
+
 export default function WorkIntakeForm() {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
   const [projectBrief, setProjectBrief] = useState("");
   const [projectType, setProjectType] = useState<string>("Not sure yet");
-  const [prefill, setPrefill] = useState<AteamDemoHandoffPayload<AteamDemoOutput> | null>(null);
+  const [prefill, setPrefill] = useState<PrefillState>(null);
   const [successSummary, setSuccessSummary] = useState<{
     requestId: string;
     email: string;
@@ -68,11 +114,19 @@ export default function WorkIntakeForm() {
   const startedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
-    const handoff = loadAteamDemoHandoff<AteamDemoOutput>();
-    if (!handoff) return;
-    setPrefill(handoff);
-    setProjectType(handoff.output?.recommendedLane ?? handoff.categoryLabel ?? "Not sure yet");
-    setProjectBrief((existing) => (existing ? existing : buildPrefilledBrief(handoff)));
+    const workflowHandoff = loadAteamWorkflowHandoff();
+    if (workflowHandoff) {
+      setPrefill({ kind: "workflow", value: workflowHandoff });
+      setProjectType(workflowHandoff.recommendedLane || workflowHandoff.categoryLabel || "Not sure yet");
+      setProjectBrief((existing) => (existing ? existing : buildWorkflowPrefilledBrief(workflowHandoff)));
+      return;
+    }
+
+    const demoHandoff = loadAteamDemoHandoff<AteamDemoOutput>();
+    if (!demoHandoff) return;
+    setPrefill({ kind: "demo", value: demoHandoff });
+    setProjectType(demoHandoff.output?.recommendedLane ?? demoHandoff.categoryLabel ?? "Not sure yet");
+    setProjectBrief((existing) => (existing ? existing : buildDemoPrefilledBrief(demoHandoff)));
   }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -102,16 +156,18 @@ export default function WorkIntakeForm() {
       notes: String(formData.get("notes") || "").trim(),
       companyWebsite: String(formData.get("companyWebsite") || "").trim(),
       startedAt: startedAtRef.current,
-      ateamDemo: prefill
-        ? {
-            idea: prefill.idea,
-            category: {
-              value: prefill.categoryValue,
-              label: prefill.categoryLabel
-            },
-            output: prefill.output
-          }
-        : undefined
+      ateamDemo:
+        prefill?.kind === "demo"
+          ? {
+              idea: prefill.value.idea,
+              category: {
+                value: prefill.value.categoryValue,
+                label: prefill.value.categoryLabel
+              },
+              output: prefill.value.output
+            }
+          : undefined,
+      ateamWorkflow: prefill?.kind === "workflow" ? prefill.value : undefined
     };
 
     setSubmitState("submitting");
@@ -160,7 +216,11 @@ export default function WorkIntakeForm() {
       });
 
       if (prefill) {
-        clearAteamDemoHandoff();
+        if (prefill.kind === "workflow") {
+          clearAteamWorkflowHandoff();
+        } else {
+          clearAteamDemoHandoff();
+        }
         setPrefill(null);
       }
 
@@ -290,12 +350,16 @@ export default function WorkIntakeForm() {
         </label>
         {prefill ? (
           <div className="intake-prefill-note">
-            Prefilled from your ATEAM demo. Edit anything before submitting.
+            Prefilled from your ATEAM {prefill.kind === "workflow" ? "workflow run" : "demo"}. Edit anything before submitting.
             <button
               type="button"
               className="intake-prefill-clear"
               onClick={() => {
-                clearAteamDemoHandoff();
+                if (prefill.kind === "workflow") {
+                  clearAteamWorkflowHandoff();
+                } else {
+                  clearAteamDemoHandoff();
+                }
                 setPrefill(null);
               }}
             >
@@ -319,43 +383,84 @@ export default function WorkIntakeForm() {
 
       {prefill ? (
         <details className="ateam-brief-details">
-          <summary>ATEAM demo brief attached</summary>
+          <summary>ATEAM {prefill.kind === "workflow" ? "workflow pack" : "demo brief"} attached</summary>
           <div className="ateam-brief-body">
-            <p className="muted">
-              Category: {prefill.categoryLabel}
-              {prefill.output?.recommendedLane ? ` · Recommended lane: ${prefill.output.recommendedLane}` : ""}
-            </p>
-            <div className="ateam-brief-grid">
-              <div>
-                <p className="ateam-brief-title">Summary</p>
-                <p>{prefill.output?.summary}</p>
-                <p className="muted">{prefill.output?.recommendedDirection}</p>
-              </div>
-              <div>
-                <p className="ateam-brief-title">Phases</p>
-                <ul className="ateam-brief-list">
-                  {(prefill.output?.phases ?? []).slice(0, 4).map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="ateam-brief-title">Deliverables</p>
-                <ul className="ateam-brief-list">
-                  {(prefill.output?.deliverables ?? []).slice(0, 4).map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="ateam-brief-title">Suggested stack</p>
-                <ul className="ateam-brief-list">
-                  {(prefill.output?.stack ?? []).slice(0, 4).map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            {prefill.kind === "workflow" ? (
+              <>
+                <p className="muted">
+                  Run: {prefill.value.runId} · Category: {prefill.value.categoryLabel} · Recommended lane: {prefill.value.recommendedLane}
+                </p>
+                <div className="ateam-brief-grid">
+                  <div>
+                    <p className="ateam-brief-title">Summary</p>
+                    <p>{prefill.value.brief.summary}</p>
+                    <p className="muted">Audience: {prefill.value.brief.audience}</p>
+                  </div>
+                  <div>
+                    <p className="ateam-brief-title">Goals</p>
+                    <ul className="ateam-brief-list">
+                      {(prefill.value.brief.goals ?? []).slice(0, 4).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="ateam-brief-title">Constraints</p>
+                    <ul className="ateam-brief-list">
+                      {(prefill.value.brief.constraints ?? []).slice(0, 4).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="ateam-brief-title">Generated pack</p>
+                    <ul className="ateam-brief-list">
+                      <li>{prefill.value.artifacts.mockupTitle}</li>
+                      <li>{prefill.value.artifacts.prototypeTitle}</li>
+                      <li>{prefill.value.artifacts.docTitle}</li>
+                    </ul>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="muted">
+                  Category: {prefill.value.categoryLabel}
+                  {prefill.value.output?.recommendedLane ? ` · Recommended lane: ${prefill.value.output.recommendedLane}` : ""}
+                </p>
+                <div className="ateam-brief-grid">
+                  <div>
+                    <p className="ateam-brief-title">Summary</p>
+                    <p>{prefill.value.output?.summary}</p>
+                    <p className="muted">{prefill.value.output?.recommendedDirection}</p>
+                  </div>
+                  <div>
+                    <p className="ateam-brief-title">Phases</p>
+                    <ul className="ateam-brief-list">
+                      {(prefill.value.output?.phases ?? []).slice(0, 4).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="ateam-brief-title">Deliverables</p>
+                    <ul className="ateam-brief-list">
+                      {(prefill.value.output?.deliverables ?? []).slice(0, 4).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="ateam-brief-title">Suggested stack</p>
+                    <ul className="ateam-brief-list">
+                      {(prefill.value.output?.stack ?? []).slice(0, 4).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </details>
       ) : null}

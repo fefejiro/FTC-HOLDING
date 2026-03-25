@@ -97,6 +97,33 @@ function runMigrations(db) {
 
     CREATE INDEX IF NOT EXISTS idx_approvals_status
       ON approvals(status);
+
+    CREATE TABLE IF NOT EXISTS workflow_runs (
+      id TEXT PRIMARY KEY,
+      created_ts TEXT NOT NULL,
+      updated_ts TEXT NOT NULL,
+      phase TEXT NOT NULL DEFAULT 'intake',
+      requested_by TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT 'website',
+      idea TEXT NOT NULL DEFAULT '',
+      title TEXT NOT NULL DEFAULT '',
+      questions_json TEXT NOT NULL DEFAULT '[]',
+      answers_json TEXT NOT NULL DEFAULT '{}',
+      brief_json TEXT NOT NULL DEFAULT '{}',
+      recommended_lane TEXT NOT NULL DEFAULT '',
+      risks_json TEXT NOT NULL DEFAULT '[]',
+      artifacts_json TEXT NOT NULL DEFAULT '{}',
+      approvals_json TEXT NOT NULL DEFAULT '{}',
+      links_json TEXT NOT NULL DEFAULT '{}',
+      handoff_json TEXT NOT NULL DEFAULT '{}',
+      meta_json TEXT NOT NULL DEFAULT '{}'
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_workflow_runs_phase
+      ON workflow_runs(phase, updated_ts);
+
+    CREATE INDEX IF NOT EXISTS idx_workflow_runs_updated
+      ON workflow_runs(updated_ts);
   `);
 }
 
