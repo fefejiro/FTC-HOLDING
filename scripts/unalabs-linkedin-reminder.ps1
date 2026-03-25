@@ -21,29 +21,6 @@ function Resolve-RepoRoot {
   return $candidate
 }
 
-function Assert-DedicatedBot {
-  param([string]$Token)
-  if (-not $Token) { return }
-  if ($env:OPENCLAW_TELEGRAM_BOT_TOKEN -and $env:OPENCLAW_TELEGRAM_BOT_TOKEN -eq $Token) {
-    Write-Err "TELEGRAM_BOT_TOKEN matches OPENCLAW_TELEGRAM_BOT_TOKEN. Use a dedicated bot for LinkedIn automation."
-    exit 1
-  }
-  if ($env:OPENCLAW_BOT_TOKEN -and $env:OPENCLAW_BOT_TOKEN -eq $Token) {
-    Write-Err "TELEGRAM_BOT_TOKEN matches OPENCLAW_BOT_TOKEN. Use a dedicated bot for LinkedIn automation."
-    exit 1
-  }
-  $openclawConfigPath = Join-Path $env:USERPROFILE ".openclaw\\openclaw.json"
-  if (Test-Path $openclawConfigPath) {
-    try {
-      $raw = Get-Content $openclawConfigPath -Raw
-      if ($raw -match [regex]::Escape($Token)) {
-        Write-Err "TELEGRAM_BOT_TOKEN appears in OpenClaw config. Use a dedicated bot for LinkedIn automation."
-        exit 1
-      }
-    } catch {}
-  }
-}
-
 function Ensure-LocalDir($path) {
   if (-not (Test-Path $path)) { New-Item -ItemType Directory -Path $path -Force | Out-Null }
 }
@@ -76,7 +53,6 @@ if (-not $TelegramToken -or -not $TelegramChatId) {
   Write-Err "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID"
   exit 1
 }
-Assert-DedicatedBot -Token $TelegramToken
 if (-not (Test-Path $lastDigestPath)) {
   Write-Warn "Missing last digest state; nothing to remind."
   exit 0

@@ -20,6 +20,7 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Railway Setup](RAILWAY_SETUP.md)
 - [Deploy Commands](DEPLOY_COMMANDS.md)
 - [Security Rotation Checklist](SECURITY_ROTATION_CHECKLIST.md)
+- [OpenClaw Removal Handover 2026-03-24](OPENCLAW_REMOVAL_HANDOVER_2026-03-24.md)
 
 ## PeacePad
 
