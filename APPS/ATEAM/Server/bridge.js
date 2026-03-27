@@ -2,7 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
-import { exec, execFile } from "node:child_process";
+import { exec, execFile, spawn } from "node:child_process";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
@@ -28,6 +28,7 @@ const REQUEST_TIMEOUT_MS = Number(process.env.ATEAM_BRIDGE_TIMEOUT_MS || 120000)
 const MAX_BUFFER_BYTES = Number(process.env.ATEAM_BRIDGE_MAX_BUFFER_BYTES || 4 * 1024 * 1024);
 const API_KEY = String(process.env.ATEAM_KEY || "").trim();
 const ALLOWED_ORIGINS = String(process.env.ATEAM_BRIDGE_ALLOWED_ORIGINS || "*").trim();
+const CLAUDE_BIN = String(process.env.CLAUDE_BIN || path.resolve(__dirname, "..", "..", "..", "claude.exe")).trim();
 
 app.disable("x-powered-by");
 app.use((req, res, next) => {
@@ -242,6 +243,68 @@ app.post("/run", async (req, res) => {
     });
   }
 });
+
+// ── Telegram gateway compatibility routes ─────────────────────────────────────
+
+app.get("/health", (req, res) => {
+  res.json({ ok: true });
+});
+
+app.get("/events/:sessionId", (req, res) => {
+  res.json({ ok: true, events: [] });
+});
+
+app.post("/events/:sessionId", (req, res) => {
+  const sessionId = req.params.sessionId;
+  const event = req.body;
+  console.log(`[ATEAM] Event[${sessionId}]: ${safeText(event?.type || "unknown")} — ${safeText(event?.summary || "").slice(0, 120)}`);
+  res.json({ ok: true });
+});
+
+app.post("/api/orchestrator/plan", (req, res) => {
+  res.json({ ok: true, output: { emit_events: [] } });
+});
+
+const AGENT_SYSTEM_PROMPT =
+  "You are ATEAM, Mike's personal AI assistant running on his PC. " +
+  "Mike is messaging you via Telegram from his phone. " +
+  "Reply conversationally and concisely — no markdown headers, no bullet preamble, no code blocks unless actually needed. " +
+  "If asked to do something on the PC (run code, edit files, check status), do it and report back briefly.";
+
+function stripAnsi(str) {
+  return String(str || "").replace(/\x1B\[[0-9;]*[A-Za-z]/g, "").replace(/\x1B\][^\x07]*\x07/g, "").trim();
+}
+
+app.post("/agent/command", async (req, res) => {
+  const message = safeText(req.body?.message);
+  const taskId = safeText(req.body?.taskId || "");
+  if (!message) {
+    return res.status(400).json({ ok: false, error: "message is required" });
+  }
+  console.log(`[ATEAM] Agent command [${taskId}]: ${message}`);
+  try {
+    const result = await new Promise((resolve) => {
+      const child = spawn(
+        CLAUDE_BIN,
+        ["--print", "--dangerously-skip-permissions", "-p", `${AGENT_SYSTEM_PROMPT}\n\n${message}`],
+        { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }
+      );
+      let stdout = "";
+      let stderr = "";
+      const timer = setTimeout(() => { child.kill(); resolve({ stdout, stderr: "timeout", exitCode: 124 }); }, REQUEST_TIMEOUT_MS);
+      child.stdout.on("data", (d) => { stdout += d; });
+      child.stderr.on("data", (d) => { stderr += d; });
+      child.on("close", (code) => { clearTimeout(timer); resolve({ stdout, stderr: buildStderr(stderr, null), exitCode: code ?? 0 }); });
+      child.on("error", (err) => { clearTimeout(timer); resolve({ stdout: "", stderr: err.message, exitCode: -1 }); });
+    });
+    const reply = stripAnsi(result.stdout || result.stderr || "No response.").slice(0, 4000);
+    return res.json({ ok: true, reply, agent: "ATEAM" });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: String(err?.message || err) });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, HOST, () => {
   console.log(`[ATEAM] Bridge listening on http://${HOST}:${PORT}`);
