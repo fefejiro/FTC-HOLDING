@@ -81,8 +81,8 @@ Cloudflare Pages / Vercel-style build note:
 ## Core public journey
 
 1. Visitor lands on the public site and learns what Una Labs offers.
-2. Visitor opens `/ateam` and sees only four public modules: `Intake`, `System`, `Work`, and `Output`.
-3. Visitor speaks or types one rough idea, then answers the short clarifiers.
+2. Visitor opens `/ateam` and immediately sees ATEAM already alive on screen, with a visible preview of Intake, System, Work, and Output before any typing starts.
+3. Visitor speaks or types one rough idea, then answers only the two short clarifiers needed to move.
 4. ATEAM turns the idea into a live run with intent understanding, visible state, public-safe work steps, timeline movement, and run-owned artifacts.
 5. The output pack returns a recommended move, visual concept, prototype direction, build watch, and next step.
 6. `Start this with Una Labs` should keep the user inside the ATEAM flow long enough to send the handoff directly, instead of forcing a second idea form.
@@ -97,7 +97,7 @@ Cloudflare Pages / Vercel-style build note:
 - Private operator host: `https://ops.unalabs.cloud`
 - Private operator proxy routes: `/ateam/operator/*` on the ops host, plus `/api/operator/ateam/*` for private JSON access
 
-The public flow is intentionally narrowed so clients only see the trustworthy high-level system narrative. Public ATEAM now behaves like a simple intent engine: text or voice intake first, system understanding second, visible work third, and output plus conversion last. The public route deliberately hides operator wording, internal owner names, approvals, logs, and overrides so the experience reads like a client product, not a control room. On the public production host, the Cloudflare Worker currently owns `/ateam*`, so `/ateam/operator/*` is intentionally not exposed there.
+The public flow is intentionally narrowed so clients only see the trustworthy high-level system narrative. Public ATEAM now behaves like a simple intent engine: the first screen should already feel alive, the intake box should already be visible, and the system/work/output story should unfold without sending the visitor into a second idea form. The public route deliberately hides operator wording, internal owner names, approvals, logs, and overrides so the experience reads like a client product, not a control room. On the public production host, the Cloudflare Worker currently owns `/ateam*`, so `/ateam/operator/*` is intentionally not exposed there.
 
 Operator security model:
 

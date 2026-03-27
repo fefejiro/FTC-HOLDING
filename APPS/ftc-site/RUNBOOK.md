@@ -37,6 +37,8 @@ Public flow expectation for `/ateam`:
 - `Work`: visible public-safe work steps + public-safe timeline
 - `Output`: run-owned artifacts + decision pack + handoff
 - public flow should read like one intent engine, not a mini admin dashboard
+- first screen should show ATEAM already alive plus the intake box; do not make users read a long hero before they can start
+- before intake begins, the page should still preview believable System, Work, and Output states so ATEAM feels alive immediately
 - public work/output language should hide internal operator names and approval wording
 - public CTA should keep users inside ATEAM until output is ready; no premature jump to a second idea form
 - once output is ready, the preferred path is an inline ATEAM handoff capture, with `/work-with-ftc?from=ateam` as fallback
