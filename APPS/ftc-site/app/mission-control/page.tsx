@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import missionControlData from "@/data/mission-control.json";
+import { OPS_SITE_URL } from "@/lib/site";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
 export const runtime = "edge";
 
@@ -69,7 +70,7 @@ export default function MissionControlPage() {
   if (process.env.NODE_ENV !== "development") {
     const accessJwt = headers().get("cf-access-jwt-assertion");
     if (!accessJwt) {
-      notFound();
+      redirect(`${OPS_SITE_URL}/`);
     }
   }
 

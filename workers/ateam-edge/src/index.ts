@@ -1,6 +1,7 @@
 export interface Env {
   ATEAM_UPSTREAM_ORIGIN?: string;
   CANONICAL_SITE_ORIGIN?: string;
+  CANONICAL_OPS_ORIGIN?: string;
 }
 
 type WorkflowRun = {
@@ -46,6 +47,20 @@ function html(body: string, init: ResponseInit = {}) {
 
 function getUpstreamOrigin(env: Env) {
   return trimTrailingSlash(env.ATEAM_UPSTREAM_ORIGIN || "");
+}
+
+function getOpsOrigin(env: Env) {
+  return trimTrailingSlash(env.CANONICAL_OPS_ORIGIN || "https://ops.unalabs.cloud");
+}
+
+function redirect(location: string, status = 302) {
+  return new Response(null, {
+    status,
+    headers: {
+      location,
+      "cache-control": "no-store"
+    }
+  });
 }
 
 function normalizeProxyHeaders(headers: Headers, request: Request) {
@@ -110,7 +125,7 @@ async function proxyWorkflowRequest(request: Request, env: Env) {
   }
 }
 
-function buildPage(canonicalOrigin: string) {
+function buildPage(canonicalOrigin: string, opsOrigin: string) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -144,7 +159,7 @@ function buildPage(canonicalOrigin: string) {
     <div class="top">
       <a class="brand" href="/"><img src="/images/brand/ateam-logo.png" alt="" /><div><div class="eyebrow">Una Labs</div><strong>ATEAM Cloud Intake</strong></div></a>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <a class="btn btn-secondary" href="/mission-control">Mission Control</a>
+        <a class="btn btn-secondary" href="${opsOrigin}/">Private Operator Login</a>
         <a class="btn btn-primary" href="/work-with-ftc">Start a Project</a>
       </div>
     </div>
@@ -223,7 +238,7 @@ function buildPage(canonicalOrigin: string) {
           <div id="resultGrid" class="grid2" style="margin-top:16px"></div>
           <div class="actions" style="margin-top:18px">
             <button id="continueBtn" class="btn btn-primary" type="button">Continue with Una Labs</button>
-            <a class="btn btn-secondary" href="/mission-control">Open Mission Control</a>
+            <a class="btn btn-secondary" href="${opsOrigin}/">Open Private Ops</a>
           </div>
         </div>
       </div>
@@ -291,9 +306,14 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const canonicalOrigin = trimTrailingSlash(env.CANONICAL_SITE_ORIGIN || `${url.protocol}//${url.host}`);
+    const opsOrigin = getOpsOrigin(env);
 
     if (request.method === "HEAD" && url.pathname === "/ateam") {
       return new Response(null, { status: 200 });
+    }
+
+    if (url.pathname === "/mission-control" || url.pathname.startsWith("/mission-control/")) {
+      return redirect(`${opsOrigin}/`, 302);
     }
 
     if (url.pathname.startsWith("/api/ateam/")) {
@@ -311,7 +331,7 @@ export default {
     }
 
     if (url.pathname === "/ateam" || url.pathname === "/ateam/") {
-      return html(buildPage(canonicalOrigin));
+      return html(buildPage(canonicalOrigin, opsOrigin));
     }
 
     if (url.pathname.startsWith("/ateam/")) {
