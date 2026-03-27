@@ -14,6 +14,7 @@
     "start:telegram": "npm --prefix telegram-gateway start",
     "launch:office": "powershell.exe -ExecutionPolicy Bypass -File tools/ateam-launcher.ps1",
     "clean:local": "powershell.exe -ExecutionPolicy Bypass -File tools/clean-local-runtime.ps1",
+    "migrate:workflow:supabase": "node Server/scripts/migrateWorkflowStorageToSupabase.mjs",
     "install:dev": "npm --prefix Server install",
     "install:server": "npm --prefix Server install --omit=dev",
     "test": "npm run test:backend",

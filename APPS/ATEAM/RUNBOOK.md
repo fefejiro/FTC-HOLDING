@@ -83,7 +83,16 @@ Before enabling Supabase in production:
 
 1. Apply [Docs/SUPABASE_WORKFLOW_SCHEMA.sql](/c:/FTC%20HOLDING/APPS/ATEAM/Docs/SUPABASE_WORKFLOW_SCHEMA.sql).
 2. Set the `SUPABASE_*` secrets in Railway.
-3. Confirm `/health` reports `storage.backend = supabase`.
+3. Optional: migrate existing workflow state:
+
+```powershell
+# from the live public/ops surfaces
+$env:ATEAM_OPS_BASIC_AUTH_USERNAME="mike.fejiro@gmail.com"
+$env:ATEAM_OPS_BASIC_AUTH_PASSWORD="..."
+npm run migrate:workflow:supabase -- --source-http
+```
+
+4. Confirm `/health` reports `storage.backend = supabase`.
 
 ## Test Commands
 

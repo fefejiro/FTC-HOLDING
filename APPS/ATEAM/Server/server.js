@@ -778,6 +778,7 @@ app.get("/health", async (req, res) => {
         mode: AUTH_MODE
       },
       storage: {
+        requestedBackend: STORAGE_BACKEND,
         backend: resolvedStorageBackend,
         capability: storageCapability || null
       },

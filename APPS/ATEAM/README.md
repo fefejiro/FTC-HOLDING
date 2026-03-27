@@ -180,6 +180,7 @@ Managed storage rollout:
 - `ATEAM_STORAGE_BACKEND=supabase` switches workflow runs, jobs, and approvals to Supabase when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are present.
 - If Supabase is requested but not configured, ATEAM falls back safely to `local` and reports that fallback in `/health`.
 - Apply [`Docs/SUPABASE_WORKFLOW_SCHEMA.sql`](Docs/SUPABASE_WORKFLOW_SCHEMA.sql) before enabling the Supabase backend in production.
+- Optional migration helper: `npm run migrate:workflow:supabase -- --source-http` or `npm run migrate:workflow:supabase -- --source-db <sqlite-path>`
 
 ## Current Classification
 
