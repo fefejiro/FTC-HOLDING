@@ -38,6 +38,7 @@ Public flow expectation for `/ateam`:
 - `Output`: run-owned artifacts + decision pack + handoff
 - public flow should read like one intent engine, not a mini admin dashboard
 - public work/output language should hide internal operator names and approval wording
+- public CTA should keep users inside ATEAM until output is ready; no premature jump to a second idea form
 
 Operator expectation for `/ateam/operator/*`:
 
@@ -201,3 +202,8 @@ After production smoke is green:
    - `https://unalabs.cloud/work/peacepad`
    - `https://unalabs.cloud/work/saywetin`
    - `https://unalabs.cloud/work/ateam`
+- `/work-with-ftc?from=ateam` should behave like a handoff, not a restart:
+  - shorter hero
+  - no repeated idea prompt
+  - attached ATEAM brief sent automatically
+  - only contact details plus optional budget/timeline/notes required

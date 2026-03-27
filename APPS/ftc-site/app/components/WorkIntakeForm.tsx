@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { trackEvent } from "../../lib/analytics";
 import type { AteamDemoHandoffPayload, AteamWorkflowHandoffPayload } from "../../lib/ateamHandoff";
 import {
@@ -67,6 +68,7 @@ function buildWorkflowPrefilledBrief(prefill: AteamWorkflowHandoffPayload) {
 }
 
 export default function WorkIntakeForm() {
+  const searchParams = useSearchParams();
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
   const [projectBrief, setProjectBrief] = useState("");
@@ -84,6 +86,8 @@ export default function WorkIntakeForm() {
   } | null>(null);
   const startedAtRef = useRef<number>(Date.now());
   const isWorkflowPrefill = prefill?.kind === "workflow";
+  const isAteamRoute = String(searchParams.get("from") || "").trim().toLowerCase() === "ateam";
+  const useWorkflowFastPass = isWorkflowPrefill && isAteamRoute;
 
   useEffect(() => {
     const workflowHandoff = loadAteamWorkflowHandoff();
@@ -327,13 +331,16 @@ export default function WorkIntakeForm() {
         <div className="intake-prefill-card">
           <div className="intake-prefill-card-head">
             <div>
-              <p className="card-kicker">ATEAM fast pass attached</p>
+              <p className="card-kicker">{useWorkflowFastPass ? "ATEAM handoff attached" : "ATEAM fast pass attached"}</p>
               <h3>{prefill.value.recommendedLane}</h3>
               <p className="muted">
                 {prefill.value.brief.quickVerdict || "Go for a scoped first pass"}.
                 {" "}
                 {prefill.value.brief.recommendedDirection || prefill.value.brief.summary}
               </p>
+              {useWorkflowFastPass ? (
+                <p className="muted">No need to rewrite the idea. ATEAM already attached the brief and output pack.</p>
+              ) : null}
             </div>
             <button
               type="button"
@@ -389,8 +396,16 @@ export default function WorkIntakeForm() {
       ) : (
         <>
           <input type="hidden" name="projectType" value={projectType} />
-          <details className="ateam-brief-details" open>
-            <summary>Review attached ATEAM pack</summary>
+          <input
+            type="hidden"
+            name="projectName"
+            value={prefill?.value.brief.title || prefill?.value.recommendedLane || "ATEAM handoff"}
+          />
+          {useWorkflowFastPass ? (
+            <input type="hidden" name="projectIdea" value={projectBrief} />
+          ) : null}
+          <details className="ateam-brief-details" open={!useWorkflowFastPass}>
+            <summary>{useWorkflowFastPass ? "Review or edit attached ATEAM brief" : "Review attached ATEAM pack"}</summary>
             <div className="ateam-brief-body">
               <p className="muted">
                 Run: {prefill?.value.runId} / Category: {prefill?.value.categoryLabel} / Lane:{" "}
@@ -412,35 +427,56 @@ export default function WorkIntakeForm() {
                 </div>
               </div>
 
-              <label className="intake-workflow-edit" htmlFor="project-brief">
-                <span>Edit attached brief if needed</span>
-              </label>
-              <textarea
-                id="project-brief"
-                name="projectIdea"
-                rows={6}
-                required
-                minLength={20}
-                value={projectBrief}
-                onChange={(event) => setProjectBrief(event.target.value)}
-                placeholder="ATEAM prefilled this brief. Tweak anything before sending."
-              />
+              {useWorkflowFastPass ? (
+                <div className="intake-prefill-note">
+                  The ATEAM brief will be sent automatically. Only open this if you want to adjust the wording before submission.
+                  <label className="intake-workflow-edit" htmlFor="project-brief">
+                    <span>Edit attached brief</span>
+                  </label>
+                  <textarea
+                    id="project-brief"
+                    name="projectIdeaEdit"
+                    rows={6}
+                    value={projectBrief}
+                    onChange={(event) => setProjectBrief(event.target.value)}
+                    placeholder="ATEAM prefilled this brief. Tweak anything before sending."
+                  />
+                </div>
+              ) : (
+                <>
+                  <label className="intake-workflow-edit" htmlFor="project-brief">
+                    <span>Edit attached brief if needed</span>
+                  </label>
+                  <textarea
+                    id="project-brief"
+                    name="projectIdea"
+                    rows={6}
+                    required
+                    minLength={20}
+                    value={projectBrief}
+                    onChange={(event) => setProjectBrief(event.target.value)}
+                    placeholder="ATEAM prefilled this brief. Tweak anything before sending."
+                  />
+                </>
+              )}
             </div>
           </details>
 
           <details className="ateam-brief-details">
-            <summary>Add project name, timeline, budget, or notes</summary>
+            <summary>{useWorkflowFastPass ? "Add optional timeline, budget, or notes" : "Add project name, timeline, budget, or notes"}</summary>
             <div className="ateam-brief-body">
               <div className="intake-form-grid">
-                <label>
-                  <span>Company or project name</span>
-                  <input
-                    type="text"
-                    name="projectName"
-                    autoComplete="organization"
-                    placeholder="Optional project or company name"
-                  />
-                </label>
+                {useWorkflowFastPass ? null : (
+                  <label>
+                    <span>Company or project name</span>
+                    <input
+                      type="text"
+                      name="projectName"
+                      autoComplete="organization"
+                      placeholder="Optional project or company name"
+                    />
+                  </label>
+                )}
                 <label>
                   <span>Timeline</span>
                   <select name="timeline" defaultValue="" className="dark-select">
@@ -526,7 +562,9 @@ export default function WorkIntakeForm() {
         {submitState === "submitting"
           ? "Submitting..."
           : isWorkflowPrefill
-            ? "Continue with Una Labs"
+            ? useWorkflowFastPass
+              ? "Send ATEAM handoff"
+              : "Continue with Una Labs"
             : "Submit project request"}
       </button>
 

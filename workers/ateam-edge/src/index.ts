@@ -164,7 +164,8 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
     <div class="top">
       <a class="brand" href="/"><img src="/images/brand/ateam-logo.png" alt="" /><div><div class="eyebrow">Una Labs</div><strong>ATEAM Cloud Intake</strong></div></a>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <a class="btn btn-primary" href="/work-with-ftc">Start a Project</a>
+        <a class="btn btn-primary" href="#public-intake">Start with ATEAM</a>
+        <a class="text-link" href="/work-with-ftc">Direct project form</a>
         <a class="text-link" href="${opsOrigin}/">Operator access</a>
       </div>
     </div>
@@ -181,7 +182,7 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
         </div>
         <div class="hero-actions" style="margin-top:18px">
           <a class="btn btn-primary" href="#public-intake">Start the intake</a>
-          <a class="btn btn-secondary" href="/work-with-ftc">Skip to project intake</a>
+          <span class="muted tiny">ATEAM should shape the first pass before you continue into the project handoff.</span>
         </div>
       </div>
       <div class="card hero-preview">
