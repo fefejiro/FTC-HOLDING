@@ -43,6 +43,53 @@ function resolveHeaderPrincipal(req) {
   };
 }
 
+function resolveTrustedProxyPrincipal(req) {
+  const configuredKey = String(process.env.ATEAM_TRUSTED_PROXY_KEY || "").trim();
+  if (!configuredKey) {
+    throw createScopeError(
+      "AUTH_REQUIRED",
+      "trusted_proxy_not_configured",
+      503,
+      "ATEAM_TRUSTED_PROXY_KEY is required for trusted_proxy mode"
+    );
+  }
+
+  const receivedKey = String(req.headers["x-ateam-proxy-key"] || "").trim();
+  if (!receivedKey || receivedKey !== configuredKey) {
+    throw createScopeError(
+      "AUTH_REQUIRED",
+      "invalid_trusted_proxy_key",
+      401,
+      "trusted proxy key required"
+    );
+  }
+
+  const tenantId = sanitizeScopeToken(req.headers["x-ateam-tenant-id"]);
+  const workspaceId = sanitizeScopeToken(req.headers["x-ateam-workspace-id"]);
+  const userId = sanitizeScopeToken(req.headers["x-ateam-user-id"]);
+  const role = sanitizeScopeToken(req.headers["x-ateam-role"], "owner");
+  const email = String(req.headers["x-ateam-operator-email"] || "").trim().toLowerCase();
+
+  if (!tenantId || !workspaceId || !userId) {
+    throw createScopeError(
+      "AUTH_REQUIRED",
+      "missing_trusted_proxy_scope",
+      401,
+      "x-ateam-tenant-id, x-ateam-workspace-id, x-ateam-user-id are required"
+    );
+  }
+
+  return {
+    mode: "trusted_proxy",
+    authenticated: true,
+    tenantId,
+    workspaceId,
+    userId,
+    role,
+    email
+  };
+}
+
 function parseJwtPayloadUnsafe(token = "") {
   const raw = String(token || "").trim();
   const parts = raw.split(".");
@@ -119,6 +166,7 @@ function resolveJwtPrincipal(req) {
 
 function resolvePrincipal(req, mode = "local") {
   const normalized = String(mode || "local").trim().toLowerCase();
+  if (normalized === "trusted_proxy") return resolveTrustedProxyPrincipal(req);
   if (normalized === "jwt") return resolveJwtPrincipal(req);
   if (normalized === "header") return resolveHeaderPrincipal(req);
   return resolveLocalPrincipal();

@@ -46,7 +46,28 @@ Production note:
 
 - the Cloudflare Worker currently owns public `https://unalabs.cloud/ateam*`
 - that means `https://unalabs.cloud/ateam/operator/*` is intentionally masked on the public host
-- use the secured/local operator deployment when you need the full admin shell
+- use `https://ops.unalabs.cloud` for the full admin shell once the private worker and Cloudflare Access policy are active
+
+Private operator runtime:
+
+- Cloudflare Worker: `workers/ateam-ops`
+- shared Railway upstream: `https://ateam-api-production.up.railway.app`
+- required Railway env:
+  - `ATEAM_AUTH_MODE=trusted_proxy`
+  - `ATEAM_PUBLIC_SERVICE_MODE=false`
+  - `ATEAM_TRUSTED_PROXY_KEY=<same secret used by the ops worker>`
+- required Cloudflare Access behavior:
+  - protect `ops.unalabs.cloud/*`
+  - allowlist `mike.fejiro@gmail.com`
+  - copy the Access team domain into `CF_ACCESS_TEAM_DOMAIN`
+  - copy the Access application AUD into `CF_ACCESS_AUD`
+
+Private operator verification:
+
+1. `GET https://ops.unalabs.cloud/` redirects to `/ateam/operator/office`
+2. without Cloudflare Access, the worker returns `cloudflare_access_required`
+3. with Access, `/api/operator/session` returns the operator identity payload
+4. Office / Factory / Team routes load through the ops worker
 
 Optional proxy override:
 

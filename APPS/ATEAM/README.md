@@ -115,9 +115,9 @@ npm run start:bridge
 ## Public/Private Runtime Split
 
 - Local operator app: full `Server/server.js` + `Public/*`
-- Public cloud workflow service: same backend in `ATEAM_PUBLIC_SERVICE_MODE=true`
-- Cloud API runtime: Railway
-- Public route layer: Cloudflare Worker / Pages
+- Shared cloud runtime: same backend on Railway, now intended to run in `ATEAM_AUTH_MODE=trusted_proxy`
+- Public route layer: `workers/ateam-edge` owns `https://unalabs.cloud/ateam*` and only proxies public workflow endpoints
+- Private route layer: `workers/ateam-ops` is the dedicated operator proxy for `https://ops.unalabs.cloud`
 
 Public flow contract:
 
@@ -130,6 +130,8 @@ Private operator contract:
 
 - `/ateam/operator/*` keeps the full Mission Control shell
 - approvals, logs, overrides, Office, Team, Factory, and Memory stay private
+- Cloudflare Access authenticates the browser on `ops.unalabs.cloud`, the ops worker validates the Access JWT (`CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_AUD`), then injects trusted scope headers to Railway server-side only
+- Direct browser-supplied `Authorization` / `X-ATEAM-*` headers are no longer the intended operator trust model
 
 ## API Surface
 
@@ -149,6 +151,7 @@ Defined in `.env.example` and code paths in `Server/server.js` + `Server/lib/*`.
 Primary groups:
 
 - Core runtime: `PORT`, `LLM_MODE`, `ATEAM_PROMPT_EVENT_SESSION_ID`, `ATEAM_PUBLIC_SERVICE_MODE`, `ATEAM_ALLOWED_ORIGINS`
+- Trusted proxy runtime: `ATEAM_AUTH_MODE=trusted_proxy`, `ATEAM_TRUSTED_PROXY_KEY`, `ATEAM_OPERATOR_AUDIT_SESSION_ID`
 - OpenAI: `OPENAI_API_KEY`, model, temperature, stream, timeout variables
 - ElevenLabs: API key, model/output format, voice IDs, tuning, timeout variables
 - Bridge/phone: `ATEAM_KEY`, `ATEAM_BRIDGE_*`, `PHONE_PORT`
@@ -162,6 +165,11 @@ Start here for architecture and cleanup context:
 - `Docs/ARCHITECTURE.md`
 - `Docs/MIGRATION_READINESS.md`
 - `RUNBOOK.md`
+
+Operator edge runtime:
+
+- `workers/ateam-edge`
+- `workers/ateam-ops`
 
 ## Current Classification
 

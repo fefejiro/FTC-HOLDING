@@ -20,6 +20,10 @@ type WorkflowRun = {
   history?: Array<Record<string, unknown>>;
   handoff?: Record<string, unknown>;
   statusNarrative?: Record<string, unknown>;
+  publicFlow?: {
+    modules?: Array<Record<string, unknown>>;
+    understanding?: Record<string, unknown>;
+  };
 };
 
 function trimTrailingSlash(value = "") {
@@ -46,9 +50,26 @@ function getUpstreamOrigin(env: Env) {
 
 function normalizeProxyHeaders(headers: Headers, request: Request) {
   const nextHeaders = new Headers(headers);
+  [
+    "authorization",
+    "x-ateam-tenant-id",
+    "x-ateam-workspace-id",
+    "x-ateam-user-id",
+    "x-ateam-role",
+    "x-ateam-operator-email",
+    "x-ateam-proxy-key",
+    "cf-access-jwt-assertion",
+    "cf-access-authenticated-user-email"
+  ].forEach((header) => nextHeaders.delete(header));
   nextHeaders.set("x-forwarded-host", new URL(request.url).host);
+  nextHeaders.set("x-forwarded-proto", "https");
   nextHeaders.delete("host");
   return nextHeaders;
+}
+
+function isPublicWorkflowApiPath(pathname = "") {
+  const normalized = String(pathname || "").trim();
+  return normalized === "/api/ateam/workflow" || normalized.startsWith("/api/ateam/workflow/");
 }
 
 async function proxyWorkflowRequest(request: Request, env: Env) {
@@ -58,6 +79,9 @@ async function proxyWorkflowRequest(request: Request, env: Env) {
   }
 
   const url = new URL(request.url);
+  if (!isPublicWorkflowApiPath(url.pathname)) {
+    return json({ ok: false, error: "not_found" }, { status: 404 });
+  }
   const upstreamUrl = new URL(origin + url.pathname.replace(/^\/api\/ateam/, "/api") + url.search);
   const upstreamRequest = new Request(upstreamUrl.toString(), {
     method: request.method,
@@ -147,10 +171,10 @@ function buildPage(canonicalOrigin: string) {
       <h2>Only the public-safe modules stay on this route.</h2>
       <p class="muted">Clients see intake, system state, visible work, and output. Office, approvals, logs, and overrides remain private.</p>
       <div class="module-grid">
-        <article class="module"><p class="eyebrow">Intake</p><h3>Open narrative</h3><span>Capture the rough idea and the last clarifiers without forcing a rigid form.</span></article>
-        <article class="module"><p class="eyebrow">System</p><h3>State and routing</h3><span>Show the run state, lane, movement reason, and blocker context clearly.</span></article>
-        <article class="module"><p class="eyebrow">Work</p><h3>Visible execution</h3><span>Keep jobs, ownership, and timeline movement readable on the public-safe surface.</span></article>
-        <article class="module"><p class="eyebrow">Output</p><h3>Client-ready pack</h3><span>Return run-owned artifacts and the clearest next move into Una Labs delivery.</span></article>
+        <article class="module"><p class="eyebrow">Intake</p><h3 id="module-intake-state">Open narrative</h3><p id="module-intake-summary" class="muted tiny">One rough paragraph is enough to start the public flow.</p><span id="module-intake-detail">Capture the rough idea and the last clarifiers without forcing a rigid form.</span></article>
+        <article class="module"><p class="eyebrow">System</p><h3 id="module-system-state">State and routing</h3><p id="module-system-summary" class="muted tiny">The system view will expose lane, movement reason, and blocker context once the run is active.</p><span id="module-system-detail">Show the run state, lane, movement reason, and blocker context clearly.</span></article>
+        <article class="module"><p class="eyebrow">Work</p><h3 id="module-work-state">Visible execution</h3><p id="module-work-summary" class="muted tiny">Jobs and timeline movement appear here once ATEAM routes the run.</p><span id="module-work-detail">Keep jobs, ownership, and timeline movement readable on the public-safe surface.</span></article>
+        <article class="module"><p class="eyebrow">Output</p><h3 id="module-output-state">Client-ready pack</h3><p id="module-output-summary" class="muted tiny">The output pack appears here once ATEAM reaches a believable first pass.</p><span id="module-output-detail">Return run-owned artifacts and the clearest next move into Una Labs delivery.</span></article>
       </div>
     </section>
     <section class="layout">
@@ -205,6 +229,11 @@ function buildPage(canonicalOrigin: string) {
       </div>
       <aside class="stack">
         <div class="card">
+          <p class="eyebrow">What ATEAM understood</p>
+          <h2 id="understandingTitle">ATEAM will translate the rough idea into a working intent.</h2>
+          <div id="understandingBox" class="empty">Audience, first win, and lane will appear here once the run starts.</div>
+        </div>
+        <div class="card">
           <p class="eyebrow">Module 2 · System</p>
           <h2>What the system is doing</h2>
           <div id="statusBox" class="empty">No run yet.</div>
@@ -237,13 +266,15 @@ function buildPage(canonicalOrigin: string) {
     const req=(path,init)=>fetch(path,{method:init&&init.method?init.method:"GET",headers:{"content-type":"application/json",...(init&&init.headers?init.headers:{})},body:init&&init.body?init.body:undefined,cache:"no-store"}).then(async(r)=>{const p=await r.json().catch(()=>({})); if(!r.ok||p.ok===false) throw new Error(p.message||p.details||p.error||"ATEAM request failed."); return p;});
     function renderSteps(){const idx=!state.run?0:state.run.phase==="analysis"?1:state.run.phase==="brief_approval"||state.run.phase==="initiation"?2:state.run.phase==="prototype_pack"||state.run.phase==="pack_approval"?3:state.run.phase==="handoff"||state.run.phase==="archived"?4:0; $("stepRail").innerHTML=STEPS.map((s,i)=>'<div class="step '+(i<idx||idx===4?'done ':'')+(i===idx?'active':'')+'"><strong>'+esc(s)+'</strong></div>').join("");}
     function renderStatus(){if(!state.run){$("statusBox").className="empty"; $("statusBox").textContent="No run yet."; return;} const n=state.run.statusNarrative||{}; $("statusBox").className="box"; $("statusBox").innerHTML='<strong>'+esc(n.label||state.run.phase||"Run active")+'</strong><div class="muted tiny">Run ID: '+esc(state.run.id)+'</div><p>'+esc(n.summary||"ATEAM is holding the current workflow state.")+'</p>'+(n.movementReason?'<div class="muted tiny">Reason: '+esc(n.movementReason)+'</div>':'')+(n.blockerReason?'<div class="muted tiny">Blocker: '+esc(n.blockerReason)+'</div>':'');}
+    function renderPublicFlow(){const detailMap={intake:'Capture the rough idea and the last clarifiers without forcing a rigid form.',system:'Show the run state, lane, movement reason, and blocker context clearly.',work:'Keep jobs, ownership, and timeline movement readable on the public-safe surface.',output:'Return run-owned artifacts and the clearest next move into Una Labs delivery.'}; const fallback={intake:{state:state.run?'Run captured':'Open narrative',summary:state.run?'ATEAM has the rough idea and can shape the rest from short clarifiers.':'One rough paragraph is enough to start the public flow.'},system:{state:state.run&&state.run.statusNarrative&&state.run.statusNarrative.label||'State and routing',summary:state.run&&state.run.statusNarrative&&state.run.statusNarrative.summary||'The system view will expose lane, movement reason, and blocker context once the run is active.'},work:{state:Array.isArray(state.run&&state.run.jobs)&&state.run.jobs.length?String(state.run.jobs.length)+' visible jobs':'Visible execution',summary:Array.isArray(state.run&&state.run.history)&&state.run.history.length?'Jobs and timeline movement are visible from this run.':'Jobs and timeline movement appear here once ATEAM routes the run.'},output:{state:state.run&&((state.run.phase==='handoff')||(state.run.handoff&&state.run.handoff.version===2))?'Decision pack ready':'Client-ready pack',summary:Array.isArray(state.run&&state.run.artifactSummaries)&&state.run.artifactSummaries.length?'Run-owned artifacts are ready for handoff into Una Labs delivery.':'The output pack appears here once ATEAM reaches a believable first pass.'}}; ['intake','system','work','output'].forEach((key)=>{const modules=Array.isArray(state.run&&state.run.publicFlow&&state.run.publicFlow.modules)?state.run.publicFlow.modules:[]; const item=modules.find((entry)=>String(entry&&entry.key||'').toLowerCase()===key)||fallback[key]; const stateEl=$('module-'+key+'-state'); const summaryEl=$('module-'+key+'-summary'); const detailEl=$('module-'+key+'-detail'); if(stateEl) stateEl.textContent=String(item&&item.state||''); if(summaryEl) summaryEl.textContent=String(item&&item.summary||''); if(detailEl) detailEl.textContent=String(item&&item.detail||detailMap[key]||'');});}
+    function renderUnderstanding(){const understanding=state.run&&state.run.publicFlow&&state.run.publicFlow.understanding?state.run.publicFlow.understanding:null; if(!understanding){$("understandingTitle").textContent='ATEAM will translate the rough idea into a working intent.'; $("understandingBox").className='empty'; $("understandingBox").textContent='Audience, first win, and lane will appear here once the run starts.'; return;} $("understandingTitle").textContent=String(understanding.title||state.run.title||'ATEAM understanding'); $("understandingBox").className='box'; $("understandingBox").innerHTML='<p>'+esc(understanding.summary||'ATEAM has translated the rough idea into a workable direction.')+'</p>'+(understanding.audience?'<div class="muted tiny">Audience: '+esc(understanding.audience)+'</div>':'')+(understanding.firstWin?'<div class="muted tiny">First win: '+esc(understanding.firstWin)+'</div>':'')+(understanding.recommendedLane?'<div class="muted tiny">Lane: '+esc(understanding.recommendedLane)+'</div>':'');}
     function renderQuestions(){const questions=Array.isArray(state.run&&state.run.questions)?state.run.questions:[]; if(!questions.length||state.run.phase==="handoff"||state.run.phase==="archived"){ $("questionsCard").hidden=true; $("questions").innerHTML=""; return; } $("questionsCard").hidden=false; $("questions").innerHTML=questions.map((q)=>'<label class="box"><strong>'+esc(q.prompt)+'</strong><textarea data-q="'+esc(q.id)+'" rows="4" placeholder="'+esc(q.placeholder||"")+'">'+esc(state.answers[q.id]||(state.run.answers&&state.run.answers[q.id])||"")+'</textarea>'+(q.hint?'<div class="muted tiny">'+esc(q.hint)+'</div>':'')+'</label>').join(""); document.querySelectorAll("[data-q]").forEach((el)=>el.addEventListener("input",()=>{state.answers[el.getAttribute("data-q")]=el.value;}));}
     function renderJobs(){const jobs=Array.isArray(state.run&&state.run.jobs)?state.run.jobs:[]; $("jobsBox").innerHTML=jobs.length?jobs.slice(0,6).map((j)=>'<div class="box"><strong>'+esc(j.title||"Job")+'</strong><div class="muted tiny">Stage: '+esc(j.stage||j.stageKey||j.status||"queued")+'</div><div class="muted tiny">Owner: '+esc(j.ownerAgentId||"Unassigned")+'</div><p>'+esc(j.objective||j.blockerReason||j.waitingReason||"Work item created from this run.")+'</p></div>').join(""):'<div class="empty">Jobs appear here once ATEAM routes the run.</div>';}
     function renderArtifacts(){const items=Array.isArray(state.run&&state.run.artifactSummaries)?state.run.artifactSummaries:[]; $("artifactsBox").innerHTML=items.length?items.slice(0,6).map((a)=>'<div class="box"><strong>'+esc(a.title||"Artifact")+'</strong><div class="muted tiny">Type: '+esc(a.type||a.kind||"artifact")+'</div><div class="muted tiny">Ownership: '+esc(a.projectId?"Project-linked":"Run-owned")+'</div><p>'+esc(a.summary||"")+'</p></div>').join(""):'<div class="empty">Artifact ownership appears here once the pack is generated.</div>';}
     function renderTimeline(){const items=Array.isArray(state.run&&state.run.history)?state.run.history:[]; $("timelineBox").innerHTML=items.length?items.slice(-8).reverse().map((i)=>'<div class="box"><strong>'+esc(i.message||i.eventType||"Event")+'</strong><div class="muted tiny">'+esc(i.createdAt||"")+'</div>'+(i.metadata&&i.metadata.reason?'<p>'+esc(i.metadata.reason)+'</p>':'')+'</div>').join(""):'<div class="empty">Timeline events appear here once the run starts moving.</div>';}
     function renderResults(){const ready=!!(state.run&&(state.run.phase==="handoff"||(state.run.handoff&&state.run.handoff.version===2))); if(!ready){$("resultCard").hidden=true; $("resultGrid").innerHTML=""; return;} const brief=state.run.brief||{}; const artifacts=state.run.artifacts||{}; const project=state.run.project||{}; $("resultCard").hidden=false; $("resultTitle").textContent=brief.title||state.run.title||"ATEAM result"; $("resultSummary").textContent=brief.summary||"ATEAM has packaged the first pass and project handoff."; $("resultVerdict").textContent=brief.quickVerdict||"Decision pack ready"; $("resultGrid").innerHTML='<div class="box"><strong>Recommended lane</strong><div>'+esc(state.run.recommendedLane||brief.recommendedLane||"Scoped first pass")+'</div></div><div class="box"><strong>Project</strong><div>'+esc(project.name||"Run-owned project shell")+'</div></div><div class="box"><strong>Prototype</strong><div>'+esc(artifacts.prototype&&artifacts.prototype.title||"Prototype direction")+'</div></div><div class="box"><strong>Document</strong><div>'+esc(artifacts.doc&&artifacts.doc.title||"Structured scope")+'</div></div>'; }
     function handoffPayload(){const h=state.run&&state.run.handoff; if(h&&h.version===2&&h.runId) return h; const b=state.run&&state.run.brief?state.run.brief:{}; const a=state.run&&state.run.artifacts?state.run.artifacts:{}; const label=(state.run&&state.run.category)||$("category").value||"auto"; return {version:2,runId:state.run.id,createdAtMs:Date.now(),idea:state.run.idea||"",categoryValue:label,categoryLabel:label,recommendedLane:state.run.recommendedLane||b.recommendedLane||label,phase:state.run.phase||"handoff",brief:{title:b.title||"ATEAM result",summary:b.summary||"",audience:b.audience||"",primaryGoal:b.primaryGoal||"",likelyUserValue:b.likelyUserValue||"",recommendedDirection:b.recommendedDirection||"",quickVerdict:b.quickVerdict||"",goals:Array.isArray(b.goals)?b.goals:[],constraints:Array.isArray(b.constraints)?b.constraints:[],successCriteria:Array.isArray(b.successCriteria)?b.successCriteria:[],phasedPlan:Array.isArray(b.phasedPlan)?b.phasedPlan:[]},artifacts:{mockupTitle:a.mockup&&a.mockup.title||"Concept pack",prototypeTitle:a.prototype&&a.prototype.title||"Prototype direction",smokeSummary:a.smoke&&a.smoke.summary||"Quick QA view",docTitle:a.doc&&a.doc.title||"Structured scope"},nextSteps:Array.isArray(a.nextSteps)?a.nextSteps:[]};}
-    function render(){renderSteps(); renderStatus(); renderQuestions(); renderJobs(); renderArtifacts(); renderTimeline(); renderResults();}
+    function render(){renderSteps(); renderPublicFlow(); renderUnderstanding(); renderStatus(); renderQuestions(); renderJobs(); renderArtifacts(); renderTimeline(); renderResults();}
     async function loadRun(runId){const payload=await req("/api/ateam/workflow/runs/"+encodeURIComponent(runId)); state.run=payload.run; render();}
     async function start(){setBox("errorBox",""); setBox("noticeBox",""); const idea=$("idea").value.trim(); if(state.service!=="ready"){setBox("errorBox","ATEAM is not connected yet. You can still continue into Start a Project while the workflow service comes online.","error"); return;} if(idea.length<12){setBox("errorBox","Drop a little more context so ATEAM can shape a believable first pass.","error"); return;} $("startBtn").disabled=true; $("startBtn").textContent="Opening workflow..."; try{const payload=await req("/api/ateam/workflow/runs",{method:"POST",body:JSON.stringify({idea,category:$("category").value==="auto"?"":$("category").value})}); state.run=payload.run; state.answers={}; history.replaceState({}, "", "/ateam?run="+encodeURIComponent(payload.run.id)); render(); setBox("noticeBox","ATEAM captured the run. Answer the quick clarifiers and it will route, build, and package the first pass.","notice");}catch(err){setBox("errorBox",err instanceof Error?err.message:"Unable to start the ATEAM workflow run.","error");}finally{$("startBtn").disabled=false; $("startBtn").textContent="Start ATEAM workflow";}}
     async function buildPack(){if(!state.run) return; const qs=Array.isArray(state.run.questions)?state.run.questions:[]; const missing=qs.find((q)=>!String(state.answers[q.id]||"").trim()); if(missing){setBox("errorBox","Answer the quick clarifiers so ATEAM can shape the first pass cleanly.","error"); return;} $("buildBtn").disabled=true; $("buildBtn").textContent="Building run..."; setBox("errorBox",""); setBox("noticeBox",""); try{await req("/api/ateam/workflow/runs/"+encodeURIComponent(state.run.id)+"/answers",{method:"POST",body:JSON.stringify({answers:state.answers})}); await req("/api/ateam/workflow/runs/"+encodeURIComponent(state.run.id)+"/approve",{method:"POST",body:JSON.stringify({gate:"brief",decision:"approved"})}); await req("/api/ateam/workflow/runs/"+encodeURIComponent(state.run.id)+"/generate-pack",{method:"POST",body:JSON.stringify({})}); const finalPayload=await req("/api/ateam/workflow/runs/"+encodeURIComponent(state.run.id)+"/approve",{method:"POST",body:JSON.stringify({gate:"pack",decision:"approved"})}); state.run=finalPayload.run; render(); setBox("noticeBox","ATEAM shaped the brief, created the preview artifacts, and lined up the delivery handoff.","notice");}catch(err){setBox("errorBox",err instanceof Error?err.message:"ATEAM could not finish the workflow run right now.","error");}finally{$("buildBtn").disabled=false; $("buildBtn").textContent="Build the preview pack";}}

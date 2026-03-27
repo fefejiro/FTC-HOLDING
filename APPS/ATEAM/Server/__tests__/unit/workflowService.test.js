@@ -47,6 +47,13 @@ describe("workflowService", () => {
     expect(started.statusNarrative.currentStage).toBe("understanding");
     expect(started.project.workflowRunId).toBe(started.id);
     expect(started.project.status).toBe("intake");
+    expect(started.publicFlow?.modules.map((module) => module.key)).toEqual([
+      "intake",
+      "system",
+      "work",
+      "output"
+    ]);
+    expect(started.publicFlow?.understanding?.title).toBeTruthy();
 
     const withBrief = workflowService.captureAnswers(started.id, {
       actor: "public",
@@ -97,6 +104,7 @@ describe("workflowService", () => {
     expect(delivered.history.some((entry) => entry.eventType === "delivered")).toBe(true);
     expect(delivered.artifactSummaries.every((artifact) => artifact.runId === delivered.id)).toBe(true);
     expect(delivered.artifactSummaries.every((artifact) => artifact.projectId === delivered.project.id)).toBe(true);
+    expect(delivered.publicFlow?.modules.find((module) => module.key === "output")?.state).toBe("Decision pack ready");
   });
 
   test("job timelines persist stage movement and blocker reasons", () => {

@@ -66,7 +66,7 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-ATEAM-TENANT-ID, X-ATEAM-WORKSPACE-ID, X-ATEAM-USER-ID"
+    "Content-Type, Authorization, X-ATEAM-TENANT-ID, X-ATEAM-WORKSPACE-ID, X-ATEAM-USER-ID, X-ATEAM-ROLE, X-ATEAM-OPERATOR-EMAIL, X-ATEAM-PROXY-KEY"
   );
   if (req.method === "OPTIONS") {
     if (!requestOrigin || allowedOrigins.has(requestOrigin)) return res.sendStatus(204);
@@ -155,6 +155,9 @@ const DOCS_CATALOG = [
 ];
 const STORAGE_BACKEND = String(process.env.ATEAM_STORAGE_BACKEND || "local").trim().toLowerCase();
 const AUTH_MODE = String(process.env.ATEAM_AUTH_MODE || "local").trim().toLowerCase();
+const OPERATOR_AUDIT_SESSION_ID = sanitizeSessionId(
+  process.env.ATEAM_OPERATOR_AUDIT_SESSION_ID || "operator_audit"
+);
 const principalScopeMiddleware = createPrincipalScopeMiddleware({ mode: AUTH_MODE });
 app.use(["/task", "/tasks", "/agent", "/command", "/voice", "/events", "/speech", "/capability", "/content"], principalScopeMiddleware);
 app.use((req, res, next) => {
@@ -162,6 +165,59 @@ app.use((req, res, next) => {
   if (String(req.path || "").startsWith("/api")) {
     return principalScopeMiddleware(req, res, next);
   }
+  return next();
+});
+app.use((req, res, next) => {
+  if (PUBLIC_SERVICE_MODE || AUTH_MODE !== "trusted_proxy") return next();
+  if (isPublicWorkflowRoute(req.path)) return next();
+  if (String(req.path || "").startsWith("/api")) return next();
+  return principalScopeMiddleware(req, res, next);
+});
+
+function isStaticAssetRequest(pathname = "") {
+  return /\.[a-z0-9]+$/i.test(String(pathname || "").trim());
+}
+
+function shouldAuditOperatorRequest(req) {
+  const pathname = String(req?.path || "").trim() || "/";
+  const method = String(req?.method || "GET").trim().toUpperCase();
+  if (!pathname || pathname === "/health" || isPublicWorkflowRoute(pathname) || isStaticAssetRequest(pathname)) {
+    return false;
+  }
+  if (method === "GET" && pathname.startsWith("/api/")) {
+    return false;
+  }
+  return true;
+}
+
+app.use((req, res, next) => {
+  if (AUTH_MODE !== "trusted_proxy") return next();
+  if (!req.principal?.authenticated || req.principal?.mode !== "trusted_proxy") return next();
+  if (!shouldAuditOperatorRequest(req)) return next();
+
+  try {
+    const actor = String(req.principal.email || req.principal.userId || "operator").trim() || "operator";
+    const method = String(req.method || "GET").trim().toUpperCase();
+    const pathname = String(req.path || "/").trim() || "/";
+    const event = createEvent(
+      method === "GET" ? "operator_access" : "operator_action",
+      actor,
+      "system",
+      `${method} ${pathname}`,
+      {
+        email: req.principal.email || "",
+        role: req.principal.role || "",
+        tenantId: req.principal.tenantId || "",
+        workspaceId: req.principal.workspaceId || "",
+        method,
+        path: pathname
+      }
+    );
+    appendEvent(OPERATOR_AUDIT_SESSION_ID, event);
+  } catch (err) {
+    console.error("[OperatorAudit] Failed to append operator audit event", err);
+  }
+
   return next();
 });
 

@@ -424,6 +424,82 @@ function buildProjectSummary(run, jobs = [], artifactSummaries = []) {
   };
 }
 
+function buildUnderstandingSummary(run = {}) {
+  const brief = run?.brief && typeof run.brief === "object" ? run.brief : {};
+  const safeIdea = safeText(run?.idea, 240);
+  const recommendedLane = safeText(run?.recommendedLane || brief.recommendedLane, 120);
+  return {
+    title: safeText(brief.title, 160) || "What ATEAM understood",
+    summary:
+      safeText(brief.summary, 320) ||
+      safeText(
+        safeIdea
+          ? `ATEAM is shaping this idea into a ${recommendedLane || "clear"} run with visible state and a believable first delivery move.`
+          : "ATEAM is shaping the rough idea into a clearer delivery frame.",
+        320
+      ),
+    audience: safeText(brief.audience, 160),
+    firstWin: safeText(brief.primaryGoal || brief.quickVerdict, 220),
+    recommendedLane
+  };
+}
+
+function buildPublicFlow(run, jobs = [], artifactSummaries = []) {
+  const statusNarrative = buildStatusNarrative(run, jobs);
+  const understanding = buildUnderstandingSummary(run);
+  return {
+    modules: [
+      {
+        key: "intake",
+        title: "Intake",
+        state: safeText(run?.id, 120) ? "Run captured" : "Waiting for idea",
+        summary: safeText(
+          run?.idea
+            ? "ATEAM has the rough idea and can continue from short clarifiers instead of a rigid form."
+            : "The public flow starts with an open narrative instead of a dead-end intake form.",
+          240
+        ),
+        detail: "Capture the rough idea and the last clarifiers without forcing the client to pre-structure everything."
+      },
+      {
+        key: "system",
+        title: "System",
+        state: safeText(statusNarrative.label, 120) || "Waiting",
+        summary: safeText(
+          statusNarrative.summary || "ATEAM keeps the current stage, movement reason, and blocker context visible.",
+          240
+        ),
+        detail: "Expose run state, lane, movement reason, and blocker context clearly enough to trust."
+      },
+      {
+        key: "work",
+        title: "Work",
+        state: jobs.length ? `${jobs.length} visible job${jobs.length === 1 ? "" : "s"}` : "No jobs yet",
+        summary: safeText(
+          jobs.length
+            ? `${jobs.length} job${jobs.length === 1 ? "" : "s"} and ${normalizeTimeline(run?.meta?.workflowTimeline, "run", safeText(run?.id, 120)).length} timeline event${normalizeTimeline(run?.meta?.workflowTimeline, "run", safeText(run?.id, 120)).length === 1 ? "" : "s"} are currently visible.`
+            : "Jobs and timeline movement will appear once ATEAM routes the run.",
+          240
+        ),
+        detail: "Show public-safe jobs, ownership, and recent timeline movement without exposing admin controls."
+      },
+      {
+        key: "output",
+        title: "Output",
+        state: safeText(run?.phase, 40).toLowerCase() === "handoff" ? "Decision pack ready" : "Building output",
+        summary: safeText(
+          artifactSummaries.length
+            ? `${artifactSummaries.length} run-owned artifact${artifactSummaries.length === 1 ? "" : "s"} are tied to this execution and ready for the next move.`
+            : "ATEAM will return run-owned artifacts and a clean project handoff once the pack is ready.",
+          240
+        ),
+        detail: "Return run-owned artifacts, a decision pack, and the clearest next move into delivery."
+      }
+    ],
+    understanding
+  };
+}
+
 function linkArtifactsToJobs(artifacts = [], jobs = []) {
   const byStep = new Map(
     (Array.isArray(jobs) ? jobs : [])
@@ -507,7 +583,8 @@ export function createWorkflowService({
       jobs,
       artifactSummaries,
       statusNarrative: buildStatusNarrative(rawRun, jobs),
-      history: normalizeTimeline(meta.workflowTimeline, "run", safeText(rawRun.id, 120))
+      history: normalizeTimeline(meta.workflowTimeline, "run", safeText(rawRun.id, 120)),
+      publicFlow: buildPublicFlow(rawRun, jobs, artifactSummaries)
     };
   }
 

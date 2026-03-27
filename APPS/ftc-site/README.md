@@ -93,9 +93,18 @@ Cloudflare Pages / Vercel-style build note:
 
 - Public route: `/ateam`
 - Public modules: `Intake`, `System`, `Work`, `Output`
-- Private operator routes: `/ateam/operator/*` when the secured operator proxy is enabled
+- Private operator host: `https://ops.unalabs.cloud`
+- Private operator proxy routes: `/ateam/operator/*` on the ops host, plus `/api/operator/ateam/*` for private JSON access
 
 The public flow is intentionally narrowed so clients only see the trustworthy high-level system narrative. Office, Factory, approvals, logs, and overrides remain inside the operator control plane. On the public production host, the Cloudflare Worker currently owns `/ateam*`, so `/ateam/operator/*` is intentionally not exposed there.
+
+Operator security model:
+
+- browser auth happens through Cloudflare Access on `ops.unalabs.cloud`
+- the ops worker verifies the Access identity and allowlisted email
+- the ops worker validates the Access JWT against `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`
+- the ops worker injects trusted scope headers to Railway server-side only
+- the public host never proxies private operator APIs
 
 ## Current launch mode
 
@@ -114,6 +123,7 @@ Optional environment variables:
 - `FTC_INTAKE_WEBHOOK_URL` (fallback webhook sink for compatibility)
 - `UNALABS_CONFIRMATION_EMAIL_WEBHOOK_URL` (optional webhook for acknowledgment emails after intake submission)
 - `ATEAM_UPSTREAM_ORIGIN` (origin for the real ATEAM runtime and workflow API proxy; defaults to `http://127.0.0.1:3000` in local dev)
+- `UNALABS_OPS_SITE_URL` / `NEXT_PUBLIC_OPS_SITE_URL` (optional override for the private operator host; defaults to `https://ops.unalabs.cloud`)
 - `UNALABS_SITE_URL` (preferred canonical URL override, for Phase B switch)
 - `FTC_SITE_URL` (fallback canonical URL override)
 - `UNALABS_REDIRECT_FROM_HOSTS` (comma-separated legacy hosts to 308 to canonical)

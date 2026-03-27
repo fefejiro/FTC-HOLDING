@@ -197,6 +197,35 @@ export type ProjectSummary = {
   updatedAt?: string;
 };
 
+export type PublicFlowModule = {
+  key: "intake" | "system" | "work" | "output" | string;
+  title: string;
+  state: string;
+  summary: string;
+  detail: string;
+};
+
+export type PublicFlowUnderstanding = {
+  title: string;
+  summary: string;
+  audience?: string;
+  firstWin?: string;
+  recommendedLane?: string;
+};
+
+export type PublicFlow = {
+  modules: PublicFlowModule[];
+  understanding: PublicFlowUnderstanding;
+};
+
+export type OperatorIdentity = {
+  email: string;
+  role: string;
+  tenantId: string;
+  workspaceId: string;
+  userId: string;
+};
+
 export type WorkflowHandoffPayload = {
   version: 2;
   runId: string;
@@ -255,6 +284,7 @@ export type WorkflowRun = {
   artifactSummaries?: ArtifactSummary[];
   statusNarrative?: StatusNarrative;
   history?: TimelineEntry[];
+  publicFlow?: PublicFlow;
 };
 
 export const ateamWorkflowCategories = [

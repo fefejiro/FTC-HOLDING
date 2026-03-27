@@ -299,13 +299,22 @@ export default function AteamWorkflowClient() {
   const artifactRecords = (run?.artifactSummaries || []).slice(0, 5);
   const jobSummaries = (run?.jobs || []).slice(0, 4);
   const timelineEntries = (run?.history || []).slice(-4).reverse();
+  const understanding = run?.publicFlow?.understanding || {
+    title: run?.title || "ATEAM will translate the rough idea into a working intent.",
+    summary:
+      run?.brief?.summary ||
+      "Once the run starts, ATEAM will turn the rough idea into a clear audience, first win, and believable lane.",
+    audience: run?.brief?.audience || "",
+    firstWin: run?.brief?.primaryGoal || "",
+    recommendedLane: run?.recommendedLane || selectedCategory.label
+  };
   const operatorOfficeHref = run?.id
     ? `/ateam/operator/office?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`
     : "/ateam/operator/office?shell=workflow";
   const operatorFactoryHref = run?.id
     ? `/ateam/operator/factory?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`
     : "/ateam/operator/factory?shell=workflow";
-  const publicFlowCards = publicFlowModules.map((module) => {
+  const fallbackPublicFlowCards = publicFlowModules.map((module) => {
     if (module.key === "intake") {
       return {
         ...module,
@@ -341,6 +350,16 @@ export default function AteamWorkflowClient() {
         : "The output module turns the run into artifacts, a decision pack, and a clean next move."
     };
   });
+  const publicFlowCards =
+    run?.publicFlow?.modules?.length
+      ? run.publicFlow.modules.map((module) => ({
+          ...module,
+          detail:
+            module.detail ||
+            publicFlowModules.find((item) => item.key === module.key)?.detail ||
+            ""
+        }))
+      : fallbackPublicFlowCards;
 
   async function syncRun(nextRun: WorkflowRun) {
     setRun(nextRun);
@@ -954,6 +973,29 @@ export default function AteamWorkflowClient() {
         </div>
 
         <aside className="ateam-workflow-sidebar">
+          <section className="card ateam-workflow-sidebar-card">
+            <p className="card-kicker">What ATEAM understood</p>
+            <h3>{understanding.title}</h3>
+            <p className="muted">{understanding.summary}</p>
+            <div className="ateam-workflow-sidebar-meta">
+              <div>
+                <span>Audience</span>
+                <strong>{understanding.audience || "Still forming"}</strong>
+              </div>
+              <div>
+                <span>First win</span>
+                <strong>{understanding.firstWin || "Clarifiers will sharpen it"}</strong>
+              </div>
+              <div>
+                <span>Lane</span>
+                <strong>{understanding.recommendedLane || selectedCategory.label}</strong>
+              </div>
+              <div>
+                <span>Intent source</span>
+                <strong>{run ? "Workflow run" : "Awaiting intake"}</strong>
+              </div>
+            </div>
+          </section>
           <section className="card ateam-workflow-sidebar-card">
             <p className="card-kicker">Module 2 · System</p>
             <h3>{workflowReady ? "System is ready for handoff" : run ? "System is tracking the run" : "System is waiting for intake"}</h3>
