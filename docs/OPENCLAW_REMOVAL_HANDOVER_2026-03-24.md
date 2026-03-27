@@ -30,11 +30,11 @@ Those files were OpenClaw-specific account-switching automation and are intentio
 
 The Una Labs LinkedIn helper scripts were kept, but they were rewritten to stop depending on OpenClaw:
 
-- [unalabs-linkedin-setup.ps1](/c:/FTC%20HOLDING/scripts/unalabs-linkedin-setup.ps1)
-- [unalabs-linkedin-digest.ps1](/c:/FTC%20HOLDING/scripts/unalabs-linkedin-digest.ps1)
-- [unalabs-linkedin-approvals.ps1](/c:/FTC%20HOLDING/scripts/unalabs-linkedin-approvals.ps1)
-- [unalabs-linkedin-reminder.ps1](/c:/FTC%20HOLDING/scripts/unalabs-linkedin-reminder.ps1)
-- [UNALABS_LINKEDIN_AUTOMATION.md](/c:/FTC%20HOLDING/DOCS/linkedin/UNALABS_LINKEDIN_AUTOMATION.md)
+- [unalabs-linkedin-setup.ps1](/c:/FTC%20HOLDING/FTC-HOLDING/scripts/unalabs-linkedin-setup.ps1)
+- [unalabs-linkedin-digest.ps1](/c:/FTC%20HOLDING/FTC-HOLDING/scripts/unalabs-linkedin-digest.ps1)
+- [unalabs-linkedin-approvals.ps1](/c:/FTC%20HOLDING/FTC-HOLDING/scripts/unalabs-linkedin-approvals.ps1)
+- [unalabs-linkedin-reminder.ps1](/c:/FTC%20HOLDING/FTC-HOLDING/scripts/unalabs-linkedin-reminder.ps1)
+- [UNALABS_LINKEDIN_AUTOMATION.md](/c:/FTC%20HOLDING/FTC-HOLDING/DOCS/linkedin/UNALABS_LINKEDIN_AUTOMATION.md)
 
 The digest flow now uses a local drafter instead of calling OpenClaw.
 
