@@ -105,6 +105,7 @@ Operator security model:
 - the ops worker validates the Access JWT against `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`
 - the ops worker injects trusted scope headers to Railway server-side only
 - the public host never proxies private operator APIs
+- if Access is not configured yet, the ops worker can enforce worker-level Basic Auth as a secure fallback
 
 ## Current launch mode
 

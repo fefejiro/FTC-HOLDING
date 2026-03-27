@@ -4572,7 +4572,7 @@ async function renderDocsPage({ force = false } = {}) {
   try {
     docs = await mcLoadDocs({ force });
   } catch {
-    if (docsSummary) docsSummary.textContent = "Docs could not be loaded from the local server.";
+    if (docsSummary) docsSummary.textContent = "Docs could not be loaded from the active runtime.";
     if (docsList) docsList.innerHTML = mcEmptyHtml("Docs are unavailable right now.");
     renderDocsDetail(null);
     return;
@@ -4767,7 +4767,7 @@ async function renderSystemPage({ force = false } = {}) {
   if (systemSummary) {
     systemSummary.textContent = health?.ok
       ? `Local server is responding. Talk model: ${config?.llm?.talkPrimary || "unknown"} | Dashboard model: ${config?.llm?.dashboardPrimary || "unknown"}.`
-      : "Health data could not be loaded from the local server.";
+      : "Health data could not be loaded from the active runtime.";
   }
   if (systemMetricMode) systemMetricMode.textContent = String(health.mode || "unknown");
   if (systemMetricStorage) systemMetricStorage.textContent = String(config?.storage?.backend || "unknown");

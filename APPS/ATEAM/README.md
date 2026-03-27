@@ -132,6 +132,7 @@ Private operator contract:
 - approvals, logs, overrides, Office, Team, Factory, and Memory stay private
 - Cloudflare Access authenticates the browser on `ops.unalabs.cloud`, the ops worker validates the Access JWT (`CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_AUD`), then injects trusted scope headers to Railway server-side only
 - Direct browser-supplied `Authorization` / `X-ATEAM-*` headers are no longer the intended operator trust model
+- If Access is not configured yet, the ops worker can fall back to secure Basic Auth so the private runtime is still usable without exposing operator APIs publicly
 
 ## API Surface
 

@@ -22,6 +22,7 @@ Set these in `wrangler.toml` / Worker secrets:
 
 - `ATEAM_UPSTREAM_ORIGIN`
 - `OPS_ALLOWED_EMAILS`
+- `OPS_BASIC_AUTH_USERNAME`
 - `ATEAM_PROXY_TENANT_ID`
 - `ATEAM_PROXY_WORKSPACE_ID`
 - `ATEAM_PROXY_USER_ID`
@@ -30,6 +31,7 @@ Set these in `wrangler.toml` / Worker secrets:
 - `CF_ACCESS_TEAM_DOMAIN`
 - `CF_ACCESS_AUD`
 - secret: `ATEAM_TRUSTED_PROXY_KEY`
+- secret: `OPS_BASIC_AUTH_PASSWORD`
 
 Set these in Railway:
 
@@ -39,7 +41,14 @@ Set these in Railway:
 
 ## Access requirement
 
-Cloudflare Access must protect `ops.unalabs.cloud/*` and allowlist `mike.fejiro@gmail.com`.
-The worker validates the `CF-Access-Jwt-Assertion` against the Access signing keys from
-`CF_ACCESS_TEAM_DOMAIN` and checks the configured `CF_ACCESS_AUD`.
-Without that configuration, the worker returns `access_validation_not_configured`.
+Preferred mode:
+
+- Cloudflare Access protects `ops.unalabs.cloud/*` and allowlists `mike.fejiro@gmail.com`.
+- The worker validates the `CF-Access-Jwt-Assertion` against the Access signing keys from
+  `CF_ACCESS_TEAM_DOMAIN` and checks the configured `CF_ACCESS_AUD`.
+
+Fallback mode:
+
+- If the Access values are not configured, the worker falls back to HTTP Basic Auth using
+  `OPS_BASIC_AUTH_USERNAME` + `OPS_BASIC_AUTH_PASSWORD`.
+- This keeps the private host secured and usable while the Access app is still being finished.

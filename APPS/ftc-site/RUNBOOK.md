@@ -61,6 +61,10 @@ Private operator runtime:
   - allowlist `mike.fejiro@gmail.com`
   - copy the Access team domain into `CF_ACCESS_TEAM_DOMAIN`
   - copy the Access application AUD into `CF_ACCESS_AUD`
+- secure fallback if Access is not ready:
+  - set `OPS_BASIC_AUTH_USERNAME`
+  - set `OPS_BASIC_AUTH_PASSWORD`
+  - the worker will challenge with HTTP Basic Auth until Access is fully configured
 
 Private operator verification:
 

@@ -12,6 +12,7 @@ custom_domain = true
 [vars]
 ATEAM_UPSTREAM_ORIGIN = "https://ateam-api-production.up.railway.app"
 OPS_ALLOWED_EMAILS = "mike.fejiro@gmail.com"
+OPS_BASIC_AUTH_USERNAME = "mike.fejiro@gmail.com"
 ATEAM_PROXY_TENANT_ID = "owner_tenant"
 ATEAM_PROXY_WORKSPACE_ID = "main_workspace"
 ATEAM_PROXY_USER_ID = "mike_owner"

@@ -2,6 +2,8 @@ export interface Env {
   ATEAM_UPSTREAM_ORIGIN?: string;
   ATEAM_TRUSTED_PROXY_KEY?: string;
   OPS_ALLOWED_EMAILS?: string;
+  OPS_BASIC_AUTH_USERNAME?: string;
+  OPS_BASIC_AUTH_PASSWORD?: string;
   ATEAM_PROXY_TENANT_ID?: string;
   ATEAM_PROXY_WORKSPACE_ID?: string;
   ATEAM_PROXY_USER_ID?: string;
@@ -65,6 +67,13 @@ function getAllowedEmails(env: Env) {
       .map((item) => String(item || "").trim().toLowerCase())
       .filter(Boolean)
   );
+}
+
+function getBasicAuthConfig(env: Env) {
+  return {
+    username: String(env.OPS_BASIC_AUTH_USERNAME || "").trim().toLowerCase(),
+    password: String(env.OPS_BASIC_AUTH_PASSWORD || "").trim()
+  };
 }
 
 function decodeBase64Url(value: string) {
@@ -204,13 +213,75 @@ async function verifyAccessJwt(request: Request, env: Env) {
   };
 }
 
-async function getOperatorIdentity(request: Request, env: Env) {
-  const verification = await verifyAccessJwt(request, env);
-  if (!verification.ok) return verification;
+function verifyBasicAuth(request: Request, env: Env) {
+  const config = getBasicAuthConfig(env);
+  if (!config.username || !config.password) {
+    return {
+      ok: false,
+      status: 503,
+      error: "basic_auth_not_configured",
+      message:
+        "Basic auth fallback is not configured yet. Set OPS_BASIC_AUTH_USERNAME and OPS_BASIC_AUTH_PASSWORD on the ops worker."
+    };
+  }
 
-  const email = String(verification.payload.email || "")
-    .trim()
-    .toLowerCase();
+  const header = String(request.headers.get("authorization") || "").trim();
+  if (!header.toLowerCase().startsWith("basic ")) {
+    return {
+      ok: false,
+      status: 401,
+      error: "basic_auth_required",
+      message: "Basic auth is required for the private operator surface."
+    };
+  }
+
+  try {
+    const encoded = header.slice(6).trim();
+    const decoded = new TextDecoder().decode(decodeBase64Url(encoded));
+    const separatorIndex = decoded.indexOf(":");
+    const username = decoded.slice(0, separatorIndex).trim().toLowerCase();
+    const password = decoded.slice(separatorIndex + 1);
+    if (separatorIndex <= 0 || username !== config.username || password !== config.password) {
+      return {
+        ok: false,
+        status: 401,
+        error: "basic_auth_invalid",
+        message: "The operator basic auth credentials were not accepted."
+      };
+    }
+
+    return {
+      ok: true,
+      email: username
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 401,
+      error: "basic_auth_invalid",
+      message: "The operator basic auth header could not be decoded."
+    };
+  }
+}
+
+async function getOperatorIdentity(request: Request, env: Env) {
+  const accessConfigured =
+    Boolean(String(env.CF_ACCESS_TEAM_DOMAIN || "").trim()) &&
+    Boolean(String(env.CF_ACCESS_AUD || "").trim());
+
+  let email = "";
+  if (accessConfigured) {
+    const verification = await verifyAccessJwt(request, env);
+    if (!verification.ok) return verification;
+    email = String(verification.payload.email || "")
+      .trim()
+      .toLowerCase();
+  } else {
+    const basicAuth = verifyBasicAuth(request, env);
+    if (!basicAuth.ok) return basicAuth;
+    email = String(basicAuth.email || "").trim().toLowerCase();
+  }
+
   if (!email || !getAllowedEmails(env).has(email)) {
     return {
       ok: false,
@@ -241,7 +312,15 @@ function errorResponse(status: number, error: string, message: string) {
       error,
       message
     },
-    { status }
+    {
+      status,
+      headers:
+        status === 401
+          ? {
+              "www-authenticate": 'Basic realm="ATEAM Ops", charset="UTF-8"'
+            }
+          : undefined
+    }
   );
 }
 
