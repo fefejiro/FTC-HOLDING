@@ -17,12 +17,12 @@ export default function AteamSurfaceShell({ surfaceKey }: { surfaceKey: AteamLoc
             <img src={ATEAM_BRAND_LOGO_PATH} alt="" width={64} height={64} />
           </div>
           <div className="ateam-hero-heading">
-            <p className="eyebrow">Real ATEAM route</p>
-            <h1>ATEAM inside Una Labs opens the actual local product, not a fake demo.</h1>
+            <p className="eyebrow">ATEAM operator route</p>
+            <h1>ATEAM inside Una Labs keeps the public and operator surfaces on one workflow model.</h1>
             <p className="lead">
-              This route keeps the Una Labs wrapper at the top. Open it locally to embed the live
-              ATEAM {surface.label} surface, or use the public page as a clean handoff into that same
-              runtime on your machine.
+              This route keeps the Una Labs wrapper at the top while pointing to the private ATEAM{" "}
+              {surface.label} surface. The public page handles intake and preview artifacts. The
+              operator route handles approvals, logs, and delivery control.
             </p>
           </div>
         </div>
@@ -33,9 +33,9 @@ export default function AteamSurfaceShell({ surfaceKey }: { surfaceKey: AteamLoc
             <h2>{surface.label}</h2>
             <p>{surface.detail}</p>
             <ul className="ateam-hero-list">
-              <li>Uses the real ATEAM runtime from <code>localhost:3000</code> when Una Labs is opened locally.</li>
-              <li>Keeps Office, Memory, Team, Factory, and Pipeline reachable from Una Labs routes.</li>
-              <li>Shows a clear local handoff instead of pretending the public site can embed your machine automatically.</li>
+              <li>Keeps Office, Memory, Team, Factory, and Pipeline reachable through operator routes.</li>
+              <li>Shares the same runs, jobs, artifacts, and approval state as the public intake flow.</li>
+              <li>Protects operator controls instead of leaking them into the public marketing surface.</li>
             </ul>
           </div>
 

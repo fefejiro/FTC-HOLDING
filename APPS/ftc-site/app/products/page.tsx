@@ -150,8 +150,8 @@ export default function ProductsPage() {
                 className="product-ateam-preview"
               />
               <p className="muted">
-                Memory, Office, Team, and Factory stay visible inside the real local ATEAM shell
-                instead of being reduced to a fake public walkthrough.
+                Intake, routing, artifacts, and delivery state now sit inside the same ATEAM
+                product flow instead of being framed as a sidecar shell.
               </p>
             </div>
           </div>

@@ -115,8 +115,8 @@ export default function HomePage() {
                   <p className="proof-label">Inside ATEAM</p>
                   <h2>The AI lab inside Una Labs where rough ideas become clear next steps.</h2>
                   <p className="hero-media-caption">
-                    {ateamModeSummary} Open the real local product surfaces from here instead of a
-                    recreated demo shell.
+                    {ateamModeSummary} It now reads as a real Una Labs capability, not a borrowed
+                    demo surface.
                   </p>
                 </div>
               </div>
@@ -264,9 +264,9 @@ export default function HomePage() {
               <p className="eyebrow">Inside ATEAM</p>
               <h2>Open the real ATEAM surfaces that drive Una Labs from this route.</h2>
               <p className="muted">
-                ATEAM is part of Una Labs, not a detached step explainer. This route is meant to
-                hand you into the real local ATEAM surfaces instead of replacing them with marketing
-                cards.
+                ATEAM is part of Una Labs, not a detached explainer. This route now frames a real
+                workflow system with public intake, visible work, and a private operator control
+                plane behind it.
               </p>
             </div>
             <div className="ateam-preview-band-steps" aria-label="ATEAM inside Una Labs">

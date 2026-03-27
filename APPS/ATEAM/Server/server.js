@@ -1415,7 +1415,12 @@ app.post("/api/work-items/:workItemId/stage", async (req, res) => {
     const current = workItemStore.get(workItemId);
     if (!current) return res.status(404).json({ ok: false, error: "work_item_not_found" });
 
-    const updated = workItemStore.setStage(workItemId, stage);
+    const dataPatch = body.dataPatch && typeof body.dataPatch === "object" ? body.dataPatch : undefined;
+    const updated = workItemStore.setStage(workItemId, stage, {
+      actor,
+      reason,
+      dataPatch
+    });
     if (!updated) return res.status(500).json({ ok: false, error: "failed_to_update_stage" });
 
     const event = createEvent("decision", actor, "factory", `Stage: ${updated.stage}`, {
@@ -1444,7 +1449,9 @@ app.post("/api/work-items/:workItemId/stage", async (req, res) => {
           data: { approvalId: approval.id, policy: approval.policy, status: approval.status, payload: approval.payload }
         });
         appendEvent(sessionId, approvalEvent);
-        const relinked = workItemStore.setStage(updated.id, updated.stage, { dataPatch: { approvalId: approval.id } });
+        const relinked = workItemStore.setStage(updated.id, updated.stage, {
+          dataPatch: { approvalId: approval.id }
+        });
         return res.json({ ok: true, item: relinked || updated, sessionId, event, approval, approvalEvent });
       }
     }

@@ -54,12 +54,12 @@ type BrowserSpeechRecognition = {
 type BrowserSpeechRecognitionCtor = new () => BrowserSpeechRecognition;
 
 const conversionTunnel = [
-  { key: "capture", label: "Capture", detail: "Take the raw idea as-is." },
-  { key: "structure", label: "Structure", detail: "Pull out the audience and first useful win." },
-  { key: "route", label: "Route", detail: "Pick the fastest believable lane." },
-  { key: "build", label: "Build pass", detail: "Shape a quick concept and flow." },
-  { key: "review", label: "QA check", detail: "Flag what is ready and what still needs care." },
-  { key: "pack", label: "Decision pack", detail: "Bundle the next move with Una Labs." }
+  { key: "capture", label: "Intake", detail: "Receive the rough idea and preserve the signal." },
+  { key: "structure", label: "Understand", detail: "Pull out the audience, first win, and constraints." },
+  { key: "route", label: "Route", detail: "Turn the run into the clearest believable lane." },
+  { key: "build", label: "Build", detail: "Generate preview artifacts and visible delivery jobs." },
+  { key: "review", label: "Review", detail: "Surface quality notes, blockers, and next decisions." },
+  { key: "pack", label: "Decision", detail: "Package the outcome into a project-ready handoff." }
 ] as const;
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -273,6 +273,9 @@ export default function AteamWorkflowClient() {
   const compactScreens = (run?.artifacts?.mockup?.screens || []).slice(0, 3);
   const compactDocSections = (run?.artifacts?.doc?.sections || []).slice(0, 3);
   const nextSteps = (handoff?.nextSteps || run?.artifacts?.nextSteps || []).slice(0, 3);
+  const artifactRecords = (run?.artifactSummaries || []).slice(0, 5);
+  const jobSummaries = (run?.jobs || []).slice(0, 4);
+  const timelineEntries = (run?.history || []).slice(-4).reverse();
   const operatorOfficeHref = run?.id
     ? `/ateam/operator/office?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`
     : "/ateam/operator/office?shell=workflow";
@@ -330,7 +333,7 @@ export default function AteamWorkflowClient() {
 
     if (workflowServiceState !== "ready") {
       setError(
-        "ATEAM idea intake isn't live in this environment yet. Use Start a Project to connect directly."
+        "ATEAM is not connected yet. You can still start a project directly while the workflow service comes online."
       );
       return;
     }
@@ -355,12 +358,12 @@ export default function AteamWorkflowClient() {
       setProcessingStageIndex(1);
       await wait(180);
       await syncRun(payload.run);
-      setNotice("ATEAM pulled out the two missing pieces. Answer them and the pack will build automatically.");
+      setNotice("ATEAM captured the run. Answer the two quick prompts and it will route, build, and package the first pass.");
     } catch (requestError) {
       setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to start the ATEAM fast pass."
+          requestError instanceof Error
+            ? requestError.message
+            : "Unable to start the ATEAM workflow run."
       );
     } finally {
       setBusy("idle");
@@ -428,12 +431,12 @@ export default function AteamWorkflowClient() {
       );
 
       await syncRun(handoffPayload.run);
-      setNotice("ATEAM shaped the brief, built the pack, and lined up the next move.");
+      setNotice("ATEAM shaped the brief, created the preview artifacts, and lined up the delivery handoff.");
     } catch (requestError) {
       setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "ATEAM could not finish the fast pass right now."
+          requestError instanceof Error
+            ? requestError.message
+            : "ATEAM could not finish the workflow run right now."
       );
     } finally {
       setBusy("idle");
@@ -456,15 +459,15 @@ export default function AteamWorkflowClient() {
       <section className="card ateam-workflow-hero-card ateam-fast-pass-hero">
         <div className="ateam-workflow-hero-copy">
           <p className="eyebrow">ATEAM inside Una Labs</p>
-          <h1>Drop a rough idea. Leave with a quick decision pack.</h1>
+          <h1>Drop a rough idea. Watch it turn into a structured run.</h1>
           <p className="lead">
-            ATEAM takes messy input, shapes the useful core, and turns it into a first-pass concept,
-            build notes, and a clear next move with Una Labs.
+            ATEAM turns messy input into a live workflow run, routes it into visible jobs, generates
+            preview artifacts, and prepares the clearest next move with Una Labs.
           </p>
           <div className="ateam-fast-pass-pills" aria-label="ATEAM flow highlights">
-            <span className="proof-tag">Raw idea in</span>
-            <span className="proof-tag">Quick structure pass</span>
-            <span className="proof-tag">Prototype direction out</span>
+            <span className="proof-tag">Narrative intake</span>
+            <span className="proof-tag">Visible work state</span>
+            <span className="proof-tag">Run-owned artifacts</span>
           </div>
         </div>
 
@@ -492,11 +495,11 @@ export default function AteamWorkflowClient() {
           <section className="card ateam-workflow-step-card">
             <div className="ateam-workflow-step-head">
               <div>
-                <p className="card-kicker">Fast pass</p>
+                <p className="card-kicker">Public intake</p>
                 <h2>Start with the rough idea</h2>
                 <p className="muted">
-                  Keep it natural. One paragraph is enough. If you know the lane already, set it.
-                  If not, leave it on auto.
+                  Keep it natural. One paragraph is enough. ATEAM will shape the run, ask the last
+                  two clarifiers, and build the first pass from there.
                 </p>
               </div>
               <span className="status-pill">
@@ -508,7 +511,7 @@ export default function AteamWorkflowClient() {
               </span>
             </div>
 
-            <div className="ateam-workflow-step-rail" aria-label="ATEAM fast-pass stages">
+              <div className="ateam-workflow-step-rail" aria-label="ATEAM workflow stages">
               {ateamWorkflowSteps.map((step, index) => {
                 const isComplete = workflowReady ? true : index < stepIndex;
                 const isActive = workflowReady ? index === ateamWorkflowSteps.length - 1 : index === stepIndex;
@@ -571,7 +574,7 @@ export default function AteamWorkflowClient() {
                     onClick={handleStartRun}
                     disabled={busy === "starting" || busy === "processing"}
                   >
-                    {busy === "starting" ? "Opening fast pass..." : "Start ATEAM fast pass"}
+                    {busy === "starting" ? "Opening workflow..." : "Start ATEAM workflow"}
                   </button>
                 </div>
               </div>
@@ -582,10 +585,11 @@ export default function AteamWorkflowClient() {
             <section className="card ateam-workflow-step-card">
               <div className="ateam-workflow-step-head">
                 <div>
-                  <p className="card-kicker">Quick clarifiers</p>
+                  <p className="card-kicker">Run clarifiers</p>
                   <h2>Answer the last two gaps</h2>
                   <p className="muted">
-                    Keep these short. ATEAM only needs enough to shape a believable first pass.
+                    Keep these short. ATEAM only needs enough to route the work cleanly and build the
+                    first preview artifacts.
                   </p>
                 </div>
                 <span className="status-pill">{run.questions.length} prompts</span>
@@ -619,7 +623,7 @@ export default function AteamWorkflowClient() {
                   onClick={handleBuildPack}
                   disabled={busy === "processing" || busy === "starting"}
                 >
-                  {busy === "processing" ? "Building pack..." : "Build the decision pack"}
+                  {busy === "processing" ? "Building run..." : "Build the preview pack"}
                 </button>
               </div>
             </section>
@@ -629,10 +633,10 @@ export default function AteamWorkflowClient() {
             <section className="card ateam-workflow-step-card">
               <div className="ateam-workflow-step-head">
                 <div>
-                  <p className="card-kicker">Conversion tunnel</p>
-                  <h2>ATEAM is shaping the first pass</h2>
+                  <p className="card-kicker">Live workflow</p>
+                  <h2>ATEAM is shaping the run</h2>
                   <p className="muted">
-                    Short enough to feel quick. Visible enough to feel real.
+                    Short enough to feel quick. Visible enough to feel trustworthy.
                   </p>
                 </div>
                 <span className="status-pill">
@@ -759,6 +763,71 @@ export default function AteamWorkflowClient() {
 
               <div className="ateam-workflow-pack-grid">
                 <article className="ateam-workflow-pack-panel">
+                  <p className="ateam-workflow-brief-label">Project evolution</p>
+                  <h3>{run.project?.name || "Run-owned project shell"}</h3>
+                  <p>{run.project?.summary || run.statusNarrative?.summary}</p>
+                  <ul className="ateam-demo-list">
+                    <li>Status: {run.project?.status || "intake"}</li>
+                    <li>Recommended lane: {run.project?.recommendedLane || run.recommendedLane}</li>
+                    <li>Active jobs: {String(run.project?.activeJobCount || jobSummaries.length || 0)}</li>
+                    <li>Blocked jobs: {String(run.project?.blockedJobCount || 0)}</li>
+                  </ul>
+                </article>
+
+                <article className="ateam-workflow-pack-panel">
+                  <p className="ateam-workflow-brief-label">Visible jobs</p>
+                  <h3>ATEAM work state</h3>
+                  <div className="ateam-workflow-doc-grid">
+                    {jobSummaries.map((job) => (
+                      <div key={job.id} className="ateam-workflow-doc-section">
+                        <strong>{job.title}</strong>
+                        <p>{job.objective}</p>
+                        <ul>
+                          <li>{job.stage}</li>
+                          <li>{job.ownerAgentId || "Unassigned"}</li>
+                          <li>{job.blockerReason || job.waitingReason || job.status}</li>
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              </div>
+
+              <div className="ateam-workflow-pack-grid">
+                <article className="ateam-workflow-pack-panel">
+                  <p className="ateam-workflow-brief-label">Artifact ownership</p>
+                  <h3>Every output stays tied to this run</h3>
+                  <div className="ateam-workflow-doc-grid">
+                    {artifactRecords.map((artifact) => (
+                      <div key={artifact.id} className="ateam-workflow-doc-section">
+                        <strong>{artifact.title}</strong>
+                        <p>{artifact.summary}</p>
+                        <ul>
+                          <li>{artifact.type}</li>
+                          <li>{artifact.promotionStatus || "run_owned"}</li>
+                          <li>{artifact.projectId ? "Project-linked" : "Run-owned"}</li>
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+
+                <article className="ateam-workflow-pack-panel">
+                  <p className="ateam-workflow-brief-label">Timeline</p>
+                  <h3>Why the run moved</h3>
+                  <ul className="ateam-demo-list">
+                    {timelineEntries.map((entry) => (
+                      <li key={entry.id}>
+                        <strong>{entry.message}</strong>
+                        {entry.metadata?.reason ? ` - ${String(entry.metadata.reason)}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </div>
+
+              <div className="ateam-workflow-pack-grid">
+                <article className="ateam-workflow-pack-panel">
                   <p className="ateam-workflow-brief-label">Build watch</p>
                   <h3>{run.artifacts?.smoke?.summary || "Quick QA view"}</h3>
                   <div className="ateam-workflow-smoke-list">
@@ -774,7 +843,7 @@ export default function AteamWorkflowClient() {
 
                 <article className="ateam-workflow-pack-panel">
                   <p className="ateam-workflow-brief-label">Next move</p>
-                  <h3>Continue with Una Labs or open the real lab view</h3>
+                  <h3>Move from preview into delivery</h3>
                   <div className="ateam-workflow-doc-grid">
                     {compactDocSections.map((section) => (
                       <div key={section.title} className="ateam-workflow-doc-section">
@@ -796,11 +865,11 @@ export default function AteamWorkflowClient() {
 
                   <div className="ateam-workflow-actions">
                     <button type="button" className="btn btn-primary" onClick={handleContinueWithUnaLabs}>
-                      Continue with Una Labs
+                      Start a project with Una Labs
                     </button>
                     {operatorEnabled ? (
                       <Link href={operatorOfficeHref} prefetch={false} className="btn btn-secondary">
-                        Open real lab view
+                        Open operator control
                       </Link>
                     ) : null}
                   </div>
@@ -812,18 +881,19 @@ export default function AteamWorkflowClient() {
               <div className="ateam-workflow-step-head">
                 <div>
                   <p className="card-kicker">What comes out</p>
-                  <h2>A quick decision package, not a fake story about intelligence.</h2>
+                  <h2>A run, visible jobs, owned artifacts, and a clean delivery handoff.</h2>
                   <p className="muted">
-                    Once ATEAM runs, this panel will show the idea summary, likely user value,
-                    prototype direction, build notes, and the next move with Una Labs.
+                    Once ATEAM runs, this panel will show the project frame, active jobs, preview
+                    artifacts, recent timeline events, and the next move with Una Labs.
                   </p>
                 </div>
                 <span className="status-pill">Waiting</span>
               </div>
               <div className="ateam-output-card">
                 <p>
-                  Expect a first-pass read on what the product is, who it helps, what to build
-                  first, what systems matter, and whether it looks worth moving forward.
+                  Expect a first-pass read on what the product is, who it helps, which jobs were
+                  created, what artifacts exist, and whether the run is ready to convert into a real
+                  Una Labs project.
                 </p>
               </div>
             </section>
@@ -834,14 +904,22 @@ export default function AteamWorkflowClient() {
           <section className="card ateam-workflow-sidebar-card">
             <p className="card-kicker">Run status</p>
             <h3>{workflowReady ? "Decision pack ready" : run ? "Run in progress" : "No run yet"}</h3>
+            <p className="muted">
+              {run?.statusNarrative?.summary ||
+                "ATEAM will show the current stage, the movement reason, and any blocker once the run starts."}
+            </p>
             <div className="ateam-workflow-sidebar-meta">
               <div>
                 <span>Phase</span>
-                <strong>{run ? formatWorkflowPhaseLabel(run.phase) : "Waiting for idea"}</strong>
+                <strong>{run?.statusNarrative?.label || (run ? formatWorkflowPhaseLabel(run.phase) : "Waiting for idea")}</strong>
               </div>
               <div>
                 <span>Lane</span>
                 <strong>{run?.recommendedLane || selectedCategory.label}</strong>
+              </div>
+              <div>
+                <span>Project</span>
+                <strong>{run?.project?.name || "Not formed yet"}</strong>
               </div>
               <div>
                 <span>Run ID</span>
@@ -851,11 +929,11 @@ export default function AteamWorkflowClient() {
           </section>
 
           <section className="card ateam-workflow-sidebar-card">
-            <p className="card-kicker">Real lab view</p>
-            <h3>ATEAM still connects to the actual local runtime.</h3>
+            <p className="card-kicker">Operator control plane</p>
+            <h3>Public intake and private operations now share one workflow model.</h3>
             <p className="muted">
-              The public fast pass stays focused. The real Office and Factory views stay available
-              through the local/operator route when Una Labs is running locally.
+              The public surface stays client-safe. Office, Factory, approvals, logs, and overrides
+              remain private for operators.
             </p>
             {operatorEnabled ? (
               <div className="ateam-workflow-actions">
@@ -868,8 +946,7 @@ export default function AteamWorkflowClient() {
               </div>
             ) : (
               <p className="muted">
-                The live operator view is available when Una Labs is opened locally with the ATEAM
-                runtime on port 3000.
+                The private operator routes stay available only inside the secured operator surface.
               </p>
             )}
           </section>

@@ -4577,7 +4577,7 @@ async function renderCouncilPage({ force = false } = {}) {
       {
         seat: `${mcDisplayName("henry")} / Coordinator`,
         focus: approvals.length ? `Clear ${approvals.length} pending decision${approvals.length === 1 ? "" : "s"}.` : "Keep delivery lanes aligned.",
-        note: activeItems.length ? `${activeItems.length} work item${activeItems.length === 1 ? "" : "s"} moving right now.` : "No active delivery pressure."
+        note: activeItems.length ? `${activeItems.length} job${activeItems.length === 1 ? "" : "s"} moving right now.` : "No active delivery pressure."
       },
       {
         seat: `${mcDisplayName("violet")} / Research`,
@@ -4711,10 +4711,10 @@ async function renderProjectsPage({ force = false } = {}) {
 
   if (projectsSummary) {
     projectsSummary.textContent = linkedWorkCount
-      ? `${linkedWorkCount} linked work item${linkedWorkCount === 1 ? "" : "s"} are currently mapped across ${portfolioRows.length} initiatives${workflowProjectCount ? `, including ${workflowProjectCount} workflow-generated project${workflowProjectCount === 1 ? "" : "s"}` : ""}.`
+      ? `${linkedWorkCount} linked job${linkedWorkCount === 1 ? "" : "s"} are currently mapped across ${portfolioRows.length} initiatives${workflowProjectCount ? `, including ${workflowProjectCount} workflow-generated project${workflowProjectCount === 1 ? "" : "s"}` : ""}.`
       : workflowProjectCount
-        ? `${workflowProjectCount} workflow-generated project${workflowProjectCount === 1 ? "" : "s"} are ready for operator review, but no linked work has been created yet.`
-        : "No linked work items yet. Create one to seed the project ledger.";
+        ? `${workflowProjectCount} workflow-generated project${workflowProjectCount === 1 ? "" : "s"} are ready for operator review, but no linked jobs have been created yet.`
+        : "No linked jobs yet. Create one to seed the project ledger.";
   }
   if (projectsMetricCount) projectsMetricCount.textContent = String(portfolioRows.length);
   if (projectsMetricWork) projectsMetricWork.textContent = String(linkedWorkCount);
@@ -4724,8 +4724,8 @@ async function renderProjectsPage({ force = false } = {}) {
   if (projectsPortfolioList) {
     projectsPortfolioList.innerHTML = portfolioRows
       .map(({ project, items, status }) => {
-        const linkedLabel = `${items.length} linked item${items.length === 1 ? "" : "s"}`;
-        const linkedActionLabel = items.length ? `Open ${linkedLabel}` : "No linked items";
+        const linkedLabel = `${items.length} linked job${items.length === 1 ? "" : "s"}`;
+        const linkedActionLabel = items.length ? `Open ${linkedLabel}` : "No linked jobs";
         const docCount = Array.isArray(project.docIds) ? project.docIds.length : 0;
         const firstDocId = docCount ? project.docIds[0] : "";
         return `
@@ -4807,11 +4807,11 @@ async function renderProjectsPage({ force = false } = {}) {
               <span>Linked Docs</span>
               <div class="ops-chip-row">${docChips}</div>
             </div>
-            <div class="ops-key-value-row"><span>Stage Mix</span><strong>${escapeHtml(stageSummary || "No linked work yet")}</strong></div>
+            <div class="ops-key-value-row"><span>Stage Mix</span><strong>${escapeHtml(stageSummary || "No linked jobs yet")}</strong></div>
             ${workflowDetails}
           </div>
           <div class="ops-action-row ops-action-row-compact">
-            <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-project-ledger" data-project-id="${escapeHtml(project.id)}">View linked items</button>
+            <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-project-ledger" data-project-id="${escapeHtml(project.id)}">View linked jobs</button>
           </div>
         </article>
       `;
@@ -4820,7 +4820,7 @@ async function renderProjectsPage({ force = false } = {}) {
 
   if (projectsLedger) {
     if (!activeRow || (!activeRow.items.length && !activeRow.project?.workflowRunId)) {
-      projectsLedger.innerHTML = mcEmptyHtml("No work items linked to this initiative yet.");
+      projectsLedger.innerHTML = mcEmptyHtml("No jobs linked to this initiative yet.");
     } else {
       const workflowCard = activeRow.project?.workflowRunId
         ? `
@@ -4841,7 +4841,11 @@ async function renderProjectsPage({ force = false } = {}) {
         .slice()
         .sort((a, b) => String(b?.createdTs || "").localeCompare(String(a?.createdTs || "")))
         .map(
-          (item) => `
+          (item) => {
+            const latestTimeline = Array.isArray(item?.timeline) && item.timeline.length
+              ? item.timeline[item.timeline.length - 1]
+              : null;
+            return `
             <article class="ops-card">
               <div class="ops-card-head">
                 <div class="ops-card-title">${escapeHtml(item.title || item.id)}</div>
@@ -4851,12 +4855,15 @@ async function renderProjectsPage({ force = false } = {}) {
               <div class="ops-inline-meta">
                 <span>${escapeHtml(formatRelativeTime(item.createdTs) || "New")}</span>
                 <span>${escapeHtml(item.ownerAgentId ? mcDisplayName(item.ownerAgentId) : "Unassigned")}</span>
+                <span>${escapeHtml(item.blockerReason || item.waitingReason || item.jobStatus || "")}</span>
               </div>
+              ${latestTimeline ? `<div class="ops-card-copy">${escapeHtml(latestTimeline.message || "Recent job activity")}</div>` : ""}
               <div class="ops-action-row">
                 <button class="ops-action-btn" type="button" data-action="advance-work-item" data-item-id="${escapeHtml(item.id)}">Advance</button>
               </div>
             </article>
-          `
+          `;
+          }
         )
         .join("");
       projectsLedger.innerHTML = `${workflowCard}${itemCards}`;
@@ -5172,7 +5179,7 @@ async function renderSystemPage({ force = false } = {}) {
   if (systemCountsList) {
     const counts = [
       { label: "Approvals", value: approvals.length },
-      { label: "Work Items", value: workItems.length },
+      { label: "Jobs", value: workItems.length },
       { label: "Signals", value: (content.signals || []).length },
       { label: "Topics", value: (content.topics || []).length },
       { label: "Drafts", value: (content.drafts || []).length },
@@ -5457,7 +5464,7 @@ async function renderPipelinePage({ force = false } = {}) {
                   <div class="ops-card-title">${escapeHtml(isApproval ? item.summary || item.id : item.title || item.id)}</div>
                   <div class="ops-card-meta">${escapeHtml(isApproval ? "Approval" : normalizeFactoryStage(item.stage).toUpperCase())}</div>
                 </div>
-                <div class="ops-card-copy">${escapeHtml(isApproval ? item.policy || "Pending decision" : item.objective || "Blocked work item")}</div>
+                <div class="ops-card-copy">${escapeHtml(isApproval ? item.policy || "Pending decision" : item.objective || item.blockerReason || "Blocked job")}</div>
               </article>
             `;
           })
@@ -5645,7 +5652,7 @@ async function handleProjectsCreateItem() {
     showToast("Work item created.", "ok");
     void renderProjectsPage({ force: true });
   } catch {
-    showToast("Failed to create work item.", "error");
+    showToast("Failed to create job.", "error");
   }
 }
 
@@ -8281,7 +8288,7 @@ async function maybeCreateWorkItemFromTalk(text, { turnId, segmentId } = {}) {
     const item = await apiCreateWorkItem(payload);
     if (!item) return null;
 
-    await emitEvent("decision", "user", "talk", `Created work item: ${item.title}`, {
+    await emitEvent("decision", "user", "talk", `Created job: ${item.title}`, {
       source: { kind: "talk" },
       targets: { page: "factory", workItemId: item.id },
       severity: "info",
@@ -8291,8 +8298,8 @@ async function maybeCreateWorkItemFromTalk(text, { turnId, segmentId } = {}) {
     showToast(`Factory: ${item.title}`, "ok");
     return item;
   } catch (err) {
-    console.error("[Talk->Factory] Failed to create work item", err);
-    showToast("Factory item failed to create.", "error");
+    console.error("[Talk->Factory] Failed to create job", err);
+    showToast("Factory job failed to create.", "error");
     return null;
   }
 }

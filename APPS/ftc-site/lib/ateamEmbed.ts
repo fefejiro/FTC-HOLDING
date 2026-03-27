@@ -8,9 +8,9 @@ const ateamLocalSurfaceMap = {
     route: "/office",
     href: "/ateam",
     summary:
-      "Office is the live routing desk where conversations, priorities, and the next move get assigned.",
+      "Office is the operator routing desk where conversations, priorities, and the next move get assigned.",
     detail:
-      "The real Office surface stays readable inside Una Labs instead of being flattened into a fake stage card."
+      "The Office control plane stays readable inside Una Labs without leaking private controls into the public flow."
   },
   memory: {
     key: "memory",
@@ -18,9 +18,9 @@ const ateamLocalSurfaceMap = {
     route: "/memory",
     href: "/ateam/memory",
     summary:
-      "Memory keeps the brief, signal, and history visible before work gets routed or handed off.",
+      "Memory keeps the brief, signal, and history visible before work gets routed or promoted into delivery.",
     detail:
-      "This is the actual Memory surface from ATEAM, embedded through the Una Labs route."
+      "This is the private Memory surface from ATEAM, framed inside the Una Labs operator route."
   },
   team: {
     key: "team",
@@ -30,7 +30,7 @@ const ateamLocalSurfaceMap = {
     summary:
       "Team shows the live crew, who is present, and where ownership currently sits.",
     detail:
-      "The real Team surface stays intact so the product still feels like ATEAM, not a brochure."
+      "The Team surface stays intact so ownership remains visible as runs evolve into projects."
   },
   factory: {
     key: "factory",
@@ -38,9 +38,9 @@ const ateamLocalSurfaceMap = {
     route: "/factory",
     href: "/ateam/factory",
     summary:
-      "Factory exposes the actual work floor with build, QA, review, and ship movement.",
+      "Factory exposes the delivery floor with build, QA, review, and ship movement.",
     detail:
-      "The embedded Factory surface keeps the real ATEAM floor visible from inside Una Labs."
+      "The Factory route keeps delivery movement visible from inside the ATEAM operator shell."
   },
   pipeline: {
     key: "pipeline",
@@ -50,7 +50,7 @@ const ateamLocalSurfaceMap = {
     summary:
       "Pipeline keeps the current flow legible when you want the big-picture movement across the system.",
     detail:
-      "It is still the live ATEAM runtime, just framed inside the Una Labs product shell."
+      "It stays aligned with the same public runs, jobs, artifacts, and approvals."
   }
 } as const;
 
@@ -58,8 +58,6 @@ export type AteamLocalSurfaceKey = keyof typeof ateamLocalSurfaceMap;
 
 export const ateamLocalSurfaceKeys = Object.keys(ateamLocalSurfaceMap) as AteamLocalSurfaceKey[];
 export const ateamLocalSurfaces = ateamLocalSurfaceKeys.map((key) => ateamLocalSurfaceMap[key]);
-
-export const ATEAM_LOCAL_EMBED_ORIGINS = ["http://127.0.0.1:3000", "http://localhost:3000"] as const;
 
 export function resolveAteamLocalSurface(rawValue?: string | null): AteamLocalSurfaceKey {
   const normalized = String(rawValue || "").trim().toLowerCase();

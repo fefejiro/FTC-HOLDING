@@ -1,0 +1,11 @@
+{
+  "name": "ateam-platform",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "postinstall": "npm --prefix Server install --omit=dev",
+    "start": "npm --prefix Server start"
+  }
+}

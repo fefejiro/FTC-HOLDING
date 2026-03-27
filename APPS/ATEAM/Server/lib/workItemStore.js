@@ -43,6 +43,96 @@ function safeStringifyJson(value) {
   }
 }
 
+function normalizeHistory(entries) {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      id: normalizeText(entry.id || `job_history_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`, 120),
+      timestamp: normalizeText(entry.timestamp || new Date().toISOString(), 80),
+      type: normalizeText(entry.type || "note", 40) || "note",
+      title: normalizeText(entry.title || "Job update", 140) || "Job update",
+      detail: normalizeText(entry.detail || "", 400),
+      actor: normalizeText(entry.actor || "", 80),
+      stage: normalizeStage(entry.stage || ""),
+      reason: normalizeText(entry.reason || "", 220),
+      blockerReason: normalizeText(entry.blockerReason || "", 220)
+    }))
+    .slice(-60);
+}
+
+function createHistoryEntry({
+  type = "note",
+  title = "Job update",
+  detail = "",
+  actor = "",
+  stage = "BACKLOG",
+  reason = "",
+  blockerReason = ""
+} = {}) {
+  return {
+    id: `job_history_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+    timestamp: new Date().toISOString(),
+    type: normalizeText(type, 40) || "note",
+    title: normalizeText(title, 140) || "Job update",
+    detail: normalizeText(detail, 400),
+    actor: normalizeText(actor, 80),
+    stage: normalizeStage(stage),
+    reason: normalizeText(reason, 220),
+    blockerReason: normalizeText(blockerReason, 220)
+  };
+}
+
+function deriveJobStatus(stage, risk, data = {}) {
+  const explicitStatus = normalizeText(data.status, 40).toLowerCase();
+  if (["queued", "in_progress", "blocked", "review", "done", "canceled"].includes(explicitStatus)) {
+    return explicitStatus;
+  }
+
+  if (Boolean(data.blocked) || normalizeText(data.blockerReason, 220) || normalizeText(data.waitingReason, 220)) {
+    return "blocked";
+  }
+
+  const safeRisk = String(risk || "").trim().toLowerCase();
+  const normalizedStage = normalizeStage(stage);
+  if (safeRisk === "high") return "blocked";
+  if (normalizedStage === "BACKLOG") return "queued";
+  if (normalizedStage === "BUILD") return "in_progress";
+  if (normalizedStage === "QA" || normalizedStage === "REVIEW") return "review";
+  if (normalizedStage === "SHIP") return "done";
+  return "queued";
+}
+
+function deriveStageNarrative(stage, data = {}) {
+  const normalizedStage = normalizeStage(stage);
+  if (Boolean(data.blocked) || normalizeText(data.blockerReason, 220) || normalizeText(data.waitingReason, 220)) {
+    return "Blocked";
+  }
+  if (normalizedStage === "BACKLOG") return "Queued";
+  if (normalizedStage === "BUILD") return "Building";
+  if (normalizedStage === "QA") return "Review";
+  if (normalizedStage === "REVIEW") return "Decision";
+  if (normalizedStage === "SHIP") return "Delivered";
+  return "Queued";
+}
+
+function toTimeline(entries = [], entityId = "") {
+  return normalizeHistory(entries).map((entry) => ({
+    id: normalizeText(entry.id, 120),
+    entityType: "job",
+    entityId: normalizeText(entityId, 120),
+    eventType: normalizeText(entry.type, 40) || "updated",
+    message: normalizeText(entry.title || entry.detail || "Job updated", 320),
+    metadata: {
+      actor: normalizeText(entry.actor, 80),
+      stage: normalizeStage(entry.stage || ""),
+      reason: normalizeText(entry.reason, 220),
+      blockerReason: normalizeText(entry.blockerReason, 220)
+    },
+    createdAt: normalizeText(entry.timestamp, 80) || new Date().toISOString()
+  }));
+}
+
 export function createWorkItemStore() {
   const db = getDb();
 
@@ -61,15 +151,34 @@ export function createWorkItemStore() {
 
   function rowToWorkItem(row) {
     if (!row) return null;
+    const data = safeParseJson(row.data_json);
+    const history = normalizeHistory(data.history);
+    const blockerReason = normalizeText(
+      data.blockerReason || data.blockedReason || data.waitingReason || "",
+      220
+    );
+    const waitingReason = normalizeText(data.waitingReason || "", 220);
+    const stage = String(row.stage || "BACKLOG");
+    const risk = String(row.risk || "low");
     return {
       id: String(row.id),
       createdTs: String(row.created_ts),
       title: String(row.title || ""),
       objective: String(row.objective || ""),
-      stage: String(row.stage || "BACKLOG"),
-      risk: String(row.risk || "low"),
+      stage,
+      risk,
       ownerAgentId: row.owner_agent_id ? String(row.owner_agent_id) : "",
-      data: safeParseJson(row.data_json)
+      data,
+      projectId: normalizeText(data.projectId || "", 120),
+      workflowRunId: normalizeText(data.workflowRunId || "", 120),
+      workflowStep: normalizeText(data.workflowStep || "", 80),
+      approvalId: normalizeText(data.approvalId || "", 120),
+      blockerReason,
+      waitingReason,
+      history,
+      timeline: toTimeline(history, String(row.id)),
+      jobStatus: deriveJobStatus(stage, risk, data),
+      stageNarrative: deriveStageNarrative(stage, data)
     };
   }
 
@@ -121,7 +230,33 @@ export function createWorkItemStore() {
     const normalizedStage = normalizeStage(stage);
     const normalizedRisk = normalizeRisk(risk);
     const normalizedOwner = normalizeText(ownerAgentId, 80);
-    const payloadJson = safeStringifyJson(data);
+    const normalizedData =
+      data && typeof data === "object" && !Array.isArray(data)
+        ? { ...data }
+        : {};
+    const blockerReason = normalizeText(
+      normalizedData.blockerReason || normalizedData.blockedReason || normalizedData.waitingReason || "",
+      220
+    );
+    normalizedData.history = normalizeHistory(normalizedData.history);
+    if (!normalizedData.history.length) {
+      normalizedData.history = [
+        createHistoryEntry({
+          type: "created",
+          title: "Job created",
+          detail: normalizeText(objective || title, 320),
+          actor: normalizedOwner || "system",
+          stage: normalizedStage,
+          reason: normalizeText(normalizedData.reason || "created", 220),
+          blockerReason
+        })
+      ];
+    }
+    if (blockerReason) {
+      normalizedData.blockerReason = blockerReason;
+      normalizedData.blocked = true;
+    }
+    const payloadJson = safeStringifyJson(normalizedData);
 
     insertStmt.run(
       id,
@@ -144,6 +279,12 @@ export function createWorkItemStore() {
     return rowToWorkItem(selectStmt.get(workItemId));
   }
 
+  function getMany(ids = []) {
+    seedIfEmpty();
+    if (!Array.isArray(ids)) return [];
+    return ids.map((id) => get(id)).filter(Boolean);
+  }
+
   function list({ stage, limit = 50 } = {}) {
     seedIfEmpty();
     const lim = Math.max(1, Math.min(200, Number(limit) || 50));
@@ -154,7 +295,7 @@ export function createWorkItemStore() {
     return (Array.isArray(rows) ? rows : []).map(rowToWorkItem).filter(Boolean);
   }
 
-  function setStage(id, stage, { dataPatch } = {}) {
+  function setStage(id, stage, { dataPatch, actor = "", reason = "" } = {}) {
     seedIfEmpty();
     const workItemId = String(id || "").trim();
     if (!workItemId) return null;
@@ -164,6 +305,50 @@ export function createWorkItemStore() {
     const nextData = dataPatch && typeof dataPatch === "object" && !Array.isArray(dataPatch)
       ? { ...(current.data || {}), ...dataPatch }
       : current.data || {};
+    const blockerReason = normalizeText(
+      nextData.blockerReason || nextData.blockedReason || nextData.waitingReason || "",
+      220
+    );
+    if (blockerReason) {
+      nextData.blockerReason = blockerReason;
+      nextData.blocked = true;
+    } else if (Object.prototype.hasOwnProperty.call(nextData, "blocked")) {
+      nextData.blocked = Boolean(nextData.blocked);
+    }
+    const history = normalizeHistory(nextData.history || current.history);
+    const shouldRecordHistory =
+      current.stage !== nextStage ||
+      Boolean(
+        (dataPatch && typeof dataPatch === "object" && !Array.isArray(dataPatch) && (
+          "blockerReason" in dataPatch ||
+          "blockedReason" in dataPatch ||
+          "waitingReason" in dataPatch ||
+          "status" in dataPatch
+        )) ||
+        reason
+      );
+    if (shouldRecordHistory) {
+      history.push(
+        createHistoryEntry({
+          type: current.stage !== nextStage ? "stage_changed" : "status_updated",
+          title:
+            current.stage !== nextStage
+              ? `Moved to ${deriveStageNarrative(nextStage, nextData)}`
+              : blockerReason
+                ? "Job status updated"
+                : "Job note updated",
+          detail:
+            current.stage !== nextStage
+              ? `${current.stage} -> ${nextStage}`
+              : blockerReason || normalizeText(reason, 220),
+          actor,
+          stage: nextStage,
+          reason: normalizeText(reason, 220),
+          blockerReason
+        })
+      );
+    }
+    nextData.history = history.slice(-60);
     updateStageStmt.run(nextStage, safeStringifyJson(nextData), workItemId);
     return get(workItemId);
   }
@@ -171,6 +356,7 @@ export function createWorkItemStore() {
   return {
     create,
     get,
+    getMany,
     list,
     setStage
   };

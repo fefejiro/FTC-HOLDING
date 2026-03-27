@@ -22,7 +22,7 @@ export async function proxyAteamJson(path: string, init: RequestInit = {}) {
     return NextResponse.json(
       {
         ok: false,
-        message: "ATEAM workflow service is not configured yet."
+        message: "ATEAM workflow service is not connected yet."
       },
       { status: 503 }
     );
@@ -46,8 +46,7 @@ export async function proxyAteamJson(path: string, init: RequestInit = {}) {
       return NextResponse.json(
         {
           ok: false,
-          message:
-            "ATEAM returned HTML instead of the workflow API. Restart the local ATEAM server on port 3000 from C:\\FTC HOLDING\\FTC-HOLDING\\APPS\\ATEAM\\Server."
+          message: "ATEAM returned an unexpected response instead of the workflow API."
         },
         { status: 502 }
       );

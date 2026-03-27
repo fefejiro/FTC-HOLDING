@@ -5,7 +5,7 @@ import AteamWorkflowClient from "./AteamWorkflowClient";
 export const metadata: Metadata = {
   title: "ATEAM | Una Labs",
   description:
-    "Run the public ATEAM workflow inside Una Labs, then hand the approved pack into real operator Mission Control.",
+    "Use ATEAM inside Una Labs to turn a rough idea into a structured run, visible progress, preview artifacts, and a clear project handoff.",
   alternates: {
     canonical: "/ateam"
   }

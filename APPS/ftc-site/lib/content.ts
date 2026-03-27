@@ -27,7 +27,7 @@ export interface ProjectCaseStudy {
   pillar: CapabilityPillar;
   tags: string[];
   summary: string;
-  status: "live" | "active-development" | "internal-runtime";
+  status: "live" | "active-development" | "internal-runtime" | "cloud-ready-workflow";
   availabilityLabel?: string;
   googlePlayUrl?: string;
   marketingBullets?: string[];
@@ -251,11 +251,11 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     name: "ATEAM",
     tagline: "The AI lab where rough ideas become clear next steps.",
     pillar: "business-intelligence",
-    tags: ["Local runtime", "Scoping", "Systems"],
+    tags: ["Workflow OS", "Scoping", "Systems"],
     summary:
-      "ATEAM is Una Labs' route into the same Memory, Office, Team, Factory, and Pipeline system used to route, coordinate, and deliver work.",
-    status: "internal-runtime",
-    availabilityLabel: "Real local runtime",
+      "ATEAM is Una Labs' intake-to-delivery engine for shaping rough ideas into structured runs, visible jobs, and artifact packs.",
+    status: "cloud-ready-workflow",
+    availabilityLabel: "Cloud-native workflow",
     marketingBullets: [...ateamModeSupportPoints],
     sections: {
       problem:
@@ -263,21 +263,21 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
       insight:
         "People move faster when they can see how context, ownership, and delivery surfaces line up before build work begins.",
       solution:
-        "ATEAM keeps the real local surfaces reachable from Una Labs so people can move inside Office, Memory, Team, Factory, and Pipeline instead of reading a simulated walkthrough.",
+        "ATEAM gives Una Labs a real workflow system where public intake becomes a run, jobs move through clear states, and artifacts accumulate value before handoff.",
       capabilities: [
-        "Memory-first intake and clarification",
-        "Office routing and scoping",
-        "Team visibility and handoff framing",
-        "Factory-oriented delivery path",
-        "Pipeline visibility inside the same runtime"
+        "Narrative intake and clarification",
+        "Run, project, and job orchestration",
+        "Artifact generation with visible ownership",
+        "Operator review and approval gates",
+        "Conversion from preview pack into live delivery"
       ],
       technology: [
-        "Real localhost-backed ATEAM embed",
-        "Static Una Labs shell + local runtime handoff",
-        "Scoped handoff into intake"
+        "Cloud-backed ATEAM workflow API",
+        "Public and operator surfaces on the same model",
+        "Run-first artifact ownership and promotion"
       ],
       outcome:
-        `${ateamModeSummary} It keeps the real local runtime reachable from Una Labs instead of falling back to a brochure page.`
+        `${ateamModeSummary} It presents ATEAM as a real product capability inside Una Labs instead of a local wrapper demo.`
     }
   }
 ];

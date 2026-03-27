@@ -24,21 +24,17 @@ test.describe("Public journey", () => {
     await expect(page.getByRole("link", { name: "View onboarding snapshot" })).toBeVisible();
   });
 
-  test("ATEAM route exposes the real local surface shell", async ({ page }) => {
+  test("ATEAM route exposes the cloud-native workflow surface", async ({ page }) => {
     await page.goto("/ateam");
 
     await expect(
       page.getByRole("heading", {
-        name: "ATEAM inside Una Labs opens the actual local product, not a fake demo."
+        name: "Drop a rough idea. Watch it turn into a structured run."
       })
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: /Memory/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Factory/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retry local ATEAM" })).toBeVisible();
-
-    await page.goto("/ateam/factory");
-    await expect(page).toHaveURL("/ateam/factory");
-    await expect(page.getByRole("link", { name: /Factory/i })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("button", { name: "Start ATEAM workflow" })).toBeVisible();
+    await expect(page.getByText("Narrative intake")).toBeVisible();
+    await expect(page.getByText("Visible work state")).toBeVisible();
   });
 
   test("mobile navigation still exposes the core public routes", async ({ page }) => {
@@ -53,7 +49,7 @@ test.describe("Public journey", () => {
     await expect(page).toHaveURL("/ateam");
     await expect(
       page.getByRole("heading", {
-        name: "ATEAM inside Una Labs opens the actual local product, not a fake demo."
+        name: "Drop a rough idea. Watch it turn into a structured run."
       })
     ).toBeVisible();
   });

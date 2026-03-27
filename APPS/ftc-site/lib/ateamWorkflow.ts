@@ -104,7 +104,97 @@ export type WorkflowApprovals = {
 export type WorkflowLinks = {
   projectId?: string;
   workItemIds?: string[];
+  jobIds?: string[];
   ownerAgentId?: string;
+};
+
+export type ArtifactKind =
+  | "brief"
+  | "mockup"
+  | "prototype"
+  | "smoke_report"
+  | "document"
+  | "asset";
+
+export type TimelineEntry = {
+  id: string;
+  entityType: "job" | "run" | "project";
+  entityId: string;
+  eventType: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type StatusNarrative = {
+  currentStage: string;
+  label: string;
+  summary: string;
+  movementReason?: string;
+  blockerReason?: string;
+  responsible?: string;
+  updatedAt?: string;
+};
+
+export type ArtifactSummary = {
+  id: string;
+  runId: string;
+  projectId?: string;
+  jobId?: string;
+  type: ArtifactKind | string;
+  kind?: ArtifactKind | string;
+  title: string;
+  summary: string;
+  contentRef?: string;
+  version?: number;
+  stage?: string;
+  createdAt: string;
+  updatedAt?: string;
+  promotionStatus?: string;
+  promotedAt?: string;
+  previewItems?: string[];
+};
+
+export type JobSummary = {
+  id: string;
+  title: string;
+  objective: string;
+  status: "queued" | "in_progress" | "blocked" | "review" | "done" | "canceled" | string;
+  stage: string;
+  stageKey?: string;
+  ownerAgentId?: string;
+  blockerReason?: string;
+  waitingReason?: string;
+  risk?: string;
+  projectId?: string;
+  workflowRunId?: string;
+  workflowStep?: string;
+  approvalId?: string;
+  history?: Array<Record<string, unknown>>;
+  timeline?: TimelineEntry[];
+};
+
+export type ProjectSummary = {
+  id: string;
+  name: string;
+  status:
+    | "intake"
+    | "discovery"
+    | "planning"
+    | "build"
+    | "review"
+    | "delivery"
+    | "archived"
+    | string;
+  summary: string;
+  ownerAgentId?: string;
+  workflowRunId?: string;
+  recommendedLane?: string;
+  jobIds?: string[];
+  artifactIds?: string[];
+  activeJobCount?: number;
+  blockedJobCount?: number;
+  updatedAt?: string;
 };
 
 export type WorkflowHandoffPayload = {
@@ -160,6 +250,11 @@ export type WorkflowRun = {
   links: WorkflowLinks;
   handoff: Partial<WorkflowHandoffPayload> & Record<string, unknown>;
   meta: Record<string, unknown>;
+  project?: ProjectSummary;
+  jobs?: JobSummary[];
+  artifactSummaries?: ArtifactSummary[];
+  statusNarrative?: StatusNarrative;
+  history?: TimelineEntry[];
 };
 
 export const ateamWorkflowCategories = [

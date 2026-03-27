@@ -31,6 +31,423 @@ function ensureLinks(links = {}) {
   return links && typeof links === "object" && !Array.isArray(links) ? { ...links } : {};
 }
 
+function ensureMeta(meta = {}) {
+  return meta && typeof meta === "object" && !Array.isArray(meta) ? { ...meta } : {};
+}
+
+function safeList(value, limit = 8, itemLimit = 220) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => safeText(item, itemLimit))
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function uniqueStrings(values = []) {
+  return Array.from(
+    new Set((Array.isArray(values) ? values : []).map((value) => safeText(value, 120)).filter(Boolean))
+  );
+}
+
+function createTimelineEntry({
+  entityType = "run",
+  entityId = "",
+  eventType = "updated",
+  message = "Workflow updated",
+  metadata = {}
+} = {}) {
+  return {
+    id: `timeline_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+    entityType: safeText(entityType, 20) || "run",
+    entityId: safeText(entityId, 120),
+    eventType: safeText(eventType, 40) || "updated",
+    message: safeText(message, 320) || "Workflow updated",
+    metadata: metadata && typeof metadata === "object" && !Array.isArray(metadata) ? { ...metadata } : {},
+    createdAt: new Date().toISOString()
+  };
+}
+
+function normalizeTimeline(entries = [], entityType = "run", entityId = "") {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      id: safeText(entry.id || `timeline_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`, 120),
+      entityType: safeText(entry.entityType || entityType, 20) || entityType,
+      entityId: safeText(entry.entityId || entityId, 120) || entityId,
+      eventType: safeText(entry.eventType || entry.type || "updated", 40) || "updated",
+      message: safeText(entry.message || entry.title || entry.detail || "Workflow updated", 320),
+      metadata:
+        entry.metadata && typeof entry.metadata === "object" && !Array.isArray(entry.metadata)
+          ? { ...entry.metadata }
+          : {},
+      createdAt: safeText(entry.createdAt || entry.timestamp || new Date().toISOString(), 80)
+    }))
+    .slice(-80);
+}
+
+function appendRunTimeline(run, entry) {
+  const meta = ensureMeta(run?.meta);
+  const timeline = normalizeTimeline(meta.workflowTimeline, "run", safeText(run?.id, 120));
+  timeline.push(
+    createTimelineEntry({
+      entityType: "run",
+      entityId: safeText(run?.id, 120),
+      ...entry
+    })
+  );
+  return {
+    ...meta,
+    workflowTimeline: timeline.slice(-80)
+  };
+}
+
+function buildArtifactRecord({
+  id,
+  runId,
+  projectId = "",
+  jobId = "",
+  type,
+  title,
+  summary = "",
+  contentRef = "",
+  version = 1,
+  stage = "",
+  createdAt = new Date().toISOString(),
+  updatedAt = createdAt,
+  promotionStatus = "",
+  promotedAt = "",
+  previewItems = []
+}) {
+  const normalizedType = safeText(type, 40);
+  return {
+    id: safeText(id, 120),
+    runId: safeText(runId, 120),
+    projectId: safeText(projectId, 120),
+    jobId: safeText(jobId, 120),
+    type: normalizedType,
+    kind: normalizedType,
+    title: safeText(title, 160),
+    summary: safeText(summary, 320),
+    contentRef: safeText(contentRef, 220),
+    version: Math.max(1, Number(version) || 1),
+    stage: safeText(stage, 80),
+    createdAt: safeText(createdAt, 80) || new Date().toISOString(),
+    updatedAt: safeText(updatedAt, 80) || new Date().toISOString(),
+    promotionStatus: safeText(promotionStatus || (projectId ? "promoted" : "run_owned"), 40),
+    promotedAt: safeText(promotedAt, 80),
+    previewItems: safeList(previewItems, 6, 140)
+  };
+}
+
+function normalizeArtifactRecords(records = []) {
+  if (!Array.isArray(records)) return [];
+  return records
+    .filter((record) => record && typeof record === "object" && !Array.isArray(record))
+    .map((record) =>
+      buildArtifactRecord({
+        id: record.id,
+        runId: record.runId,
+        projectId: record.projectId,
+        jobId: record.jobId,
+        type: record.type || record.kind,
+        title: record.title,
+        summary: record.summary,
+        contentRef: record.contentRef,
+        version: record.version,
+        stage: record.stage,
+        createdAt: record.createdAt || record.createdTs,
+        updatedAt: record.updatedAt || record.updatedTs,
+        promotionStatus: record.promotionStatus,
+        promotedAt: record.promotedAt,
+        previewItems: record.previewItems
+      })
+    )
+    .filter((record) => record.id && record.runId && record.type)
+    .slice(-20);
+}
+
+function mergeArtifactRecords(existing = [], incoming = []) {
+  const merged = new Map();
+  for (const record of normalizeArtifactRecords(existing)) {
+    merged.set(record.id, record);
+  }
+  for (const record of normalizeArtifactRecords(incoming)) {
+    const current = merged.get(record.id);
+    merged.set(record.id, {
+      ...(current || {}),
+      ...record,
+      createdAt: current?.createdAt || record.createdAt || new Date().toISOString(),
+      updatedAt: record.updatedAt || new Date().toISOString()
+    });
+  }
+  return Array.from(merged.values()).slice(-20);
+}
+
+function promoteArtifactRecords(records = [], { projectId = "", actor = "", artifactIds = [] } = {}) {
+  const safeProjectId = safeText(projectId, 120);
+  const filterIds = new Set(uniqueStrings(artifactIds));
+  const promotedAt = new Date().toISOString();
+  return normalizeArtifactRecords(records).map((record) => {
+    if (!safeProjectId) return record;
+    if (filterIds.size && !filterIds.has(record.id)) return record;
+    return {
+      ...record,
+      projectId: safeProjectId,
+      promotionStatus: "promoted",
+      promotedAt,
+      updatedAt: promotedAt,
+      promotedBy: safeText(actor, 80)
+    };
+  });
+}
+
+function phaseToProjectStatus(phase = "") {
+  const safePhase = safeText(phase, 40).toLowerCase();
+  if (safePhase === "analysis") return "intake";
+  if (safePhase === "brief_approval") return "discovery";
+  if (safePhase === "initiation") return "planning";
+  if (safePhase === "prototype_pack") return "build";
+  if (safePhase === "pack_approval") return "review";
+  if (safePhase === "handoff") return "delivery";
+  if (safePhase === "archived") return "archived";
+  return "intake";
+}
+
+function phaseToNarrativeStage(phase = "") {
+  const safePhase = safeText(phase, 40).toLowerCase();
+  if (safePhase === "analysis") return "understanding";
+  if (safePhase === "brief_approval") return "routing";
+  if (safePhase === "initiation") return "scout_direction";
+  if (safePhase === "prototype_pack") return "build";
+  if (safePhase === "pack_approval") return "review";
+  if (safePhase === "handoff") return "decision_pack";
+  if (safePhase === "archived") return "archived";
+  return "understanding";
+}
+
+function phaseNarrativeLabel(phase = "") {
+  const stage = phaseToNarrativeStage(phase);
+  if (stage === "understanding") return "Understanding";
+  if (stage === "routing") return "Routing";
+  if (stage === "scout_direction") return "Scout Direction";
+  if (stage === "build") return "Build";
+  if (stage === "review") return "Review";
+  if (stage === "decision_pack") return "Decision Pack";
+  if (stage === "archived") return "Archived";
+  return "Understanding";
+}
+
+function buildDefaultStatusSummary(run, jobs = []) {
+  const blockedJob = jobs.find((job) => job.status === "blocked");
+  if (blockedJob) {
+    return `A job is blocked${blockedJob.blockerReason ? `: ${blockedJob.blockerReason}` : " and needs operator attention."}`;
+  }
+  const safePhase = safeText(run?.phase, 40).toLowerCase();
+  if (safePhase === "analysis") return "ATEAM is interpreting the idea and shaping the intake frame.";
+  if (safePhase === "brief_approval") return "ATEAM has a brief ready and is lining up the strongest route forward.";
+  if (safePhase === "initiation") return "ATEAM seeded the work and attached the run to live delivery jobs.";
+  if (safePhase === "pack_approval") return "ATEAM generated the preview pack and staged it for decision.";
+  if (safePhase === "handoff") return "ATEAM has a decision pack ready to turn into live Una Labs execution.";
+  return "ATEAM is moving the intake toward a clear next step.";
+}
+
+function buildStatusNarrative(run, jobs = []) {
+  const meta = ensureMeta(run?.meta);
+  const transition = meta.lastTransition && typeof meta.lastTransition === "object" ? meta.lastTransition : {};
+  const blockedJob = jobs.find((job) => job.status === "blocked");
+  const responsible = safeText(
+    blockedJob?.ownerAgentId || transition.responsible || run?.links?.ownerAgentId || "",
+    80
+  );
+  return {
+    currentStage: phaseToNarrativeStage(run?.phase),
+    label: phaseNarrativeLabel(run?.phase),
+    summary: safeText(transition.summary || buildDefaultStatusSummary(run, jobs), 320),
+    movementReason: safeText(transition.reason || transition.movementReason, 220),
+    blockerReason: safeText(blockedJob?.blockerReason || transition.blockerReason, 220),
+    responsible,
+    updatedAt: safeText(run?.updatedTs || transition.timestamp, 80) || new Date().toISOString()
+  };
+}
+
+function buildArtifactRecords(run) {
+  const meta = ensureMeta(run?.meta);
+  const existing = normalizeArtifactRecords(meta.artifactRecords);
+  if (existing.length) return existing;
+
+  const artifacts = run?.artifacts && typeof run.artifacts === "object" ? run.artifacts : {};
+  const runId = safeText(run?.id, 120) || "workflow_run";
+  const updatedAt = safeText(run?.updatedTs || run?.createdTs, 80) || new Date().toISOString();
+  const records = [];
+
+  if (run?.brief && typeof run.brief === "object" && safeText(run.brief.title, 160)) {
+    records.push(
+      buildArtifactRecord({
+        id: `${runId}_brief`,
+        runId,
+        type: "brief",
+        title: run.brief.title,
+        summary: run.brief.summary || run.brief.quickVerdict,
+        stage: "routing",
+        createdAt: updatedAt,
+        updatedAt,
+        previewItems: [...safeList(run.brief.goals || [], 3), ...safeList(run.brief.constraints || [], 2)]
+      })
+    );
+  }
+  if (artifacts?.mockup?.title) {
+    records.push(
+      buildArtifactRecord({
+        id: `${runId}_mockup`,
+        runId,
+        type: "mockup",
+        title: artifacts.mockup.title,
+        summary: artifacts.mockup.summary,
+        stage: "build",
+        createdAt: updatedAt,
+        updatedAt,
+        previewItems: safeList((artifacts.mockup.screens || []).map((screen) => screen.title), 4)
+      })
+    );
+  }
+  if (artifacts?.prototype?.title) {
+    records.push(
+      buildArtifactRecord({
+        id: `${runId}_prototype`,
+        runId,
+        type: "prototype",
+        title: artifacts.prototype.title,
+        summary: artifacts.prototype.summary,
+        stage: "build",
+        createdAt: updatedAt,
+        updatedAt,
+        previewItems: safeList((artifacts.prototype.frames || []).map((frame) => frame.title), 4)
+      })
+    );
+  }
+  if (artifacts?.smoke?.summary) {
+    records.push(
+      buildArtifactRecord({
+        id: `${runId}_smoke`,
+        runId,
+        type: "smoke_report",
+        title: artifacts.smoke.status || "Smoke report",
+        summary: artifacts.smoke.summary,
+        stage: "review",
+        createdAt: updatedAt,
+        updatedAt,
+        previewItems: safeList((artifacts.smoke.checks || []).map((check) => `${check.label}: ${check.result}`), 4)
+      })
+    );
+  }
+  if (artifacts?.doc?.title) {
+    records.push(
+      buildArtifactRecord({
+        id: `${runId}_document`,
+        runId,
+        type: "document",
+        title: artifacts.doc.title,
+        summary: artifacts.doc.summary,
+        stage: "decision_pack",
+        createdAt: updatedAt,
+        updatedAt,
+        previewItems: safeList((artifacts.doc.sections || []).map((section) => section.title), 4)
+      })
+    );
+  }
+  return records;
+}
+
+function mapJobSummary(item = {}) {
+  const data = item?.data && typeof item.data === "object" && !Array.isArray(item.data) ? item.data : {};
+  const history = Array.isArray(item.history) ? item.history : [];
+  return {
+    id: safeText(item.id, 120),
+    title: safeText(item.title, 160),
+    objective: safeText(item.objective, 400),
+    status: safeText(item.jobStatus, 40) || "queued",
+    stage: safeText(item.stageNarrative || item.stage, 80) || "Queued",
+    stageKey: safeText(item.stage, 40),
+    ownerAgentId: safeText(item.ownerAgentId, 80),
+    blockerReason: safeText(item.blockerReason || data.blockerReason || "", 220),
+    waitingReason: safeText(item.waitingReason || data.waitingReason || "", 220),
+    risk: safeText(item.risk, 20) || "low",
+    projectId: safeText(item.projectId || data.projectId, 120),
+    workflowRunId: safeText(item.workflowRunId || data.workflowRunId, 120),
+    workflowStep: safeText(item.workflowStep || data.workflowStep, 80),
+    approvalId: safeText(item.approvalId || data.approvalId, 120),
+    history,
+    timeline: normalizeTimeline(
+      history.map((entry) => ({
+        entityType: "job",
+        entityId: item.id,
+        eventType: entry.type || "updated",
+        message: entry.title || entry.detail || "Job updated",
+        metadata: {
+          stage: entry.stage,
+          actor: entry.actor,
+          reason: entry.reason,
+          blockerReason: entry.blockerReason
+        },
+        createdAt: entry.timestamp
+      })),
+      "job",
+      safeText(item.id, 120)
+    )
+  };
+}
+
+function buildProjectSummary(run, jobs = [], artifactSummaries = []) {
+  const links = ensureLinks(run?.links);
+  const brief = run?.brief && typeof run.brief === "object" ? run.brief : {};
+  const blockedCount = jobs.filter((job) => job.status === "blocked").length;
+  const activeCount = jobs.filter((job) => ["in_progress", "review"].includes(job.status)).length;
+  return {
+    id: safeText(links.projectId || `workflow_${run?.id}`, 120),
+    name: safeText(brief.title || run?.title || run?.idea, 160) || "ATEAM project",
+    status: phaseToProjectStatus(run?.phase),
+    summary: safeText(
+      brief.summary ||
+        brief.quickVerdict ||
+        `ATEAM is moving this intake through ${phaseNarrativeLabel(run?.phase).toLowerCase()}.`,
+      320
+    ),
+    ownerAgentId: safeText(links.ownerAgentId || jobs[0]?.ownerAgentId || "henry", 80),
+    workflowRunId: safeText(run?.id, 120),
+    recommendedLane: safeText(run?.recommendedLane || brief.recommendedLane, 120),
+    jobIds: uniqueStrings(jobs.map((job) => job.id)),
+    artifactIds: uniqueStrings(artifactSummaries.map((artifact) => artifact.id)),
+    activeJobCount: activeCount,
+    blockedJobCount: blockedCount,
+    updatedAt: safeText(run?.updatedTs, 80) || new Date().toISOString()
+  };
+}
+
+function linkArtifactsToJobs(artifacts = [], jobs = []) {
+  const byStep = new Map(
+    (Array.isArray(jobs) ? jobs : [])
+      .filter(Boolean)
+      .map((job) => [safeText(job.workflowStep, 80), safeText(job.id, 120)])
+      .filter(([step, id]) => step && id)
+  );
+
+  return normalizeArtifactRecords(artifacts).map((artifact) => {
+    if (safeText(artifact.jobId, 120)) return artifact;
+    let workflowStep = "";
+    if (artifact.type === "brief") workflowStep = "initiation";
+    if (artifact.type === "mockup" || artifact.type === "prototype") workflowStep = "prototype_pack";
+    if (artifact.type === "smoke_report") workflowStep = "smoke";
+    if (artifact.type === "document") workflowStep = "handoff";
+    return workflowStep && byStep.get(workflowStep)
+      ? {
+          ...artifact,
+          jobId: byStep.get(workflowStep)
+        }
+      : artifact;
+  });
+}
+
 function createError(code, message, status = 400) {
   const error = new Error(message);
   error.code = code;
@@ -62,6 +479,38 @@ export function createWorkflowService({
     return run;
   }
 
+  function presentRun(run) {
+    const rawRun = run && typeof run === "object" ? run : null;
+    if (!rawRun) return null;
+    const links = ensureLinks(rawRun.links);
+    const linkedIds = uniqueStrings([
+      ...(Array.isArray(links.workItemIds) ? links.workItemIds : []),
+      ...(Array.isArray(links.jobIds) ? links.jobIds : [])
+    ]);
+    const items =
+      typeof workItemStore.getMany === "function"
+        ? workItemStore.getMany(linkedIds)
+        : linkedIds.map((id) => workItemStore.get(id)).filter(Boolean);
+    const jobs = items.map(mapJobSummary);
+    const artifactSummaries = linkArtifactsToJobs(buildArtifactRecords(rawRun), jobs);
+    const project = buildProjectSummary(rawRun, jobs, artifactSummaries);
+    const meta = ensureMeta(rawRun.meta);
+
+    return {
+      ...rawRun,
+      links: {
+        ...links,
+        workItemIds: linkedIds,
+        jobIds: linkedIds
+      },
+      project,
+      jobs,
+      artifactSummaries,
+      statusNarrative: buildStatusNarrative(rawRun, jobs),
+      history: normalizeTimeline(meta.workflowTimeline, "run", safeText(rawRun.id, 120))
+    };
+  }
+
   function startRun({ idea, category, requestedBy = "public", sessionId = "global_podcast", meta = {} }) {
     const safeIdea = safeText(idea, 1200);
     if (safeIdea.length < 12) {
@@ -79,7 +528,28 @@ export function createWorkflowService({
       title: "",
       questions,
       recommendedLane: preset.recommendedLane,
-      meta
+      meta: {
+        ...ensureMeta(meta),
+        lastTransition: {
+          currentStage: phaseToNarrativeStage("analysis"),
+          summary: "ATEAM captured the idea and started shaping the intake.",
+          reason: "A new run was created from public intake.",
+          responsible: "ateam_intake",
+          timestamp: new Date().toISOString()
+        }
+      }
+    });
+
+    const updated = workflowRunStore.update(run.id, {
+      meta: appendRunTimeline(run, {
+        eventType: "created",
+        message: "Run created from intake",
+        metadata: {
+          actor: requestedBy,
+          category: normalizedCategory,
+          recommendedLane: preset.recommendedLane
+        }
+      })
     });
 
     logEvent(sessionId, "workflow_run_started", requestedBy, `Workflow run started for ${safeIdea.slice(0, 80)}`, {
@@ -88,7 +558,7 @@ export function createWorkflowService({
       recommendedLane: preset.recommendedLane
     });
 
-    return run;
+    return presentRun(updated);
   }
 
   function captureAnswers(runId, { answers, actor = "public", sessionId = "global_podcast" }) {
@@ -133,6 +603,20 @@ export function createWorkflowService({
       decidedBy: ""
     };
 
+    const artifactRecords = mergeArtifactRecords(buildArtifactRecords(run), [
+      buildArtifactRecord({
+        id: `${run.id}_brief`,
+        runId: run.id,
+        type: "brief",
+        title: brief.title,
+        summary: brief.summary || brief.quickVerdict,
+        stage: "routing",
+        createdAt: run.createdTs,
+        updatedAt: new Date().toISOString(),
+        previewItems: [...safeList(brief.goals || [], 3), ...safeList(brief.constraints || [], 2)]
+      })
+    ]);
+
     const updated = workflowRunStore.update(run.id, {
       phase: "brief_approval",
       title: brief.title,
@@ -140,7 +624,32 @@ export function createWorkflowService({
       brief,
       recommendedLane: brief.recommendedLane,
       risks,
-      approvals
+      approvals,
+      meta: appendRunTimeline(
+        {
+          ...run,
+          meta: {
+            ...ensureMeta(run.meta),
+            artifactRecords,
+            lastTransition: {
+              currentStage: phaseToNarrativeStage("brief_approval"),
+              summary: "ATEAM shaped the brief and queued the routing decision.",
+              reason: "The intake answers were converted into a scoped brief.",
+              responsible: "henry",
+              timestamp: new Date().toISOString()
+            }
+          }
+        },
+        {
+          eventType: "artifact_created",
+          message: "Artifact generated: Brief v1",
+          metadata: {
+            actor,
+            artifactId: `${run.id}_brief`,
+            approvalId
+          }
+        }
+      )
     });
 
     logEvent(sessionId, "workflow_brief_ready", actor, `Workflow brief ready for ${brief.title}`, {
@@ -149,7 +658,7 @@ export function createWorkflowService({
       recommendedLane: brief.recommendedLane
     });
 
-    return updated;
+    return presentRun(updated);
   }
 
   function ensureLinkedWork(run) {
@@ -159,7 +668,8 @@ export function createWorkflowService({
     if (existingProjectId && existingWorkItemIds.length) {
       return {
         projectId: existingProjectId,
-        workItemIds: existingWorkItemIds
+        workItemIds: existingWorkItemIds,
+        ownerAgentId: safeText(links.ownerAgentId, 80)
       };
     }
 
@@ -170,7 +680,10 @@ export function createWorkflowService({
         objective: item.objective,
         stage: item.stage,
         ownerAgentId: item.ownerAgentId,
-        data: item.data
+        data: {
+          ...(item.data || {}),
+          reason: "created_from_workflow_run"
+        }
       })
     );
     return {
@@ -205,6 +718,7 @@ export function createWorkflowService({
     approvals[safeGate] = currentGate;
 
     const patch = { approvals };
+    const existingArtifacts = buildArtifactRecords(run);
 
     if (safeGate === "brief") {
       if (safeDecision === "approved") {
@@ -214,15 +728,72 @@ export function createWorkflowService({
           ...ensureLinks(run.links),
           projectId: linked.projectId,
           workItemIds: linked.workItemIds,
+          jobIds: linked.workItemIds,
           ownerAgentId: linked.ownerAgentId || ensureLinks(run.links).ownerAgentId || "henry"
         };
+        patch.meta = appendRunTimeline(
+          {
+            ...run,
+            meta: {
+              ...ensureMeta(run.meta),
+              artifactRecords: promoteArtifactRecords(existingArtifacts, {
+                projectId: linked.projectId,
+                actor,
+                artifactIds: [`${run.id}_brief`]
+              }),
+              lastTransition: {
+                currentStage: phaseToNarrativeStage("initiation"),
+                summary: "ATEAM promoted the run into a project and seeded the first jobs.",
+                reason: "The brief was approved and delivery work was created.",
+                responsible: linked.ownerAgentId || "henry",
+                timestamp: new Date().toISOString()
+              }
+            }
+          },
+          {
+            eventType: "approved",
+            message: "Approved by operator: brief gate",
+            metadata: {
+              actor,
+              gate: safeGate,
+              projectId: linked.projectId,
+              jobIds: linked.workItemIds
+            }
+          }
+        );
       } else {
         patch.phase = "analysis";
+        patch.meta = appendRunTimeline(
+          {
+            ...run,
+            meta: {
+              ...ensureMeta(run.meta),
+              lastTransition: {
+                currentStage: phaseToNarrativeStage("analysis"),
+                summary: "ATEAM sent the brief back for more clarity.",
+                reason: "The brief approval was rejected.",
+                responsible: "ateam_intake",
+                blockerReason: "Brief approval was rejected.",
+                timestamp: new Date().toISOString()
+              }
+            }
+          },
+          {
+            eventType: "rejected",
+            message: "Rejected by operator: brief gate",
+            metadata: {
+              actor,
+              gate: safeGate,
+              blockerReason: "Brief approval was rejected."
+            }
+          }
+        );
       }
     }
 
     if (safeGate === "pack") {
       if (safeDecision === "approved") {
+        const projectId = safeText(run.links?.projectId, 120);
         patch.phase = "handoff";
         patch.handoff = {
           ...(run.handoff || {}),
@@ -230,12 +801,62 @@ export function createWorkflowService({
           approvedAt: new Date().toISOString(),
           approvedBy: actor
         };
+        patch.meta = appendRunTimeline(
+          {
+            ...run,
+            meta: {
+              ...ensureMeta(run.meta),
+              artifactRecords: promoteArtifactRecords(existingArtifacts, { projectId, actor }),
+              lastTransition: {
+                currentStage: phaseToNarrativeStage("handoff"),
+                summary: "The decision pack is ready to turn into live Una Labs execution.",
+                reason: "The preview artifacts passed the decision gate.",
+                responsible: ensureLinks(run.links).ownerAgentId || "henry",
+                timestamp: new Date().toISOString()
+              }
+            }
+          },
+          {
+            eventType: "delivered",
+            message: "Delivered to output",
+            metadata: {
+              actor,
+              gate: safeGate,
+              projectId
+            }
+          }
+        );
       } else {
         patch.phase = "initiation";
         patch.handoff = {
           ...(run.handoff || {}),
           status: "needs_revision"
         };
+        patch.meta = appendRunTimeline(
+          {
+            ...run,
+            meta: {
+              ...ensureMeta(run.meta),
+              lastTransition: {
+                currentStage: phaseToNarrativeStage("initiation"),
+                summary: "ATEAM sent the pack back for another build pass.",
+                reason: "The decision pack needs revisions.",
+                responsible: ensureLinks(run.links).ownerAgentId || "henry",
+                blockerReason: "Pack approval was rejected.",
+                timestamp: new Date().toISOString()
+              }
+            }
+          },
+          {
+            eventType: "rejected",
+            message: "Rejected by operator: pack gate",
+            metadata: {
+              actor,
+              gate: safeGate,
+              blockerReason: "Pack approval was rejected."
+            }
+          }
+        );
       }
     }
 
@@ -248,7 +869,7 @@ export function createWorkflowService({
       approvalId
     });
 
-    return updated;
+    return presentRun(updated);
   }
 
   function generatePack(runId, { actor = "operator", sessionId = "global_podcast" }) {
@@ -293,6 +914,70 @@ export function createWorkflowService({
       decidedBy: ""
     };
 
+    const updatedAt = new Date().toISOString();
+    const artifactRecords = mergeArtifactRecords(buildArtifactRecords(run), [
+      buildArtifactRecord({
+        id: `${run.id}_brief`,
+        runId: run.id,
+        projectId: safeText(run.links?.projectId, 120),
+        type: "brief",
+        title: run.brief?.title || run.title || "Workflow brief",
+        summary: run.brief?.summary || run.brief?.quickVerdict,
+        stage: "routing",
+        createdAt: run.createdTs,
+        updatedAt,
+        previewItems: [...safeList(run.brief?.goals || [], 3), ...safeList(run.brief?.constraints || [], 2)]
+      }),
+      buildArtifactRecord({
+        id: `${run.id}_mockup`,
+        runId: run.id,
+        projectId: safeText(run.links?.projectId, 120),
+        type: "mockup",
+        title: artifacts?.mockup?.title,
+        summary: artifacts?.mockup?.summary,
+        stage: "build",
+        createdAt: updatedAt,
+        updatedAt,
+        previewItems: safeList((artifacts?.mockup?.screens || []).map((screen) => screen.title), 4)
+      }),
+      buildArtifactRecord({
+        id: `${run.id}_prototype`,
+        runId: run.id,
+        projectId: safeText(run.links?.projectId, 120),
+        type: "prototype",
+        title: artifacts?.prototype?.title,
+        summary: artifacts?.prototype?.summary,
+        stage: "build",
+        createdAt: updatedAt,
+        updatedAt,
+        previewItems: safeList((artifacts?.prototype?.frames || []).map((frame) => frame.title), 4)
+      }),
+      buildArtifactRecord({
+        id: `${run.id}_smoke`,
+        runId: run.id,
+        projectId: safeText(run.links?.projectId, 120),
+        type: "smoke_report",
+        title: artifacts?.smoke?.status || "Smoke report",
+        summary: artifacts?.smoke?.summary,
+        stage: "review",
+        createdAt: updatedAt,
+        updatedAt,
+        previewItems: safeList((artifacts?.smoke?.checks || []).map((check) => `${check.label}: ${check.result}`), 4)
+      }),
+      buildArtifactRecord({
+        id: `${run.id}_document`,
+        runId: run.id,
+        projectId: safeText(run.links?.projectId, 120),
+        type: "document",
+        title: artifacts?.doc?.title || "Decision pack",
+        summary: artifacts?.doc?.summary,
+        stage: "decision_pack",
+        createdAt: updatedAt,
+        updatedAt,
+        previewItems: safeList((artifacts?.doc?.sections || []).map((section) => section.title), 4)
+      })
+    ]);
+
     const updated = workflowRunStore.update(run.id, {
       phase: "pack_approval",
       artifacts,
@@ -300,7 +985,32 @@ export function createWorkflowService({
         ...handoff,
         status: "pending_pack_approval"
       },
-      approvals
+      approvals,
+      meta: appendRunTimeline(
+        {
+          ...run,
+          meta: {
+            ...ensureMeta(run.meta),
+            artifactRecords,
+            lastTransition: {
+              currentStage: phaseToNarrativeStage("pack_approval"),
+              summary: "ATEAM generated the preview pack and staged it for review.",
+              reason: "The brief was approved and the preview artifacts were created.",
+              responsible: ensureLinks(run.links).ownerAgentId || "henry",
+              timestamp: updatedAt
+            }
+          }
+        },
+        {
+          eventType: "artifact_created",
+          message: "Artifact generated: Decision pack",
+          metadata: {
+            actor,
+            approvalId,
+            artifactIds: artifactRecords.map((artifact) => artifact.id)
+          }
+        }
+      )
     });
 
     logEvent(sessionId, "workflow_pack_generated", actor, `Workflow pack generated for ${run.brief?.title || run.title || "workflow run"}`, {
@@ -308,7 +1018,7 @@ export function createWorkflowService({
       approvalId
     });
 
-    return updated;
+    return presentRun(updated);
   }
 
   return {
@@ -316,7 +1026,7 @@ export function createWorkflowService({
     captureAnswers,
     approveRun,
     generatePack,
-    getRun: getRunOrThrow,
-    listRuns: ({ phase, limit } = {}) => workflowRunStore.list({ phase, limit })
+    getRun: (runId) => presentRun(getRunOrThrow(runId)),
+    listRuns: ({ phase, limit } = {}) => workflowRunStore.list({ phase, limit }).map((run) => presentRun(run))
   };
 }
