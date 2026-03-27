@@ -1,7 +1,8 @@
 import { createLocalRepositories } from "./backends/local.js";
+import { createPostgresRepositories } from "./backends/postgres.js";
 import { createSupabaseRepositories } from "./backends/supabase.js";
 
-const SUPPORTED_STORAGE_BACKENDS = new Set(["local", "supabase"]);
+const SUPPORTED_STORAGE_BACKENDS = new Set(["local", "postgres", "supabase"]);
 
 export function createRepositories({ backend = "local", memoryDir = "" } = {}) {
   const normalized = String(backend || "local").trim().toLowerCase();
@@ -11,6 +12,9 @@ export function createRepositories({ backend = "local", memoryDir = "" } = {}) {
   }
   if (normalized === "supabase") {
     return createSupabaseRepositories({ memoryDir });
+  }
+  if (normalized === "postgres") {
+    return createPostgresRepositories({ memoryDir });
   }
 
   const err = new Error(`Unsupported storage backend: ${normalized}`);

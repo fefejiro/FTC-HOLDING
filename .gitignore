@@ -3,6 +3,7 @@ node_modules/
 dist/
 build/
 .playwright-report/
+.playwright-cli/
 test-results/
 .env
 .env.local

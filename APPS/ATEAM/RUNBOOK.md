@@ -49,6 +49,36 @@ Copy-Item .env.example .env
 npm run start:server
 ```
 
+## Supabase CLI
+
+ATEAM now carries the Supabase CLI as a local dev dependency. From `APPS/ATEAM`:
+
+```powershell
+npm run supabase:status
+npm run supabase:login
+npm run supabase:projects
+npm run supabase:link
+npm run supabase:preflight
+npm run storage:preflight
+```
+
+Notes:
+
+- Local Supabase stack commands require Docker Desktop to be running.
+- Remote project commands require a Supabase access token from `npm run supabase:login`.
+- In non-TTY shells like Codex, use `SUPABASE_ACCESS_TOKEN` or run `supabase login --token <token>` in a normal terminal first.
+- `SUPABASE_PROJECT_REF` is required for scripted remote cutover.
+- The preferred managed runtime path is direct Postgres with `ATEAM_DATABASE_URL` or `DATABASE_URL`.
+
+Useful local database commands:
+
+```powershell
+npm run supabase:start
+npm run supabase:db:reset
+npm run supabase:db:lint
+npm run supabase:stop
+```
+
 ## Build
 
 No frontend build step is required for the local app. The main verification is syntax and tests.
@@ -73,7 +103,11 @@ Durable workflow storage:
 # keep local fallback
 $env:ATEAM_STORAGE_BACKEND="local"
 
-# or switch workflow runs / jobs / approvals to Supabase
+# or switch workflow runs / jobs / approvals to managed Postgres
+$env:ATEAM_STORAGE_BACKEND="postgres"
+$env:ATEAM_DATABASE_URL="postgresql://..."
+
+# optional REST-based Supabase storage
 $env:ATEAM_STORAGE_BACKEND="supabase"
 $env:SUPABASE_URL="https://your-project.supabase.co"
 $env:SUPABASE_SERVICE_ROLE_KEY="..."
@@ -81,9 +115,13 @@ $env:SUPABASE_SERVICE_ROLE_KEY="..."
 
 Before enabling Supabase in production:
 
-1. Apply [Docs/SUPABASE_WORKFLOW_SCHEMA.sql](/c:/FTC%20HOLDING/APPS/ATEAM/Docs/SUPABASE_WORKFLOW_SCHEMA.sql).
-2. Set the `SUPABASE_*` secrets in Railway.
-3. Optional: migrate existing workflow state:
+1. Preferred path: set `ATEAM_STORAGE_BACKEND=postgres` and `ATEAM_DATABASE_URL` (or `DATABASE_URL`) to the managed database.
+2. Run `npm run storage:preflight`.
+3. Run `npm run migrate:workflow:postgres -- --source-http` or `npm run storage:cutover`.
+4. Redeploy the ATEAM runtime and confirm `/health` reports `storage.backend = postgres`.
+5. Optional REST path: authenticate the Supabase CLI, set `SUPABASE_PROJECT_REF`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`, then use `npm run supabase:cutover`.
+6. Keep the legacy reference copy in [Docs/SUPABASE_WORKFLOW_SCHEMA.sql](/c:/FTC%20HOLDING/APPS/ATEAM/Docs/SUPABASE_WORKFLOW_SCHEMA.sql) for manual SQL fallback only.
+7. Optional: migrate existing workflow state:
 
 ```powershell
 # from the live public/ops surfaces
@@ -92,7 +130,7 @@ $env:ATEAM_OPS_BASIC_AUTH_PASSWORD="..."
 npm run migrate:workflow:supabase -- --source-http
 ```
 
-4. Confirm `/health` reports `storage.backend = supabase`.
+8. Confirm `/health` reports the intended managed backend.
 
 ## Test Commands
 

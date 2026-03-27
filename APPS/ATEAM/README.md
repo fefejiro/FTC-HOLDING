@@ -27,6 +27,24 @@ Copy-Item .env.example .env
 npm run start:server
 ```
 
+Supabase CLI is now available locally from this repo as a dev dependency. From `APPS/ATEAM`, use:
+
+```powershell
+npm run supabase:status
+npm run supabase:login
+npm run supabase:projects
+npm run supabase:preflight
+npm run storage:preflight
+```
+
+Notes:
+
+- `supabase:start`, `supabase:status`, and other local stack commands require Docker Desktop.
+- Remote project commands such as `supabase:projects`, `supabase:link`, and `supabase:db:push` require a Supabase access token from `npm run supabase:login`.
+- In non-interactive shells like Codex, automatic browser login does not work. Use `supabase login --token <token>` in a normal terminal or set `SUPABASE_ACCESS_TOKEN` before running remote CLI commands here.
+- `SUPABASE_PROJECT_REF` is the expected project identifier for scripted remote cutover commands.
+- The current preferred managed runtime path is `ATEAM_STORAGE_BACKEND=postgres` with `ATEAM_DATABASE_URL` (or `DATABASE_URL`) pointed at the shared Supabase Postgres database.
+
 ## Runtime and Stack
 
 - Frontend: static HTML/CSS/JS (`Public/index.html`, `Public/style.css`, `Public/app.js`)
@@ -177,9 +195,15 @@ Managed storage rollout:
 
 - Workflow runs, jobs, and approvals now resolve through `Server/lib/storage/repositories.js`.
 - `ATEAM_STORAGE_BACKEND=local` keeps the current SQLite/local behavior.
+- `ATEAM_STORAGE_BACKEND=postgres` uses a direct PostgreSQL connection and auto-applies the tracked workflow schema from `supabase/migrations/20260327000100_ateam_workflow_base.sql`.
 - `ATEAM_STORAGE_BACKEND=supabase` switches workflow runs, jobs, and approvals to Supabase when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are present.
 - If Supabase is requested but not configured, ATEAM falls back safely to `local` and reports that fallback in `/health`.
-- Apply [`Docs/SUPABASE_WORKFLOW_SCHEMA.sql`](Docs/SUPABASE_WORKFLOW_SCHEMA.sql) before enabling the Supabase backend in production.
+- Canonical CLI migration lives at [`supabase/migrations/20260327000100_ateam_workflow_base.sql`](supabase/migrations/20260327000100_ateam_workflow_base.sql). The legacy schema reference remains at [`Docs/SUPABASE_WORKFLOW_SCHEMA.sql`](Docs/SUPABASE_WORKFLOW_SCHEMA.sql).
+- Run `npm run supabase:login` and `npm run supabase:link` before remote CLI operations.
+- `npm run supabase:preflight -- -RequireRemote` checks whether token, project ref, URL, and service-role inputs are ready for remote cutover.
+- `npm run supabase:cutover` links the project, pushes the tracked migration, and can optionally migrate existing workflow data.
+- `npm run migrate:workflow:postgres -- --source-http` migrates live workflow runs, jobs, and approvals directly into the managed Postgres backend.
+- `npm run storage:cutover` is the one-command managed runtime cutover for the direct Postgres path.
 - Optional migration helper: `npm run migrate:workflow:supabase -- --source-http` or `npm run migrate:workflow:supabase -- --source-db <sqlite-path>`
 
 ## Current Classification

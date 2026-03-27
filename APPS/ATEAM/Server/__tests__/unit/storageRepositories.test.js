@@ -36,4 +36,28 @@ describe("storage repositories", () => {
       else delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     }
   });
+
+  test("postgres backend falls back safely when database url is missing", () => {
+    const previousDatabaseUrl = process.env.DATABASE_URL;
+    const previousAteamDatabaseUrl = process.env.ATEAM_DATABASE_URL;
+    delete process.env.DATABASE_URL;
+    delete process.env.ATEAM_DATABASE_URL;
+
+    try {
+      const repositories = createRepositories({ backend: "postgres" });
+      expect(repositories.backend).toBe("local");
+      expect(repositories.capability).toMatchObject({
+        provider: "postgres",
+        configured: false,
+        fallbackBackend: "local"
+      });
+      expect(typeof repositories.approvalStore?.create).toBe("function");
+      expect(typeof repositories.workflowRunStore?.create).toBe("function");
+    } finally {
+      if (previousDatabaseUrl != null) process.env.DATABASE_URL = previousDatabaseUrl;
+      else delete process.env.DATABASE_URL;
+      if (previousAteamDatabaseUrl != null) process.env.ATEAM_DATABASE_URL = previousAteamDatabaseUrl;
+      else delete process.env.ATEAM_DATABASE_URL;
+    }
+  });
 });

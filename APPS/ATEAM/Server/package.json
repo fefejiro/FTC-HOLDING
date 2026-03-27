@@ -21,7 +21,8 @@
     "@supabase/supabase-js": "^2.57.4",
     "dotenv": "^17.0.0",
     "express": "^5.0.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

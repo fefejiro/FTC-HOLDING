@@ -14,6 +14,21 @@
     "start:telegram": "npm --prefix telegram-gateway start",
     "launch:office": "powershell.exe -ExecutionPolicy Bypass -File tools/ateam-launcher.ps1",
     "clean:local": "powershell.exe -ExecutionPolicy Bypass -File tools/clean-local-runtime.ps1",
+    "supabase:init": "supabase init --yes --workdir .",
+    "supabase:status": "supabase status --workdir .",
+    "supabase:start": "supabase start --workdir .",
+    "supabase:stop": "supabase stop --workdir .",
+    "supabase:login": "supabase login --workdir .",
+    "supabase:projects": "supabase projects list --workdir .",
+    "supabase:link": "supabase link --workdir .",
+    "storage:preflight": "powershell.exe -ExecutionPolicy Bypass -File tools/supabase-preflight.ps1 -RequireRemote",
+    "storage:cutover": "powershell.exe -ExecutionPolicy Bypass -File tools/supabase-cutover.ps1 -Backend postgres -MigrateFromHttp",
+    "supabase:preflight": "powershell.exe -ExecutionPolicy Bypass -File tools/supabase-preflight.ps1",
+    "supabase:cutover": "powershell.exe -ExecutionPolicy Bypass -File tools/supabase-cutover.ps1",
+    "supabase:db:push": "supabase db push --workdir .",
+    "supabase:db:lint": "supabase db lint --workdir .",
+    "supabase:db:reset": "supabase db reset --workdir .",
+    "migrate:workflow:postgres": "node Server/scripts/migrateWorkflowStorageToPostgres.mjs",
     "migrate:workflow:supabase": "node Server/scripts/migrateWorkflowStorageToSupabase.mjs",
     "install:dev": "npm --prefix Server install",
     "install:server": "npm --prefix Server install --omit=dev",
@@ -23,5 +38,8 @@
     "test:integration": "npm --prefix Server run test:integration",
     "test:coverage": "npm --prefix Server run test:coverage",
     "verify:server": "node --check Server/server.js && node --check Server/bridge.js && node --check Server/phone.js"
+  },
+  "devDependencies": {
+    "supabase": "^2.84.4"
   }
 }
