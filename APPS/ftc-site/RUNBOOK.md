@@ -42,6 +42,12 @@ Operator expectation for `/ateam/operator/*`:
 - full Office / Team / Factory / Memory / Pipeline shell
 - approvals, logs, overrides, and delivery control remain private
 
+Production note:
+
+- the Cloudflare Worker currently owns public `https://unalabs.cloud/ateam*`
+- that means `https://unalabs.cloud/ateam/operator/*` is intentionally masked on the public host
+- use the secured/local operator deployment when you need the full admin shell
+
 Optional proxy override:
 
 ```powershell

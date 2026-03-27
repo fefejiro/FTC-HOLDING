@@ -86,16 +86,16 @@ Cloudflare Pages / Vercel-style build note:
 4. ATEAM turns the idea into a live run with visible state, jobs, timeline movement, and run-owned artifacts.
 5. The output pack returns a recommended move, visual concept, prototype direction, build watch, and next step.
 6. `Continue with Una Labs` opens `/work-with-ftc?from=ateam` with the workflow pack prefilled.
-7. Operator users can open the full ATEAM Mission Control shell through `/ateam/operator/...` without leaking those controls into the public view.
+7. Operator users keep the full ATEAM Mission Control shell in the private operator deployment without leaking those controls into the public view.
 8. Submitting the intake returns a success state with a request reference and response expectation.
 
 ## Public vs private ATEAM
 
 - Public route: `/ateam`
 - Public modules: `Intake`, `System`, `Work`, `Output`
-- Private operator routes: `/ateam/operator/*`
+- Private operator routes: `/ateam/operator/*` when the secured operator proxy is enabled
 
-The public flow is intentionally narrowed so clients only see the trustworthy high-level system narrative. Office, Factory, approvals, logs, and overrides remain inside the operator control plane.
+The public flow is intentionally narrowed so clients only see the trustworthy high-level system narrative. Office, Factory, approvals, logs, and overrides remain inside the operator control plane. On the public production host, the Cloudflare Worker currently owns `/ateam*`, so `/ateam/operator/*` is intentionally not exposed there.
 
 ## Current launch mode
 
