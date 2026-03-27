@@ -63,9 +63,46 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/polar-anchor` }
 };
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "FreightForwarder",
+  "name": "Polar Anchor",
+  "slogan": "Just in time connections",
+  "description": "End-to-end freight forwarding, transportation, warehousing, customs clearance, and import-export logistics services across Canada.",
+  "url": `${SITE_URL}/polar-anchor`,
+  "email": "hello@polaranchor.ca",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Toronto",
+    "addressRegion": "Ontario",
+    "addressCountry": "CA"
+  },
+  "areaServed": { "@type": "Country", "name": "Canada" },
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Freight and Logistics Services",
+    "itemListElement": polarServices.map((s) => ({
+      "@type": "Offer",
+      "itemOffered": { "@type": "Service", "name": s.title, "description": s.summary }
+    }))
+  }
+};
+
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": polarAnchorConfig.faqs.map((faq) => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": { "@type": "Answer", "text": faq.answer }
+  }))
+};
+
 export default function HomePage() {
   return (
     <div className="polar-site-shell">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }} />
       <div className="container page-content polar-page-content">
         <PolarHero />
         <PolarTrustStrip />

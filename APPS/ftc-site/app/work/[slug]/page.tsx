@@ -19,5 +19,13 @@ export default function WorkSlugPage({ params }: { params: { slug: string } }) {
     permanentRedirect("/ateam");
   }
 
+  if (slug === "polar-anchor") {
+    permanentRedirect("/polar-anchor");
+  }
+
+  if (slug === "garden-cleaners") {
+    permanentRedirect("/garden-cleaners");
+  }
+
   notFound();
 }

@@ -39,6 +39,18 @@ FTC-HOLDING/
 
 # local ATEAM temp artifacts
 APPS/ATEAM/tmpclaude-*
+APPS/ATEAM/Server/tmpclaude-*
+
+# bundled Git for Windows installer (not source code)
+Git/
+
+# local binaries
+tmp-bin/
+claude.exe
+
+# Claude Code session state (keep project settings, ignore everything else)
+.claude/*
+!.claude/settings.json
 
 # ATEAM local runtime data (keep private / avoid noisy diffs)
 APPS/ATEAM/memory/**

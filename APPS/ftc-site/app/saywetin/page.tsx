@@ -47,6 +47,7 @@ export default function SayWetinPage() {
         </div>
         <BrandVideoPanel
           src="/images/brand/saywetin-showcase.mp4"
+          poster="/images/brand/saywetin-og.png"
           title="SayWetin animated showcase"
           aspect="wide"
           preload="metadata"

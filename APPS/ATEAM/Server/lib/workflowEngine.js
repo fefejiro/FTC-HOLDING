@@ -4,7 +4,7 @@ function safeText(value, limit = 220) {
 
 function safeList(values = [], limit = 6) {
   return (Array.isArray(values) ? values : [])
-    .map((value) => safeText(value, 160))
+    .map((value) => safeText(value, 180))
     .filter(Boolean)
     .slice(0, limit);
 }
@@ -17,12 +17,12 @@ function answerText(answers, key, fallback = "", limit = 240) {
 function titleCaseFromIdea(idea) {
   const cleaned = safeText(idea, 120).replace(/[.?!]+$/g, "");
   if (!cleaned) return "ATEAM Workflow Run";
-  const words = cleaned
+  return cleaned
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 8)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1));
-  return words.join(" ");
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 function slugify(value) {
@@ -31,6 +31,83 @@ function slugify(value) {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 48);
+}
+
+function lowerFirst(value = "") {
+  const text = safeText(value, 260);
+  if (!text) return "";
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+function inferWorkflowCategoryFromIdea(idea = "") {
+  const haystack = safeText(idea, 1200).toLowerCase();
+  if (
+    /\b(lead|quote|quotes|calls|booking|bookings|follow-up|follow up|pipeline|crm|whatsapp|inbound)\b/.test(
+      haystack
+    )
+  ) {
+    return "lead-automation";
+  }
+  if (
+    /\b(internal|ops|operations|backoffice|back office|staff|admin|approval|queue|reporting|dashboard)\b/.test(
+      haystack
+    )
+  ) {
+    return "internal-tool";
+  }
+  if (
+    /\b(ai|assistant|copilot|agent|voice|speech|automation|automate|intelligence)\b/.test(haystack)
+  ) {
+    return "ai-feature";
+  }
+  if (/\b(app|mobile|platform|portal|marketplace|product)\b/.test(haystack)) {
+    return "product-app";
+  }
+  return "website";
+}
+
+function inferConstraintNote(firstWin = "", preset) {
+  const text = safeText(firstWin, 240).toLowerCase();
+  if (/(fast|quick|soon|asap|urgent|two weeks|2 weeks|launch)/.test(text)) {
+    return "Speed matters. Keep the first pass tight enough to ship without dragging in extra edge cases.";
+  }
+  if (/(simple|minimal|lean|light|small|just)\b/.test(text)) {
+    return "Keep the first pass intentionally light. Prove the useful core before widening the scope.";
+  }
+  if (/(integrat|payment|calendar|map|sms|whatsapp|sync|crm|auth)/.test(text)) {
+    return "Integration risk is real here. Prove the core path before wiring every external system.";
+  }
+  return `Protect the ${preset.deliveryTheme} scope and avoid turning version one into the whole product.`;
+}
+
+function inferSignalNote(idea = "", firstWin = "") {
+  const text = `${safeText(idea, 360)} ${safeText(firstWin, 240)}`.toLowerCase();
+  if (/(manual|repeated|repeat|slow|messy|missed|missing|pain|friction|lose|lost)/.test(text)) {
+    return "There is already friction here, which is enough reason to test a sharp first pass.";
+  }
+  if (/(lead|demand|customer|client|orders|request|booking|quote)/.test(text)) {
+    return "The idea connects to a visible request path, which makes it worth a practical first demo.";
+  }
+  return "There is enough signal to shape a first pass, as long as the first win stays narrow and testable.";
+}
+
+function buildWorkflowDecision({ idea = "", firstWin = "", audience = "", preset }) {
+  const combined = `${safeText(idea, 500)} ${safeText(firstWin, 240)}`.toLowerCase();
+  const tooBroad = /\b(all[- ]in[- ]one|everything|full platform|super app|marketplace|end[- ]to[- ]end)\b/.test(
+    combined
+  );
+  if (tooBroad && safeText(firstWin, 240).length < 32) {
+    return {
+      quickVerdict: "No-go for a full build yet",
+      decisionNote:
+        "The idea has signal, but it still needs a tighter first slice before it should move beyond a quick demo pass."
+    };
+  }
+
+  return {
+    quickVerdict: "Go for a scoped first pass",
+    decisionNote: `There is enough here to shape a practical ${preset.deliveryTheme} demo, as long as the first win stays narrow for ${audience}.`
+  };
 }
 
 export const WORKFLOW_PHASES = [
@@ -51,9 +128,9 @@ export const WORKFLOW_CATEGORY_PRESETS = {
     ownerAgentId: "henry",
     problemFrame: "clarify the offer and turn interest into a measurable next step",
     audienceHint: "buyers or visitors you want to convert quickly",
-    screens: ["Landing", "Service Detail", "Lead Capture", "Proof / FAQ"],
-    prototypeFrame: "quick route from first visit to qualified request",
-    stack: ["Next.js", "Analytics", "Lead intake routing", "Performance tuning"],
+    screens: ["Landing", "Offer detail", "Conversion path", "Proof / FAQ"],
+    prototypeFrame: "a quick route from first visit to a qualified next action",
+    stack: ["Next.js", "Lead capture", "Analytics", "Performance / SEO"],
     deliveryTheme: "conversion-first launch"
   },
   "lead-automation": {
@@ -61,10 +138,10 @@ export const WORKFLOW_CATEGORY_PRESETS = {
     recommendedLane: "Local Services Lead Engine",
     ownerAgentId: "henry",
     problemFrame: "capture, qualify, and route incoming demand without manual babysitting",
-    audienceHint: "operators or teams handling inbound leads",
-    screens: ["Capture Form", "Qualification Queue", "Routing Rules", "Follow-up Timeline"],
-    prototypeFrame: "show how a lead moves from form submit to routed follow-up",
-    stack: ["Webhook intake", "Routing logic", "Templates", "Visibility dashboard"],
+    audienceHint: "operators or teams handling inbound demand",
+    screens: ["Capture", "Qualification", "Routing", "Follow-up"],
+    prototypeFrame: "a believable path from inbound request to routed follow-up",
+    stack: ["Webhook intake", "Routing rules", "Templates", "Visibility dashboard"],
     deliveryTheme: "automation-first intake"
   },
   "product-app": {
@@ -73,8 +150,8 @@ export const WORKFLOW_CATEGORY_PRESETS = {
     ownerAgentId: "codex",
     problemFrame: "frame the MVP, the first useful workflow, and the safest build order",
     audienceHint: "end users adopting a new workflow or utility",
-    screens: ["Onboarding", "Core Workflow", "Status / Feed", "Settings / Admin"],
-    prototypeFrame: "prove the most important user journey before full build",
+    screens: ["Entry", "Core flow", "Status", "Settings"],
+    prototypeFrame: "the shortest believable route through the core user flow",
     stack: ["App shell", "API layer", "Analytics", "Release checklist"],
     deliveryTheme: "MVP-first product path"
   },
@@ -84,8 +161,8 @@ export const WORKFLOW_CATEGORY_PRESETS = {
     ownerAgentId: "charlie",
     problemFrame: "remove repeated manual steps and make execution visible",
     audienceHint: "operators, managers, or internal teams",
-    screens: ["Ops Dashboard", "Queue / Backlog", "Task Detail", "Reporting"],
-    prototypeFrame: "show the internal flow before deeper systems integration",
+    screens: ["Queue", "Task view", "Progress", "Reporting"],
+    prototypeFrame: "the internal flow before deeper systems integration",
     stack: ["Dashboard shell", "Permissions", "Audit trail", "Automation hooks"],
     deliveryTheme: "ops visibility and control"
   },
@@ -95,23 +172,23 @@ export const WORKFLOW_CATEGORY_PRESETS = {
     ownerAgentId: "violet",
     problemFrame: "place AI where it removes friction and improves judgment",
     audienceHint: "people who need faster decisions, not novelty",
-    screens: ["Use-case Intake", "AI Assist Surface", "Human Review", "Outcome Log"],
-    prototypeFrame: "make the human-in-the-loop path believable before wider rollout",
+    screens: ["Intake", "Assist surface", "Human review", "Outcome log"],
+    prototypeFrame: "a guarded AI-assist flow with a believable human check",
     stack: ["Model orchestration", "Guardrails", "Feedback loop", "Observability"],
     deliveryTheme: "guardrailed AI assist"
   }
 };
 
-export function normalizeWorkflowCategory(rawValue = "") {
+export function normalizeWorkflowCategory(rawValue = "", idea = "") {
   const normalized = safeText(rawValue, 40).toLowerCase();
   if (normalized && Object.prototype.hasOwnProperty.call(WORKFLOW_CATEGORY_PRESETS, normalized)) {
     return normalized;
   }
-  return "website";
+  return inferWorkflowCategoryFromIdea(idea);
 }
 
-export function getWorkflowCategoryPreset(rawValue = "") {
-  return WORKFLOW_CATEGORY_PRESETS[normalizeWorkflowCategory(rawValue)];
+export function getWorkflowCategoryPreset(rawValue = "", idea = "") {
+  return WORKFLOW_CATEGORY_PRESETS[normalizeWorkflowCategory(rawValue, idea)];
 }
 
 export function buildWorkflowProjectId(runId = "") {
@@ -119,214 +196,250 @@ export function buildWorkflowProjectId(runId = "") {
 }
 
 export function buildWorkflowQuestions({ idea = "", category = "website" } = {}) {
-  const preset = getWorkflowCategoryPreset(category);
+  const preset = getWorkflowCategoryPreset(category, idea);
   const ideaTitle = titleCaseFromIdea(idea);
+
   return [
     {
       id: "audience",
       label: "Who it is for",
-      prompt: `Who is this mainly for in "${ideaTitle}"?`,
-      hint: `Keep it practical: ${preset.audienceHint}.`,
+      prompt: `Who needs this first in "${ideaTitle}"?`,
+      hint: `Keep it concrete: ${preset.audienceHint}.`,
       placeholder: "Example: busy restaurant staff handling rush-hour orders on WhatsApp."
     },
     {
       id: "firstWin",
-      label: "First win",
-      prompt: "What should this make clearly easier in the first version?",
-      hint: "Name the one useful win, plus the main limit if there is one.",
-      placeholder: "Example: take an order, route it to staff, and show status back fast. Keep v1 simple."
+      label: "First useful win",
+      prompt: "What should feel clearly easier in the first version?",
+      hint: "Name the one useful win, plus any hard limit if it matters.",
+      placeholder: "Example: take a request, route it fast, and show status back clearly."
     }
   ];
 }
 
 export function buildWorkflowBrief({ idea = "", category = "website", answers = {}, runId = "" } = {}) {
-  const preset = getWorkflowCategoryPreset(category);
+  const resolvedCategory = normalizeWorkflowCategory(category, idea);
+  const preset = getWorkflowCategoryPreset(resolvedCategory, idea);
   const title = titleCaseFromIdea(idea);
   const audience = answerText(answers, "audience", preset.audienceHint, 220);
-  const coreOutcome = answerText(
+  const firstWin = answerText(
     answers,
     "firstWin",
-    `Create a first version that can ${preset.problemFrame}.`,
+    answerText(
+      answers,
+      "coreOutcome",
+      `Give ${audience} a first version that can ${preset.problemFrame}.`,
+      220
+    ),
     220
   );
   const constraints = answerText(
     answers,
     "constraints",
-    "Move quickly without creating a fragile or oversized first release.",
+    inferConstraintNote(firstWin, preset),
     220
   );
   const signals = answerText(
     answers,
     "signals",
-    "There is enough demand or repeated friction to justify a fast, credible first pass.",
+    inferSignalNote(idea, firstWin),
     220
   );
-
-  const goals = safeList([
-    coreOutcome,
-    `Keep the first release focused enough to fit a ${preset.deliveryTheme}.`,
-    "Produce a handoff pack that Una Labs can scope without guesswork."
-  ]);
-  const constraintList = safeList([
-    constraints,
-    "Avoid overbuilding before the main workflow is proven.",
-    "Keep the first pass explainable to both operators and stakeholders."
-  ]);
-  const successCriteria = safeList([
-    `The first user can complete the main path for ${audience}.`,
-    "The generated pack exposes enough structure for an implementation estimate.",
-    "Operator work items can move through build, QA, review, and handoff without ambiguity."
-  ]);
-  const phasedPlan = safeList([
-    "Intake and discovery: capture the idea, signals, and hard constraints.",
-    "Brief shaping: turn answers into scope, lane, goals, risks, and a delivery path.",
-    "Prototype pack: generate concept screens, prototype flow, smoke summary, and operator notes.",
-    "Handoff: carry the brief into Una Labs intake with a clear next decision."
-  ], 4);
-  const operatorNotes = safeList([
-    `Route the run through ${preset.recommendedLane}.`,
-    `Use the proof signal as the first operator checkpoint: ${signals}`,
-    `Protect the main constraint during delivery: ${constraints}`
-  ], 4);
+  const decision = buildWorkflowDecision({
+    idea,
+    firstWin,
+    audience,
+    preset
+  });
+  const likelyUserValue = `For ${audience}, the first useful value is simple: ${lowerFirst(firstWin)} without extra complexity getting in the way.`;
+  const recommendedDirection = `Start with a ${preset.deliveryTheme} first pass that proves ${lowerFirst(firstWin)} before layering in broader workflow or integrations.`;
 
   return {
     title,
-    summary: `${title} should ${preset.problemFrame} for ${audience}. The first pass stays narrow, testable, and ready for operator handoff.`,
+    summary: `${title} should ${preset.problemFrame} for ${audience}. The first pass should prove ${lowerFirst(firstWin)} without pretending to be the whole product.`,
     audience,
-    scope: coreOutcome,
-    primaryGoal: coreOutcome,
+    scope: firstWin,
+    primaryGoal: firstWin,
     signals,
-    constraints: constraintList,
-    goals,
-    successCriteria,
+    likelyUserValue,
+    recommendedDirection,
+    quickVerdict: decision.quickVerdict,
+    decisionNote: decision.decisionNote,
+    constraints: safeList([
+      constraints,
+      "Keep version one narrow enough to explain in one breath.",
+      "Avoid polishing edge cases before the main path works."
+    ]),
+    goals: safeList([
+      firstWin,
+      `Show enough structure to judge whether ${title} deserves a deeper build.`,
+      "Produce a clear decision pack that Una Labs can scope quickly."
+    ]),
+    successCriteria: safeList([
+      `A first user from ${audience} can complete the main path with minimal explanation.`,
+      "The concept pack makes the core path, risks, and next move easy to judge.",
+      "The handoff is clear enough to estimate a phase-one build."
+    ]),
     recommendedLane: preset.recommendedLane,
-    phasedPlan,
-    operatorNotes,
+    phasedPlan: safeList([
+      "Capture the rough idea and strip out the noise.",
+      "Lock the audience, the first win, and the safest lane.",
+      "Generate a visual first pass and a simple route map.",
+      "Run a quick review so the next move is obvious."
+    ], 4),
+    operatorNotes: safeList([
+      `Keep the first pass centered on ${lowerFirst(firstWin)}.`,
+      `Route this through ${preset.recommendedLane}.`,
+      `Protect the main constraint during delivery: ${constraints}`
+    ]),
     runLabel: runId ? `Workflow run ${runId}` : "Workflow run"
   };
 }
 
 export function buildWorkflowRisks({ brief, answers = {}, category = "website" } = {}) {
   const preset = getWorkflowCategoryPreset(category);
-  const constraints = answerText(answers, "constraints", "", 220);
+  const firstWin = answerText(
+    answers,
+    "firstWin",
+    answerText(answers, "coreOutcome", "", 220),
+    220
+  );
+  const constraints = answerText(answers, "constraints", inferConstraintNote(firstWin, preset), 220);
   const signals = answerText(answers, "signals", "", 220);
+
   return safeList([
-    constraints ? `Primary constraint pressure: ${constraints}` : "",
-    signals ? `Signal quality still needs confirmation: ${signals}` : "",
-    `Scope can sprawl unless the team protects the ${preset.deliveryTheme} path.`,
-    brief?.audience ? `Audience clarity should stay grounded in ${brief.audience}.` : ""
+    constraints ? `Main constraint: ${constraints}` : "",
+    signals ? `Proof still to confirm: ${signals}` : "",
+    firstWin ? `Do not let the build drift away from ${lowerFirst(firstWin)}.` : "",
+    brief?.audience ? `Keep the audience tight around ${brief.audience}.` : ""
   ], 4);
 }
 
 function buildMockupScreens(run, preset) {
-  const title = run?.brief?.title || titleCaseFromIdea(run?.idea || "");
-  const scope = run?.brief?.scope || run?.brief?.primaryGoal || preset.problemFrame;
-  const audience = run?.brief?.audience || preset.audienceHint;
-  const screens = preset.screens.map((screenTitle, index) => ({
+  const brief = run?.brief || {};
+  const title = brief.title || titleCaseFromIdea(run?.idea || "");
+  const firstWin = brief.primaryGoal || preset.problemFrame;
+  const audience = brief.audience || preset.audienceHint;
+
+  return preset.screens.slice(0, 4).map((screenTitle, index) => ({
     id: `screen_${index + 1}`,
-    title: `${screenTitle}`,
+    title: screenTitle,
     caption:
       index === 0
         ? `Open with the clearest promise for ${audience}.`
-        : index === preset.screens.length - 1
-          ? `Close the loop so ${title} feels ready for handoff or follow-up.`
-          : `Carry the user deeper into ${scope.toLowerCase()}.`,
+        : index === 1
+          ? `Show how ${lowerFirst(firstWin)} actually works in a believable first pass.`
+          : index === 2
+            ? "Keep the decision path visible so the user never wonders what happens next."
+            : `Close the loop so ${title} feels ready for a real build decision.`,
     highlights: safeList([
-      index === 0 ? "Hero message, trust proof, and a single action" : "",
-      index === 1 ? "Core workflow block with visible progress" : "",
-      index === 2 ? "Decision support and human review moments" : "",
-      index >= 3 ? "Next step, route, or confirmation" : "",
+      index === 0 ? "Promise, trust signal, and one strong action" : "",
+      index === 1 ? "Core flow block with obvious state change" : "",
+      index === 2 ? "Review, confirmation, or human-check moment" : "",
+      index === 3 ? "Clear follow-up or handoff state" : "",
       `Tone: ${preset.deliveryTheme}`
     ], 4)
   }));
-  return screens.slice(0, 5);
 }
 
 function buildPrototypeFrames(run, preset) {
-  const title = run?.brief?.title || titleCaseFromIdea(run?.idea || "");
+  const brief = run?.brief || {};
+  const title = brief.title || titleCaseFromIdea(run?.idea || "");
+  const firstWin = brief.primaryGoal || preset.problemFrame;
+
   return [
     {
       id: "frame_entry",
       title: "Start",
-      purpose: `Introduce ${title} and invite the first useful action.`,
+      purpose: `Introduce ${title} and make the next action feel obvious.`,
       interactions: safeList([
-        "Primary CTA routes into a focused intake or action path.",
-        "Secondary CTA reveals proof, context, or examples."
-      ], 3)
+        "Primary CTA starts the main path immediately.",
+        "Secondary CTA shows proof, examples, or context."
+      ])
     },
     {
       id: "frame_flow",
       title: "Core Flow",
-      purpose: preset.prototypeFrame,
+      purpose: `Prove the first useful win: ${lowerFirst(firstWin)}.`,
       interactions: safeList([
-        "User completes the main decision or submission path.",
-        "System exposes status, feedback, or next move in plain language."
-      ], 3)
+        "User completes the core action without extra branching.",
+        "State, response, or progress is visible in plain language."
+      ])
     },
     {
       id: "frame_review",
       title: "Review",
-      purpose: "Show operator review, visibility, or approval before the run is shipped onward.",
+      purpose: "Show the human check, QA moment, or decision state before handoff.",
       interactions: safeList([
-        "Human review keeps the outcome safe and scoped.",
-        "Route into build, QA, or handoff is visible."
-      ], 3)
+        "Review keeps the outcome safe and scoped.",
+        "Next move into build or handoff is visible."
+      ])
     }
   ];
 }
 
 export function buildWorkflowPack({ run } = {}) {
-  const category = normalizeWorkflowCategory(run?.category);
-  const preset = getWorkflowCategoryPreset(category);
-  const brief = run?.brief || buildWorkflowBrief({ idea: run?.idea, category, answers: run?.answers, runId: run?.id });
+  const category = normalizeWorkflowCategory(run?.category, run?.idea);
+  const preset = getWorkflowCategoryPreset(category, run?.idea);
+  const brief =
+    run?.brief ||
+    buildWorkflowBrief({
+      idea: run?.idea,
+      category,
+      answers: run?.answers,
+      runId: run?.id
+    });
   const mockupScreens = buildMockupScreens({ ...run, brief }, preset);
   const prototypeFrames = buildPrototypeFrames({ ...run, brief }, preset);
-  const nextSteps = safeList([
-    "Review the generated brief with a human and protect the main constraint.",
-    `Use ${preset.recommendedLane} as the default delivery lane unless new context changes the path.`,
-    "Carry the run into Una Labs intake with the brief, pack, and the clearest next ask."
-  ], 4);
 
   return {
     mockup: {
       title: `${brief.title} concept pack`,
-      summary: `Figma-looking concept screens for the first believable version of ${brief.title}.`,
+      summary: `Figma-style concept screens for the first believable version of ${brief.title}.`,
       screens: mockupScreens
     },
     prototype: {
-      title: `${brief.title} clickable prototype`,
-      summary: `A lightweight route map that demonstrates ${preset.prototypeFrame}.`,
+      title: `${brief.title} quick prototype`,
+      summary: `A lightweight route map that proves ${lowerFirst(brief.primaryGoal || preset.prototypeFrame)}.`,
       frames: prototypeFrames,
       stack: preset.stack
     },
     smoke: {
-      status: "ready_for_operator_review",
-      summary: "Quick smoke pass prepared so the first prototype review stays high-level and practical.",
+      status: "first_pass_ready",
+      summary: "Quick review shows the main path, the visible decision points, and the likely build watch-outs.",
       checks: [
         {
-          label: "Main route loads",
+          label: "Main path is visible",
           result: "ready",
-          note: "The first screen, the core flow, and the review state are all represented."
+          note: "The first action, core flow, and review state are all represented."
         },
         {
-          label: "Primary actions stay visible",
+          label: "Primary moves are clear",
           result: "ready",
-          note: "CTA, transition, and review actions are called out in the prototype frames."
+          note: "The CTA, transition, and follow-up state are called out directly."
         },
         {
-          label: "No fatal scope gaps",
+          label: "Build watch remains",
           result: "watch",
-          note: "Operator still needs to confirm integrations, data edges, and copy before a real build."
+          note: "Integrations, edge cases, and production copy still need a scoped build pass."
         }
       ]
     },
     doc: {
-      title: `${brief.title} operator note`,
-      summary: `Scope, lane, risks, and prototype direction for ${brief.title}.`,
+      title: `${brief.title} build note`,
+      summary: `Recommended move, risk watch, and system shape for ${brief.title}.`,
       sections: [
         {
-          title: "Recommended lane",
-          items: [brief.recommendedLane, ...safeList(brief.phasedPlan || [], 4)]
+          title: "Recommended move",
+          items: safeList([
+            brief.quickVerdict,
+            brief.recommendedLane,
+            brief.recommendedDirection
+          ], 4)
+        },
+        {
+          title: "Systems / integrations",
+          items: safeList(preset.stack, 5)
         },
         {
           title: "Risk watch",
@@ -338,15 +451,27 @@ export function buildWorkflowPack({ run } = {}) {
         }
       ]
     },
-    nextSteps
+    nextSteps: safeList([
+      "Decide whether this should move into a scoped phase-one build with Una Labs.",
+      `If yes, keep the first build centered on ${lowerFirst(brief.primaryGoal)}.`,
+      "Use the pack to lock scope, timing, and integrations before deeper build work starts."
+    ], 4)
   };
 }
 
 export function buildWorkflowHandoff({ run } = {}) {
-  const category = normalizeWorkflowCategory(run?.category);
-  const preset = getWorkflowCategoryPreset(category);
-  const brief = run?.brief || buildWorkflowBrief({ idea: run?.idea, category, answers: run?.answers, runId: run?.id });
+  const category = normalizeWorkflowCategory(run?.category, run?.idea);
+  const preset = getWorkflowCategoryPreset(category, run?.idea);
+  const brief =
+    run?.brief ||
+    buildWorkflowBrief({
+      idea: run?.idea,
+      category,
+      answers: run?.answers,
+      runId: run?.id
+    });
   const artifacts = run?.artifacts || buildWorkflowPack({ run: { ...run, brief } });
+
   return {
     version: 2,
     runId: String(run?.id || "").trim(),
@@ -361,6 +486,9 @@ export function buildWorkflowHandoff({ run } = {}) {
       summary: brief.summary,
       audience: brief.audience,
       primaryGoal: brief.primaryGoal,
+      likelyUserValue: brief.likelyUserValue,
+      recommendedDirection: brief.recommendedDirection,
+      quickVerdict: brief.quickVerdict,
       goals: safeList(brief.goals || [], 5),
       constraints: safeList(brief.constraints || [], 5),
       successCriteria: safeList(brief.successCriteria || [], 5),
@@ -369,7 +497,7 @@ export function buildWorkflowHandoff({ run } = {}) {
     artifacts: {
       mockupTitle: safeText(artifacts?.mockup?.title, 140),
       prototypeTitle: safeText(artifacts?.prototype?.title, 140),
-      smokeSummary: safeText(artifacts?.smoke?.summary, 200),
+      smokeSummary: safeText(artifacts?.smoke?.summary, 220),
       docTitle: safeText(artifacts?.doc?.title, 140)
     },
     nextSteps: safeList(artifacts?.nextSteps || [], 5)
@@ -377,10 +505,18 @@ export function buildWorkflowHandoff({ run } = {}) {
 }
 
 export function buildWorkflowWorkItems(run) {
-  const category = normalizeWorkflowCategory(run?.category);
-  const preset = getWorkflowCategoryPreset(category);
-  const brief = run?.brief || buildWorkflowBrief({ idea: run?.idea, category, answers: run?.answers, runId: run?.id });
+  const category = normalizeWorkflowCategory(run?.category, run?.idea);
+  const preset = getWorkflowCategoryPreset(category, run?.idea);
+  const brief =
+    run?.brief ||
+    buildWorkflowBrief({
+      idea: run?.idea,
+      category,
+      answers: run?.answers,
+      runId: run?.id
+    });
   const projectId = buildWorkflowProjectId(run?.id);
+
   return {
     projectId,
     ownerAgentId: preset.ownerAgentId,
@@ -398,8 +534,8 @@ export function buildWorkflowWorkItems(run) {
         }
       },
       {
-        title: `Prototype pack for ${brief.title}`,
-        objective: `Build the first prototype pack for ${brief.title} and protect the ${preset.deliveryTheme} lane.`,
+        title: `Build pack for ${brief.title}`,
+        objective: `Generate the first concept pack for ${brief.title} without losing the core first win.`,
         stage: "BUILD",
         ownerAgentId: preset.ownerAgentId,
         data: {
@@ -410,8 +546,8 @@ export function buildWorkflowWorkItems(run) {
         }
       },
       {
-        title: `Smoke test ${brief.title}`,
-        objective: `Run a quick smoke pass so the generated prototype stays reviewable.`,
+        title: `Review ${brief.title}`,
+        objective: "Run a quick smoke pass and flag the main build watch-outs.",
         stage: "QA",
         ownerAgentId: "ralph",
         data: {
@@ -423,7 +559,7 @@ export function buildWorkflowWorkItems(run) {
       },
       {
         title: `Handoff ${brief.title}`,
-        objective: `Prepare the Una Labs handoff pack and next-step recommendation.`,
+        objective: "Prepare the Una Labs handoff pack and the clearest next move.",
         stage: "REVIEW",
         ownerAgentId: "henry",
         data: {

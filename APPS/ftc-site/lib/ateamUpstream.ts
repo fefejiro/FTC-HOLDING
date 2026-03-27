@@ -52,7 +52,6 @@ export async function proxyAteamJson(path: string, init: RequestInit = {}) {
         { status: 502 }
       );
     }
-
     return new NextResponse(bodyText, {
       status: response.status,
       headers: {

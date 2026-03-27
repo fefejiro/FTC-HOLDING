@@ -42,6 +42,7 @@ This index organizes the highest-signal documentation currently in the repo with
 
 - [Una Labs Site Handover 2026-03-10](UNALABS_SITE_HANDOVER_2026-03-10.md)
 - [ATEAM Public-to-Operator Handover 2026-03-24](ATEAM_PUBLIC_OPERATOR_HANDOVER_2026-03-24.md)
+- [Una Labs ATEAM Fast Pass Handover 2026-03-25](UNALABS_ATEAM_FAST_PASS_HANDOVER_2026-03-25.md)
 
 ## Working Rule
 

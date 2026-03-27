@@ -23,6 +23,10 @@ export type WorkflowBrief = {
   scope?: string;
   primaryGoal: string;
   signals?: string;
+  likelyUserValue?: string;
+  recommendedDirection?: string;
+  quickVerdict?: string;
+  decisionNote?: string;
   constraints: string[];
   goals: string[];
   successCriteria: string[];
@@ -117,6 +121,9 @@ export type WorkflowHandoffPayload = {
     summary: string;
     audience: string;
     primaryGoal: string;
+    likelyUserValue?: string;
+    recommendedDirection?: string;
+    quickVerdict?: string;
     goals: string[];
     constraints: string[];
     successCriteria: string[];
@@ -156,38 +163,81 @@ export type WorkflowRun = {
 };
 
 export const ateamWorkflowCategories = [
-  { value: "website", label: "Website" },
-  { value: "lead-automation", label: "Lead automation" },
-  { value: "product-app", label: "App" },
-  { value: "internal-tool", label: "Internal tool" },
-  { value: "ai-feature", label: "AI workflow" }
+  {
+    value: "auto",
+    label: "Auto detect",
+    detail: "Let ATEAM pick the best lane from the rough idea."
+  },
+  {
+    value: "website",
+    label: "Website",
+    detail: "Landing pages, service sites, or marketing surfaces."
+  },
+  {
+    value: "lead-automation",
+    label: "Lead flow",
+    detail: "Quotes, booking, routing, and follow-up logic."
+  },
+  {
+    value: "product-app",
+    label: "App",
+    detail: "A product, portal, or app-like user flow."
+  },
+  {
+    value: "internal-tool",
+    label: "Internal tool",
+    detail: "Ops dashboards, team workflows, or back-office systems."
+  },
+  {
+    value: "ai-feature",
+    label: "AI workflow",
+    detail: "AI-assisted decision, content, or workflow surfaces."
+  }
 ] as const;
+
+export type WorkflowCategoryValue = (typeof ateamWorkflowCategories)[number]["value"];
 
 export const ateamWorkflowSteps = [
   {
     key: "idea",
     label: "Idea in",
-    detail: "Start with one clear problem."
+    detail: "Drop the rough concept."
   },
   {
-    key: "analysis",
-    label: "Office pass",
-    detail: "ATEAM shapes the fast brief."
+    key: "structure",
+    label: "Structure",
+    detail: "Pull out the audience and first win."
   },
   {
-    key: "brief",
-    label: "Factory output",
-    detail: "ATEAM turns it into a visible pack."
+    key: "route",
+    label: "Route",
+    detail: "Pick the fastest believable lane."
+  },
+  {
+    key: "build",
+    label: "Build pass",
+    detail: "Generate a quick concept and route map."
   },
   {
     key: "pack",
-    label: "Send on",
-    detail: "Carry it into Una Labs or operator view."
+    label: "Decision pack",
+    detail: "Bundle the output and next move."
   }
 ] as const;
 
+const PHASE_LABELS: Record<string, string> = {
+  intake: "Idea in",
+  analysis: "Structure",
+  brief_approval: "Route",
+  initiation: "Route",
+  prototype_pack: "Build pass",
+  pack_approval: "Build pass",
+  handoff: "Decision pack",
+  archived: "Archived"
+};
+
 export function formatWorkflowPhaseLabel(phase?: string | null) {
-  const safe = String(phase || "").trim().replaceAll("_", " ");
-  if (!safe) return "intake";
-  return safe.charAt(0).toUpperCase() + safe.slice(1);
+  const safe = String(phase || "").trim().toLowerCase();
+  if (!safe) return "Idea in";
+  return PHASE_LABELS[safe] || safe.replaceAll("_", " ").replace(/^\w/, (char) => char.toUpperCase());
 }

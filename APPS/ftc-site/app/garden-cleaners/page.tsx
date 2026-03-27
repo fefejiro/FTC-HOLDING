@@ -10,6 +10,44 @@ import GardenTestimonials from "../components/garden-cleaners/GardenTestimonials
 import GardenTrustStrip from "../components/garden-cleaners/GardenTrustStrip";
 import { gardenCleanersConfig, gardenServices } from "../../lib/gardenCleaners";
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "HouseCleaning",
+  "name": "Garden Cleaners",
+  "description": "Professional residential and commercial cleaning services in Oshawa, Ontario. Deep cleaning, move-in/move-out, recurring cleaning, and office cleaning across Durham Region.",
+  "url": "https://unalabs.cloud/garden-cleaners",
+  "email": "hello@gardencleaners.ca",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Oshawa",
+    "addressRegion": "Ontario",
+    "addressCountry": "CA"
+  },
+  "areaServed": gardenCleanersConfig.serviceAreas.map((area) => ({ "@type": "City", "name": area })),
+  "openingHoursSpecification": [
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "08:00", "closes": "18:00" },
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "15:00" }
+  ],
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Cleaning Services",
+    "itemListElement": gardenServices.map((s) => ({
+      "@type": "Offer",
+      "itemOffered": { "@type": "Service", "name": s.title, "description": s.summary }
+    }))
+  }
+};
+
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": gardenCleanersConfig.faqs.map((faq) => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": { "@type": "Answer", "text": faq.answer }
+  }))
+};
+
 export const metadata: Metadata = {
   title: "Garden Cleaners | Professional Cleaning Services in Oshawa, Ontario",
   description:
@@ -20,6 +58,8 @@ export const metadata: Metadata = {
 export default function GardenCleanersHomePage() {
   return (
     <div className="garden-site-shell">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }} />
       <div className="container page-content garden-page-content">
         <GardenHero />
         <GardenTrustStrip />

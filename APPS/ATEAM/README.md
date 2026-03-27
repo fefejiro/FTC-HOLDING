@@ -57,6 +57,50 @@ ATEAM includes a companion service that connects Telegram to the local event log
 
 See `APPS/ATEAM/telegram-gateway/README.md` for setup and run instructions.
 
+## Remote Bridge V1
+
+ATEAM also supports a minimal local execution bridge for phone-to-laptop task handoff:
+
+- File: `APPS/ATEAM/Server/bridge.js`
+- Transport: `POST /run`
+- Modes: `codex` or `shell`
+- Protection: `x-ateam-key` header must match `ATEAM_KEY`
+
+### Bridge Run
+
+From `APPS/ATEAM/`:
+
+```powershell
+$env:ATEAM_KEY="replace-this"
+node Server/bridge.js
+```
+
+The bridge binds to `127.0.0.1:3001` by default so it stays local-only unless you deliberately expose it.
+
+### Bridge Request
+
+```http
+POST /run
+x-ateam-key: replace-this
+Content-Type: application/json
+
+{
+  "task": "echo hello from ateam",
+  "mode": "shell",
+  "context": ""
+}
+```
+
+### Cloudflared Tunnel
+
+When you want phone access, expose the local bridge with:
+
+```powershell
+cloudflared tunnel --url http://127.0.0.1:3001
+```
+
+That gives you a public HTTPS URL without opening the bridge directly to the LAN or binding it to all interfaces.
+
 ## API Surface (current)
 
 - Health/config: `GET /health`

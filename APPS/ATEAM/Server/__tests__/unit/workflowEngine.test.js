@@ -61,6 +61,7 @@ describe("workflowEngine", () => {
 
     expect(brief.title).toContain("Build");
     expect(brief.recommendedLane).toBe("Internal Tool / Ops System");
+    expect(brief.quickVerdict).toBeTruthy();
     expect(pack.mockup.screens.length).toBeGreaterThanOrEqual(3);
     expect(pack.prototype.frames.length).toBe(3);
     expect(pack.smoke.checks).toHaveLength(3);

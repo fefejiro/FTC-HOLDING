@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../../../lib/recentWork";
 
@@ -12,13 +13,50 @@ const setupNow = [
   "Lead capture path from visit to inbound call"
 ] as const;
 
+function getBrandStyle() {
+  return {
+    "--launch-accent": emergencyPromptCaseStudy.brand.accent,
+    "--launch-accent-soft": emergencyPromptCaseStudy.brand.accentSoft,
+    "--launch-accent-glow": emergencyPromptCaseStudy.brand.accentGlow,
+    "--launch-accent-surface": emergencyPromptCaseStudy.brand.accentSurface
+  } as CSSProperties;
+}
+
 export default function EmergencyPromptCaseStudy() {
   return (
     <article className="container page-content case-study">
-      <p className="eyebrow">Client Launch</p>
-      <h1>{emergencyPromptCaseStudy.tileTitle}</h1>
-      <span className="status-pill">{emergencyPromptCaseStudy.status}</span>
-      <p className="lead">{emergencyPromptCaseStudy.subtitle}</p>
+      <section className="card case-study-brand-hero" style={getBrandStyle()}>
+        <div className="case-study-brand-lockup">
+          <div className="client-launch-brand-mark case-study-brand-mark" aria-hidden="true">
+            {emergencyPromptCaseStudy.brand.mark}
+          </div>
+          <div className="case-study-brand-copy">
+            <p className="eyebrow">Client Launch</p>
+            <h1>{emergencyPromptCaseStudy.tileTitle}</h1>
+            <span className="status-pill">{emergencyPromptCaseStudy.status}</span>
+            <p className="lead">{emergencyPromptCaseStudy.subtitle}</p>
+          </div>
+        </div>
+
+        <div className="case-study-brand-actions">
+          <a
+            className="btn btn-secondary"
+            href={emergencyPromptCaseStudy.websiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Visit Emergency Prompt
+          </a>
+          <a
+            className="btn btn-secondary"
+            href={emergencyPromptCaseStudy.youtubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View YouTube channel
+          </a>
+        </div>
+      </section>
 
       <section className="case-study-section">
         <h2>Snapshot</h2>
@@ -63,28 +101,6 @@ export default function EmergencyPromptCaseStudy() {
             <li key={item}>{item}</li>
           ))}
         </ul>
-      </section>
-
-      <section className="case-study-section">
-        <h2>External links</h2>
-        <div className="hero-actions">
-          <a
-            className="btn btn-secondary"
-            href={emergencyPromptCaseStudy.websiteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Visit Emergency Prompt
-          </a>
-          <a
-            className="btn btn-secondary"
-            href={emergencyPromptCaseStudy.youtubeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View YouTube channel
-          </a>
-        </div>
       </section>
 
       <section className="case-study-section">

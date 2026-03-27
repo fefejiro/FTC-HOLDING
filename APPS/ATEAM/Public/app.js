@@ -1279,8 +1279,7 @@ function buildTalkDemoThread() {
     {
       role: "assistant",
       agent: "Coach",
-      content:
-        "My name na Manchi, your personal AI companion. How your day dey go? My name na Manchi, your personal AI companion. How your day dey go?",
+      content: "I'm Manchi. Drop the rough idea, and I'll shape the first pass.",
       ts: "2026-03-20T19:03:46-04:00"
     }
   ];
@@ -1298,7 +1297,7 @@ function buildTalkDemoEvents() {
     Podcast: "Idle"
   };
   const demoTurnId = "seed_turn_1";
-  const assistantReply = "My name na Manchi, your personal AI companion. How your day dey go?";
+  const assistantReply = "I'm Manchi. Drop the rough idea, and I'll shape the first pass.";
 
   return [
     {
