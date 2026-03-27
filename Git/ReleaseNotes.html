@@ -28,9 +28,9 @@ href="usr/share/git/ReleaseNotes.css">
 </div>
 </div>
 <div class="content">
-<h1>Git for Windows v2.53.0 Release Notes</h1>
+<h1>Git for Windows v2.53.0(2) Release Notes</h1>
 
-<p>Latest update: February 2nd 2026</p>
+<p>Latest update: March 10th 2026</p>
 
 <h2>Introduction</h2>
 
@@ -76,7 +76,15 @@ href="usr/share/git/ReleaseNotes.css">
 
 <p>Git for Windows is distributed with other components yet, such as Bash, zlib, curl, tcl/tk, perl, MSYS2. Each of these components is governed by their respective license.</p>
 
-</div><h2 id="v2.53.0" nr="1" class="collapsible"> <a name="latest">Changes in v2.53.0</a><br /><small>since  v2.52.0 (November 17th 2025)</h2></small><div>
+</div><h2 id="v2.53.0(2)" nr="1" class="collapsible"> <a name="latest">Changes in v2.53.0(2)</a><br /><small>since  v2.53.0 (February 2nd 2026)</h2></small><div>
+
+<p>This is a security fix release, addressing CVE-2025-66413.</p>
+
+<ul>
+<li><a href="https://github.com/git-for-windows/git/security/advisories/GHSA-hv9c-4jm9-jh3x">CVE-2025-66413</a>, Git for Windows: When a user clones a repository from an attacker-controlled server, Git may attempt NTLM authentication and disclose the user's NTLMv2 hash to the remote server. Since NTLM hashing is weak, the captured hash can potentially be brute-forced to recover the user's credentials. This is addressed by disabling NTLM authentication by default.</li>
+</ul>
+
+</div><h2 id="v2.53.0" nr="2" class="collapsible"> Changes in v2.53.0<br /><small>since  v2.52.0 (November 17th 2025)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -100,7 +108,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>The <code>astextplain</code> tool (which is used by Git for Windows to generate diffs of <code>.pdf</code> and <code>.doc</code> files) used to handle empty files gracefully. This behavior is <a href="https://github.com/git-for-windows/build-extra/pull/668">now reinstated</a>.</li>
 </ul>
 
-</div><h2 id="v2.52.0" nr="2" class="collapsible"> Changes in v2.52.0<br /><small>since  v2.51.2 (October 28th 2025)</h2></small><div>
+</div><h2 id="v2.52.0" nr="3" class="collapsible"> Changes in v2.52.0<br /><small>since  v2.51.2 (October 28th 2025)</h2></small><div>
 
 <p>As announced in several recent release notes, <a href="https://github.com/git-for-windows/git/issues/5405"><code>git svn</code> is no longer supported by the Git for Windows project</a>.</p>
 
@@ -119,7 +127,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>The command <code>git help git-bash</code> was broken by a change in upstream Git v2.49.0, which <a href="https://github.com/git-for-windows/MINGW-packages/pull/171">has been fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.51.2" nr="3" class="collapsible"> Changes in v2.51.2<br /><small>since  v2.51.1 (October 17th 2025)</h2></small><div>
+</div><h2 id="v2.51.2" nr="4" class="collapsible"> Changes in v2.51.2<br /><small>since  v2.51.1 (October 17th 2025)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -133,7 +141,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>The default credential helper in the portable variant of Git for Windows (<code>credential-helper-selector</code>) <a href="https://github.com/git-for-windows/build-extra/pull/651">is now high DPI aware</a>.</li>
 </ul>
 
-</div><h2 id="v2.51.1" nr="4" class="collapsible"> Changes in v2.51.1<br /><small>since  v2.51.0(2) (September 29th 2025)</h2></small><div>
+</div><h2 id="v2.51.1" nr="5" class="collapsible"> Changes in v2.51.1<br /><small>since  v2.51.0(2) (September 29th 2025)</h2></small><div>
 
 <p>This is a security release! Git LFS (which is enabled by default in Git for Windows) fixes <a href="https://github.com/git-lfs/git-lfs/security/advisories/GHSA-6pvw-g552-53c5">CVE-2025-26625</a> (Severity rated High, 8.6 / 10) in v3.7.1. Please only clone or pull from repositories you trust until you upgraded.</p>
 
@@ -158,7 +166,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>A potential memory corruption in the optional <code>wincred</code> credential helper <a href="https://github.com/git-for-windows/git/pull/5856">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.51.0(2)" nr="5" class="collapsible"> Changes in v2.51.0(2)<br /><small>since  v2.51.0 (August 19th 2025)</h2></small><div>
+</div><h2 id="v2.51.0(2)" nr="6" class="collapsible"> Changes in v2.51.0(2)<br /><small>since  v2.51.0 (August 19th 2025)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -193,7 +201,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>During interactive rebase, using <code>drop</code> on a merge commit lead to an error, which was incorrect. This was fixed by merging Git's topic branch <a href="https://github.com/gitgitgadget/git/commits/js/rebase-i-allow-drop-on-a-merge"><code>js/rebase-i-allow-drop-on-a-merge</code></a>.</li>
 </ul>
 
-</div><h2 id="v2.51.0" nr="6" class="collapsible"> Changes in v2.51.0<br /><small>since  v2.50.1 (July 8th 2025)</h2></small><div>
+</div><h2 id="v2.51.0" nr="7" class="collapsible"> Changes in v2.51.0<br /><small>since  v2.50.1 (July 8th 2025)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -205,7 +213,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>Comes with <a href="https://github.com/mintty/mintty/releases/tag/3.7.9">MinTTY v3.7.9</a>.</li>
 </ul>
 
-</div><h2 id="v2.50.1" nr="7" class="collapsible"> Changes in v2.50.1<br /><small>since  v2.50.0(2) (July 1st 2025)</h2></small><div>
+</div><h2 id="v2.50.1" nr="8" class="collapsible"> Changes in v2.50.1<br /><small>since  v2.50.0(2) (July 1st 2025)</h2></small><div>
 
 <p>This is a security fix release, addressing CVE-2024-50349, CVE-2024-52006, CVE-2025-27613, CVE-2025-27614, CVE-2025-46334, CVE-2025-46835, CVE-2025-48384, CVE-2025-48385, and CVE-2025-48386.</p>
 
@@ -227,7 +235,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li><a href="https://github.com/git/git/security/advisories/GHSA-4v56-3xvj-xvfr"><strong>CVE-2025-48386</strong></a>, Git: The wincred credential helper uses a static buffer (<code>target</code>) as a unique key for storing and comparing against internal storage. This credential helper does not properly bounds check the available space remaining in the buffer before appending to it with <code>wcsncat()</code>, leading to potential buffer overflows.</li>
 </ul>
 
-</div><h2 id="v2.50.0(2)" nr="8" class="collapsible"> Changes in v2.50.0(2)<br /><small>since  v2.50.0 (June 16th 2025)</h2></small><div>
+</div><h2 id="v2.50.0(2)" nr="9" class="collapsible"> Changes in v2.50.0(2)<br /><small>since  v2.50.0 (June 16th 2025)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -243,7 +251,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>Git for Windows v2.50.0 is <a href="https://github.com/git-for-windows/git/issues/5695">unable to initialize Git repositories on Windows Server 2016</a>, which has been <a href="https://github.com/git-for-windows/git/pull/5700">fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.50.0" nr="9" class="collapsible"> Changes in v2.50.0<br /><small>since  v2.49.0 (March 17th 2025)</h2></small><div>
+</div><h2 id="v2.50.0" nr="10" class="collapsible"> Changes in v2.50.0<br /><small>since  v2.49.0 (March 17th 2025)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -263,7 +271,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>Git for Windows' installer <a href="https://github.com/git-for-windows/git/issues/5618">used a non-writable file</a> for testing custom editors, which <a href="https://github.com/git-for-windows/build-extra/pull/618">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.49.0" nr="10" class="collapsible"> Changes in v2.49.0<br /><small>since  v2.48.1 (February 13th 2025)</h2></small><div>
+</div><h2 id="v2.49.0" nr="11" class="collapsible"> Changes in v2.49.0<br /><small>since  v2.48.1 (February 13th 2025)</h2></small><div>
 
 <p>Due to persistent maintenance challenges and the community's limited engagement and usage, <code>git svn</code> support in Git for Windows will be <a href="https://github.com/git-for-windows/git/issues/5405">phased out</a> over the next few months.</p>
 
@@ -288,7 +296,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>The <a href="https://github.com/git-for-windows/git/issues/5462">syntax highlighting of the <code>nano</code> editor was recently disabled</a> in Git for Windows by mistake, which <a href="https://github.com/git-for-windows/build-extra/pull/605">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.48.1" nr="11" class="collapsible"> Changes in v2.48.1<br /><small>since  v2.47.1(2) (January 14th 2025)</h2></small><div>
+</div><h2 id="v2.48.1" nr="12" class="collapsible"> Changes in v2.48.1<br /><small>since  v2.47.1(2) (January 14th 2025)</h2></small><div>
 
 <p>Git for Windows v2.48.1 is the last version to ship with the i686 ("32-bit") variant of the installer, portable Git and archive. Only 32-bit MinGit will be built for future versions, <a href="https://gitforwindows.org/32-bit">until April 2029</a>.</p>
 
@@ -314,7 +322,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>Git for Windows used <a href="https://github.com/git-for-windows/git/issues/5068">to issue a misleading warning when <code>.gitignore</code> was a directory</a>, which has been <a href="https://github.com/git-for-windows/git/pull/5342">fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.47.1(2)" nr="12" class="collapsible"> Changes in v2.47.1(2)<br /><small>since  v2.47.1 (November 25th 2024)</h2></small><div>
+</div><h2 id="v2.47.1(2)" nr="13" class="collapsible"> Changes in v2.47.1(2)<br /><small>since  v2.47.1 (November 25th 2024)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -333,7 +341,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li><a href="https://github.com/git/git/security/advisories/GHSA-r5ph-xg7q-xfrp"><strong>CVE-2024-52006</strong></a>: Similar to CVE-2020-5260, affecting credential helpers that interpret Carriage Returns as newlines.</li>
 </ul>
 
-</div><h2 id="v2.47.1" nr="13" class="collapsible"> Changes in v2.47.1<br /><small>since  v2.47.0(2) (October 22nd 2024)</h2></small><div>
+</div><h2 id="v2.47.1" nr="14" class="collapsible"> Changes in v2.47.1<br /><small>since  v2.47.0(2) (October 22nd 2024)</h2></small><div>
 
 <p>This release comes with the first early native <a href="https://github.com/git-for-windows/git/issues/3107">support of Windows/ARM64</a>, ready for testing. Please report any issues!</p>
 
@@ -353,7 +361,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>On Windows/ARM64, running the 64-bit version of Git for Windows could infrequently cause deadlocked threads (see e.g. <a href="https://github.com/msys2/msys2-autobuild/issues/62">this report</a> or <a href="https://inbox.sourceware.org/cygwin-developers/78f294de-4c94-242a-722e-fd98e51edff9@jdrake.com/">this one</a>), <a href="https://github.com/git-for-windows/msys2-runtime/pull/73">which was addressed</a>.</li>
 </ul>
 
-</div><h2 id="v2.47.0(2)" nr="14" class="collapsible"> Changes in v2.47.0(2)<br /><small>since  v2.47.0 (October 8th 2024)</h2></small><div>
+</div><h2 id="v2.47.0(2)" nr="15" class="collapsible"> Changes in v2.47.0(2)<br /><small>since  v2.47.0 (October 8th 2024)</h2></small><div>
 
 <p>As of this version, wildcards in the command-line arguments of any <code>git.exe</code> process <a href="https://www.msys2.org/news/#2024-11-03-disabling-mingw-w64-wildcard-support-by-default">will no longer be expanded</a> (this does <em>not</em> affect wildcard expansion when calling <code>git</code> from Git Bash).</p>
 
@@ -366,7 +374,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>A few documentation and other, minor bug fixes from upstream Git <a href="https://github.com/git-for-windows/git/pull/5221">were integrated into Git for Windows early</a>.</li>
 </ul>
 
-</div><h2 id="v2.47.0" nr="15" class="collapsible"> Changes in v2.47.0<br /><small>since  v2.46.2 (September 24th 2024)</h2></small><div>
+</div><h2 id="v2.47.0" nr="16" class="collapsible"> Changes in v2.47.0<br /><small>since  v2.46.2 (September 24th 2024)</h2></small><div>
 
 <p>Git for Windows for Windows v2.47 drops support for Windows 7 and for Windows 8, as announced previously.</p>
 
@@ -382,7 +390,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>Comes with <a href="https://github.com/git-ecosystem/git-credential-manager/releases/tag/v2.6.0">Git Credential Manager v2.6.0</a>.</li>
 </ul>
 
-</div><h2 id="v2.46.2" nr="16" class="collapsible"> Changes in v2.46.2<br /><small>since  v2.46.1 (September 18th 2024)</h2></small><div>
+</div><h2 id="v2.46.2" nr="17" class="collapsible"> Changes in v2.46.2<br /><small>since  v2.46.1 (September 18th 2024)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -394,7 +402,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>Comes with the <a href="https://github.com/git-for-windows/git/pull/5157">new, experimental <code>--full-name-hash</code> option for <code>git repack</code></a> that helps packing monorepos more tightly.</li>
 </ul>
 
-</div><h2 id="v2.46.1" nr="17" class="collapsible"> Changes in v2.46.1<br /><small>since  v2.46.0 (July 29th 2024)</h2></small><div>
+</div><h2 id="v2.46.1" nr="18" class="collapsible"> Changes in v2.46.1<br /><small>since  v2.46.0 (July 29th 2024)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -413,7 +421,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>When using an <code>askpass</code> helper (e.g. implicitly when running inside VS Code's internal terminal), Git v2.46.0 <a href="https://github.com/git-for-windows/git/issues/5115">would error out with "read error: Invalid argument"</a>; This bug has been fixed.</li>
 </ul>
 
-</div><h2 id="v2.46.0" nr="18" class="collapsible"> Changes in v2.46.0<br /><small>since  v2.45.2 (June 3rd 2024)</h2></small><div>
+</div><h2 id="v2.46.0" nr="19" class="collapsible"> Changes in v2.46.0<br /><small>since  v2.45.2 (June 3rd 2024)</h2></small><div>
 
 <p>Git for Windows for Windows v2.46 is the last version to support for Windows 7 and for Windows 8, see <a href="https://www.msys2.org/docs/windows_support/">MSYS2's corresponding deprecation announcement</a> (Git for Windows relies on MSYS2 for components such as Bash and Perl).</p>
 
@@ -442,7 +450,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>As of v2.45.0, the manual pages of <code>git clone</code> and <code>git init</code> <a href="https://github.com/git-for-windows/git/issues/5063">were broken</a>, which has been fixed. </li>
 </ul>
 
-</div><h2 id="v2.45.2" nr="19" class="collapsible"> Changes in v2.45.2<br /><small>since  v2.45.1 (May 14th 2024)</h2></small><div>
+</div><h2 id="v2.45.2" nr="20" class="collapsible"> Changes in v2.45.2<br /><small>since  v2.45.1 (May 14th 2024)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -458,7 +466,7 @@ href="usr/share/git/ReleaseNotes.css">
 <li>When Git for Windows v2.44.0 introduced the ability <a href="https://github.com/git-for-windows/git/pull/4700">to use native Win32 Console ANSI sequence processing</a>, an inadvertent fallout was that in this instance, <a href="https://github.com/git-for-windows/git/issues/4851">non-ASCII characters were no longer printed correctly unless the current code page was set to 65001</a>. This bug <a href="https://github.com/git-for-windows/git/pull/4968">has been fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.45.1" nr="20" class="collapsible"> Changes in v2.45.1<br /><small>since  v2.45.0 (April 29th 2024)</h2></small><div>
+</div><h2 id="v2.45.1" nr="21" class="collapsible"> Changes in v2.45.1<br /><small>since  v2.45.0 (April 29th 2024)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -506,7 +514,7 @@ uninteresting output.</li>
 of Node.js.</li>
 </ul>
 
-</div><h2 id="v2.45.0" nr="21" class="collapsible"> Changes in v2.45.0<br /><small>since  v2.44.0 (February 23rd 2024)</h2></small><div>
+</div><h2 id="v2.45.0" nr="22" class="collapsible"> Changes in v2.45.0<br /><small>since  v2.44.0 (February 23rd 2024)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -531,7 +539,7 @@ of Node.js.</li>
 <li>Apparently some anti-malware programs fiddle with the mode of <code>stdout</code> which <a href="https://github.com/git-for-windows/git/issues/4890">can lead to problems because expected output is missing</a>, which <a href="https://github.com/git-for-windows/git/pull/4901">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.44.0" nr="22" class="collapsible"> Changes in v2.44.0<br /><small>since  v2.43.0 (November 20th 2023)</h2></small><div>
+</div><h2 id="v2.44.0" nr="23" class="collapsible"> Changes in v2.44.0<br /><small>since  v2.43.0 (November 20th 2023)</h2></small><div>
 
 <p>As announced previously, Git for Windows will drop support for Windows 7 and for Windows 8 in one of the next versions, following <a href="https://www.msys2.org/docs/windows_support/">Cygwin's and MSYS2's lead</a> (Git for Windows relies on MSYS2 for components such as Bash and Perl).</p>
 
@@ -564,7 +572,7 @@ of Node.js.</li>
 <li>A couple of bugs that could cause Git Bash to hang in certain scenarios <a href="https://github.com/git-for-windows/MSYS2-packages/pull/158">were fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.43.0" nr="23" class="collapsible"> Changes in v2.43.0<br /><small>since  v2.42.0(2) (August 30th 2023)</h2></small><div>
+</div><h2 id="v2.43.0" nr="24" class="collapsible"> Changes in v2.43.0<br /><small>since  v2.42.0(2) (August 30th 2023)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -589,7 +597,7 @@ of Node.js.</li>
 <li>The installer <a href="https://github.com/git-for-windows/build-extra/pull/498">no longer claims that "fast-forward or merge" is the default <code>git pull</code> behavior</a>: The default behavior has changed in Git a while ago, to "fast-forward only".</li>
 </ul>
 
-</div><h2 id="v2.42.0(2)" nr="24" class="collapsible"> Changes in v2.42.0(2)<br /><small>since  v2.42.0 (August 21st 2023)</h2></small><div>
+</div><h2 id="v2.42.0(2)" nr="25" class="collapsible"> Changes in v2.42.0(2)<br /><small>since  v2.42.0 (August 21st 2023)</h2></small><div>
 
 <p>As announced previously, Git for Windows will drop support for Windows 7 and for Windows 8 in one of the next versions, following <a href="https://www.msys2.org/docs/windows_support/">Cygwin's and MSYS2's lead</a> (Git for Windows relies on MSYS2 for components such as Bash and Perl).</p>
 
@@ -604,7 +612,7 @@ of Node.js.</li>
 <li>As of Git for Windows v2.41.0, when installed into a location whose path contains non-ASCII characters, <a href="https://github.com/git-for-windows/git/issues/4573">it was no longer possible to fetch from/push to remote repositories via https://</a>, which <a href="https://github.com/git-for-windows/git/pull/4575">has been fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.42.0" nr="25" class="collapsible"> Changes in v2.42.0<br /><small>since  v2.41.0(3) (July 13th 2023)</h2></small><div>
+</div><h2 id="v2.42.0" nr="26" class="collapsible"> Changes in v2.42.0<br /><small>since  v2.41.0(3) (July 13th 2023)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -624,7 +632,7 @@ of Node.js.</li>
 <li>When running on a remote APFS share, Git <a href="https://github.com/git-for-windows/git/issues/4482">would fail</a>, which <a href="https://github.com/git-for-windows/git/pull/4527">has been fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.41.0(3)" nr="26" class="collapsible"> Changes in v2.41.0(3)<br /><small>since  v2.41.0(2) (July 7th 2023)</h2></small><div>
+</div><h2 id="v2.41.0(3)" nr="27" class="collapsible"> Changes in v2.41.0(3)<br /><small>since  v2.41.0(2) (July 7th 2023)</h2></small><div>
 
 <p>This release is a hot-fix release to incorporate a new Git Credential Manager version that addresses several issues present in the previous verison. There are no other changes.</p>
 
@@ -634,7 +642,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://github.com/git-ecosystem/git-credential-manager/releases/tag/v2.2.2">Git Credential Manager v2.2.2</a>.</li>
 </ul>
 
-</div><h2 id="v2.41.0(2)" nr="27" class="collapsible"> Changes in v2.41.0(2)<br /><small>since  v2.41.0 (June 1st 2023)</h2></small><div>
+</div><h2 id="v2.41.0(2)" nr="28" class="collapsible"> Changes in v2.41.0(2)<br /><small>since  v2.41.0 (June 1st 2023)</h2></small><div>
 
 <p>As announced previously, Git for Windows will drop support for Windows 7 and for Windows 8 in one of the next versions, following <a href="https://www.msys2.org/docs/windows_support/">Cygwin's and MSYS2's lead</a> (Git for Windows relies on MSYS2 for components such as Bash and Perl).</p>
 
@@ -655,7 +663,7 @@ of Node.js.</li>
 <li>The labels of the File Explorer menu items installed by the Git for Windows installer <a href="https://github.com/git-for-windows/build-extra/pull/507">have been aligned</a> with what is customary ("Open Git Bash Here" instead of "Git Bash Here").</li>
 </ul>
 
-</div><h2 id="v2.41.0" nr="28" class="collapsible"> Changes in v2.41.0<br /><small>since  v2.40.1 (April 25th 2023)</h2></small><div>
+</div><h2 id="v2.41.0" nr="29" class="collapsible"> Changes in v2.41.0<br /><small>since  v2.40.1 (April 25th 2023)</h2></small><div>
 
 <p>As announced previously, Git for Windows will drop support for Windows 7 and for Windows 8 in one of the next versions, following <a href="https://www.msys2.org/docs/windows_support/">Cygwin's and MSYS2's lead</a> (Git for Windows relies on MSYS2 for components such as Bash and Perl).</p>
 
@@ -686,7 +694,7 @@ of Node.js.</li>
 <li>The MSYS2 runtime was adjusted to <a href="https://github.com/git-for-windows/git/issues/4429">prepare for an upcoming Windows version</a>.</li>
 </ul>
 
-</div><h2 id="v2.40.1" nr="29" class="collapsible"> Changes in v2.40.1<br /><small>since  v2.40.0 (March 14th 2023)</h2></small><div>
+</div><h2 id="v2.40.1" nr="30" class="collapsible"> Changes in v2.40.1<br /><small>since  v2.40.0 (March 14th 2023)</h2></small><div>
 
 <p>This is a security release, addressing <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-gq5x-v87v-8f7g">CVE-2023-29012</a>, <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-g4fv-xjqw-q7jm">CVE-2023-29011</a>, <a href="https://github.com/git/git/security/advisories/GHSA-v48j-4xgg-4844">CVE-2023-29007</a>, <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-9w66-8mq8-5vm8">CVE-2023-25815</a> and <a href="https://github.com/git/git/security/advisories/GHSA-2hvf-7c8p-28fx">CVE-2023-25652</a>.</p>
 
@@ -706,7 +714,7 @@ of Node.js.</li>
 <li>Addresses <a href="https://github.com/git/git/security/advisories/GHSA-2hvf-7c8p-28fx">CVE-2023-25652</a>, a vulnerability where <code>git apply --reject</code> could follow symbolic links to write files outside the worktree.</li>
 </ul>
 
-</div><h2 id="v2.40.0" nr="30" class="collapsible"> Changes in v2.40.0<br /><small>since  v2.39.2 (February 14th 2023)</h2></small><div>
+</div><h2 id="v2.40.0" nr="31" class="collapsible"> Changes in v2.40.0<br /><small>since  v2.39.2 (February 14th 2023)</h2></small><div>
 
 <p>As announced previously, Git for Windows will drop support for Windows 7 and for Windows 8 in one of the next versions, following <a href="https://www.msys2.org/docs/windows_support/">Cygwin's and MSYS2's lead</a> (Git for Windows relies on MSYS2 for components such as Bash and Perl).</p>
 
@@ -733,7 +741,7 @@ of Node.js.</li>
 <li>When trying to call Cygwin (or for that matter, MSYS2) programs from Git Bash, users would frequently be greeted with <a href="https://github.com/git-for-windows/git/issues/4255">cryptic error messages about a "cygheap"</a> or even just an even more puzzling exit code 127. Many of these calls <a href="https://github.com/git-for-windows/msys2-runtime/pull/48">now</a> <a href="https://github.com/git-for-windows/msys2-runtime/pull/49">succeed</a>, allowing basic interactions. While it is still not possible for, say, Cygwin's <code>vim.exe</code> to interact with the Git Bash's terminal window, it <em>is</em> now possible for Cygwin's <code>zstd.exe</code> in conjuction with Git for Windows' <code>tar.exe</code> to handle <code>.tar.zst</code> archives. </li>
 </ul>
 
-</div><h2 id="v2.39.2" nr="31" class="collapsible"> Changes in v2.39.2<br /><small>since  v2.39.1 (January 17th 2023)</h2></small><div>
+</div><h2 id="v2.39.2" nr="32" class="collapsible"> Changes in v2.39.2<br /><small>since  v2.39.1 (January 17th 2023)</h2></small><div>
 
 <p>This is a security release, addressing <a href="https://github.com/git/git/security/advisories/GHSA-gw92-x3fm-3g3q">CVE-2023-22490</a>, <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-p2x9-prp4-8gvq">CVE-2023-22743</a>, <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-wxwv-49qw-35pm">CVE-2023-23618</a> and <a href="https://github.com/git/git/security/advisories/GHSA-r87m-v37r-cwfh">CVE-2023-23946</a>.</p>
 
@@ -752,7 +760,7 @@ of Node.js.</li>
 <li>Addresses <a href="https://github.com/git/git/security/advisories/GHSA-r87m-v37r-cwfh">CVE-2023-23946</a>, a moderate vulnerability that would allow crafted patches to trick <code>git apply</code> into writing into files outside the current directory.</li>
 </ul>
 
-</div><h2 id="v2.39.1" nr="32" class="collapsible"> Changes in v2.39.1<br /><small>since  v2.39.0(2) (December 21st 2022)</h2></small><div>
+</div><h2 id="v2.39.1" nr="33" class="collapsible"> Changes in v2.39.1<br /><small>since  v2.39.0(2) (December 21st 2022)</h2></small><div>
 
 <p>This is a security release, addressing <a href="https://github.com/git/git/security/advisories/GHSA-475x-2q3q-hvwq">CVE-2022-41903</a>, <a href="https://github.com/git/git/security/advisories/GHSA-c738-c5qq-xg89">CVE-2022-23521</a> and <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-v4px-mx59-w99c">CVE-2022-41953</a>.</p>
 
@@ -771,7 +779,7 @@ of Node.js.</li>
 <li>A <a href="https://github.com/git-for-windows/git/issues/4194">regression introduced in Git for Windows v2.39.0(2)</a> that prevented cloning from Bitbucket <a href="https://github.com/git-for-windows/MINGW-packages/pull/64">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.39.0(2)" nr="33" class="collapsible"> Changes in v2.39.0(2)<br /><small>since  v2.39.0 (December 12th 2022)</h2></small><div>
+</div><h2 id="v2.39.0(2)" nr="34" class="collapsible"> Changes in v2.39.0(2)<br /><small>since  v2.39.0 (December 12th 2022)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -791,7 +799,7 @@ of Node.js.</li>
 <li>A bug in MinTTY caused it to throw a Critical Error when the printer spool service was not started, which was fixed by <a href="https://github.com/git-for-windows/git/issues/4182">upgrading MinTTY</a>.</li>
 </ul>
 
-</div><h2 id="v2.39.0" nr="34" class="collapsible"> Changes in v2.39.0<br /><small>since  v2.38.1 (October 18th 2022)</h2></small><div>
+</div><h2 id="v2.39.0" nr="35" class="collapsible"> Changes in v2.39.0<br /><small>since  v2.38.1 (October 18th 2022)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -818,7 +826,7 @@ of Node.js.</li>
 <li>A <a href="https://github.com/git-for-windows/git/issues/4052">regression</a> introduced in Git for Windows v2.38.0 that prevented <code>git.exe</code> from running in Windows Nano Server containers <a href="https://github.com/git-for-windows/git/pull/4074">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.38.1" nr="35" class="collapsible"> Changes in v2.38.1<br /><small>since  v2.38.0 (October 3rd 2022)</h2></small><div>
+</div><h2 id="v2.38.1" nr="36" class="collapsible"> Changes in v2.38.1<br /><small>since  v2.38.0 (October 3rd 2022)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -826,7 +834,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://github.com/git/git/blob/v2.38.1/Documentation/RelNotes/2.38.1.txt">Git v2.38.1</a>.</li>
 </ul>
 
-</div><h2 id="v2.38.0" nr="36" class="collapsible"> Changes in v2.38.0<br /><small>since  v2.37.3 (August 30th 2022)</h2></small><div>
+</div><h2 id="v2.38.0" nr="37" class="collapsible"> Changes in v2.38.0<br /><small>since  v2.37.3 (August 30th 2022)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -838,7 +846,7 @@ of Node.js.</li>
 <li>The <code>scalar</code> command is now included. <a href="https://github.com/microsoft/git/blob/vfs-2.37.3/contrib/scalar/docs/philosophy.md">Scalar</a> is a helper to automatically configure your (large) Git repositories to take advantage of the latest and greatest features. Note: If you work with repositories hosted on Azure Repos, use <a href="https://github.com/microsoft/git/releases/latest">Microsoft's fork of Git</a> for the best user experience.</li>
 </ul>
 
-</div><h2 id="v2.37.3" nr="37" class="collapsible"> Changes in v2.37.3<br /><small>since  v2.37.2(2) (August 11th 2022)</h2></small><div>
+</div><h2 id="v2.37.3" nr="38" class="collapsible"> Changes in v2.37.3<br /><small>since  v2.37.2(2) (August 11th 2022)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -853,7 +861,7 @@ of Node.js.</li>
 <li>Git for Windows <a href="https://github.com/git-for-windows/build-extra/pull/432">now correctly handles <code>.doc</code> files that are not Word Documents</a>.</li>
 </ul>
 
-</div><h2 id="v2.37.2(2)" nr="38" class="collapsible"> Changes in v2.37.2(2)<br /><small>since  v2.37.1 (July 12th 2022)</h2></small><div>
+</div><h2 id="v2.37.2(2)" nr="39" class="collapsible"> Changes in v2.37.2(2)<br /><small>since  v2.37.1 (July 12th 2022)</h2></small><div>
 
 <h3>(Upcoming) breaking changes</h3>
 
@@ -883,7 +891,7 @@ of Node.js.</li>
 <li>With certain network drives, <a href="https://github.com/git-for-windows/git/issues/3727">it was reported</a> that some attributes associated with caching confused Git for Windows. This <a href="https://github.com/git-for-windows/git/pull/3753">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.37.1" nr="39" class="collapsible"> Changes in v2.37.1<br /><small>since  v2.37.0 (June 27th 2022)</h2></small><div>
+</div><h2 id="v2.37.1" nr="40" class="collapsible"> Changes in v2.37.1<br /><small>since  v2.37.0 (June 27th 2022)</h2></small><div>
 
 <p>This release addresses <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-gjrj-fxvp-hjj2">CVE-2022-31012</a> and <a href="https://github.com/git/git/security/advisories/GHSA-j342-m5hw-rr3v">CVE-2022-29187</a>.</p>
 
@@ -905,7 +913,7 @@ of Node.js.</li>
 <li>When running Git in a world-writable directory owned by the current user (think <code>C:\Windows\Temp</code>, when running under the <code>SYSTEM</code> account), the checks for dubious ownership of the <code>.git</code> directory now detect this situation properly (<a href="https://github.com/git/git/security/advisories/GHSA-j342-m5hw-rr3v">CVE-2022-29187</a>).</li>
 </ul>
 
-</div><h2 id="v2.37.0" nr="40" class="collapsible"> Changes in v2.37.0<br /><small>since  v2.36.1 (May 9th 2022)</h2></small><div>
+</div><h2 id="v2.37.0" nr="41" class="collapsible"> Changes in v2.37.0<br /><small>since  v2.36.1 (May 9th 2022)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -932,7 +940,7 @@ of Node.js.</li>
 <li>When Git indicates an unsafe directory due to the file system (e.g. FAT32) being unable to record ownership, Git <a href="https://github.com/git-for-windows/git/pull/3887">now gives better hints</a>.</li>
 </ul>
 
-</div><h2 id="v2.36.1" nr="41" class="collapsible"> Changes in v2.36.1<br /><small>since  v2.36.0 (April 20th 2022)</h2></small><div>
+</div><h2 id="v2.36.1" nr="42" class="collapsible"> Changes in v2.36.1<br /><small>since  v2.36.0 (April 20th 2022)</h2></small><div>
 
 <h3>Upcoming breaking changes</h3>
 
@@ -963,7 +971,7 @@ of Node.js.</li>
 <li>A bug introduced into v2.36.0 where <a href="https://github.com/git-for-windows/git/issues/3825">shell scripts failed to run on some network shares with the error "Too many levels of symbolic links"</a> was fixed.</li>
 </ul>
 
-</div><h2 id="v2.36.0" nr="42" class="collapsible"> Changes in v2.36.0<br /><small>since  v2.35.3 (April 15th 2022)</h2></small><div>
+</div><h2 id="v2.36.0" nr="43" class="collapsible"> Changes in v2.36.0<br /><small>since  v2.35.3 (April 15th 2022)</h2></small><div>
 
 <p>This version includes Git LFS v3.1.4, addressing <a href="https://github.com/git-lfs/git-lfs/security/advisories/GHSA-6rw3-3whw-jvjj">CVE-2022-24826</a> (if you use Git LFS with <a href="https://gitforwindows.org/mingit">MinGit</a>, you will want to upgrade).</p>
 
@@ -986,7 +994,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://github.com/git-lfs/git-lfs/releases/tag/v3.1.4">Git LFS v3.1.4</a>.</li>
 </ul>
 
-</div><h2 id="v2.35.3" nr="43" class="collapsible"> Changes in v2.35.3<br /><small>since  v2.35.2 (April 12th 2022)</h2></small><div>
+</div><h2 id="v2.35.3" nr="44" class="collapsible"> Changes in v2.35.3<br /><small>since  v2.35.2 (April 12th 2022)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1001,7 +1009,7 @@ of Node.js.</li>
 <li><a href="https://github.com/git-for-windows/git/pull/3791">Various fixes</a> for usage of the <code>safe.directory</code> and <code>%(prefix)</code> when using Windows Subsystem for Linux (WSL).</li>
 </ul>
 
-</div><h2 id="v2.35.2" nr="44" class="collapsible"> Changes in v2.35.2<br /><small>since  v2.35.1(2) (February 1st 2022)</h2></small><div>
+</div><h2 id="v2.35.2" nr="45" class="collapsible"> Changes in v2.35.2<br /><small>since  v2.35.1(2) (February 1st 2022)</h2></small><div>
 
 <p>This version addresses <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-vw2c-22j4-2fh2">CVE-2022-24765</a> and <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-gf48-x3vr-j5c3">CVE-2022-24767</a>.</p>
 
@@ -1017,7 +1025,7 @@ of Node.js.</li>
 <li>The uninstaller was hardened to <a href="https://github.com/git-for-windows/git/security/advisories/GHSA-gf48-x3vr-j5c3">avoid a vulnerability when running under the SYSTEM account</a>, addressing CVE-2022-24767.</li>
 </ul>
 
-</div><h2 id="v2.35.1(2)" nr="45" class="collapsible"> Changes in v2.35.1(2)<br /><small>since  v2.35.1 (January 29th 2022)</h2></small><div>
+</div><h2 id="v2.35.1(2)" nr="46" class="collapsible"> Changes in v2.35.1(2)<br /><small>since  v2.35.1 (January 29th 2022)</h2></small><div>
 
 <h3>Bug Fixes</h3>
 
@@ -1025,7 +1033,7 @@ of Node.js.</li>
 <li>A <a href="https://github.com/git-for-windows/git/issues/3674">bug</a> in FSCache that triggered by a patch that made it into Git for Windows v2.35.0 <a href="https://github.com/git-for-windows/git/pull/3678">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.35.1" nr="46" class="collapsible"> Changes in v2.35.1<br /><small>since  v2.35.0 (January 24th 2022)</h2></small><div>
+</div><h2 id="v2.35.1" nr="47" class="collapsible"> Changes in v2.35.1<br /><small>since  v2.35.0 (January 24th 2022)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1033,7 +1041,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://github.com/git/git/blob/v2.35.1/Documentation/RelNotes/2.35.1.txt">Git v2.35.1</a>.</li>
 </ul>
 
-</div><h2 id="v2.35.0" nr="47" class="collapsible"> Changes in v2.35.0<br /><small>since  v2.34.1 (November 25th 2021)</h2></small><div>
+</div><h2 id="v2.35.0" nr="48" class="collapsible"> Changes in v2.35.0<br /><small>since  v2.34.1 (November 25th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1053,7 +1061,7 @@ of Node.js.</li>
 <li>A <a href="https://github.com/git-for-windows/git/issues/3624">bug</a> which caused crashes when running <code>git log</code> with custom date formats in 32-bit builds was fixed.</li>
 </ul>
 
-</div><h2 id="v2.34.1" nr="48" class="collapsible"> Changes in v2.34.1<br /><small>since  v2.34.0 (November 15th 2021)</h2></small><div>
+</div><h2 id="v2.34.1" nr="49" class="collapsible"> Changes in v2.34.1<br /><small>since  v2.34.0 (November 15th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1063,7 +1071,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://curl.haxx.se/changes.html#7_80_0">cURL v7.80.0</a>.</li>
 </ul>
 
-</div><h2 id="v2.34.0" nr="49" class="collapsible"> Changes in v2.34.0<br /><small>since  v2.33.1 (October 13th 2021)</h2></small><div>
+</div><h2 id="v2.34.0" nr="50" class="collapsible"> Changes in v2.34.0<br /><small>since  v2.33.1 (October 13th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1082,7 +1090,7 @@ of Node.js.</li>
 <li>Git now works around <a href="https://github.com/microsoft/terminal/issues/9359">an issue with <code>vi</code> and incorrect line breaks in the Windows Terminal</a>.</li>
 </ul>
 
-</div><h2 id="v2.33.1" nr="50" class="collapsible"> Changes in v2.33.1<br /><small>since  v2.33.0(2) (August 24th 2021)</h2></small><div>
+</div><h2 id="v2.33.1" nr="51" class="collapsible"> Changes in v2.33.1<br /><small>since  v2.33.0(2) (August 24th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1110,7 +1118,7 @@ of Node.js.</li>
 <li>The 32-bit versions of Git for Windows included outdated versions of <code>ca-certificates</code> and <code>less</code>, <a href="https://github.com/git-for-windows/MSYS2-packages/pull/49">which has been rectified</a>.</li>
 </ul>
 
-</div><h2 id="v2.33.0(2)" nr="51" class="collapsible"> Changes in v2.33.0(2)<br /><small>since  v2.33.0 (August 17th 2021)</h2></small><div>
+</div><h2 id="v2.33.0(2)" nr="52" class="collapsible"> Changes in v2.33.0(2)<br /><small>since  v2.33.0 (August 17th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1125,7 +1133,7 @@ of Node.js.</li>
 <li>A <a href="https://github.com/git-for-windows/git/issues/3368">bug</a> affecting older Windows versions that caused the installer to show the error message "Could not call proc" <a href="https://github.com/git-for-windows/build-extra/pull/374">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.33.0" nr="52" class="collapsible"> Changes in v2.33.0<br /><small>since  v2.32.0(2) (July 6th 2021)</h2></small><div>
+</div><h2 id="v2.33.0" nr="53" class="collapsible"> Changes in v2.33.0<br /><small>since  v2.32.0(2) (July 6th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1146,7 +1154,7 @@ of Node.js.</li>
 <li>The version of GNU Privacy Guard (GPG) bundled in Git for Windows <a href="https://github.com/git-for-windows/git/issues/2888">did not work in 64-bit setups</a>, which <a href="https://github.com/git-for-windows/MSYS2-packages/pull/46">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.32.0(2)" nr="53" class="collapsible"> Changes in v2.32.0(2)<br /><small>since  v2.32.0 (June 7th 2021)</h2></small><div>
+</div><h2 id="v2.32.0(2)" nr="54" class="collapsible"> Changes in v2.32.0(2)<br /><small>since  v2.32.0 (June 7th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1168,7 +1176,7 @@ of Node.js.</li>
 <li>A bug was fixed where the experimental built-in file system watcher had <a href="https://github.com/git-for-windows/git/issues/3262">a problem with worktrees whose paths had non-ASCII characters</a>.</li>
 </ul>
 
-</div><h2 id="v2.32.0" nr="54" class="collapsible"> Changes in v2.32.0<br /><small>since  v2.31.1 (March 27th 2021)</h2></small><div>
+</div><h2 id="v2.32.0" nr="55" class="collapsible"> Changes in v2.32.0<br /><small>since  v2.31.1 (March 27th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1191,7 +1199,7 @@ of Node.js.</li>
 <li>The auto-updater <a href="https://github.com/git-for-windows/build-extra/pull/347">no longer suggests to downgrade from -rc0 versions</a>.</li>
 </ul>
 
-</div><h2 id="v2.31.1" nr="55" class="collapsible"> Changes in v2.31.1<br /><small>since  v2.31.0 (March 15th 2021)</h2></small><div>
+</div><h2 id="v2.31.1" nr="56" class="collapsible"> Changes in v2.31.1<br /><small>since  v2.31.0 (March 15th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1208,7 +1216,7 @@ of Node.js.</li>
 <li>It <a href="https://github.com/git-for-windows/git/issues/2675">is now possible</a> to execute the Windows Store version of <code>python3.exe</code> from Git Bash.</li>
 </ul>
 
-</div><h2 id="v2.31.0" nr="56" class="collapsible"> Changes in v2.31.0<br /><small>since  v2.30.2 (March 9th 2021)</h2></small><div>
+</div><h2 id="v2.31.0" nr="57" class="collapsible"> Changes in v2.31.0<br /><small>since  v2.30.2 (March 9th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1221,7 +1229,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://lists.gnupg.org/pipermail/gnutls-help/2021-March/004698.html">GNU TLS v3.7.1</a>.</li>
 </ul>
 
-</div><h2 id="v2.30.2" nr="57" class="collapsible"> Changes in v2.30.2<br /><small>since  v2.30.1 (February 9th 2021)</h2></small><div>
+</div><h2 id="v2.30.2" nr="58" class="collapsible"> Changes in v2.30.2<br /><small>since  v2.30.1 (February 9th 2021)</h2></small><div>
 
 <p>This version addresses CVE-2021-21300 (a bug that allows code injection during a clone from an untrusted source).</p>
 
@@ -1234,7 +1242,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://www.openssl.org/news/openssl-1.1.1-notes.html">OpenSSL v1.1.1j</a>.</li>
 </ul>
 
-</div><h2 id="v2.30.1" nr="58" class="collapsible"> Changes in v2.30.1<br /><small>since  v2.30.0(2) (January 14th 2021)</h2></small><div>
+</div><h2 id="v2.30.1" nr="59" class="collapsible"> Changes in v2.30.1<br /><small>since  v2.30.0(2) (January 14th 2021)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1244,7 +1252,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://curl.haxx.se/changes.html#7_75_0">cURL v7.75.0</a>.</li>
 </ul>
 
-</div><h2 id="v2.30.0(2)" nr="59" class="collapsible"> Changes in v2.30.0(2)<br /><small>since  v2.30.0 (December 28th 2020)</h2></small><div>
+</div><h2 id="v2.30.0(2)" nr="60" class="collapsible"> Changes in v2.30.0(2)<br /><small>since  v2.30.0 (December 28th 2020)</h2></small><div>
 
 <p>This version includes <a href="https://github.com/git-lfs/git-lfs/releases/tag/v2.13.2">Git LFS v2.13.2</a>, addressing CVE-2021-21237.</p>
 
@@ -1255,7 +1263,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://github.com/git-lfs/git-lfs/releases/tag/v2.13.2">Git LFS v2.13.2</a>.</li>
 </ul>
 
-</div><h2 id="v2.30.0" nr="60" class="collapsible"> Changes in v2.30.0<br /><small>since  v2.29.2(3) (December 8th 2020)</h2></small><div>
+</div><h2 id="v2.30.0" nr="61" class="collapsible"> Changes in v2.30.0<br /><small>since  v2.29.2(3) (December 8th 2020)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1274,7 +1282,7 @@ of Node.js.</li>
 <li>The credential-helper selector (which is the default credential helper in the Portable version of Git for Windows) <a href="https://github.com/git-for-windows/build-extra/pull/319">now handles paths with spaces correctly</a>.</li>
 </ul>
 
-</div><h2 id="v2.29.2(3)" nr="61" class="collapsible"> Changes in v2.29.2(3)<br /><small>since  v2.29.2(2) (November 4th 2020)</h2></small><div>
+</div><h2 id="v2.29.2(3)" nr="62" class="collapsible"> Changes in v2.29.2(3)<br /><small>since  v2.29.2(2) (November 4th 2020)</h2></small><div>
 
 <p>This version updates Git Credential Manager Core to address <a href="https://github.com/microsoft/Git-Credential-Manager-Core/security/advisories/GHSA-2gq7-ww4j-3m76">CVE-2020-26233</a>.</p>
 
@@ -1291,7 +1299,7 @@ of Node.js.</li>
 <li>Beyond Compare 4 <a href="https://github.com/git-for-windows/git/issues/2893">can be configured as difftool <code>bc4</code> again</a>.</li>
 </ul>
 
-</div><h2 id="v2.29.2(2)" nr="62" class="collapsible"> Changes in v2.29.2(2)<br /><small>since  v2.29.2 (October 30th 2020)</h2></small><div>
+</div><h2 id="v2.29.2(2)" nr="63" class="collapsible"> Changes in v2.29.2(2)<br /><small>since  v2.29.2 (October 30th 2020)</h2></small><div>
 
 <p>This version includes a new Git LFS version to fix <a href="https://github.com/git-lfs/git-lfs/security/advisories/GHSA-4g4p-42wc-9f3m">CVE-2020-27955</a>.</p>
 
@@ -1302,7 +1310,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://github.com/git-lfs/git-lfs/releases/tag/v2.12.1">Git LFS v2.12.1</a>.</li>
 </ul>
 
-</div><h2 id="v2.29.2" nr="63" class="collapsible"> Changes in v2.29.2<br /><small>since  v2.29.1 (October 23rd 2020)</h2></small><div>
+</div><h2 id="v2.29.2" nr="64" class="collapsible"> Changes in v2.29.2<br /><small>since  v2.29.1 (October 23rd 2020)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1317,7 +1325,7 @@ of Node.js.</li>
 <li>A <a href="https://github.com/git-for-windows/git/issues/2874">regression preventing <code>/usr/bin/update-ca-trust</code> from working</a> was fixed.</li>
 </ul>
 
-</div><h2 id="v2.29.1" nr="64" class="collapsible"> Changes in v2.29.1<br /><small>since  v2.29.0 (October 19th 2020)</h2></small><div>
+</div><h2 id="v2.29.1" nr="65" class="collapsible"> Changes in v2.29.1<br /><small>since  v2.29.0 (October 19th 2020)</h2></small><div>
 
 <p>Important note: v2.29.0 and v2.29.1 upgrade existing users of <a href="https://github.com/microsoft/Git-Credential-Manager-for-Windows/">Git Credential Manager for Windows</a> (which was just deprecated) to <a href="https://github.com/microsoft/Git-Credential-Manager-Core">Git Credential Manager Core</a> ("GCM Core", which is the designated successor of the former). This is necessary because <a href="https://github.blog/changelog/2019-08-08-password-based-http-basic-authentication-deprecation-and-removal/">GitHub deprecated password-based authentication</a> and intends to remove support for it soon, and GCM Core is prepared for this change.</p>
 
@@ -1330,7 +1338,7 @@ of Node.js.</li>
 <li>The MSYS2 runtime <a href="https://github.com/msys2/msys2-runtime/pull/16">now optionally supports creating Cygwin-style symbolic links</a> (via setting the environment variable <code>MSYS=winsymlinks:sysfile</code>).</li>
 </ul>
 
-</div><h2 id="v2.29.0" nr="65" class="collapsible"> Changes in v2.29.0<br /><small>since  v2.28.0 (July 28th 2020)</h2></small><div>
+</div><h2 id="v2.29.0" nr="66" class="collapsible"> Changes in v2.29.0<br /><small>since  v2.28.0 (July 28th 2020)</h2></small><div>
 
 <p>This version upgrades existing users of <a href="https://github.com/microsoft/Git-Credential-Manager-for-Windows/">Git Credential Manager for Windows</a> (which was just deprecated) to <a href="https://github.com/microsoft/Git-Credential-Manager-Core">Git Credential Manager Core</a> ("GCM Core", which is the designated successor of the former). This is necessary because <a href="https://github.blog/changelog/2019-08-08-password-based-http-basic-authentication-deprecation-and-removal/">GitHub deprecated password-based authentication</a> and intends to remove support for it soon, and GCM Core is prepared for this change.</p>
 
@@ -1368,7 +1376,7 @@ of Node.js.</li>
 <li>Git for Windows <a href="https://github.com/git-for-windows/build-extra/pull/312">can now be installed</a> even with stale <code>AutoRun</code> registry entries (e.g. left-overs from a Miniconda installation).</li>
 </ul>
 
-</div><h2 id="v2.28.0" nr="66" class="collapsible"> Changes in v2.28.0<br /><small>since  v2.27.0 (June 1st 2020)</h2></small><div>
+</div><h2 id="v2.28.0" nr="67" class="collapsible"> Changes in v2.28.0<br /><small>since  v2.27.0 (June 1st 2020)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1398,7 +1406,7 @@ of Node.js.</li>
 <li>When cloning into an existing directory, under certain circumstances, the <code>core.worktree</code> option was set unnecessarily. <a href="https://github.com/git-for-windows/git/pull/2731">This has been fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.27.0" nr="67" class="collapsible"> Changes in v2.27.0<br /><small>since  v2.26.2 (April 20th 2020)</h2></small><div>
+</div><h2 id="v2.27.0" nr="68" class="collapsible"> Changes in v2.27.0<br /><small>since  v2.26.2 (April 20th 2020)</h2></small><div>
 
 <p>Due to <a href="https://github.com/git-for-windows/git/pull/2637">a bug when handling symbolic links that was fixed in this version</a>, <code>git status</code> will show symbolic links as modified even as <code>git diff</code> won't report any changes. The quickest work-around is to call <code>git add -u</code> which lets Git realize that nothing changed, actually.</p>
 
@@ -1425,7 +1433,7 @@ of Node.js.</li>
 <li>Git for Windows and WSL Git <a href="https://github.com/git-for-windows/git/pull/2637">now have the same idea of symbolic links' length</a>, i.e. <code>git status</code> will no longer mark them as modified in Git for Windows after checking them out in WSL.</li>
 </ul>
 
-</div><h2 id="v2.26.2" nr="68" class="collapsible"> Changes in v2.26.2<br /><small>since  v2.26.1 (April 9th 2020)</h2></small><div>
+</div><h2 id="v2.26.2" nr="69" class="collapsible"> Changes in v2.26.2<br /><small>since  v2.26.1 (April 9th 2020)</h2></small><div>
 
 <p>Yet another security fix release: With a crafted URL that contains a newline or empty host, or lacks a scheme, the credential helper machinery can be fooled into providing credential information that is not appropriate for the protocol in use and host being contacted (CVE-2020-11008).</p>
 
@@ -1443,7 +1451,7 @@ of Node.js.</li>
 <li>A recent regression in <code>gitk</code> that prevented it from running in bare repositories <a href="https://github.com/git-for-windows/git/pull/2549">has been fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.26.1" nr="69" class="collapsible"> Changes in v2.26.1<br /><small>since  v2.26.0 (March 23rd 2020)</h2></small><div>
+</div><h2 id="v2.26.1" nr="70" class="collapsible"> Changes in v2.26.1<br /><small>since  v2.26.0 (March 23rd 2020)</h2></small><div>
 
 <p>This includes a fix for CVE-2020-5260.</p>
 
@@ -1460,7 +1468,7 @@ of Node.js.</li>
 <li>Git <a href="https://github.com/git-for-windows/git/pull/2574">now accepts more date formats</a> such as <code>%g</code> and <code>%V</code>.</li>
 </ul>
 
-</div><h2 id="v2.26.0" nr="70" class="collapsible"> Changes in v2.26.0<br /><small>since  v2.25.1 (February 19th 2020)</h2></small><div>
+</div><h2 id="v2.26.0" nr="71" class="collapsible"> Changes in v2.26.0<br /><small>since  v2.25.1 (February 19th 2020)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1483,7 +1491,7 @@ of Node.js.</li>
 <li><code>git update-git-for-windows -y</code> <a href="https://github.com/git-for-windows/build-extra/pull/279">now is fully automatable</a>.</li>
 </ul>
 
-</div><h2 id="v2.25.1" nr="71" class="collapsible"> Changes in v2.25.1<br /><small>since  v2.25.0 (January 13th 2020)</h2></small><div>
+</div><h2 id="v2.25.1" nr="72" class="collapsible"> Changes in v2.25.1<br /><small>since  v2.25.0 (January 13th 2020)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1504,7 +1512,7 @@ of Node.js.</li>
 <li>The <code>curl.exe</code> included in Git for Windows <a href="https://github.com/git-for-windows/git/issues/2491">can access SFTP/SSH hosts again</a>.</li>
 </ul>
 
-</div><h2 id="v2.25.0" nr="72" class="collapsible"> Changes in v2.25.0<br /><small>since  v2.24.1(2) (December 10th 2019)</h2></small><div>
+</div><h2 id="v2.25.0" nr="73" class="collapsible"> Changes in v2.25.0<br /><small>since  v2.24.1(2) (December 10th 2019)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1527,7 +1535,7 @@ of Node.js.</li>
 <li>It is <a href="https://github.com/git-for-windows/git/issues/2435">again possible</a> to clone repositories where <em>some</em> past revision contained file names containing backslashes (Git will of course still refuse to check out such revisions).</li>
 </ul>
 
-</div><h2 id="v2.24.1(2)" nr="73" class="collapsible"> Changes in v2.24.1(2)<br /><small>since  v2.24.0(2) (November 6th 2019)</h2></small><div>
+</div><h2 id="v2.24.1(2)" nr="74" class="collapsible"> Changes in v2.24.1(2)<br /><small>since  v2.24.0(2) (November 6th 2019)</h2></small><div>
 
 <p>This is a security bug release that fixes CVE-2019-1348, CVE-2019-1349, CVE-2019-1350, CVE-2019-1351, CVE-2019-1352, CVE-2019-1353, CVE-2019-1354, CVE-2019-1387, and CVE-2019-19604.</p>
 
@@ -1551,7 +1559,7 @@ of Node.js.</li>
 <li>When associating <code>.sh</code> files with Git Bash to allow running them by double-clicking them in the Windows Explorer, shell scripts with non-ASCII characters in their file name <a href="https://github.com/git-for-windows/git/issues/2189">are now supported</a>.</li>
 </ul>
 
-</div><h2 id="v2.24.0(2)" nr="74" class="collapsible"> Changes in v2.24.0(2)<br /><small>since  v2.24.0 (November 4th 2019)</h2></small><div>
+</div><h2 id="v2.24.0(2)" nr="75" class="collapsible"> Changes in v2.24.0(2)<br /><small>since  v2.24.0 (November 4th 2019)</h2></small><div>
 
 <h3>Bug Fixes</h3>
 
@@ -1562,7 +1570,7 @@ of Node.js.</li>
 <li>A bug in cURL v7.67.0 that caused <code>SSL_read: No error</code> with some servers <a href="https://github.com/git-for-windows/MINGW-packages/commit/7b39ea818c014bafcd7c75f6aefd614fef756164">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.24.0" nr="75" class="collapsible"> Changes in v2.24.0<br /><small>since  v2.23.0 (August 17th 2019)</h2></small><div>
+</div><h2 id="v2.24.0" nr="76" class="collapsible"> Changes in v2.24.0<br /><small>since  v2.23.0 (August 17th 2019)</h2></small><div>
 
 <p>Note! As a consequence of making <code>git config --system</code> work as expected, the location of the system config is now <code>C:\Program Files\Git\etc\gitconfig</code> (no longer split between <code>C:\Program Files\Git\mingw64\etc\gitconfig</code> and <code>C:\ProgramData\Git\config</code>), and likewise the location of the system gitattributes is now <code>C:\Program Files\Git\etc\gitattributes</code> (no longer <code>C:\Program Files\Git\mingw64\etc\gitattributes</code>). Any manual modifications to <code>C:\ProgramData\Git\config</code> need to be ported manually.</p>
 
@@ -1592,7 +1600,7 @@ of Node.js.</li>
 <li>The Git for Windows installer <a href="https://github.com/git-for-windows/build-extra/pull/264">no longer complains about a downgrade</a> when upgrading from an <code>-rc</code> version, i.e. from a pre-release leading up to the next major version.</li>
 </ul>
 
-</div><h2 id="v2.23.0" nr="76" class="collapsible"> Changes in v2.23.0<br /><small>since  v2.22.0 (June 8th 2019)</h2></small><div>
+</div><h2 id="v2.23.0" nr="77" class="collapsible"> Changes in v2.23.0<br /><small>since  v2.22.0 (June 8th 2019)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1616,7 +1624,7 @@ of Node.js.</li>
 <li>Fixed <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-1211">CVE-2019-1211</a> in MinGit/Portable Git by being more careful about validating the Windows-wide config.</li>
 </ul>
 
-</div><h2 id="v2.22.0" nr="77" class="collapsible"> Changes in v2.22.0<br /><small>since  v2.21.0 (February 26th 2019)</h2></small><div>
+</div><h2 id="v2.22.0" nr="78" class="collapsible"> Changes in v2.22.0<br /><small>since  v2.21.0 (February 26th 2019)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1654,7 +1662,7 @@ of Node.js.</li>
 <li>We <a href="https://github.com/git-for-windows/git/pull/2198">now avoid problems updating the commit graph</a> when <code>gc.writeCommitGraph=true</code>.</li>
 </ul>
 
-</div><h2 id="v2.21.0" nr="78" class="collapsible"> Changes in v2.21.0<br /><small>since  v2.20.1 (December 15th 2018)</h2></small><div>
+</div><h2 id="v2.21.0" nr="79" class="collapsible"> Changes in v2.21.0<br /><small>since  v2.20.1 (December 15th 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1684,7 +1692,7 @@ of Node.js.</li>
 <li>The installer <a href="https://github.com/git-for-windows/git/issues/2011">now configures editors so that the built-in rebase can use them</a>.</li>
 </ul>
 
-</div><h2 id="v2.20.1" nr="79" class="collapsible"> Changes in v2.20.1<br /><small>since  v2.20.0 (December 10th 2018)</h2></small><div>
+</div><h2 id="v2.20.1" nr="80" class="collapsible"> Changes in v2.20.1<br /><small>since  v2.20.0 (December 10th 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1699,7 +1707,7 @@ of Node.js.</li>
 <li><a href="https://github.com/git-for-windows/git/pull/1983">Fixes</a> a speed regression in the built-in rebase.</li>
 </ul>
 
-</div><h2 id="v2.20.0" nr="80" class="collapsible"> Changes in v2.20.0<br /><small>since  v2.19.2 (November 21st 2018)</h2></small><div>
+</div><h2 id="v2.20.0" nr="81" class="collapsible"> Changes in v2.20.0<br /><small>since  v2.19.2 (November 21st 2018)</h2></small><div>
 
 <p>Please note that Git for Windows v2.19.2 was offered as a full release only for about a week, and then demoted to "pre-release" status, as it had two rather big regressions: 32-bit Git Bash crashed, and git:// was broken.</p>
 
@@ -1728,7 +1736,7 @@ of Node.js.</li>
 <li>It is <a href="https://github.com/git-for-windows/git/issues/1650">now possible to call <code>cmd\git.exe</code> via a symbolic link</a>.</li>
 </ul>
 
-</div><h2 id="v2.19.2" nr="81" class="collapsible"> Changes in v2.19.2<br /><small>since  v2.19.1 (Oct 5th 2018)</h2></small><div>
+</div><h2 id="v2.19.2" nr="82" class="collapsible"> Changes in v2.19.2<br /><small>since  v2.19.1 (Oct 5th 2018)</h2></small><div>
 
 <ul>
 <li>The <em>Git CMD</em> start menu shortcut is deprecated and will be dropped in future version. Note that the deprecation only affects the shortcut; <code>git-cmd.exe</code> will continue to be distributed and installed.</li>
@@ -1755,7 +1763,7 @@ of Node.js.</li>
 <li>The 64-bit Portable Git <a href="https://github.com/git-for-windows/build-extra/pull/212">no longer sets <code>pack.packSizeLimit</code></a>.</li>
 </ul>
 
-</div><h2 id="v2.19.1" nr="82" class="collapsible"> Changes in v2.19.1<br /><small>since  v2.19.0 (September 11th 2018)</h2></small><div>
+</div><h2 id="v2.19.1" nr="83" class="collapsible"> Changes in v2.19.1<br /><small>since  v2.19.0 (September 11th 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1774,7 +1782,7 @@ of Node.js.</li>
 <li>An <a href="https://github.com/git-for-windows/git/issues/1839">occasional crash in <code>git gc</code></a> (which had been introduced into v2.19.0) has been fixed.</li>
 </ul>
 
-</div><h2 id="v2.19.0" nr="83" class="collapsible"> Changes in v2.19.0<br /><small>since  v2.18.0 (June 22nd 2018)</h2></small><div>
+</div><h2 id="v2.19.0" nr="84" class="collapsible"> Changes in v2.19.0<br /><small>since  v2.18.0 (June 22nd 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1802,7 +1810,7 @@ of Node.js.</li>
 <li>The funny <a href="https://github.com/git-for-windows/git/issues/356"><code>fatal error -cmalloc would have returned NULL</code> problems</a> should be gone.</li>
 </ul>
 
-</div><h2 id="v2.18.0" nr="84" class="collapsible"> Changes in v2.18.0<br /><small>since  v2.17.1(2) (May 29th 2018)</h2></small><div>
+</div><h2 id="v2.18.0" nr="85" class="collapsible"> Changes in v2.18.0<br /><small>since  v2.17.1(2) (May 29th 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1820,7 +1828,7 @@ of Node.js.</li>
 <li>The <code>http.schannel.checkRevoke</code> setting <a href="https://github.com/git-for-windows/git/issues/1531">now really works</a>.</li>
 </ul>
 
-</div><h2 id="v2.17.1(2)" nr="85" class="collapsible"> Changes in v2.17.1(2)<br /><small>since  v2.17.1 (May 29th 2018)</h2></small><div>
+</div><h2 id="v2.17.1(2)" nr="86" class="collapsible"> Changes in v2.17.1(2)<br /><small>since  v2.17.1 (May 29th 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1835,7 +1843,7 @@ of Node.js.</li>
 <li>This release <em>really</em> contains Git v2.17.1.</li>
 </ul>
 
-</div><h2 id="v2.17.1" nr="86" class="collapsible"> Changes in v2.17.1<br /><small>since  v2.17.0 (April 3rd 2018)</h2></small><div>
+</div><h2 id="v2.17.1" nr="87" class="collapsible"> Changes in v2.17.1<br /><small>since  v2.17.0 (April 3rd 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1863,7 +1871,7 @@ of Node.js.</li>
 <li>Git <a href="https://github.com/git-for-windows/git/issues/1496">no longer enters an infinite loop</a> when misspelling <code>git status</code> as, say, <code>git Status</code>.</li>
 </ul>
 
-</div><h2 id="v2.17.0" nr="87" class="collapsible"> Changes in v2.17.0<br /><small>since  v2.16.3 (March 23rd 2018)</h2></small><div>
+</div><h2 id="v2.17.0" nr="88" class="collapsible"> Changes in v2.17.0<br /><small>since  v2.16.3 (March 23rd 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1880,7 +1888,7 @@ of Node.js.</li>
 <li>When <code>git.exe</code> is called with an invalid subcommand,  <a href="https://github.com/git-for-windows/git/issues/1591">it no longer complains about file handles</a>.</li>
 </ul>
 
-</div><h2 id="v2.16.3" nr="88" class="collapsible"> Changes in v2.16.3<br /><small>since  v2.16.2 (February 20th 2018)</h2></small><div>
+</div><h2 id="v2.16.3" nr="89" class="collapsible"> Changes in v2.16.3<br /><small>since  v2.16.2 (February 20th 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1908,7 +1916,7 @@ of Node.js.</li>
 <li>The certificates of HTTPS proxies configured via <code>http.proxy</code> <a href="https://github.com/git-for-windows/git/issues/1493">are now validated against the <code>ca-bundle.crt</code> correctly</a>.</li>
 </ul>
 
-</div><h2 id="v2.16.2" nr="89" class="collapsible"> Changes in v2.16.2<br /><small>since  v2.16.1(4) (February 7th 2018)</h2></small><div>
+</div><h2 id="v2.16.2" nr="90" class="collapsible"> Changes in v2.16.2<br /><small>since  v2.16.1(4) (February 7th 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1926,7 +1934,7 @@ of Node.js.</li>
 <li>When configuring HTTPS transport to use Secure Channel, <a href="https://github.com/git-for-windows/build-extra/pull/172">we now refrain from configuring <code>http.sslCAInfo</code></a>. This also helps Git LFS (which uses Git for Windows' private <code>http.sslCAInfo</code> setting) to use the same credentials as <code>git fetch</code> and <code>git push</code>.</li>
 </ul>
 
-</div><h2 id="v2.16.1(4)" nr="90" class="collapsible"> Changes in v2.16.1(4)<br /><small>since  v2.16.1(3) (February 6th 2018)</h2></small><div>
+</div><h2 id="v2.16.1(4)" nr="91" class="collapsible"> Changes in v2.16.1(4)<br /><small>since  v2.16.1(3) (February 6th 2018)</h2></small><div>
 
 <h3>Bug Fixes</h3>
 
@@ -1934,7 +1942,7 @@ of Node.js.</li>
 <li>When called from TortoiseGit, <code>git.exe</code> <a href="https://github.com/git-for-windows/git/issues/1481">can now spawn processes again</a>.</li>
 </ul>
 
-</div><h2 id="v2.16.1(3)" nr="91" class="collapsible"> Changes in v2.16.1(3)<br /><small>since  v2.16.1(2) (February 2nd 2018)</h2></small><div>
+</div><h2 id="v2.16.1(3)" nr="92" class="collapsible"> Changes in v2.16.1(3)<br /><small>since  v2.16.1(2) (February 2nd 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1951,7 +1959,7 @@ of Node.js.</li>
 <li>The Perl upgrade in v2.16.1(2) broke <code>git send-email</code>; This <a href="https://github.com/git-for-windows/git/issues/1480">has been fixed</a> by updating the Net-SSLeay Perl module.</li>
 </ul>
 
-</div><h2 id="v2.16.1(2)" nr="92" class="collapsible"> Changes in v2.16.1(2)<br /><small>since  v2.16.1 (January 22nd 2018)</h2></small><div>
+</div><h2 id="v2.16.1(2)" nr="93" class="collapsible"> Changes in v2.16.1(2)<br /><small>since  v2.16.1 (January 22nd 2018)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -1972,7 +1980,7 @@ of Node.js.</li>
 <li>The <code>git update</code> command <a href="https://github.com/git-for-windows/build-extra/pull/167">has been renamed to <code>git update-git-for-windows</code></a> to avoid confusion where users may think that <code>git update</code> updates their local repository or worktree.</li>
 </ul>
 
-</div><h2 id="v2.16.1" nr="93" class="collapsible"> Changes in v2.16.1<br /><small>since  v2.16.0(2) (January 18th 2018)</h2></small><div>
+</div><h2 id="v2.16.1" nr="94" class="collapsible"> Changes in v2.16.1<br /><small>since  v2.16.0(2) (January 18th 2018)</h2></small><div>
 
 <p>This is a hotfix release, based on upstream Git's hotfix to address a possible segmentation fault associated with case-insensitive file systems.</p>
 
@@ -1990,7 +1998,7 @@ of Node.js.</li>
 <li>A set of regressions introduced by patches intended to speed up <code>reset</code> and <code>checkout</code> was fixed (issues <a href="https://github.com/git-for-windows/git/issues/1437">#1437</a>, <a href="https://github.com/git-for-windows/git/issues/1438">#1438</a>, <a href="https://github.com/git-for-windows/git/issues/1440">#1440</a> and <a href="https://github.com/git-for-windows/git/issues/1442">#1442</a>).</li>
 </ul>
 
-</div><h2 id="v2.16.0(2)" nr="94" class="collapsible"> Changes in v2.16.0(2)<br /><small>since  v2.15.1(2) (November 30th 2017)</h2></small><div>
+</div><h2 id="v2.16.0(2)" nr="95" class="collapsible"> Changes in v2.16.0(2)<br /><small>since  v2.15.1(2) (November 30th 2017)</h2></small><div>
 
 <p>Git for Windows now has a new homepage: <a href="https://gitforwindows.org/">https://gitforwindows.org/</a> (it is still graciously hosted by GitHub, but now much quicker to type).</p>
 
@@ -2014,7 +2022,7 @@ of Node.js.</li>
 <li>Interrupting processes (and their children) using Control+C <a href="https://github.com/git-for-windows/msys2-runtime/pull/16">is now a lot more robust</a>.</li>
 </ul>
 
-</div><h2 id="v2.15.1(2)" nr="95" class="collapsible"> Changes in v2.15.1(2)<br /><small>since  v2.15.1 (November 29th 2017)</h2></small><div>
+</div><h2 id="v2.15.1(2)" nr="96" class="collapsible"> Changes in v2.15.1(2)<br /><small>since  v2.15.1 (November 29th 2017)</h2></small><div>
 
 <h3>Bug Fixes</h3>
 
@@ -2022,7 +2030,7 @@ of Node.js.</li>
 <li>The bug introduced into Git for Windows v2.15.1 where <code>vim</code> would show an ugly warning upon startup <a href="https://github.com/git-for-windows/git/issues/1382">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.15.1" nr="96" class="collapsible"> Changes in v2.15.1<br /><small>since  v2.15.0 (October 30th 2017)</h2></small><div>
+</div><h2 id="v2.15.1" nr="97" class="collapsible"> Changes in v2.15.1<br /><small>since  v2.15.0 (October 30th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2043,7 +2051,7 @@ of Node.js.</li>
 <li>The <code>git update</code> command (to auto-update Git for Windows) will <a href="https://github.com/git-for-windows/git/issues/1363">now also work behind proxies</a>.</li>
 </ul>
 
-</div><h2 id="v2.15.0" nr="97" class="collapsible"> Changes in v2.15.0<br /><small>since  v2.14.3 (October 23rd 2017)</h2></small><div>
+</div><h2 id="v2.15.0" nr="98" class="collapsible"> Changes in v2.15.0<br /><small>since  v2.14.3 (October 23rd 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2061,7 +2069,7 @@ of Node.js.</li>
 <li>Git for Windows <a href="https://github.com/git-for-windows/build-extra/commit/c86d164f2c9d5c79cd95f1fda881f9e80ca9dc3a">no longer includes (non-working) <code>xmlcatalog.exe</code> and <code>xmllint.exe</code></a>.</li>
 </ul>
 
-</div><h2 id="v2.14.3" nr="98" class="collapsible"> Changes in v2.14.3<br /><small>since  v2.14.2(3) (October 12th 2017)</h2></small><div>
+</div><h2 id="v2.14.3" nr="99" class="collapsible"> Changes in v2.14.3<br /><small>since  v2.14.2(3) (October 12th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2078,7 +2086,7 @@ of Node.js.</li>
 <li>Git for Windows <a href="https://github.com/git-for-windows/git/issues/1320">now handles worktrees at the top-level of a UNC share correctly</a>.</li>
 </ul>
 
-</div><h2 id="v2.14.2(3)" nr="99" class="collapsible"> Changes in v2.14.2(3)<br /><small>since  v2.14.2(2) (October 5th 2017)</h2></small><div>
+</div><h2 id="v2.14.2(3)" nr="100" class="collapsible"> Changes in v2.14.2(3)<br /><small>since  v2.14.2(2) (October 5th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2092,7 +2100,7 @@ of Node.js.</li>
 <li><a href="https://github.com/git-for-windows/build-extra/commit/b46fba6f44b3680210b19ef5fc9ce22ca1dcda55">Re-enabled some SSHv1 ciphers</a> since some sites (e.g. Visual Studio Team Services) rely on them for the time being.</li>
 </ul>
 
-</div><h2 id="v2.14.2(2)" nr="100" class="collapsible"> Changes in v2.14.2(2)<br /><small>since  v2.14.2 (September 26th 2017)</h2></small><div>
+</div><h2 id="v2.14.2(2)" nr="101" class="collapsible"> Changes in v2.14.2(2)<br /><small>since  v2.14.2 (September 26th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2111,7 +2119,7 @@ of Node.js.</li>
 <li>A crash when calling <code>kill &lt;pid&gt;</code> for a non-existing process <a href="https://github.com/git-for-windows/git/issues/1316">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.14.2" nr="101" class="collapsible"> Changes in v2.14.2<br /><small>since  v2.14.1 (August 10th 2017)</h2></small><div>
+</div><h2 id="v2.14.2" nr="102" class="collapsible"> Changes in v2.14.2<br /><small>since  v2.14.1 (August 10th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2145,7 +2153,7 @@ of Node.js.</li>
 <li>Before installing Git for Windows, we already verified that no Git Bash instance is active (which would prevent files from being overwritten). We <a href="https://github.com/git-for-windows/build-extra/commit/1b93b50cf08c6cbd3200a66603d28fbd269c2f6a">now also verify that no <code>git.exe</code> processes are active, either</a>.</li>
 </ul>
 
-</div><h2 id="v2.14.1" nr="102" class="collapsible"> Changes in v2.14.1<br /><small>since  v2.14.0(2) (August 7th 2017)</h2></small><div>
+</div><h2 id="v2.14.1" nr="103" class="collapsible"> Changes in v2.14.1<br /><small>since  v2.14.0(2) (August 7th 2017)</h2></small><div>
 
 <p>Note: there have been MinGit-only releases v2.12.2(3) and v2.13.1(3) with backports of the important bug fix in v2.14.1 as well as the experimental <code>--show-ignored-directory</code> option of <code>git status</code>.</p>
 
@@ -2157,7 +2165,7 @@ of Node.js.</li>
 <li>The <em>Git Bash Here</em> context menu item <a href="https://github.com/git-for-windows/build-extra/pull/150">is now also available</a> in the special <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/dd758096.aspx">Libraries folders</a>.</li>
 </ul>
 
-</div><h2 id="v2.14.0(2)" nr="103" class="collapsible"> Changes in v2.14.0(2)<br /><small>since  v2.14.0 (August 6th 2017)</h2></small><div>
+</div><h2 id="v2.14.0(2)" nr="104" class="collapsible"> Changes in v2.14.0(2)<br /><small>since  v2.14.0 (August 6th 2017)</h2></small><div>
 
 <h3>Bug Fixes</h3>
 
@@ -2165,7 +2173,7 @@ of Node.js.</li>
 <li>A regression introduced in v2.14.0 that prevented fetching via SSH <a href="https://github.com/git-for-windows/git/issues/1258">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.14.0" nr="104" class="collapsible"> Changes in v2.14.0<br /><small>since  v2.13.3 (July 13th 2017)</h2></small><div>
+</div><h2 id="v2.14.0" nr="105" class="collapsible"> Changes in v2.14.0<br /><small>since  v2.13.3 (July 13th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2186,7 +2194,7 @@ of Node.js.</li>
 <li>The 32-bit Git binaries are now built against the same dependencies that are shipped with Git for Windows.</li>
 </ul>
 
-</div><h2 id="v2.13.3" nr="105" class="collapsible"> Changes in v2.13.3<br /><small>since  v2.13.2 (June 26th 2017)</h2></small><div>
+</div><h2 id="v2.13.3" nr="106" class="collapsible"> Changes in v2.13.3<br /><small>since  v2.13.2 (June 26th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2202,7 +2210,7 @@ of Node.js.</li>
 <li>Git Bash <a href="https://github.com/git-for-windows/git/issues/1226">no longer tries to use the <code>getent</code> tool</a> which was never shipped with Git for Windows.</li>
 </ul>
 
-</div><h2 id="v2.13.2" nr="106" class="collapsible"> Changes in v2.13.2<br /><small>since  v2.13.1(2) (June 15th 2017)</h2></small><div>
+</div><h2 id="v2.13.2" nr="107" class="collapsible"> Changes in v2.13.2<br /><small>since  v2.13.1(2) (June 15th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2213,7 +2221,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://curl.haxx.se/changes.html#7_54_1">cURL v7.54.1</a>.</li>
 </ul>
 
-</div><h2 id="v2.13.1(2)" nr="107" class="collapsible"> Changes in v2.13.1(2)<br /><small>since  v2.13.1 (June 13th 2017)</h2></small><div>
+</div><h2 id="v2.13.1(2)" nr="108" class="collapsible"> Changes in v2.13.1(2)<br /><small>since  v2.13.1 (June 13th 2017)</h2></small><div>
 
 <h3>Bug Fixes</h3>
 
@@ -2221,7 +2229,7 @@ of Node.js.</li>
 <li><code>git commit</code> and <code>git status</code> <a href="https://github.com/git-for-windows/git/issues/1202">no longer randomly throw segmentation faults</a>.</li>
 </ul>
 
-</div><h2 id="v2.13.1" nr="108" class="collapsible"> Changes in v2.13.1<br /><small>since  v2.13.0 (May 10th 2017)</h2></small><div>
+</div><h2 id="v2.13.1" nr="109" class="collapsible"> Changes in v2.13.1<br /><small>since  v2.13.0 (May 10th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2246,7 +2254,7 @@ of Node.js.</li>
 <li>When hitting Ctrl+T in Git GUI to stage files, but the file list is empty, Git GUI <a href="https://github.com/git-for-windows/git/issues/1075">no longer shows an exception window</a>.</li>
 </ul>
 
-</div><h2 id="v2.13.0" nr="109" class="collapsible"> Changes in v2.13.0<br /><small>since  v2.12.2(2) (April 5th 2017)</h2></small><div>
+</div><h2 id="v2.13.0" nr="110" class="collapsible"> Changes in v2.13.0<br /><small>since  v2.12.2(2) (April 5th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2266,7 +2274,7 @@ of Node.js.</li>
 <li>On Windows, absolute paths can start with a backslash (implicitly referring to the same drive as the current directory), and now <code>git clone</code> <a href="https://github.com/git-for-windows/git/commit/fad23e90efc">can use those paths, too</a>.</li>
 </ul>
 
-</div><h2 id="v2.12.2(2)" nr="110" class="collapsible"> Changes in v2.12.2(2)<br /><small>since  v2.12.2 (March 27th 2017)</h2></small><div>
+</div><h2 id="v2.12.2(2)" nr="111" class="collapsible"> Changes in v2.12.2(2)<br /><small>since  v2.12.2 (March 27th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2288,7 +2296,7 @@ of Node.js.</li>
 <li><code>git difftool -d</code> <a href="https://github.com/git-for-windows/git/issues/1124">no longer crashes randomly</a>.</li>
 </ul>
 
-</div><h2 id="v2.12.2" nr="111" class="collapsible"> Changes in v2.12.2<br /><small>since  v2.12.1 (March 21st 2017)</h2></small><div>
+</div><h2 id="v2.12.2" nr="112" class="collapsible"> Changes in v2.12.2<br /><small>since  v2.12.1 (March 21st 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2297,7 +2305,7 @@ of Node.js.</li>
 <li>An earlier iteration of the changes speeding up the case-insensitive cache of file names was replaced by <a href="https://github.com/git-for-windows/git/commit/212247dd6345c820deeae61fcdf2f10cea10525a">a new iteration</a>.</li>
 </ul>
 
-</div><h2 id="v2.12.1" nr="112" class="collapsible"> Changes in v2.12.1<br /><small>since  v2.12.0 (February 25th 2017)</h2></small><div>
+</div><h2 id="v2.12.1" nr="113" class="collapsible"> Changes in v2.12.1<br /><small>since  v2.12.0 (February 25th 2017)</h2></small><div>
 
 <p>A <a href="https://github.com/git-for-windows/git/releases/tag/v2.12.0.windows.2">MinGit-only v2.12.0(2)</a> was released in the meantime.</p>
 
@@ -2324,7 +2332,7 @@ of Node.js.</li>
 <li>The <code>ORIGINAL_PATH</code> variable, recently introduced by the MSYS2 project to allow for special "PATH modes", <a href="https://github.com/git-for-windows/msys2-runtime/commit/476605ced959f217b3820157b8101b4529fa6a0d">is now handled in the same manner as the <code>PATH</code> variable</a> when jumping the Windows&lt;->MSYS2 boundary, fixing issues when <code>ORIGINAL_PATH</code> is converted to Windows format and back again.</li>
 </ul>
 
-</div><h2 id="v2.12.0" nr="113" class="collapsible"> Changes in v2.12.0<br /><small>since  v2.11.1 (February 3rd 2017)</h2></small><div>
+</div><h2 id="v2.12.0" nr="114" class="collapsible"> Changes in v2.12.0<br /><small>since  v2.11.1 (February 3rd 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2348,7 +2356,7 @@ of Node.js.</li>
 <li>Git for Windows <a href="https://github.com/git-for-windows/git/issues/1034">no longer attempts to send empty credentials to HTTP(S) servers that handle only Basic and/or Digest authentication</a>.</li>
 </ul>
 
-</div><h2 id="v2.11.1" nr="114" class="collapsible"> Changes in v2.11.1<br /><small>since  v2.11.0(3) (January 14th 2017)</h2></small><div>
+</div><h2 id="v2.11.1" nr="115" class="collapsible"> Changes in v2.11.1<br /><small>since  v2.11.0(3) (January 14th 2017)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2365,7 +2373,7 @@ of Node.js.</li>
 <li>When the <code>PATH</code> contains UNC entries, Git Bash will <a href="https://github.com/git-for-windows/git/issues/1033">no longer error out with a "Bad address" error message</a>.</li>
 </ul>
 
-</div><h2 id="v2.11.0(3)" nr="115" class="collapsible"> Changes in v2.11.0(3)<br /><small>since  v2.11.0(2) (January 13th 2017)</h2></small><div>
+</div><h2 id="v2.11.0(3)" nr="116" class="collapsible"> Changes in v2.11.0(3)<br /><small>since  v2.11.0(2) (January 13th 2017)</h2></small><div>
 
 <h3>Bug Fixes</h3>
 
@@ -2374,7 +2382,7 @@ of Node.js.</li>
 <li>A regression in <code>rebase -i</code>, introduced into v2.11.0(2), which caused commit attribution to be mishandled after resolving conflicts, <a href="https://github.com/git-for-windows/git/commit/e11df2efb3072fe73153442589129d2eb8d9ea02">was fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.11.0(2)" nr="116" class="collapsible"> Changes in v2.11.0(2)<br /><small>since  v2.11.0 (December 1st 2016)</h2></small><div>
+</div><h2 id="v2.11.0(2)" nr="117" class="collapsible"> Changes in v2.11.0(2)<br /><small>since  v2.11.0 (December 1st 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2400,7 +2408,7 @@ of Node.js.</li>
 <li><a href="https://github.com/git-for-windows/git/commit/ecb88230d10382833dc961f83cd1092b8d0a2af2">Fixed a bug</a> in the experimental builtin difftool where it would not handle copied/renamed files properly.</li>
 </ul>
 
-</div><h2 id="v2.11.0" nr="117" class="collapsible"> Changes in v2.11.0<br /><small>since  v2.10.2 (November 2nd 2016)</h2></small><div>
+</div><h2 id="v2.11.0" nr="118" class="collapsible"> Changes in v2.11.0<br /><small>since  v2.10.2 (November 2nd 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2426,7 +2434,7 @@ of Node.js.</li>
 <li>A certain scenario that could cause a crash in cherry-pick <a href="https://github.com/git-for-windows/git/issues/952">no longer causes that</a>.</li>
 </ul>
 
-</div><h2 id="v2.10.2" nr="118" class="collapsible"> Changes in v2.10.2<br /><small>since  v2.10.1(2) (October 13th 2016)</h2></small><div>
+</div><h2 id="v2.10.2" nr="119" class="collapsible"> Changes in v2.10.2<br /><small>since  v2.10.1(2) (October 13th 2016)</h2></small><div>
 
 <p>Git for windows v2.10.1(2) was a MinGit-only release (i.e. there was no Git for windows installer for that version).</p>
 
@@ -2450,7 +2458,7 @@ of Node.js.</li>
 <li>When trying to install/upgrade on a Windows version that is no longer supported, <a href="https://github.com/git-for-windows/git/issues/928">we now refuse to do so</a>.</li>
 </ul>
 
-</div><h2 id="v2.10.1(2)" nr="119" class="collapsible"> Changes in v2.10.1(2)<br /><small>since  v2.10.1 (October 4th 2016)</h2></small><div>
+</div><h2 id="v2.10.1(2)" nr="120" class="collapsible"> Changes in v2.10.1(2)<br /><small>since  v2.10.1 (October 4th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2459,7 +2467,7 @@ of Node.js.</li>
 <li>The <code>git reset</code> command <a href="https://github.com/git-for-windows/git/commit/6a6c0e84720ab5a374b61341ba9ab645ffafd35f">learned the (still experimental) <code>--stdin</code> option</a>.</li>
 </ul>
 
-</div><h2 id="v2.10.1" nr="120" class="collapsible"> Changes in v2.10.1<br /><small>since  v2.10.0 (September 3rd 2016)</h2></small><div>
+</div><h2 id="v2.10.1" nr="121" class="collapsible"> Changes in v2.10.1<br /><small>since  v2.10.0 (September 3rd 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2482,7 +2490,7 @@ of Node.js.</li>
 <li>Upgrades the bundled OpenSSL to <a href="https://www.openssl.org/news/cl102.txt">v1.0.2j</a>.</li>
 </ul>
 
-</div><h2 id="v2.10.0" nr="121" class="collapsible"> Changes in v2.10.0<br /><small>since  v2.9.3(2) (August 25th 2016)</h2></small><div>
+</div><h2 id="v2.10.0" nr="122" class="collapsible"> Changes in v2.10.0<br /><small>since  v2.9.3(2) (August 25th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2500,7 +2508,7 @@ of Node.js.</li>
 <li>Git for Windows' SDK <a href="https://github.com/git-for-windows/build-extra/commit/955e82b25a825f005946e7e4951e29404370aa94">can build an installer out of the box again</a>, without requiring an extra package to be installed.</li>
 </ul>
 
-</div><h2 id="v2.9.3(2)" nr="122" class="collapsible"> Changes in v2.9.3(2)<br /><small>since  v2.9.3 (August 13th 2016)</h2></small><div>
+</div><h2 id="v2.9.3(2)" nr="123" class="collapsible"> Changes in v2.9.3(2)<br /><small>since  v2.9.3 (August 13th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2511,7 +2519,7 @@ of Node.js.</li>
 <li>Git's .exe files are now <a href="https://github.com/git-for-windows/build-extra/commit/3e9b83526">code-signed</a>, helping with performance when being run with <a href="https://en.wikipedia.org/wiki/Windows_File_Protection">Windows File Protection</a>.</li>
 </ul>
 
-</div><h2 id="v2.9.3" nr="123" class="collapsible"> Changes in v2.9.3<br /><small>since  v2.9.2 (July 16th 2016)</h2></small><div>
+</div><h2 id="v2.9.3" nr="124" class="collapsible"> Changes in v2.9.3<br /><small>since  v2.9.2 (July 16th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2530,7 +2538,7 @@ of Node.js.</li>
 <li>When <code>~/.gitconfig</code> sets <code>core.hideDotFiles=false</code>, <code>git init</code> <a href="https://github.com/git-for-windows/git/issues/789">respects that again</a>.</li>
 </ul>
 
-</div><h2 id="v2.9.2" nr="124" class="collapsible"> Changes in v2.9.2<br /><small>since  v2.9.0 (June 14th 2016)</h2></small><div>
+</div><h2 id="v2.9.2" nr="125" class="collapsible"> Changes in v2.9.2<br /><small>since  v2.9.0 (June 14th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2551,7 +2559,7 @@ of Node.js.</li>
 <li>When configuring <code>notepad</code> as commit message editor, <a href="https://github.com/git-for-windows/build-extra/pull/123">UTF-8 messages are now handled correctly</a>.</li>
 </ul>
 
-</div><h2 id="v2.9.0" nr="125" class="collapsible"> Changes in v2.9.0<br /><small>since  v2.8.4 (June 7th 2016)</h2></small><div>
+</div><h2 id="v2.9.0" nr="126" class="collapsible"> Changes in v2.9.0<br /><small>since  v2.8.4 (June 7th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2565,7 +2573,7 @@ of Node.js.</li>
 <li>When running <code>git gc --aggressive</code> or <code>git repack -ald</code> in the presence of multiple pack files, the command still had open handles to the pack files it wanted to remove. This <a href="https://github.com/git-for-windows/git/commit/85bc5ad9a69fa120b23471d483dc8da35d771ab7">has been fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.8.4" nr="126" class="collapsible"> Changes in v2.8.4<br /><small>since  v2.8.3 (May 20th 2016)</h2></small><div>
+</div><h2 id="v2.8.4" nr="127" class="collapsible"> Changes in v2.8.4<br /><small>since  v2.8.3 (May 20th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2580,7 +2588,7 @@ of Node.js.</li>
 <li>When configuring Git Bash with Windows' default console, it <a href="https://github.com/git-for-windows/build-extra/pull/118">no longer loses its icon</a>.</li>
 </ul>
 
-</div><h2 id="v2.8.3" nr="127" class="collapsible"> Changes in v2.8.3<br /><small>since  v2.8.2 (May 3rd 2016)</h2></small><div>
+</div><h2 id="v2.8.3" nr="128" class="collapsible"> Changes in v2.8.3<br /><small>since  v2.8.2 (May 3rd 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2588,7 +2596,7 @@ of Node.js.</li>
 <li>Comes with <a href="https://github.com/git/git/blob/v2.8.3/Documentation/RelNotes/2.8.3.txt">Git v2.8.3</a>.</li>
 </ul>
 
-</div><h2 id="v2.8.2" nr="128" class="collapsible"> Changes in v2.8.2<br /><small>since  v2.8.1 (April 4th 2016)</h2></small><div>
+</div><h2 id="v2.8.2" nr="129" class="collapsible"> Changes in v2.8.2<br /><small>since  v2.8.1 (April 4th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2607,7 +2615,7 @@ of Node.js.</li>
 <li>OpenSSL received a critical update to <a href="https://www.openssl.org/news/newslog.html">version 1.0.2h</a>.</li>
 </ul>
 
-</div><h2 id="v2.8.1" nr="129" class="collapsible"> Changes in v2.8.1<br /><small>since  v2.8.0 (March 29th 2016)</h2></small><div>
+</div><h2 id="v2.8.1" nr="130" class="collapsible"> Changes in v2.8.1<br /><small>since  v2.8.0 (March 29th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2623,7 +2631,7 @@ of Node.js.</li>
 <li>GIT_SSH (and other executable paths that Git wants to spawn) <a href="https://github.com/git-for-windows/git/issues/692">can now contain spaces</a>.</li>
 </ul>
 
-</div><h2 id="v2.8.0" nr="130" class="collapsible"> Changes in v2.8.0<br /><small>since  v2.7.4 (March 18th 2016)</h2></small><div>
+</div><h2 id="v2.8.0" nr="131" class="collapsible"> Changes in v2.8.0<br /><small>since  v2.7.4 (March 18th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2642,7 +2650,7 @@ of Node.js.</li>
 <li>The installer <a href="https://github.com/git-for-windows/build-extra/pull/104">now changes the label of the <code>Next</code> button to <code>Install</code></a> on the last wizard page before installing.</li>
 </ul>
 
-</div><h2 id="v2.7.4" nr="131" class="collapsible"> Changes in v2.7.4<br /><small>since  v2.7.3 (March 15th 2016)</h2></small><div>
+</div><h2 id="v2.7.4" nr="132" class="collapsible"> Changes in v2.7.4<br /><small>since  v2.7.3 (March 15th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2656,7 +2664,7 @@ of Node.js.</li>
 <li>The Git Credential Manager hyperlink in the installer <a href="https://github.com/git-for-windows/build-extra/commit/28bb2a330323ba1c69f278cafa81e3e4fd3bf71c">is no longer blurred</a>.</li>
 </ul>
 
-</div><h2 id="v2.7.3" nr="132" class="collapsible"> Changes in v2.7.3<br /><small>since  v2.7.2 (February 23rd 2016)</h2></small><div>
+</div><h2 id="v2.7.3" nr="133" class="collapsible"> Changes in v2.7.3<br /><small>since  v2.7.2 (February 23rd 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2674,7 +2682,7 @@ of Node.js.</li>
 <li>We <a href="https://github.com/git-for-windows/git/pull/677">no longer show asterisks when reading the username for credentials</a>.</li>
 </ul>
 
-</div><h2 id="v2.7.2" nr="133" class="collapsible"> Changes in v2.7.2<br /><small>since  v2.7.1(2) (February 12th 2016)</h2></small><div>
+</div><h2 id="v2.7.2" nr="134" class="collapsible"> Changes in v2.7.2<br /><small>since  v2.7.1(2) (February 12th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2694,7 +2702,7 @@ of Node.js.</li>
 <li>When launching <code>C:\Program Files\Git\bin\bash -l -i</code> in a cmd window and pressing Ctrl+C, <a href="https://github.com/git-for-windows/git/pull/205">the console is no longer corrupted</a> (previously, the <code>bash.exe</code> redirector would terminate and both cmd &amp; Bash would compete for user input).</li>
 </ul>
 
-</div><h2 id="v2.7.1(2)" nr="134" class="collapsible"> Changes in v2.7.1(2)<br /><small>since  v2.7.1 (February 6th 2016)</h2></small><div>
+</div><h2 id="v2.7.1(2)" nr="135" class="collapsible"> Changes in v2.7.1(2)<br /><small>since  v2.7.1 (February 6th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2709,7 +2717,7 @@ of Node.js.</li>
 <li>Thanks to Eric Lawrence and Martijn Laan, <a href="https://github.com/git-for-windows/build-extra/tree/HEAD/installer/InnoSetup">our installer sports a better way to look for system files now</a>.</li>
 </ul>
 
-</div><h2 id="v2.7.1" nr="135" class="collapsible"> Changes in v2.7.1<br /><small>since  v2.7.0(2) (February 2nd 2016)</h2></small><div>
+</div><h2 id="v2.7.1" nr="136" class="collapsible"> Changes in v2.7.1<br /><small>since  v2.7.0(2) (February 2nd 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2725,7 +2733,7 @@ of Node.js.</li>
 <li>A bug in one of the DLLs used by Git for Windows <a href="https://github.com/Alexpux/MINGW-packages/pull/1051">was fixed</a> that prevented Git from working properly in 64-bit setups where <a href="https://technet.microsoft.com/en-us/library/cc779664%28v=ws.10%29.aspx">the <code>FLG_LDR_TOP_DOWN</code> global flag</a> is set.</li>
 </ul>
 
-</div><h2 id="v2.7.0(2)" nr="136" class="collapsible"> Changes in v2.7.0(2)<br /><small>since  v2.7.0 (January 5th 2016)</h2></small><div>
+</div><h2 id="v2.7.0(2)" nr="137" class="collapsible"> Changes in v2.7.0(2)<br /><small>since  v2.7.0 (January 5th 2016)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2747,7 +2755,7 @@ of Node.js.</li>
 <li>More file locking issues ("Unlink of file ... failed. Should I try again?") <a href="https://github.com/git-for-windows/git/issues/500">were fixed</a>.</li>
 </ul>
 
-</div><h2 id="v2.7.0" nr="137" class="collapsible"> Changes in v2.7.0<br /><small>since  v2.6.4 (December 14th 2015)</h2></small><div>
+</div><h2 id="v2.7.0" nr="138" class="collapsible"> Changes in v2.7.0<br /><small>since  v2.6.4 (December 14th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2761,7 +2769,7 @@ of Node.js.</li>
 <li>Non-ASCII command-lines are now <a href="https://github.com/git-for-windows/msys2-runtime/commit/4c362726c41102173613658">passed properly</a> to shell scripts.</li>
 </ul>
 
-</div><h2 id="v2.6.4" nr="138" class="collapsible"> Changes in v2.6.4<br /><small>since  v2.6.3 (November 10th 2015)</h2></small><div>
+</div><h2 id="v2.6.4" nr="139" class="collapsible"> Changes in v2.6.4<br /><small>since  v2.6.3 (November 10th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2778,7 +2786,7 @@ of Node.js.</li>
 <li>An additional work-around from upstream Git for <code>SHELL_PATH</code> containing spaces (fixing <a href="https://github.com/git-for-windows/git/issues/542">problems with interactive rebase's <code>exec</code> command</a> has been applied.</li>
 </ul>
 
-</div><h2 id="v2.6.3" nr="139" class="collapsible"> Changes in v2.6.3<br /><small>since  v2.6.2 (October 19th 2015)</h2></small><div>
+</div><h2 id="v2.6.3" nr="140" class="collapsible"> Changes in v2.6.3<br /><small>since  v2.6.2 (October 19th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2797,7 +2805,7 @@ of Node.js.</li>
 <li>When <code>notepad</code> is configured as default editor, we no longer do anything specially <a href="https://github.com/git-for-windows/git/issues/488">unless editing files inside <code>.git/</code></a>.</li>
 </ul>
 
-</div><h2 id="v2.6.2" nr="140" class="collapsible"> Changes in v2.6.2<br /><small>since  v2.6.1 (October 5th 2015)</h2></small><div>
+</div><h2 id="v2.6.2" nr="141" class="collapsible"> Changes in v2.6.2<br /><small>since  v2.6.1 (October 5th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2814,7 +2822,7 @@ of Node.js.</li>
 <li><em>Git GUI</em> now respects the <a href="https://github.com/git-for-windows/git/issues/490">terminal emulation chosen at install time</a> when <a href="https://github.com/git-for-windows/git/pull/492">running the <em>Git Bash</em></a>.</li>
 </ul>
 
-</div><h2 id="v2.6.1" nr="141" class="collapsible"> Changes in v2.6.1<br /><small>since 2.6.0 (September 29th 2015)</h2></small><div>
+</div><h2 id="v2.6.1" nr="142" class="collapsible"> Changes in v2.6.1<br /><small>since 2.6.0 (September 29th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2834,7 +2842,7 @@ of Node.js.</li>
 <li>When installing Git for Windows as regular user, <a href="https://github.com/git-for-windows/git/issues/455">the installer no longer tries to create privileged registry keys</a>.</li>
 </ul>
 
-</div><h2 id="v2.6.0" nr="142" class="collapsible"> Changes in v2.6.0<br /><small>since 2.5.3 (September 18th 2015)</h2></small><div>
+</div><h2 id="v2.6.0" nr="143" class="collapsible"> Changes in v2.6.0<br /><small>since 2.5.3 (September 18th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2862,7 +2870,7 @@ of Node.js.</li>
 <li>The 64-bit version <a href="https://github.com/git-for-windows/git/issues/449">now includes</a> the <code>astextplain</code> script it lacked by mistake.</li>
 </ul>
 
-</div><h2 id="v2.5.3" nr="143" class="collapsible"> Changes in v2.5.3<br /><small>since 2.5.2(2) (September 13th 2015)</h2></small><div>
+</div><h2 id="v2.5.3" nr="144" class="collapsible"> Changes in v2.5.3<br /><small>since 2.5.2(2) (September 13th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2887,7 +2895,7 @@ of Node.js.</li>
 <li>When run inside the PowerShell, Git no longer gets confused when the current directory's path and what is recorded in the file system differs in case (e.g. "GIT/" vs "Git/").</li>
 </ul>
 
-</div><h2 id="v2.5.2(2)" nr="144" class="collapsible"> Changes in v2.5.2(2)<br /><small>since 2.5.2 (September 10th 2015)</h2></small><div>
+</div><h2 id="v2.5.2(2)" nr="145" class="collapsible"> Changes in v2.5.2(2)<br /><small>since 2.5.2 (September 10th 2015)</h2></small><div>
 
 <h3>Bug Fixes</h3>
 
@@ -2898,7 +2906,7 @@ of Node.js.</li>
 <li>Tab completion in the context of a large Active Directory <a href="https://github.com/git-for-windows/git/issues/377">is no longer slow</a>.</li>
 </ul>
 
-</div><h2 id="v2.5.2" nr="145" class="collapsible"> Changes in v2.5.2<br /><small>since 2.5.1 (August 31th 2015)</h2></small><div>
+</div><h2 id="v2.5.2" nr="146" class="collapsible"> Changes in v2.5.2<br /><small>since 2.5.1 (August 31th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2919,7 +2927,7 @@ of Node.js.</li>
 <li>Git <a href="https://github.com/git-for-windows/git/issues/329">no longer asks for a DVD to be inserted again</a> when one has been ejected from the <code>D:</code> drive.</li>
 </ul>
 
-</div><h2 id="v2.5.1" nr="146" class="collapsible"> Changes in v2.5.1<br /><small>since 2.5.0 (August 18th 2015)</h2></small><div>
+</div><h2 id="v2.5.1" nr="147" class="collapsible"> Changes in v2.5.1<br /><small>since 2.5.0 (August 18th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2942,7 +2950,7 @@ of Node.js.</li>
 <li>The <code>patch</code> tool <a href="https://github.com/git-for-windows/build-extra/pull/74">is now included again</a> as it was in Git for Windows 1.x.</li>
 </ul>
 
-</div><h2 id="v2.5.0" nr="147" class="collapsible"> Changes in v2.5.0<br /><small>since 2.4.6 (July 18th 2015)</h2></small><div>
+</div><h2 id="v2.5.0" nr="148" class="collapsible"> Changes in v2.5.0<br /><small>since 2.4.6 (July 18th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2959,7 +2967,7 @@ of Node.js.</li>
 <li>Git <a href="https://github.com/git-for-windows/git/issues/255">no longer warns about being unable to read bogus Git attributes</a>.</li>
 </ul>
 
-</div><h2 id="v2.4.6" nr="148" class="collapsible"> Changes in v2.4.6<br /><small>since 2.4.5 (June 29th 2015)</h2></small><div>
+</div><h2 id="v2.4.6" nr="149" class="collapsible"> Changes in v2.4.6<br /><small>since 2.4.5 (June 29th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2974,7 +2982,7 @@ of Node.js.</li>
 <li><code>git svn</code> learned <a href="https://github.com/git-for-windows/git/pull/246"><em>not</em> to reuse incompatible on-disk caches left over from previous Git for Windows versions</a>.</li>
 </ul>
 
-</div><h2 id="v2.4.5" nr="149" class="collapsible"> Changes in v2.4.5<br /><small>since 2.4.4 (June 20th 2015)</h2></small><div>
+</div><h2 id="v2.4.5" nr="150" class="collapsible"> Changes in v2.4.5<br /><small>since 2.4.4 (June 20th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -2988,7 +2996,7 @@ of Node.js.</li>
 <li>Git Bash <a href="https://github.com/git-for-windows/git/issues/222">no longer crashes when called with <code>TERM=msys</code></a>. This reinstates compatibility with GitHub for Windows.</li>
 </ul>
 
-</div><h2 id="v2.4.4" nr="150" class="collapsible"> Changes in v2.4.4<br /><small>since 2.4.3 (June 12th 2015)</h2></small><div>
+</div><h2 id="v2.4.4" nr="151" class="collapsible"> Changes in v2.4.4<br /><small>since 2.4.3 (June 12th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3006,7 +3014,7 @@ of Node.js.</li>
 <li>When using <code>core.symlinks = true</code> while cloning repositories with symbolic links pointing to directories, <a href="https://github.com/git-for-windows/git/issues/210"><code>git status</code> no longer shows bogus modifications</a>.</li>
 </ul>
 
-</div><h2 id="v2.4.3" nr="151" class="collapsible"> Changes in v2.4.3<br /><small>since 2.4.2 (May 27th 2015)</h2></small><div>
+</div><h2 id="v2.4.3" nr="152" class="collapsible"> Changes in v2.4.3<br /><small>since 2.4.2 (May 27th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3024,7 +3032,7 @@ of Node.js.</li>
 <li><em>Git Bash Here</em> works even from the context menu of the empty area in Windows Explorer's view of C:\, D:\, etc (https://github.com/git-for-windows/git/issues/176).</li>
 </ul>
 
-</div><h2 id="v2.4.2" nr="152" class="collapsible"> Changes in v2.4.2<br /><small>since 2.4.1 (May 14th 2015)</h2></small><div>
+</div><h2 id="v2.4.2" nr="153" class="collapsible"> Changes in v2.4.2<br /><small>since 2.4.1 (May 14th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3040,7 +3048,7 @@ of Node.js.</li>
 <li><a href="https://github.com/git-for-windows/msys2-runtime/pull/9">Auto-mount the temporary directory of the current user to <code>/tmp/</code> again</a>, just like Git for Windows 1.x did (thanks to MSys1's hard-coded mount point).</li>
 </ul>
 
-</div><h2 id="v2.4.1" nr="153" class="collapsible"> Changes in v2.4.1<br /><small>since 2.4.0(2) (May 7th 2015)</h2></small><div>
+</div><h2 id="v2.4.1" nr="154" class="collapsible"> Changes in v2.4.1<br /><small>since 2.4.0(2) (May 7th 2015)</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3055,7 +3063,7 @@ of Node.js.</li>
 <li>The password <a href="https://github.com/git-for-windows/git/issues/124">can be entered interactively again</a> when <code>git push</code>ing to a HTTPS remote.</li>
 </ul>
 
-</div><h2 id="v2.4.0(2)" nr="154" class="collapsible"> Changes in v2.4.0(2)<br /><small>since 2.4.0 (May 5th 2015)</h2></small><div>
+</div><h2 id="v2.4.0(2)" nr="155" class="collapsible"> Changes in v2.4.0(2)<br /><small>since 2.4.0 (May 5th 2015)</h2></small><div>
 
 <h3>Bug Fixes</h3>
 
@@ -3070,7 +3078,7 @@ of Node.js.</li>
 <li>The installer now offers the choice between opening the <em>Git Bash</em> in a MinTTY (default) or a regular Windows console window (Git for Windows 1.x' setting).</li>
 </ul>
 
-</div><h2 id="v2.4.0" nr="155" class="collapsible"> Changes in v2.4.0<br /><small>since 2.3.7-preview20150429</h2></small><div>
+</div><h2 id="v2.4.0" nr="156" class="collapsible"> Changes in v2.4.0<br /><small>since 2.3.7-preview20150429</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3089,7 +3097,7 @@ of Node.js.</li>
 <li>All files that are part of the installation will now be registered so they are deleted upon uninstall</li>
 </ul>
 
-</div><h2 id="v2.3.7-preview20150429" nr="156" class="collapsible"> Changes in v2.3.7-preview20150429<br /><small>since 2.3.6-preview20150425</h2></small><div>
+</div><h2 id="v2.3.7-preview20150429" nr="157" class="collapsible"> Changes in v2.3.7-preview20150429<br /><small>since 2.3.6-preview20150425</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3104,7 +3112,7 @@ of Node.js.</li>
 <li>The home directory can be overridden using the <code>$HOME</code> environment variable again</li>
 </ul>
 
-</div><h2 id="v2.3.6-preview20150425" nr="157" class="collapsible"> Changes in v2.3.6-preview20150425<br /><small>since 2.3.5-preview20150402</h2></small><div>
+</div><h2 id="v2.3.6-preview20150425" nr="158" class="collapsible"> Changes in v2.3.6-preview20150425<br /><small>since 2.3.5-preview20150402</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3123,7 +3131,7 @@ of Node.js.</li>
 <li>Respects the newly introduced Windows-wide <code>%PROGRAMDATA%\Git\config</code> configuration</li>
 </ul>
 
-</div><h2 id="v2.3.5-preview20150402" nr="158" class="collapsible"> Changes in v2.3.5-preview20150402<br /><small>since 1.9.5-preview20150402</h2></small><div>
+</div><h2 id="v2.3.5-preview20150402" nr="159" class="collapsible"> Changes in v2.3.5-preview20150402<br /><small>since 1.9.5-preview20150402</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3140,7 +3148,7 @@ of Node.js.</li>
 <li>No longer ships with Git Cheetah (because there are better-maintained Explorer extensions out there).</li>
 </ul>
 
-</div><h2 id="v1.9.5-preview20150402" nr="159" class="collapsible"> Changes in v1.9.5-preview20150402<br /><small>since 1.9.5-preview20141217</h2></small><div>
+</div><h2 id="v1.9.5-preview20150402" nr="160" class="collapsible"> Changes in v1.9.5-preview20150402<br /><small>since 1.9.5-preview20141217</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3167,7 +3175,7 @@ of Node.js.</li>
 <li>For <code>git.exe</code> alone, use the same HOME directory fallback mechanism as <code>/etc/profile</code></li>
 </ul>
 
-</div><h2 id="v1.9.5-preview20141217" nr="160" class="collapsible"> Changes in v1.9.5-preview20141217<br /><small>since 1.9.4-preview20140929</h2></small><div>
+</div><h2 id="v1.9.5-preview20141217" nr="161" class="collapsible"> Changes in v1.9.5-preview20141217<br /><small>since 1.9.4-preview20140929</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3181,7 +3189,7 @@ of Node.js.</li>
 <li>Safeguards against bogus file names on NTFS (CVE-2014-9390).</li>
 </ul>
 
-</div><h2 id="v1.9.4-preview20140929" nr="161" class="collapsible"> Changes in v1.9.4-preview20140929<br /><small>since 1.9.4-preview20140815</h2></small><div>
+</div><h2 id="v1.9.4-preview20140929" nr="162" class="collapsible"> Changes in v1.9.4-preview20140929<br /><small>since 1.9.4-preview20140815</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3199,7 +3207,7 @@ of Node.js.</li>
 <li><code>git svn</code> is now usable again (regression in previous update, msysgit PR#245)</li>
 </ul>
 
-</div><h2 id="v1.9.4-preview20140815" nr="162" class="collapsible"> Changes in v1.9.4-preview20140815<br /><small>since 1.9.4-preview20140611</h2></small><div>
+</div><h2 id="v1.9.4-preview20140815" nr="163" class="collapsible"> Changes in v1.9.4-preview20140815<br /><small>since 1.9.4-preview20140611</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3223,7 +3231,7 @@ of Node.js.</li>
 <li><code>git svn</code> is/might be broken. Fixes welcome.</li>
 </ul>
 
-</div><h2 id="v1.9.4-preview20140611" nr="163" class="collapsible"> Changes in v1.9.4-preview20140611<br /><small>since 1.9.2-preview20140411</h2></small><div>
+</div><h2 id="v1.9.4-preview20140611" nr="164" class="collapsible"> Changes in v1.9.4-preview20140611<br /><small>since 1.9.2-preview20140411</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3239,7 +3247,7 @@ of Node.js.</li>
 <li>Make <code>git-http-backend</code>, <code>git-http-push</code>, <code>git-http-fetch</code> available again (#174)</li>
 </ul>
 
-</div><h2 id="v1.9.2-preview20140411" nr="164" class="collapsible"> Changes in v1.9.2-preview20140411<br /><small>since 1.9.0-preview20140217</h2></small><div>
+</div><h2 id="v1.9.2-preview20140411" nr="165" class="collapsible"> Changes in v1.9.2-preview20140411<br /><small>since 1.9.0-preview20140217</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3262,7 +3270,7 @@ of Node.js.</li>
 <li>Fixes a regression in Git-Cheetah which froze the Explorer upon calling Git Bash from the context menu (Git-Cheetah PRs #14 and #15).</li>
 </ul>
 
-</div><h2 id="v1.9.0-preview20140217" nr="165" class="collapsible"> Changes in v1.9.0-preview20140217<br /><small>since 1.8.5.2-preview20131230</h2></small><div>
+</div><h2 id="v1.9.0-preview20140217" nr="166" class="collapsible"> Changes in v1.9.0-preview20140217<br /><small>since 1.8.5.2-preview20131230</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3283,7 +3291,7 @@ of Node.js.</li>
 <li>Perl no longer creates empty <code>sys$command</code> files when no stdin is connected (msysGit pull request #152)</li>
 </ul>
 
-</div><h2 id="v1.8.5.2-preview20131230" nr="166" class="collapsible"> Changes in v1.8.5.2-preview20131230<br /><small>since 1.8.4-preview20130916</h2></small><div>
+</div><h2 id="v1.8.5.2-preview20131230" nr="167" class="collapsible"> Changes in v1.8.5.2-preview20131230<br /><small>since 1.8.4-preview20130916</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3304,7 +3312,7 @@ of Node.js.</li>
 <li>No longer replaces <code>dos2unix</code> with <code>hd2u</code> (a more powerful, but slightly incompatible version of dos2unix)</li>
 </ul>
 
-</div><h2 id="v1.8.4-preview20130916" nr="167" class="collapsible"> Changes in v1.8.4-preview20130916<br /><small>since 1.8.3-preview20130601</h2></small><div>
+</div><h2 id="v1.8.4-preview20130916" nr="168" class="collapsible"> Changes in v1.8.4-preview20130916<br /><small>since 1.8.3-preview20130601</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3323,7 +3331,7 @@ of Node.js.</li>
 <li>Ensure wincred handles empty username/password.</li>
 </ul>
 
-</div><h2 id="v1.8.3-preview20130601" nr="168" class="collapsible"> Changes in v1.8.3-preview20130601<br /><small>since 1.8.1.2-preview20130201</h2></small><div>
+</div><h2 id="v1.8.3-preview20130601" nr="169" class="collapsible"> Changes in v1.8.3-preview20130601<br /><small>since 1.8.1.2-preview20130201</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3343,7 +3351,7 @@ of Node.js.</li>
 <li>Fixed registry-based explorer menu items for XP (#95)</li>
 </ul>
 
-</div><h2 id="v1.8.1.2-preview20130201" nr="169" class="collapsible"> Changes in v1.8.1.2-preview20130201<br /><small>since 1.8.0-preview20121022</h2></small><div>
+</div><h2 id="v1.8.1.2-preview20130201" nr="170" class="collapsible"> Changes in v1.8.1.2-preview20130201<br /><small>since 1.8.0-preview20121022</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3363,7 +3371,7 @@ of Node.js.</li>
 <li>The installer will attempt to handle files mirrored in the virtualstore.</li>
 </ul>
 
-</div><h2 id="v1.8.0-preview20121022" nr="170" class="collapsible"> Changes in v1.8.0-preview20121022<br /><small>since 1.7.11-preview20120710</h2></small><div>
+</div><h2 id="v1.8.0-preview20121022" nr="171" class="collapsible"> Changes in v1.8.0-preview20121022<br /><small>since 1.7.11-preview20120710</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3380,7 +3388,7 @@ of Node.js.</li>
 <li>Fix bash prompt handling due to upstream changes.</li>
 </ul>
 
-</div><h2 id="v1.7.11-preview20120710" nr="171" class="collapsible"> Changes in v1.7.11-preview20120710<br /><small>since 1.7.11-preview20120704</h2></small><div>
+</div><h2 id="v1.7.11-preview20120710" nr="172" class="collapsible"> Changes in v1.7.11-preview20120710<br /><small>since 1.7.11-preview20120704</h2></small><div>
 
 <h3>Bugfixes</h3>
 
@@ -3389,7 +3397,7 @@ of Node.js.</li>
 <li>Include CAcert root certificates in SSL bundle (issue #37)</li>
 </ul>
 
-</div><h2 id="v1.7.11-preview20120704" nr="172" class="collapsible"> Changes in v1.7.11-preview20120704<br /><small>since 1.7.11-preview20120620</h2></small><div>
+</div><h2 id="v1.7.11-preview20120704" nr="173" class="collapsible"> Changes in v1.7.11-preview20120704<br /><small>since 1.7.11-preview20120620</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3408,7 +3416,7 @@ of Node.js.</li>
 <li>Fixed executable detection to speed up help -a display.</li>
 </ul>
 
-</div><h2 id="v1.7.11-preview20120620" nr="173" class="collapsible"> Changes in v1.7.11-preview20120620<br /><small>since 1.7.10-preview20120409</h2></small><div>
+</div><h2 id="v1.7.11-preview20120620" nr="174" class="collapsible"> Changes in v1.7.11-preview20120620<br /><small>since 1.7.10-preview20120409</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3431,7 +3439,7 @@ of Node.js.</li>
 <li>Various fixes for handling unicode paths.</li>
 </ul>
 
-</div><h2 id="v1.7.10-preview20120409" nr="174" class="collapsible"> Changes in v1.7.10-preview20120409<br /><small>since 1.7.9-preview20120201</h2></small><div>
+</div><h2 id="v1.7.10-preview20120409" nr="175" class="collapsible"> Changes in v1.7.10-preview20120409<br /><small>since 1.7.9-preview20120201</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3452,7 +3460,7 @@ of Node.js.</li>
 <li>Development environment: enhancements to the 64-bit Cheetah build.</li>
 </ul>
 
-</div><h2 id="v1.7.9-preview20120201" nr="175" class="collapsible"> Changes in v1.7.9-preview20120201<br /><small>since 1.7.8-preview20111206</h2></small><div>
+</div><h2 id="v1.7.9-preview20120201" nr="176" class="collapsible"> Changes in v1.7.9-preview20120201<br /><small>since 1.7.8-preview20111206</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3471,7 +3479,7 @@ of Node.js.</li>
 <li>Tabbed gitk preferences dialog to allow use on smaller screens.</li>
 </ul>
 
-</div><h2 id="v1.7.8-preview20111206" nr="176" class="collapsible"> Changes in v1.7.8-preview20111206<br /><small>since 1.7.7.1-preview20111027</h2></small><div>
+</div><h2 id="v1.7.8-preview20111206" nr="177" class="collapsible"> Changes in v1.7.8-preview20111206<br /><small>since 1.7.7.1-preview20111027</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3488,7 +3496,7 @@ of Node.js.</li>
 <li>Git documentation submodule location fixed.</li>
 </ul>
 
-</div><h2 id="v1.7.7.1-preview20111027" nr="177" class="collapsible"> Changes in v1.7.7.1-preview20111027<br /><small>since 1.7.7-preview20111014</h2></small><div>
+</div><h2 id="v1.7.7.1-preview20111027" nr="178" class="collapsible"> Changes in v1.7.7.1-preview20111027<br /><small>since 1.7.7-preview20111014</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3503,7 +3511,7 @@ of Node.js.</li>
 <li>Includes an important upstream fix for a bug that sometimes corrupts the git index file.</li>
 </ul>
 
-</div><h2 id="v1.7.7-preview20111014" nr="178" class="collapsible"> Changes in v1.7.7-preview20111014<br /><small>since 1.7.6-preview20110708</h2></small><div>
+</div><h2 id="v1.7.7-preview20111014" nr="179" class="collapsible"> Changes in v1.7.7-preview20111014<br /><small>since 1.7.6-preview20110708</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3524,7 +3532,7 @@ of Node.js.</li>
 <li>Fixed warning about mising hostname during <code>git fetch</code></li>
 </ul>
 
-</div><h2 id="v1.7.6-preview20110708" nr="179" class="collapsible"> Changes in v1.7.6-preview20110708<br /><small>since 1.7.4-preview20110211</h2></small><div>
+</div><h2 id="v1.7.6-preview20110708" nr="180" class="collapsible"> Changes in v1.7.6-preview20110708<br /><small>since 1.7.4-preview20110211</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3540,7 +3548,7 @@ of Node.js.</li>
 <li>Fixes to msys compat layer for directory entry handling and command line globbing.</li>
 </ul>
 
-</div><h2 id="v1.7.4-preview20110211" nr="180" class="collapsible"> Changes in v1.7.4-preview20110211<br /><small>since 1.7.3.2-preview20101025</h2></small><div>
+</div><h2 id="v1.7.4-preview20110211" nr="181" class="collapsible"> Changes in v1.7.4-preview20110211<br /><small>since 1.7.3.2-preview20101025</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3557,7 +3565,7 @@ of Node.js.</li>
 <li>Please refer to the release notes for official Git 1.7.4</li>
 </ul>
 
-</div><h2 id="v1.7.3.2-preview20101025" nr="181" class="collapsible"> Changes in v1.7.3.2-preview20101025<br /><small>since 1.7.3.1-preview20101002</h2></small><div>
+</div><h2 id="v1.7.3.2-preview20101025" nr="182" class="collapsible"> Changes in v1.7.3.2-preview20101025<br /><small>since 1.7.3.1-preview20101002</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3565,7 +3573,7 @@ of Node.js.</li>
 <li>Comes with Git 1.7.3.2 plus patches.</li>
 </ul>
 
-</div><h2 id="v1.7.3.1-preview20101002" nr="182" class="collapsible"> Changes in v1.7.3.1-preview20101002<br /><small>since 1.7.2.3-preview20100911</h2></small><div>
+</div><h2 id="v1.7.3.1-preview20101002" nr="183" class="collapsible"> Changes in v1.7.3.1-preview20101002<br /><small>since 1.7.2.3-preview20100911</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3583,7 +3591,7 @@ of Node.js.</li>
 <li>Issue 523 (crash pushing to WebDAV remote) was fixed</li>
 </ul>
 
-</div><h2 id="v1.7.2.3-preview20100911" nr="183" class="collapsible"> Changes in v1.7.2.3-preview20100911<br /><small>since 1.7.1-preview20100612</h2></small><div>
+</div><h2 id="v1.7.2.3-preview20100911" nr="184" class="collapsible"> Changes in v1.7.2.3-preview20100911<br /><small>since 1.7.1-preview20100612</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3600,7 +3608,7 @@ of Node.js.</li>
 <li>Issue 501 (failing to clone repo from root dir using relative path) was fixed</li>
 </ul>
 
-</div><h2 id="v1.7.1-preview20100612" nr="184" class="collapsible"> Changes in v1.7.1-preview20100612<br /><small>since 1.7.0.2-preview20100309</h2></small><div>
+</div><h2 id="v1.7.1-preview20100612" nr="185" class="collapsible"> Changes in v1.7.1-preview20100612<br /><small>since 1.7.0.2-preview20100309</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3632,7 +3640,7 @@ of Node.js.</li>
 <li>Issue 441 (Git-1.7.0.2-preview20100309.exe installer fails with unwritable <code>msys-1.0.dll</code> when <code>ssh-agent</code> is running) was fixed</li>
 </ul>
 
-</div><h2 id="v1.7.0.2-preview20100309" nr="185" class="collapsible"> Changes in v1.7.0.2-preview20100309<br /><small>since 1.6.5.1-preview20091022</h2></small><div>
+</div><h2 id="v1.7.0.2-preview20100309" nr="186" class="collapsible"> Changes in v1.7.0.2-preview20100309<br /><small>since 1.6.5.1-preview20091022</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3672,7 +3680,7 @@ of Node.js.</li>
 <li><code>.git*</code> files can be associated with the default text editor (issue 397).</li>
 </ul>
 
-</div><h2 id="v1.6.5.1-preview20091022" nr="186" class="collapsible"> Changes in v1.6.5.1-preview20091022<br /><small>since 1.6.4-preview20090729</h2></small><div>
+</div><h2 id="v1.6.5.1-preview20091022" nr="187" class="collapsible"> Changes in v1.6.5.1-preview20091022<br /><small>since 1.6.4-preview20090729</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3692,7 +3700,7 @@ of Node.js.</li>
 <li>Thanks to Sebastian Schuberth, <code>git svn</code> picks up the SSH setting specified with the installer (Issue 305).</li>
 </ul>
 
-</div><h2 id="v1.6.4-preview20090729" nr="187" class="collapsible"> Changes in v1.6.4-preview20090729<br /><small>since 1.6.3.2-preview20090608</h2></small><div>
+</div><h2 id="v1.6.4-preview20090729" nr="188" class="collapsible"> Changes in v1.6.4-preview20090729<br /><small>since 1.6.3.2-preview20090608</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3710,7 +3718,7 @@ of Node.js.</li>
 <li>IPv6 is supported now, thanks to Martin Martin Storsjö (Issue 182).</li>
 </ul>
 
-</div><h2 id="v1.6.3.2-preview20090608" nr="188" class="collapsible"> Changes in v1.6.3.2-preview20090608<br /><small>since 1.6.3-preview20090507</h2></small><div>
+</div><h2 id="v1.6.3.2-preview20090608" nr="189" class="collapsible"> Changes in v1.6.3.2-preview20090608<br /><small>since 1.6.3-preview20090507</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3733,7 +3741,7 @@ of Node.js.</li>
 <li>For some Git commands (such as <code>git commit</code>), <code>vi</code> no longer "restores" the cursor position.</li>
 </ul>
 
-</div><h2 id="v1.6.3-preview20090507" nr="189" class="collapsible"> Changes in v1.6.3-preview20090507<br /><small>since 1.6.2.2-preview20090408</h2></small><div>
+</div><h2 id="v1.6.3-preview20090507" nr="190" class="collapsible"> Changes in v1.6.3-preview20090507<br /><small>since 1.6.2.2-preview20090408</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3759,7 +3767,7 @@ of Node.js.</li>
 <li><code>git-svn</code> sets <code>core.autocrlf</code> to <code>false</code> now, hopefully shutting up most of the <code>git-svn</code> reports.</li>
 </ul>
 
-</div><h2 id="v1.6.2.2-preview20090408" nr="190" class="collapsible"> Changes in v1.6.2.2-preview20090408<br /><small>since 1.6.2.1-preview20090322</h2></small><div>
+</div><h2 id="v1.6.2.2-preview20090408" nr="191" class="collapsible"> Changes in v1.6.2.2-preview20090408<br /><small>since 1.6.2.1-preview20090322</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3781,7 +3789,7 @@ of Node.js.</li>
 <li>Fall back to <code>/</code> when HOME cannot be set to the real home directory due to locale issues (works around Issue 108 for the moment).</li>
 </ul>
 
-</div><h2 id="v1.6.2.1-preview20090322" nr="191" class="collapsible"> Changes in v1.6.2.1-preview20090322<br /><small>since 1.6.2-preview20090308</h2></small><div>
+</div><h2 id="v1.6.2.1-preview20090322" nr="192" class="collapsible"> Changes in v1.6.2.1-preview20090322<br /><small>since 1.6.2-preview20090308</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3803,7 +3811,7 @@ of Node.js.</li>
 <li>More vim files are shipped now, so that syntax highlighting works.</li>
 </ul>
 
-</div><h2 id="v1.6.2-preview20090308" nr="192" class="collapsible"> Changes in v1.6.2-preview20090308<br /><small>since 1.6.1-preview20081225</h2></small><div>
+</div><h2 id="v1.6.2-preview20090308" nr="193" class="collapsible"> Changes in v1.6.2-preview20090308<br /><small>since 1.6.1-preview20081225</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3827,7 +3835,7 @@ of Node.js.</li>
 <li>Obsolete programs from previous installations are cleaned up.</li>
 </ul>
 
-</div><h2 id="v1.6.1-preview20081225" nr="193" class="collapsible"> Changes in v1.6.1-preview20081225<br /><small>since 1.6.0.2-preview20080923</h2></small><div>
+</div><h2 id="v1.6.1-preview20081225" nr="194" class="collapsible"> Changes in v1.6.1-preview20081225<br /><small>since 1.6.0.2-preview20080923</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3837,7 +3845,7 @@ of Node.js.</li>
 <li>Installer remembers how to handle PATH.</li>
 </ul>
 
-</div><h2 id="v1.6.0.2-preview20080923" nr="194" class="collapsible"> Changes in v1.6.0.2-preview20080923<br /><small>since 1.6.0.2-preview20080921</h2></small><div>
+</div><h2 id="v1.6.0.2-preview20080923" nr="195" class="collapsible"> Changes in v1.6.0.2-preview20080923<br /><small>since 1.6.0.2-preview20080921</h2></small><div>
 
 <h3>Bugfixes</h3>
 
@@ -3847,7 +3855,7 @@ of Node.js.</li>
 <li>Various programs that aborted with <code>Assertion failed: argv0_path</code> are fixed.</li>
 </ul>
 
-</div><h2 id="v1.6.0.2-preview20080921" nr="195" class="collapsible"> Changes in v1.6.0.2-preview20080921<br /><small>since 1.5.6.1-preview20080701</h2></small><div>
+</div><h2 id="v1.6.0.2-preview20080921" nr="196" class="collapsible"> Changes in v1.6.0.2-preview20080921<br /><small>since 1.5.6.1-preview20080701</h2></small><div>
 
 <ul>
 <li>Removed Features</li>
@@ -3866,7 +3874,7 @@ of Node.js.</li>
 <li>No Windows-specific bugfixes.</li>
 </ul>
 
-</div><h2 id="v1.5.6.1-preview20080701" nr="196" class="collapsible"> Changes in v1.5.6.1-preview20080701<br /><small>since 1.5.6-preview20080622</h2></small><div>
+</div><h2 id="v1.5.6.1-preview20080701" nr="197" class="collapsible"> Changes in v1.5.6.1-preview20080701<br /><small>since 1.5.6-preview20080622</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3881,7 +3889,7 @@ of Node.js.</li>
 <li>cmd wrappers do no longer switch off echo.</li>
 </ul>
 
-</div><h2 id="v1.5.6-preview20080622" nr="197" class="collapsible"> Changes in v1.5.6-preview20080622<br /><small>since 1.5.5-preview20080413</h2></small><div>
+</div><h2 id="v1.5.6-preview20080622" nr="198" class="collapsible"> Changes in v1.5.6-preview20080622<br /><small>since 1.5.5-preview20080413</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3901,7 +3909,7 @@ of Node.js.</li>
 <li>Git correctly passes port numbers to PuTTY's Plink</li>
 </ul>
 
-</div><h2 id="v1.5.5-preview20080413" nr="198" class="collapsible"> Changes in v1.5.5-preview20080413<br /><small>since 1.5.4-preview20080202</h2></small><div>
+</div><h2 id="v1.5.5-preview20080413" nr="199" class="collapsible"> Changes in v1.5.5-preview20080413<br /><small>since 1.5.4-preview20080202</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3921,7 +3929,7 @@ of Node.js.</li>
 <li>All DLLs are rebased to avoid problems with "fork" on Vista.</li>
 </ul>
 
-</div><h2 id="v1.5.4-preview20080202" nr="199" class="collapsible"> Changes in v1.5.4-preview20080202<br /><small>since 1.5.3.6-preview20071126</h2></small><div>
+</div><h2 id="v1.5.4-preview20080202" nr="200" class="collapsible"> Changes in v1.5.4-preview20080202<br /><small>since 1.5.3.6-preview20071126</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3940,7 +3948,7 @@ of Node.js.</li>
 <li>Vim's syntax highlighting is suitable for dark background.</li>
 </ul>
 
-</div><h2 id="v1.5.3.6-preview20071126" nr="200" class="collapsible"> Changes in v1.5.3.6-preview20071126<br /><small>since 1.5.3.5-preview20071114</h2></small><div>
+</div><h2 id="v1.5.3.6-preview20071126" nr="201" class="collapsible"> Changes in v1.5.3.6-preview20071126<br /><small>since 1.5.3.5-preview20071114</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3955,7 +3963,7 @@ of Node.js.</li>
 <li><code>pull</code>/<code>fetch</code>/<code>push</code> in <code>git-gui</code> works. Note, there is no way for <code>ssh</code> to ask for a passphrase or for confirmation if you connect to an unknown host. So, you must have ssh set up to work without passphrase. Either you have a key without passphrase, or you started ssh-agent. You may also consider using PuTTY by pointing <code>GIT_SSH</code> to <code>plink.exe</code> and handle your ssh keys with Pageant. In this case you should include your login name in urls. You must also connect to an unknown host once from the command line and confirm the host key, before you can use it from <code>git-gui</code>.</li>
 </ul>
 
-</div><h2 id="v1.5.3.5-preview20071114" nr="201" class="collapsible"> Changes in v1.5.3.5-preview20071114<br /><small>since 1.5.3-preview20071027</h2></small><div>
+</div><h2 id="v1.5.3.5-preview20071114" nr="202" class="collapsible"> Changes in v1.5.3.5-preview20071114<br /><small>since 1.5.3-preview20071027</h2></small><div>
 
 <h3>New Features</h3>
 
@@ -3972,7 +3980,7 @@ of Node.js.</li>
 <li>Git Bash works on Windows XP 64.</li>
 </ul>
 
-</div><h2 id="v1.5.3-preview20071027" nr="202" class="collapsible"> Changes in v1.5.3-preview20071027<br /><small>since 1.5.3-preview20071019</h2></small><div>
+</div><h2 id="v1.5.3-preview20071027" nr="203" class="collapsible"> Changes in v1.5.3-preview20071027<br /><small>since 1.5.3-preview20071019</h2></small><div>
 
 <h3>Bugfixes</h3>
 
@@ -3982,7 +3990,7 @@ of Node.js.</li>
 <li>Git Gui localization works. It falls back to English if a translation has errors.</li>
 </ul>
 
-</div><h2 id="v1.5.3-preview20071019" nr="203" class="collapsible"> Changes since WinGit-0.2-alpha</h2><div>
+</div><h2 id="v1.5.3-preview20071019" nr="204" class="collapsible"> Changes since WinGit-0.2-alpha</h2><div>
 
 <ul>
 <li>The history of the release notes stops here. Various new features and bugfixes are available since WinGit-0.2-alpha. Please check the git history of the msysgit project for details.</li>

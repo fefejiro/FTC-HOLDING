@@ -6206,6 +6206,12 @@ authenticating with PKCS#11 tokens, with a PKCS#11 URL in sslCert option.
 See also libcurl <code>CURLOPT_SSLKEYTYPE</code>. Can be overridden by the
 <code>GIT_SSL_KEY_TYPE</code> environment variable.</p>
 </dd>
+<dt class="hdlist1">http.allowNTLMAuth</dt>
+<dd>
+<p>Whether or not to allow NTLM authentication. While very convenient to set
+up, and therefore still used in many on-prem scenarios, NTLM is a weak
+authentication method and therefore deprecated. Defaults to "false".</p>
+</dd>
 <dt class="hdlist1">http.schannelCheckRevoke</dt>
 <dd>
 <p>Used to enforce or disable certificate revocation checks in cURL
@@ -10207,7 +10213,7 @@ looks like</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2026-02-02 17:39:08 UTC
+Last updated 2026-02-12 17:24:15 UTC
 </div>
 </div>
 </body>
