@@ -39,6 +39,7 @@ Public flow expectation for `/ateam`:
 - public flow should read like one intent engine, not a mini admin dashboard
 - public work/output language should hide internal operator names and approval wording
 - public CTA should keep users inside ATEAM until output is ready; no premature jump to a second idea form
+- once output is ready, the preferred path is an inline ATEAM handoff capture, with `/work-with-ftc?from=ateam` as fallback
 
 Operator expectation for `/ateam/operator/*`:
 

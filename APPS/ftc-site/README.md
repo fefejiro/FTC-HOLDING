@@ -85,8 +85,8 @@ Cloudflare Pages / Vercel-style build note:
 3. Visitor speaks or types one rough idea, then answers the short clarifiers.
 4. ATEAM turns the idea into a live run with intent understanding, visible state, public-safe work steps, timeline movement, and run-owned artifacts.
 5. The output pack returns a recommended move, visual concept, prototype direction, build watch, and next step.
-6. `Start this with Una Labs` opens `/work-with-ftc?from=ateam` with the workflow pack prefilled.
-7. The ATEAM handoff page should not ask for the idea again; it should only ask for reply details and optional delivery context.
+6. `Start this with Una Labs` should keep the user inside the ATEAM flow long enough to send the handoff directly, instead of forcing a second idea form.
+7. `/work-with-ftc?from=ateam` remains the fallback handoff route, but it should not ask for the idea again; it should only ask for reply details and optional delivery context.
 8. Operator users keep the full ATEAM Mission Control shell in the private operator deployment without leaking those controls into the public view.
 9. Submitting the intake returns a success state with a request reference and response expectation.
 
