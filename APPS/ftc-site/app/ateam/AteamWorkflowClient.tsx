@@ -62,6 +62,29 @@ const conversionTunnel = [
   { key: "pack", label: "Decision", detail: "Package the outcome into a project-ready handoff." }
 ] as const;
 
+const publicFlowModules = [
+  {
+    key: "intake",
+    title: "Intake",
+    detail: "Capture the rough idea and the last clarifiers without making the client structure everything upfront."
+  },
+  {
+    key: "system",
+    title: "System",
+    detail: "Show the run state, movement reason, lane, and project evolution clearly enough to trust."
+  },
+  {
+    key: "work",
+    title: "Work",
+    detail: "Keep visible jobs, ownership, and timeline movement on the public-safe surface."
+  },
+  {
+    key: "output",
+    title: "Output",
+    detail: "Return run-owned artifacts, a decision pack, and the clean next move into delivery."
+  }
+] as const;
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     method: init?.method || "GET",
@@ -282,6 +305,42 @@ export default function AteamWorkflowClient() {
   const operatorFactoryHref = run?.id
     ? `/ateam/operator/factory?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`
     : "/ateam/operator/factory?shell=workflow";
+  const publicFlowCards = publicFlowModules.map((module) => {
+    if (module.key === "intake") {
+      return {
+        ...module,
+        state: run ? "Run captured" : "Waiting for idea",
+        summary: run
+          ? "ATEAM has the rough idea and can shape the rest from short clarifiers."
+          : "One rough paragraph is enough to start the public flow."
+      };
+    }
+    if (module.key === "system") {
+      return {
+        ...module,
+        state: run?.statusNarrative?.label || (run ? formatWorkflowPhaseLabel(run.phase) : "Idle"),
+        summary:
+          run?.statusNarrative?.summary ||
+          "The public system view shows lane, movement reason, and blocker context once the run is active."
+      };
+    }
+    if (module.key === "work") {
+      return {
+        ...module,
+        state: jobSummaries.length ? `${jobSummaries.length} visible jobs` : "No jobs yet",
+        summary: jobSummaries.length
+          ? `${jobSummaries.length} jobs and ${timelineEntries.length} recent events are visible from this run.`
+          : "Jobs and timeline events appear here once the run is routed."
+      };
+    }
+    return {
+      ...module,
+      state: workflowReady ? "Decision pack ready" : "Waiting for output",
+      summary: workflowReady
+        ? `${artifactRecords.length || 0} run-owned artifacts are ready for handoff into Una Labs delivery.`
+        : "The output module turns the run into artifacts, a decision pack, and a clean next move."
+    };
+  });
 
   async function syncRun(nextRun: WorkflowRun) {
     setRun(nextRun);
@@ -490,12 +549,39 @@ export default function AteamWorkflowClient() {
         </div>
       </section>
 
+      <section className="card ateam-public-flow-card">
+        <div className="ateam-public-flow-head">
+          <div>
+            <p className="card-kicker">Public flow view</p>
+            <h2>Only the public-safe modules stay on this route.</h2>
+            <p className="muted">
+              The public experience is intentionally narrowed to Intake, System, Work, and Output.
+              The full operator shell still exists, but it stays behind the private control plane.
+            </p>
+          </div>
+          <span className="status-pill">
+            {workflowReady ? "Output ready" : run ? "Run active" : "Ready for intake"}
+          </span>
+        </div>
+
+        <div className="ateam-public-flow-grid" aria-label="ATEAM public flow modules">
+          {publicFlowCards.map((module) => (
+            <article key={module.key} className="ateam-public-flow-module">
+              <p className="ateam-workflow-brief-label">{module.title}</p>
+              <h3>{module.state}</h3>
+              <p>{module.summary}</p>
+              <span>{module.detail}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <div className="ateam-workflow-layout">
         <div className="ateam-workflow-main">
           <section className="card ateam-workflow-step-card">
             <div className="ateam-workflow-step-head">
               <div>
-                <p className="card-kicker">Public intake</p>
+                <p className="card-kicker">Module 1 · Intake</p>
                 <h2>Start with the rough idea</h2>
                 <p className="muted">
                   Keep it natural. One paragraph is enough. ATEAM will shape the run, ask the last
@@ -585,7 +671,7 @@ export default function AteamWorkflowClient() {
             <section className="card ateam-workflow-step-card">
               <div className="ateam-workflow-step-head">
                 <div>
-                  <p className="card-kicker">Run clarifiers</p>
+                  <p className="card-kicker">Module 1 · Intake</p>
                   <h2>Answer the last two gaps</h2>
                   <p className="muted">
                     Keep these short. ATEAM only needs enough to route the work cleanly and build the
@@ -633,7 +719,7 @@ export default function AteamWorkflowClient() {
             <section className="card ateam-workflow-step-card">
               <div className="ateam-workflow-step-head">
                 <div>
-                  <p className="card-kicker">Live workflow</p>
+                  <p className="card-kicker">Module 2 · System</p>
                   <h2>ATEAM is shaping the run</h2>
                   <p className="muted">
                     Short enough to feel quick. Visible enough to feel trustworthy.
@@ -666,7 +752,7 @@ export default function AteamWorkflowClient() {
             <section ref={outputRef} className="card ateam-workflow-step-card ateam-result-package">
               <div className="ateam-workflow-step-head">
                 <div>
-                  <p className="card-kicker">Decision pack</p>
+                  <p className="card-kicker">Module 4 · Output</p>
                   <h2>{run.brief?.title || "ATEAM result"}</h2>
                   <p className="muted">{run.brief?.summary}</p>
                 </div>
@@ -763,38 +849,6 @@ export default function AteamWorkflowClient() {
 
               <div className="ateam-workflow-pack-grid">
                 <article className="ateam-workflow-pack-panel">
-                  <p className="ateam-workflow-brief-label">Project evolution</p>
-                  <h3>{run.project?.name || "Run-owned project shell"}</h3>
-                  <p>{run.project?.summary || run.statusNarrative?.summary}</p>
-                  <ul className="ateam-demo-list">
-                    <li>Status: {run.project?.status || "intake"}</li>
-                    <li>Recommended lane: {run.project?.recommendedLane || run.recommendedLane}</li>
-                    <li>Active jobs: {String(run.project?.activeJobCount || jobSummaries.length || 0)}</li>
-                    <li>Blocked jobs: {String(run.project?.blockedJobCount || 0)}</li>
-                  </ul>
-                </article>
-
-                <article className="ateam-workflow-pack-panel">
-                  <p className="ateam-workflow-brief-label">Visible jobs</p>
-                  <h3>ATEAM work state</h3>
-                  <div className="ateam-workflow-doc-grid">
-                    {jobSummaries.map((job) => (
-                      <div key={job.id} className="ateam-workflow-doc-section">
-                        <strong>{job.title}</strong>
-                        <p>{job.objective}</p>
-                        <ul>
-                          <li>{job.stage}</li>
-                          <li>{job.ownerAgentId || "Unassigned"}</li>
-                          <li>{job.blockerReason || job.waitingReason || job.status}</li>
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              </div>
-
-              <div className="ateam-workflow-pack-grid">
-                <article className="ateam-workflow-pack-panel">
                   <p className="ateam-workflow-brief-label">Artifact ownership</p>
                   <h3>Every output stays tied to this run</h3>
                   <div className="ateam-workflow-doc-grid">
@@ -813,21 +867,6 @@ export default function AteamWorkflowClient() {
                 </article>
 
                 <article className="ateam-workflow-pack-panel">
-                  <p className="ateam-workflow-brief-label">Timeline</p>
-                  <h3>Why the run moved</h3>
-                  <ul className="ateam-demo-list">
-                    {timelineEntries.map((entry) => (
-                      <li key={entry.id}>
-                        <strong>{entry.message}</strong>
-                        {entry.metadata?.reason ? ` - ${String(entry.metadata.reason)}` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              </div>
-
-              <div className="ateam-workflow-pack-grid">
-                <article className="ateam-workflow-pack-panel">
                   <p className="ateam-workflow-brief-label">Build watch</p>
                   <h3>{run.artifacts?.smoke?.summary || "Quick QA view"}</h3>
                   <div className="ateam-workflow-smoke-list">
@@ -839,6 +878,20 @@ export default function AteamWorkflowClient() {
                       </div>
                     ))}
                   </div>
+                </article>
+              </div>
+
+              <div className="ateam-workflow-pack-grid">
+                <article className="ateam-workflow-pack-panel">
+                  <p className="ateam-workflow-brief-label">Project handoff</p>
+                  <h3>{run.project?.name || "Run-owned project shell"}</h3>
+                  <p>{run.project?.summary || run.statusNarrative?.summary}</p>
+                  <ul className="ateam-demo-list">
+                    <li>Status: {run.project?.status || "intake"}</li>
+                    <li>Recommended lane: {run.project?.recommendedLane || run.recommendedLane}</li>
+                    <li>Active jobs: {String(run.project?.activeJobCount || jobSummaries.length || 0)}</li>
+                    <li>Blocked jobs: {String(run.project?.blockedJobCount || 0)}</li>
+                  </ul>
                 </article>
 
                 <article className="ateam-workflow-pack-panel">
@@ -880,7 +933,7 @@ export default function AteamWorkflowClient() {
             <section className="card ateam-workflow-step-card">
               <div className="ateam-workflow-step-head">
                 <div>
-                  <p className="card-kicker">What comes out</p>
+                  <p className="card-kicker">Module 4 · Output</p>
                   <h2>A run, visible jobs, owned artifacts, and a clean delivery handoff.</h2>
                   <p className="muted">
                     Once ATEAM runs, this panel will show the project frame, active jobs, preview
@@ -902,12 +955,22 @@ export default function AteamWorkflowClient() {
 
         <aside className="ateam-workflow-sidebar">
           <section className="card ateam-workflow-sidebar-card">
-            <p className="card-kicker">Run status</p>
-            <h3>{workflowReady ? "Decision pack ready" : run ? "Run in progress" : "No run yet"}</h3>
+            <p className="card-kicker">Module 2 · System</p>
+            <h3>{workflowReady ? "System is ready for handoff" : run ? "System is tracking the run" : "System is waiting for intake"}</h3>
             <p className="muted">
               {run?.statusNarrative?.summary ||
                 "ATEAM will show the current stage, the movement reason, and any blocker once the run starts."}
             </p>
+            {run?.statusNarrative?.movementReason ? (
+              <p className="muted">
+                Movement reason: <strong>{run.statusNarrative.movementReason}</strong>
+              </p>
+            ) : null}
+            {run?.statusNarrative?.blockerReason ? (
+              <p className="muted">
+                Blocker: <strong>{run.statusNarrative.blockerReason}</strong>
+              </p>
+            ) : null}
             <div className="ateam-workflow-sidebar-meta">
               <div>
                 <span>Phase</span>
@@ -929,7 +992,49 @@ export default function AteamWorkflowClient() {
           </section>
 
           <section className="card ateam-workflow-sidebar-card">
-            <p className="card-kicker">Operator control plane</p>
+            <p className="card-kicker">Module 3 · Work</p>
+            <h3>Visible jobs and timeline stay public-safe.</h3>
+            <p className="muted">
+              The public work module shows what is moving without leaking approvals, overrides, or private operator controls.
+            </p>
+            {jobSummaries.length ? (
+              <div className="ateam-workflow-doc-grid">
+                {jobSummaries.map((job) => (
+                  <div key={job.id} className="ateam-workflow-doc-section">
+                    <strong>{job.title}</strong>
+                    <p>{job.objective}</p>
+                    <ul>
+                      <li>{job.stage}</li>
+                      <li>{job.ownerAgentId || "Unassigned"}</li>
+                      <li>{job.blockerReason || job.waitingReason || job.status}</li>
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="ateam-output-card">
+                <p>Visible jobs show up here once ATEAM routes the run into real work.</p>
+              </div>
+            )}
+
+            {timelineEntries.length ? (
+              <ul className="ateam-demo-list">
+                {timelineEntries.map((entry) => (
+                  <li key={entry.id}>
+                    <strong>{entry.message}</strong>
+                    {entry.metadata?.reason ? ` - ${String(entry.metadata.reason)}` : ""}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">
+                Timeline history appears here once the run starts moving through the system.
+              </p>
+            )}
+          </section>
+
+          <section className="card ateam-workflow-sidebar-card">
+            <p className="card-kicker">Private admin</p>
             <h3>Public intake and private operations now share one workflow model.</h3>
             <p className="muted">
               The public surface stays client-safe. Office, Factory, approvals, logs, and overrides

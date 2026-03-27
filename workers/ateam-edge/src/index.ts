@@ -104,14 +104,15 @@ function buildPage(canonicalOrigin: string) {
     .hero{grid-template-columns:1.15fr .85fr;margin-bottom:20px}.layout{grid-template-columns:1.3fr .7fr}.stack{display:grid;gap:20px} h1{font-size:clamp(2rem,4vw,3.8rem);line-height:.96;margin:0 0 14px;max-width:12ch}
     h2,h3,p{margin-top:0}.lead,.muted{color:var(--muted)} .lead{font-size:1.04rem;max-width:58ch}.btn{border:0;border-radius:999px;padding:12px 18px;font:inherit;cursor:pointer;text-decoration:none;display:inline-block}
     .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}.btn-secondary{background:rgba(255,255,255,.78);border:1px solid var(--line)}
-    .actions,.meta,.grid2{display:grid;gap:12px}.actions{grid-auto-flow:column;justify-content:start}.meta,.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .actions,.meta,.grid2,.module-grid{display:grid;gap:12px}.actions{grid-auto-flow:column;justify-content:start}.meta,.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.module-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin:0 0 20px}
+    .module{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.72);padding:16px;display:grid;gap:8px}.module h3,.module p,.module span{margin:0}.module span{color:var(--muted);font-size:.88rem;line-height:1.45}
     .steprail,.questions,.timeline{display:grid;gap:10px}.steprail{grid-template-columns:repeat(5,minmax(0,1fr));margin:16px 0}.step,.box{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.72);padding:14px 16px}
     .step.active{border-color:rgba(15,143,98,.38);box-shadow:inset 0 0 0 1px rgba(15,143,98,.18)}.step.done{background:rgba(15,143,98,.08)}
     textarea,select{width:100%;border:1px solid var(--line);border-radius:18px;padding:14px 16px;font:inherit;background:rgba(255,255,255,.86);color:var(--ink)} textarea{min-height:150px;resize:vertical}
     .state{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-size:.92rem;background:rgba(15,143,98,.1);color:var(--brand2)}.state.offline{background:rgba(220,85,60,.1);color:#92322a}.state.checking{background:rgba(245,155,66,.16);color:var(--warn)}
     .notice,.error{margin-top:14px;padding:14px 16px;border-radius:16px}.notice{background:rgba(15,143,98,.08);color:var(--brand2)}.error{background:rgba(220,85,60,.1);color:#92322a}
     .empty{padding:16px;border:1px dashed rgba(16,33,27,.18);border-radius:18px;color:var(--muted);background:rgba(255,255,255,.5)} .tiny{font-size:.92rem}.hero-preview img{width:100%;border-radius:18px;border:1px solid var(--line)}
-    @media (max-width:980px){.hero,.layout,.meta,.grid2,.steprail,.actions{grid-template-columns:1fr}.actions{grid-auto-flow:row}}
+    @media (max-width:980px){.hero,.layout,.meta,.grid2,.module-grid,.steprail,.actions{grid-template-columns:1fr}.actions{grid-auto-flow:row}}
   </style>
 </head>
 <body>
@@ -127,7 +128,7 @@ function buildPage(canonicalOrigin: string) {
       <div class="card">
         <p class="eyebrow">ATEAM inside Una Labs</p>
         <h1>Drop a rough idea. Watch it become a real run.</h1>
-        <p class="lead">This route is now cloud-backed. ATEAM captures the idea, routes the work, shows visible state, generates preview artifacts, and prepares a clean handoff into real Una Labs delivery.</p>
+        <p class="lead">This route is now cloud-backed. The public surface is narrowed to four modules only: Intake, System, Work, and Output. Full admin controls stay private.</p>
         <div class="meta">
           <div class="box"><strong>Narrative intake</strong><div class="muted tiny">Start with one rough paragraph.</div></div>
           <div class="box"><strong>Visible work state</strong><div class="muted tiny">Runs, jobs, blockers, and movement.</div></div>
@@ -141,10 +142,21 @@ function buildPage(canonicalOrigin: string) {
         <img src="/images/brand/ateam-mission-control.png" alt="ATEAM preview" />
       </div>
     </section>
+    <section class="card">
+      <p class="eyebrow">Public flow view</p>
+      <h2>Only the public-safe modules stay on this route.</h2>
+      <p class="muted">Clients see intake, system state, visible work, and output. Office, approvals, logs, and overrides remain private.</p>
+      <div class="module-grid">
+        <article class="module"><p class="eyebrow">Intake</p><h3>Open narrative</h3><span>Capture the rough idea and the last clarifiers without forcing a rigid form.</span></article>
+        <article class="module"><p class="eyebrow">System</p><h3>State and routing</h3><span>Show the run state, lane, movement reason, and blocker context clearly.</span></article>
+        <article class="module"><p class="eyebrow">Work</p><h3>Visible execution</h3><span>Keep jobs, ownership, and timeline movement readable on the public-safe surface.</span></article>
+        <article class="module"><p class="eyebrow">Output</p><h3>Client-ready pack</h3><span>Return run-owned artifacts and the clearest next move into Una Labs delivery.</span></article>
+      </div>
+    </section>
     <section class="layout">
       <div class="stack">
         <div class="card">
-          <p class="eyebrow">Public intake</p>
+          <p class="eyebrow">Module 1 · Intake</p>
           <h2>Start the workflow run</h2>
           <p class="muted">Keep it natural. ATEAM will ask the last two clarifiers, route the work, and build the first pack.</p>
           <div id="stepRail" class="steprail"></div>
@@ -171,7 +183,7 @@ function buildPage(canonicalOrigin: string) {
           <div id="noticeBox" class="notice" hidden></div>
         </div>
         <div id="questionsCard" class="card" hidden>
-          <p class="eyebrow">Run clarifiers</p>
+          <p class="eyebrow">Module 1 · Intake</p>
           <h2>Answer the last gaps</h2>
           <p class="muted">Short answers are enough. ATEAM only needs enough signal to route and build the first pass.</p>
           <div id="questions" class="questions"></div>
@@ -180,7 +192,7 @@ function buildPage(canonicalOrigin: string) {
           </div>
         </div>
         <div id="resultCard" class="card" hidden>
-          <p class="eyebrow">Decision pack</p>
+          <p class="eyebrow">Module 4 · Output</p>
           <h2 id="resultTitle">ATEAM result</h2>
           <p id="resultSummary" class="muted"></p>
           <div id="resultVerdict" class="state">Waiting</div>
@@ -193,23 +205,23 @@ function buildPage(canonicalOrigin: string) {
       </div>
       <aside class="stack">
         <div class="card">
-          <p class="eyebrow">Run status</p>
-          <h2>What ATEAM is doing</h2>
+          <p class="eyebrow">Module 2 · System</p>
+          <h2>What the system is doing</h2>
           <div id="statusBox" class="empty">No run yet.</div>
         </div>
         <div class="card">
-          <p class="eyebrow">Jobs</p>
+          <p class="eyebrow">Module 3 · Work</p>
           <h2>Visible work state</h2>
           <div id="jobsBox" class="grid2"><div class="empty">Jobs appear here once ATEAM routes the run.</div></div>
         </div>
         <div class="card">
-          <p class="eyebrow">Artifacts</p>
+          <p class="eyebrow">Module 4 · Output</p>
           <h2>Run-owned outputs</h2>
           <div id="artifactsBox" class="grid2"><div class="empty">Artifact ownership appears here once the pack is generated.</div></div>
         </div>
         <div class="card">
-          <p class="eyebrow">Timeline</p>
-          <h2>Why the run moved</h2>
+          <p class="eyebrow">Module 3 · Work</p>
+          <h2>Why the work moved</h2>
           <div id="timelineBox" class="timeline"><div class="empty">Timeline events appear here once the run starts moving.</div></div>
         </div>
       </aside>

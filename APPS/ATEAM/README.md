@@ -119,6 +119,18 @@ npm run start:bridge
 - Cloud API runtime: Railway
 - Public route layer: Cloudflare Worker / Pages
 
+Public flow contract:
+
+- `Intake`: capture the rough idea and short clarifiers
+- `System`: expose run state, routing, movement reason, and blockers
+- `Work`: show public-safe jobs and timeline movement
+- `Output`: return run-owned artifacts and the project handoff
+
+Private operator contract:
+
+- `/ateam/operator/*` keeps the full Mission Control shell
+- approvals, logs, overrides, Office, Team, Factory, and Memory stay private
+
 ## API Surface
 
 - Health/config: `GET /health`

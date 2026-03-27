@@ -1,4 +1,4 @@
-export const ateamModeStageLabels = ["Memory", "Office", "Team", "Factory"] as const;
+export const ateamModeStageLabels = ["Intake", "System", "Work", "Output"] as const;
 
 export const ateamModeStages = [
   {
@@ -9,25 +9,25 @@ export const ateamModeStages = [
     detail: "The client does not need to pre-structure the request before work begins."
   },
   {
-    title: "Routing",
-    eyebrow: "Work OS",
+    title: "System",
+    eyebrow: "State and routing",
     description:
-      "ATEAM turns intake into a run, routes it into jobs, and keeps the next move visible.",
-    detail: "State, ownership, and reasons for movement stay legible."
+      "ATEAM turns intake into a run, keeps the current stage legible, and explains why the next move happened.",
+    detail: "State, ownership, movement reason, and blockers stay visible."
   },
   {
-    title: "Artifacts",
-    eyebrow: "Client-ready output",
+    title: "Work",
+    eyebrow: "Visible execution",
     description:
-      "ATEAM produces briefs, prototype direction, smoke notes, and decision-pack artifacts from the run.",
-    detail: "Outputs stay tied to the execution that created them."
+      "ATEAM routes the run into jobs, shows who owns the work, and keeps the timeline readable enough to trust.",
+    detail: "Jobs and timeline stay on the public-safe view without exposing admin controls."
   },
   {
-    title: "Conversion",
-    eyebrow: "Delivery handoff",
+    title: "Output",
+    eyebrow: "Client-ready pack",
     description:
-      "Once the direction is clear, Una Labs takes the run into real execution with a stronger project handoff.",
-    detail: "The public intake and private operator control plane stay connected."
+      "ATEAM produces artifacts, a decision pack, and a clean handoff into Una Labs delivery once the direction is clear.",
+    detail: "Outputs stay tied to the run and can evolve into a real project."
   }
 ] as const;
 
@@ -40,10 +40,11 @@ export const ateamModeHighlights = [
 
 export const ateamModeSupportPoints = [
   "Narrative intake",
-  "Run-based artifacts",
-  "Visible job state",
+  "System visibility",
+  "Visible work state",
+  "Client-ready output",
   "Operator control plane"
 ] as const;
 
 export const ateamModeSummary =
-  "ATEAM inside Una Labs turns rough ideas into structured runs, visible work, and client-ready artifacts that can become real projects.";
+  "ATEAM inside Una Labs turns rough ideas into intake, system visibility, visible work, and client-ready output that can become a real project.";

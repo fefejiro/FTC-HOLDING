@@ -3623,6 +3623,45 @@ nav.primary {
   justify-content: flex-end;
 }
 
+.ateam-public-flow-card {
+  display: grid;
+  gap: 18px;
+}
+
+.ateam-public-flow-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.ateam-public-flow-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ateam-public-flow-module {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(12, 16, 27, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ateam-public-flow-module h3,
+.ateam-public-flow-module p,
+.ateam-public-flow-module span {
+  margin: 0;
+}
+
+.ateam-public-flow-module span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
 .ateam-workflow-layout {
   display: grid;
   gap: 24px;
@@ -3887,6 +3926,7 @@ nav.primary {
 @media (max-width: 1100px) {
   .ateam-workflow-layout,
   .ateam-workflow-hero-card,
+  .ateam-public-flow-grid,
   .ateam-workflow-form-grid,
   .ateam-workflow-pack-grid,
   .ateam-workflow-brief-grid {
@@ -3900,6 +3940,7 @@ nav.primary {
     grid-template-columns: 1fr;
   }
 
+  .ateam-public-flow-head,
   .ateam-workflow-step-head,
   .ateam-workflow-actions {
     flex-direction: column;

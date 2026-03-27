@@ -30,6 +30,18 @@ Deep-link checks:
 - operator office: `http://localhost:3001/ateam/operator/office`
 - operator factory: `http://localhost:3001/ateam/operator/factory`
 
+Public flow expectation for `/ateam`:
+
+- `Intake`: narrative input + short clarifiers
+- `System`: run state, lane, movement reason, blocker context
+- `Work`: visible jobs + public-safe timeline
+- `Output`: run-owned artifacts + decision pack + handoff
+
+Operator expectation for `/ateam/operator/*`:
+
+- full Office / Team / Factory / Memory / Pipeline shell
+- approvals, logs, overrides, and delivery control remain private
+
 Optional proxy override:
 
 ```powershell
