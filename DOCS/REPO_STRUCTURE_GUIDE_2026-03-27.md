@@ -3,17 +3,18 @@
 ## Current Risks
 
 - The canonical repo is `C:\FTC HOLDING`.
-- A nested duplicate repo exists at `C:\FTC HOLDING\FTC-HOLDING`.
-- Additional linked worktrees exist outside the root, including one dirty publish worktree.
+- The former nested duplicate repo was archived to `C:\Users\mikef\ArchivedRepos\FTC-HOLDING-nested-2026-03-27`.
+- A small locked remnant still exists at `C:\FTC HOLDING\FTC-HOLDING\APPS\ATEAM` because Windows kept file handles open on the old SQLite memory files.
+- Long-lived worktrees were moved into `C:\worktrees`.
 
-This causes duplicate Source Control roots in VS Code and raises the risk of editing or committing from the wrong checkout.
+The main duplicate-repo risk is now reduced, but the locked remnant should be deleted once the holding process releases it.
 
 ## Safe End State
 
 - Keep one canonical repo root: `C:\FTC HOLDING`
-- Keep linked worktrees outside the repo in one stable directory, for example:
+- Keep linked worktrees outside the repo in one stable directory:
   - `C:\worktrees\publish-unalabs`
-  - `C:\worktrees\release-snapshots`
+  - `C:\worktrees\ftc-publish-main`
 - Do not keep a nested `.git` repo inside the main repo tree.
 - Keep deploy-specific shims isolated:
   - `APPS/ftc-site` for the main site
@@ -23,10 +24,10 @@ This causes duplicate Source Control roots in VS Code and raises the risk of edi
 ## Recommended Cleanup Order
 
 1. Preserve the real root as the source of truth.
-2. Keep the nested repo ignored in VS Code until it is archived or removed.
-3. Audit the dirty publish worktree before moving or deleting it.
-4. Move any long-lived worktrees into a dedicated `C:\worktrees` folder.
-5. Archive or remove the nested duplicate repo only after confirming there is no unique work left inside it.
+2. Keep any duplicate repo ignored in VS Code until it is archived.
+3. Move long-lived worktrees into `C:\worktrees`.
+4. Remove leftover duplicate-repo remnants after confirming they are archived and no process still holds them open.
+5. Audit dirty worktrees before resolving or deleting them.
 
 ## Fallback Strategy
 
@@ -39,3 +40,11 @@ This keeps the public flow live even when the main Next/Pages adapter path is un
 ## Immediate Rule
 
 If Source Control shows multiple roots again, verify which one you are in before committing. The only repo that should carry day-to-day product changes is `C:\FTC HOLDING`.
+
+## Current Layout
+
+- Canonical repo: `C:\FTC HOLDING`
+- Dirty publish worktree: `C:\worktrees\publish-unalabs`
+- Clean detached worktree: `C:\worktrees\ftc-publish-main`
+- Archived duplicate repo: `C:\Users\mikef\ArchivedRepos\FTC-HOLDING-nested-2026-03-27`
+- Leftover locked remnant to delete later: `C:\FTC HOLDING\FTC-HOLDING\APPS\ATEAM`
