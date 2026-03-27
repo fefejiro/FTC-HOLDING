@@ -71,6 +71,7 @@ Key files:
 - Shell + routes + pages: `Public/index.html`
 - Theme + layout styling: `Public/style.css`
 - Page renderers + mission control behavior: `Public/app.js`
+- Shared browser modules: `Public/modules/config.js`, `Public/modules/browser-utils.js`
 
 Seeded local-first UI data is stored in `localStorage`:
 
