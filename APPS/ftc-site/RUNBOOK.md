@@ -32,10 +32,12 @@ Deep-link checks:
 
 Public flow expectation for `/ateam`:
 
-- `Intake`: narrative input + short clarifiers
-- `System`: run state, lane, movement reason, blocker context
-- `Work`: visible jobs + public-safe timeline
+- `Intake`: text or voice narrative input + short clarifiers
+- `System`: intent summary, run state, lane, movement reason, blocker context
+- `Work`: visible public-safe work steps + public-safe timeline
 - `Output`: run-owned artifacts + decision pack + handoff
+- public flow should read like one intent engine, not a mini admin dashboard
+- public work/output language should hide internal operator names and approval wording
 
 Operator expectation for `/ateam/operator/*`:
 
