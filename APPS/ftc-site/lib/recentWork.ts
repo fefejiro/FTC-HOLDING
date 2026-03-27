@@ -52,4 +52,54 @@ export const emergencyPromptCaseStudy: ClientLaunch = {
   }
 };
 
-export const clientLaunches = [emergencyPromptCaseStudy] as const;
+export const polarAnchorLaunch: ClientLaunch = {
+  slug: "polar-anchor",
+  clientName: "Polar Anchor",
+  tileTitle: "Polar Anchor",
+  subtitle: "Freight forwarding and logistics — Toronto, Ontario",
+  service: "Website and lead system",
+  status: "Live",
+  tags: ["Freight & Logistics", "Website", "Quote System"],
+  summary:
+    "Full website and quote lead system for a Toronto-based freight forwarding company handling cargo, vehicles, customs clearance, and import-export coordination across Canada.",
+  currentFocus: ["Organic search visibility", "Quote lead conversion", "Vehicle shipping market"],
+  nextMilestone: ["Local SEO baseline", "Quote form optimization", "Polar Anchor domain launch"],
+  websiteUrl: "https://unalabs.cloud/polar-anchor",
+  youtubeUrl: "",
+  brand: {
+    mark: "PA",
+    wordmark: "Polar Anchor",
+    accent: "#3b82f6",
+    accentSoft: "rgba(59, 130, 246, 0.18)",
+    accentGlow: "rgba(59, 130, 246, 0.28)",
+    accentSurface:
+      "linear-gradient(135deg, rgba(59, 130, 246, 0.24), rgba(59, 130, 246, 0.06) 58%, rgba(8, 12, 20, 0.18))"
+  }
+};
+
+export const gardenCleanersLaunch: ClientLaunch = {
+  slug: "garden-cleaners",
+  clientName: "Garden Cleaners",
+  tileTitle: "Garden Cleaners",
+  subtitle: "Professional cleaning services — Oshawa, Ontario",
+  service: "Website and quote system",
+  status: "Live",
+  tags: ["Cleaning Services", "Local SEO", "Quote System"],
+  summary:
+    "Website and quote lead system for a residential and commercial cleaning company serving Oshawa and the Durham Region, Ontario, with recurring booking and move-in/move-out capability.",
+  currentFocus: ["Oshawa local search presence", "Residential booking flow", "Move-in/out service visibility"],
+  nextMilestone: ["Google Business Profile setup", "Recurring booking path", "Durham Region expansion"],
+  websiteUrl: "https://unalabs.cloud/garden-cleaners",
+  youtubeUrl: "",
+  brand: {
+    mark: "GC",
+    wordmark: "Garden Cleaners",
+    accent: "#10b981",
+    accentSoft: "rgba(16, 185, 129, 0.18)",
+    accentGlow: "rgba(16, 185, 129, 0.28)",
+    accentSurface:
+      "linear-gradient(135deg, rgba(16, 185, 129, 0.24), rgba(16, 185, 129, 0.06) 58%, rgba(8, 12, 20, 0.18))"
+  }
+};
+
+export const clientLaunches = [emergencyPromptCaseStudy, polarAnchorLaunch, gardenCleanersLaunch] as const;

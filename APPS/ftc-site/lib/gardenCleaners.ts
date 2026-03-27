@@ -106,6 +106,26 @@ export const gardenCleanersConfig = {
       question: 'How do quotes work?',
       answer:
         'Submit the quote form with your property details and required service. We will follow up with the next step and a tailored estimate path.'
+    },
+    {
+      question: 'What areas do you serve?',
+      answer:
+        'Garden Cleaners primarily serves Oshawa and the surrounding Durham Region, including Whitby, Ajax, Pickering, and Courtice. Reach out to confirm availability for your location.'
+    },
+    {
+      question: 'Do you bring your own cleaning supplies and equipment?',
+      answer:
+        'Yes. Garden Cleaners arrives with professional-grade supplies and equipment. If you have a preferred product or a specific requirement, let us know when booking and we will do our best to accommodate.'
+    },
+    {
+      question: 'How far in advance do I need to book?',
+      answer:
+        'For standard bookings we recommend at least 48 hours notice. For move-out, post-construction, or large commercial cleans, a few days lead time helps us allocate the right team and prepare properly.'
+    },
+    {
+      question: 'Is the cleaning team insured and professional?',
+      answer:
+        'Yes. Garden Cleaners operates with a professional, trained team. We take presentation, communication, and reliability seriously on every visit.'
     }
   ] satisfies GardenFaq[],
   deepCleaningFeature: {

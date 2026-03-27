@@ -330,7 +330,7 @@ export default function AteamWorkflowClient() {
 
     if (workflowServiceState !== "ready") {
       setError(
-        "ATEAM fast pass is not connected in this environment yet. Run the local ATEAM server or use Start a Project."
+        "ATEAM idea intake isn't live in this environment yet. Use Start a Project to connect directly."
       );
       return;
     }

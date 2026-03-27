@@ -14,7 +14,7 @@ function getLaunchBrandStyle(accent?: string, accentSoft?: string, accentGlow?: 
 }
 
 export default function WorkPageClient() {
-  const featuredLaunch = clientLaunches[0];
+  const [featuredLaunch, ...additionalLaunches] = Array.from(clientLaunches);
 
   return (
     <div className="container page-content client-launches-page">
@@ -103,6 +103,87 @@ export default function WorkPageClient() {
             </Link>
           </div>
         </article>
+      ) : null}
+
+      {additionalLaunches.length > 0 ? (
+        <section className="client-launches-grid-section">
+          <div className="section-heading home-section-heading">
+            <p className="eyebrow">Also live</p>
+            <h2>More client launches</h2>
+            <p>Live websites and lead systems built for clients and actively serving their markets.</p>
+          </div>
+          <div className="cards-grid cards-grid-2 client-launches-grid">
+            {additionalLaunches.map((launch) => (
+              <article
+                key={launch.slug}
+                className="card client-launch-card client-launch-card--brand"
+                style={getLaunchBrandStyle(
+                  launch.brand.accent,
+                  launch.brand.accentSoft,
+                  launch.brand.accentGlow,
+                  launch.brand.accentSurface
+                )}
+              >
+                <div className="client-launch-brand-bar">
+                  <div className="client-launch-brand-lockup">
+                    <div className="client-launch-brand-mark" aria-hidden="true">
+                      {launch.brand.mark}
+                    </div>
+                    <div className="client-launch-brand-copy">
+                      <h3>{launch.brand.wordmark}</h3>
+                      <p className="muted">{launch.subtitle}</p>
+                    </div>
+                  </div>
+                  <p className="status-pill">{launch.status}</p>
+                </div>
+
+                <p className="client-launch-service">{launch.service}</p>
+                <p className="client-launch-summary">{launch.summary}</p>
+
+                <div className="proof-tags" aria-label={`${launch.tileTitle} tags`}>
+                  {launch.tags.map((tag) => (
+                    <span key={tag} className="proof-tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="featured-launch-grid">
+                  <div className="client-launch-signal">
+                    <p className="client-launch-signal-title">Current focus</p>
+                    <ul className="client-launch-signal-list">
+                      {(launch.currentFocus ?? []).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="client-launch-signal">
+                    <p className="client-launch-signal-title">Next milestone</p>
+                    <ul className="client-launch-signal-list">
+                      {(launch.nextMilestone ?? []).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="client-launch-actions">
+                  <a
+                    href={launch.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                  >
+                    Visit live site
+                  </a>
+                  <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
+                    Start a similar project
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <article className="card final-cta-card">

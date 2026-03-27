@@ -8,7 +8,7 @@ export default function ClientLogoStrip() {
         <div className="client-logo-copy">
           <p className="eyebrow">Selected clients</p>
           <h2 id="selected-clients-heading">Selected clients</h2>
-          <p>FTC has delivered consulting and technology work for organizations including:</p>
+          <p>Una Labs has delivered consulting and technology work for organizations including:</p>
         </div>
 
         <div className="client-logo-grid" role="list" aria-label="Selected clients">

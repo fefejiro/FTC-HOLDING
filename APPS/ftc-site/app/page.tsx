@@ -3,6 +3,7 @@ import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../lib/recentWork";
 import { ATEAM_BRAND_LOGO_PATH, ATEAM_MISSION_CONTROL_PREVIEW_PATH } from "../lib/ateamEmbed";
 import { ateamModeStages, ateamModeSummary, ateamModeSupportPoints } from "../lib/ateamMode";
+import ClientLogoStrip from "./components/ClientLogoStrip";
 
 const serviceLanes = [
   {
@@ -123,6 +124,8 @@ export default function HomePage() {
           </section>
         </div>
       </section>
+
+      <ClientLogoStrip />
 
       <section className="section fade-on-scroll anchor-offset" id="services">
         <div className="container">

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(git:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(jq:*)",
+      "Bash(curl:*)",
+      "WebSearch"
+    ]
+  }
+}

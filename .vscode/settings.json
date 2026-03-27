@@ -1,8 +1,16 @@
 {
     "chatgpt.openOnStartup": true,
+    "claudeCode.claudeProcessWrapper": "C:\\FTC HOLDING\\tmp-bin\\claude-wrapper-v2.exe",
+    "claudeCode.environmentVariables": [
+        {
+            "name": "CLAUDE_CODE_GIT_BASH_PATH",
+            "value": "C:\\FTC HOLDING\\Git\\bin\\bash.exe"
+        }
+    ],
     "workbench.editor.autoLockGroups": {
         "vscode.audioPreview": true,
         "vscode.videoPreview": true,
         "agentSessionsWelcomePage": true
+        
     }
 }
