@@ -36,8 +36,8 @@ describe("workflowService", () => {
     }
   });
 
-  test("builds a public-safe workflow view with timelines, jobs, and run-owned artifacts", () => {
-    const started = workflowService.startRun({
+  test("builds a public-safe workflow view with timelines, jobs, and run-owned artifacts", async () => {
+    const started = await workflowService.startRun({
       idea: "Build a client intake system that turns rough ideas into a brief, route, and first delivery pack.",
       category: "internal-tool",
       requestedBy: "public"
@@ -55,7 +55,7 @@ describe("workflowService", () => {
     ]);
     expect(started.publicFlow?.understanding?.title).toBeTruthy();
 
-    const withBrief = workflowService.captureAnswers(started.id, {
+    const withBrief = await workflowService.captureAnswers(started.id, {
       actor: "public",
       answers: {
         audience: "small teams who bring rough briefs and need the next move fast",
@@ -72,7 +72,7 @@ describe("workflowService", () => {
     expect(briefArtifact.projectId).toBe("");
     expect(briefArtifact.promotionStatus).toBe("run_owned");
 
-    const initiated = workflowService.approveRun(withBrief.id, {
+    const initiated = await workflowService.approveRun(withBrief.id, {
       actor: "operator",
       gate: "brief",
       decision: "approved"
@@ -86,14 +86,14 @@ describe("workflowService", () => {
       initiated.artifactSummaries.find((artifact) => artifact.id === `${initiated.id}_brief`)?.projectId
     ).toBe(initiated.project.id);
 
-    const packed = workflowService.generatePack(initiated.id, { actor: "operator" });
+    const packed = await workflowService.generatePack(initiated.id, { actor: "operator" });
     expect(packed.artifactSummaries.map((artifact) => artifact.type)).toEqual(
       expect.arrayContaining(["brief", "mockup", "prototype", "smoke_report", "document"])
     );
     expect(packed.statusNarrative.currentStage).toBe("review");
     expect(packed.history.some((entry) => entry.eventType === "artifact_created")).toBe(true);
 
-    const delivered = workflowService.approveRun(packed.id, {
+    const delivered = await workflowService.approveRun(packed.id, {
       actor: "operator",
       gate: "pack",
       decision: "approved"
@@ -107,14 +107,14 @@ describe("workflowService", () => {
     expect(delivered.publicFlow?.modules.find((module) => module.key === "output")?.state).toBe("Decision pack ready");
   });
 
-  test("job timelines persist stage movement and blocker reasons", () => {
-    const started = workflowService.startRun({
+  test("job timelines persist stage movement and blocker reasons", async () => {
+    const started = await workflowService.startRun({
       idea: "Build a workflow that can show why a delivery item got stuck and what it is waiting on.",
       category: "internal-tool",
       requestedBy: "public"
     });
 
-    const withBrief = workflowService.captureAnswers(started.id, {
+    const withBrief = await workflowService.captureAnswers(started.id, {
       actor: "public",
       answers: {
         audience: "operators",
@@ -124,14 +124,14 @@ describe("workflowService", () => {
       }
     });
 
-    const initiated = workflowService.approveRun(withBrief.id, {
+    const initiated = await workflowService.approveRun(withBrief.id, {
       actor: "operator",
       gate: "brief",
       decision: "approved"
     });
 
     const jobId = initiated.jobs[0].id;
-    const updatedJob = workItemStore.setStage(jobId, "BUILD", {
+    const updatedJob = await workItemStore.setStage(jobId, "BUILD", {
       actor: "henry",
       reason: "Routing completed",
       dataPatch: {
@@ -144,7 +144,7 @@ describe("workflowService", () => {
       true
     );
 
-    const refreshed = workflowService.getRun(initiated.id);
+    const refreshed = await workflowService.getRun(initiated.id);
     const job = refreshed.jobs.find((item) => item.id === jobId);
 
     expect(job.status).toBe("blocked");

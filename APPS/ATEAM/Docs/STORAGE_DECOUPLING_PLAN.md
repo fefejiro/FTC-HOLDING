@@ -19,6 +19,9 @@ Primary writing modules:
 - `lib/contextBundle.js` (summary cache snapshots)
 - `lib/eventLog.js`
 - `lib/speechClarity/speechClarityStore.js`
+- `lib/workflowRunStore.js`
+- `lib/workItemStore.js`
+- `lib/approvalStore.js`
 
 ## 2. Mapping Table
 
@@ -32,6 +35,9 @@ Primary writing modules:
 | `memory/events/{sessionId}.json` | Supabase Postgres table `session_events` (append-only) | Reliable event ingestion, dedupe by keys, timeline queries |
 | `memory/speech_clarity/{sessionId}.json` | Supabase Postgres table `speech_sessions` | Session metadata and analysis persistence |
 | `memory/speech_clarity/audio/{sessionId}.webm` | Object storage bucket (Supabase Storage or S3-compatible bucket) | Binary artifact storage, signed URL access, lifecycle policies |
+| SQLite `workflow_runs` | Supabase Postgres table `ateam_workflow_runs` | Durable public/private workflow state across Railway restarts |
+| SQLite `work_items` | Supabase Postgres table `ateam_work_items` | Durable job state, blockers, history, and operator visibility |
+| SQLite `approvals` | Supabase Postgres table `ateam_approvals` | Durable approval gates and handoff decisions |
 | In-process lane locks (`agentLaneLocks` map) | Keep ephemeral in process now; optional Redis later | Lock state is transient; only externalize if multi-instance concurrency is required |
 
 ## 3. What Can Remain Ephemeral
@@ -72,15 +78,22 @@ Implemented in ATEAM backend:
   - `Server/lib/storage/repositories.js`
 - Local backend adapter:
   - `Server/lib/storage/backends/local.js`
+- Supabase workflow adapter:
+  - `Server/lib/storage/backends/supabase.js`
+  - `Server/lib/storage/backends/supabaseCore.js`
 - `Server/server.js` now resolves storage via:
   - `createRepositories({ backend: ATEAM_STORAGE_BACKEND, memoryDir })`
 - Added `.env.example` knob:
   - `ATEAM_STORAGE_BACKEND=local`
+- Added durable table schema:
+  - `Docs/SUPABASE_WORKFLOW_SCHEMA.sql`
 
 Behavior note:
 
-- Runtime behavior remains local-file backed by default.
-- This is scaffolding for future Supabase/object-store adapters; no cloud adapter is implemented yet.
+- Runtime remains local by default.
+- Workflow runs, jobs, and approvals can now use Supabase when configured.
+- Threads/tasks/memory/speech/content still use the local adapters today.
+- If `ATEAM_STORAGE_BACKEND=supabase` is requested without credentials, the runtime falls back safely to `local`.
 
 ## 7. Uncertainty Notes
 

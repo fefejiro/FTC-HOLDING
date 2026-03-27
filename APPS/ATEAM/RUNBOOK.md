@@ -67,6 +67,24 @@ Public workflow-only behavior is available locally with:
 npm run start:public
 ```
 
+Durable workflow storage:
+
+```powershell
+# keep local fallback
+$env:ATEAM_STORAGE_BACKEND="local"
+
+# or switch workflow runs / jobs / approvals to Supabase
+$env:ATEAM_STORAGE_BACKEND="supabase"
+$env:SUPABASE_URL="https://your-project.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="..."
+```
+
+Before enabling Supabase in production:
+
+1. Apply [Docs/SUPABASE_WORKFLOW_SCHEMA.sql](/c:/FTC%20HOLDING/APPS/ATEAM/Docs/SUPABASE_WORKFLOW_SCHEMA.sql).
+2. Set the `SUPABASE_*` secrets in Railway.
+3. Confirm `/health` reports `storage.backend = supabase`.
+
 ## Test Commands
 
 ```powershell
@@ -88,3 +106,4 @@ npm run verify:server
 
 - Public Una Labs intake uses the cloud-backed Railway API plus the Cloudflare route layer.
 - Local bridge and Telegram gateway are optional operator tools, not part of the public product narrative.
+- Core workflow durability now supports a safe `supabase -> local` fallback for runs, jobs, and approvals.

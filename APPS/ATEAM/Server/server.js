@@ -13,10 +13,7 @@ import { routeAgentCommand } from "./lib/agentRouter.js";
 import { createSpeechClarityAnalyze } from "./lib/speechClarity/speechClarityAnalyze.js";
 import { createSpeechClarityRoutes } from "./lib/speechClarity/speechClarityRoutes.js";
 import { sanitizeSessionId, createEvent, appendEvent, getEvents, getEventsAfterTimestamp } from "./lib/eventLog.js";
-import { createApprovalStore } from "./lib/approvalStore.js";
-import { createWorkItemStore } from "./lib/workItemStore.js";
 import { planOrchestration } from "./lib/orchestrator.js";
-import { createWorkflowRunStore } from "./lib/workflowRunStore.js";
 import { createWorkflowService } from "./lib/workflowService.js";
 import { createRepositories } from "./lib/storage/repositories.js";
 import { createPrincipalScopeMiddleware, normalizeScopedResourceId } from "./lib/auth/principalScope.js";
@@ -223,11 +220,15 @@ app.use((req, res, next) => {
 
 const {
   backend: resolvedStorageBackend,
+  capability: storageCapability,
   threadStore,
   taskStore,
   memoryStore,
   speechClarityStore,
-  contentPipelineStore
+  contentPipelineStore,
+  approvalStore,
+  workItemStore,
+  workflowRunStore
 } = createRepositories({
   backend: STORAGE_BACKEND,
   memoryDir: MEMORY_DIR
@@ -236,9 +237,6 @@ const voice = createVoiceModule();
 const toolRegistry = createToolRegistry({ taskStore, threadStore, voice });
 const llmAdapter = createLlmAdapter({ mode: process.env.LLM_MODE || "auto" });
 const agentLaneLocks = new Map();
-const approvalStore = createApprovalStore();
-const workItemStore = createWorkItemStore();
-const workflowRunStore = createWorkflowRunStore();
 const elevenlabsTts = createElevenLabsTts({
   apiKey: process.env.ELEVENLABS_API_KEY || "",
   modelId: process.env.ELEVENLABS_MODEL_ID || "eleven_multilingual_v2",
@@ -780,7 +778,8 @@ app.get("/health", async (req, res) => {
         mode: AUTH_MODE
       },
       storage: {
-        backend: resolvedStorageBackend
+        backend: resolvedStorageBackend,
+        capability: storageCapability || null
       },
       llm: {
         streamTalk: Boolean(talkOpts.stream),
@@ -1232,7 +1231,7 @@ app.get("/api/workflow/runs", async (req, res) => {
   try {
     const phase = String(req.query?.phase || "").trim();
     const limit = Math.max(1, Math.min(120, Number(req.query?.limit || 40)));
-    const runs = workflowService.listRuns({ phase, limit });
+    const runs = await workflowService.listRuns({ phase, limit });
     res.json({ ok: true, runs });
   } catch (err) {
     serverError(res, "failed_to_list_workflow_runs", err);
@@ -1243,7 +1242,7 @@ app.post("/api/workflow/runs", async (req, res) => {
   try {
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
-    const run = workflowService.startRun({
+    const run = await workflowService.startRun({
       idea: body.idea,
       category: body.category,
       requestedBy: String(body.actor || body.requestedBy || "public").trim() || "public",
@@ -1260,7 +1259,7 @@ app.post("/api/workflow/runs", async (req, res) => {
 
 app.get("/api/workflow/runs/:runId", async (req, res) => {
   try {
-    const run = workflowService.getRun(String(req.params.runId || "").trim());
+    const run = await workflowService.getRun(String(req.params.runId || "").trim());
     res.json({ ok: true, run });
   } catch (err) {
     if (workflowError(res, err)) return;
@@ -1272,7 +1271,7 @@ app.post("/api/workflow/runs/:runId/answers", async (req, res) => {
   try {
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
-    const run = workflowService.captureAnswers(String(req.params.runId || "").trim(), {
+    const run = await workflowService.captureAnswers(String(req.params.runId || "").trim(), {
       answers: body.answers,
       actor: String(body.actor || body.requestedBy || "public").trim() || "public",
       sessionId
@@ -1289,7 +1288,7 @@ app.post("/api/workflow/runs/:runId/approve", async (req, res) => {
   try {
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
-    const run = workflowService.approveRun(String(req.params.runId || "").trim(), {
+    const run = await workflowService.approveRun(String(req.params.runId || "").trim(), {
       gate: body.gate,
       decision: body.decision || body.status,
       actor: String(body.actor || body.requestedBy || "operator").trim() || "operator",
@@ -1307,7 +1306,7 @@ app.post("/api/workflow/runs/:runId/generate-pack", async (req, res) => {
   try {
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
-    const run = workflowService.generatePack(String(req.params.runId || "").trim(), {
+    const run = await workflowService.generatePack(String(req.params.runId || "").trim(), {
       actor: String(body.actor || body.requestedBy || "operator").trim() || "operator",
       sessionId
     });
@@ -1333,7 +1332,7 @@ app.get("/api/approvals", async (req, res) => {
   try {
     const status = String(req.query?.status || "").trim();
     const limit = Math.max(1, Math.min(200, Number(req.query?.limit || 50)));
-    const approvals = approvalStore.list({ status: status || undefined, limit });
+    const approvals = await approvalStore.list({ status: status || undefined, limit });
     res.json({ ok: true, approvals });
   } catch (err) {
     serverError(res, "failed_to_list_approvals", err);
@@ -1352,7 +1351,7 @@ app.post("/api/approvals", async (req, res) => {
     if (!policy) return badRequest(res, "policy required");
     if (!summary) return badRequest(res, "summary required");
 
-    const approval = approvalStore.create({ policy, summary, requestedBy, payload });
+    const approval = await approvalStore.create({ policy, summary, requestedBy, payload });
     const event = createEvent("approval_requested", requestedBy || "system", "system", summary, {
       approvalId: approval.id,
       policy,
@@ -1380,7 +1379,7 @@ app.post("/api/approvals/:approvalId/decision", async (req, res) => {
 
     if (!decision) return badRequest(res, "decision required");
 
-    const updated = approvalStore.setStatus(approvalId, decision);
+    const updated = await approvalStore.setStatus(approvalId, decision);
     if (!updated) return res.status(404).json({ ok: false, error: "approval_not_found" });
 
     const event = createEvent("approval_decision", actor || "user", "system", `Approval ${decision}`, {
@@ -1402,7 +1401,7 @@ app.get("/api/work-items", async (req, res) => {
   try {
     const stage = String(req.query?.stage || "").trim();
     const limit = Math.max(1, Math.min(200, Number(req.query?.limit || 50)));
-    const items = workItemStore.list({ stage: stage || undefined, limit });
+    const items = await workItemStore.list({ stage: stage || undefined, limit });
     res.json({ ok: true, items });
   } catch (err) {
     serverError(res, "failed_to_list_work_items", err);
@@ -1425,7 +1424,7 @@ app.post("/api/work-items", async (req, res) => {
 
     if (!title) return badRequest(res, "title required");
 
-    const item = workItemStore.create({ title, objective, stage, risk, ownerAgentId, data });
+    const item = await workItemStore.create({ title, objective, stage, risk, ownerAgentId, data });
 
     const event = createEvent("state_snapshot", requestedBy, "factory", `Work item created: ${item.title}`, {
       source: { kind: "api", actor: requestedBy },
@@ -1437,7 +1436,7 @@ app.post("/api/work-items", async (req, res) => {
 
     // If created straight into SHIP, create approval gate (no outbound automation).
     if (String(item.stage || "").toUpperCase() === "SHIP") {
-      const approval = approvalStore.create({
+      const approval = await approvalStore.create({
         policy: "factory_ship",
         summary: `Ship work item: ${item.title}`,
         requestedBy: requestedBy || "system",
@@ -1451,7 +1450,7 @@ app.post("/api/work-items", async (req, res) => {
       });
       appendEvent(sessionId, approvalEvent);
       // Persist link back onto the work item record.
-      const updated = workItemStore.setStage(item.id, item.stage, { dataPatch: { approvalId: approval.id } });
+      const updated = await workItemStore.setStage(item.id, item.stage, { dataPatch: { approvalId: approval.id } });
       return res.json({ ok: true, item: updated || item, sessionId, event, approval, approvalEvent });
     }
 
@@ -1475,11 +1474,11 @@ app.post("/api/work-items/:workItemId/stage", async (req, res) => {
     const reason = String(body.reason || "stage_update").trim();
     const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
 
-    const current = workItemStore.get(workItemId);
+    const current = await workItemStore.get(workItemId);
     if (!current) return res.status(404).json({ ok: false, error: "work_item_not_found" });
 
     const dataPatch = body.dataPatch && typeof body.dataPatch === "object" ? body.dataPatch : undefined;
-    const updated = workItemStore.setStage(workItemId, stage, {
+    const updated = await workItemStore.setStage(workItemId, stage, {
       actor,
       reason,
       dataPatch
@@ -1497,9 +1496,9 @@ app.post("/api/work-items/:workItemId/stage", async (req, res) => {
     // Approval gate when entering SHIP.
     if (String(updated.stage || "").toUpperCase() === "SHIP") {
       const existingApprovalId = String(updated.data?.approvalId || "").trim();
-      const existingApproval = existingApprovalId ? approvalStore.get(existingApprovalId) : null;
+      const existingApproval = existingApprovalId ? await approvalStore.get(existingApprovalId) : null;
       if (!existingApproval || String(existingApproval.status || "") !== "pending") {
-        const approval = approvalStore.create({
+        const approval = await approvalStore.create({
           policy: "factory_ship",
           summary: `Ship work item: ${updated.title}`,
           requestedBy: actor || "system",
@@ -1512,7 +1511,7 @@ app.post("/api/work-items/:workItemId/stage", async (req, res) => {
           data: { approvalId: approval.id, policy: approval.policy, status: approval.status, payload: approval.payload }
         });
         appendEvent(sessionId, approvalEvent);
-        const relinked = workItemStore.setStage(updated.id, updated.stage, {
+        const relinked = await workItemStore.setStage(updated.id, updated.stage, {
           dataPatch: { approvalId: approval.id }
         });
         return res.json({ ok: true, item: relinked || updated, sessionId, event, approval, approvalEvent });

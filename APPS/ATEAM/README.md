@@ -33,7 +33,7 @@ npm run start:server
 - Backend: Node.js (ESM) + Express 5 (`Server/server.js`)
 - AI provider: OpenAI Responses API with local stub fallback
 - Voice provider: ElevenLabs TTS (optional)
-- State persistence: local JSON/audio files in `memory/` for dev, with cloud-ready workflow interfaces already in place
+- State persistence: local JSON/audio files in `memory/` for dev, with durable workflow storage now available through the shared Supabase-ready repository layer
 - Test framework: Jest (`Server/__tests__`)
 
 ## Canonical Scripts
@@ -153,6 +153,7 @@ Primary groups:
 
 - Core runtime: `PORT`, `LLM_MODE`, `ATEAM_PROMPT_EVENT_SESSION_ID`, `ATEAM_PUBLIC_SERVICE_MODE`, `ATEAM_ALLOWED_ORIGINS`
 - Trusted proxy runtime: `ATEAM_AUTH_MODE=trusted_proxy`, `ATEAM_TRUSTED_PROXY_KEY`, `ATEAM_OPERATOR_AUDIT_SESSION_ID`
+- Durable workflow storage: `ATEAM_STORAGE_BACKEND`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_TABLE_ATEAM_*`
 - OpenAI: `OPENAI_API_KEY`, model, temperature, stream, timeout variables
 - ElevenLabs: API key, model/output format, voice IDs, tuning, timeout variables
 - Bridge/phone: `ATEAM_KEY`, `ATEAM_BRIDGE_*`, `PHONE_PORT`
@@ -171,6 +172,14 @@ Operator edge runtime:
 
 - `workers/ateam-edge`
 - `workers/ateam-ops`
+
+Managed storage rollout:
+
+- Workflow runs, jobs, and approvals now resolve through `Server/lib/storage/repositories.js`.
+- `ATEAM_STORAGE_BACKEND=local` keeps the current SQLite/local behavior.
+- `ATEAM_STORAGE_BACKEND=supabase` switches workflow runs, jobs, and approvals to Supabase when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are present.
+- If Supabase is requested but not configured, ATEAM falls back safely to `local` and reports that fallback in `/health`.
+- Apply [`Docs/SUPABASE_WORKFLOW_SCHEMA.sql`](Docs/SUPABASE_WORKFLOW_SCHEMA.sql) before enabling the Supabase backend in production.
 
 ## Current Classification
 

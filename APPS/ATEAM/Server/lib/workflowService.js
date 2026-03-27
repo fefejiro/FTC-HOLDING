@@ -549,13 +549,13 @@ export function createWorkflowService({
     });
   }
 
-  function getRunOrThrow(runId) {
-    const run = workflowRunStore.get(runId);
+  async function getRunOrThrow(runId) {
+    const run = await workflowRunStore.get(runId);
     if (!run) throw createError("WORKFLOW_RUN_NOT_FOUND", "Workflow run not found.", 404);
     return run;
   }
 
-  function presentRun(run) {
+  async function presentRun(run) {
     const rawRun = run && typeof run === "object" ? run : null;
     if (!rawRun) return null;
     const links = ensureLinks(rawRun.links);
@@ -565,8 +565,8 @@ export function createWorkflowService({
     ]);
     const items =
       typeof workItemStore.getMany === "function"
-        ? workItemStore.getMany(linkedIds)
-        : linkedIds.map((id) => workItemStore.get(id)).filter(Boolean);
+        ? await workItemStore.getMany(linkedIds)
+        : (await Promise.all(linkedIds.map((id) => workItemStore.get(id)))).filter(Boolean);
     const jobs = items.map(mapJobSummary);
     const artifactSummaries = linkArtifactsToJobs(buildArtifactRecords(rawRun), jobs);
     const project = buildProjectSummary(rawRun, jobs, artifactSummaries);
@@ -588,7 +588,7 @@ export function createWorkflowService({
     };
   }
 
-  function startRun({ idea, category, requestedBy = "public", sessionId = "global_podcast", meta = {} }) {
+  async function startRun({ idea, category, requestedBy = "public", sessionId = "global_podcast", meta = {} }) {
     const safeIdea = safeText(idea, 1200);
     if (safeIdea.length < 12) {
       throw createError("INVALID_WORKFLOW_IDEA", "Share a bit more detail so ATEAM can shape the run.");
@@ -597,7 +597,7 @@ export function createWorkflowService({
     const preset = getWorkflowCategoryPreset(normalizedCategory);
     const questions = buildWorkflowQuestions({ idea: safeIdea, category: normalizedCategory });
 
-    const run = workflowRunStore.create({
+    const run = await workflowRunStore.create({
       phase: "analysis",
       requestedBy,
       category: normalizedCategory,
@@ -617,7 +617,7 @@ export function createWorkflowService({
       }
     });
 
-    const updated = workflowRunStore.update(run.id, {
+    const updated = await workflowRunStore.update(run.id, {
       meta: appendRunTimeline(run, {
         eventType: "created",
         message: "Run created from intake",
@@ -635,11 +635,11 @@ export function createWorkflowService({
       recommendedLane: preset.recommendedLane
     });
 
-    return presentRun(updated);
+    return await presentRun(updated);
   }
 
-  function captureAnswers(runId, { answers, actor = "public", sessionId = "global_podcast" }) {
-    const run = getRunOrThrow(runId);
+  async function captureAnswers(runId, { answers, actor = "public", sessionId = "global_podcast" }) {
+    const run = await getRunOrThrow(runId);
     const mergedAnswers = {
       ...(run.answers || {}),
       ...normalizeAnswers(answers)
@@ -659,7 +659,7 @@ export function createWorkflowService({
     const approvals = ensureApprovalState(run.approvals);
     let approvalId = safeText(approvals?.brief?.approvalId, 120);
     if (!approvalId) {
-      const approval = approvalStore.create({
+      const approval = await approvalStore.create({
         policy: "workflow_brief",
         summary: `Approve brief for ${brief.title}`,
         requestedBy: actor,
@@ -694,7 +694,7 @@ export function createWorkflowService({
       })
     ]);
 
-    const updated = workflowRunStore.update(run.id, {
+    const updated = await workflowRunStore.update(run.id, {
       phase: "brief_approval",
       title: brief.title,
       answers: mergedAnswers,
@@ -735,10 +735,10 @@ export function createWorkflowService({
       recommendedLane: brief.recommendedLane
     });
 
-    return presentRun(updated);
+    return await presentRun(updated);
   }
 
-  function ensureLinkedWork(run) {
+  async function ensureLinkedWork(run) {
     const links = ensureLinks(run.links);
     const existingProjectId = safeText(links.projectId, 120);
     const existingWorkItemIds = Array.isArray(links.workItemIds) ? links.workItemIds.filter(Boolean) : [];
@@ -751,8 +751,9 @@ export function createWorkflowService({
     }
 
     const blueprint = buildWorkflowWorkItems(run);
-    const createdItems = blueprint.items.map((item) =>
-      workItemStore.create({
+    const createdItems = await Promise.all(
+      blueprint.items.map((item) =>
+        workItemStore.create({
         title: item.title,
         objective: item.objective,
         stage: item.stage,
@@ -762,6 +763,7 @@ export function createWorkflowService({
           reason: "created_from_workflow_run"
         }
       })
+      )
     );
     return {
       projectId: blueprint.projectId,
@@ -770,8 +772,8 @@ export function createWorkflowService({
     };
   }
 
-  function approveRun(runId, { gate, decision, actor = "operator", sessionId = "global_podcast" }) {
-    const run = getRunOrThrow(runId);
+  async function approveRun(runId, { gate, decision, actor = "operator", sessionId = "global_podcast" }) {
+    const run = await getRunOrThrow(runId);
     const safeGate = safeText(gate, 40).toLowerCase();
     const safeDecision = safeText(decision, 40).toLowerCase();
 
@@ -786,7 +788,7 @@ export function createWorkflowService({
     const currentGate = approvals[safeGate] && typeof approvals[safeGate] === "object" ? { ...approvals[safeGate] } : {};
     const approvalId = safeText(currentGate.approvalId, 120);
     if (approvalId) {
-      approvalStore.setStatus(approvalId, safeDecision);
+      await approvalStore.setStatus(approvalId, safeDecision);
     }
 
     currentGate.status = safeDecision;
@@ -799,7 +801,7 @@ export function createWorkflowService({
 
     if (safeGate === "brief") {
       if (safeDecision === "approved") {
-        const linked = ensureLinkedWork(run);
+        const linked = await ensureLinkedWork(run);
         patch.phase = "initiation";
         patch.links = {
           ...ensureLinks(run.links),
@@ -937,7 +939,7 @@ export function createWorkflowService({
       }
     }
 
-    const updated = workflowRunStore.update(run.id, patch);
+    const updated = await workflowRunStore.update(run.id, patch);
 
     logEvent(sessionId, "workflow_approval_decision", actor, `Workflow ${safeGate} ${safeDecision}`, {
       workflowRunId: run.id,
@@ -946,11 +948,11 @@ export function createWorkflowService({
       approvalId
     });
 
-    return presentRun(updated);
+    return await presentRun(updated);
   }
 
-  function generatePack(runId, { actor = "operator", sessionId = "global_podcast" }) {
-    const run = getRunOrThrow(runId);
+  async function generatePack(runId, { actor = "operator", sessionId = "global_podcast" }) {
+    const run = await getRunOrThrow(runId);
     if (safeText(run.approvals?.brief?.status, 40).toLowerCase() !== "approved") {
       throw createError(
         "WORKFLOW_BRIEF_NOT_APPROVED",
@@ -971,7 +973,7 @@ export function createWorkflowService({
     const approvals = ensureApprovalState(run.approvals);
     let approvalId = safeText(approvals?.pack?.approvalId, 120);
     if (!approvalId) {
-      const approval = approvalStore.create({
+      const approval = await approvalStore.create({
         policy: "workflow_pack",
         summary: `Approve pack for ${run.brief?.title || run.title || "workflow run"}`,
         requestedBy: actor,
@@ -1055,7 +1057,7 @@ export function createWorkflowService({
       })
     ]);
 
-    const updated = workflowRunStore.update(run.id, {
+    const updated = await workflowRunStore.update(run.id, {
       phase: "pack_approval",
       artifacts,
       handoff: {
@@ -1095,7 +1097,7 @@ export function createWorkflowService({
       approvalId
     });
 
-    return presentRun(updated);
+    return await presentRun(updated);
   }
 
   return {
@@ -1103,7 +1105,10 @@ export function createWorkflowService({
     captureAnswers,
     approveRun,
     generatePack,
-    getRun: (runId) => presentRun(getRunOrThrow(runId)),
-    listRuns: ({ phase, limit } = {}) => workflowRunStore.list({ phase, limit }).map((run) => presentRun(run))
+    getRun: async (runId) => presentRun(await getRunOrThrow(runId)),
+    listRuns: async ({ phase, limit } = {}) => {
+      const runs = await workflowRunStore.list({ phase, limit });
+      return Promise.all(runs.map((run) => presentRun(run)));
+    }
   };
 }

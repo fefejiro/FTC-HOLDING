@@ -8,9 +8,12 @@ describe("storage repositories", () => {
     expect(typeof repositories.taskStore?.ensure).toBe("function");
     expect(typeof repositories.memoryStore?.ensure).toBe("function");
     expect(typeof repositories.speechClarityStore?.ensure).toBe("function");
+    expect(typeof repositories.approvalStore?.create).toBe("function");
+    expect(typeof repositories.workItemStore?.list).toBe("function");
+    expect(typeof repositories.workflowRunStore?.create).toBe("function");
   });
 
-  test("supabase backend resolves scaffold repositories", () => {
+  test("supabase backend falls back safely when credentials are missing", () => {
     const previousUrl = process.env.SUPABASE_URL;
     const previousKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     delete process.env.SUPABASE_URL;
@@ -18,12 +21,14 @@ describe("storage repositories", () => {
 
     try {
       const repositories = createRepositories({ backend: "supabase" });
-      expect(repositories.backend).toBe("supabase");
+      expect(repositories.backend).toBe("local");
       expect(repositories.capability).toMatchObject({
         provider: "supabase",
-        configured: false
+        configured: false,
+        fallbackBackend: "local"
       });
       expect(typeof repositories.threadStore?.ensure).toBe("function");
+      expect(typeof repositories.approvalStore?.create).toBe("function");
     } finally {
       if (previousUrl != null) process.env.SUPABASE_URL = previousUrl;
       else delete process.env.SUPABASE_URL;

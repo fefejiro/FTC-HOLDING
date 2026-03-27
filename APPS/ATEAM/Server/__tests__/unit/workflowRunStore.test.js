@@ -22,9 +22,9 @@ describe("workflowRunStore", () => {
     }
   });
 
-  test("creates, updates, and lists workflow runs", () => {
+  test("creates, updates, and lists workflow runs", async () => {
     const store = createWorkflowRunStore();
-    const created = store.create({
+    const created = await store.create({
       phase: "analysis",
       requestedBy: "public",
       category: "website",
@@ -37,7 +37,7 @@ describe("workflowRunStore", () => {
     expect(created.phase).toBe("analysis");
     expect(created.category).toBe("website");
 
-    const updated = store.update(created.id, {
+    const updated = await store.update(created.id, {
       phase: "brief_approval",
       title: "Service Site Lead Funnel",
       answers: { audience: "local service owners" },
@@ -50,7 +50,7 @@ describe("workflowRunStore", () => {
     expect(updated.answers.audience).toBe("local service owners");
     expect(updated.links.projectId).toBe("workflow_service_site");
 
-    const listed = store.list({ limit: 10 });
+    const listed = await store.list({ limit: 10 });
     expect(listed).toHaveLength(1);
     expect(listed[0].id).toBe(created.id);
   });

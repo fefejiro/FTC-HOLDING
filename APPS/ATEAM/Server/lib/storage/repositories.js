@@ -10,7 +10,7 @@ export function createRepositories({ backend = "local", memoryDir = "" } = {}) {
     return createLocalRepositories({ memoryDir });
   }
   if (normalized === "supabase") {
-    return createSupabaseRepositories();
+    return createSupabaseRepositories({ memoryDir });
   }
 
   const err = new Error(`Unsupported storage backend: ${normalized}`);
