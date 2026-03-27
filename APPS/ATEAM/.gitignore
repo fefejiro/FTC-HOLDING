@@ -4,3 +4,11 @@ Server/.env.*
 .env.*
 !.env.example
 !Server/.env.example
+memory/**
+!memory/.gitkeep
+Server/.local/
+Server/coverage/
+Server/node_modules/
+Server/server.log
+telegram-gateway/.local/
+Public/tmpclaude-*
