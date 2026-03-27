@@ -101,6 +101,7 @@ Seeded local-first UI data is stored in `localStorage`:
 Integration notes:
 
 - The Office pixel room (`/office`) opens a Command Station drawer that reuses the existing Command Station panel from the Agents page (`/agents`).
+- The Talk route (`/talk`, or `/ateam/operator/talk` behind the ops worker) is now the fastest intake surface: type the rough request or start voice intake first, then open session details only when you need transcript/timeline controls.
 - The frontend supports being proxied under `/ateam`, but the public production surface now routes through the Railway API and Cloudflare Worker/Pages stack instead of depending on a local wrapper story.
 
 ## Telegram Remote Control
@@ -147,6 +148,7 @@ Public flow contract:
 Private operator contract:
 
 - `/ateam/operator/*` keeps the full Mission Control shell
+- `/ateam/operator/talk` now opens as a simplified intake surface with text + voice first and advanced session controls behind a session-details toggle
 - approvals, logs, overrides, Office, Team, Factory, and Memory stay private
 - Cloudflare Access authenticates the browser on `ops.unalabs.cloud`, the ops worker validates the Access JWT (`CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_AUD`), then injects trusted scope headers to Railway server-side only
 - Direct browser-supplied `Authorization` / `X-ATEAM-*` headers are no longer the intended operator trust model

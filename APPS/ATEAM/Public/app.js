@@ -61,6 +61,7 @@ const TTS_CONFIG = {
 
 const TAP_COOLDOWN_MS = 200;
 const OFFICE_STUDIO_KEY = "ATEAM_OFFICE_STUDIO";
+const TALK_ADVANCED_KEY = "ATEAM_TALK_ADVANCED";
 
 const config = (window.ATEAMModules && window.ATEAMModules.config) || {};
 const browserUtils = (window.ATEAMModules && window.ATEAMModules.browserUtils) || {};
@@ -410,6 +411,10 @@ const talkStateNode = document.getElementById("talk-state");
 const talkStateLabel = document.getElementById("talk-state-label");
 const talkSubtitle = document.getElementById("talk-subtitle");
 const talkHint = document.getElementById("talk-hint");
+const talkVoiceToggleBtn = document.getElementById("talk-voice-toggle-btn");
+const talkAdvancedToggleBtn = document.getElementById("talk-advanced-toggle-btn");
+const talkSettingsPanel = document.getElementById("talk-settings-panel");
+const talkAdvancedSections = document.getElementById("talk-advanced-sections");
 const talkTranscriptWrap = document.getElementById("talk-transcript-wrap");
 const talkTranscriptToggle = document.getElementById("talk-transcript-toggle");
 const talkTranscript = document.getElementById("talk-transcript");
@@ -1962,11 +1967,61 @@ function setTalkState(next) {
   }
 
   updateStopVoiceBtnUi();
+  updateTalkVoiceToggleUi();
   if (!talkHint) return;
-  if (next === "idle") talkHint.textContent = state.reviewMode && !state.sessionActive ? "Review mode active. Disable review mode to talk." : "Tap to talk";
-  if (next === "listening") talkHint.textContent = "Listening... tap orb to end session";
-  if (next === "thinking") talkHint.textContent = "Thinking...";
-  if (next === "speaking") talkHint.textContent = "Speaking...";
+  if (next === "idle") talkHint.textContent = state.reviewMode && !state.sessionActive ? "Review mode active. Disable review mode to talk." : "Type the intake below or start voice intake.";
+  if (next === "listening") talkHint.textContent = "Listening... press Stop voice intake when you're done.";
+  if (next === "thinking") talkHint.textContent = "ATEAM is shaping the intake...";
+  if (next === "speaking") talkHint.textContent = "ATEAM is replying...";
+}
+
+function loadTalkAdvancedPref() {
+  try {
+    return localStorage.getItem(TALK_ADVANCED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setTalkAdvancedVisible(visible, options = {}) {
+  const on = Boolean(visible);
+  const persist = options.persist !== false;
+  if (talkSettingsPanel) talkSettingsPanel.classList.toggle("hidden", !on);
+  if (talkAdvancedSections) talkAdvancedSections.classList.toggle("hidden", !on);
+  if (talkAdvancedToggleBtn) {
+    talkAdvancedToggleBtn.textContent = on ? "Hide session details" : "Show session details";
+    talkAdvancedToggleBtn.setAttribute("aria-expanded", on ? "true" : "false");
+    talkAdvancedToggleBtn.classList.toggle("active", on);
+  }
+  if (!persist) return;
+  try {
+    localStorage.setItem(TALK_ADVANCED_KEY, on ? "1" : "0");
+  } catch {}
+}
+
+function updateTalkVoiceToggleUi() {
+  if (!talkVoiceToggleBtn) return;
+  if (!state.supportsRecognition) {
+    talkVoiceToggleBtn.textContent = "Voice unavailable";
+    talkVoiceToggleBtn.dataset.state = "disabled";
+    talkVoiceToggleBtn.disabled = true;
+    return;
+  }
+
+  talkVoiceToggleBtn.disabled = false;
+  let label = "Start voice intake";
+  let buttonState = "idle";
+  if (state.sessionActive) {
+    if (state.talkState === "thinking" || state.talkState === "speaking" || state.assistantThinking || state.assistantSpeaking) {
+      label = "Interrupt and listen";
+      buttonState = state.talkState === "speaking" ? "speaking" : "thinking";
+    } else {
+      label = "Stop voice intake";
+      buttonState = "listening";
+    }
+  }
+  talkVoiceToggleBtn.textContent = label;
+  talkVoiceToggleBtn.dataset.state = buttonState;
 }
 
 function setOrbSubtitle(text) {
@@ -5109,7 +5164,7 @@ async function renderAiLabPage({ force = false } = {}) {
   const availableProfiles = overview.voice?.synthesis?.availableProfiles || overview.health?.config?.voice?.availableProfiles || [];
 
   if (aiLabSummary) {
-    aiLabSummary.textContent = `Talk turns: ${talkTurns.length}. Speech sessions: ${speechSessions.length}. Voice profiles: ${availableProfiles.length}.`;
+    aiLabSummary.textContent = `Intake turns: ${talkTurns.length}. Speech sessions: ${speechSessions.length}. Voice profiles: ${availableProfiles.length}.`;
   }
   if (aiLabMetricTurns) aiLabMetricTurns.textContent = String(talkTurns.length);
   if (aiLabMetricSessions) aiLabMetricSessions.textContent = String(speechSessions.length);
@@ -5119,8 +5174,8 @@ async function renderAiLabPage({ force = false } = {}) {
   if (aiLabModules) {
     const modules = [
       {
-        title: "Talk Mode",
-        copy: "Live conversation surface with timeline, chapters, and review controls.",
+        title: "Simple Intake",
+        copy: "Type the rough request or start voice intake first, then open session details only when needed.",
         action: `<button class="ops-action-btn" type="button" data-action="open-talk-focus">Open Focus</button>`
       },
       {
@@ -5135,8 +5190,8 @@ async function renderAiLabPage({ force = false } = {}) {
       },
       {
         title: "Vision + Context",
-        copy: state.screenStream || state.cameraStream ? "Capture is active right now." : "Screen/camera capture is available from Talk Mode.",
-        action: `<button class="ops-action-btn" type="button" data-action="open-talk">Open Talk</button>`
+        copy: state.screenStream || state.cameraStream ? "Capture is active right now." : "Screen/camera capture is available from the intake route.",
+        action: `<button class="ops-action-btn" type="button" data-action="open-talk">Open Intake</button>`
       }
     ];
     aiLabModules.innerHTML = modules
@@ -11139,6 +11194,21 @@ function bindEvents() {
     });
   }
 
+  if (talkVoiceToggleBtn && !talkVoiceToggleBtn.dataset.bound) {
+    talkVoiceToggleBtn.dataset.bound = "1";
+    talkVoiceToggleBtn.addEventListener("click", () => {
+      void onOrbTap();
+    });
+  }
+
+  if (talkAdvancedToggleBtn && !talkAdvancedToggleBtn.dataset.bound) {
+    talkAdvancedToggleBtn.dataset.bound = "1";
+    talkAdvancedToggleBtn.addEventListener("click", () => {
+      const expanded = talkAdvancedToggleBtn.getAttribute("aria-expanded") === "true";
+      setTalkAdvancedVisible(!expanded);
+    });
+  }
+
   if (talkChatSendBtn && !talkChatSendBtn.dataset.bound) {
     talkChatSendBtn.dataset.bound = "1";
     talkChatSendBtn.addEventListener("click", handleTalkComposerSend);
@@ -11553,6 +11623,7 @@ async function bootstrap() {
   updateSelectionUi();
 
   setTalkState("idle");
+  setTalkAdvancedVisible(loadTalkAdvancedPref(), { persist: false });
   updateReviewModeUi();
   setOrbSubtitle("");
   setTranscriptExpanded(false);

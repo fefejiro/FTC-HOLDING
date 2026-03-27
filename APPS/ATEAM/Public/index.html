@@ -27,7 +27,7 @@
       <button id="go-dashboard" class="top-btn active">Dashboard</button>
       <button id="go-office" class="top-btn">Office</button>
       <button id="go-content" class="top-btn">Content</button>
-      <button id="go-talk" class="top-btn">Talk Mode</button>
+      <button id="go-talk" class="top-btn">Intake</button>
       <button id="go-speech" class="top-btn">Speech</button>
     </div>
   </header>
@@ -707,7 +707,7 @@
           <p id="people-summary" class="ops-subtitle">Conversation speakers, internal operators, and likely handoffs.</p>
         </div>
         <div class="ops-hero-actions">
-          <button id="people-open-talk-btn" class="mc-top-btn" type="button">Open Talk</button>
+          <button id="people-open-talk-btn" class="mc-top-btn" type="button">Open Intake</button>
           <button id="people-open-team-btn" class="mc-top-btn" type="button">Open Team</button>
         </div>
       </section>
@@ -1120,11 +1120,11 @@
         <div>
           <div class="ops-kicker">AI Lab</div>
           <h1 class="ops-title">Talk and speech modules</h1>
-          <p id="ai-lab-summary" class="ops-subtitle">The conversation lab, voice stack, and speech clarity workflows in one place.</p>
+          <p id="ai-lab-summary" class="ops-subtitle">The intake surface, voice stack, and speech clarity workflows in one place.</p>
         </div>
         <div class="ops-hero-actions">
           <button id="ai-lab-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
-          <button id="ai-lab-open-talk-btn" class="mc-top-btn" type="button">Open Talk</button>
+          <button id="ai-lab-open-talk-btn" class="mc-top-btn" type="button">Open Intake</button>
           <button id="ai-lab-open-speech-btn" class="mc-top-btn" type="button">Open Speech</button>
         </div>
       </section>
@@ -1197,115 +1197,71 @@
   <main id="talk-view" class="view mc-page talk-view hidden" data-mc-page="talk">
     <div class="talk-top">
       <div class="talk-meta">
-        <div class="talk-mode-label">Talk Mode</div>
-        <div class="talk-session">Session: ATEAM Podcast</div>
+        <div class="talk-mode-label">ATEAM Intake</div>
+        <h1 class="talk-title">Tell ATEAM what needs to move.</h1>
+        <div class="talk-session">Use text or voice. Session controls stay available when you need them, but they no longer lead the page.</div>
       </div>
       <div class="talk-head-controls">
-        <div class="talk-task" id="talk-task-label">Session Thread: global_podcast</div>
-        <label class="talk-voice-control" for="talk-speaker-select">
-          <span>Speaker</span>
-          <select id="talk-speaker-select" class="talk-voice-select" aria-label="Select current speaker">
-            <option value="unknown">Unknown</option>
-            <option value="michael">Michael</option>
-            <option value="mark">Mark</option>
-            <option value="guest">Guest</option>
-            <option value="ai_podcast">Manchi AI</option>
-          </select>
-        </label>
-        <button
-          id="talk-speaker-edit-label-btn"
-          class="top-btn talk-speaker-edit-btn"
-          type="button"
-          aria-label="Edit selected speaker label">
-          Edit Name
+        <button id="talk-voice-toggle-btn" class="top-btn talk-voice-toggle-btn" type="button" aria-label="Start voice intake">
+          Start voice intake
         </button>
-        <label class="talk-voice-control" for="talk-voice-style">
-          <span>Voice</span>
-          <select id="talk-voice-style" class="talk-voice-select" aria-label="Select voice style">
-            <option value="male_assistant">Male Assistant</option>
-            <option value="female_assistant">Female Assistant</option>
-            <option value="nigerian_professor_ss">Nigerian Professor (South South vibe)</option>
-          </select>
-        </label>
-        <button id="talk-ui-mode-btn" class="top-btn talk-ui-mode-btn" type="button" aria-label="Toggle Talk focus mode">Focus</button>
+        <button
+          id="talk-advanced-toggle-btn"
+          class="top-btn talk-advanced-toggle-btn"
+          type="button"
+          aria-expanded="false"
+          aria-controls="talk-settings-panel talk-advanced-sections">
+          Show session details
+        </button>
       </div>
     </div>
 
-    <section id="talk-transcript-wrap" class="talk-transcript-wrap">
-      <div class="talk-transcript-head">
-        <span>Transcript</span>
-        <button id="talk-transcript-toggle" class="top-btn transcript-toggle">Expand</button>
-      </div>
-      <div class="talk-transcript" id="talk-transcript">
-        <div class="talk-empty">No transcript yet.</div>
-      </div>
-    </section>
-
-    <section id="talk-timeline-wrap" class="talk-timeline-wrap">
-      <div class="talk-timeline-head">
-        <span>Session Timeline</span>
-        <button id="timeline-refresh-btn" class="top-btn timeline-refresh-btn">Refresh</button>
-      </div>
-      <div class="timeline-controls">
-        <button id="timeline-pause-btn" class="top-btn timeline-control-btn">Pause</button>
-        <button id="timeline-resume-btn" class="top-btn timeline-control-btn">Resume</button>
-        <button id="timeline-clear-btn" class="top-btn timeline-control-btn">Clear View</button>
-        <button id="timeline-export-btn" class="top-btn timeline-control-btn">Export JSON</button>
-        <button id="timeline-export-pack-btn" class="top-btn timeline-control-btn">Export Pack</button>
-        <button id="review-mode-btn" class="top-btn timeline-control-btn">Review: Off</button>
-        <button id="timeline-highlight-btn" class="top-btn timeline-control-btn">Mark Highlight</button>
-        <button id="tts-toggle-btn" class="top-btn timeline-control-btn">TTS: On</button>
-        <button id="tts-stop-btn" class="top-btn timeline-control-btn stop-voice-btn disabled hidden" disabled>Interrupt</button>
-      </div>
-      <div id="timeline-review-controls" class="timeline-review-controls">
-        <button id="timeline-review-prev-btn" class="top-btn timeline-control-btn">Prev</button>
-        <button id="timeline-review-next-btn" class="top-btn timeline-control-btn">Next</button>
-        <button id="timeline-review-latest-btn" class="top-btn timeline-control-btn">Latest</button>
-        <button id="timeline-review-autoplay-btn" class="top-btn timeline-control-btn">Auto: Off</button>
-        <span id="timeline-review-status" class="timeline-review-status">Review cursor: none</span>
-      </div>
-      <div id="timeline-filters" class="timeline-filters" role="tablist" aria-label="Timeline filters">
-        <button class="timeline-filter-btn active" data-filter="all">All</button>
-        <button class="timeline-filter-btn" data-filter="talk">Talk</button>
-        <button class="timeline-filter-btn" data-filter="highlights">Highlights</button>
-        <button class="timeline-filter-btn" data-filter="status">Status</button>
-        <button class="timeline-filter-btn" data-filter="errors">Errors</button>
-        <label class="timeline-speaker-filter-label" for="timeline-speaker-filter">
-          <span>Speaker</span>
-          <select id="timeline-speaker-filter" class="timeline-speaker-filter" aria-label="Filter timeline by speaker">
-            <option value="all">All</option>
-            <option value="michael">Michael</option>
-            <option value="mark">Mark</option>
-            <option value="guest">Guest</option>
-            <option value="ai_podcast">Manchi AI</option>
-            <option value="unknown">Unknown</option>
-          </select>
-        </label>
-      </div>
-      <div id="talk-timeline" class="talk-timeline">
-        <div class="timeline-empty">No events yet.</div>
-      </div>
-    </section>
-
-    <section id="talk-chapters-wrap" class="talk-chapters-wrap">
-      <div class="talk-chapters-head">
-        <span>Chapters</span>
-        <button id="chapter-clear-focus-btn" class="top-btn timeline-refresh-btn">Full Timeline</button>
-      </div>
-      <div id="talk-chapters" class="talk-chapters">
-        <div class="timeline-empty">No chapters yet.</div>
-      </div>
+    <section id="talk-settings-panel" class="talk-settings-panel hidden" aria-label="Talk session settings">
+      <div class="talk-task" id="talk-task-label">Session Thread: global_podcast</div>
+      <label class="talk-voice-control" for="talk-speaker-select">
+        <span>Speaker</span>
+        <select id="talk-speaker-select" class="talk-voice-select" aria-label="Select current speaker">
+          <option value="unknown">Unknown</option>
+          <option value="michael">Michael</option>
+          <option value="mark">Mark</option>
+          <option value="guest">Guest</option>
+          <option value="ai_podcast">Manchi AI</option>
+        </select>
+      </label>
+      <button
+        id="talk-speaker-edit-label-btn"
+        class="top-btn talk-speaker-edit-btn"
+        type="button"
+        aria-label="Edit selected speaker label">
+        Edit Name
+      </button>
+      <label class="talk-voice-control" for="talk-voice-style">
+        <span>Voice</span>
+        <select id="talk-voice-style" class="talk-voice-select" aria-label="Select voice style">
+          <option value="male_assistant">Male Assistant</option>
+          <option value="female_assistant">Female Assistant</option>
+          <option value="nigerian_professor_ss">Nigerian Professor (South South vibe)</option>
+        </select>
+      </label>
+      <button id="talk-ui-mode-btn" class="top-btn talk-ui-mode-btn" type="button" aria-label="Toggle Talk focus mode">Focus</button>
     </section>
 
     <section id="talk-composer" class="talk-composer" aria-label="Talk composer">
+      <div class="talk-composer-head">
+        <div>
+          <div class="talk-composer-title">Simple intake</div>
+          <div class="talk-composer-copy">Type the rough idea or start voice intake and speak naturally.</div>
+        </div>
+        <span class="talk-composer-mode">Text + Voice</span>
+      </div>
       <div class="talk-composer-row">
         <textarea
           id="talk-chat-input"
           class="talk-chat-input"
           rows="1"
-          placeholder="Message ATEAM…"
+          placeholder="Tell ATEAM what you want to build, fix, check, or move forward…"
           aria-label="Message ATEAM"></textarea>
-        <button id="talk-chat-send" class="top-btn talk-chat-send" type="button">Send</button>
+        <button id="talk-chat-send" class="top-btn talk-chat-send" type="button">Send intake</button>
       </div>
       <div class="talk-composer-sub">
         <div id="talk-state" class="talk-state-pill" data-state="idle" aria-label="Talk state">
@@ -1314,6 +1270,74 @@
         <div id="talk-hint" class="talk-hint-compact">Ready.</div>
       </div>
     </section>
+
+    <div id="talk-advanced-sections" class="talk-advanced-sections hidden">
+      <section id="talk-transcript-wrap" class="talk-transcript-wrap">
+        <div class="talk-transcript-head">
+          <span>Transcript</span>
+          <button id="talk-transcript-toggle" class="top-btn transcript-toggle">Expand</button>
+        </div>
+        <div class="talk-transcript" id="talk-transcript">
+          <div class="talk-empty">No transcript yet.</div>
+        </div>
+      </section>
+
+      <section id="talk-timeline-wrap" class="talk-timeline-wrap">
+        <div class="talk-timeline-head">
+          <span>Session Timeline</span>
+          <button id="timeline-refresh-btn" class="top-btn timeline-refresh-btn">Refresh</button>
+        </div>
+        <div class="timeline-controls">
+          <button id="timeline-pause-btn" class="top-btn timeline-control-btn">Pause</button>
+          <button id="timeline-resume-btn" class="top-btn timeline-control-btn">Resume</button>
+          <button id="timeline-clear-btn" class="top-btn timeline-control-btn">Clear View</button>
+          <button id="timeline-export-btn" class="top-btn timeline-control-btn">Export JSON</button>
+          <button id="timeline-export-pack-btn" class="top-btn timeline-control-btn">Export Pack</button>
+          <button id="review-mode-btn" class="top-btn timeline-control-btn">Review: Off</button>
+          <button id="timeline-highlight-btn" class="top-btn timeline-control-btn">Mark Highlight</button>
+          <button id="tts-toggle-btn" class="top-btn timeline-control-btn">TTS: On</button>
+          <button id="tts-stop-btn" class="top-btn timeline-control-btn stop-voice-btn disabled hidden" disabled>Interrupt</button>
+        </div>
+        <div id="timeline-review-controls" class="timeline-review-controls">
+          <button id="timeline-review-prev-btn" class="top-btn timeline-control-btn">Prev</button>
+          <button id="timeline-review-next-btn" class="top-btn timeline-control-btn">Next</button>
+          <button id="timeline-review-latest-btn" class="top-btn timeline-control-btn">Latest</button>
+          <button id="timeline-review-autoplay-btn" class="top-btn timeline-control-btn">Auto: Off</button>
+          <span id="timeline-review-status" class="timeline-review-status">Review cursor: none</span>
+        </div>
+        <div id="timeline-filters" class="timeline-filters" role="tablist" aria-label="Timeline filters">
+          <button class="timeline-filter-btn active" data-filter="all">All</button>
+          <button class="timeline-filter-btn" data-filter="talk">Talk</button>
+          <button class="timeline-filter-btn" data-filter="highlights">Highlights</button>
+          <button class="timeline-filter-btn" data-filter="status">Status</button>
+          <button class="timeline-filter-btn" data-filter="errors">Errors</button>
+          <label class="timeline-speaker-filter-label" for="timeline-speaker-filter">
+            <span>Speaker</span>
+            <select id="timeline-speaker-filter" class="timeline-speaker-filter" aria-label="Filter timeline by speaker">
+              <option value="all">All</option>
+              <option value="michael">Michael</option>
+              <option value="mark">Mark</option>
+              <option value="guest">Guest</option>
+              <option value="ai_podcast">Manchi AI</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </label>
+        </div>
+        <div id="talk-timeline" class="talk-timeline">
+          <div class="timeline-empty">No events yet.</div>
+        </div>
+      </section>
+
+      <section id="talk-chapters-wrap" class="talk-chapters-wrap">
+        <div class="talk-chapters-head">
+          <span>Chapters</span>
+          <button id="chapter-clear-focus-btn" class="top-btn timeline-refresh-btn">Full Timeline</button>
+        </div>
+        <div id="talk-chapters" class="talk-chapters">
+          <div class="timeline-empty">No chapters yet.</div>
+        </div>
+      </section>
+    </div>
   </main>
   <main id="speech-view" class="view speech-view hidden" data-mc-page="speech">
     <div class="speech-header">

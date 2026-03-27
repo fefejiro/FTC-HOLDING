@@ -33,6 +33,12 @@ Launch Office with health-check guard:
 npm run launch:office
 ```
 
+Fastest private intake surface:
+
+- Local: `http://localhost:3000/talk`
+- Private ops: `https://ops.unalabs.cloud/ateam/operator/talk`
+- Use text or `Start voice intake` first; open `Session details` only when you need transcript, timeline, export, or review controls.
+
 Optional sidecars:
 
 ```powershell

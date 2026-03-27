@@ -2660,13 +2660,13 @@ body[data-office-studio="true"] .office-view {
 .talk-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .talk-head-controls {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -2675,7 +2675,14 @@ body[data-office-studio="true"] .office-view {
 .talk-meta {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6px;
+  max-width: 760px;
+}
+
+.talk-title {
+  font-size: clamp(1.6rem, 2vw, 2.2rem);
+  line-height: 1.05;
+  color: #f4f9ff;
 }
 
 .talk-mode-label,
@@ -2717,8 +2724,49 @@ body[data-office-studio="true"] .office-view {
 
 .talk-session {
   color: #8fa8c6;
-  font-size: var(--fs-xs);
-  padding-left: 4px;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.talk-voice-toggle-btn {
+  min-width: 168px;
+  justify-content: center;
+}
+
+.talk-voice-toggle-btn[data-state="idle"] {
+  border-color: rgba(83, 182, 255, 0.42);
+}
+
+.talk-voice-toggle-btn[data-state="listening"] {
+  border-color: rgba(250, 204, 21, 0.65);
+  color: #fff2bf;
+}
+
+.talk-voice-toggle-btn[data-state="thinking"],
+.talk-voice-toggle-btn[data-state="speaking"] {
+  border-color: rgba(52, 211, 153, 0.6);
+  color: #c8ffe7;
+}
+
+.talk-voice-toggle-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.talk-advanced-toggle-btn[aria-expanded="true"] {
+  border-color: rgba(125, 211, 252, 0.42);
+  color: #e7f5ff;
+}
+
+.talk-settings-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border: 1px solid rgba(63, 92, 138, 0.45);
+  border-radius: 14px;
+  background: rgba(5, 10, 18, 0.72);
+  padding: 10px 12px;
 }
 
 .talk-ui-mode-btn {
@@ -2727,36 +2775,15 @@ body[data-office-studio="true"] .office-view {
 }
 
 .talk-view.talk-focus .talk-timeline-wrap,
-.talk-view.talk-focus .talk-chapters-wrap {
+.talk-view.talk-focus .talk-chapters-wrap,
+.talk-view.talk-focus .talk-advanced-sections,
+.talk-view.talk-focus .talk-settings-panel {
   display: none;
-}
-
-.talk-view.talk-focus .talk-transcript-wrap {
-  flex: 1;
-  min-height: 0;
-}
-
-.talk-view.talk-focus .talk-transcript {
-  max-height: none;
-  height: 100%;
-}
-
-.talk-view.talk-focus .talk-line.system {
-  display: none;
-}
-
-/* Focus mode = "ChatGPT listen" vibe: keep only the conversation + input. */
-.talk-view.talk-focus .talk-head-controls > :not(#talk-ui-mode-btn) {
-  display: none !important;
 }
 
 .talk-view.talk-focus .talk-head-controls {
   justify-content: flex-end;
   gap: 10px;
-}
-
-.talk-view.talk-focus .talk-transcript-head {
-  display: none;
 }
 
 .talk-view.talk-focus .talk-hint-compact {
@@ -2803,6 +2830,36 @@ body[data-office-studio="true"] .office-view {
   background: rgba(5, 10, 18, 0.82);
   padding: 10px 10px;
   backdrop-filter: blur(5px);
+}
+
+.talk-composer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.talk-composer-title {
+  font-size: 1rem;
+  font-weight: 650;
+  color: #f4f9ff;
+}
+
+.talk-composer-copy {
+  margin-top: 4px;
+  font-size: var(--fs-sm);
+  color: rgba(198, 213, 233, 0.72);
+  line-height: 1.45;
+}
+
+.talk-composer-mode {
+  border: 1px solid rgba(83, 182, 255, 0.28);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: var(--fs-xs);
+  color: #d7ebff;
+  background: rgba(15, 27, 44, 0.78);
 }
 
 .talk-composer-row {
@@ -2878,6 +2935,11 @@ body[data-office-studio="true"] .office-view {
 .talk-hint-compact {
   font-size: var(--fs-xs);
   color: rgba(198, 213, 233, 0.6);
+}
+
+.talk-advanced-sections {
+  display: grid;
+  gap: 10px;
 }
 
 .talk-core {
@@ -3705,7 +3767,13 @@ body[data-office-studio="true"] .office-view {
 
   .talk-head-controls {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+  }
+
+  .talk-settings-panel,
+  .talk-composer-head {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .console-row {
