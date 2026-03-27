@@ -5,6 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:public": "cross-env ATEAM_PUBLIC_SERVICE_MODE=true node server.js",
+    "bridge": "node bridge.js",
+    "phone": "node phone.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "test:backend": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.js",
     "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathPatterns=unit",

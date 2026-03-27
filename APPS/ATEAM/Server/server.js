@@ -90,6 +90,13 @@ const PUBLIC_DIR = path.join(PROJECT_ROOT, "Public");
 const MEMORY_DIR = path.join(PROJECT_ROOT, "memory");
 const DOCS_CATALOG = [
   {
+    id: "docs_index",
+    title: "Docs Index",
+    category: "overview",
+    summary: "Current documentation map, archive notes, and where runtime files belong.",
+    relativePath: "Docs/README.md"
+  },
+  {
     id: "readme",
     title: "ATEAM README",
     category: "overview",

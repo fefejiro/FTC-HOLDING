@@ -5,7 +5,22 @@
     "node": "22.x"
   },
   "scripts": {
-    "postinstall": "npm --prefix Server install --omit=dev",
-    "start": "npm --prefix Server start"
+    "postinstall": "npm --prefix Server install",
+    "start": "npm run start:server",
+    "start:server": "npm --prefix Server start",
+    "start:public": "npm --prefix Server run start:public",
+    "start:bridge": "npm --prefix Server run bridge",
+    "start:phone": "npm --prefix Server run phone",
+    "start:telegram": "npm --prefix telegram-gateway start",
+    "launch:office": "powershell.exe -ExecutionPolicy Bypass -File tools/ateam-launcher.ps1",
+    "clean:local": "powershell.exe -ExecutionPolicy Bypass -File tools/clean-local-runtime.ps1",
+    "install:dev": "npm --prefix Server install",
+    "install:server": "npm --prefix Server install --omit=dev",
+    "test": "npm run test:backend",
+    "test:backend": "npm --prefix Server run test:backend",
+    "test:unit": "npm --prefix Server run test:unit",
+    "test:integration": "npm --prefix Server run test:integration",
+    "test:coverage": "npm --prefix Server run test:coverage",
+    "verify:server": "node --check Server/server.js && node --check Server/bridge.js && node --check Server/phone.js"
   }
 }

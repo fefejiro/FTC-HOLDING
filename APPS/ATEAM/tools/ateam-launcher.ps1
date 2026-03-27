@@ -37,7 +37,7 @@ function Show-LauncherError($message) {
 
 function Start-AteamServer {
   # Keep launch "push-button clean": start server in a hidden window.
-  Start-Process -WindowStyle Hidden -WorkingDirectory $serverPath -FilePath "npm.cmd" -ArgumentList "start"
+  Start-Process -WindowStyle Hidden -WorkingDirectory $expectedProjectRoot -FilePath "npm.cmd" -ArgumentList "run", "start:server"
 }
 
 if (Test-PortListening) {
