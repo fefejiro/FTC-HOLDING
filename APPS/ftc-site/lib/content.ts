@@ -253,7 +253,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     pillar: "business-intelligence",
     tags: ["Dispatch", "Roadside", "Operations"],
     summary:
-      "Dispatch is Una Labs' roadside assistance system for direct customer intake, operator movement, and official Ottawa incident visibility.",
+      "Dispatch is Una Labs' roadside assistance system for direct customer intake, invited operator demos, and official Ottawa incident visibility.",
     status: "live",
     availabilityLabel: "Live on Una Labs",
     marketingBullets: [
@@ -267,11 +267,11 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
       insight:
         "A lean dispatch product works best when customer intake, operator movement, and incident visibility share one live system.",
       solution:
-        "Dispatch gives Ottawa roadside teams a browser-based request flow, operator console, private admin surface, and continuous incident watch without depending on paid traffic feeds to get started.",
+        "Dispatch gives Ottawa roadside teams a browser-based request flow, invite-only operator sandbox, and continuous incident watch without depending on paid traffic feeds to get started.",
       capabilities: [
         "Customer roadside request intake",
         "Operator console with live request updates",
-        "Private admin control for requests and operators",
+        "Client-safe demo flow with invite-only operator access",
         "Official Ottawa-area incident monitoring"
       ],
       technology: [

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -14,7 +14,16 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
+import DemoFeedbackForm from '../components/DemoFeedbackForm';
 import { cn } from '../lib/cn';
+import {
+  clearStoredDemoSessionId,
+  getDemoSessionId,
+  isDemoMode,
+  makeDemoSessionId,
+  readStoredDemoSessionId,
+  storeDemoSessionId,
+} from '../lib/demo';
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
 type PageState = 'form' | 'submitting' | 'success' | 'error';
@@ -26,6 +35,30 @@ const SERVICE_OPTIONS = [
   { type: 'tire' as ServiceType, Icon: CircleDot, label: 'Tire Change' },
   { type: 'other' as ServiceType, Icon: Wrench, label: 'Other Issue' },
 ];
+
+function resetFormState(
+  setters: {
+    setServiceType: (value: ServiceType | null) => void;
+    setName: (value: string) => void;
+    setPhone: (value: string) => void;
+    setAddress: (value: string) => void;
+    setNotes: (value: string) => void;
+    setLocationLat: (value: number | null) => void;
+    setLocationLng: (value: number | null) => void;
+    setRequestId: (value: string | null) => void;
+    setShowFeedback: (value: boolean) => void;
+  },
+) {
+  setters.setServiceType(null);
+  setters.setName('');
+  setters.setPhone('');
+  setters.setAddress('');
+  setters.setNotes('');
+  setters.setLocationLat(null);
+  setters.setLocationLng(null);
+  setters.setRequestId(null);
+  setters.setShowFeedback(false);
+}
 
 export default function RequestPage() {
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
@@ -39,12 +72,33 @@ export default function RequestPage() {
   const [locationError, setLocationError] = useState('');
   const [pageState, setPageState] = useState<PageState>('form');
   const [errorMessage, setErrorMessage] = useState('');
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoSessionId, setDemoSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const liveDemoMode = isDemoMode(window.location.search);
+    setDemoMode(liveDemoMode);
+    if (!liveDemoMode) {
+      clearStoredDemoSessionId();
+      setDemoSessionId(null);
+      return;
+    }
+
+    const existingSession =
+      getDemoSessionId(window.location.search) || readStoredDemoSessionId() || makeDemoSessionId();
+    storeDemoSessionId(existingSession);
+    setDemoSessionId(existingSession);
+  }, []);
 
   async function handleUseMyLocation() {
     if (!navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser.');
       return;
     }
+
     setLocating(true);
     setLocationError('');
     navigator.geolocation.getCurrentPosition(
@@ -60,7 +114,7 @@ export default function RequestPage() {
             if (data.displayName) setAddress(data.displayName);
           }
         } catch {
-          // coords still captured
+          // Coordinates are still captured even if reverse geocoding fails.
         } finally {
           setLocating(false);
         }
@@ -70,12 +124,13 @@ export default function RequestPage() {
         setLocationError('Could not get your location. Please type your address below.');
         console.error('[geo]', err);
       },
-      { timeout: 10000 },
+      { timeout: 10_000 },
     );
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+
     if (!serviceType) {
       setErrorMessage('Please select a service type.');
       return;
@@ -92,10 +147,12 @@ export default function RequestPage() {
       setErrorMessage('Please share your location or enter your address.');
       return;
     }
+
     setErrorMessage('');
     setPageState('submitting');
+
     try {
-      const res = await fetch('/api/requests', {
+      const response = await fetch('/api/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -106,15 +163,22 @@ export default function RequestPage() {
           locationLat: locationLat ?? undefined,
           locationLng: locationLng ?? undefined,
           notes: notes.trim() || undefined,
+          mode: demoMode ? 'demo' : 'live',
+          demoSessionId: demoMode ? demoSessionId || undefined : undefined,
         }),
       });
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error || 'Failed to submit request');
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error || 'Failed to submit request');
       }
+
+      const payload = (await response.json()) as { request?: { id?: string } };
+      setRequestId(payload.request?.id || null);
+      setShowFeedback(false);
       setPageState('success');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
       setErrorMessage(message);
       setPageState('error');
     }
@@ -122,28 +186,77 @@ export default function RequestPage() {
 
   if (pageState === 'success') {
     return (
-      <div className="min-h-dvh bg-dispatch-bg flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-full max-w-sm">
+      <div className="min-h-dvh bg-dispatch-bg flex flex-col items-center justify-center px-6 py-10 text-center">
+        <div className="w-full max-w-lg">
           <div className="w-20 h-20 bg-green-500/10 border border-green-500/25 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-green-400" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-3">Help is on the way.</h1>
-          <p className="text-slate-400 leading-relaxed mb-2">
-            We'll call you shortly at <span className="text-orange-400 font-semibold">{phone}</span>.
-          </p>
-          <p className="text-slate-600 text-sm">
-            Stay with your vehicle if safe. Typical response: 20-40 minutes.
-          </p>
+          <h1 className="text-2xl font-bold text-white mb-3">
+            {demoMode ? 'Demo request created.' : 'Help is on the way.'}
+          </h1>
+
+          {demoMode ? (
+            <>
+              <p className="text-slate-400 leading-relaxed mb-2">
+                Your sample roadside request is now in the live demo system. Next, sign in as the invited
+                operator and work the same request through the queue.
+              </p>
+              <p className="text-slate-600 text-sm">
+                Demo session {demoSessionId || 'active'}
+                {requestId ? ` - request ${requestId.slice(0, 8)}` : ''}.
+              </p>
+              <div className="mt-8 flex flex-col gap-3">
+                <a
+                  href={`/operator?mode=demo${demoSessionId ? `&demoSession=${encodeURIComponent(demoSessionId)}` : ''}`}
+                  className="inline-flex items-center justify-center rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-400"
+                >
+                  Open operator demo
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowFeedback((current) => !current)}
+                  className="inline-flex items-center justify-center rounded-xl border border-dispatch-border bg-dispatch-surface px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
+                >
+                  {showFeedback ? 'Hide feedback form' : 'Send demo feedback'}
+                </button>
+              </div>
+              {showFeedback ? (
+                <div className="mt-6 text-left">
+                  <DemoFeedbackForm
+                    context={{
+                      context: 'dispatch-demo-request-success',
+                      demoSessionId,
+                      requestId,
+                    }}
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p className="text-slate-400 leading-relaxed mb-2">
+                We&apos;ll call you shortly at <span className="text-orange-400 font-semibold">{phone}</span>.
+              </p>
+              <p className="text-slate-600 text-sm">
+                Stay with your vehicle if safe. Typical response: 20-40 minutes.
+              </p>
+            </>
+          )}
+
           <button
             onClick={() => {
               setPageState('form');
-              setServiceType(null);
-              setName('');
-              setPhone('');
-              setAddress('');
-              setNotes('');
-              setLocationLat(null);
-              setLocationLng(null);
+              resetFormState({
+                setServiceType,
+                setName,
+                setPhone,
+                setAddress,
+                setNotes,
+                setLocationLat,
+                setLocationLng,
+                setRequestId,
+                setShowFeedback,
+              });
             }}
             className="mt-12 text-slate-700 text-xs hover:text-slate-500 transition-colors"
           >
@@ -170,9 +283,16 @@ export default function RequestPage() {
             Back to Dispatch
           </a>
         </div>
+        {demoMode ? (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-orange-300">
+            Client demo mode
+          </div>
+        ) : null}
         <h1 className="text-3xl font-bold text-white mt-3">Need help?</h1>
         <p className="text-slate-400 mt-1.5 text-[15px]">
-          We will dispatch a technician to your location.
+          {demoMode
+            ? 'Create a sample roadside request, then switch into operator to work the same job through the live system.'
+            : 'We will dispatch a technician to your location.'}
         </p>
       </div>
 
@@ -182,14 +302,14 @@ export default function RequestPage() {
             What do you need?
           </label>
           <div className="grid grid-cols-2 gap-2.5">
-            {SERVICE_OPTIONS.map(({ type, Icon, label }, i) => (
+            {SERVICE_OPTIONS.map(({ type, Icon, label }, index) => (
               <button
                 key={type}
                 type="button"
                 onClick={() => setServiceType(type)}
                 className={cn(
                   'flex items-center gap-3 px-4 py-4 rounded-xl border-2 text-left transition-all duration-150',
-                  i === 4 && 'col-span-2',
+                  index === 4 && 'col-span-2',
                   serviceType === type
                     ? 'bg-orange-500/12 border-orange-500 text-white'
                     : 'bg-dispatch-surface border-dispatch-border text-slate-300 hover:border-slate-500 active:bg-slate-800',
@@ -216,8 +336,8 @@ export default function RequestPage() {
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="First and last name"
+              onChange={(event) => setName(event.target.value)}
+              placeholder={demoMode ? 'Client demo reviewer' : 'First and last name'}
               autoComplete="name"
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl pl-11 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 transition-colors"
             />
@@ -233,8 +353,8 @@ export default function RequestPage() {
             <input
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="613-555-0100"
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder={demoMode ? '613-555-0100' : '613-555-0100'}
               autoComplete="tel"
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl pl-11 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 transition-colors"
             />
@@ -265,19 +385,19 @@ export default function RequestPage() {
             )}
             {locating ? 'Getting your location...' : locationLat ? 'GPS location captured' : 'Use my GPS location'}
           </button>
-          {locationError && (
+          {locationError ? (
             <div className="flex items-start gap-2 text-red-400 text-xs mb-2.5">
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
               <span>{locationError}</span>
             </div>
-          )}
+          ) : null}
           <div className="relative">
             <MapPin className="absolute left-4 top-4 w-4 h-4 text-slate-500 pointer-events-none" />
             <input
               type="text"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Or type your address"
+              onChange={(event) => setAddress(event.target.value)}
+              placeholder={demoMode ? 'Example: 350 Sparks St, Ottawa' : 'Or type your address'}
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl pl-11 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 transition-colors text-sm"
             />
           </div>
@@ -291,22 +411,26 @@ export default function RequestPage() {
             <FileText className="absolute left-4 top-4 w-4 h-4 text-slate-500 pointer-events-none" />
             <textarea
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Vehicle make/colour, nearest landmark, any other details..."
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder={
+                demoMode
+                  ? 'Optional demo note: use fake details only.'
+                  : 'Vehicle make/colour, nearest landmark, any other details...'
+              }
               rows={3}
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl pl-11 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 transition-colors text-sm"
             />
           </div>
         </div>
 
-        {(pageState === 'error' || errorMessage) && (
+        {(pageState === 'error' || errorMessage) ? (
           <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
             <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
             <p className="text-red-400 text-sm leading-snug">
               {errorMessage || 'Something went wrong. Please try again.'}
             </p>
           </div>
-        )}
+        ) : null}
 
         <button
           type="submit"
@@ -322,13 +446,17 @@ export default function RequestPage() {
             <>
               <Loader2 className="w-5 h-5 animate-spin" /> Sending request...
             </>
+          ) : demoMode ? (
+            'Create Demo Request'
           ) : (
             'Request Help Now'
           )}
         </button>
 
         <p className="text-slate-700 text-xs text-center pb-2">
-          Ottawa area · Available 24/7 · Typical response 20-40 min
+          {demoMode
+            ? 'Demo flow only - use sample details and invited operator credentials'
+            : 'Ottawa area - Available 24/7 - Typical response 20-40 min'}
         </p>
       </form>
     </div>

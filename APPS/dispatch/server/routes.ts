@@ -1,17 +1,22 @@
 import type { Express } from 'express';
 import type { Server } from 'http';
-import { db } from './db';
-import { operators, requests, incidents } from './schema';
-import { eq, desc } from 'drizzle-orm';
-import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { getVapidPublicKey, sendToAllActiveOperators } from './push';
-import { sseAdd, sseRemove, sseBroadcast, sseClientCount } from './sse';
-import { getIncidentMonitorInfo } from './monitor';
+import { desc, eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
+import { db } from './db';
+import {
+  buildRequestNotes,
+  matchesRequestMode,
+  normalizeDemoSessionId,
+  serializeRequest,
+} from './demo';
+import { getIncidentMonitorInfo } from './monitor';
+import { getVapidPublicKey, sendToAllActiveOperators } from './push';
+import { incidents, operators, requests } from './schema';
+import { sseAdd, sseBroadcast, sseClientCount, sseRemove } from './sse';
 
-export async function registerRoutes(server: Server, app: Express): Promise<void> {
-  // Status
+export async function registerRoutes(_server: Server, app: Express): Promise<void> {
   app.get('/api/status', (_req, res) => {
     res.json({
       ok: true,
@@ -24,21 +29,22 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     });
   });
 
-  // ── Server-Sent Events ────────────────────────────────────────────────────
-  // Operators connect here on load; all writes broadcast instantly.
   app.get('/api/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no'); // disable nginx buffering
+    res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
     sseAdd(res);
-    res.write(': connected\n\n'); // initial handshake
+    res.write(': connected\n\n');
 
-    // Keepalive ping every 25 s to prevent proxy timeouts
     const ping = setInterval(() => {
-      try { res.write(': ping\n\n'); } catch { clearInterval(ping); }
+      try {
+        res.write(': ping\n\n');
+      } catch {
+        clearInterval(ping);
+      }
     }, 25_000);
 
     req.on('close', () => {
@@ -47,7 +53,6 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     });
   });
 
-  // Push / VAPID
   app.get('/api/push/vapid-key', (_req, res) => {
     const publicKey = getVapidPublicKey();
     if (!publicKey) {
@@ -80,8 +85,6 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     res.json({ ok: true });
   });
 
-  // ── Requests ──────────────────────────────────────────────────────────────
-
   app.post('/api/requests', async (req, res) => {
     const schema = z.object({
       customerName: z.string().min(1),
@@ -91,6 +94,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       locationAddress: z.string().optional(),
       serviceType: z.enum(['gas', 'lockout', 'jump', 'tire', 'other']),
       notes: z.string().optional(),
+      mode: z.enum(['live', 'demo']).optional(),
+      demoSessionId: z.string().optional(),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -99,41 +104,53 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return;
     }
 
-    const [request] = await db.insert(requests).values(parsed.data).returning();
+    const demoMode = parsed.data.mode === 'demo';
+    const demoSessionId = normalizeDemoSessionId(parsed.data.demoSessionId);
+    const [request] = await db
+      .insert(requests)
+      .values({
+        customerName: parsed.data.customerName,
+        customerPhone: parsed.data.customerPhone,
+        locationLat: parsed.data.locationLat,
+        locationLng: parsed.data.locationLng,
+        locationAddress: parsed.data.locationAddress,
+        serviceType: parsed.data.serviceType,
+        notes: buildRequestNotes(parsed.data.notes, { demoMode, demoSessionId }),
+      })
+      .returning();
 
-    // SSE — instant update to all connected operator browsers
-    sseBroadcast('request:new', request);
+    const serializedRequest = serializeRequest(request);
+    sseBroadcast('request:new', serializedRequest);
 
-    // Push notification (non-blocking)
-    sendToAllActiveOperators({
-      title: '🚨 New Roadside Request',
-      body: `${parsed.data.serviceType.toUpperCase()} — ${parsed.data.customerName} at ${parsed.data.locationAddress || 'unknown location'}`,
-      data: { requestId: request.id, type: parsed.data.serviceType },
-    }).catch((err) => console.error('[push] Failed to notify operators:', err));
+    if (!demoMode) {
+      sendToAllActiveOperators({
+        title: 'New Roadside Request',
+        body: `${parsed.data.serviceType.toUpperCase()} - ${parsed.data.customerName} at ${parsed.data.locationAddress || 'unknown location'}`,
+        data: { requestId: request.id, type: parsed.data.serviceType },
+      }).catch((err) => console.error('[push] Failed to notify operators:', err));
+    }
 
-    res.status(201).json({ ok: true, request });
+    res.status(201).json({ ok: true, request: serializedRequest });
   });
 
   app.get('/api/requests', async (req, res) => {
-    const { status } = req.query;
-
-    if (status && typeof status === 'string') {
-      const results = await db
-        .select()
-        .from(requests)
-        .where(eq(requests.status, status as any))
-        .orderBy(desc(requests.createdAt));
-      res.json(results);
-      return;
-    }
+    const requestedStatus = typeof req.query.status === 'string' ? req.query.status : null;
+    const requestedMode =
+      req.query.mode === 'demo' ? 'demo' : req.query.mode === 'live' ? 'live' : 'all';
+    const demoSessionId =
+      typeof req.query.demoSessionId === 'string' ? normalizeDemoSessionId(req.query.demoSessionId) : null;
 
     const results = await db.select().from(requests).orderBy(desc(requests.createdAt));
-    res.json(results);
+    const filtered = results
+      .filter((request) => !requestedStatus || request.status === requestedStatus)
+      .filter((request) => matchesRequestMode(request, requestedMode, demoSessionId))
+      .map((request) => serializeRequest(request));
+
+    res.json(filtered);
   });
 
   app.patch('/api/requests/:id/status', async (req, res) => {
     const { id } = req.params;
-
     const schema = z.object({
       status: z.enum(['pending', 'accepted', 'en_route', 'completed', 'cancelled']),
       operatorId: z.string().uuid().optional(),
@@ -153,8 +170,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       updateValues.acceptedAt = now;
       if (operatorId) updateValues.operatorId = operatorId;
     }
-    if (status === 'en_route') {
-      if (operatorId) updateValues.operatorId = operatorId;
+    if (status === 'en_route' && operatorId) {
+      updateValues.operatorId = operatorId;
     }
     if (status === 'completed') {
       updateValues.completedAt = now;
@@ -171,13 +188,10 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return;
     }
 
-    // SSE — push updated job to all connected operators
-    sseBroadcast('request:updated', updated);
-
-    res.json({ ok: true, request: updated });
+    const serializedRequest = serializeRequest(updated);
+    sseBroadcast('request:updated', serializedRequest);
+    res.json({ ok: true, request: serializedRequest });
   });
-
-  // ── Operators ─────────────────────────────────────────────────────────────
 
   app.get('/api/operators', async (_req, res) => {
     const result = await db
@@ -212,12 +226,10 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return;
     }
 
-    const { name, phone, pin } = parsed.data;
-    const pinHash = await bcrypt.hash(pin, 10);
-
+    const pinHash = await bcrypt.hash(parsed.data.pin, 10);
     const [operator] = await db
       .insert(operators)
-      .values({ name, phone, pinHash })
+      .values({ name: parsed.data.name, phone: parsed.data.phone, pinHash })
       .returning({
         id: operators.id,
         name: operators.name,
@@ -241,16 +253,13 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return;
     }
 
-    const { operatorId, pin } = parsed.data;
-
-    const [operator] = await db.select().from(operators).where(eq(operators.id, operatorId));
-
+    const [operator] = await db.select().from(operators).where(eq(operators.id, parsed.data.operatorId));
     if (!operator || !operator.pinHash) {
       res.status(401).json({ ok: false, error: 'Invalid credentials' });
       return;
     }
 
-    const valid = await bcrypt.compare(pin, operator.pinHash);
+    const valid = await bcrypt.compare(parsed.data.pin, operator.pinHash);
     if (!valid) {
       res.status(401).json({ ok: false, error: 'Invalid PIN' });
       return;
@@ -267,9 +276,6 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     });
   });
 
-  // ── Admin auth ────────────────────────────────────────────────────────────
-  // Returns the proxy key on successful PIN validation.
-  // Client stores it and sends as x-dispatch-admin-proxy-key on admin requests.
   app.post('/api/admin/auth', async (req, res) => {
     const schema = z.object({ pin: z.string().min(1) });
     const parsed = schema.safeParse(req.body);
@@ -281,7 +287,6 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     const adminPin = process.env.DISPATCH_ADMIN_PIN;
     const proxyKey = process.env.DISPATCH_ADMIN_PROXY_KEY;
 
-    // Local dev: no env vars needed
     if (!adminPin || !proxyKey) {
       const host = String(req.hostname).toLowerCase();
       if (host === 'localhost' || host === '127.0.0.1') {
@@ -300,7 +305,95 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     res.json({ ok: true, token: proxyKey });
   });
 
-  // ── Admin: assign operator to a request ───────────────────────────────────
+  app.post('/api/demo-feedback', async (req, res) => {
+    const schema = z.object({
+      name: z.string().optional(),
+      email: z.string().email(),
+      overallImpression: z.string().min(4),
+      confusing: z.string().min(4),
+      trustworthy: z.string().min(4),
+      missing: z.string().min(4),
+      startedAt: z.number(),
+      demoSessionId: z.string().optional(),
+      context: z.string().optional(),
+      operatorName: z.string().optional(),
+      requestId: z.string().optional(),
+      completedRequestId: z.string().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ ok: false, error: 'Invalid feedback payload' });
+      return;
+    }
+
+    const feedbackOrigin = String(process.env.UNALABS_FEEDBACK_ORIGIN || 'https://unalabs.cloud').replace(/\/+$/, '');
+    const demoSessionId = normalizeDemoSessionId(parsed.data.demoSessionId);
+    const summary = [
+      'Dispatch demo feedback',
+      `Overall impression: ${parsed.data.overallImpression}`,
+      `What felt confusing: ${parsed.data.confusing}`,
+      `What felt trustworthy: ${parsed.data.trustworthy}`,
+      `What is missing: ${parsed.data.missing}`,
+    ].join('\n');
+    const notes = [
+      'Source: dispatch-demo',
+      parsed.data.context ? `Context: ${parsed.data.context}` : '',
+      parsed.data.operatorName ? `Operator: ${parsed.data.operatorName}` : '',
+      demoSessionId ? `Demo session: ${demoSessionId}` : '',
+      parsed.data.requestId ? `Request: ${parsed.data.requestId}` : '',
+      parsed.data.completedRequestId ? `Completed request: ${parsed.data.completedRequestId}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    try {
+      const response = await fetch(`${feedbackOrigin}/api/intake`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: parsed.data.name || 'Dispatch demo reviewer',
+          email: parsed.data.email,
+          projectName: 'Dispatch demo feedback',
+          projectType: 'Dispatch demo feedback',
+          projectIdea: summary,
+          budgetRange: 'not-sure-yet',
+          timeline: '',
+          notes,
+          companyWebsite: '',
+          startedAt: parsed.data.startedAt,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        requestId?: string;
+      };
+
+      if (!response.ok || !payload.ok) {
+        res.status(502).json({
+          ok: false,
+          error: payload.message || 'Unable to forward demo feedback right now.',
+        });
+        return;
+      }
+
+      res.json({
+        ok: true,
+        message: payload.message || 'Feedback received.',
+        requestId: payload.requestId,
+      });
+    } catch (error) {
+      res.status(502).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unable to send demo feedback right now.',
+      });
+    }
+  });
+
   app.patch('/api/requests/:id/assign', async (req, res) => {
     if (!canAccessAdminSurface(req)) {
       res.status(403).json({ error: 'Admin access required' });
@@ -310,7 +403,6 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     const { id } = req.params;
     const schema = z.object({
       operatorId: z.string().uuid().nullable(),
-      // optionally bump status to accepted when assigning
       accept: z.boolean().optional(),
     });
 
@@ -320,9 +412,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return;
     }
 
-    const { operatorId, accept } = parsed.data;
-    const updateValues: Record<string, unknown> = { operatorId };
-    if (accept) {
+    const updateValues: Record<string, unknown> = { operatorId: parsed.data.operatorId };
+    if (parsed.data.accept) {
       updateValues.status = 'accepted';
       updateValues.acceptedAt = new Date();
     }
@@ -338,11 +429,11 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return;
     }
 
-    sseBroadcast('request:updated', updated);
-    res.json({ ok: true, request: updated });
+    const serializedRequest = serializeRequest(updated);
+    sseBroadcast('request:updated', serializedRequest);
+    res.json({ ok: true, request: serializedRequest });
   });
 
-  // ── Admin: change request status ──────────────────────────────────────────
   app.patch('/api/requests/:id/admin-status', async (req, res) => {
     if (!canAccessAdminSurface(req)) {
       res.status(403).json({ error: 'Admin access required' });
@@ -360,11 +451,10 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return;
     }
 
-    const { status } = parsed.data;
     const now = new Date();
-    const updateValues: Record<string, unknown> = { status };
-    if (status === 'accepted') updateValues.acceptedAt = now;
-    if (status === 'completed') updateValues.completedAt = now;
+    const updateValues: Record<string, unknown> = { status: parsed.data.status };
+    if (parsed.data.status === 'accepted') updateValues.acceptedAt = now;
+    if (parsed.data.status === 'completed') updateValues.completedAt = now;
 
     const [updated] = await db
       .update(requests)
@@ -377,11 +467,10 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return;
     }
 
-    sseBroadcast('request:updated', updated);
-    res.json({ ok: true, request: updated });
+    const serializedRequest = serializeRequest(updated);
+    sseBroadcast('request:updated', serializedRequest);
+    res.json({ ok: true, request: serializedRequest });
   });
-
-  // ── Ontario 511 incidents ─────────────────────────────────────────────────
 
   app.get('/api/incidents', async (req, res) => {
     const lim = Math.min(Number(req.query.limit ?? 30), 50);
@@ -417,33 +506,34 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     res.json(deduped);
   });
 
-  // ── Reverse geocode proxy (Nominatim) ─────────────────────────────────────
-
   app.get('/api/geocode/reverse', async (req, res) => {
     const { lat, lng } = req.query;
-
     if (!lat || !lng) {
       res.status(400).json({ error: 'lat and lng are required' });
       return;
     }
 
     try {
-      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'dispatch-app/1.0 (mike@unalabs.cloud)' },
-      });
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        {
+          headers: { 'User-Agent': 'dispatch-app/1.0 (mike@unalabs.cloud)' },
+        },
+      );
 
       if (!response.ok) {
         res.status(502).json({ error: 'Geocoding service unavailable' });
         return;
       }
 
-      const data = await response.json() as {
+      const data = (await response.json()) as {
         display_name?: string;
         address?: {
-          city?: string; town?: string; village?: string;
-          state?: string; country?: string;
-          road?: string; house_number?: string;
+          city?: string;
+          town?: string;
+          village?: string;
+          state?: string;
+          country?: string;
         };
         lat?: string;
         lon?: string;
@@ -461,8 +551,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         lat: data.lat || String(lat),
         lng: data.lon || String(lng),
       });
-    } catch (err) {
-      console.error('[geocode] Reverse geocode error:', err);
+    } catch (error) {
+      console.error('[geocode] Reverse geocode error:', error);
       res.status(502).json({ error: 'Failed to reverse geocode' });
     }
   });

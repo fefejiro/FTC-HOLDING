@@ -10,8 +10,8 @@ export const metadata = {
 
 const dispatchHighlights = [
   "Roadside requests for fuel delivery, lockouts, jump starts, and tire changes",
-  "Operator console with live request movement and incident drill-down",
-  "Private admin surface for request control and operator management",
+  "Invite-only operator demo with live request movement and incident drill-down",
+  "Client-safe demo loop without exposing admin controls",
   "Official Ottawa-area incident watch using no-key public sources"
 ] as const;
 
@@ -37,25 +37,26 @@ export default function DispatchProductPage() {
         <p className="eyebrow">Product</p>
         <h1>Dispatch</h1>
         <p className="page-intro">
-          Dispatch is the live Ottawa roadside assistance product inside Una Labs. It handles public
-          roadside intake, operator routing, and official incident watch in one browser-based system.
+          Dispatch is the live Ottawa roadside assistance product inside Una Labs. The client path is
+          simple: submit a sample roadside request, sign in as the invited operator, work the request,
+          and send feedback from inside the system.
         </p>
         <div className="product-actions">
           <a
-            href="https://dispatch.unalabs.cloud"
+            href="https://dispatch.unalabs.cloud/request?mode=demo"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
           >
-            Open Dispatch
+            Try Dispatch Demo
           </a>
           <a
-            href="https://dispatch.unalabs.cloud/request"
+            href="https://dispatch.unalabs.cloud"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-secondary"
           >
-            Open request form
+            View Live Dispatch
           </a>
         </div>
       </section>
@@ -77,15 +78,17 @@ export default function DispatchProductPage() {
 
         <article className="card product-spotlight-card">
           <p className="status-pill">Built for Ottawa</p>
-          <h2>Why it matters</h2>
+          <h2>How to test it</h2>
           <p>
-            The product is tuned for local roadside operations where speed, clarity, and live
-            operator feedback matter more than a heavy app-store rollout on day one.
+            The first client round should stay on the operator sandbox only. Admin remains private so
+            the demo feels clean and safe.
           </p>
-          <p className="muted">
-            Public access stays on the live Dispatch app. Private operator and admin controls remain
-            on separate secured surfaces and are not exposed on the public marketing site.
-          </p>
+          <ol className="feature-list compact-feature-list">
+            <li>Submit a sample roadside request</li>
+            <li>Sign in as operator with the credentials you were given</li>
+            <li>Complete the flow and send feedback</li>
+          </ol>
+          <p className="muted">Operator testing is available by invite. Admin remains private and is not part of the client flow.</p>
         </article>
       </section>
 
@@ -109,7 +112,15 @@ export default function DispatchProductPage() {
           </p>
         </div>
         <div className="product-actions">
-          <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
+          <a
+            href="https://dispatch.unalabs.cloud/request?mode=demo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+          >
+            Try Dispatch Demo
+          </a>
+          <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
             Start a Project
           </Link>
           <a
@@ -118,7 +129,7 @@ export default function DispatchProductPage() {
             rel="noopener noreferrer"
             className="btn btn-secondary"
           >
-            Visit Dispatch
+            View Live Dispatch
           </a>
         </div>
       </article>

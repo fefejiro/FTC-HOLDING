@@ -17,6 +17,15 @@ Dispatch is the Ottawa roadside assistance app and API in this repo.
 - `/operator` is the operator console
 - `/admin` is the admin dashboard
 
+## Client demo flow
+
+- Official entrypoint: `https://unalabs.cloud/products/dispatch`
+- Demo request form: `https://dispatch.unalabs.cloud/request?mode=demo`
+- Demo operator surface: `https://dispatch.unalabs.cloud/operator?mode=demo&demoSession=<id>`
+- Admin remains private on `https://dispatch-admin.unalabs.cloud/admin`
+
+Demo requests are tagged with a session marker so invited operators can work a client-safe queue without mixing with unrelated live jobs. The real incident-watch feed stays visible during the demo so the system still feels live.
+
 ## Remote admin security
 
 - `dispatch.unalabs.cloud` stays public and does not expose remote admin access
