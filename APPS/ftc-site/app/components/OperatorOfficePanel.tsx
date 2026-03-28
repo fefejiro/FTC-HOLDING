@@ -43,7 +43,7 @@ function drawPixelPerson(canvas: HTMLCanvasElement, agentId: string) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const { skin, body, pants, hair, accent, glasses, hat } = pixelPalette(agentId);
-  const S = 3; // scale: 16×20 grid → 48×60px
+  const S = 4; // scale: 16×20 grid → 64×80px
   canvas.width = 16 * S;
   canvas.height = 20 * S;
   ctx.imageSmoothingEnabled = false;
@@ -139,11 +139,28 @@ export default function OperatorOfficePanel({ phase }: { phase: OfficePhase }) {
   return (
     <div className="opi-shell">
       <div className="opi-header">
-        <span className="opi-header-label">ATEAM agents</span>
+        <span className="opi-header-label">Live agent team</span>
         <span className={`opi-header-chip opi-header-chip--${phase}`}>
           {phase !== "idle" && <span className="opi-header-dot" aria-hidden="true" />}
           {PHASE_LABEL[phase]}
         </span>
+      </div>
+
+      <div className="opi-intro" aria-hidden="true">
+        <p className="opi-intro-title">
+          {phase === "idle"
+            ? "The team is standing by."
+            : phase === "done"
+            ? "Pack delivered."
+            : "Agents are working on your idea."}
+        </p>
+        <p className="opi-intro-sub">
+          {phase === "idle"
+            ? "Drop a rough idea on the right and watch them go."
+            : phase === "done"
+            ? "Review the decision pack and start the project."
+            : "Each agent owns a stage — routing, building, or packaging."}
+        </p>
       </div>
 
       <div className="opi-grid">

@@ -5801,9 +5801,9 @@ nav.primary {
 
 .wf-split {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 1fr 1fr;
   min-height: calc(100vh - 52px);
-  align-items: start;
+  align-items: stretch;
 }
 
 .wf-office-col {
@@ -5811,18 +5811,21 @@ nav.primary {
   top: 52px;
   height: calc(100vh - 52px);
   overflow-y: auto;
-  padding: 28px 20px;
-  border-right: 1px solid rgba(226,241,255,0.06);
-  background: rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  padding: 36px 32px;
+  border-right: 1px solid rgba(226,241,255,0.07);
+  background: linear-gradient(160deg, rgba(108,92,231,0.07) 0%, rgba(0,0,0,0.18) 100%);
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.1) transparent;
 }
 
 .wf-intake-col {
   min-width: 0;
+  overflow-y: auto;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 960px) {
   .wf-split {
     grid-template-columns: 1fr;
     min-height: unset;
@@ -5831,8 +5834,8 @@ nav.primary {
     position: static;
     height: auto;
     border-right: none;
-    border-bottom: 1px solid rgba(226,241,255,0.06);
-    padding: 16px 20px;
+    border-bottom: 1px solid rgba(226,241,255,0.07);
+    padding: 24px 20px;
   }
 }
 
@@ -5841,7 +5844,8 @@ nav.primary {
 .opi-shell {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  height: 100%;
 }
 
 .opi-header {
@@ -5849,6 +5853,7 @@ nav.primary {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .opi-header-label {
@@ -5865,7 +5870,7 @@ nav.primary {
   gap: 5px;
   font-size: 11px;
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 20px;
   color: rgba(226,241,255,0.5);
   background: rgba(226,241,255,0.05);
@@ -5896,41 +5901,66 @@ nav.primary {
   flex-shrink: 0;
 }
 
+.opi-intro {
+  flex-shrink: 0;
+}
+
+.opi-intro-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(226,241,255,0.85);
+  margin: 0 0 4px;
+  line-height: 1.4;
+}
+
+.opi-intro-sub {
+  font-size: 12px;
+  color: rgba(226,241,255,0.35);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* 2-column agent grid — hero layout */
 .opi-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  flex: 1;
 }
 
 .opi-agent {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(226,241,255,0.02);
-  border: 1px solid rgba(226,241,255,0.05);
+  padding: 20px 12px 16px;
+  border-radius: 12px;
+  background: rgba(226,241,255,0.03);
+  border: 1px solid rgba(226,241,255,0.06);
   transition: background 0.4s ease, border-color 0.4s ease, opacity 0.4s ease;
   animation: opi-idle-float 4s ease-in-out infinite;
+  text-align: center;
+  cursor: default;
 }
 
 .opi-agent--active {
-  background: rgba(108,92,231,0.1);
-  border-color: rgba(108,92,231,0.28);
+  background: rgba(108,92,231,0.12);
+  border-color: rgba(108,92,231,0.32);
+  box-shadow: 0 0 20px rgba(108,92,231,0.12);
   animation: opi-active-float 2s ease-in-out infinite;
 }
 
 .opi-agent--done {
   background: rgba(0,212,255,0.04);
-  border-color: rgba(0,212,255,0.12);
-  opacity: 0.65;
+  border-color: rgba(0,212,255,0.14);
+  opacity: 0.6;
   animation: none;
 }
 
 .opi-sprite {
   flex-shrink: 0;
-  width: 48px;
-  height: 60px;
+  width: 64px;
+  height: 80px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -5943,20 +5973,16 @@ nav.primary {
 }
 
 .opi-agent-info {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  align-items: center;
 }
 
 .opi-agent-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: rgba(226,241,255,0.85);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: rgba(226,241,255,0.9);
 }
 
 .opi-agent-role {
@@ -5964,64 +5990,55 @@ nav.primary {
   font-weight: 400;
   color: rgba(226,241,255,0.35);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
 }
 
 .opi-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
   transition: background 0.4s ease, box-shadow 0.4s ease;
 }
 
 .opi-dot--idle    { background: rgba(226,241,255,0.15); }
-.opi-dot--active  { background: #8b5cf6; box-shadow: 0 0 8px 1px rgba(139,92,246,0.7); animation: opi-dot-blink 1.2s ease-in-out infinite; }
-.opi-dot--done    { background: #00d4ff; box-shadow: 0 0 6px 1px rgba(0,212,255,0.4); }
+.opi-dot--active  { background: #8b5cf6; box-shadow: 0 0 10px 2px rgba(139,92,246,0.7); animation: opi-dot-blink 1.2s ease-in-out infinite; }
+.opi-dot--done    { background: #00d4ff; box-shadow: 0 0 8px 1px rgba(0,212,255,0.5); }
 
 .opi-footer {
   font-size: 10px;
-  color: rgba(226,241,255,0.18);
+  color: rgba(226,241,255,0.15);
   text-align: center;
-  padding-top: 8px;
-  border-top: 1px solid rgba(226,241,255,0.04);
+  padding-top: 12px;
+  border-top: 1px solid rgba(226,241,255,0.05);
   letter-spacing: 0.06em;
+  flex-shrink: 0;
 }
 
-/* Mobile: horizontal compact row */
-@media (max-width: 860px) {
-  .opi-shell { gap: 12px; }
+/* Mobile: 3-wide horizontal scroll */
+@media (max-width: 960px) {
+  .opi-shell { gap: 14px; height: auto; }
 
   .opi-grid {
-    flex-direction: row;
+    grid-template-columns: repeat(6, 88px);
     overflow-x: auto;
-    gap: 8px;
-    padding-bottom: 4px;
+    gap: 10px;
+    padding-bottom: 6px;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.1) transparent;
+    flex: unset;
   }
 
   .opi-agent {
-    flex-direction: column;
-    align-items: center;
-    min-width: 72px;
-    padding: 10px 8px 8px;
-    gap: 6px;
-    text-align: center;
-    animation-name: opi-idle-float;
+    padding: 14px 8px 12px;
+    border-radius: 10px;
+    min-height: unset;
   }
 
   .opi-sprite {
-    width: 48px;
-    height: 60px;
+    width: 64px;
+    height: 80px;
   }
-
-  .opi-agent-info {
-    align-items: center;
-  }
-
-  .opi-agent-role { display: none; }
-  .opi-dot { display: none; }
 }
 
 /* ── Animations ──────────────────────────────────────────────────────────────── */
