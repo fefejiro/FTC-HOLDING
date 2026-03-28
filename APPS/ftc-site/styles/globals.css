@@ -4439,17 +4439,17 @@ nav.primary {
 
 /* Body */
 .wf-body {
-  padding: 60px 0 100px;
+  padding: 36px 0 60px;
   display: flex;
   flex-direction: column;
-  gap: 48px;
+  gap: 32px;
 }
 
 /* Shared stage wrapper */
 .wf-stage {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 20px;
 }
 
 /* ── Intake stage ── */
@@ -4935,10 +4935,10 @@ nav.primary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
+  gap: 16px;
   flex-wrap: wrap;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  padding-bottom: 28px;
+  padding-bottom: 16px;
 }
 
 .wf-pack-head-copy {
@@ -4955,26 +4955,26 @@ nav.primary {
   color: var(--accent-2);
   background: rgba(0, 212, 255, 0.1);
   border: 1px solid rgba(0, 212, 255, 0.2);
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 20px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .wf-pack-title {
-  font-size: clamp(1.6rem, 4vw, 2.8rem);
+  font-size: clamp(1.25rem, 2.8vw, 2rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #fff;
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   line-height: 1.15;
 }
 
 .wf-pack-summary {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.5);
-  line-height: 1.65;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.6;
   margin: 0;
-  max-width: 60ch;
+  max-width: 56ch;
 }
 
 .wf-pack-verdict {
@@ -5014,11 +5014,11 @@ nav.primary {
 .wf-pack-meta-cell {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  padding: 16px 18px;
+  border-radius: 12px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .wf-pack-meta-label {
@@ -5047,11 +5047,11 @@ nav.primary {
 .wf-pack-panel {
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 18px;
-  padding: 24px;
+  border-radius: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .wf-pack-panel-kicker {
@@ -5802,18 +5802,17 @@ nav.primary {
 .wf-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: calc(100vh - 52px);
+  height: calc(100vh - 52px);
   align-items: stretch;
+  overflow: hidden;
 }
 
 .wf-office-col {
-  position: sticky;
-  top: 52px;
-  height: calc(100vh - 52px);
+  height: 100%;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 36px 32px;
+  padding: 28px 28px;
   border-right: 1px solid rgba(226,241,255,0.07);
   background: linear-gradient(160deg, rgba(108,92,231,0.07) 0%, rgba(0,0,0,0.18) 100%);
   scrollbar-width: thin;
@@ -5822,7 +5821,10 @@ nav.primary {
 
 .wf-intake-col {
   min-width: 0;
+  height: 100%;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
 }
 
 @media (max-width: 960px) {
@@ -5933,44 +5935,93 @@ nav.primary {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 20px 12px 16px;
+  gap: 8px;
+  padding: 16px 10px 12px;
   border-radius: 12px;
   background: rgba(226,241,255,0.03);
   border: 1px solid rgba(226,241,255,0.06);
-  transition: background 0.4s ease, border-color 0.4s ease, opacity 0.4s ease;
+  transition: background 0.5s ease, border-color 0.5s ease, opacity 0.5s ease, box-shadow 0.5s ease;
   animation: opi-idle-float 4s ease-in-out infinite;
   text-align: center;
   cursor: default;
+  position: relative;
+  overflow: hidden;
 }
 
 .opi-agent--active {
   background: rgba(108,92,231,0.12);
   border-color: rgba(108,92,231,0.32);
-  box-shadow: 0 0 20px rgba(108,92,231,0.12);
-  animation: opi-active-float 2s ease-in-out infinite;
+  box-shadow: 0 0 24px rgba(108,92,231,0.18), inset 0 0 20px rgba(108,92,231,0.05);
+  animation: opi-active-float 1.8s ease-in-out infinite;
+}
+
+.opi-agent--active::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.9) 50%, transparent 100%);
+  animation: opi-scan 2s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .opi-agent--done {
-  background: rgba(0,212,255,0.04);
-  border-color: rgba(0,212,255,0.14);
-  opacity: 0.6;
+  background: rgba(0,212,255,0.03);
+  border-color: rgba(0,212,255,0.12);
+  opacity: 0.55;
   animation: none;
+}
+
+.opi-agent--entering {
+  animation: opi-enter-flash 0.6s ease-out forwards, opi-active-float 1.8s ease-in-out 0.6s infinite;
+}
+
+.opi-agent--entering::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(108,92,231,0.7);
+  animation: opi-ring-out 0.65s ease-out forwards;
+  pointer-events: none;
 }
 
 .opi-sprite {
   flex-shrink: 0;
-  width: 64px;
-  height: 80px;
+  width: 80px;
+  height: 100px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.opi-agent--active .opi-sprite {
+  transform: scale(1.06);
 }
 
 .opi-sprite canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   display: block;
+}
+
+.opi-agent-task {
+  font-size: 10px;
+  font-weight: 500;
+  color: #a78bfa;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  height: 0;
+  overflow: hidden;
+}
+
+.opi-agent--active .opi-agent-task {
+  opacity: 1;
+  transform: translateY(0);
+  height: auto;
 }
 
 .opi-agent-info {
@@ -6037,8 +6088,8 @@ nav.primary {
   }
 
   .opi-sprite {
-    width: 64px;
-    height: 80px;
+    width: 80px;
+    height: 100px;
   }
 }
 
@@ -6050,11 +6101,32 @@ nav.primary {
 }
 
 @keyframes opi-active-float {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%       { transform: translateY(-3px) scale(1.01); }
+  0%   { transform: translateY(0) rotate(0deg); }
+  20%  { transform: translateY(-5px) rotate(0.4deg); }
+  50%  { transform: translateY(-3px) rotate(-0.3deg); }
+  80%  { transform: translateY(-5px) rotate(0.2deg); }
+  100% { transform: translateY(0) rotate(0deg); }
 }
 
 @keyframes opi-dot-blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.3; }
+}
+
+@keyframes opi-scan {
+  0%   { top: -1px; opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes opi-enter-flash {
+  0%   { transform: scale(0.93); box-shadow: 0 0 0 0 rgba(108,92,231,0); background: rgba(108,92,231,0.04); }
+  45%  { transform: scale(1.05); box-shadow: 0 0 32px 10px rgba(108,92,231,0.28); background: rgba(108,92,231,0.2); border-color: rgba(108,92,231,0.5); }
+  100% { transform: scale(1);   box-shadow: 0 0 24px rgba(108,92,231,0.18); background: rgba(108,92,231,0.12); border-color: rgba(108,92,231,0.32); }
+}
+
+@keyframes opi-ring-out {
+  0%   { inset: -2px; opacity: 0.9; border-width: 2px; }
+  100% { inset: -18px; opacity: 0;  border-width: 1px; }
 }

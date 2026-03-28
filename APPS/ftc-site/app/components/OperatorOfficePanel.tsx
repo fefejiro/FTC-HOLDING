@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -10,6 +10,7 @@ type AgentDef = {
   id: string;
   name: string;
   role: string;
+  task: string;
   activeIn: OfficePhase[];
   doneAfter: OfficePhase[];
 };
@@ -17,12 +18,12 @@ type AgentDef = {
 // ── Agent definitions ─────────────────────────────────────────────────────────
 
 const AGENTS: AgentDef[] = [
-  { id: "violet", name: "Violet",  role: "Lead Route",  activeIn: ["routing"],               doneAfter: ["building", "packaging", "done"] },
-  { id: "scout",  name: "Scout",   role: "Discovery",   activeIn: ["routing"],               doneAfter: ["building", "packaging", "done"] },
-  { id: "codex",  name: "Codex",   role: "Builder",     activeIn: ["building"],              doneAfter: ["packaging", "done"] },
-  { id: "quill",  name: "Quill",   role: "Reviewer",    activeIn: ["building"],              doneAfter: ["packaging", "done"] },
-  { id: "pixel",  name: "Pixel",   role: "Packager",    activeIn: ["packaging"],             doneAfter: ["done"] },
-  { id: "echo",   name: "Echo",    role: "Handoff",     activeIn: ["packaging", "done"],     doneAfter: [] },
+  { id: "violet", name: "Violet", role: "Lead Route",  task: "Analyzing intent",    activeIn: ["routing"],           doneAfter: ["building", "packaging", "done"] },
+  { id: "scout",  name: "Scout",  role: "Discovery",   task: "Mapping context",     activeIn: ["routing"],           doneAfter: ["building", "packaging", "done"] },
+  { id: "codex",  name: "Codex",  role: "Builder",     task: "Writing spec",        activeIn: ["building"],          doneAfter: ["packaging", "done"] },
+  { id: "quill",  name: "Quill",  role: "Reviewer",    task: "Reviewing draft",     activeIn: ["building"],          doneAfter: ["packaging", "done"] },
+  { id: "pixel",  name: "Pixel",  role: "Packager",    task: "Assembling pack",     activeIn: ["packaging"],         doneAfter: ["done"] },
+  { id: "echo",   name: "Echo",   role: "Handoff",     task: "Preparing delivery",  activeIn: ["packaging", "done"], doneAfter: [] },
 ];
 
 // ── Pixel art rendering ───────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ function drawPixelPerson(canvas: HTMLCanvasElement, agentId: string) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const { skin, body, pants, hair, accent, glasses, hat } = pixelPalette(agentId);
-  const S = 4; // scale: 16×20 grid → 64×80px
+  const S = 5; // scale: 16×20 grid → 80×100px
   canvas.width = 16 * S;
   canvas.height = 20 * S;
   ctx.imageSmoothingEnabled = false;
@@ -54,8 +55,8 @@ function drawPixelPerson(canvas: HTMLCanvasElement, agentId: string) {
   };
 
   // Hat
-  if (hat === "beanie")  { fill(4, 1, 8, 2, accent); fill(5, 3, 6, 1, accent); }
-  else if (hat === "cap") { fill(4, 1, 8, 2, accent); fill(9, 3, 4, 1, accent); }
+  if (hat === "beanie")      { fill(4, 1, 8, 2, accent); fill(5, 3, 6, 1, accent); }
+  else if (hat === "cap")    { fill(4, 1, 8, 2, accent); fill(9, 3, 4, 1, accent); }
 
   // Hair
   fill(5, 1, 6, 2, hair);
@@ -97,7 +98,17 @@ function drawPixelPerson(canvas: HTMLCanvasElement, agentId: string) {
 
 // ── Agent card ────────────────────────────────────────────────────────────────
 
-function AgentCard({ agent, phase, idx }: { agent: AgentDef; phase: OfficePhase; idx: number }) {
+function AgentCard({
+  agent,
+  phase,
+  idx,
+  entering,
+}: {
+  agent: AgentDef;
+  phase: OfficePhase;
+  idx: number;
+  entering: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -108,10 +119,16 @@ function AgentCard({ agent, phase, idx }: { agent: AgentDef; phase: OfficePhase;
   const isDone   = agent.doneAfter.includes(phase);
   const status   = isActive ? "active" : isDone ? "done" : "idle";
 
+  const classNames = [
+    "opi-agent",
+    `opi-agent--${status}`,
+    isActive && entering ? "opi-agent--entering" : "",
+  ].filter(Boolean).join(" ");
+
   return (
     <div
-      className={`opi-agent opi-agent--${status}`}
-      style={{ animationDelay: `${idx * 0.22}s` }}
+      className={classNames}
+      style={!entering ? { animationDelay: `${idx * 0.22}s` } : undefined}
     >
       <div className="opi-sprite" aria-hidden="true">
         <canvas ref={canvasRef} />
@@ -119,6 +136,7 @@ function AgentCard({ agent, phase, idx }: { agent: AgentDef; phase: OfficePhase;
       <div className="opi-agent-info">
         <span className="opi-agent-name">{agent.name}</span>
         <span className="opi-agent-role">{agent.role}</span>
+        <span className="opi-agent-task" aria-hidden="true">{agent.task}</span>
       </div>
       <span className={`opi-dot opi-dot--${status}`} aria-hidden="true" />
     </div>
@@ -136,6 +154,26 @@ const PHASE_LABEL: Record<OfficePhase, string> = {
 };
 
 export default function OperatorOfficePanel({ phase }: { phase: OfficePhase }) {
+  const prevPhaseRef = useRef<OfficePhase>(phase);
+  const [enteringAgents, setEnteringAgents] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    if (prev === phase) return;
+    prevPhaseRef.current = phase;
+
+    // Find agents newly becoming active in this phase
+    const nowActive = AGENTS.filter(
+      (a) => a.activeIn.includes(phase) && !a.activeIn.includes(prev)
+    ).map((a) => a.id);
+
+    if (nowActive.length === 0) return;
+
+    setEnteringAgents(new Set(nowActive));
+    const t = setTimeout(() => setEnteringAgents(new Set()), 700);
+    return () => clearTimeout(t);
+  }, [phase]);
+
   return (
     <div className="opi-shell">
       <div className="opi-header">
@@ -165,7 +203,13 @@ export default function OperatorOfficePanel({ phase }: { phase: OfficePhase }) {
 
       <div className="opi-grid">
         {AGENTS.map((agent, idx) => (
-          <AgentCard key={agent.id} agent={agent} phase={phase} idx={idx} />
+          <AgentCard
+            key={agent.id}
+            agent={agent}
+            phase={phase}
+            idx={idx}
+            entering={enteringAgents.has(agent.id)}
+          />
         ))}
       </div>
 
