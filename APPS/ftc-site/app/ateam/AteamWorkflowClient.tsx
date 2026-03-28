@@ -7,6 +7,7 @@ import {
   ATEAM_BRAND_LOGO_PATH,
 } from "../../lib/ateamEmbed";
 import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
+import OperatorOfficePanel, { type OfficePhase } from "../components/OperatorOfficePanel";
 import {
   ateamWorkflowCategories,
   formatWorkflowPhaseLabel,
@@ -240,6 +241,16 @@ export default function AteamWorkflowClient() {
   const isWorking = busy === "starting" || busy === "processing";
   const showClarifiers = Boolean(run && !workflowReady && !isWorking && (run.questions?.length ?? 0) > 0);
 
+  const officePhase: OfficePhase = workflowReady
+    ? "done"
+    : !isWorking
+    ? "idle"
+    : processingStageIndex <= 1
+    ? "routing"
+    : processingStageIndex <= 3
+    ? "building"
+    : "packaging";
+
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   async function syncRun(nextRun: WorkflowRun) {
@@ -395,7 +406,12 @@ export default function AteamWorkflowClient() {
         </div>
       </header>
 
-      <div className="container">
+      <div className="wf-split">
+        <aside className="wf-office-col" aria-label="ATEAM agents">
+          <OperatorOfficePanel phase={officePhase} />
+        </aside>
+        <div className="wf-intake-col">
+        <div className="container">
         <div className="wf-body">
 
           {/* ── INTAKE STAGE ── */}
@@ -816,7 +832,9 @@ export default function AteamWorkflowClient() {
           )}
 
         </div>
-      </div>
+        </div>{/* container */}
+        </div>{/* wf-intake-col */}
+      </div>{/* wf-split */}
     </div>
   );
 }
