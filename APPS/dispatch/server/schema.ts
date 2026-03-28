@@ -1,9 +1,13 @@
-import { pgTable, uuid, text, real, timestamp, integer, boolean, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+import { pgSchema, uuid, text, real, timestamp, integer, boolean, jsonb } from 'drizzle-orm/pg-core';
 
-export const serviceTypeEnum = pgEnum('service_type', ['gas', 'lockout', 'jump', 'tire', 'other']);
-export const requestStatusEnum = pgEnum('request_status', ['pending', 'accepted', 'en_route', 'completed', 'cancelled']);
+// All dispatch tables live in the 'dispatch' PostgreSQL schema,
+// isolated from the shared 'public' schema used by peacepad/ATEAM.
+const dispatch = pgSchema('dispatch');
 
-export const operators = pgTable('operators', {
+export const serviceTypeEnum = dispatch.enum('service_type', ['gas', 'lockout', 'jump', 'tire', 'other']);
+export const requestStatusEnum = dispatch.enum('request_status', ['pending', 'accepted', 'en_route', 'completed', 'cancelled']);
+
+export const operators = dispatch.table('operators', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   phone: text('phone'),
@@ -15,8 +19,8 @@ export const operators = pgTable('operators', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const incidents = pgTable('incidents', {
-  id: text('id').primaryKey(), // Ontario 511 event ID (dedup key)
+export const incidents = dispatch.table('incidents', {
+  id: text('id').primaryKey(),
   eventType: text('event_type'),
   description: text('description'),
   roadway: text('roadway'),
@@ -30,7 +34,7 @@ export const incidents = pgTable('incidents', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const requests = pgTable('requests', {
+export const requests = dispatch.table('requests', {
   id: uuid('id').primaryKey().defaultRandom(),
   customerName: text('customer_name').notNull(),
   customerPhone: text('customer_phone').notNull(),
