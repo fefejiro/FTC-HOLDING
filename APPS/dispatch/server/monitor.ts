@@ -242,13 +242,37 @@ function rssText(xml: string, tag: string): string {
 }
 
 function decodeHtmlEntities(value: string): string {
+  const namedEntities: Record<string, string> = {
+    nbsp: ' ',
+    amp: '&',
+    quot: '"',
+    apos: "'",
+    lt: '<',
+    gt: '>',
+    Agrave: 'À',
+    agrave: 'à',
+    Acirc: 'Â',
+    acirc: 'â',
+    Ccedil: 'Ç',
+    ccedil: 'ç',
+    Eacute: 'É',
+    eacute: 'é',
+    Egrave: 'È',
+    egrave: 'è',
+    Ecirc: 'Ê',
+    ecirc: 'ê',
+    Euml: 'Ë',
+    euml: 'ë',
+    Icirc: 'Î',
+    icirc: 'î',
+    Ocirc: 'Ô',
+    ocirc: 'ô',
+    Ugrave: 'Ù',
+    ugrave: 'ù',
+  };
+
   return value
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'")
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
+    .replace(/&([a-zA-Z]+);/g, (match, name: string) => namedEntities[name] ?? match)
     .replace(/&#(\d+);/g, (_, code: string) => {
       const parsed = Number.parseInt(code, 10);
       return Number.isFinite(parsed) ? String.fromCharCode(parsed) : '';
@@ -261,9 +285,70 @@ function cleanFeedText(value: string): string {
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<[^>]+>/g, ' ')
-    .replace(/&[a-zA-Z]+;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function normalizeFeedSpacing(value: string): string {
+  return value
+    .replace(/([,;:])(?!\s|$)/g, '$1 ')
+    .replace(/\b([A-Za-z]+)to regular routing\b/g, '$1 to regular routing')
+    .replace(/\b([A-Za-z]+)to detour\b/g, '$1 to detour')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function summarizeOCTranspoAlert(title: string, description: string, eventType: string) {
+  const cleanTitle = normalizeFeedSpacing(cleanFeedText(title));
+  let body = normalizeFeedSpacing(cleanFeedText(description));
+
+  if (!body) {
+    return {
+      roadway: cleanTitle,
+      description: cleanTitle,
+    };
+  }
+
+  body = body
+    .replace(/^[A-Z][a-z]+ \d{1,2} \d{4}\s*-\s*/i, '')
+    .replace(new RegExp(`^${escapeRegExp(cleanTitle)}\\s*[-–—:]\\s*`, 'i'), '')
+    .replace(/\bStops missed:.*$/i, '')
+    .replace(/\bAlternative stops?:.*$/i, '')
+    .replace(/\bAffected stops?:.*$/i, '')
+    .trim();
+
+  const firstSentence = body.split(/(?<=[.!?])\s+/)[0]?.trim() || '';
+
+  if (eventType === 'ROUTE_CANCELLED') {
+    const sentence =
+      /The trip is cancelled[^.]*\.?/i.exec(body)?.[0]?.trim() ||
+      'Trip cancellation in effect.';
+
+    return {
+      roadway: cleanTitle,
+      description: normalizeFeedSpacing(sentence).slice(0, 180),
+    };
+  }
+
+  if (eventType === 'ROAD_DETOUR') {
+    const sentence = /stopping outside|station will be closed|bus loop/i.test(body)
+      ? 'Temporary stop change in effect.'
+      : 'Detour active. Routing has changed for this service.';
+
+    return {
+      roadway: cleanTitle,
+      description: sentence,
+    };
+  }
+
+  return {
+    roadway: cleanTitle,
+    description: firstSentence || 'Transit alert active.',
+  };
 }
 
 function parseRSSItems(xml: string) {
@@ -340,8 +425,8 @@ async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<No
   const seen = new Set<string>();
 
   for (const item of recent) {
-    const cleanTitle = cleanFeedText(item.title);
-    const cleanDescription = cleanFeedText(item.description);
+    const cleanTitle = normalizeFeedSpacing(cleanFeedText(item.title));
+    const cleanDescription = normalizeFeedSpacing(cleanFeedText(item.description));
     const dedupeKey = `${cleanTitle}::${cleanDescription}::${item.pubDate || ''}`;
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
@@ -372,14 +457,13 @@ async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<No
     }
 
     const alerted = isDetour;
-    const body = cleanDescription ? `${cleanTitle} - ${cleanDescription}` : cleanTitle;
-    const description = body.slice(0, 250).trim();
+    const summary = summarizeOCTranspoAlert(cleanTitle, cleanDescription, eventType);
 
     result.push({
       id,
       eventType,
-      description,
-      roadway: cleanTitle,
+      description: summary.description,
+      roadway: summary.roadway,
       locationLat: lat,
       locationLng: lng,
       severity: isDetour ? 'Medium' : 'Low',
