@@ -1,6 +1,6 @@
 ﻿# Unalabs Ecosystem Map
 
-Last updated: 2026-03-10
+Last updated: 2026-03-28
 Canonical repo root: `C:\FTC HOLDING`
 
 ## Purpose
@@ -25,6 +25,9 @@ Unalabs
         |
         +-- ATEAM
         |     Internal AI operating system and orchestration layer
+        |
+        +-- Dispatch
+        |     Ottawa roadside assistance dispatch system (client product)
         |
         +-- Extensions
               Channel-specific product surfaces starting with PeacePad WhatsApp/browser
@@ -100,7 +103,15 @@ Current local code locations already reflect some of this split:
 - No evidence in this pass of a separate production backend owned by the extension itself
 
 #### ATEAM
-- Current posture: local / decision-pending, not part of the active root production deploy path
+- Public surface: `unalabs.cloud/ateam` — live, CF Pages deployed
+- Local orchestration layer: `APPS/ATEAM/` — bridge server + Telegram gateway
+- API: Railway (`ateam-api-production.up.railway.app`)
+
+#### Dispatch
+- Ottawa roadside assistance system for a client operator
+- Frontend + API: Railway (`dispatch-api-production.up.railway.app`)
+- Database: Supabase shared project, isolated in `dispatch.*` schema
+- See: `DOCS/DISPATCH_HANDOVER_2026-03-28.md`
 
 ## Operating Interpretation
 
