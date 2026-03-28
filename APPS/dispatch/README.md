@@ -9,6 +9,19 @@ Dispatch is the Ottawa roadside assistance app and API in this repo.
 - Railway fallback: `https://dispatch-api-production.up.railway.app`
 - Railway health: `https://dispatch-api-production.up.railway.app/health`
 
+## Product flow
+
+- `/` is the public Dispatch front door
+- `/request` is the stranded-driver intake form
+- `/operator` is the operator console
+
+## Incident sources
+
+Dispatch currently watches two official no-key incident sources for Ottawa-area activity:
+
+- Ontario 511 events feed
+- City of Ottawa traffic events feed
+
 ## Local
 
 ```powershell

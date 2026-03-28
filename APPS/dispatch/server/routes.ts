@@ -7,11 +7,20 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { getVapidPublicKey, sendToAllActiveOperators } from './push';
 import { sseAdd, sseRemove, sseBroadcast, sseClientCount } from './sse';
+import { getIncidentMonitorInfo } from './monitor';
 
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
   // Status
   app.get('/api/status', (_req, res) => {
-    res.json({ ok: true, service: 'dispatch', sseClients: sseClientCount() });
+    res.json({
+      ok: true,
+      service: 'dispatch',
+      sseClients: sseClientCount(),
+      incidentMonitor: getIncidentMonitorInfo(),
+      notifications: {
+        webPushConfigured: Boolean(getVapidPublicKey()),
+      },
+    });
   });
 
   // ── Server-Sent Events ────────────────────────────────────────────────────

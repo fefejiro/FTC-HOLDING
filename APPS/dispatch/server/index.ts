@@ -18,6 +18,10 @@ const allowedOrigins = new Set([
   'http://127.0.0.1:5173',
   'http://localhost:8080',
   'http://127.0.0.1:8080',
+  'https://dispatch.unalabs.cloud',
+  'http://dispatch.unalabs.cloud',
+  'https://dispatch-api-production.up.railway.app',
+  'https://dispatch-edge.fejiro-efiuvwere.workers.dev',
 ]);
 
 const corsOptions: CorsOptions = {

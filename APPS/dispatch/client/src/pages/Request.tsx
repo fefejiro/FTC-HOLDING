@@ -1,7 +1,18 @@
 import { useState } from 'react';
 import {
-  AlertCircle, CheckCircle2, CircleDot, FileText, Fuel,
-  KeyRound, Loader2, MapPin, Navigation2, Phone, User, Wrench, Zap,
+  AlertCircle,
+  CheckCircle2,
+  CircleDot,
+  FileText,
+  Fuel,
+  KeyRound,
+  Loader2,
+  MapPin,
+  Navigation2,
+  Phone,
+  User,
+  Wrench,
+  Zap,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 
@@ -45,7 +56,7 @@ export default function RequestPage() {
         try {
           const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`);
           if (res.ok) {
-            const data = await res.json() as { displayName?: string };
+            const data = (await res.json()) as { displayName?: string };
             if (data.displayName) setAddress(data.displayName);
           }
         } catch {
@@ -65,9 +76,18 @@ export default function RequestPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!serviceType) { setErrorMessage('Please select a service type.'); return; }
-    if (!name.trim()) { setErrorMessage('Please enter your name.'); return; }
-    if (!phone.trim()) { setErrorMessage('Please enter your phone number.'); return; }
+    if (!serviceType) {
+      setErrorMessage('Please select a service type.');
+      return;
+    }
+    if (!name.trim()) {
+      setErrorMessage('Please enter your name.');
+      return;
+    }
+    if (!phone.trim()) {
+      setErrorMessage('Please enter your phone number.');
+      return;
+    }
     if (!address.trim() && !locationLat) {
       setErrorMessage('Please share your location or enter your address.');
       return;
@@ -89,7 +109,7 @@ export default function RequestPage() {
         }),
       });
       if (!res.ok) {
-        const data = await res.json() as { error?: string };
+        const data = (await res.json()) as { error?: string };
         throw new Error(data.error || 'Failed to submit request');
       }
       setPageState('success');
@@ -109,18 +129,21 @@ export default function RequestPage() {
           </div>
           <h1 className="text-2xl font-bold text-white mb-3">Help is on the way.</h1>
           <p className="text-slate-400 leading-relaxed mb-2">
-            We'll call you shortly at{' '}
-            <span className="text-orange-400 font-semibold">{phone}</span>.
+            We'll call you shortly at <span className="text-orange-400 font-semibold">{phone}</span>.
           </p>
           <p className="text-slate-600 text-sm">
-            Stay with your vehicle if safe. Typical response: 20–40 minutes.
+            Stay with your vehicle if safe. Typical response: 20-40 minutes.
           </p>
           <button
             onClick={() => {
               setPageState('form');
               setServiceType(null);
-              setName(''); setPhone(''); setAddress(''); setNotes('');
-              setLocationLat(null); setLocationLng(null);
+              setName('');
+              setPhone('');
+              setAddress('');
+              setNotes('');
+              setLocationLat(null);
+              setLocationLng(null);
             }}
             className="mt-12 text-slate-700 text-xs hover:text-slate-500 transition-colors"
           >
@@ -133,26 +156,27 @@ export default function RequestPage() {
 
   return (
     <div className="min-h-dvh bg-dispatch-bg flex flex-col">
-      {/* Header */}
       <div className="px-6 pt-14 pb-6 border-b border-dispatch-border">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20">
-            <Zap className="w-4 h-4 text-white" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20">
+              <Zap className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-orange-500 font-semibold text-sm tracking-wider uppercase">
+              Ottawa Roadside
+            </span>
           </div>
-          <span className="text-orange-500 font-semibold text-sm tracking-wider uppercase">
-            Ottawa Roadside
-          </span>
+          <a href="/" className="text-xs text-slate-500 hover:text-orange-400 transition-colors">
+            Back to Dispatch
+          </a>
         </div>
         <h1 className="text-3xl font-bold text-white mt-3">Need help?</h1>
         <p className="text-slate-400 mt-1.5 text-[15px]">
-          We'll dispatch a technician to your location.
+          We will dispatch a technician to your location.
         </p>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="flex-1 px-6 py-7 flex flex-col gap-7 pb-10">
-
-        {/* Service type */}
         <div>
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3 block">
             What do you need?
@@ -183,7 +207,6 @@ export default function RequestPage() {
           </div>
         </div>
 
-        {/* Name */}
         <div>
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2.5 block">
             Your Name
@@ -201,7 +224,6 @@ export default function RequestPage() {
           </div>
         </div>
 
-        {/* Phone */}
         <div>
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2.5 block">
             Phone Number
@@ -219,7 +241,6 @@ export default function RequestPage() {
           </div>
         </div>
 
-        {/* Location */}
         <div>
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2.5 block">
             Your Location
@@ -233,20 +254,16 @@ export default function RequestPage() {
               locating
                 ? 'border-dispatch-border text-slate-500 cursor-wait bg-dispatch-surface'
                 : locationLat
-                ? 'border-green-500/40 bg-green-500/10 text-green-400'
-                : 'border-orange-500/40 bg-orange-500/10 text-orange-400 hover:bg-orange-500/15 active:bg-orange-500/20',
+                  ? 'border-green-500/40 bg-green-500/10 text-green-400'
+                  : 'border-orange-500/40 bg-orange-500/10 text-orange-400 hover:bg-orange-500/15 active:bg-orange-500/20',
             )}
           >
-            {locating
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <Navigation2 className={cn('w-4 h-4', locationLat ? 'text-green-400' : 'text-orange-400')} />
-            }
-            {locating
-              ? 'Getting your location…'
-              : locationLat
-              ? 'GPS location captured ✓'
-              : 'Use my GPS location'
-            }
+            {locating ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Navigation2 className={cn('w-4 h-4', locationLat ? 'text-green-400' : 'text-orange-400')} />
+            )}
+            {locating ? 'Getting your location...' : locationLat ? 'GPS location captured' : 'Use my GPS location'}
           </button>
           {locationError && (
             <div className="flex items-start gap-2 text-red-400 text-xs mb-2.5">
@@ -266,25 +283,22 @@ export default function RequestPage() {
           </div>
         </div>
 
-        {/* Notes */}
         <div>
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2.5 block">
-            Notes{' '}
-            <span className="normal-case font-normal text-slate-600">(optional)</span>
+            Notes <span className="normal-case font-normal text-slate-600">(optional)</span>
           </label>
           <div className="relative">
             <FileText className="absolute left-4 top-4 w-4 h-4 text-slate-500 pointer-events-none" />
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Vehicle make/colour, nearest landmark, any other details…"
+              placeholder="Vehicle make/colour, nearest landmark, any other details..."
               rows={3}
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl pl-11 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 transition-colors text-sm"
             />
           </div>
         </div>
 
-        {/* Error */}
         {(pageState === 'error' || errorMessage) && (
           <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
             <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
@@ -294,7 +308,6 @@ export default function RequestPage() {
           </div>
         )}
 
-        {/* Submit */}
         <button
           type="submit"
           disabled={pageState === 'submitting'}
@@ -306,14 +319,16 @@ export default function RequestPage() {
           )}
         >
           {pageState === 'submitting' ? (
-            <><Loader2 className="w-5 h-5 animate-spin" /> Sending request…</>
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" /> Sending request...
+            </>
           ) : (
             'Request Help Now'
           )}
         </button>
 
         <p className="text-slate-700 text-xs text-center pb-2">
-          Ottawa area · Available 24/7 · Typical response 20–40 min
+          Ottawa area · Available 24/7 · Typical response 20-40 min
         </p>
       </form>
     </div>
