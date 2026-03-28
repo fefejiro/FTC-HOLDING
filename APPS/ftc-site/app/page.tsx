@@ -61,6 +61,12 @@ const productTiles = [
     href: "/saywetin",
     image: "/images/brand/saywetin-og.png",
     alt: "SayWetin preview"
+  },
+  {
+    title: "Dispatch",
+    description: "Ottawa roadside intake, operator routing, and live incident watch.",
+    proof: "Live on Una Labs",
+    href: "/products/dispatch"
   }
 ] as const;
 
@@ -203,14 +209,20 @@ export default function HomePage() {
             <p className="eyebrow">Products</p>
             <h2>Products and lab systems built inside Una Labs</h2>
             <p>
-              PeacePad and SayWetin are public products. ATEAM is the guided AI lab that helps turn
-              new ideas into scoped next steps.
+              PeacePad, SayWetin, and Dispatch are public products. ATEAM is the guided AI lab that
+              helps turn new ideas into scoped next steps.
             </p>
           </div>
           <div className="proof-grid home-products-grid">
             {productTiles.map((tile) => (
               <article key={tile.title} className="card proof-card">
-                <img className="proof-thumb proof-thumb-image" src={tile.image} alt={tile.alt} loading="lazy" />
+                {"image" in tile && tile.image ? (
+                  <img className="proof-thumb proof-thumb-image" src={tile.image} alt={tile.alt} loading="lazy" />
+                ) : (
+                  <div className="proof-thumb proof-thumb-neutral" aria-hidden="true">
+                    <span className="proof-label">{tile.title}</span>
+                  </div>
+                )}
                 <h3>{tile.title}</h3>
                 <p>{tile.description}</p>
                 <p className="proof-proof">{tile.proof}</p>

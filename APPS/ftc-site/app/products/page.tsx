@@ -37,6 +37,16 @@ const productOfferContent: Record<
       "Add context, not just metadata"
     ]
   },
+  dispatch: {
+    offerCopy:
+      "A live roadside dispatch product for Ottawa with direct customer intake, operator routing, and incident watch.",
+    secondaryLabel: "See Dispatch overview",
+    supportPoints: [
+      "Roadside request intake",
+      "Operator movement with live updates",
+      "Official no-key incident sources"
+    ]
+  },
   ateam: {
     offerCopy:
       ateamModeSummary,
@@ -50,6 +60,8 @@ function getProductOverviewHref(project: ProjectCaseStudy): string {
     ? "/products/peacepad"
     : project.slug === "saywetin"
       ? "/saywetin"
+      : project.slug === "dispatch"
+        ? "/products/dispatch"
       : "/ateam";
 }
 
@@ -67,9 +79,8 @@ export default function ProductsPage() {
         <p className="eyebrow">Products</p>
         <h1>Products</h1>
         <p className="page-intro">
-          PeacePad and SayWetin are public products. ATEAM is the local AI lab inside Una Labs, and
-          this route opens the real Office, Memory, Team, and Factory surfaces when ATEAM is running
-          on the same machine.
+          PeacePad, SayWetin, and Dispatch are public Una Labs products. ATEAM is the guided
+          workflow system that turns rough ideas into structured next steps and clean project handoff.
         </p>
       </section>
 

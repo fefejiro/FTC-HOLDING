@@ -247,6 +247,43 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     }
   },
   {
+    slug: "dispatch",
+    name: "Dispatch",
+    tagline: "Ottawa roadside intake, operator routing, and live incident watch.",
+    pillar: "business-intelligence",
+    tags: ["Dispatch", "Roadside", "Operations"],
+    summary:
+      "Dispatch is Una Labs' roadside assistance system for direct customer intake, operator movement, and official Ottawa incident visibility.",
+    status: "live",
+    availabilityLabel: "Live on Una Labs",
+    marketingBullets: [
+      "Roadside intake in the browser",
+      "Operator workflow with live updates",
+      "Official no-key incident watch for Ottawa"
+    ],
+    sections: {
+      problem:
+        "Roadside service businesses lose time when requests, operator updates, and incident signals live in separate tools or get handled informally.",
+      insight:
+        "A lean dispatch product works best when customer intake, operator movement, and incident visibility share one live system.",
+      solution:
+        "Dispatch gives Ottawa roadside teams a browser-based request flow, operator console, private admin surface, and continuous incident watch without depending on paid traffic feeds to get started.",
+      capabilities: [
+        "Customer roadside request intake",
+        "Operator console with live request updates",
+        "Private admin control for requests and operators",
+        "Official Ottawa-area incident monitoring"
+      ],
+      technology: [
+        "Cloud-hosted dispatch API and UI",
+        "Live operator/browser event feed",
+        "Public and private subdomain split"
+      ],
+      outcome:
+        "Dispatch is already live on Una Labs as a real roadside product, not a static concept page."
+    }
+  },
+  {
     slug: "ateam",
     name: "ATEAM",
     tagline: "The AI lab where rough ideas become clear next steps.",
