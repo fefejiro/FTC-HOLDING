@@ -4299,3 +4299,373 @@ nav.primary {
     align-items: stretch;
   }
 }
+
+/* ── ATEAM Home Widget ──────────────────────────────────────────────────────── */
+
+.ahw-shell {
+  position: relative;
+  background: linear-gradient(155deg, rgba(17, 22, 35, 0.97), rgba(13, 17, 27, 0.94));
+  border: 1px solid rgba(108, 92, 231, 0.28);
+  border-radius: 24px;
+  padding: 24px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.06), 0 28px 56px rgba(0, 0, 0, 0.44);
+  overflow: hidden;
+}
+
+.ahw-shell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 5%, rgba(108, 92, 231, 0.7) 40%, rgba(0, 212, 255, 0.5) 70%, transparent 95%);
+  pointer-events: none;
+}
+
+/* Top bar */
+.ahw-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ahw-topbar-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.ahw-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  transition: background 0.4s;
+}
+
+.ahw-live-dot--active {
+  background: var(--accent);
+  animation: ahw-pulse 1.4s ease-in-out infinite;
+}
+
+/* Stage nodes */
+.ahw-nodes {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  gap: 0;
+}
+
+.ahw-node {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.ahw-node-ring {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.4s, background 0.4s, box-shadow 0.4s;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ahw-node--active .ahw-node-ring {
+  border-color: var(--accent);
+  background: rgba(108, 92, 231, 0.14);
+  box-shadow: 0 0 16px rgba(108, 92, 231, 0.4);
+}
+
+.ahw-node--done .ahw-node-ring {
+  border-color: rgba(0, 212, 255, 0.45);
+  background: rgba(0, 212, 255, 0.07);
+}
+
+.ahw-node-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: background 0.4s, box-shadow 0.4s, transform 0.4s;
+}
+
+.ahw-node--active .ahw-node-dot {
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  animation: ahw-pulse 1.2s ease-in-out infinite;
+}
+
+.ahw-node--done .ahw-node-dot {
+  background: var(--accent-2);
+}
+
+/* Idle pulse — staggered per node */
+.ahw-node--idle .ahw-node-dot {
+  animation: ahw-idle 3.2s ease-in-out infinite;
+}
+
+.ahw-node--idle-0 .ahw-node-dot { animation-delay: 0s; }
+.ahw-node--idle-1 .ahw-node-dot { animation-delay: 0.6s; }
+.ahw-node--idle-2 .ahw-node-dot { animation-delay: 1.2s; }
+.ahw-node--idle-3 .ahw-node-dot { animation-delay: 1.8s; }
+
+.ahw-node--idle .ahw-node-ring {
+  animation: ahw-idle-ring 3.2s ease-in-out infinite;
+}
+.ahw-node--idle-0 .ahw-node-ring { animation-delay: 0s; }
+.ahw-node--idle-1 .ahw-node-ring { animation-delay: 0.6s; }
+.ahw-node--idle-2 .ahw-node-ring { animation-delay: 1.2s; }
+.ahw-node--idle-3 .ahw-node-ring { animation-delay: 1.8s; }
+
+.ahw-node-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.28);
+  transition: color 0.4s;
+}
+
+.ahw-node--active .ahw-node-label { color: rgba(255, 255, 255, 0.85); }
+.ahw-node--done .ahw-node-label { color: var(--accent-2); opacity: 0.8; }
+
+/* Connecting lines between nodes */
+.ahw-connector {
+  position: absolute;
+  top: 17px;
+  left: calc(50% + 18px);
+  right: calc(-50% + 18px);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  transition: background 0.5s;
+}
+
+.ahw-connector--lit {
+  background: linear-gradient(90deg, rgba(108, 92, 231, 0.6), rgba(0, 212, 255, 0.35));
+}
+
+/* Status line */
+.ahw-status {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.38);
+  letter-spacing: 0.02em;
+  text-align: center;
+  margin: 0;
+  min-height: 18px;
+  transition: color 0.3s;
+}
+
+/* Intake */
+.ahw-intake {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ahw-textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: 13px 14px;
+  color: var(--text);
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.65;
+  resize: none;
+  outline: none;
+  transition: border-color 0.25s, background 0.25s;
+}
+
+.ahw-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.22);
+}
+
+.ahw-textarea:focus {
+  border-color: rgba(108, 92, 231, 0.55);
+  background: rgba(108, 92, 231, 0.04);
+}
+
+.ahw-error {
+  font-size: 12px;
+  color: #f87171;
+  margin: 0;
+}
+
+.ahw-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ahw-row--mt {
+  margin-top: 4px;
+}
+
+.ahw-btn-primary {
+  padding: 10px 20px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  display: inline-block;
+  transition: background 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.ahw-btn-primary:hover {
+  background: #8474f4;
+  transform: translateY(-1px);
+}
+
+.ahw-link {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.38);
+  text-decoration: none;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.ahw-link:hover {
+  color: var(--accent-2);
+}
+
+/* Working state */
+.ahw-working {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ahw-working-idea {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.32);
+  font-style: italic;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.ahw-working-stage {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0;
+  animation: ahw-text-pulse 2s ease-in-out infinite;
+}
+
+/* Output state */
+.ahw-output {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.16);
+  border-radius: 14px;
+}
+
+.ahw-output-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.ahw-output-verdict {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.ahw-output-lane {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  background: rgba(0, 212, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+  align-self: flex-start;
+}
+
+.ahw-reset {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-align: left;
+  transition: color 0.2s;
+}
+
+.ahw-reset:hover {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Keyframes */
+@keyframes ahw-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.75); }
+}
+
+@keyframes ahw-idle {
+  0%, 100% { opacity: 0.25; transform: scale(1); background: rgba(255, 255, 255, 0.15); box-shadow: none; }
+  50% { opacity: 1; transform: scale(1.35); background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+}
+
+@keyframes ahw-idle-ring {
+  0%, 100% { border-color: rgba(255, 255, 255, 0.07); box-shadow: none; }
+  50% { border-color: rgba(108, 92, 231, 0.55); box-shadow: 0 0 12px rgba(108, 92, 231, 0.25); }
+}
+
+@keyframes ahw-text-pulse {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 0.45; }
+}
+
+/* Responsive: stack on small screens */
+@media (max-width: 560px) {
+  .ahw-nodes {
+    gap: 4px;
+  }
+  .ahw-node-ring {
+    width: 30px;
+    height: 30px;
+  }
+  .ahw-node-label {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+  .ahw-connector {
+    top: 14px;
+  }
+}

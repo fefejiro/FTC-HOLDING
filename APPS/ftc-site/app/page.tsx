@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../lib/recentWork";
-import { ATEAM_BRAND_LOGO_PATH, ATEAM_MISSION_CONTROL_PREVIEW_PATH } from "../lib/ateamEmbed";
+import { ATEAM_BRAND_LOGO_PATH } from "../lib/ateamEmbed";
 import { ateamModeStages, ateamModeSummary, ateamModeSupportPoints } from "../lib/ateamMode";
+import AteamHomeWidget from "./components/AteamHomeWidget";
 import ClientLogoStrip from "./components/ClientLogoStrip";
 
 const serviceLanes = [
@@ -104,22 +105,7 @@ export default function HomePage() {
                   <li>AI-assisted workflows that help rough ideas become scoped next steps.</li>
                 </ul>
               </div>
-              <div className="hero-media-card hero-media-card--ateam">
-                <p className="collage-label">Mission Control preview</p>
-                <img
-                  src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
-                  alt="ATEAM mission control preview"
-                  className="hero-media-image"
-                />
-                <div className="home-hero-side-note">
-                  <p className="proof-label">Inside ATEAM</p>
-                  <h2>The AI lab inside Una Labs where rough ideas become clear next steps.</h2>
-                  <p className="hero-media-caption">
-                    {ateamModeSummary} It now reads as a real Una Labs capability, not a borrowed
-                    demo surface.
-                  </p>
-                </div>
-              </div>
+              <AteamHomeWidget />
             </div>
           </section>
         </div>
