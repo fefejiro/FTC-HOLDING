@@ -1,107 +1,93 @@
-# Dispatch Handover — 2026-03-28
+# Dispatch Handover - 2026-03-28
 
 ## What it is
 
-Ottawa Roadside Assistance dispatch system. Client runs gas delivery, lockouts, jump starts, and tire changes. Single-operator mobile-first PWA with real-time job routing, push notifications, and live Ottawa incident monitoring.
-
----
+Dispatch is the Ottawa roadside assistance product in this repo. It covers gas delivery, lockouts, jump starts, and tire changes, with a live operator workflow and a real Ottawa incident watch layered into the same system.
 
 ## Live surfaces
 
 | Surface | URL | Notes |
 |---|---|---|
-| Customer intake | `dispatch.unalabs.cloud/request` | Public, no auth |
-| Operator dashboard | `dispatch.unalabs.cloud/operator` | PIN protected |
-| Admin | `dispatch.unalabs.cloud/admin` | Proxy-key protected |
-| API | `dispatch-api-production.up.railway.app` | Railway, Docker |
+| Una Labs product page | `https://unalabs.cloud/products/dispatch` | Official client entrypoint |
+| Public app | `https://dispatch.unalabs.cloud` | Live product surface |
+| Demo request form | `https://dispatch.unalabs.cloud/request?mode=demo` | Client-safe demo intake |
+| Demo operator surface | `https://dispatch.unalabs.cloud/operator?mode=demo` | Invite-only sandbox operator flow |
+| Private admin | `https://dispatch-admin.unalabs.cloud/admin` | Internal only |
+| Railway fallback | `https://dispatch-api-production.up.railway.app` | Backend fallback |
 
----
+## Role split
 
-## Stack
+- `unalabs.cloud/products/dispatch` is the sales and context layer.
+- `dispatch.unalabs.cloud` is the live product and demo surface.
+- `dispatch-admin.unalabs.cloud/admin` is private and not part of the client flow.
 
-| Layer | Service |
-|---|---|
-| Frontend | Vite + React + Tailwind, served by Express |
-| Backend | Express + Drizzle ORM + PostgreSQL |
-| Database | Supabase (shared project, `dispatch` schema) |
-| Deploy | Railway (Dockerfile), auto-redeploy on push |
-| Push | VAPID web-push configured, FCM slot available |
-| Incidents | Ontario 511 + Ottawa Traffic Events + OC Transpo RSS, 60s poll |
+For client feedback rounds, give operator sandbox access only. Do not give admin access.
 
----
+## Client demo flow
 
-## Database
+1. Client opens `https://unalabs.cloud/products/dispatch`
+2. Client clicks `Try Dispatch Demo`
+3. Client submits a fake roadside request
+4. Client opens the invited operator demo and signs in
+5. Client works the same request through the queue
+6. Client submits feedback from inside Dispatch
 
-Uses the shared Supabase instance (`cmxahlxcqxphszmfywzn`) but **isolated in the `dispatch` PostgreSQL schema** — no overlap with `public.*` tables used by peacepad/ATEAM.
+Demo requests are tagged by session so the client only sees their own sandbox queue while the real incident watch stays visible.
 
-Tables: `dispatch.operators`, `dispatch.requests`, `dispatch.incidents`
+## Current product behavior
 
-To push schema changes:
-```bash
-cd APPS/dispatch
-npx drizzle-kit push
-```
-
----
-
-## Environment variables (Railway)
-
-| Var | Purpose |
-|---|---|
-| `DATABASE_URL` | Supabase pooled connection |
-| `VAPID_PUBLIC_KEY` | Web push (set) |
-| `VAPID_PRIVATE_KEY` | Web push (set) |
-| `VAPID_EMAIL` | `mailto:mike@unalabs.cloud` |
-| `DISPATCH_ADMIN_PIN` | `dispatch2026` — operator PIN |
-| `DISPATCH_ADMIN_PROXY_KEY` | Admin surface gate key |
-| `NODE_ENV` | `production` |
-
----
+- Customer intake is live
+- Operator queue is live
+- Request drill-down is live
+- Back-to-queue navigation is live
+- Status movement is live
+- Demo feedback form is live
+- Admin can observe demo requests and see demo session markers
 
 ## Incident monitor
 
-Three sources polled every 60 seconds:
-1. Ontario 511 (`511on.ca/api/v2/get/event`) — major highway/road events
-2. City of Ottawa Traffic Events (`traffic.ottawa.ca`) — municipal events
-3. OC Transpo RSS — transit detours and cancellations
+Dispatch currently watches three official no-key Ottawa-area sources:
 
-Events are deduped by source-prefixed ID, geocoded (Nominatim, max 8/run), stored in `dispatch.incidents`, and broadcast via SSE to connected operators. Push alert fires on high-severity new events.
+1. Ontario 511
+2. City of Ottawa Traffic Events
+3. OC Transpo Service Alerts
 
----
+The monitor polls every 60 seconds and keeps the operator road-alert feed warm through SSE.
 
-## First-run operator setup
+## Security notes
 
-1. Open `dispatch.unalabs.cloud/admin`
-2. Use PIN `dispatch2026` to log in
-3. Add operator → name + phone + set active
-4. Operator opens `/operator` on their phone, enters PIN
-5. Browser subscribes to push — operator is now live
+- Admin stays on a separate private host
+- Admin session uses a server-side worker gate and HTTP-only cookie
+- Operator creation is restricted to the private admin surface
+- Credentials should be shared manually and must not be committed into repo docs
 
----
+## Key code locations
 
-## Local dev
-
-```bash
-cd APPS/dispatch
-npm run dev         # starts Express + Vite HMR on :8080
+```text
+APPS/dispatch/client/src/pages/Home.tsx
+APPS/dispatch/client/src/pages/Request.tsx
+APPS/dispatch/client/src/pages/Operator.tsx
+APPS/dispatch/client/src/pages/Admin.tsx
+APPS/dispatch/client/src/components/DemoFeedbackForm.tsx
+APPS/dispatch/client/src/lib/demo.ts
+APPS/dispatch/server/routes.ts
+APPS/dispatch/server/demo.ts
+APPS/dispatch/server/monitor.ts
+workers/dispatch-edge/src/index.ts
+APPS/ftc-site/app/products/dispatch/page.tsx
+APPS/ftc-site/lib/content.ts
 ```
 
----
+## Deployment notes
 
-## Code locations
+- Dispatch backend deploys from `APPS/dispatch` to Railway using `railway up . --path-as-root --detach`
+- Una Labs marketing site deploys from the repo to Cloudflare Pages
+- If `unalabs.cloud/products/dispatch` looks stale right after push, wait for Pages to roll the cache and hard refresh once
 
-```
-APPS/dispatch/
-├── client/src/pages/
-│   ├── Request.tsx     # Customer intake form
-│   ├── Operator.tsx    # Job queue + accept/navigate/complete
-│   ├── Admin.tsx       # All jobs, operator management
-│   └── Home.tsx        # Public landing + system status
-├── server/
-│   ├── index.ts        # Express entry
-│   ├── routes.ts       # All API routes
-│   ├── schema.ts       # Drizzle schema (dispatch.* tables)
-│   ├── push.ts         # VAPID web-push
-│   ├── monitor.ts      # Incident feed polling
-│   └── sse.ts          # Server-sent events broadcast
-```
+## Final state on 2026-03-28
+
+- Dispatch demo flow is live
+- Sandbox operator flow is live
+- Private admin host is live
+- Una Labs product page now points clients into the demo path instead of admin
+- Real incident watch remains active during client demos

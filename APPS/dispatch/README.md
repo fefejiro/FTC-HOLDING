@@ -26,6 +26,8 @@ Dispatch is the Ottawa roadside assistance app and API in this repo.
 
 Demo requests are tagged with a session marker so invited operators can work a client-safe queue without mixing with unrelated live jobs. The real incident-watch feed stays visible during the demo so the system still feels live.
 
+Credentials for invited demo operators and private admin access are managed outside the repo and should be shared manually, not committed into documentation.
+
 ## Remote admin security
 
 - `dispatch.unalabs.cloud` stays public and does not expose remote admin access
@@ -77,9 +79,12 @@ Why this matters:
 - the app expects `PORT=8080` in production
 - the branded public hostname is fronted by the Cloudflare Worker in [workers/dispatch-edge/src/index.ts](/c:/FTC%20HOLDING/workers/dispatch-edge/src/index.ts)
 
-## Verified on March 27, 2026
+## Verified on March 28, 2026
 
 - Railway service: `dispatch-api`
 - Project: `enchanting-caring`
 - Deploy status: `SUCCESS`
 - Public `/health` returned `200` with `{"status":"ok"}`
+- Demo request creation worked on the live host
+- Demo operator sign-in worked on the live host
+- Una Labs product page at `/products/dispatch` showed the demo-first client path
