@@ -420,10 +420,10 @@ export default function AteamWorkflowClient() {
               <div className="wf-intro">
                 <p className="wf-intro-eyebrow">Idea to action</p>
                 <h1 className="wf-intro-headline">
-                  Drop a rough idea.<br />Get a clear next step.
+                  Drop an idea.<br />Get a build-ready brief.
                 </h1>
                 <p className="wf-intro-lead">
-                  ATEAM reads your idea, routes it to the right build path, and packages a first-version concept — ready for Una Labs to execute.
+                  Six agents break it down — concept, prototype direction, build scope, and next steps. Ready for Una Labs to move on.
                 </p>
               </div>
 

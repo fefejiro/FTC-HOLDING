@@ -128,7 +128,7 @@ function AgentCard({ agent, phase, idx }: { agent: AgentDef; phase: OfficePhase;
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
 const PHASE_LABEL: Record<OfficePhase, string> = {
-  idle:      "Standby",
+  idle:      "Ready",
   routing:   "Routing",
   building:  "Building",
   packaging: "Packaging",
@@ -149,14 +149,14 @@ export default function OperatorOfficePanel({ phase }: { phase: OfficePhase }) {
       <div className="opi-intro" aria-hidden="true">
         <p className="opi-intro-title">
           {phase === "idle"
-            ? "The team is standing by."
+            ? "Six specialists. One structured output."
             : phase === "done"
             ? "Pack delivered."
             : "Agents are working on your idea."}
         </p>
         <p className="opi-intro-sub">
           {phase === "idle"
-            ? "Drop a rough idea on the right and watch them go."
+            ? "Concept brief · Prototype direction · Build note · Next steps"
             : phase === "done"
             ? "Review the decision pack and start the project."
             : "Each agent owns a stage — routing, building, or packaging."}
