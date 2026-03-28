@@ -1,4 +1,4 @@
-export const dynamic = "force-static";
+export const runtime = "edge";
 
 import { redirect } from "next/navigation";
 import { isAteamOperatorEnabled } from "../../../lib/ateamOperator";

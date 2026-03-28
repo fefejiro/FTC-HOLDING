@@ -1,6 +1,6 @@
 import { proxyAteamJson } from "../../../../../../lib/ateamUpstream";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, context: { params: { runId: string } }) {
