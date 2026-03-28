@@ -1,0 +1,32 @@
+{
+  "name": "Dispatch | Ottawa Roadside",
+  "short_name": "Dispatch",
+  "description": "Fast roadside assistance dispatch — Ottawa area",
+  "display": "standalone",
+  "background_color": "#0a0f1a",
+  "theme_color": "#f97316",
+  "start_url": "/operator",
+  "scope": "/",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Request",
+      "url": "/request",
+      "description": "Submit a roadside assistance request"
+    }
+  ]
+}

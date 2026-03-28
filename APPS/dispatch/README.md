@@ -1,0 +1,47 @@
+# Dispatch
+
+Dispatch is the Ottawa roadside assistance app and API in this repo.
+
+## Live
+
+- App URL: `https://dispatch-api-production.up.railway.app`
+- Health: `https://dispatch-api-production.up.railway.app/health`
+
+## Local
+
+```powershell
+npm install --workspaces=false
+npm run build:prod
+npm run dev
+```
+
+Required environment variables are shown in [`.env.example`](/c:/FTC%20HOLDING/APPS/dispatch/.env.example).
+
+## Railway deploy
+
+This app lives inside a monorepo, so Railway must deploy `APPS/dispatch` as the archive root.
+
+```powershell
+cd "C:\FTC HOLDING\APPS\dispatch"
+railway up . --path-as-root --detach
+```
+
+Why this matters:
+
+- without `--path-as-root`, Railway builds from the monorepo root
+- that causes Railpack to miss the local `Dockerfile`
+- the correct deploy path uses the `Dockerfile` and `railway.json` in this folder
+
+## Production notes
+
+- Docker build uses [Dockerfile](/c:/FTC%20HOLDING/APPS/dispatch/Dockerfile)
+- Railway config lives in [railway.json](/c:/FTC%20HOLDING/APPS/dispatch/railway.json)
+- build context is trimmed by [`.dockerignore`](/c:/FTC%20HOLDING/APPS/dispatch/.dockerignore)
+- the app expects `PORT=8080` in production
+
+## Verified on March 27, 2026
+
+- Railway service: `dispatch-api`
+- Project: `enchanting-caring`
+- Deploy status: `SUCCESS`
+- Public `/health` returned `200` with `{"status":"ok"}`

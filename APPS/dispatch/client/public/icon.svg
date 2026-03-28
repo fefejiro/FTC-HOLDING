@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#f97316"/>
+  <!-- Lightning bolt (Zap) — fast response, roadside energy -->
+  <path d="M274,76 L94,292 H256 L238,436 L418,220 H256 Z" fill="white" fill-rule="evenodd"/>
+</svg>
