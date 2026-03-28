@@ -9,13 +9,13 @@ import { cn } from '../lib/cn';
 import { usePush } from '../hooks/usePush';
 import { useEvents } from '../hooks/useEvents';
 
-// ─── Audio alerts ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Audio alerts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function playJobAlert() {
   try {
     const ctx = new AudioContext();
     const t = ctx.currentTime;
-    // Two-tone dispatch beep: 660 Hz → 880 Hz
+    // Two-tone dispatch beep: 660 Hz â†’ 880 Hz
     [[660, 0], [880, 0.18]].forEach(([freq, offset]) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -88,6 +88,15 @@ interface Incident {
   createdAt: string;
 }
 
+interface DispatchStatusResponse {
+  ok: boolean;
+  incidentMonitor?: {
+    sourceCount?: number;
+    pollIntervalMs?: number;
+    lastSuccessAt?: string | null;
+  };
+}
+
 const SERVICE_ICONS: Record<ServiceType, React.ComponentType<{ className?: string }>> = {
   gas: Fuel,
   lockout: KeyRound,
@@ -121,6 +130,9 @@ const INCIDENT_LABELS: Record<string, string> = {
   VEHICLE_FIRE: 'Vehicle Fire',
   HAZARD: 'Road Hazard',
   DEBRIS: 'Debris on Road',
+  ROUTE_CANCELLED: 'Route Cancelled',
+  TRANSIT_ALERT: 'Transit Alert',
+  ROAD_DETOUR: 'Transit Detour',
   ROADWORK: 'Road Work Zone',
   ROAD_CLOSURE: 'Road Closure',
   ROAD_EVENT: 'Road Event',
@@ -174,7 +186,12 @@ function fmt(dateStr: string): string {
   });
 }
 
-// ─── PIN Screen ──────────────────────────────────────────────────────────────
+function formatSourcePollTime(value?: string | null): string {
+  if (!value) return 'Waiting for first successful poll';
+  return fmt(value);
+}
+
+// â”€â”€â”€ PIN Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function PinScreen({ onAuthenticated }: { onAuthenticated: (s: OperatorSession) => void }) {
   const [operators, setOperators] = useState<{ id: string; name: string }[]>([]);
@@ -246,7 +263,7 @@ function PinScreen({ onAuthenticated }: { onAuthenticated: (s: OperatorSession) 
                 disabled={opsLoading || operators.length === 0}
                 className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl px-4 py-4 text-white focus:outline-none focus:border-orange-500 transition-colors disabled:text-slate-500"
               >
-                {opsLoading && <option>Loading…</option>}
+                {opsLoading && <option>Loadingâ€¦</option>}
                 {!opsLoading && operators.length === 0 && <option>No operators found</option>}
                 {operators.map(op => (
                   <option key={op.id} value={op.id}>{op.name}</option>
@@ -264,7 +281,7 @@ function PinScreen({ onAuthenticated }: { onAuthenticated: (s: OperatorSession) 
               type="password"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
-              placeholder="••••"
+              placeholder="â€¢â€¢â€¢â€¢"
               inputMode="numeric"
               maxLength={8}
               autoComplete="current-password"
@@ -289,14 +306,14 @@ function PinScreen({ onAuthenticated }: { onAuthenticated: (s: OperatorSession) 
                 : 'bg-orange-500 text-white hover:bg-orange-400 active:bg-orange-600 shadow-lg shadow-orange-500/20',
             )}
           >
-            {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> Verifying…</> : 'Sign In'}
+            {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> Verifyingâ€¦</> : 'Sign In'}
           </button>
         </form>
 
         <p className="text-center text-slate-700 text-xs mt-8">
           Customer?{' '}
           <a href="/request" className="text-slate-500 hover:text-orange-400 transition-colors">
-            Submit a request →
+            Submit a request â†’
           </a>
         </p>
       </div>
@@ -304,7 +321,7 @@ function PinScreen({ onAuthenticated }: { onAuthenticated: (s: OperatorSession) 
   );
 }
 
-// ─── Job Card ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Job Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function JobCard({
   request,
@@ -330,7 +347,7 @@ function JobCard({
 
   return (
     <div className="relative bg-dispatch-surface border border-dispatch-border rounded-2xl overflow-hidden">
-      {/* Status bar — left edge accent */}
+      {/* Status bar â€” left edge accent */}
       <div className={cn('absolute left-0 top-0 bottom-0 w-1', bar)} />
 
       <div className="pl-5 pr-5 pt-4 pb-4 ml-1">
@@ -430,7 +447,7 @@ function JobCard({
   );
 }
 
-// ─── Incident Card ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Incident Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function IncidentCard({
   incident,
@@ -621,7 +638,7 @@ function IncidentDetailCard({
   );
 }
 
-// ─── Operator View ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Operator View â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface Toast {
   id: number;
@@ -646,17 +663,17 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     if (isSupported && !isSubscribed) subscribe();
   }, [isSupported, isSubscribed, subscribe]);
 
-  // ── Real-time SSE ──────────────────────────────────────────────────────────
+  // â”€â”€ Real-time SSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { connected: liveFeedConnected } = useEvents({
     onRequestNew: (data) => {
       const req = data as ServiceRequest;
-      // Prepend to query cache — no round-trip needed
+      // Prepend to query cache â€” no round-trip needed
       queryClient.setQueryData<ServiceRequest[]>(['requests'], old =>
         old ? [req, ...old.filter(r => r.id !== req.id)] : [req]
       );
       playJobAlert();
       addToast(
-        `New job: ${SERVICE_LABELS[req.serviceType]} — ${req.customerName}`,
+        `New job: ${SERVICE_LABELS[req.serviceType]} â€” ${req.customerName}`,
         'job',
       );
     },
@@ -676,11 +693,30 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       if (isHigh) {
         playIncidentAlert();
         addToast(
-          `${INCIDENT_LABELS[inc.eventType?.toUpperCase() ?? ''] ?? 'Incident'} — ${inc.roadway ?? 'Ottawa area'}`,
+          `${INCIDENT_LABELS[inc.eventType?.toUpperCase() ?? ''] ?? 'Incident'} â€” ${inc.roadway ?? 'Ottawa area'}`,
           'incident',
         );
       }
     },
+    onIncidentUpdated: (data) => {
+      const updated = data as Incident;
+      queryClient.setQueryData<Incident[]>(['incidents'], old =>
+        old
+          ? [updated, ...old.filter((incident) => incident.id !== updated.id)]
+          : [updated]
+      );
+    },
+  });
+
+  const { data: status } = useQuery<DispatchStatusResponse>({
+    queryKey: ['dispatch-status'],
+    queryFn: async () => {
+      const res = await fetch('/api/status');
+      if (!res.ok) throw new Error('Failed to load dispatch status');
+      return res.json() as Promise<DispatchStatusResponse>;
+    },
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 
   const { data: allRequests = [], isLoading } = useQuery<ServiceRequest[]>({
@@ -700,8 +736,8 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       if (!res.ok) throw new Error('Failed to load incidents');
       return res.json() as Promise<Incident[]>;
     },
-    refetchInterval: 3 * 60 * 1_000,
-    enabled: filter === 'incidents',
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 
   const { mutate: updateStatus, isPending: isUpdating } = useMutation({
@@ -734,7 +770,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customerName: `Lead — ${roadway}`,
+          customerName: `Lead â€” ${roadway}`,
           customerPhone: '000-000-0000',
           serviceType: 'other',
           locationLat: inc.locationLat,
@@ -764,6 +800,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const activeCount = myRequests.filter(r => ['accepted', 'en_route'].includes(r.status)).length;
   const selectedIncident =
     incidentFeed.find((incident) => incident.id === selectedIncidentId) ?? null;
+  const sourceCount = status?.incidentMonitor?.sourceCount ?? 3;
+  const pollSeconds = Math.max(1, Math.round((status?.incidentMonitor?.pollIntervalMs ?? 60_000) / 1000));
+  const lastIncidentPollLabel = formatSourcePollTime(status?.incidentMonitor?.lastSuccessAt);
 
   useEffect(() => {
     if (filter !== 'incidents') {
@@ -785,7 +824,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   return (
     <div className="min-h-dvh bg-dispatch-bg flex flex-col">
 
-      {/* ── Toast banners ──────────────────────────────────────────────────── */}
+      {/* â”€â”€ Toast banners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="fixed top-0 left-0 right-0 z-50 flex flex-col gap-2 px-4 pt-4 pointer-events-none">
         {toasts.map(toast => (
           <div
@@ -868,6 +907,14 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
             <div className={cn('w-1.5 h-1.5 rounded-full', liveFeedConnected ? 'bg-green-400' : 'bg-amber-400 animate-pulse')} />
             {liveFeedConnected ? 'Live feed connected' : 'Reconnecting live feed'}
           </div>
+          <div className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 border border-orange-500/20 bg-orange-500/10 text-orange-300 text-xs font-semibold">
+            <TriangleAlert className="w-3.5 h-3.5" />
+            {sourceCount} official sources Â· ~{pollSeconds}s checks
+          </div>
+          <div className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 border border-dispatch-border bg-dispatch-surface text-slate-400 text-xs font-semibold">
+            <Clock className="w-3.5 h-3.5" />
+            Last incident poll {lastIncidentPollLabel}
+          </div>
         </div>
 
         {/* Push notification banner */}
@@ -914,6 +961,11 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       <div className="flex-1 px-5 py-4 flex flex-col gap-3 overflow-y-auto pb-8">
         {filter === 'incidents' ? (
           <>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span>Road alerts stay warm even when you leave this tab.</span>
+              <span>Source watch: {sourceCount} official feeds.</span>
+              <span>Last poll: {lastIncidentPollLabel}.</span>
+            </div>
             {selectedIncident && (
               <IncidentDetailCard
                 incident={selectedIncident}
@@ -924,7 +976,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
             {incidentsLoading && (
               <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Loading Ottawa incidents…
+                Loading Ottawa incidentsâ€¦
               </div>
             )}
             {!incidentsLoading && incidentFeed.length === 0 && (
@@ -934,7 +986,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                 </div>
                 <p className="text-slate-300 font-semibold">All clear</p>
                 <p className="text-slate-600 text-sm mt-1">No incidents in the Ottawa area.</p>
-                <p className="text-slate-700 text-xs mt-1">Ontario 511 · Refreshes every 3 min</p>
+                <p className="text-slate-700 text-xs mt-1">{sourceCount} official sources · refreshes about every {pollSeconds} sec</p>
               </div>
             )}
             {incidentFeed.map(inc => (
@@ -952,7 +1004,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
             {isLoading && (
               <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Loading jobs…
+                Loading jobsâ€¦
               </div>
             )}
             {!isLoading && displayRequests.length === 0 && (
@@ -989,7 +1041,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   );
 }
 
-// ─── Root ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Root â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const SESSION_KEY = 'dispatch_operator_session';
 

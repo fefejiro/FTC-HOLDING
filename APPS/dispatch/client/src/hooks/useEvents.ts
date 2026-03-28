@@ -4,6 +4,7 @@ interface EventHandlers {
   onRequestNew?: (data: unknown) => void;
   onRequestUpdated?: (data: unknown) => void;
   onIncidentNew?: (data: unknown) => void;
+  onIncidentUpdated?: (data: unknown) => void;
 }
 
 /**
@@ -35,6 +36,12 @@ export function useEvents(handlers: EventHandlers): { connected: boolean } {
     es.addEventListener('incident:new', (e: Event) => {
       try {
         ref.current.onIncidentNew?.(JSON.parse((e as MessageEvent).data));
+      } catch { /* malformed payload */ }
+    });
+
+    es.addEventListener('incident:updated', (e: Event) => {
+      try {
+        ref.current.onIncidentUpdated?.(JSON.parse((e as MessageEvent).data));
       } catch { /* malformed payload */ }
     });
 

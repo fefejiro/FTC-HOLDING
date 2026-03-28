@@ -27,10 +27,13 @@ Dispatch is the Ottawa roadside assistance app and API in this repo.
 
 ## Incident sources
 
-Dispatch currently watches two official no-key incident sources for Ottawa-area activity:
+Dispatch currently watches three official no-key incident sources for Ottawa-area activity:
 
 - Ontario 511 events feed
 - City of Ottawa traffic events feed
+- OC Transpo service alerts feed
+
+The live operator feed checks these sources about every 60 seconds and keeps the road-alert list warm even when the operator is viewing jobs.
 
 ## Local
 

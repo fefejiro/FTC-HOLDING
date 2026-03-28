@@ -388,9 +388,33 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     const results = await db
       .select()
       .from(incidents)
-      .orderBy(desc(incidents.createdAt))
-      .limit(lim);
-    res.json(results);
+      .orderBy(desc(incidents.lastUpdated), desc(incidents.createdAt))
+      .limit(lim * 3);
+
+    const deduped = results
+      .filter((incident, index, all) => {
+        const signature = [
+          incident.eventType || '',
+          incident.roadway || '',
+          incident.description || '',
+          incident.startDate ? new Date(incident.startDate).toISOString() : '',
+        ].join('::');
+
+        return (
+          all.findIndex((candidate) => {
+            const candidateSignature = [
+              candidate.eventType || '',
+              candidate.roadway || '',
+              candidate.description || '',
+              candidate.startDate ? new Date(candidate.startDate).toISOString() : '',
+            ].join('::');
+            return candidateSignature === signature;
+          }) === index
+        );
+      })
+      .slice(0, lim);
+
+    res.json(deduped);
   });
 
   // ── Reverse geocode proxy (Nominatim) ─────────────────────────────────────

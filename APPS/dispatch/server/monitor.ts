@@ -20,7 +20,7 @@ import { sseBroadcast } from './sse';
 
 const OTTAWA = { north: 45.53, south: 45.15, west: -76.35, east: -75.25 };
 const OTTAWA_CENTER = { lat: 45.4215, lng: -75.6972 } as const;
-const POLL_INTERVAL_MS = 3 * 60 * 1_000;
+const POLL_INTERVAL_MS = 60 * 1_000;
 const MAX_GEOCODE_PER_RUN = 8; // Nominatim 1 req/s rate-limit cap
 
 const INCIDENT_SOURCES = [
@@ -47,6 +47,7 @@ type MonitorSourceSnapshot = {
   fetched: number;
   eligible: number;
   inserted: number;
+  updated: number;
 };
 
 type MonitorState = {
@@ -105,9 +106,9 @@ type OttawaTrafficEvent = {
 };
 
 const initialSourceStats = (): Record<SourceKey, MonitorSourceSnapshot> => ({
-  on511: { fetched: 0, eligible: 0, inserted: 0 },
-  ottawa_traffic: { fetched: 0, eligible: 0, inserted: 0 },
-  octranspo: { fetched: 0, eligible: 0, inserted: 0 },
+  on511: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
+  ottawa_traffic: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
+  octranspo: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
 });
 
 const monitorState: MonitorState = {
@@ -213,13 +214,56 @@ function prettyType(type: string): string {
   return map[type] || type || 'Road incident';
 }
 
-// ── RSS parser (no external dependency) ──────────────────────────────────────
+function incidentNeedsUpdate(
+  existing: Pick<
+    typeof incidents.$inferSelect,
+    'eventType' | 'description' | 'roadway' | 'severity' | 'startDate' | 'lastUpdated' | 'alerted'
+  >,
+  incoming: NormalizedIncident,
+): boolean {
+  return (
+    (existing.eventType ?? null) !== incoming.eventType ||
+    (existing.description ?? null) !== incoming.description ||
+    (existing.roadway ?? null) !== incoming.roadway ||
+    (existing.severity ?? null) !== incoming.severity ||
+    (existing.startDate ?? null) !== incoming.startDate ||
+    (existing.lastUpdated ?? null) !== incoming.lastUpdated ||
+    Boolean(existing.alerted) !== incoming.alerted
+  );
+}
+
+// â”€â”€ RSS parser (no external dependency) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function rssText(xml: string, tag: string): string {
   const cdata = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`).exec(xml);
   if (cdata) return cdata[1].trim();
   const plain = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`).exec(xml);
   return plain ? plain[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#(\d+);/g, (_, code: string) => {
+      const parsed = Number.parseInt(code, 10);
+      return Number.isFinite(parsed) ? String.fromCharCode(parsed) : '';
+    });
+}
+
+function cleanFeedText(value: string): string {
+  return decodeHtmlEntities(String(value || ''))
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&[a-zA-Z]+;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function parseRSSItems(xml: string) {
@@ -243,7 +287,7 @@ function parseRSSItems(xml: string) {
   return items;
 }
 
-// ── Nominatim forward geocoder ────────────────────────────────────────────────
+// â”€â”€ Nominatim forward geocoder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function geocodeOttawaStreet(query: string): Promise<{ lat: number; lng: number } | null> {
   try {
@@ -264,16 +308,16 @@ async function geocodeOttawaStreet(query: string): Promise<{ lat: number; lng: n
 }
 
 function extractStreetHint(title: string): string | null {
-  // "DETOUR: Route 8 near Laurier Ave." → "Laurier Ave"
+  // "DETOUR: Route 8 near Laurier Ave." â†’ "Laurier Ave"
   const near = /\bnear\s+([A-Za-z][A-Za-z0-9\s./]+?)\.?\s*$/i.exec(title);
   if (near) return near[1].trim();
-  // "Route 95 Albert/Slater" → "Albert"
+  // "Route 95 Albert/Slater" â†’ "Albert"
   const route = /Route\s+\d+[A-Z]?\s+([A-Za-z][A-Za-z/\s]+)/i.exec(title);
   if (route) return route[1].split('/')[0].trim();
   return null;
 }
 
-// ── OC Transpo alerts ─────────────────────────────────────────────────────────
+// â”€â”€ OC Transpo alerts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<NormalizedIncident[]> {
   const res = await fetch('https://www.octranspo.com/feeds/updates-en/', {
@@ -293,20 +337,29 @@ async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<No
   });
 
   const result: NormalizedIncident[] = [];
+  const seen = new Set<string>();
 
   for (const item of recent) {
-    const id = `octranspo:${createHash('md5').update(item.guid || item.title).digest('hex').slice(0, 12)}`;
+    const cleanTitle = cleanFeedText(item.title);
+    const cleanDescription = cleanFeedText(item.description);
+    const dedupeKey = `${cleanTitle}::${cleanDescription}::${item.pubDate || ''}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
+    const id = `octranspo:${createHash('md5').update(item.guid || dedupeKey).digest('hex').slice(0, 12)}`;
     const cats = item.categories.map((c) => c.toLowerCase());
     const isDetour = cats.some((c) => c.includes('detour'));
-    const isCancel = cats.some((c) => c.includes('cancel'));
+    const isCancel =
+      cats.some((c) => c.includes('cancel')) ||
+      /cancelled trip|cancelled stop|trip is cancelled|cancelled/i.test(`${cleanTitle} ${cleanDescription}`);
     const eventType = isDetour ? 'ROAD_DETOUR' : isCancel ? 'ROUTE_CANCELLED' : 'TRANSIT_ALERT';
 
-    // Try to geocode extracted street — respect per-run budget
+    // Try to geocode extracted street â€” respect per-run budget
     let lat = OTTAWA_CENTER.lat;
     let lng = OTTAWA_CENTER.lng;
 
     if (geocodeBudget.used < MAX_GEOCODE_PER_RUN) {
-      const hint = extractStreetHint(item.title);
+      const hint = extractStreetHint(cleanTitle);
       if (hint) {
         geocodeBudget.used += 1;
         // 1.1s gap satisfies Nominatim's 1 req/s policy
@@ -319,15 +372,14 @@ async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<No
     }
 
     const alerted = isDetour;
-    const description = item.description
-      ? `${item.title} — ${item.description.slice(0, 250)}`
-      : item.title;
+    const body = cleanDescription ? `${cleanTitle} - ${cleanDescription}` : cleanTitle;
+    const description = body.slice(0, 250).trim();
 
     result.push({
       id,
       eventType,
       description,
-      roadway: item.title,
+      roadway: cleanTitle,
       locationLat: lat,
       locationLng: lng,
       severity: isDetour ? 'Medium' : 'Low',
@@ -432,7 +484,7 @@ async function loadSourceIncidents(): Promise<Record<SourceKey, NormalizedIncide
   // Share a geocode budget across the run to respect Nominatim rate limits
   const geocodeBudget = { used: 0 };
 
-  // OC Transpo may geocode sequentially — run it first, then parallel the rest
+  // OC Transpo may geocode sequentially â€” run it first, then parallel the rest
   const octranspo = await fetchOCTranspoAlerts(geocodeBudget);
   const [on511, ottawaTraffic] = await Promise.all([
     fetchOntario511Incidents(),
@@ -455,16 +507,19 @@ async function runMonitor(): Promise<void> {
         fetched: sourceIncidents.on511.length,
         eligible: sourceIncidents.on511.filter((i) => i.alerted).length,
         inserted: 0,
+        updated: 0,
       },
       ottawa_traffic: {
         fetched: sourceIncidents.ottawa_traffic.length,
         eligible: sourceIncidents.ottawa_traffic.filter((i) => i.alerted).length,
         inserted: 0,
+        updated: 0,
       },
       octranspo: {
         fetched: sourceIncidents.octranspo.length,
         eligible: sourceIncidents.octranspo.filter((i) => i.alerted).length,
         inserted: 0,
+        updated: 0,
       },
     };
 
@@ -475,18 +530,48 @@ async function runMonitor(): Promise<void> {
     }
 
     const ids = all.map((incident) => incident.id);
+    const currentIdSet = new Set(ids);
     const seen = await db
-      .select({ id: incidents.id })
+      .select({
+        id: incidents.id,
+        eventType: incidents.eventType,
+        description: incidents.description,
+        roadway: incidents.roadway,
+        severity: incidents.severity,
+        startDate: incidents.startDate,
+        lastUpdated: incidents.lastUpdated,
+        alerted: incidents.alerted,
+      })
       .from(incidents)
       .where(inArray(incidents.id, ids));
 
-    const seenSet = new Set(seen.map((item) => item.id));
-    const fresh = all.filter((incident) => !seenSet.has(incident.id));
+    const seenMap = new Map(seen.map((item) => [item.id, item]));
+    const fresh = all.filter((incident) => !seenMap.has(incident.id));
+    const changed = all.filter((incident) => {
+      const existing = seenMap.get(incident.id);
+      return existing ? incidentNeedsUpdate(existing, incident) : false;
+    });
 
-    if (fresh.length === 0) {
+    const activeSourcePrefixes = INCIDENT_SOURCES
+      .filter((source) => monitorState.sourceStats[source.key].fetched > 0)
+      .map((source) => `${source.key}:`);
+
+    const existingIds = await db.select({ id: incidents.id }).from(incidents);
+    const staleIds = existingIds
+      .map((item) => item.id)
+      .filter(
+        (id) =>
+          activeSourcePrefixes.some((prefix) => id.startsWith(prefix)) &&
+          !currentIdSet.has(id),
+      );
+
+    if (fresh.length === 0 && changed.length === 0) {
+      if (staleIds.length > 0) {
+        await db.delete(incidents).where(inArray(incidents.id, staleIds));
+      }
       monitorState.lastSuccessAt = new Date().toISOString();
       console.log(
-        `[monitor] checked ${all.length} Ottawa incidents across ${INCIDENT_SOURCES.length} sources; no new incidents`,
+        `[monitor] checked ${all.length} Ottawa incidents across ${INCIDENT_SOURCES.length} sources; no new incidents, removed ${staleIds.length} stale incidents`,
       );
       return;
     }
@@ -542,9 +627,46 @@ async function runMonitor(): Promise<void> {
       }
     }
 
+    for (const incident of changed) {
+      await db
+        .update(incidents)
+        .set({
+          eventType: incident.eventType,
+          description: incident.description,
+          roadway: incident.roadway,
+          locationLat: incident.locationLat,
+          locationLng: incident.locationLng,
+          severity: incident.severity,
+          startDate: incident.startDate,
+          lastUpdated: incident.lastUpdated,
+          alerted: incident.alerted,
+          alertedAt: incident.alerted ? new Date() : null,
+        })
+        .where(inArray(incidents.id, [incident.id]));
+
+      monitorState.sourceStats[incident.sourceKey].updated += 1;
+
+      sseBroadcast('incident:updated', {
+        id: incident.id,
+        eventType: incident.eventType,
+        description: incident.description,
+        roadway: incident.roadway,
+        locationLat: incident.locationLat,
+        locationLng: incident.locationLng,
+        severity: incident.severity,
+        alerted: incident.alerted,
+        createdAt: incident.lastUpdated || incident.startDate || new Date().toISOString(),
+        source: incident.sourceKey,
+      });
+    }
+
+    if (staleIds.length > 0) {
+      await db.delete(incidents).where(inArray(incidents.id, staleIds));
+    }
+
     monitorState.lastSuccessAt = new Date().toISOString();
     console.log(
-      `[monitor] ${fresh.length} new Ottawa incidents from ${INCIDENT_SOURCES.length} sources - ${alertCount} operator alerts sent`,
+      `[monitor] ${fresh.length} new, ${changed.length} updated, and ${staleIds.length} removed Ottawa incidents from ${INCIDENT_SOURCES.length} sources - ${alertCount} operator alerts sent`,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown monitor error';
@@ -574,6 +696,6 @@ export function startIncidentMonitor(): void {
   }, 10_000);
 
   console.log(
-    `[monitor] Ottawa incident monitor started - ${INCIDENT_SOURCES.length} official sources, polling every 3 min`,
+    `[monitor] Ottawa incident monitor started - ${INCIDENT_SOURCES.length} official sources, polling every 60 sec`,
   );
 }
