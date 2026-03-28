@@ -4,8 +4,10 @@ Dispatch is the Ottawa roadside assistance app and API in this repo.
 
 ## Live
 
-- App URL: `https://dispatch-api-production.up.railway.app`
-- Health: `https://dispatch-api-production.up.railway.app/health`
+- Public URL: `https://dispatch.unalabs.cloud`
+- Public health: `https://dispatch.unalabs.cloud/health`
+- Railway fallback: `https://dispatch-api-production.up.railway.app`
+- Railway health: `https://dispatch-api-production.up.railway.app/health`
 
 ## Local
 
@@ -38,6 +40,7 @@ Why this matters:
 - Railway config lives in [railway.json](/c:/FTC%20HOLDING/APPS/dispatch/railway.json)
 - build context is trimmed by [`.dockerignore`](/c:/FTC%20HOLDING/APPS/dispatch/.dockerignore)
 - the app expects `PORT=8080` in production
+- the branded public hostname is fronted by the Cloudflare Worker in [workers/dispatch-edge/src/index.ts](/c:/FTC%20HOLDING/workers/dispatch-edge/src/index.ts)
 
 ## Verified on March 27, 2026
 
