@@ -317,7 +317,13 @@ function AddOperatorForm({
 
 // ── Admin Dashboard ───────────────────────────────────────────────────────────
 
-function AdminDashboard({ adminToken }: { adminToken: string | null }) {
+function AdminDashboard({
+  adminToken,
+  onSignOut,
+}: {
+  adminToken: string | null;
+  onSignOut: () => void;
+}) {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AdminFilter>('all');
@@ -465,9 +471,21 @@ function AdminDashboard({ adminToken }: { adminToken: string | null }) {
               <p className="text-slate-500 text-xs">Ottawa Roadside Dispatch</p>
             </div>
           </div>
-          <a href="/" className="text-xs text-slate-500 hover:text-orange-400 transition-colors">
-            Open public site
-          </a>
+          <div className="flex items-center gap-3">
+            <a href="/operator" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+              Operator
+            </a>
+            <a href="/" className="text-xs text-slate-500 hover:text-orange-400 transition-colors">
+              Public site
+            </a>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="text-xs text-slate-500 hover:text-white transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
 
@@ -779,21 +797,86 @@ function AdminDashboard({ adminToken }: { adminToken: string | null }) {
 // ── Admin Page (auth gate) ────────────────────────────────────────────────────
 
 export default function AdminPage() {
+  const isRemoteAdminHost =
+    typeof window !== 'undefined' && window.location.hostname === 'dispatch-admin.unalabs.cloud';
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    () => sessionStorage.getItem('dispatch_admin_authenticated') === '1',
+    () =>
+      typeof window !== 'undefined' && window.location.hostname === 'dispatch-admin.unalabs.cloud'
+        ? false
+        : sessionStorage.getItem('dispatch_admin_authenticated') === '1',
   );
   const [adminToken, setAdminToken] = useState<string | null>(
-    () => sessionStorage.getItem('dispatch_admin_token'),
+    () =>
+      typeof window !== 'undefined' && window.location.hostname === 'dispatch-admin.unalabs.cloud'
+        ? null
+        : sessionStorage.getItem('dispatch_admin_token'),
   );
+  const [sessionChecking, setSessionChecking] = useState<boolean>(isRemoteAdminHost);
+
+  useEffect(() => {
+    if (!isRemoteAdminHost) {
+      setSessionChecking(false);
+      return;
+    }
+
+    let active = true;
+    fetch('/api/admin/session', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!active) return;
+        if (!res.ok) {
+          sessionStorage.removeItem('dispatch_admin_authenticated');
+          sessionStorage.removeItem('dispatch_admin_token');
+          setIsAuthenticated(false);
+          setAdminToken(null);
+          return;
+        }
+
+        sessionStorage.setItem('dispatch_admin_authenticated', '1');
+        setIsAuthenticated(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setIsAuthenticated(false);
+        setAdminToken(null);
+      })
+      .finally(() => {
+        if (active) setSessionChecking(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isRemoteAdminHost]);
 
   function handleLoginSuccess(token: string | null) {
     setAdminToken(token);
     setIsAuthenticated(true);
   }
 
+  function handleSignOut() {
+    sessionStorage.removeItem('dispatch_admin_authenticated');
+    sessionStorage.removeItem('dispatch_admin_token');
+    setAdminToken(null);
+    setIsAuthenticated(false);
+    if (isRemoteAdminHost) {
+      fetch('/api/admin/logout', { method: 'POST' }).catch(() => undefined);
+    }
+  }
+
+  if (sessionChecking) {
+    return (
+      <div className="min-h-dvh bg-dispatch-bg flex items-center justify-center px-5">
+        <div className="flex items-center gap-2 text-slate-400 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Checking admin session...
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return <AdminLogin onSuccess={handleLoginSuccess} />;
   }
 
-  return <AdminDashboard adminToken={adminToken} />;
+  return <AdminDashboard adminToken={adminToken} onSignOut={handleSignOut} />;
 }

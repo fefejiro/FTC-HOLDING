@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface EventHandlers {
   onRequestNew?: (data: unknown) => void;
@@ -10,13 +10,15 @@ interface EventHandlers {
  * Connects to /api/events (SSE) and calls handlers on each event.
  * EventSource auto-reconnects on network loss — no polling needed.
  */
-export function useEvents(handlers: EventHandlers): void {
+export function useEvents(handlers: EventHandlers): { connected: boolean } {
   // Keep a ref so handlers never cause the effect to re-run
   const ref = useRef(handlers);
+  const [connected, setConnected] = useState(false);
   ref.current = handlers;
 
   useEffect(() => {
     const es = new EventSource('/api/events');
+    es.onopen = () => setConnected(true);
 
     es.addEventListener('request:new', (e: Event) => {
       try {
@@ -37,9 +39,15 @@ export function useEvents(handlers: EventHandlers): void {
     });
 
     es.onerror = () => {
+      setConnected(false);
       // EventSource will reconnect automatically — no action needed
     };
 
-    return () => es.close();
+    return () => {
+      setConnected(false);
+      es.close();
+    };
   }, []); // intentionally empty — connects once, stays open
+
+  return { connected };
 }

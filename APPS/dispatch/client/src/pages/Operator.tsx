@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  AlertTriangle, Bell, CheckCircle2, ChevronDown, CircleDot,
+  AlertTriangle, ArrowLeft, Bell, CheckCircle2, ChevronDown, CircleDot,
   Clock, Fuel, KeyRound, Loader2, LogOut, MapPin, Navigation2,
   Phone, RefreshCw, TriangleAlert, Wrench, X, Zap,
 } from 'lucide-react';
@@ -127,6 +127,34 @@ const INCIDENT_LABELS: Record<string, string> = {
   CONSTRUCTION: 'Construction Zone',
 };
 
+function incidentIsExactGps(incident: Incident) {
+  return Boolean(
+    incident.locationLat &&
+      incident.locationLng &&
+      !(Math.abs(incident.locationLat - 45.4215) < 0.001 && Math.abs(incident.locationLng + 75.6972) < 0.001),
+  );
+}
+
+function incidentMapsUrl(incident: Incident) {
+  if (incidentIsExactGps(incident)) {
+    return `https://maps.google.com/?q=${incident.locationLat},${incident.locationLng}`;
+  }
+  if (incident.roadway) {
+    return `https://maps.google.com/search/?api=1&query=${encodeURIComponent(`${incident.roadway}, Ottawa ON`)}`;
+  }
+  return null;
+}
+
+function incidentLabel(incident: Incident) {
+  const key = incident.eventType?.toUpperCase() ?? '';
+  return INCIDENT_LABELS[key] ?? incident.eventType ?? 'Incident';
+}
+
+function incidentIsHighPriority(incident: Incident) {
+  const key = incident.eventType?.toUpperCase() ?? '';
+  return ['ACCIDENT', 'COLLISION', 'VEHICLE_FIRE'].includes(key);
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const min = Math.floor(diff / 60000);
@@ -135,6 +163,15 @@ function timeAgo(dateStr: string): string {
   const h = Math.floor(min / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+function fmt(dateStr: string): string {
+  return new Date(dateStr).toLocaleString('en-CA', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 // ─── PIN Screen ──────────────────────────────────────────────────────────────
@@ -395,23 +432,27 @@ function JobCard({
 
 // ─── Incident Card ────────────────────────────────────────────────────────────
 
-function IncidentCard({ incident, onDispatch }: { incident: Incident; onDispatch?: (inc: Incident) => void }) {
-  // Prefer GPS coords; fall back to text search on roadway name for transit alerts
-  const isExactGps = incident.locationLat && incident.locationLng &&
-    !(Math.abs(incident.locationLat - 45.4215) < 0.001 && Math.abs(incident.locationLng + 75.6972) < 0.001);
-  const mapsUrl = isExactGps
-    ? `https://maps.google.com/?q=${incident.locationLat},${incident.locationLng}`
-    : incident.roadway
-    ? `https://maps.google.com/search/?api=1&query=${encodeURIComponent(incident.roadway + ', Ottawa ON')}`
-    : null;
-  const key = incident.eventType?.toUpperCase() ?? '';
-  const label = INCIDENT_LABELS[key] ?? incident.eventType ?? 'Incident';
-  const isHigh = ['ACCIDENT', 'COLLISION', 'VEHICLE_FIRE'].includes(key);
+function IncidentCard({
+  incident,
+  selected,
+  onDispatch,
+  onSelect,
+}: {
+  incident: Incident;
+  selected?: boolean;
+  onDispatch?: (inc: Incident) => void;
+  onSelect?: (inc: Incident) => void;
+}) {
+  const mapsUrl = incidentMapsUrl(incident);
+  const label = incidentLabel(incident);
+  const isHigh = incidentIsHighPriority(incident);
 
   return (
     <div className={cn(
-      'relative bg-dispatch-surface border rounded-2xl overflow-hidden',
-      incident.alerted ? 'border-orange-500/30' : 'border-dispatch-border',
+      'relative bg-dispatch-surface border rounded-2xl overflow-hidden transition-all',
+      selected
+        ? 'border-orange-500/40 shadow-[0_0_0_1px_rgba(249,115,22,0.18)]'
+        : incident.alerted ? 'border-orange-500/30' : 'border-dispatch-border',
     )}>
       <div className={cn('absolute left-0 top-0 bottom-0 w-1', incident.alerted ? 'bg-orange-500' : 'bg-slate-600')} />
 
@@ -452,6 +493,19 @@ function IncidentCard({ incident, onDispatch }: { incident: Incident; onDispatch
         )}
 
         <div className="flex gap-2">
+          {onSelect && (
+            <button
+              onClick={() => onSelect(incident)}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all',
+                selected
+                  ? 'bg-slate-700 text-white'
+                  : 'bg-dispatch-bg text-slate-300 hover:text-white hover:bg-slate-800',
+              )}
+            >
+              {selected ? 'Viewing details' : 'Open details'}
+            </button>
+          )}
           {mapsUrl && (
             <a
               href={mapsUrl}
@@ -478,6 +532,95 @@ function IncidentCard({ incident, onDispatch }: { incident: Incident; onDispatch
   );
 }
 
+function IncidentDetailCard({
+  incident,
+  onBack,
+  onDispatch,
+}: {
+  incident: Incident;
+  onBack: () => void;
+  onDispatch?: (inc: Incident) => void;
+}) {
+  const mapsUrl = incidentMapsUrl(incident);
+  const label = incidentLabel(incident);
+  const isHigh = incidentIsHighPriority(incident);
+  const severity = incident.severity ? String(incident.severity).replace(/_/g, ' ') : 'Not specified';
+
+  return (
+    <div className="bg-dispatch-surface border border-orange-500/30 rounded-2xl p-5">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to road alerts
+        </button>
+        <div className={cn(
+          'text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap',
+          isHigh ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400',
+        )}>
+          {label}
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-3 mb-3">
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+          <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Roadway</div>
+          <div className="text-white text-sm font-semibold mt-2">{incident.roadway || 'Ottawa area'}</div>
+        </div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+          <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Severity</div>
+          <div className="text-slate-300 text-sm mt-2">{severity}</div>
+        </div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+          <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Detected</div>
+          <div className="text-slate-300 text-sm mt-2">{fmt(incident.createdAt)}</div>
+        </div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+          <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Coordinates</div>
+          <div className="text-slate-300 text-sm mt-2">
+            {incident.locationLat && incident.locationLng
+              ? `${incident.locationLat.toFixed(5)}, ${incident.locationLng.toFixed(5)}`
+              : 'Coordinate precision unavailable'}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3 mb-3">
+        <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Incident detail</div>
+        <div className="text-slate-300 text-sm mt-2 leading-relaxed">
+          {incident.description || 'No additional incident description was provided by the source feed.'}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {mapsUrl && (
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-500 transition-all"
+          >
+            <Navigation2 className="w-4 h-4" />
+            Open navigation
+          </a>
+        )}
+        {onDispatch && (
+          <button
+            onClick={() => onDispatch(incident)}
+            className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 active:bg-orange-600 transition-all"
+          >
+            <Zap className="w-4 h-4" />
+            Create job from incident
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Operator View ────────────────────────────────────────────────────────────
 
 interface Toast {
@@ -488,6 +631,7 @@ interface Toast {
 
 function OperatorView({ session, onSignOut }: { session: OperatorSession; onSignOut: () => void }) {
   const [filter, setFilter] = useState<'active' | 'all' | 'incidents'>('active');
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const queryClient = useQueryClient();
   const { isSubscribed, isSupported, subscribe } = usePush({ operatorId: session.id });
@@ -503,7 +647,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   }, [isSupported, isSubscribed, subscribe]);
 
   // ── Real-time SSE ──────────────────────────────────────────────────────────
-  useEvents({
+  const { connected: liveFeedConnected } = useEvents({
     onRequestNew: (data) => {
       const req = data as ServiceRequest;
       // Prepend to query cache — no round-trip needed
@@ -618,6 +762,25 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     filter === 'active' ? myRequests.filter(r => activeStatuses.includes(r.status)) : myRequests;
   const pendingCount = myRequests.filter(r => r.status === 'pending').length;
   const activeCount = myRequests.filter(r => ['accepted', 'en_route'].includes(r.status)).length;
+  const selectedIncident =
+    incidentFeed.find((incident) => incident.id === selectedIncidentId) ?? null;
+
+  useEffect(() => {
+    if (filter !== 'incidents') {
+      setSelectedIncidentId(null);
+      return;
+    }
+
+    if (!incidentFeed.length) {
+      if (selectedIncidentId !== null) setSelectedIncidentId(null);
+      return;
+    }
+
+    const stillVisible = incidentFeed.some((incident) => incident.id === selectedIncidentId);
+    if (!stillVisible && selectedIncidentId !== null) {
+      setSelectedIncidentId(null);
+    }
+  }, [filter, incidentFeed, selectedIncidentId]);
 
   return (
     <div className="min-h-dvh bg-dispatch-bg flex flex-col">
@@ -695,6 +858,18 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           </div>
         )}
 
+        <div className="flex gap-2 mt-3 flex-wrap">
+          <div className={cn(
+            'flex items-center gap-1.5 rounded-lg px-3 py-1.5 border text-xs font-semibold',
+            liveFeedConnected
+              ? 'bg-green-500/10 border-green-500/20 text-green-400'
+              : 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+          )}>
+            <div className={cn('w-1.5 h-1.5 rounded-full', liveFeedConnected ? 'bg-green-400' : 'bg-amber-400 animate-pulse')} />
+            {liveFeedConnected ? 'Live feed connected' : 'Reconnecting live feed'}
+          </div>
+        </div>
+
         {/* Push notification banner */}
         {isSupported && !isSubscribed && (
           <button
@@ -739,6 +914,13 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       <div className="flex-1 px-5 py-4 flex flex-col gap-3 overflow-y-auto pb-8">
         {filter === 'incidents' ? (
           <>
+            {selectedIncident && (
+              <IncidentDetailCard
+                incident={selectedIncident}
+                onBack={() => setSelectedIncidentId(null)}
+                onDispatch={handleIncidentDispatch}
+              />
+            )}
             {incidentsLoading && (
               <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -755,7 +937,15 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                 <p className="text-slate-700 text-xs mt-1">Ontario 511 · Refreshes every 3 min</p>
               </div>
             )}
-            {incidentFeed.map(inc => <IncidentCard key={inc.id} incident={inc} onDispatch={handleIncidentDispatch} />)}
+            {incidentFeed.map(inc => (
+              <IncidentCard
+                key={inc.id}
+                incident={inc}
+                selected={selectedIncident?.id === inc.id}
+                onSelect={(incident) => setSelectedIncidentId(incident.id)}
+                onDispatch={handleIncidentDispatch}
+              />
+            ))}
           </>
         ) : (
           <>
