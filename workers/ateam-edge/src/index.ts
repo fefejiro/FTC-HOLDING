@@ -142,18 +142,28 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
     .brand{display:flex;gap:12px;align-items:center;text-decoration:none}.brand img{width:42px;height:42px}.eyebrow{margin:0 0 8px;font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:var(--brand2);font-weight:700}
     .text-link{font-size:.92rem;color:var(--muted);text-decoration:none}.text-link:hover{text-decoration:underline}
     .card{background:rgba(255,250,243,.96);border:1px solid rgba(255,255,255,.5);border-radius:24px;padding:24px;box-shadow:0 18px 40px rgba(16,33,27,.1)} .hero,.layout{display:grid;gap:20px}
-    .hero{grid-template-columns:1.15fr .85fr;margin-bottom:20px}.layout{grid-template-columns:1.28fr .72fr}.stack{display:grid;gap:20px} h1{font-size:clamp(2rem,4vw,3.8rem);line-height:.96;margin:0 0 14px;max-width:12ch}
+    .hero{grid-template-columns:1.02fr .98fr;align-items:start;margin-bottom:18px}.layout{grid-template-columns:1.05fr .95fr}.stack{display:grid;gap:18px} h1{font-size:clamp(2.2rem,4vw,3.9rem);line-height:.96;margin:0 0 14px;max-width:12ch}
     h2,h3,p{margin-top:0}.lead,.muted{color:var(--muted)} .lead{font-size:1.04rem;max-width:58ch}.btn{border:0;border-radius:999px;padding:12px 18px;font:inherit;cursor:pointer;text-decoration:none;display:inline-block}
     .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}.btn-secondary{background:rgba(255,255,255,.78);border:1px solid var(--line)}.btn-ghost{background:transparent;border:1px solid var(--line)}
-    .actions,.meta,.grid2,.module-grid,.timeline,.questions,.hero-actions,.intake-toolbar{display:grid;gap:12px}.actions,.hero-actions,.intake-toolbar{grid-auto-flow:column;justify-content:start}.meta,.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.module-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .actions,.grid2,.module-grid,.timeline,.questions,.intake-toolbar,.hero-bullets{display:grid;gap:12px}.actions,.intake-toolbar{grid-auto-flow:column;justify-content:start}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.module-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:18px}
     .module{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.72);padding:16px;display:grid;gap:8px}.module h3,.module p,.module span{margin:0}.module span{color:var(--muted);font-size:.88rem;line-height:1.45}
+    .hero-bullets{grid-template-columns:repeat(3,minmax(0,1fr));margin:18px 0}
+    .hero-bullet{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.72);padding:14px 16px}
+    .hero-bullet strong,.hero-bullet span{display:block}
+    .hero-bullet span{color:var(--muted);font-size:.88rem;line-height:1.45;margin-top:4px}
+    .intake-shell{display:grid;gap:16px}
     .steprail{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.step,.box{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.72);padding:14px 16px}
     .step.active{border-color:rgba(15,143,98,.38);box-shadow:inset 0 0 0 1px rgba(15,143,98,.18)}.step.done{background:rgba(15,143,98,.08)}
     textarea,select{width:100%;border:1px solid var(--line);border-radius:18px;padding:14px 16px;font:inherit;background:rgba(255,255,255,.86);color:var(--ink)} textarea{min-height:170px;resize:vertical}
     .field-note{margin-top:8px;color:var(--muted);font-size:.9rem}.state{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-size:.92rem;background:rgba(15,143,98,.1);color:var(--brand2)}.state.offline{background:rgba(220,85,60,.1);color:#92322a}.state.checking{background:rgba(245,155,66,.16);color:var(--warn)}
     .notice,.error{margin-top:14px;padding:14px 16px;border-radius:16px}.notice{background:rgba(15,143,98,.08);color:var(--brand2)}.error{background:rgba(220,85,60,.1);color:#92322a}
-    .empty{padding:16px;border:1px dashed rgba(16,33,27,.18);border-radius:18px;color:var(--muted);background:rgba(255,255,255,.5)} .tiny{font-size:.92rem}.hero-preview img{width:100%;border-radius:18px;border:1px solid var(--line)}
-    .hero-preview-copy{display:grid;gap:10px}.hero-note{padding:14px 16px;border-radius:18px;background:var(--soft);color:var(--brand2)}.flow-head-copy{max-width:48rem}.system-stack,.output-stack{display:grid;gap:12px}.panel-divider{height:1px;background:var(--line);margin:4px 0}
+    .empty{padding:16px;border:1px dashed rgba(16,33,27,.18);border-radius:18px;color:var(--muted);background:rgba(255,255,255,.5)} .tiny{font-size:.92rem}
+    .preview-copy{display:grid;gap:10px}.hero-note{padding:14px 16px;border-radius:18px;background:var(--soft);color:var(--brand2)}
+    .preview-frame{overflow:hidden;border-radius:20px;border:1px solid var(--line);background:#0d1311}
+    .preview-frame img{display:block;width:100%}
+    .system-stack,.output-stack{display:grid;gap:12px}.panel-divider{height:1px;background:var(--line);margin:4px 0}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .quick-note{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:.9rem;color:var(--muted)}
     .voice-btn[data-state="listening"]{background:rgba(15,143,98,.14);border-color:rgba(15,143,98,.28);color:var(--brand2)}.voice-btn[data-state="unsupported"]{opacity:.6;cursor:not-allowed}.status-line{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.92rem}
     .result-actions{display:flex;gap:12px;flex-wrap:wrap}.result-card-summary{font-size:1rem;line-height:1.6;color:var(--muted)}
     .contact-card{margin-top:18px;padding-top:18px;border-top:1px solid var(--line);display:grid;gap:14px}
@@ -164,7 +174,7 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
     .contact-success{padding:14px 16px;border-radius:16px;background:rgba(15,143,98,.08);color:var(--brand2)}
     .contact-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .contact-meta strong{display:block}
-    @media (max-width:980px){.hero,.layout,.meta,.grid2,.module-grid,.steprail,.actions,.hero-actions,.intake-toolbar,.contact-grid,.contact-meta{grid-template-columns:1fr}.actions,.hero-actions,.intake-toolbar{grid-auto-flow:row}}
+    @media (max-width:980px){.hero,.layout,.grid2,.module-grid,.steprail,.contact-grid,.contact-meta,.hero-bullets{grid-template-columns:1fr}.actions,.intake-toolbar{grid-auto-flow:row}}
   </style>
 </head>
 <body>
@@ -179,34 +189,54 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
     <section class="hero">
       <div class="card">
         <p class="eyebrow">ATEAM inside Una Labs</p>
-        <h1>See ATEAM at work. Then start your project.</h1>
-        <p class="lead">Describe the opportunity once. ATEAM clarifies the intent, maps the work, and returns a first-pass pack you can send straight into Una Labs delivery.</p>
-        <div class="meta">
-          <div class="box"><strong>Text + voice intake</strong><div class="muted tiny">Say it or type it once.</div></div>
-          <div class="box"><strong>Intent made clear</strong><div class="muted tiny">Audience, first win, lane, and movement reason.</div></div>
-          <div class="box"><strong>Visible public work</strong><div class="muted tiny">Clear steps and timeline without admin noise.</div></div>
-          <div class="box"><strong>Client-ready output</strong><div class="muted tiny">A pack you can hand to Una Labs without repeating the idea.</div></div>
+        <h1>See ATEAM. Say the idea once. Get the first path.</h1>
+        <p class="lead">Keep the intake short. ATEAM turns one rough idea into a clearer intent, visible work, and a first-pass output you can move into Una Labs.</p>
+        <div class="hero-bullets">
+          <div class="hero-bullet"><strong>Text or voice</strong><span>Drop the rough idea once.</span></div>
+          <div class="hero-bullet"><strong>Few clarifiers</strong><span>Only the last missing questions.</span></div>
+          <div class="hero-bullet"><strong>Clean handoff</strong><span>No restart loop into another form.</span></div>
         </div>
-        <div class="hero-actions" style="margin-top:18px">
-          <a class="btn btn-primary" href="#public-intake">Start with ATEAM</a>
-          <span class="muted tiny">Few questions. Visible movement. Clean handoff.</span>
+        <div id="public-intake" class="intake-shell">
+          <div class="intake-toolbar">
+            <div id="serviceState" class="state checking">Checking ATEAM service</div>
+            <button id="voiceBtn" class="btn btn-ghost voice-btn" type="button">Start voice intake</button>
+            <div class="state" id="intakeMode">Text intake ready</div>
+          </div>
+          <label class="tiny">What should ATEAM help you build or solve?
+            <textarea id="idea" placeholder="Example: Build a cleaner intake and first-pass client workflow for Una Labs, then show the path, work, and output without making me repeat myself."></textarea>
+          </label>
+          <select id="category" hidden>
+            <option value="auto" selected>Auto detect</option>
+            <option value="website">Website</option>
+            <option value="lead-automation">Lead flow</option>
+            <option value="product-app">App</option>
+            <option value="internal-tool">Internal tool</option>
+            <option value="ai-feature">AI workflow</option>
+          </select>
+          <div class="field-note">No long form here. ATEAM will only ask the last two questions it needs to shape the first pass.</div>
+          <div class="hero-actions">
+            <button id="startBtn" class="btn btn-primary" type="button">Start intake</button>
+            <button id="resetBtn" class="btn btn-secondary" type="button">Start fresh</button>
+            <span class="quick-note">System, work, and output stay tied to the same run.</span>
+          </div>
+          <div id="stepRail" class="steprail"></div>
+          <div id="errorBox" class="error" hidden></div>
+          <div id="noticeBox" class="notice" hidden></div>
         </div>
       </div>
-      <div class="card hero-preview">
-        <div id="serviceState" class="state checking">Checking ATEAM service</div>
-        <div class="hero-preview-copy">
-          <p class="muted">The public route stays focused on four modules only: Intake, System, Work, and Output.</p>
-          <div class="hero-note">No private controls. No restart loop. Just a trustworthy path from rough idea to clear next move.</div>
+      <div class="card">
+        <p class="eyebrow">Live ATEAM preview</p>
+        <h2 style="margin-bottom:8px">Real operator surface, public-safe view.</h2>
+        <div class="preview-copy">
+          <p class="muted">ATEAM is already on screen here as an embedded preview. The public route stays focused on intake, system, work, and output without exposing private controls.</p>
+          <div class="hero-note">You should be able to understand the system first, then start the intake without leaving the page or repeating the idea.</div>
         </div>
-        <img src="/images/brand/ateam-mission-control.png" alt="ATEAM preview" />
+        <div class="preview-frame" style="margin-top:16px">
+          <img src="/images/brand/ateam-mission-control.png" alt="ATEAM preview" />
+        </div>
       </div>
     </section>
-    <section class="card">
-      <div class="flow-head-copy">
-        <p class="eyebrow">Public flow view</p>
-        <h2>Four modules. Nothing extra.</h2>
-        <p class="muted">This is the whole public story: capture the idea, show what the system understood, expose the work that moved, and return output worth converting into a Una Labs project.</p>
-      </div>
+    <section>
       <div class="module-grid">
         <article class="module"><p class="eyebrow">Intake</p><h3 id="module-intake-state">Ready for intake</h3><p id="module-intake-summary" class="muted tiny">Start with one rough idea by text or voice.</p><span id="module-intake-detail">Capture the rough idea by text or voice, then ask only the last questions needed to move.</span></article>
         <article class="module"><p class="eyebrow">System</p><h3 id="module-system-state">Intent forming</h3><p id="module-system-summary" class="muted tiny">ATEAM will show lane, movement reason, and blocker context once the run is active.</p><span id="module-system-detail">Show what ATEAM understood, which lane it chose, and why the run moved.</span></article>
@@ -216,49 +246,17 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
     </section>
     <section class="layout">
       <div class="stack">
-        <div id="public-intake" class="card">
-          <p class="eyebrow">Module 1 - Intake</p>
-          <h2>Tell ATEAM what needs to happen.</h2>
-          <p class="muted">Start with the rough outcome, product idea, or problem to solve. ATEAM will ask only the last missing questions and build the first believable output.</p>
-          <div id="stepRail" class="steprail"></div>
-          <div class="intake-toolbar">
-            <button id="voiceBtn" class="btn btn-ghost voice-btn" type="button">Start voice intake</button>
-            <div class="state" id="intakeMode">Text intake ready</div>
-          </div>
-          <label class="tiny">Describe the rough idea or outcome
-            <textarea id="idea" placeholder="Example: I want Una Labs to turn a rough service idea into a clear launch path, visible work, and a client-ready first pack."></textarea>
-          </label>
-          <div class="field-note">Voice intake works in supported browsers and appends to the text box so you can keep editing naturally.</div>
-          <div style="margin-top:12px">
-            <label class="tiny">Optional focus
-              <select id="category">
-                <option value="auto">Auto detect</option>
-                <option value="website">Website</option>
-                <option value="lead-automation">Lead flow</option>
-                <option value="product-app">App</option>
-                <option value="internal-tool">Internal tool</option>
-                <option value="ai-feature">AI workflow</option>
-              </select>
-            </label>
-          </div>
-          <div class="actions" style="margin-top:16px">
-            <button id="startBtn" class="btn btn-primary" type="button">Start with ATEAM</button>
-            <button id="resetBtn" class="btn btn-secondary" type="button">Start fresh</button>
-          </div>
-          <div id="errorBox" class="error" hidden></div>
-          <div id="noticeBox" class="notice" hidden></div>
-        </div>
         <div id="questionsCard" class="card" hidden>
-          <p class="eyebrow">Module 1 - Intake</p>
-          <h2>ATEAM needs two quick clarifiers.</h2>
-          <p class="muted">Keep these short. The goal is to tighten the intent, not make you fill a long form.</p>
+          <p class="eyebrow">Intake clarifiers</p>
+          <h2>Two short answers, then ATEAM moves.</h2>
+          <p class="muted">Keep these answers short. The point is to close the gap quickly, not hand you another intake form.</p>
           <div id="questions" class="questions"></div>
           <div class="actions" style="margin-top:16px">
             <button id="buildBtn" class="btn btn-primary" type="button">Build preview output</button>
           </div>
         </div>
         <div id="resultCard" class="card" hidden>
-          <p class="eyebrow">Module 4 - Output</p>
+          <p class="eyebrow">Output</p>
           <h2 id="resultTitle">ATEAM result</h2>
           <p id="resultSummary" class="result-card-summary"></p>
           <div id="resultVerdict" class="state">Waiting</div>
@@ -313,8 +311,8 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
       </div>
       <aside class="stack">
         <div class="card">
-          <p class="eyebrow">Module 2 - System</p>
-          <h2>Intent snapshot and system state</h2>
+          <p class="eyebrow">System</p>
+          <h2>What ATEAM understood</h2>
           <div class="system-stack">
             <div>
               <strong id="understandingTitle">ATEAM will translate the rough idea into a working intent.</strong>
@@ -325,15 +323,15 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
           </div>
         </div>
         <div class="card">
-          <p class="eyebrow">Module 3 - Work</p>
-          <h2>Visible work and movement</h2>
+          <p class="eyebrow">Work</p>
+          <h2>Visible movement without the noise</h2>
           <div id="jobsBox" class="grid2"><div class="empty">Jobs appear here once ATEAM routes the run.</div></div>
           <div class="panel-divider"></div>
           <div class="status-line"><strong>Recent movement</strong><span class="muted tiny">Public-safe event timeline</span></div>
           <div id="timelineBox" class="timeline"><div class="empty">Timeline events appear here once the run starts moving.</div></div>
         </div>
         <div class="card">
-          <p class="eyebrow">Module 4 - Output</p>
+          <p class="eyebrow">Output</p>
           <h2>Run-owned output and handoff</h2>
           <div class="output-stack">
             <div id="artifactsBox" class="grid2"><div class="empty">Artifact ownership appears here once the pack is generated.</div></div>
@@ -368,7 +366,7 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
     const setBox=(id,msg,type)=>{const el=$(id); if(!el){return;} if(!msg){el.hidden=true; el.textContent=""; return;} el.hidden=false; el.textContent=msg; if(type==="error"){ $("noticeBox").hidden=true; } else { $("errorBox").hidden=true; }};
     const req=(path,init)=>fetch(path,{method:init&&init.method?init.method:"GET",headers:{"content-type":"application/json",...(init&&init.headers?init.headers:{})},body:init&&init.body?init.body:undefined,cache:"no-store"}).then(async(r)=>{const p=await r.json().catch(()=>({})); if(!r.ok||p.ok===false) throw new Error(p.message||p.details||p.error||"ATEAM request failed."); return p;});
     function renderSteps(){const idx=!state.run?0:state.run.phase==="analysis"?1:state.run.phase==="brief_approval"||state.run.phase==="initiation"?1:state.run.phase==="prototype_pack"||state.run.phase==="pack_approval"?2:state.run.phase==="handoff"||state.run.phase==="archived"?3:0; $("stepRail").innerHTML=STEPS.map((s,i)=>'<div class="step '+(i<idx||idx===3?'done ':'')+(i===idx?'active':'')+'"><strong>'+esc(s)+'</strong></div>').join("");}
-    function updateVoiceUi(){const btn=$("voiceBtn"); const mode=$("intakeMode"); if(!btn||!mode){return;} if(!state.supportsVoice){btn.textContent="Voice unavailable"; btn.disabled=true; btn.dataset.state="unsupported"; mode.textContent="Text intake ready"; return;} btn.disabled=false; if(state.isListening){btn.textContent="Stop voice intake"; btn.dataset.state="listening"; mode.textContent="Voice intake live"; return;} btn.textContent="Start voice intake"; btn.dataset.state="idle"; mode.textContent="Text + voice intake ready";}
+    function updateVoiceUi(){const btn=$("voiceBtn"); const mode=$("intakeMode"); if(!btn||!mode){return;} if(!state.supportsVoice){btn.textContent="Voice unavailable"; btn.disabled=true; btn.dataset.state="unsupported"; mode.textContent="Text intake ready"; return;} btn.disabled=false; if(state.isListening){btn.textContent="Stop voice intake"; btn.dataset.state="listening"; mode.textContent="Voice intake live"; return;} btn.textContent="Start voice intake"; btn.dataset.state="idle"; mode.textContent="Text + voice ready";}
     function renderStatus(){if(!state.run){$("statusBox").className="box"; $("statusBox").innerHTML='<strong>Ready for intake</strong><p class="muted tiny">ATEAM will show the current lane, movement reason, and blocker context here as soon as the run starts.</p>'; return;} const n=state.run.statusNarrative||{}; $("statusBox").className="box"; $("statusBox").innerHTML='<strong>'+esc(n.label||state.run.phase||"Run active")+'</strong><div class="muted tiny">Run ID: '+esc(state.run.id)+'</div><p>'+esc(n.summary||"ATEAM is holding the current workflow state.")+'</p>'+(n.movementReason?'<div class="muted tiny">Movement reason: '+esc(n.movementReason)+'</div>':'')+(n.blockerReason?'<div class="muted tiny">Blocker: '+esc(n.blockerReason)+'</div>':'');}
     function renderPublicFlow(){const jobCount=Array.isArray(state.run&&state.run.jobs)?state.run.jobs.length:0; const eventCount=Array.isArray(state.run&&state.run.history)?state.run.history.length:0; const artifactCount=Array.isArray(state.run&&state.run.artifactSummaries)?state.run.artifactSummaries.length:0; const systemState=text(state.run&&state.run.statusNarrative&&state.run.statusNarrative.label)||"Intent forming"; const modules={intake:{state:state.run?"Intent captured":"Ready for intake",summary:state.run?"ATEAM has the rough idea and can keep moving from two short clarifiers.":"Start with one rough idea by text or voice."},system:{state:systemState,summary:text(state.run&&state.run.statusNarrative&&state.run.statusNarrative.summary)||"The system module will show lane, movement reason, and blocker context once the run is active."},work:{state:jobCount?String(jobCount)+" work step"+(jobCount===1?"":"s")+" visible":"Work not routed yet",summary:jobCount?String(jobCount)+" work step"+(jobCount===1?"":"s")+" and "+String(eventCount)+" public event"+(eventCount===1?"":"s")+" show how the run moved.":"Visible work appears once ATEAM routes the run."},output:{state:state.run&&((state.run.phase==='handoff')||(state.run.handoff&&state.run.handoff.version===2))?"Decision pack ready":"Output forming",summary:artifactCount?String(artifactCount)+" run-owned artifact"+(artifactCount===1?"":"s")+" are ready for the next move into Una Labs.":"The output module returns artifacts and a clean delivery handoff once the first pass is believable."}}; const detailMap={intake:'Capture the rough idea by text or voice, then ask only the last questions needed to move.',system:'Show what ATEAM understood, which lane it chose, and why the run moved.',work:'Expose the public-safe work steps and timeline so the flow feels active, not mysterious.',output:'Return run-owned artifacts and a clean handoff into Una Labs delivery.'}; ['intake','system','work','output'].forEach((key)=>{const item=modules[key]; const stateEl=$('module-'+key+'-state'); const summaryEl=$('module-'+key+'-summary'); const detailEl=$('module-'+key+'-detail'); if(stateEl) stateEl.textContent=String(item&&item.state||''); if(summaryEl) summaryEl.textContent=String(item&&item.summary||''); if(detailEl) detailEl.textContent=String(detailMap[key]||'');});}
     function renderUnderstanding(){if(!state.run){$("understandingTitle").textContent='What ATEAM will make clear'; $("understandingBox").className='box'; $("understandingBox").innerHTML='<p>ATEAM turns a rough idea into a clearer delivery direction before the pack is built.</p><div class="muted tiny">Audience: who should benefit first.</div><div class="muted tiny">First win: the smallest believable result.</div><div class="muted tiny">Lane: the clearest shape for delivery.</div>'; return;} const understanding=publicUnderstanding(state.run); $("understandingTitle").textContent=understanding.title; $("understandingBox").className='box'; $("understandingBox").innerHTML='<p>'+esc(understanding.summary)+'</p>'+(understanding.audience?'<div class="muted tiny">Audience: '+esc(understanding.audience)+'</div>':'')+(understanding.firstWin?'<div class="muted tiny">First win: '+esc(understanding.firstWin)+'</div>':'')+(understanding.lane?'<div class="muted tiny">Lane: '+esc(understanding.lane)+'</div>':'');}
@@ -376,14 +374,14 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
     function renderJobs(){const jobs=Array.isArray(state.run&&state.run.jobs)?state.run.jobs:[]; $("jobsBox").innerHTML=jobs.length?jobs.slice(0,4).map((j)=>'<div class="box"><strong>'+esc(publicJobTitle(j))+'</strong><div class="muted tiny">Step: '+esc(publicJobStage(j))+'</div><p>'+esc(publicJobNote(j))+'</p></div>').join(""):'<div class="box"><strong>Route the idea</strong><p class="muted tiny">ATEAM turns the rough input into a workable lane.</p></div><div class="box"><strong>Shape the first pass</strong><p class="muted tiny">The pack is built around the smallest believable result.</p></div><div class="box"><strong>Review the output</strong><p class="muted tiny">ATEAM flags the main watch-outs before handoff.</p></div><div class="box"><strong>Prepare the handoff</strong><p class="muted tiny">The idea and output stay tied to the same run.</p></div>';}
     function renderArtifacts(){const items=Array.isArray(state.run&&state.run.artifactSummaries)?state.run.artifactSummaries:[]; $("artifactsBox").innerHTML=items.length?items.slice(0,5).map((a)=>'<div class="box"><strong>'+esc(publicArtifactTitle(a))+'</strong><div class="muted tiny">Type: '+esc(publicArtifactType(a))+'</div><div class="muted tiny">Ownership: '+esc(publicArtifactOwnership(a))+'</div><p>'+esc(publicArtifactSummary(a))+'</p></div>').join(""):'<div class="box"><strong>First brief</strong><p class="muted tiny">Audience, first win, and recommended lane.</p></div><div class="box"><strong>Concept pack</strong><p class="muted tiny">The first believable version of the experience.</p></div><div class="box"><strong>Prototype direction</strong><p class="muted tiny">Main path and decision points.</p></div><div class="box"><strong>Build note</strong><p class="muted tiny">Scope, risk, and the clearest next move.</p></div>';}
     function renderTimeline(){const items=Array.isArray(state.run&&state.run.history)?state.run.history:[]; $("timelineBox").innerHTML=items.length?items.slice(-5).reverse().map((i)=>'<div class="box"><strong>'+esc(publicTimelineMessage(i))+'</strong><div class="muted tiny">'+esc(i.createdAt||"")+'</div>'+(i.metadata&&i.metadata.reason?'<p>'+esc(i.metadata.reason)+'</p>':'')+'</div>').join(""):'<div class="box"><strong>Intent received</strong><div class="muted tiny">The rough idea is captured.</div></div><div class="box"><strong>Lane selected</strong><div class="muted tiny">ATEAM picks the clearest first path.</div></div><div class="box"><strong>Output prepared</strong><div class="muted tiny">The run is ready for handoff.</div></div>';}
-    function renderResults(){const ready=!!(state.run&&(state.run.phase==="handoff"||(state.run.handoff&&state.run.handoff.version===2))); if(!ready){$("resultCard").hidden=true; $("resultGrid").innerHTML=""; $("contactCard").hidden=true; return;} const artifacts=state.run.artifacts||{}; $("resultCard").hidden=false; $("resultTitle").textContent="First pass ready"; $("resultSummary").textContent=publicResultSummary(state.run); $("resultVerdict").textContent="Decision pack ready"; $("resultGrid").innerHTML='<div class="box"><strong>Recommended lane</strong><div>'+esc(laneLabel(state.run.recommendedLane||state.run.brief&&state.run.brief.recommendedLane||"Scoped first pass"))+'</div></div><div class="box"><strong>Project shell</strong><div>Ready for project scoping</div></div><div class="box"><strong>Prototype direction</strong><div>'+esc(publicArtifactTitle({type:"prototype",title:artifacts.prototype&&artifacts.prototype.title}))+'</div></div><div class="box"><strong>Build note</strong><div>'+esc(publicArtifactTitle({type:"document",title:artifacts.doc&&artifacts.doc.title}))+'</div></div>'; $("contactCard").hidden=!(state.contactOpen||state.leadSubmitted);}
+    function renderResults(){const ready=!!(state.run&&(state.run.phase==="handoff"||(state.run.handoff&&state.run.handoff.version===2))); if(!ready){$("resultCard").hidden=true; $("resultGrid").innerHTML=""; $("contactCard").hidden=true; return;} const artifacts=state.run.artifacts||{}; $("resultCard").hidden=false; $("resultTitle").textContent="First pass ready"; $("resultSummary").textContent=publicResultSummary(state.run); $("resultVerdict").textContent="Decision pack ready"; $("resultGrid").innerHTML='<div class="box"><strong>Recommended lane</strong><div>'+esc(laneLabel(state.run.recommendedLane||state.run.brief&&state.run.brief.recommendedLane||"Scoped first pass"))+'</div></div><div class="box"><strong>Project shell</strong><div>Ready for project scoping</div></div><div class="box"><strong>Prototype direction</strong><div>'+esc((artifacts.prototype&&artifacts.prototype.summary)||(artifacts.prototype&&artifacts.prototype.title)||"Prototype direction")+'</div></div><div class="box"><strong>Build note</strong><div>'+esc((artifacts.doc&&artifacts.doc.summary)||(artifacts.doc&&artifacts.doc.title)||"Build note")+'</div></div>'; $("contactCard").hidden=!(state.contactOpen||state.leadSubmitted);}
     function handoffPayload(){const h=state.run&&state.run.handoff; if(h&&h.version===2&&h.runId) return h; const b=state.run&&state.run.brief?state.run.brief:{}; const a=state.run&&state.run.artifacts?state.run.artifacts:{}; const label=(state.run&&state.run.category)||$("category").value||"auto"; return {version:2,runId:state.run.id,createdAtMs:Date.now(),idea:state.run.idea||"",categoryValue:label,categoryLabel:label,recommendedLane:state.run.recommendedLane||b.recommendedLane||label,phase:state.run.phase||"handoff",brief:{title:b.title||"ATEAM result",summary:b.summary||"",audience:b.audience||"",primaryGoal:b.primaryGoal||"",likelyUserValue:b.likelyUserValue||"",recommendedDirection:b.recommendedDirection||"",quickVerdict:b.quickVerdict||"",goals:Array.isArray(b.goals)?b.goals:[],constraints:Array.isArray(b.constraints)?b.constraints:[],successCriteria:Array.isArray(b.successCriteria)?b.successCriteria:[],phasedPlan:Array.isArray(b.phasedPlan)?b.phasedPlan:[]},artifacts:{mockupTitle:a.mockup&&a.mockup.title||"Concept pack",prototypeTitle:a.prototype&&a.prototype.title||"Prototype direction",smokeSummary:a.smoke&&a.smoke.summary||"Quick QA view",docTitle:a.doc&&a.doc.title||"Structured scope"},nextSteps:Array.isArray(a.nextSteps)?a.nextSteps:[]};}
     function render(){renderSteps(); renderPublicFlow(); renderUnderstanding(); renderStatus(); renderQuestions(); renderJobs(); renderArtifacts(); renderTimeline(); renderResults(); updateVoiceUi();}
     function appendVoiceTranscript(text){const ideaEl=$("idea"); if(!ideaEl){return;} const spoken=String(text||"").trim(); if(!spoken){return;} const current=ideaEl.value.trim(); ideaEl.value=current?(current+(/[.?!]\\s*$/.test(current)?" ":". ")+spoken):spoken;}
     function stopVoiceCapture(){if(!state.recognition){return;} try{state.recognition.stop();}catch{} state.isListening=false; updateVoiceUi();}
     function toggleVoiceCapture(){if(!state.supportsVoice||!state.recognition){return;} if(state.isListening){stopVoiceCapture(); setBox("noticeBox","Voice intake stopped. You can edit the idea or continue typing.","notice"); return;} setBox("errorBox",""); try{state.recognition.start(); state.isListening=true; updateVoiceUi(); setBox("noticeBox","Voice intake is live. Speak naturally and ATEAM will append it to the intake box.","notice");}catch{state.isListening=false; updateVoiceUi(); setBox("errorBox","Voice intake could not start in this browser. Type the idea instead.","error");}}
     async function loadRun(runId){const payload=await req("/api/ateam/workflow/runs/"+encodeURIComponent(runId)); state.run=payload.run; render();}
-    async function start(){setBox("errorBox",""); setBox("noticeBox",""); const idea=$("idea").value.trim(); if(state.service!=="ready"){setBox("errorBox","ATEAM is not connected yet. Try again in a moment.","error"); return;} if(idea.length<12){setBox("errorBox","Drop a little more context so ATEAM can shape a believable first pass.","error"); return;} $("startBtn").disabled=true; $("startBtn").textContent="Starting..."; try{const payload=await req("/api/ateam/workflow/runs",{method:"POST",body:JSON.stringify({idea,category:$("category").value==="auto"?"":$("category").value})}); state.run=payload.run; state.answers={}; history.replaceState({}, "", "/ateam?run="+encodeURIComponent(payload.run.id)); render(); setBox("noticeBox","ATEAM captured the intent. Answer the two quick clarifiers and it will shape the first path.","notice"); const questionCard=$("questionsCard"); if(questionCard&&!questionCard.hidden){questionCard.scrollIntoView({behavior:"smooth",block:"start"});}}catch(err){setBox("errorBox",err instanceof Error?err.message:"Unable to start the ATEAM workflow run.","error");}finally{$("startBtn").disabled=false; $("startBtn").textContent="Start with ATEAM";}}
+    async function start(){setBox("errorBox",""); setBox("noticeBox",""); const idea=$("idea").value.trim(); if(state.service!=="ready"){setBox("errorBox","ATEAM is not connected yet. Try again in a moment.","error"); return;} if(idea.length<12){setBox("errorBox","Drop a little more context so ATEAM can shape a believable first pass.","error"); return;} $("startBtn").disabled=true; $("startBtn").textContent="Starting..."; try{const payload=await req("/api/ateam/workflow/runs",{method:"POST",body:JSON.stringify({idea,category:$("category").value==="auto"?"":$("category").value})}); state.run=payload.run; state.answers={}; history.replaceState({}, "", "/ateam?run="+encodeURIComponent(payload.run.id)); render(); setBox("noticeBox","ATEAM captured the intent. Answer the two quick clarifiers and it will shape the first path.","notice"); const questionCard=$("questionsCard"); if(questionCard&&!questionCard.hidden){questionCard.scrollIntoView({behavior:"smooth",block:"start"});}}catch(err){setBox("errorBox",err instanceof Error?err.message:"Unable to start the ATEAM workflow run.","error");}finally{$("startBtn").disabled=false; $("startBtn").textContent="Start intake";}}
     async function buildPack(){if(!state.run) return; const qs=Array.isArray(state.run.questions)?state.run.questions:[]; const missing=qs.find((q)=>!String(state.answers[q.id]||"").trim()); if(missing){setBox("errorBox","Answer the quick clarifiers so ATEAM can shape the first pass cleanly.","error"); return;} $("buildBtn").disabled=true; $("buildBtn").textContent="Building output..."; setBox("errorBox",""); setBox("noticeBox",""); try{await req("/api/ateam/workflow/runs/"+encodeURIComponent(state.run.id)+"/answers",{method:"POST",body:JSON.stringify({answers:state.answers})}); await req("/api/ateam/workflow/runs/"+encodeURIComponent(state.run.id)+"/approve",{method:"POST",body:JSON.stringify({gate:"brief",decision:"approved"})}); await req("/api/ateam/workflow/runs/"+encodeURIComponent(state.run.id)+"/generate-pack",{method:"POST",body:JSON.stringify({})}); const finalPayload=await req("/api/ateam/workflow/runs/"+encodeURIComponent(state.run.id)+"/approve",{method:"POST",body:JSON.stringify({gate:"pack",decision:"approved"})}); state.run=finalPayload.run; state.leadSubmitted=false; state.contactOpen=false; setContactMessage("contactError",""); setContactMessage("contactSuccess",""); render(); $("resultCard")?.scrollIntoView({behavior:"smooth",block:"start"}); setBox("noticeBox","ATEAM turned the intent into visible work, owned artifacts, and a delivery handoff.","notice");}catch(err){setBox("errorBox",err instanceof Error?err.message:"ATEAM could not finish the workflow run right now.","error");}finally{$("buildBtn").disabled=false; $("buildBtn").textContent="Build preview output";}}
     function reset(){state.run=null; state.answers={}; $("idea").value=""; history.replaceState({}, "", "/ateam"); setBox("errorBox",""); setBox("noticeBox",""); render();}
     function cont(){if(!state.run){location.href="#public-intake"; return;} showContactCard();}
@@ -424,14 +422,7 @@ export default {
       return proxyWorkflowRequest(request, env);
     }
 
-    if (url.pathname === "/ateam" || url.pathname === "/ateam/") {
-      return html(buildPage(canonicalOrigin, opsOrigin));
-    }
-
-    if (url.pathname.startsWith("/ateam/")) {
-      return Response.redirect(`${canonicalOrigin}/ateam${url.search}`, 302);
-    }
-
+    // /ateam and all sub-paths fall through to CF Pages (ftc-site)
     return fetch(request);
   }
 };
