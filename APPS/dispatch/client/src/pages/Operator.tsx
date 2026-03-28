@@ -121,6 +121,10 @@ const INCIDENT_LABELS: Record<string, string> = {
   VEHICLE_FIRE: 'Vehicle Fire',
   HAZARD: 'Road Hazard',
   DEBRIS: 'Debris on Road',
+  ROADWORK: 'Road Work Zone',
+  ROAD_CLOSURE: 'Road Closure',
+  ROAD_EVENT: 'Road Event',
+  CONSTRUCTION: 'Construction Zone',
 };
 
 function timeAgo(dateStr: string): string {
@@ -391,11 +395,15 @@ function JobCard({
 
 // ─── Incident Card ────────────────────────────────────────────────────────────
 
-function IncidentCard({ incident }: { incident: Incident }) {
-  const mapsUrl =
-    incident.locationLat && incident.locationLng
-      ? `https://maps.google.com/?q=${incident.locationLat},${incident.locationLng}`
-      : null;
+function IncidentCard({ incident, onDispatch }: { incident: Incident; onDispatch?: (inc: Incident) => void }) {
+  // Prefer GPS coords; fall back to text search on roadway name for transit alerts
+  const isExactGps = incident.locationLat && incident.locationLng &&
+    !(Math.abs(incident.locationLat - 45.4215) < 0.001 && Math.abs(incident.locationLng + 75.6972) < 0.001);
+  const mapsUrl = isExactGps
+    ? `https://maps.google.com/?q=${incident.locationLat},${incident.locationLng}`
+    : incident.roadway
+    ? `https://maps.google.com/search/?api=1&query=${encodeURIComponent(incident.roadway + ', Ottawa ON')}`
+    : null;
   const key = incident.eventType?.toUpperCase() ?? '';
   const label = INCIDENT_LABELS[key] ?? incident.eventType ?? 'Incident';
   const isHigh = ['ACCIDENT', 'COLLISION', 'VEHICLE_FIRE'].includes(key);
@@ -443,17 +451,28 @@ function IncidentCard({ incident }: { incident: Incident }) {
           </p>
         )}
 
-        {mapsUrl && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-500 transition-all"
-          >
-            <Navigation2 className="w-4 h-4" />
-            Navigate to incident
-          </a>
-        )}
+        <div className="flex gap-2">
+          {mapsUrl && (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-500 transition-all"
+            >
+              <Navigation2 className="w-4 h-4" />
+              Navigate
+            </a>
+          )}
+          {onDispatch && (
+            <button
+              onClick={() => onDispatch(incident)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 active:bg-orange-600 transition-all"
+            >
+              <Zap className="w-4 h-4" />
+              Create Job
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -559,11 +578,46 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     [updateStatus],
   );
 
+  const handleIncidentDispatch = useCallback(async (inc: Incident) => {
+    const roadway = inc.roadway || 'Ottawa area';
+    const toast = (message: string, type: Toast['type']) => {
+      const id = Date.now();
+      setToasts(prev => [...prev, { id, message, type }]);
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
+    };
+    try {
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: `Lead — ${roadway}`,
+          customerPhone: '000-000-0000',
+          serviceType: 'other',
+          locationLat: inc.locationLat,
+          locationLng: inc.locationLng,
+          locationAddress: roadway,
+          notes: inc.description || undefined,
+        }),
+      });
+      if (res.ok) {
+        toast(`Job created from incident on ${roadway}`, 'job');
+        queryClient.invalidateQueries({ queryKey: ['requests'] });
+      }
+    } catch {
+      toast('Failed to create job. Try again.', 'incident');
+    }
+  }, [queryClient, setToasts]);
+
   const activeStatuses: RequestStatus[] = ['pending', 'accepted', 'en_route'];
+  // Operators see: unassigned pending jobs (available to claim) + their own assigned jobs
+  const myRequests = allRequests.filter(r => {
+    if (r.operatorId === null && r.status === 'pending') return true; // open pool
+    return r.operatorId === session.id; // assigned to me
+  });
   const displayRequests =
-    filter === 'active' ? allRequests.filter(r => activeStatuses.includes(r.status)) : allRequests;
-  const pendingCount = allRequests.filter(r => r.status === 'pending').length;
-  const activeCount = allRequests.filter(r => ['accepted', 'en_route'].includes(r.status)).length;
+    filter === 'active' ? myRequests.filter(r => activeStatuses.includes(r.status)) : myRequests;
+  const pendingCount = myRequests.filter(r => r.status === 'pending').length;
+  const activeCount = myRequests.filter(r => ['accepted', 'en_route'].includes(r.status)).length;
 
   return (
     <div className="min-h-dvh bg-dispatch-bg flex flex-col">
@@ -701,7 +755,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                 <p className="text-slate-700 text-xs mt-1">Ontario 511 · Refreshes every 3 min</p>
               </div>
             )}
-            {incidentFeed.map(inc => <IncidentCard key={inc.id} incident={inc} />)}
+            {incidentFeed.map(inc => <IncidentCard key={inc.id} incident={inc} onDispatch={handleIncidentDispatch} />)}
           </>
         ) : (
           <>

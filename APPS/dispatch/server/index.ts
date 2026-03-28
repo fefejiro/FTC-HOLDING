@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import cors, { type CorsOptions } from 'cors';
 import { initPush } from './push';
 import { startIncidentMonitor } from './monitor';
+import { canAccessAdminSurface } from './adminAccess';
 
 const app = express();
 const httpServer = createServer(app);
@@ -20,6 +21,7 @@ const allowedOrigins = new Set([
   'http://127.0.0.1:8080',
   'https://dispatch.unalabs.cloud',
   'http://dispatch.unalabs.cloud',
+  'https://dispatch-admin.unalabs.cloud',
   'https://dispatch-api-production.up.railway.app',
   'https://dispatch-edge.fejiro-efiuvwere.workers.dev',
 ]);
@@ -102,6 +104,19 @@ app.use((req, res, next) => {
     const message = (err as any)?.message || 'Internal Server Error';
     console.error(err);
     res.status(status).json({ error: message });
+  });
+
+  app.use((req, res, next) => {
+    if (req.path === '/admin' || req.path.startsWith('/admin/')) {
+      if (canAccessAdminSurface(req)) {
+        next();
+        return;
+      }
+      res.status(404).send('Not found');
+      return;
+    }
+
+    next();
   });
 
   if (process.env.NODE_ENV === 'production') {

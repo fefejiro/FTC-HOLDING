@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import { getVapidPublicKey, sendToAllActiveOperators } from './push';
 import { sseAdd, sseRemove, sseBroadcast, sseClientCount } from './sse';
 import { getIncidentMonitorInfo } from './monitor';
+import { canAccessAdminSurface } from './adminAccess';
 
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
   // Status
@@ -194,6 +195,11 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   });
 
   app.post('/api/operators', async (req, res) => {
+    if (!canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
     const schema = z.object({
       name: z.string().min(1),
       phone: z.string().optional(),
@@ -259,6 +265,120 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         active: operator.active,
       },
     });
+  });
+
+  // ── Admin auth ────────────────────────────────────────────────────────────
+  // Returns the proxy key on successful PIN validation.
+  // Client stores it and sends as x-dispatch-admin-proxy-key on admin requests.
+  app.post('/api/admin/auth', async (req, res) => {
+    const schema = z.object({ pin: z.string().min(1) });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'PIN required' });
+      return;
+    }
+
+    const adminPin = process.env.DISPATCH_ADMIN_PIN;
+    const proxyKey = process.env.DISPATCH_ADMIN_PROXY_KEY;
+
+    // Local dev: no env vars needed
+    if (!adminPin || !proxyKey) {
+      const host = String(req.hostname).toLowerCase();
+      if (host === 'localhost' || host === '127.0.0.1') {
+        res.json({ ok: true, token: null });
+        return;
+      }
+      res.status(503).json({ error: 'Admin auth not configured' });
+      return;
+    }
+
+    if (parsed.data.pin !== adminPin) {
+      res.status(401).json({ ok: false, error: 'Incorrect PIN' });
+      return;
+    }
+
+    res.json({ ok: true, token: proxyKey });
+  });
+
+  // ── Admin: assign operator to a request ───────────────────────────────────
+  app.patch('/api/requests/:id/assign', async (req, res) => {
+    if (!canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    const { id } = req.params;
+    const schema = z.object({
+      operatorId: z.string().uuid().nullable(),
+      // optionally bump status to accepted when assigning
+      accept: z.boolean().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid payload' });
+      return;
+    }
+
+    const { operatorId, accept } = parsed.data;
+    const updateValues: Record<string, unknown> = { operatorId };
+    if (accept) {
+      updateValues.status = 'accepted';
+      updateValues.acceptedAt = new Date();
+    }
+
+    const [updated] = await db
+      .update(requests)
+      .set(updateValues)
+      .where(eq(requests.id, id))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: 'Request not found' });
+      return;
+    }
+
+    sseBroadcast('request:updated', updated);
+    res.json({ ok: true, request: updated });
+  });
+
+  // ── Admin: change request status ──────────────────────────────────────────
+  app.patch('/api/requests/:id/admin-status', async (req, res) => {
+    if (!canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    const { id } = req.params;
+    const schema = z.object({
+      status: z.enum(['pending', 'accepted', 'en_route', 'completed', 'cancelled']),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid status' });
+      return;
+    }
+
+    const { status } = parsed.data;
+    const now = new Date();
+    const updateValues: Record<string, unknown> = { status };
+    if (status === 'accepted') updateValues.acceptedAt = now;
+    if (status === 'completed') updateValues.completedAt = now;
+
+    const [updated] = await db
+      .update(requests)
+      .set(updateValues)
+      .where(eq(requests.id, id))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: 'Request not found' });
+      return;
+    }
+
+    sseBroadcast('request:updated', updated);
+    res.json({ ok: true, request: updated });
   });
 
   // ── Ontario 511 incidents ─────────────────────────────────────────────────

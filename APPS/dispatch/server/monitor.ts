@@ -4,12 +4,14 @@
  * Automated incident sources:
  * 1. Ontario 511 official events feed
  * 2. City of Ottawa official traffic events feed
+ * 3. OC Transpo service alerts RSS (detours, cancellations)
  *
  * The monitor normalizes both feeds into a single incident stream, deduplicates
  * by source-prefixed ID, stores fresh incidents, broadcasts them over SSE, and
  * sends web-push alerts to active operators when the event is worth acting on.
  */
 
+import { createHash } from 'node:crypto';
 import { inArray } from 'drizzle-orm';
 import { db } from './db';
 import { incidents } from './schema';
@@ -17,7 +19,9 @@ import { sendToAllActiveOperators } from './push';
 import { sseBroadcast } from './sse';
 
 const OTTAWA = { north: 45.53, south: 45.15, west: -76.35, east: -75.25 };
+const OTTAWA_CENTER = { lat: 45.4215, lng: -75.6972 } as const;
 const POLL_INTERVAL_MS = 3 * 60 * 1_000;
+const MAX_GEOCODE_PER_RUN = 8; // Nominatim 1 req/s rate-limit cap
 
 const INCIDENT_SOURCES = [
   {
@@ -29,6 +33,11 @@ const INCIDENT_SOURCES = [
     key: 'ottawa_traffic',
     label: 'City of Ottawa Traffic Events',
     url: 'https://traffic.ottawa.ca/map/service/events?accept-language=en',
+  },
+  {
+    key: 'octranspo',
+    label: 'OC Transpo Service Alerts',
+    url: 'https://www.octranspo.com/feeds/updates-en/',
   },
 ] as const;
 
@@ -98,6 +107,7 @@ type OttawaTrafficEvent = {
 const initialSourceStats = (): Record<SourceKey, MonitorSourceSnapshot> => ({
   on511: { fetched: 0, eligible: 0, inserted: 0 },
   ottawa_traffic: { fetched: 0, eligible: 0, inserted: 0 },
+  octranspo: { fetched: 0, eligible: 0, inserted: 0 },
 });
 
 const monitorState: MonitorState = {
@@ -203,6 +213,134 @@ function prettyType(type: string): string {
   return map[type] || type || 'Road incident';
 }
 
+// ── RSS parser (no external dependency) ──────────────────────────────────────
+
+function rssText(xml: string, tag: string): string {
+  const cdata = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`).exec(xml);
+  if (cdata) return cdata[1].trim();
+  const plain = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`).exec(xml);
+  return plain ? plain[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+}
+
+function parseRSSItems(xml: string) {
+  const items: Array<{ title: string; description: string; pubDate: string; guid: string; categories: string[] }> = [];
+  const re = /<item>([\s\S]*?)<\/item>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml)) !== null) {
+    const body = m[1];
+    const cats: string[] = [];
+    const catRe = /<category>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/category>/g;
+    let cm: RegExpExecArray | null;
+    while ((cm = catRe.exec(body)) !== null) cats.push(cm[1].trim());
+    items.push({
+      title: rssText(body, 'title'),
+      description: rssText(body, 'description'),
+      pubDate: rssText(body, 'pubDate'),
+      guid: rssText(body, 'guid'),
+      categories: cats,
+    });
+  }
+  return items;
+}
+
+// ── Nominatim forward geocoder ────────────────────────────────────────────────
+
+async function geocodeOttawaStreet(query: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const q = encodeURIComponent(`${query}, Ottawa, Ontario`);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&countrycodes=ca`,
+      { headers: { 'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)' }, signal: AbortSignal.timeout(6_000) },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as Array<{ lat: string; lon: string }>;
+    if (!data.length) return null;
+    const lat = parseFloat(data[0].lat);
+    const lng = parseFloat(data[0].lon);
+    return inOttawa(lat, lng) ? { lat, lng } : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractStreetHint(title: string): string | null {
+  // "DETOUR: Route 8 near Laurier Ave." → "Laurier Ave"
+  const near = /\bnear\s+([A-Za-z][A-Za-z0-9\s./]+?)\.?\s*$/i.exec(title);
+  if (near) return near[1].trim();
+  // "Route 95 Albert/Slater" → "Albert"
+  const route = /Route\s+\d+[A-Z]?\s+([A-Za-z][A-Za-z/\s]+)/i.exec(title);
+  if (route) return route[1].split('/')[0].trim();
+  return null;
+}
+
+// ── OC Transpo alerts ─────────────────────────────────────────────────────────
+
+async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<NormalizedIncident[]> {
+  const res = await fetch('https://www.octranspo.com/feeds/updates-en/', {
+    headers: { 'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)' },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) return [];
+
+  const xml = await res.text();
+  const items = parseRSSItems(xml);
+
+  // Only include alerts from last 48 hours
+  const cutoff = Date.now() - 48 * 60 * 60 * 1_000;
+  const recent = items.filter((item) => {
+    const t = item.pubDate ? new Date(item.pubDate).getTime() : 0;
+    return t >= cutoff;
+  });
+
+  const result: NormalizedIncident[] = [];
+
+  for (const item of recent) {
+    const id = `octranspo:${createHash('md5').update(item.guid || item.title).digest('hex').slice(0, 12)}`;
+    const cats = item.categories.map((c) => c.toLowerCase());
+    const isDetour = cats.some((c) => c.includes('detour'));
+    const isCancel = cats.some((c) => c.includes('cancel'));
+    const eventType = isDetour ? 'ROAD_DETOUR' : isCancel ? 'ROUTE_CANCELLED' : 'TRANSIT_ALERT';
+
+    // Try to geocode extracted street — respect per-run budget
+    let lat = OTTAWA_CENTER.lat;
+    let lng = OTTAWA_CENTER.lng;
+
+    if (geocodeBudget.used < MAX_GEOCODE_PER_RUN) {
+      const hint = extractStreetHint(item.title);
+      if (hint) {
+        geocodeBudget.used += 1;
+        // 1.1s gap satisfies Nominatim's 1 req/s policy
+        const [coords] = await Promise.all([
+          geocodeOttawaStreet(hint),
+          new Promise<void>((r) => setTimeout(r, 1_100)),
+        ]);
+        if (coords) { lat = coords.lat; lng = coords.lng; }
+      }
+    }
+
+    const alerted = isDetour;
+    const description = item.description
+      ? `${item.title} — ${item.description.slice(0, 250)}`
+      : item.title;
+
+    result.push({
+      id,
+      eventType,
+      description,
+      roadway: item.title,
+      locationLat: lat,
+      locationLng: lng,
+      severity: isDetour ? 'Medium' : 'Low',
+      startDate: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+      lastUpdated: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+      alerted,
+      sourceKey: 'octranspo' as const,
+    });
+  }
+
+  return result;
+}
+
 async function fetchOntario511Incidents(): Promise<NormalizedIncident[]> {
   const res = await fetch('https://511on.ca/api/v2/get/event', {
     headers: { 'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)' },
@@ -291,15 +429,17 @@ async function fetchOttawaTrafficIncidents(): Promise<NormalizedIncident[]> {
 }
 
 async function loadSourceIncidents(): Promise<Record<SourceKey, NormalizedIncident[]>> {
+  // Share a geocode budget across the run to respect Nominatim rate limits
+  const geocodeBudget = { used: 0 };
+
+  // OC Transpo may geocode sequentially — run it first, then parallel the rest
+  const octranspo = await fetchOCTranspoAlerts(geocodeBudget);
   const [on511, ottawaTraffic] = await Promise.all([
     fetchOntario511Incidents(),
     fetchOttawaTrafficIncidents(),
   ]);
 
-  return {
-    on511,
-    ottawa_traffic: ottawaTraffic,
-  };
+  return { on511, ottawa_traffic: ottawaTraffic, octranspo };
 }
 
 async function runMonitor(): Promise<void> {
@@ -308,17 +448,22 @@ async function runMonitor(): Promise<void> {
 
   try {
     const sourceIncidents = await loadSourceIncidents();
-    const all = [...sourceIncidents.on511, ...sourceIncidents.ottawa_traffic];
+    const all = [...sourceIncidents.on511, ...sourceIncidents.ottawa_traffic, ...sourceIncidents.octranspo];
 
     monitorState.sourceStats = {
       on511: {
         fetched: sourceIncidents.on511.length,
-        eligible: sourceIncidents.on511.filter((incident) => incident.alerted).length,
+        eligible: sourceIncidents.on511.filter((i) => i.alerted).length,
         inserted: 0,
       },
       ottawa_traffic: {
         fetched: sourceIncidents.ottawa_traffic.length,
-        eligible: sourceIncidents.ottawa_traffic.filter((incident) => incident.alerted).length,
+        eligible: sourceIncidents.ottawa_traffic.filter((i) => i.alerted).length,
+        inserted: 0,
+      },
+      octranspo: {
+        fetched: sourceIncidents.octranspo.length,
+        eligible: sourceIncidents.octranspo.filter((i) => i.alerted).length,
         inserted: 0,
       },
     };
@@ -409,12 +554,13 @@ async function runMonitor(): Promise<void> {
 }
 
 export function getIncidentMonitorInfo(): MonitorState {
+  const stats = {} as Record<SourceKey, MonitorSourceSnapshot>;
+  for (const key of Object.keys(monitorState.sourceStats) as SourceKey[]) {
+    stats[key] = { ...monitorState.sourceStats[key] };
+  }
   return {
     ...monitorState,
-    sourceStats: {
-      on511: { ...monitorState.sourceStats.on511 },
-      ottawa_traffic: { ...monitorState.sourceStats.ottawa_traffic },
-    },
+    sourceStats: stats,
     sources: monitorState.sources.map((source) => ({ ...source })),
   };
 }
