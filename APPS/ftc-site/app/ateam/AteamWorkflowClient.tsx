@@ -5,39 +5,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ATEAM_BRAND_LOGO_PATH,
-  ATEAM_MISSION_CONTROL_PREVIEW_PATH
 } from "../../lib/ateamEmbed";
 import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
 import {
   ateamWorkflowCategories,
-  ateamWorkflowSteps,
   formatWorkflowPhaseLabel,
   type WorkflowCategoryValue,
-  type WorkflowRun
+  type WorkflowRun,
 } from "../../lib/ateamWorkflow";
 import {
   clearAteamDemoHandoff,
   saveAteamWorkflowHandoff,
-  type AteamWorkflowHandoffPayload
+  type AteamWorkflowHandoffPayload,
 } from "../../lib/ateamHandoff";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type BusyState = "idle" | "starting" | "processing" | "loading";
 type WorkflowServiceState = "checking" | "ready" | "unavailable";
-
-type SpeechRecognitionResultLike = {
-  transcript: string;
-};
-
-type SpeechRecognitionAlternativeLike = {
-  0?: SpeechRecognitionResultLike;
-  isFinal?: boolean;
-  length?: number;
-};
-
-type SpeechRecognitionEventLike = {
-  resultIndex?: number;
-  results: ArrayLike<SpeechRecognitionAlternativeLike>;
-};
 
 type BrowserSpeechRecognition = {
   continuous: boolean;
@@ -51,73 +36,42 @@ type BrowserSpeechRecognition = {
   abort?: () => void;
 };
 
+type SpeechRecognitionResultLike = { transcript: string };
+type SpeechRecognitionAlternativeLike = {
+  0?: SpeechRecognitionResultLike;
+  isFinal?: boolean;
+  length?: number;
+};
+type SpeechRecognitionEventLike = {
+  resultIndex?: number;
+  results: ArrayLike<SpeechRecognitionAlternativeLike>;
+};
 type BrowserSpeechRecognitionCtor = new () => BrowserSpeechRecognition;
 
-const conversionTunnel = [
-  { key: "capture", label: "Intake", detail: "Receive the rough idea and preserve the signal." },
-  { key: "structure", label: "Understand", detail: "Pull out the audience, first win, and constraints." },
-  { key: "route", label: "Route", detail: "Turn the run into the clearest believable lane." },
-  { key: "build", label: "Build", detail: "Generate preview artifacts and visible delivery jobs." },
-  { key: "review", label: "Review", detail: "Surface quality notes, blockers, and next decisions." },
-  { key: "pack", label: "Decision", detail: "Package the outcome into a project-ready handoff." }
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+// Human-readable working stages shown during processing
+const WORKING_STAGES = [
+  { label: "Reading your idea", detail: "Capturing the signal and intent." },
+  { label: "Finding the right path", detail: "Routing to the fastest believable lane." },
+  { label: "Building the first version", detail: "Generating concept, prototype, and artifacts." },
+  { label: "Packaging your results", detail: "Creating the decision pack for Una Labs." },
 ] as const;
 
-const publicFlowModules = [
-  {
-    key: "intake",
-    title: "Intake",
-    detail: "Capture the rough idea and the last clarifiers without making the client structure everything upfront."
-  },
-  {
-    key: "system",
-    title: "System",
-    detail: "Show the run state, movement reason, lane, and project evolution clearly enough to trust."
-  },
-  {
-    key: "work",
-    title: "Work",
-    detail: "Keep visible jobs, ownership, and timeline movement on the public-safe surface."
-  },
-  {
-    key: "output",
-    title: "Output",
-    detail: "Return run-owned artifacts, a decision pack, and the clean next move into delivery."
-  }
+// Compact type labels (no verbose descriptions)
+const COMPACT_TYPES = [
+  { value: "auto", label: "Auto" },
+  { value: "product-app", label: "App / Product" },
+  { value: "website", label: "Website" },
+  { value: "lead-automation", label: "Lead system" },
+  { value: "ai-feature", label: "AI workflow" },
 ] as const;
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    method: init?.method || "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {})
-    },
-    body: init?.body,
-    cache: "no-store"
-  });
-
-  const payload = (await response.json().catch(() => ({}))) as T & {
-    ok?: boolean;
-    message?: string;
-    details?: string;
-    error?: string;
-  };
-
-  if (!response.ok || payload?.ok === false) {
-    throw new Error(
-      payload?.message ||
-        payload?.details ||
-        payload?.error ||
-        "ATEAM workflow request failed."
-    );
-  }
-
-  return payload;
-}
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildEmptyAnswers(run: WorkflowRun | null) {
-  return (run?.questions || []).reduce<Record<string, string>>((acc, question) => {
-    acc[question.id] = String(run?.answers?.[question.id] || "");
+  return (run?.questions || []).reduce<Record<string, string>>((acc, q) => {
+    acc[q.id] = String(run?.answers?.[q.id] || "");
     return acc;
   }, {});
 }
@@ -132,21 +86,35 @@ function toHandoffPayload(run: WorkflowRun | null): AteamWorkflowHandoffPayload 
   return run.handoff as AteamWorkflowHandoffPayload;
 }
 
-function getStepIndex(run: WorkflowRun | null, workflowReady: boolean, busy: BusyState) {
-  if (busy === "starting") return 0;
-  if (!run) return 0;
-  if (workflowReady) return 4;
-  if (busy === "processing") return 3;
-  if (run.phase === "analysis") return 1;
-  if (run.phase === "brief_approval" || run.phase === "initiation") return 2;
-  if (run.phase === "prototype_pack" || run.phase === "pack_approval") return 3;
-  return 0;
+function processingIndexToHumanStage(idx: number): number {
+  if (idx <= 0) return 0;
+  if (idx === 1) return 1;
+  if (idx <= 3) return 2;
+  return 3;
 }
 
-function getQuickVerdict(run: WorkflowRun | null) {
-  if (!run) return "No output yet";
-  return run.brief?.quickVerdict || "Go for a scoped first pass";
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    method: init?.method || "GET",
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    body: init?.body,
+    cache: "no-store",
+  });
+  const payload = (await response.json().catch(() => ({}))) as T & {
+    ok?: boolean;
+    message?: string;
+    details?: string;
+    error?: string;
+  };
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(
+      payload?.message || payload?.details || payload?.error || "ATEAM workflow request failed.",
+    );
+  }
+  return payload;
 }
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AteamWorkflowClient() {
   const router = useRouter();
@@ -169,20 +137,16 @@ export default function AteamWorkflowClient() {
   const runId = String(searchParams.get("run") || "").trim();
   const operatorEnabled = isAteamOperatorEnabled();
 
+  // Check if ATEAM is live
   useEffect(() => {
     let cancelled = false;
-    requestJson<{ ok: true; runs?: WorkflowRun[] }>("/api/ateam/workflow/runs?limit=1")
-      .then(() => {
-        if (!cancelled) setWorkflowServiceState("ready");
-      })
-      .catch(() => {
-        if (!cancelled) setWorkflowServiceState("unavailable");
-      });
-    return () => {
-      cancelled = true;
-    };
+    requestJson<{ ok: true }>("/api/ateam/workflow/runs?limit=1")
+      .then(() => { if (!cancelled) setWorkflowServiceState("ready"); })
+      .catch(() => { if (!cancelled) setWorkflowServiceState("unavailable"); });
+    return () => { cancelled = true; };
   }, []);
 
+  // Voice recognition setup
   useEffect(() => {
     if (typeof window === "undefined") return;
     const speechWindow = window as Window &
@@ -199,8 +163,8 @@ export default function AteamWorkflowClient() {
     recognition.lang = "en-US";
     recognition.onresult = (event) => {
       const parts: string[] = [];
-      for (let index = event.resultIndex || 0; index < event.results.length; index += 1) {
-        const result = event.results[index];
+      for (let i = event.resultIndex || 0; i < event.results.length; i++) {
+        const result = event.results[i];
         if (!result?.isFinal) continue;
         const transcript = String(result[0]?.transcript || "").trim();
         if (transcript) parts.push(transcript);
@@ -215,25 +179,23 @@ export default function AteamWorkflowClient() {
     };
     recognition.onend = () => setIsListening(false);
     recognition.onerror = () => setIsListening(false);
-
     recognitionRef.current = recognition;
     setSupportsVoice(true);
 
     return () => {
-      try {
-        recognition.abort?.();
-      } catch {
-        // Ignore cleanup issues from browser recognition.
-      }
+      try { recognition.abort?.(); } catch { /* ignore */ }
       recognitionRef.current = null;
     };
   }, []);
 
+  // Load run from URL
   useEffect(() => {
     if (!runId) return;
     let cancelled = false;
     setBusy("loading");
-    requestJson<{ ok: true; run: WorkflowRun }>(`/api/ateam/workflow/runs/${encodeURIComponent(runId)}`)
+    requestJson<{ ok: true; run: WorkflowRun }>(
+      `/api/ateam/workflow/runs/${encodeURIComponent(runId)}`
+    )
       .then((payload) => {
         if (cancelled) return;
         setRun(payload.run);
@@ -243,19 +205,8 @@ export default function AteamWorkflowClient() {
         setActivePrototypeFrameId(payload.run.artifacts?.prototype?.frames?.[0]?.id || "");
         setBusy("idle");
       })
-      .catch((requestError) => {
-        if (cancelled) return;
-        setBusy("idle");
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Unable to load the ATEAM workflow run."
-        );
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => { if (!cancelled) setBusy("idle"); });
+    return () => { cancelled = true; };
   }, [runId]);
 
   useEffect(() => {
@@ -265,101 +216,31 @@ export default function AteamWorkflowClient() {
 
   useEffect(() => {
     const firstFrame = run?.artifacts?.prototype?.frames?.[0]?.id || "";
-    if (!firstFrame) {
-      setActivePrototypeFrameId("");
-      return;
-    }
+    if (!firstFrame) { setActivePrototypeFrameId(""); return; }
     setActivePrototypeFrameId((current) => current || firstFrame);
   }, [run?.artifacts?.prototype?.frames]);
 
+  // Scroll to output when ready
   useEffect(() => {
     const handoff = toHandoffPayload(run);
     if (!handoff || !outputRef.current) return;
     outputRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [run?.id, run?.phase]);
 
-  const selectedCategory = useMemo(
-    () =>
-      ateamWorkflowCategories.find((item) => item.value === category) ||
-      ateamWorkflowCategories[0],
-    [category]
-  );
+  // Derived state
   const handoff = toHandoffPayload(run);
-  const packReady = Boolean(run?.artifacts?.prototype?.frames?.length);
   const packApproved = String(run?.approvals?.pack?.status || "").toLowerCase() === "approved";
   const workflowReady = Boolean(handoff && (packApproved || run?.phase === "handoff"));
   const activePrototypeFrame =
-    run?.artifacts?.prototype?.frames?.find((frame) => frame.id === activePrototypeFrameId) ||
+    run?.artifacts?.prototype?.frames?.find((f) => f.id === activePrototypeFrameId) ||
     run?.artifacts?.prototype?.frames?.[0] ||
     null;
-  const stepIndex = getStepIndex(run, workflowReady, busy);
-  const compactScreens = (run?.artifacts?.mockup?.screens || []).slice(0, 3);
-  const compactDocSections = (run?.artifacts?.doc?.sections || []).slice(0, 3);
-  const nextSteps = (handoff?.nextSteps || run?.artifacts?.nextSteps || []).slice(0, 3);
-  const artifactRecords = (run?.artifactSummaries || []).slice(0, 5);
-  const jobSummaries = (run?.jobs || []).slice(0, 4);
-  const timelineEntries = (run?.history || []).slice(-4).reverse();
-  const understanding = run?.publicFlow?.understanding || {
-    title: run?.title || "ATEAM will translate the rough idea into a working intent.",
-    summary:
-      run?.brief?.summary ||
-      "Once the run starts, ATEAM will turn the rough idea into a clear audience, first win, and believable lane.",
-    audience: run?.brief?.audience || "",
-    firstWin: run?.brief?.primaryGoal || "",
-    recommendedLane: run?.recommendedLane || selectedCategory.label
-  };
-  const operatorOfficeHref = run?.id
-    ? `/ateam/operator/office?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`
-    : "/ateam/operator/office?shell=workflow";
-  const operatorFactoryHref = run?.id
-    ? `/ateam/operator/factory?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`
-    : "/ateam/operator/factory?shell=workflow";
-  const fallbackPublicFlowCards = publicFlowModules.map((module) => {
-    if (module.key === "intake") {
-      return {
-        ...module,
-        state: run ? "Run captured" : "Waiting for idea",
-        summary: run
-          ? "ATEAM has the rough idea and can shape the rest from short clarifiers."
-          : "One rough paragraph is enough to start the public flow."
-      };
-    }
-    if (module.key === "system") {
-      return {
-        ...module,
-        state: run?.statusNarrative?.label || (run ? formatWorkflowPhaseLabel(run.phase) : "Idle"),
-        summary:
-          run?.statusNarrative?.summary ||
-          "The public system view shows lane, movement reason, and blocker context once the run is active."
-      };
-    }
-    if (module.key === "work") {
-      return {
-        ...module,
-        state: jobSummaries.length ? `${jobSummaries.length} visible jobs` : "No jobs yet",
-        summary: jobSummaries.length
-          ? `${jobSummaries.length} jobs and ${timelineEntries.length} recent events are visible from this run.`
-          : "Jobs and timeline events appear here once the run is routed."
-      };
-    }
-    return {
-      ...module,
-      state: workflowReady ? "Decision pack ready" : "Waiting for output",
-      summary: workflowReady
-        ? `${artifactRecords.length || 0} run-owned artifacts are ready for handoff into Una Labs delivery.`
-        : "The output module turns the run into artifacts, a decision pack, and a clean next move."
-    };
-  });
-  const publicFlowCards =
-    run?.publicFlow?.modules?.length
-      ? run.publicFlow.modules.map((module) => ({
-          ...module,
-          detail:
-            module.detail ||
-            publicFlowModules.find((item) => item.key === module.key)?.detail ||
-            ""
-        }))
-      : fallbackPublicFlowCards;
+  const nextSteps = (handoff?.nextSteps || run?.artifacts?.nextSteps || []).slice(0, 4);
+  const humanStage = processingIndexToHumanStage(processingStageIndex);
+  const isWorking = busy === "starting" || busy === "processing";
+  const showClarifiers = Boolean(run && !workflowReady && !isWorking && (run.questions?.length ?? 0) > 0);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   async function syncRun(nextRun: WorkflowRun) {
     setRun(nextRun);
@@ -385,10 +266,9 @@ export default function AteamWorkflowClient() {
     router.replace("/ateam");
   }
 
-  function toggleVoiceCapture() {
+  function toggleVoice() {
     const recognition = recognitionRef.current;
     if (!recognition) return;
-
     try {
       if (isListening) {
         recognition.stop();
@@ -396,53 +276,37 @@ export default function AteamWorkflowClient() {
         return;
       }
       setError("");
-      setNotice("Voice capture is on. Drop the rough idea naturally.");
       recognition.start();
       setIsListening(true);
     } catch {
       setIsListening(false);
-      setError("Voice capture could not start in this browser. Type the rough idea instead.");
     }
   }
 
   async function handleStartRun() {
     setError("");
     setNotice("");
-
     if (workflowServiceState !== "ready") {
-      setError(
-        "ATEAM is not connected yet. You can still start a project directly while the workflow service comes online."
-      );
+      setError("ATEAM is still connecting. Try again in a moment.");
       return;
     }
-
     if (idea.trim().length < 12) {
-      setError("Drop a little more context so ATEAM can shape a believable first pass.");
+      setError("Add a bit more detail — one sentence is enough to start.");
       return;
     }
-
     setBusy("starting");
     setProcessingStageIndex(0);
-
     try {
       await wait(180);
-      const payload = await requestJson<{ ok: true; run: WorkflowRun }>("/api/ateam/workflow/runs", {
-        method: "POST",
-        body: JSON.stringify({
-          idea,
-          category: category === "auto" ? "" : category
-        })
-      });
+      const payload = await requestJson<{ ok: true; run: WorkflowRun }>(
+        "/api/ateam/workflow/runs",
+        { method: "POST", body: JSON.stringify({ idea, category: category === "auto" ? "" : category }) }
+      );
       setProcessingStageIndex(1);
       await wait(180);
       await syncRun(payload.run);
-      setNotice("ATEAM captured the run. Answer the two quick prompts and it will route, build, and package the first pass.");
-    } catch (requestError) {
-      setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Unable to start the ATEAM workflow run."
-      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ATEAM could not start the run.");
     } finally {
       setBusy("idle");
       setProcessingStageIndex(-1);
@@ -451,71 +315,40 @@ export default function AteamWorkflowClient() {
 
   async function handleBuildPack() {
     if (!run) return;
-
-    const missingAnswer = (run.questions || []).find((question) => !String(answers[question.id] || "").trim());
-    if (missingAnswer) {
-      setError("Answer the quick clarifiers so ATEAM can shape the first pass cleanly.");
+    const missing = (run.questions || []).find((q) => !String(answers[q.id] || "").trim());
+    if (missing) {
+      setError("Answer both questions so ATEAM can shape the pack cleanly.");
       return;
     }
-
     setError("");
-    setNotice("");
     setBusy("processing");
-
     try {
       setProcessingStageIndex(1);
       await requestJson<{ ok: true; run: WorkflowRun }>(
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/answers`,
-        {
-          method: "POST",
-          body: JSON.stringify({ answers })
-        }
+        { method: "POST", body: JSON.stringify({ answers }) }
       );
-
       setProcessingStageIndex(2);
       await wait(180);
       await requestJson<{ ok: true; run: WorkflowRun }>(
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            gate: "brief",
-            decision: "approved"
-          })
-        }
+        { method: "POST", body: JSON.stringify({ gate: "brief", decision: "approved" }) }
       );
-
       setProcessingStageIndex(3);
       await wait(220);
       await requestJson<{ ok: true; run: WorkflowRun }>(
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/generate-pack`,
-        {
-          method: "POST",
-          body: JSON.stringify({})
-        }
+        { method: "POST", body: JSON.stringify({}) }
       );
-
       setProcessingStageIndex(4);
       await wait(220);
-      const handoffPayload = await requestJson<{ ok: true; run: WorkflowRun }>(
+      const result = await requestJson<{ ok: true; run: WorkflowRun }>(
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            gate: "pack",
-            decision: "approved"
-          })
-        }
+        { method: "POST", body: JSON.stringify({ gate: "pack", decision: "approved" }) }
       );
-
-      await syncRun(handoffPayload.run);
-      setNotice("ATEAM shaped the brief, created the preview artifacts, and lined up the delivery handoff.");
-    } catch (requestError) {
-      setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "ATEAM could not finish the workflow run right now."
-      );
+      await syncRun(result.run);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ATEAM could not build the pack right now.");
     } finally {
       setBusy("idle");
       setProcessingStageIndex(-1);
@@ -523,582 +356,467 @@ export default function AteamWorkflowClient() {
   }
 
   function handleContinueWithUnaLabs() {
-    if (!handoff) {
-      setError("The decision pack is not ready to send onward yet.");
-      return;
-    }
+    if (!handoff) { setError("The decision pack isn't ready yet."); return; }
     clearAteamDemoHandoff();
     saveAteamWorkflowHandoff(handoff);
     router.push("/work-with-ftc");
   }
 
+  // ── Render ───────────────────────────────────────────────────────────────────
+
   return (
-    <article className="container page-content ateam-page ateam-page--workflow">
-      <section className="card ateam-workflow-hero-card ateam-fast-pass-hero">
-        <div className="ateam-workflow-hero-copy">
-          <p className="eyebrow">ATEAM inside Una Labs</p>
-          <h1>Drop a rough idea. Watch it turn into a structured run.</h1>
-          <p className="lead">
-            ATEAM turns messy input into a live workflow run, routes it into visible jobs, generates
-            preview artifacts, and prepares the clearest next move with Una Labs.
-          </p>
-          <div className="ateam-fast-pass-pills" aria-label="ATEAM flow highlights">
-            <span className="proof-tag">Narrative intake</span>
-            <span className="proof-tag">Visible work state</span>
-            <span className="proof-tag">Run-owned artifacts</span>
-          </div>
-        </div>
+    <div className="wf-shell">
 
-        <div className="ateam-workflow-hero-visual">
-          <div className="ateam-conversion-preview">
-            <div className="ateam-conversion-preview-mark" aria-hidden="true">
-              <img src={ATEAM_BRAND_LOGO_PATH} alt="" width={56} height={56} />
-            </div>
-            <img
-              src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
-              alt="ATEAM Mission Control preview"
-              className="ateam-conversion-preview-image"
-            />
-            <div className="ateam-conversion-preview-strip" aria-hidden="true">
-              {conversionTunnel.slice(0, 4).map((stage) => (
-                <span key={stage.key}>{stage.label}</span>
-              ))}
-            </div>
-          </div>
+      {/* ── Top bar ── */}
+      <header className="wf-bar">
+        <div className="wf-bar-brand">
+          <img src={ATEAM_BRAND_LOGO_PATH} alt="ATEAM" width={28} height={28} className="wf-bar-logo" />
+          <span className="wf-bar-name">ATEAM</span>
+          <span className="wf-bar-sep">·</span>
+          <span className="wf-bar-sub">Una Labs</span>
         </div>
-      </section>
-
-      <section className="card ateam-public-flow-card">
-        <div className="ateam-public-flow-head">
-          <div>
-            <p className="card-kicker">Public flow view</p>
-            <h2>Only the public-safe modules stay on this route.</h2>
-            <p className="muted">
-              The public experience is intentionally narrowed to Intake, System, Work, and Output.
-              The full operator shell still exists, but it stays behind the private control plane.
-            </p>
-          </div>
-          <span className="status-pill">
-            {workflowReady ? "Output ready" : run ? "Run active" : "Ready for intake"}
+        <div className="wf-bar-right">
+          <span
+            className={`wf-live-chip ${workflowServiceState === "ready" ? "wf-live-chip--on" : workflowServiceState === "checking" ? "wf-live-chip--wait" : "wf-live-chip--off"}`}
+          >
+            <span className="wf-live-dot" />
+            {workflowServiceState === "ready" ? "Live" : workflowServiceState === "checking" ? "Connecting" : "Unavailable"}
           </span>
+          {run && (
+            <button className="wf-reset-btn" onClick={resetFlow} aria-label="Start a new idea">
+              New idea
+            </button>
+          )}
+          {operatorEnabled && (
+            <Link href="/ateam/operator/office" prefetch={false} className="wf-op-link">
+              Operator →
+            </Link>
+          )}
         </div>
+      </header>
 
-        <div className="ateam-public-flow-grid" aria-label="ATEAM public flow modules">
-          {publicFlowCards.map((module) => (
-            <article key={module.key} className="ateam-public-flow-module">
-              <p className="ateam-workflow-brief-label">{module.title}</p>
-              <h3>{module.state}</h3>
-              <p>{module.summary}</p>
-              <span>{module.detail}</span>
-            </article>
-          ))}
-        </div>
-      </section>
+      <div className="container">
+        <div className="wf-body">
 
-      <div className="ateam-workflow-layout">
-        <div className="ateam-workflow-main">
-          <section className="card ateam-workflow-step-card">
-            <div className="ateam-workflow-step-head">
-              <div>
-                <p className="card-kicker">Module 1 · Intake</p>
-                <h2>Start with the rough idea</h2>
-                <p className="muted">
-                  Keep it natural. One paragraph is enough. ATEAM will shape the run, ask the last
-                  two clarifiers, and build the first pass from there.
+          {/* ── INTAKE STAGE ── */}
+          {!run && !isWorking && !workflowReady && (
+            <section className="wf-stage wf-stage--intake">
+              <div className="wf-intro">
+                <p className="wf-intro-eyebrow">Idea to action</p>
+                <h1 className="wf-intro-headline">
+                  Drop a rough idea.<br />Get a clear next step.
+                </h1>
+                <p className="wf-intro-lead">
+                  ATEAM reads your idea, routes it to the right build path, and packages a first-version concept — ready for Una Labs to execute.
                 </p>
               </div>
-              <span className="status-pill">
-                {workflowServiceState === "ready"
-                  ? "Live"
-                  : workflowServiceState === "checking"
-                    ? "Checking"
-                    : "Unavailable"}
-              </span>
-            </div>
 
-              <div className="ateam-workflow-step-rail" aria-label="ATEAM workflow stages">
-              {ateamWorkflowSteps.map((step, index) => {
-                const isComplete = workflowReady ? true : index < stepIndex;
-                const isActive = workflowReady ? index === ateamWorkflowSteps.length - 1 : index === stepIndex;
-                return (
-                  <div
-                    key={step.key}
-                    className={`ateam-workflow-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
-                  >
-                    <strong>{step.label}</strong>
-                    <span>{step.detail}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {error ? <p className="ateam-demo-error">{error}</p> : null}
-            {notice ? <p className="ateam-demo-hint">{notice}</p> : null}
-
-            <div className="ateam-fast-pass-intake">
-              <label className="ateam-demo-field" htmlFor="ateam-idea-input">
-                <span>Drop your rough idea</span>
-                <textarea
-                  id="ateam-idea-input"
-                  rows={7}
-                  value={idea}
-                  onChange={(event) => setIdea(event.target.value)}
-                  placeholder="Example: I want a WhatsApp-first system that helps food vendors take orders, route them to staff, and show status back clearly."
-                />
-              </label>
-
-              <div className="ateam-fast-pass-toolbar">
-                <div className="ateam-category-strip" aria-label="Optional lane selection">
-                  {ateamWorkflowCategories.map((item) => (
+              <div className="wf-intake-card">
+                <div className="wf-intake-label-row">
+                  <label className="wf-field-label" htmlFor="wf-idea">Your idea</label>
+                  {supportsVoice && (
                     <button
-                      key={item.value}
                       type="button"
-                      className={`ateam-category-chip${category === item.value ? " is-active" : ""}`}
-                      onClick={() => setCategory(item.value)}
+                      className={`wf-voice-btn ${isListening ? "wf-voice-btn--active" : ""}`}
+                      onClick={toggleVoice}
+                      aria-label={isListening ? "Stop voice capture" : "Speak your idea"}
                     >
-                      <strong>{item.label}</strong>
-                      <span>{item.detail}</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 15.2 14.47 17 12 17s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V21c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
+                      </svg>
+                      {isListening ? "Listening…" : "Speak"}
+                    </button>
+                  )}
+                </div>
+
+                <textarea
+                  id="wf-idea"
+                  className="wf-idea-textarea"
+                  rows={6}
+                  value={idea}
+                  onChange={(e) => setIdea(e.target.value)}
+                  placeholder="Example: I want a WhatsApp-first system that helps food vendors take orders, route them to staff, and show status back clearly."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleStartRun();
+                  }}
+                />
+
+                {/* Compact type selector */}
+                <div className="wf-type-row" role="group" aria-label="What type of idea is this?">
+                  {COMPACT_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      className={`wf-type-chip ${category === t.value ? "wf-type-chip--active" : ""}`}
+                      onClick={() => setCategory(t.value as WorkflowCategoryValue)}
+                    >
+                      {t.label}
                     </button>
                   ))}
                 </div>
 
-                <div className="ateam-fast-pass-actions">
-                  {supportsVoice ? (
-                    <button type="button" className="btn btn-secondary" onClick={toggleVoiceCapture}>
-                      {isListening ? "Stop voice capture" : "Speak the idea"}
-                    </button>
-                  ) : null}
-                  {run ? (
-                    <button type="button" className="btn btn-secondary" onClick={resetFlow}>
-                      Start fresh
-                    </button>
-                  ) : null}
+                {error && <p className="wf-error" role="alert">{error}</p>}
+
+                <div className="wf-intake-actions">
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="wf-btn-primary"
                     onClick={handleStartRun}
-                    disabled={busy === "starting" || busy === "processing"}
+                    disabled={busy !== "idle" || workflowServiceState !== "ready"}
                   >
-                    {busy === "starting" ? "Opening workflow..." : "Start ATEAM workflow"}
+                    {busy !== "idle" ? "Starting…" : "Start ATEAM →"}
                   </button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {run && !workflowReady && run.questions?.length ? (
-            <section className="card ateam-workflow-step-card">
-              <div className="ateam-workflow-step-head">
-                <div>
-                  <p className="card-kicker">Module 1 · Intake</p>
-                  <h2>Answer the last two gaps</h2>
-                  <p className="muted">
-                    Keep these short. ATEAM only needs enough to route the work cleanly and build the
-                    first preview artifacts.
+                  <p className="wf-intake-hint">
+                    {workflowServiceState === "checking" ? "Connecting to ATEAM…" :
+                     workflowServiceState === "unavailable" ? "ATEAM is offline — try again shortly" :
+                     "One paragraph is enough. ATEAM handles the rest."}
                   </p>
                 </div>
-                <span className="status-pill">{run.questions.length} prompts</span>
               </div>
 
-              <div className="ateam-workflow-question-list">
-                {run.questions.map((question) => (
-                  <label key={question.id} className="ateam-demo-field" htmlFor={`question-${question.id}`}>
-                    <span>{question.prompt}</span>
-                    <textarea
-                      id={`question-${question.id}`}
-                      rows={4}
-                      value={answers[question.id] || ""}
-                      onChange={(event) =>
-                        setAnswers((current) => ({
-                          ...current,
-                          [question.id]: event.target.value
-                        }))
-                      }
-                      placeholder={question.placeholder}
-                    />
-                    {question.hint ? <small className="ateam-workflow-field-hint">{question.hint}</small> : null}
-                  </label>
+              {/* What you'll get */}
+              <div className="wf-expect-row" aria-label="What ATEAM produces">
+                {[
+                  { icon: "◎", label: "Concept brief", detail: "Audience, first win, recommended path" },
+                  { icon: "⬡", label: "Prototype direction", detail: "What the first version looks and does" },
+                  { icon: "✦", label: "Build note", detail: "Scope, risk, and tech direction" },
+                  { icon: "→", label: "Next steps", detail: "Clear action items for Una Labs to execute" },
+                ].map((item) => (
+                  <div key={item.label} className="wf-expect-item">
+                    <span className="wf-expect-icon" aria-hidden="true">{item.icon}</span>
+                    <div>
+                      <strong>{item.label}</strong>
+                      <span>{item.detail}</span>
+                    </div>
+                  </div>
                 ))}
               </div>
-
-              <div className="ateam-workflow-actions">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleBuildPack}
-                  disabled={busy === "processing" || busy === "starting"}
-                >
-                  {busy === "processing" ? "Building run..." : "Build the preview pack"}
-                </button>
-              </div>
             </section>
-          ) : null}
+          )}
 
-          {busy === "starting" || busy === "processing" ? (
-            <section className="card ateam-workflow-step-card">
-              <div className="ateam-workflow-step-head">
-                <div>
-                  <p className="card-kicker">Module 2 · System</p>
-                  <h2>ATEAM is shaping the run</h2>
-                  <p className="muted">
-                    Short enough to feel quick. Visible enough to feel trustworthy.
+          {/* ── WORKING ANIMATION ── */}
+          {isWorking && (
+            <section className="wf-stage wf-stage--working" aria-live="polite" aria-label="ATEAM is working">
+              {idea && (
+                <div className="wf-idea-echo">
+                  <span className="wf-idea-echo-label">Your idea</span>
+                  <p className="wf-idea-echo-text">
+                    &ldquo;{idea.length > 140 ? `${idea.slice(0, 140)}\u2026` : idea}&rdquo;
                   </p>
                 </div>
-                <span className="status-pill">
-                  {conversionTunnel[Math.max(processingStageIndex, 0)]?.label || "Working"}
-                </span>
-              </div>
-
-              <div className="ateam-conversion-tunnel" aria-live="polite">
-                {conversionTunnel.map((stage, index) => {
-                  const isActive = index === Math.max(processingStageIndex, 0);
-                  const isComplete = index < processingStageIndex;
+              )}
+              <div className="wf-working-track">
+                {WORKING_STAGES.map((stage, i) => {
+                  const isActive = humanStage === i;
+                  const isDone = humanStage > i;
                   return (
                     <div
-                      key={stage.key}
-                      className={`ateam-conversion-node${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
+                      key={stage.label}
+                      className={`wf-wnode ${isActive ? "wf-wnode--active" : ""} ${isDone ? "wf-wnode--done" : ""}`}
                     >
-                      <strong>{stage.label}</strong>
-                      <span>{stage.detail}</span>
+                      <div className="wf-wnode-indicator" aria-hidden="true">
+                        {isDone ? (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                          </svg>
+                        ) : isActive ? (
+                          <div className="wf-wnode-spinner" />
+                        ) : (
+                          <div className="wf-wnode-idle-dot" />
+                        )}
+                      </div>
+                      <div className="wf-wnode-body">
+                        <strong className="wf-wnode-label">{stage.label}</strong>
+                        <span className="wf-wnode-detail">{stage.detail}</span>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </section>
-          ) : null}
+          )}
 
-          {workflowReady && run ? (
-            <section ref={outputRef} className="card ateam-workflow-step-card ateam-result-package">
-              <div className="ateam-workflow-step-head">
-                <div>
-                  <p className="card-kicker">Module 4 · Output</p>
-                  <h2>{run.brief?.title || "ATEAM result"}</h2>
-                  <p className="muted">{run.brief?.summary}</p>
-                </div>
-                <span className="status-pill">{getQuickVerdict(run)}</span>
-              </div>
-
-              <div className="ateam-workflow-brief-grid">
-                <article className="ateam-workflow-brief-panel">
-                  <p className="ateam-workflow-brief-label">Recommended move</p>
-                  <h3>{run.brief?.recommendedLane || run.recommendedLane}</h3>
-                  <p>{run.brief?.recommendedDirection}</p>
-                  <p className="muted">{run.brief?.decisionNote}</p>
-                </article>
-                <article className="ateam-workflow-brief-panel">
-                  <p className="ateam-workflow-brief-label">Likely user value</p>
-                  <h3>{run.brief?.audience || "Primary audience"}</h3>
-                  <p>{run.brief?.likelyUserValue}</p>
-                  <ul className="ateam-brief-list">
-                    {(run.brief?.goals || []).slice(0, 3).map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </article>
-              </div>
-
-              <div className="ateam-workflow-pack-grid">
-                <article className="ateam-workflow-pack-panel">
-                  <p className="ateam-workflow-brief-label">Visual concept</p>
-                  <h3>{run.artifacts?.mockup?.title || "Concept pack"}</h3>
-                  <p>{run.artifacts?.mockup?.summary}</p>
-                  <div className="ateam-workflow-screen-grid">
-                    {compactScreens.map((screen) => (
-                      <div key={screen.id} className="ateam-workflow-screen-card">
-                        <strong>{screen.title}</strong>
-                        <p>{screen.caption}</p>
-                        <ul>
-                          {screen.highlights.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-
-                <article className="ateam-workflow-pack-panel">
-                  <p className="ateam-workflow-brief-label">Quick prototype</p>
-                  <h3>{run.artifacts?.prototype?.title || "Prototype direction"}</h3>
-                  <div className="ateam-workflow-prototype-shell">
-                    <div className="ateam-workflow-prototype-tabs" role="tablist" aria-label="Prototype frames">
-                      {(run.artifacts?.prototype?.frames || []).map((frame) => (
-                        <button
-                          key={frame.id}
-                          type="button"
-                          className={`ateam-workflow-prototype-tab${activePrototypeFrame?.id === frame.id ? " is-active" : ""}`}
-                          onClick={() => setActivePrototypeFrameId(frame.id)}
-                        >
-                          {frame.title}
-                        </button>
-                      ))}
-                    </div>
-
-                    {activePrototypeFrame ? (
-                      <div className="ateam-workflow-prototype-stage">
-                        <div className="ateam-workflow-prototype-window">
-                          <div className="ateam-workflow-prototype-window-bar" aria-hidden="true">
-                            <span />
-                            <span />
-                            <span />
-                          </div>
-                          <div className="ateam-workflow-prototype-window-body">
-                            <h4>{activePrototypeFrame.title}</h4>
-                            <p>{activePrototypeFrame.purpose}</p>
-                            <ul className="ateam-brief-list">
-                              {activePrototypeFrame.interactions.map((item) => (
-                                <li key={item}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className="ateam-workflow-prototype-actions">
-                      {(run.artifacts?.prototype?.stack || []).map((item) => (
-                        <span key={item} className="proof-tag">
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </article>
-              </div>
-
-              <div className="ateam-workflow-pack-grid">
-                <article className="ateam-workflow-pack-panel">
-                  <p className="ateam-workflow-brief-label">Artifact ownership</p>
-                  <h3>Every output stays tied to this run</h3>
-                  <div className="ateam-workflow-doc-grid">
-                    {artifactRecords.map((artifact) => (
-                      <div key={artifact.id} className="ateam-workflow-doc-section">
-                        <strong>{artifact.title}</strong>
-                        <p>{artifact.summary}</p>
-                        <ul>
-                          <li>{artifact.type}</li>
-                          <li>{artifact.promotionStatus || "run_owned"}</li>
-                          <li>{artifact.projectId ? "Project-linked" : "Run-owned"}</li>
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-
-                <article className="ateam-workflow-pack-panel">
-                  <p className="ateam-workflow-brief-label">Build watch</p>
-                  <h3>{run.artifacts?.smoke?.summary || "Quick QA view"}</h3>
-                  <div className="ateam-workflow-smoke-list">
-                    {(run.artifacts?.smoke?.checks || []).map((check) => (
-                      <div key={check.label} className="ateam-workflow-smoke-item">
-                        <span>{check.result}</span>
-                        <strong>{check.label}</strong>
-                        <p>{check.note}</p>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              </div>
-
-              <div className="ateam-workflow-pack-grid">
-                <article className="ateam-workflow-pack-panel">
-                  <p className="ateam-workflow-brief-label">Project handoff</p>
-                  <h3>{run.project?.name || "Run-owned project shell"}</h3>
-                  <p>{run.project?.summary || run.statusNarrative?.summary}</p>
-                  <ul className="ateam-demo-list">
-                    <li>Status: {run.project?.status || "intake"}</li>
-                    <li>Recommended lane: {run.project?.recommendedLane || run.recommendedLane}</li>
-                    <li>Active jobs: {String(run.project?.activeJobCount || jobSummaries.length || 0)}</li>
-                    <li>Blocked jobs: {String(run.project?.blockedJobCount || 0)}</li>
-                  </ul>
-                </article>
-
-                <article className="ateam-workflow-pack-panel">
-                  <p className="ateam-workflow-brief-label">Next move</p>
-                  <h3>Move from preview into delivery</h3>
-                  <div className="ateam-workflow-doc-grid">
-                    {compactDocSections.map((section) => (
-                      <div key={section.title} className="ateam-workflow-doc-section">
-                        <strong>{section.title}</strong>
-                        <ul>
-                          {section.items.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-
-                  <ul className="ateam-demo-list">
-                    {nextSteps.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-
-                  <div className="ateam-workflow-actions">
-                    <button type="button" className="btn btn-primary" onClick={handleContinueWithUnaLabs}>
-                      Start a project with Una Labs
-                    </button>
-                    {operatorEnabled ? (
-                      <Link href={operatorOfficeHref} prefetch={false} className="btn btn-secondary">
-                        Open operator control
-                      </Link>
-                    ) : null}
-                  </div>
-                </article>
-              </div>
-            </section>
-          ) : (
-            <section className="card ateam-workflow-step-card">
-              <div className="ateam-workflow-step-head">
-                <div>
-                  <p className="card-kicker">Module 4 · Output</p>
-                  <h2>A run, visible jobs, owned artifacts, and a clean delivery handoff.</h2>
-                  <p className="muted">
-                    Once ATEAM runs, this panel will show the project frame, active jobs, preview
-                    artifacts, recent timeline events, and the next move with Una Labs.
+          {/* ── CLARIFIER QUESTIONS ── */}
+          {showClarifiers && (
+            <section className="wf-stage wf-stage--clarify">
+              {idea && (
+                <div className="wf-idea-echo">
+                  <span className="wf-idea-echo-label">Your idea</span>
+                  <p className="wf-idea-echo-text">
+                    &ldquo;{idea.length > 140 ? `${idea.slice(0, 140)}\u2026` : idea}&rdquo;
                   </p>
                 </div>
-                <span className="status-pill">Waiting</span>
-              </div>
-              <div className="ateam-output-card">
-                <p>
-                  Expect a first-pass read on what the product is, who it helps, which jobs were
-                  created, what artifacts exist, and whether the run is ready to convert into a real
-                  Una Labs project.
+              )}
+
+              <div className="wf-clarify-head">
+                <h2 className="wf-clarify-headline">Two quick gaps</h2>
+                <p className="wf-clarify-sub">
+                  ATEAM needs these last two points to route cleanly and build a strong first pass.
                 </p>
+              </div>
+
+              <div className="wf-questions">
+                {(run?.questions || []).map((question, idx) => (
+                  <div key={question.id} className="wf-question-card">
+                    <div className="wf-question-num" aria-hidden="true">{idx + 1}</div>
+                    <div className="wf-question-body">
+                      <label className="wf-field-label" htmlFor={`wf-q-${question.id}`}>
+                        {question.prompt}
+                      </label>
+                      <textarea
+                        id={`wf-q-${question.id}`}
+                        className="wf-question-textarea"
+                        rows={3}
+                        value={answers[question.id] || ""}
+                        onChange={(e) =>
+                          setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
+                        }
+                        placeholder={question.placeholder || "Keep it short and direct."}
+                      />
+                      {question.hint && <small className="wf-field-hint">{question.hint}</small>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {error && <p className="wf-error" role="alert">{error}</p>}
+
+              <div className="wf-clarify-actions">
+                <button
+                  type="button"
+                  className="wf-btn-primary"
+                  onClick={handleBuildPack}
+                  disabled={busy !== "idle"}
+                >
+                  Build my pack →
+                </button>
+                <button type="button" className="wf-btn-ghost" onClick={resetFlow}>
+                  Start over
+                </button>
               </div>
             </section>
           )}
-        </div>
 
-        <aside className="ateam-workflow-sidebar">
-          <section className="card ateam-workflow-sidebar-card">
-            <p className="card-kicker">What ATEAM understood</p>
-            <h3>{understanding.title}</h3>
-            <p className="muted">{understanding.summary}</p>
-            <div className="ateam-workflow-sidebar-meta">
-              <div>
-                <span>Audience</span>
-                <strong>{understanding.audience || "Still forming"}</strong>
+          {/* ── OUTPUT / DECISION PACK ── */}
+          {workflowReady && run && (
+            <section
+              ref={outputRef}
+              className="wf-stage wf-stage--output"
+              aria-label="Decision pack"
+            >
+              {/* Pack header */}
+              <div className="wf-pack-head">
+                <div className="wf-pack-head-copy">
+                  <span className="wf-pack-badge">Decision pack ready</span>
+                  <h1 className="wf-pack-title">{run.brief?.title || "ATEAM result"}</h1>
+                  {run.brief?.summary && (
+                    <p className="wf-pack-summary">{run.brief.summary}</p>
+                  )}
+                </div>
+                {run.brief?.quickVerdict && (
+                  <div className="wf-pack-verdict">
+                    <span className="wf-pack-verdict-label">Verdict</span>
+                    <p>{run.brief.quickVerdict}</p>
+                  </div>
+                )}
               </div>
-              <div>
-                <span>First win</span>
-                <strong>{understanding.firstWin || "Clarifiers will sharpen it"}</strong>
-              </div>
-              <div>
-                <span>Lane</span>
-                <strong>{understanding.recommendedLane || selectedCategory.label}</strong>
-              </div>
-              <div>
-                <span>Intent source</span>
-                <strong>{run ? "Workflow run" : "Awaiting intake"}</strong>
-              </div>
-            </div>
-          </section>
-          <section className="card ateam-workflow-sidebar-card">
-            <p className="card-kicker">Module 2 · System</p>
-            <h3>{workflowReady ? "System is ready for handoff" : run ? "System is tracking the run" : "System is waiting for intake"}</h3>
-            <p className="muted">
-              {run?.statusNarrative?.summary ||
-                "ATEAM will show the current stage, the movement reason, and any blocker once the run starts."}
-            </p>
-            {run?.statusNarrative?.movementReason ? (
-              <p className="muted">
-                Movement reason: <strong>{run.statusNarrative.movementReason}</strong>
-              </p>
-            ) : null}
-            {run?.statusNarrative?.blockerReason ? (
-              <p className="muted">
-                Blocker: <strong>{run.statusNarrative.blockerReason}</strong>
-              </p>
-            ) : null}
-            <div className="ateam-workflow-sidebar-meta">
-              <div>
-                <span>Phase</span>
-                <strong>{run?.statusNarrative?.label || (run ? formatWorkflowPhaseLabel(run.phase) : "Waiting for idea")}</strong>
-              </div>
-              <div>
-                <span>Lane</span>
-                <strong>{run?.recommendedLane || selectedCategory.label}</strong>
-              </div>
-              <div>
-                <span>Project</span>
-                <strong>{run?.project?.name || "Not formed yet"}</strong>
-              </div>
-              <div>
-                <span>Run ID</span>
-                <strong>{run?.id || "--"}</strong>
-              </div>
-            </div>
-          </section>
 
-          <section className="card ateam-workflow-sidebar-card">
-            <p className="card-kicker">Module 3 · Work</p>
-            <h3>Visible jobs and timeline stay public-safe.</h3>
-            <p className="muted">
-              The public work module shows what is moving without leaking approvals, overrides, or private operator controls.
-            </p>
-            {jobSummaries.length ? (
-              <div className="ateam-workflow-doc-grid">
-                {jobSummaries.map((job) => (
-                  <div key={job.id} className="ateam-workflow-doc-section">
-                    <strong>{job.title}</strong>
-                    <p>{job.objective}</p>
-                    <ul>
-                      <li>{job.stage}</li>
-                      <li>{job.ownerAgentId || "Unassigned"}</li>
-                      <li>{job.blockerReason || job.waitingReason || job.status}</li>
-                    </ul>
+              {/* 3-cell meta: lane / audience / first win */}
+              <div className="wf-pack-meta">
+                {[
+                  { label: "Recommended path", value: run.brief?.recommendedLane || run.recommendedLane },
+                  { label: "Who it helps", value: run.brief?.audience },
+                  { label: "First win", value: run.brief?.primaryGoal || run.brief?.likelyUserValue },
+                ].filter((m) => m.value).map((meta) => (
+                  <div key={meta.label} className="wf-pack-meta-cell">
+                    <span className="wf-pack-meta-label">{meta.label}</span>
+                    <strong className="wf-pack-meta-value">{meta.value}</strong>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="ateam-output-card">
-                <p>Visible jobs show up here once ATEAM routes the run into real work.</p>
-              </div>
-            )}
 
-            {timelineEntries.length ? (
-              <ul className="ateam-demo-list">
-                {timelineEntries.map((entry) => (
-                  <li key={entry.id}>
-                    <strong>{entry.message}</strong>
-                    {entry.metadata?.reason ? ` - ${String(entry.metadata.reason)}` : ""}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">
-                Timeline history appears here once the run starts moving through the system.
-              </p>
-            )}
-          </section>
+              {/* Prototype direction + Build note */}
+              <div className="wf-pack-2col">
 
-          <section className="card ateam-workflow-sidebar-card">
-            <p className="card-kicker">Private admin</p>
-            <h3>Public intake and private operations now share one workflow model.</h3>
-            <p className="muted">
-              The public surface stays client-safe. Office, Factory, approvals, logs, and overrides
-              remain private for operators.
-            </p>
-            {operatorEnabled ? (
-              <div className="ateam-workflow-actions">
-                <Link href={operatorOfficeHref} prefetch={false} className="btn btn-secondary">
-                  Open Office
-                </Link>
-                <Link href={operatorFactoryHref} prefetch={false} className="btn btn-secondary">
-                  Open Factory
-                </Link>
+                {/* Prototype direction */}
+                {run.artifacts?.prototype && (
+                  <div className="wf-pack-panel wf-pack-panel--proto">
+                    <p className="wf-pack-panel-kicker">Prototype direction</p>
+                    <h3 className="wf-pack-panel-title">{run.artifacts.prototype.title || "First version"}</h3>
+                    {run.artifacts.prototype.summary && (
+                      <p className="wf-pack-panel-body">{run.artifacts.prototype.summary}</p>
+                    )}
+
+                    {/* Frame tabs */}
+                    {(run.artifacts.prototype.frames || []).length > 0 && (
+                      <div className="wf-proto-shell">
+                        <div className="wf-proto-tabs" role="tablist">
+                          {run.artifacts.prototype.frames.map((frame) => (
+                            <button
+                              key={frame.id}
+                              type="button"
+                              role="tab"
+                              aria-selected={activePrototypeFrame?.id === frame.id}
+                              className={`wf-proto-tab ${activePrototypeFrame?.id === frame.id ? "wf-proto-tab--active" : ""}`}
+                              onClick={() => setActivePrototypeFrameId(frame.id)}
+                            >
+                              {frame.title}
+                            </button>
+                          ))}
+                        </div>
+
+                        {activePrototypeFrame && (
+                          <div className="wf-proto-frame">
+                            <div className="wf-proto-window">
+                              <div className="wf-proto-window-bar" aria-hidden="true">
+                                <span /><span /><span />
+                              </div>
+                              <div className="wf-proto-window-body">
+                                <h4>{activePrototypeFrame.title}</h4>
+                                <p>{activePrototypeFrame.purpose}</p>
+                                {(activePrototypeFrame.interactions || []).length > 0 && (
+                                  <ul className="wf-proto-interactions">
+                                    {activePrototypeFrame.interactions.map((item) => (
+                                      <li key={item}>{item}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tech stack */}
+                    {(run.artifacts.prototype.stack || []).length > 0 && (
+                      <div className="wf-pack-tags">
+                        {run.artifacts.prototype.stack.map((s) => (
+                          <span key={s} className="wf-pack-tag">{s}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Build note */}
+                <div className="wf-pack-panel wf-pack-panel--build">
+                  <p className="wf-pack-panel-kicker">Build note</p>
+                  <h3 className="wf-pack-panel-title">
+                    {run.artifacts?.smoke?.summary
+                      ? "Scope & watch-outs"
+                      : "What to expect"}
+                  </h3>
+                  {run.artifacts?.smoke?.summary && (
+                    <p className="wf-pack-panel-body">{run.artifacts.smoke.summary}</p>
+                  )}
+
+                  {/* Smoke checks */}
+                  {(run.artifacts?.smoke?.checks || []).length > 0 && (
+                    <div className="wf-smoke-list">
+                      {run.artifacts!.smoke!.checks.slice(0, 4).map((check) => (
+                        <div key={check.label} className="wf-smoke-item">
+                          <span className={`wf-smoke-result wf-smoke-result--${String(check.result).toLowerCase()}`}>
+                            {check.result}
+                          </span>
+                          <div>
+                            <strong>{check.label}</strong>
+                            {check.note && <p>{check.note}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Phased plan */}
+                  {(run.brief?.phasedPlan || []).length > 0 && (
+                    <>
+                      <p className="wf-pack-panel-kicker" style={{ marginTop: "20px" }}>Phased plan</p>
+                      <ol className="wf-phased-list">
+                        {(run.brief!.phasedPlan || []).slice(0, 3).map((phase, i) => (
+                          <li key={i}>{phase}</li>
+                        ))}
+                      </ol>
+                    </>
+                  )}
+                </div>
               </div>
-            ) : (
-              <p className="muted">
-                The private operator routes stay available only inside the secured operator surface.
-              </p>
-            )}
-          </section>
-        </aside>
+
+              {/* Next steps */}
+              {nextSteps.length > 0 && (
+                <div className="wf-pack-nextsteps">
+                  <p className="wf-pack-panel-kicker">Next steps</p>
+                  <ol className="wf-nextsteps-list">
+                    {nextSteps.map((step, i) => (
+                      <li key={i} className="wf-nextstep">
+                        <span className="wf-nextstep-num" aria-hidden="true">{i + 1}</span>
+                        <p>{step}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* CTA to Una Labs */}
+              <div className="wf-pack-cta">
+                <div className="wf-pack-cta-copy">
+                  <h2 className="wf-pack-cta-headline">Ready to build it?</h2>
+                  <p className="wf-pack-cta-body">
+                    Una Labs takes this pack and executes: demo, prototype, MVP, or full product. Send it over and get a scoped reply.
+                  </p>
+                </div>
+                <div className="wf-pack-cta-actions">
+                  <button
+                    type="button"
+                    className="wf-btn-primary wf-btn-primary--large"
+                    onClick={handleContinueWithUnaLabs}
+                  >
+                    Start this with Una Labs →
+                  </button>
+                  <button type="button" className="wf-btn-ghost" onClick={resetFlow}>
+                    Run another idea
+                  </button>
+                </div>
+              </div>
+
+              {/* Operator shortcut (hidden from public) */}
+              {operatorEnabled && run.id && (
+                <div className="wf-op-strip">
+                  <Link
+                    href={`/ateam/operator/office?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`}
+                    prefetch={false}
+                    className="wf-op-link"
+                  >
+                    Open in Mission Control →
+                  </Link>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ── IDLE OUTPUT PLACEHOLDER (before run) ── */}
+          {!run && !isWorking && !workflowReady && (
+            <div className="wf-placeholder-strip" aria-hidden="true">
+              <div className="wf-placeholder-node">
+                <span>◎</span><p>Concept brief</p>
+              </div>
+              <div className="wf-placeholder-arrow">→</div>
+              <div className="wf-placeholder-node">
+                <span>⬡</span><p>Prototype</p>
+              </div>
+              <div className="wf-placeholder-arrow">→</div>
+              <div className="wf-placeholder-node">
+                <span>✦</span><p>Build note</p>
+              </div>
+              <div className="wf-placeholder-arrow">→</div>
+              <div className="wf-placeholder-node wf-placeholder-node--cta">
+                <span>→</span><p>Una Labs</p>
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
-    </article>
+    </div>
   );
 }
