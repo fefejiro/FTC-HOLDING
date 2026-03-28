@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 import type { Metadata } from "next";
 import DroneServiceInquiryForm from "../../components/DroneServiceInquiryForm";
 import { networkingProfile } from "../../../lib/content";

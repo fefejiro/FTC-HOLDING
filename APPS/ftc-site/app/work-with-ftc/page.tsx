@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 import { serviceTracks } from "../../lib/content";
 import ServiceCard from "../components/ServiceCard";
 import WorkIntakeForm from "../components/WorkIntakeForm";

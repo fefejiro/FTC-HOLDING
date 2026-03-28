@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 export const metadata = {
   title: "About | Una Labs",
   description: "Una Labs studio philosophy, focus, and mission."

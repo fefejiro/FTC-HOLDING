@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { blogPosts } from "../../lib/blog";

@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../../../lib/recentWork";

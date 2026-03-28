@@ -1,3 +1,4 @@
+export const dynamic = 'force-static';
 import type { Metadata } from "next";
 import PolarImagePanel from "../../components/polar-anchor/PolarImagePanel";
 import PolarQuoteForm from "../../components/polar-anchor/PolarQuoteForm";

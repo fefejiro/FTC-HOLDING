@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import AteamWorkflowClient from "./AteamWorkflowClient";

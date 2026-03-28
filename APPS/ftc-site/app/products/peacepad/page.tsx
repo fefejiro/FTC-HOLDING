@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 import Link from "next/link";
 import BrandImagePanel from "../../components/BrandImagePanel";
 import { projectCaseStudies } from "../../../lib/content";

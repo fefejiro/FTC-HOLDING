@@ -1,3 +1,4 @@
+export const dynamic = 'force-static';
 import type { Metadata } from "next";
 import GardenImagePanel from "../../components/garden-cleaners/GardenImagePanel";
 import GardenQuoteForm from "../../components/garden-cleaners/GardenQuoteForm";

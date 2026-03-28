@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 import WorkPageClient from "./WorkPageClient";
 
 export const metadata = {

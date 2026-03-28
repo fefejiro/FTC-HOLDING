@@ -1,3 +1,4 @@
+export const dynamic = 'force-static';
 ﻿import type { Metadata } from "next";
 import CTABanner from "../../components/CTABanner";
 import GardenServiceCard from "../../components/garden-cleaners/GardenServiceCard";

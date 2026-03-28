@@ -1,12 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { blogPosts, getBlogPost } from "../../../lib/blog";
 import { SITE_URL } from "../../../lib/site";
-
-export function generateStaticParams() {
-  return blogPosts.map((post) => ({ slug: post.slug }));
-}
 
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
   const post = getBlogPost(params.slug);

@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 import CTABanner from "../components/CTABanner";
 import CapabilityCard from "../components/CapabilityCard";
 import { capabilities } from "../../lib/content";

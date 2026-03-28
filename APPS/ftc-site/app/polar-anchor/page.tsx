@@ -1,3 +1,4 @@
+export const dynamic = 'force-static';
 import type { Metadata } from "next";
 import CTABanner from "../components/CTABanner";
 import PolarFaqList from "../components/polar-anchor/PolarFaqList";
