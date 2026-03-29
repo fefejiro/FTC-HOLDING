@@ -6,9 +6,7 @@ import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../lib/recentWork";
 import { ATEAM_BRAND_LOGO_PATH } from "../lib/ateamEmbed";
 import { ateamModeStages, ateamModeSummary, ateamModeSupportPoints } from "../lib/ateamMode";
-import AteamHomeWidget from "./components/AteamHomeWidget";
 import ClientLogoStrip from "./components/ClientLogoStrip";
-import HeroSpotlight from "./components/HeroSpotlight";
 
 type ServiceLaneIcon = "website" | "lead" | "scoping";
 
@@ -155,9 +153,7 @@ export default function HomePage() {
     <div className="home-page">
       <section className="section section-hero fade-on-scroll">
         <div className="container">
-          <section className="hero home-hero spotlight-hero">
-            <div className="hero-noise" aria-hidden="true" />
-            <HeroSpotlight />
+          <section className="hero home-hero home-hero-enterprise">
             <div className="hero-grid premium-hero-grid">
               <div className="hero-copy premium-hero-copy">
                 <p className="eyebrow">Una Labs</p>
@@ -188,7 +184,28 @@ export default function HomePage() {
                   <li>AI-assisted workflows that help rough ideas become scoped next steps.</li>
                 </ul>
               </div>
-              <AteamHomeWidget />
+              <div className="hero-enterprise-visual">
+                <div className="hero-enterprise-image-wrap">
+                  <Image
+                    src="/images/garden-cleaners/hero-office-team.png"
+                    alt="Una Labs operators collaborating on delivery workflow"
+                    width={860}
+                    height={960}
+                    className="hero-enterprise-image"
+                    priority
+                  />
+                </div>
+                <div className="hero-enterprise-card">
+                  <p className="hero-enterprise-kicker">ATEAM Workflow</p>
+                  <h3>Route, Build, Review, Pack</h3>
+                  <p>
+                    AI-assisted scoping with live visibility and a clear output pack for execution.
+                  </p>
+                  <Link href="/ateam" prefetch={false} className="inline-link">
+                    Explore ATEAM
+                  </Link>
+                </div>
+              </div>
             </div>
           </section>
         </div>

@@ -93,7 +93,9 @@ export default function Header() {
     if (isPolarSite) {
       return polarAnchorConfig.nav;
     }
-    return siteNav.map((link) => ({ label: link.label, href: link.href }));
+    return siteNav
+      .filter((link) => link.label !== "Start a Project")
+      .map((link) => ({ label: link.label, href: link.href }));
   }, [isGardenSite, isPolarSite]);
 
   const homeHref = isGardenSite ? "/garden-cleaners" : isPolarSite ? "/polar-anchor" : "/";
@@ -148,13 +150,12 @@ export default function Header() {
             }
 
             const isActive = isPathActive(pathname, link.href);
-            const isCta = isDefaultUnaSite && link.label === "Start a Project";
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 prefetch={false}
-                className={`nav-link${isActive ? " active" : ""}${isCta ? " nav-link--cta" : ""}`}
+                className={`nav-link${isActive ? " active" : ""}`}
                 aria-current={isActive ? "page" : undefined}
               >
                 {link.label}
@@ -162,6 +163,18 @@ export default function Header() {
             );
           })}
         </nav>
+
+        {isDefaultUnaSite ? (
+          <div className="header-actions">
+            <a href="tel:+14164732732" className="header-call-chip">
+              Talk to an Expert
+              <strong>+1 (416) 473-2732</strong>
+            </a>
+            <Link href="/work-with-ftc" prefetch={false} className="header-contact-btn">
+              Contact Us
+            </Link>
+          </div>
+        ) : null}
 
         <div className="mobile-shell">
           <button
@@ -226,6 +239,9 @@ export default function Header() {
                     <span>{item.description}</span>
                   </Link>
                 ))}
+                <Link href="/work-with-ftc" prefetch={false} className="mobile-project-btn" onClick={closeMenu}>
+                  Start a Project
+                </Link>
               </div>
             ) : null}
           </div>
