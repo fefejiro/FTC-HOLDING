@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../lib/recentWork";
-import { ATEAM_BRAND_LOGO_PATH } from "../lib/ateamEmbed";
+import { ATEAM_BRAND_LOGO_PATH, ATEAM_MISSION_CONTROL_PREVIEW_PATH } from "../lib/ateamEmbed";
 import { ateamModeStages, ateamModeSummary, ateamModeSupportPoints } from "../lib/ateamMode";
 import AteamHomeWidget from "./components/AteamHomeWidget";
 import ClientLogoStrip from "./components/ClientLogoStrip";
@@ -357,8 +357,15 @@ export default function HomePage() {
               </article>
             ))}
             <article className="card proof-card proof-card--featured-ateam">
-              <div className="proof-card-ateam-visual" aria-hidden="true">
-                <Image src={ATEAM_BRAND_LOGO_PATH} alt="" width={84} height={84} />
+              <div className="proof-card-ateam-preview-wrap">
+                <Image
+                  src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
+                  alt="ATEAM mission control interface preview"
+                  width={960}
+                  height={540}
+                  className="proof-card-ateam-preview"
+                />
+                <span className="proof-card-ateam-badge">ATEAM</span>
               </div>
               <p className="proof-label">ATEAM</p>
               <h3>The AI lab where rough ideas become clear next steps.</h3>
