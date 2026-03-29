@@ -168,11 +168,11 @@ export default function EmergencyPromptPrivacyPage() {
       <h2>12. Delete Account or Data</h2>
       <p>
         To request deletion of an operator account and/or associated request
-        data, visit{" "}
-        <Link href="/privacy/delete-account">
-          /privacy/delete-account
-        </Link>
-        .
+        data, email{" "}
+        <a href="mailto:hello@unalabs.cloud?subject=Emergency%20Prompt%20-%20Delete%20account%2Fdata%20request">
+          hello@unalabs.cloud
+        </a>{" "}
+        with subject line <strong>Emergency Prompt - Delete account/data request</strong>.
       </p>
 
       <p style={{ marginTop: "1.25rem" }}>

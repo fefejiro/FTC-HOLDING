@@ -35,11 +35,6 @@ export default function PrivacyPage() {
             Emergency Prompt - Ottawa Roadside Privacy Policy
           </Link>
         </li>
-        <li>
-          <Link href="/privacy/delete-account">
-            Emergency Prompt - Delete Account or Data Request
-          </Link>
-        </li>
       </ul>
 
       <h2>3. Website Data</h2>
