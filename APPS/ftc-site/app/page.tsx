@@ -162,12 +162,23 @@ export default function HomePage() {
                   <span aria-hidden="true">+</span>
                   Ships in days, not months
                 </p>
-                <h1>Fast websites, lead systems, and AI-assisted workflows.</h1>
+                <h1 className="hero-primary-title">Fast websites, lead systems, and AI-assisted workflows.</h1>
                 <p className="lead hero-subtitle">
                   Una Labs is the only operator-led studio that combines AI-assisted scoping
                   (ATEAM), production-grade website builds, and live client visibility - all in one
                   lab.
                 </p>
+                <div className="hero-motion-band" aria-label="ATEAM motion preview">
+                  <div className="hero-motion-labels">
+                    <span>Intake</span>
+                    <span>Routing</span>
+                    <span>Build</span>
+                    <span>Pack</span>
+                  </div>
+                  <div className="hero-motion-track" aria-hidden="true">
+                    <i className="hero-motion-tracer" />
+                  </div>
+                </div>
                 <div className="hero-actions hero-cta-row">
                   <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
                     Start a Project
@@ -416,14 +427,27 @@ export default function HomePage() {
               </div>
             </div>
             <a
-              className="ateam-demo-placeholder"
+              className="ateam-motion-preview"
               href="https://www.youtube.com/"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="See ATEAM in action video placeholder"
+              aria-label="See ATEAM in action on YouTube"
             >
-              <span className="ateam-demo-play" aria-hidden="true" />
-              <span className="ateam-demo-text">See ATEAM in Action</span>
+              <div className="ateam-motion-row">
+                <span>Route</span>
+                <span>Build</span>
+                <span>Review</span>
+                <span>Pack</span>
+              </div>
+              <div className="ateam-motion-canvas" aria-hidden="true">
+                <div className="ateam-motion-line ateam-motion-line--1" />
+                <div className="ateam-motion-line ateam-motion-line--2" />
+                <div className="ateam-motion-line ateam-motion-line--3" />
+                <div className="ateam-motion-dot ateam-motion-dot--1" />
+                <div className="ateam-motion-dot ateam-motion-dot--2" />
+                <div className="ateam-motion-dot ateam-motion-dot--3" />
+              </div>
+              <span className="ateam-motion-cta">See ATEAM in Action</span>
             </a>
             <blockquote className="ateam-quote-card">
               "ATEAM gave us a clear build path in one session. We could see exactly what to ship
