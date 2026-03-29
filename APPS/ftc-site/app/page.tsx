@@ -426,29 +426,6 @@ export default function HomePage() {
                 </table>
               </div>
             </div>
-            <a
-              className="ateam-motion-preview"
-              href="https://www.youtube.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="See ATEAM in action on YouTube"
-            >
-              <div className="ateam-motion-row">
-                <span>Route</span>
-                <span>Build</span>
-                <span>Review</span>
-                <span>Pack</span>
-              </div>
-              <div className="ateam-motion-canvas" aria-hidden="true">
-                <div className="ateam-motion-line ateam-motion-line--1" />
-                <div className="ateam-motion-line ateam-motion-line--2" />
-                <div className="ateam-motion-line ateam-motion-line--3" />
-                <div className="ateam-motion-dot ateam-motion-dot--1" />
-                <div className="ateam-motion-dot ateam-motion-dot--2" />
-                <div className="ateam-motion-dot ateam-motion-dot--3" />
-              </div>
-              <span className="ateam-motion-cta">See ATEAM in Action</span>
-            </a>
             <blockquote className="ateam-quote-card">
               "ATEAM gave us a clear build path in one session. We could see exactly what to ship
               first without losing momentum."

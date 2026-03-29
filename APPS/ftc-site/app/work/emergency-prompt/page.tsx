@@ -49,14 +49,6 @@ export default function EmergencyPromptCaseStudy() {
           >
             Visit Emergency Prompt
           </a>
-          <a
-            className="btn btn-secondary"
-            href={emergencyPromptCaseStudy.youtubeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View YouTube channel
-          </a>
         </div>
       </section>
 

@@ -54,7 +54,7 @@ export const emergencyPromptCaseStudy: ClientLaunch = {
     label: "Build"
   },
   websiteUrl: "https://emergencyprompt.com",
-  youtubeUrl: "https://www.youtube.com/@EmergencyPromptOttawa",
+  youtubeUrl: "",
   brand: {
     mark: "EP",
     wordmark: "Emergency Prompt",
