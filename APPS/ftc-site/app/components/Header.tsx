@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -10,11 +10,54 @@ import GardenBrandMark from "./garden-cleaners/GardenBrandMark";
 import PolarBrandMark from "./polar-anchor/PolarBrandMark";
 import Logo from "./Logo";
 
+const productMenuItems = [
+  {
+    label: "PeacePad",
+    href: "/products/peacepad",
+    description: "Pre-send communication safety."
+  },
+  {
+    label: "SayWetin",
+    href: "/saywetin",
+    description: "Nigerian music and context intelligence."
+  },
+  {
+    label: "Dispatch",
+    href: "/products/dispatch",
+    description: "Roadside intake, routing, and incident watch."
+  },
+  {
+    label: "ATEAM",
+    href: "/ateam",
+    description: "AI-assisted scoping and delivery workflow."
+  }
+] as const;
+
+function isPathActive(pathname: string | null, href: string) {
+  if (!pathname) {
+    return false;
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function isProductsPath(pathname: string | null) {
+  if (!pathname) {
+    return false;
+  }
+  return (
+    pathname === "/products" ||
+    pathname.startsWith("/products/") ||
+    pathname.startsWith("/peacepad") ||
+    pathname.startsWith("/saywetin")
+  );
+}
+
 export default function Header() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
+  const isDefaultUnaSite = !isGardenSite && !isPolarSite;
 
   useEffect(() => {
     setIsOpen(false);
@@ -80,13 +123,38 @@ export default function Header() {
 
         <nav className="primary" aria-label="Main navigation">
           {navLinks.map((link) => {
-            const isActive = pathname === link.href || pathname?.startsWith(`${link.href}/`);
+            if (isDefaultUnaSite && link.label === "Products") {
+              const productsActive = isProductsPath(pathname);
+              return (
+                <div key="products-nav-dropdown" className="nav-dropdown">
+                  <Link
+                    href={link.href}
+                    prefetch={false}
+                    className={`nav-link nav-link--dropdown${productsActive ? " active" : ""}`}
+                    aria-current={productsActive ? "page" : undefined}
+                  >
+                    Products
+                  </Link>
+                  <div className="nav-dropdown-panel" role="menu" aria-label="Products menu">
+                    {productMenuItems.map((item) => (
+                      <Link key={item.href} href={item.href} prefetch={false} className="nav-dropdown-item" role="menuitem">
+                        <strong>{item.label}</strong>
+                        <span>{item.description}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            const isActive = isPathActive(pathname, link.href);
+            const isCta = isDefaultUnaSite && link.label === "Start a Project";
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 prefetch={false}
-                className={`nav-link${isActive ? " active" : ""}`}
+                className={`nav-link${isActive ? " active" : ""}${isCta ? " nav-link--cta" : ""}`}
                 aria-current={isActive ? "page" : undefined}
               >
                 {link.label}
@@ -125,7 +193,9 @@ export default function Header() {
 
             <nav className="mobile-panel-nav" aria-label="Mobile navigation links">
               {navLinks.map((link) => {
-                const isActive = pathname === link.href || pathname?.startsWith(`${link.href}/`);
+                const isActive = link.label === "Products" && isDefaultUnaSite
+                  ? isProductsPath(pathname)
+                  : isPathActive(pathname, link.href);
                 return (
                   <Link
                     key={link.href}
@@ -140,6 +210,24 @@ export default function Header() {
                 );
               })}
             </nav>
+
+            {isDefaultUnaSite ? (
+              <div className="mobile-products-group" aria-label="Products">
+                <p className="mobile-products-title">Products</p>
+                {productMenuItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    prefetch={false}
+                    className="mobile-product-link"
+                    onClick={closeMenu}
+                  >
+                    <strong>{item.label}</strong>
+                    <span>{item.description}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

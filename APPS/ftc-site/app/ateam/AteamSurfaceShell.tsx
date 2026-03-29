@@ -1,3 +1,4 @@
+import Image from "next/image";
 import AteamEmbedClient from "./AteamEmbedClient";
 import {
   ATEAM_BRAND_LOGO_PATH,
@@ -12,10 +13,10 @@ export default function AteamSurfaceShell({ surfaceKey }: { surfaceKey: AteamLoc
   return (
     <article className="container page-content ateam-page ateam-page--live">
       <section className="ateam-section ateam-section--hero">
-        <div className="ateam-hero-topline">
-          <div className="ateam-hero-mark" aria-hidden="true">
-            <img src={ATEAM_BRAND_LOGO_PATH} alt="" width={64} height={64} />
-          </div>
+          <div className="ateam-hero-topline">
+            <div className="ateam-hero-mark" aria-hidden="true">
+              <Image src={ATEAM_BRAND_LOGO_PATH} alt="" width={64} height={64} />
+            </div>
           <div className="ateam-hero-heading">
             <p className="eyebrow">ATEAM operator route</p>
             <h1>ATEAM inside Una Labs keeps the public and operator surfaces on one workflow model.</h1>
@@ -40,10 +41,12 @@ export default function AteamSurfaceShell({ surfaceKey }: { surfaceKey: AteamLoc
           </div>
 
           <div className="ateam-live-summary-preview">
-            <img
+            <Image
               src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
               alt="ATEAM Mission Control preview inside Una Labs"
               className="ateam-live-summary-image"
+              width={960}
+              height={540}
             />
           </div>
         </section>

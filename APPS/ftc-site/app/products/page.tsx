@@ -1,5 +1,6 @@
 export const dynamic = "force-static";
 
+import Image from "next/image";
 import Link from "next/link";
 import GooglePlayBadge from "../components/GooglePlayBadge";
 import { ATEAM_BRAND_LOGO_PATH, ATEAM_MISSION_CONTROL_PREVIEW_PATH } from "../../lib/ateamEmbed";
@@ -155,12 +156,14 @@ export default function ProductsPage() {
             </div>
             <div className="product-ateam-visual">
               <div className="product-ateam-visual-mark" aria-hidden="true">
-                <img src={ATEAM_BRAND_LOGO_PATH} alt="" width={58} height={58} />
+                <Image src={ATEAM_BRAND_LOGO_PATH} alt="" width={58} height={58} />
               </div>
-              <img
+              <Image
                 src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
                 alt="ATEAM mission control preview"
                 className="product-ateam-preview"
+                width={960}
+                height={540}
               />
               <p className="muted">
                 Intake, routing, artifacts, and delivery state now sit inside the same ATEAM

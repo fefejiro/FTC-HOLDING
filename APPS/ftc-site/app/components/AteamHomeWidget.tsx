@@ -52,12 +52,18 @@ const PHASE_LABELS: Record<string, string> = {
 export default function AteamHomeWidget() {
   const [idea, setIdea] = useState("");
   const [widgetPhase, setWidgetPhase] = useState<WidgetPhase>("idle");
+  const [introSweep, setIntroSweep] = useState(true);
   const [runId, setRunId] = useState<string | null>(null);
   const [run, setRun] = useState<RunData | null>(null);
   const [activeStage, setActiveStage] = useState(-1);
   const [stageLabel, setStageLabel] = useState("ATEAM is live · Drop a rough idea below");
   const [error, setError] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIntroSweep(false), 2_200);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Poll run state when working
   useEffect(() => {
@@ -172,7 +178,8 @@ export default function AteamHomeWidget() {
             "ahw-node",
             isActive ? "ahw-node--active" : "",
             isDoneStage ? "ahw-node--done" : "",
-            isIdle ? `ahw-node--idle ahw-node--idle-${i}` : "",
+            isIdle && !introSweep ? `ahw-node--idle ahw-node--idle-${i}` : "",
+            isIdle && introSweep ? `ahw-node--intro ahw-node--intro-${i}` : "",
           ]
             .filter(Boolean)
             .join(" ");

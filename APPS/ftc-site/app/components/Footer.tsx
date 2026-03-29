@@ -68,18 +68,25 @@ export default function Footer() {
   }
 
   return (
-      <footer>
+    <footer>
       <div className="container">
         <div className="footer-grid">
           <div className="footer-brand">
             <p className="footer-title">Una Labs</p>
             <p className="footer-subtitle">Operator-led studio</p>
             <p className="footer-copy">
-              Systems-first digital delivery for fast websites, lead automation, and AI-assisted workflows.
+              The fastest path from rough idea to live, production-grade digital system.
             </p>
-            <a className="footer-email" href="mailto:hello@unalabs.cloud">
-              hello@unalabs.cloud
-            </a>
+            <p className="footer-powered">Powered by ATEAM • Built with Next.js, React, and Supabase.</p>
+            <div className="footer-contact-row">
+              <a className="footer-email" href="mailto:hello@unalabs.cloud">
+                hello@unalabs.cloud
+              </a>
+              <span className="footer-status-pill">
+                <span className="footer-status-dot" aria-hidden="true" />
+                Currently accepting new projects
+              </span>
+            </div>
             <SocialIcons />
           </div>
           <div className="footer-links">
@@ -90,6 +97,8 @@ export default function Footer() {
             <a href="/peacepad">PeacePad</a>
             <a href="/saywetin">SayWetin</a>
             <a href="/work-with-ftc">Start a Project</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Use</a>
           </div>
         </div>
       </div>

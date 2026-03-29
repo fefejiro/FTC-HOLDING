@@ -28,3 +28,32 @@
     height: 88
   }
 ] as const;
+
+export type ClientMetric = {
+  label: string;
+  value: number;
+  prefix?: string;
+  suffix?: string;
+};
+
+export const clientMetrics: ClientMetric[] = [
+  {
+    label: "Active Projects",
+    value: 12,
+    suffix: "+"
+  },
+  {
+    label: "Average First Delivery",
+    value: 48,
+    suffix: "hr"
+  },
+  {
+    label: "Build Transparency",
+    value: 100,
+    suffix: "%"
+  },
+  {
+    label: "Live Products",
+    value: 3
+  }
+];

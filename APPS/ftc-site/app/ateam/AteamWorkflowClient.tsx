@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -381,7 +382,7 @@ export default function AteamWorkflowClient() {
       {/* ── Top bar ── */}
       <header className="wf-bar">
         <div className="wf-bar-brand">
-          <img src={ATEAM_BRAND_LOGO_PATH} alt="ATEAM" width={28} height={28} className="wf-bar-logo" />
+          <Image src={ATEAM_BRAND_LOGO_PATH} alt="ATEAM" width={28} height={28} className="wf-bar-logo" />
           <span className="wf-bar-name">ATEAM</span>
           <span className="wf-bar-sep">·</span>
           <span className="wf-bar-sub">Una Labs</span>

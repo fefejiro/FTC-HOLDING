@@ -7,6 +7,7 @@ import { siteLinks } from "../lib/siteLinks";
 import "../styles/globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import ScrollReveal from "./components/ScrollReveal";
 
 const Analytics = dynamic(() => import("./components/Analytics"), { ssr: false });
 
@@ -25,9 +26,9 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk"
 });
 
-const defaultTitle = "Una Labs \u2014 Creative AI Studio Building AI Products";
+const defaultTitle = "Una Labs - AI Build Lab | Fast Websites, Lead Systems & ATEAM Workflows";
 const defaultDescription =
-  "Una Labs is a creative AI studio building real-world AI products including PeacePad and SayWetin. Explore our work in automation, AI tools, and product innovation.";
+  "Una Labs is an operator-led AI build lab delivering fast websites, lead automation, and ATEAM-guided workflows. Trusted by LCBO, Home Depot, and the Ontario Government.";
 const defaultOgImage = `${SITE_URL}/opengraph-image`;
 
 const organizationStructuredData = {
@@ -36,11 +37,17 @@ const organizationStructuredData = {
   name: "Una Labs",
   url: "https://unalabs.cloud",
   logo: "https://unalabs.cloud/logo.png",
-  sameAs: [
-    siteLinks.instagram,
-    siteLinks.linkedIn
+  sameAs: [siteLinks.linkedIn],
+  contactPoint: [
+    {
+      "@type": "ContactPoint",
+      contactType: "sales",
+      email: "hello@unalabs.cloud",
+      areaServed: "CA",
+      availableLanguage: ["en"]
+    }
   ],
-  description: "Creative AI studio building real-world AI tools."
+  description: "Operator-led AI build lab for fast websites, lead systems, and ATEAM workflows."
 };
 
 export const metadata: Metadata = {
@@ -49,6 +56,9 @@ export const metadata: Metadata = {
   description: defaultDescription,
   keywords: [
     "Una Labs",
+    "AI Build Lab Canada",
+    "Fast Website Development Studio",
+    "MVP Launch Studio",
     "Creative AI Studio",
     "AI Product Development",
     "Automation Systems",
@@ -108,6 +118,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -116,6 +128,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
+        <ScrollReveal />
         <Header />
         <main className="main-shell">{children}</main>
         <Footer />

@@ -1,6 +1,7 @@
 export const dynamic = "force-static";
 
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import CTABanner from "../components/CTABanner";
 import { networkingProfile } from "../../lib/content";
@@ -45,13 +46,11 @@ export default function ConnectPage() {
             Scan this to open the networking hub directly on mobile.
           </p>
           <div className="connect-qr-grid">
-            <img
+            <Image
               src="/connect/qr.svg"
               alt="QR code linking to unalabs.cloud/connect"
               width={220}
               height={220}
-              loading="lazy"
-              decoding="async"
             />
             <div className="hero-actions connect-qr-actions">
               <a

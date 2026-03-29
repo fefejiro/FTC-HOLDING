@@ -18,6 +18,13 @@ export type ClientLaunch = {
   summary: string;
   currentFocus?: string[];
   nextMilestone?: string[];
+  startedLabel?: string;
+  lastUpdatedLabel?: string;
+  phase?: {
+    current: number;
+    total: number;
+    label: string;
+  };
   websiteUrl: string;
   youtubeUrl: string;
   brand: ClientLaunchBrand;
@@ -39,6 +46,13 @@ export const emergencyPromptCaseStudy: ClientLaunch = {
     "Inbound call flow setup",
     "Local SEO baseline"
   ],
+  startedLabel: "Started 3 days ago",
+  lastUpdatedLabel: "Last update: 2 hours ago",
+  phase: {
+    current: 2,
+    total: 4,
+    label: "Build"
+  },
   websiteUrl: "https://emergencyprompt.com",
   youtubeUrl: "https://www.youtube.com/@EmergencyPromptOttawa",
   brand: {
@@ -64,6 +78,13 @@ export const polarAnchorLaunch: ClientLaunch = {
     "Full website and quote lead system for a Toronto-based freight forwarding company handling cargo, vehicles, customs clearance, and import-export coordination across Canada.",
   currentFocus: ["Organic search visibility", "Quote lead conversion", "Vehicle shipping market"],
   nextMilestone: ["Local SEO baseline", "Quote form optimization", "Polar Anchor domain launch"],
+  startedLabel: "Started 14 days ago",
+  lastUpdatedLabel: "Last update: 18 hours ago",
+  phase: {
+    current: 4,
+    total: 4,
+    label: "Live"
+  },
   websiteUrl: "https://unalabs.cloud/polar-anchor",
   youtubeUrl: "",
   brand: {
@@ -89,6 +110,13 @@ export const gardenCleanersLaunch: ClientLaunch = {
     "Website and quote lead system for a residential and commercial cleaning company serving Oshawa and the Durham Region, Ontario, with recurring booking and move-in/move-out capability.",
   currentFocus: ["Oshawa local search presence", "Residential booking flow", "Move-in/out service visibility"],
   nextMilestone: ["Google Business Profile setup", "Recurring booking path", "Durham Region expansion"],
+  startedLabel: "Started 11 days ago",
+  lastUpdatedLabel: "Last update: 10 hours ago",
+  phase: {
+    current: 4,
+    total: 4,
+    label: "Live"
+  },
   websiteUrl: "https://unalabs.cloud/garden-cleaners",
   youtubeUrl: "",
   brand: {
