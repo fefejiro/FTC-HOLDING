@@ -26,7 +26,6 @@ export type ClientLaunch = {
     label: string;
   };
   websiteUrl: string;
-  youtubeUrl: string;
   brand: ClientLaunchBrand;
 };
 
@@ -54,7 +53,6 @@ export const emergencyPromptCaseStudy: ClientLaunch = {
     label: "Build"
   },
   websiteUrl: "https://emergencyprompt.com",
-  youtubeUrl: "",
   brand: {
     mark: "EP",
     wordmark: "Emergency Prompt",
@@ -86,7 +84,6 @@ export const polarAnchorLaunch: ClientLaunch = {
     label: "Live"
   },
   websiteUrl: "https://unalabs.cloud/polar-anchor",
-  youtubeUrl: "",
   brand: {
     mark: "PA",
     wordmark: "Polar Anchor",
@@ -118,7 +115,6 @@ export const gardenCleanersLaunch: ClientLaunch = {
     label: "Live"
   },
   websiteUrl: "https://unalabs.cloud/garden-cleaners",
-  youtubeUrl: "",
   brand: {
     mark: "GC",
     wordmark: "Garden Cleaners",
