@@ -37,6 +37,7 @@ export type ClientMetric = {
 };
 
 export const clientMetrics: ClientMetric[] = [
+  // TODO(content): replace these constants with verified live/business-approved metrics source.
   {
     label: "Active Projects",
     value: 12,

@@ -219,10 +219,12 @@ export default function HomePage() {
           <div className="cards-grid cards-grid-3 services-grid">
             {serviceLanes.map((lane) => (
               <article key={lane.title} className="card service-card service-card--lane">
-                <div className="service-lane-icon" aria-hidden="true">
-                  {renderServiceLaneIcon(lane.icon)}
+                <div className="service-lane-head">
+                  <div className="service-lane-icon" aria-hidden="true">
+                    {renderServiceLaneIcon(lane.icon)}
+                  </div>
+                  <h3>{lane.title}</h3>
                 </div>
-                <h3>{lane.title}</h3>
                 <p className="service-lane-outcome">{lane.outcome}</p>
                 <p>{lane.description}</p>
                 <ul className="compact-feature-list">
@@ -327,11 +329,11 @@ export default function HomePage() {
             <p className="eyebrow">Products</p>
             <h2>Products and lab systems built inside Una Labs</h2>
             <p>
-              PeacePad, SayWetin, and Dispatch are public products. ATEAM is the guided AI lab that
-              helps turn new ideas into scoped next steps.
+              PeacePad, SayWetin, and Dispatch are public products. ATEAM is the internal workflow
+              system that powers intake, execution, and client-ready output.
             </p>
           </div>
-          <div className="proof-grid home-products-grid">
+          <div className="proof-grid home-products-grid home-products-public">
             {productTiles.map((tile) => (
               <article key={tile.title} className="card proof-card">
                 {"image" in tile && tile.image ? (
@@ -356,34 +358,36 @@ export default function HomePage() {
                 </Link>
               </article>
             ))}
-            <article className="card proof-card proof-card--featured-ateam">
-              <div className="proof-card-ateam-preview-wrap">
-                <Image
-                  src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
-                  alt="ATEAM mission control interface preview"
-                  width={960}
-                  height={540}
-                  className="proof-card-ateam-preview"
-                />
-                <span className="proof-card-ateam-badge">ATEAM</span>
-              </div>
-              <p className="proof-label">ATEAM</p>
-              <h3>The AI lab where rough ideas become clear next steps.</h3>
-              <p>
-                {ateamModeSummary}
-              </p>
-              <div className="proof-tags">
-                {ateamModeSupportPoints.map((point) => (
-                  <span key={point} className="proof-tag">
-                    {point}
-                  </span>
-                ))}
-              </div>
-              <Link href="/ateam" prefetch={false} className="btn btn-primary">
-                Open ATEAM
-              </Link>
-            </article>
           </div>
+          <article className="card proof-card proof-card--featured-ateam home-ateam-system">
+            <div className="home-ateam-system-head">
+              <p className="eyebrow">Internal workflow system</p>
+              <h3>ATEAM runs behind delivery, not beside it.</h3>
+            </div>
+            <div className="proof-card-ateam-preview-wrap">
+              <Image
+                src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
+                alt="ATEAM mission control interface preview"
+                width={960}
+                height={540}
+                className="proof-card-ateam-preview"
+              />
+              <span className="proof-card-ateam-badge">ATEAM</span>
+            </div>
+            <p className="proof-label">ATEAM</p>
+            <h3>The AI lab where rough ideas become clear next steps.</h3>
+            <p>{ateamModeSummary}</p>
+            <div className="proof-tags">
+              {ateamModeSupportPoints.map((point) => (
+                <span key={point} className="proof-tag">
+                  {point}
+                </span>
+              ))}
+            </div>
+            <Link href="/ateam" prefetch={false} className="btn btn-primary">
+              Open ATEAM
+            </Link>
+          </article>
         </div>
       </section>
 
@@ -393,10 +397,9 @@ export default function HomePage() {
             <div className="ateam-preview-band-copy">
               <p className="eyebrow">Inside ATEAM</p>
               <h2>Open the real ATEAM surfaces that drive Una Labs from this route.</h2>
-              <p className="muted">
-                ATEAM is part of Una Labs, not a detached explainer. This route now frames a real
-                workflow system with public intake, visible work, and a private operator control
-                plane behind it.
+              <p className="muted ateam-preview-intro">
+                ATEAM is part of Una Labs, not a detached explainer. This route shows the real
+                workflow system: public intake, visible work, and a private operator control plane.
               </p>
             </div>
             <div className="ateam-preview-band-steps" aria-label="ATEAM inside Una Labs">
@@ -410,6 +413,14 @@ export default function HomePage() {
             </div>
             <div className="ateam-compare-shell">
               <h3>Why ATEAM over a traditional delivery path</h3>
+              <div className="ateam-compare-mobile-list" aria-label="ATEAM comparison highlights">
+                {ateamComparisonRows.map((row) => (
+                  <article key={`${row.label}-mobile`} className="ateam-compare-mobile-item">
+                    <p className="ateam-compare-mobile-label">{row.label}</p>
+                    <p className="ateam-compare-mobile-copy">{row.ateam}</p>
+                  </article>
+                ))}
+              </div>
               <div className="ateam-compare-table-wrap">
                 <table className="ateam-compare-table">
                   <thead>
@@ -461,7 +472,7 @@ export default function HomePage() {
                 you already know the outcome you need.
               </p>
             </div>
-            <div className="product-actions">
+            <div className="product-actions final-cta-actions">
               <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
                 Start a Project
               </Link>
