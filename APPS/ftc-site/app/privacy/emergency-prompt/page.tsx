@@ -169,8 +169,8 @@ export default function EmergencyPromptPrivacyPage() {
       <p>
         To request deletion of an operator account and/or associated request
         data, visit{" "}
-        <Link href="/privacy/emergency-prompt/delete-account">
-          /privacy/emergency-prompt/delete-account
+        <Link href="/privacy/delete-account">
+          /privacy/delete-account
         </Link>
         .
       </p>
