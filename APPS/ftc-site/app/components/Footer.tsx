@@ -98,6 +98,7 @@ export default function Footer() {
             <a href="/saywetin">SayWetin</a>
             <a href="/work-with-ftc">Start a Project</a>
             <a href="/privacy">Privacy Policy</a>
+            <a href="/privacy/emergency-prompt">Emergency Prompt Privacy</a>
             <a href="/terms">Terms of Use</a>
           </div>
         </div>
