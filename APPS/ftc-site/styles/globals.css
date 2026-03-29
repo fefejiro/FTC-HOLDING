@@ -7468,6 +7468,11 @@ body {
   min-width: 0;
 }
 
+.home-page .section {
+  content-visibility: visible;
+  contain-intrinsic-size: auto;
+}
+
 .service-lane-head {
   display: flex;
   align-items: center;
@@ -7578,6 +7583,7 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  width: 100%;
 }
 
 .final-cta-actions .btn {
@@ -7635,6 +7641,10 @@ body {
 
   .ateam-preview-band-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .final-cta-card {
+    align-items: stretch;
   }
 }
 
@@ -7834,6 +7844,7 @@ body {
 
   .final-cta-card {
     gap: 14px;
+    align-items: stretch;
   }
 
   .final-cta-actions {
@@ -7871,9 +7882,16 @@ body {
   }
 
   .client-logo-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .client-metrics-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .client-logo-grid,
   .client-metrics-strip {
     grid-template-columns: 1fr;
   }
