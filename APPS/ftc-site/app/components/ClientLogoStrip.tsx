@@ -61,8 +61,8 @@ export default function ClientLogoStrip() {
     <section className="section fade-on-scroll client-logo-section" aria-labelledby="selected-clients-heading">
       <div className="container client-logo-shell">
         <div className="client-logo-copy">
-          <p className="eyebrow">Selected clients</p>
-          <h2 id="selected-clients-heading">Selected clients</h2>
+          <p className="eyebrow">Trusted clients</p>
+          <h2 id="selected-clients-heading">Trusted by leading organizations</h2>
           <p>Una Labs has delivered consulting and technology work for organizations including:</p>
         </div>
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { emergencyPromptCaseStudy } from "../lib/recentWork";
 import { ATEAM_BRAND_LOGO_PATH } from "../lib/ateamEmbed";
 import { ateamModeStages, ateamModeSummary, ateamModeSupportPoints } from "../lib/ateamMode";
+import AteamHomeWidget from "./components/AteamHomeWidget";
 import ClientLogoStrip from "./components/ClientLogoStrip";
 
 type ServiceLaneIcon = "website" | "lead" | "scoping";
@@ -185,26 +186,7 @@ export default function HomePage() {
                 </ul>
               </div>
               <div className="hero-enterprise-visual">
-                <div className="hero-enterprise-image-wrap">
-                  <Image
-                    src="/images/garden-cleaners/hero-office-team.png"
-                    alt="Una Labs operators collaborating on delivery workflow"
-                    width={860}
-                    height={960}
-                    className="hero-enterprise-image"
-                    priority
-                  />
-                </div>
-                <div className="hero-enterprise-card">
-                  <p className="hero-enterprise-kicker">ATEAM Workflow</p>
-                  <h3>Route, Build, Review, Pack</h3>
-                  <p>
-                    AI-assisted scoping with live visibility and a clear output pack for execution.
-                  </p>
-                  <Link href="/ateam" prefetch={false} className="inline-link">
-                    Explore ATEAM
-                  </Link>
-                </div>
+                <AteamHomeWidget />
               </div>
             </div>
           </section>

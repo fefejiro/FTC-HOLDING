@@ -7134,3 +7134,128 @@ footer {
     min-height: 320px;
   }
 }
+
+/* Requested refinements: animated ATEAM hero visual + cleaner 247-style logo row */
+
+.hero-enterprise-visual {
+  display: block;
+}
+
+.hero-enterprise-visual .ahw-shell {
+  background: #ffffff;
+  border: 1px solid rgba(15, 27, 73, 0.14);
+  box-shadow: 0 14px 30px rgba(15, 27, 73, 0.1);
+}
+
+.hero-enterprise-visual .ahw-shell::before {
+  background: linear-gradient(90deg, transparent 0%, rgba(122, 31, 162, 0.45) 50%, transparent 100%);
+}
+
+.hero-enterprise-visual .ahw-topbar-label {
+  color: #5f6888;
+}
+
+.hero-enterprise-visual .ahw-status {
+  color: #5f6888;
+}
+
+.hero-enterprise-visual .ahw-textarea {
+  background: #ffffff;
+  border: 1px solid rgba(15, 27, 73, 0.16);
+  color: #1a2553;
+}
+
+.hero-enterprise-visual .ahw-textarea::placeholder {
+  color: #8188a6;
+}
+
+.hero-enterprise-visual .ahw-btn-primary {
+  background: #7a1fa2;
+}
+
+.hero-enterprise-visual .ahw-btn-primary:hover {
+  background: #651886;
+}
+
+.hero-enterprise-visual .ahw-link {
+  color: #6a188c;
+}
+
+.hero-enterprise-visual .ahw-link:hover {
+  color: #4d1267;
+}
+
+.hero-enterprise-visual .ahw-node-ring {
+  border-color: rgba(15, 27, 73, 0.16);
+  background: #f8f8fc;
+}
+
+.hero-enterprise-visual .ahw-node-dot {
+  background: rgba(122, 31, 162, 0.28);
+}
+
+.hero-enterprise-visual .ahw-node--active .ahw-node-ring {
+  border-color: #7a1fa2;
+  background: rgba(122, 31, 162, 0.1);
+  box-shadow: 0 0 14px rgba(122, 31, 162, 0.22);
+}
+
+.hero-enterprise-visual .ahw-node--active .ahw-node-dot {
+  background: #7a1fa2;
+  box-shadow: 0 0 8px rgba(122, 31, 162, 0.35);
+}
+
+.hero-enterprise-visual .ahw-node-label {
+  color: #5f6888;
+}
+
+.hero-enterprise-visual .ahw-connector {
+  background: rgba(15, 27, 73, 0.14);
+}
+
+.hero-enterprise-visual .ahw-connector--lit {
+  background: linear-gradient(90deg, rgba(122, 31, 162, 0.58), rgba(171, 71, 188, 0.32));
+}
+
+.hero-enterprise-visual .ahw-output {
+  background: rgba(122, 31, 162, 0.06);
+  border-color: rgba(122, 31, 162, 0.2);
+}
+
+.hero-enterprise-visual .ahw-output-lane {
+  color: #6a188c;
+  background: rgba(122, 31, 162, 0.1);
+}
+
+.client-logo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 26px 34px;
+}
+
+.client-logo-card {
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.client-logo-card:hover {
+  transform: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.client-logo-image {
+  max-height: 62px;
+  max-width: 210px;
+  filter: none;
+  opacity: 1;
+}
+
+.client-metrics-strip {
+  margin-top: 14px;
+}
