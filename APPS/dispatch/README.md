@@ -56,6 +56,60 @@ npm run dev
 
 Required environment variables are shown in [`.env.example`](/c:/FTC%20HOLDING/APPS/dispatch/.env.example).
 
+## Desktop troubleshooting workflow
+
+Use the web app directly while debugging product behavior before shipping mobile updates:
+
+```powershell
+cd "C:\FTC HOLDING\APPS\dispatch"
+npm run desktop:dev
+```
+
+Then open `http://localhost:8080` in desktop browser and troubleshoot there first.
+
+## Capacitor update workflow (next releases)
+
+Dispatch is configured so Capacitor production builds point to:
+
+- `https://dispatch.unalabs.cloud`
+
+That means:
+
+- web/content fixes can be deployed server-side and reflected in the app webview
+- native/plugin/icon/manifest changes still require a new Play Store build
+
+### One-command Android AAB build
+
+```powershell
+cd "C:\FTC HOLDING\APPS\dispatch"
+npm run cap:bundle:release
+```
+
+This command now does all required steps:
+
+1. Builds web assets
+2. Syncs Capacitor Android (`CAPACITOR_ENV=production`)
+3. Ensures `android/local.properties` has SDK path when available
+4. Runs Gradle `bundleRelease`
+5. Prints final AAB path
+
+Expected output file:
+
+- `C:\FTC HOLDING\APPS\dispatch\android\app\build\outputs\bundle\release\app-release.aab`
+
+### Useful helper commands
+
+```powershell
+# Sync Android with local dev server target (for native debugging)
+npm run cap:sync:dev
+
+# Sync Android with production target (default release behavior)
+npm run cap:sync:prod
+
+# Open Android Studio project
+npm run cap:open
+```
+
 ## Railway deploy
 
 This app lives inside a monorepo, so Railway must deploy `APPS/dispatch` as the archive root.
