@@ -165,6 +165,16 @@ export default function EmergencyPromptPrivacyPage() {
         <a href="mailto:hello@unalabs.cloud">hello@unalabs.cloud</a>
       </p>
 
+      <h2>12. Delete Account or Data</h2>
+      <p>
+        To request deletion of an operator account and/or associated request
+        data, visit{" "}
+        <Link href="/privacy/emergency-prompt/delete-account">
+          /privacy/emergency-prompt/delete-account
+        </Link>
+        .
+      </p>
+
       <p style={{ marginTop: "1.25rem" }}>
         <Link href="/privacy">Back to Una Labs Privacy Hub</Link>
       </p>
