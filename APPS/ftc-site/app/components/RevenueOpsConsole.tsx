@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { engagementOffers } from "../../lib/engagementOffers";
 
 type PipelineStage =
   | "lead_qualified"
@@ -188,9 +189,11 @@ export default function RevenueOpsConsole() {
               <span>Offer</span>
               <select name="engagementType" defaultValue="">
                 <option value="">Not set</option>
-                <option value="scoped-first-pass">Scoped First Pass</option>
-                <option value="prototype-direction-sprint">Prototype Direction Sprint</option>
-                <option value="build-execution-track">Build Execution Track</option>
+                {engagementOffers.map((offer) => (
+                  <option key={offer.value} value={offer.value}>
+                    {offer.title}
+                  </option>
+                ))}
               </select>
             </label>
             <label>

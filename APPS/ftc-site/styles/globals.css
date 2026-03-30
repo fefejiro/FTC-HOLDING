@@ -1428,6 +1428,34 @@ nav.primary {
   padding: 14px 16px 16px;
 }
 
+.client-launch-offer-map {
+  display: grid;
+  gap: 18px;
+}
+
+.client-launch-offer-grid {
+  margin-top: 0;
+}
+
+.client-launch-offer-card {
+  gap: 12px;
+}
+
+.client-launch-offer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.client-launch-offer-example {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(26, 40, 76, 0.1);
+}
+
 .client-launch-feature-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2485,6 +2513,16 @@ nav.primary {
   font-size: 0.92rem;
 }
 
+.work-intake-guidance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.work-intake-guidance-card {
+  gap: 12px;
+}
+
 .intake-form {
   margin-top: 18px;
   display: grid;
@@ -3222,7 +3260,8 @@ nav.primary {
 
   .featured-launch-grid,
   .intake-form-grid,
-  .intake-form-grid--triple {
+  .intake-form-grid--triple,
+  .work-intake-guidance-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3758,7 +3797,8 @@ nav.primary {
 
   .hero-actions .btn,
   .product-actions .btn,
-  .ateam-embed-actions .btn {
+  .ateam-embed-actions .btn,
+  .client-launch-actions .btn {
     width: 100%;
   }
 

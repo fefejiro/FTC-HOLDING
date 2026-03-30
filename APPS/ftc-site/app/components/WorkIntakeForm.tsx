@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { trackEvent } from "../../lib/analytics";
 import type { AteamDemoHandoffPayload, AteamWorkflowHandoffPayload } from "../../lib/ateamHandoff";
+import { engagementOffers } from "../../lib/engagementOffers";
 import {
   clearAteamDemoHandoff,
   clearAteamWorkflowHandoff,
@@ -38,9 +39,7 @@ const projectTypeOptions = [
 ] as const;
 
 const engagementTypeOptions = [
-  { value: "scoped-first-pass", label: "Scoped First Pass" },
-  { value: "prototype-direction-sprint", label: "Prototype Direction Sprint" },
-  { value: "build-execution-track", label: "Build Execution Track" },
+  ...engagementOffers.map((offer) => ({ value: offer.value, label: offer.title })),
   { value: "not-sure-yet", label: "Not sure yet" }
 ] as const;
 

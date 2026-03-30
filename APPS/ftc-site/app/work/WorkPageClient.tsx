@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { clientLaunches } from "../../lib/recentWork";
+import { engagementOffers } from "../../lib/engagementOffers";
 
 function getLaunchBrandStyle(accent?: string, accentSoft?: string, accentGlow?: string, accentSurface?: string) {
   return {
@@ -15,6 +16,7 @@ function getLaunchBrandStyle(accent?: string, accentSoft?: string, accentGlow?: 
 
 export default function WorkPageClient() {
   const [featuredLaunch, ...additionalLaunches] = Array.from(clientLaunches);
+  const launchesByOffer = new Map(clientLaunches.map((launch) => [launch.offerProof.value, launch]));
 
   return (
     <div className="container page-content client-launches-page">
@@ -26,6 +28,58 @@ export default function WorkPageClient() {
           context, and real systems in motion. Products stays reserved for Una Labs-owned tools
           like PeacePad, SayWetin, Dispatch, and ATEAM.
         </p>
+      </section>
+
+      <section className="client-launch-offer-map" aria-label="Offer proof map">
+        <div className="section-heading home-section-heading">
+          <p className="eyebrow">Choose the proof lane</p>
+          <h2>Each offer already has a live reference point.</h2>
+          <p>
+            Start with the kind of commercial path you need, then inspect the closest launch
+            snapshot before sending your own request.
+          </p>
+        </div>
+        <div className="cards-grid cards-grid-3 client-launch-offer-grid">
+          {engagementOffers.map((offer) => {
+            const launch = launchesByOffer.get(offer.value);
+            return (
+              <article key={offer.value} className="card client-launch-offer-card">
+                <div className="client-launch-offer-head">
+                  <p className="status-pill">{offer.title}</p>
+                  <p className="work-intake-offer-price">{offer.price}</p>
+                </div>
+                <p>{offer.summary}</p>
+                <p className="muted">{offer.idealFor}</p>
+                {launch ? (
+                  <div className="client-launch-offer-example">
+                    <p className="eyebrow">Live example</p>
+                    <h3>{launch.brand.wordmark}</h3>
+                    <p className="muted">{offer.proofPrompt}</p>
+                    <div className="proof-tags" aria-label={`${launch.brand.wordmark} tags`}>
+                      {launch.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="proof-tag">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="client-launch-actions">
+                      <Link href={`/work/${launch.slug}`} prefetch={false} className="btn btn-secondary">
+                        View proof
+                      </Link>
+                      <Link
+                        href={`/work-with-ftc?offer=${offer.value}`}
+                        prefetch={false}
+                        className="btn btn-primary"
+                      >
+                        Start this path
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       {featuredLaunch ? (
@@ -215,10 +269,10 @@ export default function WorkPageClient() {
       <article className="card final-cta-card">
         <div>
           <p className="eyebrow">Next step</p>
-          <h2>Need a launch path like this for your own business?</h2>
+          <h2>Need proof, then a clear project path?</h2>
           <p className="muted">
-            Una Labs can scope the shortest credible setup for your website, lead path, or
-            AI-assisted workflow.
+            If one of these launches looks close to your situation, use the matching offer path
+            and Una Labs will respond with the shortest credible next move.
           </p>
         </div>
         <div className="product-actions">

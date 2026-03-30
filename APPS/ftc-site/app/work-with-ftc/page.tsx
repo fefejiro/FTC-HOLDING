@@ -1,6 +1,7 @@
 export const dynamic = "force-static";
 
 import WorkIntakeForm from "../components/WorkIntakeForm";
+import { engagementOffers } from "../../lib/engagementOffers";
 
 export const metadata = {
   title: "Start a Project | Una Labs",
@@ -18,30 +19,6 @@ type WorkWithFtcPageProps = {
 function readSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? String(value[0] || "") : String(value || "");
 }
-
-const engagementOffers = [
-  {
-    value: "scoped-first-pass",
-    title: "Scoped First Pass",
-    summary: "Best when the problem is still messy and you need the shortest believable next move.",
-    meta: "2-5 business days - decision-ready first pass",
-    price: "Starting from $750"
-  },
-  {
-    value: "prototype-direction-sprint",
-    title: "Prototype Direction Sprint",
-    summary: "Best when you need a credible first version, tighter boundaries, and a real implementation path.",
-    meta: "1-2 weeks - prototype direction and system framing",
-    price: "Starting from $2,500"
-  },
-  {
-    value: "build-execution-track",
-    title: "Build Execution Track",
-    summary: "Best when you already know the system needs to get built and want operator-led delivery.",
-    meta: "Phased delivery - execution, iteration, and handoff",
-    price: "Starting from $5,000+"
-  }
-] as const;
 
 export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) {
   const isAteamHandoff = readSingleParam(searchParams?.from).trim().toLowerCase() === "ateam";
@@ -91,6 +68,27 @@ export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) 
           Starting ranges are for focused entry scopes. Final pricing depends on complexity,
           integrations, and delivery depth.
         </p>
+      </section>
+
+      <section className="work-intake-guidance-grid" aria-label="Who this path is built for">
+        <article className="card work-intake-guidance-card">
+          <p className="eyebrow">Best for</p>
+          <h2>Teams that need a clear next move quickly</h2>
+          <ul className="client-launch-signal-list">
+            <li>Local service businesses needing a lead path, offer clarity, or a cleaner customer flow.</li>
+            <li>Founders who need a believable first version before build expands.</li>
+            <li>Operators who need a workflow, internal tool, or execution path made concrete.</li>
+          </ul>
+        </article>
+        <article className="card work-intake-guidance-card">
+          <p className="eyebrow">Not ideal for</p>
+          <h2>Broad discovery without an owner</h2>
+          <ul className="client-launch-signal-list">
+            <li>Long procurement cycles that need a full RFP process first.</li>
+            <li>Projects with no urgency, owner, or decision-maker attached.</li>
+            <li>Teams looking for vague brainstorming without a real next move.</li>
+          </ul>
+        </article>
       </section>
 
       <section className="intake-card work-intake-shell">
