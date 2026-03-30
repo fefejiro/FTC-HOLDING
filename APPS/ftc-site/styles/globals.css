@@ -6569,7 +6569,7 @@ nav.primary {
 }
 
 .wf-split {
-  min-height: calc(100dvh - 52px);
+  min-height: clamp(680px, calc(88dvh - 52px), 780px);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(244, 247, 255, 0.22));
 }
 
@@ -6596,7 +6596,7 @@ nav.primary {
 .wf-body {
   flex: 1;
   min-height: 100%;
-  padding: 26px 0 42px;
+  padding: 24px 0 20px;
 }
 
 .wf-stage--output {
