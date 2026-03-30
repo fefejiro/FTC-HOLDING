@@ -18,28 +18,28 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
-    version: "1.0.3",
-    date: "January 31, 2026",
+    version: "1.0.8",
+    date: "March 30, 2026",
     changes: [
       {
         type: "improvement",
-        title: "UX Overhaul",
-        description: "Radical simplification of the 'pressure release valve' experience. Practice Chat is now always the homepage with a single input box for instant results.",
+        title: "Messaging First",
+        description: "PeacePad now focuses on helping co-parents say what they mean without starting a fight, with simpler navigation and a cleaner flow into Messages.",
       },
       {
         type: "improvement",
-        title: "Uniform Aesthetic",
-        description: "Unified minimal design across all features. Clean, focused connection and empty states without promotional clutter.",
+        title: "Before-You-Send Coaching",
+        description: "Tone guidance now appears inline with calmer rewrites and clear choices to use the suggestion, keep editing, or send anyway.",
       },
       {
         type: "improvement",
-        title: "Optimized Navigation",
-        description: "Reordered navigation based on access: Practice, Calendar, Expenses, Chat, and Conch Mode.",
+        title: "Prep Chat Refocus",
+        description: "Prep Chat is now a dedicated coaching space for planning hard conversations and moving a draft straight into Messages.",
       },
       {
         type: "improvement",
-        title: "Android Performance",
-        description: "Improved compatibility and performance for the latest Android devices with version 1.0.3.",
+        title: "MVP Cleanup",
+        description: "Deferred tabs and extra tools are out of the way so the app stays focused on communication, schedule context, invites, and support resources.",
       },
     ],
   },

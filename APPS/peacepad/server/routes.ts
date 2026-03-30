@@ -712,6 +712,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enforce guest trial expiry on write operations without affecting authenticated users.
   app.use("/api", trialEnforcer);
 
+  // PHASE 2: Disabled for MVP refocus. Re-enable these route families when ready to reintroduce them.
+  const phase2DisabledPrefixes = [
+    "/api/expenses",
+    "/api/settlements",
+    "/api/tasks",
+    "/api/child-updates",
+    "/api/children",
+    "/api/conch-sessions",
+    "/api/calls",
+    "/api/scheduled-calls",
+    "/api/summaries",
+    "/api/achievements",
+    "/api/user-stats",
+    "/api/parenting-tips",
+    "/api/therapists",
+    "/api/support-resources",
+  ];
+
+  // Removed from the MVP surface entirely.
+  const removedPrefixes = [
+    "/api/shopping-lists",
+    "/api/shopping-items",
+    "/api/pets",
+    "/api/weather-activities",
+  ];
+
+  app.use((req, res, next) => {
+    const requestPath = String(req.originalUrl || req.path || "").split("?")[0];
+
+    if (removedPrefixes.some((prefix) => requestPath.startsWith(prefix))) {
+      return res.status(410).json({
+        message: "This endpoint has been removed from the current PeacePad MVP.",
+      });
+    }
+
+    if (phase2DisabledPrefixes.some((prefix) => requestPath.startsWith(prefix))) {
+      return res.status(404).json({
+        message: "This feature is disabled in the PeacePad MVP refocus.",
+      });
+    }
+
+    if (requestPath.startsWith("/api/events")) {
+      const isReadOnlyEventsRoute =
+        req.method === "GET" &&
+        (requestPath === "/api/events" || /^\/api\/events\/?$/.test(requestPath));
+
+      if (!isReadOnlyEventsRoute) {
+        return res.status(404).json({
+          message: "Calendar editing is disabled in the PeacePad MVP.",
+        });
+      }
+    }
+
+    next();
+  });
+
   // Geocoding routes moved to comprehensive route below (line ~6740)
 
   app.get("/api/geocode/reverse", async (req, res) => {
@@ -1785,9 +1841,12 @@ Crawl-delay: 1
   });
 
   // Update user consent preferences
-  app.patch("/api/user/consent", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/user/consent", isAuthenticatedEither, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const { privacyAccepted, aiMessageConsent, aiCallConsent, ndaAccepted } = req.body;
 
       const updateData: any = {};

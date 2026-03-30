@@ -65,9 +65,9 @@ export default function LandingPage() {
   return (
     <>
       <SEOHead
-        title="PeacePad - Co-Parenting App to Communicate Clearly & Reduce Conflict"
-        description="PeacePad is a co-parenting app that helps parents communicate clearly and reduce conflict. AI-powered message clarity, shared custody calendar, and expense tracking — free for separated and divorced parents."
-        keywords="co-parenting app, co-parenting communication app, reduce conflict co-parenting, talk to ex about kids, co-parent messaging app, shared custody calendar, divorce communication app, separated parents app, parallel parenting app"
+        title="PeacePad | Say what you mean. Without the fight."
+        description="PeacePad helps co-parents communicate clearly with before-you-send tone guidance, Prep Chat, and custody schedule context."
+        keywords="co-parenting app, co-parent communication app, calm messaging, prep chat, custody calendar, divorce communication app, separated parents app"
         ogImage="https://peacepad.ca/og-image.png"
         canonical="https://peacepad.ca/"
       />

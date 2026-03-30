@@ -89,15 +89,14 @@ export async function sendInviteAcceptanceEmail(userEmail: string, userName: str
           
           <p>You've successfully joined PeacePad by accepting ${partnerName}'s partnership invitation!</p>
           
-          <p>PeacePad is your AI-powered co-parenting platform designed to make communication easier and keep everyone on the same page.</p>
+          <p>PeacePad helps co-parents communicate clearly before things get worse.</p>
           
           <p><strong>Here's what you can do now:</strong></p>
           <ul>
-            <li><strong>Message your co-parent</strong> with AI tone analysis to keep conversations constructive</li>
-            <li><strong>Share a custody calendar</strong> to coordinate schedules and avoid conflicts</li>
-            <li><strong>Manage shared tasks</strong> like school pickups, doctor appointments, and activities</li>
-            <li><strong>Track shared expenses</strong> with automatic splitting and payment tracking</li>
-            <li><strong>Use Conch Mode</strong> for structured, respectful conversations when things get tense</li>
+            <li><strong>Message your co-parent</strong> with before-you-send tone guidance</li>
+            <li><strong>Use Prep Chat</strong> to plan a hard conversation before you send it</li>
+            <li><strong>Check the calendar</strong> for custody context and schedule visibility</li>
+            <li><strong>Open support resources</strong> when you need outside help</li>
           </ul>
           
           <p style="text-align: center;">
@@ -124,15 +123,14 @@ Hi ${userName},
 
 You've successfully joined PeacePad by accepting ${partnerName}'s partnership invitation!
 
-PeacePad is your AI-powered co-parenting platform designed to make communication easier and keep everyone on the same page.
+PeacePad helps co-parents communicate clearly before things get worse.
 
 Here's what you can do now:
 
-- Message your co-parent with AI tone analysis to keep conversations constructive
-- Share a custody calendar to coordinate schedules and avoid conflicts
-- Manage shared tasks like school pickups, doctor appointments, and activities
-- Track shared expenses with automatic splitting and payment tracking
-- Use Conch Mode for structured, respectful conversations when things get tense
+- Message your co-parent with before-you-send tone guidance
+- Use Prep Chat to plan a hard conversation before you send it
+- Check the calendar for custody context and schedule visibility
+- Open support resources when you need outside help
 
 Get started: ${process.env.VITE_BASE_URL || 'https://peacepad.ca'}
 
@@ -187,7 +185,7 @@ export async function sendNewPartnershipEmail(userEmail: string, userName: strin
           
           <p><strong>Next Step: Invite Your Co-Parent</strong></p>
           
-          <p>To start using PeacePad's shared features like messaging, calendar, tasks, and expense tracking, you'll need to invite your co-parent.</p>
+          <p>To start using PeacePad with your co-parent, share your invite link so you can message each other and view your schedule context together.</p>
           
           <div class="invite-box">
             <p><strong>How to Send Your Invite:</strong></p>
@@ -205,11 +203,10 @@ export async function sendNewPartnershipEmail(userEmail: string, userName: strin
           
           <p><strong>What PeacePad Offers:</strong></p>
           <ul>
-            <li><strong>AI-Powered Messaging</strong> - Get tone analysis to keep conversations constructive</li>
-            <li><strong>Shared Calendar</strong> - Coordinate custody schedules with conflict detection</li>
-            <li><strong>Task Management</strong> - Track pickups, appointments, and activities together</li>
-            <li><strong>Expense Tracking</strong> - Split costs fairly with automatic calculations</li>
-            <li><strong>Conch Mode</strong> - Structured conversations when emotions run high</li>
+            <li><strong>Messaging</strong> - Check how a message might land before you send it</li>
+            <li><strong>Prep Chat</strong> - Get coaching for hard conversations</li>
+            <li><strong>Calendar</strong> - Keep custody and family schedule context visible</li>
+            <li><strong>Support resources</strong> - Open trusted outside help when you need it</li>
           </ul>
           
           <p>Need help? Visit our <a href="${process.env.VITE_BASE_URL || 'https://peacepad.ca'}/resources">resource library</a> for guides and co-parenting tips.</p>
@@ -234,7 +231,7 @@ Welcome to PeacePad! Your account is all set up and ready to go.
 
 NEXT STEP: Invite Your Co-Parent
 
-To start using PeacePad's shared features like messaging, calendar, tasks, and expense tracking, you'll need to invite your co-parent.
+To start using PeacePad with your co-parent, share your invite link so you can message each other and view your schedule context together.
 
 How to Send Your Invite:
 1. Log in to PeacePad
@@ -246,11 +243,10 @@ Get started: ${process.env.VITE_BASE_URL || 'https://peacepad.ca'}
 
 What PeacePad Offers:
 
-- AI-Powered Messaging - Get tone analysis to keep conversations constructive
-- Shared Calendar - Coordinate custody schedules with conflict detection
-- Task Management - Track pickups, appointments, and activities together
-- Expense Tracking - Split costs fairly with automatic calculations
-- Conch Mode - Structured conversations when emotions run high
+- Messaging - Check how a message might land before you send it
+- Prep Chat - Get coaching for hard conversations
+- Calendar - Keep custody and family schedule context visible
+- Support resources - Open trusted outside help when you need it
 
 Need help? Visit our resource library: ${process.env.VITE_BASE_URL || 'https://peacepad.ca'}/resources
 

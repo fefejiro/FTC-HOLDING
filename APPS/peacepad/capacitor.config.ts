@@ -53,7 +53,7 @@ const serverConfig = getServerConfig();
 
 const config: CapacitorConfig = {
   appId: 'ca.peacepad.family',
-  appName: 'PeacePad - Co-Parenting App',
+  appName: 'PeacePad',
   webDir: 'dist/public',
   server: {
     ...serverConfig,

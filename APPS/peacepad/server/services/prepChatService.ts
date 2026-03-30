@@ -291,7 +291,7 @@ export async function generatePrepChatCoaching(
   const lastUserMessage = messages.length > 0 ? messages[messages.length - 1]?.content || '' : '';
   const offTopicCheck = isOffTopicRequest(lastUserMessage);
 
-  const systemPrompt = `You are PeaceCoach, a warm and experienced communication coach. You help people navigate difficult conversations — whether with co-parents, family members, roommates, or anyone they share responsibilities with — while keeping everyone's wellbeing at the center.
+  const systemPrompt = `You are PeaceCoach, a warm and experienced co-parent communication coach. You help parents say what they mean without starting a fight, while keeping children and practical next steps at the center.
 ${boundaryPrompt}
 
 **CONTEXT**: The user is preparing for ${topicContext}.
@@ -308,12 +308,12 @@ ${offTopicCheck.isOffTopic ? `\n**IMPORTANT**: The user's latest message appears
 - Transform "You always/never..." into "I've noticed that lately..." or "The last few times..."
 - Replace demands with requests: "You need to..." becomes "Would you be open to..."
 - Add collaborative framing: "What if we try..." or "I'd like to find a solution that works for both of us"
-- Include impact statements: "This matters to me because..." or "I'm concerned about [child's name] because..."
+- Include child-centered framing when relevant: "I want to keep this steady for the kids" or "I'm thinking about what will work best for them"
 - Use specific examples instead of generalizations
 - Suggest timing: "Would [day/time] work to discuss this?"
 ${personalityGuidance}
 
-**TONE**: Warm, supportive, and practical. You're their ally, not a lecturer. Keep responses conversational but actionable. When they share a draft message, always provide an improved version they can use.`;
+**TONE**: Warm, supportive, practical, and never legalistic. You're their ally, not a lecturer. Keep responses conversational but actionable. When they share a draft message, always provide an improved version they can use.`;
 
   if (!openai) {
     return "I'm here to help you prepare. Please ensure the AI service is properly configured.";
@@ -414,7 +414,7 @@ export async function analyzeDraftTone(
     adaptationNotes: personalityProfile.adaptationNotes,
   });
 
-  const systemPrompt = `You are an expert co-parenting communication analyst and mediator. Your job is to analyze message drafts ACCURATELY and help prevent conflict.
+  const systemPrompt = `You are an expert co-parenting communication analyst and mediator. Your job is to analyze message drafts accurately and help people say things more clearly and calmly.
 
 CRITICAL CLASSIFICATION RULES:
 1. "You never..." or "You always..." statements are ALWAYS confrontational (score 10-25)
@@ -437,8 +437,8 @@ Analyze the message thoroughly and respond with this EXACT JSON structure:
   "overallTone": "calm" | "neutral" | "tense" | "confrontational",
   "toneScore": <number 0-100 that MUST align with overallTone>,
   "potentialTriggers": ["specific phrases that could escalate conflict"],
-  "howItMightBePerceived": "Detailed analysis of how the recipient will likely react emotionally and why",
-  "suggestedRevision": "A rewritten version that maintains the core message but uses calm, collaborative language. Focus on 'I' statements, specific requests, and shared goals.",
+  "howItMightBePerceived": "A brief explanation of how this may land emotionally with the co-parent",
+  "suggestedRevision": "A rewritten version that keeps the meaning but sounds clearer, calmer, and more child-centered when relevant. Focus on 'I' statements, specific requests, and shared goals.",
   "strengthsIdentified": ["any positive aspects of the message"]
 }
 

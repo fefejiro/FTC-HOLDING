@@ -10,6 +10,13 @@ const openai = apiKey ? new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 }) : null;
 
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    throw new Error('OpenAI client is not configured');
+  }
+  return openai;
+}
+
 export interface AgentContext {
   partnershipId: string;
   userId: string;
@@ -204,7 +211,7 @@ Upcoming events this week: ${context.upcomingEvents.length}
 Active conflict patterns: ${context.conflictPatterns.length}`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },

@@ -16,7 +16,7 @@ interface SEOHeadProps {
   };
 }
 
-const defaultKeywords = "co-parenting app, co-parenting communication, shared custody calendar, expense tracking, separated parents, blended families, divorce communication, parallel parenting";
+const defaultKeywords = "co-parenting app, co-parent communication, calm messaging, prep chat, custody calendar, separated parents, divorce communication, parallel parenting";
 
 export function SEOHead({
   title,
@@ -32,7 +32,7 @@ export function SEOHead({
   const baseUrl = "https://peacepad.ca";
   const fullCanonical = canonical || window.location.pathname;
   const canonicalUrl = fullCanonical.startsWith('http') ? fullCanonical : `${baseUrl}${fullCanonical}`;
-  const fullTitle = title.includes("PeacePad") ? title : `${title} | PeacePad - Co-Parenting App`;
+  const fullTitle = title.includes("PeacePad") ? title : `${title} | PeacePad`;
   const fullKeywords = keywords ? `${keywords}, ${defaultKeywords}` : defaultKeywords;
   
   return (

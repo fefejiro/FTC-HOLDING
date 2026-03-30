@@ -5,23 +5,24 @@ import path from "path";
 const isReplitDevelopment =
   process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined;
 
-const replitDevPlugins = isReplitDevelopment
-  ? [
-      (await import("@replit/vite-plugin-runtime-error-modal")).default(),
-      await import("@replit/vite-plugin-cartographer").then((m) =>
-        m.cartographer(),
-      ),
-      await import("@replit/vite-plugin-dev-banner").then((m) =>
-        m.devBanner(),
-      ),
-    ]
-  : [];
+export default defineConfig(async () => {
+  const replitDevPlugins = isReplitDevelopment
+    ? [
+        (await import("@replit/vite-plugin-runtime-error-modal")).default(),
+        await import("@replit/vite-plugin-cartographer").then((m) =>
+          m.cartographer(),
+        ),
+        await import("@replit/vite-plugin-dev-banner").then((m) =>
+          m.devBanner(),
+        ),
+      ]
+    : [];
 
-export default defineConfig({
-  plugins: [
-    react(),
-    ...replitDevPlugins,
-  ],
+  return {
+    plugins: [
+      react(),
+      ...replitDevPlugins,
+    ],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -78,4 +79,5 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
+  };
 });

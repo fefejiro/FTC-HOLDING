@@ -1,7 +1,7 @@
 {
-  "name": "PeacePad - Co-Parenting App",
+  "name": "PeacePad",
   "short_name": "PeacePad",
-  "description": "PeacePad is a co-parenting app that helps parents communicate clearly and reduce conflict.",
+  "description": "PeacePad helps co-parents communicate clearly with calmer messaging, Prep Chat, and schedule context.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -29,5 +29,5 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["lifestyle", "productivity", "social"]
+  "categories": ["lifestyle", "communication"]
 }

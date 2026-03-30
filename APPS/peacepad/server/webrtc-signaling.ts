@@ -517,7 +517,7 @@ export async function broadcastConchSessionCreated(sessionId: string, partnershi
   // Get initiator info for notification
   const initiator = await storage.getUser(initiatorUserId);
   const initiatorName = initiator?.displayName || 'Your co-parent';
-  const initiatorProfileImage = initiator?.profileImage || null;
+  const initiatorProfileImage = initiator?.profileImageUrl || null;
 
   clients.forEach((client) => {
     if (partnershipUserIds.has(client.userId) && client.ws.readyState === WebSocket.OPEN) {
@@ -1227,7 +1227,7 @@ export function setupWebRTCSignaling(server: Server) {
               console.log(`[WS] Routing v2 message to CallEngineV2: ${type}`);
               try {
                 await callEngineV2.handleEvent(
-                  { type, payload },
+                  { type: type as any, payload },
                   userId,
                   connectionId
                 );
@@ -1277,10 +1277,13 @@ export function setupWebRTCSignaling(server: Server) {
             // Try to update call status in database (if accessible)
             try {
               // Find call by sessionCode and mark as ended
-              const sessions = await storage.getActiveCalls();
-              const activeCall = sessions.find(s => s.sessionCode === client.callSessionCode);
+              const sessions = await storage.getAllCalls();
+              const activeCall = sessions.find((s) => s.sessionId && s.status === 'active' && s.sessionId === client.callSessionCode);
               if (activeCall) {
-                await storage.endCall(activeCall.id, 'network_disconnect');
+                await storage.updateCall(activeCall.id, {
+                  status: 'ended',
+                  endedAt: new Date(),
+                });
                 console.log(`[WS_CLOSE] Updated call ${activeCall.id} status to ended in database`);
               }
             } catch (error) {

@@ -1,440 +1,486 @@
-import { useState, useRef, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { 
-  Copy,
-  RefreshCw,
-  Check,
-  Pencil,
-  ArrowUp,
-  RotateCcw,
-  Send
-} from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import CalmBreathModal from "@/components/CalmBreathModal";
-import { PracticeVoiceRecorder } from "@/components/PracticeVoiceRecorder";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ArrowRight, Check, MessageCircle, RefreshCw, Sparkles } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { SEOHead } from "@/components/SEOHead";
+import { trackEvent } from "@/lib/analytics";
 
-interface AnalysisResult {
+type PrepChatMessage = {
+  role: "user" | "coach";
+  content: string;
+  timestamp: string;
+};
+
+type PrepChatSession = {
+  id: string;
+  topic: string;
+  customTopic: string | null;
+  emotionalStateStart: string | null;
+  messages: PrepChatMessage[];
+  draftedMessage: string | null;
+  createdAt: string;
+};
+
+type DraftAnalysis = {
   overallTone: string;
   toneScore: number;
-  potentialTriggers: string[];
   howItMightBePerceived: string;
   suggestedRevision?: string;
-  strengthsIdentified: string[];
-  personalityContextApplied?: boolean;
-  personalityContext?: {
-    userPersonalityType?: string;
-    coParentPersonalityType?: string;
-    adaptationNotes?: string[];
-  };
-}
+};
 
-const PERSONALITY_TYPES = [
-  { value: 'INTJ', label: 'The Strategist' },
-  { value: 'INTP', label: 'The Thinker' },
-  { value: 'ENTJ', label: 'The Commander' },
-  { value: 'ENTP', label: 'The Debater' },
-  { value: 'INFJ', label: 'The Advocate' },
-  { value: 'INFP', label: 'The Mediator' },
-  { value: 'ENFJ', label: 'The Teacher' },
-  { value: 'ENFP', label: 'The Enthusiast' },
-  { value: 'ISTJ', label: 'The Inspector' },
-  { value: 'ISFJ', label: 'The Protector' },
-  { value: 'ESTJ', label: 'The Executive' },
-  { value: 'ESFJ', label: 'The Caregiver' },
-  { value: 'ISTP', label: 'The Craftsman' },
-  { value: 'ISFP', label: 'The Artist' },
-  { value: 'ESTP', label: 'The Dynamo' },
-  { value: 'ESFP', label: 'The Performer' },
+const FEELINGS = [
+  "Calm",
+  "Anxious",
+  "Frustrated",
+  "Overwhelmed",
+  "Sad",
+  "Angry",
+];
+
+const STARTERS = [
+  "I need to talk about a schedule change.",
+  "I need help writing a message about money.",
+  "I want to set a boundary without making things worse.",
+  "I need to respond to something upsetting.",
 ];
 
 export default function PrepChatPage() {
-  const [message, setMessage] = useState("");
-  const [voiceInputStatus, setVoiceInputStatus] = useState<"idle" | "listening" | "transcribing" | "error">("idle");
-  const [originalMessage, setOriginalMessage] = useState("");
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [editedResult, setEditedResult] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
+  const [topicInput, setTopicInput] = useState("");
+  const [feeling, setFeeling] = useState("");
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [composer, setComposer] = useState("");
+  const [draftInput, setDraftInput] = useState("");
+  const [draftSuggestion, setDraftSuggestion] = useState("");
+  const [draftSourceText, setDraftSourceText] = useState("");
 
-  const [showBreathModal, setShowBreathModal] = useState(false);
+  const entryPoint = useMemo(() => {
+    const params = new URLSearchParams(location.split("?")[1] || "");
+    return params.get("entry") || localStorage.getItem("peacepad_prep_chat_entry_point") || "nav";
+  }, [location]);
 
-  // Persistent style settings via localStorage
-  const [coParentPersonality, setCoParentPersonality] = useState<string>(() => {
-    return localStorage.getItem('peacepad_coparent_style') || "";
+  const { data: sessions = [] } = useQuery<PrepChatSession[]>({
+    queryKey: ["/api/prep-chat/sessions"],
   });
-  const [userPersonality, setUserPersonality] = useState<string>(() => {
-    return localStorage.getItem('peacepad_user_style') || "";
-  });
 
-  // Persist style settings when changed
+  const activeSession = useMemo(
+    () => sessions.find((session) => session.id === activeSessionId) ?? sessions[0] ?? null,
+    [activeSessionId, sessions],
+  );
+
   useEffect(() => {
-    if (userPersonality) {
-      localStorage.setItem('peacepad_user_style', userPersonality);
+    if (!activeSessionId && sessions[0]?.id) {
+      setActiveSessionId(sessions[0].id);
     }
-  }, [userPersonality]);
+  }, [activeSessionId, sessions]);
 
   useEffect(() => {
-    if (coParentPersonality) {
-      localStorage.setItem('peacepad_coparent_style', coParentPersonality);
-    }
-  }, [coParentPersonality]);
-
-  const handleBreathContinue = () => {
-    setShowBreathModal(false);
-  };
-
-  const { data: partnerships = [] } = useQuery<any[]>({
-    queryKey: ['/api/partnerships'],
-    staleTime: 30000,
-  });
-  const hasPartnership = partnerships.length > 0;
-
-  const analyzeMutation = useMutation({
-    mutationFn: async (draft: string) => {
-      const res = await apiRequest('POST', '/api/prep-chat/analyze-draft', { 
-        draft,
-        coParentPersonality: coParentPersonality || undefined,
-        userPersonality: userPersonality || undefined,
-      });
-      return res.json();
-    },
-    onSuccess: (data, draft) => {
-      const safeRevision =
-        typeof data?.suggestedRevision === "string" && data.suggestedRevision.trim().length > 0
-          ? data.suggestedRevision.trim()
-          : (draft || "").trim();
-
-      if (data?.personalityContextApplied) {
-        console.debug("[PrepChat] Personality adaptation applied", data.personalityContext);
+    if (activeSession && !draftInput) {
+      const lastUserMessage = [...activeSession.messages].reverse().find((item) => item.role === "user");
+      if (lastUserMessage?.content) {
+        setDraftInput(lastUserMessage.content);
       }
+    }
+  }, [activeSession, draftInput]);
 
-      setResult({ ...data, suggestedRevision: safeRevision });
-      setEditedResult(safeRevision);
-      setIsEditing(false);
+  const createSession = useMutation({
+    mutationFn: async (payload: { topic: string; emotionalStateStart?: string }) => {
+      const response = await apiRequest("POST", "/api/prep-chat/sessions", {
+        topic: "custom",
+        customTopic: payload.topic,
+        emotionalStateStart: payload.emotionalStateStart || undefined,
+      });
+      return response.json() as Promise<PrepChatSession>;
+    },
+    onSuccess: async (session) => {
+      setActiveSessionId(session.id);
+      await queryClient.invalidateQueries({ queryKey: ["/api/prep-chat/sessions"] });
+      trackEvent("prep_chat_started", { entry_point: entryPoint });
+    },
+  });
+
+  const sendPrepMessage = useMutation({
+    mutationFn: async (payload: { sessionId: string; content: string }) => {
+      const response = await apiRequest("POST", `/api/prep-chat/sessions/${payload.sessionId}/messages`, {
+        content: payload.content,
+      });
+      return response.json() as Promise<{ session: PrepChatSession; coachMessage: string }>;
+    },
+    onSuccess: async (result, variables) => {
+      setComposer("");
+      setDraftInput(variables.content);
+      await queryClient.invalidateQueries({ queryKey: ["/api/prep-chat/sessions"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/prep-chat/sessions", variables.sessionId] });
+
+      const refreshedSession = result.session;
+      const turns = (refreshedSession.messages || []).filter((item) => item.role === "user").length;
+      trackEvent("prep_chat_message_sent", { turn_number: turns });
     },
     onError: () => {
       toast({
-        title: "Something went wrong",
-        description: "Please try again",
+        title: "Prep Chat is unavailable",
+        description: "Please try sending that again.",
         variant: "destructive",
       });
     },
   });
 
-  const handleSend = () => {
-    if (message.trim()) {
-      setOriginalMessage(message.trim());
-      analyzeMutation.mutate(message.trim());
+  const analyzeDraft = useMutation({
+    mutationFn: async (draft: string) => {
+      const response = await apiRequest("POST", "/api/prep-chat/analyze-draft", { draft });
+      return response.json() as Promise<DraftAnalysis>;
+    },
+    onSuccess: async (result) => {
+      const revision = result.suggestedRevision?.trim();
+      setDraftSuggestion(revision || "");
+      setDraftSourceText(draftInput.trim());
+
+      if (revision) {
+        trackEvent("prep_chat_draft_generated", {
+          draft_length: revision.length,
+        });
+      }
+
+      if (activeSession?.id) {
+        await apiRequest("PUT", `/api/prep-chat/sessions/${activeSession.id}`, {
+          draftedMessage: revision || draftInput.trim(),
+          tonePreview: result,
+        });
+        await queryClient.invalidateQueries({ queryKey: ["/api/prep-chat/sessions"] });
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Draft not ready yet",
+        description: "Please try again in a moment.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartSession = async () => {
+    const topic = topicInput.trim();
+    if (!topic) {
+      toast({
+        title: "What do you need to discuss?",
+        description: "Add a quick sentence so PeacePad can help.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const session = await createSession.mutateAsync({
+        topic,
+        emotionalStateStart: feeling || undefined,
+      });
+
+      await sendPrepMessage.mutateAsync({
+        sessionId: session.id,
+        content: topic,
+      });
+    } catch {
+      // Error handled by mutations.
     }
   };
 
-  // Copy puts suggestion INTO the input field (ready to send)
-  const handleCopy = () => {
-    const textToCopy = isEditing ? editedResult : (result?.suggestedRevision || originalMessage || message);
-    setMessage(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({
-      title: "Copied to input",
-      description: "Suggestion is now in your input field",
+  const handleFollowUpSend = async () => {
+    if (!activeSession || !composer.trim()) {
+      return;
+    }
+
+    await sendPrepMessage.mutateAsync({
+      sessionId: activeSession.id,
+      content: composer.trim(),
     });
-    // Also copy to clipboard as a convenience
-    navigator.clipboard.writeText(textToCopy);
   };
 
-  // Redo requests a new alternative suggestion
-  const handleRedo = () => {
-    if (originalMessage) {
-      analyzeMutation.mutate(originalMessage);
+  const handleUseDraft = async () => {
+    const message = (draftSuggestion || draftInput).trim();
+    if (!message) {
+      return;
     }
-  };
 
-  // Reset clears suggestion but preserves originalMessage for future Redo
-  const handleReset = () => {
-    setResult(null);
-    setEditedResult("");
-    setIsEditing(false);
-    // Only restore original if we have one, otherwise keep current input
-    if (originalMessage) {
-      setMessage(originalMessage);
-    }
-    // Keep originalMessage intact so Redo can still work
-  };
+    localStorage.setItem("preparedMessage", message);
+    localStorage.setItem("peacepad_last_prep_chat_draft_at", new Date().toISOString());
+    localStorage.removeItem("peacepad_prep_chat_entry_point");
 
-  const handleSendToChat = () => {
-    const messageToSend = isEditing ? editedResult : (result?.suggestedRevision || originalMessage || message);
-    localStorage.setItem('preparedMessage', messageToSend);
-    
-    if (hasPartnership) {
-      toast({
-        title: "Opening Chat",
-        description: "Your message is ready to send",
+    if (activeSession?.id) {
+      await apiRequest("PUT", `/api/prep-chat/sessions/${activeSession.id}`, {
+        draftedMessage: message,
+        sentToChat: true,
+        outcome: "revised",
       });
-      navigate('/chat');
-    } else {
-      toast({
-        title: "Message Saved",
-        description: "Connect with someone to send this message",
-      });
-      navigate('/chat');
+      await queryClient.invalidateQueries({ queryKey: ["/api/prep-chat/sessions"] });
     }
+
+    trackEvent("prep_chat_draft_used", {
+      turns_in_session: activeSession?.messages.filter((item) => item.role === "user").length ?? 0,
+    });
+
+    setLocation("/chat");
   };
-
-  // Auto-expand textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
-    }
-  }, [message]);
-
-  // Auto-expand edit textarea
-  useEffect(() => {
-    if (editTextareaRef.current && isEditing) {
-      editTextareaRef.current.style.height = 'auto';
-      editTextareaRef.current.style.height = `${Math.min(editTextareaRef.current.scrollHeight, 200)}px`;
-    }
-  }, [editedResult, isEditing]);
 
   return (
     <>
-      <CalmBreathModal isOpen={showBreathModal} onContinue={handleBreathContinue} />
-      
-      <div className="flex flex-col flex-1 min-h-0 bg-background">
-        {/* TOP: Suggested Response Display Area (read-only) */}
-        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4">
-          <div className="max-w-2xl mx-auto w-full">
-            {!result ? (
-              <div className="flex flex-col items-center pt-16 animate-in fade-in duration-700">
-                <img 
-                  src="/icon-512.png" 
-                  alt="PeacePad" 
-                  className="h-16 w-16 mb-4 opacity-70"
-                  data-testid="img-peacepad-logo"
-                />
-                <h1 className="text-xl font-bold text-foreground mb-2 text-center">Before you send that message</h1>
-                <p className="text-muted-foreground text-center text-sm max-w-xs">
-                  Type or speak what you want to say. I'll help you find the right words.
-                </p>
+      <SEOHead
+        title="Prep Chat - PeacePad"
+        description="Plan a hard conversation before you send it."
+        noindex
+      />
+
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4">
+        <Card className="border-border/60 bg-card/80">
+          <CardHeader>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle>Prep Chat</CardTitle>
+                <CardDescription>
+                  Warm, practical coaching for the conversations you do not want to get wrong.
+                </CardDescription>
               </div>
-            ) : (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                <div className="text-center mb-6">
-                  <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Here's a calmer way to say it</p>
-                </div>
-                
-                {isEditing ? (
-                  <div className="relative">
+              <Badge variant="outline" className="w-fit bg-muted/40">
+                AI communication coach
+              </Badge>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <div className="grid flex-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <Card className="flex min-h-0 flex-col border-border/60">
+            <CardHeader className="border-b border-border/60">
+              <CardTitle className="text-lg">Coach conversation</CardTitle>
+              <CardDescription>Tell PeacePad what you need to talk about and ask follow-up questions.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-4">
+              {!activeSession ? (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="prep-topic">What do you need to discuss?</Label>
                     <Textarea
-                      ref={editTextareaRef}
-                      value={editedResult}
-                      onChange={(e) => setEditedResult(e.target.value)}
-                      className="text-lg leading-relaxed rounded-2xl border-2 border-blue-200/50 dark:border-blue-800/30 p-4 bg-blue-50/40 dark:bg-blue-950/20"
-                      data-testid="input-edit-suggestion"
+                      id="prep-topic"
+                      value={topicInput}
+                      onChange={(event) => setTopicInput(event.target.value)}
+                      placeholder="For example: I need to ask for a pickup change on Thursday."
+                      className="min-h-[140px] resize-none"
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label>How are you feeling about this?</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {FEELINGS.map((item) => (
+                        <Button
+                          key={item}
+                          type="button"
+                          size="sm"
+                          variant={feeling === item ? "default" : "outline"}
+                          onClick={() => setFeeling(item)}
+                        >
+                          {item}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Quick starts</Label>
+                    <div className="grid gap-2">
+                      {STARTERS.map((starter) => (
+                        <button
+                          key={starter}
+                          type="button"
+                          className="rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-left text-sm transition hover:bg-muted/40"
+                          onClick={() => setTopicInput(starter)}
+                        >
+                          {starter}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    onClick={handleStartSession}
+                    disabled={createSession.isPending || sendPrepMessage.isPending}
+                  >
+                    {createSession.isPending || sendPrepMessage.isPending ? (
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="mr-2 h-4 w-4" />
+                    )}
+                    Start Prep Chat
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+                    {activeSession.messages.map((item, index) => (
+                      <div
+                        key={`${item.timestamp}-${index}`}
+                        className={item.role === "coach" ? "mr-6" : "ml-6"}
+                      >
+                        <div
+                          className={[
+                            "rounded-2xl border p-4 shadow-sm",
+                            item.role === "coach"
+                              ? "border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/20"
+                              : "border-border/60 bg-background",
+                          ].join(" ")}
+                        >
+                          <div className="mb-2 flex items-center gap-2">
+                            <Badge variant="outline" className="bg-background/70">
+                              {item.role === "coach" ? "Coach" : "You"}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(item.timestamp).toLocaleTimeString([], {
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed">{item.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-3 border-t border-border/60 pt-4">
+                    <Textarea
+                      value={composer}
+                      onChange={(event) => setComposer(event.target.value)}
+                      placeholder='Ask a follow-up like "What if they say no?" or "Make it shorter."'
+                      className="min-h-[110px] resize-none"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleFollowUpSend}
+                      disabled={!composer.trim() || sendPrepMessage.isPending}
+                    >
+                      {sendPrepMessage.isPending ? (
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                      )}
+                      Send to coach
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60">
+            <CardHeader className="border-b border-border/60">
+              <CardTitle className="text-lg">Draft a message</CardTitle>
+              <CardDescription>Turn your thinking into a calmer message you can send.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 p-4">
+              <div className="space-y-2">
+                <Label htmlFor="draft-input">Draft</Label>
+                <Textarea
+                  id="draft-input"
+                  value={draftInput}
+                  onChange={(event) => setDraftInput(event.target.value)}
+                  placeholder="Type the message you want help with."
+                  className="min-h-[170px] resize-none"
+                />
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => analyzeDraft.mutate(draftInput.trim())}
+                disabled={!draftInput.trim() || analyzeDraft.isPending}
+              >
+                {analyzeDraft.isPending ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <div className="p-6 bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/40 dark:border-blue-800/30 rounded-2xl">
-                    <p className="text-lg leading-relaxed whitespace-pre-wrap text-foreground" data-testid="text-suggested-message">
-                      {result.suggestedRevision || originalMessage || message}
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Generate calmer draft
+              </Button>
+
+              {draftSuggestion && (
+                <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+                  <div className="space-y-1">
+                    <p className="font-medium">Suggested draft</p>
+                    <p className="text-sm text-muted-foreground">
+                      {analyzeDraft.data?.howItMightBePerceived || "A clearer, calmer version for your co-parent."}
                     </p>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* BOTTOM: Action Buttons + Style Settings + Input (close together for easy access) */}
-        <div className="border-t bg-background px-4 py-3 safe-area-bottom">
-          <div className="max-w-2xl mx-auto w-full space-y-3">
-            
-            {/* Action Buttons - ONLY shown when there's a result, positioned close to input */}
-            {result && (
-              <div className="grid grid-cols-4 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopy}
-                  className="flex flex-col items-center gap-1 py-2 rounded-xl"
-                  data-testid="button-copy"
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                  <span className="text-xs">{copied ? "Done" : "Copy"}</span>
-                </Button>
-                
-                <Button
-                  variant={isEditing ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="flex flex-col items-center gap-1 py-2 rounded-xl"
-                  data-testid="button-edit"
-                >
-                  <Pencil className="h-4 w-4" />
-                  <span className="text-xs">{isEditing ? "Done" : "Edit"}</span>
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRedo}
-                  disabled={analyzeMutation.isPending}
-                  className="flex flex-col items-center gap-1 py-2 rounded-xl"
-                  data-testid="button-redo"
-                >
-                  {analyzeMutation.isPending ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  <span className="text-xs">Redo</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleReset}
-                  className="flex flex-col items-center gap-1 py-2 rounded-xl"
-                  data-testid="button-reset"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  <span className="text-xs">Reset</span>
-                </Button>
-              </div>
-            )}
-
-            {/* Send to Chat - only when there's a result */}
-            {result && (
-              <Button
-                onClick={handleSendToChat}
-                className="w-full rounded-xl"
-                variant="default"
-                data-testid="button-send-to-chat"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Send to Chat
-              </Button>
-            )}
-
-            {/* Persistent Style Settings - Always Visible */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Your personality</Label>
-                <Select value={userPersonality} onValueChange={setUserPersonality}>
-                  <SelectTrigger data-testid="select-user-personality" className="text-xs rounded-lg bg-background">
-                    <SelectValue placeholder="Select..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PERSONALITY_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.value} - {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Their personality</Label>
-                <Select value={coParentPersonality} onValueChange={setCoParentPersonality}>
-                  <SelectTrigger data-testid="select-coparent-personality" className="text-xs rounded-lg bg-background">
-                    <SelectValue placeholder="Select..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PERSONALITY_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.value} - {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Input Field */}
-            <div
-              className={`bg-background border-2 rounded-2xl p-2 flex items-center gap-2 transition-colors ${
-                voiceInputStatus === "listening"
-                  ? "border-destructive/50"
-                  : voiceInputStatus === "transcribing"
-                    ? "border-primary/50"
-                    : "border-primary/20"
-              }`}
-            >
-              <div className="flex-1 relative flex items-center min-w-0 pl-2">
-                <Textarea
-                  ref={textareaRef}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder={
-                    voiceInputStatus === "listening"
-                      ? "Listening... speak naturally"
-                      : voiceInputStatus === "transcribing"
-                        ? "Transcribing your voice note..."
-                        : "What do you want to say?"
-                  }
-                  className="w-full text-base resize-none border-0 bg-transparent p-2 leading-relaxed placeholder:text-muted-foreground/50"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  data-testid="input-message"
-                />
-                <div className="absolute right-0 bottom-1">
-                  <PracticeVoiceRecorder 
-                    onRecordingStart={() => {
-                      setMessage("");
-                      setResult(null);
-                    }}
-                    onStatusChange={setVoiceInputStatus}
-                    onTranscription={(text) => {
-                      if (text) {
-                        setMessage(text);
-                      }
-                    }}
-                    disabled={analyzeMutation.isPending}
-                  />
+                  <div className="rounded-xl border border-border/60 bg-background/80 p-3 text-sm leading-relaxed">
+                    {draftSuggestion}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" onClick={handleUseDraft}>
+                      <Check className="mr-2 h-4 w-4" />
+                      Use in Messages
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDraftInput(draftSuggestion)}
+                    >
+                      Keep editing here
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <Button
-                size="icon"
-                onClick={handleSend}
-                disabled={!message.trim() || analyzeMutation.isPending}
-                className="rounded-full shrink-0"
-                variant={message.trim() ? "default" : "ghost"}
-                data-testid="button-send"
-              >
-                {analyzeMutation.isPending ? (
-                  <RefreshCw className="h-5 w-5 animate-spin" />
-                ) : (
-                  <ArrowUp className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-            {(voiceInputStatus === "listening" || voiceInputStatus === "transcribing") && (
-              <p className="text-xs text-muted-foreground px-2" data-testid="text-prep-voice-hint">
-                {voiceInputStatus === "listening"
-                  ? "Listening now. Tap the mic again when you are done speaking."
-                  : "Converting speech to text..."}
-              </p>
-            )}
-          </div>
+              {activeSession && (
+                <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                  <p className="text-sm font-medium">Recent sessions</p>
+                  <div className="mt-3 space-y-2">
+                    {sessions.slice(0, 3).map((session) => (
+                      <button
+                        key={session.id}
+                        type="button"
+                        className={[
+                          "w-full rounded-xl border px-3 py-3 text-left text-sm transition",
+                          session.id === activeSession.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border/60 bg-background hover:bg-muted/30",
+                        ].join(" ")}
+                        onClick={() => {
+                          setActiveSessionId(session.id);
+                          setDraftSuggestion("");
+                          setDraftInput(session.draftedMessage || session.customTopic || "");
+                          setDraftSourceText("");
+                        }}
+                      >
+                        <div className="font-medium">{session.customTopic || "Prep Chat session"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(session.createdAt).toLocaleDateString()}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!activeSession && (
+                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-5 text-sm text-muted-foreground">
+                  Start a Prep Chat conversation to save your coaching history here.
+                </div>
+              )}
+
+              {draftSourceText && (
+                <p className="text-xs text-muted-foreground">
+                  Based on: "{draftSourceText}"
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </>

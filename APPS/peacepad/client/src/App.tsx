@@ -1,7 +1,7 @@
 import { useState, useCallback, lazy, Suspense, useEffect, useRef } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,12 +18,12 @@ import { CallProvider, useCallContext } from "@/contexts/CallContext";
 import { WebRTCProvider } from "@/contexts/WebRTCContext";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useToast } from "@/hooks/use-toast";
 import { MessageCircle } from "lucide-react";
 import { unlockAudio } from "@/utils/ringManager";
 import { initializeRemoteAudioManager } from "./call/remoteAudioManager";
 import { PageSkeleton, AuthLoadingSkeleton } from "@/components/PageSkeleton";
 import { VersionGuard } from "@/components/VersionGuard";
+import { identifyAnalyticsUser, trackSessionStarted } from "@/lib/analytics";
 
 // Lazy load non-critical UI components for better initial load performance
 const WhatsNewModal = lazy(() => import("@/components/WhatsNewModal").then(m => ({ default: m.WhatsNewModal })));
@@ -48,30 +48,9 @@ import SettingsPage from "@/pages/settings";
 import HealthPanelPage from "@/pages/health-panel";
 import NotFound from "@/pages/not-found";
 import PrepChatPage from "@/pages/prep-chat";
-import DashboardPage from "@/pages/dashboard";
 
 // Lazy load heavy/infrequently used pages for better performance
 const SchedulingPage = lazy(() => import("@/pages/scheduling"));
-const TasksPage = lazy(() => import("@/pages/tasks"));
-const ExpensesPage = lazy(() => import("@/pages/expenses"));
-const ExpenseDetailPage = lazy(() => import("@/pages/expense-detail"));
-const NotesPage = lazy(() => import("@/pages/notes"));
-const ChildUpdatesPage = lazy(() => import("@/pages/child-updates"));
-const PetsPage = lazy(() => import("@/pages/pets"));
-const ProgressPage = lazy(() => import("@/pages/progress"));
-const AgentSettingsPage = lazy(() => import("@/pages/agent-settings"));
-const ParentingTipsPage = lazy(() => import("@/pages/parenting-tips"));
-const WeatherActivitiesPage = lazy(() => import("@/pages/weather-activities"));
-const StorybookCreatorPage = lazy(() => import("@/pages/storybook-creator"));
-const ShoppingListPage = lazy(() => import("@/pages/shopping-list"));
-const TherapistLocatorPage = lazy(() => import("@/pages/therapist-locator"));
-const TherapistDirectoryPage = lazy(() => import("@/pages/therapist-directory"));
-const SafetyPlanPage = lazy(() => import("@/pages/support/safety-plan"));
-const AuditTrailPage = lazy(() => import("@/pages/audit-trail"));
-const JoinCallPage = lazy(() => import("@/pages/join-call"));
-const CallsPage = lazy(() => import("@/pages/calls"));
-const CallPreferencesPage = lazy(() => import("@/pages/call-preferences"));
-const ConchModePage = lazy(() => import("@/pages/conch-mode"));
 const TermsPage = lazy(() => import("@/pages/terms"));
 const SupportPage = lazy(() => import("@/pages/support"));
 const PrivacyPage = lazy(() => import("@/pages/privacy"));
@@ -84,20 +63,43 @@ const AdminUsersPage = lazy(() => import("@/pages/admin-users"));
 const AdminPartnershipsPage = lazy(() => import("@/pages/admin-partnerships"));
 const AdminMessagesPage = lazy(() => import("@/pages/admin-messages"));
 const HelpPage = lazy(() => import("@/pages/help"));
-const MessagingFeaturePage = lazy(() => import("@/pages/features/messaging"));
-const CalendarFeaturePage = lazy(() => import("@/pages/features/calendar"));
-const ExpensesFeaturePage = lazy(() => import("@/pages/features/expenses"));
-const SupportFeaturePage = lazy(() => import("@/pages/features/support"));
-const BetaWelcome = lazy(() => import("@/pages/beta/Welcome"));
-const BetaGettingStarted = lazy(() => import("@/pages/beta/GettingStarted"));
-const BetaFeatures = lazy(() => import("@/pages/beta/Features"));
-const BetaFeedbackGuide = lazy(() => import("@/pages/beta/FeedbackGuide"));
-const BetaFAQ = lazy(() => import("@/pages/beta/FAQ"));
 const JoinPartnershipPage = lazy(() => import("@/pages/join-partnership"));
 
 // Loading fallback component - uses skeleton for native feel
 function PageLoader() {
   return <PageSkeleton variant="default" />;
+}
+
+function hasMeaningfulDisplayName(value?: string | null): boolean {
+  const name = (value || "").trim();
+  if (!name || name === "PeacePad User") {
+    return false;
+  }
+  return !/^guest[a-z0-9]+$/i.test(name);
+}
+
+function HomeResolverPage() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { data: partnerships = [] } = useQuery<any[]>({
+    queryKey: ["/api/partnerships"],
+    enabled: Boolean(user),
+  });
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    if (user.activePartnershipId || partnerships.length > 0) {
+      setLocation("/chat");
+      return;
+    }
+
+    setLocation("/settings");
+  }, [partnerships.length, setLocation, user]);
+
+  return <PageLoader />;
 }
 
 function Router() {
@@ -148,12 +150,14 @@ function Router() {
       return null;
     }
 
-    const needsOnboarding = !user.displayName;
-    const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
+    const hasCompletedOnboarding = Boolean(localStorage.getItem(`onboarding_completed_${user.id}`));
+    const needsOnboarding =
+      !hasCompletedOnboarding &&
+      (!hasMeaningfulDisplayName(user.displayName) || Boolean(user.isGuest));
     const isOnOnboardingPage = location === "/onboarding";
     const isOnJoinPage = location.startsWith("/join/");
 
-    if (needsOnboarding && !hasCompletedOnboarding && !isOnOnboardingPage && !isOnJoinPage) {
+    if (needsOnboarding && !isOnOnboardingPage && !isOnJoinPage) {
       setLocation("/onboarding");
       return null;
     }
@@ -164,33 +168,14 @@ function Router() {
       <>
         <Suspense fallback={<PageLoader />}>
           <Switch>
-            <Route path="/" component={PrepChatPage} />
+            <Route path="/" component={HomeResolverPage} />
             <Route path="/chat" component={ChatPage} />
-            <Route path="/calls" component={CallsPage} />
-            <Route path="/call-preferences" component={CallPreferencesPage} />
-            <Route path="/conch-mode" component={ConchModePage} />
             <Route path="/onboarding" component={OnboardingPage} />
             <Route path="/auth/callback" component={AuthCallbackPage} />
             <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
             <Route path="/health-panel" component={HealthPanelPage} />
             <Route path="/scheduling" component={SchedulingPage} />
-            <Route path="/tasks" component={TasksPage} />
-            <Route path="/expenses" component={ExpensesPage} />
-            <Route path="/expense/:id" component={ExpenseDetailPage} />
-            <Route path="/notes" component={NotesPage} />
-            <Route path="/child-updates" component={ChildUpdatesPage} />
-            <Route path="/pets" component={PetsPage} />
-            <Route path="/progress" component={ProgressPage} />
             <Route path="/prep-chat" component={PrepChatPage} />
-            <Route path="/agent-settings" component={AgentSettingsPage} />
-            <Route path="/parenting-tips" component={ParentingTipsPage} />
-            <Route path="/weather-activities" component={WeatherActivitiesPage} />
-            <Route path="/storybook-creator" component={StorybookCreatorPage} />
-            <Route path="/shopping-list" component={ShoppingListPage} />
-            <Route path="/therapist-locator" component={TherapistLocatorPage} />
-            <Route path="/therapist-directory" component={TherapistDirectoryPage} />
-            <Route path="/support/safety-plan" component={SafetyPlanPage} />
-            <Route path="/audit-trail" component={AuditTrailPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route path="/admin" component={AdminDashboard} />
             <Route path="/admin/users" component={AdminUsersPage} />
@@ -204,18 +189,7 @@ function Router() {
             <Route path="/privacy" component={PrivacyPage} />
             <Route path="/delete-account" component={DeleteAccountPage} />
             <Route path="/resources" component={ResourcesPage} />
-            <Route path="/features/messaging" component={MessagingFeaturePage} />
-            <Route path="/features/calendar" component={CalendarFeaturePage} />
-            <Route path="/features/expenses" component={ExpensesFeaturePage} />
-            <Route path="/features/support" component={SupportFeaturePage} />
-            <Route path="/beta/welcome" component={BetaWelcome} />
-            <Route path="/beta/getting-started" component={BetaGettingStarted} />
-            <Route path="/beta/features" component={BetaFeatures} />
-            <Route path="/beta/feedback-guide" component={BetaFeedbackGuide} />
-            <Route path="/beta/faq" component={BetaFAQ} />
             <Route path="/join/:code" component={JoinPartnershipPage} />
-            <Route path="/call/:code" component={JoinCallPage} />
-            <Route path="/call" component={JoinCallPage} />
             <Route component={NotFound} />
           </Switch>
         </Suspense>
@@ -238,13 +212,7 @@ function Router() {
         <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
         <Route path="/health-panel" component={HealthPanelPage} />
         <Route path="/join/:code" component={JoinPartnershipPage} />
-        <Route path="/call/:code" component={JoinCallPage} />
-        <Route path="/call" component={JoinCallPage} />
         <Route path="/resources" component={ResourcesPage} />
-        <Route path="/features/messaging" component={MessagingFeaturePage} />
-        <Route path="/features/calendar" component={CalendarFeaturePage} />
-        <Route path="/features/expenses" component={ExpensesFeaturePage} />
-        <Route path="/features/support" component={SupportFeaturePage} />
         <Route path="/privacy" component={PrivacyPage} />
         <Route path="/support" component={SupportPage} />
         <Route path="/terms" component={TermsPage} />
@@ -401,6 +369,7 @@ export default function App() {
                 <CallProvider>
                   <WebRTCContextWrapper>
                     <AuthWrapper>
+                      <SessionTracker />
                       <SidebarProvider style={style as React.CSSProperties}>
                         <div 
                           className="flex w-full"
@@ -565,9 +534,7 @@ function WebRTCContextWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
-  const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const { toast } = useToast();
   const callContext = useCallContext();
 
   const activeCallPhases = ['ringing', 'dialing', 'connecting', 'active'];
@@ -672,6 +639,30 @@ function ConditionalLogo() {
       <span className="font-bold text-lg tracking-tight">PeacePad</span>
     </div>
   );
+}
+
+function SessionTracker() {
+  const { user, isAuthenticated } = useAuth();
+  const trackedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      trackedRef.current = null;
+      return;
+    }
+
+    identifyAnalyticsUser(user);
+    if (trackedRef.current === user.id) {
+      return;
+    }
+
+    trackedRef.current = user.id;
+    trackSessionStarted({
+      is_guest: Boolean(user.isGuest),
+    });
+  }, [isAuthenticated, user]);
+
+  return null;
 }
 
 function AuthenticatedWhatsNew() {

@@ -51,7 +51,7 @@ export function ConnectWithPartner({
 
   // Check if we now have an active partnership with a co-parent
   const activePartnership = partnerships.find(
-    (p) => p.user1Id && p.user2Id && p.status === 'active'
+    (p) => p.user1Id && p.user2Id
   );
 
   // Redirect to chat when partnership is formed
