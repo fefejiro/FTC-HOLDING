@@ -18,6 +18,38 @@ const TIMELINE_VALUES = new Set([
   "8-12-weeks",
   "12-weeks-plus"
 ]);
+const ENGAGEMENT_TYPE_VALUES = new Set([
+  "scoped-first-pass",
+  "prototype-direction-sprint",
+  "build-execution-track",
+  "not-sure-yet"
+]);
+const BUSINESS_TYPE_VALUES = new Set([
+  "local-services-business",
+  "startup-founder-led",
+  "internal-operations-team",
+  "product-team",
+  "other"
+]);
+const MAIN_GOAL_VALUES = new Set([
+  "get-more-leads",
+  "launch-something-fast",
+  "clarify-product-direction",
+  "fix-a-workflow",
+  "improve-operations-visibility",
+  "other"
+]);
+const URGENCY_VALUES = new Set([
+  "need-direction-this-week",
+  "need-movement-this-month",
+  "planning-next-quarter",
+  "just-exploring"
+]);
+const BUYER_READINESS_VALUES = new Set([
+  "ready-to-start-after-scope",
+  "need-help-deciding-approach",
+  "need-internal-alignment-first"
+]);
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 5;
 const RATE_LIMIT_ENABLED = process.env.NODE_ENV === "production";
@@ -28,6 +60,11 @@ type IntakePayload = {
   projectName?: unknown;
   projectType?: unknown;
   projectIdea?: unknown;
+  engagementType?: unknown;
+  businessType?: unknown;
+  mainGoal?: unknown;
+  urgency?: unknown;
+  buyerReadiness?: unknown;
   budgetRange?: unknown;
   timeline?: unknown;
   notes?: unknown;
@@ -110,6 +147,12 @@ export async function POST(req: NextRequest) {
   const projectName = normalizeText(payload.projectName);
   const projectType = normalizeText(payload.projectType) || "Not sure yet";
   const projectIdea = normalizeText(payload.projectIdea);
+  const engagementType = normalizeText(payload.engagementType) || "not-sure-yet";
+  const businessType = normalizeText(payload.businessType) || "other";
+  const mainGoal = normalizeText(payload.mainGoal) || "other";
+  const urgency = normalizeText(payload.urgency) || "just-exploring";
+  const buyerReadiness =
+    normalizeText(payload.buyerReadiness) || "need-help-deciding-approach";
   const budgetRange = normalizeText(payload.budgetRange);
   const timeline = normalizeText(payload.timeline);
   const notes = normalizeText(payload.notes);
@@ -155,6 +198,26 @@ export async function POST(req: NextRequest) {
     return badRequest("Please select a valid timeline.");
   }
 
+  if (!ENGAGEMENT_TYPE_VALUES.has(engagementType)) {
+    return badRequest("Please select a valid engagement type.");
+  }
+
+  if (!BUSINESS_TYPE_VALUES.has(businessType)) {
+    return badRequest("Please select a valid business type.");
+  }
+
+  if (!MAIN_GOAL_VALUES.has(mainGoal)) {
+    return badRequest("Please select a valid main goal.");
+  }
+
+  if (!URGENCY_VALUES.has(urgency)) {
+    return badRequest("Please select a valid urgency.");
+  }
+
+  if (!BUYER_READINESS_VALUES.has(buyerReadiness)) {
+    return badRequest("Please select a valid buyer readiness state.");
+  }
+
   if (!Number.isFinite(startedAtValue) || Date.now() - startedAtValue < 800) {
     return badRequest("Submission flagged as automated. Please retry.", 422);
   }
@@ -169,6 +232,11 @@ export async function POST(req: NextRequest) {
     projectName,
     projectType,
     projectIdea,
+    engagementType,
+    businessType,
+    mainGoal,
+    urgency,
+    buyerReadiness,
     budgetRange,
     timeline,
     notes,
@@ -184,6 +252,11 @@ export async function POST(req: NextRequest) {
     budgetRange: lead.budgetRange,
     timeline: lead.timeline,
     projectType: lead.projectType,
+    engagementType: lead.engagementType,
+    businessType: lead.businessType,
+    mainGoal: lead.mainGoal,
+    urgency: lead.urgency,
+    buyerReadiness: lead.buyerReadiness,
     ateamAttached: Boolean(ateamWorkflow || ateamDemo),
     ateamWorkflowAttached: Boolean(ateamWorkflow)
   });
@@ -233,6 +306,7 @@ export async function POST(req: NextRequest) {
           requestId: lead.requestId,
           email: lead.email,
           summary: lead.projectIdea,
+          engagementType: lead.engagementType,
           projectType: lead.projectType,
           receivedAt: lead.receivedAt
         })

@@ -432,18 +432,22 @@ export default function AteamWorkflowClient({
           {!run && !isWorking && !workflowReady && (
             <section className="wf-stage wf-stage--intake">
               <div className="wf-intro">
-                <p className="wf-intro-eyebrow">Idea to action</p>
+                <p className="wf-intro-eyebrow">Operator-led AI build studio</p>
                 <h1 className="wf-intro-headline">
-                  Drop an idea.<br />Get a build-ready brief.
+                  Turn a rough idea into a
+                  <br />
+                  scoped, buildable system fast.
                 </h1>
                 <p className="wf-intro-lead">
-                  Six agents break it down — concept, prototype direction, build scope, and next steps. Ready for Una Labs to move on.
+                  ATEAM structures the intake, shapes the first pass, and hands Una Labs a
+                  clearer next move for websites, lead systems, workflow tools, and early
+                  product builds.
                 </p>
               </div>
 
               <div className="wf-intake-card">
                 <div className="wf-intake-label-row">
-                  <label className="wf-field-label" htmlFor="wf-idea">Your idea</label>
+                  <label className="wf-field-label" htmlFor="wf-idea">Drop the rough idea</label>
                   {supportsVoice && (
                     <button
                       type="button"
@@ -465,7 +469,7 @@ export default function AteamWorkflowClient({
                   rows={6}
                   value={idea}
                   onChange={(e) => setIdea(e.target.value)}
-                  placeholder="Example: I want a WhatsApp-first system that helps food vendors take orders, route them to staff, and show status back clearly."
+                  placeholder="Example: We need a WhatsApp-first order flow that captures requests, routes them to staff, and shows live status without manual follow-up."
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleStartRun();
                   }}
@@ -499,7 +503,7 @@ export default function AteamWorkflowClient({
                   <p className="wf-intake-hint">
                     {workflowServiceState === "checking" ? "Connecting to ATEAM…" :
                      workflowServiceState === "unavailable" ? "ATEAM is offline — try again shortly" :
-                     "One paragraph is enough. ATEAM handles the rest."}
+                     "One paragraph is enough. ATEAM turns it into a scoped first pass."}
                   </p>
                 </div>
               </div>
@@ -507,10 +511,10 @@ export default function AteamWorkflowClient({
               {/* What you'll get */}
               <div className="wf-expect-row" aria-label="What ATEAM produces">
                 {[
-                  { icon: "◎", label: "Concept brief", detail: "Audience, first win, recommended path" },
-                  { icon: "⬡", label: "Prototype direction", detail: "What the first version looks and does" },
-                  { icon: "✦", label: "Build note", detail: "Scope, risk, and tech direction" },
-                  { icon: "→", label: "Next steps", detail: "Clear action items for Una Labs to execute" },
+                  { icon: "◎", label: "Scoped first pass", detail: "Problem, audience, and the shortest believable path" },
+                  { icon: "⬡", label: "Prototype direction", detail: "What the first version should do and prove" },
+                  { icon: "✦", label: "Build note", detail: "Scope, risk, lane, and technical direction" },
+                  { icon: "→", label: "Next move", detail: "A handoff Una Labs can review and execute" },
                 ].map((item) => (
                   <div key={item.label} className="wf-expect-item">
                     <span className="wf-expect-icon" aria-hidden="true">{item.icon}</span>
@@ -520,6 +524,22 @@ export default function AteamWorkflowClient({
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="wf-fit-strip" aria-label="Who ATEAM is best for">
+                <div className="wf-fit-card">
+                  <p className="wf-fit-title">Best for teams that need a clear next step fast</p>
+                  <ul className="wf-fit-list">
+                    <li>Local services businesses needing lead and ops systems</li>
+                    <li>Founders who need a believable prototype path</li>
+                    <li>Teams shaping workflow or internal tool direction</li>
+                    <li>Operators with messy process problems that need structure</li>
+                  </ul>
+                </div>
+                <p className="wf-fit-note">
+                  Not ideal for long procurement cycles, broad RFP shopping, or projects with no
+                  direct owner.
+                </p>
               </div>
             </section>
           )}
@@ -790,9 +810,9 @@ export default function AteamWorkflowClient({
               {/* CTA to Una Labs */}
               <div className="wf-pack-cta">
                 <div className="wf-pack-cta-copy">
-                  <h2 className="wf-pack-cta-headline">Ready to build it?</h2>
+                  <h2 className="wf-pack-cta-headline">Move this into a real scoped engagement.</h2>
                   <p className="wf-pack-cta-body">
-                    Una Labs takes this pack and executes: demo, prototype, MVP, or full product. Send it over and get a scoped reply.
+                    This pack becomes the commercial starting point: scoped first pass, prototype direction sprint, or build execution track. Send it over and get the shortest credible next step back.
                   </p>
                 </div>
                 <div className="wf-pack-cta-actions">
@@ -852,3 +872,4 @@ export default function AteamWorkflowClient({
     </div>
   );
 }
+

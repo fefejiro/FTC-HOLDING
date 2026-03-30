@@ -20,10 +20,11 @@ export default function WorkPageClient() {
     <div className="container page-content client-launches-page">
       <section className="client-launches-hero">
         <p className="eyebrow">Client Launches</p>
-        <h1>Live delivery snapshots, with the client identity carried through the work.</h1>
+        <h1>Proof that Una Labs can scope and ship real systems.</h1>
         <p className="page-intro">
-          Client Launches shows real onboarding and setup work in progress. Products stays reserved
-          for Una Labs-owned tools like PeacePad, SayWetin, and ATEAM.
+          Client Launches shows the delivery side of the studio: real onboarding, real operating
+          context, and real systems in motion. Products stays reserved for Una Labs-owned tools
+          like PeacePad, SayWetin, Dispatch, and ATEAM.
         </p>
       </section>
 
@@ -65,6 +66,10 @@ export default function WorkPageClient() {
             <div>
               <p className="client-launch-service">{featuredLaunch.service}</p>
               <p className="client-launch-summary">{featuredLaunch.summary}</p>
+              <p className="muted">
+                This is the kind of work Una Labs is built to do: take a rough operational or
+                growth problem, scope it quickly, and move it into a live system.
+              </p>
             </div>
             <div className="proof-tags" aria-label={`${featuredLaunch.tileTitle} tags`}>
               {featuredLaunch.tags.map((tag) => (
@@ -110,7 +115,7 @@ export default function WorkPageClient() {
           <div className="section-heading home-section-heading">
             <p className="eyebrow">Also live</p>
             <h2>More client launches</h2>
-            <p>Live websites and lead systems built for clients and actively serving their markets.</p>
+            <p>Live websites, lead systems, and delivery tracks that show how Una Labs turns scoped work into operating reality.</p>
           </div>
           <div className="cards-grid cards-grid-2 client-launches-grid">
             {additionalLaunches.map((launch) => (

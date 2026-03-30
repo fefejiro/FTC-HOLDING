@@ -1,7 +1,5 @@
 export const dynamic = "force-static";
 
-import { serviceTracks } from "../../lib/content";
-import ServiceCard from "../components/ServiceCard";
 import WorkIntakeForm from "../components/WorkIntakeForm";
 
 export const metadata = {
@@ -20,6 +18,24 @@ function readSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? String(value[0] || "") : String(value || "");
 }
 
+const engagementOffers = [
+  {
+    title: "Scoped First Pass",
+    summary: "Best when the problem is still messy and you need the shortest believable next move.",
+    meta: "2-5 business days - decision-ready first pass"
+  },
+  {
+    title: "Prototype Direction Sprint",
+    summary: "Best when you need a credible first version, tighter boundaries, and a real implementation path.",
+    meta: "1-2 weeks - prototype direction and system framing"
+  },
+  {
+    title: "Build Execution Track",
+    summary: "Best when you already know the system needs to get built and want operator-led delivery.",
+    meta: "Phased delivery - execution, iteration, and handoff"
+  }
+] as const;
+
 export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) {
   const isAteamHandoff = readSingleParam(searchParams?.from).trim().toLowerCase() === "ateam";
 
@@ -27,32 +43,45 @@ export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) 
     <div className="container page-content work-intake-page">
       <section className="work-intake-hero">
         <p className="eyebrow">{isAteamHandoff ? "ATEAM handoff" : "Start a Project"}</p>
-        <h1>{isAteamHandoff ? "ATEAM already shaped the first pass." : "Turn the idea into a scoped next step."}</h1>
+        <h1>{isAteamHandoff ? "ATEAM already shaped the first pass." : "Start with the shortest credible next step."}</h1>
         <p className="page-intro">
           {isAteamHandoff
-            ? "You do not need to rewrite the idea. ATEAM already attached the intent, the visible work, and the first output pack. Just tell Una Labs where to reply and add any optional delivery context."
-            : "If you need a fast website, stronger lead capture, or a practical AI-assisted workflow, Una Labs can scope the shortest credible path to a working setup."}
+            ? "You do not need to rewrite the idea. ATEAM already attached the intent, the visible work, and the first output pack. Add the missing business context and Una Labs can respond with the next commercial move."
+            : "This request is for teams that need a clear path, not a vague consultation. Una Labs uses it to decide whether the right next move is a scoped first pass, prototype direction sprint, or build execution track."}
         </p>
       </section>
 
-      {isAteamHandoff ? null : (
-        <div className="cards-grid cards-grid-3 work-intake-track-grid">
-          {serviceTracks.map((track) => (
-            <ServiceCard key={track.audience} track={track} />
+      <section className="work-intake-offer-strip" aria-label="How Una Labs starts engagements">
+        <div className="section-heading home-section-heading">
+          <p className="eyebrow">How engagements start</p>
+          <h2>{isAteamHandoff ? "ATEAM already handled the rough first pass." : "Choose the commercial path that fits the problem."}</h2>
+          <p>
+            {isAteamHandoff
+              ? "The handoff below already carries the brief. Use this request to add readiness, urgency, and the business outcome that matters most."
+              : "The goal is to shorten time-to-decision. We are looking for the smallest credible next move, not a long discovery cycle."}
+          </p>
+        </div>
+        <div className="cards-grid cards-grid-3 work-intake-proof-grid">
+          {engagementOffers.map((offer) => (
+            <article key={offer.title} className="card work-intake-proof-card">
+              <p className="status-pill">{offer.title}</p>
+              <p>{offer.summary}</p>
+              <p className="muted">{offer.meta}</p>
+            </article>
           ))}
         </div>
-      )}
+      </section>
 
       <section className="intake-card work-intake-shell">
         <div className="work-intake-shell-head">
           <div>
             <p className="card-kicker">{isAteamHandoff ? "Continue from ATEAM" : "Project request"}</p>
-            <h2>{isAteamHandoff ? "Send the ATEAM handoff" : "Send a setup request"}</h2>
+            <h2>{isAteamHandoff ? "Send the ATEAM handoff" : "Send the setup request"}</h2>
           </div>
           <p className="muted">
             {isAteamHandoff
-              ? "The attached ATEAM brief will carry through automatically. No second idea form."
-              : "If you arrived from ATEAM, the form will carry your workflow pack or demo output automatically."}
+              ? "The attached ATEAM brief will carry through automatically. Use this to confirm fit, urgency, and the best next offer."
+              : "This is not a generic contact form. It is how Una Labs decides the fastest credible path into a real scoped engagement."}
           </p>
         </div>
         <WorkIntakeForm />
@@ -60,3 +89,4 @@ export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) 
     </div>
   );
 }
+

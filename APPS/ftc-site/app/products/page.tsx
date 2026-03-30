@@ -80,10 +80,11 @@ export default function ProductsPage() {
     <div className="container page-content products-page">
       <section className="products-intro">
         <p className="eyebrow">Products</p>
-        <h1>Products</h1>
+        <h1>Products built inside Una Labs</h1>
         <p className="page-intro">
-          PeacePad, SayWetin, and Dispatch are public Una Labs products. ATEAM is the guided
-          workflow system that turns rough ideas into structured next steps and clean project handoff.
+          These products are proof that Una Labs ships real systems. PeacePad, SayWetin, and
+          Dispatch show public execution. ATEAM shows how rough ideas become structured next
+          steps and cleaner project handoff.
         </p>
       </section>
 
@@ -138,8 +139,11 @@ export default function ProductsPage() {
             <div className="product-spotlight-feature-copy">
               <p className="status-pill">{getLifecycleStatusLabel(featuredAteam)}</p>
               <h2>ATEAM</h2>
-              <p className="muted">The AI lab where rough ideas become clear next steps.</p>
-              <p>{ateamModeSummary} It ends in a clean handoff into a real project request.</p>
+              <p className="muted">The intake-to-delivery engine behind the studio.</p>
+              <p>
+                {ateamModeSummary} It is strongest as the system that helps Una Labs turn rough
+                business and workflow ideas into scoped first passes, not as a detached demo.
+              </p>
               <ul className="feature-list compact-feature-list">
                 {(featuredAteam.marketingBullets ?? productOfferContent.ateam.supportPoints ?? []).map((bullet) => (
                   <li key={bullet}>{bullet}</li>
@@ -166,8 +170,8 @@ export default function ProductsPage() {
                 height={540}
               />
               <p className="muted">
-                Intake, routing, artifacts, and delivery state now sit inside the same ATEAM
-                product flow instead of being framed as a sidecar shell.
+                Intake, routing, artifacts, and delivery state sit inside the same ATEAM flow so
+                a rough idea can become a real commercial handoff without starting over.
               </p>
             </div>
           </div>
@@ -177,9 +181,10 @@ export default function ProductsPage() {
       <article className="card final-cta-card">
         <div>
           <p className="eyebrow">Next step</p>
-          <h2>Want one of these products, or a similar system for your team?</h2>
+          <h2>Need a system like these for your own team?</h2>
           <p className="muted">
-            Una Labs can scope the shortest credible path from idea to launch-ready delivery.
+            Start with ATEAM if the problem is still messy. Send the request directly if you
+            already know the system you need.
           </p>
         </div>
         <div className="product-actions">

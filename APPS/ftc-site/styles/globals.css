@@ -2336,8 +2336,21 @@ nav.primary {
   flex-wrap: wrap;
 }
 
+.work-intake-offer-strip {
+  display: grid;
+  gap: 18px;
+}
+
 .work-intake-track-grid {
   margin-top: 0;
+}
+
+.work-intake-proof-grid {
+  margin-top: 0;
+}
+
+.work-intake-proof-card {
+  gap: 10px;
 }
 
 .intake-form {
@@ -2346,10 +2359,34 @@ nav.primary {
   gap: 14px;
 }
 
+.intake-form-intro {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(131, 145, 188, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.intake-form-intro-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.intake-form-intro p:last-child {
+  margin: 0;
+  color: var(--muted);
+}
+
 .intake-form-grid {
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.intake-form-grid--triple {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .intake-form label {
@@ -3052,7 +3089,8 @@ nav.primary {
   }
 
   .featured-launch-grid,
-  .intake-form-grid {
+  .intake-form-grid,
+  .intake-form-grid--triple {
     grid-template-columns: 1fr;
   }
 
@@ -4763,6 +4801,42 @@ nav.primary {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.3);
   line-height: 1.5;
+}
+
+.wf-fit-strip {
+  display: grid;
+  gap: 12px;
+  max-width: 760px;
+}
+
+.wf-fit-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.wf-fit-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.wf-fit-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.54);
+}
+
+.wf-fit-note {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.92rem;
 }
 
 /* ── Working animation ── */
@@ -6638,6 +6712,21 @@ nav.primary {
 
 .wf-expect-icon {
   color: #7a1fa2;
+}
+
+.wf-fit-card {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(131, 145, 188, 0.14);
+  box-shadow: 0 14px 28px rgba(26, 39, 82, 0.06);
+}
+
+.wf-fit-title {
+  color: #17234b;
+}
+
+.wf-fit-list,
+.wf-fit-note {
+  color: #66739a;
 }
 
 .wf-idea-echo,
