@@ -50,6 +50,12 @@ function readSecret(req: NextRequest): string {
   return normalizeText(req.headers.get("x-unalabs-pipeline-key"));
 }
 
+function hasInternalAccess(req: NextRequest): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
+  const accessJwt = normalizeText(req.headers.get("cf-access-jwt-assertion"));
+  return accessJwt.length > 0;
+}
+
 function parseValue(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim().length > 0) {
@@ -62,12 +68,13 @@ function parseValue(value: unknown): number | null {
 export async function POST(req: NextRequest) {
   const configuredSecret = normalizeText(process.env.UNALABS_PIPELINE_API_KEY);
   const providedSecret = readSecret(req);
+  const internalAccess = hasInternalAccess(req);
 
   if (configuredSecret) {
-    if (!providedSecret || providedSecret !== configuredSecret) {
+    if ((!providedSecret || providedSecret !== configuredSecret) && !internalAccess) {
       return unauthorized();
     }
-  } else if (process.env.NODE_ENV === "production") {
+  } else if (process.env.NODE_ENV === "production" && !internalAccess) {
     return badRequest("Pipeline tracking is not configured.", 503);
   }
 

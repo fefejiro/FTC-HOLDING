@@ -91,7 +91,7 @@ export default function MissionControlPage() {
               truth. The goal is simple: keep execution visible and reduce mental tabs.
             </p>
             <div className="hero-actions">
-              <Link href="/lead-response-system" className="btn btn-secondary">
+              <Link href="/mission-control/revenue" className="btn btn-secondary">
                 Revenue lane
               </Link>
               <Link href="/connect" className="btn btn-primary">

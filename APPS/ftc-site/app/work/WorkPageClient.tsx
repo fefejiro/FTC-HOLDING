@@ -187,6 +187,9 @@ export default function WorkPageClient() {
                 </div>
 
                 <div className="client-launch-actions">
+                  <Link href={`/work/${launch.slug}`} prefetch={false} className="btn btn-secondary">
+                    View launch snapshot
+                  </Link>
                   <a
                     href={launch.websiteUrl}
                     target="_blank"

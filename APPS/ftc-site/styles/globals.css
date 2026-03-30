@@ -2377,6 +2377,89 @@ nav.primary {
   transform: translateY(-2px);
 }
 
+.revenue-ops-console,
+.revenue-ops-guide-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.revenue-ops-guide-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.revenue-ops-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.revenue-ops-panel-strong {
+  gap: 20px;
+}
+
+.revenue-ops-head {
+  display: grid;
+  gap: 8px;
+}
+
+.revenue-ops-form {
+  display: grid;
+  gap: 16px;
+}
+
+.revenue-ops-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.revenue-ops-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.revenue-ops-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.revenue-ops-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.revenue-ops-form span {
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.revenue-ops-form input,
+.revenue-ops-form select {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(26, 40, 76, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--heading);
+}
+
+.revenue-ops-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.revenue-ops-message {
+  margin: 0;
+  color: var(--muted);
+}
+
+.revenue-ops-message.success {
+  color: #0f7a52;
+}
+
+.revenue-ops-message.error {
+  color: #b42318;
+}
+
 .work-intake-track-grid {
   margin-top: 0;
 }
@@ -9083,5 +9166,14 @@ body {
   .home-final-cta-card {
     margin-top: 0;
     gap: 12px;
+  }
+}
+
+@media (max-width: 980px) {
+  .revenue-ops-guide-grid,
+  .revenue-ops-grid,
+  .revenue-ops-grid-3,
+  .revenue-ops-grid-4 {
+    grid-template-columns: 1fr;
   }
 }
