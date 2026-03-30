@@ -493,7 +493,7 @@ function PinScreen({
           ) : (
             <>
               <h1 className="text-2xl font-bold text-white">Operator Login</h1>
-              <p className="text-slate-500 text-sm mt-1">Emergency Prompt - Ottawa</p>
+              <p className="text-slate-500 text-sm mt-1">Dispatch - Ottawa</p>
             </>
           )}
         </div>

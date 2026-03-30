@@ -82,7 +82,7 @@ function buildLocationShareMessage(params: {
   const destinationLine = params.destinationName
     ? `Heading to: ${params.destinationName}.`
     : '';
-  return `Emergency Prompt update: ${scenarioLabel}. Current location: ${coordinateLine}. ${destinationLine}`.trim();
+  return `Dispatch update: ${scenarioLabel}. Current location: ${coordinateLine}. ${destinationLine}`.trim();
 }
 
 function uniqueById(groups: DecisionCardGroup[]) {
@@ -517,7 +517,7 @@ export default function RequestPage() {
               <Zap className="w-4 h-4 text-white" />
             </div>
             <span className="text-orange-500 font-semibold text-sm tracking-wider uppercase">
-              Emergency Prompt
+              Dispatch
             </span>
           </div>
           <a href="/" className="text-xs text-slate-500 hover:text-orange-400 transition-colors">

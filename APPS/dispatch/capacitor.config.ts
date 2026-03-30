@@ -30,7 +30,7 @@ const serverConfig = getServerConfig();
 
 const config: CapacitorConfig = {
   appId: 'ca.emergencyprompt.roadside',
-  appName: 'Emergency Prompt',
+  appName: 'Dispatch',
   webDir: 'dist/public',
   server: {
     ...serverConfig,

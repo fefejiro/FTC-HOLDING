@@ -1,7 +1,7 @@
 {
-  "name": "Emergency Prompt — Ottawa Roadside",
-  "short_name": "E-Prompt",
-  "description": "Ottawa roadside assistance — gas delivery, lockouts, jump starts, tire changes. Fast dispatch from Emergency Prompt.",
+  "name": "Dispatch — Ottawa Roadside",
+  "short_name": "Dispatch",
+  "description": "Dispatch for Ottawa roadside assistance — gas delivery, lockouts, jump starts, tire changes, and fast operator routing.",
   "display": "standalone",
   "background_color": "#0a0f1a",
   "theme_color": "#f97316",

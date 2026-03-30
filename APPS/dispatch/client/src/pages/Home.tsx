@@ -82,7 +82,7 @@ export default function HomePage() {
               <div className="text-xs font-semibold uppercase tracking-[0.3em] text-orange-400">
                 Ottawa Roadside
               </div>
-              <div className="text-lg font-semibold text-white">Emergency Prompt</div>
+              <div className="text-lg font-semibold text-white">Dispatch</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -112,7 +112,7 @@ export default function HomePage() {
                 Ottawa roadside assistance — fast, direct, and on the way.
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-slate-300">
-                Emergency Prompt handles gas delivery, lockouts, jump starts, and tire changes across Ottawa.
+                Dispatch handles gas delivery, lockouts, jump starts, and tire changes across Ottawa.
                 Submit a request in seconds — a real operator gets it immediately.
               </p>
             </div>
@@ -194,7 +194,7 @@ export default function HomePage() {
               <h3 className="text-xl font-semibold">Serving Ottawa and surrounding areas</h3>
             </div>
             <p className="leading-7 text-slate-300">
-              Emergency Prompt covers gas delivery, lockout service, jump starts, and tire changes
+              Dispatch covers gas delivery, lockout service, jump starts, and tire changes
               across Ottawa. Live incident monitoring keeps the operator ahead of the road.
             </p>
           </div>
@@ -205,7 +205,7 @@ export default function HomePage() {
               <h3 className="text-xl font-semibold">Fast response, no hold music</h3>
             </div>
             <p className="leading-7 text-slate-300">
-              Skip the call centre. Submit your request, share your location, and Emergency Prompt
+              Skip the call centre. Submit your request, share your location, and Dispatch
               dispatches a real operator directly to you — tracked live the whole way.
             </p>
           </div>
@@ -216,12 +216,12 @@ export default function HomePage() {
             <div>
               <div className="flex items-center gap-2 text-orange-300">
                 <PhoneCall className="h-4 w-4" />
-                Emergency Prompt — Ottawa
+                Dispatch — Ottawa
               </div>
               <h3 className="mt-2 text-2xl font-semibold">Stranded in Ottawa right now?</h3>
               <p className="mt-2 max-w-2xl leading-7 text-slate-300">
                 Open the request form, tell us what you need and where you are.
-                Emergency Prompt dispatches immediately — no hold music, no middleman.
+                Dispatch routes immediately — no hold music, no middleman.
               </p>
             </div>
             <a
