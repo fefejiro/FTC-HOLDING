@@ -50,6 +50,42 @@ interface Operator {
   active: boolean;
 }
 
+interface OperatorLocationRecord {
+  id: string;
+  name: string;
+  phone: string | null;
+  active: boolean;
+  lastLocationLat: number | null;
+  lastLocationLng: number | null;
+  lastLocationLabel: string | null;
+  lastLocationAccuracyMeters: number | null;
+  lastLocationAt: string | null;
+}
+
+interface IncidentSummaryItem {
+  id: string;
+  eventType: string | null;
+  roadway: string | null;
+  description: string | null;
+  viewCount: number | null;
+  actionCount: number | null;
+  actioned: boolean | null;
+  lastViewedAt: string | null;
+  lastActionedAt: string | null;
+}
+
+interface IncidentSummaryResponse {
+  total: number;
+  viewed: number;
+  actioned: number;
+  notActioned: number;
+  viewedNotActioned: number;
+  totalViewEvents: number;
+  totalActionEvents: number;
+  recentViewed: IncidentSummaryItem[];
+  recentActioned: IncidentSummaryItem[];
+}
+
 type AdminFilter = 'all' | 'pending' | 'active' | 'completed';
 
 const SERVICE_ICONS: Record<ServiceType, React.ComponentType<{ className?: string }>> = {
@@ -97,6 +133,11 @@ function fmt(str: string) {
 
 function shortId(id: string) {
   return id.split('-')[0] || id;
+}
+
+function mapsUrl(lat: number | null, lng: number | null) {
+  if (lat === null || lng === null) return null;
+  return `https://maps.google.com/?q=${lat},${lng}`;
 }
 
 function filterRequests(requests: ServiceRequest[], filter: AdminFilter) {
@@ -389,6 +430,26 @@ function AdminDashboard({
     },
   });
 
+  const { data: operatorLocations = [] } = useQuery<OperatorLocationRecord[]>({
+    queryKey: ['admin-operator-locations'],
+    queryFn: async () => {
+      const res = await adminFetch('/api/admin/operators/locations');
+      if (!res.ok) throw new Error('Failed to load operator locations');
+      return res.json() as Promise<OperatorLocationRecord[]>;
+    },
+    refetchInterval: 30_000,
+  });
+
+  const { data: incidentSummary } = useQuery<IncidentSummaryResponse>({
+    queryKey: ['admin-incident-summary'],
+    queryFn: async () => {
+      const res = await adminFetch('/api/admin/incidents/summary');
+      if (!res.ok) throw new Error('Failed to load incident summary');
+      return res.json() as Promise<IncidentSummaryResponse>;
+    },
+    refetchInterval: 30_000,
+  });
+
   const stats = {
     total: requests.length,
     pending: requests.filter((r) => r.status === 'pending').length,
@@ -539,6 +600,113 @@ function AdminDashboard({
               </div>
             </button>
           ))}
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <section className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-5">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-white font-bold text-[15px]">Incident activity</h2>
+                <p className="text-slate-500 text-xs mt-1">Live tracking starts from this release onward.</p>
+              </div>
+              <div className="text-[11px] text-slate-600">
+                {incidentSummary ? `${incidentSummary.total} tracked incidents` : 'Loading...'}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                { label: 'Viewed', value: incidentSummary?.viewed ?? 0, tone: 'text-cyan-300' },
+                { label: 'Actioned', value: incidentSummary?.actioned ?? 0, tone: 'text-orange-300' },
+                { label: 'Not actioned', value: incidentSummary?.notActioned ?? 0, tone: 'text-slate-300' },
+                { label: 'Viewed, no action', value: incidentSummary?.viewedNotActioned ?? 0, tone: 'text-amber-300' },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+                  <div className={cn('text-2xl font-bold tabular-nums', stat.tone)}>{stat.value}</div>
+                  <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold mt-1.5">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+            <div className="grid md:grid-cols-2 gap-3 mt-4">
+              <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+                <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold mb-2">Recent viewed</div>
+                <div className="space-y-2">
+                  {(incidentSummary?.recentViewed ?? []).length === 0 ? (
+                    <div className="text-slate-600 text-xs">No incident views tracked yet.</div>
+                  ) : (
+                    (incidentSummary?.recentViewed ?? []).map((incident) => (
+                      <div key={`view-${incident.id}`} className="text-xs text-slate-300">
+                        <div className="font-semibold text-white">{incident.roadway || incident.eventType || 'Incident'}</div>
+                        <div className="text-slate-500 mt-0.5">{fmt(incident.lastViewedAt)} • {(incident.viewCount ?? 0)} view(s)</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+                <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold mb-2">Recent actioned</div>
+                <div className="space-y-2">
+                  {(incidentSummary?.recentActioned ?? []).length === 0 ? (
+                    <div className="text-slate-600 text-xs">No incident actions tracked yet.</div>
+                  ) : (
+                    (incidentSummary?.recentActioned ?? []).map((incident) => (
+                      <div key={`action-${incident.id}`} className="text-xs text-slate-300">
+                        <div className="font-semibold text-white">{incident.roadway || incident.eventType || 'Incident'}</div>
+                        <div className="text-slate-500 mt-0.5">{fmt(incident.lastActionedAt)} • {(incident.actionCount ?? 0)} action(s)</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-5">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-white font-bold text-[15px]">Operator tracker</h2>
+                <p className="text-slate-500 text-xs mt-1">Admin can see each operator’s most recent device location.</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {operatorLocations.length === 0 ? (
+                <div className="text-slate-600 text-sm">No operators available yet.</div>
+              ) : (
+                operatorLocations.map((operator) => {
+                  const url = mapsUrl(operator.lastLocationLat, operator.lastLocationLng);
+                  const hasLocation = operator.lastLocationLat !== null && operator.lastLocationLng !== null;
+                  return (
+                    <div key={operator.id} className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-white font-semibold text-sm">{operator.name}</div>
+                          <div className="text-slate-500 text-xs mt-1">
+                            {hasLocation
+                              ? operator.lastLocationLabel || `${operator.lastLocationLat?.toFixed(4)}, ${operator.lastLocationLng?.toFixed(4)}`
+                              : 'No device location shared yet'}
+                          </div>
+                          <div className="text-slate-600 text-[11px] mt-1">
+                            {operator.lastLocationAt ? `Last seen ${fmt(operator.lastLocationAt)}` : 'Waiting for first device heartbeat'}
+                            {typeof operator.lastLocationAccuracyMeters === 'number' ? ` • ±${Math.round(operator.lastLocationAccuracyMeters)}m` : ''}
+                          </div>
+                        </div>
+                        {url ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-dispatch-border px-3 py-2 text-xs text-cyan-300 hover:text-cyan-200 transition-colors"
+                          >
+                            <MapPin className="w-3.5 h-3.5" />
+                            Open map
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
         </div>
 
         {!showAdd ? (

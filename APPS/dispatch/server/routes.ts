@@ -1,7 +1,7 @@
 import type { Express } from 'express';
 import type { Server } from 'http';
 import bcrypt from 'bcryptjs';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
 import { db } from './db';
@@ -197,6 +197,52 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     res.json(result);
   });
 
+  app.post('/api/operators/:id/location', async (req, res) => {
+    const { id } = req.params;
+    const schema = z.object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
+      label: z.string().min(1).max(160).optional(),
+      accuracyMeters: z.number().min(0).max(100000).optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid operator location payload' });
+      return;
+    }
+
+    const [operator] = await db
+      .update(operators)
+      .set({
+        lastLocationLat: parsed.data.lat,
+        lastLocationLng: parsed.data.lng,
+        lastLocationLabel: parsed.data.label,
+        lastLocationAccuracyMeters:
+          typeof parsed.data.accuracyMeters === 'number'
+            ? Math.round(parsed.data.accuracyMeters)
+            : null,
+        lastLocationAt: new Date(),
+      })
+      .where(eq(operators.id, id))
+      .returning({
+        id: operators.id,
+        name: operators.name,
+        lastLocationLat: operators.lastLocationLat,
+        lastLocationLng: operators.lastLocationLng,
+        lastLocationLabel: operators.lastLocationLabel,
+        lastLocationAccuracyMeters: operators.lastLocationAccuracyMeters,
+        lastLocationAt: operators.lastLocationAt,
+      });
+
+    if (!operator) {
+      res.status(404).json({ error: 'Operator not found' });
+      return;
+    }
+
+    res.json({ ok: true, operator });
+  });
+
   app.post('/api/operators', async (req, res) => {
     if (!canAccessAdminSurface(req)) {
       res.status(403).json({ error: 'Admin access required' });
@@ -365,6 +411,87 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     });
 
     res.json({ ok: true, sent, skipped });
+  });
+
+  app.get('/api/admin/operators/locations', async (req, res) => {
+    if (!canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    const result = await db
+      .select({
+        id: operators.id,
+        name: operators.name,
+        phone: operators.phone,
+        active: operators.active,
+        lastLocationLat: operators.lastLocationLat,
+        lastLocationLng: operators.lastLocationLng,
+        lastLocationLabel: operators.lastLocationLabel,
+        lastLocationAccuracyMeters: operators.lastLocationAccuracyMeters,
+        lastLocationAt: operators.lastLocationAt,
+      })
+      .from(operators)
+      .orderBy(desc(operators.lastLocationAt), operators.name);
+
+    res.json(result);
+  });
+
+  app.get('/api/admin/incidents/summary', async (req, res) => {
+    if (!canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    const result = await db
+      .select({
+        id: incidents.id,
+        viewCount: incidents.viewCount,
+        actionCount: incidents.actionCount,
+        actioned: incidents.actioned,
+        lastViewedAt: incidents.lastViewedAt,
+        lastActionedAt: incidents.lastActionedAt,
+        eventType: incidents.eventType,
+        roadway: incidents.roadway,
+        description: incidents.description,
+      })
+      .from(incidents)
+      .orderBy(desc(incidents.lastUpdated), desc(incidents.createdAt));
+
+    const summary = result.reduce(
+      (acc, incident) => {
+        const viewed = (incident.viewCount ?? 0) > 0;
+        const actioned = Boolean(incident.actioned) || (incident.actionCount ?? 0) > 0;
+        acc.total += 1;
+        acc.totalViewEvents += incident.viewCount ?? 0;
+        acc.totalActionEvents += incident.actionCount ?? 0;
+        if (viewed) acc.viewed += 1;
+        if (actioned) acc.actioned += 1;
+        if (!actioned) acc.notActioned += 1;
+        if (viewed && !actioned) acc.viewedNotActioned += 1;
+        return acc;
+      },
+      {
+        total: 0,
+        viewed: 0,
+        actioned: 0,
+        notActioned: 0,
+        viewedNotActioned: 0,
+        totalViewEvents: 0,
+        totalActionEvents: 0,
+      },
+    );
+
+    const recentViewed = result
+      .filter((incident) => incident.lastViewedAt)
+      .sort((a, b) => new Date(String(b.lastViewedAt)).getTime() - new Date(String(a.lastViewedAt)).getTime())
+      .slice(0, 5);
+    const recentActioned = result
+      .filter((incident) => incident.lastActionedAt)
+      .sort((a, b) => new Date(String(b.lastActionedAt)).getTime() - new Date(String(a.lastActionedAt)).getTime())
+      .slice(0, 5);
+
+    res.json({ ...summary, recentViewed, recentActioned });
   });
 
   app.post('/api/demo-feedback', async (req, res) => {
@@ -609,6 +736,77 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       });
 
     res.json(deduped);
+  });
+
+  app.post('/api/incidents/:id/view', async (req, res) => {
+    const { id } = req.params;
+    const schema = z.object({
+      operatorId: z.string().uuid().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid incident view payload' });
+      return;
+    }
+
+    const [updated] = await db
+      .update(incidents)
+      .set({
+        viewCount: sql`coalesce(${incidents.viewCount}, 0) + 1`,
+        lastViewedAt: new Date(),
+        lastViewedByOperatorId: parsed.data.operatorId ?? null,
+      })
+      .where(eq(incidents.id, id))
+      .returning({
+        id: incidents.id,
+        viewCount: incidents.viewCount,
+        lastViewedAt: incidents.lastViewedAt,
+      });
+
+    if (!updated) {
+      res.status(404).json({ error: 'Incident not found' });
+      return;
+    }
+
+    res.json({ ok: true, incident: updated });
+  });
+
+  app.post('/api/incidents/:id/action', async (req, res) => {
+    const { id } = req.params;
+    const schema = z.object({
+      operatorId: z.string().uuid().optional(),
+      requestId: z.string().uuid().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid incident action payload' });
+      return;
+    }
+
+    const [updated] = await db
+      .update(incidents)
+      .set({
+        actionCount: sql`coalesce(${incidents.actionCount}, 0) + 1`,
+        actioned: true,
+        lastActionedAt: new Date(),
+        lastActionedByOperatorId: parsed.data.operatorId ?? null,
+      })
+      .where(eq(incidents.id, id))
+      .returning({
+        id: incidents.id,
+        actionCount: incidents.actionCount,
+        actioned: incidents.actioned,
+        lastActionedAt: incidents.lastActionedAt,
+      });
+
+    if (!updated) {
+      res.status(404).json({ error: 'Incident not found' });
+      return;
+    }
+
+    res.json({ ok: true, incident: updated, requestId: parsed.data.requestId ?? null });
   });
 
   app.get('/api/geocode/reverse', async (req, res) => {

@@ -16,6 +16,11 @@ export const operators = dispatch.table('operators', {
   vapidSub: jsonb('vapid_sub'),
   serviceRadiusKm: integer('service_radius_km').default(25),
   active: boolean('active').default(true),
+  lastLocationLat: real('last_location_lat'),
+  lastLocationLng: real('last_location_lng'),
+  lastLocationLabel: text('last_location_label'),
+  lastLocationAccuracyMeters: integer('last_location_accuracy_meters'),
+  lastLocationAt: timestamp('last_location_at'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -31,6 +36,13 @@ export const incidents = dispatch.table('incidents', {
   lastUpdated: text('last_updated'),
   alerted: boolean('alerted').default(false),
   alertedAt: timestamp('alerted_at'),
+  viewCount: integer('view_count').default(0),
+  actionCount: integer('action_count').default(0),
+  actioned: boolean('actioned').default(false),
+  lastViewedAt: timestamp('last_viewed_at'),
+  lastActionedAt: timestamp('last_actioned_at'),
+  lastViewedByOperatorId: uuid('last_viewed_by_operator_id').references(() => operators.id),
+  lastActionedByOperatorId: uuid('last_actioned_by_operator_id').references(() => operators.id),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

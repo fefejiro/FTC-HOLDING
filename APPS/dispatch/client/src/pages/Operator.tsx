@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import L from 'leaflet';
 import {
@@ -1130,6 +1130,8 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const [showFeedback, setShowFeedback] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [, setNowTick] = useState(0);
+  const viewedIncidentIdsRef = useRef<Set<string>>(new Set());
+  const lastOperatorLocationSentRef = useRef<{ lat: number; lng: number; sentAt: number } | null>(null);
   const queryClient = useQueryClient();
   const requestQueryKey = useMemo(() => ['requests', demoMode ? `demo:${demoSessionId || 'demo'}` : 'live'], [demoMode, demoSessionId]);
   const requestsUrl = useMemo(() => {
@@ -1268,12 +1270,23 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
     try {
       const response = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerName: `Lead - ${roadway}`, customerPhone: '000-000-0000', serviceType: 'other', locationLat: incident.locationLat, locationLng: incident.locationLng, locationAddress: roadway, notes: incident.description || undefined, mode: demoMode ? 'demo' : 'live', demoSessionId: demoMode ? demoSessionId || undefined : undefined }) });
       if (!response.ok) throw new Error('Failed to create job');
+      const payload = (await response.json()) as { ok?: boolean; request?: { id?: string } };
+      if (!demoMode) {
+        await fetch(`/api/incidents/${incident.id}/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ operatorId: session.id, requestId: payload.request?.id || undefined }),
+        }).catch(() => {
+          // Keep request creation successful even if action analytics fail.
+        });
+      }
       addToast(`Job created from incident on ${roadway}`, 'job');
       queryClient.invalidateQueries({ queryKey: requestQueryKey });
+      queryClient.invalidateQueries({ queryKey: ['incident-summary'] });
     } catch {
       addToast('Failed to create job. Try again.', 'incident');
     }
-  }, [demoMode, demoSessionId, queryClient, requestQueryKey]);
+  }, [demoMode, demoSessionId, queryClient, requestQueryKey, session.id]);
 
   const myRequests = allRequests.filter((request) => (request.operatorId === null && request.status === 'pending') || request.operatorId === session.id);
   const displayRequests = filter === 'active' ? myRequests.filter((request) => ['pending', 'accepted', 'en_route'].includes(request.status)) : filter === 'all' ? myRequests : [];
@@ -1367,6 +1380,77 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const sourceCount = status?.incidentMonitor?.sourceCount ?? 3;
   const pollSeconds = Math.max(1, Math.round((status?.incidentMonitor?.pollIntervalMs ?? 60_000) / 1000));
   const lastPoll = formatPoll(status?.incidentMonitor?.lastSuccessAt);
+
+  useEffect(() => {
+    if (demoMode || filter !== 'incidents' || !selectedIncidentId) return;
+    if (viewedIncidentIdsRef.current.has(selectedIncidentId)) return;
+
+    const selected = sortedIncidentFeed.find((incident) => incident.id === selectedIncidentId);
+    if (!selected) return;
+
+    viewedIncidentIdsRef.current.add(selectedIncidentId);
+    fetch(`/api/incidents/${selectedIncidentId}/view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operatorId: session.id }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          viewedIncidentIdsRef.current.delete(selectedIncidentId);
+        }
+      })
+      .catch(() => {
+        viewedIncidentIdsRef.current.delete(selectedIncidentId);
+      });
+  }, [demoMode, filter, selectedIncidentId, session.id, sortedIncidentFeed]);
+
+  useEffect(() => {
+    if (demoMode || typeof navigator === 'undefined' || !navigator.geolocation) return;
+
+    const shouldSendLocation = (lat: number, lng: number) => {
+      const previous = lastOperatorLocationSentRef.current;
+      if (!previous) return true;
+
+      const secondsSinceLastSend = (Date.now() - previous.sentAt) / 1000;
+      const distanceSinceLastSend = haversineKm(previous.lat, previous.lng, lat, lng);
+      return secondsSinceLastSend >= 45 || distanceSinceLastSend >= 0.25;
+    };
+
+    const postLocation = async (position: GeolocationPosition) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      if (!shouldSendLocation(lat, lng)) return;
+
+      lastOperatorLocationSentRef.current = { lat, lng, sentAt: Date.now() };
+      await fetch(`/api/operators/${session.id}/location`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lat,
+          lng,
+          accuracyMeters: Math.round(position.coords.accuracy),
+        }),
+      }).catch(() => {
+        // Location sharing should stay best-effort and never break the operator view.
+      });
+    };
+
+    navigator.geolocation.getCurrentPosition(postLocation, () => undefined, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 60000,
+    });
+
+    const watchId = navigator.geolocation.watchPosition(postLocation, () => undefined, {
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 60000,
+    });
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [demoMode, session.id]);
 
   useEffect(() => {
     if (filter === 'incidents') {
