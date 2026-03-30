@@ -25,6 +25,10 @@ import {
 
 type BusyState = "idle" | "starting" | "processing" | "loading";
 type WorkflowServiceState = "checking" | "ready" | "unavailable";
+type AteamWorkflowClientProps = {
+  basePath?: string;
+  operatorOfficePath?: string;
+};
 
 type BrowserSpeechRecognition = {
   continuous: boolean;
@@ -116,9 +120,20 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return payload;
 }
 
+function buildWorkflowPath(basePath: string, runId?: string) {
+  const normalizedBasePath = basePath === "/" ? "/" : basePath.replace(/\/$/, "");
+  if (!runId) {
+    return normalizedBasePath;
+  }
+  return `${normalizedBasePath}?run=${encodeURIComponent(runId)}`;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function AteamWorkflowClient() {
+export default function AteamWorkflowClient({
+  basePath = "/ateam",
+  operatorOfficePath = "/ateam/operator/office",
+}: AteamWorkflowClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
@@ -260,7 +275,7 @@ export default function AteamWorkflowClient() {
     setCategory((nextRun.category as WorkflowCategoryValue) || "auto");
     setAnswers(buildEmptyAnswers(nextRun));
     if (nextRun.id && nextRun.id !== runId) {
-      router.replace(`/ateam?run=${encodeURIComponent(nextRun.id)}`);
+      router.replace(buildWorkflowPath(basePath, nextRun.id));
     }
   }
 
@@ -275,7 +290,7 @@ export default function AteamWorkflowClient() {
     setIdea("");
     setCategory("auto");
     clearAteamDemoHandoff();
-    router.replace("/ateam");
+    router.replace(buildWorkflowPath(basePath));
   }
 
   function toggleVoice() {
@@ -400,7 +415,7 @@ export default function AteamWorkflowClient() {
             </button>
           )}
           {operatorEnabled && (
-            <Link href="/ateam/operator/office" prefetch={false} className="wf-op-link">
+            <Link href={operatorOfficePath} prefetch={false} className="wf-op-link">
               Operator →
             </Link>
           )}
@@ -800,7 +815,7 @@ export default function AteamWorkflowClient() {
               {operatorEnabled && run.id && (
                 <div className="wf-op-strip">
                   <Link
-                    href={`/ateam/operator/office?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`}
+                    href={`${operatorOfficePath}?workflowRunId=${encodeURIComponent(run.id)}&shell=workflow`}
                     prefetch={false}
                     className="wf-op-link"
                   >

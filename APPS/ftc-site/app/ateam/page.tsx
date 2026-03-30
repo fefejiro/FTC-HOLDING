@@ -1,8 +1,7 @@
 export const dynamic = "force-static";
 
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import AteamWorkflowClient from "./AteamWorkflowClient";
+import AteamLandingExperience from "../components/AteamLandingExperience";
 
 export const metadata: Metadata = {
   title: "ATEAM | Una Labs",
@@ -14,9 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function AteamPage() {
-  return (
-    <Suspense fallback={<div className="container page-content ateam-page">Loading ATEAM workflow...</div>}>
-      <AteamWorkflowClient />
-    </Suspense>
-  );
+  return <AteamLandingExperience basePath="/ateam" />;
 }
