@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { trackEvent } from "../../lib/analytics";
 import { ATEAM_BRAND_LOGO_PATH } from "../../lib/ateamEmbed";
 import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
 import OperatorOfficePanel, { type OfficePhase } from "../components/OperatorOfficePanel";
@@ -136,6 +137,8 @@ export default function AteamWorkflowClient({
   const searchParams = useSearchParams();
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const outputRef = useRef<HTMLElement | null>(null);
+  const hasTrackedViewRef = useRef(false);
+  const trackedPackViewRef = useRef("");
   const [idea, setIdea] = useState("");
   const [category, setCategory] = useState<WorkflowCategoryValue>("auto");
   const [run, setRun] = useState<WorkflowRun | null>(null);
@@ -160,6 +163,15 @@ export default function AteamWorkflowClient({
       .catch(() => { if (!cancelled) setWorkflowServiceState("unavailable"); });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (hasTrackedViewRef.current) return;
+    hasTrackedViewRef.current = true;
+    trackEvent("ateam_landing_view", {
+      location: basePath === "/" ? "homepage" : "ateam_page",
+      base_path: basePath,
+    });
+  }, [basePath]);
 
   // Voice recognition setup
   useEffect(() => {
@@ -242,6 +254,21 @@ export default function AteamWorkflowClient({
     outputRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [run?.id, run?.phase]);
 
+  useEffect(() => {
+    const handoff = toHandoffPayload(run);
+    const packApproved = String(run?.approvals?.pack?.status || "").toLowerCase() === "approved";
+    const ready = Boolean(handoff && (packApproved || run?.phase === "handoff"));
+    if (!ready || !handoff || !run?.id) return;
+    if (trackedPackViewRef.current === run.id) return;
+    trackedPackViewRef.current = run.id;
+    trackEvent("ateam_pack_view", {
+      location: basePath === "/" ? "homepage" : "ateam_page",
+      run_id: run.id,
+      recommended_lane: handoff.recommendedLane,
+      category: handoff.categoryValue,
+    });
+  }, [basePath, run]);
+
   // Derived state
   const handoff = toHandoffPayload(run);
   const packApproved = String(run?.approvals?.pack?.status || "").toLowerCase() === "approved";
@@ -278,6 +305,13 @@ export default function AteamWorkflowClient({
   }
 
   function resetFlow() {
+    if (run?.id || idea.trim()) {
+      trackEvent("ateam_reset", {
+        location: basePath === "/" ? "homepage" : "ateam_page",
+        had_run: Boolean(run?.id),
+        had_idea: Boolean(idea.trim()),
+      });
+    }
     setRun(null);
     setAnswers({});
     setError("");
@@ -313,12 +347,27 @@ export default function AteamWorkflowClient({
     setNotice("");
     if (workflowServiceState !== "ready") {
       setError("ATEAM is still connecting. Try again in a moment.");
+      trackEvent("ateam_run_start_error", {
+        reason: "service_not_ready",
+        location: basePath === "/" ? "homepage" : "ateam_page",
+        category,
+      });
       return;
     }
     if (idea.trim().length < 12) {
       setError("Add a bit more detail — one sentence is enough to start.");
+      trackEvent("ateam_run_start_error", {
+        reason: "idea_too_short",
+        location: basePath === "/" ? "homepage" : "ateam_page",
+        category,
+      });
       return;
     }
+    trackEvent("ateam_run_start", {
+      location: basePath === "/" ? "homepage" : "ateam_page",
+      category,
+      idea_length: idea.trim().length,
+    });
     setBusy("starting");
     setProcessingStageIndex(0);
     try {
@@ -327,10 +376,21 @@ export default function AteamWorkflowClient({
         "/api/ateam/workflow/runs",
         { method: "POST", body: JSON.stringify({ idea, category: category === "auto" ? "" : category }) }
       );
+      trackEvent("ateam_run_started", {
+        location: basePath === "/" ? "homepage" : "ateam_page",
+        run_id: payload.run.id,
+        category: payload.run.category || category,
+        question_count: payload.run.questions?.length || 0,
+      });
       setProcessingStageIndex(1);
       await wait(180);
       await syncRun(payload.run);
     } catch (err) {
+      trackEvent("ateam_run_start_error", {
+        reason: err instanceof Error ? err.message : "request_failed",
+        location: basePath === "/" ? "homepage" : "ateam_page",
+        category,
+      });
       setError(err instanceof Error ? err.message : "ATEAM could not start the run.");
     } finally {
       setBusy("idle");
@@ -343,9 +403,19 @@ export default function AteamWorkflowClient({
     const missing = (run.questions || []).find((q) => !String(answers[q.id] || "").trim());
     if (missing) {
       setError("Answer both questions so ATEAM can shape the pack cleanly.");
+      trackEvent("ateam_pack_build_error", {
+        reason: "missing_answer",
+        location: basePath === "/" ? "homepage" : "ateam_page",
+        run_id: run.id,
+      });
       return;
     }
     setError("");
+    trackEvent("ateam_pack_build_start", {
+      location: basePath === "/" ? "homepage" : "ateam_page",
+      run_id: run.id,
+      question_count: run.questions?.length || 0,
+    });
     setBusy("processing");
     try {
       setProcessingStageIndex(1);
@@ -371,8 +441,19 @@ export default function AteamWorkflowClient({
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
         { method: "POST", body: JSON.stringify({ gate: "pack", decision: "approved" }) }
       );
+      trackEvent("ateam_pack_ready", {
+        location: basePath === "/" ? "homepage" : "ateam_page",
+        run_id: result.run.id,
+        recommended_lane: result.run.recommendedLane || "",
+        next_steps_count: result.run.artifacts?.nextSteps?.length || 0,
+      });
       await syncRun(result.run);
     } catch (err) {
+      trackEvent("ateam_pack_build_error", {
+        reason: err instanceof Error ? err.message : "request_failed",
+        location: basePath === "/" ? "homepage" : "ateam_page",
+        run_id: run.id,
+      });
       setError(err instanceof Error ? err.message : "ATEAM could not build the pack right now.");
     } finally {
       setBusy("idle");
@@ -384,7 +465,13 @@ export default function AteamWorkflowClient({
     if (!handoff) { setError("The decision pack isn't ready yet."); return; }
     clearAteamDemoHandoff();
     saveAteamWorkflowHandoff(handoff);
-    router.push("/work-with-ftc");
+    trackEvent("ateam_continue_to_intake", {
+      location: basePath === "/" ? "homepage" : "ateam_page",
+      run_id: handoff.runId,
+      recommended_lane: handoff.recommendedLane,
+      category: handoff.categoryValue,
+    });
+    router.push("/work-with-ftc?from=ateam");
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────

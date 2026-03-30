@@ -133,6 +133,7 @@ export default function WorkIntakeForm() {
   const [projectBrief, setProjectBrief] = useState("");
   const [projectType, setProjectType] = useState<string>("Not sure yet");
   const [prefill, setPrefill] = useState<PrefillState>(null);
+  const [prefillChecked, setPrefillChecked] = useState(false);
   const [successSummary, setSuccessSummary] = useState<{
     requestId: string;
     email: string;
@@ -144,6 +145,7 @@ export default function WorkIntakeForm() {
     confirmationSent?: boolean;
   } | null>(null);
   const startedAtRef = useRef<number>(Date.now());
+  const hasTrackedViewRef = useRef(false);
   const isWorkflowPrefill = prefill?.kind === "workflow";
 
   useEffect(() => {
@@ -152,15 +154,34 @@ export default function WorkIntakeForm() {
       setPrefill({ kind: "workflow", value: workflowHandoff });
       setProjectType(workflowHandoff.recommendedLane || workflowHandoff.categoryLabel || "Not sure yet");
       setProjectBrief((existing) => (existing ? existing : buildWorkflowPrefilledBrief(workflowHandoff)));
+      setPrefillChecked(true);
       return;
     }
 
     const demoHandoff = loadAteamDemoHandoff<AteamDemoOutput>();
-    if (!demoHandoff) return;
+    if (!demoHandoff) {
+      setPrefillChecked(true);
+      return;
+    }
     setPrefill({ kind: "demo", value: demoHandoff });
     setProjectType(demoHandoff.output?.recommendedLane ?? demoHandoff.categoryLabel ?? "Not sure yet");
     setProjectBrief((existing) => (existing ? existing : buildDemoPrefilledBrief(demoHandoff)));
+    setPrefillChecked(true);
   }, []);
+
+  useEffect(() => {
+    if (!prefillChecked || hasTrackedViewRef.current) return;
+    hasTrackedViewRef.current = true;
+    trackEvent("intake_form_view", {
+      source:
+        prefill?.kind === "workflow"
+          ? "ateam_workflow"
+          : prefill?.kind === "demo"
+            ? "ateam_demo"
+            : "direct",
+      project_type: projectType || "not-specified",
+    });
+  }, [prefillChecked, prefill, projectType]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -213,6 +234,23 @@ export default function WorkIntakeForm() {
       ateamWorkflow: prefill?.kind === "workflow" ? prefill.value : undefined
     };
 
+    trackEvent("lead_submit_attempt", {
+      source:
+        prefill?.kind === "workflow"
+          ? "ateam_workflow"
+          : prefill?.kind === "demo"
+            ? "ateam_demo"
+            : "direct",
+      project_type: payload.projectType || "not-specified",
+      engagement_type: payload.engagementType,
+      business_type: payload.businessType,
+      main_goal: payload.mainGoal,
+      urgency: payload.urgency,
+      buyer_readiness: payload.buyerReadiness,
+      budget_range: payload.budgetRange,
+      timeline: payload.timeline || "not-specified"
+    });
+
     setSubmitState("submitting");
     setMessage("");
     setSuccessSummary(null);
@@ -253,6 +291,12 @@ export default function WorkIntakeForm() {
         });
       }
       trackEvent("lead_submit_success", {
+        source:
+          prefill?.kind === "workflow"
+            ? "ateam_workflow"
+            : prefill?.kind === "demo"
+              ? "ateam_demo"
+              : "direct",
         project_type: payload.projectType || "not-specified",
         engagement_type: payload.engagementType,
         business_type: payload.businessType,
@@ -282,7 +326,16 @@ export default function WorkIntakeForm() {
           ? error.message
           : "Submission failed. Please try again in a few minutes."
       );
-      trackEvent("lead_submit_error");
+      trackEvent("lead_submit_error", {
+        source:
+          prefill?.kind === "workflow"
+            ? "ateam_workflow"
+            : prefill?.kind === "demo"
+              ? "ateam_demo"
+              : "direct",
+        project_type: payload.projectType || "not-specified",
+        engagement_type: payload.engagementType,
+      });
     }
   }
 
