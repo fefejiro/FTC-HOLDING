@@ -6389,22 +6389,37 @@ nav.primary {
 .opi-agent-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   align-items: center;
 }
 
+.opi-agent-stage {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(226,241,255,0.38);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
 .opi-agent-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   color: rgba(226,241,255,0.9);
 }
 
+.opi-agent-hook {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #d9c7ff;
+  letter-spacing: 0.01em;
+}
+
 .opi-agent-role {
-  font-size: 10px;
+  font-size: 0.74rem;
   font-weight: 500;
-  color: rgba(226,241,255,0.45);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: rgba(226,241,255,0.62);
+  line-height: 1.45;
+  max-width: 22ch;
 }
 
 .opi-dot {
@@ -7034,7 +7049,7 @@ nav.primary {
 
 .opi-header-label,
 .opi-intro-sub,
-.opi-agent-role,
+.opi-agent-stage,
 .opi-footer {
   color: #6d789a;
 }
@@ -7048,6 +7063,8 @@ nav.primary {
   background: rgba(255, 255, 255, 0.82);
   border-color: rgba(131, 145, 188, 0.14);
   box-shadow: 0 16px 34px rgba(26, 39, 82, 0.07);
+  padding: 18px 14px 15px;
+  border-radius: 16px;
 }
 
 .opi-agent--active {
@@ -7066,14 +7083,23 @@ nav.primary {
   opacity: 0.72;
 }
 
-.opi-agent-task {
-  color: #7a1fa2;
-}
-
 .opi-header-chip {
   background: rgba(255, 255, 255, 0.74);
   border-color: rgba(131, 145, 188, 0.14);
   color: #6d789a;
+}
+
+.opi-agent-hook {
+  color: #7a1fa2;
+}
+
+.opi-agent-role {
+  color: #54617f;
+  max-width: 24ch;
+}
+
+.opi-grid {
+  gap: 14px;
 }
 
 .opi-header-chip--routing,
@@ -7107,62 +7133,62 @@ nav.primary {
   filter: drop-shadow(0 12px 22px rgba(122, 31, 162, 0.22));
 }
 
-.opi-agent--persona-violet .opi-sprite canvas {
-  animation: opi-violet-idle 3.6s ease-in-out infinite;
+.opi-agent--persona-lead .opi-sprite canvas {
+  animation: opi-lead-idle 3.6s ease-in-out infinite;
 }
 
 .opi-agent--persona-scout .opi-sprite canvas {
   animation: opi-scout-idle 2.9s ease-in-out infinite;
 }
 
-.opi-agent--persona-codex .opi-sprite canvas {
-  animation: opi-codex-idle 3.2s ease-in-out infinite;
+.opi-agent--persona-architect .opi-sprite canvas {
+  animation: opi-architect-idle 3.1s ease-in-out infinite;
 }
 
-.opi-agent--persona-quill .opi-sprite canvas {
-  animation: opi-quill-idle 3.1s ease-in-out infinite;
+.opi-agent--persona-builder .opi-sprite canvas {
+  animation: opi-builder-idle 3.2s ease-in-out infinite;
 }
 
-.opi-agent--persona-pixel .opi-sprite canvas {
-  animation: opi-pixel-idle 3.4s ease-in-out infinite;
+.opi-agent--persona-designer .opi-sprite canvas {
+  animation: opi-designer-idle 3.4s ease-in-out infinite;
 }
 
-.opi-agent--persona-echo .opi-sprite canvas {
-  animation: opi-echo-idle 3s ease-in-out infinite;
+.opi-agent--persona-operator .opi-sprite canvas {
+  animation: opi-operator-idle 3s ease-in-out infinite;
 }
 
-.opi-agent--active.opi-agent--persona-violet .opi-sprite canvas {
-  animation: opi-violet-active 1.45s ease-in-out infinite;
+.opi-agent--active.opi-agent--persona-lead .opi-sprite canvas {
+  animation: opi-lead-active 1.45s ease-in-out infinite;
 }
 
 .opi-agent--active.opi-agent--persona-scout .opi-sprite canvas {
   animation: opi-scout-active 1.2s ease-in-out infinite;
 }
 
-.opi-agent--active.opi-agent--persona-codex .opi-sprite canvas {
-  animation: opi-codex-active 1.15s ease-in-out infinite;
+.opi-agent--active.opi-agent--persona-architect .opi-sprite canvas {
+  animation: opi-architect-active 1.35s ease-in-out infinite;
 }
 
-.opi-agent--active.opi-agent--persona-quill .opi-sprite canvas {
-  animation: opi-quill-active 1.35s ease-in-out infinite;
+.opi-agent--active.opi-agent--persona-builder .opi-sprite canvas {
+  animation: opi-builder-active 1.15s ease-in-out infinite;
 }
 
-.opi-agent--active.opi-agent--persona-pixel .opi-sprite canvas {
-  animation: opi-pixel-active 1.25s ease-in-out infinite;
+.opi-agent--active.opi-agent--persona-designer .opi-sprite canvas {
+  animation: opi-designer-active 1.25s ease-in-out infinite;
 }
 
-.opi-agent--active.opi-agent--persona-echo .opi-sprite canvas {
-  animation: opi-echo-active 1.15s ease-in-out infinite;
+.opi-agent--active.opi-agent--persona-operator .opi-sprite canvas {
+  animation: opi-operator-active 1.15s ease-in-out infinite;
 }
 
-@keyframes opi-violet-idle {
+@keyframes opi-lead-idle {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   25% { transform: translateY(-1px) rotate(-1deg); }
   50% { transform: translateY(-3px) rotate(1.2deg); }
   75% { transform: translateY(-1px) rotate(-0.4deg); }
 }
 
-@keyframes opi-violet-active {
+@keyframes opi-lead-active {
   0%, 100% { transform: translateY(0) rotate(0deg) scale(1.02); }
   30% { transform: translateY(-6px) rotate(-2.2deg) scale(1.07); }
   60% { transform: translateY(-2px) rotate(2.2deg) scale(1.04); }
@@ -7181,13 +7207,26 @@ nav.primary {
   70% { transform: translateX(-2px) translateY(-4px) scale(1.06); }
 }
 
-@keyframes opi-codex-idle {
+@keyframes opi-architect-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-1px) rotate(-0.8deg); }
+  60% { transform: translateY(-2px) rotate(0.8deg); }
+}
+
+@keyframes opi-architect-active {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1.01); }
+  22% { transform: translateY(-4px) rotate(-2deg) scale(1.05); }
+  48% { transform: translateY(-1px) rotate(2deg) scale(1.03); }
+  74% { transform: translateY(-5px) rotate(-1deg) scale(1.06); }
+}
+
+@keyframes opi-builder-idle {
   0%, 100% { transform: translateY(0); }
   40% { transform: translateY(-2px) skewX(-1deg); }
   80% { transform: translateY(-1px) skewX(1deg); }
 }
 
-@keyframes opi-codex-active {
+@keyframes opi-builder-active {
   0%, 100% { transform: translateY(0) scale(1.01); }
   18% { transform: translateY(-4px) scale(1.05); }
   36% { transform: translateY(0) scale(1.02); }
@@ -7195,38 +7234,25 @@ nav.primary {
   72% { transform: translateY(-1px) scale(1.03); }
 }
 
-@keyframes opi-quill-idle {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  30% { transform: translateY(-1px) rotate(-0.8deg); }
-  60% { transform: translateY(-2px) rotate(0.8deg); }
-}
-
-@keyframes opi-quill-active {
-  0%, 100% { transform: translateY(0) rotate(0deg) scale(1.01); }
-  22% { transform: translateY(-4px) rotate(-2deg) scale(1.05); }
-  48% { transform: translateY(-1px) rotate(2deg) scale(1.03); }
-  74% { transform: translateY(-5px) rotate(-1deg) scale(1.06); }
-}
-
-@keyframes opi-pixel-idle {
+@keyframes opi-designer-idle {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-2px) scale(1.02); }
 }
 
-@keyframes opi-pixel-active {
+@keyframes opi-designer-active {
   0%, 100% { transform: translateY(0) scale(1.02); }
   25% { transform: translateY(-7px) scale(1.07); }
   50% { transform: translateY(0) scale(1.03); }
   75% { transform: translateY(-4px) scale(1.05); }
 }
 
-@keyframes opi-echo-idle {
+@keyframes opi-operator-idle {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   45% { transform: translateY(-2px) rotate(1deg); }
   75% { transform: translateY(-1px) rotate(-1deg); }
 }
 
-@keyframes opi-echo-active {
+@keyframes opi-operator-active {
   0%, 100% { transform: translateY(0) scale(1.02); }
   20% { transform: translateY(-4px) translateX(-1px) scale(1.06); }
   50% { transform: translateY(-2px) translateX(2px) scale(1.03); }
