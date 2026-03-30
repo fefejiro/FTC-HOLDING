@@ -122,6 +122,7 @@ function AgentCard({
   const classNames = [
     "opi-agent",
     `opi-agent--${status}`,
+    `opi-agent--persona-${agent.id}`,
     isActive && entering ? "opi-agent--entering" : "",
   ].filter(Boolean).join(" ");
 

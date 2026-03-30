@@ -4,9 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ATEAM_BRAND_LOGO_PATH,
-} from "../../lib/ateamEmbed";
+import { ATEAM_BRAND_LOGO_PATH } from "../../lib/ateamEmbed";
 import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
 import OperatorOfficePanel, { type OfficePhase } from "../components/OperatorOfficePanel";
 import {
