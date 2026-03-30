@@ -301,6 +301,12 @@ const ONTARIO_CITY_HINTS = [
   'Orleans',
 ] as const;
 
+const OTTAWA_AREA_ALIASES = new Set([
+  'Ottawa',
+  'Kanata',
+  'Orleans',
+]);
+
 function toNumber(value: number | null) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -322,12 +328,19 @@ function formatDistance(km: number | null) {
 }
 
 function extractIncidentCity(incident: Incident) {
+  const lat = toNumber(incident.locationLat);
+  const lng = toNumber(incident.locationLng);
+  if (lat !== null && lng !== null) {
+    const distanceFromOttawa = haversineKm(OTTAWA_CENTER.lat, OTTAWA_CENTER.lng, lat, lng);
+    if (distanceFromOttawa <= 55) return 'Ottawa';
+  }
+
   const text = `${incident.roadway || ''} ${incident.description || ''}`.trim();
   if (!text) return 'Ontario';
 
   for (const city of ONTARIO_CITY_HINTS) {
     const match = new RegExp(`\\b${city.replace(/\s+/g, '\\s+')}\\b`, 'i');
-    if (match.test(text)) return city;
+    if (match.test(text)) return OTTAWA_AREA_ALIASES.has(city) ? 'Ottawa' : city;
   }
 
   const commaParts = text.split(',').map((part) => part.trim()).filter(Boolean);
@@ -335,10 +348,19 @@ function extractIncidentCity(incident: Incident) {
     const guess = commaParts[commaParts.length - 1]
       .replace(/\b(near|at|on|route|hwy|highway|road|rd|street|st|avenue|ave)\b/gi, '')
       .trim();
-    if (guess.length >= 3 && guess.length <= 24) return guess;
+    if (guess.length >= 3 && guess.length <= 24) {
+      return OTTAWA_AREA_ALIASES.has(guess as (typeof ONTARIO_CITY_HINTS)[number]) ? 'Ottawa' : guess;
+    }
   }
 
   return 'Ontario';
+}
+
+function incidentMatchesCity(incident: IncidentWithMeta, city: string) {
+  if (city === 'Ottawa') {
+    return incident.city === 'Ottawa';
+  }
+  return incident.city === city;
 }
 
 function classifyRoadside(incident: IncidentWithMeta | Incident): {
@@ -1224,7 +1246,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   }, [cityOptions, incidentCity]);
   const cityFilteredIncidentFeed = incidentCity === 'all'
     ? incidentFeedWithMeta
-    : incidentFeedWithMeta.filter((incident) => incident.city === incidentCity);
+    : incidentFeedWithMeta.filter((incident) => incidentMatchesCity(incident, incidentCity));
   const radiusFilteredIncidentFeed = incidentRadiusKm > 0
     ? cityFilteredIncidentFeed.filter(
         (incident) => incident.distanceKm !== null && incident.distanceKm <= incidentRadiusKm,
@@ -1416,9 +1438,9 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
                     }}
                     className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
                   >
-                    <option value="all">All cities</option>
+                    <option value="all" className="bg-slate-950 text-slate-100">All cities</option>
                     {cityOptions.map((city) => (
-                      <option key={city} value={city}>
+                      <option key={city} value={city} className="bg-slate-950 text-slate-100">
                         {city}
                       </option>
                     ))}
@@ -1431,9 +1453,9 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
                     onChange={(event) => setIncidentSort(event.target.value as 'roadside' | 'newest' | 'proximity')}
                     className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
                   >
-                    <option value="proximity">Sort: closest first</option>
-                    <option value="roadside">Sort: most likely assist</option>
-                    <option value="newest">Sort: newest first</option>
+                    <option value="proximity" className="bg-slate-950 text-slate-100">Sort: closest first</option>
+                    <option value="roadside" className="bg-slate-950 text-slate-100">Sort: most likely assist</option>
+                    <option value="newest" className="bg-slate-950 text-slate-100">Sort: newest first</option>
                   </select>
                 </label>
                 <div className="flex gap-2">
