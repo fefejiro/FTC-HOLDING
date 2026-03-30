@@ -19,6 +19,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import { loginRoleHref } from '../lib/loginRoleRoutes';
 import { cn } from '../lib/cn';
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
@@ -154,6 +155,10 @@ function AdminLogin({ onSuccess }: { onSuccess: (token: string | null) => void }
             <Shield className="w-7 h-7 text-slate-300" />
           </div>
         </div>
+        <DispatchAccessPanel
+          activeRole="admin"
+          className="mb-5"
+        />
         <h1 className="text-white font-bold text-2xl text-center mb-1">Admin Access</h1>
         <p className="text-slate-500 text-sm text-center mb-8">Enter your admin PIN to continue.</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -333,6 +338,8 @@ function AdminDashboard({
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>('unassigned');
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [statusChangingId, setStatusChangingId] = useState<string | null>(null);
+  const [testPushState, setTestPushState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
+  const [testPushResult, setTestPushResult] = useState('');
 
   const adminFetch = useCallback(
     (url: string, options: RequestInit = {}) => {
@@ -342,6 +349,26 @@ function AdminDashboard({
     },
     [adminToken],
   );
+
+  async function handleTestPush() {
+    setTestPushState('sending');
+    setTestPushResult('');
+    try {
+      const res = await adminFetch('/api/admin/test-push', { method: 'POST' });
+      const data = (await res.json()) as { ok?: boolean; sent?: number; skipped?: number; error?: string };
+      if (!res.ok || !data.ok) {
+        setTestPushState('error');
+        setTestPushResult(data.error || 'Push failed');
+      } else {
+        setTestPushState('ok');
+        setTestPushResult(`Sent to ${data.sent ?? 0} operator(s), ${data.skipped ?? 0} skipped (no subscription)`);
+      }
+    } catch {
+      setTestPushState('error');
+      setTestPushResult('Network error');
+    }
+    setTimeout(() => setTestPushState('idle'), 5000);
+  }
 
   const { data: requests = [], isLoading, refetch, isFetching } = useQuery<ServiceRequest[]>({
     queryKey: ['admin-requests'],
@@ -474,11 +501,8 @@ function AdminDashboard({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <a href="/operator" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
-              Operator
-            </a>
-            <a href="/" className="text-xs text-slate-500 hover:text-orange-400 transition-colors">
-              Public site
+            <a href={loginRoleHref('operator')} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+              Operator view
             </a>
             <button
               type="button"
@@ -518,16 +542,35 @@ function AdminDashboard({
         </div>
 
         {!showAdd ? (
-          <button
-            onClick={() => setShowAdd(true)}
-            className="w-full py-3 rounded-xl flex items-center justify-center gap-2 border border-dashed border-dispatch-border text-slate-500 text-sm font-medium hover:border-orange-500/40 hover:text-orange-400 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Add Operator
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border border-dashed border-dispatch-border text-slate-500 text-sm font-medium hover:border-orange-500/40 hover:text-orange-400 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Add Operator
+            </button>
+            <button
+              type="button"
+              onClick={handleTestPush}
+              disabled={testPushState === 'sending'}
+              className={cn(
+                'px-4 py-3 rounded-xl border text-sm font-medium flex items-center gap-2 transition-all',
+                testPushState === 'ok' ? 'border-green-500/40 bg-green-500/10 text-green-400' :
+                testPushState === 'error' ? 'border-red-500/40 bg-red-500/10 text-red-400' :
+                'border-dispatch-border text-slate-500 hover:border-slate-500 hover:text-slate-300',
+              )}
+            >
+              {testPushState === 'sending' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              {testPushState === 'sending' ? 'Sending...' : testPushState === 'ok' ? 'Sent' : testPushState === 'error' ? 'Failed' : 'Test Push'}
+            </button>
+          </div>
         ) : (
           <AddOperatorForm onClose={() => setShowAdd(false)} adminToken={adminToken} />
         )}
+        {testPushResult ? (
+          <p className={cn('text-xs -mt-2', testPushState === 'error' ? 'text-red-400' : 'text-slate-500')}>{testPushResult}</p>
+        ) : null}
 
         <div>
           <div className="flex items-center justify-between mb-3.5">

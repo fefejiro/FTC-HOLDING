@@ -1,5 +1,5 @@
 /**
- * Ottawa incident monitor.
+ * Ontario incident monitor.
  *
  * Automated incident sources:
  * 1. Ontario 511 official events feed
@@ -18,9 +18,9 @@ import { incidents } from './schema';
 import { sendToAllActiveOperators } from './push';
 import { sseBroadcast } from './sse';
 
-const OTTAWA = { north: 45.53, south: 45.15, west: -76.35, east: -75.25 };
+const ONTARIO = { north: 56.9, south: 41.6, west: -95.2, east: -74.0 };
 const OTTAWA_CENTER = { lat: 45.4215, lng: -75.6972 } as const;
-const POLL_INTERVAL_MS = 60 * 1_000;
+const POLL_INTERVAL_MS = 45 * 1_000;
 const MAX_GEOCODE_PER_RUN = 8; // Nominatim 1 req/s rate-limit cap
 
 const INCIDENT_SOURCES = [
@@ -122,8 +122,8 @@ const monitorState: MonitorState = {
   sourceStats: initialSourceStats(),
 };
 
-function inOttawa(lat: number, lng: number): boolean {
-  return lat >= OTTAWA.south && lat <= OTTAWA.north && lng >= OTTAWA.west && lng <= OTTAWA.east;
+function inOntario(lat: number, lng: number): boolean {
+  return lat >= ONTARIO.south && lat <= ONTARIO.north && lng >= ONTARIO.west && lng <= ONTARIO.east;
 }
 
 function toNumber(value: unknown): number | null {
@@ -171,6 +171,10 @@ function parseOttawaCoordinates(
 
 function inferIncidentType(rawType: string, rawSubType: string, description: string): string {
   const text = `${rawType} ${rawSubType} ${description}`.toLowerCase();
+  if (/(lockout|locked out|key stuck|keys? in car|vehicle lock)/i.test(text)) return 'LOCKOUT_ASSIST';
+  if (/(dead battery|battery boost|boost required|jump start|no start|won't start)/i.test(text)) return 'BATTERY_ASSIST';
+  if (/(out of gas|ran out of gas|fuel empty|fuel shortage|need fuel|no fuel)/i.test(text)) return 'FUEL_ASSIST';
+  if (/(flat tire|puncture|blowout|tire change|tire repair|wheel damage)/i.test(text)) return 'TIRE_ASSIST';
   if (text.includes('breakdown')) return 'VEHICLE_BREAKDOWN';
   if (text.includes('stalled')) return 'STALLED_VEHICLE';
   if (text.includes('disabled')) return 'DISABLED_VEHICLE';
@@ -186,6 +190,10 @@ function inferIncidentType(rawType: string, rawSubType: string, description: str
 
 function shouldAlert(normalizedType: string, description: string): boolean {
   const directTypes = new Set([
+    'LOCKOUT_ASSIST',
+    'BATTERY_ASSIST',
+    'FUEL_ASSIST',
+    'TIRE_ASSIST',
     'VEHICLE_BREAKDOWN',
     'STALLED_VEHICLE',
     'DISABLED_VEHICLE',
@@ -195,13 +203,17 @@ function shouldAlert(normalizedType: string, description: string): boolean {
     'DEBRIS',
   ]);
   if (directTypes.has(normalizedType)) return true;
-  return /(breakdown|stalled|disabled|accident|collision|vehicle fire|debris|hazard)/i.test(
+  return /(lockout|locked out|key stuck|dead battery|battery boost|jump start|out of gas|fuel empty|flat tire|puncture|blowout|breakdown|stalled|disabled|accident|collision|vehicle fire|debris|hazard)/i.test(
     description,
   );
 }
 
 function prettyType(type: string): string {
   const map: Record<string, string> = {
+    LOCKOUT_ASSIST: 'Lockout assist',
+    BATTERY_ASSIST: 'Battery boost likely',
+    FUEL_ASSIST: 'Fuel assist likely',
+    TIRE_ASSIST: 'Tire assist likely',
     VEHICLE_BREAKDOWN: 'Breakdown',
     STALLED_VEHICLE: 'Stalled vehicle',
     DISABLED_VEHICLE: 'Disabled vehicle',
@@ -374,7 +386,7 @@ function parseRSSItems(xml: string) {
 
 // â”€â”€ Nominatim forward geocoder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-async function geocodeOttawaStreet(query: string): Promise<{ lat: number; lng: number } | null> {
+async function geocodeOntarioStreet(query: string): Promise<{ lat: number; lng: number } | null> {
   try {
     const q = encodeURIComponent(`${query}, Ottawa, Ontario`);
     const res = await fetch(
@@ -386,7 +398,7 @@ async function geocodeOttawaStreet(query: string): Promise<{ lat: number; lng: n
     if (!data.length) return null;
     const lat = parseFloat(data[0].lat);
     const lng = parseFloat(data[0].lon);
-    return inOttawa(lat, lng) ? { lat, lng } : null;
+    return inOntario(lat, lng) ? { lat, lng } : null;
   } catch {
     return null;
   }
@@ -449,7 +461,7 @@ async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<No
         geocodeBudget.used += 1;
         // 1.1s gap satisfies Nominatim's 1 req/s policy
         const [coords] = await Promise.all([
-          geocodeOttawaStreet(hint),
+          geocodeOntarioStreet(hint),
           new Promise<void>((r) => setTimeout(r, 1_100)),
         ]);
         if (coords) { lat = coords.lat; lng = coords.lng; }
@@ -491,7 +503,7 @@ async function fetchOntario511Incidents(): Promise<NormalizedIncident[]> {
     .map((event) => {
       const lat = toNumber(event.Latitude);
       const lng = toNumber(event.Longitude);
-      if (lat === null || lng === null || !inOttawa(lat, lng)) return null;
+      if (lat === null || lng === null || !inOntario(lat, lng)) return null;
 
       const description = String(event.Description || '').trim();
       const eventType = inferIncidentType(
@@ -530,7 +542,7 @@ async function fetchOttawaTrafficIncidents(): Promise<NormalizedIncident[]> {
   return all
     .map((event) => {
       const coords = parseOttawaCoordinates(event.geodata);
-      if (!coords || !inOttawa(coords.lat, coords.lng)) return null;
+      if (!coords || !inOntario(coords.lat, coords.lng)) return null;
 
       const description = String(event.message || event.headline || '').trim();
       const normalizedType = inferIncidentType(
@@ -609,7 +621,7 @@ async function runMonitor(): Promise<void> {
 
     if (all.length === 0) {
       monitorState.lastSuccessAt = new Date().toISOString();
-      console.log('[monitor] no Ottawa incidents matched current filters');
+      console.log('[monitor] no Ontario incidents matched current filters');
       return;
     }
 
@@ -650,12 +662,9 @@ async function runMonitor(): Promise<void> {
       );
 
     if (fresh.length === 0 && changed.length === 0) {
-      if (staleIds.length > 0) {
-        await db.delete(incidents).where(inArray(incidents.id, staleIds));
-      }
       monitorState.lastSuccessAt = new Date().toISOString();
       console.log(
-        `[monitor] checked ${all.length} Ottawa incidents across ${INCIDENT_SOURCES.length} sources; no new incidents, removed ${staleIds.length} stale incidents`,
+        `[monitor] checked ${all.length} Ontario incidents across ${INCIDENT_SOURCES.length} sources; no new incidents, retained ${staleIds.length} historical incidents`,
       );
       return;
     }
@@ -663,6 +672,7 @@ async function runMonitor(): Promise<void> {
     let alertCount = 0;
 
     for (const incident of fresh) {
+      const occurredAt = incident.lastUpdated || incident.startDate || new Date().toISOString();
       await db
         .insert(incidents)
         .values({
@@ -690,13 +700,16 @@ async function runMonitor(): Promise<void> {
         locationLat: incident.locationLat,
         locationLng: incident.locationLng,
         severity: incident.severity,
+        startDate: incident.startDate,
+        lastUpdated: incident.lastUpdated,
+        occurredAt,
         alerted: incident.alerted,
-        createdAt: new Date().toISOString(),
+        createdAt: occurredAt,
         source: incident.sourceKey,
       });
 
       if (incident.alerted) {
-        const location = incident.roadway || incident.description.slice(0, 80) || 'Ottawa area';
+        const location = incident.roadway || incident.description.slice(0, 80) || 'Ontario';
         sendToAllActiveOperators({
           title: 'Incident Alert',
           body: `${prettyType(incident.eventType)} - ${location}`,
@@ -712,6 +725,7 @@ async function runMonitor(): Promise<void> {
     }
 
     for (const incident of changed) {
+      const occurredAt = incident.lastUpdated || incident.startDate || new Date().toISOString();
       await db
         .update(incidents)
         .set({
@@ -738,19 +752,18 @@ async function runMonitor(): Promise<void> {
         locationLat: incident.locationLat,
         locationLng: incident.locationLng,
         severity: incident.severity,
+        startDate: incident.startDate,
+        lastUpdated: incident.lastUpdated,
+        occurredAt,
         alerted: incident.alerted,
-        createdAt: incident.lastUpdated || incident.startDate || new Date().toISOString(),
+        createdAt: occurredAt,
         source: incident.sourceKey,
       });
     }
 
-    if (staleIds.length > 0) {
-      await db.delete(incidents).where(inArray(incidents.id, staleIds));
-    }
-
     monitorState.lastSuccessAt = new Date().toISOString();
     console.log(
-      `[monitor] ${fresh.length} new, ${changed.length} updated, and ${staleIds.length} removed Ottawa incidents from ${INCIDENT_SOURCES.length} sources - ${alertCount} operator alerts sent`,
+      `[monitor] ${fresh.length} new, ${changed.length} updated, and ${staleIds.length} retained as history from ${INCIDENT_SOURCES.length} Ontario sources - ${alertCount} operator alerts sent`,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown monitor error';
@@ -780,6 +793,6 @@ export function startIncidentMonitor(): void {
   }, 10_000);
 
   console.log(
-    `[monitor] Ottawa incident monitor started - ${INCIDENT_SOURCES.length} official sources, polling every 60 sec`,
+    `[monitor] Ontario incident monitor started - ${INCIDENT_SOURCES.length} official sources, polling every ${Math.round(POLL_INTERVAL_MS / 1000)} sec`,
   );
 }

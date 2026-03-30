@@ -1,38 +1,42 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import L from 'leaflet';
 import {
   AlertTriangle,
   ArrowLeft,
-  Bell,
   CheckCircle2,
   CircleDot,
   Clock,
   Fuel,
   KeyRound,
   Loader2,
+  LocateFixed,
   LogOut,
   MapPin,
   Navigation2,
   Phone,
   RefreshCw,
+  Search,
   TriangleAlert,
   Wrench,
   X,
   Zap,
 } from 'lucide-react';
+import {
+  CircleMarker,
+  MapContainer,
+  Polyline,
+  Popup,
+  TileLayer,
+  Tooltip,
+  useMap,
+} from 'react-leaflet';
+import DispatchAccessPanel from '../components/DispatchAccessPanel';
 import DemoFeedbackForm from '../components/DemoFeedbackForm';
 import { useEvents } from '../hooks/useEvents';
 import { usePush } from '../hooks/usePush';
 import { cn } from '../lib/cn';
-import {
-  clearStoredDemoSessionId,
-  getDemoSessionId,
-  isDemoMode,
-  makeDemoSessionId,
-  readStoredDemoSessionId,
-  requestMatchesDemoMode,
-  storeDemoSessionId,
-} from '../lib/demo';
+import { requestMatchesDemoMode } from '../lib/demo';
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
 type RequestStatus = 'pending' | 'accepted' | 'en_route' | 'completed' | 'cancelled';
@@ -75,7 +79,24 @@ interface Incident {
   locationLng: number | null;
   severity: string | null;
   alerted: boolean | null;
+  startDate?: string | null;
+  lastUpdated?: string | null;
+  occurredAt?: string | null;
+  isHistorical?: boolean;
   createdAt: string;
+}
+
+interface IncidentWithMeta extends Incident {
+  city: string;
+  distanceKm: number | null;
+  roadsideType: 'accident' | 'battery' | 'lockout' | 'gas' | 'tire' | 'general';
+  roadsideScore: number;
+}
+
+interface ProximityPoint {
+  lat: number;
+  lng: number;
+  label: string;
 }
 
 interface DispatchStatusResponse {
@@ -97,7 +118,6 @@ interface Toast {
 }
 
 const LIVE_SESSION_KEY = 'dispatch_operator_session';
-const DEMO_SESSION_KEY = 'dispatch_operator_demo_session';
 
 const SERVICE_ICONS: Record<ServiceType, React.ComponentType<{ className?: string }>> = {
   gas: Fuel,
@@ -124,6 +144,10 @@ const STATUS_CONFIG: Record<RequestStatus, { label: string; badge: string; bar: 
 };
 
 const INCIDENT_LABELS: Record<string, string> = {
+  LOCKOUT_ASSIST: 'Lockout Assist',
+  BATTERY_ASSIST: 'Battery Assist',
+  FUEL_ASSIST: 'Fuel Assist',
+  TIRE_ASSIST: 'Tire Assist',
   VEHICLE_BREAKDOWN: 'Breakdown',
   STALLED_VEHICLE: 'Stalled Vehicle',
   DISABLED_VEHICLE: 'Disabled Vehicle',
@@ -177,8 +201,29 @@ function playIncidentAlert() {
   } catch {}
 }
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
+function parseTimestamp(value?: string | null) {
+  if (!value) return null;
+  const ts = Date.parse(value);
+  return Number.isFinite(ts) ? ts : null;
+}
+
+function incidentOccurredAt(incident: Incident) {
+  return incident.occurredAt || incident.lastUpdated || incident.startDate || incident.createdAt;
+}
+
+function incidentOccurredMs(incident: Incident) {
+  const ts =
+    parseTimestamp(incident.occurredAt) ??
+    parseTimestamp(incident.lastUpdated) ??
+    parseTimestamp(incident.startDate) ??
+    parseTimestamp(incident.createdAt);
+  return ts ?? 0;
+}
+
+function timeAgo(dateStr?: string | null, nowMs = Date.now()) {
+  const ts = parseTimestamp(dateStr);
+  if (ts === null) return 'time unknown';
+  const diff = Math.max(0, nowMs - ts);
   const minutes = Math.floor(diff / 60000);
   if (minutes < 1) return 'just now';
   if (minutes < 60) return `${minutes}m ago`;
@@ -187,7 +232,10 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-function fmt(dateStr: string) {
+function fmt(dateStr?: string | null) {
+  if (!dateStr) return 'Unknown time';
+  const ts = parseTimestamp(dateStr);
+  if (ts === null) return 'Unknown time';
   return new Date(dateStr).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
@@ -215,20 +263,142 @@ function incidentIsHighPriority(incident: Incident) {
   return ['ACCIDENT', 'COLLISION', 'VEHICLE_FIRE'].includes(incident.eventType?.toUpperCase() || '');
 }
 
-function readDemoContext() {
-  if (typeof window === 'undefined') return { demoMode: false, demoSessionId: null as string | null };
-  const demoMode = isDemoMode(window.location.search);
-  if (!demoMode) {
-    clearStoredDemoSessionId();
-    return { demoMode: false, demoSessionId: null };
-  }
-  const demoSessionId = getDemoSessionId(window.location.search) || readStoredDemoSessionId() || makeDemoSessionId();
-  storeDemoSessionId(demoSessionId);
-  return { demoMode: true, demoSessionId };
+const OTTAWA_CENTER: ProximityPoint = {
+  lat: 45.4215,
+  lng: -75.6972,
+  label: 'Ottawa centre',
+};
+
+const ONTARIO_CITY_HINTS = [
+  'Ottawa',
+  'Toronto',
+  'Mississauga',
+  'Brampton',
+  'Hamilton',
+  'London',
+  'Markham',
+  'Vaughan',
+  'Kitchener',
+  'Windsor',
+  'Richmond Hill',
+  'Oakville',
+  'Burlington',
+  'Oshawa',
+  'Barrie',
+  'Kingston',
+  'Guelph',
+  'Waterloo',
+  'Ajax',
+  'Whitby',
+  'Milton',
+  'Cambridge',
+  'Thunder Bay',
+  'Niagara Falls',
+  'Sudbury',
+  'Belleville',
+  'Peterborough',
+  'Kanata',
+  'Orleans',
+] as const;
+
+function toNumber(value: number | null) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function sessionKey(demoMode: boolean) {
-  return demoMode ? DEMO_SESSION_KEY : LIVE_SESSION_KEY;
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(km: number | null) {
+  if (km === null || !Number.isFinite(km)) return 'Distance unavailable';
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1)} km`;
+}
+
+function extractIncidentCity(incident: Incident) {
+  const text = `${incident.roadway || ''} ${incident.description || ''}`.trim();
+  if (!text) return 'Ontario';
+
+  for (const city of ONTARIO_CITY_HINTS) {
+    const match = new RegExp(`\\b${city.replace(/\s+/g, '\\s+')}\\b`, 'i');
+    if (match.test(text)) return city;
+  }
+
+  const commaParts = text.split(',').map((part) => part.trim()).filter(Boolean);
+  if (commaParts.length > 1) {
+    const guess = commaParts[commaParts.length - 1]
+      .replace(/\b(near|at|on|route|hwy|highway|road|rd|street|st|avenue|ave)\b/gi, '')
+      .trim();
+    if (guess.length >= 3 && guess.length <= 24) return guess;
+  }
+
+  return 'Ontario';
+}
+
+function classifyRoadside(incident: IncidentWithMeta | Incident): {
+  roadsideType: 'accident' | 'battery' | 'lockout' | 'gas' | 'tire' | 'general';
+  roadsideScore: number;
+} {
+  const haystack = `${incident.eventType || ''} ${incident.description || ''} ${incident.roadway || ''}`.toLowerCase();
+
+  const scores = {
+    accident: 0,
+    battery: 0,
+    lockout: 0,
+    gas: 0,
+    tire: 0,
+  };
+
+  if (/(accident|collision|crash|vehicle fire|incident)/i.test(haystack)) scores.accident += 70;
+  if (/(dead battery|battery boost|jump start|no start|stalled|disabled)/i.test(haystack)) scores.battery += 65;
+  if (/(lockout|locked out|key stuck|keys? in car|vehicle lock)/i.test(haystack)) scores.lockout += 75;
+  if (/(out of gas|ran out of gas|fuel empty|no fuel|need fuel|gas delivery)/i.test(haystack)) scores.gas += 75;
+  if (/(flat tire|puncture|blowout|tire change|wheel damage)/i.test(haystack)) scores.tire += 75;
+
+  if ((incident.eventType || '').toUpperCase() === 'BATTERY_ASSIST') scores.battery += 25;
+  if ((incident.eventType || '').toUpperCase() === 'LOCKOUT_ASSIST') scores.lockout += 25;
+  if ((incident.eventType || '').toUpperCase() === 'FUEL_ASSIST') scores.gas += 25;
+  if ((incident.eventType || '').toUpperCase() === 'TIRE_ASSIST') scores.tire += 25;
+  if (['ACCIDENT', 'COLLISION', 'VEHICLE_FIRE'].includes((incident.eventType || '').toUpperCase())) scores.accident += 20;
+  if ((incident as Incident).alerted) {
+    scores.accident += 5;
+    scores.battery += 5;
+    scores.lockout += 5;
+    scores.gas += 5;
+    scores.tire += 5;
+  }
+
+  const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]) as Array<[
+    'accident' | 'battery' | 'lockout' | 'gas' | 'tire',
+    number,
+  ]>;
+  const [topType, rawScore] = ranked[0];
+  const roadsideType = rawScore >= 45 ? topType : 'general';
+  const roadsideScore = Math.max(0, Math.min(100, rawScore));
+  return { roadsideType, roadsideScore };
+}
+
+function roadsideLabel(type: IncidentWithMeta['roadsideType']) {
+  if (type === 'accident') return 'Accident likely';
+  if (type === 'battery') return 'Battery assist likely';
+  if (type === 'lockout') return 'Lockout likely';
+  if (type === 'gas') return 'Fuel assist likely';
+  if (type === 'tire') return 'Tire assist likely';
+  return 'General roadside';
+}
+
+function readDemoContext() {
+  return { demoMode: false, demoSessionId: null as string | null };
+}
+
+function sessionKey() {
+  return LIVE_SESSION_KEY;
 }
 
 function PinScreen({
@@ -305,6 +475,10 @@ function PinScreen({
           <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center mb-5 shadow-xl shadow-orange-500/25">
             <Zap className="w-8 h-8 text-white" />
           </div>
+          <DispatchAccessPanel
+            activeRole="operator"
+            className="mb-5 w-full"
+          />
           {demoMode ? (
             <>
               <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-orange-300 mb-4">
@@ -319,7 +493,7 @@ function PinScreen({
           ) : (
             <>
               <h1 className="text-2xl font-bold text-white">Operator Login</h1>
-              <p className="text-slate-500 text-sm mt-1">Ottawa Roadside Dispatch</p>
+              <p className="text-slate-500 text-sm mt-1">Emergency Prompt - Ottawa</p>
             </>
           )}
         </div>
@@ -387,16 +561,6 @@ function PinScreen({
             )}
           </button>
         </form>
-
-        <p className="text-center text-slate-700 text-xs mt-8">
-          Need a request to test?{' '}
-          <a
-            href={demoMode ? `/request?mode=demo${demoSessionId ? `&demoSession=${encodeURIComponent(demoSessionId)}` : ''}` : '/request'}
-            className="text-slate-500 hover:text-orange-400 transition-colors"
-          >
-            Open the request form
-          </a>
-        </p>
       </div>
     </div>
   );
@@ -587,10 +751,179 @@ function RequestDetailCard({
   );
 }
 
-function IncidentCard({ incident, selected, onDispatch, onSelect }: { incident: Incident; selected?: boolean; onDispatch?: (incident: Incident) => void; onSelect?: (incident: Incident) => void }) {
+function IncidentMapViewport({
+  incidents,
+  proximityPoint,
+  selectedIncidentId,
+}: {
+  incidents: IncidentWithMeta[];
+  proximityPoint: ProximityPoint;
+  selectedIncidentId: string | null;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!incidents.length) {
+      map.setView([proximityPoint.lat, proximityPoint.lng], 11, { animate: true });
+      return;
+    }
+
+    const bounds = L.latLngBounds(
+      incidents.map((incident) => [incident.locationLat as number, incident.locationLng as number]),
+    );
+    bounds.extend([proximityPoint.lat, proximityPoint.lng]);
+    map.fitBounds(bounds.pad(0.2), {
+      animate: true,
+      duration: 0.45,
+      maxZoom: 14,
+    });
+  }, [incidents, map, proximityPoint.lat, proximityPoint.lng]);
+
+  useEffect(() => {
+    if (!selectedIncidentId) return;
+    const selected = incidents.find((incident) => incident.id === selectedIncidentId);
+    if (!selected) return;
+    map.flyTo([selected.locationLat as number, selected.locationLng as number], Math.max(map.getZoom(), 13), {
+      animate: true,
+      duration: 0.35,
+    });
+  }, [incidents, map, selectedIncidentId]);
+
+  return null;
+}
+
+function IncidentMapPanel({
+  incidents,
+  selectedIncidentId,
+  onSelect,
+  proximityPoint,
+}: {
+  incidents: IncidentWithMeta[];
+  selectedIncidentId: string | null;
+  onSelect: (incident: IncidentWithMeta) => void;
+  proximityPoint: ProximityPoint;
+}) {
+  const plotted = incidents.filter(
+    (incident) =>
+      toNumber(incident.locationLat) !== null && toNumber(incident.locationLng) !== null,
+  );
+
+  if (!plotted.length) {
+    return (
+      <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-4">
+        <div className="text-white text-sm font-semibold">Incident map</div>
+        <p className="text-slate-500 text-xs mt-1">No coordinate-ready incidents for this filter.</p>
+      </div>
+    );
+  }
+
+  const selected = plotted.find((incident) => incident.id === selectedIncidentId) || null;
+
+  return (
+    <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-4">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <div className="text-white text-sm font-semibold">Live incident map</div>
+          <div className="text-slate-500 text-xs mt-1">Pan, zoom, and tap markers like a normal map.</div>
+        </div>
+        <div className="text-right">
+          <div className="text-slate-500 text-[11px] uppercase tracking-[0.14em]">Reference point</div>
+          <div className="text-slate-200 text-xs mt-1">{proximityPoint.label}</div>
+        </div>
+      </div>
+
+      <MapContainer
+        center={[proximityPoint.lat, proximityPoint.lng]}
+        zoom={11}
+        scrollWheelZoom
+        className="h-64 sm:h-72 w-full rounded-xl overflow-hidden border border-dispatch-border"
+      >
+        <TileLayer
+          attribution='&copy; OpenStreetMap contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <IncidentMapViewport
+          incidents={plotted}
+          proximityPoint={proximityPoint}
+          selectedIncidentId={selectedIncidentId}
+        />
+
+        <CircleMarker
+          center={[proximityPoint.lat, proximityPoint.lng]}
+          radius={8}
+          pathOptions={{
+            color: '#22d3ee',
+            fillColor: '#22d3ee',
+            fillOpacity: 0.35,
+            weight: 2,
+          }}
+        >
+          <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
+            {proximityPoint.label}
+          </Tooltip>
+        </CircleMarker>
+
+        {plotted.map((incident) => {
+          const selectedMarker = incident.id === selectedIncidentId;
+          return (
+            <CircleMarker
+              key={incident.id}
+              center={[incident.locationLat as number, incident.locationLng as number]}
+              radius={selectedMarker ? 9 : 7}
+              eventHandlers={{
+                click: () => onSelect(incident),
+              }}
+              pathOptions={{
+                color: selectedMarker ? '#fb923c' : '#f59e0b',
+                fillColor: selectedMarker ? '#fb923c' : '#f59e0b',
+                fillOpacity: selectedMarker ? 0.75 : 0.6,
+                weight: selectedMarker ? 3 : 2,
+              }}
+            >
+              <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
+                {incidentLabel(incident)}
+              </Tooltip>
+              <Popup>
+                <div className="text-sm">
+                  <div className="font-semibold">{incidentLabel(incident)}</div>
+                  <div className="mt-1">{incident.roadway || incident.city}</div>
+                  <div className="mt-1 text-slate-600">{formatDistance(incident.distanceKm)} from {proximityPoint.label}</div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+
+        {selected ? (
+          <Polyline
+            positions={[
+              [proximityPoint.lat, proximityPoint.lng],
+              [selected.locationLat as number, selected.locationLng as number],
+            ]}
+            pathOptions={{ color: '#22d3ee', dashArray: '6 6', weight: 2 }}
+          />
+        ) : null}
+      </MapContainer>
+
+      <div className="flex items-center gap-4 mt-3 text-xs text-slate-400">
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-amber-400 border border-amber-200/80" />
+          Incident marker
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-cyan-400/30 border-2 border-cyan-300" />
+          Distance reference
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel }: { incident: IncidentWithMeta; selected?: boolean; onDispatch?: (incident: Incident) => void; onSelect?: (incident: IncidentWithMeta) => void; proximityLabel: string }) {
   const mapsUrl = incidentMapsUrl(incident);
   const label = incidentLabel(incident);
   const isHigh = incidentIsHighPriority(incident);
+  const occurredAt = incidentOccurredAt(incident);
 
   return (
     <div className={cn('relative bg-dispatch-surface border rounded-2xl overflow-hidden transition-all', selected ? 'border-orange-500/40 shadow-[0_0_0_1px_rgba(249,115,22,0.18)]' : incident.alerted ? 'border-orange-500/30' : 'border-dispatch-border')}>
@@ -605,11 +938,15 @@ function IncidentCard({ incident, selected, onDispatch, onSelect }: { incident: 
               <div className="font-bold text-white text-sm">{label}</div>
               <div className="flex items-center gap-1.5 text-slate-500 text-xs mt-0.5">
                 <Clock className="w-3 h-3" />
-                {timeAgo(incident.createdAt)}
+                {timeAgo(occurredAt)}
               </div>
             </div>
           </div>
-          {incident.alerted ? <span className="text-xs text-orange-400 font-semibold border border-orange-500/25 bg-orange-500/10 px-2.5 py-1 rounded-full whitespace-nowrap">Alerted</span> : null}
+          <div className="flex flex-col items-end gap-1">
+            {incident.alerted ? <span className="text-xs text-orange-400 font-semibold border border-orange-500/25 bg-orange-500/10 px-2.5 py-1 rounded-full whitespace-nowrap">Alerted</span> : null}
+            <span className="text-[11px] text-cyan-300 font-semibold">{formatDistance(incident.distanceKm)}</span>
+            <span className="text-[11px] text-lime-300 font-semibold">{roadsideLabel(incident.roadsideType)} ({incident.roadsideScore}%)</span>
+          </div>
         </div>
         {incident.roadway ? (
           <div className="flex items-center gap-2 text-slate-300 text-sm mb-1.5">
@@ -617,6 +954,9 @@ function IncidentCard({ incident, selected, onDispatch, onSelect }: { incident: 
             <span className="font-medium">{incident.roadway}</span>
           </div>
         ) : null}
+        <div className="text-[11px] text-slate-500 mb-2">
+          {incident.city} - {formatDistance(incident.distanceKm)} from {proximityLabel}
+        </div>
         {incident.description ? <p className="text-slate-500 text-xs leading-relaxed line-clamp-2 mb-3">{incident.description}</p> : null}
         <div className="flex gap-2">
           {onSelect ? <button type="button" onClick={() => onSelect(incident)} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all', selected ? 'bg-slate-700 text-white' : 'bg-dispatch-bg text-slate-300 hover:text-white hover:bg-slate-800')}>{selected ? 'Viewing details' : 'Open details'}</button> : null}
@@ -628,9 +968,20 @@ function IncidentCard({ incident, selected, onDispatch, onSelect }: { incident: 
   );
 }
 
-function IncidentDetailCard({ incident, onBack, onDispatch }: { incident: Incident; onBack: () => void; onDispatch?: (incident: Incident) => void }) {
+function IncidentDetailCard({
+  incident,
+  onBack,
+  onDispatch,
+  proximityLabel,
+}: {
+  incident: IncidentWithMeta;
+  onBack: () => void;
+  onDispatch?: (incident: Incident) => void;
+  proximityLabel: string;
+}) {
   const mapsUrl = incidentMapsUrl(incident);
   const severity = incident.severity ? String(incident.severity).replace(/_/g, ' ') : 'Not specified';
+  const occurredAt = incidentOccurredAt(incident);
   return (
     <div className="bg-dispatch-surface border border-orange-500/30 rounded-2xl p-5">
       <div className="flex items-center justify-between gap-3 mb-4">
@@ -641,10 +992,13 @@ function IncidentDetailCard({ incident, onBack, onDispatch }: { incident: Incide
         <div className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap bg-amber-500/15 text-amber-400">{incidentLabel(incident)}</div>
       </div>
       <div className="grid md:grid-cols-2 gap-3 mb-3">
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Roadway</div><div className="text-white text-sm font-semibold mt-2">{incident.roadway || 'Ottawa area'}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Roadway</div><div className="text-white text-sm font-semibold mt-2">{incident.roadway || 'Ontario area'}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Severity</div><div className="text-slate-300 text-sm mt-2">{severity}</div></div>
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Detected</div><div className="text-slate-300 text-sm mt-2">{fmt(incident.createdAt)}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Reported</div><div className="text-slate-300 text-sm mt-2">{fmt(occurredAt)} ({timeAgo(occurredAt)})</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Coordinates</div><div className="text-slate-300 text-sm mt-2">{incident.locationLat && incident.locationLng ? `${incident.locationLat.toFixed(5)}, ${incident.locationLng.toFixed(5)}` : 'Coordinate precision unavailable'}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">City</div><div className="text-slate-300 text-sm mt-2">{incident.city}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Distance</div><div className="text-slate-300 text-sm mt-2">{formatDistance(incident.distanceKm)} from {proximityLabel}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Likely assist</div><div className="text-lime-300 text-sm mt-2">{roadsideLabel(incident.roadsideType)} ({incident.roadsideScore}%)</div></div>
       </div>
       <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3 mb-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Incident detail</div><div className="text-slate-300 text-sm mt-2 leading-relaxed">{incident.description || 'No additional incident description was provided by the source feed.'}</div></div>
       <div className="flex flex-wrap gap-2">
@@ -659,10 +1013,20 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const [filter, setFilter] = useState<OperatorFilter>('active');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const { isSubscribed, isSupported, subscribe } = usePush({ operatorId: session.id });
+  const [incidentMode, setIncidentMode] = useState<'active' | 'history' | 'all'>('active');
+  const [incidentCategory, setIncidentCategory] = useState<'all' | 'emergency' | 'breakdown' | 'traffic' | 'transit'>('all');
+  const [incidentCity, setIncidentCity] = useState('all');
+  const [incidentSort, setIncidentSort] = useState<'roadside' | 'newest' | 'proximity'>('proximity');
+  const [incidentRadiusKm, setIncidentRadiusKm] = useState(0);
+  const [proximityPoint, setProximityPoint] = useState<ProximityPoint>(OTTAWA_CENTER);
+  const [locatingProximity, setLocatingProximity] = useState(false);
+  const [proximityError, setProximityError] = useState('');
+  const [incidentSearch, setIncidentSearch] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [, setNowTick] = useState(0);
   const queryClient = useQueryClient();
-  const { isSubscribed, isSupported, subscribe } = usePush({ operatorId: session.id });
   const requestQueryKey = useMemo(() => ['requests', demoMode ? `demo:${demoSessionId || 'demo'}` : 'live'], [demoMode, demoSessionId]);
   const requestsUrl = useMemo(() => {
     if (!demoMode) return '/api/requests?mode=live';
@@ -671,15 +1035,70 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
     return `/api/requests?${params.toString()}`;
   }, [demoMode, demoSessionId]);
 
+  const incidentsUrl = useMemo(() => {
+    const params = new URLSearchParams({ mode: incidentMode, limit: '80' });
+    const q = incidentSearch.trim();
+    if (q) params.set('q', q);
+    return `/api/incidents?${params.toString()}`;
+  }, [incidentMode, incidentSearch]);
+
+  const useMyLocationForProximity = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setProximityError('Location is not supported on this device. Using Ottawa centre.');
+      setProximityPoint(OTTAWA_CENTER);
+      return;
+    }
+    setLocatingProximity(true);
+    setProximityError('');
+    const gpsPromise = new Promise<GeolocationPosition>((resolve, reject) => {
+      const timeoutId = setTimeout(() => reject(new Error('GPS timeout')), 15000);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          clearTimeout(timeoutId);
+          resolve(position);
+        },
+        (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+      );
+    });
+
+    gpsPromise
+      .then(async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        let label = 'your location';
+
+        try {
+          const response = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`, {
+            credentials: 'include',
+          });
+          if (response.ok) {
+            const data = (await response.json()) as { city?: string; displayName?: string };
+            label = data.city || data.displayName || label;
+          }
+        } catch {
+          // Keep generic label if reverse geocoding fails.
+        }
+
+        setProximityPoint({ lat, lng, label });
+      })
+      .catch(() => {
+        setProximityPoint(OTTAWA_CENTER);
+        setProximityError('Could not read GPS location. Using Ottawa centre.');
+      })
+      .finally(() => {
+        setLocatingProximity(false);
+      });
+  }, []);
+
   function addToast(message: string, type: Toast['type']) {
     const id = Date.now() + Math.round(Math.random() * 1000);
     setToasts((current) => [...current, { id, message, type }]);
     setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 5000);
   }
-
-  useEffect(() => {
-    if (isSupported && !isSubscribed) subscribe();
-  }, [isSubscribed, isSupported, subscribe]);
 
   const { connected: liveFeedConnected } = useEvents({
     onRequestNew: (data) => {
@@ -699,24 +1118,37 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
     },
     onIncidentNew: (data) => {
       const incident = data as Incident;
-      queryClient.setQueryData<Incident[]>(['incidents'], (current) => current ? [incident, ...current.filter((item) => item.id !== incident.id)] : [incident]);
-      if (incidentIsHighPriority(incident)) {
+      queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      const likely = classifyRoadside(incident);
+      if (incidentIsHighPriority(incident) || likely.roadsideScore >= 65) {
         playIncidentAlert();
-        addToast(`${incidentLabel(incident)} - ${incident.roadway || 'Ottawa area'}`, 'incident');
+        addToast(`${roadsideLabel(likely.roadsideType)} - ${incident.roadway || 'Ontario area'}`, 'incident');
       }
     },
     onIncidentUpdated: (data) => {
-      const incident = data as Incident;
-      queryClient.setQueryData<Incident[]>(['incidents'], (current) => {
-        const currentList = current ?? [];
-        return [incident, ...currentList.filter((item) => item.id !== incident.id)];
-      });
+      void data;
+      queryClient.invalidateQueries({ queryKey: ['incidents'] });
     },
   });
 
-  const { data: status } = useQuery<DispatchStatusResponse>({ queryKey: ['dispatch-status'], queryFn: async () => { const response = await fetch('/api/status'); if (!response.ok) throw new Error('Failed to load dispatch status'); return response.json() as Promise<DispatchStatusResponse>; }, refetchInterval: 60_000, staleTime: 30_000 });
-  const { data: allRequests = [], isLoading } = useQuery<ServiceRequest[]>({ queryKey: requestQueryKey, queryFn: async () => { const response = await fetch(requestsUrl); if (!response.ok) throw new Error('Failed to load requests'); return response.json() as Promise<ServiceRequest[]>; }, refetchInterval: 60_000 });
-  const { data: incidentFeed = [], isLoading: incidentsLoading } = useQuery<Incident[]>({ queryKey: ['incidents'], queryFn: async () => { const response = await fetch('/api/incidents?limit=30'); if (!response.ok) throw new Error('Failed to load incidents'); return response.json() as Promise<Incident[]>; }, refetchInterval: 60_000, staleTime: 30_000 });
+  const requestFallbackMs = liveFeedConnected ? 30_000 : 12_000;
+  const incidentFallbackMs = liveFeedConnected ? 25_000 : 10_000;
+  const { data: status } = useQuery<DispatchStatusResponse>({ queryKey: ['dispatch-status'], queryFn: async () => { const response = await fetch('/api/status'); if (!response.ok) throw new Error('Failed to load dispatch status'); return response.json() as Promise<DispatchStatusResponse>; }, refetchInterval: 30_000, staleTime: 15_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
+  const { data: allRequests = [], isLoading } = useQuery<ServiceRequest[]>({ queryKey: requestQueryKey, queryFn: async () => { const response = await fetch(requestsUrl); if (!response.ok) throw new Error('Failed to load requests'); return response.json() as Promise<ServiceRequest[]>; }, refetchInterval: requestFallbackMs, refetchIntervalInBackground: true, staleTime: 12_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
+  const { data: incidentFeed = [], isLoading: incidentsLoading } = useQuery<Incident[]>({ queryKey: ['incidents', incidentMode, incidentSearch], queryFn: async () => { const response = await fetch(incidentsUrl); if (!response.ok) throw new Error('Failed to load incidents'); return response.json() as Promise<Incident[]>; }, refetchInterval: incidentFallbackMs, refetchIntervalInBackground: true, staleTime: 10_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowTick((tick) => tick + 1);
+    }, 30_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (!liveFeedConnected) return;
+    queryClient.invalidateQueries({ queryKey: requestQueryKey });
+    queryClient.invalidateQueries({ queryKey: ['incidents'] });
+  }, [liveFeedConnected, queryClient, requestQueryKey]);
 
   const { mutate: updateStatus, isPending: isUpdating } = useMutation({
     mutationFn: async ({ id, status, operatorId }: { id: string; status: RequestStatus; operatorId: string }) => {
@@ -728,7 +1160,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   });
 
   const handleIncidentDispatch = useCallback(async (incident: Incident) => {
-    const roadway = incident.roadway || 'Ottawa area';
+    const roadway = incident.roadway || 'Ontario area';
     try {
       const response = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerName: `Lead - ${roadway}`, customerPhone: '000-000-0000', serviceType: 'other', locationLat: incident.locationLat, locationLng: incident.locationLng, locationAddress: roadway, notes: incident.description || undefined, mode: demoMode ? 'demo' : 'live', demoSessionId: demoMode ? demoSessionId || undefined : undefined }) });
       if (!response.ok) throw new Error('Failed to create job');
@@ -745,7 +1177,89 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const activeCount = myRequests.filter((request) => ['accepted', 'en_route'].includes(request.status)).length;
   const completedDemoRequest = demoMode ? [...myRequests].find((request) => request.status === 'completed') || null : null;
   const selectedRequest = displayRequests.find((request) => request.id === selectedRequestId) || myRequests.find((request) => request.id === selectedRequestId) || null;
-  const selectedIncident = incidentFeed.find((incident) => incident.id === selectedIncidentId) || null;
+  const INCIDENT_CATEGORIES: Record<string, string[]> = {
+    emergency: ['ACCIDENT', 'COLLISION', 'VEHICLE_FIRE'],
+    breakdown: ['VEHICLE_BREAKDOWN', 'STALLED_VEHICLE', 'DISABLED_VEHICLE', 'HAZARD', 'DEBRIS', 'BATTERY_ASSIST', 'LOCKOUT_ASSIST', 'FUEL_ASSIST', 'TIRE_ASSIST'],
+    traffic: ['ROAD_CLOSURE', 'ROAD_EVENT', 'ROADWORK'],
+    transit: ['TRANSIT_ALERT', 'ROAD_DETOUR', 'ROUTE_CANCELLED'],
+  };
+  const categoryFilteredIncidentFeed = incidentCategory === 'all'
+    ? incidentFeed
+    : incidentFeed.filter((incident) =>
+        INCIDENT_CATEGORIES[incidentCategory]?.includes(
+          (incident.eventType || '').toUpperCase(),
+        ),
+      );
+  const incidentFeedWithMeta = useMemo<IncidentWithMeta[]>(
+    () =>
+      categoryFilteredIncidentFeed.map((incident) => {
+        const lat = toNumber(incident.locationLat);
+        const lng = toNumber(incident.locationLng);
+        const distanceKm =
+          lat !== null && lng !== null
+            ? haversineKm(proximityPoint.lat, proximityPoint.lng, lat, lng)
+            : null;
+        return {
+          ...incident,
+          city: extractIncidentCity(incident),
+          distanceKm,
+          ...classifyRoadside(incident),
+        };
+      }),
+    [categoryFilteredIncidentFeed, proximityPoint.lat, proximityPoint.lng],
+  );
+  const cityOptions = useMemo(() => {
+    const unique = Array.from(
+      new Set(['Ottawa', ...incidentFeedWithMeta.map((incident) => incident.city)]),
+    ).sort(
+      (a, b) => a.localeCompare(b),
+    );
+    return unique;
+  }, [incidentFeedWithMeta]);
+  useEffect(() => {
+    if (incidentCity === 'all') return;
+    if (!cityOptions.includes(incidentCity)) {
+      setIncidentCity('all');
+    }
+  }, [cityOptions, incidentCity]);
+  const cityFilteredIncidentFeed = incidentCity === 'all'
+    ? incidentFeedWithMeta
+    : incidentFeedWithMeta.filter((incident) => incident.city === incidentCity);
+  const radiusFilteredIncidentFeed = incidentRadiusKm > 0
+    ? cityFilteredIncidentFeed.filter(
+        (incident) => incident.distanceKm !== null && incident.distanceKm <= incidentRadiusKm,
+      )
+    : cityFilteredIncidentFeed;
+  const sortedIncidentFeed = useMemo(() => {
+    const next = [...radiusFilteredIncidentFeed];
+    if (incidentSort === 'proximity') {
+      next.sort((a, b) => {
+        if (a.distanceKm === null && b.distanceKm === null) {
+          if (b.roadsideScore !== a.roadsideScore) return b.roadsideScore - a.roadsideScore;
+          return incidentOccurredMs(b) - incidentOccurredMs(a);
+        }
+        if (a.distanceKm === null) return 1;
+        if (b.distanceKm === null) return -1;
+        if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+        if (b.roadsideScore !== a.roadsideScore) return b.roadsideScore - a.roadsideScore;
+        return incidentOccurredMs(b) - incidentOccurredMs(a);
+      });
+      return next;
+    }
+    if (incidentSort === 'roadside') {
+      next.sort((a, b) => {
+        if (b.roadsideScore !== a.roadsideScore) return b.roadsideScore - a.roadsideScore;
+        if (a.distanceKm !== null && b.distanceKm !== null && a.distanceKm !== b.distanceKm) {
+          return a.distanceKm - b.distanceKm;
+        }
+        return incidentOccurredMs(b) - incidentOccurredMs(a);
+      });
+      return next;
+    }
+    next.sort((a, b) => incidentOccurredMs(b) - incidentOccurredMs(a));
+    return next;
+  }, [radiusFilteredIncidentFeed, incidentSort]);
+  const selectedIncident = sortedIncidentFeed.find((incident) => incident.id === selectedIncidentId) || null;
   const sourceCount = status?.incidentMonitor?.sourceCount ?? 3;
   const pollSeconds = Math.max(1, Math.round((status?.incidentMonitor?.pollIntervalMs ?? 60_000) / 1000));
   const lastPoll = formatPoll(status?.incidentMonitor?.lastSuccessAt);
@@ -753,12 +1267,12 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   useEffect(() => {
     if (filter === 'incidents') {
       setSelectedRequestId(null);
-      if (selectedIncidentId && !incidentFeed.some((incident) => incident.id === selectedIncidentId)) setSelectedIncidentId(null);
+      if (selectedIncidentId && !sortedIncidentFeed.some((incident) => incident.id === selectedIncidentId)) setSelectedIncidentId(null);
       return;
     }
     setSelectedIncidentId(null);
     if (selectedRequestId && !myRequests.some((request) => request.id === selectedRequestId)) setSelectedRequestId(null);
-  }, [filter, incidentFeed, myRequests, selectedIncidentId, selectedRequestId]);
+  }, [filter, sortedIncidentFeed, myRequests, selectedIncidentId, selectedRequestId]);
 
   return (
     <div className="min-h-dvh bg-dispatch-bg flex flex-col">
@@ -791,7 +1305,31 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
           </div>
         </div>
 
+        <DispatchAccessPanel
+          activeRole="operator"
+          profileLabel={session.name}
+          profileMeta={demoMode ? `Demo session ${demoSessionId || 'active'}` : 'Live operator profile'}
+          showRoleSwitch={false}
+          className="mt-3"
+        />
+
         {demoMode ? <div className="mt-3 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-sm text-orange-100">Only requests from this demo session are shown in the queue. The incident watch remains live so the client can see real system movement while testing.</div> : null}
+
+        {isSupported && !isSubscribed ? (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <span className="text-amber-200 text-sm font-medium leading-snug">Push notifications off - you won&apos;t get job alerts</span>
+            </div>
+            <button
+              type="button"
+              onClick={subscribe}
+              className="flex-shrink-0 text-xs font-bold text-white bg-amber-500 hover:bg-amber-400 active:bg-amber-600 transition-colors px-3 py-1.5 rounded-lg"
+            >
+              Enable
+            </button>
+          </div>
+        ) : null}
 
         <div className="flex gap-2 mt-3 flex-wrap">
           <div className={cn('flex items-center gap-1.5 rounded-lg px-3 py-1.5 border text-xs font-semibold', liveFeedConnected ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400')}>
@@ -809,7 +1347,6 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
           {activeCount > 0 ? <div className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">{activeCount} active</div> : null}
         </div>
 
-        {isSupported && !isSubscribed ? <button type="button" onClick={subscribe} className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm font-medium hover:bg-orange-500/15 transition-all"><Bell className="w-4 h-4" />Enable push notifications</button> : null}
       </div>
 
       <div className="px-5 py-3 flex gap-2 border-b border-dispatch-border overflow-x-auto">
@@ -827,10 +1364,144 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
 
         {filter === 'incidents' ? (
           <>
-            {selectedIncident ? <IncidentDetailCard incident={selectedIncident} onBack={() => setSelectedIncidentId(null)} onDispatch={handleIncidentDispatch} /> : null}
-            {incidentsLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading Ottawa incidents...</div> : null}
-            {!incidentsLoading && incidentFeed.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mb-4"><CheckCircle2 className="w-8 h-8 text-green-500" /></div><p className="text-slate-300 font-semibold">All clear</p><p className="text-slate-600 text-sm mt-1">No incidents in the Ottawa area.</p></div> : null}
-            {incidentFeed.map((incident) => <IncidentCard key={incident.id} incident={incident} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onDispatch={handleIncidentDispatch} />)}
+            <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { key: 'active' as const, label: 'Active now' },
+                  { key: 'history' as const, label: 'History' },
+                  { key: 'all' as const, label: 'All' },
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setIncidentMode(item.key)}
+                    className={cn(
+                      'px-3 py-2 rounded-lg text-xs font-semibold transition-colors min-h-11',
+                      incidentMode === item.key
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-dispatch-bg border border-dispatch-border text-slate-400 hover:text-white',
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              {/* Category chips */}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {([
+                  { key: 'all' as const, label: 'All types', cls: incidentCategory === 'all' ? 'bg-slate-600 text-white' : 'bg-dispatch-bg border border-dispatch-border text-slate-400 hover:text-white' },
+                  { key: 'emergency' as const, label: 'Emergency', cls: incidentCategory === 'emergency' ? 'bg-red-600 text-white' : 'bg-dispatch-bg border border-dispatch-border text-slate-400 hover:text-red-400' },
+                  { key: 'breakdown' as const, label: 'Breakdown', cls: incidentCategory === 'breakdown' ? 'bg-orange-500 text-white' : 'bg-dispatch-bg border border-dispatch-border text-slate-400 hover:text-orange-400' },
+                  { key: 'traffic' as const, label: 'Traffic', cls: incidentCategory === 'traffic' ? 'bg-blue-600 text-white' : 'bg-dispatch-bg border border-dispatch-border text-slate-400 hover:text-blue-400' },
+                  { key: 'transit' as const, label: 'Transit', cls: incidentCategory === 'transit' ? 'bg-slate-500 text-white' : 'bg-dispatch-bg border border-dispatch-border text-slate-400 hover:text-white' },
+                ] as const).map((chip) => (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    onClick={() => { setIncidentCategory(chip.key); setSelectedIncidentId(null); }}
+                    className={cn('px-3 py-2 rounded-lg text-xs font-semibold transition-colors min-h-11', chip.cls)}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <label className="flex items-center gap-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5 min-h-11">
+                  <MapPin className="w-4 h-4 text-slate-500" />
+                  <select
+                    value={incidentCity}
+                    onChange={(event) => {
+                      setIncidentCity(event.target.value);
+                      setSelectedIncidentId(null);
+                    }}
+                    className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
+                  >
+                    <option value="all">All cities</option>
+                    {cityOptions.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5 min-h-11">
+                  <Navigation2 className="w-4 h-4 text-slate-500" />
+                  <select
+                    value={incidentSort}
+                    onChange={(event) => setIncidentSort(event.target.value as 'roadside' | 'newest' | 'proximity')}
+                    className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
+                  >
+                    <option value="proximity">Sort: closest first</option>
+                    <option value="roadside">Sort: most likely assist</option>
+                    <option value="newest">Sort: newest first</option>
+                  </select>
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={useMyLocationForProximity}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 transition-colors min-h-11"
+                  >
+                    {locatingProximity ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+                    Use my location
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProximityPoint(OTTAWA_CENTER)}
+                    className="inline-flex items-center justify-center rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors min-h-11"
+                  >
+                    Ottawa
+                  </button>
+                </div>
+              </div>
+              <div className="mt-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs font-semibold text-slate-300">Distance radius</div>
+                  <div className="text-xs font-semibold text-cyan-300">
+                    {incidentRadiusKm > 0 ? `Within ${incidentRadiusKm} km` : 'All distances'}
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={incidentRadiusKm}
+                  onChange={(event) => setIncidentRadiusKm(Number(event.target.value))}
+                  className="mt-2 w-full accent-cyan-400"
+                />
+                <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>All</span>
+                  <span>50 km</span>
+                  <span>100 km</span>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-slate-500">
+                Distances measured from {proximityPoint.label}.
+                {proximityError ? ` ${proximityError}` : ''}
+              </p>
+              <label className="mt-2 flex items-center gap-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5">
+                <Search className="w-4 h-4 text-slate-500" />
+                <input
+                  value={incidentSearch}
+                  onChange={(event) => setIncidentSearch(event.target.value)}
+                  placeholder="Search road, city, route, or incident text"
+                  className="w-full bg-transparent text-sm text-slate-200 placeholder-slate-600 focus:outline-none"
+                />
+              </label>
+            </div>
+            {!incidentsLoading && sortedIncidentFeed.length > 0 ? (
+              <IncidentMapPanel
+                incidents={sortedIncidentFeed}
+                selectedIncidentId={selectedIncidentId}
+                onSelect={(incident) => setSelectedIncidentId(incident.id)}
+                proximityPoint={proximityPoint}
+              />
+            ) : null}
+            {selectedIncident ? <IncidentDetailCard incident={selectedIncident} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onDispatch={handleIncidentDispatch} /> : null}
+            {incidentsLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading Ontario incidents...</div> : null}
+            {!incidentsLoading && sortedIncidentFeed.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mb-4"><CheckCircle2 className="w-8 h-8 text-green-500" /></div><p className="text-slate-300 font-semibold">No incidents for this filter</p><p className="text-slate-600 text-sm mt-1">{incidentRadiusKm > 0 ? `No incidents found within ${incidentRadiusKm} km.` : incidentCity !== 'all' ? `No incidents matched ${incidentCity}.` : incidentCategory !== 'all' ? `No ${incidentCategory} incidents matched.` : incidentMode === 'history' ? 'No historical incidents matched your filters yet.' : 'No active Ontario incidents matched your filters.'}</p></div> : null}
+            {sortedIncidentFeed.map((incident) => <IncidentCard key={incident.id} incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onDispatch={handleIncidentDispatch} />)}
           </>
         ) : (
           <>
@@ -847,7 +1518,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
 
 export default function OperatorPage() {
   const [{ demoMode, demoSessionId }] = useState(readDemoContext);
-  const storageKey = sessionKey(demoMode);
+  const storageKey = sessionKey();
   const [session, setSession] = useState<OperatorSession | null>(() => {
     if (typeof window === 'undefined') return null;
     try {

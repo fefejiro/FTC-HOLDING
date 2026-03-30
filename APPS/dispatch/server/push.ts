@@ -64,18 +64,23 @@ export async function sendToOperator(
 
 export async function sendToAllActiveOperators(
   payload: { title: string; body: string; data?: Record<string, unknown> },
-): Promise<void> {
+): Promise<{ sent: number; skipped: number }> {
   if (!pushInitialized) {
     console.warn('[push] Push not initialized, skipping notifications');
-    return;
+    return { sent: 0, skipped: 0 };
   }
 
   const activeOperators = await db
-    .select({ id: operators.id })
+    .select({ id: operators.id, vapidSub: operators.vapidSub })
     .from(operators)
     .where(eq(operators.active, true));
 
+  const withSub = activeOperators.filter((op) => op.vapidSub);
+  const skipped = activeOperators.length - withSub.length;
+
   await Promise.allSettled(
-    activeOperators.map((op) => sendToOperator(op.id, payload)),
+    withSub.map((op) => sendToOperator(op.id, payload)),
   );
+
+  return { sent: withSub.length, skipped };
 }

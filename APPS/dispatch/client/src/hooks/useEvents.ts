@@ -9,10 +9,10 @@ interface EventHandlers {
 
 /**
  * Connects to /api/events (SSE) and calls handlers on each event.
- * EventSource auto-reconnects on network loss — no polling needed.
+ * EventSource auto-reconnects on network loss.
  */
 export function useEvents(handlers: EventHandlers): { connected: boolean } {
-  // Keep a ref so handlers never cause the effect to re-run
+  // Keep a ref so handlers never cause the effect to re-run.
   const ref = useRef(handlers);
   const [connected, setConnected] = useState(false);
   ref.current = handlers;
@@ -24,37 +24,45 @@ export function useEvents(handlers: EventHandlers): { connected: boolean } {
     es.addEventListener('request:new', (e: Event) => {
       try {
         ref.current.onRequestNew?.(JSON.parse((e as MessageEvent).data));
-      } catch { /* malformed payload */ }
+      } catch {
+        // Ignore malformed payloads.
+      }
     });
 
     es.addEventListener('request:updated', (e: Event) => {
       try {
         ref.current.onRequestUpdated?.(JSON.parse((e as MessageEvent).data));
-      } catch { /* malformed payload */ }
+      } catch {
+        // Ignore malformed payloads.
+      }
     });
 
     es.addEventListener('incident:new', (e: Event) => {
       try {
         ref.current.onIncidentNew?.(JSON.parse((e as MessageEvent).data));
-      } catch { /* malformed payload */ }
+      } catch {
+        // Ignore malformed payloads.
+      }
     });
 
     es.addEventListener('incident:updated', (e: Event) => {
       try {
         ref.current.onIncidentUpdated?.(JSON.parse((e as MessageEvent).data));
-      } catch { /* malformed payload */ }
+      } catch {
+        // Ignore malformed payloads.
+      }
     });
 
     es.onerror = () => {
       setConnected(false);
-      // EventSource will reconnect automatically — no action needed
+      // EventSource will reconnect automatically.
     };
 
     return () => {
       setConnected(false);
       es.close();
     };
-  }, []); // intentionally empty — connects once, stays open
+  }, []); // intentionally empty - connects once, stays open
 
   return { connected };
 }

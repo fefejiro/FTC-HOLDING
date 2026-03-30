@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "acceptEdits",
     "allow": [
       "Read",
       "Bash(npm:*)",
@@ -11,7 +10,16 @@
       "Bash(ls:*)",
       "Bash(jq:*)",
       "Bash(curl:*)",
-      "WebSearch"
+      "WebSearch",
+      "Read(//c//**)",
+      "Bash(echo $ANDROID_HOME)",
+      "Read(//c/Users/mikef/AppData/Local/Android/Sdk/build-tools/**)",
+      "Read(//c/Android/Sdk/**)",
+      "Bash(./gradlew bundleRelease)"
+    ],
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "c:\\Users\\mikef\\.claude\\projects\\c--FTC-HOLDING\\memory"
     ]
   }
 }

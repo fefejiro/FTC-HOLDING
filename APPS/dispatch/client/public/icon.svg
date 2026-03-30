@@ -1,5 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#f97316"/>
-  <!-- Lightning bolt (Zap) — fast response, roadside energy -->
-  <path d="M274,76 L94,292 H256 L238,436 L418,220 H256 Z" fill="white" fill-rule="evenodd"/>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="url(#g)"/>
+  <!-- Road shield outline — pentagon shape (classic highway shield) -->
+  <path d="M256,60 L424,148 L424,340 Q424,452 256,468 Q88,452 88,340 L88,148 Z"
+        fill="none" stroke="white" stroke-width="20" stroke-linejoin="round" opacity="0.35"/>
+  <!-- Inner shield fill for EP text backing -->
+  <path d="M256,82 L406,162 L406,336 Q406,434 256,448 Q106,434 106,336 L106,162 Z"
+        fill="white" opacity="0.12"/>
+  <!-- EP monogram -->
+  <text x="256" y="328"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif"
+        font-weight="900"
+        font-size="172"
+        fill="white"
+        text-anchor="middle"
+        letter-spacing="-8">EP</text>
 </svg>

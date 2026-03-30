@@ -82,7 +82,7 @@ export default function HomePage() {
               <div className="text-xs font-semibold uppercase tracking-[0.3em] text-orange-400">
                 Ottawa Roadside
               </div>
-              <div className="text-lg font-semibold text-white">Dispatch</div>
+              <div className="text-lg font-semibold text-white">Emergency Prompt</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -109,11 +109,11 @@ export default function HomePage() {
             </div>
             <div className="space-y-4">
               <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-                Fast roadside help for Ottawa, with real dispatch behind it.
+                Ottawa roadside assistance — fast, direct, and on the way.
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-slate-300">
-                Dispatch handles direct roadside requests first, then layers in live incident monitoring
-                so operators can respond faster when the right opportunity appears.
+                Emergency Prompt handles gas delivery, lockouts, jump starts, and tire changes across Ottawa.
+                Submit a request in seconds — a real operator gets it immediately.
               </p>
             </div>
 
@@ -191,24 +191,22 @@ export default function HomePage() {
           <div className="rounded-3xl border border-dispatch-border bg-dispatch-surface p-6">
             <div className="mb-3 flex items-center gap-3">
               <MapPin className="h-5 w-5 text-orange-400" />
-              <h3 className="text-xl font-semibold">Built for Ottawa roadside work</h3>
+              <h3 className="text-xl font-semibold">Serving Ottawa and surrounding areas</h3>
             </div>
             <p className="leading-7 text-slate-300">
-              The product starts with direct customer requests for fuel delivery, lockouts, jump
-              starts, and tire changes. Incident feeds support the workflow, but they do not replace
-              the main intake.
+              Emergency Prompt covers gas delivery, lockout service, jump starts, and tire changes
+              across Ottawa. Live incident monitoring keeps the operator ahead of the road.
             </p>
           </div>
 
           <div className="rounded-3xl border border-dispatch-border bg-dispatch-surface p-6">
             <div className="mb-3 flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-orange-400" />
-              <h3 className="text-xl font-semibold">Lean, practical, no app-store dependency</h3>
+              <h3 className="text-xl font-semibold">Fast response, no hold music</h3>
             </div>
             <p className="leading-7 text-slate-300">
-              The public side works in the browser right now. Operators can still get live updates,
-              and the system can grow into towing and broader dispatch later without rebuilding the
-              core.
+              Skip the call centre. Submit your request, share your location, and Emergency Prompt
+              dispatches a real operator directly to you — tracked live the whole way.
             </p>
           </div>
         </section>
@@ -218,12 +216,12 @@ export default function HomePage() {
             <div>
               <div className="flex items-center gap-2 text-orange-300">
                 <PhoneCall className="h-4 w-4" />
-                Start the real flow
+                Emergency Prompt — Ottawa
               </div>
-              <h3 className="mt-2 text-2xl font-semibold">Need roadside help right now?</h3>
+              <h3 className="mt-2 text-2xl font-semibold">Stranded in Ottawa right now?</h3>
               <p className="mt-2 max-w-2xl leading-7 text-slate-300">
-                Open the request form, share the issue and location, and Dispatch will move it into
-                the operator workflow immediately.
+                Open the request form, tell us what you need and where you are.
+                Emergency Prompt dispatches immediately — no hold music, no middleman.
               </p>
             </div>
             <a

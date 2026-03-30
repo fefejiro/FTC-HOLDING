@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -10,23 +10,36 @@ import {
   MapPin,
   Navigation2,
   Phone,
+  ShieldAlert,
   User,
   Wrench,
   Zap,
 } from 'lucide-react';
-import DemoFeedbackForm from '../components/DemoFeedbackForm';
 import { cn } from '../lib/cn';
 import {
+  ACTION_LABELS,
+  buildDecisionPlan,
+  type DecisionActionId,
+  type DecisionCardGroup,
+  type EmergencyScenario,
+  getScenarioLabel,
+  getTierBadgeLabel,
+  inferScenarioFromServiceType,
+  SCENARIO_OPTIONS,
+  type RequestServiceType,
+  type RankedSupportLocation,
+} from '../lib/decisionSupport';
+import {
   clearStoredDemoSessionId,
-  getDemoSessionId,
-  isDemoMode,
-  makeDemoSessionId,
-  readStoredDemoSessionId,
-  storeDemoSessionId,
 } from '../lib/demo';
 
-type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
+type ServiceType = RequestServiceType;
 type PageState = 'form' | 'submitting' | 'success' | 'error';
+type AddressSuggestion = {
+  displayName: string;
+  lat: number;
+  lng: number;
+};
 
 const SERVICE_OPTIONS = [
   { type: 'gas' as ServiceType, Icon: Fuel, label: 'Gas Delivery' },
@@ -35,6 +48,51 @@ const SERVICE_OPTIONS = [
   { type: 'tire' as ServiceType, Icon: CircleDot, label: 'Tire Change' },
   { type: 'other' as ServiceType, Icon: Wrench, label: 'Other Issue' },
 ];
+
+const SAVED_FALLBACKS_KEY = 'dispatch_saved_fallback_ids';
+
+const TIER_STYLES: Record<ReturnType<typeof getTierBadgeLabel>, string> = {
+  Emergency: 'border-red-500/40 bg-red-500/15 text-red-200',
+  Recommended: 'border-emerald-500/35 bg-emerald-500/15 text-emerald-200',
+  'Safe wait': 'border-cyan-500/35 bg-cyan-500/15 text-cyan-200',
+  'Practical support': 'border-amber-500/35 bg-amber-500/15 text-amber-200',
+  Fallback: 'border-slate-500/30 bg-slate-500/10 text-slate-300',
+};
+
+function formatDistanceEta(location: RankedSupportLocation) {
+  return `${location.distanceKm.toFixed(1)} km - ~${location.etaMinutes} min`;
+}
+
+function locationMapsUrl(location: RankedSupportLocation) {
+  return `https://maps.google.com/?q=${location.lat},${location.lng}`;
+}
+
+function buildLocationShareMessage(params: {
+  scenario: EmergencyScenario;
+  locationLabel: string;
+  lat: number | null;
+  lng: number | null;
+  destinationName?: string;
+}) {
+  const scenarioLabel = getScenarioLabel(params.scenario);
+  const coordinateLine =
+    params.lat !== null && params.lng !== null
+      ? `${params.lat.toFixed(5)}, ${params.lng.toFixed(5)}`
+      : params.locationLabel || 'Ottawa area';
+  const destinationLine = params.destinationName
+    ? `Heading to: ${params.destinationName}.`
+    : '';
+  return `Emergency Prompt update: ${scenarioLabel}. Current location: ${coordinateLine}. ${destinationLine}`.trim();
+}
+
+function uniqueById(groups: DecisionCardGroup[]) {
+  const seen = new Set<string>();
+  return groups.filter((group) => {
+    if (seen.has(group.id)) return false;
+    seen.add(group.id);
+    return true;
+  });
+}
 
 function resetFormState(
   setters: {
@@ -45,8 +103,6 @@ function resetFormState(
     setNotes: (value: string) => void;
     setLocationLat: (value: number | null) => void;
     setLocationLng: (value: number | null) => void;
-    setRequestId: (value: string | null) => void;
-    setShowFeedback: (value: boolean) => void;
   },
 ) {
   setters.setServiceType(null);
@@ -56,12 +112,11 @@ function resetFormState(
   setters.setNotes('');
   setters.setLocationLat(null);
   setters.setLocationLng(null);
-  setters.setRequestId(null);
-  setters.setShowFeedback(false);
 }
 
 export default function RequestPage() {
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
+  const [scenario, setScenario] = useState<EmergencyScenario>('breakdown');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -70,28 +125,242 @@ export default function RequestPage() {
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<AddressSuggestion[]>([]);
+  const [searchingLocations, setSearchingLocations] = useState(false);
   const [pageState, setPageState] = useState<PageState>('form');
   const [errorMessage, setErrorMessage] = useState('');
-  const [requestId, setRequestId] = useState<string | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [demoMode, setDemoMode] = useState(false);
-  const [demoSessionId, setDemoSessionId] = useState<string | null>(null);
+  const [decisionNotice, setDecisionNotice] = useState('');
+  const [destinationLocationId, setDestinationLocationId] = useState<string | null>(null);
+  const [safeWaitLocationId, setSafeWaitLocationId] = useState<string | null>(null);
+  const [cardAltIndex, setCardAltIndex] = useState<Record<string, number>>({});
+  const [savedFallbackIds, setSavedFallbackIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem(SAVED_FALLBACKS_KEY);
+      const parsed = stored ? (JSON.parse(stored) as string[]) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const notesRef = useRef<HTMLTextAreaElement | null>(null);
+  const submitButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    clearStoredDemoSessionId();
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const liveDemoMode = isDemoMode(window.location.search);
-    setDemoMode(liveDemoMode);
-    if (!liveDemoMode) {
-      clearStoredDemoSessionId();
-      setDemoSessionId(null);
+    localStorage.setItem(SAVED_FALLBACKS_KEY, JSON.stringify(savedFallbackIds));
+  }, [savedFallbackIds]);
+
+  useEffect(() => {
+    const q = address.trim();
+    if (q.length < 4) {
+      setLocationSuggestions([]);
+      setSearchingLocations(false);
       return;
     }
 
-    const existingSession =
-      getDemoSessionId(window.location.search) || readStoredDemoSessionId() || makeDemoSessionId();
-    storeDemoSessionId(existingSession);
-    setDemoSessionId(existingSession);
-  }, []);
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        setSearchingLocations(true);
+        const response = await fetch(`/api/geocode/search?q=${encodeURIComponent(q)}&limit=5`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          setLocationSuggestions([]);
+          return;
+        }
+        const data = (await response.json()) as AddressSuggestion[];
+        setLocationSuggestions(Array.isArray(data) ? data : []);
+      } catch {
+        setLocationSuggestions([]);
+      } finally {
+        setSearchingLocations(false);
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [address]);
+
+  const userPoint = useMemo(
+    () =>
+      locationLat !== null && locationLng !== null
+        ? {
+            lat: locationLat,
+            lng: locationLng,
+            label: address.trim() || 'Current location',
+          }
+        : null,
+    [address, locationLat, locationLng],
+  );
+
+  const decisionPlan = useMemo(
+    () =>
+      buildDecisionPlan({
+        scenario,
+        userPoint,
+      }),
+    [scenario, userPoint],
+  );
+
+  const allDecisionGroups = useMemo(
+    () => uniqueById([...decisionPlan.recommended, ...decisionPlan.fallback]),
+    [decisionPlan.fallback, decisionPlan.recommended],
+  );
+
+  const selectedLocations = useMemo(() => {
+    const selected = {} as Record<string, RankedSupportLocation>;
+    for (const group of allDecisionGroups) {
+      if (!group.alternatives.length) continue;
+      const maxIndex = group.alternatives.length - 1;
+      const currentIndex = Math.min(cardAltIndex[group.id] ?? 0, maxIndex);
+      selected[group.id] = group.alternatives[currentIndex];
+    }
+    return selected;
+  }, [allDecisionGroups, cardAltIndex]);
+
+  function pushDecisionNotice(message: string) {
+    setDecisionNotice(message);
+    window.setTimeout(() => {
+      setDecisionNotice((current) => (current === message ? '' : current));
+    }, 3500);
+  }
+
+  function cycleAlternative(group: DecisionCardGroup) {
+    if (group.alternatives.length <= 1) {
+      pushDecisionNotice('No alternate nearby option found for this category.');
+      return;
+    }
+    setCardAltIndex((current) => {
+      const currentIndex = current[group.id] ?? 0;
+      const nextIndex = (currentIndex + 1) % group.alternatives.length;
+      return {
+        ...current,
+        [group.id]: nextIndex,
+      };
+    });
+  }
+
+  async function shareCurrentLocationText(text: string) {
+    try {
+      if (navigator.share) {
+        await navigator.share({ text });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+      pushDecisionNotice('Location update is ready to share.');
+    } catch {
+      pushDecisionNotice('Could not open share flow. Try again.');
+    }
+  }
+
+  function runDecisionAction(action: DecisionActionId, group: DecisionCardGroup) {
+    const location = selectedLocations[group.id];
+    if (!location) return;
+
+    if (action === 'call_emergency') {
+      window.location.href = `tel:${location.emergencyPhone || '911'}`;
+      return;
+    }
+
+    if (action === 'call_non_emergency') {
+      if (location.nonEmergencyPhone) {
+        window.location.href = `tel:${location.nonEmergencyPhone}`;
+      } else if (location.phone) {
+        window.location.href = `tel:${location.phone}`;
+      } else {
+        pushDecisionNotice('No non-emergency number available for this location.');
+      }
+      return;
+    }
+
+    if (action === 'call_now') {
+      if (!location.phone) {
+        pushDecisionNotice('Call number not available. Try navigation or alternate.');
+        return;
+      }
+      window.location.href = `tel:${location.phone}`;
+      return;
+    }
+
+    if (action === 'navigate') {
+      window.open(locationMapsUrl(location), '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (action === 'share_location') {
+      const text = buildLocationShareMessage({
+        scenario,
+        locationLabel: userPoint?.label || 'Ottawa area',
+        lat: userPoint?.lat ?? null,
+        lng: userPoint?.lng ?? null,
+        destinationName: location.name,
+      });
+      void shareCurrentLocationText(text);
+      return;
+    }
+
+    if (action === 'status_update') {
+      const text = encodeURIComponent(
+        buildLocationShareMessage({
+          scenario,
+          locationLabel: userPoint?.label || 'Ottawa area',
+          lat: userPoint?.lat ?? null,
+          lng: userPoint?.lng ?? null,
+          destinationName: location.name,
+        }),
+      );
+      window.location.href = `sms:?&body=${text}`;
+      return;
+    }
+
+    if (action === 'save_fallback') {
+      let wasSaved = false;
+      setSavedFallbackIds((current) => {
+        wasSaved = current.includes(location.id);
+        return wasSaved
+          ? current.filter((id) => id !== location.id)
+          : [...current, location.id];
+      });
+      pushDecisionNotice(wasSaved ? `${location.name} removed from fallback list.` : `${location.name} saved as fallback option.`);
+      return;
+    }
+
+    if (action === 'request_dispatch') {
+      submitButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pushDecisionNotice('Dispatch request ready below. Complete your intake and submit.');
+      return;
+    }
+
+    if (action === 'mark_going') {
+      setDestinationLocationId(location.id);
+      pushDecisionNotice(`Marked destination: ${location.name}.`);
+      return;
+    }
+
+    if (action === 'mark_safe_wait') {
+      setSafeWaitLocationId(location.id);
+      pushDecisionNotice(`Marked safe waiting place: ${location.name}.`);
+      return;
+    }
+
+    if (action === 'vehicle_details') {
+      notesRef.current?.focus();
+      pushDecisionNotice('Add vehicle details in the notes field.');
+      return;
+    }
+
+    if (action === 'set_check_in_reminder') {
+      pushDecisionNotice('Set a 15-minute check-in reminder on your phone.');
+    }
+  }
 
   async function handleUseMyLocation() {
     if (!navigator.geolocation) {
@@ -151,6 +420,22 @@ export default function RequestPage() {
     setErrorMessage('');
     setPageState('submitting');
 
+    const selectedDecisionLocations = Object.values(selectedLocations);
+    const markedDestination = selectedDecisionLocations.find(
+      (location) => location.id === destinationLocationId,
+    );
+    const markedSafeWait = selectedDecisionLocations.find(
+      (location) => location.id === safeWaitLocationId,
+    );
+    const composedNotes = [
+      `Situation: ${getScenarioLabel(scenario)}`,
+      markedDestination ? `Planned destination: ${markedDestination.name}` : '',
+      markedSafeWait ? `Safe wait point: ${markedSafeWait.name}` : '',
+      notes.trim(),
+    ]
+      .filter(Boolean)
+      .join('\n');
+
     try {
       const response = await fetch('/api/requests', {
         method: 'POST',
@@ -162,9 +447,8 @@ export default function RequestPage() {
           locationAddress: address.trim() || undefined,
           locationLat: locationLat ?? undefined,
           locationLng: locationLng ?? undefined,
-          notes: notes.trim() || undefined,
-          mode: demoMode ? 'demo' : 'live',
-          demoSessionId: demoMode ? demoSessionId || undefined : undefined,
+          notes: composedNotes || undefined,
+          mode: 'live',
         }),
       });
 
@@ -173,9 +457,7 @@ export default function RequestPage() {
         throw new Error(payload.error || 'Failed to submit request');
       }
 
-      const payload = (await response.json()) as { request?: { id?: string } };
-      setRequestId(payload.request?.id || null);
-      setShowFeedback(false);
+      await response.json().catch(() => null);
       setPageState('success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
@@ -191,61 +473,22 @@ export default function RequestPage() {
           <div className="w-20 h-20 bg-green-500/10 border border-green-500/25 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-green-400" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-3">
-            {demoMode ? 'Demo request created.' : 'Help is on the way.'}
-          </h1>
-
-          {demoMode ? (
-            <>
-              <p className="text-slate-400 leading-relaxed mb-2">
-                Your sample roadside request is now in the live demo system. Next, sign in as the invited
-                operator and work the same request through the queue.
-              </p>
-              <p className="text-slate-600 text-sm">
-                Demo session {demoSessionId || 'active'}
-                {requestId ? ` - request ${requestId.slice(0, 8)}` : ''}.
-              </p>
-              <div className="mt-8 flex flex-col gap-3">
-                <a
-                  href={`/operator?mode=demo${demoSessionId ? `&demoSession=${encodeURIComponent(demoSessionId)}` : ''}`}
-                  className="inline-flex items-center justify-center rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-400"
-                >
-                  Open operator demo
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setShowFeedback((current) => !current)}
-                  className="inline-flex items-center justify-center rounded-xl border border-dispatch-border bg-dispatch-surface px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
-                >
-                  {showFeedback ? 'Hide feedback form' : 'Send demo feedback'}
-                </button>
-              </div>
-              {showFeedback ? (
-                <div className="mt-6 text-left">
-                  <DemoFeedbackForm
-                    context={{
-                      context: 'dispatch-demo-request-success',
-                      demoSessionId,
-                      requestId,
-                    }}
-                  />
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <p className="text-slate-400 leading-relaxed mb-2">
-                We&apos;ll call you shortly at <span className="text-orange-400 font-semibold">{phone}</span>.
-              </p>
-              <p className="text-slate-600 text-sm">
-                Stay with your vehicle if safe. Typical response: 20-40 minutes.
-              </p>
-            </>
-          )}
+          <h1 className="text-2xl font-bold text-white mb-3">Help is on the way.</h1>
+          <p className="text-slate-400 leading-relaxed mb-2">
+            We&apos;ll call you shortly at <span className="text-orange-400 font-semibold">{phone}</span>.
+          </p>
+          <p className="text-slate-600 text-sm">
+            Stay with your vehicle if safe. Typical response: 20-40 minutes.
+          </p>
 
           <button
             onClick={() => {
               setPageState('form');
+              setScenario('breakdown');
+              setDecisionNotice('');
+              setDestinationLocationId(null);
+              setSafeWaitLocationId(null);
+              setCardAltIndex({});
               resetFormState({
                 setServiceType,
                 setName,
@@ -254,8 +497,6 @@ export default function RequestPage() {
                 setNotes,
                 setLocationLat,
                 setLocationLng,
-                setRequestId,
-                setShowFeedback,
               });
             }}
             className="mt-12 text-slate-700 text-xs hover:text-slate-500 transition-colors"
@@ -276,27 +517,73 @@ export default function RequestPage() {
               <Zap className="w-4 h-4 text-white" />
             </div>
             <span className="text-orange-500 font-semibold text-sm tracking-wider uppercase">
-              Ottawa Roadside
+              Emergency Prompt
             </span>
           </div>
           <a href="/" className="text-xs text-slate-500 hover:text-orange-400 transition-colors">
-            Back to Dispatch
+            Back
           </a>
         </div>
-        {demoMode ? (
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-orange-300">
-            Client demo mode
-          </div>
-        ) : null}
         <h1 className="text-3xl font-bold text-white mt-3">Need help?</h1>
-        <p className="text-slate-400 mt-1.5 text-[15px]">
-          {demoMode
-            ? 'Create a sample roadside request, then switch into operator to work the same job through the live system.'
-            : 'We will dispatch a technician to your location.'}
-        </p>
+        <p className="text-slate-400 mt-1.5 text-[15px]">We will dispatch a technician to your location.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 px-6 py-7 flex flex-col gap-7 pb-10">
+        <section className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+          <label className="text-xs font-semibold text-cyan-200 uppercase tracking-[0.18em] mb-3 block">
+            Situation Right Now
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {SCENARIO_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  setScenario(option.value);
+                  setCardAltIndex({});
+                }}
+                className={cn(
+                  'min-h-11 rounded-xl border px-3 py-3 text-left text-sm font-semibold transition-colors',
+                  scenario === option.value
+                    ? 'border-cyan-400 bg-cyan-400/15 text-white'
+                    : 'border-dispatch-border bg-dispatch-surface text-slate-300 hover:text-white',
+                )}
+              >
+                {option.short}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 rounded-xl border border-dispatch-border bg-dispatch-surface px-3 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Decision summary</div>
+                <div className="mt-1 text-sm font-semibold text-white">{decisionPlan.scenarioLabel}</div>
+              </div>
+              <span
+                className={cn(
+                  'rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]',
+                  decisionPlan.urgencyLabel === 'critical'
+                    ? 'border-red-500/35 bg-red-500/15 text-red-200'
+                    : decisionPlan.urgencyLabel === 'high'
+                      ? 'border-amber-500/35 bg-amber-500/15 text-amber-200'
+                      : 'border-cyan-500/35 bg-cyan-500/15 text-cyan-200',
+                )}
+              >
+                {decisionPlan.urgencyLabel}
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-slate-300 leading-relaxed">{decisionPlan.summary}</p>
+            <div className="mt-3 flex items-start gap-2">
+              <ShieldAlert className="w-4 h-4 text-cyan-300 mt-0.5 flex-shrink-0" />
+              <ol className="space-y-1 text-xs text-slate-400">
+                {decisionPlan.recommendedNextActions.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </section>
+
         <div>
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3 block">
             What do you need?
@@ -306,9 +593,12 @@ export default function RequestPage() {
               <button
                 key={type}
                 type="button"
-                onClick={() => setServiceType(type)}
+                onClick={() => {
+                  setServiceType(type);
+                  setScenario(inferScenarioFromServiceType(type));
+                }}
                 className={cn(
-                  'flex items-center gap-3 px-4 py-4 rounded-xl border-2 text-left transition-all duration-150',
+                  'flex items-center gap-3 px-4 py-4 rounded-xl border-2 text-left transition-all duration-150 min-h-11',
                   index === 4 && 'col-span-2',
                   serviceType === type
                     ? 'bg-orange-500/12 border-orange-500 text-white'
@@ -337,7 +627,7 @@ export default function RequestPage() {
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder={demoMode ? 'Client demo reviewer' : 'First and last name'}
+              placeholder="First and last name"
               autoComplete="name"
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl pl-11 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 transition-colors"
             />
@@ -354,7 +644,7 @@ export default function RequestPage() {
               type="tel"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
-              placeholder={demoMode ? '613-555-0100' : '613-555-0100'}
+              placeholder="613-555-0100"
               autoComplete="tel"
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl pl-11 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 transition-colors"
             />
@@ -370,7 +660,7 @@ export default function RequestPage() {
             onClick={handleUseMyLocation}
             disabled={locating}
             className={cn(
-              'w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl border font-semibold text-sm transition-all mb-3',
+              'w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl border font-semibold text-sm transition-all mb-3 min-h-11',
               locating
                 ? 'border-dispatch-border text-slate-500 cursor-wait bg-dispatch-surface'
                 : locationLat
@@ -396,12 +686,191 @@ export default function RequestPage() {
             <input
               type="text"
               value={address}
-              onChange={(event) => setAddress(event.target.value)}
-              placeholder={demoMode ? 'Example: 350 Sparks St, Ottawa' : 'Or type your address'}
+              onChange={(event) => {
+                setAddress(event.target.value);
+                setLocationLat(null);
+                setLocationLng(null);
+              }}
+              placeholder="Or type your address"
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl pl-11 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 transition-colors text-sm"
             />
           </div>
+          {searchingLocations ? (
+            <p className="mt-2 text-xs text-slate-600">Searching Ontario addresses...</p>
+          ) : null}
+          {locationSuggestions.length > 0 ? (
+            <div className="mt-2 rounded-xl border border-dispatch-border bg-dispatch-surface overflow-hidden">
+              {locationSuggestions.map((item) => (
+                <button
+                  key={`${item.displayName}-${item.lat}-${item.lng}`}
+                  type="button"
+                  onClick={() => {
+                    setAddress(item.displayName);
+                    setLocationLat(item.lat);
+                    setLocationLng(item.lng);
+                    setLocationSuggestions([]);
+                  }}
+                  className="w-full text-left px-3 py-2.5 text-sm text-slate-300 hover:bg-dispatch-bg transition-colors border-b border-dispatch-border last:border-b-0 min-h-11"
+                >
+                  {item.displayName}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
+
+        <section className="rounded-2xl border border-dispatch-border bg-dispatch-surface p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">Nearby decision support</div>
+              <h2 className="mt-1 text-lg font-semibold text-white">What matters nearby right now</h2>
+            </div>
+            <span className="text-[11px] text-slate-500 text-right">
+              {decisionPlan.computedFromExactLocation
+                ? 'Ranked from your current location'
+                : 'Estimated from Ottawa centre until location is set'}
+            </span>
+          </div>
+
+          {decisionNotice ? (
+            <div className="mt-3 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-200">
+              {decisionNotice}
+            </div>
+          ) : null}
+
+          <div className="mt-4 space-y-3">
+            {decisionPlan.recommended.map((group) => {
+              const location = selectedLocations[group.id];
+              if (!location) return null;
+              const tierLabel = getTierBadgeLabel(group.tier);
+              const primaryAction = group.actions[0];
+              const secondaryActions = group.actions.slice(1, 5);
+              const isSavedFallback = savedFallbackIds.includes(location.id);
+              const isMarkedDestination = destinationLocationId === location.id;
+              const isMarkedSafeWait = safeWaitLocationId === location.id;
+
+              return (
+                <article key={group.id} className="rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{group.typeLabel}</div>
+                      <h3 className="text-sm font-semibold text-white mt-1">{location.name}</h3>
+                    </div>
+                    <span className={cn('rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]', TIER_STYLES[tierLabel])}>
+                      {tierLabel}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400 mt-2">{formatDistanceEta(location)}</div>
+                  <p className="text-xs text-slate-300 mt-2 leading-relaxed">{group.whyItMatters}</p>
+
+                  {(isMarkedDestination || isMarkedSafeWait || isSavedFallback) ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] uppercase tracking-[0.12em]">
+                      {isMarkedDestination ? <span className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-1 text-emerald-200">Going here</span> : null}
+                      {isMarkedSafeWait ? <span className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-cyan-200">Safe wait</span> : null}
+                      {isSavedFallback ? <span className="rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-1 text-amber-200">Saved fallback</span> : null}
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => runDecisionAction(primaryAction, group)}
+                    className="mt-3 w-full min-h-11 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-400 transition-colors"
+                  >
+                    {ACTION_LABELS[primaryAction]}
+                  </button>
+
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {secondaryActions.map((action) => (
+                      <button
+                        key={`${group.id}-${action}`}
+                        type="button"
+                        onClick={() => runDecisionAction(action, group)}
+                        className={cn(
+                          'min-h-11 rounded-xl border border-dispatch-border bg-dispatch-surface px-2 py-2 text-[11px] font-semibold text-slate-200 hover:text-white transition-colors',
+                          action === 'save_fallback' && isSavedFallback && 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+                        )}
+                      >
+                        {action === 'save_fallback' && isSavedFallback ? 'Saved fallback' : ACTION_LABELS[action]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {group.alternatives.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => cycleAlternative(group)}
+                      className="mt-2 min-h-11 w-full rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-200 text-xs font-semibold hover:bg-cyan-500/20 transition-colors"
+                    >
+                      View alternate nearby option
+                    </button>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+
+          {decisionPlan.fallback.length > 0 ? (
+            <div className="mt-5">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500 mb-2">
+                Fallback options
+              </div>
+              <div className="space-y-3">
+                {decisionPlan.fallback.map((group) => {
+                  const location = selectedLocations[group.id];
+                  if (!location) return null;
+                  const tierLabel = getTierBadgeLabel(group.tier);
+                  const primaryAction = group.actions[0];
+
+                  return (
+                    <article key={group.id} className="rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{group.typeLabel}</div>
+                          <h3 className="text-sm font-semibold text-white mt-1">{location.name}</h3>
+                        </div>
+                        <span className={cn('rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]', TIER_STYLES[tierLabel])}>
+                          {tierLabel}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-400 mt-2">{formatDistanceEta(location)}</div>
+                      <p className="text-xs text-slate-300 mt-2 leading-relaxed">{group.whyItMatters}</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => runDecisionAction(primaryAction, group)}
+                          className="min-h-11 rounded-xl bg-dispatch-surface border border-dispatch-border text-slate-100 text-[11px] font-semibold hover:text-white transition-colors"
+                        >
+                          {ACTION_LABELS[primaryAction]}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => runDecisionAction('save_fallback', group)}
+                          className={cn(
+                            'min-h-11 rounded-xl border text-[11px] font-semibold transition-colors',
+                            savedFallbackIds.includes(location.id)
+                              ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+                              : 'border-dispatch-border bg-dispatch-surface text-slate-100 hover:text-white',
+                          )}
+                        >
+                          {savedFallbackIds.includes(location.id) ? 'Saved fallback' : ACTION_LABELS.save_fallback}
+                        </button>
+                      </div>
+                      {group.alternatives.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => cycleAlternative(group)}
+                          className="mt-2 min-h-11 w-full rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-200 text-xs font-semibold hover:bg-cyan-500/20 transition-colors"
+                        >
+                          View alternate nearby option
+                        </button>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </section>
 
         <div>
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2.5 block">
@@ -410,13 +879,10 @@ export default function RequestPage() {
           <div className="relative">
             <FileText className="absolute left-4 top-4 w-4 h-4 text-slate-500 pointer-events-none" />
             <textarea
+              ref={notesRef}
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder={
-                demoMode
-                  ? 'Optional demo note: use fake details only.'
-                  : 'Vehicle make/colour, nearest landmark, any other details...'
-              }
+              placeholder="Vehicle make/colour, nearest landmark, any other details..."
               rows={3}
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl pl-11 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 transition-colors text-sm"
             />
@@ -433,10 +899,11 @@ export default function RequestPage() {
         ) : null}
 
         <button
+          ref={submitButtonRef}
           type="submit"
           disabled={pageState === 'submitting'}
           className={cn(
-            'w-full py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2.5 transition-all',
+            'w-full py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2.5 transition-all min-h-11',
             pageState === 'submitting'
               ? 'bg-orange-500/50 text-orange-100 cursor-wait'
               : 'bg-orange-500 text-white hover:bg-orange-400 active:bg-orange-600 shadow-lg shadow-orange-500/20',
@@ -446,18 +913,12 @@ export default function RequestPage() {
             <>
               <Loader2 className="w-5 h-5 animate-spin" /> Sending request...
             </>
-          ) : demoMode ? (
-            'Create Demo Request'
           ) : (
             'Request Help Now'
           )}
         </button>
 
-        <p className="text-slate-700 text-xs text-center pb-2">
-          {demoMode
-            ? 'Demo flow only - use sample details and invited operator credentials'
-            : 'Ottawa area - Available 24/7 - Typical response 20-40 min'}
-        </p>
+        <p className="text-slate-700 text-xs text-center pb-2">Ottawa area - Available 24/7 - Typical response 20-40 min</p>
       </form>
     </div>
   );

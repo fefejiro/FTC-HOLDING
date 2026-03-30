@@ -1,7 +1,7 @@
 {
-  "name": "Dispatch | Ottawa Roadside",
-  "short_name": "Dispatch",
-  "description": "Fast roadside assistance dispatch — Ottawa area",
+  "name": "Emergency Prompt — Ottawa Roadside",
+  "short_name": "E-Prompt",
+  "description": "Ottawa roadside assistance — gas delivery, lockouts, jump starts, tire changes. Fast dispatch from Emergency Prompt.",
   "display": "standalone",
   "background_color": "#0a0f1a",
   "theme_color": "#f97316",
@@ -16,9 +16,21 @@
       "purpose": "any"
     },
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ],
@@ -28,5 +40,6 @@
       "url": "/request",
       "description": "Submit a roadside assistance request"
     }
-  ]
+  ],
+  "categories": ["utilities", "navigation", "productivity"]
 }

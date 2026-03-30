@@ -6,7 +6,6 @@ import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
 import { db } from './db';
 import {
-  buildRequestNotes,
   matchesRequestMode,
   normalizeDemoSessionId,
   serializeRequest,
@@ -94,8 +93,6 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       locationAddress: z.string().optional(),
       serviceType: z.enum(['gas', 'lockout', 'jump', 'tire', 'other']),
       notes: z.string().optional(),
-      mode: z.enum(['live', 'demo']).optional(),
-      demoSessionId: z.string().optional(),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -104,8 +101,6 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       return;
     }
 
-    const demoMode = parsed.data.mode === 'demo';
-    const demoSessionId = normalizeDemoSessionId(parsed.data.demoSessionId);
     const [request] = await db
       .insert(requests)
       .values({
@@ -115,35 +110,29 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
         locationLng: parsed.data.locationLng,
         locationAddress: parsed.data.locationAddress,
         serviceType: parsed.data.serviceType,
-        notes: buildRequestNotes(parsed.data.notes, { demoMode, demoSessionId }),
+        notes: parsed.data.notes,
       })
       .returning();
 
     const serializedRequest = serializeRequest(request);
     sseBroadcast('request:new', serializedRequest);
 
-    if (!demoMode) {
-      sendToAllActiveOperators({
-        title: 'New Roadside Request',
-        body: `${parsed.data.serviceType.toUpperCase()} - ${parsed.data.customerName} at ${parsed.data.locationAddress || 'unknown location'}`,
-        data: { requestId: request.id, type: parsed.data.serviceType },
-      }).catch((err) => console.error('[push] Failed to notify operators:', err));
-    }
+    sendToAllActiveOperators({
+      title: 'New Roadside Request',
+      body: `${parsed.data.serviceType.toUpperCase()} - ${parsed.data.customerName} at ${parsed.data.locationAddress || 'unknown location'}`,
+      data: { requestId: request.id, type: parsed.data.serviceType },
+    }).catch((err) => console.error('[push] Failed to notify operators:', err));
 
     res.status(201).json({ ok: true, request: serializedRequest });
   });
 
   app.get('/api/requests', async (req, res) => {
     const requestedStatus = typeof req.query.status === 'string' ? req.query.status : null;
-    const requestedMode =
-      req.query.mode === 'demo' ? 'demo' : req.query.mode === 'live' ? 'live' : 'all';
-    const demoSessionId =
-      typeof req.query.demoSessionId === 'string' ? normalizeDemoSessionId(req.query.demoSessionId) : null;
 
     const results = await db.select().from(requests).orderBy(desc(requests.createdAt));
     const filtered = results
       .filter((request) => !requestedStatus || request.status === requestedStatus)
-      .filter((request) => matchesRequestMode(request, requestedMode, demoSessionId))
+      .filter((request) => matchesRequestMode(request, 'live'))
       .map((request) => serializeRequest(request));
 
     res.json(filtered);
@@ -241,6 +230,64 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     res.status(201).json({ ok: true, operator });
   });
 
+  app.patch('/api/operators/:id', async (req, res) => {
+    if (!canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    const { id } = req.params;
+    const schema = z
+      .object({
+        name: z.string().min(1).optional(),
+        phone: z.string().nullable().optional(),
+        active: z.boolean().optional(),
+        pin: z.string().min(4).optional(),
+      })
+      .refine(
+        (data) =>
+          data.name !== undefined ||
+          data.phone !== undefined ||
+          data.active !== undefined ||
+          data.pin !== undefined,
+        { message: 'At least one field must be provided' },
+      );
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid operator update payload' });
+      return;
+    }
+
+    const updateValues: Record<string, unknown> = {};
+    if (parsed.data.name !== undefined) updateValues.name = parsed.data.name;
+    if (parsed.data.phone !== undefined) updateValues.phone = parsed.data.phone;
+    if (parsed.data.active !== undefined) updateValues.active = parsed.data.active;
+    if (parsed.data.pin !== undefined) {
+      updateValues.pinHash = await bcrypt.hash(parsed.data.pin, 10);
+    }
+
+    const [operator] = await db
+      .update(operators)
+      .set(updateValues)
+      .where(eq(operators.id, id))
+      .returning({
+        id: operators.id,
+        name: operators.name,
+        phone: operators.phone,
+        serviceRadiusKm: operators.serviceRadiusKm,
+        active: operators.active,
+        createdAt: operators.createdAt,
+      });
+
+    if (!operator) {
+      res.status(404).json({ error: 'Operator not found' });
+      return;
+    }
+
+    res.json({ ok: true, operator });
+  });
+
   app.post('/api/operators/auth', async (req, res) => {
     const schema = z.object({
       operatorId: z.string().uuid(),
@@ -303,6 +350,21 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     }
 
     res.json({ ok: true, token: proxyKey });
+  });
+
+  app.post('/api/admin/test-push', async (req, res) => {
+    if (!canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    const { sent, skipped } = await sendToAllActiveOperators({
+      title: 'Test Alert',
+      body: 'Push notification test from Dispatch admin panel',
+      data: { type: 'test' },
+    });
+
+    res.json({ ok: true, sent, skipped });
   });
 
   app.post('/api/demo-feedback', async (req, res) => {
@@ -473,14 +535,40 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
   });
 
   app.get('/api/incidents', async (req, res) => {
-    const lim = Math.min(Number(req.query.limit ?? 30), 50);
+    const lim = Math.max(1, Math.min(Number(req.query.limit ?? 50), 100));
+    const mode =
+      req.query.mode === 'history' ? 'history' : req.query.mode === 'all' ? 'all' : 'active';
+    const query = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
+    const activeWindowMs = 6 * 60 * 60 * 1000;
+    const cutoff = Date.now() - activeWindowMs;
+
     const results = await db
       .select()
       .from(incidents)
       .orderBy(desc(incidents.lastUpdated), desc(incidents.createdAt))
-      .limit(lim * 3);
+      .limit(lim * 6);
 
-    const deduped = results
+    const filtered = results
+      .filter((incident) => {
+        const ts =
+          Date.parse(
+            incident.lastUpdated ||
+              incident.startDate ||
+              incident.createdAt?.toISOString?.() ||
+              String(incident.createdAt || ''),
+          ) || 0;
+        const isHistorical = ts > 0 ? ts < cutoff : false;
+        if (mode === 'active') return !isHistorical;
+        if (mode === 'history') return isHistorical;
+        return true;
+      })
+      .filter((incident) => {
+        if (!query) return true;
+        const haystack = `${incident.eventType || ''} ${incident.roadway || ''} ${incident.description || ''}`.toLowerCase();
+        return haystack.includes(query);
+      });
+
+    const deduped = filtered
       .filter((incident, index, all) => {
         const signature = [
           incident.eventType || '',
@@ -501,7 +589,24 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
           }) === index
         );
       })
-      .slice(0, lim);
+      .slice(0, lim)
+      .map((incident) => {
+        const createdAtIso =
+          incident.createdAt?.toISOString?.() || String(incident.createdAt || '');
+        const occurredAt = incident.lastUpdated || incident.startDate || createdAtIso;
+        const ts =
+          Date.parse(
+            incident.lastUpdated ||
+              incident.startDate ||
+              createdAtIso,
+          ) || 0;
+        return {
+          ...incident,
+          createdAt: createdAtIso,
+          occurredAt,
+          isHistorical: ts > 0 ? ts < cutoff : false,
+        };
+      });
 
     res.json(deduped);
   });
@@ -554,6 +659,61 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     } catch (error) {
       console.error('[geocode] Reverse geocode error:', error);
       res.status(502).json({ error: 'Failed to reverse geocode' });
+    }
+  });
+
+  app.get('/api/geocode/search', async (req, res) => {
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    if (q.length < 3) {
+      res.status(400).json({ error: 'q (min 3 chars) is required' });
+      return;
+    }
+
+    const lim = Math.max(1, Math.min(Number(req.query.limit ?? 6), 10));
+
+    try {
+      // Ottawa viewbox (soft preference — bounded=0 means non-binding, still returns outside if needed)
+      const ottawaViewbox = '-76.4,44.9,-75.1,45.6';
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=${lim}&viewbox=${ottawaViewbox}&bounded=0&q=${encodeURIComponent(
+        `${q}, Ontario, Canada`,
+      )}`;
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'dispatch-app/1.0 (mike@unalabs.cloud)' },
+      });
+
+      if (!response.ok) {
+        res.status(502).json({ error: 'Geocoding search unavailable' });
+        return;
+      }
+
+      const rows = (await response.json()) as Array<{
+        display_name?: string;
+        lat?: string;
+        lon?: string;
+        address?: { state?: string; province?: string; country?: string };
+      }>;
+
+      const results = rows
+        .map((item) => {
+          const lat = Number(item.lat);
+          const lng = Number(item.lon);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+          return {
+            displayName: item.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+            lat,
+            lng,
+            state: item.address?.state || item.address?.province || '',
+            country: item.address?.country || '',
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => Boolean(item))
+        .filter((item) => /ontario/i.test(item.state || '') || /canada/i.test(item.country || ''))
+        .slice(0, lim);
+
+      res.json(results);
+    } catch (error) {
+      console.error('[geocode-search] error:', error);
+      res.status(502).json({ error: 'Failed to search geocode results' });
     }
   });
 }
