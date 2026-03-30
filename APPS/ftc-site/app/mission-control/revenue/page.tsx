@@ -84,6 +84,24 @@ export default function RevenueOpsPage() {
             <li>Do the strongest proof pages match the offers that are actually closing?</li>
             <li>Where is the bottleneck: qualification, booking, proposal, or close?</li>
           </ul>
+          <div className="revenue-ops-thresholds">
+            <div className="revenue-ops-threshold-card">
+              <p className="status-pill">Starter targets</p>
+              <ul className="feature-list compact-feature-list mission-control-list">
+                <li>ATEAM start rate: 12%+</li>
+                <li>Pack-ready rate: 45%+</li>
+                <li>Continue-to-intake: 35%+</li>
+                <li>Intake completion: 40%+</li>
+              </ul>
+            </div>
+            <div className="revenue-ops-threshold-card">
+              <p className="status-pill">Decision rule</p>
+              <p className="muted">
+                Pick the single weakest stage, assign one owner, and make one change for the next
+                7 days. Do not try to fix the whole funnel at once.
+              </p>
+            </div>
+          </div>
           <div className="hero-actions">
             <Link href="/work-with-ftc" className="btn btn-secondary">
               Open project intake
@@ -95,6 +113,14 @@ export default function RevenueOpsPage() {
               rel="noopener noreferrer"
             >
               Open review guide
+            </a>
+            <a
+              href="https://github.com/fefejiro/FTC-HOLDING/blob/main/APPS/ftc-site/docs/UNALABS_WEEKLY_REVIEW_TEMPLATE.md"
+              className="btn btn-secondary"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open review template
             </a>
           </div>
         </article>

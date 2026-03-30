@@ -2488,6 +2488,21 @@ nav.primary {
   color: #b42318;
 }
 
+.revenue-ops-thresholds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.revenue-ops-threshold-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(26, 40, 76, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
 .work-intake-track-grid {
   margin-top: 0;
 }
@@ -9213,7 +9228,8 @@ body {
   .revenue-ops-guide-grid,
   .revenue-ops-grid,
   .revenue-ops-grid-3,
-  .revenue-ops-grid-4 {
+  .revenue-ops-grid-4,
+  .revenue-ops-thresholds {
     grid-template-columns: 1fr;
   }
 }
