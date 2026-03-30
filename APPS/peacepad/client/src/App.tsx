@@ -1,4 +1,4 @@
-import { useState, useCallback, lazy, Suspense, useEffect, useRef } from "react";
+import { useCallback, lazy, Suspense, useEffect, useRef } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -27,12 +27,10 @@ import { identifyAnalyticsUser, trackSessionStarted } from "@/lib/analytics";
 
 // Lazy load non-critical UI components for better initial load performance
 const WhatsNewModal = lazy(() => import("@/components/WhatsNewModal").then(m => ({ default: m.WhatsNewModal })));
-import { FeedbackWidget } from "@/components/FeedbackWidget";
 const MoodCheckIn = lazy(() => import("@/components/MoodCheckIn"));
 const TransitionPrompt = lazy(() => import("@/components/TransitionPrompt"));
 const UpdateNotification = lazy(() => import("@/components/UpdateNotification").then(m => ({ default: m.UpdateNotification })));
 const InstallPWA = lazy(() => import("@/components/InstallPWA").then(m => ({ default: m.InstallPWA })));
-const ForceRefreshButton = lazy(() => import("@/components/ForceRefreshButton").then(m => ({ default: m.ForceRefreshButton })));
 const TermsAcceptanceDialog = lazy(() => import("@/components/TermsAcceptanceDialog").then(m => ({ default: m.TermsAcceptanceDialog })));
 const NotificationPermission = lazy(() => import("@/components/NotificationPermission").then(m => ({ default: m.NotificationPermission })));
 const VideoCallDialog = lazy(() => import("@/components/VideoCallDialog"));
@@ -224,7 +222,6 @@ function Router() {
 }
 
 export default function App() {
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -413,12 +410,10 @@ export default function App() {
                 </Suspense>
                 <Toaster />
                 <OfflineIndicator />
-                <FeedbackWidget open={feedbackOpen} onOpenChange={setFeedbackOpen} />
                 <Suspense fallback={null}>
                   <AuthenticatedWhatsNew />
                   <UpdateNotification />
                   <InstallPWA />
-                  <ForceRefreshButton />
                   <AppRatingPrompt trigger="general-usage" />
                   <RateLimitNotifier />
                   <AccessibilityAnnouncer />

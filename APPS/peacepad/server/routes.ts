@@ -41,6 +41,7 @@ import {
 } from "./summaryValidator";
 import {
   generatePrepChatCoaching,
+  generatePrepChatDraft,
   analyzeDraftTone,
 } from "./services/prepChatService";
 import {
@@ -9579,6 +9580,53 @@ Crawl-delay: 1
     } catch (error) {
       console.error("Error adding prep chat message:", error);
       res.status(500).json({ message: "Failed to add message" });
+    }
+  });
+
+  app.post("/api/prep-chat/sessions/:id/draft", isAuthenticatedEither, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const session = await storage.getPrepChatSession(req.params.id);
+      if (!session || session.userId !== userId) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      const partnership = user?.activePartnershipId
+        ? await storage.getPartnership(user.activePartnershipId)
+        : null;
+      const coParentId = partnership?.user1Id === userId
+        ? partnership?.user2Id
+        : partnership?.user1Id;
+      const coParent = coParentId ? await storage.getUser(coParentId) : null;
+
+      const messages = (session.messages as Array<{role: "user" | "coach"; content: string; timestamp: string}>) || [];
+      const userPersonality = session.userPersonalityType || user?.personalityType || undefined;
+      const coParentPersonality = session.coParentPersonalityType || coParent?.personalityType || undefined;
+
+      const result = await generatePrepChatDraft(
+        session.customTopic || session.topic,
+        messages,
+        userPersonality,
+        coParentPersonality,
+      );
+
+      const updated = await storage.updatePrepChatSession(req.params.id, {
+        draftedMessage: result.draft,
+      });
+
+      res.json({
+        session: updated,
+        draft: result.draft,
+        note: result.note,
+      });
+    } catch (error) {
+      console.error("Error generating prep chat draft:", error);
+      res.status(500).json({ message: "Failed to generate draft" });
     }
   });
 

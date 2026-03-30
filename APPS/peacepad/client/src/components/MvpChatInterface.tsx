@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Check, MessageCircle, RefreshCw, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, Check, MessageCircle, RefreshCw, Send, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +49,19 @@ type PreviewPayload = {
 };
 
 type AnalysisDisplay = "calm" | "concerning" | "hostile";
+
+type PendingSendDecision = {
+  acceptedSuggestion: boolean;
+  originalTone: string | null;
+  usedRewording: boolean;
+};
+
+const PREPARED_MESSAGE_KEY = "preparedMessage";
+const PREPARED_MESSAGE_TIMESTAMP_KEY = "peacepad_last_prep_chat_draft_at";
+
+function getConversationDraftKey(conversationId?: string): string | null {
+  return conversationId ? `peacepad_message_draft_${conversationId}` : null;
+}
 
 function formatMessageTime(value?: string | Date | null): string {
   if (!value) {
@@ -97,40 +111,58 @@ function getAnalysisDisplay(preview: PreviewPayload | null): AnalysisDisplay | n
   return "calm";
 }
 
-function getToneLabel(preview: PreviewPayload | null): string {
-  const tone = preview?.tone?.toLowerCase() || "";
+function getToneLabel(preview: PreviewPayload | null, display: AnalysisDisplay | null): string {
+  if (!preview || !display) {
+    return "";
+  }
 
+  if (display === "calm") {
+    return "Calm and ready";
+  }
+
+  if (display === "hostile") {
+    return "Likely to escalate";
+  }
+
+  const tone = preview.tone?.toLowerCase() || "";
   if (tone === "defensive") {
-    return "This might come across as defensive.";
+    return "Could feel defensive";
   }
   if (tone === "frustrated") {
-    return "This might come across as frustrated.";
+    return "Could feel frustrated";
   }
-  if (tone === "hostile") {
-    return "This message may escalate the conversation.";
-  }
-  if (tone === "tense" || tone === "confrontational") {
-    return "This might raise the temperature of the conversation.";
+  return "Feels tense";
+}
+
+function getToneExplanation(preview: PreviewPayload | null, display: AnalysisDisplay | null): string {
+  if (!preview || !display) {
+    return "";
   }
 
-  return "Looks good.";
+  if (display === "calm") {
+    return "This draft reads calm, clear, and ready to send.";
+  }
+
+  if (display === "hostile") {
+    return "This message may increase conflict. A calmer version could land better.";
+  }
+
+  return "This may feel tense and could raise the temperature of the conversation.";
 }
 
 export default function MvpChatInterface() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [message, setMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [analysis, setAnalysis] = useState<PreviewPayload | null>(null);
   const [analysisMessage, setAnalysisMessage] = useState("");
   const [composedTrackedForDraft, setComposedTrackedForDraft] = useState(false);
-  const [decisionContext, setDecisionContext] = useState<{
-    acceptedSuggestion: boolean;
-    originalTone: string | null;
-    usedRewording: boolean;
-  } | null>(null);
+  const [decisionContext, setDecisionContext] = useState<PendingSendDecision | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const handledPreparedDraftRef = useRef(false);
 
   const { data: partnerships = [] } = useQuery<any[]>({
     queryKey: ["/api/partnerships"],
@@ -189,20 +221,59 @@ export default function MvpChatInterface() {
     },
   });
 
+  const draftStorageKey = getConversationDraftKey(conversation?.id);
+
   useEffect(() => {
-    const preparedMessage = localStorage.getItem("preparedMessage");
-    if (!preparedMessage) {
+    if (!conversation) {
+      setMessage("");
+      setAnalysis(null);
+      setAnalysisMessage("");
+      setDecisionContext(null);
       return;
     }
 
-    setMessage(preparedMessage);
-    localStorage.removeItem("preparedMessage");
-    textareaRef.current?.focus();
-  }, []);
+    const preparedMessage = localStorage.getItem(PREPARED_MESSAGE_KEY);
+    if (preparedMessage && !handledPreparedDraftRef.current) {
+      handledPreparedDraftRef.current = true;
+      setMessage(preparedMessage);
+      setComposedTrackedForDraft(false);
+      setAnalysis(null);
+      setAnalysisMessage("");
+      setDecisionContext({
+        acceptedSuggestion: false,
+        originalTone: null,
+        usedRewording: false,
+      });
+      localStorage.removeItem(PREPARED_MESSAGE_KEY);
+      window.setTimeout(() => textareaRef.current?.focus(), 0);
+      return;
+    }
+
+    const savedDraft = draftStorageKey ? localStorage.getItem(draftStorageKey) : "";
+    setMessage(savedDraft || "");
+    setComposedTrackedForDraft(Boolean(savedDraft?.trim()));
+    setAnalysis(null);
+    setAnalysisMessage("");
+    setDecisionContext(null);
+  }, [conversation, draftStorageKey]);
+
+  useEffect(() => {
+    if (!draftStorageKey) {
+      return;
+    }
+
+    const draft = message.trim();
+    if (!draft) {
+      localStorage.removeItem(draftStorageKey);
+      return;
+    }
+
+    localStorage.setItem(draftStorageKey, message);
+  }, [draftStorageKey, message]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, analysisMessage]);
 
   useEffect(() => {
     if (!user || !conversation || messages.length === 0) {
@@ -232,22 +303,42 @@ export default function MvpChatInterface() {
       return response.json() as Promise<PreviewPayload>;
     },
     onSuccess: (data) => {
+      const display = getAnalysisDisplay(data);
+      const suggestion = data.ces?.deescalationSuggestion || data.rewordingSuggestion;
+
       setAnalysis(data);
       setAnalysisMessage(data.originalMessage);
 
-      const display = getAnalysisDisplay(data);
       trackEvent("tone_analysis_shown", {
         tone_result: display,
-        had_suggestion: Boolean(data.ces?.deescalationSuggestion || data.rewordingSuggestion),
+        had_suggestion: Boolean(suggestion),
       });
 
-      const suggestion = data.ces?.deescalationSuggestion || data.rewordingSuggestion;
+      if (display === "calm") {
+        trackEvent("tone_check_result_safe");
+      } else if (display === "hostile") {
+        trackEvent("tone_check_result_hostile", {
+          original_tone: data.tone,
+        });
+      } else {
+        trackEvent("tone_check_result_concerning", {
+          original_tone: data.tone,
+        });
+      }
+
       if (suggestion) {
         trackEvent("rewording_suggested", {
           original_tone: data.tone,
           suggestion_length: suggestion.length,
         });
       }
+    },
+    onError: () => {
+      toast({
+        title: "Tone check unavailable",
+        description: "Please try again in a moment.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -289,7 +380,7 @@ export default function MvpChatInterface() {
         });
       }
 
-      const prepChatDraftAt = localStorage.getItem("peacepad_last_prep_chat_draft_at");
+      const prepChatDraftAt = localStorage.getItem(PREPARED_MESSAGE_TIMESTAMP_KEY);
       const usedPrepChatDraft = Boolean(prepChatDraftAt);
       if (prepChatDraftAt) {
         const draftedAt = new Date(prepChatDraftAt);
@@ -297,7 +388,7 @@ export default function MvpChatInterface() {
         trackEvent("prep_chat_to_message_sent", {
           time_from_draft: elapsedMs,
         });
-        localStorage.removeItem("peacepad_last_prep_chat_draft_at");
+        localStorage.removeItem(PREPARED_MESSAGE_TIMESTAMP_KEY);
       }
 
       if ((currentDisplay === "calm" || !hadAnalysis) && !localStorage.getItem("peacepad_first_calm_message")) {
@@ -317,6 +408,9 @@ export default function MvpChatInterface() {
       setAnalysisMessage("");
       setDecisionContext(null);
       setComposedTrackedForDraft(false);
+      if (draftStorageKey) {
+        localStorage.removeItem(draftStorageKey);
+      }
     },
     onError: () => {
       toast({
@@ -327,15 +421,29 @@ export default function MvpChatInterface() {
     },
   });
 
-  const handleCheckTone = () => {
+  const analysisDisplay = getAnalysisDisplay(analysis);
+  const suggestion = analysis?.ces?.deescalationSuggestion || analysis?.rewordingSuggestion;
+  const hasFreshAnalysis = Boolean(analysis && analysisMessage === message.trim());
+  const resolutionRequired = Boolean(hasFreshAnalysis && analysisDisplay && analysisDisplay !== "calm");
+  const partnerName = getPartnerName(conversation, user?.id);
+
+  const runToneCheck = (trigger: "manual" | "send") => {
     const draft = message.trim();
     if (!draft || previewTone.isPending) {
       return;
     }
+
+    trackEvent("tone_check_started", {
+      trigger,
+    });
+
     previewTone.mutate(draft);
   };
 
-  const handleSend = (contentOverride?: string, options?: { acceptedSuggestion?: boolean; rejectedSuggestion?: boolean; usedRewording?: boolean }) => {
+  const performSend = (
+    contentOverride?: string,
+    options?: { acceptedSuggestion?: boolean; rejectedSuggestion?: boolean; usedRewording?: boolean },
+  ) => {
     const content = (contentOverride ?? message).trim();
     if (!content || sendTextMessage.isPending) {
       return;
@@ -343,6 +451,9 @@ export default function MvpChatInterface() {
 
     if (options?.rejectedSuggestion && analysis) {
       trackEvent("rewording_rejected", {
+        original_tone: analysis.tone,
+      });
+      trackEvent("original_sent_anyway", {
         original_tone: analysis.tone,
       });
     }
@@ -355,8 +466,27 @@ export default function MvpChatInterface() {
     sendTextMessage.mutate(content);
   };
 
+  const handlePrimarySend = () => {
+    if (!message.trim() || sendTextMessage.isPending || previewTone.isPending) {
+      return;
+    }
+
+    if (!hasFreshAnalysis) {
+      runToneCheck("send");
+      return;
+    }
+
+    if (resolutionRequired) {
+      return;
+    }
+
+    performSend(message, {
+      acceptedSuggestion: Boolean(decisionContext?.acceptedSuggestion),
+      usedRewording: Boolean(decisionContext?.usedRewording),
+    });
+  };
+
   const handleUseSuggestion = () => {
-    const suggestion = analysis?.ces?.deescalationSuggestion || analysis?.rewordingSuggestion;
     if (!suggestion) {
       return;
     }
@@ -364,13 +494,22 @@ export default function MvpChatInterface() {
     trackEvent("rewording_accepted", {
       original_tone: analysis?.tone,
     });
+    trackEvent("tone_suggestion_used", {
+      original_tone: analysis?.tone,
+    });
 
     setMessage(suggestion);
+    setAnalysis(null);
+    setAnalysisMessage("");
     setDecisionContext({
       acceptedSuggestion: true,
       originalTone: analysis?.tone ?? null,
       usedRewording: true,
     });
+    window.setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
+  const handleEditMessage = () => {
     textareaRef.current?.focus();
   };
 
@@ -396,17 +535,21 @@ export default function MvpChatInterface() {
     if (analysis && analysisMessage !== value.trim()) {
       setAnalysis(null);
       setAnalysisMessage("");
-      setDecisionContext(null);
+      if (!decisionContext?.usedRewording) {
+        setDecisionContext(null);
+      }
     }
   };
 
-  const analysisDisplay = getAnalysisDisplay(analysis);
-  const suggestion = analysis?.ces?.deescalationSuggestion || analysis?.rewordingSuggestion;
-  const partnerName = getPartnerName(conversation, user?.id);
+  const sendButtonLabel = resolutionRequired
+    ? "Choose an option above"
+    : hasFreshAnalysis
+      ? "Send message"
+      : "Check tone to send";
 
   if (!activePartnership) {
     return (
-      <div className="mx-auto flex w-full max-w-xl flex-1 items-center px-4 py-8">
+      <div className="mx-auto flex w-full max-w-xl flex-1 items-center px-4 py-6">
         <ConnectWithPartner
           title="Invite your co-parent"
           subtitle="Share your link to unlock messaging together."
@@ -416,16 +559,28 @@ export default function MvpChatInterface() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 px-4 py-4">
-      <Card className="border-border/60 bg-card/80">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle className="text-xl">Messages</CardTitle>
-              <CardDescription>Say what you mean without starting a fight.</CardDescription>
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 px-4 py-3">
+      <div className="flex items-start justify-between gap-3 px-1">
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold tracking-tight">Messages</h1>
+          <p className="text-sm text-muted-foreground">
+            Pause before you send, and keep the next message calm and usable.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => setLocation("/prep-chat?entry=messages")}>
+          Prep Chat
+        </Button>
+      </div>
+
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border-border/60">
+        <CardHeader className="border-b border-border/60 px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-1">
+              <CardTitle className="text-base">{partnerName}</CardTitle>
+              <CardDescription>Message history and before-you-send tone guidance.</CardDescription>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {conversations.map((item) => (
+            <div className="flex flex-wrap items-center gap-2">
+              {conversations.length > 1 && conversations.map((item) => (
                 <Button
                   key={item.id}
                   type="button"
@@ -436,35 +591,27 @@ export default function MvpChatInterface() {
                   {getPartnerName(item, user?.id)}
                 </Button>
               ))}
+              <Badge variant="outline" className="bg-muted/40">
+                {messages.length} {messages.length === 1 ? "message" : "messages"}
+              </Badge>
             </div>
           </div>
         </CardHeader>
-      </Card>
 
-      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border-border/60">
-        <CardHeader className="border-b border-border/60 pb-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <CardTitle className="text-lg">{partnerName}</CardTitle>
-              <CardDescription>Message history and calm, child-focused coaching.</CardDescription>
-            </div>
-            <Badge variant="outline" className="bg-muted/40">
-              {messages.length} {messages.length === 1 ? "message" : "messages"}
-            </Badge>
-          </div>
-        </CardHeader>
-
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-4">
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-3 p-4">
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
             {messages.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/20 px-6 py-10 text-center">
+              <div className="flex h-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/20 px-5 py-8 text-center">
                 <MessageCircle className="h-10 w-10 text-muted-foreground" />
                 <div className="space-y-1">
                   <p className="font-medium">No messages yet</p>
                   <p className="text-sm text-muted-foreground">
-                    Start with a calm first message, or use Prep Chat if this conversation feels hard.
+                    Start with a calm first message, or open Prep Chat if you want help getting the wording right.
                   </p>
                 </div>
+                <Button type="button" variant="outline" onClick={() => setLocation("/prep-chat?entry=messages")}>
+                  Open Prep Chat
+                </Button>
               </div>
             ) : (
               messages.map((item) => (
@@ -491,24 +638,17 @@ export default function MvpChatInterface() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="space-y-3 border-t border-border/60 pt-4">
-            <div className="rounded-2xl border border-border/70 bg-background p-3 shadow-sm">
-              <Textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(event) => handleMessageChange(event.target.value)}
-                onBlur={() => {
-                  if (message.trim() && analysisMessage !== message.trim()) {
-                    handleCheckTone();
-                  }
-                }}
-                placeholder="Write a message to your co-parent..."
-                className="min-h-[120px] resize-none border-0 bg-transparent p-0 text-base focus-visible:ring-0"
-                disabled={previewTone.isPending || sendTextMessage.isPending}
-              />
+          <div className="space-y-3 border-t border-border/60 pt-3">
+            <div className="flex items-center justify-between gap-3 px-1">
+              <p className="text-sm text-muted-foreground">
+                Before you send, check how this might land.
+              </p>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setLocation("/prep-chat?entry=messages")}>
+                Need help first?
+              </Button>
             </div>
 
-            {analysis && analysisMessage === message.trim() && analysisDisplay && (
+            {analysis && hasFreshAnalysis && analysisDisplay && (
               <div
                 className={[
                   "rounded-2xl border p-4",
@@ -530,18 +670,26 @@ export default function MvpChatInterface() {
                           : "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300",
                     ].join(" ")}
                   >
-                    {analysisDisplay === "calm" ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                    {analysisDisplay === "calm" ? (
+                      <Check className="h-4 w-4" />
+                    ) : analysisDisplay === "hostile" ? (
+                      <AlertTriangle className="h-4 w-4" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
                   </div>
                   <div className="flex-1 space-y-3">
                     <div className="space-y-1">
-                      <p className="font-medium">{getToneLabel(analysis)}</p>
-                      <p className="text-sm text-muted-foreground">{analysis.summary}</p>
+                      <p className="font-medium">{getToneLabel(analysis, analysisDisplay)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {getToneExplanation(analysis, analysisDisplay)}
+                      </p>
                     </div>
 
                     {suggestion && analysisDisplay !== "calm" && (
-                      <div className="rounded-xl border border-border/60 bg-background/70 p-3">
+                      <div className="rounded-xl border border-border/60 bg-background/80 p-3">
                         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Try this instead
+                          Suggested calmer version
                         </p>
                         <p className="text-sm leading-relaxed text-foreground">{suggestion}</p>
                       </div>
@@ -551,10 +699,10 @@ export default function MvpChatInterface() {
                       <div className="flex flex-wrap gap-2">
                         {suggestion && (
                           <Button type="button" size="sm" onClick={handleUseSuggestion}>
-                            Use this version
+                            Use this
                           </Button>
                         )}
-                        <Button type="button" size="sm" variant="outline" onClick={() => textareaRef.current?.focus()}>
+                        <Button type="button" size="sm" variant="outline" onClick={handleEditMessage}>
                           Edit
                         </Button>
                         <Button
@@ -562,7 +710,7 @@ export default function MvpChatInterface() {
                           size="sm"
                           variant="ghost"
                           onClick={() =>
-                            handleSend(message, {
+                            performSend(message, {
                               rejectedSuggestion: true,
                               usedRewording: false,
                             })
@@ -577,11 +725,22 @@ export default function MvpChatInterface() {
               </div>
             )}
 
+            <div className="rounded-2xl border border-border/70 bg-background p-3 shadow-sm">
+              <Textarea
+                ref={textareaRef}
+                value={message}
+                onChange={(event) => handleMessageChange(event.target.value)}
+                placeholder="Write a message to your co-parent..."
+                className="min-h-[112px] resize-none border-0 bg-transparent p-0 text-base focus-visible:ring-0"
+                disabled={previewTone.isPending || sendTextMessage.isPending}
+              />
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleCheckTone}
+                onClick={() => runToneCheck("manual")}
                 disabled={!message.trim() || previewTone.isPending || sendTextMessage.isPending}
               >
                 {previewTone.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
@@ -590,16 +749,11 @@ export default function MvpChatInterface() {
 
               <Button
                 type="button"
-                onClick={() =>
-                  handleSend(message, {
-                    acceptedSuggestion: Boolean(decisionContext?.acceptedSuggestion),
-                    usedRewording: Boolean(decisionContext?.usedRewording),
-                  })
-                }
-                disabled={!message.trim() || sendTextMessage.isPending}
+                onClick={handlePrimarySend}
+                disabled={!message.trim() || sendTextMessage.isPending || previewTone.isPending || resolutionRequired}
               >
                 {sendTextMessage.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                Send message
+                {sendButtonLabel}
               </Button>
             </div>
           </div>

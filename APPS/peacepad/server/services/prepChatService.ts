@@ -297,12 +297,17 @@ ${boundaryPrompt}
 **CONTEXT**: The user is preparing for ${topicContext}.
 
 **YOUR APPROACH**:
-1. VALIDATE first - Acknowledge their emotions and the difficulty of the situation. Let them know their feelings are understandable.
-2. CLARIFY intent - Help them identify what outcome they really want (not just venting, but what change they're seeking).
-3. REFRAME constructively - Transform accusatory or reactive language into specific, actionable requests.
-4. PROVIDE EXAMPLES - Give them 2-3 concrete reworded versions of their message, not just principles.
-5. ANTICIPATE REACTIONS - Briefly mention how the other person might receive different phrasings.
-6. OFFER A SCRIPT - When helpful, provide a complete ready-to-send message they can copy or adapt.
+1. VALIDATE briefly - Acknowledge the pressure without sounding like a therapist.
+2. CLARIFY the goal - Help them name the exact outcome they want from this message.
+3. ASK ONE USEFUL FOLLOW-UP when needed - choose practical co-parent questions such as:
+   - What pickup or dropoff time are you proposing?
+   - Do you want this to sound cooperative, firm, or brief?
+   - What outcome matters most in this message?
+   - What do you want to avoid escalating?
+   - Do you need a version that is shorter, softer, or more direct?
+4. REFRAME constructively - Transform accusatory or reactive language into specific, actionable requests.
+5. PROVIDE A SENDABLE DRAFT - When the user gives enough context, include one ready-to-send draft message in plain text.
+6. KEEP IT PRACTICAL - Focus on scheduling, boundaries, logistics, requests, and child-centered clarity.
 ${offTopicCheck.isOffTopic ? `\n**IMPORTANT**: The user's latest message appears to be about "${offTopicCheck.category}" which is outside your scope. Gently redirect with: "${offTopicCheck.redirect}"\n` : ''}
 **COMMUNICATION TOOLKIT**:
 - Transform "You always/never..." into "I've noticed that lately..." or "The last few times..."
@@ -313,7 +318,7 @@ ${offTopicCheck.isOffTopic ? `\n**IMPORTANT**: The user's latest message appears
 - Suggest timing: "Would [day/time] work to discuss this?"
 ${personalityGuidance}
 
-**TONE**: Warm, supportive, practical, and never legalistic. You're their ally, not a lecturer. Keep responses conversational but actionable. When they share a draft message, always provide an improved version they can use.`;
+**TONE**: Warm, supportive, practical, and never legalistic. You're their ally, not a lecturer. Do not sound robotic, preachy, or overly therapeutic. Keep responses conversational, specific, and action-oriented for co-parent communication. When they share a draft message, always provide an improved version they can use.`;
 
   if (!openai) {
     return "I'm here to help you prepare. Please ensure the AI service is properly configured.";
@@ -338,6 +343,85 @@ ${personalityGuidance}
   } catch (error) {
     console.error('[PrepChat] Coaching generation failed:', error);
     return "Let's take a moment to think about what you want to say. What's the main message you need to communicate?";
+  }
+}
+
+function getLastUserMessage(messages: ChatMessage[]): string {
+  return [...messages].reverse().find((message) => message.role === 'user')?.content?.trim() || '';
+}
+
+export async function generatePrepChatDraft(
+  topic: string,
+  messages: ChatMessage[],
+  userPersonality?: string,
+  coParentPersonality?: string
+): Promise<{ draft: string; note: string }> {
+  const personalityProfile = buildPrepChatPersonalityProfile(userPersonality, coParentPersonality);
+  const personalityGuidance = buildPersonalityPromptBlock(personalityProfile);
+  const boundaryPrompt = buildBoundaryPrompt();
+  const fallbackSource = getLastUserMessage(messages) || topic || "I want to send a calmer message to my co-parent.";
+  const conversationHistory = messages
+    .slice(-8)
+    .map((message) => `${message.role === 'user' ? 'Parent' : 'Coach'}: ${message.content}`)
+    .join('\n');
+
+  if (!openai) {
+    return {
+      draft: applyPrepChatPersonalityStyle(buildGuaranteedRevision(fallbackSource), personalityProfile),
+      note: "Clear, calmer, and ready to review before sending.",
+    };
+  }
+
+  const systemPrompt = `You are PeaceCoach, a co-parent communication coach. Turn the prep conversation into one ready-to-send message for a co-parent.
+${boundaryPrompt}
+
+RULES:
+- Return valid JSON with keys "draft" and "note"
+- "draft" must be a single sendable message, 2-5 sentences max
+- Make the message calm, clear, practical, and child-focused when relevant
+- Help with logistics, schedule changes, boundaries, and requests
+- Avoid blame, sarcasm, legal language, therapy language, and generic filler
+- Include one concrete ask or next step when possible
+- If a date or time was mentioned, keep it specific
+- If details are still missing, write the most usable calm draft possible without inventing facts
+${personalityGuidance}
+
+The "note" should be one short sentence explaining why this version is easier to send.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: `Conversation context:\n${conversationHistory}\n\nCreate the draft message now.`,
+        },
+      ],
+      max_tokens: 400,
+      temperature: 0.55,
+    });
+
+    const raw = response.choices[0].message.content || '';
+    const parsed = JSON.parse(raw);
+    const safeDraft = applyPrepChatPersonalityStyle(
+      ensureSuggestedRevision(typeof parsed?.draft === 'string' ? parsed.draft : '', fallbackSource),
+      personalityProfile,
+    );
+    const note = typeof parsed?.note === 'string' && parsed.note.trim()
+      ? parsed.note.trim()
+      : "Clear, calmer, and ready to review before sending.";
+
+    return {
+      draft: safeDraft,
+      note,
+    };
+  } catch (error) {
+    console.error('[PrepChat] Draft generation failed:', error);
+    return {
+      draft: applyPrepChatPersonalityStyle(buildGuaranteedRevision(fallbackSource), personalityProfile),
+      note: "Clear, calmer, and ready to review before sending.",
+    };
   }
 }
 
