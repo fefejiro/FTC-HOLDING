@@ -142,3 +142,29 @@ Recommended production secret setup:
 
 - Point `UNALABS_INTAKE_WEBHOOK_URL` to your internal lead sink / automation.
 - Point `UNALABS_CONFIRMATION_EMAIL_WEBHOOK_URL` to the endpoint that sends the user acknowledgment email.
+- Use `UNALABS_PIPELINE_API_KEY` for internal scripts or automations that record downstream pipeline stages.
+
+## Revenue pipeline updates
+
+You can record downstream sales stages without opening the internal mission-control page.
+
+Command:
+
+```bash
+npm run pipeline:update -- --request-id UL-20260330-ABC123 --event lead_qualified --owner Mike --offer scoped-first-pass --source ateam_workflow
+```
+
+Examples:
+
+```bash
+npm run pipeline:update -- --request-id UL-20260330-ABC123 --event call_booked --booked-for "2026-04-02 2:30 PM ET" --owner Mike
+
+npm run pipeline:update -- --request-id UL-20260330-ABC123 --event proposal_sent --proposal-id PROP-014 --value 2500 --notes "Scoped pack approved"
+
+npm run pipeline:update -- --request-id UL-20260330-ABC123 --event project_closed_won --value 5000 --notes "Moved into build execution track"
+```
+
+Environment:
+
+- `UNALABS_PIPELINE_API_KEY` for authenticated production requests
+- `UNALABS_PIPELINE_BASE_URL` if you want to point the script somewhere other than `https://unalabs.cloud`

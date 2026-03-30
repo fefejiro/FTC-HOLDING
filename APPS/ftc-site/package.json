@@ -9,6 +9,7 @@
     "build": "next build && node scripts/fix-vercel-monorepo-output.mjs",
     "start": "next start",
     "lint": "next lint",
+    "pipeline:update": "node scripts/update-pipeline-stage.mjs",
     "test:e2e": "playwright test",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "test": "npm run test:e2e",

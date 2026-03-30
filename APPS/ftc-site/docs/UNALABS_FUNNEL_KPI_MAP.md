@@ -288,6 +288,22 @@ In production, the endpoint requires `UNALABS_PIPELINE_API_KEY` to be configured
 }
 ```
 
+### Lightweight CLI updater
+
+If you want to record stages from your actual ops flow without opening the internal revenue page each time, use:
+
+```bash
+npm run pipeline:update -- --request-id UL-20260330-ABC123 --event lead_qualified --owner Mike --offer scoped-first-pass --source ateam_workflow
+```
+
+Useful follow-ups:
+
+```bash
+npm run pipeline:update -- --request-id UL-20260330-ABC123 --event call_booked --booked-for "2026-04-02 2:30 PM ET"
+npm run pipeline:update -- --request-id UL-20260330-ABC123 --event proposal_sent --proposal-id PROP-014 --value 2500
+npm run pipeline:update -- --request-id UL-20260330-ABC123 --event project_closed_won --value 5000 --notes "Moved into build execution"
+```
+
 ### Supported fields
 
 - `requestId` required
