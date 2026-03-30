@@ -307,6 +307,61 @@ const OTTAWA_AREA_ALIASES = new Set([
   'Orleans',
 ]);
 
+const ONTARIO_CITY_COORDS: Record<string, { lat: number; lng: number }> = {
+  Ottawa: { lat: 45.4215, lng: -75.6972 },
+  Toronto: { lat: 43.6532, lng: -79.3832 },
+  Mississauga: { lat: 43.589, lng: -79.6441 },
+  Brampton: { lat: 43.7315, lng: -79.7624 },
+  Hamilton: { lat: 43.2557, lng: -79.8711 },
+  London: { lat: 42.9849, lng: -81.2453 },
+  Markham: { lat: 43.8561, lng: -79.337 },
+  Vaughan: { lat: 43.8372, lng: -79.5083 },
+  Kitchener: { lat: 43.4516, lng: -80.4925 },
+  Windsor: { lat: 42.3149, lng: -83.0364 },
+  'Richmond Hill': { lat: 43.8828, lng: -79.4403 },
+  Oakville: { lat: 43.4675, lng: -79.6877 },
+  Burlington: { lat: 43.3255, lng: -79.799 },
+  Oshawa: { lat: 43.8971, lng: -78.8658 },
+  Barrie: { lat: 44.3894, lng: -79.6903 },
+  Kingston: { lat: 44.2312, lng: -76.486 },
+  Guelph: { lat: 43.5448, lng: -80.2482 },
+  Waterloo: { lat: 43.4643, lng: -80.5204 },
+  Ajax: { lat: 43.8509, lng: -79.0204 },
+  Whitby: { lat: 43.8975, lng: -78.9429 },
+  Milton: { lat: 43.5183, lng: -79.8774 },
+  Cambridge: { lat: 43.3616, lng: -80.3144 },
+  'Thunder Bay': { lat: 48.3809, lng: -89.2477 },
+  'Niagara Falls': { lat: 43.0896, lng: -79.0849 },
+  Sudbury: { lat: 46.4917, lng: -80.993 },
+  Belleville: { lat: 44.1628, lng: -77.3832 },
+  Peterborough: { lat: 44.3091, lng: -78.3197 },
+};
+
+const CITY_NAME_LOOKUP = new Map(
+  ONTARIO_CITY_HINTS.map((city) => [city.toLowerCase(), OTTAWA_AREA_ALIASES.has(city) ? 'Ottawa' : city]),
+);
+
+const REGION_CITY_ALIASES = new Map<string, string>([
+  ['kanata', 'Ottawa'],
+  ['orleans', 'Ottawa'],
+  ['nepean', 'Ottawa'],
+  ['barrhaven', 'Ottawa'],
+  ['gloucester', 'Ottawa'],
+  ['vanier', 'Ottawa'],
+  ['manotick', 'Ottawa'],
+  ['north york', 'Toronto'],
+  ['scarborough', 'Toronto'],
+  ['etobicoke', 'Toronto'],
+  ['york', 'Toronto'],
+  ['east york', 'Toronto'],
+  ['streetsville', 'Mississauga'],
+  ['port credit', 'Mississauga'],
+  ['meadowvale', 'Mississauga'],
+  ['ancaster', 'Hamilton'],
+  ['stoney creek', 'Hamilton'],
+  ['dundas', 'Hamilton'],
+]);
+
 function toNumber(value: number | null) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -327,20 +382,47 @@ function formatDistance(km: number | null) {
   return `${km.toFixed(1)} km`;
 }
 
+function normalizeIncidentCityLabel(city: string) {
+  const cleaned = city.trim();
+  if (!cleaned) return 'Ontario';
+  return CITY_NAME_LOOKUP.get(cleaned.toLowerCase()) || REGION_CITY_ALIASES.get(cleaned.toLowerCase()) || cleaned;
+}
+
+function inferCityFromCoordinates(lat: number, lng: number) {
+  let bestCity: string | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const [city, coords] of Object.entries(ONTARIO_CITY_COORDS)) {
+    const distanceKm = haversineKm(lat, lng, coords.lat, coords.lng);
+    if (distanceKm < bestDistance) {
+      bestDistance = distanceKm;
+      bestCity = city;
+    }
+  }
+
+  if (!bestCity || bestDistance > 60) return null;
+  return bestCity;
+}
+
 function extractIncidentCity(incident: Incident) {
   const lat = toNumber(incident.locationLat);
   const lng = toNumber(incident.locationLng);
   if (lat !== null && lng !== null) {
-    const distanceFromOttawa = haversineKm(OTTAWA_CENTER.lat, OTTAWA_CENTER.lng, lat, lng);
-    if (distanceFromOttawa <= 55) return 'Ottawa';
+    const inferredCity = inferCityFromCoordinates(lat, lng);
+    if (inferredCity) return inferredCity;
   }
 
   const text = `${incident.roadway || ''} ${incident.description || ''}`.trim();
   if (!text) return 'Ontario';
 
+  for (const [alias, city] of REGION_CITY_ALIASES.entries()) {
+    const match = new RegExp(`\\b${alias.replace(/\s+/g, '\\s+')}\\b`, 'i');
+    if (match.test(text)) return city;
+  }
+
   for (const city of ONTARIO_CITY_HINTS) {
     const match = new RegExp(`\\b${city.replace(/\s+/g, '\\s+')}\\b`, 'i');
-    if (match.test(text)) return OTTAWA_AREA_ALIASES.has(city) ? 'Ottawa' : city;
+    if (match.test(text)) return normalizeIncidentCityLabel(city);
   }
 
   const commaParts = text.split(',').map((part) => part.trim()).filter(Boolean);
@@ -349,7 +431,7 @@ function extractIncidentCity(incident: Incident) {
       .replace(/\b(near|at|on|route|hwy|highway|road|rd|street|st|avenue|ave)\b/gi, '')
       .trim();
     if (guess.length >= 3 && guess.length <= 24) {
-      return OTTAWA_AREA_ALIASES.has(guess as (typeof ONTARIO_CITY_HINTS)[number]) ? 'Ottawa' : guess;
+      return normalizeIncidentCityLabel(guess);
     }
   }
 
