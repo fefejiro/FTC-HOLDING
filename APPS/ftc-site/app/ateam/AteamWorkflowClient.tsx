@@ -57,10 +57,10 @@ type BrowserSpeechRecognitionCtor = new () => BrowserSpeechRecognition;
 
 // Human-readable working stages shown during processing
 const WORKING_STAGES = [
-  { label: "Reading your idea", detail: "Capturing the signal and intent." },
-  { label: "Finding the right path", detail: "Routing to the fastest believable lane." },
-  { label: "Building the first version", detail: "Generating concept, prototype, and artifacts." },
-  { label: "Packaging your results", detail: "Creating the decision pack for Una Labs." },
+  { label: "Reading your idea", detail: "Capturing the signal, goals, and constraints." },
+  { label: "Finding the right path", detail: "Matching the problem to the best execution lane." },
+  { label: "Structuring the system", detail: "Building the first plan, flow, and proof points." },
+  { label: "Preparing the handoff", detail: "Turning the work into a decision-ready next step." },
 ] as const;
 
 // Compact type labels (no verbose descriptions)
@@ -355,7 +355,7 @@ export default function AteamWorkflowClient({
       return;
     }
     if (idea.trim().length < 12) {
-      setError("Add a bit more detail — one sentence is enough to start.");
+      setError("Add a bit more detail - one sentence is enough to start.");
       trackEvent("ateam_run_start_error", {
         reason: "idea_too_short",
         location: basePath === "/" ? "homepage" : "ateam_page",
@@ -484,7 +484,7 @@ export default function AteamWorkflowClient({
         <div className="wf-bar-brand">
           <Image src={ATEAM_BRAND_LOGO_PATH} alt="ATEAM" width={28} height={28} className="wf-bar-logo" />
           <span className="wf-bar-name">ATEAM</span>
-          <span className="wf-bar-sep">·</span>
+          <span className="wf-bar-sep">-</span>
           <span className="wf-bar-sub">Una Labs</span>
         </div>
         <div className="wf-bar-right">
@@ -501,7 +501,7 @@ export default function AteamWorkflowClient({
           )}
           {operatorEnabled && (
             <Link href={operatorOfficePath} prefetch={false} className="wf-op-link">
-              Operator →
+              Operator {"->"}
             </Link>
           )}
         </div>
@@ -526,10 +526,29 @@ export default function AteamWorkflowClient({
                   scoped, buildable system fast.
                 </h1>
                 <p className="wf-intro-lead">
-                  ATEAM structures the intake, shapes the first pass, and hands Una Labs a
-                  clearer next move for websites, lead systems, workflow tools, and early
-                  product builds.
+                  Each operator represents a stage in turning ideas into execution. ATEAM takes
+                  you from rough input to a clearer objective, structured plan, and a real path
+                  into delivery with Una Labs.
                 </p>
+              </div>
+
+              <div className="wf-proof-strip" aria-label="How ATEAM moves work forward">
+                <div className="wf-proof-step">
+                  <span className="wf-proof-step-label">Idea in</span>
+                  <p>A rough problem, request, or opportunity enters the system.</p>
+                </div>
+                <div className="wf-proof-step">
+                  <span className="wf-proof-step-label">Operator flow</span>
+                  <p>Lead, Scout, Architect, Builder, Designer, and Operator each handle a clear stage.</p>
+                </div>
+                <div className="wf-proof-step">
+                  <span className="wf-proof-step-label">Decision pack</span>
+                  <p>ATEAM turns the work into a scoped first pass with next steps.</p>
+                </div>
+                <div className="wf-proof-step">
+                  <span className="wf-proof-step-label">Live path</span>
+                  <p>Una Labs picks up the handoff and moves it into real execution.</p>
+                </div>
               </div>
 
               <div className="wf-intake-card">
@@ -545,7 +564,7 @@ export default function AteamWorkflowClient({
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 15.2 14.47 17 12 17s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V21c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
                       </svg>
-                      {isListening ? "Listening…" : "Speak"}
+                      {isListening ? "Listening..." : "Speak"}
                     </button>
                   )}
                 </div>
@@ -585,11 +604,11 @@ export default function AteamWorkflowClient({
                     onClick={handleStartRun}
                     disabled={busy !== "idle" || workflowServiceState !== "ready"}
                   >
-                    {busy !== "idle" ? "Starting…" : "Start ATEAM →"}
+                    {busy !== "idle" ? "Starting..." : "Start ATEAM ->"}
                   </button>
                   <p className="wf-intake-hint">
-                    {workflowServiceState === "checking" ? "Connecting to ATEAM…" :
-                     workflowServiceState === "unavailable" ? "ATEAM is offline — try again shortly" :
+                    {workflowServiceState === "checking" ? "Connecting to ATEAM..." :
+                     workflowServiceState === "unavailable" ? "ATEAM is offline - try again shortly" :
                      "One paragraph is enough. ATEAM turns it into a scoped first pass."}
                   </p>
                 </div>
@@ -598,10 +617,10 @@ export default function AteamWorkflowClient({
               {/* What you'll get */}
               <div className="wf-expect-row" aria-label="What ATEAM produces">
                 {[
-                  { icon: "◎", label: "Scoped first pass", detail: "Problem, audience, and the shortest believable path" },
-                  { icon: "⬡", label: "Prototype direction", detail: "What the first version should do and prove" },
-                  { icon: "✦", label: "Build note", detail: "Scope, risk, lane, and technical direction" },
-                  { icon: "→", label: "Next move", detail: "A handoff Una Labs can review and execute" },
+                  { icon: "O", label: "Scoped first pass", detail: "Problem, audience, and the shortest believable path" },
+                  { icon: "[]", label: "Prototype direction", detail: "What the first version should do and prove" },
+                  { icon: "+", label: "Build note", detail: "Scope, risk, lane, and technical direction" },
+                  { icon: "->", label: "Next move", detail: "A handoff Una Labs can review and execute" },
                 ].map((item) => (
                   <div key={item.label} className="wf-expect-item">
                     <span className="wf-expect-icon" aria-hidden="true">{item.icon}</span>
@@ -725,7 +744,7 @@ export default function AteamWorkflowClient({
                   onClick={handleBuildPack}
                   disabled={busy !== "idle"}
                 >
-                  Build my pack →
+                  Build my pack {"->"}
                 </button>
                 <button type="button" className="wf-btn-ghost" onClick={resetFlow}>
                   Start over
@@ -894,6 +913,25 @@ export default function AteamWorkflowClient({
                 </div>
               )}
 
+              <div className="wf-proof-strip wf-proof-strip--output" aria-label="What ATEAM has clarified">
+                <div className="wf-proof-step">
+                  <span className="wf-proof-step-label">Objective set</span>
+                  <p>Lead and Scout turned the idea into a clearer goal and input.</p>
+                </div>
+                <div className="wf-proof-step">
+                  <span className="wf-proof-step-label">System designed</span>
+                  <p>Architect and Builder mapped the shortest believable execution path.</p>
+                </div>
+                <div className="wf-proof-step">
+                  <span className="wf-proof-step-label">Experience shaped</span>
+                  <p>Designer and Operator clarified how the system should be used and run.</p>
+                </div>
+                <div className="wf-proof-step">
+                  <span className="wf-proof-step-label">Ready to move</span>
+                  <p>This pack is now ready for scoped delivery with Una Labs.</p>
+                </div>
+              </div>
+
               {/* CTA to Una Labs */}
               <div className="wf-pack-cta">
                 <div className="wf-pack-cta-copy">
@@ -912,7 +950,7 @@ export default function AteamWorkflowClient({
                     className="wf-btn-primary wf-btn-primary--large"
                     onClick={handleContinueWithUnaLabs}
                   >
-                    Start this with Una Labs →
+                    Start this with Una Labs {"->"}
                   </button>
                   <button type="button" className="wf-btn-ghost" onClick={resetFlow}>
                     Run another idea
@@ -928,7 +966,7 @@ export default function AteamWorkflowClient({
                     prefetch={false}
                     className="wf-op-link"
                   >
-                    Open in Mission Control →
+                    Open in Mission Control {"->"}
                   </Link>
                 </div>
               )}
@@ -939,19 +977,19 @@ export default function AteamWorkflowClient({
           {!run && !isWorking && !workflowReady && (
             <div className="wf-placeholder-strip" aria-hidden="true">
               <div className="wf-placeholder-node">
-                <span>◎</span><p>Concept brief</p>
+                <span>◎</span><p>Idea in</p>
               </div>
-              <div className="wf-placeholder-arrow">→</div>
+              <div className="wf-placeholder-arrow">{"->"}</div>
               <div className="wf-placeholder-node">
-                <span>⬡</span><p>Prototype</p>
+                <span>⬡</span><p>Operator flow</p>
               </div>
-              <div className="wf-placeholder-arrow">→</div>
+              <div className="wf-placeholder-arrow">{"->"}</div>
               <div className="wf-placeholder-node">
-                <span>✦</span><p>Build note</p>
+                <span>✦</span><p>Decision pack</p>
               </div>
-              <div className="wf-placeholder-arrow">→</div>
+              <div className="wf-placeholder-arrow">{"->"}</div>
               <div className="wf-placeholder-node wf-placeholder-node--cta">
-                <span>→</span><p>Una Labs</p>
+                <span>{"->"}</span><p>Live system</p>
               </div>
             </div>
           )}
