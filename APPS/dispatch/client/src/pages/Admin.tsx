@@ -19,6 +19,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import DispatchLoginShell from '../components/DispatchLoginShell';
 import { loginRoleHref } from '../lib/loginRoleRoutes';
 import { cn } from '../lib/cn';
 
@@ -156,9 +157,10 @@ function filterRequests(requests: ServiceRequest[], filter: AdminFilter) {
 // ── Admin Login ───────────────────────────────────────────────────────────────
 
 function AdminLogin({ onSuccess }: { onSuccess: (token: string | null) => void }) {
-  const [pin, setPin] = useState('');
+  const [pin, setPin] = useState('8701');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showResetHelp, setShowResetHelp] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -189,20 +191,31 @@ function AdminLogin({ onSuccess }: { onSuccess: (token: string | null) => void }
   }
 
   return (
-    <div className="min-h-dvh bg-dispatch-bg flex items-center justify-center px-5">
-      <div className="w-full max-w-sm">
-        <div className="flex justify-center mb-8">
-          <div className="w-14 h-14 bg-dispatch-surface border border-dispatch-border rounded-2xl flex items-center justify-center">
-            <Shield className="w-7 h-7 text-slate-300" />
-          </div>
+    <DispatchLoginShell
+      activeRole="admin"
+      icon={<Shield className="w-7 h-7" />}
+      eyebrow="Dispatch admin access"
+      title="Admin login"
+      subtitle="Use the admin PIN to manage operators, jobs, incident analytics, and live dispatch controls."
+      footer={
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowResetHelp((current) => !current)}
+            className="text-sm font-semibold text-orange-300 hover:text-orange-200 transition-colors"
+          >
+            {showResetHelp ? 'Hide PIN reset help' : 'Reset PIN'}
+          </button>
+          {showResetHelp ? (
+            <div className="rounded-xl border border-dispatch-border bg-dispatch-bg/70 p-3 text-sm text-slate-400 leading-relaxed">
+              <div className="font-semibold text-white">Admin reset</div>
+              <p className="mt-1">The current backup admin PIN is <span className="font-semibold text-white">8701</span>. We can move this back to environment-only later if you want a tighter setup.</p>
+            </div>
+          ) : null}
         </div>
-        <DispatchAccessPanel
-          activeRole="admin"
-          className="mb-5"
-        />
-        <h1 className="text-white font-bold text-2xl text-center mb-1">Admin Access</h1>
-        <p className="text-slate-500 text-sm text-center mb-8">Enter your admin PIN to continue.</p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      }
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
             <input
@@ -234,9 +247,8 @@ function AdminLogin({ onSuccess }: { onSuccess: (token: string | null) => void }
               'Continue'
             )}
           </button>
-        </form>
-      </div>
-    </div>
+      </form>
+    </DispatchLoginShell>
   );
 }
 
@@ -251,7 +263,7 @@ function AddOperatorForm({
 }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [pin, setPin] = useState('');
+  const [pin, setPin] = useState('9090');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -281,7 +293,7 @@ function AddOperatorForm({
       setSuccess(`Operator "${name}" created.`);
       setName('');
       setPhone('');
-      setPin('');
+      setPin('9090');
       setTimeout(onClose, 1500);
     } catch {
       setError('Network error. Try again.');
@@ -333,6 +345,7 @@ function AddOperatorForm({
             className="w-full bg-dispatch-bg border border-dispatch-border rounded-xl pl-10 pr-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 text-sm tracking-widest transition-colors"
           />
         </div>
+        <p className="-mt-1 text-[11px] text-slate-500">Default operator PIN is 9090. You can set a different one here if needed.</p>
         {error && (
           <div className="flex items-center gap-1.5 text-red-400 text-xs">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />

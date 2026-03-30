@@ -32,6 +32,7 @@ import {
   useMap,
 } from 'react-leaflet';
 import DispatchAccessPanel from '../components/DispatchAccessPanel';
+import DispatchLoginShell from '../components/DispatchLoginShell';
 import DemoFeedbackForm from '../components/DemoFeedbackForm';
 import { useEvents } from '../hooks/useEvents';
 import { usePush } from '../hooks/usePush';
@@ -520,6 +521,7 @@ function PinScreen({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [opsLoading, setOpsLoading] = useState(true);
+  const [showResetHelp, setShowResetHelp] = useState(false);
 
   useEffect(() => {
     fetch('/api/operators')
@@ -573,36 +575,40 @@ function PinScreen({
   }
 
   return (
-    <div className="min-h-dvh bg-dispatch-bg flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center mb-5 shadow-xl shadow-orange-500/25">
-            <Zap className="w-8 h-8 text-white" />
-          </div>
-          <DispatchAccessPanel
-            activeRole="operator"
-            className="mb-5 w-full"
-          />
-          {demoMode ? (
-            <>
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-orange-300 mb-4">
-                Client demo mode
-              </div>
-              <h1 className="text-2xl font-bold text-white text-center">Dispatch demo operator sign in</h1>
-              <p className="text-slate-500 text-sm mt-2 text-center">
-                Use the invited sandbox credentials to work only the demo requests tied to this session.
-              </p>
-              <p className="text-slate-700 text-xs mt-2 text-center">Session {demoSessionId || 'demo'}</p>
-            </>
-          ) : (
-            <>
-              <h1 className="text-2xl font-bold text-white">Operator Login</h1>
-              <p className="text-slate-500 text-sm mt-1">Dispatch - Ottawa</p>
-            </>
-          )}
+    <DispatchLoginShell
+      activeRole="operator"
+      icon={<Zap className="w-7 h-7" />}
+      eyebrow={demoMode ? 'Dispatch demo access' : 'Dispatch access'}
+      title={demoMode ? 'Operator sign in' : 'Operator login'}
+      subtitle={
+        demoMode
+          ? `Use the invited sandbox credentials for session ${demoSessionId || 'demo'}.`
+          : 'Choose your operator name, enter your PIN, and continue into the live queue.'
+      }
+      footer={
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowResetHelp((current) => !current)}
+            className="text-sm font-semibold text-orange-300 hover:text-orange-200 transition-colors"
+          >
+            {showResetHelp ? 'Hide PIN reset help' : 'Reset PIN'}
+          </button>
+          {showResetHelp ? (
+            <div className="rounded-xl border border-dispatch-border bg-dispatch-bg/70 p-3 text-sm text-slate-400 leading-relaxed">
+              <div className="font-semibold text-white">Operator reset</div>
+              <p className="mt-1">Ask the admin team to reset your on-duty PIN. The current default operator PIN is <span className="font-semibold text-white">9090</span>.</p>
+            </div>
+          ) : null}
+          {!demoMode ? (
+            <p className="text-xs leading-relaxed text-slate-500">
+              While on duty, Dispatch can use your device location to help route nearby jobs and keep operations coordinated.
+            </p>
+          ) : null}
         </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      }
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2.5 block">
               Select Operator
@@ -664,9 +670,8 @@ function PinScreen({
               'Sign In'
             )}
           </button>
-        </form>
-      </div>
-    </div>
+      </form>
+    </DispatchLoginShell>
   );
 }
 

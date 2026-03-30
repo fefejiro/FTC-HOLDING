@@ -17,32 +17,40 @@ function roleItem(activeRole: LoginRole, role: LoginRole) {
 }
 
 export default function LoginRoleSwitch({ activeRole, className }: LoginRoleSwitchProps) {
-  const operator = roleItem(activeRole, 'operator');
-  const admin = roleItem(activeRole, 'admin');
+  const options = [roleItem(activeRole, 'operator'), roleItem(activeRole, 'admin')];
 
   return (
-    <nav
-      aria-label="Login role switch"
+    <div
       className={cn(
-        'mx-auto grid w-full max-w-sm grid-cols-2 gap-1 rounded-xl border border-dispatch-border bg-dispatch-surface p-1',
+        'rounded-2xl border border-dispatch-border bg-dispatch-bg/80 p-3',
         className,
       )}
     >
-      {[operator, admin].map((item) => (
-        <a
-          key={item.label}
-          href={item.href}
-          aria-current={item.isActive ? 'page' : undefined}
-          className={cn(
-            'inline-flex items-center justify-center rounded-lg px-3 py-2.5 text-sm font-semibold transition-all',
-            item.isActive
-              ? 'cursor-default bg-orange-500 text-white shadow-lg shadow-orange-500/20'
-              : 'text-slate-300 hover:bg-slate-700/60 hover:text-white',
-          )}
-        >
-          {item.label}
-        </a>
-      ))}
-    </nav>
+      <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        Access profile
+      </label>
+      <select
+        aria-label="Login role switch"
+        value={activeRole}
+        onChange={(event) => {
+          const nextRole = event.target.value as LoginRole;
+          const href = loginRoleHref(nextRole);
+          if (typeof window !== 'undefined') {
+            window.location.href = href;
+          }
+        }}
+        className="w-full rounded-xl border border-dispatch-border bg-dispatch-surface px-4 py-3 text-sm font-semibold text-white outline-none transition-colors focus:border-orange-500"
+      >
+        {options.map((option) => (
+          <option
+            key={option.label}
+            value={option.label.toLowerCase()}
+            className="bg-slate-900 text-white"
+          >
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
