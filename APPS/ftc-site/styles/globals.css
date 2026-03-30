@@ -2353,6 +2353,19 @@ nav.primary {
   gap: 10px;
 }
 
+.work-intake-offer-price {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #7a1fa2;
+}
+
+.work-intake-offer-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .intake-form {
   margin-top: 18px;
   display: grid;
@@ -6697,6 +6710,12 @@ nav.primary {
 
 .wf-pack-cta-actions {
   min-width: 240px;
+}
+
+.wf-pack-cta-pricing {
+  margin: 10px 0 0;
+  color: #66739a;
+  font-size: 0.92rem;
 }
 
 .wf-expect-row {

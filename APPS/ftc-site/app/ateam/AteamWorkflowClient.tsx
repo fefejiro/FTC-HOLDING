@@ -901,6 +901,10 @@ export default function AteamWorkflowClient({
                   <p className="wf-pack-cta-body">
                     This pack becomes the commercial starting point: scoped first pass, prototype direction sprint, or build execution track. Send it over and get the shortest credible next step back.
                   </p>
+                  <p className="wf-pack-cta-pricing">
+                    Starting ranges: Scoped First Pass from $750, Prototype Direction Sprint from
+                    $2,500, Build Execution Track from $5,000+.
+                  </p>
                 </div>
                 <div className="wf-pack-cta-actions">
                   <button

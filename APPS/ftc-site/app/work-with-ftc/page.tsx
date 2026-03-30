@@ -22,17 +22,20 @@ const engagementOffers = [
   {
     title: "Scoped First Pass",
     summary: "Best when the problem is still messy and you need the shortest believable next move.",
-    meta: "2-5 business days - decision-ready first pass"
+    meta: "2-5 business days - decision-ready first pass",
+    price: "Starting from $750"
   },
   {
     title: "Prototype Direction Sprint",
     summary: "Best when you need a credible first version, tighter boundaries, and a real implementation path.",
-    meta: "1-2 weeks - prototype direction and system framing"
+    meta: "1-2 weeks - prototype direction and system framing",
+    price: "Starting from $2,500"
   },
   {
     title: "Build Execution Track",
     summary: "Best when you already know the system needs to get built and want operator-led delivery.",
-    meta: "Phased delivery - execution, iteration, and handoff"
+    meta: "Phased delivery - execution, iteration, and handoff",
+    price: "Starting from $5,000+"
   }
 ] as const;
 
@@ -66,10 +69,15 @@ export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) 
             <article key={offer.title} className="card work-intake-proof-card">
               <p className="status-pill">{offer.title}</p>
               <p>{offer.summary}</p>
+              <p className="work-intake-offer-price">{offer.price}</p>
               <p className="muted">{offer.meta}</p>
             </article>
           ))}
         </div>
+        <p className="work-intake-offer-note">
+          Starting ranges are for focused entry scopes. Final pricing depends on complexity,
+          integrations, and delivery depth.
+        </p>
       </section>
 
       <section className="intake-card work-intake-shell">
