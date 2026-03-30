@@ -124,6 +124,8 @@ Optional environment variables:
 - `UNALABS_INTAKE_WEBHOOK_URL` (preferred webhook sink for intake submissions)
 - `FTC_INTAKE_WEBHOOK_URL` (fallback webhook sink for compatibility)
 - `UNALABS_CONFIRMATION_EMAIL_WEBHOOK_URL` (optional webhook for acknowledgment emails after intake submission)
+- `UNALABS_PIPELINE_API_KEY` (shared secret for internal pipeline stage recording at `/api/intake/pipeline`)
+- `UNALABS_PIPELINE_WEBHOOK_URL` (optional webhook sink for downstream commercial stage events such as qualified lead, booked call, proposal sent, and closed/won)
 - `ATEAM_UPSTREAM_ORIGIN` (origin for the real ATEAM runtime and workflow API proxy; defaults to `http://127.0.0.1:3000` in local dev)
 - `UNALABS_OPS_SITE_URL` / `NEXT_PUBLIC_OPS_SITE_URL` (optional override for the private operator host; defaults to `https://ops.unalabs.cloud`)
 - `UNALABS_SITE_URL` (preferred canonical URL override, for Phase B switch)

@@ -1398,6 +1398,36 @@ nav.primary {
   gap: 12px;
 }
 
+.client-launch-proof-inline {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.client-launch-proof-pill,
+.client-launch-offer-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--launch-accent, rgba(110, 212, 255, 0.4));
+  background: var(--launch-accent-soft, rgba(110, 212, 255, 0.12));
+  color: var(--launch-accent, #6ed4ff);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.client-launch-offer-proof {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 18px;
+  padding: 14px 16px 16px;
+}
+
 .client-launch-feature-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2339,6 +2369,12 @@ nav.primary {
 .work-intake-offer-strip {
   display: grid;
   gap: 18px;
+}
+
+.work-intake-proof-card--selected {
+  border-color: rgba(145, 92, 255, 0.42);
+  box-shadow: 0 18px 34px rgba(145, 92, 255, 0.14);
+  transform: translateY(-2px);
 }
 
 .work-intake-track-grid {

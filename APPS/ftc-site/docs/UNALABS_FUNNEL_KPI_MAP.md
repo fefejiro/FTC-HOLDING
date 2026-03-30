@@ -243,7 +243,11 @@ After 1-2 weeks of data, answer these first:
 
 This tracking does not yet measure booked calls, signed projects, or closed revenue.
 
-That should be the next layer:
+That now has an internal recording path through:
+
+- `POST /api/intake/pipeline`
+
+Supported pipeline stage events:
 
 - `lead_qualified`
 - `call_booked`
@@ -252,3 +256,57 @@ That should be the next layer:
 - `project_closed_lost`
 
 Once those exist, Una Labs can see not just which traffic converts, but which path creates revenue.
+
+## Internal Pipeline Tracking
+
+Use the internal route below after the lead has been submitted and a `requestId` exists.
+
+### Endpoint
+
+- `POST /api/intake/pipeline`
+
+### Auth
+
+- send `Authorization: Bearer <UNALABS_PIPELINE_API_KEY>`
+  or
+- send `x-unalabs-pipeline-key: <UNALABS_PIPELINE_API_KEY>`
+
+In production, the endpoint requires `UNALABS_PIPELINE_API_KEY` to be configured.
+
+### Example payload
+
+```json
+{
+  "requestId": "UL-20260330-ABC123",
+  "eventType": "proposal_sent",
+  "owner": "Mike",
+  "engagementType": "scoped-first-pass",
+  "leadSource": "ateam_workflow",
+  "proposalId": "PROP-014",
+  "value": 2500,
+  "notes": "Scope pack approved and proposal sent after review."
+}
+```
+
+### Supported fields
+
+- `requestId` required
+- `eventType` required
+- `owner` optional
+- `notes` optional
+- `value` optional numeric amount
+- `engagementType` optional
+- `leadSource` optional
+- `bookedFor` optional date/time string
+- `proposalId` optional
+- `metadata` optional object for internal extensions
+
+### Suggested operational sequence
+
+1. `lead_submit_success`
+2. `lead_qualified`
+3. `call_booked`
+4. `proposal_sent`
+5. `project_closed_won` or `project_closed_lost`
+
+This gives Una Labs a clean bridge from website funnel analytics into actual revenue tracking without forcing a full CRM rebuild first.

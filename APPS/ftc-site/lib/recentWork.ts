@@ -7,6 +7,17 @@ export type ClientLaunchBrand = {
   accentSurface: string;
 };
 
+export type ClientLaunchOfferValue =
+  | "scoped-first-pass"
+  | "prototype-direction-sprint"
+  | "build-execution-track";
+
+export type ClientLaunchOfferProof = {
+  value: ClientLaunchOfferValue;
+  label: string;
+  rationale: string;
+};
+
 export type ClientLaunch = {
   slug: string;
   clientName: string;
@@ -25,6 +36,7 @@ export type ClientLaunch = {
     total: number;
     label: string;
   };
+  offerProof: ClientLaunchOfferProof;
   websiteUrl: string;
   brand: ClientLaunchBrand;
 };
@@ -51,6 +63,12 @@ export const emergencyPromptCaseStudy: ClientLaunch = {
     current: 2,
     total: 4,
     label: "Build"
+  },
+  offerProof: {
+    value: "scoped-first-pass",
+    label: "Scoped First Pass",
+    rationale:
+      "Shows the kind of local-service setup where the first win is a decision-ready scope before the broader build expands."
   },
   websiteUrl: "https://emergencyprompt.com",
   brand: {
@@ -83,6 +101,12 @@ export const polarAnchorLaunch: ClientLaunch = {
     total: 4,
     label: "Live"
   },
+  offerProof: {
+    value: "build-execution-track",
+    label: "Build Execution Track",
+    rationale:
+      "Shows full operator-led delivery once the quote path, website structure, and shipping workflow are ready to move into execution."
+  },
   websiteUrl: "https://unalabs.cloud/polar-anchor",
   brand: {
     mark: "PA",
@@ -113,6 +137,12 @@ export const gardenCleanersLaunch: ClientLaunch = {
     current: 4,
     total: 4,
     label: "Live"
+  },
+  offerProof: {
+    value: "prototype-direction-sprint",
+    label: "Prototype Direction Sprint",
+    rationale:
+      "Shows a service business where early booking flow, service packaging, and rollout direction had to be tightened before scaling the build."
   },
   websiteUrl: "https://unalabs.cloud/garden-cleaners",
   brand: {

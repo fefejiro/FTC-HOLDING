@@ -60,6 +60,11 @@ export default function EmergencyPromptCaseStudy() {
             <h3>{emergencyPromptCaseStudy.service}</h3>
           </div>
           <div className="card overview-card">
+            <p className="eyebrow">Best-fit offer</p>
+            <h3>{emergencyPromptCaseStudy.offerProof.label}</h3>
+            <p className="muted">{emergencyPromptCaseStudy.offerProof.rationale}</p>
+          </div>
+          <div className="card overview-card">
             <p className="eyebrow">Current focus</p>
             <h3>Phase 1 setup</h3>
           </div>
@@ -109,7 +114,7 @@ export default function EmergencyPromptCaseStudy() {
           </div>
           <div className="product-actions">
             <Link
-              href="/work-with-ftc"
+              href={`/work-with-ftc?offer=${emergencyPromptCaseStudy.offerProof.value}`}
               className="btn btn-primary"
               data-analytics-event="start_project_click"
               data-analytics-location="case_study"

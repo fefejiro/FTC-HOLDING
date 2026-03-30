@@ -97,13 +97,22 @@ export default function WorkPageClient() {
                 ))}
               </ul>
             </div>
+            <div className="client-launch-signal client-launch-offer-proof">
+              <p className="client-launch-signal-title">Best-fit offer</p>
+              <p className="client-launch-offer-label">{featuredLaunch.offerProof.label}</p>
+              <p className="muted">{featuredLaunch.offerProof.rationale}</p>
+            </div>
           </div>
 
           <div className="client-launch-actions">
             <Link href={`/work/${featuredLaunch.slug}`} prefetch={false} className="btn btn-secondary">
               View onboarding snapshot
             </Link>
-            <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
+            <Link
+              href={`/work-with-ftc?offer=${featuredLaunch.offerProof.value}`}
+              prefetch={false}
+              className="btn btn-primary"
+            >
               Start a similar project
             </Link>
           </div>
@@ -153,6 +162,11 @@ export default function WorkPageClient() {
                   ))}
                 </div>
 
+                <div className="client-launch-proof-inline">
+                  <span className="client-launch-proof-pill">{launch.offerProof.label}</span>
+                  <p className="muted">{launch.offerProof.rationale}</p>
+                </div>
+
                 <div className="featured-launch-grid">
                   <div className="client-launch-signal">
                     <p className="client-launch-signal-title">Current focus</p>
@@ -181,7 +195,11 @@ export default function WorkPageClient() {
                   >
                     Visit live site
                   </a>
-                  <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
+                  <Link
+                    href={`/work-with-ftc?offer=${launch.offerProof.value}`}
+                    prefetch={false}
+                    className="btn btn-primary"
+                  >
                     Start a similar project
                   </Link>
                 </div>

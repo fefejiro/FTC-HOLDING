@@ -11,6 +11,7 @@ export const metadata = {
 type WorkWithFtcPageProps = {
   searchParams?: {
     from?: string | string[];
+    offer?: string | string[];
   };
 };
 
@@ -20,18 +21,21 @@ function readSingleParam(value: string | string[] | undefined) {
 
 const engagementOffers = [
   {
+    value: "scoped-first-pass",
     title: "Scoped First Pass",
     summary: "Best when the problem is still messy and you need the shortest believable next move.",
     meta: "2-5 business days - decision-ready first pass",
     price: "Starting from $750"
   },
   {
+    value: "prototype-direction-sprint",
     title: "Prototype Direction Sprint",
     summary: "Best when you need a credible first version, tighter boundaries, and a real implementation path.",
     meta: "1-2 weeks - prototype direction and system framing",
     price: "Starting from $2,500"
   },
   {
+    value: "build-execution-track",
     title: "Build Execution Track",
     summary: "Best when you already know the system needs to get built and want operator-led delivery.",
     meta: "Phased delivery - execution, iteration, and handoff",
@@ -41,6 +45,10 @@ const engagementOffers = [
 
 export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) {
   const isAteamHandoff = readSingleParam(searchParams?.from).trim().toLowerCase() === "ateam";
+  const selectedOffer = readSingleParam(searchParams?.offer).trim().toLowerCase();
+  const normalizedOffer = engagementOffers.some((offer) => offer.value === selectedOffer)
+    ? selectedOffer
+    : "not-sure-yet";
 
   return (
     <div className="container page-content work-intake-page">
@@ -66,7 +74,12 @@ export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) 
         </div>
         <div className="cards-grid cards-grid-3 work-intake-proof-grid">
           {engagementOffers.map((offer) => (
-            <article key={offer.title} className="card work-intake-proof-card">
+            <article
+              key={offer.title}
+              className={`card work-intake-proof-card ${
+                normalizedOffer === offer.value ? "work-intake-proof-card--selected" : ""
+              }`}
+            >
               <p className="status-pill">{offer.title}</p>
               <p>{offer.summary}</p>
               <p className="work-intake-offer-price">{offer.price}</p>
@@ -92,7 +105,7 @@ export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) 
               : "This is not a generic contact form. It is how Una Labs decides the fastest credible path into a real scoped engagement."}
           </p>
         </div>
-        <WorkIntakeForm />
+        <WorkIntakeForm initialEngagementType={normalizedOffer} />
       </section>
     </div>
   );

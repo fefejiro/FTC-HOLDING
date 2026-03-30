@@ -127,7 +127,13 @@ function buildWorkflowPrefilledBrief(prefill: AteamWorkflowHandoffPayload) {
   return lines.join("\n").trim();
 }
 
-export default function WorkIntakeForm() {
+type WorkIntakeFormProps = {
+  initialEngagementType?: string;
+};
+
+export default function WorkIntakeForm({
+  initialEngagementType = "not-sure-yet"
+}: WorkIntakeFormProps) {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
   const [projectBrief, setProjectBrief] = useState("");
@@ -465,7 +471,7 @@ export default function WorkIntakeForm() {
       <div className="intake-form-grid">
         <label>
           <span>What do you need most right now?</span>
-          <select name="engagementType" defaultValue="not-sure-yet" className="dark-select">
+          <select name="engagementType" defaultValue={initialEngagementType} className="dark-select">
             {engagementTypeOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
