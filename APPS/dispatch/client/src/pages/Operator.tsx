@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import L from 'leaflet';
 import {
@@ -210,6 +210,13 @@ function parseTimestamp(value?: string | null) {
 
 function incidentOccurredAt(incident: Incident) {
   return incident.occurredAt || incident.lastUpdated || incident.startDate || incident.createdAt;
+}
+
+function incidentSourceLabel(incident: Incident) {
+  if (incident.id.startsWith('on511:')) return 'Ontario 511';
+  if (incident.id.startsWith('ottawa_traffic:')) return 'City of Ottawa traffic';
+  if (incident.id.startsWith('octranspo:')) return 'OC Transpo service alerts';
+  return 'Official incident feed';
 }
 
 function incidentOccurredMs(incident: Incident) {
@@ -1066,6 +1073,7 @@ function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel
         <div className="text-[11px] text-slate-500 mb-2">
           {incident.city} - {formatDistance(incident.distanceKm)} from {proximityLabel}
         </div>
+        <div className="text-[11px] text-cyan-300 mb-2">{incidentSourceLabel(incident)}</div>
         {incident.description ? <p className="text-slate-500 text-xs leading-relaxed line-clamp-2 mb-3">{incident.description}</p> : null}
         <div className="flex gap-2">
           {onSelect ? <button type="button" onClick={() => onSelect(incident)} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all', selected ? 'bg-slate-700 text-white' : 'bg-dispatch-bg text-slate-300 hover:text-white hover:bg-slate-800')}>{selected ? 'Viewing details' : 'Open details'}</button> : null}
@@ -1103,6 +1111,7 @@ function IncidentDetailCard({
       <div className="grid md:grid-cols-2 gap-3 mb-3">
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Roadway</div><div className="text-white text-sm font-semibold mt-2">{incident.roadway || 'Ontario area'}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Severity</div><div className="text-slate-300 text-sm mt-2">{severity}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Source</div><div className="text-cyan-300 text-sm mt-2">{incidentSourceLabel(incident)}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Reported</div><div className="text-slate-300 text-sm mt-2">{fmt(occurredAt)} ({timeAgo(occurredAt)})</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Coordinates</div><div className="text-slate-300 text-sm mt-2">{incident.locationLat && incident.locationLng ? `${incident.locationLat.toFixed(5)}, ${incident.locationLng.toFixed(5)}` : 'Coordinate precision unavailable'}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">City</div><div className="text-slate-300 text-sm mt-2">{incident.city}</div></div>
@@ -1691,10 +1700,16 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
                 proximityPoint={proximityPoint}
               />
             ) : null}
-            {selectedIncident ? <IncidentDetailCard incident={selectedIncident} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onDispatch={handleIncidentDispatch} /> : null}
             {incidentsLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading Ontario incidents...</div> : null}
             {!incidentsLoading && sortedIncidentFeed.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mb-4"><CheckCircle2 className="w-8 h-8 text-green-500" /></div><p className="text-slate-300 font-semibold">No incidents for this filter</p><p className="text-slate-600 text-sm mt-1">{incidentRadiusKm > 0 ? `No incidents found within ${incidentRadiusKm} km.` : incidentCity !== 'all' ? `No incidents matched ${incidentCity}.` : incidentCategory !== 'all' ? `No ${incidentCategory} incidents matched.` : incidentMode === 'history' ? 'No historical incidents matched your filters yet.' : 'No active Ontario incidents matched your filters.'}</p></div> : null}
-            {sortedIncidentFeed.map((incident) => <IncidentCard key={incident.id} incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onDispatch={handleIncidentDispatch} />)}
+            {sortedIncidentFeed.map((incident) => (
+              <Fragment key={incident.id}>
+                <IncidentCard incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onDispatch={handleIncidentDispatch} />
+                {selectedIncident?.id === incident.id ? (
+                  <IncidentDetailCard incident={incident} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onDispatch={handleIncidentDispatch} />
+                ) : null}
+              </Fragment>
+            ))}
           </>
         ) : (
           <>

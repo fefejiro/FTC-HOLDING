@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ArrowLeft,
   AlertTriangle,
   CheckCircle2,
   CircleDot,
@@ -10,6 +11,7 @@ import {
   Loader2,
   Lock,
   MapPin,
+  Navigation2,
   Phone,
   Plus,
   RefreshCw,
@@ -87,7 +89,26 @@ interface IncidentSummaryResponse {
   recentActioned: IncidentSummaryItem[];
 }
 
+interface IncidentFeedItem {
+  id: string;
+  eventType: string | null;
+  description: string | null;
+  roadway: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+  severity: string | null;
+  alerted: boolean | null;
+  startDate?: string | null;
+  lastUpdated?: string | null;
+  occurredAt?: string | null;
+  isHistorical?: boolean;
+  createdAt: string;
+  viewCount?: number | null;
+  actionCount?: number | null;
+}
+
 type AdminFilter = 'all' | 'pending' | 'active' | 'completed';
+type IncidentListFilter = 'all' | 'viewed' | 'actioned' | 'not_actioned';
 
 const SERVICE_ICONS: Record<ServiceType, React.ComponentType<{ className?: string }>> = {
   gas: Fuel,
@@ -130,6 +151,54 @@ function fmt(str: string) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function fmtOptional(str?: string | null) {
+  if (!str) return 'Not available';
+  return fmt(str);
+}
+
+function incidentOccurredAt(incident: IncidentFeedItem) {
+  return incident.occurredAt || incident.lastUpdated || incident.startDate || incident.createdAt;
+}
+
+function incidentLabel(incident: IncidentFeedItem) {
+  const eventType = String(incident.eventType || '').trim();
+  if (!eventType) return 'Incident';
+  return eventType
+    .toLowerCase()
+    .split('_')
+    .map((word) => (word ? `${word[0]?.toUpperCase()}${word.slice(1)}` : ''))
+    .join(' ');
+}
+
+function incidentSourceLabel(incident: IncidentFeedItem) {
+  if (incident.id.startsWith('on511:')) return 'Ontario 511';
+  if (incident.id.startsWith('ottawa_traffic:')) return 'City of Ottawa traffic';
+  if (incident.id.startsWith('octranspo:')) return 'OC Transpo service alerts';
+  return 'Official incident feed';
+}
+
+function incidentMapsUrl(incident: IncidentFeedItem) {
+  if (incident.locationLat !== null && incident.locationLng !== null) {
+    return `https://maps.google.com/?q=${incident.locationLat},${incident.locationLng}`;
+  }
+  if (incident.roadway) {
+    return `https://maps.google.com/search/?api=1&query=${encodeURIComponent(`${incident.roadway}, Ontario`)}`;
+  }
+  return null;
+}
+
+function timeAgo(str?: string | null) {
+  if (!str) return 'Unknown';
+  const ms = Date.now() - new Date(str).getTime();
+  if (!Number.isFinite(ms)) return 'Unknown';
+  const mins = Math.round(ms / 60000);
+  if (mins < 1) return 'Now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
 }
 
 function shortId(id: string) {
@@ -394,6 +463,11 @@ function AdminDashboard({
   const [statusChangingId, setStatusChangingId] = useState<string | null>(null);
   const [testPushState, setTestPushState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [testPushResult, setTestPushResult] = useState('');
+  const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
+  const [incidentListFilter, setIncidentListFilter] = useState<IncidentListFilter>('all');
+  const [incidentActionState, setIncidentActionState] = useState<'idle' | 'saving' | 'ok' | 'error'>('idle');
+  const [incidentActionResult, setIncidentActionResult] = useState('');
+  const [incidentActionId, setIncidentActionId] = useState<string | null>(null);
 
   const adminFetch = useCallback(
     (url: string, options: RequestInit = {}) => {
@@ -463,6 +537,22 @@ function AdminDashboard({
     refetchInterval: 30_000,
   });
 
+  const {
+    data: incidentFeed = [],
+    isLoading: incidentsLoading,
+    isFetching: incidentsFetching,
+    refetch: refetchIncidents,
+  } = useQuery<IncidentFeedItem[]>({
+    queryKey: ['admin-incidents'],
+    queryFn: async () => {
+      const res = await adminFetch('/api/incidents?mode=all&limit=80');
+      if (!res.ok) throw new Error('Failed to load incidents');
+      return res.json() as Promise<IncidentFeedItem[]>;
+    },
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+
   const stats = {
     total: requests.length,
     pending: requests.filter((r) => r.status === 'pending').length,
@@ -471,6 +561,18 @@ function AdminDashboard({
   };
 
   const filteredRequests = filterRequests(requests, activeFilter);
+  const filteredIncidents = useMemo(() => {
+    if (incidentListFilter === 'viewed') {
+      return incidentFeed.filter((incident) => (incident.viewCount ?? 0) > 0);
+    }
+    if (incidentListFilter === 'actioned') {
+      return incidentFeed.filter((incident) => (incident.actionCount ?? 0) > 0);
+    }
+    if (incidentListFilter === 'not_actioned') {
+      return incidentFeed.filter((incident) => (incident.actionCount ?? 0) === 0);
+    }
+    return incidentFeed;
+  }, [incidentFeed, incidentListFilter]);
   const selectedRequest =
     filteredRequests.find((request) => request.id === selectedRequestId) ?? filteredRequests[0] ?? null;
 
@@ -487,6 +589,15 @@ function AdminDashboard({
     const stillVisible = filteredRequests.some((request) => request.id === selectedRequestId);
     if (!stillVisible) setSelectedRequestId(filteredRequests[0].id);
   }, [filteredRequests, selectedRequestId]);
+
+  useEffect(() => {
+    if (!filteredIncidents.length) {
+      if (activeIncidentId !== null) setActiveIncidentId(null);
+      return;
+    }
+    const stillVisible = filteredIncidents.some((incident) => incident.id === activeIncidentId);
+    if (!stillVisible) setActiveIncidentId(filteredIncidents[0].id);
+  }, [filteredIncidents, activeIncidentId]);
 
   async function handleAssign(requestId: string) {
     setAssigningId(requestId);
@@ -514,6 +625,54 @@ function AdminDashboard({
       await queryClient.invalidateQueries({ queryKey: ['admin-requests'] });
     } finally {
       setStatusChangingId(null);
+    }
+  }
+
+  async function handleIncidentCreateJob(incident: IncidentFeedItem) {
+    setIncidentActionState('saving');
+    setIncidentActionResult('');
+    setIncidentActionId(incident.id);
+    const roadway = incident.roadway || 'Ontario area';
+
+    try {
+      const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: `Incident lead - ${roadway}`,
+          customerPhone: '000-000-0000',
+          serviceType: 'other',
+          locationLat: incident.locationLat,
+          locationLng: incident.locationLng,
+          locationAddress: roadway,
+          notes: incident.description || undefined,
+          mode: 'live',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to create job');
+      const payload = (await response.json()) as { request?: { id?: string } };
+
+      await fetch(`/api/incidents/${incident.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: payload.request?.id || undefined }),
+      }).catch(() => undefined);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-incident-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-incidents'] }),
+      ]);
+
+      setIncidentActionState('ok');
+      setIncidentActionResult(`Job created from ${roadway}`);
+    } catch {
+      setIncidentActionState('error');
+      setIncidentActionResult('Could not create job from incident.');
+    } finally {
+      setIncidentActionId(null);
+      setTimeout(() => setIncidentActionState('idle'), 4000);
     }
   }
 
@@ -628,15 +787,25 @@ function AdminDashboard({
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {[
-                { label: 'Viewed', value: incidentSummary?.viewed ?? 0, tone: 'text-cyan-300' },
-                { label: 'Actioned', value: incidentSummary?.actioned ?? 0, tone: 'text-orange-300' },
-                { label: 'Not actioned', value: incidentSummary?.notActioned ?? 0, tone: 'text-slate-300' },
-                { label: 'Viewed, no action', value: incidentSummary?.viewedNotActioned ?? 0, tone: 'text-amber-300' },
+                { key: 'viewed' as const, label: 'Viewed', value: incidentSummary?.viewed ?? 0, tone: 'text-cyan-300' },
+                { key: 'actioned' as const, label: 'Actioned', value: incidentSummary?.actioned ?? 0, tone: 'text-orange-300' },
+                { key: 'not_actioned' as const, label: 'Not actioned', value: incidentSummary?.notActioned ?? 0, tone: 'text-slate-300' },
+                { key: 'all' as const, label: 'All tracked', value: incidentSummary?.total ?? 0, tone: 'text-white' },
               ].map((stat) => (
-                <div key={stat.label} className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+                <button
+                  key={stat.label}
+                  type="button"
+                  onClick={() => setIncidentListFilter(stat.key)}
+                  className={cn(
+                    'bg-dispatch-bg border rounded-xl p-3 text-left transition-all',
+                    incidentListFilter === stat.key
+                      ? 'border-orange-500/40 shadow-[0_0_0_1px_rgba(249,115,22,0.15)]'
+                      : 'border-dispatch-border hover:border-slate-600',
+                  )}
+                >
                   <div className={cn('text-2xl font-bold tabular-nums', stat.tone)}>{stat.value}</div>
                   <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold mt-1.5">{stat.label}</div>
-                </div>
+                </button>
               ))}
             </div>
             <div className="grid md:grid-cols-2 gap-3 mt-4">
@@ -670,6 +839,141 @@ function AdminDashboard({
                   )}
                 </div>
               </div>
+            </div>
+            <div className="mt-4 bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div>
+                  <div className="text-white text-sm font-semibold">Live incident feed</div>
+                  <div className="text-slate-500 text-xs mt-0.5">
+                    Source: Ontario 511, City of Ottawa traffic, and OC Transpo service alerts.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => refetchIncidents()}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-lg border border-dispatch-border px-3 py-2 text-xs transition-colors',
+                    incidentsFetching ? 'text-orange-300 border-orange-500/40' : 'text-slate-400 hover:text-white',
+                  )}
+                >
+                  <RefreshCw className={cn('w-3.5 h-3.5', incidentsFetching && 'animate-spin')} />
+                  {incidentsFetching ? 'Refreshing...' : 'Refresh incidents'}
+                </button>
+              </div>
+              {incidentActionResult ? (
+                <div
+                  className={cn(
+                    'mb-2 rounded-lg border px-3 py-2 text-xs',
+                    incidentActionState === 'error'
+                      ? 'border-red-500/40 bg-red-500/10 text-red-300'
+                      : 'border-green-500/40 bg-green-500/10 text-green-300',
+                  )}
+                >
+                  {incidentActionResult}
+                </div>
+              ) : null}
+              {incidentsLoading ? (
+                <div className="text-slate-500 text-xs py-3 flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Loading incidents...
+                </div>
+              ) : filteredIncidents.length === 0 ? (
+                <div className="text-slate-500 text-xs py-3">No incidents for this filter right now.</div>
+              ) : (
+                <div className="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
+                  {filteredIncidents.map((incident) => {
+                    const selected = activeIncidentId === incident.id;
+                    const mapsLink = incidentMapsUrl(incident);
+                    return (
+                      <Fragment key={incident.id}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveIncidentId((current) => (current === incident.id ? null : incident.id))}
+                          className={cn(
+                            'w-full rounded-xl border bg-dispatch-surface px-3 py-3 text-left transition-all',
+                            selected
+                              ? 'border-orange-500/40 shadow-[0_0_0_1px_rgba(249,115,22,0.12)]'
+                              : 'border-dispatch-border hover:border-slate-600',
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-white text-sm font-semibold truncate">{incident.roadway || incidentLabel(incident)}</div>
+                              <div className="text-slate-500 text-xs mt-1 line-clamp-1">
+                                {incident.description || incidentLabel(incident)}
+                              </div>
+                              <div className="text-cyan-300 text-[11px] mt-1">{incidentSourceLabel(incident)}</div>
+                            </div>
+                            <div className="text-[11px] text-slate-500 whitespace-nowrap">{timeAgo(incidentOccurredAt(incident))}</div>
+                          </div>
+                        </button>
+                        {selected ? (
+                          <div className="rounded-xl border border-dispatch-border bg-dispatch-surface px-3 py-3">
+                            <div className="grid md:grid-cols-2 gap-2">
+                              <div className="rounded-lg border border-dispatch-border bg-dispatch-bg px-2.5 py-2">
+                                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600 font-semibold">Source</div>
+                                <div className="text-cyan-300 text-xs mt-1">{incidentSourceLabel(incident)}</div>
+                              </div>
+                              <div className="rounded-lg border border-dispatch-border bg-dispatch-bg px-2.5 py-2">
+                                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600 font-semibold">Reported</div>
+                                <div className="text-slate-300 text-xs mt-1">{fmtOptional(incidentOccurredAt(incident))}</div>
+                              </div>
+                              <div className="rounded-lg border border-dispatch-border bg-dispatch-bg px-2.5 py-2">
+                                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600 font-semibold">Type</div>
+                                <div className="text-slate-300 text-xs mt-1">{incidentLabel(incident)}</div>
+                              </div>
+                              <div className="rounded-lg border border-dispatch-border bg-dispatch-bg px-2.5 py-2">
+                                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600 font-semibold">Coordinates</div>
+                                <div className="text-slate-300 text-xs mt-1">
+                                  {incident.locationLat !== null && incident.locationLng !== null
+                                    ? `${incident.locationLat.toFixed(5)}, ${incident.locationLng.toFixed(5)}`
+                                    : 'Coordinate precision unavailable'}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-dispatch-border bg-dispatch-bg px-2.5 py-2 mt-2">
+                              <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600 font-semibold">Detail</div>
+                              <div className="text-slate-300 text-xs mt-1 leading-relaxed">
+                                {incident.description || 'No additional detail provided by this source.'}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              <button
+                                type="button"
+                                onClick={() => handleIncidentCreateJob(incident)}
+                                disabled={incidentActionId === incident.id}
+                                className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-400 disabled:opacity-60 transition-colors"
+                              >
+                                {incidentActionId === incident.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                                Create job
+                              </button>
+                              {mapsLink ? (
+                                <a
+                                  href={mapsLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 rounded-lg border border-dispatch-border px-3 py-2 text-xs font-semibold text-blue-300 hover:text-blue-200 transition-colors"
+                                >
+                                  <Navigation2 className="w-3.5 h-3.5" />
+                                  Open map
+                                </a>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => setActiveIncidentId(null)}
+                                className="inline-flex items-center gap-2 rounded-lg border border-dispatch-border px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                              >
+                                <ArrowLeft className="w-3.5 h-3.5" />
+                                Close
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </section>
 
