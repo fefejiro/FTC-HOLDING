@@ -1,5 +1,5 @@
-const CACHE = 'dispatch-v1';
-const SHELL = ['/', '/manifest.json', '/icon.svg'];
+const CACHE = 'dispatch-v2';
+const SHELL = ['/manifest.json', '/icon.svg', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -19,6 +19,17 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('/api/')) return; // never cache API calls
+
+  const isDocument =
+    e.request.mode === 'navigate' ||
+    (e.request.headers.get('accept') || '').includes('text/html');
+
+  if (isDocument) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(e.request).then(cached => {
