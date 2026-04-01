@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import CTABanner from "./CTABanner";
 import ClientLogoStrip from "./ClientLogoStrip";
@@ -85,19 +87,57 @@ export default function HomePageExperience() {
 
                 <div className="cards-grid cards-grid-3 home-studio-glance-grid">
                   <article className="card home-glance-card">
+                    <div className="home-glance-visual-row" aria-label="Products lane logos">
+                      {primaryProducts.map((project) => {
+                        const logo = productCardBranding[project.slug]?.logo;
+                        if (!logo) return null;
+                        return (
+                          <ProductBrandBadge
+                            key={project.slug}
+                            logo={logo}
+                            className="home-glance-product-badge"
+                          />
+                        );
+                      })}
+                    </div>
                     <p className="card-kicker">Products</p>
-                    <strong>PeacePad, SayWetin, Dispatch</strong>
-                    <p className="muted">Studio-owned systems with live product proof.</p>
+                    <strong>Product portfolio</strong>
+                    <p className="muted">PeacePad, SayWetin, and Dispatch.</p>
                   </article>
                   <article className="card home-glance-card">
+                    <div className="home-glance-visual-row" aria-label="Client launch marks">
+                      {clientLaunches.slice(0, 3).map((launch) => {
+                        const style = {
+                          "--glance-accent": launch.brand.accent,
+                          "--glance-soft": launch.brand.accentSoft
+                        } as CSSProperties;
+
+                        return (
+                          <div key={launch.slug} className="home-glance-launch-badge" style={style}>
+                            <span>{launch.brand.mark}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                     <p className="card-kicker">Client Launches</p>
-                    <strong>Real delivery snapshots</strong>
-                    <p className="muted">Live websites, lead engines, and operator-led builds.</p>
+                    <strong>Client delivery</strong>
+                    <p className="muted">Live websites, lead systems, and rollout proof.</p>
                   </article>
                   <article className="card home-glance-card">
+                    <div className="home-glance-visual-row" aria-label="ATEAM lane logo">
+                      <div className="home-glance-ateam-badge">
+                        <Image
+                          src="/images/brand/ateam-logo.png"
+                          alt="ATEAM logo"
+                          width={96}
+                          height={96}
+                          className="home-glance-ateam-image"
+                        />
+                      </div>
+                    </div>
                     <p className="card-kicker">ATEAM</p>
-                    <strong>Workflow-first scoping</strong>
-                    <p className="muted">The system route for messy ideas that need a clear next move.</p>
+                    <strong>ATEAM workflow</strong>
+                    <p className="muted">Rough idea in. Scoped next step out.</p>
                   </article>
                 </div>
               </div>
