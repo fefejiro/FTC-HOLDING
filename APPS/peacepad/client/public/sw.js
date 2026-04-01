@@ -159,11 +159,28 @@ self.addEventListener('fetch', (event) => {
 
   // Cache certain read-only API endpoints for offline access (stale-while-revalidate)
   const CACHEABLE_API_PATHS = [
-    '/api/auth/user',
     '/api/partnerships',
     '/api/children',
     '/api/user/stats',
   ];
+
+  if (url.pathname === '/api/auth/user') {
+    event.respondWith(
+      fetch(request, {
+        cache: 'no-store',
+        credentials: 'include',
+      }).catch(() => {
+        return new Response(JSON.stringify({
+          offline: true,
+          message: 'Auth bootstrap unavailable',
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      })
+    );
+    return;
+  }
 
   const isCacheableApi = CACHEABLE_API_PATHS.some(path => url.pathname === path || url.pathname.startsWith(path + '/'));
   

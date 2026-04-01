@@ -1,4 +1,5 @@
 import { queryClient } from './queryClient';
+import { fetchCurrentUserSnapshot } from './authBootstrap';
 
 const CURRENT_VERSION = 28;
 const VERSION_KEY = 'peacepad_app_version';
@@ -67,22 +68,15 @@ export async function refreshAuthSession(): Promise<boolean> {
   console.log('[VersionManager] Refreshing auth session...');
   
   try {
-    const response = await fetch('/api/auth/user', {
-      credentials: 'include',
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
-      }
-    });
+    const user = await fetchCurrentUserSnapshot('version-refresh');
     
-    if (response.ok) {
+    if (user) {
       console.log('[VersionManager] Auth session refreshed successfully');
       return true;
-    } else {
-      console.log('[VersionManager] No active session (expected for guests)');
-      return false;
     }
+
+    console.log('[VersionManager] No active session (expected for guests)');
+    return false;
   } catch (e) {
     console.warn('[VersionManager] Failed to refresh auth:', e);
     return false;

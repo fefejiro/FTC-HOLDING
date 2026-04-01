@@ -101,7 +101,7 @@ function HomeResolverPage() {
 }
 
 function Router() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, authBootstrapIssue, retryAuth } = useAuth();
   const [location, setLocation] = useLocation();
   const consentSyncedRef = useRef(false);
 
@@ -203,20 +203,43 @@ function Router() {
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <Switch>
-        <Route path="/" component={OnboardingPage} />
-        <Route path="/onboarding" component={OnboardingPage} />
-        <Route path="/auth/callback" component={AuthCallbackPage} />
-        <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
-        <Route path="/health-panel" component={HealthPanelPage} />
-        <Route path="/join/:code" component={JoinPartnershipPage} />
-        <Route path="/resources" component={ResourcesPage} />
-        <Route path="/privacy" component={PrivacyPage} />
-        <Route path="/support" component={SupportPage} />
-        <Route path="/terms" component={TermsPage} />
-        <Route path="/delete-account" component={DeleteAccountPage} />
-        <Route component={NotFound} />
-      </Switch>
+      <>
+        {authBootstrapIssue && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+            <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Session restore needs attention</p>
+                <p className="text-sm text-amber-900/90">{authBootstrapIssue.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  retryAuth().catch((error) => {
+                    console.error("[AuthBootstrap] manual-retry-failed", error);
+                  });
+                }}
+                className="inline-flex shrink-0 items-center justify-center rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-950 transition hover:bg-amber-100"
+              >
+                Retry session check
+              </button>
+            </div>
+          </div>
+        )}
+        <Switch>
+          <Route path="/" component={OnboardingPage} />
+          <Route path="/onboarding" component={OnboardingPage} />
+          <Route path="/auth/callback" component={AuthCallbackPage} />
+          <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
+          <Route path="/health-panel" component={HealthPanelPage} />
+          <Route path="/join/:code" component={JoinPartnershipPage} />
+          <Route path="/resources" component={ResourcesPage} />
+          <Route path="/privacy" component={PrivacyPage} />
+          <Route path="/support" component={SupportPage} />
+          <Route path="/terms" component={TermsPage} />
+          <Route path="/delete-account" component={DeleteAccountPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </>
     </Suspense>
   );
 }
