@@ -8232,39 +8232,53 @@ nav.primary {
   gap: 18px;
 }
 
-.home-studio-glance-grid {
-  margin-top: 0;
-}
-
-.home-glance-card {
-  min-height: 100%;
+.home-studio-glance-panel {
   display: grid;
   gap: 10px;
-  padding: 16px;
-  background: linear-gradient(180deg, rgba(122, 31, 162, 0.04), rgba(255, 255, 255, 0.96));
+  margin-top: 0;
+  padding: 12px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.08));
 }
 
-.home-glance-visual-row {
+.home-glance-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 24px rgba(8, 26, 79, 0.08);
+}
+
+.home-glance-row-visual {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 52px;
+  min-width: fit-content;
+}
+
+.home-glance-row-copy {
+  display: grid;
+  gap: 4px;
 }
 
 .home-glance-product-badge.product-brand-badge {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: 14px;
-  padding: 6px;
+  padding: 5px;
 }
 
 .home-glance-product-badge .product-brand-badge__image {
-  height: 28px;
+  height: 24px;
 }
 
 .home-glance-launch-badge {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: 14px;
   display: inline-flex;
   align-items: center;
@@ -8280,15 +8294,15 @@ nav.primary {
 
 .home-glance-launch-badge span {
   color: var(--glance-accent, #6a188c);
-  font-size: 0.92rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .home-glance-ateam-badge {
-  width: 50px;
-  height: 50px;
+  width: 42px;
+  height: 42px;
   border-radius: 16px;
   display: inline-flex;
   align-items: center;
@@ -8299,15 +8313,35 @@ nav.primary {
 }
 
 .home-glance-ateam-image {
-  width: 30px;
+  width: 24px;
   height: auto;
 }
 
-.home-glance-card strong {
+.home-glance-row strong {
   color: #081a4f;
   font-family: var(--font-space-grotesk), var(--font-inter), sans-serif;
-  font-size: 1.02rem;
-  line-height: 1.2;
+  font-size: 0.96rem;
+  line-height: 1.18;
+}
+
+.home-glance-row .card-kicker {
+  margin-bottom: 0;
+}
+
+.home-glance-row .muted {
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .home-glance-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .home-glance-row-visual {
+    min-width: 0;
+  }
 }
 
 .home-lane-grid,

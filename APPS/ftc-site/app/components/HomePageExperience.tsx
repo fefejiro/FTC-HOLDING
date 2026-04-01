@@ -85,9 +85,9 @@ export default function HomePageExperience() {
                   }
                 />
 
-                <div className="cards-grid cards-grid-3 home-studio-glance-grid">
-                  <article className="card home-glance-card">
-                    <div className="home-glance-visual-row" aria-label="Products lane logos">
+                <div className="home-studio-glance-panel" aria-label="Studio lanes at a glance">
+                  <article className="home-glance-row">
+                    <div className="home-glance-row-visual" aria-label="Products lane logos">
                       {primaryProducts.map((project) => {
                         const logo = productCardBranding[project.slug]?.logo;
                         if (!logo) return null;
@@ -100,12 +100,15 @@ export default function HomePageExperience() {
                         );
                       })}
                     </div>
-                    <p className="card-kicker">Products</p>
-                    <strong>Product portfolio</strong>
-                    <p className="muted">PeacePad, SayWetin, and Dispatch.</p>
+                    <div className="home-glance-row-copy">
+                      <p className="card-kicker">Products</p>
+                      <strong>Studio-owned portfolio</strong>
+                      <p className="muted">PeacePad, SayWetin, and Dispatch.</p>
+                    </div>
                   </article>
-                  <article className="card home-glance-card">
-                    <div className="home-glance-visual-row" aria-label="Client launch marks">
+
+                  <article className="home-glance-row">
+                    <div className="home-glance-row-visual" aria-label="Client launch marks">
                       {clientLaunches.slice(0, 3).map((launch) => {
                         const style = {
                           "--glance-accent": launch.brand.accent,
@@ -119,12 +122,15 @@ export default function HomePageExperience() {
                         );
                       })}
                     </div>
-                    <p className="card-kicker">Client Launches</p>
-                    <strong>Client delivery</strong>
-                    <p className="muted">Live websites, lead systems, and rollout proof.</p>
+                    <div className="home-glance-row-copy">
+                      <p className="card-kicker">Client Launches</p>
+                      <strong>Live client delivery</strong>
+                      <p className="muted">Websites, lead systems, and rollout proof.</p>
+                    </div>
                   </article>
-                  <article className="card home-glance-card">
-                    <div className="home-glance-visual-row" aria-label="ATEAM lane logo">
+
+                  <article className="home-glance-row">
+                    <div className="home-glance-row-visual" aria-label="ATEAM lane logo">
                       <div className="home-glance-ateam-badge">
                         <Image
                           src="/images/brand/ateam-logo.png"
@@ -135,9 +141,11 @@ export default function HomePageExperience() {
                         />
                       </div>
                     </div>
-                    <p className="card-kicker">ATEAM</p>
-                    <strong>ATEAM workflow</strong>
-                    <p className="muted">Rough idea in. Scoped next step out.</p>
+                    <div className="home-glance-row-copy">
+                      <p className="card-kicker">ATEAM</p>
+                      <strong>Workflow-first scoping</strong>
+                      <p className="muted">Rough idea in. Scoped next step out.</p>
+                    </div>
                   </article>
                 </div>
               </div>
