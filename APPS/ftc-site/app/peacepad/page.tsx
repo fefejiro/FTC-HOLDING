@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import BrandImagePanel from "../components/BrandImagePanel";
 import BrandVideoPanel from "../components/BrandVideoPanel";
+import ProductStatusBadge from "../components/ProductStatusBadge";
 import { getProjectCaseStudy } from "../../lib/content";
 
 const peacePad = getProjectCaseStudy("peacepad");
@@ -25,7 +26,9 @@ export default function PeacePadPage() {
     <article className="container page-content case-study">
       <div className="product-hero-layout fade-on-scroll">
         <div className="product-hero-copy">
-          {peacePad.availabilityLabel ? <span className="status-pill">{peacePad.availabilityLabel}</span> : null}
+          <div className="product-hero-top">
+            <ProductStatusBadge status={peacePad.status} />
+          </div>
           <h1>PeacePad</h1>
           <p className="lead">
             PeacePad is an AI communication platform that helps users pause, review tone, and

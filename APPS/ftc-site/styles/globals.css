@@ -1185,6 +1185,89 @@ nav.primary {
   gap: 10px;
 }
 
+.product-card-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.product-hero-top,
+.project-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.product-hero-top .eyebrow,
+.project-card-top .card-kicker {
+  margin: 0;
+}
+
+.product-hero-top:empty {
+  display: none;
+}
+
+.product-card-heading {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.product-card-heading h2,
+.product-card-heading .muted {
+  margin: 0;
+}
+
+.product-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(56px, 8vw, 72px);
+  height: clamp(56px, 8vw, 72px);
+  padding: clamp(6px, 1vw, 10px);
+  border-radius: 20px;
+  border: 1px solid rgba(122, 31, 162, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 240, 255, 0.92));
+  box-shadow:
+    0 10px 24px rgba(15, 27, 73, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+}
+
+.product-brand-badge__image {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: clamp(40px, 5vw, 56px);
+  object-fit: contain;
+}
+
+.product-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(122, 31, 162, 0.18);
+  background: rgba(122, 31, 162, 0.08);
+  color: #6a188c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.product-status-badge--floating {
+  align-self: flex-end;
+  margin-left: auto;
+  margin-bottom: 2px;
+}
+
 .products-page {
   display: grid;
   gap: 24px;
@@ -2084,12 +2167,6 @@ nav.primary {
   color: #ece9ff;
 }
 
-.ateam-embed-status--unavailable {
-  border-color: rgba(255, 204, 107, 0.24);
-  background: rgba(255, 204, 107, 0.08);
-  color: #ffe9b7;
-}
-
 .ateam-embed-toolbar {
   display: grid;
   gap: 14px;
@@ -2899,10 +2976,6 @@ nav.primary {
   gap: 10px;
 }
 
-.product-hero-copy .status-pill {
-  margin-bottom: 4px;
-}
-
 .compact-feature-list {
   margin: 0;
   padding-left: 18px;
@@ -3312,6 +3385,19 @@ nav.primary {
     min-width: 0;
     gap: 10px;
     flex: 1 1 auto;
+  }
+
+  .product-card-header {
+    gap: 12px;
+  }
+
+  .product-hero-top,
+  .project-card-top {
+    gap: 10px;
+  }
+
+  .product-brand-badge {
+    border-radius: 18px;
   }
 
   .logo-link {
@@ -3828,6 +3914,16 @@ nav.primary {
   .collage-card,
   .card {
     border-radius: 18px;
+  }
+
+  .product-brand-badge {
+    width: 56px;
+    height: 56px;
+    padding: 7px;
+  }
+
+  .product-brand-badge__image {
+    height: 40px;
   }
 
   .featured-offer-grid {
@@ -4629,49 +4725,8 @@ nav.primary {
   justify-content: flex-end;
 }
 
-.wf-live-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 5px 10px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.wf-live-chip--on {
-  background: rgba(0, 200, 120, 0.1);
-  border-color: rgba(0, 200, 120, 0.25);
-  color: #4ade80;
-}
-
-.wf-live-chip--wait {
-  background: rgba(255, 180, 0, 0.08);
-  border-color: rgba(255, 180, 0, 0.2);
-  color: #fbbf24;
-}
-
-.wf-live-chip--off {
-  background: rgba(255, 80, 80, 0.08);
-  border-color: rgba(255, 80, 80, 0.2);
-  color: #f87171;
-}
-
-.wf-live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: wf-blink 2s ease-in-out infinite;
-}
-
-.wf-live-chip--wait .wf-live-dot,
-.wf-live-chip--off .wf-live-dot {
-  animation: none;
+.wf-product-badge {
+  flex-shrink: 0;
 }
 
 .wf-reset-btn {
@@ -6522,30 +6577,6 @@ nav.primary {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 249, 255, 0.92));
   border-bottom: 1px solid rgba(131, 145, 188, 0.2);
   box-shadow: 0 18px 38px rgba(32, 48, 98, 0.08);
-}
-
-.wf-live-chip {
-  background: rgba(122, 31, 162, 0.06);
-  border-color: rgba(122, 31, 162, 0.14);
-  color: #5b678c;
-}
-
-.wf-live-chip--on {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.18);
-  color: #1f7a42;
-}
-
-.wf-live-chip--wait {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.16);
-  color: #2b67c8;
-}
-
-.wf-live-chip--off {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.14);
-  color: #b73f3f;
 }
 
 .wf-reset-btn,

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BrandVideoPanel from "../components/BrandVideoPanel";
+import ProductStatusBadge from "../components/ProductStatusBadge";
 import { getProjectCaseStudy } from "../../lib/content";
 
 const sayWetin = getProjectCaseStudy("saywetin");
@@ -24,7 +25,9 @@ export default function SayWetinPage() {
     <article className="container page-content case-study">
       <div className="product-hero-layout fade-on-scroll">
         <div className="product-hero-copy">
-          {sayWetin.availabilityLabel ? <span className="status-pill">{sayWetin.availabilityLabel}</span> : null}
+          <div className="product-hero-top">
+            <ProductStatusBadge status={sayWetin.status} />
+          </div>
           <h1>SayWetin</h1>
           <p className="lead">
             SayWetin is a Nigerian music AI product built by Una Labs to translate lyrics,

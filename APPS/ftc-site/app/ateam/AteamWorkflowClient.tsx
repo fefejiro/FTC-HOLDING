@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { trackEvent } from "../../lib/analytics";
 import { ATEAM_BRAND_LOGO_PATH } from "../../lib/ateamEmbed";
 import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
+import ProductStatusBadge from "../components/ProductStatusBadge";
 import OperatorOfficePanel, { type OfficePhase } from "../components/OperatorOfficePanel";
 import {
   ateamWorkflowCategories,
@@ -14,6 +15,8 @@ import {
   type WorkflowCategoryValue,
   type WorkflowRun,
 } from "../../lib/ateamWorkflow";
+import { getProjectCaseStudy } from "../../lib/content";
+import { getProductStatusLabel } from "../../lib/productStatus";
 import {
   clearAteamDemoHandoff,
   saveAteamWorkflowHandoff,
@@ -23,7 +26,6 @@ import {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type BusyState = "idle" | "starting" | "processing" | "loading";
-type WorkflowServiceState = "checking" | "ready" | "unavailable";
 type AteamWorkflowClientProps = {
   basePath?: string;
   operatorOfficePath?: string;
@@ -71,6 +73,8 @@ const COMPACT_TYPES = [
   { value: "lead-automation", label: "Lead system" },
   { value: "ai-feature", label: "AI workflow" },
 ] as const;
+
+const ateamProject = getProjectCaseStudy("ateam");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -146,7 +150,6 @@ export default function AteamWorkflowClient({
   const [busy, setBusy] = useState<BusyState>("idle");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [workflowServiceState, setWorkflowServiceState] = useState<WorkflowServiceState>("checking");
   const [processingStageIndex, setProcessingStageIndex] = useState(-1);
   const [activePrototypeFrameId, setActivePrototypeFrameId] = useState("");
   const [supportsVoice, setSupportsVoice] = useState(false);
@@ -154,15 +157,6 @@ export default function AteamWorkflowClient({
 
   const runId = String(searchParams.get("run") || "").trim();
   const operatorEnabled = isAteamOperatorEnabled();
-
-  // Check if ATEAM is live
-  useEffect(() => {
-    let cancelled = false;
-    requestJson<{ ok: true }>("/api/ateam/workflow/runs?limit=1")
-      .then(() => { if (!cancelled) setWorkflowServiceState("ready"); })
-      .catch(() => { if (!cancelled) setWorkflowServiceState("unavailable"); });
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     if (hasTrackedViewRef.current) return;
@@ -281,6 +275,8 @@ export default function AteamWorkflowClient({
   const humanStage = processingIndexToHumanStage(processingStageIndex);
   const isWorking = busy === "starting" || busy === "processing";
   const showClarifiers = Boolean(run && !workflowReady && !isWorking && (run.questions?.length ?? 0) > 0);
+  const hasProductStatusBadge = Boolean(ateamProject && getProductStatusLabel(ateamProject.status));
+  const showBarActions = Boolean(hasProductStatusBadge || run || operatorEnabled);
 
   const officePhase: OfficePhase = workflowReady
     ? "done"
@@ -345,15 +341,6 @@ export default function AteamWorkflowClient({
   async function handleStartRun() {
     setError("");
     setNotice("");
-    if (workflowServiceState !== "ready") {
-      setError("ATEAM is still connecting. Try again in a moment.");
-      trackEvent("ateam_run_start_error", {
-        reason: "service_not_ready",
-        location: basePath === "/" ? "homepage" : "ateam_page",
-        category,
-      });
-      return;
-    }
     if (idea.trim().length < 12) {
       setError("Add a bit more detail - one sentence is enough to start.");
       trackEvent("ateam_run_start_error", {
@@ -487,24 +474,21 @@ export default function AteamWorkflowClient({
           <span className="wf-bar-sep">-</span>
           <span className="wf-bar-sub">Una Labs</span>
         </div>
-        <div className="wf-bar-right">
-          <span
-            className={`wf-live-chip ${workflowServiceState === "ready" ? "wf-live-chip--on" : workflowServiceState === "checking" ? "wf-live-chip--wait" : "wf-live-chip--off"}`}
-          >
-            <span className="wf-live-dot" />
-            {workflowServiceState === "ready" ? "Live" : workflowServiceState === "checking" ? "Connecting" : "Unavailable"}
-          </span>
-          {run && (
-            <button className="wf-reset-btn" onClick={resetFlow} aria-label="Start a new idea">
-              New idea
-            </button>
-          )}
-          {operatorEnabled && (
-            <Link href={operatorOfficePath} prefetch={false} className="wf-op-link">
-              Operator {"->"}
-            </Link>
-          )}
-        </div>
+        {showBarActions ? (
+          <div className="wf-bar-right">
+            {ateamProject ? <ProductStatusBadge status={ateamProject.status} className="wf-product-badge" /> : null}
+            {run ? (
+              <button className="wf-reset-btn" onClick={resetFlow} aria-label="Start a new idea">
+                New idea
+              </button>
+            ) : null}
+            {operatorEnabled ? (
+              <Link href={operatorOfficePath} prefetch={false} className="wf-op-link">
+                Operator {"->"}
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       <div className="wf-split">
@@ -602,14 +586,12 @@ export default function AteamWorkflowClient({
                     type="button"
                     className="wf-btn-primary"
                     onClick={handleStartRun}
-                    disabled={busy !== "idle" || workflowServiceState !== "ready"}
+                    disabled={busy !== "idle"}
                   >
                     {busy !== "idle" ? "Starting..." : "Start ATEAM ->"}
                   </button>
                   <p className="wf-intake-hint">
-                    {workflowServiceState === "checking" ? "Connecting to ATEAM..." :
-                     workflowServiceState === "unavailable" ? "ATEAM is offline - try again shortly" :
-                     "One paragraph is enough. ATEAM turns it into a scoped first pass."}
+                    One paragraph is enough. ATEAM turns it into a scoped first pass.
                   </p>
                 </div>
               </div>

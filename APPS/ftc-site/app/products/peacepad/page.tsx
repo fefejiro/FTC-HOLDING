@@ -2,6 +2,7 @@ export const dynamic = "force-static";
 
 import Link from "next/link";
 import BrandImagePanel from "../../components/BrandImagePanel";
+import ProductStatusBadge from "../../components/ProductStatusBadge";
 import { projectCaseStudies } from "../../../lib/content";
 
 const peacepad = projectCaseStudies.find((project) => project.slug === "peacepad");
@@ -32,7 +33,10 @@ export default function PeacePadProductPage() {
     <div className="container page-content">
       <section className="page-media-banner fade-on-scroll">
         <div className="page-media-copy">
-          <p className="eyebrow">Flagship product</p>
+          <div className="product-hero-top">
+            <p className="eyebrow">Flagship product</p>
+            <ProductStatusBadge status={peacepad.status} />
+          </div>
           <h1>{peacepad.name}</h1>
           <p className="page-intro">Pre-send communication safety for high-stakes conversations.</p>
           <p>{peacepad.summary}</p>
@@ -110,7 +114,7 @@ export default function PeacePadProductPage() {
 
       <section className="section">
         <div className="section-heading">
-          <p className="eyebrow">Status</p>
+          <p className="eyebrow">Availability</p>
           <h2>{peacepad.availabilityLabel ?? "Live product"}</h2>
           <p>Flagship Una Labs product demonstrating AI-assisted workflow delivery.</p>
         </div>

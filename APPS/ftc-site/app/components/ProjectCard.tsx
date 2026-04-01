@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ProductStatusBadge from "./ProductStatusBadge";
 import type { ProjectCaseStudy } from "../../lib/content";
 
 interface ProjectCardProps {
@@ -13,17 +14,12 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         ? "/saywetin"
         : "/projects";
 
-  const statusLabel =
-    project.status === "live"
-      ? "Live"
-      : project.status === "active-development"
-        ? "Active Development"
-        : "Internal Runtime";
-
   return (
     <article className="card project-card">
-      <p className="card-kicker">{project.pillar.replace("-", " ")}</p>
-      <span className="status-pill">{statusLabel}</span>
+      <div className="project-card-top">
+        <p className="card-kicker">{project.pillar.replace("-", " ")}</p>
+        <ProductStatusBadge status={project.status} />
+      </div>
       <h3>{project.name}</h3>
       <p className="muted">{project.tagline}</p>
       <p>{project.summary}</p>

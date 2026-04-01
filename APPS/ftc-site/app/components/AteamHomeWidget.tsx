@@ -5,7 +5,7 @@ import Link from "next/link";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type WidgetPhase = "idle" | "starting" | "working" | "done" | "unavailable";
+type WidgetPhase = "idle" | "starting" | "working" | "done" | "error";
 
 interface RunData {
   id: string;
@@ -127,8 +127,8 @@ export default function AteamHomeWidget() {
       setWidgetPhase("working");
       setStageLabel("Understanding the idea...");
     } catch {
-      setWidgetPhase("unavailable");
-      setError("ATEAM is unavailable right now.");
+      setWidgetPhase("error");
+      setError("ATEAM could not start right now. Try once more.");
     }
   }
 
@@ -143,7 +143,7 @@ export default function AteamHomeWidget() {
     setError("");
   }
 
-  const isIdle = widgetPhase === "idle" || widgetPhase === "unavailable";
+  const isIdle = widgetPhase === "idle" || widgetPhase === "error";
   const isWorking = widgetPhase === "starting" || widgetPhase === "working";
   const isDone = widgetPhase === "done";
 

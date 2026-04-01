@@ -1,5 +1,6 @@
 ﻿import { siteLinks } from "./siteLinks";
 import { ateamModeSupportPoints, ateamModeSummary } from "./ateamMode";
+import type { ProductStatus } from "./productStatus";
 
 export type CapabilityPillar =
   | "ai-systems"
@@ -27,7 +28,7 @@ export interface ProjectCaseStudy {
   pillar: CapabilityPillar;
   tags: string[];
   summary: string;
-  status: "live" | "active-development" | "internal-runtime" | "cloud-ready-workflow";
+  status: ProductStatus;
   availabilityLabel?: string;
   googlePlayUrl?: string;
   marketingBullets?: string[];
@@ -254,7 +255,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     tags: ["Dispatch", "Roadside", "Operations"],
     summary:
       "Dispatch is Una Labs' roadside assistance system for direct customer intake, invited operator demos, and official Ottawa incident visibility.",
-    status: "live",
+    status: "early",
     availabilityLabel: "Live on Una Labs",
     marketingBullets: [
       "Roadside intake in the browser",
@@ -291,7 +292,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     tags: ["Workflow OS", "Scoping", "Systems"],
     summary:
       "ATEAM is Una Labs' intake-to-delivery engine for shaping rough ideas into structured runs, visible jobs, and artifact packs.",
-    status: "cloud-ready-workflow",
+    status: "beta",
     availabilityLabel: "Cloud-native workflow",
     marketingBullets: [...ateamModeSupportPoints],
     sections: {

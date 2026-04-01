@@ -3,59 +3,16 @@ export const dynamic = "force-static";
 import Image from "next/image";
 import Link from "next/link";
 import GooglePlayBadge from "../components/GooglePlayBadge";
+import ProductBrandBadge from "../components/ProductBrandBadge";
+import ProductStatusBadge from "../components/ProductStatusBadge";
 import { ATEAM_BRAND_LOGO_PATH, ATEAM_MISSION_CONTROL_PREVIEW_PATH } from "../../lib/ateamEmbed";
-import { ateamModeSummary, ateamModeSupportPoints } from "../../lib/ateamMode";
+import { ateamModeSummary } from "../../lib/ateamMode";
 import { projectCaseStudies, type ProjectCaseStudy } from "../../lib/content";
+import { productCardBranding } from "../../lib/productCardBranding";
 
 export const metadata = {
   title: "Products | Una Labs",
   description: "Public products and guided systems from Una Labs."
-};
-
-const productOfferContent: Record<
-  string,
-  {
-    offerCopy: string;
-    secondaryLabel: string;
-    supportPoints?: string[];
-  }
-> = {
-  peacepad: {
-    offerCopy:
-      "A communication product built to slow escalation before a message is sent.",
-    secondaryLabel: "See PeacePad overview",
-    supportPoints: [
-      "Pause before sending",
-      "Review tone before delivery",
-      "Choose a calmer next action"
-    ]
-  },
-  saywetin: {
-    offerCopy:
-      "A cultural interpretation product that helps users understand Nigerian music and language context.",
-    secondaryLabel: "See SayWetin overview",
-    supportPoints: [
-      "Recognize songs",
-      "Explain slang and references",
-      "Add context, not just metadata"
-    ]
-  },
-  dispatch: {
-    offerCopy:
-      "A live roadside dispatch product for Ottawa with direct customer intake, operator routing, and incident watch.",
-    secondaryLabel: "See Dispatch overview",
-    supportPoints: [
-      "Roadside request intake",
-      "Operator movement with live updates",
-      "Official no-key incident sources"
-    ]
-  },
-  ateam: {
-    offerCopy:
-      ateamModeSummary,
-    secondaryLabel: "Open ATEAM",
-    supportPoints: [...ateamModeSupportPoints]
-  }
 };
 
 function getProductOverviewHref(project: ProjectCaseStudy): string {
@@ -66,10 +23,6 @@ function getProductOverviewHref(project: ProjectCaseStudy): string {
       : project.slug === "dispatch"
         ? "/products/dispatch"
       : "/ateam";
-}
-
-function getLifecycleStatusLabel(project: ProjectCaseStudy): string {
-  return project.availabilityLabel ?? (project.status === "live" ? "Live" : "Public demo");
 }
 
 export default function ProductsPage() {
@@ -90,15 +43,20 @@ export default function ProductsPage() {
 
       <div className="cards-grid cards-grid-2 products-primary-grid">
         {primaryProducts.map((project) => {
-          const offer = productOfferContent[project.slug];
-          const supportPoints = project.marketingBullets ?? offer?.supportPoints ?? [];
+          const branding = productCardBranding[project.slug];
+          const supportPoints = project.marketingBullets ?? branding?.supportPoints ?? [];
 
           return (
             <article key={project.slug} className="card product-spotlight-card">
-              <p className="status-pill">{getLifecycleStatusLabel(project)}</p>
-              <h2>{project.name}</h2>
-              <p className="muted">{project.tagline}</p>
-              <p>{offer?.offerCopy ?? project.summary}</p>
+              <ProductStatusBadge status={project.status} className="product-status-badge--floating" />
+              <div className="product-card-header">
+                {branding?.logo ? <ProductBrandBadge logo={branding.logo} /> : null}
+                <div className="product-card-heading">
+                  <h2>{project.name}</h2>
+                  <p className="muted">{project.tagline}</p>
+                </div>
+              </div>
+              <p>{branding?.offerCopy ?? project.summary}</p>
               <ul className="feature-list compact-feature-list">
                 {supportPoints.map((bullet) => (
                   <li key={bullet}>{bullet}</li>
@@ -121,7 +79,7 @@ export default function ProductsPage() {
                     prefetch={false}
                     className="btn btn-secondary product-spotlight-link"
                   >
-                    {offer?.secondaryLabel ?? "See product overview"}
+                    {branding?.secondaryLabel ?? "See product overview"}
                   </Link>
                 </div>
                 {project.googlePlayUrl ? (
@@ -135,9 +93,9 @@ export default function ProductsPage() {
 
       {featuredAteam ? (
         <article className="card product-spotlight-card product-spotlight-card--featured">
+          <ProductStatusBadge status={featuredAteam.status} className="product-status-badge--floating" />
           <div className="product-spotlight-feature product-spotlight-feature--ateam">
             <div className="product-spotlight-feature-copy">
-              <p className="status-pill">{getLifecycleStatusLabel(featuredAteam)}</p>
               <h2>ATEAM</h2>
               <p className="muted">The intake-to-delivery engine behind the studio.</p>
               <p>
@@ -145,7 +103,7 @@ export default function ProductsPage() {
                 business and workflow ideas into scoped first passes, not as a detached demo.
               </p>
               <ul className="feature-list compact-feature-list">
-                {(featuredAteam.marketingBullets ?? productOfferContent.ateam.supportPoints ?? []).map((bullet) => (
+                {(featuredAteam.marketingBullets ?? productCardBranding.ateam.supportPoints ?? []).map((bullet) => (
                   <li key={bullet}>{bullet}</li>
                 ))}
               </ul>

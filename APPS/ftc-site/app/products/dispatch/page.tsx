@@ -1,6 +1,10 @@
 export const dynamic = "force-static";
 
 import Link from "next/link";
+import ProductStatusBadge from "../../components/ProductStatusBadge";
+import { getProjectCaseStudy } from "../../../lib/content";
+
+const dispatchProduct = getProjectCaseStudy("dispatch");
 
 export const metadata = {
   title: "Dispatch | Products | Una Labs",
@@ -31,10 +35,15 @@ const dispatchFlow = [
 ] as const;
 
 export default function DispatchProductPage() {
+  const dispatchStatus = dispatchProduct?.status ?? "early";
+
   return (
     <div className="container page-content products-page">
       <section className="products-intro">
-        <p className="eyebrow">Product</p>
+        <div className="product-hero-top">
+          <p className="eyebrow">Product</p>
+          <ProductStatusBadge status={dispatchStatus} />
+        </div>
         <h1>Dispatch</h1>
         <p className="page-intro">
           Dispatch is the live Ottawa roadside assistance product inside Una Labs. The client path is
@@ -63,7 +72,7 @@ export default function DispatchProductPage() {
 
       <section className="cards-grid cards-grid-2 products-primary-grid">
         <article className="card product-spotlight-card">
-          <p className="status-pill">Live on Una Labs</p>
+          <p className="eyebrow">Overview</p>
           <h2>What it does</h2>
           <p>
             Dispatch starts with direct roadside requests first, then adds live incident visibility
@@ -77,7 +86,7 @@ export default function DispatchProductPage() {
         </article>
 
         <article className="card product-spotlight-card">
-          <p className="status-pill">Built for Ottawa</p>
+          <p className="eyebrow">Demo flow</p>
           <h2>How to test it</h2>
           <p>
             The first client round should stay on the operator sandbox only. Admin remains private so

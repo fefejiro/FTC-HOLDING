@@ -4,10 +4,8 @@ test.describe("Public journey", () => {
   test("home to products to client launches keeps the public story clear", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.locator("h1").first()).toContainText(
-      "Fast websites, lead systems, and AI-assisted workflows."
-    );
-    await expect(page.getByRole("link", { name: "Open ATEAM" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Turn a rough idea into a/i }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /Start ATEAM/i }).first()).toBeVisible();
 
     await page
       .getByLabel("Main navigation")
@@ -15,6 +13,13 @@ test.describe("Public journey", () => {
       .first()
       .click({ force: true });
     await expect(page).toHaveURL("/products");
+    await expect(page.getByRole("img", { name: "PeacePad logo" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "SayWetin logo" })).toBeVisible();
+    const dispatchLogo = page.getByRole("img", { name: "Dispatch logo" });
+    await dispatchLogo.scrollIntoViewIfNeeded();
+    await expect(dispatchLogo).toBeVisible();
+    await expect(page.getByText("Early Access", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Private Beta", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "ATEAM" }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Open ATEAM", exact: true })).toBeVisible();
 
@@ -29,12 +34,13 @@ test.describe("Public journey", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: "Drop a rough idea. Watch it turn into a structured run."
+        name: /Turn a rough idea into a/
       })
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Start ATEAM workflow" })).toBeVisible();
-    await expect(page.getByText("Narrative intake")).toBeVisible();
-    await expect(page.getByText("Visible work state")).toBeVisible();
+    await expect(page.getByText("Private Beta", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Start ATEAM/i })).toBeVisible();
+    await expect(page.getByText("Idea in")).toBeVisible();
+    await expect(page.getByText("Decision pack")).toBeVisible();
   });
 
   test("mobile navigation still exposes the core public routes", async ({ page }) => {
@@ -45,11 +51,11 @@ test.describe("Public journey", () => {
     const mobileDialog = page.getByRole("dialog", { name: "Mobile navigation" });
     await expect(mobileDialog).toBeVisible();
 
-    await mobileDialog.getByRole("link", { name: "ATEAM" }).click();
+    await mobileDialog.getByRole("link", { name: "ATEAM" }).first().click();
     await expect(page).toHaveURL("/ateam");
     await expect(
       page.getByRole("heading", {
-        name: "Drop a rough idea. Watch it turn into a structured run."
+        name: /Turn a rough idea into a/
       })
     ).toBeVisible();
   });
