@@ -3,11 +3,14 @@ import type { ProductCardLogo } from "../../lib/productCardBranding";
 
 interface ProductBrandBadgeProps {
   logo: ProductCardLogo;
+  className?: string;
 }
 
-export default function ProductBrandBadge({ logo }: ProductBrandBadgeProps) {
+export default function ProductBrandBadge({ logo, className }: ProductBrandBadgeProps) {
+  const classes = ["product-brand-badge", className].filter(Boolean).join(" ");
+
   return (
-    <div className="product-brand-badge">
+    <div className={classes}>
       <Image
         src={logo.src}
         alt={logo.alt}

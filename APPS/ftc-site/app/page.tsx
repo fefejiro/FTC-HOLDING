@@ -1,17 +1,17 @@
 export const dynamic = "force-static";
 
 import type { Metadata } from "next";
-import AteamLandingExperience from "./components/AteamLandingExperience";
+import HomePageExperience from "./components/HomePageExperience";
 
 export const metadata: Metadata = {
-  title: "Una Labs - AI Build Lab | Fast Websites, Lead Systems & ATEAM Workflows",
+  title: "Una Labs | Products, Client Launches, and AI Workflow Systems",
   description:
-    "Una Labs is an operator-led AI build lab delivering fast websites, lead automation, and ATEAM-guided workflows. Drop an idea into ATEAM and move into a real build path.",
+    "Una Labs is the umbrella studio for shipped products, client launches, and ATEAM-guided workflow systems. Explore what the studio builds before diving into the dedicated ATEAM page.",
   alternates: {
     canonical: "https://unalabs.cloud"
   }
 };
 
 export default function HomePage() {
-  return <AteamLandingExperience basePath="/" />;
+  return <HomePageExperience />;
 }

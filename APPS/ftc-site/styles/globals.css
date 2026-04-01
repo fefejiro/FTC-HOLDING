@@ -8204,6 +8204,142 @@ nav.primary {
   color: #3a446a;
 }
 
+.home-studio-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(26px, 3.6vw, 42px);
+  background:
+    radial-gradient(720px 300px at -4% -12%, rgba(122, 31, 162, 0.12) 0%, transparent 58%),
+    radial-gradient(640px 260px at 104% -10%, rgba(0, 212, 255, 0.12) 0%, transparent 60%),
+    #ffffff;
+}
+
+.home-studio-hero .hero-noise {
+  display: block;
+  opacity: 0.04;
+}
+
+.home-studio-hero-copy {
+  max-width: 640px;
+}
+
+.home-studio-credibility {
+  max-width: 62ch;
+}
+
+.home-studio-visual-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.home-studio-glance-grid {
+  margin-top: 0;
+}
+
+.home-glance-card {
+  min-height: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(122, 31, 162, 0.04), rgba(255, 255, 255, 0.96));
+}
+
+.home-glance-card strong {
+  color: #081a4f;
+  font-family: var(--font-space-grotesk), var(--font-inter), sans-serif;
+  font-size: 1.02rem;
+  line-height: 1.2;
+}
+
+.home-lane-grid,
+.home-product-preview-grid {
+  align-items: stretch;
+}
+
+.home-lane-card,
+.home-product-preview-card {
+  min-height: 100%;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.home-lane-card .btn,
+.home-product-preview-card .inline-link {
+  margin-top: auto;
+}
+
+.home-lane-product-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.home-lane-product-badge.product-brand-badge {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  padding: 7px;
+}
+
+.home-lane-product-badge .product-brand-badge__image {
+  height: 36px;
+}
+
+.home-lane-launch-list {
+  display: grid;
+  gap: 10px;
+}
+
+.home-lane-launch-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(122, 31, 162, 0.12);
+  background: rgba(122, 31, 162, 0.04);
+}
+
+.home-lane-launch-item strong,
+.home-product-preview-card h3 {
+  color: #081a4f;
+}
+
+.home-lane-launch-item span {
+  color: #6a188c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.home-lane-card--ateam {
+  background:
+    radial-gradient(600px 220px at 100% 0%, rgba(122, 31, 162, 0.08) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(248, 244, 255, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.home-lane-status {
+  align-self: flex-start;
+}
+
+.home-lane-card--ateam .product-ateam-preview-shell {
+  margin-top: 2px;
+}
+
+.home-lane-card--ateam .product-ateam-preview-flow-step {
+  font-size: 0.68rem;
+}
+
+.home-product-preview-card .product-card-header {
+  margin-top: -2px;
+}
+
+.home-product-preview-card .chip-list {
+  margin: 0;
+}
+
 .hero-cta-row .btn,
 .product-actions .btn {
   min-height: 46px;
