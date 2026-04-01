@@ -35,6 +35,7 @@ type BrowserSpeechRecognition = {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
+  onstart: (() => void) | null;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
   onend: (() => void) | null;
   onerror: ((event: { error?: string }) => void) | null;
@@ -73,6 +74,9 @@ const COMPACT_TYPES = [
   { value: "lead-automation", label: "Lead system" },
   { value: "ai-feature", label: "AI workflow" },
 ] as const;
+
+const VOICE_AUTO_STOP_MS = 12000;
+const VOICE_SILENCE_STOP_MS = 2600;
 
 const ateamProject = getProjectCaseStudy("ateam");
 
@@ -131,6 +135,33 @@ function buildWorkflowPath(basePath: string, runId?: string) {
   return `${normalizedBasePath}?run=${encodeURIComponent(runId)}`;
 }
 
+function mergeSpokenIdea(base: string, spoken: string) {
+  const trimmedBase = base.trim();
+  const trimmedSpoken = spoken.trim();
+  if (!trimmedSpoken) return trimmedBase;
+  if (!trimmedBase) return trimmedSpoken;
+  const suffix = /[.?!]\s*$/.test(trimmedBase) ? " " : ". ";
+  return `${trimmedBase}${suffix}${trimmedSpoken}`;
+}
+
+function getSpeechErrorMessage(error?: string) {
+  switch (error) {
+    case "audio-capture":
+      return "ATEAM could not access your microphone. Check your device input and try again.";
+    case "not-allowed":
+    case "service-not-allowed":
+      return "Microphone access is blocked. Allow mic permission in your browser and try again.";
+    case "network":
+      return "Voice capture hit a network issue. Try again or type the idea instead.";
+    case "no-speech":
+      return "No speech was detected. Try again and start speaking right away.";
+    case "aborted":
+      return "";
+    default:
+      return "Voice capture could not start cleanly. Try again or type the idea instead.";
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AteamWorkflowClient({
@@ -143,6 +174,12 @@ export default function AteamWorkflowClient({
   const outputRef = useRef<HTMLElement | null>(null);
   const hasTrackedViewRef = useRef(false);
   const trackedPackViewRef = useRef("");
+  const ideaRef = useRef("");
+  const speechBaseIdeaRef = useRef("");
+  const speechTranscriptRef = useRef("");
+  const speechHadErrorRef = useRef(false);
+  const voiceAutoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceSilenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [idea, setIdea] = useState("");
   const [category, setCategory] = useState<WorkflowCategoryValue>("auto");
   const [run, setRun] = useState<WorkflowRun | null>(null);
@@ -157,6 +194,10 @@ export default function AteamWorkflowClient({
 
   const runId = String(searchParams.get("run") || "").trim();
   const operatorEnabled = isAteamOperatorEnabled();
+
+  useEffect(() => {
+    ideaRef.current = idea;
+  }, [idea]);
 
   useEffect(() => {
     if (hasTrackedViewRef.current) return;
@@ -178,36 +219,116 @@ export default function AteamWorkflowClient({
     const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!Recognition) return;
 
+    function clearVoiceTimers() {
+      if (voiceAutoStopTimerRef.current) {
+        clearTimeout(voiceAutoStopTimerRef.current);
+        voiceAutoStopTimerRef.current = null;
+      }
+      if (voiceSilenceTimerRef.current) {
+        clearTimeout(voiceSilenceTimerRef.current);
+        voiceSilenceTimerRef.current = null;
+      }
+    }
+
+    function scheduleSilenceStop() {
+      if (voiceSilenceTimerRef.current) {
+        clearTimeout(voiceSilenceTimerRef.current);
+      }
+      voiceSilenceTimerRef.current = setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch {
+          setIsListening(false);
+        }
+      }, VOICE_SILENCE_STOP_MS);
+    }
+
     const recognition = new Recognition();
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = "en-US";
+    recognition.onstart = () => {
+      speechHadErrorRef.current = false;
+      setError("");
+      setNotice("Listening... speak your idea and ATEAM will stop automatically.");
+      setIsListening(true);
+      clearVoiceTimers();
+      voiceAutoStopTimerRef.current = setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch {
+          setIsListening(false);
+        }
+      }, VOICE_AUTO_STOP_MS);
+    };
     recognition.onresult = (event) => {
       const parts: string[] = [];
-      for (let i = event.resultIndex || 0; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
-        if (!result?.isFinal) continue;
         const transcript = String(result[0]?.transcript || "").trim();
         if (transcript) parts.push(transcript);
       }
       if (!parts.length) return;
-      setIdea((current) => {
-        const spoken = parts.join(" ").trim();
-        if (!current.trim()) return spoken;
-        const suffix = /[.?!]\s*$/.test(current) ? " " : ". ";
-        return `${current.trim()}${suffix}${spoken}`;
-      });
+      const spoken = parts.join(" ").replace(/\s+/g, " ").trim();
+      speechTranscriptRef.current = spoken;
+      setIdea(mergeSpokenIdea(speechBaseIdeaRef.current, spoken));
+      setNotice("Listening... ATEAM is transcribing your idea.");
+      scheduleSilenceStop();
     };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => {
+      clearVoiceTimers();
+      setIsListening(false);
+      if (speechHadErrorRef.current) {
+        speechTranscriptRef.current = "";
+        return;
+      }
+      const spoken = speechTranscriptRef.current.trim();
+      if (spoken) {
+        const nextIdea = mergeSpokenIdea(speechBaseIdeaRef.current, spoken);
+        setIdea(nextIdea);
+        setNotice("Voice captured. Review the text, then start ATEAM.");
+      } else {
+        setNotice("No speech captured. Try again or type the idea instead.");
+      }
+      speechTranscriptRef.current = "";
+    };
+    recognition.onerror = (event) => {
+      clearVoiceTimers();
+      setIsListening(false);
+      speechHadErrorRef.current = true;
+      speechTranscriptRef.current = "";
+      const message = getSpeechErrorMessage(event.error);
+      if (!message) return;
+      if (event.error === "no-speech") {
+        setNotice(message);
+        return;
+      }
+      setNotice("");
+      setError(message);
+    };
     recognitionRef.current = recognition;
     setSupportsVoice(true);
 
     return () => {
+      clearVoiceTimers();
       try { recognition.abort?.(); } catch { /* ignore */ }
       recognitionRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined" || !isListening) return;
+    const handleVisibilityChange = () => {
+      if (!document.hidden) return;
+      try {
+        recognitionRef.current?.abort?.();
+      } catch {
+        setIsListening(false);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [isListening]);
 
   // Load run from URL
   useEffect(() => {
@@ -327,14 +448,17 @@ export default function AteamWorkflowClient({
     try {
       if (isListening) {
         recognition.stop();
-        setIsListening(false);
         return;
       }
       setError("");
+      setNotice("");
+      speechBaseIdeaRef.current = ideaRef.current;
+      speechTranscriptRef.current = "";
+      speechHadErrorRef.current = false;
       recognition.start();
-      setIsListening(true);
     } catch {
       setIsListening(false);
+      setError("Voice capture could not start. Check microphone permission and try again.");
     }
   }
 
@@ -580,6 +704,11 @@ export default function AteamWorkflowClient({
                 </div>
 
                 {error && <p className="wf-error" role="alert">{error}</p>}
+                {!error && notice && (
+                  <p className="wf-notice" aria-live="polite">
+                    {notice}
+                  </p>
+                )}
 
                 <div className="wf-intake-actions">
                   <button
