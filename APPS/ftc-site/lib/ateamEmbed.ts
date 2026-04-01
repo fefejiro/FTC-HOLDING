@@ -1,5 +1,12 @@
 export const ATEAM_BRAND_LOGO_PATH = "/images/brand/ateam-logo.png";
 export const ATEAM_MISSION_CONTROL_PREVIEW_PATH = "/images/brand/ateam-mission-control.png";
+export const ATEAM_PRODUCT_PREVIEW_ASSET = {
+  // Enable once the real screen recording assets are added to /public/media.
+  hasVideo: false,
+  webmSrc: "/media/ateam-preview.webm",
+  mp4Src: "/media/ateam-preview.mp4",
+  posterSrc: "/media/ateam-preview-poster.png"
+} as const;
 
 const ateamLocalSurfaceMap = {
   office: {

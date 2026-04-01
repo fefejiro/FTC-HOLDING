@@ -1309,13 +1309,118 @@ nav.primary {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.product-ateam-preview {
-  display: block;
-  width: 100%;
-  height: auto;
+.product-ateam-preview-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.product-ateam-preview-frame {
+  position: relative;
+  aspect-ratio: 16 / 10;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(circle at top left, rgba(74, 35, 125, 0.45), transparent 42%),
+    linear-gradient(180deg, rgba(8, 11, 20, 0.98), rgba(14, 18, 30, 0.92));
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.product-ateam-preview-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-ateam-preview-chrome {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(5, 8, 16, 0.08), rgba(5, 8, 16, 0.02) 30%, rgba(5, 8, 16, 0.22));
+}
+
+.product-ateam-preview-toolbar {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.product-ateam-preview-toolbar span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.product-ateam-preview-state {
+  width: fit-content;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(6, 8, 18, 0.68);
+  backdrop-filter: blur(14px);
+}
+
+.product-ateam-preview-state span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(216, 189, 255, 0.84);
+}
+
+.product-ateam-preview-state strong {
+  color: #ffffff;
+  font-size: 0.86rem;
+}
+
+.product-ateam-preview-flow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.product-ateam-preview-flow-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(241, 236, 255, 0.92);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-align: center;
+  animation: product-ateam-preview-step-glow 3.6s ease-in-out infinite;
+}
+
+@keyframes product-ateam-preview-step-glow {
+  0%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: none;
+  }
+
+  50% {
+    border-color: rgba(209, 166, 255, 0.34);
+    background: rgba(122, 31, 162, 0.12);
+    box-shadow: 0 0 0 1px rgba(209, 166, 255, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-ateam-preview-flow-step {
+    animation: none;
+  }
 }
 
 .service-card {

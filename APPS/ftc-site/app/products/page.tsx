@@ -2,10 +2,11 @@ export const dynamic = "force-static";
 
 import Image from "next/image";
 import Link from "next/link";
+import AteamProductPreview from "../components/AteamProductPreview";
 import GooglePlayBadge from "../components/GooglePlayBadge";
 import ProductBrandBadge from "../components/ProductBrandBadge";
 import ProductStatusBadge from "../components/ProductStatusBadge";
-import { ATEAM_BRAND_LOGO_PATH, ATEAM_MISSION_CONTROL_PREVIEW_PATH } from "../../lib/ateamEmbed";
+import { ATEAM_BRAND_LOGO_PATH, ATEAM_PRODUCT_PREVIEW_ASSET } from "../../lib/ateamEmbed";
 import { ateamModeSummary } from "../../lib/ateamMode";
 import { projectCaseStudies, type ProjectCaseStudy } from "../../lib/content";
 import { productCardBranding } from "../../lib/productCardBranding";
@@ -120,12 +121,12 @@ export default function ProductsPage() {
               <div className="product-ateam-visual-mark" aria-hidden="true">
                 <Image src={ATEAM_BRAND_LOGO_PATH} alt="" width={58} height={58} />
               </div>
-              <Image
-                src={ATEAM_MISSION_CONTROL_PREVIEW_PATH}
-                alt="ATEAM mission control preview"
-                className="product-ateam-preview"
-                width={960}
-                height={540}
+              <AteamProductPreview
+                title="ATEAM workflow product preview"
+                posterSrc={ATEAM_PRODUCT_PREVIEW_ASSET.posterSrc}
+                webmSrc={ATEAM_PRODUCT_PREVIEW_ASSET.webmSrc}
+                mp4Src={ATEAM_PRODUCT_PREVIEW_ASSET.mp4Src}
+                hasVideo={ATEAM_PRODUCT_PREVIEW_ASSET.hasVideo}
               />
               <p className="muted">
                 Intake, routing, artifacts, and delivery state sit inside the same ATEAM flow so
