@@ -107,7 +107,7 @@ interface IncidentFeedItem {
   actionCount?: number | null;
 }
 
-type AdminFilter = 'all' | 'pending' | 'active' | 'completed';
+type AdminFilter = 'all' | 'pending' | 'active' | 'completed' | 'cancelled';
 type IncidentListFilter = 'all' | 'viewed' | 'actioned' | 'not_actioned';
 
 const SERVICE_ICONS: Record<ServiceType, React.ComponentType<{ className?: string }>> = {
@@ -135,11 +135,11 @@ const STATUS_BADGE: Record<RequestStatus, string> = {
 };
 
 const STATUS_LABEL: Record<RequestStatus, string> = {
-  pending: 'Pending',
-  accepted: 'Accepted',
-  en_route: 'En Route',
+  pending: 'New',
+  accepted: 'Viewed',
+  en_route: 'Heading there',
   completed: 'Completed',
-  cancelled: 'Cancelled',
+  cancelled: 'Unable / Ignored',
 };
 
 const ALL_STATUSES: RequestStatus[] = ['pending', 'accepted', 'en_route', 'completed', 'cancelled'];
@@ -184,7 +184,7 @@ function incidentMapsUrl(incident: IncidentFeedItem) {
     return `https://maps.google.com/?q=${incident.locationLat},${incident.locationLng}`;
   }
   if (incident.roadway) {
-    return `https://maps.google.com/search/?api=1&query=${encodeURIComponent(`${incident.roadway}, Ontario`)}`;
+    return `https://maps.google.com/search/?api=1&query=${encodeURIComponent(`${incident.roadway}, Ottawa ON`)}`;
   }
   return null;
 }
@@ -219,6 +219,9 @@ function filterRequests(requests: ServiceRequest[], filter: AdminFilter) {
   }
   if (filter === 'completed') {
     return requests.filter((request) => request.status === 'completed');
+  }
+  if (filter === 'cancelled') {
+    return requests.filter((request) => request.status === 'cancelled');
   }
   return requests;
 }
@@ -263,9 +266,9 @@ function AdminLogin({ onSuccess }: { onSuccess: (token: string | null) => void }
     <DispatchLoginShell
       activeRole="admin"
       icon={<Shield className="w-7 h-7" />}
-      eyebrow="Dispatch admin access"
-      title="Admin login"
-      subtitle="Use the admin PIN to manage operators, jobs, incident analytics, and live dispatch controls."
+      eyebrow="Ottawa roadside operations"
+      title="Dispatch sign in"
+      subtitle="Use the oversight PIN to review live jobs, operator coverage, and incident activity across Dispatch."
       footer={
         <div className="space-y-3">
           <button
@@ -558,6 +561,7 @@ function AdminDashboard({
     pending: requests.filter((r) => r.status === 'pending').length,
     active: requests.filter((r) => ['accepted', 'en_route'].includes(r.status)).length,
     completed: requests.filter((r) => r.status === 'completed').length,
+    cancelled: requests.filter((r) => r.status === 'cancelled').length,
   };
 
   const filteredRequests = filterRequests(requests, activeFilter);
@@ -632,7 +636,7 @@ function AdminDashboard({
     setIncidentActionState('saving');
     setIncidentActionResult('');
     setIncidentActionId(incident.id);
-    const roadway = incident.roadway || 'Ontario area';
+    const roadway = incident.roadway || 'Ottawa area';
 
     try {
       const response = await fetch('/api/requests', {
@@ -689,32 +693,40 @@ function AdminDashboard({
       label: 'Total',
       value: stats.total,
       cls: 'text-white',
-      emptyLabel: 'No requests yet.',
-      listLabel: 'All Requests',
+      emptyLabel: 'No jobs yet.',
+      listLabel: 'All Jobs',
     },
     {
       key: 'pending',
-      label: 'Pending',
+      label: 'New',
       value: stats.pending,
       cls: 'text-amber-400',
-      emptyLabel: 'No pending requests right now.',
-      listLabel: 'Pending Requests',
+      emptyLabel: 'No new jobs right now.',
+      listLabel: 'New Jobs',
     },
     {
       key: 'active',
-      label: 'Active',
+      label: 'In progress',
       value: stats.active,
       cls: 'text-blue-400',
-      emptyLabel: 'No active requests right now.',
-      listLabel: 'Active Requests',
+      emptyLabel: 'No in-progress jobs right now.',
+      listLabel: 'Jobs In Progress',
     },
     {
       key: 'completed',
-      label: 'Done',
+      label: 'Completed',
       value: stats.completed,
       cls: 'text-green-400',
-      emptyLabel: 'No completed requests yet.',
-      listLabel: 'Completed Requests',
+      emptyLabel: 'No completed jobs yet.',
+      listLabel: 'Completed Jobs',
+    },
+    {
+      key: 'cancelled',
+      label: 'Unable / Ignored',
+      value: stats.cancelled,
+      cls: 'text-slate-300',
+      emptyLabel: 'No ignored or unable-to-complete jobs yet.',
+      listLabel: 'Unable / Ignored Jobs',
     },
   ];
 
@@ -729,8 +741,8 @@ function AdminDashboard({
               <Shield className="w-5 h-5 text-slate-300" />
             </div>
             <div>
-              <h1 className="text-white font-bold text-xl">Admin</h1>
-              <p className="text-slate-500 text-xs">Ottawa Roadside Dispatch</p>
+              <h1 className="text-white font-bold text-xl">Admin oversight</h1>
+              <p className="text-slate-500 text-xs">Monitor live jobs, operator movement, and outcomes across Ottawa.</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -749,7 +761,7 @@ function AdminDashboard({
       </div>
 
       <div className="px-5 py-5 flex flex-col gap-5 pb-10">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
           {filterMeta.map((stat) => (
             <button
               key={stat.label}
@@ -768,7 +780,7 @@ function AdminDashboard({
               </div>
               <div className="text-slate-600 text-[11px] font-medium mt-1.5">{stat.label}</div>
               <div className="text-[10px] text-slate-700 mt-1">
-                {activeFilter === stat.key ? 'Showing now' : 'Click to drill down'}
+                {activeFilter === stat.key ? 'Showing now' : 'Open view'}
               </div>
             </button>
           ))}
@@ -779,7 +791,7 @@ function AdminDashboard({
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-white font-bold text-[15px]">Incident activity</h2>
-                <p className="text-slate-500 text-xs mt-1">Live tracking starts from this release onward.</p>
+                <p className="text-slate-500 text-xs mt-1">Oversight for what operators have seen, acted on, and left untouched.</p>
               </div>
               <div className="text-[11px] text-slate-600">
                 {incidentSummary ? `${incidentSummary.total} tracked incidents` : 'Loading...'}
@@ -845,7 +857,7 @@ function AdminDashboard({
                 <div>
                   <div className="text-white text-sm font-semibold">Live incident feed</div>
                   <div className="text-slate-500 text-xs mt-0.5">
-                    Source: Ontario 511, City of Ottawa traffic, and OC Transpo service alerts.
+                    Ottawa-only slice from Ontario 511, City of Ottawa traffic, and OC Transpo service alerts.
                   </div>
                 </div>
                 <button
@@ -981,7 +993,7 @@ function AdminDashboard({
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-white font-bold text-[15px]">Operator tracker</h2>
-                <p className="text-slate-500 text-xs mt-1">Admin can see each operator’s most recent device location.</p>
+                <p className="text-slate-500 text-xs mt-1">Most recent field heartbeat from each operator device.</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -1158,11 +1170,38 @@ function AdminDashboard({
                 </div>
               </div>
 
+              <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3 mb-3">
+                <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold mb-2">
+                  Activity history
+                </div>
+                <div className="space-y-2 text-xs text-slate-300">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-slate-500">Job created</span>
+                    <span>{fmt(selectedRequest.createdAt)}</span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-slate-500">Operator first viewed</span>
+                    <span>{selectedRequest.acceptedAt ? fmt(selectedRequest.acceptedAt) : 'Not viewed yet'}</span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-slate-500">Current outcome</span>
+                    <span>{STATUS_LABEL[selectedRequest.status]}</span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-slate-500">Completed at</span>
+                    <span>{selectedRequest.completedAt ? fmt(selectedRequest.completedAt) : 'Not completed'}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Assign operator */}
               <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3 mb-3">
                 <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold mb-2">
-                  Assign Operator
+                  Operator coverage
                 </div>
+                <p className="mb-2 text-xs text-slate-500">
+                  Use this only when operations need a manual coverage override.
+                </p>
                 <div className="flex gap-2">
                   <select
                     value={selectedOperatorId}
@@ -1186,12 +1225,12 @@ function AdminDashboard({
                     ) : (
                       <User className="w-3.5 h-3.5" />
                     )}
-                    Assign
+                    Update coverage
                   </button>
                 </div>
                 {selectedRequest.operatorId && (
                   <div className="text-slate-600 text-xs mt-1.5">
-                    Currently:{' '}
+                    Current operator:{' '}
                     {operators.find((o) => o.id === selectedRequest.operatorId)?.name ??
                       'Unknown operator'}
                   </div>
@@ -1201,8 +1240,11 @@ function AdminDashboard({
               {/* Change status */}
               <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3 mb-3">
                 <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold mb-2">
-                  Change Status
+                  Status override
                 </div>
+                <p className="mb-2 text-xs text-slate-500">
+                  Reflect the real field outcome if an operator update needs manual correction.
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {ALL_STATUSES.map((s) => (
                     <button
@@ -1240,10 +1282,10 @@ function AdminDashboard({
                 </div>
                 <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
                   <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">
-                    Accepted
+                    Viewed
                   </div>
                   <div className="text-slate-300 text-sm mt-2">
-                    {selectedRequest.acceptedAt ? fmt(selectedRequest.acceptedAt) : 'Not yet accepted'}
+                    {selectedRequest.acceptedAt ? fmt(selectedRequest.acceptedAt) : 'Not viewed yet'}
                   </div>
                 </div>
                 <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
@@ -1331,7 +1373,7 @@ function AdminDashboard({
                     <div className="flex items-center gap-1.5 text-slate-600 text-xs mb-1.5">
                       <User className="w-3.5 h-3.5" />
                       <span>
-                        {operators.find((o) => o.id === r.operatorId)?.name ?? 'Assigned'}
+                        {operators.find((o) => o.id === r.operatorId)?.name ?? 'Operator attached'}
                       </span>
                     </div>
                   )}

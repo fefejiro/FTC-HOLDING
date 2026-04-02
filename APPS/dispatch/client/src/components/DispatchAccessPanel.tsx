@@ -28,7 +28,7 @@ export default function DispatchAccessPanel({
         <>
           <div className="flex items-center justify-between gap-3">
             <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Profile
+              Signed in as
             </span>
             {profileLabel ? (
               <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-xs font-semibold text-orange-200">

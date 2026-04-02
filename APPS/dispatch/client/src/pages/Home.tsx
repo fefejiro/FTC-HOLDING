@@ -41,8 +41,8 @@ const publicFlow = [
     body: 'Dispatch classifies the job, checks incident signals, and pushes the next action.',
   },
   {
-    title: 'Operator moves',
-    body: 'The nearest operator sees the job, claims it, and updates the status live.',
+    title: 'Field team moves',
+    body: 'The field team sees the job, moves on it, and updates the status live.',
   },
 ];
 
@@ -80,7 +80,7 @@ export default function HomePage() {
             </div>
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.3em] text-orange-400">
-                Ottawa Roadside
+                Ottawa roadside operations
               </div>
               <div className="text-lg font-semibold text-white">Dispatch</div>
             </div>
@@ -93,10 +93,10 @@ export default function HomePage() {
               Get help now
             </a>
             <a
-              href="/operator"
+              href="/login"
               className="inline-flex items-center justify-center rounded-xl border border-dispatch-border bg-dispatch-surface px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
             >
-              Operator sign in
+              Team sign in
             </a>
           </div>
         </header>

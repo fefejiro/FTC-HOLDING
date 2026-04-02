@@ -5,6 +5,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
 import { db } from './db';
+import { isOttawaScopedIncident } from './ottawaScope';
 import {
   matchesRequestMode,
   normalizeDemoSessionId,
@@ -461,7 +462,9 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       .from(incidents)
       .orderBy(desc(incidents.lastUpdated), desc(incidents.createdAt));
 
-    const summary = result.reduce(
+    const ottawaResult = result.filter((incident) => isOttawaScopedIncident(incident));
+
+    const summary = ottawaResult.reduce(
       (acc, incident) => {
         const viewed = (incident.viewCount ?? 0) > 0;
         const actioned = Boolean(incident.actioned) || (incident.actionCount ?? 0) > 0;
@@ -485,11 +488,11 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       },
     );
 
-    const recentViewed = result
+    const recentViewed = ottawaResult
       .filter((incident) => incident.lastViewedAt)
       .sort((a, b) => new Date(String(b.lastViewedAt)).getTime() - new Date(String(a.lastViewedAt)).getTime())
       .slice(0, 5);
-    const recentActioned = result
+    const recentActioned = ottawaResult
       .filter((incident) => incident.lastActionedAt)
       .sort((a, b) => new Date(String(b.lastActionedAt)).getTime() - new Date(String(a.lastActionedAt)).getTime())
       .slice(0, 5);
@@ -679,6 +682,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       .limit(lim * 6);
 
     const filtered = results
+      .filter((incident) => isOttawaScopedIncident(incident))
       .filter((incident) => {
         const ts =
           Date.parse(

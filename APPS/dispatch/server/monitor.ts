@@ -1,8 +1,8 @@
 /**
- * Ontario incident monitor.
+ * Ottawa incident monitor.
  *
  * Automated incident sources:
- * 1. Ontario 511 official events feed
+ * 1. Ontario 511 official events feed (Ottawa slice)
  * 2. City of Ottawa official traffic events feed
  * 3. OC Transpo service alerts RSS (detours, cancellations)
  *
@@ -14,12 +14,12 @@
 import { createHash } from 'node:crypto';
 import { inArray } from 'drizzle-orm';
 import { db } from './db';
+import { OTTAWA_CENTER, isOttawaScopedIncident } from './ottawaScope';
 import { incidents } from './schema';
 import { sendToAllActiveOperators } from './push';
 import { sseBroadcast } from './sse';
 
 const ONTARIO = { north: 56.9, south: 41.6, west: -95.2, east: -74.0 };
-const OTTAWA_CENTER = { lat: 45.4215, lng: -75.6972 } as const;
 const POLL_INTERVAL_MS = 45 * 1_000;
 const MAX_GEOCODE_PER_RUN = 8; // Nominatim 1 req/s rate-limit cap
 
@@ -511,12 +511,20 @@ async function fetchOntario511Incidents(): Promise<NormalizedIncident[]> {
         String(event.EventSubType || ''),
         description,
       );
+      const candidate = {
+        id: `on511:${String(event.ID ?? '')}`,
+        roadway: String(event.RoadwayName || '').trim() || null,
+        description,
+        locationLat: lat,
+        locationLng: lng,
+      };
+      if (!isOttawaScopedIncident(candidate)) return null;
 
       return {
-        id: `on511:${String(event.ID ?? '')}`,
+        id: candidate.id,
         eventType,
         description,
-        roadway: String(event.RoadwayName || '').trim() || null,
+        roadway: candidate.roadway,
         locationLat: lat,
         locationLng: lng,
         severity: String(event.Severity || '').trim() || null,
@@ -621,7 +629,7 @@ async function runMonitor(): Promise<void> {
 
     if (all.length === 0) {
       monitorState.lastSuccessAt = new Date().toISOString();
-      console.log('[monitor] no Ontario incidents matched current filters');
+      console.log('[monitor] no Ottawa incidents matched current filters');
       return;
     }
 
@@ -664,7 +672,7 @@ async function runMonitor(): Promise<void> {
     if (fresh.length === 0 && changed.length === 0) {
       monitorState.lastSuccessAt = new Date().toISOString();
       console.log(
-        `[monitor] checked ${all.length} Ontario incidents across ${INCIDENT_SOURCES.length} sources; no new incidents, retained ${staleIds.length} historical incidents`,
+        `[monitor] checked ${all.length} Ottawa incidents across ${INCIDENT_SOURCES.length} sources; no new incidents, retained ${staleIds.length} historical incidents`,
       );
       return;
     }
@@ -709,7 +717,7 @@ async function runMonitor(): Promise<void> {
       });
 
       if (incident.alerted) {
-        const location = incident.roadway || incident.description.slice(0, 80) || 'Ontario';
+        const location = incident.roadway || incident.description.slice(0, 80) || 'Ottawa';
         sendToAllActiveOperators({
           title: 'Incident Alert',
           body: `${prettyType(incident.eventType)} - ${location}`,
@@ -763,7 +771,7 @@ async function runMonitor(): Promise<void> {
 
     monitorState.lastSuccessAt = new Date().toISOString();
     console.log(
-      `[monitor] ${fresh.length} new, ${changed.length} updated, and ${staleIds.length} retained as history from ${INCIDENT_SOURCES.length} Ontario sources - ${alertCount} operator alerts sent`,
+      `[monitor] ${fresh.length} new, ${changed.length} updated, and ${staleIds.length} retained as history from ${INCIDENT_SOURCES.length} Ottawa sources - ${alertCount} operator alerts sent`,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown monitor error';
@@ -793,6 +801,6 @@ export function startIncidentMonitor(): void {
   }, 10_000);
 
   console.log(
-    `[monitor] Ontario incident monitor started - ${INCIDENT_SOURCES.length} official sources, polling every ${Math.round(POLL_INTERVAL_MS / 1000)} sec`,
+    `[monitor] Ottawa incident monitor started - ${INCIDENT_SOURCES.length} official sources, polling every ${Math.round(POLL_INTERVAL_MS / 1000)} sec`,
   );
 }

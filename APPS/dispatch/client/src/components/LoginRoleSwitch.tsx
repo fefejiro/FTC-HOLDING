@@ -27,7 +27,7 @@ export default function LoginRoleSwitch({ activeRole, className }: LoginRoleSwit
       )}
     >
       <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-        Access profile
+        Role view
       </label>
       <select
         aria-label="Login role switch"

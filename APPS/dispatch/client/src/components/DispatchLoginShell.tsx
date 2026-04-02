@@ -12,6 +12,7 @@ type DispatchLoginShellProps = {
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  showRoleSwitch?: boolean;
 };
 
 export default function DispatchLoginShell({
@@ -23,6 +24,7 @@ export default function DispatchLoginShell({
   children,
   footer,
   className,
+  showRoleSwitch = false,
 }: DispatchLoginShellProps) {
   return (
     <div className="min-h-dvh bg-dispatch-bg px-5 py-10 flex items-center justify-center">
@@ -49,9 +51,11 @@ export default function DispatchLoginShell({
 
           <p className="mb-5 text-sm leading-relaxed text-slate-400">{subtitle}</p>
 
-          <div className="mb-5">
-            <LoginRoleSwitch activeRole={activeRole} />
-          </div>
+          {showRoleSwitch ? (
+            <div className="mb-5">
+              <LoginRoleSwitch activeRole={activeRole} />
+            </div>
+          ) : null}
 
           {children}
 

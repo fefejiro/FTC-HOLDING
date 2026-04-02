@@ -38,6 +38,7 @@ import { useEvents } from '../hooks/useEvents';
 import { usePush } from '../hooks/usePush';
 import { cn } from '../lib/cn';
 import { requestMatchesDemoMode } from '../lib/demo';
+import { OTTAWA_CENTER as OTTAWA_SCOPE_CENTER, isOttawaScopedIncident } from '../lib/ottawaScope';
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
 type RequestStatus = 'pending' | 'accepted' | 'en_route' | 'completed' | 'cancelled';
@@ -137,11 +138,11 @@ const SERVICE_LABELS: Record<ServiceType, string> = {
 };
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; badge: string; bar: string }> = {
-  pending: { label: 'Pending', badge: 'bg-amber-500/15 text-amber-400', bar: 'bg-orange-500' },
-  accepted: { label: 'Accepted', badge: 'bg-blue-500/15 text-blue-400', bar: 'bg-blue-500' },
-  en_route: { label: 'En Route', badge: 'bg-purple-500/15 text-purple-400', bar: 'bg-purple-500' },
+  pending: { label: 'New', badge: 'bg-amber-500/15 text-amber-400', bar: 'bg-orange-500' },
+  accepted: { label: 'Viewed', badge: 'bg-blue-500/15 text-blue-400', bar: 'bg-blue-500' },
+  en_route: { label: 'Heading there', badge: 'bg-purple-500/15 text-purple-400', bar: 'bg-purple-500' },
   completed: { label: 'Completed', badge: 'bg-green-500/15 text-green-400', bar: 'bg-green-500' },
-  cancelled: { label: 'Cancelled', badge: 'bg-slate-700/50 text-slate-500', bar: 'bg-slate-700' },
+  cancelled: { label: 'Unable to complete', badge: 'bg-slate-700/50 text-slate-500', bar: 'bg-slate-700' },
 };
 
 const INCIDENT_LABELS: Record<string, string> = {
@@ -219,6 +220,13 @@ function incidentSourceLabel(incident: Incident) {
   return 'Official incident feed';
 }
 
+function incidentSourceTrustLabel(incident: Incident) {
+  if (incident.id.startsWith('ottawa_traffic:')) return 'Official Ottawa traffic feed';
+  if (incident.id.startsWith('octranspo:')) return 'Official Ottawa transit feed';
+  if (incident.id.startsWith('on511:')) return 'Official regional feed';
+  return 'Official feed';
+}
+
 function incidentOccurredMs(incident: Incident) {
   const ts =
     parseTimestamp(incident.occurredAt) ??
@@ -238,6 +246,62 @@ function timeAgo(dateStr?: string | null, nowMs = Date.now()) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+function incidentFreshnessMeta(dateStr?: string | null) {
+  const ts = parseTimestamp(dateStr);
+  if (ts === null) {
+    return {
+      label: 'Freshness unknown',
+      tone: 'border-slate-700 bg-slate-800/60 text-slate-400',
+    };
+  }
+  const minutes = Math.max(0, Math.floor((Date.now() - ts) / 60000));
+  if (minutes <= 15) {
+    return {
+      label: 'Fresh now',
+      tone: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
+    };
+  }
+  if (minutes <= 60) {
+    return {
+      label: 'Recent',
+      tone: 'border-cyan-500/25 bg-cyan-500/10 text-cyan-200',
+    };
+  }
+  if (minutes <= 180) {
+    return {
+      label: 'Aging',
+      tone: 'border-amber-500/25 bg-amber-500/10 text-amber-200',
+    };
+  }
+  return {
+    label: 'Stale',
+    tone: 'border-slate-700 bg-slate-800/60 text-slate-400',
+  };
+}
+
+function incidentConfidenceMeta(incident: IncidentWithMeta | Incident) {
+  if (incident.alerted) {
+    if (incident.id.startsWith('ottawa_traffic:') || incident.id.startsWith('octranspo:')) {
+      return {
+        label: 'Qualified Ottawa signal',
+        tone: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
+      };
+    }
+    return {
+      label: 'Qualified official signal',
+      tone: 'border-cyan-500/25 bg-cyan-500/10 text-cyan-200',
+    };
+  }
+  return {
+    label: 'Limited feed confidence',
+    tone: 'border-slate-700 bg-slate-800/60 text-slate-400',
+  };
+}
+
+function isQualifiedOperatorSignal(incident: IncidentWithMeta) {
+  return Boolean(incident.alerted) || incident.roadsideScore >= 65;
 }
 
 function fmt(dateStr?: string | null) {
@@ -585,12 +649,12 @@ function PinScreen({
     <DispatchLoginShell
       activeRole="operator"
       icon={<Zap className="w-7 h-7" />}
-      eyebrow={demoMode ? 'Dispatch demo access' : 'Dispatch access'}
-      title={demoMode ? 'Operator sign in' : 'Operator login'}
+      eyebrow="Ottawa roadside operations"
+      title="Dispatch sign in"
       subtitle={
         demoMode
-          ? `Use the invited sandbox credentials for session ${demoSessionId || 'demo'}.`
-          : 'Choose your operator name, enter your PIN, and continue into the live queue.'
+          ? `Use the invited sandbox credentials for session ${demoSessionId || 'demo'} to open the field workspace.`
+          : 'Choose your name, enter your PIN, and continue into the live field workspace.'
       }
       footer={
         <div className="space-y-3">
@@ -761,7 +825,7 @@ function RequestDetailCard({
       <div className="flex items-center justify-between gap-3 mb-4">
         <button type="button" onClick={onBack} className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" />
-          Back to queue
+          Back to jobs
         </button>
         <div className="flex items-center gap-2">
           {demoMode ? <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-orange-300">Demo request</span> : null}
@@ -799,8 +863,8 @@ function RequestDetailCard({
           <div className="text-slate-300 text-sm mt-2">{fmt(request.createdAt)}</div>
         </div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
-          <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Accepted</div>
-          <div className="text-slate-300 text-sm mt-2">{request.acceptedAt ? fmt(request.acceptedAt) : 'Not yet accepted'}</div>
+          <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Viewed</div>
+          <div className="text-slate-300 text-sm mt-2">{request.acceptedAt ? fmt(request.acceptedAt) : 'Not viewed yet'}</div>
         </div>
       </div>
 
@@ -829,7 +893,7 @@ function RequestDetailCard({
 
       {request.status === 'pending' ? (
         <button type="button" onClick={() => onStatusChange(request.id, 'accepted', operatorId)} disabled={isUpdating} className="w-full py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-400 active:bg-orange-600 disabled:opacity-50 transition-all">
-          {isUpdating ? 'Accepting...' : 'Accept job'}
+          {isUpdating ? 'Saving...' : 'Mark viewed'}
         </button>
       ) : null}
 
@@ -838,15 +902,24 @@ function RequestDetailCard({
           {request.status === 'accepted' ? (
             <button type="button" onClick={() => onStatusChange(request.id, 'en_route', operatorId)} disabled={isUpdating} className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-500 disabled:opacity-50 transition-all">
               {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Mark en route
+              Heading there
             </button>
           ) : null}
           {request.status === 'en_route' ? (
             <button type="button" onClick={() => onStatusChange(request.id, 'completed', operatorId)} disabled={isUpdating} className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-green-600 text-white text-sm font-bold hover:bg-green-500 disabled:opacity-50 transition-all">
               {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              Complete job
+              Mark completed
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => onStatusChange(request.id, 'cancelled', operatorId)}
+            disabled={isUpdating}
+            className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-dispatch-bg border border-dispatch-border text-slate-200 text-sm font-bold hover:bg-slate-800 disabled:opacity-50 transition-all"
+          >
+            {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+            Unable to complete
+          </button>
         </div>
       ) : null}
 
@@ -940,10 +1013,10 @@ function IncidentMapPanel({
       <div className="flex items-center justify-between gap-3 mb-3">
         <div>
           <div className="text-white text-sm font-semibold">Live incident map</div>
-          <div className="text-slate-500 text-xs mt-1">Pan, zoom, and tap markers like a normal map.</div>
+          <div className="text-slate-500 text-xs mt-1">Ottawa live coverage only. Pan, zoom, and tap markers like a normal map.</div>
         </div>
         <div className="text-right">
-          <div className="text-slate-500 text-[11px] uppercase tracking-[0.14em]">Reference point</div>
+          <div className="text-slate-500 text-[11px] uppercase tracking-[0.14em]">Coverage anchor</div>
           <div className="text-slate-200 text-xs mt-1">{proximityPoint.label}</div>
         </div>
       </div>
@@ -1002,8 +1075,8 @@ function IncidentMapPanel({
               <Popup>
                 <div className="text-sm">
                   <div className="font-semibold">{incidentLabel(incident)}</div>
-                  <div className="mt-1">{incident.roadway || incident.city}</div>
-                  <div className="mt-1 text-slate-600">{formatDistance(incident.distanceKm)} from {proximityPoint.label}</div>
+                  <div className="mt-1">{incident.roadway || 'Ottawa area'}</div>
+                  <div className="mt-1 text-slate-600">Ottawa coverage item</div>
                 </div>
               </Popup>
             </CircleMarker>
@@ -1028,7 +1101,7 @@ function IncidentMapPanel({
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full bg-cyan-400/30 border-2 border-cyan-300" />
-          Distance reference
+          Ottawa coverage anchor
         </div>
       </div>
     </div>
@@ -1040,6 +1113,8 @@ function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel
   const label = incidentLabel(incident);
   const isHigh = incidentIsHighPriority(incident);
   const occurredAt = incidentOccurredAt(incident);
+  const freshness = incidentFreshnessMeta(occurredAt);
+  const confidence = incidentConfidenceMeta(incident);
 
   return (
     <div className={cn('relative bg-dispatch-surface border rounded-2xl overflow-hidden transition-all', selected ? 'border-orange-500/40 shadow-[0_0_0_1px_rgba(249,115,22,0.18)]' : incident.alerted ? 'border-orange-500/30' : 'border-dispatch-border')}>
@@ -1060,7 +1135,6 @@ function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel
           </div>
           <div className="flex flex-col items-end gap-1">
             {incident.alerted ? <span className="text-xs text-orange-400 font-semibold border border-orange-500/25 bg-orange-500/10 px-2.5 py-1 rounded-full whitespace-nowrap">Alerted</span> : null}
-            <span className="text-[11px] text-cyan-300 font-semibold">{formatDistance(incident.distanceKm)}</span>
             <span className="text-[11px] text-lime-300 font-semibold">{roadsideLabel(incident.roadsideType)} ({incident.roadsideScore}%)</span>
           </div>
         </div>
@@ -1070,10 +1144,13 @@ function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel
             <span className="font-medium">{incident.roadway}</span>
           </div>
         ) : null}
-        <div className="text-[11px] text-slate-500 mb-2">
-          {incident.city} - {formatDistance(incident.distanceKm)} from {proximityLabel}
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          <span className="rounded-full border border-slate-700 bg-slate-800/60 px-2.5 py-1 text-[11px] font-medium text-slate-300">Ottawa</span>
+          <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', freshness.tone)}>{freshness.label}</span>
+          <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', confidence.tone)}>{confidence.label}</span>
         </div>
-        <div className="text-[11px] text-cyan-300 mb-2">{incidentSourceLabel(incident)}</div>
+        <div className="text-[11px] text-cyan-300 mb-1">Source: {incidentSourceLabel(incident)}</div>
+        <div className="text-[11px] text-slate-500 mb-2">Updated {fmtOptional(occurredAt)} • {timeAgo(occurredAt)}</div>
         {incident.description ? <p className="text-slate-500 text-xs leading-relaxed line-clamp-2 mb-3">{incident.description}</p> : null}
         <div className="flex gap-2">
           {onSelect ? <button type="button" onClick={() => onSelect(incident)} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all', selected ? 'bg-slate-700 text-white' : 'bg-dispatch-bg text-slate-300 hover:text-white hover:bg-slate-800')}>{selected ? 'Viewing details' : 'Open details'}</button> : null}
@@ -1099,6 +1176,8 @@ function IncidentDetailCard({
   const mapsUrl = incidentMapsUrl(incident);
   const severity = incident.severity ? String(incident.severity).replace(/_/g, ' ') : 'Not specified';
   const occurredAt = incidentOccurredAt(incident);
+  const freshness = incidentFreshnessMeta(occurredAt);
+  const confidence = incidentConfidenceMeta(incident);
   return (
     <div className="bg-dispatch-surface border border-orange-500/30 rounded-2xl p-5">
       <div className="flex items-center justify-between gap-3 mb-4">
@@ -1109,13 +1188,14 @@ function IncidentDetailCard({
         <div className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap bg-amber-500/15 text-amber-400">{incidentLabel(incident)}</div>
       </div>
       <div className="grid md:grid-cols-2 gap-3 mb-3">
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Roadway</div><div className="text-white text-sm font-semibold mt-2">{incident.roadway || 'Ontario area'}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Roadway</div><div className="text-white text-sm font-semibold mt-2">{incident.roadway || 'Ottawa area'}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Severity</div><div className="text-slate-300 text-sm mt-2">{severity}</div></div>
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Source</div><div className="text-cyan-300 text-sm mt-2">{incidentSourceLabel(incident)}</div></div>
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Reported</div><div className="text-slate-300 text-sm mt-2">{fmt(occurredAt)} ({timeAgo(occurredAt)})</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Source</div><div className="text-cyan-300 text-sm mt-2">{incidentSourceLabel(incident)}</div><div className="text-slate-500 text-[11px] mt-1">{incidentSourceTrustLabel(incident)}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Last updated</div><div className="text-slate-300 text-sm mt-2">{fmt(occurredAt)}</div><div className="text-slate-500 text-[11px] mt-1">{timeAgo(occurredAt)}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Coordinates</div><div className="text-slate-300 text-sm mt-2">{incident.locationLat && incident.locationLng ? `${incident.locationLat.toFixed(5)}, ${incident.locationLng.toFixed(5)}` : 'Coordinate precision unavailable'}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">City</div><div className="text-slate-300 text-sm mt-2">{incident.city}</div></div>
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Distance</div><div className="text-slate-300 text-sm mt-2">{formatDistance(incident.distanceKm)} from {proximityLabel}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Coverage</div><div className="text-slate-300 text-sm mt-2">Ottawa live workflow</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Confidence</div><div className={cn('inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium mt-2', confidence.tone)}>{confidence.label}</div><div className={cn('inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium mt-2 ml-2', freshness.tone)}>{freshness.label}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Likely assist</div><div className="text-lime-300 text-sm mt-2">{roadsideLabel(incident.roadsideType)} ({incident.roadsideScore}%)</div></div>
       </div>
       <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3 mb-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Incident detail</div><div className="text-slate-300 text-sm mt-2 leading-relaxed">{incident.description || 'No additional incident description was provided by the source feed.'}</div></div>
@@ -1134,10 +1214,10 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const { isSubscribed, isSupported, subscribe } = usePush({ operatorId: session.id });
   const [incidentMode, setIncidentMode] = useState<'active' | 'history' | 'all'>('active');
   const [incidentCategory, setIncidentCategory] = useState<'all' | 'emergency' | 'breakdown' | 'traffic' | 'transit'>('all');
-  const [incidentCity, setIncidentCity] = useState('all');
-  const [incidentSort, setIncidentSort] = useState<'roadside' | 'newest' | 'proximity'>('proximity');
+  const [incidentCity, setIncidentCity] = useState('Ottawa');
+  const [incidentSort, setIncidentSort] = useState<'roadside' | 'newest' | 'proximity'>('roadside');
   const [incidentRadiusKm, setIncidentRadiusKm] = useState(0);
-  const [proximityPoint, setProximityPoint] = useState<ProximityPoint>(OTTAWA_CENTER);
+  const [proximityPoint, setProximityPoint] = useState<ProximityPoint>(OTTAWA_SCOPE_CENTER);
   const [locatingProximity, setLocatingProximity] = useState(false);
   const [proximityError, setProximityError] = useState('');
   const [incidentSearch, setIncidentSearch] = useState('');
@@ -1238,11 +1318,12 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
     },
     onIncidentNew: (data) => {
       const incident = data as Incident;
+      if (!isOttawaScopedIncident(incident)) return;
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
       const likely = classifyRoadside(incident);
       if (incidentIsHighPriority(incident) || likely.roadsideScore >= 65) {
         playIncidentAlert();
-        addToast(`${roadsideLabel(likely.roadsideType)} - ${incident.roadway || 'Ontario area'}`, 'incident');
+        addToast(`${roadsideLabel(likely.roadsideType)} - ${incident.roadway || 'Ottawa area'}`, 'incident');
       }
     },
     onIncidentUpdated: (data) => {
@@ -1280,7 +1361,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   });
 
   const handleIncidentDispatch = useCallback(async (incident: Incident) => {
-    const roadway = incident.roadway || 'Ontario area';
+    const roadway = incident.roadway || 'Ottawa area';
     try {
       const response = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerName: `Lead - ${roadway}`, customerPhone: '000-000-0000', serviceType: 'other', locationLat: incident.locationLat, locationLng: incident.locationLng, locationAddress: roadway, notes: incident.description || undefined, mode: demoMode ? 'demo' : 'live', demoSessionId: demoMode ? demoSessionId || undefined : undefined }) });
       if (!response.ok) throw new Error('Failed to create job');
@@ -1321,9 +1402,13 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
           (incident.eventType || '').toUpperCase(),
         ),
       );
+  const ottawaScopedIncidentFeed = useMemo(
+    () => categoryFilteredIncidentFeed.filter((incident) => isOttawaScopedIncident(incident)),
+    [categoryFilteredIncidentFeed],
+  );
   const incidentFeedWithMeta = useMemo<IncidentWithMeta[]>(
     () =>
-      categoryFilteredIncidentFeed.map((incident) => {
+      ottawaScopedIncidentFeed.map((incident) => {
         const lat = toNumber(incident.locationLat);
         const lng = toNumber(incident.locationLng);
         const distanceKm =
@@ -1337,30 +1422,22 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
           ...classifyRoadside(incident),
         };
       }),
-    [categoryFilteredIncidentFeed, proximityPoint.lat, proximityPoint.lng],
+    [ottawaScopedIncidentFeed, proximityPoint.lat, proximityPoint.lng],
+  );
+  const qualifiedIncidentFeed = useMemo(
+    () => incidentFeedWithMeta.filter((incident) => isQualifiedOperatorSignal(incident)),
+    [incidentFeedWithMeta],
   );
   const cityOptions = useMemo(() => {
-    const unique = Array.from(
-      new Set(['Ottawa', ...incidentFeedWithMeta.map((incident) => incident.city)]),
-    ).sort(
-      (a, b) => a.localeCompare(b),
-    );
-    return unique;
-  }, [incidentFeedWithMeta]);
+    return ['Ottawa'];
+  }, []);
   useEffect(() => {
-    if (incidentCity === 'all') return;
     if (!cityOptions.includes(incidentCity)) {
-      setIncidentCity('all');
+      setIncidentCity('Ottawa');
     }
   }, [cityOptions, incidentCity]);
-  const cityFilteredIncidentFeed = incidentCity === 'all'
-    ? incidentFeedWithMeta
-    : incidentFeedWithMeta.filter((incident) => incidentMatchesCity(incident, incidentCity));
-  const radiusFilteredIncidentFeed = incidentRadiusKm > 0
-    ? cityFilteredIncidentFeed.filter(
-        (incident) => incident.distanceKm !== null && incident.distanceKm <= incidentRadiusKm,
-      )
-    : cityFilteredIncidentFeed;
+  const cityFilteredIncidentFeed = qualifiedIncidentFeed.filter((incident) => incidentMatchesCity(incident, 'Ottawa'));
+  const radiusFilteredIncidentFeed = cityFilteredIncidentFeed;
   const sortedIncidentFeed = useMemo(() => {
     const next = [...radiusFilteredIncidentFeed];
     if (incidentSort === 'proximity') {
@@ -1394,6 +1471,11 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const sourceCount = status?.incidentMonitor?.sourceCount ?? 3;
   const pollSeconds = Math.max(1, Math.round((status?.incidentMonitor?.pollIntervalMs ?? 60_000) / 1000));
   const lastPoll = formatPoll(status?.incidentMonitor?.lastSuccessAt);
+  const monitorLastSuccessMs = parseTimestamp(status?.incidentMonitor?.lastSuccessAt);
+  const monitorNeedsCaution =
+    monitorLastSuccessMs === null ||
+    Date.now() - monitorLastSuccessMs > Math.max(180_000, pollSeconds * 1000 * 4);
+  const hasWeakOttawaSignals = incidentFeedWithMeta.length > 0 && qualifiedIncidentFeed.length === 0;
 
   useEffect(() => {
     if (demoMode || filter !== 'incidents' || !selectedIncidentId) return;
@@ -1510,12 +1592,12 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
         <DispatchAccessPanel
           activeRole="operator"
           profileLabel={session.name}
-          profileMeta={demoMode ? `Demo session ${demoSessionId || 'active'}` : 'Live operator profile'}
+          profileMeta={demoMode ? `Demo session ${demoSessionId || 'active'}` : 'Live field operator'}
           showRoleSwitch={false}
           className="mt-3"
         />
 
-        {demoMode ? <div className="mt-3 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-sm text-orange-100">Only requests from this demo session are shown in the queue. The incident watch remains live so the client can see real system movement while testing.</div> : null}
+        {demoMode ? <div className="mt-3 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-sm text-orange-100">Only requests from this demo session are shown in the queue. The incident watch uses official Ottawa feed activity only and does not inject demo incidents.</div> : null}
 
         {isSupported && !isSubscribed ? (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
@@ -1540,7 +1622,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
           </div>
           <div className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 border border-orange-500/20 bg-orange-500/10 text-orange-300 text-xs font-semibold">
             <TriangleAlert className="w-3.5 h-3.5" />
-            {sourceCount} official sources - about every {pollSeconds}s
+            {sourceCount} Ottawa sources - about every {pollSeconds}s
           </div>
           <div className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 border border-dispatch-border bg-dispatch-surface text-slate-400 text-xs font-semibold">
             <Clock className="w-3.5 h-3.5" />
@@ -1552,7 +1634,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
       </div>
 
       <div className="px-5 py-3 flex gap-2 border-b border-dispatch-border overflow-x-auto">
-        {[{ key: 'active' as const, label: demoMode ? 'Active demo' : 'Active', badge: pendingCount, danger: false }, { key: 'all' as const, label: demoMode ? 'All demo' : 'All jobs', badge: 0, danger: false }, { key: 'incidents' as const, label: 'Road alerts', badge: 0, danger: true }].map(({ key, label, badge, danger }) => (
+        {[{ key: 'active' as const, label: demoMode ? 'Active demo jobs' : 'Active jobs', badge: pendingCount, danger: false }, { key: 'all' as const, label: demoMode ? 'All demo jobs' : 'All jobs', badge: 0, danger: false }, { key: 'incidents' as const, label: 'Road alerts', badge: 0, danger: true }].map(({ key, label, badge, danger }) => (
           <button key={key} type="button" onClick={() => setFilter(key)} className={cn('px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2', filter === key ? danger ? 'bg-red-600 text-white' : 'bg-orange-500 text-white' : 'bg-dispatch-surface text-slate-400 hover:text-white')}>
             {key === 'incidents' ? <TriangleAlert className="w-3.5 h-3.5" /> : null}
             {label}
@@ -1607,24 +1689,15 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
                   </button>
                 ))}
               </div>
-              <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <label className="flex items-center gap-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5 min-h-11">
-                  <MapPin className="w-4 h-4 text-slate-500" />
-                  <select
-                    value={incidentCity}
-                    onChange={(event) => {
-                      setIncidentCity(event.target.value);
-                      setSelectedIncidentId(null);
-                    }}
-                    className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
-                  >
-                    <option value="all" className="bg-slate-950 text-slate-100">All cities</option>
-                    {cityOptions.map((city) => (
-                      <option key={city} value={city} className="bg-slate-950 text-slate-100">
-                        {city}
-                      </option>
-                    ))}
-                  </select>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px] gap-2">
+                <label className="flex items-center gap-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5">
+                  <Search className="w-4 h-4 text-slate-500" />
+                  <input
+                    value={incidentSearch}
+                    onChange={(event) => setIncidentSearch(event.target.value)}
+                    placeholder="Search Ottawa road, route, or incident text"
+                    className="w-full bg-transparent text-sm text-slate-200 placeholder-slate-600 focus:outline-none"
+                  />
                 </label>
                 <label className="flex items-center gap-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5 min-h-11">
                   <Navigation2 className="w-4 h-4 text-slate-500" />
@@ -1633,64 +1706,19 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
                     onChange={(event) => setIncidentSort(event.target.value as 'roadside' | 'newest' | 'proximity')}
                     className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
                   >
-                    <option value="proximity" className="bg-slate-950 text-slate-100">Sort: closest first</option>
-                    <option value="roadside" className="bg-slate-950 text-slate-100">Sort: most likely assist</option>
+                    <option value="roadside" className="bg-slate-950 text-slate-100">Sort: strongest assist signal</option>
                     <option value="newest" className="bg-slate-950 text-slate-100">Sort: newest first</option>
                   </select>
                 </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={useMyLocationForProximity}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 transition-colors min-h-11"
-                  >
-                    {locatingProximity ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
-                    Use my location
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProximityPoint(OTTAWA_CENTER)}
-                    className="inline-flex items-center justify-center rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors min-h-11"
-                  >
-                    Ottawa
-                  </button>
-                </div>
               </div>
-              <div className="mt-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs font-semibold text-slate-300">Distance radius</div>
-                  <div className="text-xs font-semibold text-cyan-300">
-                    {incidentRadiusKm > 0 ? `Within ${incidentRadiusKm} km` : 'All distances'}
-                  </div>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={incidentRadiusKm}
-                  onChange={(event) => setIncidentRadiusKm(Number(event.target.value))}
-                  className="mt-2 w-full accent-cyan-400"
-                />
-                <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>All</span>
-                  <span>50 km</span>
-                  <span>100 km</span>
-                </div>
+              <div className="mt-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-[11px] text-cyan-200">
+                Ottawa-only live scope. Out-of-area incidents are hidden from this workflow.
               </div>
-              <p className="mt-2 text-[11px] text-slate-500">
-                Distances measured from {proximityPoint.label}.
-                {proximityError ? ` ${proximityError}` : ''}
-              </p>
-              <label className="mt-2 flex items-center gap-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5">
-                <Search className="w-4 h-4 text-slate-500" />
-                <input
-                  value={incidentSearch}
-                  onChange={(event) => setIncidentSearch(event.target.value)}
-                  placeholder="Search road, city, route, or incident text"
-                  className="w-full bg-transparent text-sm text-slate-200 placeholder-slate-600 focus:outline-none"
-                />
-              </label>
+              {monitorNeedsCaution ? (
+                <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-[11px] text-amber-200">
+                  Limited feed confidence at the moment. Last successful poll {lastPoll}.
+                </div>
+              ) : null}
             </div>
             {!incidentsLoading && sortedIncidentFeed.length > 0 ? (
               <IncidentMapPanel
@@ -1700,8 +1728,8 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
                 proximityPoint={proximityPoint}
               />
             ) : null}
-            {incidentsLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading Ontario incidents...</div> : null}
-            {!incidentsLoading && sortedIncidentFeed.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mb-4"><CheckCircle2 className="w-8 h-8 text-green-500" /></div><p className="text-slate-300 font-semibold">No incidents for this filter</p><p className="text-slate-600 text-sm mt-1">{incidentRadiusKm > 0 ? `No incidents found within ${incidentRadiusKm} km.` : incidentCity !== 'all' ? `No incidents matched ${incidentCity}.` : incidentCategory !== 'all' ? `No ${incidentCategory} incidents matched.` : incidentMode === 'history' ? 'No historical incidents matched your filters yet.' : 'No active Ontario incidents matched your filters.'}</p></div> : null}
+            {incidentsLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading Ottawa incidents...</div> : null}
+            {!incidentsLoading && sortedIncidentFeed.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mb-4"><CheckCircle2 className="w-8 h-8 text-green-500" /></div><p className="text-slate-300 font-semibold">{incidentCategory !== 'all' || incidentMode === 'history' ? 'No qualified Ottawa events for this filter' : 'No strong nearby Ottawa signal right now'}</p><p className="text-slate-600 text-sm mt-1 max-w-sm">{hasWeakOttawaSignals ? `Monitoring for qualified Ottawa events. Limited feed confidence at the moment. Last successful poll ${lastPoll}.` : incidentCategory !== 'all' ? `Monitoring for qualified Ottawa ${incidentCategory} events.` : incidentMode === 'history' ? 'Monitoring for qualified Ottawa events as history becomes available.' : monitorNeedsCaution ? `Monitoring for qualified Ottawa events. Limited feed confidence at the moment. Last successful poll ${lastPoll}.` : 'Monitoring for qualified Ottawa events.'}</p></div> : null}
             {sortedIncidentFeed.map((incident) => (
               <Fragment key={incident.id}>
                 <IncidentCard incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onDispatch={handleIncidentDispatch} />
@@ -1715,7 +1743,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
           <>
             {selectedRequest ? <RequestDetailCard request={selectedRequest} operatorId={session.id} operatorName={session.name} demoMode={demoMode} demoSessionId={demoSessionId} isUpdating={isUpdating} showFeedback={showFeedback} onBack={() => setSelectedRequestId(null)} onToggleFeedback={() => setShowFeedback((current) => !current)} onStatusChange={(id, statusValue, operatorId) => updateStatus({ id, status: statusValue, operatorId })} /> : null}
             {isLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading jobs...</div> : null}
-            {!isLoading && displayRequests.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-dispatch-surface border border-dispatch-border rounded-full flex items-center justify-center mb-4">{filter === 'active' ? <CheckCircle2 className="w-8 h-8 text-slate-600" /> : <RefreshCw className="w-8 h-8 text-slate-600" />}</div><p className="text-slate-400 font-semibold">{filter === 'active' ? demoMode ? 'No active demo jobs' : 'No active jobs' : demoMode ? 'No demo jobs yet' : 'No jobs yet'}</p><p className="text-slate-600 text-sm mt-1 max-w-xs">{demoMode ? 'Submit a sample roadside request from the demo link, then it will appear here automatically.' : 'Submitted customer requests will appear here.'}</p></div> : null}
+            {!isLoading && displayRequests.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-dispatch-surface border border-dispatch-border rounded-full flex items-center justify-center mb-4">{filter === 'active' ? <CheckCircle2 className="w-8 h-8 text-slate-600" /> : <RefreshCw className="w-8 h-8 text-slate-600" />}</div><p className="text-slate-400 font-semibold">{filter === 'active' ? demoMode ? 'No active demo jobs' : 'No active jobs right now' : demoMode ? 'No demo jobs yet' : 'No jobs yet'}</p><p className="text-slate-600 text-sm mt-1 max-w-xs">{demoMode ? 'Submit a sample roadside request from the demo link, then it will appear here automatically.' : 'New customer jobs will appear here automatically.'}</p></div> : null}
             {displayRequests.map((request) => <JobCard key={request.id} request={request} onOpen={() => setSelectedRequestId(request.id)} />)}
           </>
         )}
