@@ -17,12 +17,48 @@ import { getVapidPublicKey, sendToAllActiveOperators } from './push';
 import { incidents, operators, requests } from './schema';
 import { sseAdd, sseBroadcast, sseClientCount, sseRemove } from './sse';
 
+const INCIDENT_SOURCE_DEFS = [
+  { key: 'on511', label: 'Ontario 511', prefix: 'on511:' },
+  { key: 'ottawa_traffic', label: 'City of Ottawa traffic', prefix: 'ottawa_traffic:' },
+  { key: 'octranspo', label: 'OC Transpo service alerts', prefix: 'octranspo:' },
+  { key: 'tomtom', label: 'TomTom traffic', prefix: 'tomtom:' },
+  { key: 'waze', label: 'Waze (crowd-sourced)', prefix: 'waze:' },
+] as const;
+
+type IncidentSourceSummaryKey = (typeof INCIDENT_SOURCE_DEFS)[number]['key'];
+
 function serializeIncident(record: typeof incidents.$inferSelect) {
   return {
     ...record,
     createdAt: record.createdAt?.toISOString?.() || String(record.createdAt || ''),
     workflowStatus: normalizeSignalWorkflowStatus(record.workflowStatus),
   };
+}
+
+function getIncidentSourceKey(id: string | null | undefined): IncidentSourceSummaryKey | null {
+  const value = String(id || '');
+  const match = INCIDENT_SOURCE_DEFS.find((source) => value.startsWith(source.prefix));
+  return match?.key ?? null;
+}
+
+function formatEasternDayKey(value: Date) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Toronto',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(value);
+}
+
+function formatEasternDayLabel(dayKey: string) {
+  const date = new Date(`${dayKey}T12:00:00-04:00`);
+  if (Number.isNaN(date.getTime())) return dayKey;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Toronto',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
 }
 
 export async function registerRoutes(_server: Server, app: Express): Promise<void> {
@@ -36,6 +72,60 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       notifications: {
         webPushConfigured: Boolean(getVapidPublicKey()),
       },
+    });
+  });
+
+  app.get('/api/incidents/source-summary', async (req, res) => {
+    if (!canAccessOperatorSurface(req) && !canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Operator or admin access required' });
+      return;
+    }
+
+    const dateSchema = z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional();
+    const parsedDate = dateSchema.safeParse(req.query.date);
+    if (!parsedDate.success) {
+      res.status(400).json({ error: 'Invalid date. Use YYYY-MM-DD.' });
+      return;
+    }
+
+    const dayKey = parsedDate.data ?? formatEasternDayKey(new Date());
+    const rows = await db
+      .select({
+        id: incidents.id,
+        roadway: incidents.roadway,
+        description: incidents.description,
+        locationLat: incidents.locationLat,
+        locationLng: incidents.locationLng,
+        createdAt: incidents.createdAt,
+      })
+      .from(incidents);
+
+    const totals = new Map<IncidentSourceSummaryKey, number>(
+      INCIDENT_SOURCE_DEFS.map((source) => [source.key, 0]),
+    );
+
+    for (const row of rows) {
+      if (!row.createdAt) continue;
+      if (formatEasternDayKey(row.createdAt) !== dayKey) continue;
+      if (!isOttawaScopedIncident(row)) continue;
+      const sourceKey = getIncidentSourceKey(row.id);
+      if (!sourceKey) continue;
+      totals.set(sourceKey, (totals.get(sourceKey) ?? 0) + 1);
+    }
+
+    res.json({
+      ok: true,
+      date: dayKey,
+      dayLabel: formatEasternDayLabel(dayKey),
+      sourceCount: INCIDENT_SOURCE_DEFS.length,
+      items: INCIDENT_SOURCE_DEFS.map((source) => ({
+        key: source.key,
+        label: source.label,
+        count: totals.get(source.key) ?? 0,
+      })),
     });
   });
 

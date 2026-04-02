@@ -5,19 +5,18 @@ import { cn } from '../lib/cn';
 export interface SourceMonitorItem {
   key: string;
   label: string;
-  fetched: number;
-  eligible?: number;
-  inserted?: number;
-  updated?: number;
+  count: number;
 }
 
 export default function SourceMonitorSummary({
   sourceCount,
+  dayLabel,
   items,
   compact = false,
   className,
 }: {
   sourceCount: number;
+  dayLabel: string;
   items: SourceMonitorItem[];
   compact?: boolean;
   className?: string;
@@ -25,10 +24,9 @@ export default function SourceMonitorSummary({
   const [open, setOpen] = useState(false);
 
   const summaryText = useMemo(() => {
-    if (items.length === 0) return `${sourceCount} live sources`;
-    const activeSources = items.filter((item) => item.fetched > 0).length;
-    return `${sourceCount} live sources${activeSources > 0 ? `, ${activeSources} reporting now` : ''}`;
-  }, [items, sourceCount]);
+    const totalSignals = items.reduce((sum, item) => sum + item.count, 0);
+    return `${sourceCount} sources, ${totalSignals} signals on ${dayLabel}`;
+  }, [dayLabel, items, sourceCount]);
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -50,7 +48,7 @@ export default function SourceMonitorSummary({
                 {summaryText}
               </div>
               <div className={cn('text-xs', compact ? 'text-orange-200/80' : 'text-slate-500')}>
-                Tap to see each source count
+                Tap to see each source&apos;s daily count
               </div>
             </div>
           </div>
@@ -77,12 +75,12 @@ export default function SourceMonitorSummary({
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-white">{item.label}</div>
                   <div className="mt-1 text-[11px] text-slate-500">
-                    Eligible {item.eligible ?? 0} • New {item.inserted ?? 0} • Updated {item.updated ?? 0}
+                    Signals received on {dayLabel}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-bold tabular-nums text-cyan-300">{item.fetched}</div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Current count</div>
+                  <div className="text-lg font-bold tabular-nums text-cyan-300">{item.count}</div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Daily count</div>
                 </div>
               </div>
             ))}

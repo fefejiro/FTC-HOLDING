@@ -120,23 +120,16 @@ interface IncidentFeedItem {
   actionCount?: number | null;
 }
 
-interface DispatchStatusResponse {
+interface IncidentSourceSummaryResponse {
   ok: boolean;
-  incidentMonitor?: {
-    sourceCount?: number;
-    sources?: Array<{ key: string; label: string; url: string }>;
-    sourceStats?: Record<
-      string,
-      {
-        fetched?: number;
-        eligible?: number;
-        inserted?: number;
-        updated?: number;
-      }
-    >;
-    pollIntervalMs?: number;
-    lastSuccessAt?: string | null;
-  };
+  date: string;
+  dayLabel: string;
+  sourceCount: number;
+  items: Array<{
+    key: string;
+    label: string;
+    count: number;
+  }>;
 }
 
 type AdminFilter = 'all' | 'pending' | 'active' | 'completed' | 'cancelled';
@@ -559,15 +552,15 @@ function AdminDashboard({
     refetchInterval: 30_000,
   });
 
-  const { data: status } = useQuery<DispatchStatusResponse>({
-    queryKey: ['dispatch-status'],
+  const { data: sourceSummary } = useQuery<IncidentSourceSummaryResponse>({
+    queryKey: ['incident-source-summary'],
     queryFn: async () => {
-      const res = await fetch('/api/status');
-      if (!res.ok) throw new Error('Failed to load dispatch status');
-      return res.json() as Promise<DispatchStatusResponse>;
+      const res = await adminFetch('/api/incidents/source-summary');
+      if (!res.ok) throw new Error('Failed to load source summary');
+      return res.json() as Promise<IncidentSourceSummaryResponse>;
     },
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 
   const { data: incidentSummary } = useQuery<IncidentSummaryResponse>({
@@ -637,22 +630,9 @@ function AdminDashboard({
       ),
     [operators],
   );
-  const sourceCount = status?.incidentMonitor?.sourceCount ?? 0;
-  const sourceMonitorItems = useMemo(
-    () =>
-      (status?.incidentMonitor?.sources ?? []).map((source) => {
-        const snapshot = status?.incidentMonitor?.sourceStats?.[source.key];
-        return {
-          key: source.key,
-          label: source.label,
-          fetched: snapshot?.fetched ?? 0,
-          eligible: snapshot?.eligible ?? 0,
-          inserted: snapshot?.inserted ?? 0,
-          updated: snapshot?.updated ?? 0,
-        };
-      }),
-    [status?.incidentMonitor?.sourceStats, status?.incidentMonitor?.sources],
-  );
+  const sourceCount = sourceSummary?.sourceCount ?? 5;
+  const sourceMonitorItems = sourceSummary?.items ?? [];
+  const sourceSummaryDayLabel = sourceSummary?.dayLabel ?? 'today';
   const selectedRequest =
     filteredRequests.find((request) => request.id === selectedRequestId) ?? filteredRequests[0] ?? null;
 
@@ -792,6 +772,7 @@ function AdminDashboard({
         <SourceMonitorSummary
           sourceCount={sourceCount}
           items={sourceMonitorItems}
+          dayLabel={sourceSummaryDayLabel}
         />
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">

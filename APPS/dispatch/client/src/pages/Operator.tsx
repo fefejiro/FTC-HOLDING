@@ -134,6 +134,18 @@ interface DispatchStatusResponse {
   };
 }
 
+interface IncidentSourceSummaryResponse {
+  ok: boolean;
+  date: string;
+  dayLabel: string;
+  sourceCount: number;
+  items: Array<{
+    key: string;
+    label: string;
+    count: number;
+  }>;
+}
+
 interface Toast {
   id: number;
   message: string;
@@ -1533,6 +1545,18 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const requestFallbackMs = liveFeedConnected ? 30_000 : 12_000;
   const incidentFallbackMs = liveFeedConnected ? 25_000 : 10_000;
   const { data: status } = useQuery<DispatchStatusResponse>({ queryKey: ['dispatch-status'], queryFn: async () => { const response = await fetch('/api/status'); if (!response.ok) throw new Error('Failed to load dispatch status'); return response.json() as Promise<DispatchStatusResponse>; }, refetchInterval: 30_000, staleTime: 15_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
+  const { data: sourceSummary } = useQuery<IncidentSourceSummaryResponse>({
+    queryKey: ['incident-source-summary'],
+    queryFn: async () => {
+      const response = await operatorFetch('/api/incidents/source-summary');
+      if (!response.ok) throw new Error('Failed to load source summary');
+      return response.json() as Promise<IncidentSourceSummaryResponse>;
+    },
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  });
   const { data: allRequests = [], isLoading } = useQuery<ServiceRequest[]>({ queryKey: requestQueryKey, queryFn: async () => { const response = await operatorFetch(requestsUrl); if (!response.ok) throw new Error('Failed to load requests'); return response.json() as Promise<ServiceRequest[]>; }, refetchInterval: requestFallbackMs, refetchIntervalInBackground: true, staleTime: 12_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
   const {
     data: incidentFeed = [],
@@ -1725,22 +1749,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     return next;
   }, [radiusFilteredIncidentFeed, incidentSort]);
   const selectedIncident = sortedIncidentFeed.find((incident) => incident.id === selectedIncidentId) || null;
-  const sourceCount = status?.incidentMonitor?.sourceCount ?? 3;
-  const sourceMonitorItems = useMemo(
-    () =>
-      (status?.incidentMonitor?.sources ?? []).map((source) => {
-        const snapshot = status?.incidentMonitor?.sourceStats?.[source.key];
-        return {
-          key: source.key,
-          label: source.label,
-          fetched: snapshot?.fetched ?? 0,
-          eligible: snapshot?.eligible ?? 0,
-          inserted: snapshot?.inserted ?? 0,
-          updated: snapshot?.updated ?? 0,
-        };
-      }),
-    [status?.incidentMonitor?.sourceStats, status?.incidentMonitor?.sources],
-  );
+  const sourceCount = sourceSummary?.sourceCount ?? status?.incidentMonitor?.sourceCount ?? 5;
+  const sourceMonitorItems = sourceSummary?.items ?? [];
+  const sourceSummaryDayLabel = sourceSummary?.dayLabel ?? 'today';
   const pollSeconds = Math.max(1, Math.round((status?.incidentMonitor?.pollIntervalMs ?? 60_000) / 1000));
   const lastPoll = formatPoll(status?.incidentMonitor?.lastSuccessAt);
   const monitorLastSuccessMs = parseTimestamp(status?.incidentMonitor?.lastSuccessAt);
@@ -1938,6 +1949,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           compact
           sourceCount={sourceCount}
           items={sourceMonitorItems}
+          dayLabel={sourceSummaryDayLabel}
         />
 
       </div>
