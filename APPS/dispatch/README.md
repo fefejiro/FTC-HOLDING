@@ -131,17 +131,17 @@ npm run cap:open
 
 ## Railway deploy
 
-This app lives inside a monorepo, so Railway must deploy `APPS/dispatch` as the archive root.
+This app lives inside a monorepo, and the Railway service is already linked to `APPS/dispatch` as its root directory.
 
 ```powershell
 cd "C:\FTC HOLDING\APPS\dispatch"
-railway up . --path-as-root --detach
+git push origin main
 ```
 
 Why this matters:
 
-- without `--path-as-root`, Railway builds from the monorepo root
-- that causes Railway to guess at the wrong build context
+- the linked Railway service already knows its root directory and config file
+- manual `railway up . --path-as-root --detach` duplicates that root and can fail with `Could not find root directory: APPS/dispatch`
 - the correct deploy path uses the `Dockerfile` and `railway.json` in this folder
 - the app-root `Dockerfile` is the only valid Railway Docker path for Dispatch
 
