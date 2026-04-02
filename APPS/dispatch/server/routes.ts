@@ -745,18 +745,25 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const activeWindowMs = 6 * 60 * 60 * 1000;
     const cutoff = Date.now() - activeWindowMs;
 
-    const results = await db
+    const sourcePrefix =
+      requestedSource
+        ? INCIDENT_SOURCE_DEFS.find((source) => source.key === requestedSource)?.prefix ?? null
+        : null;
+
+    const baseQuery = db
       .select()
       .from(incidents)
       .orderBy(desc(incidents.lastUpdated), desc(incidents.createdAt))
-      .limit(lim * 6);
+      .$dynamic();
+
+    const results = sourcePrefix
+      ? await baseQuery
+          .where(sql`${incidents.id} like ${`${sourcePrefix}%`}`)
+          .limit(lim * 6)
+      : await baseQuery.limit(lim * 6);
 
     const filtered = results
       .filter((incident) => isOttawaScopedIncident(incident))
-      .filter((incident) => {
-        if (!requestedSource) return true;
-        return getIncidentSourceKey(incident.id) === requestedSource;
-      })
       .filter((incident) => {
         const workflowStatus = normalizeSignalWorkflowStatus(incident.workflowStatus);
         const ts =
