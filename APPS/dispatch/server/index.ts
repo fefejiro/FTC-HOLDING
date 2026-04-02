@@ -6,6 +6,7 @@ import cors, { type CorsOptions } from 'cors';
 import { initPush } from './push';
 import { startIncidentMonitor, startWazeMonitor } from './monitor';
 import { canAccessAdminSurface } from './adminAccess';
+import { ensureDispatchIncidentWorkflowColumns } from './db';
 
 const app = express();
 const httpServer = createServer(app);
@@ -90,6 +91,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await ensureDispatchIncidentWorkflowColumns();
   initPush();
   startIncidentMonitor();
   startWazeMonitor();

@@ -39,6 +39,10 @@ CREATE TABLE IF NOT EXISTS incidents (
   last_updated TEXT,
   alerted BOOLEAN DEFAULT false,
   alerted_at TIMESTAMP,
+  workflow_status TEXT DEFAULT 'new_signal',
+  workflow_operator_id UUID REFERENCES operators(id),
+  workflow_started_at TIMESTAMP,
+  workflow_resolved_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW()
 );
 

@@ -24,6 +24,12 @@ import {
 import DispatchLoginShell from '../components/DispatchLoginShell';
 import { loginRoleHref } from '../lib/loginRoleRoutes';
 import { cn } from '../lib/cn';
+import {
+  SIGNAL_WORKFLOW_BADGES,
+  SIGNAL_WORKFLOW_LABELS,
+  type SignalWorkflowStatus,
+  normalizeSignalWorkflowStatus,
+} from '../lib/signalWorkflow';
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
 type RequestStatus = 'pending' | 'accepted' | 'en_route' | 'completed' | 'cancelled';
@@ -77,6 +83,10 @@ interface IncidentSummaryItem {
 
 interface IncidentSummaryResponse {
   total: number;
+  received: number;
+  beingPursued: number;
+  handled: number;
+  notLegit: number;
   viewed: number;
   actioned: number;
   notActioned: number;
@@ -100,13 +110,17 @@ interface IncidentFeedItem {
   lastUpdated?: string | null;
   occurredAt?: string | null;
   isHistorical?: boolean;
+  workflowStatus?: SignalWorkflowStatus | null;
+  workflowOperatorId?: string | null;
+  workflowStartedAt?: string | null;
+  workflowResolvedAt?: string | null;
   createdAt: string;
   viewCount?: number | null;
   actionCount?: number | null;
 }
 
 type AdminFilter = 'all' | 'pending' | 'active' | 'completed' | 'cancelled';
-type IncidentListFilter = 'all' | 'viewed' | 'actioned' | 'not_actioned';
+type IncidentListFilter = 'all' | 'received' | 'being_pursued' | 'handled' | 'not_legit';
 
 const SERVICE_ICONS: Record<ServiceType, React.ComponentType<{ className?: string }>> = {
   gas: Fuel,
@@ -466,9 +480,6 @@ function AdminDashboard({
   const [testPushResult, setTestPushResult] = useState('');
   const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
   const [incidentListFilter, setIncidentListFilter] = useState<IncidentListFilter>('all');
-  const [incidentActionState, setIncidentActionState] = useState<'idle' | 'saving' | 'ok' | 'error'>('idle');
-  const [incidentActionResult, setIncidentActionResult] = useState('');
-  const [incidentActionId, setIncidentActionId] = useState<string | null>(null);
 
   const adminFetch = useCallback(
     (url: string, options: RequestInit = {}) => {
@@ -564,17 +575,37 @@ function AdminDashboard({
 
   const filteredRequests = filterRequests(requests, activeFilter);
   const filteredIncidents = useMemo(() => {
-    if (incidentListFilter === 'viewed') {
-      return incidentFeed.filter((incident) => (incident.viewCount ?? 0) > 0);
+    if (incidentListFilter === 'received') {
+      return incidentFeed.filter(
+        (incident) => normalizeSignalWorkflowStatus(incident.workflowStatus) === 'new_signal',
+      );
     }
-    if (incidentListFilter === 'actioned') {
-      return incidentFeed.filter((incident) => (incident.actionCount ?? 0) > 0);
+    if (incidentListFilter === 'being_pursued') {
+      return incidentFeed.filter(
+        (incident) => normalizeSignalWorkflowStatus(incident.workflowStatus) === 'heading_there',
+      );
     }
-    if (incidentListFilter === 'not_actioned') {
-      return incidentFeed.filter((incident) => (incident.actionCount ?? 0) === 0);
+    if (incidentListFilter === 'handled') {
+      return incidentFeed.filter(
+        (incident) => normalizeSignalWorkflowStatus(incident.workflowStatus) === 'handled',
+      );
+    }
+    if (incidentListFilter === 'not_legit') {
+      return incidentFeed.filter(
+        (incident) =>
+          normalizeSignalWorkflowStatus(incident.workflowStatus) ===
+          'not_legit_or_not_serviceable',
+      );
     }
     return incidentFeed;
   }, [incidentFeed, incidentListFilter]);
+  const operatorNameById = useMemo(
+    () =>
+      new Map(
+        operators.map((operator) => [operator.id, operator.name] as const),
+      ),
+    [operators],
+  );
   const selectedRequest =
     filteredRequests.find((request) => request.id === selectedRequestId) ?? filteredRequests[0] ?? null;
 
@@ -627,53 +658,6 @@ function AdminDashboard({
       await queryClient.invalidateQueries({ queryKey: ['admin-requests'] });
     } finally {
       setStatusChangingId(null);
-    }
-  }
-
-  async function handleIncidentCreateJob(incident: IncidentFeedItem) {
-    setIncidentActionState('saving');
-    setIncidentActionResult('');
-    setIncidentActionId(incident.id);
-    const roadway = incident.roadway || 'Ottawa area';
-
-    try {
-        const response = await adminFetch('/api/requests', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customerName: `Incident lead - ${roadway}`,
-            customerPhone: '000-000-0000',
-            serviceType: 'other',
-            locationLat: incident.locationLat,
-            locationLng: incident.locationLng,
-            locationAddress: roadway,
-            notes: incident.description || undefined,
-          }),
-        });
-
-      if (!response.ok) throw new Error('Failed to create job');
-      const payload = (await response.json()) as { request?: { id?: string } };
-
-      await adminFetch(`/api/incidents/${incident.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId: payload.request?.id || undefined }),
-      }).catch(() => undefined);
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['admin-requests'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin-incident-summary'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin-incidents'] }),
-      ]);
-
-      setIncidentActionState('ok');
-      setIncidentActionResult(`Job created from ${roadway}`);
-    } catch {
-      setIncidentActionState('error');
-      setIncidentActionResult('Could not create job from incident.');
-    } finally {
-      setIncidentActionId(null);
-      setTimeout(() => setIncidentActionState('idle'), 4000);
     }
   }
 
@@ -739,7 +723,7 @@ function AdminDashboard({
             </div>
             <div>
               <h1 className="text-white font-bold text-xl">Admin oversight</h1>
-              <p className="text-slate-500 text-xs">Monitor live jobs, operator movement, and outcomes across Ottawa.</p>
+              <p className="text-slate-500 text-xs">Monitor live signal pursuit, operator movement, and simple field outcomes across Ottawa.</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -787,19 +771,20 @@ function AdminDashboard({
           <section className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
-                <h2 className="text-white font-bold text-[15px]">Incident activity</h2>
-                <p className="text-slate-500 text-xs mt-1">Oversight for what operators have seen, acted on, and left untouched.</p>
+                <h2 className="text-white font-bold text-[15px]">Signal workflow</h2>
+                <p className="text-slate-500 text-xs mt-1">Simple field truth for received signals, pursuit, handled outcomes, and signals that were not legitimate or serviceable.</p>
               </div>
               <div className="text-[11px] text-slate-600">
                 {incidentSummary ? `${incidentSummary.total} tracked incidents` : 'Loading...'}
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
               {[
-                { key: 'viewed' as const, label: 'Viewed', value: incidentSummary?.viewed ?? 0, tone: 'text-cyan-300' },
-                { key: 'actioned' as const, label: 'Actioned', value: incidentSummary?.actioned ?? 0, tone: 'text-orange-300' },
-                { key: 'not_actioned' as const, label: 'Not actioned', value: incidentSummary?.notActioned ?? 0, tone: 'text-slate-300' },
                 { key: 'all' as const, label: 'All tracked', value: incidentSummary?.total ?? 0, tone: 'text-white' },
+                { key: 'received' as const, label: 'Received', value: incidentSummary?.received ?? 0, tone: 'text-amber-300' },
+                { key: 'being_pursued' as const, label: 'Being pursued', value: incidentSummary?.beingPursued ?? 0, tone: 'text-blue-300' },
+                { key: 'handled' as const, label: 'Handled', value: incidentSummary?.handled ?? 0, tone: 'text-green-300' },
+                { key: 'not_legit' as const, label: 'Not legit / not serviceable', value: incidentSummary?.notLegit ?? 0, tone: 'text-slate-200' },
               ].map((stat) => (
                 <button
                   key={stat.label}
@@ -869,18 +854,6 @@ function AdminDashboard({
                   {incidentsFetching ? 'Refreshing...' : 'Refresh incidents'}
                 </button>
               </div>
-              {incidentActionResult ? (
-                <div
-                  className={cn(
-                    'mb-2 rounded-lg border px-3 py-2 text-xs',
-                    incidentActionState === 'error'
-                      ? 'border-red-500/40 bg-red-500/10 text-red-300'
-                      : 'border-green-500/40 bg-green-500/10 text-green-300',
-                  )}
-                >
-                  {incidentActionResult}
-                </div>
-              ) : null}
               {incidentsLoading ? (
                 <div className="text-slate-500 text-xs py-3 flex items-center gap-2">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -913,7 +886,12 @@ function AdminDashboard({
                               </div>
                               <div className="text-cyan-300 text-[11px] mt-1">{incidentSourceLabel(incident)}</div>
                             </div>
-                            <div className="text-[11px] text-slate-500 whitespace-nowrap">{timeAgo(incidentOccurredAt(incident))}</div>
+                            <div className="flex flex-col items-end gap-1">
+                              <span className={cn('rounded-full border px-2 py-1 text-[10px] font-semibold whitespace-nowrap', SIGNAL_WORKFLOW_BADGES[normalizeSignalWorkflowStatus(incident.workflowStatus)])}>
+                                {SIGNAL_WORKFLOW_LABELS[normalizeSignalWorkflowStatus(incident.workflowStatus)]}
+                              </span>
+                              <div className="text-[11px] text-slate-500 whitespace-nowrap">{timeAgo(incidentOccurredAt(incident))}</div>
+                            </div>
                           </div>
                         </button>
                         {selected ? (
@@ -941,21 +919,23 @@ function AdminDashboard({
                               </div>
                             </div>
                             <div className="rounded-lg border border-dispatch-border bg-dispatch-bg px-2.5 py-2 mt-2">
+                              <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600 font-semibold">Workflow</div>
+                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                                <span className={cn('rounded-full border px-2.5 py-1 text-[10px] font-semibold', SIGNAL_WORKFLOW_BADGES[normalizeSignalWorkflowStatus(incident.workflowStatus)])}>
+                                  {SIGNAL_WORKFLOW_LABELS[normalizeSignalWorkflowStatus(incident.workflowStatus)]}
+                                </span>
+                                <span className="text-slate-500 text-xs">
+                                  {incident.workflowOperatorId ? `Operator: ${operatorNameById.get(incident.workflowOperatorId) ?? 'Assigned operator'}` : 'No operator committed yet'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-dispatch-border bg-dispatch-bg px-2.5 py-2 mt-2">
                               <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600 font-semibold">Detail</div>
                               <div className="text-slate-300 text-xs mt-1 leading-relaxed">
                                 {incident.description || 'No additional detail provided by this source.'}
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-2 mt-2">
-                              <button
-                                type="button"
-                                onClick={() => handleIncidentCreateJob(incident)}
-                                disabled={incidentActionId === incident.id}
-                                className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-400 disabled:opacity-60 transition-colors"
-                              >
-                                {incidentActionId === incident.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                                Create job
-                              </button>
                               {mapsLink ? (
                                 <a
                                   href={mapsLink}

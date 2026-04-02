@@ -43,6 +43,10 @@ export const incidents = dispatch.table('incidents', {
   lastActionedAt: timestamp('last_actioned_at'),
   lastViewedByOperatorId: uuid('last_viewed_by_operator_id').references(() => operators.id),
   lastActionedByOperatorId: uuid('last_actioned_by_operator_id').references(() => operators.id),
+  workflowStatus: text('workflow_status'),
+  workflowOperatorId: uuid('workflow_operator_id').references(() => operators.id),
+  workflowStartedAt: timestamp('workflow_started_at'),
+  workflowResolvedAt: timestamp('workflow_resolved_at'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

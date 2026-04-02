@@ -45,6 +45,13 @@ import {
   writeOperatorSession,
 } from '../lib/operatorSession';
 import { OTTAWA_CENTER as OTTAWA_SCOPE_CENTER, isOttawaScopedIncident } from '../lib/ottawaScope';
+import {
+  type SignalWorkflowStatus,
+  SIGNAL_WORKFLOW_BADGES,
+  SIGNAL_WORKFLOW_LABELS,
+  isResolvedSignalWorkflowStatus,
+  normalizeSignalWorkflowStatus,
+} from '../lib/signalWorkflow';
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
 type RequestStatus = 'pending' | 'accepted' | 'en_route' | 'completed' | 'cancelled';
@@ -84,6 +91,10 @@ interface Incident {
   lastUpdated?: string | null;
   occurredAt?: string | null;
   isHistorical?: boolean;
+  workflowStatus?: SignalWorkflowStatus | null;
+  workflowOperatorId?: string | null;
+  workflowStartedAt?: string | null;
+  workflowResolvedAt?: string | null;
   createdAt: string;
 }
 
@@ -1125,13 +1136,36 @@ function IncidentMapPanel({
   );
 }
 
-function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel }: { incident: IncidentWithMeta; selected?: boolean; onDispatch?: (incident: Incident) => void; onSelect?: (incident: IncidentWithMeta) => void; proximityLabel: string }) {
+function IncidentCard({
+  incident,
+  selected,
+  onNavigate,
+  onSelect,
+  currentOperatorId,
+  isWorkflowUpdating,
+  proximityLabel,
+}: {
+  incident: IncidentWithMeta;
+  selected?: boolean;
+  onNavigate?: (incident: Incident) => void;
+  onSelect?: (incident: IncidentWithMeta) => void;
+  currentOperatorId: string;
+  isWorkflowUpdating?: boolean;
+  proximityLabel: string;
+}) {
+  void proximityLabel;
   const mapsUrl = incidentMapsUrl(incident);
   const label = incidentLabel(incident);
   const isHigh = incidentIsHighPriority(incident);
   const occurredAt = incidentOccurredAt(incident);
   const freshness = incidentFreshnessMeta(occurredAt);
   const confidence = incidentConfidenceMeta(incident);
+  const workflowStatus = normalizeSignalWorkflowStatus(incident.workflowStatus);
+  const isMine = !incident.workflowOperatorId || incident.workflowOperatorId === currentOperatorId;
+  const canNavigate =
+    (workflowStatus === 'new_signal' || workflowStatus === 'heading_there') &&
+    isMine &&
+    Boolean(onNavigate);
 
   return (
     <div className={cn('relative bg-dispatch-surface border rounded-2xl overflow-hidden transition-all', selected ? 'border-orange-500/40 shadow-[0_0_0_1px_rgba(249,115,22,0.18)]' : incident.alerted ? 'border-orange-500/30' : 'border-dispatch-border')}>
@@ -1151,7 +1185,9 @@ function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
-            {incident.alerted ? <span className="text-xs text-orange-400 font-semibold border border-orange-500/25 bg-orange-500/10 px-2.5 py-1 rounded-full whitespace-nowrap">Alerted</span> : null}
+            <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap', SIGNAL_WORKFLOW_BADGES[workflowStatus])}>
+              {SIGNAL_WORKFLOW_LABELS[workflowStatus]}
+            </span>
             <span className="text-[11px] text-lime-300 font-semibold">{roadsideLabel(incident.roadsideType)}</span>
           </div>
         </div>
@@ -1167,12 +1203,31 @@ function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel
           <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', confidence.tone)}>{confidence.label}</span>
         </div>
         <div className="text-[11px] text-cyan-300 mb-1">Source: {incidentSourceLabel(incident)}</div>
-        <div className="text-[11px] text-slate-500 mb-2">Updated {fmtOptional(occurredAt)} • {timeAgo(occurredAt)}</div>
+        <div className="text-[11px] text-slate-500 mb-2">Updated {fmtOptional(occurredAt)} | {timeAgo(occurredAt)}</div>
+        {workflowStatus === 'heading_there' ? (
+          <div className="mb-2 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-[11px] text-blue-200">
+            {isMine ? 'You are marked as heading there for this signal.' : 'Another operator is already heading there for this signal.'}
+          </div>
+        ) : null}
+        {isResolvedSignalWorkflowStatus(workflowStatus) ? (
+          <div className="mb-2 rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-[11px] text-slate-300">
+            Outcome recorded: {SIGNAL_WORKFLOW_LABELS[workflowStatus]}.
+          </div>
+        ) : null}
         {incident.description ? <p className="text-slate-500 text-xs leading-relaxed line-clamp-2 mb-3">{incident.description}</p> : null}
         <div className="flex gap-2">
           {onSelect ? <button type="button" onClick={() => onSelect(incident)} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all', selected ? 'bg-slate-700 text-white' : 'bg-dispatch-bg text-slate-300 hover:text-white hover:bg-slate-800')}>{selected ? 'Viewing details' : 'Open details'}</button> : null}
-          {mapsUrl ? <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-500 transition-all"><Navigation2 className="w-4 h-4" />Navigate</a> : null}
-          {onDispatch ? <button type="button" onClick={() => onDispatch(incident)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 transition-all"><Zap className="w-4 h-4" />Create job</button> : null}
+          {canNavigate ? (
+            <button
+              type="button"
+              onClick={() => onNavigate?.(incident)}
+              disabled={isWorkflowUpdating}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-500 disabled:opacity-60 transition-all"
+            >
+              {isWorkflowUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation2 className="w-4 h-4" />}
+              {mapsUrl ? (workflowStatus === 'heading_there' ? 'Resume navigation' : 'Navigate') : 'Mark heading there'}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -1182,19 +1237,31 @@ function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel
 function IncidentDetailCard({
   incident,
   onBack,
-  onDispatch,
+  onNavigate,
+  onResolve,
+  currentOperatorId,
+  isWorkflowUpdating,
   proximityLabel,
 }: {
   incident: IncidentWithMeta;
   onBack: () => void;
-  onDispatch?: (incident: Incident) => void;
+  onNavigate?: (incident: Incident) => void;
+  onResolve?: (incident: Incident, status: SignalWorkflowStatus) => void;
+  currentOperatorId: string;
+  isWorkflowUpdating?: boolean;
   proximityLabel: string;
 }) {
+  void proximityLabel;
   const mapsUrl = incidentMapsUrl(incident);
   const severity = incident.severity ? String(incident.severity).replace(/_/g, ' ') : 'Not specified';
   const occurredAt = incidentOccurredAt(incident);
   const freshness = incidentFreshnessMeta(occurredAt);
   const confidence = incidentConfidenceMeta(incident);
+  const workflowStatus = normalizeSignalWorkflowStatus(incident.workflowStatus);
+  const isMine = !incident.workflowOperatorId || incident.workflowOperatorId === currentOperatorId;
+  const canNavigate = (workflowStatus === 'new_signal' || workflowStatus === 'heading_there') && isMine;
+  const canResolve = workflowStatus === 'heading_there' && isMine;
+
   return (
     <div className="bg-dispatch-surface border border-orange-500/30 rounded-2xl p-5">
       <div className="flex items-center justify-between gap-3 mb-4">
@@ -1202,7 +1269,7 @@ function IncidentDetailCard({
           <ArrowLeft className="w-4 h-4" />
           Back to roadside alerts
         </button>
-        <div className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap bg-amber-500/15 text-amber-400">{incidentLabel(incident)}</div>
+        <div className={cn('text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap border', SIGNAL_WORKFLOW_BADGES[workflowStatus])}>{SIGNAL_WORKFLOW_LABELS[workflowStatus]}</div>
       </div>
       <div className="grid md:grid-cols-2 gap-3 mb-3">
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Roadway</div><div className="text-white text-sm font-semibold mt-2">{incident.roadway || 'Ottawa area'}</div></div>
@@ -1214,9 +1281,33 @@ function IncidentDetailCard({
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Likely assist</div><div className="text-lime-300 text-sm mt-2">{roadsideLabel(incident.roadsideType)}</div></div>
       </div>
       <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3 mb-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Incident detail</div><div className="text-slate-300 text-sm mt-2 leading-relaxed">{incident.description || 'No additional incident description was provided by the source feed.'}</div></div>
+      <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3 mb-3">
+        <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Workflow</div>
+        <div className="text-slate-200 text-sm mt-2">{SIGNAL_WORKFLOW_LABELS[workflowStatus]}</div>
+        <div className="text-slate-500 text-xs mt-1">
+          {workflowStatus === 'new_signal' ? 'No operator has committed to this signal yet.' : workflowStatus === 'heading_there' ? (isMine ? 'You are currently heading there.' : 'Another operator is currently heading there.') : `Outcome recorded for this signal.`}
+        </div>
+        {canNavigate ? <div className="text-blue-200 text-xs mt-2">Navigate is the practical commit action. It marks this signal as heading there in the backend.</div> : null}
+      </div>
       <div className="flex flex-wrap gap-2">
-        {mapsUrl ? <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-500 transition-all"><Navigation2 className="w-4 h-4" />Open navigation</a> : null}
-        {onDispatch ? <button type="button" onClick={() => onDispatch(incident)} className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-400 transition-all"><Zap className="w-4 h-4" />Create job from incident</button> : null}
+        {canNavigate ? (
+          <button type="button" onClick={() => onNavigate?.(incident)} disabled={isWorkflowUpdating} className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-500 disabled:opacity-60 transition-all">
+            {isWorkflowUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation2 className="w-4 h-4" />}
+            {mapsUrl ? (workflowStatus === 'heading_there' ? 'Resume navigation' : 'Navigate and head there') : 'Mark heading there'}
+          </button>
+        ) : null}
+        {canResolve ? (
+          <button type="button" onClick={() => onResolve?.(incident, 'handled')} disabled={isWorkflowUpdating} className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-green-600 text-white text-sm font-bold hover:bg-green-500 disabled:opacity-60 transition-all">
+            {isWorkflowUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            Mark handled
+          </button>
+        ) : null}
+        {canResolve ? (
+          <button type="button" onClick={() => onResolve?.(incident, 'not_legit_or_not_serviceable')} disabled={isWorkflowUpdating} className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-dispatch-bg border border-dispatch-border text-slate-200 text-sm font-bold hover:bg-slate-800 disabled:opacity-60 transition-all">
+            {isWorkflowUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+            Not legit / not serviceable
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -1233,12 +1324,10 @@ interface MetricsData {
 }
 
 interface PeriodStats {
-  claimed: number;
-  completed: number;
-  cancelled: number;
-  conversionRate: number;
-  avgResponseMinutes: number | null;
-  avgJobMinutes: number | null;
+  pursued: number;
+  handled: number;
+  notLegit: number;
+  successRate: number;
 }
 
 function MetricsPanel({ session }: { session: OperatorSession }) {
@@ -1284,15 +1373,10 @@ function MetricsPanel({ session }: { session: OperatorSession }) {
     return (
       <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{title}</p>
-        <StatRow label="Jobs claimed" value={stats.claimed} />
-        <StatRow label="Completed" value={stats.completed} />
-        <StatRow label="Conversion" value={`${stats.conversionRate}%`} />
-        {stats.avgResponseMinutes !== null ? (
-          <StatRow label="Avg response" value={`${stats.avgResponseMinutes} min`} sub="accepted → en route" />
-        ) : null}
-        {stats.avgJobMinutes !== null ? (
-          <StatRow label="Avg job time" value={`${stats.avgJobMinutes} min`} sub="accepted → done" />
-        ) : null}
+        <StatRow label="Pursued" value={stats.pursued} />
+        <StatRow label="Handled" value={stats.handled} />
+        <StatRow label="Not legit" value={stats.notLegit} />
+        <StatRow label="Success rate" value={`${stats.successRate}%`} />
       </div>
     );
   }
@@ -1305,7 +1389,7 @@ function MetricsPanel({ session }: { session: OperatorSession }) {
         </div>
         <div>
           <p className="text-white font-semibold text-sm">{data.operatorName}</p>
-          <p className="text-slate-500 text-xs">Performance stats</p>
+          <p className="text-slate-500 text-xs">Signal outcomes</p>
         </div>
       </div>
       <PeriodCard title="Today" stats={data.today} />
@@ -1431,6 +1515,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     onIncidentUpdated: (data) => {
       void data;
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      queryClient.invalidateQueries({ queryKey: ['metrics', session.id] });
     },
   });
 
@@ -1485,26 +1570,65 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     onSuccess: () => queryClient.invalidateQueries({ queryKey: requestQueryKey }),
   });
 
-  const handleIncidentDispatch = useCallback(async (incident: Incident) => {
+  const { mutateAsync: updateIncidentWorkflow, isPending: isWorkflowUpdating } = useMutation({
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: SignalWorkflowStatus;
+    }) => {
+      const response = await operatorFetch(`/api/incidents/${id}/workflow`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, operatorId: session.id }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to update signal workflow');
+      }
+      return payload;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      queryClient.invalidateQueries({ queryKey: ['metrics', session.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-incidents'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-incident-summary'] });
+    },
+  });
+
+  const handleIncidentNavigate = useCallback(async (incident: Incident) => {
     const roadway = incident.roadway || 'Ottawa area';
     try {
-      const response = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerName: `Lead - ${roadway}`, customerPhone: '000-000-0000', serviceType: 'other', locationLat: incident.locationLat, locationLng: incident.locationLng, locationAddress: roadway, notes: incident.description || undefined }) });
-      if (!response.ok) throw new Error('Failed to create job');
-      const payload = (await response.json()) as { ok?: boolean; request?: { id?: string } };
-      await operatorFetch(`/api/incidents/${incident.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ operatorId: session.id, requestId: payload.request?.id || undefined }),
-      }).catch(() => {
-        // Keep request creation successful even if action analytics fail.
-      });
-      addToast(`Job created from incident on ${roadway}`, 'job');
-      queryClient.invalidateQueries({ queryKey: requestQueryKey });
-      queryClient.invalidateQueries({ queryKey: ['incident-summary'] });
-    } catch {
-      addToast('Failed to create job. Try again.', 'incident');
+      await updateIncidentWorkflow({ id: incident.id, status: 'heading_there' });
+      addToast(`Heading there: ${roadway}`, 'job');
+      const mapsUrl = incidentMapsUrl(incident);
+      if (mapsUrl && typeof window !== 'undefined') {
+        window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update signal';
+      addToast(message, 'incident');
     }
-  }, [queryClient, requestQueryKey, session.id]);
+  }, [updateIncidentWorkflow]);
+
+  const handleIncidentResolution = useCallback(async (
+    incident: Incident,
+    status: SignalWorkflowStatus,
+  ) => {
+    try {
+      await updateIncidentWorkflow({ id: incident.id, status });
+      addToast(
+        status === 'handled'
+          ? `Signal handled: ${incident.roadway || 'Ottawa area'}`
+          : `Marked not legit / not serviceable`,
+        'job',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save outcome';
+      addToast(message, 'incident');
+    }
+  }, [updateIncidentWorkflow]);
 
   const myRequests = allRequests.filter((request) => (request.operatorId === null && request.status === 'pending') || request.operatorId === session.id);
   const displayRequests = filter === 'active' ? myRequests.filter((request) => ['pending', 'accepted', 'en_route'].includes(request.status)) : filter === 'all' ? myRequests : [];
@@ -1952,9 +2076,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
             {roadAlertsState === 'success'
               ? sortedIncidentFeed.map((incident) => (
                   <Fragment key={incident.id}>
-                    <IncidentCard incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onDispatch={handleIncidentDispatch} />
+                    <IncidentCard incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onNavigate={handleIncidentNavigate} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
                     {selectedIncident?.id === incident.id ? (
-                      <IncidentDetailCard incident={incident} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onDispatch={handleIncidentDispatch} />
+                      <IncidentDetailCard incident={incident} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onNavigate={handleIncidentNavigate} onResolve={handleIncidentResolution} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
                     ) : null}
                   </Fragment>
                 ))

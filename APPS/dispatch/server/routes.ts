@@ -6,12 +6,24 @@ import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
 import { db } from './db';
 import { normalizeRequestNotes, serializeRequest } from './requestPayload';
+import {
+  isResolvedSignalWorkflowStatus,
+  normalizeSignalWorkflowStatus,
+} from './signalWorkflow';
 import { isOttawaScopedIncident } from './ottawaScope';
 import { canAccessOperatorSurface, getAuthenticatedOperatorId, issueOperatorToken } from './operatorAccess';
 import { getIncidentMonitorInfo, getWazeMonitorInfo } from './monitor';
 import { getVapidPublicKey, sendToAllActiveOperators } from './push';
 import { incidents, operators, requests } from './schema';
 import { sseAdd, sseBroadcast, sseClientCount, sseRemove } from './sse';
+
+function serializeIncident(record: typeof incidents.$inferSelect) {
+  return {
+    ...record,
+    createdAt: record.createdAt?.toISOString?.() || String(record.createdAt || ''),
+    workflowStatus: normalizeSignalWorkflowStatus(record.workflowStatus),
+  };
+}
 
 export async function registerRoutes(_server: Server, app: Express): Promise<void> {
   app.get('/api/status', (_req, res) => {
@@ -493,6 +505,10 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
         actioned: incidents.actioned,
         lastViewedAt: incidents.lastViewedAt,
         lastActionedAt: incidents.lastActionedAt,
+        workflowStatus: incidents.workflowStatus,
+        workflowOperatorId: incidents.workflowOperatorId,
+        workflowStartedAt: incidents.workflowStartedAt,
+        workflowResolvedAt: incidents.workflowResolvedAt,
         eventType: incidents.eventType,
         roadway: incidents.roadway,
         description: incidents.description,
@@ -506,9 +522,14 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       (acc, incident) => {
         const viewed = (incident.viewCount ?? 0) > 0;
         const actioned = Boolean(incident.actioned) || (incident.actionCount ?? 0) > 0;
+        const workflowStatus = normalizeSignalWorkflowStatus(incident.workflowStatus);
         acc.total += 1;
         acc.totalViewEvents += incident.viewCount ?? 0;
         acc.totalActionEvents += incident.actionCount ?? 0;
+        if (workflowStatus === 'new_signal') acc.received += 1;
+        if (workflowStatus === 'heading_there') acc.beingPursued += 1;
+        if (workflowStatus === 'handled') acc.handled += 1;
+        if (workflowStatus === 'not_legit_or_not_serviceable') acc.notLegit += 1;
         if (viewed) acc.viewed += 1;
         if (actioned) acc.actioned += 1;
         if (!actioned) acc.notActioned += 1;
@@ -517,6 +538,10 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       },
       {
         total: 0,
+        received: 0,
+        beingPursued: 0,
+        handled: 0,
+        notLegit: 0,
         viewed: 0,
         actioned: 0,
         notActioned: 0,
@@ -634,6 +659,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const filtered = results
       .filter((incident) => isOttawaScopedIncident(incident))
       .filter((incident) => {
+        const workflowStatus = normalizeSignalWorkflowStatus(incident.workflowStatus);
         const ts =
           Date.parse(
             incident.lastUpdated ||
@@ -642,8 +668,8 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
               String(incident.createdAt || ''),
           ) || 0;
         const isHistorical = ts > 0 ? ts < cutoff : false;
-        if (mode === 'active') return !isHistorical;
-        if (mode === 'history') return isHistorical;
+        if (mode === 'active') return !isHistorical && !isResolvedSignalWorkflowStatus(workflowStatus);
+        if (mode === 'history') return isHistorical || isResolvedSignalWorkflowStatus(workflowStatus);
         return true;
       })
       .filter((incident) => {
@@ -675,6 +701,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       })
       .slice(0, lim)
       .map((incident) => {
+        const workflowStatus = normalizeSignalWorkflowStatus(incident.workflowStatus);
         const createdAtIso =
           incident.createdAt?.toISOString?.() || String(incident.createdAt || '');
         const occurredAt = incident.lastUpdated || incident.startDate || createdAtIso;
@@ -689,6 +716,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
           createdAt: createdAtIso,
           occurredAt,
           isHistorical: ts > 0 ? ts < cutoff : false,
+          workflowStatus,
         };
       });
 
@@ -772,6 +800,119 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     }
 
     res.json({ ok: true, incident: updated, requestId: parsed.data.requestId ?? null });
+  });
+
+  app.patch('/api/incidents/:id/workflow', async (req, res) => {
+    const { id } = req.params;
+    const schema = z.object({
+      status: z.enum(['new_signal', 'heading_there', 'handled', 'not_legit_or_not_serviceable']),
+      operatorId: z.string().uuid().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid signal workflow payload' });
+      return;
+    }
+
+    const isAdmin = canAccessAdminSurface(req);
+    const authenticatedOperatorId = getAuthenticatedOperatorId(req);
+    if (!isAdmin && !authenticatedOperatorId) {
+      res.status(403).json({ error: 'Operator or admin access required' });
+      return;
+    }
+
+    const [currentIncident] = await db.select().from(incidents).where(eq(incidents.id, id));
+    if (!currentIncident) {
+      res.status(404).json({ error: 'Incident not found' });
+      return;
+    }
+
+    const currentStatus = normalizeSignalWorkflowStatus(currentIncident.workflowStatus);
+    const nextStatus = parsed.data.status;
+    const actingOperatorId = isAdmin
+      ? parsed.data.operatorId ?? currentIncident.workflowOperatorId ?? null
+      : authenticatedOperatorId;
+
+    if (!isAdmin && nextStatus === 'new_signal') {
+      res.status(403).json({ error: 'Only admin can reset a signal' });
+      return;
+    }
+
+    if (!isAdmin) {
+      if (
+        currentIncident.workflowOperatorId &&
+        currentIncident.workflowOperatorId !== authenticatedOperatorId
+      ) {
+        res.status(409).json({ error: 'This signal is already being handled by another operator' });
+        return;
+      }
+
+      if (
+        (nextStatus === 'handled' || nextStatus === 'not_legit_or_not_serviceable') &&
+        currentStatus !== 'heading_there'
+      ) {
+        res.status(409).json({ error: 'Mark heading there before closing out a signal' });
+        return;
+      }
+
+      if (
+        nextStatus === 'heading_there' &&
+        isResolvedSignalWorkflowStatus(currentStatus)
+      ) {
+        res.status(409).json({ error: 'Resolved signals cannot be pursued again from the operator view' });
+        return;
+      }
+    }
+
+    const now = new Date();
+    const updateValues: Record<string, unknown> = {
+      workflowStatus: nextStatus,
+    };
+
+    if (nextStatus === 'new_signal') {
+      updateValues.workflowOperatorId = null;
+      updateValues.workflowStartedAt = null;
+      updateValues.workflowResolvedAt = null;
+    } else if (nextStatus === 'heading_there') {
+      updateValues.workflowOperatorId = actingOperatorId;
+      updateValues.workflowStartedAt = currentIncident.workflowStartedAt ?? now;
+      updateValues.workflowResolvedAt = null;
+      updateValues.actioned = true;
+      updateValues.lastActionedAt = now;
+      updateValues.lastActionedByOperatorId = actingOperatorId;
+      if (
+        currentStatus !== nextStatus ||
+        currentIncident.workflowOperatorId !== actingOperatorId
+      ) {
+        updateValues.actionCount = sql`coalesce(${incidents.actionCount}, 0) + 1`;
+      }
+    } else {
+      updateValues.workflowOperatorId = currentIncident.workflowOperatorId ?? actingOperatorId;
+      updateValues.workflowStartedAt = currentIncident.workflowStartedAt ?? now;
+      updateValues.workflowResolvedAt = now;
+      updateValues.actioned = true;
+      updateValues.lastActionedAt = now;
+      updateValues.lastActionedByOperatorId = actingOperatorId;
+      if (currentStatus !== nextStatus) {
+        updateValues.actionCount = sql`coalesce(${incidents.actionCount}, 0) + 1`;
+      }
+    }
+
+    const [updated] = await db
+      .update(incidents)
+      .set(updateValues)
+      .where(eq(incidents.id, id))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: 'Incident not found' });
+      return;
+    }
+
+    const serializedIncident = serializeIncident(updated);
+    sseBroadcast('incident:updated', serializedIncident);
+    res.json({ ok: true, incident: serializedIncident });
   });
 
   app.get('/api/geocode/reverse', async (req, res) => {
@@ -889,7 +1030,9 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       return;
     }
 
-    const operatorId = authenticatedOperatorId ?? (typeof req.query.operatorId === 'string' ? req.query.operatorId : null);
+    const operatorId =
+      authenticatedOperatorId ??
+      (typeof req.query.operatorId === 'string' ? req.query.operatorId : null);
     if (!operatorId) {
       res.status(400).json({ error: 'operatorId required' });
       return;
@@ -901,35 +1044,39 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const allJobs = await db
+    const allSignals = await db
       .select()
-      .from(requests)
-      .where(eq(requests.operatorId, operatorId));
+      .from(incidents)
+      .where(eq(incidents.workflowOperatorId, operatorId));
 
-    function computePeriod(jobs: typeof allJobs, since: Date) {
-      const inPeriod = jobs.filter((j) => j.createdAt && j.createdAt >= since);
-      const claimed = inPeriod.filter((j) => ['accepted', 'en_route', 'completed'].includes(j.status ?? '')).length;
-      const completed = inPeriod.filter((j) => j.status === 'completed').length;
-      const cancelled = inPeriod.filter((j) => j.status === 'cancelled').length;
-      const conversionRate = claimed > 0 ? Math.round((completed / claimed) * 100) : 0;
+    function computePeriod(signals: typeof allSignals, since: Date) {
+      const pursued = signals.filter((signal) => {
+        const startedAt = signal.workflowStartedAt;
+        return Boolean(startedAt && startedAt >= since);
+      }).length;
 
-      const responseTimes = inPeriod
-        .filter((j) => j.acceptedAt && j.enRouteAt)
-        .map((j) => (j.enRouteAt!.getTime() - j.acceptedAt!.getTime()) / 60_000);
-      const avgResponseMinutes =
-        responseTimes.length > 0
-          ? Math.round((responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) * 10) / 10
-          : null;
+      const handled = signals.filter((signal) => {
+        const resolvedAt = signal.workflowResolvedAt;
+        return Boolean(
+          resolvedAt &&
+            resolvedAt >= since &&
+            normalizeSignalWorkflowStatus(signal.workflowStatus) === 'handled',
+        );
+      }).length;
 
-      const completionTimes = inPeriod
-        .filter((j) => j.acceptedAt && j.completedAt)
-        .map((j) => (j.completedAt!.getTime() - j.acceptedAt!.getTime()) / 60_000);
-      const avgJobMinutes =
-        completionTimes.length > 0
-          ? Math.round((completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length) * 10) / 10
-          : null;
+      const notLegit = signals.filter((signal) => {
+        const resolvedAt = signal.workflowResolvedAt;
+        return Boolean(
+          resolvedAt &&
+            resolvedAt >= since &&
+            normalizeSignalWorkflowStatus(signal.workflowStatus) ===
+              'not_legit_or_not_serviceable',
+        );
+      }).length;
 
-      return { claimed, completed, cancelled, conversionRate, avgResponseMinutes, avgJobMinutes };
+      const successRate = pursued > 0 ? Math.round((handled / pursued) * 100) : 0;
+
+      return { pursued, handled, notLegit, successRate };
     }
 
     const [operator] = await db
@@ -941,10 +1088,10 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       ok: true,
       operatorId,
       operatorName: operator?.name ?? 'Unknown',
-      today: computePeriod(allJobs, startOfToday),
-      week: computePeriod(allJobs, startOfWeek),
-      month: computePeriod(allJobs, startOfMonth),
-      allTime: computePeriod(allJobs, new Date(0)),
+      today: computePeriod(allSignals, startOfToday),
+      week: computePeriod(allSignals, startOfWeek),
+      month: computePeriod(allSignals, startOfMonth),
+      allTime: computePeriod(allSignals, new Date(0)),
     });
   });
 
