@@ -1228,7 +1228,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const [incidentMode, setIncidentMode] = useState<'active' | 'history' | 'all'>('active');
   const [incidentCategory, setIncidentCategory] = useState<'all' | 'emergency' | 'breakdown' | 'traffic' | 'transit'>('all');
   const [incidentCity, setIncidentCity] = useState('Ottawa');
-  const [incidentSort, setIncidentSort] = useState<'roadside' | 'newest' | 'proximity'>('roadside');
+  const [incidentSort, setIncidentSort] = useState<'roadside' | 'newest' | 'proximity'>('newest');
   const [incidentRadiusKm, setIncidentRadiusKm] = useState(0);
   const [proximityPoint, setProximityPoint] = useState<ProximityPoint>(OTTAWA_SCOPE_CENTER);
   const [locatingProximity, setLocatingProximity] = useState(false);
@@ -1449,8 +1449,8 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       }),
     [ottawaScopedIncidentFeed, proximityPoint.lat, proximityPoint.lng],
   );
-  const qualifiedIncidentFeed = useMemo(
-    () => incidentFeedWithMeta.filter((incident) => isQualifiedOperatorSignal(incident)),
+  const highSignalIncidentCount = useMemo(
+    () => incidentFeedWithMeta.filter((incident) => isQualifiedOperatorSignal(incident)).length,
     [incidentFeedWithMeta],
   );
   const cityOptions = useMemo(() => {
@@ -1461,7 +1461,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       setIncidentCity('Ottawa');
     }
   }, [cityOptions, incidentCity]);
-  const cityFilteredIncidentFeed = qualifiedIncidentFeed.filter((incident) => incidentMatchesCity(incident, 'Ottawa'));
+  const cityFilteredIncidentFeed = incidentFeedWithMeta.filter((incident) => incidentMatchesCity(incident, 'Ottawa'));
   const radiusFilteredIncidentFeed = cityFilteredIncidentFeed;
   const sortedIncidentFeed = useMemo(() => {
     const next = [...radiusFilteredIncidentFeed];
@@ -1500,7 +1500,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const monitorNeedsCaution =
     monitorLastSuccessMs === null ||
     Date.now() - monitorLastSuccessMs > Math.max(180_000, pollSeconds * 1000 * 4);
-  const hasWeakOttawaSignals = incidentFeedWithMeta.length > 0 && qualifiedIncidentFeed.length === 0;
+  const hasWeakOttawaSignals = incidentFeedWithMeta.length > 0 && highSignalIncidentCount === 0;
   const roadAlertsState =
     incidentsLoading ? 'loading' : incidentsError ? 'error' : sortedIncidentFeed.length > 0 ? 'success' : 'empty';
 
@@ -1518,7 +1518,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       incidentCategory,
       count: sortedIncidentFeed.length,
       feedCount: incidentFeed.length,
-      qualifiedCount: qualifiedIncidentFeed.length,
+      highSignalCount: highSignalIncidentCount,
       selectedIncidentId,
       hasWeakOttawaSignals,
       incidentsError: incidentsError ? String(incidentsErrorValue) : null,
@@ -1530,7 +1530,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     incidentMode,
     incidentsError,
     incidentsErrorValue,
-    qualifiedIncidentFeed.length,
+    highSignalIncidentCount,
     roadAlertsState,
     selectedIncidentId,
     sortedIncidentFeed.length,
@@ -1759,14 +1759,19 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                     onChange={(event) => setIncidentSort(event.target.value as 'roadside' | 'newest' | 'proximity')}
                     className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
                   >
-                    <option value="roadside" className="bg-slate-950 text-slate-100">Sort: strongest assist signal</option>
                     <option value="newest" className="bg-slate-950 text-slate-100">Sort: newest first</option>
+                    <option value="roadside" className="bg-slate-950 text-slate-100">Sort: strongest assist signal</option>
                   </select>
                 </label>
               </div>
               <div className="mt-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-[11px] text-cyan-200">
                 Ottawa-only live scope. Out-of-area incidents are hidden from this workflow.
               </div>
+              {incidentFeedWithMeta.length > 0 ? (
+                <div className="mt-2 rounded-xl border border-slate-700 bg-dispatch-bg px-3 py-2.5 text-[11px] text-slate-300">
+                  Showing all Ottawa incidents related to operations. Stronger roadside-assist signals are ranked and labeled, not hidden.
+                </div>
+              ) : null}
               {monitorNeedsCaution ? (
                 <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-[11px] text-amber-200">
                   Limited feed confidence at the moment. Last successful poll {lastPoll}.
