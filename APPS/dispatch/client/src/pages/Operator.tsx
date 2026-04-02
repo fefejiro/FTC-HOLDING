@@ -1200,7 +1200,7 @@ function IncidentDetailCard({
       <div className="flex items-center justify-between gap-3 mb-4">
         <button type="button" onClick={onBack} className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" />
-          Back to road alerts
+          Back to roadside alerts
         </button>
         <div className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap bg-amber-500/15 text-amber-400">{incidentLabel(incident)}</div>
       </div>
@@ -1786,7 +1786,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       </div>
 
       <div className="px-5 py-3 flex gap-2 border-b border-dispatch-border overflow-x-auto">
-        {[{ key: 'active' as const, label: 'Active jobs', badge: pendingCount, danger: false }, { key: 'all' as const, label: 'All jobs', badge: 0, danger: false }, { key: 'incidents' as const, label: 'Road alerts', badge: 0, danger: true }, { key: 'stats' as const, label: 'My stats', badge: 0, danger: false }].map(({ key, label, badge, danger }) => (
+        {[{ key: 'active' as const, label: 'Active jobs', badge: pendingCount, danger: false }, { key: 'all' as const, label: 'Job history', badge: 0, danger: false }, { key: 'incidents' as const, label: 'Roadside alerts', badge: 0, danger: true }, { key: 'stats' as const, label: 'My stats', badge: 0, danger: false }].map(({ key, label, badge, danger }) => (
           <button key={key} type="button" onClick={() => setFilter(key)} className={cn('px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2', filter === key ? danger ? 'bg-red-600 text-white' : 'bg-orange-500 text-white' : 'bg-dispatch-surface text-slate-400 hover:text-white')}>
             {key === 'incidents' ? <TriangleAlert className="w-3.5 h-3.5" /> : null}
             {key === 'stats' ? <BarChart2 className="w-3.5 h-3.5" /> : null}
@@ -1801,11 +1801,15 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           <MetricsPanel session={session} />
         ) : filter === 'incidents' ? (
           <>
+            <div className="px-1">
+              <div className="text-white text-lg font-semibold">Roadside alerts</div>
+              <div className="text-slate-500 text-sm mt-1">Live roadside signals and incidents that may turn into dispatch jobs.</div>
+            </div>
             <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-3">
               <div className="flex flex-wrap items-center gap-2">
                 {[
                   { key: 'active' as const, label: 'Active now' },
-                  { key: 'history' as const, label: 'History' },
+                  { key: 'history' as const, label: 'Past alerts' },
                   { key: 'all' as const, label: 'All' },
                 ].map((item) => (
                   <button
@@ -1865,11 +1869,11 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                 </label>
               </div>
               <div className="mt-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-[11px] text-cyan-200">
-                Ottawa-only live scope. Out-of-area incidents are hidden from this workflow.
+                Ottawa-only live scope. Out-of-area roadside signals are hidden from this workflow.
               </div>
               {incidentFeedWithMeta.length > 0 ? (
                 <div className="mt-2 rounded-xl border border-slate-700 bg-dispatch-bg px-3 py-2.5 text-[11px] text-slate-300">
-                  Showing all Ottawa incidents related to operations. Stronger roadside-assist signals are ranked and labeled, not hidden.
+                  Showing live Ottawa roadside signals that can become jobs. Stronger job-worthy alerts are ranked and labeled, not hidden.
                 </div>
               ) : null}
               {monitorNeedsCaution ? (
@@ -1898,7 +1902,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
             {roadAlertsState === 'loading' ? (
               <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Loading Ottawa road alerts...
+                Loading Ottawa roadside alerts...
               </div>
             ) : null}
             {roadAlertsState === 'error' ? (
@@ -1906,9 +1910,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                 <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center mb-4">
                   <TriangleAlert className="w-8 h-8 text-amber-400" />
                 </div>
-                <p className="text-slate-200 font-semibold">Road alerts are temporarily unavailable</p>
+                <p className="text-slate-200 font-semibold">Roadside alerts are temporarily unavailable</p>
                 <p className="text-slate-500 text-sm mt-1 max-w-sm">
-                  Still monitoring Ottawa incident sources. Try again to reload the latest road alerts.
+                  Still monitoring Ottawa incident sources. Try again to reload the latest roadside alerts.
                 </p>
                 <button
                   type="button"
@@ -1918,7 +1922,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                   className="mt-4 inline-flex items-center gap-2 rounded-xl bg-dispatch-surface border border-dispatch-border px-4 py-2.5 text-sm font-semibold text-slate-200 hover:text-white"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  Retry road alerts
+                  Retry roadside alerts
                 </button>
               </div>
             ) : null}
@@ -1929,19 +1933,19 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                 </div>
                 <p className="text-slate-300 font-semibold">
                   {incidentCategory !== 'all' || incidentMode === 'history'
-                    ? 'No Ottawa road alerts right now for this filter'
-                    : 'No Ottawa road alerts right now'}
+                    ? 'No roadside alerts right now for this filter'
+                    : 'No roadside alerts right now'}
                 </p>
                 <p className="text-slate-600 text-sm mt-1 max-w-sm">
                   {hasWeakOttawaSignals
                     ? `Still monitoring Ottawa incident sources. Limited feed confidence at the moment. Last successful poll ${lastPoll}.`
                     : incidentCategory !== 'all'
-                      ? `Road alerts will appear here when relevant Ottawa ${incidentCategory} signal is available.`
+                      ? `Roadside alerts will appear here when a relevant Ottawa ${incidentCategory} signal is available.`
                       : incidentMode === 'history'
-                        ? 'Road alerts will appear here when relevant Ottawa signal is available in the selected history view.'
+                        ? 'Roadside alerts will appear here when a relevant Ottawa signal is available in the selected past alerts view.'
                         : monitorNeedsCaution
                           ? `Still monitoring Ottawa incident sources. Limited feed confidence at the moment. Last successful poll ${lastPoll}.`
-                          : 'Road alerts will appear here when relevant Ottawa signal is available.'}
+                          : 'Roadside alerts will appear here when a live Ottawa incident or roadside signal is available.'}
                 </p>
               </div>
             ) : null}
@@ -1958,9 +1962,18 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           </>
         ) : (
           <>
+            <div className="px-1">
+              <div className="text-white text-lg font-semibold">{filter === 'active' ? 'Active jobs' : 'Job history'}</div>
+              <div className="text-slate-500 text-sm mt-1">{filter === 'active' ? 'Live job requests that still need action in the field.' : 'Your job record timeline, including created, claimed, completed, and cancelled jobs.'}</div>
+            </div>
             {selectedRequest ? <RequestDetailCard request={selectedRequest} operatorId={session.id} isUpdating={isUpdating} onBack={() => setSelectedRequestId(null)} onStatusChange={(id, statusValue, operatorId) => updateStatus({ id, status: statusValue, operatorId })} /> : null}
-            {isLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading jobs...</div> : null}
-            {!isLoading && displayRequests.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-dispatch-surface border border-dispatch-border rounded-full flex items-center justify-center mb-4">{filter === 'active' ? <CheckCircle2 className="w-8 h-8 text-slate-600" /> : <RefreshCw className="w-8 h-8 text-slate-600" />}</div><p className="text-slate-400 font-semibold">{filter === 'active' ? 'No active jobs right now' : 'No jobs yet'}</p><p className="text-slate-600 text-sm mt-1 max-w-xs">New customer jobs will appear here automatically.</p></div> : null}
+            {filter === 'all' ? (
+              <div className="rounded-xl border border-dispatch-border bg-dispatch-surface px-3 py-2.5 text-[11px] text-slate-300">
+                Job history shows your created, claimed, completed, and cancelled job records.
+              </div>
+            ) : null}
+            {isLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />{filter === 'active' ? 'Loading active jobs...' : 'Loading job history...'}</div> : null}
+            {!isLoading && displayRequests.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-dispatch-surface border border-dispatch-border rounded-full flex items-center justify-center mb-4">{filter === 'active' ? <CheckCircle2 className="w-8 h-8 text-slate-600" /> : <RefreshCw className="w-8 h-8 text-slate-600" />}</div><p className="text-slate-400 font-semibold">{filter === 'active' ? 'No active jobs right now' : 'No completed or created jobs yet'}</p><p className="text-slate-600 text-sm mt-1 max-w-xs">{filter === 'active' ? 'New customer jobs will appear here automatically.' : 'Completed, cancelled, and newly created job records will appear here automatically.'}</p></div> : null}
             {displayRequests.map((request) => <JobCard key={request.id} request={request} onOpen={() => setSelectedRequestId(request.id)} />)}
           </>
         )}
