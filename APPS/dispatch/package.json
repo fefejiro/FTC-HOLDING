@@ -8,6 +8,7 @@
     "desktop:dev": "npm run dev",
     "build": "node --import tsx script/build.ts",
     "build:prod": "npm run build",
+    "test:e2e:road-alerts": "playwright test -c playwright.config.ts",
     "desktop:preview": "cross-env NODE_ENV=production node dist/index.cjs",
     "start": "node dist/index.cjs",
     "check": "tsc",

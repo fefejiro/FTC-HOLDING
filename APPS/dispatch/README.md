@@ -56,6 +56,23 @@ npm run dev
 
 Required environment variables are shown in [`.env.example`](/c:/FTC%20HOLDING/APPS/dispatch/.env.example).
 
+## Mobile road-alert smoke test
+
+Use the focused mobile smoke test when changing operator tab logic or Road Alerts rendering:
+
+```powershell
+cd "C:\FTC HOLDING\APPS\dispatch"
+npm run test:e2e:road-alerts
+```
+
+Defaults:
+
+- Base URL: `https://dispatch.unalabs.cloud`
+- Operator name: `Ottawa Operator`
+- Operator PIN: `9090`
+
+Override them with `DISPATCH_PLAYWRIGHT_BASE_URL`, `DISPATCH_TEST_OPERATOR_NAME`, or `DISPATCH_TEST_OPERATOR_PIN` if needed.
+
 ## Desktop troubleshooting workflow
 
 Use the web app directly while debugging product behavior before shipping mobile updates:

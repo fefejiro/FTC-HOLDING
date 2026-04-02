@@ -344,6 +344,11 @@ function fmt(dateStr?: string | null) {
   return new Date(dateStr).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function fmtOptional(dateStr?: string | null) {
+  if (!dateStr) return 'Not available';
+  return fmt(dateStr);
+}
+
 function formatPoll(value?: string | null) {
   return value ? fmt(value) : 'Waiting for first successful poll';
 }
