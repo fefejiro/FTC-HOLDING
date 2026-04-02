@@ -743,23 +743,41 @@ type WazeResponse = {
   data?: { alerts?: WazeAlert[]; jams?: unknown[] };
 };
 
-async function fetchWazeIncidents(): Promise<NormalizedIncident[]> {
-  const apiKey = process.env.OPENWEBNINJA_API_KEY;
-  if (!apiKey) return [];
+// Throttle: call Waze every 7th monitor run (~5 min at 45s intervals) to protect free quota.
+// At 45s × 7 = 315s ≈ 5 min per call → ~8,600 calls/month (upgrade plan for production).
+let wazeRunCount = 0;
+const WAZE_POLL_EVERY_N = 7;
 
-  // Ottawa bounding box (tighter than OTTAWA_BOUNDS — better for Waze free-tier quota)
+async function fetchWazeIncidents(): Promise<NormalizedIncident[]> {
+  // Support both keys — prefer RapidAPI wrapper, fall back to direct OpenWeb Ninja key
+  const rapidApiKey = process.env.OPENWEBNINJA_API_KEY;
+  const directKey = process.env.OPENWEBNINJA_DIRECT_KEY;
+  if (!rapidApiKey && !directKey) return [];
+
   const bottomLeft = '45.2501,-76.3556';
   const topRight = '45.5375,-75.2466';
-  const url = `https://waze.p.rapidapi.com/alerts-and-jams?bottom_left=${encodeURIComponent(bottomLeft)}&top_right=${encodeURIComponent(topRight)}&max_alerts=100&max_jams=0`;
+  const params = `bottom_left=${encodeURIComponent(bottomLeft)}&top_right=${encodeURIComponent(topRight)}&max_alerts=100&max_jams=0`;
 
-  const res = await fetch(url, {
-    headers: {
-      'X-RapidAPI-Key': apiKey,
+  let url: string;
+  let headers: Record<string, string>;
+
+  if (rapidApiKey) {
+    url = `https://waze.p.rapidapi.com/alerts-and-jams?${params}`;
+    headers = {
+      'X-RapidAPI-Key': rapidApiKey,
       'X-RapidAPI-Host': 'waze.p.rapidapi.com',
       'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)',
-    },
-    signal: AbortSignal.timeout(15_000),
-  });
+    };
+  } else {
+    // Direct OpenWeb Ninja endpoint
+    url = `https://api.openwebninja.com/waze/alerts-and-jams?${params}`;
+    headers = {
+      'x-api-key': directKey!,
+      'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)',
+    };
+  }
+
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
   if (!res.ok) {
     console.warn(`[monitor][waze] fetch failed: ${res.status} ${res.statusText}`);
     return [];
@@ -869,11 +887,14 @@ async function loadSourceIncidents(): Promise<Record<SourceKey, NormalizedIncide
 
   // OC Transpo may geocode sequentially â€” run it first, then parallel the rest
   const octranspo = await fetchOCTranspoAlerts(geocodeBudget);
+  wazeRunCount += 1;
+  const shouldPollWaze = wazeRunCount % WAZE_POLL_EVERY_N === 0;
+
   const [on511, ottawaTraffic, tomtom, waze] = await Promise.all([
     fetchOntario511Incidents(),
     fetchOttawaTrafficIncidents(),
     fetchTomTomIncidents(),
-    fetchWazeIncidents(),
+    shouldPollWaze ? fetchWazeIncidents() : Promise.resolve([]),
   ]);
 
   return { on511, ottawa_traffic: ottawaTraffic, octranspo, tomtom, waze };
