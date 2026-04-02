@@ -737,6 +737,16 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const mode =
       req.query.mode === 'history' ? 'history' : req.query.mode === 'all' ? 'all' : 'active';
     const query = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
+    const parsedDate = z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+      .safeParse(req.query.date);
+    if (!parsedDate.success) {
+      res.status(400).json({ error: 'Invalid date. Use YYYY-MM-DD.' });
+      return;
+    }
+    const requestedDayKey = parsedDate.data ?? null;
     const requestedSource =
       typeof req.query.source === 'string' &&
       INCIDENT_SOURCE_DEFS.some((source) => source.key === req.query.source)
@@ -764,6 +774,11 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
 
     const filtered = results
       .filter((incident) => isOttawaScopedIncident(incident))
+      .filter((incident) => {
+        if (!requestedDayKey) return true;
+        if (!incident.createdAt) return false;
+        return formatEasternDayKey(incident.createdAt) === requestedDayKey;
+      })
       .filter((incident) => {
         const workflowStatus = normalizeSignalWorkflowStatus(incident.workflowStatus);
         const ts =

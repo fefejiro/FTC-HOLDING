@@ -585,6 +585,7 @@ function AdminDashboard({
     queryFn: async () => {
       const params = new URLSearchParams({ mode: 'all', limit: '80' });
       if (incidentSource) params.set('source', incidentSource);
+      if (incidentSource && sourceSummary?.date) params.set('date', sourceSummary.date);
       const res = await adminFetch(`/api/incidents?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load incidents');
       return res.json() as Promise<IncidentFeedItem[]>;

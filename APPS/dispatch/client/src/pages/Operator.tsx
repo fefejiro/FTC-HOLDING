@@ -1453,8 +1453,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     const q = incidentSearch.trim();
     if (q) params.set('q', q);
     if (incidentSource) params.set('source', incidentSource);
+    if (incidentSource && sourceSummary?.date) params.set('date', sourceSummary.date);
     return `/api/incidents?${params.toString()}`;
-  }, [incidentMode, incidentSearch, incidentSource]);
+  }, [incidentMode, incidentSearch, incidentSource, sourceSummary?.date]);
 
   const useMyLocationForProximity = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
