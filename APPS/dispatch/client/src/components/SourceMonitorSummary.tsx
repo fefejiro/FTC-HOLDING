@@ -12,12 +12,16 @@ export default function SourceMonitorSummary({
   sourceCount,
   dayLabel,
   items,
+  selectedKey = null,
+  onSelect,
   compact = false,
   className,
 }: {
   sourceCount: number;
   dayLabel: string;
   items: SourceMonitorItem[];
+  selectedKey?: string | null;
+  onSelect?: (key: string | null) => void;
   compact?: boolean;
   className?: string;
 }) {
@@ -27,6 +31,11 @@ export default function SourceMonitorSummary({
     const totalSignals = items.reduce((sum, item) => sum + item.count, 0);
     return `${sourceCount} sources, ${totalSignals} signals on ${dayLabel}`;
   }, [dayLabel, items, sourceCount]);
+
+  const totalSignals = useMemo(
+    () => items.reduce((sum, item) => sum + item.count, 0),
+    [items],
+  );
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -67,10 +76,38 @@ export default function SourceMonitorSummary({
           )}
         >
           <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => onSelect?.(null)}
+              className={cn(
+                'flex w-full items-start justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-all',
+                selectedKey === null
+                  ? 'border-orange-500/40 bg-orange-500/10'
+                  : 'border-dispatch-border bg-dispatch-bg hover:border-slate-600',
+              )}
+            >
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-white">All sources</div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  Combined daily signals on {dayLabel}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold tabular-nums text-cyan-300">{totalSignals}</div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Daily count</div>
+              </div>
+            </button>
             {items.map((item) => (
-              <div
+              <button
+                type="button"
+                onClick={() => onSelect?.(item.key)}
                 key={item.key}
-                className="flex items-start justify-between gap-3 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5"
+                className={cn(
+                  'flex w-full items-start justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-all',
+                  selectedKey === item.key
+                    ? 'border-orange-500/40 bg-orange-500/10'
+                    : 'border-dispatch-border bg-dispatch-bg hover:border-slate-600',
+                )}
               >
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-white">{item.label}</div>
@@ -82,7 +119,7 @@ export default function SourceMonitorSummary({
                   <div className="text-lg font-bold tabular-nums text-cyan-300">{item.count}</div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Daily count</div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

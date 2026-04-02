@@ -737,6 +737,11 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const mode =
       req.query.mode === 'history' ? 'history' : req.query.mode === 'all' ? 'all' : 'active';
     const query = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
+    const requestedSource =
+      typeof req.query.source === 'string' &&
+      INCIDENT_SOURCE_DEFS.some((source) => source.key === req.query.source)
+        ? (req.query.source as IncidentSourceSummaryKey)
+        : null;
     const activeWindowMs = 6 * 60 * 60 * 1000;
     const cutoff = Date.now() - activeWindowMs;
 
@@ -748,6 +753,10 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
 
     const filtered = results
       .filter((incident) => isOttawaScopedIncident(incident))
+      .filter((incident) => {
+        if (!requestedSource) return true;
+        return getIncidentSourceKey(incident.id) === requestedSource;
+      })
       .filter((incident) => {
         const workflowStatus = normalizeSignalWorkflowStatus(incident.workflowStatus);
         const ts =

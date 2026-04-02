@@ -57,6 +57,7 @@ import {
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
 type RequestStatus = 'pending' | 'accepted' | 'en_route' | 'completed' | 'cancelled';
 type OperatorFilter = 'active' | 'all' | 'incidents' | 'stats';
+type IncidentSourceFilter = 'on511' | 'ottawa_traffic' | 'octranspo' | 'tomtom' | 'waze';
 
 interface ServiceRequest {
   id: string;
@@ -1431,6 +1432,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const { isSubscribed, isSupported, subscribe } = usePush({ operatorId: session.id });
   const [incidentMode, setIncidentMode] = useState<'active' | 'history' | 'all'>('active');
   const [incidentCategory, setIncidentCategory] = useState<'all' | 'emergency' | 'breakdown' | 'traffic' | 'transit'>('all');
+  const [incidentSource, setIncidentSource] = useState<IncidentSourceFilter | null>(null);
   const [incidentCity, setIncidentCity] = useState('Ottawa');
   const [incidentSort, setIncidentSort] = useState<'roadside' | 'newest' | 'proximity'>('newest');
   const [incidentRadiusKm, setIncidentRadiusKm] = useState(0);
@@ -1450,8 +1452,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     const params = new URLSearchParams({ mode: incidentMode, limit: '80' });
     const q = incidentSearch.trim();
     if (q) params.set('q', q);
+    if (incidentSource) params.set('source', incidentSource);
     return `/api/incidents?${params.toString()}`;
-  }, [incidentMode, incidentSearch]);
+  }, [incidentMode, incidentSearch, incidentSource]);
 
   const useMyLocationForProximity = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -1565,7 +1568,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     error: incidentsErrorValue,
     refetch: refetchIncidents,
   } = useQuery<Incident[]>({
-    queryKey: ['incidents', incidentMode, incidentSearch],
+    queryKey: ['incidents', incidentMode, incidentSearch, incidentSource],
     queryFn: async () => {
       const response = await fetch(incidentsUrl);
       if (!response.ok) throw new Error('Failed to load incidents');
@@ -1752,6 +1755,8 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const sourceCount = sourceSummary?.sourceCount ?? status?.incidentMonitor?.sourceCount ?? 5;
   const sourceMonitorItems = sourceSummary?.items ?? [];
   const sourceSummaryDayLabel = sourceSummary?.dayLabel ?? 'today';
+  const selectedIncidentSourceLabel =
+    sourceMonitorItems.find((item) => item.key === incidentSource)?.label ?? null;
   const pollSeconds = Math.max(1, Math.round((status?.incidentMonitor?.pollIntervalMs ?? 60_000) / 1000));
   const lastPoll = formatPoll(status?.incidentMonitor?.lastSuccessAt);
   const monitorLastSuccessMs = parseTimestamp(status?.incidentMonitor?.lastSuccessAt);
@@ -1950,6 +1955,12 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           sourceCount={sourceCount}
           items={sourceMonitorItems}
           dayLabel={sourceSummaryDayLabel}
+          selectedKey={incidentSource}
+          onSelect={(key) => {
+            setIncidentSource((key as IncidentSourceFilter | null) ?? null);
+            setFilter('incidents');
+            setSelectedIncidentId(null);
+          }}
         />
 
       </div>
@@ -1972,7 +1983,11 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           <>
             <div className="px-1">
               <div className="text-white text-lg font-semibold">Roadside alerts</div>
-              <div className="text-slate-500 text-sm mt-1">Live roadside signals and incidents that may turn into dispatch jobs.</div>
+              <div className="text-slate-500 text-sm mt-1">
+                {selectedIncidentSourceLabel
+                  ? `${selectedIncidentSourceLabel} roadside signals and incidents for ${sourceSummaryDayLabel}.`
+                  : 'Live roadside signals and incidents that may turn into dispatch jobs.'}
+              </div>
             </div>
             <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -2040,9 +2055,23 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
               <div className="mt-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-[11px] text-cyan-200">
                 Ottawa-only live scope. Out-of-area roadside signals are hidden from this workflow.
               </div>
+              {selectedIncidentSourceLabel ? (
+                <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2.5 text-[11px] text-orange-200">
+                  <span>Source filter active: {selectedIncidentSourceLabel}</span>
+                  <button
+                    type="button"
+                    onClick={() => setIncidentSource(null)}
+                    className="font-semibold text-orange-100 hover:text-white"
+                  >
+                    Show all sources
+                  </button>
+                </div>
+              ) : null}
               {incidentFeedWithMeta.length > 0 ? (
                 <div className="mt-2 rounded-xl border border-slate-700 bg-dispatch-bg px-3 py-2.5 text-[11px] text-slate-300">
-                  Showing live Ottawa roadside signals that can become jobs. Stronger job-worthy alerts are ranked and labeled, not hidden.
+                  {selectedIncidentSourceLabel
+                    ? `Showing persisted Ottawa signals from ${selectedIncidentSourceLabel}.`
+                    : 'Showing live Ottawa roadside signals that can become jobs. Stronger job-worthy alerts are ranked and labeled, not hidden.'}
                 </div>
               ) : null}
               {monitorNeedsCaution ? (
@@ -2101,7 +2130,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                   <CheckCircle2 className="w-8 h-8 text-green-500" />
                 </div>
                 <p className="text-slate-300 font-semibold">
-                  {incidentCategory !== 'all' || incidentMode === 'history'
+                  {selectedIncidentSourceLabel
+                    ? `No ${selectedIncidentSourceLabel} alerts right now for this view`
+                    : incidentCategory !== 'all' || incidentMode === 'history'
                     ? 'No roadside alerts right now for this filter'
                     : 'No roadside alerts right now'}
                 </p>

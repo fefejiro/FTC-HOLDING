@@ -134,6 +134,7 @@ interface IncidentSourceSummaryResponse {
 
 type AdminFilter = 'all' | 'pending' | 'active' | 'completed' | 'cancelled';
 type IncidentListFilter = 'all' | 'received' | 'being_pursued' | 'handled' | 'not_legit';
+type IncidentSourceFilter = 'on511' | 'ottawa_traffic' | 'octranspo' | 'tomtom' | 'waze';
 
 const SERVICE_ICONS: Record<ServiceType, React.ComponentType<{ className?: string }>> = {
   gas: Fuel,
@@ -493,6 +494,7 @@ function AdminDashboard({
   const [testPushResult, setTestPushResult] = useState('');
   const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
   const [incidentListFilter, setIncidentListFilter] = useState<IncidentListFilter>('all');
+  const [incidentSource, setIncidentSource] = useState<IncidentSourceFilter | null>(null);
 
   const adminFetch = useCallback(
     (url: string, options: RequestInit = {}) => {
@@ -579,9 +581,11 @@ function AdminDashboard({
     isFetching: incidentsFetching,
     refetch: refetchIncidents,
   } = useQuery<IncidentFeedItem[]>({
-    queryKey: ['admin-incidents'],
+    queryKey: ['admin-incidents', incidentSource],
     queryFn: async () => {
-      const res = await adminFetch('/api/incidents?mode=all&limit=80');
+      const params = new URLSearchParams({ mode: 'all', limit: '80' });
+      if (incidentSource) params.set('source', incidentSource);
+      const res = await adminFetch(`/api/incidents?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load incidents');
       return res.json() as Promise<IncidentFeedItem[]>;
     },
@@ -633,6 +637,8 @@ function AdminDashboard({
   const sourceCount = sourceSummary?.sourceCount ?? 5;
   const sourceMonitorItems = sourceSummary?.items ?? [];
   const sourceSummaryDayLabel = sourceSummary?.dayLabel ?? 'today';
+  const selectedIncidentSourceLabel =
+    sourceMonitorItems.find((item) => item.key === incidentSource)?.label ?? null;
   const selectedRequest =
     filteredRequests.find((request) => request.id === selectedRequestId) ?? filteredRequests[0] ?? null;
 
@@ -773,6 +779,11 @@ function AdminDashboard({
           sourceCount={sourceCount}
           items={sourceMonitorItems}
           dayLabel={sourceSummaryDayLabel}
+          selectedKey={incidentSource}
+          onSelect={(key) => {
+            setIncidentSource((key as IncidentSourceFilter | null) ?? null);
+            setActiveIncidentId(null);
+          }}
         />
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
@@ -872,7 +883,9 @@ function AdminDashboard({
                 <div>
                   <div className="text-white text-sm font-semibold">Live incident feed</div>
                   <div className="text-slate-500 text-xs mt-0.5">
-                    Ottawa-only slice from Ontario 511, City of Ottawa traffic, and OC Transpo service alerts.
+                    {selectedIncidentSourceLabel
+                      ? `Filtered to persisted ${selectedIncidentSourceLabel} incidents for ${sourceSummaryDayLabel}.`
+                      : 'Ottawa-only slice from Ontario 511, City of Ottawa traffic, and OC Transpo service alerts.'}
                   </div>
                 </div>
                 <button
@@ -887,13 +900,29 @@ function AdminDashboard({
                   {incidentsFetching ? 'Refreshing...' : 'Refresh incidents'}
                 </button>
               </div>
+              {selectedIncidentSourceLabel ? (
+                <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2.5 text-[11px] text-orange-200">
+                  <span>Source filter active: {selectedIncidentSourceLabel}</span>
+                  <button
+                    type="button"
+                    onClick={() => setIncidentSource(null)}
+                    className="font-semibold text-orange-100 hover:text-white"
+                  >
+                    Show all sources
+                  </button>
+                </div>
+              ) : null}
               {incidentsLoading ? (
                 <div className="text-slate-500 text-xs py-3 flex items-center gap-2">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Loading incidents...
                 </div>
               ) : filteredIncidents.length === 0 ? (
-                <div className="text-slate-500 text-xs py-3">No incidents for this filter right now.</div>
+                <div className="text-slate-500 text-xs py-3">
+                  {selectedIncidentSourceLabel
+                    ? `No ${selectedIncidentSourceLabel} incidents for this filter right now.`
+                    : 'No incidents for this filter right now.'}
+                </div>
               ) : (
                 <div className="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
                   {filteredIncidents.map((incident) => {
