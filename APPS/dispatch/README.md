@@ -17,16 +17,14 @@ Dispatch is the Ottawa roadside assistance app and API in this repo.
 - `/operator` is the operator console
 - `/admin` is the admin dashboard
 
-## Client demo flow
+## Live product flow
 
 - Official entrypoint: `https://unalabs.cloud/products/dispatch`
-- Demo request form: `https://dispatch.unalabs.cloud/request?mode=demo`
-- Demo operator surface: `https://dispatch.unalabs.cloud/operator?mode=demo&demoSession=<id>`
+- Customer request form: `https://dispatch.unalabs.cloud/request`
+- Operator workspace: `https://dispatch.unalabs.cloud/operator`
 - Admin remains private on `https://dispatch-admin.unalabs.cloud/admin`
 
-Demo requests are tagged with a session marker so invited operators can work a client-safe queue without mixing with unrelated live jobs. The real incident-watch feed stays visible during the demo so the system still feels live.
-
-Credentials for invited demo operators and private admin access are managed outside the repo and should be shared manually, not committed into documentation.
+Dispatch is live-only. Demo request/session flows are retired, and any older demo-tagged rows are filtered out of the operational queues.
 
 ## Remote admin security
 
@@ -161,6 +159,6 @@ Why this matters:
 - Project: `enchanting-caring`
 - Deploy status: `SUCCESS`
 - Public `/health` returned `200` with `{"status":"ok"}`
-- Demo request creation worked on the live host
-- Demo operator sign-in worked on the live host
-- Una Labs product page at `/products/dispatch` showed the demo-first client path
+- Live request creation worked on the live host
+- Operator sign-in worked on the live host
+- Una Labs product page at `/products/dispatch` linked into the live Dispatch path

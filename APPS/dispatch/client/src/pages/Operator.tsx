@@ -33,11 +33,9 @@ import {
 } from 'react-leaflet';
 import DispatchAccessPanel from '../components/DispatchAccessPanel';
 import DispatchLoginShell from '../components/DispatchLoginShell';
-import DemoFeedbackForm from '../components/DemoFeedbackForm';
 import { useEvents } from '../hooks/useEvents';
 import { usePush } from '../hooks/usePush';
 import { cn } from '../lib/cn';
-import { requestMatchesDemoMode } from '../lib/demo';
 import {
   clearOperatorSession,
   operatorFetch,
@@ -65,8 +63,6 @@ interface ServiceRequest {
   createdAt: string;
   acceptedAt: string | null;
   completedAt: string | null;
-  demoMode?: boolean | null;
-  demoSessionId?: string | null;
 }
 
 interface OperatorRecord {
@@ -607,17 +603,9 @@ function roadsideLabel(type: IncidentWithMeta['roadsideType']) {
   return 'General roadside';
 }
 
-function readDemoContext() {
-  return { demoMode: false, demoSessionId: null as string | null };
-}
-
 function PinScreen({
-  demoMode,
-  demoSessionId,
   onAuthenticated,
 }: {
-  demoMode: boolean;
-  demoSessionId?: string | null;
   onAuthenticated: (session: OperatorSession) => void;
 }) {
   const [operators, setOperators] = useState<OperatorRecord[]>([]);
@@ -638,18 +626,12 @@ function PinScreen({
       .finally(() => setOpsLoading(false));
   }, []);
 
-  const visibleOperators = useMemo(() => {
-    if (!demoMode) return operators;
-    const demoOperators = operators.filter((operator) => /demo/i.test(operator.name));
-    return demoOperators.length ? demoOperators : operators;
-  }, [demoMode, operators]);
-
   useEffect(() => {
-    if (!visibleOperators.length) return;
-    if (!visibleOperators.some((operator) => operator.id === selectedId)) {
-      setSelectedId(visibleOperators[0].id);
+    if (!operators.length) return;
+    if (!operators.some((operator) => operator.id === selectedId)) {
+      setSelectedId(operators[0].id);
     }
-  }, [selectedId, visibleOperators]);
+  }, [operators, selectedId]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -685,11 +667,7 @@ function PinScreen({
       icon={<Zap className="w-7 h-7" />}
       eyebrow="Ottawa roadside operations"
       title="Dispatch sign in"
-      subtitle={
-        demoMode
-          ? `Use the invited sandbox credentials for session ${demoSessionId || 'demo'} to open the field workspace.`
-          : 'Choose your name, enter your PIN, and continue into the live field workspace.'
-      }
+      subtitle="Choose your name, enter your PIN, and continue into the live field workspace."
       footer={
         <div className="space-y-3">
           <button
@@ -705,11 +683,9 @@ function PinScreen({
               <p className="mt-1">Ask the admin team to reset your on-duty PIN. The current default operator PIN is <span className="font-semibold text-white">9090</span>.</p>
             </div>
           ) : null}
-          {!demoMode ? (
-            <p className="text-xs leading-relaxed text-slate-500">
-              While on duty, Dispatch can use your device location to help route nearby jobs and keep operations coordinated.
-            </p>
-          ) : null}
+          <p className="text-xs leading-relaxed text-slate-500">
+            While on duty, Dispatch can use your device location to help route nearby jobs and keep operations coordinated.
+          </p>
         </div>
       }
     >
@@ -721,12 +697,12 @@ function PinScreen({
             <select
               value={selectedId}
               onChange={(event) => setSelectedId(event.target.value)}
-              disabled={opsLoading || visibleOperators.length === 0}
+              disabled={opsLoading || operators.length === 0}
               className="w-full bg-dispatch-surface border border-dispatch-border rounded-xl px-4 py-4 text-white focus:outline-none focus:border-orange-500 transition-colors disabled:text-slate-500"
             >
               {opsLoading ? <option>Loading...</option> : null}
-              {!opsLoading && visibleOperators.length === 0 ? <option>No operators found</option> : null}
-              {visibleOperators.map((operator) => (
+              {!opsLoading && operators.length === 0 ? <option>No operators found</option> : null}
+              {operators.map((operator) => (
                 <option key={operator.id} value={operator.id}>
                   {operator.name}
                 </option>
@@ -800,7 +776,6 @@ function JobCard({ request, onOpen }: { request: ServiceRequest; onOpen: () => v
             <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap', STATUS_CONFIG[request.status].badge)}>
               {STATUS_CONFIG[request.status].label}
             </span>
-            {request.demoMode ? <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-300">Demo</span> : null}
           </div>
         </div>
         <div className="flex flex-col gap-1.5 mb-4 text-sm">
@@ -830,24 +805,14 @@ function JobCard({ request, onOpen }: { request: ServiceRequest; onOpen: () => v
 function RequestDetailCard({
   request,
   operatorId,
-  operatorName,
-  demoMode,
-  demoSessionId,
   isUpdating,
-  showFeedback,
   onBack,
-  onToggleFeedback,
   onStatusChange,
 }: {
   request: ServiceRequest;
   operatorId: string;
-  operatorName: string;
-  demoMode: boolean;
-  demoSessionId?: string | null;
   isUpdating: boolean;
-  showFeedback: boolean;
   onBack: () => void;
-  onToggleFeedback: () => void;
   onStatusChange: (id: string, status: RequestStatus, operatorId: string) => void;
 }) {
   const Icon = SERVICE_ICONS[request.serviceType];
@@ -861,12 +826,9 @@ function RequestDetailCard({
           <ArrowLeft className="w-4 h-4" />
           Back to jobs
         </button>
-        <div className="flex items-center gap-2">
-          {demoMode ? <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-orange-300">Demo request</span> : null}
-          <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap', STATUS_CONFIG[request.status].badge)}>
-            {STATUS_CONFIG[request.status].label}
-          </span>
-        </div>
+        <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap', STATUS_CONFIG[request.status].badge)}>
+          {STATUS_CONFIG[request.status].label}
+        </span>
       </div>
 
       <div className="flex items-start gap-3 mb-4">
@@ -876,7 +838,6 @@ function RequestDetailCard({
         <div>
           <h2 className="text-white font-bold text-xl">{request.customerName}</h2>
           <p className="text-slate-400 text-sm mt-1">{SERVICE_LABELS[request.serviceType]}</p>
-          {request.demoSessionId ? <p className="text-slate-600 text-xs mt-1">Session {request.demoSessionId}</p> : null}
         </div>
       </div>
 
@@ -918,11 +879,6 @@ function RequestDetailCard({
           <Phone className="w-4 h-4" />
           Call customer
         </a>
-        {demoMode ? (
-          <button type="button" onClick={onToggleFeedback} className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-dispatch-bg text-slate-200 text-sm font-bold hover:bg-slate-800 transition-all">
-            {showFeedback ? 'Hide demo feedback' : 'Send demo feedback'}
-          </button>
-        ) : null}
       </div>
 
       {request.status === 'pending' ? (
@@ -954,20 +910,6 @@ function RequestDetailCard({
             {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
             Unable to complete
           </button>
-        </div>
-      ) : null}
-
-      {showFeedback ? (
-        <div className="mt-5">
-          <DemoFeedbackForm
-            context={{
-              context: request.status === 'completed' ? 'dispatch-demo-operator-complete' : 'dispatch-demo-operator',
-              operatorName,
-              demoSessionId,
-              requestId: request.id,
-              completedRequestId: request.status === 'completed' ? request.id : undefined,
-            }}
-          />
         </div>
       ) : null}
     </div>
@@ -1277,7 +1219,7 @@ function IncidentDetailCard({
   );
 }
 
-function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session: OperatorSession; onSignOut: () => void; demoMode: boolean; demoSessionId?: string | null }) {
+function OperatorView({ session, onSignOut }: { session: OperatorSession; onSignOut: () => void }) {
   const [filter, setFilter] = useState<OperatorFilter>('active');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
@@ -1292,19 +1234,13 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const [locatingProximity, setLocatingProximity] = useState(false);
   const [proximityError, setProximityError] = useState('');
   const [incidentSearch, setIncidentSearch] = useState('');
-  const [showFeedback, setShowFeedback] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [, setNowTick] = useState(0);
   const viewedIncidentIdsRef = useRef<Set<string>>(new Set());
   const lastOperatorLocationSentRef = useRef<{ lat: number; lng: number; sentAt: number } | null>(null);
   const queryClient = useQueryClient();
-  const requestQueryKey = useMemo(() => ['requests', demoMode ? `demo:${demoSessionId || 'demo'}` : 'live'], [demoMode, demoSessionId]);
-  const requestsUrl = useMemo(() => {
-    if (!demoMode) return '/api/requests?mode=live';
-    const params = new URLSearchParams({ mode: 'demo' });
-    if (demoSessionId) params.set('demoSessionId', demoSessionId);
-    return `/api/requests?${params.toString()}`;
-  }, [demoMode, demoSessionId]);
+  const requestQueryKey = useMemo(() => ['requests', 'live'], []);
+  const requestsUrl = '/api/requests';
 
   const incidentsUrl = useMemo(() => {
     const params = new URLSearchParams({ mode: incidentMode, limit: '80' });
@@ -1374,7 +1310,6 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const { connected: liveFeedConnected } = useEvents({
     onRequestNew: (data) => {
       const request = data as ServiceRequest;
-      if (!requestMatchesDemoMode(request, demoMode, demoSessionId)) return;
       queryClient.setQueryData<ServiceRequest[]>(requestQueryKey, (current) => current ? [request, ...current.filter((item) => item.id !== request.id)] : [request]);
       playJobAlert();
       addToast(`New job: ${SERVICE_LABELS[request.serviceType]} - ${request.customerName}`, 'job');
@@ -1383,7 +1318,6 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
       const request = data as ServiceRequest;
       queryClient.setQueryData<ServiceRequest[]>(requestQueryKey, (current) => {
         const currentList = current ?? [];
-        if (!requestMatchesDemoMode(request, demoMode, demoSessionId)) return currentList.filter((item) => item.id !== request.id);
         return currentList.some((item) => item.id === request.id) ? currentList.map((item) => item.id === request.id ? request : item) : [request, ...currentList];
       });
     },
@@ -1457,31 +1391,28 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const handleIncidentDispatch = useCallback(async (incident: Incident) => {
     const roadway = incident.roadway || 'Ottawa area';
     try {
-      const response = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerName: `Lead - ${roadway}`, customerPhone: '000-000-0000', serviceType: 'other', locationLat: incident.locationLat, locationLng: incident.locationLng, locationAddress: roadway, notes: incident.description || undefined, mode: demoMode ? 'demo' : 'live', demoSessionId: demoMode ? demoSessionId || undefined : undefined }) });
+      const response = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerName: `Lead - ${roadway}`, customerPhone: '000-000-0000', serviceType: 'other', locationLat: incident.locationLat, locationLng: incident.locationLng, locationAddress: roadway, notes: incident.description || undefined }) });
       if (!response.ok) throw new Error('Failed to create job');
       const payload = (await response.json()) as { ok?: boolean; request?: { id?: string } };
-      if (!demoMode) {
-        await operatorFetch(`/api/incidents/${incident.id}/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ operatorId: session.id, requestId: payload.request?.id || undefined }),
-        }).catch(() => {
-          // Keep request creation successful even if action analytics fail.
-        });
-      }
+      await operatorFetch(`/api/incidents/${incident.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operatorId: session.id, requestId: payload.request?.id || undefined }),
+      }).catch(() => {
+        // Keep request creation successful even if action analytics fail.
+      });
       addToast(`Job created from incident on ${roadway}`, 'job');
       queryClient.invalidateQueries({ queryKey: requestQueryKey });
       queryClient.invalidateQueries({ queryKey: ['incident-summary'] });
     } catch {
       addToast('Failed to create job. Try again.', 'incident');
     }
-  }, [demoMode, demoSessionId, queryClient, requestQueryKey, session.id]);
+  }, [queryClient, requestQueryKey, session.id]);
 
   const myRequests = allRequests.filter((request) => (request.operatorId === null && request.status === 'pending') || request.operatorId === session.id);
   const displayRequests = filter === 'active' ? myRequests.filter((request) => ['pending', 'accepted', 'en_route'].includes(request.status)) : filter === 'all' ? myRequests : [];
   const pendingCount = myRequests.filter((request) => request.status === 'pending').length;
   const activeCount = myRequests.filter((request) => ['accepted', 'en_route'].includes(request.status)).length;
-  const completedDemoRequest = demoMode ? [...myRequests].find((request) => request.status === 'completed') || null : null;
   const selectedRequest = displayRequests.find((request) => request.id === selectedRequestId) || myRequests.find((request) => request.id === selectedRequestId) || null;
   const INCIDENT_CATEGORIES: Record<string, string[]> = {
     emergency: ['ACCIDENT', 'COLLISION', 'VEHICLE_FIRE'],
@@ -1606,7 +1537,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   ]);
 
   useEffect(() => {
-    if (demoMode || filter !== 'incidents' || !selectedIncidentId) return;
+    if (filter !== 'incidents' || !selectedIncidentId) return;
     if (viewedIncidentIdsRef.current.has(selectedIncidentId)) return;
 
     const selected = sortedIncidentFeed.find((incident) => incident.id === selectedIncidentId);
@@ -1626,10 +1557,10 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
       .catch(() => {
         viewedIncidentIdsRef.current.delete(selectedIncidentId);
       });
-  }, [demoMode, filter, selectedIncidentId, session.id, sortedIncidentFeed]);
+  }, [filter, selectedIncidentId, session.id, sortedIncidentFeed]);
 
   useEffect(() => {
-    if (demoMode || typeof navigator === 'undefined' || !navigator.geolocation) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
 
     const shouldSendLocation = (lat: number, lng: number) => {
       const previous = lastOperatorLocationSentRef.current;
@@ -1674,7 +1605,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
     return () => {
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [demoMode, session.id]);
+  }, [session.id]);
 
   useEffect(() => {
     if (filter === 'incidents') {
@@ -1705,14 +1636,12 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="text-white font-bold text-lg">Dispatch</span>
-                {demoMode ? <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-300">Demo mode</span> : null}
                 {pendingCount > 0 ? <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse leading-none">{pendingCount} new</span> : null}
               </div>
-              <div className="text-slate-500 text-xs mt-0.5">{session.name}{demoMode ? ' - invited sandbox operator view' : ''}</div>
+              <div className="text-slate-500 text-xs mt-0.5">{session.name}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {demoMode ? <button type="button" onClick={() => setShowFeedback((current) => !current)} className="flex items-center gap-1.5 text-slate-200 text-xs border border-dispatch-border rounded-xl px-3 py-2 hover:border-slate-500 transition-colors">{showFeedback ? 'Hide feedback' : 'Send demo feedback'}</button> : null}
             <button type="button" onClick={onSignOut} className="flex items-center gap-1.5 text-slate-500 text-xs hover:text-slate-300 transition-colors py-2 px-3 rounded-xl hover:bg-dispatch-surface"><LogOut className="w-3.5 h-3.5" />Sign out</button>
           </div>
         </div>
@@ -1720,12 +1649,10 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
         <DispatchAccessPanel
           activeRole="operator"
           profileLabel={session.name}
-          profileMeta={demoMode ? `Demo session ${demoSessionId || 'active'}` : 'Live field operator'}
+          profileMeta="Live field operator"
           showRoleSwitch={false}
           className="mt-3"
         />
-
-        {demoMode ? <div className="mt-3 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-sm text-orange-100">Only requests from this demo session are shown in the queue. The incident watch uses official Ottawa feed activity only and does not inject demo incidents.</div> : null}
 
         {isSupported && !isSubscribed ? (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
@@ -1762,7 +1689,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
       </div>
 
       <div className="px-5 py-3 flex gap-2 border-b border-dispatch-border overflow-x-auto">
-        {[{ key: 'active' as const, label: demoMode ? 'Active demo jobs' : 'Active jobs', badge: pendingCount, danger: false }, { key: 'all' as const, label: demoMode ? 'All demo jobs' : 'All jobs', badge: 0, danger: false }, { key: 'incidents' as const, label: 'Road alerts', badge: 0, danger: true }].map(({ key, label, badge, danger }) => (
+        {[{ key: 'active' as const, label: 'Active jobs', badge: pendingCount, danger: false }, { key: 'all' as const, label: 'All jobs', badge: 0, danger: false }, { key: 'incidents' as const, label: 'Road alerts', badge: 0, danger: true }].map(({ key, label, badge, danger }) => (
           <button key={key} type="button" onClick={() => setFilter(key)} className={cn('px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2', filter === key ? danger ? 'bg-red-600 text-white' : 'bg-orange-500 text-white' : 'bg-dispatch-surface text-slate-400 hover:text-white')}>
             {key === 'incidents' ? <TriangleAlert className="w-3.5 h-3.5" /> : null}
             {label}
@@ -1772,8 +1699,6 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
       </div>
 
       <div className="flex-1 px-5 py-4 flex flex-col gap-3 overflow-y-auto pb-8">
-        {demoMode && showFeedback && !selectedRequest ? <DemoFeedbackForm context={{ context: 'dispatch-demo-operator-header', operatorName: session.name, demoSessionId, requestId: completedDemoRequest?.id || undefined, completedRequestId: completedDemoRequest?.status === 'completed' ? completedDemoRequest.id : undefined }} /> : null}
-
         {filter === 'incidents' ? (
           <>
             <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-3">
@@ -1928,9 +1853,9 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
           </>
         ) : (
           <>
-            {selectedRequest ? <RequestDetailCard request={selectedRequest} operatorId={session.id} operatorName={session.name} demoMode={demoMode} demoSessionId={demoSessionId} isUpdating={isUpdating} showFeedback={showFeedback} onBack={() => setSelectedRequestId(null)} onToggleFeedback={() => setShowFeedback((current) => !current)} onStatusChange={(id, statusValue, operatorId) => updateStatus({ id, status: statusValue, operatorId })} /> : null}
+            {selectedRequest ? <RequestDetailCard request={selectedRequest} operatorId={session.id} isUpdating={isUpdating} onBack={() => setSelectedRequestId(null)} onStatusChange={(id, statusValue, operatorId) => updateStatus({ id, status: statusValue, operatorId })} /> : null}
             {isLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading jobs...</div> : null}
-            {!isLoading && displayRequests.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-dispatch-surface border border-dispatch-border rounded-full flex items-center justify-center mb-4">{filter === 'active' ? <CheckCircle2 className="w-8 h-8 text-slate-600" /> : <RefreshCw className="w-8 h-8 text-slate-600" />}</div><p className="text-slate-400 font-semibold">{filter === 'active' ? demoMode ? 'No active demo jobs' : 'No active jobs right now' : demoMode ? 'No demo jobs yet' : 'No jobs yet'}</p><p className="text-slate-600 text-sm mt-1 max-w-xs">{demoMode ? 'Submit a sample roadside request from the demo link, then it will appear here automatically.' : 'New customer jobs will appear here automatically.'}</p></div> : null}
+            {!isLoading && displayRequests.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-dispatch-surface border border-dispatch-border rounded-full flex items-center justify-center mb-4">{filter === 'active' ? <CheckCircle2 className="w-8 h-8 text-slate-600" /> : <RefreshCw className="w-8 h-8 text-slate-600" />}</div><p className="text-slate-400 font-semibold">{filter === 'active' ? 'No active jobs right now' : 'No jobs yet'}</p><p className="text-slate-600 text-sm mt-1 max-w-xs">New customer jobs will appear here automatically.</p></div> : null}
             {displayRequests.map((request) => <JobCard key={request.id} request={request} onOpen={() => setSelectedRequestId(request.id)} />)}
           </>
         )}
@@ -1940,7 +1865,6 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
 }
 
 export default function OperatorPage() {
-  const [{ demoMode, demoSessionId }] = useState(readDemoContext);
   const [session, setSession] = useState<OperatorSession | null>(() => readOperatorSession());
 
   function handleAuthenticated(operator: OperatorSession) {
@@ -1953,5 +1877,5 @@ export default function OperatorPage() {
     setSession(null);
   }
 
-  return session ? <OperatorView session={session} onSignOut={handleSignOut} demoMode={demoMode} demoSessionId={demoSessionId} /> : <PinScreen demoMode={demoMode} demoSessionId={demoSessionId} onAuthenticated={handleAuthenticated} />;
+  return session ? <OperatorView session={session} onSignOut={handleSignOut} /> : <PinScreen onAuthenticated={handleAuthenticated} />;
 }

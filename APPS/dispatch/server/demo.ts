@@ -18,16 +18,9 @@ export function normalizeDemoSessionId(value: unknown): string | null {
 
 export function buildRequestNotes(
   notes: string | undefined,
-  options?: { demoMode?: boolean; demoSessionId?: string | null },
 ): string | undefined {
   const trimmedNotes = String(notes || "").trim();
-  if (!options?.demoMode) {
-    return trimmedNotes || undefined;
-  }
-
-  const demoSessionId = normalizeDemoSessionId(options.demoSessionId);
-  const marker = demoSessionId ? `${DEMO_MARKER} session:${demoSessionId}` : DEMO_MARKER;
-  return [marker, trimmedNotes].filter(Boolean).join("\n");
+  return trimmedNotes || undefined;
 }
 
 export function getRequestDemoMeta(notes: string | null | undefined) {
@@ -63,15 +56,7 @@ export function serializeRequest<T extends RequestLike>(request: T) {
   };
 }
 
-export function matchesRequestMode(
-  request: RequestLike,
-  mode: "all" | "live" | "demo",
-  demoSessionId?: string | null,
-) {
+export function isLiveRequest(request: RequestLike) {
   const meta = getRequestDemoMeta(request.notes);
-  if (mode === "all") return true;
-  if (mode === "live") return !meta.demoMode;
-  if (!meta.demoMode) return false;
-  if (!demoSessionId) return true;
-  return meta.demoSessionId === normalizeDemoSessionId(demoSessionId);
+  return !meta.demoMode;
 }

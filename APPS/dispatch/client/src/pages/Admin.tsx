@@ -42,8 +42,6 @@ interface ServiceRequest {
   createdAt: string;
   acceptedAt: string | null;
   completedAt: string | null;
-  demoMode?: boolean | null;
-  demoSessionId?: string | null;
 }
 
 interface Operator {
@@ -639,20 +637,19 @@ function AdminDashboard({
     const roadway = incident.roadway || 'Ottawa area';
 
     try {
-      const response = await adminFetch('/api/requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: `Incident lead - ${roadway}`,
-          customerPhone: '000-000-0000',
-          serviceType: 'other',
-          locationLat: incident.locationLat,
-          locationLng: incident.locationLng,
-          locationAddress: roadway,
-          notes: incident.description || undefined,
-          mode: 'live',
-        }),
-      });
+        const response = await adminFetch('/api/requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerName: `Incident lead - ${roadway}`,
+            customerPhone: '000-000-0000',
+            serviceType: 'other',
+            locationLat: incident.locationLat,
+            locationLng: incident.locationLng,
+            locationAddress: roadway,
+            notes: incident.description || undefined,
+          }),
+        });
 
       if (!response.ok) throw new Error('Failed to create job');
       const payload = (await response.json()) as { request?: { id?: string } };
@@ -1099,11 +1096,6 @@ function AdminDashboard({
                   <h3 className="text-white font-bold text-lg mt-1">{selectedRequest.customerName}</h3>
                   <div className="flex items-center gap-2 text-slate-500 text-xs mt-1">
                     <span>Event {shortId(selectedRequest.id)}</span>
-                    {selectedRequest.demoMode ? (
-                      <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-300">
-                        Demo
-                      </span>
-                    ) : null}
                   </div>
                 </div>
                 <div className="text-slate-600 text-xs">
@@ -1154,19 +1146,6 @@ function AdminDashboard({
                   <div className="text-slate-300 text-sm mt-2 leading-snug">
                     {selectedRequest.locationAddress || 'Location not attached'}
                   </div>
-                </div>
-                <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3">
-                  <div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">
-                    Mode
-                  </div>
-                  <div className="text-slate-300 text-sm mt-2">
-                    {selectedRequest.demoMode ? 'Demo request' : 'Live request'}
-                  </div>
-                  {selectedRequest.demoSessionId ? (
-                    <div className="text-slate-600 text-xs mt-1">
-                      Session {selectedRequest.demoSessionId}
-                    </div>
-                  ) : null}
                 </div>
               </div>
 
@@ -1346,11 +1325,6 @@ function AdminDashboard({
                         </div>
                         <div className="flex items-center gap-2 text-slate-600 text-xs mt-0.5">
                           <span>{SERVICE_LABELS[r.serviceType]}</span>
-                          {r.demoMode ? (
-                            <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-300">
-                              Demo
-                            </span>
-                          ) : null}
                         </div>
                       </div>
                     </div>

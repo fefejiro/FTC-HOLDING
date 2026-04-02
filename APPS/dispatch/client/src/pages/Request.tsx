@@ -29,14 +29,6 @@ import {
   type RequestServiceType,
   type RankedSupportLocation,
 } from '../lib/decisionSupport';
-import {
-  clearStoredDemoSessionId,
-  getDemoSessionId,
-  isDemoMode,
-  makeDemoSessionId,
-  readStoredDemoSessionId,
-  storeDemoSessionId,
-} from '../lib/demo';
 
 type ServiceType = RequestServiceType;
 type PageState = 'form' | 'submitting' | 'success' | 'error';
@@ -120,12 +112,6 @@ function resetFormState(
 }
 
 export default function RequestPage() {
-  const demoMode = typeof window !== 'undefined' ? isDemoMode(window.location.search) : false;
-  const [demoSessionId] = useState(() => {
-    if (!demoMode) return null;
-    const fromQuery = typeof window !== 'undefined' ? getDemoSessionId(window.location.search) : null;
-    return fromQuery || readStoredDemoSessionId() || makeDemoSessionId();
-  });
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
   const [scenario, setScenario] = useState<EmergencyScenario>('breakdown');
   const [name, setName] = useState('');
@@ -156,14 +142,6 @@ export default function RequestPage() {
   });
   const notesRef = useRef<HTMLTextAreaElement | null>(null);
   const submitButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    if (!demoMode) {
-      clearStoredDemoSessionId();
-      return;
-    }
-    if (demoSessionId) storeDemoSessionId(demoSessionId);
-  }, [demoMode, demoSessionId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -463,8 +441,6 @@ export default function RequestPage() {
           locationLat: locationLat ?? undefined,
           locationLng: locationLng ?? undefined,
           notes: composedNotes || undefined,
-          mode: demoMode ? 'demo' : 'live',
-          demoSessionId: demoMode ? demoSessionId || undefined : undefined,
         }),
       });
 

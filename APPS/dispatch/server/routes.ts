@@ -5,7 +5,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
 import { db } from './db';
-import { buildRequestNotes, matchesRequestMode, normalizeDemoSessionId, serializeRequest } from './demo';
+import { buildRequestNotes, isLiveRequest, serializeRequest } from './demo';
 import { isOttawaScopedIncident } from './ottawaScope';
 import { canAccessOperatorSurface, getAuthenticatedOperatorId, issueOperatorToken } from './operatorAccess';
 import { getIncidentMonitorInfo } from './monitor';
@@ -101,8 +101,6 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       locationAddress: z.string().optional(),
       serviceType: z.enum(['gas', 'lockout', 'jump', 'tire', 'other']),
       notes: z.string().optional(),
-      mode: z.enum(['live', 'demo']).optional(),
-      demoSessionId: z.string().optional(),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -120,10 +118,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
         locationLng: parsed.data.locationLng,
         locationAddress: parsed.data.locationAddress,
         serviceType: parsed.data.serviceType,
-        notes: buildRequestNotes(parsed.data.notes, {
-          demoMode: parsed.data.mode === 'demo',
-          demoSessionId: parsed.data.demoSessionId,
-        }),
+        notes: buildRequestNotes(parsed.data.notes),
       })
       .returning();
 
@@ -141,10 +136,6 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
 
   app.get('/api/requests', async (req, res) => {
     const requestedStatus = typeof req.query.status === 'string' ? req.query.status : null;
-    const requestedMode =
-      req.query.mode === 'demo' ? 'demo' : req.query.mode === 'all' ? 'all' : 'live';
-    const requestedDemoSessionId =
-      typeof req.query.demoSessionId === 'string' ? normalizeDemoSessionId(req.query.demoSessionId) : null;
     const isAdmin = canAccessAdminSurface(req);
     const authenticatedOperatorId = getAuthenticatedOperatorId(req);
 
@@ -156,7 +147,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const results = await db.select().from(requests).orderBy(desc(requests.createdAt));
     const filtered = results
       .filter((request) => !requestedStatus || request.status === requestedStatus)
-      .filter((request) => matchesRequestMode(request, requestedMode, requestedDemoSessionId))
+      .filter((request) => isLiveRequest(request))
       .filter((request) => {
         if (isAdmin) return true;
         return request.operatorId === null || request.operatorId === authenticatedOperatorId;
@@ -546,93 +537,8 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     res.json({ ...summary, recentViewed, recentActioned });
   });
 
-  app.post('/api/demo-feedback', async (req, res) => {
-    const schema = z.object({
-      name: z.string().optional(),
-      email: z.string().email(),
-      overallImpression: z.string().min(4),
-      confusing: z.string().min(4),
-      trustworthy: z.string().min(4),
-      missing: z.string().min(4),
-      startedAt: z.number(),
-      demoSessionId: z.string().optional(),
-      context: z.string().optional(),
-      operatorName: z.string().optional(),
-      requestId: z.string().optional(),
-      completedRequestId: z.string().optional(),
-    });
-
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ ok: false, error: 'Invalid feedback payload' });
-      return;
-    }
-
-    const feedbackOrigin = String(process.env.UNALABS_FEEDBACK_ORIGIN || 'https://unalabs.cloud').replace(/\/+$/, '');
-    const demoSessionId = normalizeDemoSessionId(parsed.data.demoSessionId);
-    const summary = [
-      'Dispatch demo feedback',
-      `Overall impression: ${parsed.data.overallImpression}`,
-      `What felt confusing: ${parsed.data.confusing}`,
-      `What felt trustworthy: ${parsed.data.trustworthy}`,
-      `What is missing: ${parsed.data.missing}`,
-    ].join('\n');
-    const notes = [
-      'Source: dispatch-demo',
-      parsed.data.context ? `Context: ${parsed.data.context}` : '',
-      parsed.data.operatorName ? `Operator: ${parsed.data.operatorName}` : '',
-      demoSessionId ? `Demo session: ${demoSessionId}` : '',
-      parsed.data.requestId ? `Request: ${parsed.data.requestId}` : '',
-      parsed.data.completedRequestId ? `Completed request: ${parsed.data.completedRequestId}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    try {
-      const response = await fetch(`${feedbackOrigin}/api/intake`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: parsed.data.name || 'Dispatch demo reviewer',
-          email: parsed.data.email,
-          projectName: 'Dispatch demo feedback',
-          projectType: 'Dispatch demo feedback',
-          projectIdea: summary,
-          budgetRange: 'not-sure-yet',
-          timeline: '',
-          notes,
-          companyWebsite: '',
-          startedAt: parsed.data.startedAt,
-        }),
-      });
-
-      const payload = (await response.json().catch(() => ({}))) as {
-        ok?: boolean;
-        message?: string;
-        requestId?: string;
-      };
-
-      if (!response.ok || !payload.ok) {
-        res.status(502).json({
-          ok: false,
-          error: payload.message || 'Unable to forward demo feedback right now.',
-        });
-        return;
-      }
-
-      res.json({
-        ok: true,
-        message: payload.message || 'Feedback received.',
-        requestId: payload.requestId,
-      });
-    } catch (error) {
-      res.status(502).json({
-        ok: false,
-        error: error instanceof Error ? error.message : 'Unable to send demo feedback right now.',
-      });
-    }
+  app.post('/api/demo-feedback', (_req, res) => {
+    res.status(410).json({ ok: false, error: 'Demo feedback is no longer supported in Dispatch.' });
   });
 
   app.patch('/api/requests/:id/assign', async (req, res) => {
