@@ -5,7 +5,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
 import { db } from './db';
-import { buildRequestNotes, isLiveRequest, serializeRequest } from './demo';
+import { normalizeRequestNotes, serializeRequest } from './requestPayload';
 import { isOttawaScopedIncident } from './ottawaScope';
 import { canAccessOperatorSurface, getAuthenticatedOperatorId, issueOperatorToken } from './operatorAccess';
 import { getIncidentMonitorInfo } from './monitor';
@@ -118,7 +118,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
         locationLng: parsed.data.locationLng,
         locationAddress: parsed.data.locationAddress,
         serviceType: parsed.data.serviceType,
-        notes: buildRequestNotes(parsed.data.notes),
+        notes: normalizeRequestNotes(parsed.data.notes),
       })
       .returning();
 
@@ -147,7 +147,6 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const results = await db.select().from(requests).orderBy(desc(requests.createdAt));
     const filtered = results
       .filter((request) => !requestedStatus || request.status === requestedStatus)
-      .filter((request) => isLiveRequest(request))
       .filter((request) => {
         if (isAdmin) return true;
         return request.operatorId === null || request.operatorId === authenticatedOperatorId;
@@ -535,10 +534,6 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       .slice(0, 5);
 
     res.json({ ...summary, recentViewed, recentActioned });
-  });
-
-  app.post('/api/demo-feedback', (_req, res) => {
-    res.status(410).json({ ok: false, error: 'Demo feedback is no longer supported in Dispatch.' });
   });
 
   app.patch('/api/requests/:id/assign', async (req, res) => {

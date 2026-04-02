@@ -24,7 +24,7 @@ Dispatch is the Ottawa roadside assistance app and API in this repo.
 - Operator workspace: `https://dispatch.unalabs.cloud/operator`
 - Admin remains private on `https://dispatch-admin.unalabs.cloud/admin`
 
-Dispatch is live-only. Demo request/session flows are retired, and any older demo-tagged rows are filtered out of the operational queues.
+Dispatch is live-only. The product does not support alternate request/session modes.
 
 ## Remote admin security
 
