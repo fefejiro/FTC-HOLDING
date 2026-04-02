@@ -246,6 +246,7 @@ function incidentSourceLabel(incident: Incident) {
   if (incident.id.startsWith('on511:')) return 'Ontario 511';
   if (incident.id.startsWith('ottawa_traffic:')) return 'City of Ottawa traffic';
   if (incident.id.startsWith('octranspo:')) return 'OC Transpo service alerts';
+  if (incident.id.startsWith('tomtom:')) return 'TomTom traffic';
   return 'Official incident feed';
 }
 
@@ -253,6 +254,7 @@ function incidentSourceTrustLabel(incident: Incident) {
   if (incident.id.startsWith('ottawa_traffic:')) return 'Official Ottawa traffic feed';
   if (incident.id.startsWith('octranspo:')) return 'Official Ottawa transit feed';
   if (incident.id.startsWith('on511:')) return 'Official regional feed';
+  if (incident.id.startsWith('tomtom:')) return 'TomTom commercial feed';
   return 'Official feed';
 }
 

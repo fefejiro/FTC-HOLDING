@@ -39,6 +39,11 @@ const INCIDENT_SOURCES = [
     label: 'OC Transpo Service Alerts',
     url: 'https://www.octranspo.com/feeds/updates-en/',
   },
+  {
+    key: 'tomtom',
+    label: 'TomTom Traffic Incidents',
+    url: 'https://api.tomtom.com/traffic/services/5/incidentDetails',
+  },
 ] as const;
 
 type SourceKey = (typeof INCIDENT_SOURCES)[number]['key'];
@@ -109,6 +114,7 @@ const initialSourceStats = (): Record<SourceKey, MonitorSourceSnapshot> => ({
   on511: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
   ottawa_traffic: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
   octranspo: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
+  tomtom: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
 });
 
 const monitorState: MonitorState = {
@@ -584,18 +590,145 @@ async function fetchOttawaTrafficIncidents(): Promise<NormalizedIncident[]> {
     );
 }
 
+// ── TomTom Traffic Incidents ────────────────────────────────────────────────
+
+type TomTomGeometry =
+  | { type: 'Point'; coordinates: [number, number] }
+  | { type: 'LineString'; coordinates: Array<[number, number]> };
+
+type TomTomIncident = {
+  type: 'Feature';
+  geometry?: TomTomGeometry;
+  properties?: {
+    id?: string;
+    iconCategory?: number;
+    magnitudeOfDelay?: number;
+    events?: Array<{ description?: string; code?: number; iconCategory?: number }>;
+    startTime?: string;
+    endTime?: string;
+    from?: string;
+    to?: string;
+    length?: number;
+    delay?: number;
+    roadNumbers?: string[];
+    timeValidity?: string;
+  };
+};
+
+type TomTomResponse = { incidents?: TomTomIncident[] };
+
+const TOMTOM_CATEGORY_TO_EVENT: Record<number, string> = {
+  1: 'ACCIDENT',
+  3: 'HAZARD',
+  6: 'ROAD_EVENT',
+  7: 'ROAD_CLOSURE',
+  8: 'ROAD_CLOSURE',
+  9: 'ROAD_CLOSURE',
+  12: 'VEHICLE_BREAKDOWN',
+  13: 'VEHICLE_FIRE',
+};
+
+const TOMTOM_ALERTABLE = new Set([1, 12, 13]);
+
+const TOMTOM_DELAY_SEVERITY: Record<number, string> = {
+  0: 'Unknown',
+  1: 'Minor',
+  2: 'Moderate',
+  3: 'Major',
+  4: 'Road Closure',
+};
+
+async function fetchTomTomIncidents(): Promise<NormalizedIncident[]> {
+  const apiKey = process.env.TOMTOM_API_KEY;
+  if (!apiKey) return [];
+
+  // Ottawa bounds: SW(-76.35,45.05) NE(-75.2,45.62) as minLon,minLat,maxLon,maxLat
+  const bbox = '-76.35,45.05,-75.2,45.62';
+  const fields = encodeURIComponent(
+    '{incidents{type,geometry{type,coordinates},properties{id,iconCategory,magnitudeOfDelay,events{description,code,iconCategory},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}}',
+  );
+  const url = `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${apiKey}&bbox=${bbox}&fields=${fields}&language=en-GB&timeValidityFilter=present`;
+
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)' },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) {
+    console.warn(`[monitor][tomtom] fetch failed: ${res.status} ${res.statusText}`);
+    return [];
+  }
+
+  const raw = (await res.json()) as TomTomResponse;
+  const all = Array.isArray(raw.incidents) ? raw.incidents : [];
+
+  return all
+    .map((incident) => {
+      const cat = incident.properties?.iconCategory ?? 0;
+      const eventType = TOMTOM_CATEGORY_TO_EVENT[cat];
+      if (!eventType) return null;
+
+      // Extract first coordinate from Point or LineString (GeoJSON: [lng, lat])
+      let lat: number | null = null;
+      let lng: number | null = null;
+      const geom = incident.geometry;
+      if (geom?.type === 'Point') {
+        lng = toNumber(geom.coordinates[0]);
+        lat = toNumber(geom.coordinates[1]);
+      } else if (geom?.type === 'LineString' && geom.coordinates.length > 0) {
+        lng = toNumber(geom.coordinates[0][0]);
+        lat = toNumber(geom.coordinates[0][1]);
+      }
+
+      if (lat === null || lng === null || !inOntario(lat, lng)) return null;
+
+      const props = incident.properties ?? {};
+      const description =
+        props.events
+          ?.map((e) => e.description)
+          .filter(Boolean)
+          .join('. ') ?? '';
+      const roadway =
+        [props.from, props.to].filter(Boolean).join(' - ') ||
+        props.roadNumbers?.[0] ||
+        null;
+      const id = `tomtom:${String(props.id ?? '')}`;
+      if (id === 'tomtom:') return null;
+
+      const severity =
+        typeof props.magnitudeOfDelay === 'number'
+          ? (TOMTOM_DELAY_SEVERITY[props.magnitudeOfDelay] ?? null)
+          : null;
+
+      return {
+        id,
+        eventType,
+        description,
+        roadway,
+        locationLat: lat,
+        locationLng: lng,
+        severity,
+        startDate: props.startTime ? new Date(props.startTime).toISOString() : null,
+        lastUpdated: props.startTime ? new Date(props.startTime).toISOString() : null,
+        alerted: TOMTOM_ALERTABLE.has(cat),
+        sourceKey: 'tomtom' as const,
+      } satisfies NormalizedIncident;
+    })
+    .filter((v): v is NormalizedIncident => v !== null);
+}
+
 async function loadSourceIncidents(): Promise<Record<SourceKey, NormalizedIncident[]>> {
   // Share a geocode budget across the run to respect Nominatim rate limits
   const geocodeBudget = { used: 0 };
 
   // OC Transpo may geocode sequentially â€” run it first, then parallel the rest
   const octranspo = await fetchOCTranspoAlerts(geocodeBudget);
-  const [on511, ottawaTraffic] = await Promise.all([
+  const [on511, ottawaTraffic, tomtom] = await Promise.all([
     fetchOntario511Incidents(),
     fetchOttawaTrafficIncidents(),
+    fetchTomTomIncidents(),
   ]);
 
-  return { on511, ottawa_traffic: ottawaTraffic, octranspo };
+  return { on511, ottawa_traffic: ottawaTraffic, octranspo, tomtom };
 }
 
 async function runMonitor(): Promise<void> {
@@ -604,7 +737,12 @@ async function runMonitor(): Promise<void> {
 
   try {
     const sourceIncidents = await loadSourceIncidents();
-    const all = [...sourceIncidents.on511, ...sourceIncidents.ottawa_traffic, ...sourceIncidents.octranspo];
+    const all = [
+      ...sourceIncidents.on511,
+      ...sourceIncidents.ottawa_traffic,
+      ...sourceIncidents.octranspo,
+      ...sourceIncidents.tomtom,
+    ];
 
     monitorState.sourceStats = {
       on511: {
@@ -622,6 +760,12 @@ async function runMonitor(): Promise<void> {
       octranspo: {
         fetched: sourceIncidents.octranspo.length,
         eligible: sourceIncidents.octranspo.filter((i) => i.alerted).length,
+        inserted: 0,
+        updated: 0,
+      },
+      tomtom: {
+        fetched: sourceIncidents.tomtom.length,
+        eligible: sourceIncidents.tomtom.filter((i) => i.alerted).length,
         inserted: 0,
         updated: 0,
       },
