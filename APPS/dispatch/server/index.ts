@@ -4,7 +4,7 @@ import { serveStatic } from './static';
 import { createServer } from 'http';
 import cors, { type CorsOptions } from 'cors';
 import { initPush } from './push';
-import { startIncidentMonitor } from './monitor';
+import { startIncidentMonitor, startWazeMonitor } from './monitor';
 import { canAccessAdminSurface } from './adminAccess';
 
 const app = express();
@@ -92,6 +92,7 @@ app.use((req, res, next) => {
 (async () => {
   initPush();
   startIncidentMonitor();
+  startWazeMonitor();
 
   await registerRoutes(httpServer, app);
 

@@ -8,7 +8,7 @@ import { db } from './db';
 import { normalizeRequestNotes, serializeRequest } from './requestPayload';
 import { isOttawaScopedIncident } from './ottawaScope';
 import { canAccessOperatorSurface, getAuthenticatedOperatorId, issueOperatorToken } from './operatorAccess';
-import { getIncidentMonitorInfo } from './monitor';
+import { getIncidentMonitorInfo, getWazeMonitorInfo } from './monitor';
 import { getVapidPublicKey, sendToAllActiveOperators } from './push';
 import { incidents, operators, requests } from './schema';
 import { sseAdd, sseBroadcast, sseClientCount, sseRemove } from './sse';
@@ -20,6 +20,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       service: 'dispatch',
       sseClients: sseClientCount(),
       incidentMonitor: getIncidentMonitorInfo(),
+      wazeMonitor: getWazeMonitorInfo(),
       notifications: {
         webPushConfigured: Boolean(getVapidPublicKey()),
       },

@@ -12,7 +12,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { inArray } from 'drizzle-orm';
+import { and, gt, inArray, sql } from 'drizzle-orm';
 import { db } from './db';
 import { OTTAWA_CENTER, isOttawaScopedIncident } from './ottawaScope';
 import { incidents } from './schema';
@@ -743,11 +743,6 @@ type WazeResponse = {
   data?: { alerts?: WazeAlert[]; jams?: unknown[] };
 };
 
-// Throttle: call Waze every 7th monitor run (~5 min at 45s intervals) to protect free quota.
-// At 45s × 7 = 315s ≈ 5 min per call → ~8,600 calls/month (upgrade plan for production).
-let wazeRunCount = 0;
-const WAZE_POLL_EVERY_N = 7;
-
 async function fetchWazeIncidents(): Promise<NormalizedIncident[]> {
   // Support both keys — prefer RapidAPI wrapper, fall back to direct OpenWeb Ninja key
   const rapidApiKey = process.env.OPENWEBNINJA_API_KEY;
@@ -887,17 +882,14 @@ async function loadSourceIncidents(): Promise<Record<SourceKey, NormalizedIncide
 
   // OC Transpo may geocode sequentially â€” run it first, then parallel the rest
   const octranspo = await fetchOCTranspoAlerts(geocodeBudget);
-  wazeRunCount += 1;
-  const shouldPollWaze = wazeRunCount % WAZE_POLL_EVERY_N === 0;
-
-  const [on511, ottawaTraffic, tomtom, waze] = await Promise.all([
+  const [on511, ottawaTraffic, tomtom] = await Promise.all([
     fetchOntario511Incidents(),
     fetchOttawaTrafficIncidents(),
     fetchTomTomIncidents(),
-    shouldPollWaze ? fetchWazeIncidents() : Promise.resolve([]),
   ]);
 
-  return { on511, ottawa_traffic: ottawaTraffic, octranspo, tomtom, waze };
+  // Waze runs on its own 20s loop (startWazeMonitor) — not polled here
+  return { on511, ottawa_traffic: ottawaTraffic, octranspo, tomtom, waze: [] };
 }
 
 async function runMonitor(): Promise<void> {
@@ -906,12 +898,12 @@ async function runMonitor(): Promise<void> {
 
   try {
     const sourceIncidents = await loadSourceIncidents();
+    // Waze is handled separately in the 20s Waze monitor loop
     const rawAll = [
       ...sourceIncidents.on511,
       ...sourceIncidents.ottawa_traffic,
       ...sourceIncidents.octranspo,
       ...sourceIncidents.tomtom,
-      ...sourceIncidents.waze,
     ];
     const all = deduplicateAcrossSources(rawAll);
 
@@ -1099,6 +1091,208 @@ async function runMonitor(): Promise<void> {
     monitorState.lastError = message;
     console.error('[monitor] poll failed:', err);
   }
+}
+
+// ── Standalone Waze monitor — variable polling by time of day ─────────────────
+//
+// Period     | Hours (Eastern)      | Interval
+// -----------|----------------------|----------
+// peak       | 7–9 AM, 5–7 PM       | 20 s
+// moderate   | 9 AM–5 PM, 7–9 PM    | 60 s
+// off-peak   | 5–7 AM, 9–11 PM      | 90 s
+// inactive   | 11 PM–5 AM           | sleep (no API calls)
+//
+// Daily estimate: ~1,300 requests — fits free tier for ~2 days of testing.
+
+type WazePeriod = 'peak' | 'moderate' | 'off-peak' | 'inactive';
+
+function getEasternHour(): number {
+  const formatted = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Toronto',
+    hour: 'numeric',
+    hour12: false,
+  }).format(new Date());
+  const h = parseInt(formatted, 10);
+  return h === 24 ? 0 : h;
+}
+
+function getWazePeriod(): WazePeriod {
+  const h = getEasternHour();
+  if (h < 5 || h >= 23) return 'inactive';
+  if ((h >= 7 && h < 9) || (h >= 17 && h < 19)) return 'peak';
+  if ((h >= 9 && h < 17) || (h >= 19 && h < 21)) return 'moderate';
+  return 'off-peak'; // 5–7 AM, 9–11 PM
+}
+
+function getWazePollIntervalMs(period: WazePeriod): number {
+  if (period === 'inactive') return 60_000; // wake-check every 60s
+  if (period === 'peak') return 20_000;
+  if (period === 'moderate') return 60_000;
+  return 90_000;
+}
+
+type WazeMonitorState = {
+  running: boolean;
+  period: WazePeriod;
+  currentPollIntervalMs: number;
+  lastRunAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  lastFetchCount: number;
+  todayFetched: number;
+  todayInserted: number;
+};
+
+const wazeState: WazeMonitorState = {
+  running: false,
+  period: 'inactive',
+  currentPollIntervalMs: 60_000,
+  lastRunAt: null,
+  lastSuccessAt: null,
+  lastError: null,
+  lastFetchCount: 0,
+  todayFetched: 0,
+  todayInserted: 0,
+};
+
+let wazeResetDay = '';
+function checkWazeDailyReset(): void {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto' }).format(new Date());
+  if (wazeResetDay !== today) {
+    wazeState.todayFetched = 0;
+    wazeState.todayInserted = 0;
+    wazeResetDay = today;
+  }
+}
+
+async function isNearbyIncidentInDb(lat: number, lng: number): Promise<boolean> {
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1_000);
+  const result = await db
+    .select({ id: incidents.id })
+    .from(incidents)
+    .where(
+      and(
+        sql`ABS(${incidents.locationLat} - ${lat}) < 0.002`,
+        sql`ABS(${incidents.locationLng} - ${lng}) < 0.003`,
+        gt(incidents.createdAt, tenMinutesAgo),
+      ),
+    )
+    .limit(1);
+  return result.length > 0;
+}
+
+async function runWazeMonitor(): Promise<void> {
+  checkWazeDailyReset();
+  const period = getWazePeriod();
+  wazeState.period = period;
+  wazeState.currentPollIntervalMs = getWazePollIntervalMs(period);
+  wazeState.lastRunAt = new Date().toISOString();
+
+  if (period === 'inactive') return;
+
+  try {
+    const waze = await fetchWazeIncidents();
+    wazeState.lastFetchCount = waze.length;
+    wazeState.todayFetched += waze.length;
+
+    if (waze.length === 0) {
+      wazeState.lastSuccessAt = new Date().toISOString();
+      return;
+    }
+
+    // Fast ID-based dedup
+    const ids = waze.map((i) => i.id);
+    const seenRows = await db.select({ id: incidents.id }).from(incidents).where(inArray(incidents.id, ids));
+    const seenIds = new Set(seenRows.map((r) => r.id));
+
+    let inserted = 0;
+    for (const incident of waze) {
+      if (seenIds.has(incident.id)) continue;
+
+      // Skip if TomTom/official source already has a nearby record
+      if (await isNearbyIncidentInDb(incident.locationLat, incident.locationLng)) continue;
+
+      const occurredAt = incident.lastUpdated || incident.startDate || new Date().toISOString();
+      await db
+        .insert(incidents)
+        .values({
+          id: incident.id,
+          eventType: incident.eventType,
+          description: incident.description,
+          roadway: incident.roadway,
+          locationLat: incident.locationLat,
+          locationLng: incident.locationLng,
+          severity: incident.severity,
+          startDate: incident.startDate,
+          lastUpdated: incident.lastUpdated,
+          alerted: incident.alerted,
+          alertedAt: incident.alerted ? new Date() : null,
+        })
+        .onConflictDoNothing();
+
+      inserted += 1;
+      wazeState.todayInserted += 1;
+
+      sseBroadcast('incident:new', {
+        id: incident.id,
+        eventType: incident.eventType,
+        description: incident.description,
+        roadway: incident.roadway,
+        locationLat: incident.locationLat,
+        locationLng: incident.locationLng,
+        severity: incident.severity,
+        startDate: incident.startDate,
+        lastUpdated: incident.lastUpdated,
+        occurredAt,
+        alerted: incident.alerted,
+        createdAt: occurredAt,
+        source: 'waze',
+      });
+
+      if (incident.alerted) {
+        sendToAllActiveOperators({
+          title: 'Waze Alert',
+          body: `${prettyType(incident.eventType)} — ${incident.roadway || incident.description?.slice(0, 80) || 'Ottawa area'}`,
+          data: {
+            incidentId: incident.id,
+            lat: String(incident.locationLat),
+            lng: String(incident.locationLng),
+            source: 'waze',
+          },
+        }).catch(() => {});
+      }
+    }
+
+    wazeState.lastSuccessAt = new Date().toISOString();
+    if (inserted > 0) {
+      console.log(`[waze-monitor][${period}] ${waze.length} fetched, ${inserted} new`);
+    }
+  } catch (err) {
+    wazeState.lastError = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[waze-monitor] poll failed:', err);
+  }
+}
+
+function scheduleNextWazePoll(): void {
+  const delay = getWazePollIntervalMs(getWazePeriod());
+  setTimeout(async () => {
+    await runWazeMonitor();
+    scheduleNextWazePoll();
+  }, delay);
+}
+
+export function startWazeMonitor(): void {
+  wazeState.running = true;
+  wazeState.period = getWazePeriod();
+  // Stagger 5s after main monitor startup
+  setTimeout(() => {
+    runWazeMonitor().then(() => scheduleNextWazePoll());
+  }, 5_000);
+  console.log('[waze-monitor] started — peak 20s | moderate 60s | off-peak 90s | inactive 11PM–5AM Eastern');
+}
+
+export function getWazeMonitorInfo(): WazeMonitorState {
+  return { ...wazeState };
 }
 
 export function getIncidentMonitorInfo(): MonitorState {
