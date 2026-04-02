@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, Fragment, type ErrorInfo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import L from 'leaflet';
 import {
@@ -117,6 +117,39 @@ interface Toast {
   id: number;
   message: string;
   type: 'job' | 'incident';
+}
+
+const ROAD_ALERTS_DEBUG = import.meta.env.DEV;
+
+function logRoadAlertsDebug(event: string, details?: Record<string, unknown>) {
+  if (!ROAD_ALERTS_DEBUG) return;
+  console.debug('[dispatch][road-alerts]', event, details ?? {});
+}
+
+function useCompactViewport(query = '(max-width: 767px)') {
+  const [compact, setCompact] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const media = window.matchMedia(query);
+    const update = (matches: boolean) => setCompact(matches);
+    update(media.matches);
+
+    const handler = (event: MediaQueryListEvent) => update(event.matches);
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', handler);
+      return () => media.removeEventListener('change', handler);
+    }
+
+    media.addListener(handler);
+    return () => media.removeListener(handler);
+  }, [query]);
+
+  return compact;
 }
 
 const LIVE_SESSION_KEY = 'dispatch_operator_session';
@@ -981,6 +1014,42 @@ function IncidentMapViewport({
   return null;
 }
 
+class IncidentMapErrorBoundary extends Component<
+  {
+    children: ReactNode;
+    onError?: (error: Error, info: ErrorInfo) => void;
+  },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; onError?: (error: Error, info: ErrorInfo) => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    this.props.onError?.(error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-4">
+          <div className="text-white text-sm font-semibold">Road alert map unavailable</div>
+          <p className="text-slate-500 text-xs mt-1">
+            The Ottawa alerts list is still available while the map reloads.
+          </p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function IncidentMapPanel({
   incidents,
   selectedIncidentId,
@@ -1211,6 +1280,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const [filter, setFilter] = useState<OperatorFilter>('active');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const isCompactViewport = useCompactViewport();
   const { isSubscribed, isSupported, subscribe } = usePush({ operatorId: session.id });
   const [incidentMode, setIncidentMode] = useState<'active' | 'history' | 'all'>('active');
   const [incidentCategory, setIncidentCategory] = useState<'all' | 'emergency' | 'breakdown' | 'traffic' | 'transit'>('all');
@@ -1336,7 +1406,30 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const incidentFallbackMs = liveFeedConnected ? 25_000 : 10_000;
   const { data: status } = useQuery<DispatchStatusResponse>({ queryKey: ['dispatch-status'], queryFn: async () => { const response = await fetch('/api/status'); if (!response.ok) throw new Error('Failed to load dispatch status'); return response.json() as Promise<DispatchStatusResponse>; }, refetchInterval: 30_000, staleTime: 15_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
   const { data: allRequests = [], isLoading } = useQuery<ServiceRequest[]>({ queryKey: requestQueryKey, queryFn: async () => { const response = await fetch(requestsUrl); if (!response.ok) throw new Error('Failed to load requests'); return response.json() as Promise<ServiceRequest[]>; }, refetchInterval: requestFallbackMs, refetchIntervalInBackground: true, staleTime: 12_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
-  const { data: incidentFeed = [], isLoading: incidentsLoading } = useQuery<Incident[]>({ queryKey: ['incidents', incidentMode, incidentSearch], queryFn: async () => { const response = await fetch(incidentsUrl); if (!response.ok) throw new Error('Failed to load incidents'); return response.json() as Promise<Incident[]>; }, refetchInterval: incidentFallbackMs, refetchIntervalInBackground: true, staleTime: 10_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
+  const {
+    data: incidentFeed = [],
+    isLoading: incidentsLoading,
+    isError: incidentsError,
+    error: incidentsErrorValue,
+    refetch: refetchIncidents,
+  } = useQuery<Incident[]>({
+    queryKey: ['incidents', incidentMode, incidentSearch],
+    queryFn: async () => {
+      const response = await fetch(incidentsUrl);
+      if (!response.ok) throw new Error('Failed to load incidents');
+      const payload = (await response.json()) as unknown;
+      if (!Array.isArray(payload)) {
+        logRoadAlertsDebug('malformed_incident_payload', { payloadType: typeof payload });
+        return [];
+      }
+      return payload as Incident[];
+    },
+    refetchInterval: incidentFallbackMs,
+    refetchIntervalInBackground: true,
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  });
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -1476,6 +1569,40 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
     monitorLastSuccessMs === null ||
     Date.now() - monitorLastSuccessMs > Math.max(180_000, pollSeconds * 1000 * 4);
   const hasWeakOttawaSignals = incidentFeedWithMeta.length > 0 && qualifiedIncidentFeed.length === 0;
+  const roadAlertsState =
+    incidentsLoading ? 'loading' : incidentsError ? 'error' : sortedIncidentFeed.length > 0 ? 'success' : 'empty';
+
+  useEffect(() => {
+    logRoadAlertsDebug('tab_state_changed', {
+      filter,
+      compact: isCompactViewport,
+    });
+  }, [filter, isCompactViewport]);
+
+  useEffect(() => {
+    logRoadAlertsDebug('render_state', {
+      state: roadAlertsState,
+      incidentMode,
+      incidentCategory,
+      count: sortedIncidentFeed.length,
+      feedCount: incidentFeed.length,
+      qualifiedCount: qualifiedIncidentFeed.length,
+      selectedIncidentId,
+      hasWeakOttawaSignals,
+      incidentsError: incidentsError ? String(incidentsErrorValue) : null,
+    });
+  }, [
+    hasWeakOttawaSignals,
+    incidentCategory,
+    incidentFeed.length,
+    incidentMode,
+    incidentsError,
+    incidentsErrorValue,
+    qualifiedIncidentFeed.length,
+    roadAlertsState,
+    selectedIncidentId,
+    sortedIncidentFeed.length,
+  ]);
 
   useEffect(() => {
     if (demoMode || filter !== 'incidents' || !selectedIncidentId) return;
@@ -1720,24 +1847,83 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
                 </div>
               ) : null}
             </div>
-            {!incidentsLoading && sortedIncidentFeed.length > 0 ? (
-              <IncidentMapPanel
-                incidents={sortedIncidentFeed}
-                selectedIncidentId={selectedIncidentId}
-                onSelect={(incident) => setSelectedIncidentId(incident.id)}
-                proximityPoint={proximityPoint}
-              />
+            {roadAlertsState === 'success' && !isCompactViewport ? (
+              <IncidentMapErrorBoundary
+                onError={(error, info) => {
+                  logRoadAlertsDebug('map_render_failed', {
+                    message: error.message,
+                    componentStack: info.componentStack,
+                  });
+                }}
+              >
+                <IncidentMapPanel
+                  incidents={sortedIncidentFeed}
+                  selectedIncidentId={selectedIncidentId}
+                  onSelect={(incident) => setSelectedIncidentId(incident.id)}
+                  proximityPoint={proximityPoint}
+                />
+              </IncidentMapErrorBoundary>
             ) : null}
-            {incidentsLoading ? <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading Ottawa incidents...</div> : null}
-            {!incidentsLoading && sortedIncidentFeed.length === 0 ? <div className="flex flex-col items-center justify-center py-16 text-center"><div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mb-4"><CheckCircle2 className="w-8 h-8 text-green-500" /></div><p className="text-slate-300 font-semibold">{incidentCategory !== 'all' || incidentMode === 'history' ? 'No qualified Ottawa events for this filter' : 'No strong nearby Ottawa signal right now'}</p><p className="text-slate-600 text-sm mt-1 max-w-sm">{hasWeakOttawaSignals ? `Monitoring for qualified Ottawa events. Limited feed confidence at the moment. Last successful poll ${lastPoll}.` : incidentCategory !== 'all' ? `Monitoring for qualified Ottawa ${incidentCategory} events.` : incidentMode === 'history' ? 'Monitoring for qualified Ottawa events as history becomes available.' : monitorNeedsCaution ? `Monitoring for qualified Ottawa events. Limited feed confidence at the moment. Last successful poll ${lastPoll}.` : 'Monitoring for qualified Ottawa events.'}</p></div> : null}
-            {sortedIncidentFeed.map((incident) => (
-              <Fragment key={incident.id}>
-                <IncidentCard incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onDispatch={handleIncidentDispatch} />
-                {selectedIncident?.id === incident.id ? (
-                  <IncidentDetailCard incident={incident} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onDispatch={handleIncidentDispatch} />
-                ) : null}
-              </Fragment>
-            ))}
+            {roadAlertsState === 'loading' ? (
+              <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading Ottawa road alerts...
+              </div>
+            ) : null}
+            {roadAlertsState === 'error' ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center mb-4">
+                  <TriangleAlert className="w-8 h-8 text-amber-400" />
+                </div>
+                <p className="text-slate-200 font-semibold">Road alerts are temporarily unavailable</p>
+                <p className="text-slate-500 text-sm mt-1 max-w-sm">
+                  Still monitoring Ottawa incident sources. Try again to reload the latest road alerts.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void refetchIncidents();
+                  }}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-dispatch-surface border border-dispatch-border px-4 py-2.5 text-sm font-semibold text-slate-200 hover:text-white"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry road alerts
+                </button>
+              </div>
+            ) : null}
+            {roadAlertsState === 'empty' ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-green-500" />
+                </div>
+                <p className="text-slate-300 font-semibold">
+                  {incidentCategory !== 'all' || incidentMode === 'history'
+                    ? 'No Ottawa road alerts right now for this filter'
+                    : 'No Ottawa road alerts right now'}
+                </p>
+                <p className="text-slate-600 text-sm mt-1 max-w-sm">
+                  {hasWeakOttawaSignals
+                    ? `Still monitoring Ottawa incident sources. Limited feed confidence at the moment. Last successful poll ${lastPoll}.`
+                    : incidentCategory !== 'all'
+                      ? `Road alerts will appear here when relevant Ottawa ${incidentCategory} signal is available.`
+                      : incidentMode === 'history'
+                        ? 'Road alerts will appear here when relevant Ottawa signal is available in the selected history view.'
+                        : monitorNeedsCaution
+                          ? `Still monitoring Ottawa incident sources. Limited feed confidence at the moment. Last successful poll ${lastPoll}.`
+                          : 'Road alerts will appear here when relevant Ottawa signal is available.'}
+                </p>
+              </div>
+            ) : null}
+            {roadAlertsState === 'success'
+              ? sortedIncidentFeed.map((incident) => (
+                  <Fragment key={incident.id}>
+                    <IncidentCard incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onDispatch={handleIncidentDispatch} />
+                    {selectedIncident?.id === incident.id ? (
+                      <IncidentDetailCard incident={incident} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onDispatch={handleIncidentDispatch} />
+                    ) : null}
+                  </Fragment>
+                ))
+              : null}
           </>
         ) : (
           <>
