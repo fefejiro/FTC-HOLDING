@@ -21,6 +21,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import SourceMonitorSummary from '../components/SourceMonitorSummary';
 import DispatchLoginShell from '../components/DispatchLoginShell';
 import { loginRoleHref } from '../lib/loginRoleRoutes';
 import { cn } from '../lib/cn';
@@ -117,6 +118,25 @@ interface IncidentFeedItem {
   createdAt: string;
   viewCount?: number | null;
   actionCount?: number | null;
+}
+
+interface DispatchStatusResponse {
+  ok: boolean;
+  incidentMonitor?: {
+    sourceCount?: number;
+    sources?: Array<{ key: string; label: string; url: string }>;
+    sourceStats?: Record<
+      string,
+      {
+        fetched?: number;
+        eligible?: number;
+        inserted?: number;
+        updated?: number;
+      }
+    >;
+    pollIntervalMs?: number;
+    lastSuccessAt?: string | null;
+  };
 }
 
 type AdminFilter = 'all' | 'pending' | 'active' | 'completed' | 'cancelled';
@@ -539,6 +559,17 @@ function AdminDashboard({
     refetchInterval: 30_000,
   });
 
+  const { data: status } = useQuery<DispatchStatusResponse>({
+    queryKey: ['dispatch-status'],
+    queryFn: async () => {
+      const res = await fetch('/api/status');
+      if (!res.ok) throw new Error('Failed to load dispatch status');
+      return res.json() as Promise<DispatchStatusResponse>;
+    },
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+
   const { data: incidentSummary } = useQuery<IncidentSummaryResponse>({
     queryKey: ['admin-incident-summary'],
     queryFn: async () => {
@@ -605,6 +636,22 @@ function AdminDashboard({
         operators.map((operator) => [operator.id, operator.name] as const),
       ),
     [operators],
+  );
+  const sourceCount = status?.incidentMonitor?.sourceCount ?? 0;
+  const sourceMonitorItems = useMemo(
+    () =>
+      (status?.incidentMonitor?.sources ?? []).map((source) => {
+        const snapshot = status?.incidentMonitor?.sourceStats?.[source.key];
+        return {
+          key: source.key,
+          label: source.label,
+          fetched: snapshot?.fetched ?? 0,
+          eligible: snapshot?.eligible ?? 0,
+          inserted: snapshot?.inserted ?? 0,
+          updated: snapshot?.updated ?? 0,
+        };
+      }),
+    [status?.incidentMonitor?.sourceStats, status?.incidentMonitor?.sources],
   );
   const selectedRequest =
     filteredRequests.find((request) => request.id === selectedRequestId) ?? filteredRequests[0] ?? null;
@@ -742,6 +789,11 @@ function AdminDashboard({
       </div>
 
       <div className="px-5 py-5 flex flex-col gap-5 pb-10">
+        <SourceMonitorSummary
+          sourceCount={sourceCount}
+          items={sourceMonitorItems}
+        />
+
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
           {filterMeta.map((stat) => (
             <button

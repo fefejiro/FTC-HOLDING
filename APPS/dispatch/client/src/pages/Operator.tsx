@@ -34,6 +34,7 @@ import {
 } from 'react-leaflet';
 import DispatchAccessPanel from '../components/DispatchAccessPanel';
 import DispatchLoginShell from '../components/DispatchLoginShell';
+import SourceMonitorSummary from '../components/SourceMonitorSummary';
 import { useEvents } from '../hooks/useEvents';
 import { usePush } from '../hooks/usePush';
 import { cn } from '../lib/cn';
@@ -118,8 +119,18 @@ interface DispatchStatusResponse {
   incidentMonitor?: {
     running?: boolean;
     sourceCount?: number;
+    sources?: Array<{ key: string; label: string; url: string }>;
     pollIntervalMs?: number;
     lastSuccessAt?: string | null;
+    sourceStats?: Record<
+      string,
+      {
+        fetched?: number;
+        eligible?: number;
+        inserted?: number;
+        updated?: number;
+      }
+    >;
   };
 }
 
@@ -1715,6 +1726,21 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   }, [radiusFilteredIncidentFeed, incidentSort]);
   const selectedIncident = sortedIncidentFeed.find((incident) => incident.id === selectedIncidentId) || null;
   const sourceCount = status?.incidentMonitor?.sourceCount ?? 3;
+  const sourceMonitorItems = useMemo(
+    () =>
+      (status?.incidentMonitor?.sources ?? []).map((source) => {
+        const snapshot = status?.incidentMonitor?.sourceStats?.[source.key];
+        return {
+          key: source.key,
+          label: source.label,
+          fetched: snapshot?.fetched ?? 0,
+          eligible: snapshot?.eligible ?? 0,
+          inserted: snapshot?.inserted ?? 0,
+          updated: snapshot?.updated ?? 0,
+        };
+      }),
+    [status?.incidentMonitor?.sourceStats, status?.incidentMonitor?.sources],
+  );
   const pollSeconds = Math.max(1, Math.round((status?.incidentMonitor?.pollIntervalMs ?? 60_000) / 1000));
   const lastPoll = formatPoll(status?.incidentMonitor?.lastSuccessAt);
   const monitorLastSuccessMs = parseTimestamp(status?.incidentMonitor?.lastSuccessAt);
@@ -1906,6 +1932,13 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           </div>
           {activeCount > 0 ? <div className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">{activeCount} active</div> : null}
         </div>
+
+        <SourceMonitorSummary
+          className="mt-3"
+          compact
+          sourceCount={sourceCount}
+          items={sourceMonitorItems}
+        />
 
       </div>
 
