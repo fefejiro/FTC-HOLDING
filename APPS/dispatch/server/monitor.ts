@@ -44,6 +44,11 @@ const INCIDENT_SOURCES = [
     label: 'TomTom Traffic Incidents',
     url: 'https://api.tomtom.com/traffic/services/5/incidentDetails',
   },
+  {
+    key: 'waze',
+    label: 'Waze (OpenWeb Ninja)',
+    url: 'https://waze.p.rapidapi.com/alerts-and-jams',
+  },
 ] as const;
 
 type SourceKey = (typeof INCIDENT_SOURCES)[number]['key'];
@@ -115,6 +120,7 @@ const initialSourceStats = (): Record<SourceKey, MonitorSourceSnapshot> => ({
   ottawa_traffic: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
   octranspo: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
   tomtom: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
+  waze: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
 });
 
 const monitorState: MonitorState = {
@@ -716,19 +722,161 @@ async function fetchTomTomIncidents(): Promise<NormalizedIncident[]> {
     .filter((v): v is NormalizedIncident => v !== null);
 }
 
+// ── Waze via OpenWeb Ninja (RapidAPI) ────────────────────────────────────────
+
+type WazeAlert = {
+  alert_id?: string;
+  type?: string;
+  subtype?: string;
+  description?: string;
+  publish_datetime_utc?: string;
+  street?: string;
+  city?: string;
+  latitude?: number | string;
+  longitude?: number | string;
+  alert_reliability?: number;
+  alert_confidence?: number;
+  num_thumbs_up?: number;
+};
+
+type WazeResponse = {
+  data?: { alerts?: WazeAlert[]; jams?: unknown[] };
+};
+
+async function fetchWazeIncidents(): Promise<NormalizedIncident[]> {
+  const apiKey = process.env.OPENWEBNINJA_API_KEY;
+  if (!apiKey) return [];
+
+  // Ottawa bounding box (tighter than OTTAWA_BOUNDS — better for Waze free-tier quota)
+  const bottomLeft = '45.2501,-76.3556';
+  const topRight = '45.5375,-75.2466';
+  const url = `https://waze.p.rapidapi.com/alerts-and-jams?bottom_left=${encodeURIComponent(bottomLeft)}&top_right=${encodeURIComponent(topRight)}&max_alerts=100&max_jams=0`;
+
+  const res = await fetch(url, {
+    headers: {
+      'X-RapidAPI-Key': apiKey,
+      'X-RapidAPI-Host': 'waze.p.rapidapi.com',
+      'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)',
+    },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) {
+    console.warn(`[monitor][waze] fetch failed: ${res.status} ${res.statusText}`);
+    return [];
+  }
+
+  const raw = (await res.json()) as WazeResponse;
+  const alerts = raw.data?.alerts ?? [];
+
+  return alerts
+    .map((alert) => {
+      const type = String(alert.type || '').toUpperCase();
+      const subtype = String(alert.subtype || '').toUpperCase();
+
+      let eventType: string;
+      let alerted: boolean;
+
+      if (type === 'ACCIDENT') {
+        eventType = 'ACCIDENT';
+        alerted = true;
+      } else if (type === 'HAZARD') {
+        if (subtype.includes('CAR_STOPPED')) {
+          eventType = 'STALLED_VEHICLE';
+          alerted = true;
+        } else {
+          eventType = 'HAZARD';
+          alerted = false;
+        }
+      } else if (type === 'ROAD_CLOSED') {
+        eventType = 'ROAD_CLOSURE';
+        alerted = false;
+      } else {
+        return null; // skip POLICE, JAM, etc.
+      }
+
+      const lat = toNumber(alert.latitude);
+      const lng = toNumber(alert.longitude);
+      if (lat === null || lng === null || !inOntario(lat, lng)) return null;
+
+      const id = `waze:${String(alert.alert_id ?? '')}`;
+      if (id === 'waze:') return null;
+
+      const description = alert.description || alert.subtype || type;
+      const startDate = alert.publish_datetime_utc
+        ? new Date(alert.publish_datetime_utc).toISOString()
+        : null;
+
+      return {
+        id,
+        eventType,
+        description,
+        roadway: alert.street || null,
+        locationLat: lat,
+        locationLng: lng,
+        severity:
+          typeof alert.alert_reliability === 'number'
+            ? String(alert.alert_reliability)
+            : null,
+        startDate,
+        lastUpdated: startDate,
+        alerted,
+        sourceKey: 'waze' as const,
+      } satisfies NormalizedIncident;
+    })
+    .filter((v): v is NormalizedIncident => v !== null);
+}
+
+// ── Cross-source deduplication ────────────────────────────────────────────────
+// If two incidents from different sources are within ~200m and 10 min of each
+// other, keep only the higher-priority source's record.
+
+const DEDUP_LAT_THRESHOLD = 0.002; // ~220 m
+const DEDUP_LNG_THRESHOLD = 0.003; // ~210 m at 45°N
+const DEDUP_TIME_MS = 10 * 60 * 1_000;
+
+const SOURCE_PRIORITY = new Map<SourceKey, number>([
+  ['on511', 1],
+  ['ottawa_traffic', 2],
+  ['tomtom', 3],
+  ['octranspo', 4],
+  ['waze', 5],
+]);
+
+function deduplicateAcrossSources(all: NormalizedIncident[]): NormalizedIncident[] {
+  const sorted = [...all].sort(
+    (a, b) => (SOURCE_PRIORITY.get(a.sourceKey) ?? 9) - (SOURCE_PRIORITY.get(b.sourceKey) ?? 9),
+  );
+  const kept: NormalizedIncident[] = [];
+  for (const incident of sorted) {
+    const isDup = kept.some((existing) => {
+      if (existing.sourceKey === incident.sourceKey) return false;
+      const latDiff = Math.abs(existing.locationLat - incident.locationLat);
+      const lngDiff = Math.abs(existing.locationLng - incident.locationLng);
+      if (latDiff > DEDUP_LAT_THRESHOLD || lngDiff > DEDUP_LNG_THRESHOLD) return false;
+      const tsA = existing.startDate ? Date.parse(existing.startDate) : 0;
+      const tsB = incident.startDate ? Date.parse(incident.startDate) : 0;
+      if (tsA > 0 && tsB > 0 && Math.abs(tsA - tsB) > DEDUP_TIME_MS) return false;
+      return true;
+    });
+    if (!isDup) kept.push(incident);
+  }
+  return kept;
+}
+
 async function loadSourceIncidents(): Promise<Record<SourceKey, NormalizedIncident[]>> {
   // Share a geocode budget across the run to respect Nominatim rate limits
   const geocodeBudget = { used: 0 };
 
   // OC Transpo may geocode sequentially â€” run it first, then parallel the rest
   const octranspo = await fetchOCTranspoAlerts(geocodeBudget);
-  const [on511, ottawaTraffic, tomtom] = await Promise.all([
+  const [on511, ottawaTraffic, tomtom, waze] = await Promise.all([
     fetchOntario511Incidents(),
     fetchOttawaTrafficIncidents(),
     fetchTomTomIncidents(),
+    fetchWazeIncidents(),
   ]);
 
-  return { on511, ottawa_traffic: ottawaTraffic, octranspo, tomtom };
+  return { on511, ottawa_traffic: ottawaTraffic, octranspo, tomtom, waze };
 }
 
 async function runMonitor(): Promise<void> {
@@ -737,12 +885,14 @@ async function runMonitor(): Promise<void> {
 
   try {
     const sourceIncidents = await loadSourceIncidents();
-    const all = [
+    const rawAll = [
       ...sourceIncidents.on511,
       ...sourceIncidents.ottawa_traffic,
       ...sourceIncidents.octranspo,
       ...sourceIncidents.tomtom,
+      ...sourceIncidents.waze,
     ];
+    const all = deduplicateAcrossSources(rawAll);
 
     monitorState.sourceStats = {
       on511: {
@@ -766,6 +916,12 @@ async function runMonitor(): Promise<void> {
       tomtom: {
         fetched: sourceIncidents.tomtom.length,
         eligible: sourceIncidents.tomtom.filter((i) => i.alerted).length,
+        inserted: 0,
+        updated: 0,
+      },
+      waze: {
+        fetched: sourceIncidents.waze.length,
+        eligible: sourceIncidents.waze.filter((i) => i.alerted).length,
         inserted: 0,
         updated: 0,
       },
