@@ -168,7 +168,7 @@ const SERVICE_LABELS: Record<ServiceType, string> = {
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; badge: string; bar: string }> = {
   pending: { label: 'New', badge: 'bg-amber-500/15 text-amber-400', bar: 'bg-orange-500' },
-  accepted: { label: 'Viewed', badge: 'bg-blue-500/15 text-blue-400', bar: 'bg-blue-500' },
+  accepted: { label: 'Claimed', badge: 'bg-blue-500/15 text-blue-400', bar: 'bg-blue-500' },
   en_route: { label: 'Heading there', badge: 'bg-purple-500/15 text-purple-400', bar: 'bg-purple-500' },
   completed: { label: 'Completed', badge: 'bg-green-500/15 text-green-400', bar: 'bg-green-500' },
   cancelled: { label: 'Unable to complete', badge: 'bg-slate-700/50 text-slate-500', bar: 'bg-slate-700' },
@@ -887,14 +887,14 @@ function RequestDetailCard({
 
       {request.status === 'pending' ? (
         <button type="button" onClick={() => onStatusChange(request.id, 'accepted', operatorId)} disabled={isUpdating} className="w-full py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-400 active:bg-orange-600 disabled:opacity-50 transition-all">
-          {isUpdating ? 'Saving...' : 'Mark viewed'}
+          {isUpdating ? 'Saving...' : 'Claim job'}
         </button>
       ) : null}
 
       {(request.status === 'accepted' || request.status === 'en_route') && isMyJob ? (
         <div className="flex flex-wrap gap-2">
           {request.status === 'accepted' ? (
-            <button type="button" onClick={() => onStatusChange(request.id, 'en_route', operatorId)} disabled={isUpdating} className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-500 disabled:opacity-50 transition-all">
+            <button type="button" onClick={() => onStatusChange(request.id, 'en_route', operatorId)} disabled={isUpdating} className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-500 disabled:opacity-50 transition-all">
               {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               Heading there
             </button>
@@ -1151,7 +1151,7 @@ function IncidentCard({ incident, selected, onDispatch, onSelect, proximityLabel
           </div>
           <div className="flex flex-col items-end gap-1">
             {incident.alerted ? <span className="text-xs text-orange-400 font-semibold border border-orange-500/25 bg-orange-500/10 px-2.5 py-1 rounded-full whitespace-nowrap">Alerted</span> : null}
-            <span className="text-[11px] text-lime-300 font-semibold">{roadsideLabel(incident.roadsideType)} ({incident.roadsideScore}%)</span>
+            <span className="text-[11px] text-lime-300 font-semibold">{roadsideLabel(incident.roadsideType)}</span>
           </div>
         </div>
         {incident.roadway ? (
@@ -1208,11 +1208,9 @@ function IncidentDetailCard({
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Severity</div><div className="text-slate-300 text-sm mt-2">{severity}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Source</div><div className="text-cyan-300 text-sm mt-2">{incidentSourceLabel(incident)}</div><div className="text-slate-500 text-[11px] mt-1">{incidentSourceTrustLabel(incident)}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Last updated</div><div className="text-slate-300 text-sm mt-2">{fmt(occurredAt)}</div><div className="text-slate-500 text-[11px] mt-1">{timeAgo(occurredAt)}</div></div>
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Coordinates</div><div className="text-slate-300 text-sm mt-2">{incident.locationLat && incident.locationLng ? `${incident.locationLat.toFixed(5)}, ${incident.locationLng.toFixed(5)}` : 'Coordinate precision unavailable'}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">City</div><div className="text-slate-300 text-sm mt-2">{incident.city}</div></div>
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Coverage</div><div className="text-slate-300 text-sm mt-2">Ottawa live workflow</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Confidence</div><div className={cn('inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium mt-2', confidence.tone)}>{confidence.label}</div><div className={cn('inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium mt-2 ml-2', freshness.tone)}>{freshness.label}</div></div>
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Likely assist</div><div className="text-lime-300 text-sm mt-2">{roadsideLabel(incident.roadsideType)} ({incident.roadsideScore}%)</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Likely assist</div><div className="text-lime-300 text-sm mt-2">{roadsideLabel(incident.roadsideType)}</div></div>
       </div>
       <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3 mb-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Incident detail</div><div className="text-slate-300 text-sm mt-2 leading-relaxed">{incident.description || 'No additional incident description was provided by the source feed.'}</div></div>
       <div className="flex flex-wrap gap-2">

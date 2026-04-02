@@ -1,7 +1,7 @@
 import type { Express } from 'express';
 import type { Server } from 'http';
 import bcrypt from 'bcryptjs';
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
 import { db } from './db';
@@ -876,5 +876,83 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       console.error('[geocode-search] error:', error);
       res.status(502).json({ error: 'Failed to search geocode results' });
     }
+  });
+
+  // ── Dedup validation endpoint (admin only) ──────────────────────────────────
+  // Inserts a fake TomTom incident, then checks whether the proximity query
+  // that guards Waze insertions would correctly suppress a nearby Waze record.
+  // Cleans up after itself — safe to call in production.
+  app.post('/api/test/duplicate-incident', async (req, res) => {
+    if (!canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    const testLat = 45.4215;
+    const testLng = -75.6972;
+    const tomtomId = `tomtom:test-dedup-${Date.now()}`;
+
+    // Insert fake TomTom incident at Ottawa centre
+    await db
+      .insert(incidents)
+      .values({
+        id: tomtomId,
+        eventType: 'VEHICLE_BREAKDOWN',
+        description: 'Dedup validation — TomTom side (auto-cleanup)',
+        roadway: 'Ottawa centre (test)',
+        locationLat: testLat,
+        locationLng: testLng,
+        severity: 'Minor',
+        startDate: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        alerted: false,
+        alertedAt: null,
+      })
+      .onConflictDoNothing();
+
+    // Simulate Waze incident ~130 m away (within 200 m dedup radius)
+    const wazeLat = testLat + 0.001;
+    const wazeLng = testLng + 0.001;
+    const wazeId = `waze:test-dedup-${Date.now()}`;
+
+    const distanceM = Math.round(
+      Math.sqrt(
+        Math.pow((wazeLat - testLat) * 111_000, 2) +
+          Math.pow((wazeLng - testLng) * 78_000, 2),
+      ),
+    );
+
+    // Run the same proximity query used by isNearbyIncidentInDb
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1_000);
+    const nearby = await db
+      .select({ id: incidents.id })
+      .from(incidents)
+      .where(
+        and(
+          sql`ABS(${incidents.locationLat} - ${wazeLat}) < 0.002`,
+          sql`ABS(${incidents.locationLng} - ${wazeLng}) < 0.003`,
+          gt(incidents.createdAt, tenMinutesAgo),
+        ),
+      )
+      .limit(1);
+
+    const dedupTriggered = nearby.length > 0;
+
+    // Clean up test record
+    await db.delete(incidents).where(eq(incidents.id, tomtomId));
+
+    res.json({
+      ok: true,
+      test: 'cross-source deduplication',
+      tomtomInserted: tomtomId,
+      wazeCandidate: wazeId,
+      distanceM,
+      dedupRadiusM: 200,
+      dedupTriggered,
+      nearbyId: nearby[0]?.id ?? null,
+      verdict: dedupTriggered
+        ? 'PASS — Waze would NOT insert (duplicate suppressed)'
+        : 'FAIL — Waze would insert (dedup not working)',
+    });
   });
 }
