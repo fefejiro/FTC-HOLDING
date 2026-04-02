@@ -38,6 +38,13 @@ import { useEvents } from '../hooks/useEvents';
 import { usePush } from '../hooks/usePush';
 import { cn } from '../lib/cn';
 import { requestMatchesDemoMode } from '../lib/demo';
+import {
+  clearOperatorSession,
+  operatorFetch,
+  readOperatorSession,
+  type OperatorSession,
+  writeOperatorSession,
+} from '../lib/operatorSession';
 import { OTTAWA_CENTER as OTTAWA_SCOPE_CENTER, isOttawaScopedIncident } from '../lib/ottawaScope';
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
@@ -60,11 +67,6 @@ interface ServiceRequest {
   completedAt: string | null;
   demoMode?: boolean | null;
   demoSessionId?: string | null;
-}
-
-interface OperatorSession {
-  id: string;
-  name: string;
 }
 
 interface OperatorRecord {
@@ -151,8 +153,6 @@ function useCompactViewport(query = '(max-width: 767px)') {
 
   return compact;
 }
-
-const LIVE_SESSION_KEY = 'dispatch_operator_session';
 
 const SERVICE_ICONS: Record<ServiceType, React.ComponentType<{ className?: string }>> = {
   gas: Fuel,
@@ -609,10 +609,6 @@ function roadsideLabel(type: IncidentWithMeta['roadsideType']) {
 
 function readDemoContext() {
   return { demoMode: false, demoSessionId: null as string | null };
-}
-
-function sessionKey() {
-  return LIVE_SESSION_KEY;
 }
 
 function PinScreen({
@@ -1410,7 +1406,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
   const requestFallbackMs = liveFeedConnected ? 30_000 : 12_000;
   const incidentFallbackMs = liveFeedConnected ? 25_000 : 10_000;
   const { data: status } = useQuery<DispatchStatusResponse>({ queryKey: ['dispatch-status'], queryFn: async () => { const response = await fetch('/api/status'); if (!response.ok) throw new Error('Failed to load dispatch status'); return response.json() as Promise<DispatchStatusResponse>; }, refetchInterval: 30_000, staleTime: 15_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
-  const { data: allRequests = [], isLoading } = useQuery<ServiceRequest[]>({ queryKey: requestQueryKey, queryFn: async () => { const response = await fetch(requestsUrl); if (!response.ok) throw new Error('Failed to load requests'); return response.json() as Promise<ServiceRequest[]>; }, refetchInterval: requestFallbackMs, refetchIntervalInBackground: true, staleTime: 12_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
+  const { data: allRequests = [], isLoading } = useQuery<ServiceRequest[]>({ queryKey: requestQueryKey, queryFn: async () => { const response = await operatorFetch(requestsUrl); if (!response.ok) throw new Error('Failed to load requests'); return response.json() as Promise<ServiceRequest[]>; }, refetchInterval: requestFallbackMs, refetchIntervalInBackground: true, staleTime: 12_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
   const {
     data: incidentFeed = [],
     isLoading: incidentsLoading,
@@ -1451,7 +1447,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
 
   const { mutate: updateStatus, isPending: isUpdating } = useMutation({
     mutationFn: async ({ id, status, operatorId }: { id: string; status: RequestStatus; operatorId: string }) => {
-      const response = await fetch(`/api/requests/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, operatorId }) });
+      const response = await operatorFetch(`/api/requests/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, operatorId }) });
       if (!response.ok) throw new Error('Failed to update request status');
       return response.json();
     },
@@ -1465,7 +1461,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
       if (!response.ok) throw new Error('Failed to create job');
       const payload = (await response.json()) as { ok?: boolean; request?: { id?: string } };
       if (!demoMode) {
-        await fetch(`/api/incidents/${incident.id}/action`, {
+        await operatorFetch(`/api/incidents/${incident.id}/action`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ operatorId: session.id, requestId: payload.request?.id || undefined }),
@@ -1617,7 +1613,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
     if (!selected) return;
 
     viewedIncidentIdsRef.current.add(selectedIncidentId);
-    fetch(`/api/incidents/${selectedIncidentId}/view`, {
+    operatorFetch(`/api/incidents/${selectedIncidentId}/view`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ operatorId: session.id }),
@@ -1650,7 +1646,7 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
       if (!shouldSendLocation(lat, lng)) return;
 
       lastOperatorLocationSentRef.current = { lat, lng, sentAt: Date.now() };
-      await fetch(`/api/operators/${session.id}/location`, {
+      await operatorFetch(`/api/operators/${session.id}/location`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1945,24 +1941,15 @@ function OperatorView({ session, onSignOut, demoMode, demoSessionId }: { session
 
 export default function OperatorPage() {
   const [{ demoMode, demoSessionId }] = useState(readDemoContext);
-  const storageKey = sessionKey();
-  const [session, setSession] = useState<OperatorSession | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const stored = localStorage.getItem(storageKey);
-      return stored ? (JSON.parse(stored) as OperatorSession) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [session, setSession] = useState<OperatorSession | null>(() => readOperatorSession());
 
   function handleAuthenticated(operator: OperatorSession) {
-    localStorage.setItem(storageKey, JSON.stringify(operator));
+    writeOperatorSession(operator);
     setSession(operator);
   }
 
   function handleSignOut() {
-    localStorage.removeItem(storageKey);
+    clearOperatorSession();
     setSession(null);
   }
 

@@ -56,6 +56,8 @@ npm run dev
 
 Required environment variables are shown in [`.env.example`](/c:/FTC%20HOLDING/APPS/dispatch/.env.example).
 
+For production hardening, set `DISPATCH_OPERATOR_SESSION_SECRET` so operator sessions can authenticate request access, SSE, push subscription, and field updates without exposing admin credentials.
+
 ## Mobile road-alert smoke test
 
 Use the focused mobile smoke test when changing operator tab logic or Road Alerts rendering:

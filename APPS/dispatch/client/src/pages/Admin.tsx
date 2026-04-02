@@ -504,7 +504,7 @@ function AdminDashboard({
   const { data: requests = [], isLoading, refetch, isFetching } = useQuery<ServiceRequest[]>({
     queryKey: ['admin-requests'],
     queryFn: async () => {
-      const res = await fetch('/api/requests');
+      const res = await adminFetch('/api/requests');
       if (!res.ok) throw new Error('Failed to load');
       return res.json() as Promise<ServiceRequest[]>;
     },
@@ -639,7 +639,7 @@ function AdminDashboard({
     const roadway = incident.roadway || 'Ottawa area';
 
     try {
-      const response = await fetch('/api/requests', {
+      const response = await adminFetch('/api/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -657,7 +657,7 @@ function AdminDashboard({
       if (!response.ok) throw new Error('Failed to create job');
       const payload = (await response.json()) as { request?: { id?: string } };
 
-      await fetch(`/api/incidents/${incident.id}/action`, {
+      await adminFetch(`/api/incidents/${incident.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: payload.request?.id || undefined }),

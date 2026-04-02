@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Loader2, Lock, Shield, Siren, User } from 'lucide-react';
 import DispatchLoginShell from '../components/DispatchLoginShell';
+import { type OperatorSession, writeOperatorSession } from '../lib/operatorSession';
 
 type AccessMode = 'operator' | 'admin';
 
@@ -9,12 +10,6 @@ type OperatorRecord = {
   name: string;
 };
 
-type OperatorSession = {
-  id: string;
-  name: string;
-};
-
-const OPERATOR_SESSION_KEY = 'dispatch_operator_session';
 const ADMIN_LOGIN_URL = 'https://dispatch-admin.unalabs.cloud/login?mode=admin';
 const OPERATOR_LOGIN_URL = 'https://dispatch.unalabs.cloud/login?mode=operator';
 
@@ -140,7 +135,7 @@ function OperatorFrontDoor({ privateAdminHost }: { privateAdminHost: boolean }) 
         setPin('');
         return;
       }
-      localStorage.setItem(OPERATOR_SESSION_KEY, JSON.stringify(data.operator));
+      writeOperatorSession(data.operator);
       window.location.href = '/operator';
     } catch {
       setError('Authentication failed. Check your connection.');

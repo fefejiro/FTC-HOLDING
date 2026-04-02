@@ -5,12 +5,9 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
 import { db } from './db';
+import { buildRequestNotes, matchesRequestMode, normalizeDemoSessionId, serializeRequest } from './demo';
 import { isOttawaScopedIncident } from './ottawaScope';
-import {
-  matchesRequestMode,
-  normalizeDemoSessionId,
-  serializeRequest,
-} from './demo';
+import { canAccessOperatorSurface, getAuthenticatedOperatorId, issueOperatorToken } from './operatorAccess';
 import { getIncidentMonitorInfo } from './monitor';
 import { getVapidPublicKey, sendToAllActiveOperators } from './push';
 import { incidents, operators, requests } from './schema';
@@ -30,6 +27,11 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
   });
 
   app.get('/api/events', (req, res) => {
+    if (!canAccessOperatorSurface(req) && !canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Operator or admin access required' });
+      return;
+    }
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -81,6 +83,11 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     }
 
     const { operatorId, subscription } = parsed.data;
+    if (!canAccessOperatorSurface(req, operatorId)) {
+      res.status(403).json({ error: 'Operator access required' });
+      return;
+    }
+
     await db.update(operators).set({ vapidSub: subscription }).where(eq(operators.id, operatorId));
     res.json({ ok: true });
   });
@@ -94,6 +101,8 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       locationAddress: z.string().optional(),
       serviceType: z.enum(['gas', 'lockout', 'jump', 'tire', 'other']),
       notes: z.string().optional(),
+      mode: z.enum(['live', 'demo']).optional(),
+      demoSessionId: z.string().optional(),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -111,7 +120,10 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
         locationLng: parsed.data.locationLng,
         locationAddress: parsed.data.locationAddress,
         serviceType: parsed.data.serviceType,
-        notes: parsed.data.notes,
+        notes: buildRequestNotes(parsed.data.notes, {
+          demoMode: parsed.data.mode === 'demo',
+          demoSessionId: parsed.data.demoSessionId,
+        }),
       })
       .returning();
 
@@ -129,11 +141,26 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
 
   app.get('/api/requests', async (req, res) => {
     const requestedStatus = typeof req.query.status === 'string' ? req.query.status : null;
+    const requestedMode =
+      req.query.mode === 'demo' ? 'demo' : req.query.mode === 'all' ? 'all' : 'live';
+    const requestedDemoSessionId =
+      typeof req.query.demoSessionId === 'string' ? normalizeDemoSessionId(req.query.demoSessionId) : null;
+    const isAdmin = canAccessAdminSurface(req);
+    const authenticatedOperatorId = getAuthenticatedOperatorId(req);
+
+    if (!isAdmin && !authenticatedOperatorId) {
+      res.status(403).json({ error: 'Operator or admin access required' });
+      return;
+    }
 
     const results = await db.select().from(requests).orderBy(desc(requests.createdAt));
     const filtered = results
       .filter((request) => !requestedStatus || request.status === requestedStatus)
-      .filter((request) => matchesRequestMode(request, 'live'))
+      .filter((request) => matchesRequestMode(request, requestedMode, requestedDemoSessionId))
+      .filter((request) => {
+        if (isAdmin) return true;
+        return request.operatorId === null || request.operatorId === authenticatedOperatorId;
+      })
       .map((request) => serializeRequest(request));
 
     res.json(filtered);
@@ -153,15 +180,27 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     }
 
     const { status, operatorId } = parsed.data;
+    const isAdmin = canAccessAdminSurface(req);
+    const authenticatedOperatorId = getAuthenticatedOperatorId(req);
+    if (!isAdmin && !authenticatedOperatorId) {
+      res.status(403).json({ error: 'Operator or admin access required' });
+      return;
+    }
+    if (!isAdmin && operatorId && authenticatedOperatorId !== operatorId) {
+      res.status(403).json({ error: 'Cannot update another operator session' });
+      return;
+    }
+
     const now = new Date();
     const updateValues: Record<string, unknown> = { status };
+    const actingOperatorId = isAdmin ? operatorId : authenticatedOperatorId;
 
     if (status === 'accepted') {
       updateValues.acceptedAt = now;
-      if (operatorId) updateValues.operatorId = operatorId;
+      if (actingOperatorId) updateValues.operatorId = actingOperatorId;
     }
-    if (status === 'en_route' && operatorId) {
-      updateValues.operatorId = operatorId;
+    if (status === 'en_route' && actingOperatorId) {
+      updateValues.operatorId = actingOperatorId;
     }
     if (status === 'completed') {
       updateValues.completedAt = now;
@@ -188,10 +227,6 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       .select({
         id: operators.id,
         name: operators.name,
-        phone: operators.phone,
-        serviceRadiusKm: operators.serviceRadiusKm,
-        active: operators.active,
-        createdAt: operators.createdAt,
       })
       .from(operators)
       .where(eq(operators.active, true));
@@ -210,6 +245,10 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: 'Invalid operator location payload' });
+      return;
+    }
+    if (!canAccessOperatorSurface(req, id)) {
+      res.status(403).json({ error: 'Operator access required' });
       return;
     }
 
@@ -359,6 +398,12 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       return;
     }
 
+    const token = issueOperatorToken(operator.id);
+    if (!token) {
+      res.status(503).json({ ok: false, error: 'Operator auth not configured' });
+      return;
+    }
+
     res.json({
       ok: true,
       operator: {
@@ -366,6 +411,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
         name: operator.name,
         phone: operator.phone,
         active: operator.active,
+        token,
       },
     });
   });
@@ -756,6 +802,10 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       res.status(400).json({ error: 'Invalid incident view payload' });
       return;
     }
+    if (!canAccessOperatorSurface(req, parsed.data.operatorId) && !canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Operator or admin access required' });
+      return;
+    }
 
     const [updated] = await db
       .update(incidents)
@@ -789,6 +839,10 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const parsed = schema.safeParse(req.body ?? {});
     if (!parsed.success) {
       res.status(400).json({ error: 'Invalid incident action payload' });
+      return;
+    }
+    if (!canAccessOperatorSurface(req, parsed.data.operatorId) && !canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Operator or admin access required' });
       return;
     }
 

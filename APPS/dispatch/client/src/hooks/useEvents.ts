@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { operatorEventSourceUrl } from '../lib/operatorSession';
 
 interface EventHandlers {
   onRequestNew?: (data: unknown) => void;
@@ -18,7 +19,7 @@ export function useEvents(handlers: EventHandlers): { connected: boolean } {
   ref.current = handlers;
 
   useEffect(() => {
-    const es = new EventSource('/api/events');
+    const es = new EventSource(operatorEventSourceUrl('/api/events'));
     es.onopen = () => setConnected(true);
 
     es.addEventListener('request:new', (e: Event) => {

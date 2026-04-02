@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { operatorFetch } from '../lib/operatorSession';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -66,7 +67,7 @@ export function usePush({ operatorId }: UsePushOptions): UsePushResult {
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
 
-      await fetch('/api/push/subscribe', {
+      await operatorFetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ operatorId, subscription }),
