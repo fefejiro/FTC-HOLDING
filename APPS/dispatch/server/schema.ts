@@ -59,5 +59,6 @@ export const requests = dispatch.table('requests', {
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow(),
   acceptedAt: timestamp('accepted_at'),
+  enRouteAt: timestamp('en_route_at'),
   completedAt: timestamp('completed_at'),
 });
