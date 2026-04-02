@@ -122,8 +122,9 @@ railway up . --path-as-root --detach
 Why this matters:
 
 - without `--path-as-root`, Railway builds from the monorepo root
-- that causes Railpack to miss the local `Dockerfile`
+- that causes Railway to guess at the wrong build context
 - the correct deploy path uses the `Dockerfile` and `railway.json` in this folder
+- the app-root `Dockerfile` is the only valid Railway Docker path for Dispatch
 
 ## Production notes
 
@@ -132,6 +133,8 @@ Why this matters:
 - build context is trimmed by [`.dockerignore`](/c:/FTC%20HOLDING/APPS/dispatch/.dockerignore)
 - the app expects `PORT=8080` in production
 - the branded public hostname is fronted by the Cloudflare Worker in [workers/dispatch-edge/src/index.ts](/c:/FTC%20HOLDING/workers/dispatch-edge/src/index.ts)
+- Railway should keep only the fallback origin (`dispatch-api-production.up.railway.app`); public branded hosts stay at Cloudflare
+- if Railway build health regresses, verify app-root installs with `npm ci --workspaces=false`
 
 ## Verified on March 28, 2026
 

@@ -30,6 +30,11 @@ This folder is the current source of truth for SayWetin.
 - `api.saywetin.ca` is not part of the default production contract.
 - `www.saywetin.app` should redirect to `https://saywetin.app` at Cloudflare; the Pages `_redirects` file must stay as SPA fallback only.
 
+## Runtime posture
+
+- Default posture for a lean Railway Hobby plan: keep `sunny-acceptance` intentionally paused unless SayWetin needs active server-side processing again.
+- When reactivated, Railway should host only the API runtime and Cloudflare should continue to own the public web domains.
+
 ## Railway Docker Deployment (Strict)
 - Railway root directory: `APPS/saywetin`
 - Dockerfile path: `Dockerfile` (relative to the configured root directory)
@@ -41,6 +46,7 @@ Required Railway settings when Dockerfile is active:
 1. Builder: Dockerfile
 2. Build command: empty
 3. Start command: empty
+4. Health check path: `/health`
 
 Non-Docker fallback commands (documentation only):
 - Build: `npm run build:prod`

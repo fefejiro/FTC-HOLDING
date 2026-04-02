@@ -10,7 +10,7 @@ This repo contains multiple apps plus shared packages. Use this as the top-level
   - `ftc-site` (Next.js marketing/site shell)
   - `peacepad` (Vite frontend + Node API + Capacitor mobile shell)
   - `saywetin` (Vite frontend + Node API + Capacitor mobile shell)
-  - `ATEAM` (local-first AI app under active ownership decision)
+  - `ATEAM` (Cloudflare-fronted workflow runtime with Railway backend)
 - `PACKAGES/`
   - `auth`, `config`, `logger`, `supabase`, `types`
 - `DOCS/`
@@ -42,8 +42,13 @@ This repo contains multiple apps plus shared packages. Use this as the top-level
 - Runtime/domain notes: `DOCS/SAYWETIN_HANDOVER.md`
 
 4. ATEAM
-- Not in current root deployment pipeline.
-- Treated as local/analysis track until ownership/tracking decision is finalized.
+- Public and ops entry stay on Cloudflare workers.
+- Runtime remains Railway-backed when ATEAM is part of the live Una Labs flow.
+
+5. Dispatch
+- Public/admin entry is Cloudflare worker owned.
+- Runtime is Railway service `dispatch-api` from `APPS/dispatch`.
+- Railway default domain is fallback only; branded hosts stay on Cloudflare.
 
 ## Local Build/Test Commands
 
@@ -86,5 +91,8 @@ See:
 - [Repo Structure Recommendation](DOCS/REPO_STRUCTURE_RECOMMENDATION.md)
 - [Domain and Ownership Map](DOCS/DOMAIN_AND_OWNERSHIP_MAP.md)
 - [Unalabs Rollout Plan](DOCS/ROLLOUT_PLAN_UNALABS.md)
+- [Lean Stack Map](DOCS/infra/stack-map.md)
+- [Railway Services](DOCS/infra/railway-services.md)
+- [Deployment Decisions](DOCS/infra/deployment-decisions.md)
 
 
