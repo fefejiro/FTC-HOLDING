@@ -26,6 +26,12 @@ Dispatch is the Ottawa roadside assistance app and API in this repo.
 
 Dispatch is live-only. The product does not support alternate request/session modes.
 
+## Production data hygiene
+
+- Dispatch production should contain only real Ottawa roadside operations data.
+- QA, seeded, or sample jobs must be removed from production storage after verification.
+- As of 2026-04-02, the older demo-tagged request and known QA/sample jobs used during rollout verification were removed from production.
+
 ## Remote admin security
 
 - `dispatch.unalabs.cloud` stays public and does not expose remote admin access
