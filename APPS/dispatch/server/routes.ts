@@ -192,6 +192,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     }
     if (status === 'en_route' && actingOperatorId) {
       updateValues.operatorId = actingOperatorId;
+      updateValues.enRouteAt = now;
     }
     if (status === 'completed') {
       updateValues.completedAt = now;
@@ -597,6 +598,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const now = new Date();
     const updateValues: Record<string, unknown> = { status: parsed.data.status };
     if (parsed.data.status === 'accepted') updateValues.acceptedAt = now;
+    if (parsed.data.status === 'en_route') updateValues.enRouteAt = now;
     if (parsed.data.status === 'completed') updateValues.completedAt = now;
 
     const [updated] = await db
@@ -876,6 +878,74 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       console.error('[geocode-search] error:', error);
       res.status(502).json({ error: 'Failed to search geocode results' });
     }
+  });
+
+  // ── Operator metrics endpoint ───────────────────────────────────────────────
+  app.get('/api/metrics', async (req, res) => {
+    const authenticatedOperatorId = getAuthenticatedOperatorId(req);
+    const isAdmin = canAccessAdminSurface(req);
+    if (!authenticatedOperatorId && !isAdmin) {
+      res.status(403).json({ error: 'Operator or admin access required' });
+      return;
+    }
+
+    const operatorId = authenticatedOperatorId ?? (typeof req.query.operatorId === 'string' ? req.query.operatorId : null);
+    if (!operatorId) {
+      res.status(400).json({ error: 'operatorId required' });
+      return;
+    }
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const allJobs = await db
+      .select()
+      .from(requests)
+      .where(eq(requests.operatorId, operatorId));
+
+    function computePeriod(jobs: typeof allJobs, since: Date) {
+      const inPeriod = jobs.filter((j) => j.createdAt && j.createdAt >= since);
+      const claimed = inPeriod.filter((j) => ['accepted', 'en_route', 'completed'].includes(j.status ?? '')).length;
+      const completed = inPeriod.filter((j) => j.status === 'completed').length;
+      const cancelled = inPeriod.filter((j) => j.status === 'cancelled').length;
+      const conversionRate = claimed > 0 ? Math.round((completed / claimed) * 100) : 0;
+
+      const responseTimes = inPeriod
+        .filter((j) => j.acceptedAt && j.enRouteAt)
+        .map((j) => (j.enRouteAt!.getTime() - j.acceptedAt!.getTime()) / 60_000);
+      const avgResponseMinutes =
+        responseTimes.length > 0
+          ? Math.round((responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) * 10) / 10
+          : null;
+
+      const completionTimes = inPeriod
+        .filter((j) => j.acceptedAt && j.completedAt)
+        .map((j) => (j.completedAt!.getTime() - j.acceptedAt!.getTime()) / 60_000);
+      const avgJobMinutes =
+        completionTimes.length > 0
+          ? Math.round((completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length) * 10) / 10
+          : null;
+
+      return { claimed, completed, cancelled, conversionRate, avgResponseMinutes, avgJobMinutes };
+    }
+
+    const [operator] = await db
+      .select({ name: operators.name })
+      .from(operators)
+      .where(eq(operators.id, operatorId));
+
+    res.json({
+      ok: true,
+      operatorId,
+      operatorName: operator?.name ?? 'Unknown',
+      today: computePeriod(allJobs, startOfToday),
+      week: computePeriod(allJobs, startOfWeek),
+      month: computePeriod(allJobs, startOfMonth),
+      allTime: computePeriod(allJobs, new Date(0)),
+    });
   });
 
   // ── Dedup validation endpoint (admin only) ──────────────────────────────────

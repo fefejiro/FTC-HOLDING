@@ -4,6 +4,7 @@ import L from 'leaflet';
 import {
   AlertTriangle,
   ArrowLeft,
+  BarChart2,
   CheckCircle2,
   CircleDot,
   Clock,
@@ -47,7 +48,7 @@ import { OTTAWA_CENTER as OTTAWA_SCOPE_CENTER, isOttawaScopedIncident } from '..
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
 type RequestStatus = 'pending' | 'accepted' | 'en_route' | 'completed' | 'cancelled';
-type OperatorFilter = 'active' | 'all' | 'incidents';
+type OperatorFilter = 'active' | 'all' | 'incidents' | 'stats';
 
 interface ServiceRequest {
   id: string;
@@ -1221,6 +1222,100 @@ function IncidentDetailCard({
   );
 }
 
+interface MetricsData {
+  ok: boolean;
+  operatorId: string;
+  operatorName: string;
+  today: PeriodStats;
+  week: PeriodStats;
+  month: PeriodStats;
+  allTime: PeriodStats;
+}
+
+interface PeriodStats {
+  claimed: number;
+  completed: number;
+  cancelled: number;
+  conversionRate: number;
+  avgResponseMinutes: number | null;
+  avgJobMinutes: number | null;
+}
+
+function MetricsPanel({ session }: { session: OperatorSession }) {
+  const { data, isLoading, isError } = useQuery<MetricsData>({
+    queryKey: ['metrics', session.id],
+    queryFn: async () => {
+      const r = await operatorFetch('/api/metrics');
+      if (!r.ok) throw new Error('Failed to load metrics');
+      return r.json();
+    },
+    refetchInterval: 60_000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
+        <Loader2 className="w-4 h-4 animate-spin" />Loading stats...
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <p className="text-slate-400 font-semibold">Stats unavailable</p>
+      </div>
+    );
+  }
+
+  function StatRow({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+    return (
+      <div className="flex items-center justify-between py-2.5 border-b border-dispatch-border last:border-0">
+        <span className="text-slate-400 text-sm">{label}</span>
+        <div className="text-right">
+          <span className="text-white font-semibold text-sm">{value}</span>
+          {sub ? <span className="text-slate-500 text-xs ml-1">{sub}</span> : null}
+        </div>
+      </div>
+    );
+  }
+
+  function PeriodCard({ title, stats }: { title: string; stats: PeriodStats }) {
+    return (
+      <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">{title}</p>
+        <StatRow label="Jobs claimed" value={stats.claimed} />
+        <StatRow label="Completed" value={stats.completed} />
+        <StatRow label="Conversion" value={`${stats.conversionRate}%`} />
+        {stats.avgResponseMinutes !== null ? (
+          <StatRow label="Avg response" value={`${stats.avgResponseMinutes} min`} sub="accepted → en route" />
+        ) : null}
+        {stats.avgJobMinutes !== null ? (
+          <StatRow label="Avg job time" value={`${stats.avgJobMinutes} min`} sub="accepted → done" />
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl px-4 py-3 flex items-center gap-3">
+        <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center">
+          <BarChart2 className="w-5 h-5 text-orange-400" />
+        </div>
+        <div>
+          <p className="text-white font-semibold text-sm">{data.operatorName}</p>
+          <p className="text-slate-500 text-xs">Performance stats</p>
+        </div>
+      </div>
+      <PeriodCard title="Today" stats={data.today} />
+      <PeriodCard title="This week" stats={data.week} />
+      <PeriodCard title="This month" stats={data.month} />
+      <PeriodCard title="All time" stats={data.allTime} />
+    </div>
+  );
+}
+
 function OperatorView({ session, onSignOut }: { session: OperatorSession; onSignOut: () => void }) {
   const [filter, setFilter] = useState<OperatorFilter>('active');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
@@ -1691,9 +1786,10 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       </div>
 
       <div className="px-5 py-3 flex gap-2 border-b border-dispatch-border overflow-x-auto">
-        {[{ key: 'active' as const, label: 'Active jobs', badge: pendingCount, danger: false }, { key: 'all' as const, label: 'All jobs', badge: 0, danger: false }, { key: 'incidents' as const, label: 'Road alerts', badge: 0, danger: true }].map(({ key, label, badge, danger }) => (
+        {[{ key: 'active' as const, label: 'Active jobs', badge: pendingCount, danger: false }, { key: 'all' as const, label: 'All jobs', badge: 0, danger: false }, { key: 'incidents' as const, label: 'Road alerts', badge: 0, danger: true }, { key: 'stats' as const, label: 'My stats', badge: 0, danger: false }].map(({ key, label, badge, danger }) => (
           <button key={key} type="button" onClick={() => setFilter(key)} className={cn('px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2', filter === key ? danger ? 'bg-red-600 text-white' : 'bg-orange-500 text-white' : 'bg-dispatch-surface text-slate-400 hover:text-white')}>
             {key === 'incidents' ? <TriangleAlert className="w-3.5 h-3.5" /> : null}
+            {key === 'stats' ? <BarChart2 className="w-3.5 h-3.5" /> : null}
             {label}
             {badge > 0 && filter !== key ? <span className="bg-orange-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center leading-none">{badge}</span> : null}
           </button>
@@ -1701,7 +1797,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       </div>
 
       <div className="flex-1 px-5 py-4 flex flex-col gap-3 overflow-y-auto pb-8">
-        {filter === 'incidents' ? (
+        {filter === 'stats' ? (
+          <MetricsPanel session={session} />
+        ) : filter === 'incidents' ? (
           <>
             <div className="bg-dispatch-surface border border-dispatch-border rounded-2xl p-3">
               <div className="flex flex-wrap items-center gap-2">

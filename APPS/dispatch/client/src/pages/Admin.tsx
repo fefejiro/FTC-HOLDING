@@ -134,7 +134,7 @@ const STATUS_BADGE: Record<RequestStatus, string> = {
 
 const STATUS_LABEL: Record<RequestStatus, string> = {
   pending: 'New',
-  accepted: 'Viewed',
+  accepted: 'Claimed',
   en_route: 'Heading there',
   completed: 'Completed',
   cancelled: 'Unable / Ignored',
