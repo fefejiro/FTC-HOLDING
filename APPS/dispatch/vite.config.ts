@@ -22,6 +22,7 @@ const config = {
     },
     fs: {
       strict: true,
+      allow: [path.resolve(import.meta.dirname, 'shared')],
       deny: ['**/.*'],
     },
   },

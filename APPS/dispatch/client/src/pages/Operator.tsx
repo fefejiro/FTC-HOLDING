@@ -45,7 +45,6 @@ import {
   type OperatorSession,
   writeOperatorSession,
 } from '../lib/operatorSession';
-import { OTTAWA_CENTER as OTTAWA_SCOPE_CENTER, isOttawaScopedIncident } from '../lib/ottawaScope';
 import {
   type SignalWorkflowStatus,
   SIGNAL_WORKFLOW_BADGES,
@@ -53,6 +52,13 @@ import {
   isResolvedSignalWorkflowStatus,
   normalizeSignalWorkflowStatus,
 } from '../lib/signalWorkflow';
+import {
+  DEFAULT_DISPATCH_REGION,
+  DISPATCH_REGION_ORDER,
+  type DispatchRegionKey,
+  getDispatchRegion,
+  isRegionScopedIncident,
+} from '../../../shared/dispatchRegions';
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
 type RequestStatus = 'pending' | 'accepted' | 'en_route' | 'completed' | 'cancelled';
@@ -115,35 +121,58 @@ interface ProximityPoint {
 
 interface DispatchStatusResponse {
   ok: boolean;
+  region?: {
+    key: DispatchRegionKey;
+    label: string;
+    coverageLabel: string;
+  };
   sseClients?: number;
   notifications?: { webPushConfigured?: boolean };
   incidentMonitor?: {
     running?: boolean;
     sourceCount?: number;
-    sources?: Array<{ key: string; label: string; url: string }>;
+    sources?: Array<{
+      key: string;
+      label: string;
+      url: string;
+      tier?: string;
+      tierLabel?: string;
+      statusLabel?: string;
+      enabled?: boolean;
+      lastSuccessAt?: string | null;
+      lastError?: string | null;
+      rateLimited?: boolean;
+      lastFetchCount?: number;
+      rawCount?: number;
+      actionableCount?: number;
+      pollState?: string;
+      currentPollIntervalMs?: number | null;
+      lastRegion?: DispatchRegionKey | null;
+    }>;
     pollIntervalMs?: number;
     lastSuccessAt?: string | null;
-    sourceStats?: Record<
-      string,
-      {
-        fetched?: number;
-        eligible?: number;
-        inserted?: number;
-        updated?: number;
-      }
-    >;
   };
 }
 
 interface IncidentSourceSummaryResponse {
   ok: boolean;
+  region?: {
+    key: DispatchRegionKey;
+    label: string;
+    coverageLabel: string;
+  };
   date: string;
   dayLabel: string;
   sourceCount: number;
   items: Array<{
     key: string;
     label: string;
-    count: number;
+    rawCount: number;
+    actionableCount: number;
+    tierLabel?: string;
+    statusLabel?: string;
+    pollState?: string;
+    lastError?: string | null;
   }>;
 }
 
@@ -354,7 +383,7 @@ function incidentConfidenceMeta(incident: IncidentWithMeta | Incident) {
   if (incident.alerted) {
     if (incident.id.startsWith('ottawa_traffic:') || incident.id.startsWith('octranspo:')) {
       return {
-        label: 'Qualified Ottawa signal',
+        label: 'Qualified regional signal',
         tone: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
       };
     }
@@ -395,9 +424,11 @@ function requestMapsUrl(request: ServiceRequest) {
   return null;
 }
 
-function incidentMapsUrl(incident: Incident) {
+function incidentMapsUrl(incident: Incident, regionKey: DispatchRegionKey) {
   if (incident.locationLat && incident.locationLng) return `https://maps.google.com/?q=${incident.locationLat},${incident.locationLng}`;
-  if (incident.roadway) return `https://maps.google.com/search/?api=1&query=${encodeURIComponent(`${incident.roadway}, Ottawa ON`)}`;
+  if (incident.roadway) {
+    return `https://maps.google.com/search/?api=1&query=${encodeURIComponent(`${incident.roadway}, ${getDispatchRegion(regionKey).locationSuffix}`)}`;
+  }
   return null;
 }
 
@@ -409,11 +440,20 @@ function incidentIsHighPriority(incident: Incident) {
   return ['ACCIDENT', 'COLLISION', 'VEHICLE_FIRE'].includes(incident.eventType?.toUpperCase() || '');
 }
 
-const OTTAWA_CENTER: ProximityPoint = {
-  lat: 45.4215,
-  lng: -75.6972,
-  label: 'Ottawa centre',
-};
+function regionCenterPoint(regionKey: DispatchRegionKey): ProximityPoint {
+  const region = getDispatchRegion(regionKey);
+  return {
+    lat: region.center.lat,
+    lng: region.center.lng,
+    label: region.center.label,
+  };
+}
+
+const DEFAULT_OPERATOR_PROXIMITY_POINT = {
+  lat: getDispatchRegion('ottawa').center.lat,
+  lng: getDispatchRegion('ottawa').center.lng,
+  label: 'Ottawa default dispatch area',
+} satisfies ProximityPoint;
 
 const ONTARIO_CITY_HINTS = [
   'Ottawa',
@@ -1127,7 +1167,7 @@ function IncidentMapPanel({
               <Popup>
                 <div className="text-sm">
                   <div className="font-semibold">{incidentLabel(incident)}</div>
-                  <div className="mt-1">{incident.roadway || 'Ottawa area'}</div>
+                  <div className="mt-1">{incident.roadway || 'Dispatch area'}</div>
                   <div className="mt-1 text-slate-600">Ottawa coverage item</div>
                 </div>
               </Popup>
@@ -1296,7 +1336,7 @@ function IncidentDetailCard({
         <div className={cn('text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap border', SIGNAL_WORKFLOW_BADGES[workflowStatus])}>{SIGNAL_WORKFLOW_LABELS[workflowStatus]}</div>
       </div>
       <div className="grid md:grid-cols-2 gap-3 mb-3">
-        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Roadway</div><div className="text-white text-sm font-semibold mt-2">{incident.roadway || 'Ottawa area'}</div></div>
+        <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Roadway</div><div className="text-white text-sm font-semibold mt-2">{incident.roadway || 'Dispatch area'}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Severity</div><div className="text-slate-300 text-sm mt-2">{severity}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Source</div><div className="text-cyan-300 text-sm mt-2">{incidentSourceLabel(incident)}</div><div className="text-slate-500 text-[11px] mt-1">{incidentSourceTrustLabel(incident)}</div></div>
         <div className="bg-dispatch-bg border border-dispatch-border rounded-xl p-3"><div className="text-slate-600 text-[11px] uppercase tracking-[0.14em] font-semibold">Last updated</div><div className="text-slate-300 text-sm mt-2">{fmt(occurredAt)}</div><div className="text-slate-500 text-[11px] mt-1">{timeAgo(occurredAt)}</div></div>
@@ -1428,15 +1468,15 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const [filter, setFilter] = useState<OperatorFilter>('active');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const [regionKey, setRegionKey] = useState<DispatchRegionKey>(DEFAULT_DISPATCH_REGION);
   const isCompactViewport = useCompactViewport();
   const { isSubscribed, isSupported, subscribe } = usePush({ operatorId: session.id });
   const [incidentMode, setIncidentMode] = useState<'active' | 'history' | 'all'>('active');
   const [incidentCategory, setIncidentCategory] = useState<'all' | 'emergency' | 'breakdown' | 'traffic' | 'transit'>('all');
   const [incidentSource, setIncidentSource] = useState<IncidentSourceFilter | null>(null);
-  const [incidentCity, setIncidentCity] = useState('Ottawa');
-  const [incidentSort, setIncidentSort] = useState<'roadside' | 'newest' | 'proximity'>('newest');
-  const [incidentRadiusKm, setIncidentRadiusKm] = useState(0);
-  const [proximityPoint, setProximityPoint] = useState<ProximityPoint>(OTTAWA_SCOPE_CENTER);
+  const [incidentSort, setIncidentSort] = useState<'roadside' | 'newest' | 'proximity'>('proximity');
+  const [proximityPoint, setProximityPoint] = useState<ProximityPoint>(DEFAULT_OPERATOR_PROXIMITY_POINT);
+  const [isUsingSharedLocation, setIsUsingSharedLocation] = useState(false);
   const [locatingProximity, setLocatingProximity] = useState(false);
   const [proximityError, setProximityError] = useState('');
   const [incidentSearch, setIncidentSearch] = useState('');
@@ -1447,11 +1487,13 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const queryClient = useQueryClient();
   const requestQueryKey = useMemo(() => ['requests', 'live'], []);
   const requestsUrl = '/api/requests';
+  const activeRegion = useMemo(() => getDispatchRegion(regionKey), [regionKey]);
 
   const useMyLocationForProximity = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setProximityError('Location is not supported on this device. Using Ottawa centre.');
-      setProximityPoint(OTTAWA_CENTER);
+      setIsUsingSharedLocation(false);
+      setProximityError('Location is not supported on this device. Using Ottawa as the dispatch priority anchor.');
+      setProximityPoint(DEFAULT_OPERATOR_PROXIMITY_POINT);
       return;
     }
     setLocatingProximity(true);
@@ -1490,15 +1532,22 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
         }
 
         setProximityPoint({ lat, lng, label });
+        setIsUsingSharedLocation(true);
       })
       .catch(() => {
-        setProximityPoint(OTTAWA_CENTER);
-        setProximityError('Could not read GPS location. Using Ottawa centre.');
+        setIsUsingSharedLocation(false);
+        setProximityPoint(DEFAULT_OPERATOR_PROXIMITY_POINT);
+        setProximityError('Could not read GPS location. Using Ottawa as the dispatch priority anchor.');
       })
       .finally(() => {
         setLocatingProximity(false);
       });
   }, []);
+
+  useEffect(() => {
+    setSelectedIncidentId(null);
+    setIncidentSource(null);
+  }, [regionKey]);
 
   function addToast(message: string, type: Toast['type']) {
     const id = Date.now() + Math.round(Math.random() * 1000);
@@ -1522,28 +1571,29 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     },
     onIncidentNew: (data) => {
       const incident = data as Incident;
-      if (!isOttawaScopedIncident(incident)) return;
-      queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      if (!isRegionScopedIncident(regionKey, incident)) return;
+      queryClient.invalidateQueries({ queryKey: ['incidents', regionKey] });
       const likely = classifyRoadside(incident);
       if (incidentIsHighPriority(incident) || likely.roadsideScore >= 65) {
         playIncidentAlert();
-        addToast(`${roadsideLabel(likely.roadsideType)} - ${incident.roadway || 'Ottawa area'}`, 'incident');
+        addToast(`${roadsideLabel(likely.roadsideType)} - ${incident.roadway || activeRegion.shortLabel}`, 'incident');
       }
     },
     onIncidentUpdated: (data) => {
       void data;
-      queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      queryClient.invalidateQueries({ queryKey: ['incidents', regionKey] });
+      queryClient.invalidateQueries({ queryKey: ['incident-source-summary', regionKey] });
       queryClient.invalidateQueries({ queryKey: ['metrics', session.id] });
     },
   });
 
   const requestFallbackMs = liveFeedConnected ? 30_000 : 12_000;
   const incidentFallbackMs = liveFeedConnected ? 25_000 : 10_000;
-  const { data: status } = useQuery<DispatchStatusResponse>({ queryKey: ['dispatch-status'], queryFn: async () => { const response = await fetch('/api/status'); if (!response.ok) throw new Error('Failed to load dispatch status'); return response.json() as Promise<DispatchStatusResponse>; }, refetchInterval: 30_000, staleTime: 15_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
+  const { data: status } = useQuery<DispatchStatusResponse>({ queryKey: ['dispatch-status', regionKey], queryFn: async () => { const response = await fetch(`/api/status?region=${regionKey}`); if (!response.ok) throw new Error('Failed to load dispatch status'); return response.json() as Promise<DispatchStatusResponse>; }, refetchInterval: 30_000, staleTime: 15_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
   const { data: sourceSummary } = useQuery<IncidentSourceSummaryResponse>({
-    queryKey: ['incident-source-summary'],
+    queryKey: ['incident-source-summary', regionKey],
     queryFn: async () => {
-      const response = await operatorFetch('/api/incidents/source-summary');
+      const response = await operatorFetch(`/api/incidents/source-summary?region=${regionKey}`);
       if (!response.ok) throw new Error('Failed to load source summary');
       return response.json() as Promise<IncidentSourceSummaryResponse>;
     },
@@ -1553,13 +1603,13 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     refetchOnReconnect: true,
   });
   const incidentsUrl = useMemo(() => {
-    const params = new URLSearchParams({ mode: incidentMode, limit: '80' });
+    const params = new URLSearchParams({ mode: incidentMode, limit: '80', region: regionKey, scope: 'actionable' });
     const q = incidentSearch.trim();
     if (q) params.set('q', q);
     if (incidentSource) params.set('source', incidentSource);
-    if (incidentSource && sourceSummary?.date) params.set('date', sourceSummary.date);
+    if (sourceSummary?.date) params.set('date', sourceSummary.date);
     return `/api/incidents?${params.toString()}`;
-  }, [incidentMode, incidentSearch, incidentSource, sourceSummary?.date]);
+  }, [incidentMode, incidentSearch, incidentSource, regionKey, sourceSummary?.date]);
   const { data: allRequests = [], isLoading } = useQuery<ServiceRequest[]>({ queryKey: requestQueryKey, queryFn: async () => { const response = await operatorFetch(requestsUrl); if (!response.ok) throw new Error('Failed to load requests'); return response.json() as Promise<ServiceRequest[]>; }, refetchInterval: requestFallbackMs, refetchIntervalInBackground: true, staleTime: 12_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
   const {
     data: incidentFeed = [],
@@ -1568,7 +1618,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     error: incidentsErrorValue,
     refetch: refetchIncidents,
   } = useQuery<Incident[]>({
-    queryKey: ['incidents', incidentMode, incidentSearch, incidentSource],
+    queryKey: ['incidents', regionKey, incidentMode, incidentSearch, incidentSource],
     queryFn: async () => {
       const response = await fetch(incidentsUrl);
       if (!response.ok) throw new Error('Failed to load incidents');
@@ -1596,8 +1646,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   useEffect(() => {
     if (!liveFeedConnected) return;
     queryClient.invalidateQueries({ queryKey: requestQueryKey });
-    queryClient.invalidateQueries({ queryKey: ['incidents'] });
-  }, [liveFeedConnected, queryClient, requestQueryKey]);
+    queryClient.invalidateQueries({ queryKey: ['incidents', regionKey] });
+    queryClient.invalidateQueries({ queryKey: ['incident-source-summary', regionKey] });
+  }, [liveFeedConnected, queryClient, regionKey, requestQueryKey]);
 
   const { mutate: updateStatus, isPending: isUpdating } = useMutation({
     mutationFn: async ({ id, status, operatorId }: { id: string; status: RequestStatus; operatorId: string }) => {
@@ -1628,19 +1679,20 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       return payload;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      queryClient.invalidateQueries({ queryKey: ['incidents', regionKey] });
+      queryClient.invalidateQueries({ queryKey: ['incident-source-summary', regionKey] });
       queryClient.invalidateQueries({ queryKey: ['metrics', session.id] });
-      queryClient.invalidateQueries({ queryKey: ['admin-incidents'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-incident-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-incidents', regionKey] });
+      queryClient.invalidateQueries({ queryKey: ['admin-incident-summary', regionKey] });
     },
   });
 
   const handleIncidentNavigate = useCallback(async (incident: Incident) => {
-    const roadway = incident.roadway || 'Ottawa area';
+    const roadway = incident.roadway || activeRegion.shortLabel;
     try {
       await updateIncidentWorkflow({ id: incident.id, status: 'heading_there' });
       addToast(`Heading there: ${roadway}`, 'job');
-      const mapsUrl = incidentMapsUrl(incident);
+      const mapsUrl = incidentMapsUrl(incident, regionKey);
       if (mapsUrl && typeof window !== 'undefined') {
         window.open(mapsUrl, '_blank', 'noopener,noreferrer');
       }
@@ -1648,7 +1700,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       const message = error instanceof Error ? error.message : 'Failed to update signal';
       addToast(message, 'incident');
     }
-  }, [updateIncidentWorkflow]);
+  }, [activeRegion.shortLabel, regionKey, updateIncidentWorkflow]);
 
   const handleIncidentResolution = useCallback(async (
     incident: Incident,
@@ -1658,7 +1710,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       await updateIncidentWorkflow({ id: incident.id, status });
       addToast(
         status === 'handled'
-          ? `Signal handled: ${incident.roadway || 'Ottawa area'}`
+          ? `Signal handled: ${incident.roadway || activeRegion.shortLabel}`
           : `Marked not legit / not serviceable`,
         'job',
       );
@@ -1666,7 +1718,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       const message = error instanceof Error ? error.message : 'Failed to save outcome';
       addToast(message, 'incident');
     }
-  }, [updateIncidentWorkflow]);
+  }, [activeRegion.shortLabel, updateIncidentWorkflow]);
 
   const myRequests = allRequests.filter((request) => (request.operatorId === null && request.status === 'pending') || request.operatorId === session.id);
   const displayRequests = filter === 'active' ? myRequests.filter((request) => ['pending', 'accepted', 'en_route'].includes(request.status)) : filter === 'all' ? myRequests : [];
@@ -1686,13 +1738,13 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           (incident.eventType || '').toUpperCase(),
         ),
       );
-  const ottawaScopedIncidentFeed = useMemo(
-    () => categoryFilteredIncidentFeed.filter((incident) => isOttawaScopedIncident(incident)),
-    [categoryFilteredIncidentFeed],
+  const regionScopedIncidentFeed = useMemo(
+    () => categoryFilteredIncidentFeed.filter((incident) => isRegionScopedIncident(regionKey, incident)),
+    [categoryFilteredIncidentFeed, regionKey],
   );
   const incidentFeedWithMeta = useMemo<IncidentWithMeta[]>(
     () =>
-      ottawaScopedIncidentFeed.map((incident) => {
+      regionScopedIncidentFeed.map((incident) => {
         const lat = toNumber(incident.locationLat);
         const lng = toNumber(incident.locationLng);
         const distanceKm =
@@ -1706,22 +1758,13 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           ...classifyRoadside(incident),
         };
       }),
-    [ottawaScopedIncidentFeed, proximityPoint.lat, proximityPoint.lng],
+    [regionScopedIncidentFeed, proximityPoint.lat, proximityPoint.lng],
   );
   const highSignalIncidentCount = useMemo(
     () => incidentFeedWithMeta.filter((incident) => isQualifiedOperatorSignal(incident)).length,
     [incidentFeedWithMeta],
   );
-  const cityOptions = useMemo(() => {
-    return ['Ottawa'];
-  }, []);
-  useEffect(() => {
-    if (!cityOptions.includes(incidentCity)) {
-      setIncidentCity('Ottawa');
-    }
-  }, [cityOptions, incidentCity]);
-  const cityFilteredIncidentFeed = incidentFeedWithMeta.filter((incident) => incidentMatchesCity(incident, 'Ottawa'));
-  const radiusFilteredIncidentFeed = cityFilteredIncidentFeed;
+  const radiusFilteredIncidentFeed = incidentFeedWithMeta;
   const sortedIncidentFeed = useMemo(() => {
     const next = [...radiusFilteredIncidentFeed];
     if (incidentSort === 'proximity') {
@@ -1753,7 +1796,20 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   }, [radiusFilteredIncidentFeed, incidentSort]);
   const selectedIncident = sortedIncidentFeed.find((incident) => incident.id === selectedIncidentId) || null;
   const sourceCount = sourceSummary?.sourceCount ?? status?.incidentMonitor?.sourceCount ?? 5;
-  const sourceMonitorItems = sourceSummary?.items ?? [];
+  const sourceMonitorItems = useMemo(
+    () =>
+      (sourceSummary?.items ?? []).map((item) => {
+        const liveSource = status?.incidentMonitor?.sources?.find((source) => source.key === item.key);
+        return {
+          ...item,
+          pollState: liveSource?.pollState ?? item.pollState,
+          lastError: liveSource?.lastError ?? item.lastError ?? null,
+          tierLabel: liveSource?.tierLabel ?? item.tierLabel,
+          statusLabel: liveSource?.statusLabel ?? item.statusLabel,
+        };
+      }),
+    [sourceSummary?.items, status?.incidentMonitor?.sources],
+  );
   const sourceSummaryDayLabel = sourceSummary?.dayLabel ?? 'today';
   const selectedIncidentSourceLabel =
     sourceMonitorItems.find((item) => item.key === incidentSource)?.label ?? null;
@@ -1763,7 +1819,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const monitorNeedsCaution =
     monitorLastSuccessMs === null ||
     Date.now() - monitorLastSuccessMs > Math.max(180_000, pollSeconds * 1000 * 4);
-  const hasWeakOttawaSignals = incidentFeedWithMeta.length > 0 && highSignalIncidentCount === 0;
+  const hasWeakRegionalSignals = incidentFeedWithMeta.length > 0 && highSignalIncidentCount === 0;
   const roadAlertsState =
     incidentsLoading ? 'loading' : incidentsError ? 'error' : sortedIncidentFeed.length > 0 ? 'success' : 'empty';
 
@@ -1783,11 +1839,11 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       feedCount: incidentFeed.length,
       highSignalCount: highSignalIncidentCount,
       selectedIncidentId,
-      hasWeakOttawaSignals,
+      hasWeakRegionalSignals,
       incidentsError: incidentsError ? String(incidentsErrorValue) : null,
     });
   }, [
-    hasWeakOttawaSignals,
+    hasWeakRegionalSignals,
     incidentCategory,
     incidentFeed.length,
     incidentMode,
@@ -1839,6 +1895,13 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       const lng = position.coords.longitude;
       if (!shouldSendLocation(lat, lng)) return;
 
+      setProximityPoint({
+        lat,
+        lng,
+        label: 'Operator location',
+      });
+      setIsUsingSharedLocation(true);
+      setProximityError('');
       lastOperatorLocationSentRef.current = { lat, lng, sentAt: Date.now() };
       await operatorFetch(`/api/operators/${session.id}/location`, {
         method: 'POST',
@@ -1853,13 +1916,21 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
       });
     };
 
-    navigator.geolocation.getCurrentPosition(postLocation, () => undefined, {
+    navigator.geolocation.getCurrentPosition(postLocation, () => {
+      setIsUsingSharedLocation(false);
+      setProximityPoint(DEFAULT_OPERATOR_PROXIMITY_POINT);
+      setProximityError('Location sharing is off. Prioritizing alerts by Ottawa by default.');
+    }, {
       enableHighAccuracy: true,
       timeout: 15000,
       maximumAge: 60000,
     });
 
-    const watchId = navigator.geolocation.watchPosition(postLocation, () => undefined, {
+    const watchId = navigator.geolocation.watchPosition(postLocation, () => {
+      setIsUsingSharedLocation(false);
+      setProximityPoint(DEFAULT_OPERATOR_PROXIMITY_POINT);
+      setProximityError('Location sharing is off. Prioritizing alerts by Ottawa by default.');
+    }, {
       enableHighAccuracy: true,
       timeout: 20000,
       maximumAge: 60000,
@@ -1917,6 +1988,25 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           className="mt-3"
         />
 
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {DISPATCH_REGION_ORDER.map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setRegionKey(key)}
+              className={cn(
+                'rounded-xl border px-3 py-2 text-xs font-semibold transition-colors',
+                regionKey === key
+                  ? 'border-orange-500/40 bg-orange-500/10 text-orange-100'
+                  : 'border-dispatch-border bg-dispatch-surface text-slate-400 hover:text-white',
+              )}
+            >
+              {getDispatchRegion(key).label}
+            </button>
+          ))}
+          <span className="text-[11px] text-slate-500">{activeRegion.coverageLabel}</span>
+        </div>
+
         {isSupported && !isSubscribed ? (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1940,7 +2030,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
           </div>
           <div className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 border border-orange-500/20 bg-orange-500/10 text-orange-300 text-xs font-semibold">
             <TriangleAlert className="w-3.5 h-3.5" />
-            {sourceCount} Ottawa sources - about every {pollSeconds}s
+            {sourceCount} {activeRegion.shortLabel} sources - about every {pollSeconds}s
           </div>
           <div className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 border border-dispatch-border bg-dispatch-surface text-slate-400 text-xs font-semibold">
             <Clock className="w-3.5 h-3.5" />
@@ -2036,7 +2126,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                   <input
                     value={incidentSearch}
                     onChange={(event) => setIncidentSearch(event.target.value)}
-                    placeholder="Search Ottawa road, route, or incident text"
+                    placeholder={`Search ${activeRegion.shortLabel} road, route, or incident text`}
                     className="w-full bg-transparent text-sm text-slate-200 placeholder-slate-600 focus:outline-none"
                   />
                 </label>
@@ -2047,13 +2137,19 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                     onChange={(event) => setIncidentSort(event.target.value as 'roadside' | 'newest' | 'proximity')}
                     className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
                   >
+                    <option value="proximity" className="bg-slate-950 text-slate-100">Sort: closest to operator</option>
                     <option value="newest" className="bg-slate-950 text-slate-100">Sort: newest first</option>
                     <option value="roadside" className="bg-slate-950 text-slate-100">Sort: strongest assist signal</option>
                   </select>
                 </label>
               </div>
               <div className="mt-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-[11px] text-cyan-200">
-                Ottawa-only live scope. Out-of-area roadside signals are hidden from this workflow.
+                {activeRegion.label}-only live scope. Out-of-area roadside signals are hidden from this workflow.
+              </div>
+              <div className="mt-2 rounded-xl border border-dispatch-border bg-dispatch-bg px-3 py-2.5 text-[11px] text-slate-300">
+                {isUsingSharedLocation
+                  ? `Prioritizing alerts closest to ${proximityPoint.label}.`
+                  : 'Location sharing is off, so Dispatch is prioritizing alerts closest to Ottawa by default.'}
               </div>
               {selectedIncidentSourceLabel ? (
                 <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2.5 text-[11px] text-orange-200">
@@ -2070,8 +2166,8 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
               {incidentFeedWithMeta.length > 0 ? (
                 <div className="mt-2 rounded-xl border border-slate-700 bg-dispatch-bg px-3 py-2.5 text-[11px] text-slate-300">
                   {selectedIncidentSourceLabel
-                    ? `Showing persisted Ottawa signals from ${selectedIncidentSourceLabel}.`
-                    : 'Showing live Ottawa roadside signals that can become jobs. Stronger job-worthy alerts are ranked and labeled, not hidden.'}
+                    ? `Showing persisted ${activeRegion.label} signals from ${selectedIncidentSourceLabel}.`
+                    : `Showing live ${activeRegion.label} roadside signals that can become jobs. Stronger job-worthy alerts are ranked and labeled, not hidden.`}
                 </div>
               ) : null}
               {monitorNeedsCaution ? (
@@ -2100,7 +2196,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
             {roadAlertsState === 'loading' ? (
               <div className="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Loading Ottawa roadside alerts...
+                Loading {activeRegion.label} roadside alerts...
               </div>
             ) : null}
             {roadAlertsState === 'error' ? (
@@ -2110,7 +2206,7 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                 </div>
                 <p className="text-slate-200 font-semibold">Roadside alerts are temporarily unavailable</p>
                 <p className="text-slate-500 text-sm mt-1 max-w-sm">
-                  Still monitoring Ottawa incident sources. Try again to reload the latest roadside alerts.
+                  Still monitoring {activeRegion.label} incident sources. Try again to reload the latest roadside alerts.
                 </p>
                 <button
                   type="button"
@@ -2137,15 +2233,15 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
                     : 'No roadside alerts right now'}
                 </p>
                 <p className="text-slate-600 text-sm mt-1 max-w-sm">
-                  {hasWeakOttawaSignals
-                    ? `Still monitoring Ottawa incident sources. Limited feed confidence at the moment. Last successful poll ${lastPoll}.`
+                  {hasWeakRegionalSignals
+                    ? `Still monitoring ${activeRegion.label} incident sources. Limited feed confidence at the moment. Last successful poll ${lastPoll}.`
                     : incidentCategory !== 'all'
-                      ? `Roadside alerts will appear here when a relevant Ottawa ${incidentCategory} signal is available.`
+                      ? `Roadside alerts will appear here when a relevant ${activeRegion.label} ${incidentCategory} signal is available.`
                       : incidentMode === 'history'
-                        ? 'Roadside alerts will appear here when a relevant Ottawa signal is available in the selected past alerts view.'
+                        ? `Roadside alerts will appear here when a relevant ${activeRegion.label} signal is available in the selected past alerts view.`
                         : monitorNeedsCaution
-                          ? `Still monitoring Ottawa incident sources. Limited feed confidence at the moment. Last successful poll ${lastPoll}.`
-                          : 'Roadside alerts will appear here when a live Ottawa incident or roadside signal is available.'}
+                          ? `Still monitoring ${activeRegion.label} incident sources. Limited feed confidence at the moment. Last successful poll ${lastPoll}.`
+                          : `Roadside alerts will appear here when a live ${activeRegion.label} incident or roadside signal is available.`}
                 </p>
               </div>
             ) : null}

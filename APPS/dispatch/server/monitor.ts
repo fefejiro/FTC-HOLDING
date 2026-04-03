@@ -1,10 +1,10 @@
 /**
- * Ottawa incident monitor.
+ * Dispatch incident monitor.
  *
  * Automated incident sources:
- * 1. Ontario 511 official events feed (Ottawa slice)
- * 2. City of Ottawa official traffic events feed
- * 3. OC Transpo service alerts RSS (detours, cancellations)
+ * 1. Ontario 511 official events feed
+ * 2. City / transit official feeds where available
+ * 3. Commercial / experimental continuity feeds
  *
  * The monitor normalizes both feeds into a single incident stream, deduplicates
  * by source-prefixed ID, stores fresh incidents, broadcasts them over SSE, and
@@ -14,57 +14,54 @@
 import { createHash } from 'node:crypto';
 import { and, gt, inArray, sql } from 'drizzle-orm';
 import { db } from './db';
-import { OTTAWA_CENTER, isOttawaScopedIncident } from './ottawaScope';
 import { incidents } from './schema';
 import { sendToAllActiveOperators } from './push';
 import { sseBroadcast } from './sse';
+import {
+  DISPATCH_REGION_ORDER,
+  type DispatchRegionKey,
+  getDispatchRegion,
+  isRegionScopedIncident,
+} from '../shared/dispatchRegions';
+import {
+  DISPATCH_SOURCES,
+  type DispatchSourceKey,
+} from '../shared/dispatchSources';
+import { isActionableIncident } from '../shared/dispatchSignals';
 
 const ONTARIO = { north: 56.9, south: 41.6, west: -95.2, east: -74.0 };
 const POLL_INTERVAL_MS = 45 * 1_000;
 const MAX_GEOCODE_PER_RUN = 8; // Nominatim 1 req/s rate-limit cap
+const ACTIVE_MONITOR_REGIONS: DispatchRegionKey[] = [...DISPATCH_REGION_ORDER];
 
-const INCIDENT_SOURCES = [
-  {
-    key: 'on511',
-    label: 'Ontario 511',
-    url: 'https://511on.ca/api/v2/get/event',
-  },
-  {
-    key: 'ottawa_traffic',
-    label: 'City of Ottawa Traffic Events',
-    url: 'https://traffic.ottawa.ca/map/service/events?accept-language=en',
-  },
-  {
-    key: 'octranspo',
-    label: 'OC Transpo Service Alerts',
-    url: 'https://www.octranspo.com/feeds/updates-en/',
-  },
-  {
-    key: 'tomtom',
-    label: 'TomTom Traffic Incidents',
-    url: 'https://api.tomtom.com/traffic/services/5/incidentDetails',
-  },
-  {
-    key: 'waze',
-    label: 'Waze (OpenWeb Ninja)',
-    url: 'https://waze.p.rapidapi.com/alerts-and-jams',
-  },
-] as const;
-
-type SourceKey = (typeof INCIDENT_SOURCES)[number]['key'];
+type SourceKey = DispatchSourceKey;
 
 type MonitorSourceSnapshot = {
   fetched: number;
   eligible: number;
   inserted: number;
   updated: number;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  rateLimited: boolean;
+  lastFetchCount: number;
+  pollState: 'idle' | 'healthy' | 'degraded' | 'rate_limited' | 'cooldown' | 'inactive';
+  currentPollIntervalMs: number | null;
+  lastRegion: DispatchRegionKey | null;
 };
 
 type MonitorState = {
   running: boolean;
   pollIntervalMs: number;
   sourceCount: number;
-  sources: Array<{ key: SourceKey; label: string; url: string }>;
+  sources: Array<{
+    key: SourceKey;
+    label: string;
+    url: string;
+    tierLabel: string;
+    statusLabel: string;
+    enabledRegions: DispatchRegionKey[];
+  }>;
   lastRunAt: string | null;
   lastSuccessAt: string | null;
   lastError: string | null;
@@ -116,18 +113,85 @@ type OttawaTrafficEvent = {
 };
 
 const initialSourceStats = (): Record<SourceKey, MonitorSourceSnapshot> => ({
-  on511: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
-  ottawa_traffic: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
-  octranspo: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
-  tomtom: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
-  waze: { fetched: 0, eligible: 0, inserted: 0, updated: 0 },
+  on511: {
+    fetched: 0,
+    eligible: 0,
+    inserted: 0,
+    updated: 0,
+    lastSuccessAt: null,
+    lastError: null,
+    rateLimited: false,
+    lastFetchCount: 0,
+    pollState: 'idle',
+    currentPollIntervalMs: POLL_INTERVAL_MS,
+    lastRegion: null,
+  },
+  ottawa_traffic: {
+    fetched: 0,
+    eligible: 0,
+    inserted: 0,
+    updated: 0,
+    lastSuccessAt: null,
+    lastError: null,
+    rateLimited: false,
+    lastFetchCount: 0,
+    pollState: 'idle',
+    currentPollIntervalMs: POLL_INTERVAL_MS,
+    lastRegion: 'ottawa',
+  },
+  octranspo: {
+    fetched: 0,
+    eligible: 0,
+    inserted: 0,
+    updated: 0,
+    lastSuccessAt: null,
+    lastError: null,
+    rateLimited: false,
+    lastFetchCount: 0,
+    pollState: 'idle',
+    currentPollIntervalMs: POLL_INTERVAL_MS,
+    lastRegion: 'ottawa',
+  },
+  tomtom: {
+    fetched: 0,
+    eligible: 0,
+    inserted: 0,
+    updated: 0,
+    lastSuccessAt: null,
+    lastError: null,
+    rateLimited: false,
+    lastFetchCount: 0,
+    pollState: 'idle',
+    currentPollIntervalMs: POLL_INTERVAL_MS,
+    lastRegion: null,
+  },
+  waze: {
+    fetched: 0,
+    eligible: 0,
+    inserted: 0,
+    updated: 0,
+    lastSuccessAt: null,
+    lastError: null,
+    rateLimited: false,
+    lastFetchCount: 0,
+    pollState: 'idle',
+    currentPollIntervalMs: null,
+    lastRegion: null,
+  },
 });
 
 const monitorState: MonitorState = {
   running: false,
   pollIntervalMs: POLL_INTERVAL_MS,
-  sourceCount: INCIDENT_SOURCES.length,
-  sources: INCIDENT_SOURCES.map((source) => ({ ...source })),
+  sourceCount: DISPATCH_SOURCES.length,
+  sources: DISPATCH_SOURCES.map((source) => ({
+    key: source.key,
+    label: source.label,
+    url: source.url,
+    tierLabel: source.tierLabel,
+    statusLabel: source.statusLabel,
+    enabledRegions: [...source.enabledRegions],
+  })),
   lastRunAt: null,
   lastSuccessAt: null,
   lastError: null,
@@ -136,6 +200,20 @@ const monitorState: MonitorState = {
 
 function inOntario(lat: number, lng: number): boolean {
   return lat >= ONTARIO.south && lat <= ONTARIO.north && lng >= ONTARIO.west && lng <= ONTARIO.east;
+}
+
+function matchesAnyActiveRegion(incident: Pick<NormalizedIncident, 'id' | 'roadway' | 'description' | 'locationLat' | 'locationLng'>) {
+  return ACTIVE_MONITOR_REGIONS.some((regionKey) => isRegionScopedIncident(regionKey, incident));
+}
+
+function updateSourceSnapshot(
+  sourceKey: SourceKey,
+  patch: Partial<MonitorSourceSnapshot>,
+) {
+  monitorState.sourceStats[sourceKey] = {
+    ...monitorState.sourceStats[sourceKey],
+    ...patch,
+  };
 }
 
 function toNumber(value: unknown): number | null {
@@ -433,7 +511,17 @@ async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<No
     headers: { 'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)' },
     signal: AbortSignal.timeout(15_000),
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    updateSourceSnapshot('octranspo', {
+      lastError: `${res.status} ${res.statusText}`,
+      lastFetchCount: 0,
+      rateLimited: res.status === 429,
+      pollState: res.status === 429 ? 'rate_limited' : 'degraded',
+      currentPollIntervalMs: POLL_INTERVAL_MS,
+      lastRegion: 'ottawa',
+    });
+    return [];
+  }
 
   const xml = await res.text();
   const items = parseRSSItems(xml);
@@ -464,8 +552,8 @@ async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<No
     const eventType = isDetour ? 'ROAD_DETOUR' : isCancel ? 'ROUTE_CANCELLED' : 'TRANSIT_ALERT';
 
     // Try to geocode extracted street â€” respect per-run budget
-    let lat = OTTAWA_CENTER.lat;
-    let lng = OTTAWA_CENTER.lng;
+    let lat = getDispatchRegion('ottawa').center.lat;
+    let lng = getDispatchRegion('ottawa').center.lng;
 
     if (geocodeBudget.used < MAX_GEOCODE_PER_RUN) {
       const hint = extractStreetHint(cleanTitle);
@@ -498,6 +586,16 @@ async function fetchOCTranspoAlerts(geocodeBudget: { used: number }): Promise<No
     });
   }
 
+  updateSourceSnapshot('octranspo', {
+    lastSuccessAt: new Date().toISOString(),
+    lastError: null,
+    rateLimited: false,
+    lastFetchCount: result.length,
+    pollState: 'healthy',
+    currentPollIntervalMs: POLL_INTERVAL_MS,
+    lastRegion: 'ottawa',
+  });
+
   return result;
 }
 
@@ -506,12 +604,21 @@ async function fetchOntario511Incidents(): Promise<NormalizedIncident[]> {
     headers: { 'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)' },
     signal: AbortSignal.timeout(15_000),
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    updateSourceSnapshot('on511', {
+      lastError: `${res.status} ${res.statusText}`,
+      lastFetchCount: 0,
+      rateLimited: res.status === 429,
+      pollState: res.status === 429 ? 'rate_limited' : 'degraded',
+      currentPollIntervalMs: POLL_INTERVAL_MS,
+    });
+    return [];
+  }
 
   const raw = (await res.json()) as Ontario511Event[] | { events?: Ontario511Event[] };
   const all = Array.isArray(raw) ? raw : Array.isArray(raw.events) ? raw.events : [];
 
-  return all
+  const result = all
     .map((event) => {
       const lat = toNumber(event.Latitude);
       const lng = toNumber(event.Longitude);
@@ -530,7 +637,7 @@ async function fetchOntario511Incidents(): Promise<NormalizedIncident[]> {
         locationLat: lat,
         locationLng: lng,
       };
-      if (!isOttawaScopedIncident(candidate)) return null;
+      if (!matchesAnyActiveRegion(candidate)) return null;
 
       return {
         id: candidate.id,
@@ -547,6 +654,18 @@ async function fetchOntario511Incidents(): Promise<NormalizedIncident[]> {
       } satisfies NormalizedIncident;
     })
     .filter((value): value is NormalizedIncident => Boolean(value && value.id !== 'on511:'));
+
+  updateSourceSnapshot('on511', {
+    lastSuccessAt: new Date().toISOString(),
+    lastError: null,
+    rateLimited: false,
+    lastFetchCount: result.length,
+    pollState: 'healthy',
+    currentPollIntervalMs: POLL_INTERVAL_MS,
+    lastRegion: null,
+  });
+
+  return result;
 }
 
 async function fetchOttawaTrafficIncidents(): Promise<NormalizedIncident[]> {
@@ -554,12 +673,22 @@ async function fetchOttawaTrafficIncidents(): Promise<NormalizedIncident[]> {
     headers: { 'User-Agent': 'dispatch-app/1.0 (contact@unalabs.cloud)' },
     signal: AbortSignal.timeout(15_000),
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    updateSourceSnapshot('ottawa_traffic', {
+      lastError: `${res.status} ${res.statusText}`,
+      lastFetchCount: 0,
+      rateLimited: res.status === 429,
+      pollState: res.status === 429 ? 'rate_limited' : 'degraded',
+      currentPollIntervalMs: POLL_INTERVAL_MS,
+      lastRegion: 'ottawa',
+    });
+    return [];
+  }
 
   const raw = (await res.json()) as { events?: OttawaTrafficEvent[] };
   const all = Array.isArray(raw.events) ? raw.events : [];
 
-  return all
+  const result = all
     .map((event) => {
       const coords = parseOttawaCoordinates(event.geodata);
       if (!coords || !inOntario(coords.lat, coords.lng)) return null;
@@ -594,6 +723,18 @@ async function fetchOttawaTrafficIncidents(): Promise<NormalizedIncident[]> {
       (value): value is NormalizedIncident =>
         Boolean(value && value.id !== 'ottawa_traffic:' && value.description),
     );
+
+  updateSourceSnapshot('ottawa_traffic', {
+    lastSuccessAt: new Date().toISOString(),
+    lastError: null,
+    rateLimited: false,
+    lastFetchCount: result.length,
+    pollState: 'healthy',
+    currentPollIntervalMs: POLL_INTERVAL_MS,
+    lastRegion: 'ottawa',
+  });
+
+  return result;
 }
 
 // ── TomTom Traffic Incidents ────────────────────────────────────────────────
@@ -644,12 +785,12 @@ const TOMTOM_DELAY_SEVERITY: Record<number, string> = {
   4: 'Road Closure',
 };
 
-async function fetchTomTomIncidents(): Promise<NormalizedIncident[]> {
+async function fetchTomTomIncidents(regionKey: DispatchRegionKey): Promise<NormalizedIncident[]> {
   const apiKey = process.env.TOMTOM_API_KEY;
   if (!apiKey) return [];
 
-  // Ottawa bounds: SW(-76.35,45.05) NE(-75.2,45.62) as minLon,minLat,maxLon,maxLat
-  const bbox = '-76.35,45.05,-75.2,45.62';
+  const region = getDispatchRegion(regionKey);
+  const bbox = `${region.bounds.west},${region.bounds.south},${region.bounds.east},${region.bounds.north}`;
   const fields = encodeURIComponent(
     '{incidents{type,geometry{type,coordinates},properties{id,iconCategory,magnitudeOfDelay,events{description,code,iconCategory},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}}',
   );
@@ -661,13 +802,21 @@ async function fetchTomTomIncidents(): Promise<NormalizedIncident[]> {
   });
   if (!res.ok) {
     console.warn(`[monitor][tomtom] fetch failed: ${res.status} ${res.statusText}`);
+    updateSourceSnapshot('tomtom', {
+      lastError: `${res.status} ${res.statusText}`,
+      lastFetchCount: 0,
+      rateLimited: res.status === 429,
+      pollState: res.status === 429 ? 'rate_limited' : 'degraded',
+      currentPollIntervalMs: POLL_INTERVAL_MS,
+      lastRegion: regionKey,
+    });
     return [];
   }
 
   const raw = (await res.json()) as TomTomResponse;
   const all = Array.isArray(raw.incidents) ? raw.incidents : [];
 
-  return all
+  const result = all
     .map((incident) => {
       const cat = incident.properties?.iconCategory ?? 0;
       const eventType = TOMTOM_CATEGORY_TO_EVENT[cat];
@@ -720,6 +869,18 @@ async function fetchTomTomIncidents(): Promise<NormalizedIncident[]> {
       } satisfies NormalizedIncident;
     })
     .filter((v): v is NormalizedIncident => v !== null);
+
+  updateSourceSnapshot('tomtom', {
+    lastSuccessAt: new Date().toISOString(),
+    lastError: null,
+    rateLimited: false,
+    lastFetchCount: result.length,
+    pollState: 'healthy',
+    currentPollIntervalMs: POLL_INTERVAL_MS,
+    lastRegion: regionKey,
+  });
+
+  return result;
 }
 
 // ── Waze via OpenWeb Ninja (RapidAPI) ────────────────────────────────────────
@@ -743,14 +904,29 @@ type WazeResponse = {
   data?: { alerts?: WazeAlert[]; jams?: unknown[] };
 };
 
-async function fetchWazeIncidents(): Promise<NormalizedIncident[]> {
+type WazeFetchResult = {
+  incidents: NormalizedIncident[];
+  status: number | null;
+  error: string | null;
+  rateLimited: boolean;
+};
+
+async function fetchWazeIncidents(regionKey: DispatchRegionKey): Promise<WazeFetchResult> {
   // Support both keys — prefer RapidAPI wrapper, fall back to direct OpenWeb Ninja key
   const rapidApiKey = process.env.OPENWEBNINJA_API_KEY;
   const directKey = process.env.OPENWEBNINJA_DIRECT_KEY;
-  if (!rapidApiKey && !directKey) return [];
+  if (!rapidApiKey && !directKey) {
+    return {
+      incidents: [],
+      status: null,
+      error: 'Waze API key not configured',
+      rateLimited: false,
+    };
+  }
 
-  const bottomLeft = '45.2501,-76.3556';
-  const topRight = '45.5375,-75.2466';
+  const region = getDispatchRegion(regionKey);
+  const bottomLeft = `${region.bounds.south},${region.bounds.west}`;
+  const topRight = `${region.bounds.north},${region.bounds.east}`;
   const params = `bottom_left=${encodeURIComponent(bottomLeft)}&top_right=${encodeURIComponent(topRight)}&max_alerts=100&max_jams=0`;
 
   let url: string;
@@ -772,71 +948,100 @@ async function fetchWazeIncidents(): Promise<NormalizedIncident[]> {
     };
   }
 
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
-  if (!res.ok) {
-    console.warn(`[monitor][waze] fetch failed: ${res.status} ${res.statusText}`);
-    return [];
-  }
-
-  const raw = (await res.json()) as WazeResponse;
-  const alerts = raw.data?.alerts ?? [];
-
-  return alerts
-    .map((alert) => {
-      const type = String(alert.type || '').toUpperCase();
-      const subtype = String(alert.subtype || '').toUpperCase();
-
-      let eventType: string;
-      let alerted: boolean;
-
-      if (type === 'ACCIDENT') {
-        eventType = 'ACCIDENT';
-        alerted = true;
-      } else if (type === 'HAZARD') {
-        if (subtype.includes('CAR_STOPPED')) {
-          eventType = 'STALLED_VEHICLE';
-          alerted = true;
-        } else {
-          eventType = 'HAZARD';
-          alerted = false;
-        }
-      } else if (type === 'ROAD_CLOSED') {
-        eventType = 'ROAD_CLOSURE';
-        alerted = false;
-      } else {
-        return null; // skip POLICE, JAM, etc.
-      }
-
-      const lat = toNumber(alert.latitude);
-      const lng = toNumber(alert.longitude);
-      if (lat === null || lng === null || !inOntario(lat, lng)) return null;
-
-      const id = `waze:${String(alert.alert_id ?? '')}`;
-      if (id === 'waze:') return null;
-
-      const description = alert.description || alert.subtype || type;
-      const startDate = alert.publish_datetime_utc
-        ? new Date(alert.publish_datetime_utc).toISOString()
-        : null;
-
+  try {
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) {
+      console.warn(`[monitor][waze] fetch failed: ${res.status} ${res.statusText}`);
       return {
-        id,
-        eventType,
-        description,
-        roadway: alert.street || null,
-        locationLat: lat,
-        locationLng: lng,
-        severity:
-          typeof alert.alert_reliability === 'number'
-            ? String(alert.alert_reliability)
-            : null,
-        startDate,
-        lastUpdated: startDate,
-        alerted,
-        sourceKey: 'waze' as const,
-      } satisfies NormalizedIncident;
-    })
-    .filter((v): v is NormalizedIncident => v !== null);
+        incidents: [],
+        status: res.status,
+        error: `${res.status} ${res.statusText}`,
+        rateLimited: res.status === 429,
+      };
+    }
+
+    const raw = (await res.json()) as WazeResponse;
+    const alerts = raw.data?.alerts ?? [];
+
+    return {
+      incidents: alerts
+        .map((alert) => {
+          const type = String(alert.type || '').toUpperCase();
+          const subtype = String(alert.subtype || '').toUpperCase();
+
+          let eventType: string;
+          let alerted: boolean;
+
+          if (type === 'ACCIDENT') {
+            eventType = 'ACCIDENT';
+            alerted = true;
+          } else if (type === 'HAZARD') {
+            if (subtype.includes('CAR_STOPPED')) {
+              eventType = 'STALLED_VEHICLE';
+              alerted = true;
+            } else {
+              eventType = 'HAZARD';
+              alerted = false;
+            }
+          } else if (type === 'ROAD_CLOSED') {
+            eventType = 'ROAD_CLOSURE';
+            alerted = false;
+          } else {
+            return null;
+          }
+
+          const lat = toNumber(alert.latitude);
+          const lng = toNumber(alert.longitude);
+          if (lat === null || lng === null || !inOntario(lat, lng)) return null;
+          if (
+            !isRegionScopedIncident(regionKey, {
+              locationLat: lat,
+              locationLng: lng,
+              roadway: alert.street || null,
+              description: alert.description || null,
+            })
+          ) {
+            return null;
+          }
+
+          const id = `waze:${String(alert.alert_id ?? '')}`;
+          if (id === 'waze:') return null;
+
+          const description = alert.description || alert.subtype || type;
+          const startDate = alert.publish_datetime_utc
+            ? new Date(alert.publish_datetime_utc).toISOString()
+            : null;
+
+          return {
+            id,
+            eventType,
+            description,
+            roadway: alert.street || null,
+            locationLat: lat,
+            locationLng: lng,
+            severity:
+              typeof alert.alert_reliability === 'number'
+                ? String(alert.alert_reliability)
+                : null,
+            startDate,
+            lastUpdated: startDate,
+            alerted,
+            sourceKey: 'waze' as const,
+          } satisfies NormalizedIncident;
+        })
+        .filter((v): v is NormalizedIncident => v !== null),
+      status: res.status,
+      error: null,
+      rateLimited: false,
+    };
+  } catch (err) {
+    return {
+      incidents: [],
+      status: null,
+      error: err instanceof Error ? err.message : 'Unknown Waze error',
+      rateLimited: false,
+    };
+  }
 }
 
 // ── Cross-source deduplication ────────────────────────────────────────────────
@@ -881,12 +1086,17 @@ async function loadSourceIncidents(): Promise<Record<SourceKey, NormalizedIncide
   const geocodeBudget = { used: 0 };
 
   // OC Transpo may geocode sequentially â€” run it first, then parallel the rest
-  const octranspo = await fetchOCTranspoAlerts(geocodeBudget);
-  const [on511, ottawaTraffic, tomtom] = await Promise.all([
+  const octranspo = ACTIVE_MONITOR_REGIONS.includes('ottawa')
+    ? await fetchOCTranspoAlerts(geocodeBudget)
+    : [];
+  const [on511, ottawaTraffic, ...tomtomByRegion] = await Promise.all([
     fetchOntario511Incidents(),
-    fetchOttawaTrafficIncidents(),
-    fetchTomTomIncidents(),
+    ACTIVE_MONITOR_REGIONS.includes('ottawa') ? fetchOttawaTrafficIncidents() : Promise.resolve([]),
+    ...ACTIVE_MONITOR_REGIONS.map((regionKey) => fetchTomTomIncidents(regionKey)),
   ]);
+  const tomtom = tomtomByRegion
+    .flat()
+    .filter((incident, index, all) => all.findIndex((candidate) => candidate.id === incident.id) === index);
 
   // Waze runs on its own 20s loop (startWazeMonitor) — not polled here
   return { on511, ottawa_traffic: ottawaTraffic, octranspo, tomtom, waze: [] };
@@ -907,42 +1117,18 @@ async function runMonitor(): Promise<void> {
     ];
     const all = deduplicateAcrossSources(rawAll);
 
-    monitorState.sourceStats = {
-      on511: {
-        fetched: sourceIncidents.on511.length,
-        eligible: sourceIncidents.on511.filter((i) => i.alerted).length,
+    for (const sourceKey of Object.keys(sourceIncidents) as SourceKey[]) {
+      updateSourceSnapshot(sourceKey, {
+        fetched: sourceIncidents[sourceKey].length,
+        eligible: sourceIncidents[sourceKey].filter((incident) => isActionableIncident(incident)).length,
         inserted: 0,
         updated: 0,
-      },
-      ottawa_traffic: {
-        fetched: sourceIncidents.ottawa_traffic.length,
-        eligible: sourceIncidents.ottawa_traffic.filter((i) => i.alerted).length,
-        inserted: 0,
-        updated: 0,
-      },
-      octranspo: {
-        fetched: sourceIncidents.octranspo.length,
-        eligible: sourceIncidents.octranspo.filter((i) => i.alerted).length,
-        inserted: 0,
-        updated: 0,
-      },
-      tomtom: {
-        fetched: sourceIncidents.tomtom.length,
-        eligible: sourceIncidents.tomtom.filter((i) => i.alerted).length,
-        inserted: 0,
-        updated: 0,
-      },
-      waze: {
-        fetched: sourceIncidents.waze.length,
-        eligible: sourceIncidents.waze.filter((i) => i.alerted).length,
-        inserted: 0,
-        updated: 0,
-      },
-    };
+      });
+    }
 
     if (all.length === 0) {
       monitorState.lastSuccessAt = new Date().toISOString();
-      console.log('[monitor] no Ottawa incidents matched current filters');
+      console.log('[monitor] no incidents matched the current region and source filters');
       return;
     }
 
@@ -969,7 +1155,7 @@ async function runMonitor(): Promise<void> {
       return existing ? incidentNeedsUpdate(existing, incident) : false;
     });
 
-    const activeSourcePrefixes = INCIDENT_SOURCES
+    const activeSourcePrefixes = DISPATCH_SOURCES
       .filter((source) => monitorState.sourceStats[source.key].fetched > 0)
       .map((source) => `${source.key}:`);
 
@@ -985,7 +1171,7 @@ async function runMonitor(): Promise<void> {
     if (fresh.length === 0 && changed.length === 0) {
       monitorState.lastSuccessAt = new Date().toISOString();
       console.log(
-        `[monitor] checked ${all.length} Ottawa incidents across ${INCIDENT_SOURCES.length} sources; no new incidents, retained ${staleIds.length} historical incidents`,
+        `[monitor] checked ${all.length} incidents across ${DISPATCH_SOURCES.length} configured sources; no new incidents, retained ${staleIds.length} historical incidents`,
       );
       return;
     }
@@ -1030,7 +1216,7 @@ async function runMonitor(): Promise<void> {
       });
 
       if (incident.alerted) {
-        const location = incident.roadway || incident.description.slice(0, 80) || 'Ottawa';
+        const location = incident.roadway || incident.description.slice(0, 80) || 'dispatch area';
         sendToAllActiveOperators({
           title: 'Incident Alert',
           body: `${prettyType(incident.eventType)} - ${location}`,
@@ -1084,7 +1270,7 @@ async function runMonitor(): Promise<void> {
 
     monitorState.lastSuccessAt = new Date().toISOString();
     console.log(
-      `[monitor] ${fresh.length} new, ${changed.length} updated, and ${staleIds.length} retained as history from ${INCIDENT_SOURCES.length} Ottawa sources - ${alertCount} operator alerts sent`,
+      `[monitor] ${fresh.length} new, ${changed.length} updated, and ${staleIds.length} retained as history from ${DISPATCH_SOURCES.length} configured sources - ${alertCount} operator alerts sent`,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown monitor error';
@@ -1141,6 +1327,12 @@ type WazeMonitorState = {
   lastFetchCount: number;
   todayFetched: number;
   todayInserted: number;
+  rateLimited: boolean;
+  pollState: 'idle' | 'healthy' | 'degraded' | 'rate_limited' | 'cooldown' | 'inactive';
+  lastRegion: DispatchRegionKey | null;
+  backoffUntil: string | null;
+  consecutiveFailures: number;
+  consecutiveRateLimits: number;
 };
 
 const wazeState: WazeMonitorState = {
@@ -1153,9 +1345,16 @@ const wazeState: WazeMonitorState = {
   lastFetchCount: 0,
   todayFetched: 0,
   todayInserted: 0,
+  rateLimited: false,
+  pollState: 'idle',
+  lastRegion: null,
+  backoffUntil: null,
+  consecutiveFailures: 0,
+  consecutiveRateLimits: 0,
 };
 
 let wazeResetDay = '';
+let wazeRegionCursor = 0;
 function checkWazeDailyReset(): void {
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto' }).format(new Date());
   if (wazeResetDay !== today) {
@@ -1181,6 +1380,78 @@ async function isNearbyIncidentInDb(lat: number, lng: number): Promise<boolean> 
   return result.length > 0;
 }
 
+async function persistFreshIncidents(
+  incidentsToPersist: NormalizedIncident[],
+  sourceKey: SourceKey,
+  notificationTitle: string,
+) {
+  if (incidentsToPersist.length === 0) {
+    updateSourceSnapshot(sourceKey, { inserted: 0, updated: 0 });
+    return { inserted: 0 };
+  }
+
+  const ids = incidentsToPersist.map((incident) => incident.id);
+  const seenRows = await db.select({ id: incidents.id }).from(incidents).where(inArray(incidents.id, ids));
+  const seenIds = new Set(seenRows.map((row) => row.id));
+
+  let inserted = 0;
+  for (const incident of incidentsToPersist) {
+    if (seenIds.has(incident.id)) continue;
+    if (sourceKey === 'waze' && (await isNearbyIncidentInDb(incident.locationLat, incident.locationLng))) continue;
+
+    const occurredAt = incident.lastUpdated || incident.startDate || new Date().toISOString();
+    await db
+      .insert(incidents)
+      .values({
+        id: incident.id,
+        eventType: incident.eventType,
+        description: incident.description,
+        roadway: incident.roadway,
+        locationLat: incident.locationLat,
+        locationLng: incident.locationLng,
+        severity: incident.severity,
+        startDate: incident.startDate,
+        lastUpdated: incident.lastUpdated,
+        alerted: incident.alerted,
+        alertedAt: incident.alerted ? new Date() : null,
+      })
+      .onConflictDoNothing();
+
+    inserted += 1;
+    sseBroadcast('incident:new', {
+      id: incident.id,
+      eventType: incident.eventType,
+      description: incident.description,
+      roadway: incident.roadway,
+      locationLat: incident.locationLat,
+      locationLng: incident.locationLng,
+      severity: incident.severity,
+      startDate: incident.startDate,
+      lastUpdated: incident.lastUpdated,
+      occurredAt,
+      alerted: incident.alerted,
+      createdAt: occurredAt,
+      source: sourceKey,
+    });
+
+    if (incident.alerted) {
+      sendToAllActiveOperators({
+        title: notificationTitle,
+        body: `${prettyType(incident.eventType)} - ${incident.roadway || incident.description?.slice(0, 80) || 'dispatch area'}`,
+        data: {
+          incidentId: incident.id,
+          lat: String(incident.locationLat),
+          lng: String(incident.locationLng),
+          source: sourceKey,
+        },
+      }).catch(() => {});
+    }
+  }
+
+  updateSourceSnapshot(sourceKey, { inserted, updated: 0 });
+  return { inserted };
+}
+
 async function runWazeMonitor(): Promise<void> {
   checkWazeDailyReset();
   const period = getWazePeriod();
@@ -1188,17 +1459,93 @@ async function runWazeMonitor(): Promise<void> {
   wazeState.currentPollIntervalMs = getWazePollIntervalMs(period);
   wazeState.lastRunAt = new Date().toISOString();
 
-  if (period === 'inactive') return;
+  updateSourceSnapshot('waze', {
+    currentPollIntervalMs: wazeState.currentPollIntervalMs,
+    pollState: period === 'inactive' ? 'inactive' : monitorState.sourceStats.waze.pollState,
+  });
+
+  if (period === 'inactive') {
+    wazeState.pollState = 'inactive';
+    updateSourceSnapshot('waze', { pollState: 'inactive' });
+    return;
+  }
+
+  if (wazeState.backoffUntil && Date.parse(wazeState.backoffUntil) > Date.now()) {
+    wazeState.pollState = 'cooldown';
+    updateSourceSnapshot('waze', {
+      pollState: 'cooldown',
+      rateLimited: wazeState.rateLimited,
+      lastError: wazeState.lastError,
+      lastRegion: wazeState.lastRegion,
+    });
+    return;
+  }
+
+  const regionKey = ACTIVE_MONITOR_REGIONS[wazeRegionCursor % ACTIVE_MONITOR_REGIONS.length] ?? 'ottawa';
+  wazeRegionCursor = (wazeRegionCursor + 1) % ACTIVE_MONITOR_REGIONS.length;
+  wazeState.lastRegion = regionKey;
 
   try {
-    const waze = await fetchWazeIncidents();
+    const result = await fetchWazeIncidents(regionKey);
+    if (result.error) {
+      wazeState.lastFetchCount = 0;
+      wazeState.lastError = result.error;
+      wazeState.rateLimited = result.rateLimited;
+      wazeState.consecutiveFailures += 1;
+      wazeState.consecutiveRateLimits = result.rateLimited ? wazeState.consecutiveRateLimits + 1 : 0;
+      const backoffMs = result.rateLimited
+        ? Math.min(15 * 60_000, 60_000 * 2 ** Math.min(wazeState.consecutiveRateLimits - 1, 4))
+        : wazeState.consecutiveFailures >= 3
+          ? 5 * 60_000
+          : 0;
+      wazeState.backoffUntil = backoffMs > 0 ? new Date(Date.now() + backoffMs).toISOString() : null;
+      wazeState.pollState = result.rateLimited ? 'rate_limited' : backoffMs > 0 ? 'cooldown' : 'degraded';
+      updateSourceSnapshot('waze', {
+        fetched: 0,
+        eligible: 0,
+        lastError: result.error,
+        rateLimited: result.rateLimited,
+        lastFetchCount: 0,
+        pollState: wazeState.pollState,
+        currentPollIntervalMs: wazeState.currentPollIntervalMs,
+        lastRegion: regionKey,
+      });
+      return;
+    }
+
+    const waze = result.incidents;
     wazeState.lastFetchCount = waze.length;
     wazeState.todayFetched += waze.length;
+    wazeState.lastError = null;
+    wazeState.rateLimited = false;
+    wazeState.pollState = 'healthy';
+    wazeState.backoffUntil = null;
+    wazeState.consecutiveFailures = 0;
+    wazeState.consecutiveRateLimits = 0;
+    updateSourceSnapshot('waze', {
+      fetched: waze.length,
+      eligible: waze.filter((incident) => isActionableIncident(incident)).length,
+      lastSuccessAt: new Date().toISOString(),
+      lastError: null,
+      rateLimited: false,
+      lastFetchCount: waze.length,
+      pollState: 'healthy',
+      currentPollIntervalMs: wazeState.currentPollIntervalMs,
+      lastRegion: regionKey,
+    });
 
     if (waze.length === 0) {
       wazeState.lastSuccessAt = new Date().toISOString();
       return;
     }
+
+    const persisted = await persistFreshIncidents(waze, 'waze', 'Waze Alert');
+    wazeState.todayInserted += persisted.inserted;
+    wazeState.lastSuccessAt = new Date().toISOString();
+    if (persisted.inserted > 0) {
+      console.log(`[waze-monitor][${period}][${regionKey}] ${waze.length} fetched, ${persisted.inserted} new`);
+    }
+    return;
 
     // Fast ID-based dedup
     const ids = waze.map((i) => i.id);
@@ -1265,10 +1612,12 @@ async function runWazeMonitor(): Promise<void> {
 
     wazeState.lastSuccessAt = new Date().toISOString();
     if (inserted > 0) {
-      console.log(`[waze-monitor][${period}] ${waze.length} fetched, ${inserted} new`);
+      console.log(`[waze-monitor][${period}][${regionKey}] ${waze.length} fetched, ${inserted} new`);
     }
   } catch (err) {
     wazeState.lastError = err instanceof Error ? err.message : 'Unknown error';
+    wazeState.pollState = 'degraded';
+    wazeState.consecutiveFailures += 1;
     console.error('[waze-monitor] poll failed:', err);
   }
 }
@@ -1289,6 +1638,65 @@ export function startWazeMonitor(): void {
     runWazeMonitor().then(() => scheduleNextWazePoll());
   }, 5_000);
   console.log('[waze-monitor] started — peak 20s | moderate 60s | off-peak 90s | inactive 11PM–5AM Eastern');
+}
+
+export async function probeDispatchSource(sourceKey: SourceKey, regionKey: DispatchRegionKey) {
+  const source = DISPATCH_SOURCES.find((entry) => entry.key === sourceKey);
+  if (!source || !source.enabledRegions.includes(regionKey)) {
+    return {
+      ok: false,
+      sourceKey,
+      regionKey,
+      error: `Source ${sourceKey} is not enabled for ${regionKey}`,
+    } as const;
+  }
+
+  if (sourceKey === 'waze') {
+    const result = await fetchWazeIncidents(regionKey);
+    if (result.error) {
+      return {
+        ok: false,
+        sourceKey,
+        regionKey,
+        error: result.error,
+        rateLimited: result.rateLimited,
+      } as const;
+    }
+
+    const rawCount = result.incidents.length;
+    const actionableCount = result.incidents.filter((incident) => isActionableIncident(incident)).length;
+    const persisted = await persistFreshIncidents(result.incidents, 'waze', 'Waze Alert');
+    return {
+      ok: true,
+      sourceKey,
+      regionKey,
+      rawCount,
+      actionableCount,
+      inserted: persisted.inserted,
+      sample: result.incidents.slice(0, 5),
+    } as const;
+  }
+
+  let probeIncidents: NormalizedIncident[] = [];
+  if (sourceKey === 'on511') {
+    probeIncidents = (await fetchOntario511Incidents()).filter((incident) => isRegionScopedIncident(regionKey, incident));
+  } else if (sourceKey === 'ottawa_traffic') {
+    probeIncidents = await fetchOttawaTrafficIncidents();
+  } else if (sourceKey === 'octranspo') {
+    probeIncidents = await fetchOCTranspoAlerts({ used: 0 });
+  } else if (sourceKey === 'tomtom') {
+    probeIncidents = await fetchTomTomIncidents(regionKey);
+  }
+
+  return {
+    ok: true,
+    sourceKey,
+    regionKey,
+    rawCount: probeIncidents.length,
+    actionableCount: probeIncidents.filter((incident) => isActionableIncident(incident)).length,
+    inserted: 0,
+    sample: probeIncidents.slice(0, 5),
+  } as const;
 }
 
 export function getWazeMonitorInfo(): WazeMonitorState {
@@ -1316,6 +1724,6 @@ export function startIncidentMonitor(): void {
   }, 10_000);
 
   console.log(
-    `[monitor] Ottawa incident monitor started - ${INCIDENT_SOURCES.length} official sources, polling every ${Math.round(POLL_INTERVAL_MS / 1000)} sec`,
+    `[monitor] Dispatch incident monitor started - ${DISPATCH_SOURCES.length} configured sources, polling every ${Math.round(POLL_INTERVAL_MS / 1000)} sec`,
   );
 }

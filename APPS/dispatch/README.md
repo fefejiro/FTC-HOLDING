@@ -1,6 +1,6 @@
 # Dispatch
 
-Dispatch is the Ottawa roadside assistance app and API in this repo.
+Dispatch is the roadside assistance app and API in this repo, with Ottawa live today and GTA region support built into the incident pipeline.
 
 ## Live
 
@@ -28,7 +28,7 @@ Dispatch is live-only. The product does not support alternate request/session mo
 
 ## Production data hygiene
 
-- Dispatch production should contain only real Ottawa roadside operations data.
+- Dispatch production should contain only real roadside operations data for supported regions.
 - QA, seeded, or sample jobs must be removed from production storage after verification.
 - As of 2026-04-02, the older demo-tagged request and known QA/sample jobs used during rollout verification were removed from production.
 
@@ -42,13 +42,15 @@ Dispatch is live-only. The product does not support alternate request/session mo
 
 ## Incident sources
 
-Dispatch currently watches three official no-key incident sources for Ottawa-area activity:
+Dispatch currently runs a mixed source stack and treats each source differently:
 
-- Ontario 511 events feed
-- City of Ottawa traffic events feed
-- OC Transpo service alerts feed
+- Ontario 511 events feed: official province-wide backbone for Ottawa and GTA
+- City of Ottawa traffic events feed: official Ottawa-only source
+- OC Transpo service alerts feed: official Ottawa-only transit source
+- TomTom traffic: commercial fallback for continuity coverage
+- Waze via OpenWebNinja/RapidAPI: experimental crowd-sourced layer with explicit degraded/rate-limited health states
 
-The live operator feed checks these sources about every 60 seconds and keeps the road-alert list warm even when the operator is viewing jobs.
+Operator workflows default to actionable roadside signals only. Admin diagnostics can inspect broader raw source coverage, per-source health, and region-specific source summaries.
 
 ## Local
 

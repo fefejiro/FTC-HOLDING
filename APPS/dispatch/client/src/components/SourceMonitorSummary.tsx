@@ -5,7 +5,12 @@ import { cn } from '../lib/cn';
 export interface SourceMonitorItem {
   key: string;
   label: string;
-  count: number;
+  rawCount: number;
+  actionableCount: number;
+  tierLabel?: string;
+  statusLabel?: string;
+  pollState?: string;
+  lastError?: string | null;
 }
 
 export default function SourceMonitorSummary({
@@ -28,12 +33,17 @@ export default function SourceMonitorSummary({
   const [open, setOpen] = useState(false);
 
   const summaryText = useMemo(() => {
-    const totalSignals = items.reduce((sum, item) => sum + item.count, 0);
-    return `${sourceCount} sources, ${totalSignals} signals on ${dayLabel}`;
+    const totalRawSignals = items.reduce((sum, item) => sum + item.rawCount, 0);
+    const totalActionableSignals = items.reduce((sum, item) => sum + item.actionableCount, 0);
+    return `${sourceCount} sources, ${totalActionableSignals} actionable / ${totalRawSignals} raw on ${dayLabel}`;
   }, [dayLabel, items, sourceCount]);
 
   const totalSignals = useMemo(
-    () => items.reduce((sum, item) => sum + item.count, 0),
+    () => items.reduce((sum, item) => sum + item.rawCount, 0),
+    [items],
+  );
+  const totalActionableSignals = useMemo(
+    () => items.reduce((sum, item) => sum + item.actionableCount, 0),
     [items],
   );
 
@@ -57,7 +67,7 @@ export default function SourceMonitorSummary({
                 {summaryText}
               </div>
               <div className={cn('text-xs', compact ? 'text-orange-200/80' : 'text-slate-500')}>
-                Tap to see each source&apos;s daily count
+                Tap to see source trust, health, and daily signal counts
               </div>
             </div>
           </div>
@@ -89,12 +99,13 @@ export default function SourceMonitorSummary({
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold text-white">All sources</div>
                 <div className="mt-1 text-[11px] text-slate-500">
-                  Combined daily signals on {dayLabel}
+                  Combined daily actionable and raw signals on {dayLabel}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold tabular-nums text-cyan-300">{totalSignals}</div>
-                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Daily count</div>
+                <div className="text-lg font-bold tabular-nums text-cyan-300">{totalActionableSignals}</div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Actionable</div>
+                <div className="mt-1 text-[11px] font-semibold text-slate-400">{totalSignals} raw</div>
               </div>
             </button>
             {items.map((item) => (
@@ -112,12 +123,18 @@ export default function SourceMonitorSummary({
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-white">{item.label}</div>
                   <div className="mt-1 text-[11px] text-slate-500">
-                    Signals received on {dayLabel}
+                    {item.tierLabel || 'Source'} • {item.statusLabel || 'Live ingest source'}
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-600">
+                    {item.lastError
+                      ? `Health: ${item.pollState || 'degraded'} • ${item.lastError}`
+                      : `Health: ${item.pollState || 'healthy'} • ${item.actionableCount} actionable on ${dayLabel}`}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-bold tabular-nums text-cyan-300">{item.count}</div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Daily count</div>
+                  <div className="text-lg font-bold tabular-nums text-cyan-300">{item.actionableCount}</div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Actionable</div>
+                  <div className="mt-1 text-[11px] font-semibold text-slate-400">{item.rawCount} raw</div>
                 </div>
               </button>
             ))}

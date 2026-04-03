@@ -68,7 +68,7 @@ export default function HomePage() {
   });
 
   const sourceCount = data?.incidentMonitor?.sourceCount ?? 2;
-  const liveSourcesLabel = `${sourceCount} official incident source${sourceCount === 1 ? '' : 's'}`;
+  const liveSourcesLabel = `${sourceCount} live incident source${sourceCount === 1 ? '' : 's'}`;
 
   return (
     <div className="min-h-dvh bg-dispatch-bg text-white">

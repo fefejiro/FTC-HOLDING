@@ -5,27 +5,34 @@ import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { canAccessAdminSurface } from './adminAccess';
 import { db } from './db';
+import { getIncidentMonitorInfo, getWazeMonitorInfo, probeDispatchSource } from './monitor';
 import { normalizeRequestNotes, serializeRequest } from './requestPayload';
 import {
   isResolvedSignalWorkflowStatus,
   normalizeSignalWorkflowStatus,
 } from './signalWorkflow';
-import { isOttawaScopedIncident } from './ottawaScope';
 import { canAccessOperatorSurface, getAuthenticatedOperatorId, issueOperatorToken } from './operatorAccess';
-import { getIncidentMonitorInfo, getWazeMonitorInfo } from './monitor';
 import { getVapidPublicKey, sendToAllActiveOperators } from './push';
 import { incidents, operators, requests } from './schema';
 import { sseAdd, sseBroadcast, sseClientCount, sseRemove } from './sse';
+import {
+  DEFAULT_DISPATCH_REGION,
+  type DispatchRegionKey,
+  getDispatchRegion,
+  isDispatchRegionKey,
+  isRegionScopedIncident,
+} from '../shared/dispatchRegions';
+import {
+  DISPATCH_SOURCES,
+  type DispatchSourceKey,
+  getDispatchSource,
+  getDispatchSourceKeyFromIncidentId,
+  isDispatchSourceKey,
+  isSourceEnabledInRegion,
+} from '../shared/dispatchSources';
+import { isActionableIncident } from '../shared/dispatchSignals';
 
-const INCIDENT_SOURCE_DEFS = [
-  { key: 'on511', label: 'Ontario 511', prefix: 'on511:' },
-  { key: 'ottawa_traffic', label: 'City of Ottawa traffic', prefix: 'ottawa_traffic:' },
-  { key: 'octranspo', label: 'OC Transpo service alerts', prefix: 'octranspo:' },
-  { key: 'tomtom', label: 'TomTom traffic', prefix: 'tomtom:' },
-  { key: 'waze', label: 'Waze (crowd-sourced)', prefix: 'waze:' },
-] as const;
-
-type IncidentSourceSummaryKey = (typeof INCIDENT_SOURCE_DEFS)[number]['key'];
+type IncidentSourceSummaryKey = DispatchSourceKey;
 
 function serializeIncident(record: typeof incidents.$inferSelect) {
   return {
@@ -36,9 +43,7 @@ function serializeIncident(record: typeof incidents.$inferSelect) {
 }
 
 function getIncidentSourceKey(id: string | null | undefined): IncidentSourceSummaryKey | null {
-  const value = String(id || '');
-  const match = INCIDENT_SOURCE_DEFS.find((source) => value.startsWith(source.prefix));
-  return match?.key ?? null;
+  return getDispatchSourceKeyFromIncidentId(id);
 }
 
 function formatEasternDayKey(value: Date) {
@@ -61,14 +66,93 @@ function formatEasternDayLabel(dayKey: string) {
   }).format(date);
 }
 
+function parseDispatchRegion(value: unknown): DispatchRegionKey {
+  return isDispatchRegionKey(value) ? value : DEFAULT_DISPATCH_REGION;
+}
+
+function getEnabledSourcesForRegion(regionKey: DispatchRegionKey) {
+  return DISPATCH_SOURCES.filter((source) => source.enabledRegions.includes(regionKey));
+}
+
+type SourceSummaryRow = Pick<
+  typeof incidents.$inferSelect,
+  'id' | 'roadway' | 'description' | 'locationLat' | 'locationLng' | 'eventType' | 'alerted' | 'createdAt'
+>;
+
+function buildSourceSummaryItems(rows: SourceSummaryRow[], regionKey: DispatchRegionKey, dayKey: string) {
+  const enabledSources = getEnabledSourcesForRegion(regionKey);
+  const totals = new Map<IncidentSourceSummaryKey, { rawCount: number; actionableCount: number }>(
+    enabledSources.map((source) => [source.key, { rawCount: 0, actionableCount: 0 }]),
+  );
+
+  for (const row of rows) {
+    if (!row.createdAt) continue;
+    if (formatEasternDayKey(row.createdAt) !== dayKey) continue;
+    if (!isRegionScopedIncident(regionKey, row)) continue;
+    const sourceKey = getIncidentSourceKey(row.id);
+    if (!sourceKey || !isSourceEnabledInRegion(sourceKey, regionKey)) continue;
+    const entry = totals.get(sourceKey);
+    if (!entry) continue;
+    entry.rawCount += 1;
+    if (isActionableIncident(row)) entry.actionableCount += 1;
+  }
+
+  return enabledSources.map((source) => {
+    const counts = totals.get(source.key) ?? { rawCount: 0, actionableCount: 0 };
+    return {
+      key: source.key,
+      label: source.label,
+      rawCount: counts.rawCount,
+      actionableCount: counts.actionableCount,
+      tier: source.trustTier,
+      tierLabel: source.tierLabel,
+      kind: source.kind,
+      statusLabel: source.statusLabel,
+      supportsActionableSignals: source.supportsActionableSignals,
+    };
+  });
+}
+
 export async function registerRoutes(_server: Server, app: Express): Promise<void> {
-  app.get('/api/status', (_req, res) => {
+  app.get('/api/status', (req, res) => {
+    const regionKey = parseDispatchRegion(req.query.region);
+    const enabledSources = getEnabledSourcesForRegion(regionKey);
+    const incidentMonitor = getIncidentMonitorInfo();
+    const wazeMonitor = getWazeMonitorInfo();
     res.json({
       ok: true,
       service: 'dispatch',
+      region: getDispatchRegion(regionKey),
       sseClients: sseClientCount(),
-      incidentMonitor: getIncidentMonitorInfo(),
-      wazeMonitor: getWazeMonitorInfo(),
+      incidentMonitor: {
+        ...incidentMonitor,
+        sourceCount: enabledSources.length,
+        sources: enabledSources.map((source) => {
+          const snapshot = incidentMonitor.sourceStats[source.key];
+          return {
+            key: source.key,
+            label: source.label,
+            url: source.url,
+            tier: source.trustTier,
+            tierLabel: source.tierLabel,
+            statusLabel: source.statusLabel,
+            enabled: true,
+            enabledRegions: source.enabledRegions,
+            lastSuccessAt: snapshot?.lastSuccessAt ?? null,
+            lastError: snapshot?.lastError ?? null,
+            rateLimited: snapshot?.rateLimited ?? false,
+            lastFetchCount: snapshot?.lastFetchCount ?? 0,
+            rawCount: snapshot?.fetched ?? 0,
+            actionableCount: snapshot?.eligible ?? 0,
+            inserted: snapshot?.inserted ?? 0,
+            updated: snapshot?.updated ?? 0,
+            pollState: snapshot?.pollState ?? 'idle',
+            currentPollIntervalMs: snapshot?.currentPollIntervalMs ?? incidentMonitor.pollIntervalMs,
+            lastRegion: snapshot?.lastRegion ?? null,
+          };
+        }),
+      },
+      wazeMonitor,
       notifications: {
         webPushConfigured: Boolean(getVapidPublicKey()),
       },
@@ -91,41 +175,29 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       return;
     }
 
+    const regionKey = parseDispatchRegion(req.query.region);
     const dayKey = parsedDate.data ?? formatEasternDayKey(new Date());
     const rows = await db
       .select({
         id: incidents.id,
+        eventType: incidents.eventType,
         roadway: incidents.roadway,
         description: incidents.description,
         locationLat: incidents.locationLat,
         locationLng: incidents.locationLng,
+        alerted: incidents.alerted,
         createdAt: incidents.createdAt,
       })
       .from(incidents);
-
-    const totals = new Map<IncidentSourceSummaryKey, number>(
-      INCIDENT_SOURCE_DEFS.map((source) => [source.key, 0]),
-    );
-
-    for (const row of rows) {
-      if (!row.createdAt) continue;
-      if (formatEasternDayKey(row.createdAt) !== dayKey) continue;
-      if (!isOttawaScopedIncident(row)) continue;
-      const sourceKey = getIncidentSourceKey(row.id);
-      if (!sourceKey) continue;
-      totals.set(sourceKey, (totals.get(sourceKey) ?? 0) + 1);
-    }
+    const items = buildSourceSummaryItems(rows, regionKey, dayKey);
 
     res.json({
       ok: true,
+      region: getDispatchRegion(regionKey),
       date: dayKey,
       dayLabel: formatEasternDayLabel(dayKey),
-      sourceCount: INCIDENT_SOURCE_DEFS.length,
-      items: INCIDENT_SOURCE_DEFS.map((source) => ({
-        key: source.key,
-        label: source.label,
-        count: totals.get(source.key) ?? 0,
-      })),
+      sourceCount: items.length,
+      items,
     });
   });
 
@@ -557,6 +629,32 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     res.json({ ok: true, sent, skipped });
   });
 
+  app.post('/api/admin/sources/probe', async (req, res) => {
+    if (!canAccessAdminSurface(req)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    const schema = z.object({
+      source: z.custom<DispatchSourceKey>((value) => isDispatchSourceKey(value)),
+      region: z.custom<DispatchRegionKey>((value) => isDispatchRegionKey(value)).optional(),
+    });
+    const parsed = schema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid source probe payload' });
+      return;
+    }
+
+    const sourceKey = parsed.data.source;
+    const regionKey = parsed.data.region ?? DEFAULT_DISPATCH_REGION;
+    const result = await probeDispatchSource(sourceKey, regionKey);
+    if (!result.ok) {
+      res.status(result.rateLimited ? 429 : 400).json(result);
+      return;
+    }
+    res.json(result);
+  });
+
   app.get('/api/admin/operators/locations', async (req, res) => {
     if (!canAccessAdminSurface(req)) {
       res.status(403).json({ error: 'Admin access required' });
@@ -587,6 +685,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       return;
     }
 
+    const regionKey = parseDispatchRegion(req.query.region);
     const result = await db
       .select({
         id: incidents.id,
@@ -606,9 +705,10 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       .from(incidents)
       .orderBy(desc(incidents.lastUpdated), desc(incidents.createdAt));
 
-    const ottawaResult = result.filter((incident) => isOttawaScopedIncident(incident));
+    const regionResult = result.filter((incident) => isRegionScopedIncident(regionKey, incident));
+    const actionableRegionResult = regionResult.filter((incident) => isActionableIncident(incident));
 
-    const summary = ottawaResult.reduce(
+    const summary = actionableRegionResult.reduce(
       (acc, incident) => {
         const viewed = (incident.viewCount ?? 0) > 0;
         const actioned = Boolean(incident.actioned) || (incident.actionCount ?? 0) > 0;
@@ -641,16 +741,16 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       },
     );
 
-    const recentViewed = ottawaResult
+    const recentViewed = regionResult
       .filter((incident) => incident.lastViewedAt)
       .sort((a, b) => new Date(String(b.lastViewedAt)).getTime() - new Date(String(a.lastViewedAt)).getTime())
       .slice(0, 5);
-    const recentActioned = ottawaResult
+    const recentActioned = regionResult
       .filter((incident) => incident.lastActionedAt)
       .sort((a, b) => new Date(String(b.lastActionedAt)).getTime() - new Date(String(a.lastActionedAt)).getTime())
       .slice(0, 5);
 
-    res.json({ ...summary, recentViewed, recentActioned });
+    res.json({ ...summary, region: getDispatchRegion(regionKey), recentViewed, recentActioned });
   });
 
   app.patch('/api/requests/:id/assign', async (req, res) => {
@@ -736,6 +836,13 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     const lim = Math.max(1, Math.min(Number(req.query.limit ?? 50), 100));
     const mode =
       req.query.mode === 'history' ? 'history' : req.query.mode === 'all' ? 'all' : 'active';
+    const regionKey = parseDispatchRegion(req.query.region);
+    const scope =
+      req.query.scope === 'all'
+        ? 'all'
+        : req.query.scope === 'diagnostics'
+          ? 'diagnostics'
+          : 'actionable';
     const query = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
     const parsedDate = z
       .string()
@@ -748,16 +855,15 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     }
     const requestedDayKey = parsedDate.data ?? null;
     const requestedSource =
-      typeof req.query.source === 'string' &&
-      INCIDENT_SOURCE_DEFS.some((source) => source.key === req.query.source)
-        ? (req.query.source as IncidentSourceSummaryKey)
+      isDispatchSourceKey(req.query.source) && isSourceEnabledInRegion(req.query.source, regionKey)
+        ? req.query.source
         : null;
     const activeWindowMs = 6 * 60 * 60 * 1000;
     const cutoff = Date.now() - activeWindowMs;
 
     const sourcePrefix =
       requestedSource
-        ? INCIDENT_SOURCE_DEFS.find((source) => source.key === requestedSource)?.prefix ?? null
+        ? getDispatchSource(requestedSource).prefix
         : null;
 
     const baseQuery = db
@@ -767,18 +873,17 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
       .$dynamic();
 
     const results = sourcePrefix
-      ? await baseQuery
-          .where(sql`${incidents.id} like ${`${sourcePrefix}%`}`)
-          .limit(lim * 6)
-      : await baseQuery.limit(lim * 6);
+      ? await baseQuery.where(sql`${incidents.id} like ${`${sourcePrefix}%`}`)
+      : await baseQuery;
 
     const filtered = results
-      .filter((incident) => isOttawaScopedIncident(incident))
+      .filter((incident) => isRegionScopedIncident(regionKey, incident))
       .filter((incident) => {
         if (!requestedDayKey) return true;
         if (!incident.createdAt) return false;
         return formatEasternDayKey(incident.createdAt) === requestedDayKey;
       })
+      .filter((incident) => (scope === 'all' || scope === 'diagnostics' ? true : isActionableIncident(incident)))
       .filter((incident) => {
         const workflowStatus = normalizeSignalWorkflowStatus(incident.workflowStatus);
         const ts =
@@ -838,6 +943,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
           occurredAt,
           isHistorical: ts > 0 ? ts < cutoff : false,
           workflowStatus,
+          sourceKey: getIncidentSourceKey(incident.id),
         };
       });
 

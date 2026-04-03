@@ -31,6 +31,12 @@ import {
   type SignalWorkflowStatus,
   normalizeSignalWorkflowStatus,
 } from '../lib/signalWorkflow';
+import {
+  DEFAULT_DISPATCH_REGION,
+  DISPATCH_REGION_ORDER,
+  type DispatchRegionKey,
+  getDispatchRegion,
+} from '../../../shared/dispatchRegions';
 
 type ServiceType = 'gas' | 'lockout' | 'jump' | 'tire' | 'other';
 type RequestStatus = 'pending' | 'accepted' | 'en_route' | 'completed' | 'cancelled';
@@ -83,6 +89,11 @@ interface IncidentSummaryItem {
 }
 
 interface IncidentSummaryResponse {
+  region?: {
+    key: DispatchRegionKey;
+    label: string;
+    coverageLabel: string;
+  };
   total: number;
   received: number;
   beingPursued: number;
@@ -122,13 +133,23 @@ interface IncidentFeedItem {
 
 interface IncidentSourceSummaryResponse {
   ok: boolean;
+  region?: {
+    key: DispatchRegionKey;
+    label: string;
+    coverageLabel: string;
+  };
   date: string;
   dayLabel: string;
   sourceCount: number;
   items: Array<{
     key: string;
     label: string;
-    count: number;
+    rawCount: number;
+    actionableCount: number;
+    tierLabel?: string;
+    statusLabel?: string;
+    pollState?: string;
+    lastError?: string | null;
   }>;
 }
 
@@ -202,15 +223,17 @@ function incidentSourceLabel(incident: IncidentFeedItem) {
   if (incident.id.startsWith('on511:')) return 'Ontario 511';
   if (incident.id.startsWith('ottawa_traffic:')) return 'City of Ottawa traffic';
   if (incident.id.startsWith('octranspo:')) return 'OC Transpo service alerts';
-  return 'Official incident feed';
+  if (incident.id.startsWith('tomtom:')) return 'TomTom traffic';
+  if (incident.id.startsWith('waze:')) return 'Waze (experimental)';
+  return 'Live incident feed';
 }
 
-function incidentMapsUrl(incident: IncidentFeedItem) {
+function incidentMapsUrl(incident: IncidentFeedItem, regionKey: DispatchRegionKey) {
   if (incident.locationLat !== null && incident.locationLng !== null) {
     return `https://maps.google.com/?q=${incident.locationLat},${incident.locationLng}`;
   }
   if (incident.roadway) {
-    return `https://maps.google.com/search/?api=1&query=${encodeURIComponent(`${incident.roadway}, Ottawa ON`)}`;
+    return `https://maps.google.com/search/?api=1&query=${encodeURIComponent(`${incident.roadway}, ${getDispatchRegion(regionKey).locationSuffix}`)}`;
   }
   return null;
 }
@@ -495,6 +518,10 @@ function AdminDashboard({
   const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
   const [incidentListFilter, setIncidentListFilter] = useState<IncidentListFilter>('all');
   const [incidentSource, setIncidentSource] = useState<IncidentSourceFilter | null>(null);
+  const [regionKey, setRegionKey] = useState<DispatchRegionKey>(DEFAULT_DISPATCH_REGION);
+  const [probeState, setProbeState] = useState<'idle' | 'probing' | 'ok' | 'error'>('idle');
+  const [probeResult, setProbeResult] = useState('');
+  const activeRegion = getDispatchRegion(regionKey);
 
   const adminFetch = useCallback(
     (url: string, options: RequestInit = {}) => {
@@ -523,6 +550,38 @@ function AdminDashboard({
       setTestPushResult('Network error');
     }
     setTimeout(() => setTestPushState('idle'), 5000);
+  }
+
+  async function handleSourceProbe() {
+    setProbeState('probing');
+    setProbeResult('');
+    try {
+      const res = await adminFetch('/api/admin/sources/probe', {
+        method: 'POST',
+        body: JSON.stringify({ source: incidentSource ?? 'waze', region: regionKey }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        rawCount?: number;
+        actionableCount?: number;
+        inserted?: number;
+        error?: string;
+        rateLimited?: boolean;
+      };
+      if (!res.ok || !data.ok) {
+        setProbeState('error');
+        setProbeResult(data.error || 'Source probe failed');
+      } else {
+        setProbeState('ok');
+        setProbeResult(`Raw ${data.rawCount ?? 0} • actionable ${data.actionableCount ?? 0} • inserted ${data.inserted ?? 0}`);
+        await queryClient.invalidateQueries({ queryKey: ['incident-source-summary', regionKey] });
+        await queryClient.invalidateQueries({ queryKey: ['admin-incidents', regionKey] });
+      }
+    } catch {
+      setProbeState('error');
+      setProbeResult('Network error');
+    }
+    setTimeout(() => setProbeState('idle'), 6000);
   }
 
   const { data: requests = [], isLoading, refetch, isFetching } = useQuery<ServiceRequest[]>({
@@ -554,10 +613,31 @@ function AdminDashboard({
     refetchInterval: 30_000,
   });
 
-  const { data: sourceSummary } = useQuery<IncidentSourceSummaryResponse>({
-    queryKey: ['incident-source-summary'],
+  const { data: status } = useQuery<{
+    incidentMonitor?: {
+      sources?: Array<{
+        key: string;
+        tierLabel?: string;
+        statusLabel?: string;
+        pollState?: string;
+        lastError?: string | null;
+      }>;
+    };
+  }>({
+    queryKey: ['dispatch-status', regionKey],
     queryFn: async () => {
-      const res = await adminFetch('/api/incidents/source-summary');
+      const res = await adminFetch(`/api/status?region=${regionKey}`);
+      if (!res.ok) throw new Error('Failed to load source status');
+      return res.json();
+    },
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+
+  const { data: sourceSummary } = useQuery<IncidentSourceSummaryResponse>({
+    queryKey: ['incident-source-summary', regionKey],
+    queryFn: async () => {
+      const res = await adminFetch(`/api/incidents/source-summary?region=${regionKey}`);
       if (!res.ok) throw new Error('Failed to load source summary');
       return res.json() as Promise<IncidentSourceSummaryResponse>;
     },
@@ -566,9 +646,9 @@ function AdminDashboard({
   });
 
   const { data: incidentSummary } = useQuery<IncidentSummaryResponse>({
-    queryKey: ['admin-incident-summary'],
+    queryKey: ['admin-incident-summary', regionKey],
     queryFn: async () => {
-      const res = await adminFetch('/api/admin/incidents/summary');
+      const res = await adminFetch(`/api/admin/incidents/summary?region=${regionKey}`);
       if (!res.ok) throw new Error('Failed to load incident summary');
       return res.json() as Promise<IncidentSummaryResponse>;
     },
@@ -581,11 +661,11 @@ function AdminDashboard({
     isFetching: incidentsFetching,
     refetch: refetchIncidents,
   } = useQuery<IncidentFeedItem[]>({
-    queryKey: ['admin-incidents', incidentSource],
+    queryKey: ['admin-incidents', regionKey, incidentSource],
     queryFn: async () => {
-      const params = new URLSearchParams({ mode: 'all', limit: '80' });
+      const params = new URLSearchParams({ mode: 'all', limit: '80', region: regionKey, scope: 'all' });
       if (incidentSource) params.set('source', incidentSource);
-      if (incidentSource && sourceSummary?.date) params.set('date', sourceSummary.date);
+      if (sourceSummary?.date) params.set('date', sourceSummary.date);
       const res = await adminFetch(`/api/incidents?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load incidents');
       return res.json() as Promise<IncidentFeedItem[]>;
@@ -636,7 +716,20 @@ function AdminDashboard({
     [operators],
   );
   const sourceCount = sourceSummary?.sourceCount ?? 5;
-  const sourceMonitorItems = sourceSummary?.items ?? [];
+  const sourceMonitorItems = useMemo(
+    () =>
+      (sourceSummary?.items ?? []).map((item) => {
+        const liveSource = status?.incidentMonitor?.sources?.find((source) => source.key === item.key);
+        return {
+          ...item,
+          tierLabel: liveSource?.tierLabel ?? item.tierLabel,
+          statusLabel: liveSource?.statusLabel ?? item.statusLabel,
+          pollState: liveSource?.pollState ?? item.pollState,
+          lastError: liveSource?.lastError ?? item.lastError ?? null,
+        };
+      }),
+    [sourceSummary?.items, status?.incidentMonitor?.sources],
+  );
   const sourceSummaryDayLabel = sourceSummary?.dayLabel ?? 'today';
   const selectedIncidentSourceLabel =
     sourceMonitorItems.find((item) => item.key === incidentSource)?.label ?? null;
@@ -757,7 +850,7 @@ function AdminDashboard({
             </div>
             <div>
               <h1 className="text-white font-bold text-xl">Admin oversight</h1>
-              <p className="text-slate-500 text-xs">Monitor live signal pursuit, operator movement, and simple field outcomes across Ottawa.</p>
+              <p className="text-slate-500 text-xs">Monitor live signal pursuit, operator movement, and simple field outcomes across {activeRegion.label}.</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -776,6 +869,48 @@ function AdminDashboard({
       </div>
 
       <div className="px-5 py-5 flex flex-col gap-5 pb-10">
+        <div className="flex flex-wrap items-center gap-2">
+          {DISPATCH_REGION_ORDER.map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setRegionKey(key)}
+              className={cn(
+                'rounded-xl border px-3 py-2 text-xs font-semibold transition-colors',
+                regionKey === key
+                  ? 'border-orange-500/40 bg-orange-500/10 text-orange-100'
+                  : 'border-dispatch-border bg-dispatch-surface text-slate-400 hover:text-white',
+              )}
+            >
+              {getDispatchRegion(key).label}
+            </button>
+          ))}
+          <span className="text-[11px] text-slate-500">{activeRegion.coverageLabel}</span>
+          <button
+            type="button"
+            onClick={handleSourceProbe}
+            className={cn(
+              'ml-auto inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors',
+              probeState === 'probing'
+                ? 'border-orange-500/40 text-orange-200'
+                : 'border-dispatch-border bg-dispatch-surface text-slate-300 hover:text-white',
+            )}
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', probeState === 'probing' && 'animate-spin')} />
+            Probe {incidentSource ? sourceMonitorItems.find((item) => item.key === incidentSource)?.label ?? incidentSource : 'Waze'}
+          </button>
+        </div>
+        {probeResult ? (
+          <div className={cn(
+            'rounded-xl border px-3 py-2 text-xs',
+            probeState === 'error'
+              ? 'border-red-500/20 bg-red-500/10 text-red-200'
+              : 'border-cyan-500/20 bg-cyan-500/10 text-cyan-200',
+          )}>
+            {probeResult}
+          </div>
+        ) : null}
+
         <SourceMonitorSummary
           sourceCount={sourceCount}
           items={sourceMonitorItems}
@@ -820,7 +955,7 @@ function AdminDashboard({
                 <p className="text-slate-500 text-xs mt-1">Simple field truth for received signals, pursuit, handled outcomes, and signals that were not legitimate or serviceable.</p>
               </div>
               <div className="text-[11px] text-slate-600">
-                {incidentSummary ? `${incidentSummary.total} tracked incidents` : 'Loading...'}
+                {incidentSummary ? `${incidentSummary.total} tracked incidents in ${activeRegion.label}` : 'Loading...'}
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
@@ -886,7 +1021,7 @@ function AdminDashboard({
                   <div className="text-slate-500 text-xs mt-0.5">
                     {selectedIncidentSourceLabel
                       ? `Filtered to persisted ${selectedIncidentSourceLabel} incidents for ${sourceSummaryDayLabel}.`
-                      : 'Ottawa-only slice from Ontario 511, City of Ottawa traffic, and OC Transpo service alerts.'}
+                      : `${activeRegion.label} slice from the configured live incident sources.`}
                   </div>
                 </div>
                 <button
@@ -922,13 +1057,13 @@ function AdminDashboard({
                 <div className="text-slate-500 text-xs py-3">
                   {selectedIncidentSourceLabel
                     ? `No ${selectedIncidentSourceLabel} incidents for this filter right now.`
-                    : 'No incidents for this filter right now.'}
+                    : `No ${activeRegion.label} incidents for this filter right now.`}
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
                   {filteredIncidents.map((incident) => {
                     const selected = activeIncidentId === incident.id;
-                    const mapsLink = incidentMapsUrl(incident);
+                    const mapsLink = incidentMapsUrl(incident, regionKey);
                     return (
                       <Fragment key={incident.id}>
                         <button
