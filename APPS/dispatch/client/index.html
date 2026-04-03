@@ -33,8 +33,23 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           const isAdminHost = window.location.hostname === 'dispatch-admin.unalabs.cloud';
+          const isNativeApp = (() => {
+            try {
+              if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
+                return window.Capacitor.isNativePlatform();
+              }
+            } catch {}
 
-          if (isAdminHost) {
+            const url = String(window.location.href || '');
+            const ua = String(window.navigator.userAgent || '');
+            return (
+              url.startsWith('capacitor://') ||
+              url.startsWith('http://localhost') ||
+              /\bwv\b/.test(ua)
+            );
+          })();
+
+          if (isAdminHost || isNativeApp) {
             navigator.serviceWorker.getRegistrations()
               .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
               .catch(() => {});
