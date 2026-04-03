@@ -1,4 +1,4 @@
-const CACHE = 'dispatch-v2';
+const CACHE = 'dispatch-v3';
 const SHELL = ['/manifest.json', '/icon.svg', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
