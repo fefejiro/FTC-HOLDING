@@ -1448,15 +1448,6 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
   const requestQueryKey = useMemo(() => ['requests', 'live'], []);
   const requestsUrl = '/api/requests';
 
-  const incidentsUrl = useMemo(() => {
-    const params = new URLSearchParams({ mode: incidentMode, limit: '80' });
-    const q = incidentSearch.trim();
-    if (q) params.set('q', q);
-    if (incidentSource) params.set('source', incidentSource);
-    if (incidentSource && sourceSummary?.date) params.set('date', sourceSummary.date);
-    return `/api/incidents?${params.toString()}`;
-  }, [incidentMode, incidentSearch, incidentSource, sourceSummary?.date]);
-
   const useMyLocationForProximity = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setProximityError('Location is not supported on this device. Using Ottawa centre.');
@@ -1561,6 +1552,14 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
+  const incidentsUrl = useMemo(() => {
+    const params = new URLSearchParams({ mode: incidentMode, limit: '80' });
+    const q = incidentSearch.trim();
+    if (q) params.set('q', q);
+    if (incidentSource) params.set('source', incidentSource);
+    if (incidentSource && sourceSummary?.date) params.set('date', sourceSummary.date);
+    return `/api/incidents?${params.toString()}`;
+  }, [incidentMode, incidentSearch, incidentSource, sourceSummary?.date]);
   const { data: allRequests = [], isLoading } = useQuery<ServiceRequest[]>({ queryKey: requestQueryKey, queryFn: async () => { const response = await operatorFetch(requestsUrl); if (!response.ok) throw new Error('Failed to load requests'); return response.json() as Promise<ServiceRequest[]>; }, refetchInterval: requestFallbackMs, refetchIntervalInBackground: true, staleTime: 12_000, refetchOnWindowFocus: true, refetchOnReconnect: true });
   const {
     data: incidentFeed = [],
