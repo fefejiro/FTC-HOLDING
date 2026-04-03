@@ -815,10 +815,10 @@ function PinScreen({
 
           <button
             type="submit"
-            disabled={loading || opsLoading || visibleOperators.length === 0}
+            disabled={loading || opsLoading || operators.length === 0}
             className={cn(
               'w-full py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2.5 transition-all mt-1',
-              loading || opsLoading || visibleOperators.length === 0
+              loading || opsLoading || operators.length === 0
                 ? 'bg-orange-500/40 text-orange-200 cursor-wait'
                 : 'bg-orange-500 text-white hover:bg-orange-400 active:bg-orange-600 shadow-lg shadow-orange-500/20',
             )}
