@@ -2795,7 +2795,8 @@ Crawl-delay: 1
           return res.status(400).json({ message: "Only image files are allowed" });
         }
 
-        const profileImageUrl = `/uploads/profiles/${file.filename}`;
+        const baseUrl = (process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+        const profileImageUrl = `${baseUrl}/uploads/profiles/${file.filename}`;
 
         console.log("[Profile Upload] Success! File saved at:", profileImageUrl);
         res.json({

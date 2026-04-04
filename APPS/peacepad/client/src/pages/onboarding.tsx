@@ -2,10 +2,10 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, Copy, Mail, MessageSquare, RefreshCw, Sparkles, Upload } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { hasSupabaseAuthConfig, rememberAuthRedirectState, sendMagicLink } from "@/lib/supabaseAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,10 @@ export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [authEmail, setAuthEmail] = useState("");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [isSendingLink, setIsSendingLink] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
@@ -77,6 +80,13 @@ export default function OnboardingPage() {
       setUploadedPhotoUrl(user.profileImageUrl);
     }
   }, [user?.profileImageUrl]);
+
+  // When user returns from magic link callback, advance past the auth step
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user || user.isGuest) return;
+    if (step <= 2) setStep(3);
+  }, [isLoading, step, user?.id, user?.isGuest]);
 
   useEffect(() => {
     if (isLoading) {
@@ -181,15 +191,45 @@ export default function OnboardingPage() {
   };
 
   const handleContinueFromWelcome = async () => {
+    if (hasSupabaseAuthConfig()) {
+      setStep(2);
+      return;
+    }
     try {
       await ensureGuestSession();
-      setStep(2);
+      setStep(3);
     } catch (error) {
       toast({
         title: "Could not continue",
         description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSendMagicLink = async () => {
+    const email = authEmail.trim();
+    if (!email || !email.includes("@")) {
+      toast({
+        title: "Add your email",
+        description: "Enter a valid email address to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsSendingLink(true);
+    try {
+      rememberAuthRedirectState("/onboarding");
+      await sendMagicLink(email);
+      setMagicLinkSent(true);
+    } catch (error) {
+      toast({
+        title: "Could not send link",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingLink(false);
     }
   };
 
@@ -246,7 +286,7 @@ export default function OnboardingPage() {
 
     await completeOnboarding(choice);
     setPathChoice(choice);
-    setStep(4);
+    setStep(5);
 
     if (choice === "prep_chat") {
       localStorage.setItem("peacepad_prep_chat_entry_point", "onboarding");
@@ -300,48 +340,71 @@ export default function OnboardingPage() {
         <div className="mx-auto flex w-full max-w-md flex-col gap-4">
           <Card className="overflow-hidden border-border/60">
             <CardHeader className="space-y-4 pb-4">
-              <Badge variant="outline" className="w-fit bg-background/70">
-                PeacePad MVP
-              </Badge>
-
               {step === 1 && (
                 <>
                   <div className="space-y-2">
                     <CardTitle className="text-3xl leading-tight">Say what you mean. Without the fight.</CardTitle>
                     <CardDescription className="text-base">
-                      PeacePad helps you communicate clearly with your co-parent.
+                      For co-parents who want to say the hard thing without making it worse.
                     </CardDescription>
-                  </div>
-                  <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
-                    Start with coaching for the hard message you need to send, or get your invite link ready for your co-parent.
                   </div>
                 </>
               )}
 
               {step === 2 && (
                 <>
+                  {!magicLinkSent ? (
+                    <>
+                      <div className="space-y-2">
+                        <CardTitle>Let&apos;s get you set up</CardTitle>
+                        <CardDescription>
+                          Enter your email. We&apos;ll send you a link to sign in — no password needed.
+                        </CardDescription>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="auth-email">Email</Label>
+                        <Input
+                          id="auth-email"
+                          type="email"
+                          value={authEmail}
+                          onChange={(e) => setAuthEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          onKeyDown={(e) => { if (e.key === "Enter") void handleSendMagicLink(); }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <CardTitle>Check your email</CardTitle>
+                      <CardDescription>
+                        We sent a link to <strong>{authEmail}</strong>. Tap it to continue.
+                      </CardDescription>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {step === 3 && (
+                <>
                   <div className="space-y-2">
                     <CardTitle>Quick profile</CardTitle>
                     <CardDescription>Your name is required. A photo is optional.</CardDescription>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-16 w-16 border border-border/70">
+                  <div className="flex items-center gap-3 py-1">
+                    <Avatar className="h-14 w-14 border border-border/70">
                       <AvatarImage src={photoPreview || undefined} />
                       <AvatarFallback>
                         {(displayName || user?.displayName || "PP").slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="space-y-2">
-                      <Label htmlFor="photo-upload" className="text-sm">Photo</Label>
-                      <label
-                        htmlFor="photo-upload"
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border/70 px-3 py-2 text-sm font-medium"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Add photo
-                      </label>
-                      <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-                    </div>
+                    <label
+                      htmlFor="photo-upload"
+                      className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border/70 px-3 py-2 text-sm font-medium"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Add photo
+                    </label>
+                    <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="display-name">Name</Label>
@@ -349,13 +412,13 @@ export default function OnboardingPage() {
                       id="display-name"
                       value={displayName}
                       onChange={(event) => setDisplayName(event.target.value)}
-                      placeholder="Your name"
+                      placeholder="Your first name"
                     />
                   </div>
                 </>
               )}
 
-              {step === 3 && (
+              {step === 4 && (
                 <>
                   <div className="space-y-2">
                     <CardTitle>Choose your first step</CardTitle>
@@ -393,7 +456,7 @@ export default function OnboardingPage() {
                 </>
               )}
 
-              {step === 4 && pathChoice === "invite" && (
+              {step === 5 && pathChoice === "invite" && (
                 <>
                   <div className="space-y-2">
                     <CardTitle>Invite your co-parent</CardTitle>
@@ -408,7 +471,7 @@ export default function OnboardingPage() {
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Button type="button" variant="outline" onClick={() => void handleInviteShare("copy")} disabled={!inviteLink}>
                       <Copy className="mr-2 h-4 w-4" />
-                      {inviteCopied ? "Copied" : "Copy link"}
+                      {inviteCopied ? "Copied! ✓" : "Copy link"}
                     </Button>
                     <Button type="button" variant="outline" onClick={() => void handleInviteShare("text")} disabled={!inviteLink}>
                       <MessageSquare className="mr-2 h-4 w-4" />
@@ -435,19 +498,42 @@ export default function OnboardingPage() {
 
             <CardContent className="space-y-3 pt-0">
               {step === 1 && (
-                <Button type="button" onClick={() => void handleContinueFromWelcome()} disabled={isBootstrapping}>
-                  {isBootstrapping ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-                  Get started
+                <>
+                  <Button type="button" onClick={() => void handleContinueFromWelcome()} disabled={isBootstrapping}>
+                    {isBootstrapping ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
+                    Get started
+                  </Button>
+                  {isBootstrapping && (
+                    <p className="text-sm text-muted-foreground">Preparing your PeacePad workspace…</p>
+                  )}
+                </>
+              )}
+
+              {step === 2 && !magicLinkSent && (
+                <Button type="button" onClick={() => void handleSendMagicLink()} disabled={isSendingLink}>
+                  {isSendingLink ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                  Send sign-in link
                 </Button>
               )}
 
-              {step === 2 && (
-                <Button type="button" onClick={() => setStep(3)} disabled={isSavingProfile}>
+              {step === 2 && magicLinkSent && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setMagicLinkSent(false); void handleSendMagicLink(); }}
+                  disabled={isSendingLink}
+                >
+                  Resend link
+                </Button>
+              )}
+
+              {step === 3 && (
+                <Button type="button" onClick={() => setStep(4)} disabled={isSavingProfile}>
                   Continue
                 </Button>
               )}
 
-              {step === 4 && pathChoice === "invite" && (
+              {step === 5 && pathChoice === "invite" && (
                 <div className="flex flex-col gap-2">
                   <Button type="button" onClick={() => setLocation("/chat")}>
                     Open Messages
@@ -458,8 +544,18 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {step > 1 && step < 4 && (
-                <Button type="button" variant="ghost" onClick={() => setStep((current) => (current === 3 ? 2 : 1))}>
+              {step > 1 && step < 5 && !(step === 2 && magicLinkSent) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    setStep((current) => {
+                      if (current === 4) return 3;
+                      if (current === 3) return hasSupabaseAuthConfig() ? 2 : 1;
+                      return 1;
+                    })
+                  }
+                >
                   Back
                 </Button>
               )}

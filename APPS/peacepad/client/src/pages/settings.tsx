@@ -1,7 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Download, ExternalLink, LogOut, Mail, MessageSquare, Upload, Users } from "lucide-react";
+import { ChevronDown, Copy, Download, ExternalLink, LogOut, Mail, MessageSquare, Upload, Users } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +22,9 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteExpanded, setInviteExpanded] = useState(false);
 
   const { data: partnerships = [] } = useQuery<any[]>({
     queryKey: ["/api/partnerships"],
@@ -38,9 +40,10 @@ export default function SettingsPage() {
   }, [partnerships, user?.activePartnershipId]);
 
   useEffect(() => {
-    if (user?.displayName) {
-      setDisplayName(user.displayName);
-    }
+    if (!user?.displayName) return;
+    const name = user.displayName;
+    const isMeaningful = name !== "PeacePad User" && !/^guest[a-z0-9]+$/i.test(name);
+    setDisplayName(isMeaningful ? name : "");
   }, [user?.displayName]);
 
   useEffect(() => {
@@ -89,12 +92,14 @@ export default function SettingsPage() {
       return;
     }
 
+    // Show immediate local preview
     const previewUrl = URL.createObjectURL(file);
     setProfileImageUrl(previewUrl);
 
     const formData = new FormData();
     formData.append("file", file);
 
+    setIsUploading(true);
     try {
       const response = await fetch("/api/profile-upload", {
         method: "POST",
@@ -107,15 +112,17 @@ export default function SettingsPage() {
 
       const data = await response.json();
       const uploadedUrl = data.url as string;
+      // Store the server URL in state — saved together with name on "Save profile"
       setProfileImageUrl(uploadedUrl);
-      await saveProfile(uploadedUrl);
     } catch {
       toast({
         title: "Photo not saved",
         description: "Please try again.",
         variant: "destructive",
       });
+      setProfileImageUrl(null);
     } finally {
+      setIsUploading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -199,7 +206,7 @@ export default function SettingsPage() {
         <Card className="border-border/60">
           <CardHeader>
             <CardTitle>You</CardTitle>
-            <CardDescription>Profile, partner setup, resources, privacy, and feedback.</CardDescription>
+            <CardDescription>Your account and settings.</CardDescription>
           </CardHeader>
         </Card>
 
@@ -210,24 +217,23 @@ export default function SettingsPage() {
               <CardDescription>Keep your name and photo simple and clear.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16 border border-border/70">
+              <div className="flex items-center gap-3 py-1">
+                <Avatar className="h-14 w-14 border border-border/70">
                   <AvatarImage src={profileImageUrl || undefined} />
                   <AvatarFallback>{(displayName || user?.displayName || "PP").slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="space-y-2">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border/70 px-3 py-2 text-sm font-medium">
-                    <Upload className="h-4 w-4" />
-                    Upload photo
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handlePhotoChange}
-                    />
-                  </label>
-                </div>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border/70 px-3 py-2 text-sm font-medium">
+                  <Upload className="h-4 w-4" />
+                  {isUploading ? "Uploading..." : "Add photo"}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoChange}
+                    disabled={isUploading}
+                  />
+                </label>
               </div>
 
               <div className="space-y-2">
@@ -236,12 +242,12 @@ export default function SettingsPage() {
                   id="settings-display-name"
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
-                  placeholder="Your name"
+                  placeholder="Your first name"
                 />
               </div>
 
-              <Button type="button" onClick={() => void saveProfile()} disabled={isSaving}>
-                Save profile
+              <Button type="button" onClick={() => void saveProfile()} disabled={isSaving || isUploading}>
+                {isSaving || isUploading ? "Saving..." : "Save profile"}
               </Button>
             </CardContent>
           </Card>
@@ -268,33 +274,45 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              <div className="rounded-2xl border border-border/70 bg-background p-4">
-                <p className="mb-2 text-sm font-medium">Invite link</p>
-                <p className="break-all text-sm text-muted-foreground">{inviteLink || "Generating invite link..."}</p>
+              <div className="rounded-2xl border border-border/70 bg-background overflow-hidden">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium"
+                  onClick={() => setInviteExpanded((v) => !v)}
+                >
+                  Share invite link
+                  <ChevronDown
+                    className={[
+                      "h-4 w-4 text-muted-foreground transition-transform",
+                      inviteExpanded ? "rotate-180" : "",
+                    ].join(" ")}
+                  />
+                </button>
+                {inviteExpanded && (
+                  <div className="space-y-3 border-t border-border/60 px-4 pb-4 pt-3">
+                    <p className="break-all text-sm text-muted-foreground">{inviteLink || "Generating your link..."}</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Button type="button" variant="outline" onClick={() => void shareInvite("copy")} disabled={!inviteLink}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        {inviteCopied ? "Copied! ✓" : "Copy link"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => void shareInvite("text")} disabled={!inviteLink}>
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Text invite
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Button type="button" variant="outline" onClick={() => void shareInvite("copy")} disabled={!inviteLink}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  {inviteCopied ? "Copied" : "Copy link"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => void shareInvite("text")} disabled={!inviteLink}>
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Text invite
-                </Button>
-                <Button type="button" variant="outline" onClick={() => void shareInvite("email")} disabled={!inviteLink}>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Email invite
-                </Button>
-                <JoinPartnershipDialog
-                  trigger={
-                    <Button type="button">
-                      <Users className="mr-2 h-4 w-4" />
-                      Enter a code
-                    </Button>
-                  }
-                />
-              </div>
+              <JoinPartnershipDialog
+                trigger={
+                  <Button type="button" variant="outline" className="w-full sm:w-auto">
+                    <Users className="mr-2 h-4 w-4" />
+                    Enter a code
+                  </Button>
+                }
+              />
             </CardContent>
           </Card>
 
@@ -305,18 +323,23 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">Crisis support</Badge>
-                <Badge variant="outline">Legal aid</Badge>
-                <Badge variant="outline">Counseling</Badge>
-                <Badge variant="outline">Co-parenting help</Badge>
+                <Link href="/resources">
+                  <Badge variant="outline" className="cursor-pointer hover:bg-muted/60">Crisis support</Badge>
+                </Link>
+                <Link href="/resources">
+                  <Badge variant="outline" className="cursor-pointer hover:bg-muted/60">Legal aid</Badge>
+                </Link>
+                <Link href="/resources">
+                  <Badge variant="outline" className="cursor-pointer hover:bg-muted/60">Counseling</Badge>
+                </Link>
+                <Link href="/resources">
+                  <Badge variant="outline" className="cursor-pointer hover:bg-muted/60">Co-parenting help</Badge>
+                </Link>
               </div>
-              <p className="text-sm text-muted-foreground">
-                PeacePad keeps this simple in the MVP: high-quality external links, no in-app directory search.
-              </p>
               <Link href="/resources">
                 <Button type="button" variant="outline">
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  Open support resources
+                  Find support
                 </Button>
               </Link>
             </CardContent>

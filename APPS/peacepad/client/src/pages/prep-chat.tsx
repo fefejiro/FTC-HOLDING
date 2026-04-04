@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowRight, Check, MessageCircle, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ClipboardList, MessageCircle, PenLine, RefreshCw, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -48,10 +48,20 @@ const FEELINGS = [
 ];
 
 const STARTERS = [
-  "I need to pick up my kids without a fight.",
   "I need to ask for a schedule change.",
-  "I want to set a boundary without making things worse.",
-  "I need to respond to something upsetting about the kids.",
+  "I need to set a boundary.",
+  "I need to respond to something upsetting.",
+  "I need to pick up my kids without a fight.",
+];
+
+const SUPPORT_FEELINGS = new Set(["Angry", "Overwhelmed", "Sad"]);
+
+const COACH_STEPS = [
+  "Understand situation",
+  "Shape message",
+  "Get draft",
+  "Refine",
+  "Send",
 ];
 
 const FOLLOW_UP_IDEAS = [
@@ -76,6 +86,7 @@ export default function PrepChatPage() {
   const { toast } = useToast();
   const [topicInput, setTopicInput] = useState("");
   const [feeling, setFeeling] = useState("");
+  const [entryMode, setEntryMode] = useState<"received" | "sending" | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [composer, setComposer] = useState("");
   const [draftCard, setDraftCard] = useState<DraftCardState | null>(null);
@@ -298,7 +309,7 @@ export default function PrepChatPage() {
               <div className="space-y-1">
                 <CardTitle>Prep Chat</CardTitle>
                 <CardDescription>
-                  Warm, practical coaching for the conversations you do not want to get wrong.
+                  Warm, practical coaching for the hard conversations.
                 </CardDescription>
               </div>
               <Badge variant="outline" className="w-fit bg-muted/40">
@@ -311,71 +322,129 @@ export default function PrepChatPage() {
         <Card className="flex min-h-0 flex-1 flex-col border-border/60">
           <CardHeader className="border-b border-border/60 px-4 py-3">
             <CardTitle className="text-lg">
-              {activeSession ? "Coach conversation" : "What do you need to talk about?"}
+              {activeSession ? "Coach conversation" : "What brought you here?"}
             </CardTitle>
-            <CardDescription>
-              {activeSession
-                ? "Keep going until you have a message that feels calm, clear, and usable."
-                : "Start with the situation. PeacePad will help you shape it into a calmer message."}
-            </CardDescription>
+            {activeSession && (
+              <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                {COACH_STEPS.map((label, i) => {
+                  const currentStep = draftCard
+                    ? latestUserTurnCount > 0
+                      ? 3
+                      : 2
+                    : latestUserTurnCount >= 2
+                      ? 1
+                      : 0;
+                  return (
+                    <span key={label} className="flex items-center gap-1">
+                      {i > 0 && <span>→</span>}
+                      <span className={i === currentStep ? "font-semibold text-primary" : ""}>{label}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </CardHeader>
 
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-4">
             {!activeSession ? (
               <div className="space-y-4">
-                <Textarea
-                  value={topicInput}
-                  onChange={(event) => setTopicInput(event.target.value)}
-                  placeholder="For example: I need to pick up my kids without a fight."
-                  className="min-h-[112px] resize-none"
-                />
-
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">How are you feeling about this?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {FEELINGS.map((item) => (
-                      <Button
-                        key={item}
-                        type="button"
-                        size="sm"
-                        variant={feeling === item ? "default" : "outline"}
-                        onClick={() => setFeeling(item)}
-                      >
-                        {item}
-                      </Button>
-                    ))}
+                {entryMode === null ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      className="rounded-2xl border border-border/70 bg-background p-4 text-left transition hover:bg-muted/30"
+                      onClick={() => setEntryMode("received")}
+                    >
+                      <div className="mb-2 flex items-center gap-2">
+                        <ClipboardList className="h-5 w-5 text-sky-500" />
+                        <span className="font-semibold text-sm">I received a message</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Paste it. I&apos;ll help you respond without escalating.
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-2xl border border-border/70 bg-background p-4 text-left transition hover:bg-muted/30"
+                      onClick={() => setEntryMode("sending")}
+                    >
+                      <div className="mb-2 flex items-center gap-2">
+                        <PenLine className="h-5 w-5 text-amber-500" />
+                        <span className="font-semibold text-sm">I need to send something</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Describe the situation and I&apos;ll help you say it calmly.
+                      </p>
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                      onClick={() => { setEntryMode(null); setTopicInput(""); setFeeling(""); }}
+                    >
+                      <ArrowLeft className="h-3 w-3" />
+                      Back
+                    </button>
 
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Helpful starting points</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {STARTERS.map((starter) => (
-                      <button
-                        key={starter}
-                        type="button"
-                        className="rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-left text-sm transition hover:bg-muted/40"
-                        onClick={() => setTopicInput(starter)}
-                      >
-                        {starter}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                    <Textarea
+                      value={topicInput}
+                      onChange={(event) => setTopicInput(event.target.value)}
+                      placeholder={entryMode === "received" ? "Paste what they sent..." : "What’s going on? Start anywhere."}
+                      className="min-h-[112px] resize-none"
+                    />
 
-                <Button
-                  type="button"
-                  onClick={handleStartSession}
-                  disabled={coachBusy}
-                  className="w-full sm:w-auto"
-                >
-                  {coachBusy ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                  )}
-                  Send to coach
-                </Button>
+                    {/* Feeling chips — optional, after input */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Optional — how are you feeling about this?</p>
+                      <div className="flex flex-wrap gap-2">
+                        {FEELINGS.map((item) => (
+                          <Button
+                            key={item}
+                            type="button"
+                            size="sm"
+                            variant={feeling === item ? "default" : "outline"}
+                            onClick={() => setFeeling((f) => (f === item ? "" : item))}
+                          >
+                            {item}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Starter chips — horizontal scroll */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">Common situations →</p>
+                      <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {STARTERS.map((starter) => (
+                          <button
+                            key={starter}
+                            type="button"
+                            className="flex-shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-muted/20 px-3 py-1.5 text-xs transition hover:bg-muted/40"
+                            onClick={() => setTopicInput(starter)}
+                          >
+                            {starter}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handleStartSession}
+                      disabled={!topicInput.trim() || coachBusy}
+                      className="w-full sm:w-auto"
+                    >
+                      {coachBusy ? (
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowRight className="mr-2 h-4 w-4" />
+                      )}
+                      {entryMode === "received" ? "Help me respond" : "Help me say this"}
+                    </Button>
+                  </>
+                )}
               </div>
             ) : (
               <>
@@ -403,6 +472,20 @@ export default function PrepChatPage() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Contextual support nudge for difficult emotional states */}
+                  {SUPPORT_FEELINGS.has(feeling) && activeSession.messages.length > 0 && (
+                    <div className="rounded-2xl border border-muted bg-muted/20 p-4">
+                      <p className="text-sm text-muted-foreground">
+                        This sounds really hard. If you need more than a draft, support resources are one tap away.
+                      </p>
+                      <Link href="/resources">
+                        <Button type="button" variant="outline" size="sm" className="mt-2">
+                          Open support resources
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
 
                   {draftCard && (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900 dark:bg-amber-950/20">
@@ -447,13 +530,9 @@ export default function PrepChatPage() {
                   <Textarea
                     value={composer}
                     onChange={(event) => setComposer(event.target.value)}
-                    placeholder="Tell the coach what you want help with next."
+                    placeholder="What would you like to work on next?"
                     className="min-h-[104px] resize-none"
                   />
-
-                  <p className="text-sm text-muted-foreground">
-                    Ask a follow-up like ‘What if they say no?’ or ‘Make it shorter.’
-                  </p>
 
                   <div className="flex flex-wrap gap-2">
                     {FOLLOW_UP_IDEAS.map((idea) => (
@@ -473,7 +552,7 @@ export default function PrepChatPage() {
                     <Button
                       type="button"
                       onClick={handleSendToCoach}
-                      disabled={!composer.trim() || coachBusy}
+                      disabled={coachBusy}
                       className="flex-1 sm:flex-none"
                     >
                       {coachBusy ? (
@@ -481,12 +560,12 @@ export default function PrepChatPage() {
                       ) : (
                         <MessageCircle className="mr-2 h-4 w-4" />
                       )}
-                      Send to coach
+                      {!composer.trim() ? "Type something first" : "Send to coach"}
                     </Button>
 
                     <Button
                       type="button"
-                      variant="outline"
+                      variant={draftCard ? "default" : "outline"}
                       onClick={handleGenerateDraft}
                       disabled={latestUserTurnCount === 0 || generateDraft.isPending}
                       className="flex-1 sm:flex-none"
@@ -508,42 +587,53 @@ export default function PrepChatPage() {
         <Card className="border-border/60">
           <CardHeader className="px-4 py-3">
             <CardTitle className="text-base">Recent sessions</CardTitle>
-            <CardDescription>Pick up where you left off without interrupting the main flow.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-0">
             {sessions.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
-                Start a Prep Chat conversation to save your coaching history here.
+                Your coaching sessions will appear here so you can pick up right where you left off.
               </div>
             ) : (
-              sessions.slice(0, 4).map((session) => (
-                <button
-                  key={session.id}
-                  type="button"
-                  className={[
-                    "w-full rounded-xl border px-3 py-3 text-left text-sm transition",
-                    session.id === activeSession?.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border/60 bg-background hover:bg-muted/30",
-                  ].join(" ")}
-                  onClick={() => {
-                    setActiveSessionId(session.id);
-                    setDraftCard(session.draftedMessage
-                      ? {
-                          draft: session.draftedMessage,
-                          note: "A calmer version you can review before sending.",
-                        }
-                      : null);
-                    setDraftEditor(session.draftedMessage || "");
-                    setIsEditingDraft(false);
-                  }}
-                >
-                  <div className="font-medium">{session.customTopic || "Prep Chat session"}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(session.createdAt).toLocaleDateString()}
-                  </div>
-                </button>
-              ))
+              sessions.slice(0, 4).map((session) => {
+                const sessionDate = new Date(session.createdAt);
+                const today = new Date();
+                const isToday =
+                  sessionDate.getFullYear() === today.getFullYear() &&
+                  sessionDate.getMonth() === today.getMonth() &&
+                  sessionDate.getDate() === today.getDate();
+                const dateLabel = isToday
+                  ? "Today"
+                  : sessionDate.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+
+                return (
+                  <button
+                    key={session.id}
+                    type="button"
+                    className={[
+                      "w-full rounded-xl border px-3 py-3 text-left text-sm transition",
+                      session.id === activeSession?.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border/60 bg-background hover:bg-muted/30",
+                    ].join(" ")}
+                    onClick={() => {
+                      setActiveSessionId(session.id);
+                      setDraftCard(
+                        session.draftedMessage
+                          ? {
+                              draft: session.draftedMessage,
+                              note: "A calmer version you can review before sending.",
+                            }
+                          : null,
+                      );
+                      setDraftEditor(session.draftedMessage || "");
+                      setIsEditingDraft(false);
+                    }}
+                  >
+                    <div className="font-medium">{session.customTopic || "Prep Chat session"}</div>
+                    <div className="text-xs text-muted-foreground">{dateLabel}</div>
+                  </button>
+                );
+              })
             )}
           </CardContent>
         </Card>

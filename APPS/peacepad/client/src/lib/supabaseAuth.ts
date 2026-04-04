@@ -185,6 +185,20 @@ export async function exchangeSupabaseTokenForApiSession(accessToken: string): P
   throw new Error(errorMessage);
 }
 
+export async function sendMagicLink(email: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  const redirectTo = getGoogleRedirectUrl();
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: redirectTo },
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function clearSupabaseSession(): Promise<void> {
   if (!hasSupabaseAuthConfig()) {
     return;
