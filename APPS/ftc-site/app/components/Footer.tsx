@@ -2,12 +2,14 @@
 
 import { usePathname } from "next/navigation";
 import { gardenCleanersConfig } from "../../lib/gardenCleaners";
+import { ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
 import SocialIcons from "./SocialIcons";
 
 export default function Footer() {
   const pathname = usePathname();
   const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
+  const isOgTradesSite = pathname?.startsWith("/og-trades-academy") ?? false;
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
 
   if (isGardenSite) {
@@ -31,6 +33,35 @@ export default function Footer() {
               <a href={gardenCleanersConfig.phoneHref}>{gardenCleanersConfig.phoneDisplay}</a>
               <a href={gardenCleanersConfig.emailHref}>{gardenCleanersConfig.email}</a>
               <span>{gardenCleanersConfig.addressLine}</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
+  if (isOgTradesSite) {
+    return (
+      <footer className="og-site-footer">
+        <div className="container">
+          <div className="footer-grid">
+            <div className="footer-brand">
+              <p className="footer-title">{ogTradesAcademyConfig.companyName}</p>
+              <p className="footer-subtitle">{ogTradesAcademyConfig.tagline}</p>
+              <p className="footer-copy">
+                Beginner forex education with a stronger focus on risk management, structure, psychology, and prop-firm-aware execution.
+              </p>
+            </div>
+            <div className="footer-links">
+              {ogTradesAcademyConfig.nav.map((item) => (
+                <a key={item.href} href={item.href}>{item.label}</a>
+              ))}
+            </div>
+            <div className="footer-links">
+              <a href={ogTradesAcademyConfig.youtubeUrl}>YouTube</a>
+              <a href={ogTradesAcademyConfig.tiktokUrl}>TikTok</a>
+              <a href={ogTradesAcademyConfig.beaconsUrl}>Beacons</a>
+              <a href={ogTradesAcademyConfig.communityUrl}>Community Hub</a>
             </div>
           </div>
         </div>
@@ -77,7 +108,7 @@ export default function Footer() {
             <p className="footer-copy">
               The fastest path from rough idea to live, production-grade digital system.
             </p>
-            <p className="footer-powered">Powered by ATEAM • Built with Next.js, React, and Supabase.</p>
+            <p className="footer-powered">Powered by ATEAM | Built with Next.js, React, and Supabase.</p>
             <div className="footer-contact-row">
               <a className="footer-email" href="mailto:hello@unalabs.cloud">
                 hello@unalabs.cloud
@@ -106,3 +137,4 @@ export default function Footer() {
     </footer>
   );
 }
+

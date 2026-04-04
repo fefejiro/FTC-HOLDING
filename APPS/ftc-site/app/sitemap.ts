@@ -27,7 +27,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/polar-anchor/about`, lastModified, priority: 0.7 },
     { url: `${SITE_URL}/polar-anchor/services`, lastModified, priority: 0.8 },
     { url: `${SITE_URL}/polar-anchor/contact`, lastModified, priority: 0.7 },
-    { url: `${SITE_URL}/polar-anchor/quote`, lastModified, priority: 0.8 }
+    { url: `${SITE_URL}/polar-anchor/quote`, lastModified, priority: 0.8 },
+    { url: `${SITE_URL}/og-trades-academy`, lastModified, priority: 0.8 },
+    { url: `${SITE_URL}/og-trades-academy/about`, lastModified, priority: 0.7 },
+    { url: `${SITE_URL}/og-trades-academy/course`, lastModified, priority: 0.8 },
+    { url: `${SITE_URL}/og-trades-academy/resources`, lastModified, priority: 0.7 },
+    { url: `${SITE_URL}/og-trades-academy/community`, lastModified, priority: 0.7 },
+    { url: `${SITE_URL}/og-trades-academy/contact`, lastModified, priority: 0.7 }
   ];
 
   const workEntries = projectCaseStudies.map((project) => ({ url: `${SITE_URL}/work/${project.slug}`, lastModified, priority: 0.8 }));

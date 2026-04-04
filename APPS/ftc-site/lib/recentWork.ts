@@ -156,4 +156,41 @@ export const gardenCleanersLaunch: ClientLaunch = {
   }
 };
 
-export const clientLaunches = [emergencyPromptCaseStudy, polarAnchorLaunch, gardenCleanersLaunch] as const;
+export const ogTradesAcademyLaunch: ClientLaunch = {
+  slug: "og-trades-academy",
+  clientName: "OG_Trades Academy",
+  tileTitle: "OG_Trades Academy",
+  subtitle: "Forex education platform | course sales, content hub, and community path",
+  service: "Premium education website and lead system",
+  status: "Live",
+  tags: ["Education", "Course Sales", "Content SEO"],
+  summary:
+    "A premium forex education website built around the OG_Trades Academy course offer, embedded YouTube proof, first-party enrollment capture, and community growth.",
+  currentFocus: ["Course conversion path", "Content authority buildout", "Community funnel"],
+  nextMilestone: ["Email automation hookup", "Blog rollout", "Offer expansion for advanced tracks"],
+  startedLabel: "Started this week",
+  lastUpdatedLabel: "Last update: today",
+  phase: {
+    current: 4,
+    total: 4,
+    label: "Live"
+  },
+  offerProof: {
+    value: "build-execution-track",
+    label: "Build Execution Track",
+    rationale:
+      "Shows a creator-education brand moving beyond link-in-bio tooling into a full sales, content, and community platform."
+  },
+  websiteUrl: "https://unalabs.cloud/og-trades-academy",
+  brand: {
+    mark: "OG",
+    wordmark: "OG_Trades Academy",
+    accent: "#1e5dd8",
+    accentSoft: "rgba(30, 93, 216, 0.18)",
+    accentGlow: "rgba(30, 93, 216, 0.28)",
+    accentSurface:
+      "linear-gradient(135deg, rgba(30, 93, 216, 0.24), rgba(30, 93, 216, 0.06) 58%, rgba(8, 12, 20, 0.18))"
+  }
+};
+
+export const clientLaunches = [emergencyPromptCaseStudy, polarAnchorLaunch, gardenCleanersLaunch, ogTradesAcademyLaunch] as const;

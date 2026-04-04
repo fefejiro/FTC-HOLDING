@@ -9707,3 +9707,551 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* OG Trades Academy */
+
+.og-site-shell {
+  --og-bg: #0f1419;
+  --og-surface: #151d2c;
+  --og-surface-2: #1b2436;
+  --og-surface-3: #22314c;
+  --og-copy: #f5f7fb;
+  --og-muted: #aeb8ca;
+  --og-line: rgba(150, 176, 225, 0.18);
+  --og-accent: #1e5dd8;
+  --og-accent-2: #7ba3e8;
+  --og-green: #10b981;
+  --og-red: #ef4444;
+  color: var(--og-copy);
+}
+
+.og-site-shell .page-intro,
+.og-site-shell .muted,
+.og-site-shell p,
+.og-site-shell li,
+.og-site-shell label,
+.og-site-shell input,
+.og-site-shell textarea,
+.og-site-shell select {
+  color: var(--og-copy);
+}
+
+.og-site-shell .muted,
+.og-site-shell .page-intro,
+.og-site-shell .section-heading p,
+.og-site-shell .og-disclaimer,
+.og-site-shell .og-price-meta p,
+.og-site-shell .og-video-copy p,
+.og-site-shell .og-proof-card p,
+.og-site-shell .og-social-list span {
+  color: var(--og-muted);
+}
+
+.og-site-header,
+.og-site-footer {
+  background:
+    radial-gradient(760px 260px at -5% 0%, rgba(30, 93, 216, 0.18) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(13, 18, 28, 0.98), rgba(10, 14, 22, 0.98));
+}
+
+.og-page-content {
+  padding-top: 56px;
+}
+
+.og-brand-mark {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(30, 93, 216, 0.24), rgba(123, 163, 232, 0.08));
+  border: 1px solid rgba(123, 163, 232, 0.2);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.og-brand-mark-grid {
+  position: absolute;
+  inset: 10px auto 10px 10px;
+  width: 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.og-brand-mark-pill {
+  display: block;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(123, 163, 232, 0.96), rgba(30, 93, 216, 0.96));
+}
+
+.og-brand-mark-pill--up { height: 8px; margin-top: 7px; }
+.og-brand-mark-pill--mid { height: 12px; }
+.og-brand-mark-pill--low { height: 18px; }
+
+.og-brand-mark-word {
+  position: relative;
+  z-index: 1;
+  margin-left: 10px;
+  font-size: 0.94rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+}
+
+.og-hero {
+  border-color: rgba(123, 163, 232, 0.18);
+  background:
+    radial-gradient(900px 340px at -5% -8%, rgba(30, 93, 216, 0.22) 0%, transparent 58%),
+    radial-gradient(660px 320px at 108% -10%, rgba(123, 163, 232, 0.18) 0%, transparent 58%),
+    linear-gradient(150deg, rgba(12, 18, 29, 0.98), rgba(10, 15, 24, 0.98));
+}
+
+.og-hero-title {
+  max-width: 12ch;
+}
+
+.og-hero-grid {
+  align-items: stretch;
+}
+
+.og-hero-copy {
+  align-content: center;
+}
+
+.og-hero-visual,
+.og-course-product-card,
+.og-founder-visual,
+.og-contact-card {
+  background: linear-gradient(155deg, rgba(20, 28, 42, 0.95), rgba(13, 19, 30, 0.96));
+  border-color: var(--og-line);
+}
+
+.og-chart-card {
+  display: grid;
+  gap: 18px;
+}
+
+.og-chart-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.og-chart-head h2 {
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+}
+
+.og-chart-shell {
+  position: relative;
+  min-height: 260px;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(123, 163, 232, 0.18);
+  background: linear-gradient(180deg, rgba(14, 21, 33, 0.98), rgba(11, 16, 26, 0.98));
+}
+
+.og-chart-grid,
+.og-chart-grid::before,
+.og-chart-grid::after {
+  position: absolute;
+  inset: 0;
+}
+
+.og-chart-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 34px 34px;
+  opacity: 0.34;
+}
+
+.og-chart-line {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(30, 93, 216, 0), rgba(123, 163, 232, 0.86), rgba(30, 93, 216, 0));
+}
+
+.og-chart-line--one {
+  top: 34%;
+  transform: rotate(-6deg);
+}
+
+.og-chart-line--two {
+  top: 56%;
+  transform: rotate(7deg);
+}
+
+.og-chart-candles {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+}
+
+.og-chart-candle {
+  position: relative;
+  display: block;
+  width: 100%;
+  border-radius: 8px 8px 4px 4px;
+  background: var(--og-green);
+  min-height: 52px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.og-chart-candle::before,
+.og-chart-candle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.og-chart-candle::before {
+  bottom: 100%;
+  height: 18px;
+}
+
+.og-chart-candle::after {
+  top: 100%;
+  height: 14px;
+}
+
+.og-chart-candle.loss {
+  background: var(--og-red);
+}
+
+.og-chart-candle:nth-child(2) { min-height: 88px; }
+.og-chart-candle:nth-child(3) { min-height: 64px; }
+.og-chart-candle:nth-child(4) { min-height: 110px; }
+.og-chart-candle:nth-child(5) { min-height: 72px; }
+.og-chart-candle:nth-child(6) { min-height: 122px; }
+.og-chart-candle:nth-child(7) { min-height: 58px; }
+.og-chart-candle:nth-child(8) { min-height: 104px; }
+.og-chart-candle:nth-child(9) { min-height: 78px; }
+.og-chart-candle:nth-child(10) { min-height: 134px; }
+
+.og-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.og-proof-card {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--og-line);
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 6px;
+}
+
+.og-proof-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d6e3ff;
+}
+
+.og-proof-card strong {
+  font-size: 1.2rem;
+}
+
+.og-trust-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.og-trust-item {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--og-line);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.og-trust-item span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(140deg, var(--og-accent-2), var(--og-accent));
+  box-shadow: 0 0 0 4px rgba(30, 93, 216, 0.14);
+}
+
+.og-founder-grid,
+.og-course-overview-grid,
+.og-course-hero,
+.og-form-layout,
+.og-community-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 18px;
+}
+
+.og-avatar-frame,
+.og-product-image-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(123, 163, 232, 0.16);
+  background: linear-gradient(145deg, rgba(30, 93, 216, 0.16), rgba(123, 163, 232, 0.06));
+}
+
+.og-founder-avatar,
+.og-course-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.og-product-image-frame {
+  aspect-ratio: 16 / 10;
+}
+
+.og-product-image-frame--large {
+  aspect-ratio: 16 / 11;
+}
+
+.og-price-row,
+.og-video-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.og-price-row h3 {
+  font-size: 2rem;
+}
+
+.og-price-meta {
+  text-align: right;
+}
+
+.og-price-meta span {
+  text-decoration: line-through;
+  color: #cdd8ec;
+}
+
+.og-video-grid,
+.og-video-library-grid,
+.og-curriculum-grid {
+  margin-top: 18px;
+}
+
+.og-video-card,
+.og-week-card,
+.og-faq-card {
+  border-color: var(--og-line);
+  background: linear-gradient(155deg, rgba(20, 28, 42, 0.92), rgba(12, 18, 29, 0.95));
+}
+
+.og-video-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  aspect-ratio: 16 / 9;
+  background: #09111d;
+  border: 1px solid rgba(123, 163, 232, 0.16);
+}
+
+.og-video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.og-faq-list {
+  display: grid;
+  gap: 14px;
+}
+
+.og-faq-card--inline {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.og-disclaimer {
+  margin-top: 14px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.og-course-price-callout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.og-course-price-callout div {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--og-line);
+  background: rgba(255, 255, 255, 0.035);
+  display: grid;
+  gap: 4px;
+}
+
+.og-course-price-callout span {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d6e3ff;
+}
+
+.og-course-price-callout strong {
+  font-size: 1.2rem;
+}
+
+.og-curriculum-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.og-course-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.og-form {
+  display: grid;
+  gap: 14px;
+}
+
+.og-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.og-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.og-form span {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.og-form input,
+.og-form textarea,
+.og-form .dark-select {
+  width: 100%;
+  padding: 14px 15px;
+  border-radius: 14px;
+  border: 1px solid rgba(123, 163, 232, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+}
+
+.og-form input::placeholder,
+.og-form textarea::placeholder {
+  color: #9fb0cb;
+}
+
+.og-social-list {
+  display: grid;
+  gap: 10px;
+}
+
+.og-social-list a {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--og-line);
+  background: rgba(255, 255, 255, 0.03);
+  text-decoration: none;
+}
+
+.og-social-list strong {
+  color: #ffffff;
+}
+
+@media (max-width: 1080px) {
+  .og-trust-strip,
+  .og-proof-grid,
+  .og-course-price-callout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .og-founder-grid,
+  .og-course-overview-grid,
+  .og-course-hero,
+  .og-form-layout,
+  .og-community-grid,
+  .og-curriculum-grid,
+  .og-course-detail-grid,
+  .og-form-grid,
+  .og-trust-strip,
+  .og-proof-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .og-page-content {
+    padding-top: 42px;
+  }
+
+  .og-site-shell .container {
+    padding: 0 14px;
+  }
+
+  .og-site-shell .card {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .og-hero-title {
+    font-size: clamp(1.92rem, 9vw, 2.75rem);
+    max-width: 13ch;
+  }
+
+  .og-chart-shell {
+    min-height: 220px;
+  }
+
+  .og-course-price-callout {
+    grid-template-columns: 1fr;
+  }
+
+  .og-video-meta-row,
+  .og-price-row,
+  .og-chart-head {
+    flex-direction: column;
+  }
+
+  .og-social-list a,
+  .og-trust-item {
+    padding: 12px 14px;
+  }
+}
