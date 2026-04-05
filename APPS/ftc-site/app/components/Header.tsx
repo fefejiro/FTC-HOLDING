@@ -125,6 +125,16 @@ export default function Header() {
       : isPolarSite
         ? polarAnchorConfig.tagline
         : "Fast websites | lead automation | AI delivery";
+  const ogHeaderCta = (
+    <a
+      href={ogTradesAcademyConfig.coursePurchaseUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="og-header-cta"
+    >
+      Enroll Now
+    </a>
+  );
 
   return (
     <header className={isGardenSite ? "garden-site-header" : isOgTradesSite ? "og-site-header" : undefined}>
@@ -192,6 +202,8 @@ export default function Header() {
           </div>
         ) : null}
 
+        {isOgTradesSite ? <div className="header-actions">{ogHeaderCta}</div> : null}
+
         <div className="mobile-shell">
           <button
             type="button"
@@ -239,6 +251,20 @@ export default function Header() {
                 );
               })}
             </nav>
+
+            {isOgTradesSite ? (
+              <div className="mobile-products-group" aria-label="Primary action">
+                <a
+                  href={ogTradesAcademyConfig.coursePurchaseUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mobile-project-btn"
+                  onClick={closeMenu}
+                >
+                  Enroll Now
+                </a>
+              </div>
+            ) : null}
 
             {isDefaultUnaSite ? (
               <div className="mobile-products-group" aria-label="Products">

@@ -69,11 +69,10 @@ export default function OgTradesCoursePage() {
 
             <div className="hero-cta-row">
               <a href={ogTradesAcademyConfig.coursePurchaseUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
-                Buy on the current checkout
+                Buy now on Beacons
               </a>
-              <a href={ogTradesAcademyConfig.communityUrl} target="_blank" rel="noreferrer" className="btn btn-secondary">
-                Join the community first
-              </a>
+              <a href="#enrollment" className="btn btn-secondary">Ask a question first</a>
+              <a href="#curriculum" className="inline-link">Review the curriculum</a>
             </div>
           </section>
 
@@ -135,7 +134,7 @@ export default function OgTradesCoursePage() {
           </div>
         </section>
 
-        <section className="section og-section">
+        <section id="enrollment" className="section og-section anchor-offset">
           <div className="og-form-layout">
             <article className="card">
               <p className="eyebrow">Enrollment interest</p>
@@ -164,4 +163,3 @@ export default function OgTradesCoursePage() {
     </div>
   );
 }
-

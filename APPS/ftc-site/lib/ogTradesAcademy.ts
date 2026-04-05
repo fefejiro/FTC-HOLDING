@@ -68,8 +68,8 @@ export const ogTradesAcademyConfig = {
   priceNow: "$199",
   priceWas: "$399",
   priceNote: "50% off the regular rate",
-  primaryCta: { label: "Enroll in the 8-Week Course", href: `${ogTradesAcademyBasePath}/course` },
-  secondaryCta: { label: "Join the Community", href: `${ogTradesAcademyBasePath}/community` },
+  primaryCta: { label: "Buy the 8-Week Course", href: "https://shop.beacons.ai/ogtradesacademy.com/f2481efd-649b-4c42-badf-f1626ace2ea3" },
+  secondaryCta: { label: "See the Course Details", href: `${ogTradesAcademyBasePath}/course` },
   nav: [
     { label: "Home", href: ogTradesAcademyBasePath },
     { label: "About", href: `${ogTradesAcademyBasePath}/about` },

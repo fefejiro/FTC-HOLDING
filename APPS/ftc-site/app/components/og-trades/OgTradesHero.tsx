@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
 
 export default function OgTradesHero() {
+  const primaryIsExternal = ogTradesAcademyConfig.primaryCta.href.startsWith("http");
+
   return (
     <section className="hero og-hero">
       <div className="hero-noise" />
@@ -22,13 +24,24 @@ export default function OgTradesHero() {
           </ul>
 
           <div className="hero-cta-row">
-            <Link href={ogTradesAcademyConfig.primaryCta.href} prefetch={false} className="btn btn-primary">
-              {ogTradesAcademyConfig.primaryCta.label}
-            </Link>
+            {primaryIsExternal ? (
+              <a
+                href={ogTradesAcademyConfig.primaryCta.href}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-primary"
+              >
+                {ogTradesAcademyConfig.primaryCta.label}
+              </a>
+            ) : (
+              <Link href={ogTradesAcademyConfig.primaryCta.href} prefetch={false} className="btn btn-primary">
+                {ogTradesAcademyConfig.primaryCta.label}
+              </Link>
+            )}
             <Link href={ogTradesAcademyConfig.secondaryCta.href} prefetch={false} className="btn btn-secondary">
               {ogTradesAcademyConfig.secondaryCta.label}
             </Link>
-            <Link href={`${ogTradesAcademyConfig.primaryCta.href}#curriculum`} prefetch={false} className="inline-link">
+            <Link href="/og-trades-academy/course#curriculum" prefetch={false} className="inline-link">
               Explore the curriculum
             </Link>
           </div>
@@ -73,4 +86,3 @@ export default function OgTradesHero() {
     </section>
   );
 }
-

@@ -9754,6 +9754,26 @@ body {
     linear-gradient(180deg, rgba(13, 18, 28, 0.98), rgba(10, 14, 22, 0.98));
 }
 
+.og-header-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.8rem 1.15rem;
+  border-radius: 999px;
+  border: 1px solid rgba(123, 163, 232, 0.28);
+  background: linear-gradient(135deg, var(--og-accent), #7c3aed);
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: 0 16px 28px rgba(30, 93, 216, 0.2);
+}
+
+.og-header-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 34px rgba(30, 93, 216, 0.26);
+}
+
 .og-page-content {
   padding-top: 56px;
 }
@@ -10136,6 +10156,10 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.og-course-hero-copy .hero-cta-row {
+  align-items: center;
 }
 
 .og-form {
