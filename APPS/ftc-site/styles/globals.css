@@ -9779,8 +9779,23 @@ body {
 .og-site-header,
 .og-site-footer {
   background:
-    radial-gradient(760px 260px at -5% 0%, rgba(30, 93, 216, 0.18) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(13, 18, 28, 0.98), rgba(10, 14, 22, 0.98));
+    radial-gradient(720px 240px at 0% 0%, rgba(123, 163, 232, 0.26) 0%, transparent 58%),
+    linear-gradient(180deg, rgba(21, 33, 53, 0.94), rgba(16, 26, 42, 0.92));
+  border-bottom: 1px solid rgba(123, 163, 232, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+.og-site-header .site-header {
+  padding: 10px 0;
+  gap: 14px;
+}
+
+.og-site-header .brand {
+  color: #f8fbff;
+}
+
+.og-site-header .brand-subtitle {
+  color: #d6e3f7;
 }
 
 .og-header-cta {
@@ -9804,13 +9819,14 @@ body {
 }
 
 .og-page-content {
-  padding-top: 56px;
+  padding-top: 34px;
+  padding-bottom: 56px;
 }
 
 .og-brand-mark {
   position: relative;
-  width: 68px;
-  height: 68px;
+  width: 58px;
+  height: 58px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -9837,8 +9853,8 @@ body {
 .og-site-header .nav-link:hover,
 .og-site-header .mobile-panel-link.active {
   color: #f8fbff;
-  background: rgba(30, 93, 216, 0.14);
-  border: 1px solid rgba(123, 163, 232, 0.2);
+  background: rgba(77, 132, 231, 0.14);
+  border: 1px solid rgba(123, 163, 232, 0.22);
 }
 
 .og-site-header .nav-link::after,
@@ -10085,7 +10101,27 @@ body {
 .og-community-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: 18px;
+  gap: 16px;
+}
+
+.og-site-shell .section {
+  padding: 44px 0;
+}
+
+.og-site-shell .section-heading {
+  margin-bottom: 18px;
+}
+
+.og-course-hero {
+  align-items: start;
+}
+
+.og-course-hero-copy {
+  gap: 8px;
+}
+
+.og-course-hero-copy .page-intro {
+  margin-top: 8px;
 }
 
 .og-avatar-frame,
@@ -10136,7 +10172,7 @@ body {
 .og-video-grid,
 .og-video-library-grid,
 .og-curriculum-grid {
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 .og-video-card,
@@ -10217,13 +10253,17 @@ body {
 .og-curriculum-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .og-course-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
+}
+
+.og-week-card {
+  gap: 8px;
 }
 
 .og-course-hero-copy .hero-cta-row {
@@ -10332,7 +10372,7 @@ body {
 
 @media (max-width: 640px) {
   .og-page-content {
-    padding-top: 42px;
+    padding-top: 22px;
   }
 
   .og-site-shell .container {
@@ -10346,6 +10386,16 @@ body {
 
   .og-site-shell {
     padding-bottom: 96px;
+  }
+
+  .og-site-header .site-header {
+    padding: 8px 0;
+  }
+
+  .og-brand-mark {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
   }
 
   .og-hero-title {
@@ -10370,6 +10420,10 @@ body {
   .og-social-list a,
   .og-trust-item {
     padding: 12px 14px;
+  }
+
+  .og-site-shell .section {
+    padding: 28px 0;
   }
 
   .og-mobile-enroll-bar {
