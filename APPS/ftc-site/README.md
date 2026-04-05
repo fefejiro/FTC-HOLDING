@@ -8,6 +8,8 @@ Next.js App Router site for the public-facing Una Labs build lab: products, clie
 - `/products`
 - `/work` (Client Launches)
 - `/work/[slug]`
+- `/og-trades-academy`
+- `/og-trades-academy/*`
 - `/ateam`
 - `/work-with-ftc` (Start a Project)
 - `/capabilities` (Studio)
@@ -143,6 +145,14 @@ Recommended production secret setup:
 - Point `UNALABS_INTAKE_WEBHOOK_URL` to your internal lead sink / automation.
 - Point `UNALABS_CONFIRMATION_EMAIL_WEBHOOK_URL` to the endpoint that sends the user acknowledgment email.
 - Use `UNALABS_PIPELINE_API_KEY` for internal scripts or automations that record downstream pipeline stages.
+
+## Client handovers
+
+Recent client-specific implementation notes live in `docs/`.
+
+OG_Trades Academy handover:
+
+- `docs/OG_TRADES_ACADEMY_HANDOVER.md`
 
 ## Revenue pipeline updates
 
