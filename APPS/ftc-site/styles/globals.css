@@ -9711,18 +9711,32 @@ body {
 /* OG Trades Academy */
 
 .og-site-shell {
-  --og-bg: #0f1419;
-  --og-surface: #151d2c;
-  --og-surface-2: #1b2436;
-  --og-surface-3: #22314c;
-  --og-copy: #f5f7fb;
-  --og-muted: #aeb8ca;
+  --og-bg: #09111c;
+  --og-surface: #131d2d;
+  --og-surface-2: #1a2639;
+  --og-surface-3: #22324d;
+  --og-copy: #f8fbff;
+  --og-muted: #c7d3e7;
   --og-line: rgba(150, 176, 225, 0.18);
   --og-accent: #1e5dd8;
   --og-accent-2: #7ba3e8;
   --og-green: #10b981;
   --og-red: #ef4444;
+  min-height: 100%;
+  background:
+    radial-gradient(960px 420px at 0% 0%, rgba(30, 93, 216, 0.18) 0%, transparent 58%),
+    radial-gradient(760px 320px at 100% 12%, rgba(123, 163, 232, 0.14) 0%, transparent 56%),
+    linear-gradient(180deg, #08111c 0%, #0b1522 42%, #0a1320 100%);
   color: var(--og-copy);
+}
+
+.og-site-shell h1,
+.og-site-shell h2,
+.og-site-shell h3,
+.og-site-shell strong,
+.og-site-shell .eyebrow,
+.og-site-shell .card-kicker {
+  color: #f8fbff;
 }
 
 .og-site-shell .page-intro,
@@ -9745,6 +9759,21 @@ body {
 .og-site-shell .og-proof-card p,
 .og-site-shell .og-social-list span {
   color: var(--og-muted);
+}
+
+.og-site-shell .card {
+  background: linear-gradient(155deg, rgba(17, 25, 38, 0.95), rgba(10, 16, 26, 0.98));
+  border-color: rgba(123, 163, 232, 0.18);
+  box-shadow: 0 22px 46px rgba(3, 8, 16, 0.24);
+}
+
+.og-site-shell .section-heading {
+  gap: 12px;
+}
+
+.og-site-shell .section-heading p,
+.og-site-shell .section-heading .eyebrow {
+  color: #dbe6f8;
 }
 
 .og-site-header,
@@ -10084,6 +10113,12 @@ body {
   background: linear-gradient(155deg, rgba(20, 28, 42, 0.92), rgba(12, 18, 29, 0.95));
 }
 
+.og-course-hero-copy,
+.og-course-detail-grid .card,
+.og-form-layout .card {
+  background: linear-gradient(160deg, rgba(16, 24, 37, 0.97), rgba(9, 15, 24, 0.99));
+}
+
 .og-video-frame {
   position: relative;
   overflow: hidden;
@@ -10181,6 +10216,7 @@ body {
 .og-form span {
   font-size: 0.9rem;
   font-weight: 700;
+  color: #eef4ff;
 }
 
 .og-form input,
@@ -10196,7 +10232,16 @@ body {
 
 .og-form input::placeholder,
 .og-form textarea::placeholder {
-  color: #9fb0cb;
+  color: #b8c6dc;
+}
+
+.og-form textarea {
+  min-height: 120px;
+}
+
+.og-form button.btn {
+  min-height: 52px;
+  font-size: 1rem;
 }
 
 .og-social-list {
@@ -10216,6 +10261,17 @@ body {
 
 .og-social-list strong {
   color: #ffffff;
+}
+
+.og-mobile-enroll-bar {
+  display: none;
+}
+
+@media (max-width: 1120px) {
+  .og-course-hero,
+  .og-form-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1080px) {
@@ -10255,6 +10311,10 @@ body {
     border-radius: 18px;
   }
 
+  .og-site-shell {
+    padding-bottom: 96px;
+  }
+
   .og-hero-title {
     font-size: clamp(1.92rem, 9vw, 2.75rem);
     max-width: 13ch;
@@ -10277,5 +10337,27 @@ body {
   .og-social-list a,
   .og-trust-item {
     padding: 12px 14px;
+  }
+
+  .og-mobile-enroll-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(8, 12, 20, 0.2), rgba(8, 12, 20, 0.96) 22%);
+    backdrop-filter: blur(16px);
+  }
+
+  .og-mobile-enroll-bar .btn {
+    width: 100%;
+    min-height: 50px;
+    justify-content: center;
+    text-align: center;
+    margin: 0;
   }
 }

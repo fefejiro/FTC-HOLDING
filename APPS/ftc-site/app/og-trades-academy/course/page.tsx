@@ -160,6 +160,20 @@ export default function OgTradesCoursePage() {
           </div>
         </section>
       </div>
+
+      <div className="og-mobile-enroll-bar">
+        <a
+          href={ogTradesAcademyConfig.coursePurchaseUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="btn btn-primary"
+        >
+          Buy the Course for {ogTradesAcademyConfig.priceNow}
+        </a>
+        <a href="#enrollment" className="btn btn-secondary">
+          Ask a Question
+        </a>
+      </div>
     </div>
   );
 }
