@@ -180,3 +180,38 @@ Added a Pages-preview bypass so direct `*.pages.dev` deployment URLs can be used
 ### Exact Next Step
 
 Deploy this middleware change, then open the newest Pages deployment URL with `/ateam?preview=1` to confirm the latest build can be tested directly even while the apex domain is stale.
+
+## 2026-04-07 Edge API Fallback For Paused Railway
+
+### Summary
+
+Added an API-layer ATEAM edge fallback so `APPS/ftc-site` can answer `/api/ateam/workflow/*` directly when the Railway `ateam-api` upstream returns `Application not found` or similar availability failures. This is meant to let even a stale public frontend complete a run while the backend service is paused.
+
+### Files Changed
+
+- `APPS/ftc-site/lib/ateamWorkflowEdgeFallback.ts`
+- `APPS/ftc-site/lib/ateamUpstream.ts`
+- `APPS/ftc-site/app/api/ateam/workflow/runs/route.ts`
+- `APPS/ftc-site/app/api/ateam/workflow/runs/[runId]/route.ts`
+- `APPS/ftc-site/app/api/ateam/workflow/runs/[runId]/answers/route.ts`
+- `APPS/ftc-site/app/api/ateam/workflow/runs/[runId]/approve/route.ts`
+- `APPS/ftc-site/app/api/ateam/workflow/runs/[runId]/generate-pack/route.ts`
+
+### Decisions Made
+
+- keep the normal upstream proxy path first and only switch to edge fallback when the upstream clearly fails
+- use a short-lived in-memory session store keyed by cookie as a continuity path for public demo testing
+- keep the fallback response shape aligned with the public workflow contract so the older frontend can still progress through the run
+
+### Validation
+
+- `npm --prefix APPS/ftc-site run build`
+
+### Unresolved Issues
+
+- the edge fallback is a continuity mechanism, not durable shared storage
+- `unalabs.cloud` and Pages deployment aliases are still serving inconsistent frontend builds, so the fallback mainly protects the API layer while Cloudflare catches up
+
+### Exact Next Step
+
+Push the edge fallback, let Cloudflare deploy it, then re-run the public `/ateam` flow to confirm the live page can complete intake -> plan -> approve -> pack even while Railway stays paused.

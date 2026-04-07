@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { handleAteamEdgeFallback, shouldUseAteamEdgeFallback } from "./ateamWorkflowEdgeFallback";
 
 function trimTrailingSlash(value = "") {
   return String(value || "").replace(/\/+$/, "");
@@ -70,4 +71,12 @@ export async function proxyAteamJson(path: string, init: RequestInit = {}) {
       { status: 502 }
     );
   }
+}
+
+export async function proxyOrFallbackAteamJson(request: Request, path: string, init: RequestInit = {}) {
+  const upstream = await proxyAteamJson(path, init);
+  if (!(await shouldUseAteamEdgeFallback(upstream))) {
+    return upstream;
+  }
+  return handleAteamEdgeFallback(request, path, init);
 }
