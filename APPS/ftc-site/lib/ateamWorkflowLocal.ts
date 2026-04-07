@@ -514,7 +514,7 @@ function createLocalRun(payload: {
   return {
     ok: true,
     localFallback: true,
-    run: enrichRun(reviewRun),
+    run: persistRun(reviewRun),
     catalog,
   } satisfies WorkflowPayload<{ run: WorkflowRun; catalog: WorkflowCatalog }>;
 }
