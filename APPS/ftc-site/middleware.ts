@@ -41,6 +41,12 @@ function shouldRedirectToCanonical(host: string): boolean {
   return host.endsWith(".pages.dev");
 }
 
+function allowPagesPreviewBypass(req: NextRequest, host: string): boolean {
+  if (!host.endsWith(".pages.dev")) return false;
+  const preview = req.nextUrl.searchParams.get("preview");
+  return truthy(preview || "");
+}
+
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const host = resolveRequestHost(req);
@@ -54,6 +60,10 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = redirectPath;
     return NextResponse.redirect(url, 308);
+  }
+
+  if (allowPagesPreviewBypass(req, host)) {
+    return NextResponse.next();
   }
 
   if (!shouldRedirectToCanonical(host)) {

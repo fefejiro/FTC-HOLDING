@@ -151,3 +151,32 @@ Added a public-facing fallback path for `/ateam` so the workflow stays testable 
 ### Exact Next Step
 
 Push the fallback pass, let Cloudflare deploy it, then verify on the public host that `/ateam` shows the local-demo banner and still completes the intake -> plan -> approve -> pack flow while Railway remains paused.
+
+## 2026-04-07 Pages Preview Bypass
+
+### Summary
+
+Added a Pages-preview bypass so direct `*.pages.dev` deployment URLs can be used for live QA without being forced back to the canonical `unalabs.cloud` host. This creates a reliable test lane when the custom-domain alias or cache lags behind the newest production deployment.
+
+### Files Changed
+
+- `APPS/ftc-site/middleware.ts`
+
+### Decisions Made
+
+- keep canonical redirect behavior as the default for `*.pages.dev`
+- allow an explicit `?preview=1` query flag to bypass the redirect only for Pages preview hosts
+- use the bypass as a deployment-verification tool, not as a public canonical entrypoint
+
+### Validation
+
+- pending deploy propagation and direct Pages-preview smoke check
+
+### Unresolved Issues
+
+- `unalabs.cloud` is still intermittently serving the pre-fix fallback build even when Pages marks the newest deployment active
+- the Railway `ateam-api` backend remains paused, so preview testing still relies on the public fallback mode
+
+### Exact Next Step
+
+Deploy this middleware change, then open the newest Pages deployment URL with `/ateam?preview=1` to confirm the latest build can be tested directly even while the apex domain is stale.
