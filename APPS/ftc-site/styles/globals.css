@@ -6776,6 +6776,44 @@ nav.primary {
   padding: 26px;
 }
 
+.wf-stage--intake {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.wf-stage--intake > .wf-intro {
+  order: 0;
+}
+
+.wf-stage--intake > .wf-intake-card {
+  order: 1;
+}
+
+.wf-stage--intake > .wf-proof-strip {
+  order: 2;
+}
+
+.wf-stage--intake > .wf-template-card {
+  order: 3;
+}
+
+.wf-stage--intake > .wf-expect-row {
+  order: 4;
+}
+
+.wf-stage--intake > .wf-fit-strip {
+  order: 5;
+}
+
+.wf-stage--intake > .wf-recent-card {
+  order: 6;
+}
+
+.wf-stage--intake > .wf-role-card {
+  order: 7;
+}
+
 .wf-intro-headline,
 .wf-pack-title,
 .wf-pack-panel-title,
@@ -6809,6 +6847,10 @@ nav.primary {
   margin: 0 0 18px;
 }
 
+.wf-stage--intake > .wf-proof-strip {
+  margin: 0;
+}
+
 .wf-proof-step {
   display: grid;
   gap: 8px;
@@ -6817,6 +6859,10 @@ nav.primary {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(131, 145, 188, 0.14);
   box-shadow: 0 14px 28px rgba(26, 39, 82, 0.06);
+}
+
+.wf-stage--intake > .wf-proof-strip .wf-proof-step {
+  padding: 12px 14px;
 }
 
 .wf-proof-step-label {
@@ -6832,6 +6878,11 @@ nav.primary {
   color: #5a6688;
   font-size: 0.9rem;
   line-height: 1.55;
+}
+
+.wf-stage--intake > .wf-proof-strip .wf-proof-step p {
+  font-size: 0.84rem;
+  line-height: 1.42;
 }
 
 .wf-intro-lead,
@@ -7499,6 +7550,10 @@ nav.primary {
   .opi-shell {
     padding: 20px;
     border-radius: 22px;
+  }
+
+  .wf-stage--intake {
+    gap: 16px;
   }
 
   .wf-proof-strip {
@@ -10618,6 +10673,12 @@ body {
   margin-top: 22px;
 }
 
+.wf-stage--intake > .wf-template-card,
+.wf-stage--intake > .wf-recent-card,
+.wf-stage--intake > .wf-role-card {
+  margin-top: 0;
+}
+
 .wf-template-card,
 .wf-role-card,
 .wf-plan-editor-card {
@@ -10637,6 +10698,12 @@ body {
   margin-bottom: 14px;
 }
 
+.wf-stage--intake > .wf-template-card .wf-template-head,
+.wf-stage--intake > .wf-role-card .wf-template-head,
+.wf-stage--intake > .wf-recent-card .wf-recent-head {
+  margin-bottom: 10px;
+}
+
 .wf-template-grid,
 .wf-role-grid {
   display: grid;
@@ -10652,6 +10719,11 @@ body {
   border: 1px solid rgba(27, 83, 255, 0.12);
   background: rgba(245, 248, 255, 0.92);
   padding: 14px 16px;
+}
+
+.wf-stage--intake > .wf-template-card .wf-template-item,
+.wf-stage--intake > .wf-role-card .wf-role-item {
+  padding: 12px 14px;
 }
 
 .wf-template-item {
@@ -10683,6 +10755,11 @@ body {
   margin: 0;
   color: rgba(16, 33, 62, 0.72);
   line-height: 1.55;
+}
+
+.wf-stage--intake > .wf-template-card .wf-template-item p,
+.wf-stage--intake > .wf-role-card .wf-role-item p {
+  line-height: 1.42;
 }
 
 .wf-template-item span,
@@ -10733,6 +10810,26 @@ body {
 .wf-recent-list {
   display: grid;
   gap: 12px;
+}
+
+.wf-stage--intake > .wf-recent-card .wf-recent-list {
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+@media (min-width: 961px) {
+  .wf-stage--intake > .wf-template-card .wf-template-grid,
+  .wf-stage--intake > .wf-role-card .wf-role-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(250px, 1fr);
+    grid-template-columns: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
 }
 
 .wf-recent-link {
