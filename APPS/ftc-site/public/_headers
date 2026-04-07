@@ -14,5 +14,20 @@
   Content-Type: text/vcard; charset=utf-8
   Content-Disposition: attachment; filename="fejiro-efiuvwere.vcf"
 
+/
+  Cache-Control: private, no-store, no-cache, must-revalidate
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
+/ateam
+  Cache-Control: private, no-store, no-cache, must-revalidate
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
+/ateam/*
+  Cache-Control: private, no-store, no-cache, must-revalidate
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
 /*
   Cache-Control: public, max-age=0, s-maxage=60, must-revalidate

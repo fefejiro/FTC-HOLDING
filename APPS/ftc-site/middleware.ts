@@ -47,6 +47,23 @@ function allowPagesPreviewBypass(req: NextRequest, host: string): boolean {
   return truthy(preview || "");
 }
 
+function shouldDisableEdgeHtmlCache(req: NextRequest, pathname: string): boolean {
+  const accept = String(req.headers.get("accept") || "").toLowerCase();
+  if (!accept.includes("text/html")) return false;
+  return pathname === "/" || pathname === "/ateam" || pathname.startsWith("/ateam/");
+}
+
+function withRuntimePageHeaders(req: NextRequest, response: NextResponse): NextResponse {
+  if (!shouldDisableEdgeHtmlCache(req, req.nextUrl.pathname)) {
+    return response;
+  }
+  response.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
+  response.headers.set("CDN-Cache-Control", "no-store");
+  response.headers.set("Cloudflare-CDN-Cache-Control", "no-store");
+  response.headers.set("Vary", "Accept");
+  return response;
+}
+
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const host = resolveRequestHost(req);
@@ -63,11 +80,11 @@ export function middleware(req: NextRequest) {
   }
 
   if (allowPagesPreviewBypass(req, host)) {
-    return NextResponse.next();
+    return withRuntimePageHeaders(req, NextResponse.next());
   }
 
   if (!shouldRedirectToCanonical(host)) {
-    return NextResponse.next();
+    return withRuntimePageHeaders(req, NextResponse.next());
   }
 
   const url = req.nextUrl.clone();

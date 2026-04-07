@@ -427,7 +427,7 @@ export default function AteamWorkflowClient({
         voiceSessionDeadlineRef.current = Date.now() + VOICE_AUTO_STOP_MS;
         voiceRestartCountRef.current = 0;
       }
-      setNotice("Listening... speak naturally. Voice beta keeps appending while you talk.");
+      setNotice("Recording... speak naturally, then tap Stop recording when you're done.");
       setIsListening(true);
       clearVoiceTimers();
       scheduleAutoStop();
@@ -487,7 +487,7 @@ export default function AteamWorkflowClient({
           } catch {
             voiceSessionActiveRef.current = false;
             setIsListening(false);
-            setNotice("Voice paused unexpectedly. Tap Voice beta to continue or type the request.");
+            setNotice("Recording paused unexpectedly. Tap Record request to continue or type the request.");
           }
         }, VOICE_RESTART_DELAY_MS);
         return;
@@ -507,7 +507,7 @@ export default function AteamWorkflowClient({
         const nextIdea = mergeSpokenIdea(speechBaseIdeaRef.current, spoken);
         setIdea(nextIdea);
         if (stopReason === "timeout") {
-          setNotice("Voice beta reached the current capture limit. Review the text, then continue.");
+          setNotice("Recording reached the current capture limit. Review the text, then continue.");
         } else {
           setNotice("Voice captured. Review the text, then generate the scoped plan.");
         }
@@ -523,7 +523,7 @@ export default function AteamWorkflowClient({
       clearVoiceTimers();
       if (event.error === "no-speech" && voiceSessionActiveRef.current) {
         speechHadErrorRef.current = false;
-        setNotice("Listening... start speaking when you're ready.");
+        setNotice("Recording is ready. Start speaking when you're ready.");
         return;
       }
       setIsListening(false);
@@ -1130,7 +1130,7 @@ export default function AteamWorkflowClient({
                     <label className="wf-field-label" htmlFor="wf-idea">Describe the request</label>
                     {supportsVoice ? (
                       <p className="wf-field-help wf-field-help--voice">
-                        Type is the safest path today. Voice beta supports longer dictation and natural pauses.
+                        Voice beta supports longer dictation now. Click Record request to start, then click Stop recording when you're done.
                       </p>
                     ) : null}
                   </div>
@@ -1139,12 +1139,16 @@ export default function AteamWorkflowClient({
                       type="button"
                       className={`wf-voice-btn ${isListening ? "wf-voice-btn--active" : ""}`}
                       onClick={toggleVoice}
-                      aria-label={isListening ? "Stop voice capture" : "Speak your idea"}
+                      aria-label={isListening ? "Stop voice capture" : "Start voice capture"}
+                      aria-pressed={isListening}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 15.2 14.47 17 12 17s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V21c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
-                      </svg>
-                      {isListening ? "Listening..." : "Voice beta"}
+                      <span className="wf-voice-indicator" aria-hidden="true">
+                        <span className="wf-voice-indicator-dot" />
+                      </span>
+                      <span className="wf-voice-copy">
+                        <strong>{isListening ? "Stop recording" : "Record request"}</strong>
+                        <span>{isListening ? "Tap again to finish voice capture" : "Click once to start voice beta"}</span>
+                      </span>
                     </button>
                   )}
                 </div>

@@ -420,3 +420,47 @@ Push this pass, let Cloudflare deploy it, then QA `https://unalabs.cloud/ateam` 
 - clearer listening notices and appended transcript behavior
 - a wider, less boxed intake surface
 - less empty dead space and less embedded-widget feel on desktop
+
+## 2026-04-07 Dynamic Route And Voice Toggle Follow-up
+
+### Summary
+
+Followed up on two remaining public pain points: needing manual Cloudflare purges to see ATEAM updates, and the voice button still feeling like a soft secondary control instead of a clear record toggle. The root route issue was that both `/` and `/ateam` were still exported as `force-static`, so edge HTML could stay stale even after successful Pages deployments. Those routes are now set to dynamic with explicit no-store headers, and the voice control is now a clearer click-to-start / click-to-stop recording toggle with a red live indicator and stronger recording-state copy.
+
+### Files Changed
+
+- `APPS/ftc-site/app/page.tsx`
+- `APPS/ftc-site/app/ateam/page.tsx`
+- `APPS/ftc-site/middleware.ts`
+- `APPS/ftc-site/public/_headers`
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/styles/globals.css`
+
+### Root Cause: Live Route Staleness
+
+- both the Una Labs homepage and `/ateam` route were explicitly marked `force-static`
+- the site was also shipping broad `s-maxage` caching for document HTML
+- together, that made active Cloudflare Pages deployments look "done" while old route HTML could still persist on the custom domain until a manual purge
+
+### What Changed For Live Delivery
+
+- switched `/` and `/ateam` from `force-static` to `force-dynamic`
+- added `revalidate = 0` on both routes
+- added explicit `Cache-Control`, `CDN-Cache-Control`, and `Cloudflare-CDN-Cache-Control` no-store headers for `/` and `/ateam`
+- kept those headers in both middleware and `_headers` so the route update path is less dependent on manual zone purges
+
+### What Changed In Voice UX
+
+- replaced the old quiet `Voice beta` pill with a clearer record toggle
+- the button now reads as a recording control:
+  - `Record request` when idle
+  - `Stop recording` when active
+- added a red recording indicator with pulsing animation while capture is active
+- updated button helper copy so the interaction is explicit: click once to start, click again to stop
+- updated recording notices to speak in recording language rather than generic listening language
+
+### Remaining Gaps
+
+- browser speech recognition remains browser-dependent, so typed input is still the safest path
+- the public ATEAM flow still uses demo/local-browser persistence when the shared backend is unavailable
+- this dynamic/no-store change should remove the need for future manual purges on `/` and `/ateam`, but it should be rechecked after the next production deploy to confirm the stale-edge pattern is gone
