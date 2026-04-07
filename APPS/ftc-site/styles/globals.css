@@ -11009,7 +11009,7 @@ body {
 
 .wf-guided-input::placeholder {
   color: rgba(16, 33, 62, 0.5);
-  text-overflow: ellipsis;
+  text-overflow: clip;
 }
 
 .wf-guided-input:focus {

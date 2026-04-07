@@ -648,3 +648,47 @@ Finalized the remaining laptop-fit polish for the Una Labs home page and `/ateam
 
 - browser speech recognition is still browser-dependent, so typed input remains the safest default
 - the ATEAM public flow still relies on demo/local-browser continuity while the shared backend remains optional
+
+## 2026-04-07 ATEAM Surface Stabilization Follow-up (Single-Flow + Notice De-dup)
+
+### Summary
+
+Completed a focused stabilization pass on `/ateam` after additional live feedback. This pass hardened the route against fallback layout drift (embedded/narrow island behavior), removed duplicate demo-mode messaging variants, and reduced form clipping risk for laptop users.
+
+### Files Changed
+
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/app/ateam/page.tsx`
+- `APPS/ftc-site/styles/globals.css`
+
+### Root Cause: Embedded / Narrow Island Behavior
+
+- legacy grid-era workflow styles still existed globally and could reserve a second split column
+- when that styling path won, `/ateam` could render like a constrained module rather than a full workflow surface
+- this created dead space and made the page feel stitched in
+
+### Root Cause: Duplicate Demo Messaging
+
+- demo status could arrive through more than one notice string variant
+- previous filtering only suppressed one exact message string, allowing similar `Demo mode active...` variants to still render in later states
+
+### What Changed
+
+- enforced route-scoped `/ateam` layout hardening:
+  - force single-column shell split
+  - remove any implicit second column reservation
+  - ensure intake container uses full available route width
+- expanded notice de-dup logic:
+  - suppress any notice beginning with `Demo mode active.` in non-banner slots
+  - keep the environment message in one clean primary banner
+- reduced clipping pressure:
+  - removed placeholder ellipsis behavior on guided inputs (`text-overflow: clip`)
+
+### Validation
+
+- `npm.cmd --prefix APPS/ftc-site run build` completed successfully
+
+### Remaining Follow-up
+
+- verify on live `https://unalabs.cloud/ateam` at laptop browser zoom settings (90% and 100%) to confirm no stale route artifact
+- if stale HTML still appears on the custom domain, finish edge-route ownership and cache checks before new UI passes

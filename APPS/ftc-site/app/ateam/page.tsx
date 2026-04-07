@@ -29,6 +29,19 @@ export default function AteamPage() {
           max-width: none;
         }
 
+        .ateam-route-surface .wf-split {
+          display: block !important;
+          grid-template-columns: 1fr !important;
+          gap: 0 !important;
+        }
+
+        .ateam-route-surface .wf-intake-col,
+        .ateam-route-surface .wf-intake-col > .container {
+          display: block;
+          width: 100%;
+          min-height: 0;
+        }
+
         .ateam-route-surface .wf-stage--intake {
           grid-template-columns: minmax(0, 0.84fr) minmax(680px, 1.16fr);
           grid-template-areas:
@@ -102,6 +115,7 @@ export default function AteamPage() {
         .ateam-route-surface .wf-idea-textarea::placeholder {
           font-size: 0.93rem;
           line-height: 1.45;
+          text-overflow: clip;
         }
 
         .ateam-route-surface .wf-intake-label-row {

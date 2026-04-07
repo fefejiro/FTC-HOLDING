@@ -260,6 +260,11 @@ function appendTranscriptSegment(base: string, next: string) {
   return `${trimmedBase} ${trimmedNext}`.replace(/\s+/g, " ").trim();
 }
 
+function isDemoNotice(value: string) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized.startsWith("demo mode active.");
+}
+
 function combineTranscript(finalText: string, interimText: string) {
   return `${finalText} ${interimText}`.replace(/\s+/g, " ").trim();
 }
@@ -1064,7 +1069,7 @@ export default function AteamWorkflowClient({
           ) : null}
 
           {/* ── INTAKE STAGE ── */}
-          {false && !run && !isWorking && !workflowReady && (
+          {!run && !isWorking && !workflowReady && (
             <section className="wf-stage wf-stage--intake">
               <div className="wf-intro">
                 <p className="wf-intro-eyebrow">Trusted AI workflow infrastructure</p>
@@ -1176,7 +1181,7 @@ export default function AteamWorkflowClient({
                       type="text"
                       value={intake.goal || ""}
                       onChange={(e) => setIntake((prev) => ({ ...prev, goal: e.target.value }))}
-                      placeholder="What should feel clearly better first?"
+                      placeholder="What should improve first?"
                     />
                   </div>
                   <div className="wf-guided-field wf-guided-field--wide">
@@ -1187,7 +1192,7 @@ export default function AteamWorkflowClient({
                       type="text"
                       value={intake.desiredOutput || ""}
                       onChange={(e) => setIntake((prev) => ({ ...prev, desiredOutput: e.target.value }))}
-                      placeholder="Spec, plan, prototype, research summary..."
+                      placeholder="Spec, plan, prototype, or research summary"
                     />
                   </div>
                   <div className="wf-guided-field wf-guided-field--full">
@@ -1240,7 +1245,7 @@ export default function AteamWorkflowClient({
                 </div>
 
                 {error && <p className="wf-error" role="alert">{error}</p>}
-                {!error && notice && !localFallbackEnabled && (
+                {!error && notice && !localFallbackEnabled && !isDemoNotice(notice) && (
                   <p className="wf-notice" aria-live="polite">
                     {notice}
                   </p>
@@ -1517,7 +1522,7 @@ export default function AteamWorkflowClient({
                     type="text"
                     value={intake.goal || ""}
                     onChange={(e) => setIntake((prev) => ({ ...prev, goal: e.target.value }))}
-                    placeholder="What should feel clearly better first?"
+                    placeholder="What should improve first?"
                   />
                 </div>
                 <div className="wf-guided-field">
@@ -1704,7 +1709,7 @@ export default function AteamWorkflowClient({
               )}
 
               {error && <p className="wf-error" role="alert">{error}</p>}
-              {!error && notice && <p className="wf-notice">{notice}</p>}
+              {!error && notice && !isDemoNotice(notice) && <p className="wf-notice">{notice}</p>}
 
               <div className="wf-clarify-actions">
                 {isEditingPlan && (
