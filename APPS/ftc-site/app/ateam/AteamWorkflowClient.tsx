@@ -24,6 +24,11 @@ import {
   saveAteamWorkflowHandoff,
   type AteamWorkflowHandoffPayload,
 } from "../../lib/ateamHandoff";
+import {
+  getLocalWorkflowFallbackEventName,
+  handleLocalWorkflowRequest,
+  shouldUseLocalWorkflowFallback,
+} from "../../lib/ateamWorkflowLocal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -193,24 +198,35 @@ function processingIndexToHumanStage(idx: number): number {
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    method: init?.method || "GET",
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-    body: init?.body,
-    cache: "no-store",
-  });
-  const payload = (await response.json().catch(() => ({}))) as T & {
-    ok?: boolean;
-    message?: string;
-    details?: string;
-    error?: string;
-  };
-  if (!response.ok || payload?.ok === false) {
-    throw new Error(
-      payload?.message || payload?.details || payload?.error || "ATEAM workflow request failed.",
-    );
+  try {
+    const response = await fetch(path, {
+      method: init?.method || "GET",
+      headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+      body: init?.body,
+      cache: "no-store",
+    });
+    const payload = (await response.json().catch(() => ({}))) as T & {
+      ok?: boolean;
+      message?: string;
+      details?: string;
+      error?: string;
+    };
+    if (!response.ok || payload?.ok === false) {
+      const message =
+        payload?.message || payload?.details || payload?.error || "ATEAM workflow request failed.";
+      if (shouldUseLocalWorkflowFallback(message, response.status)) {
+        return handleLocalWorkflowRequest<T>(path, init);
+      }
+      throw new Error(message);
+    }
+    return payload;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "ATEAM workflow request failed.";
+    if (shouldUseLocalWorkflowFallback(message, 0)) {
+      return handleLocalWorkflowRequest<T>(path, init);
+    }
+    throw error;
   }
-  return payload;
 }
 
 function buildWorkflowPath(basePath: string, runId?: string) {
@@ -288,6 +304,7 @@ export default function AteamWorkflowClient({
   const [busy, setBusy] = useState<BusyState>("idle");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [localFallbackEnabled, setLocalFallbackEnabled] = useState(false);
   const [processingStageIndex, setProcessingStageIndex] = useState(-1);
   const [activePrototypeFrameId, setActivePrototypeFrameId] = useState("");
   const [supportsVoice, setSupportsVoice] = useState(false);
@@ -308,6 +325,20 @@ export default function AteamWorkflowClient({
       base_path: basePath,
     });
   }, [basePath]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const eventName = getLocalWorkflowFallbackEventName();
+    const handleFallback = () => {
+      setLocalFallbackEnabled(true);
+      setError("");
+      setNotice(
+        "ATEAM is running in local demo mode because the cloud backend is paused. Runs stay in this browser for now."
+      );
+    };
+    window.addEventListener(eventName, handleFallback as EventListener);
+    return () => window.removeEventListener(eventName, handleFallback as EventListener);
+  }, []);
 
   // Voice recognition setup
   useEffect(() => {
@@ -899,6 +930,12 @@ export default function AteamWorkflowClient({
         <div className="wf-intake-col">
         <div className="container">
         <div className="wf-body">
+          {localFallbackEnabled ? (
+            <p className="wf-notice wf-fallback-banner" role="status">
+              Live workaround active: the Railway ATEAM backend is paused, so this page is using a
+              browser-local workflow simulator for testing.
+            </p>
+          ) : null}
 
           {/* ── INTAKE STAGE ── */}
           {!run && !isWorking && !workflowReady && (

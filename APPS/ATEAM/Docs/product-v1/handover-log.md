@@ -120,3 +120,34 @@ Extended the public ATEAM surface with the first V2-facing scaffolding while kee
 ### Exact Next Step
 
 Push the Phase 2 pass, confirm the public `/ateam` deploy is live, then run a focused browser QA of template selection, plan editing, filtered recent runs, and final pack generation.
+
+## 2026-04-07 Public Fallback Workaround
+
+### Summary
+
+Added a public-facing fallback path for `/ateam` so the workflow stays testable even when the Railway `ateam-api` service is paused. The Phase 2 frontend now detects upstream failures like `Application not found` and transparently switches into a browser-local workflow simulator.
+
+### Files Changed
+
+- `APPS/ftc-site/lib/ateamWorkflowLocal.ts`
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/styles/globals.css`
+
+### Decisions Made
+
+- keep the normal cloud API path as the default and only fall back when the live workflow upstream is unavailable
+- make the fallback explicit to the user with a visible notice so local-browser runs are not mistaken for the shared backend
+- reuse ATEAM workflow-engine logic where possible so the local simulation still follows the same request, plan, approval, and pack shapes
+
+### Validation
+
+- `npm --prefix APPS/ftc-site run build`
+
+### Unresolved Issues
+
+- the Railway `ateam-api` service is still paused for usage limits, so the fallback is a continuity path, not a replacement for the real shared runtime
+- live QA is still needed after deploy propagation to confirm the fallback activates cleanly on `unalabs.cloud/ateam`
+
+### Exact Next Step
+
+Push the fallback pass, let Cloudflare deploy it, then verify on the public host that `/ateam` shows the local-demo banner and still completes the intake -> plan -> approve -> pack flow while Railway remains paused.
