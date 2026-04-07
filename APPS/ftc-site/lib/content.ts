@@ -74,7 +74,7 @@ export const networkingProfile: NetworkingProfile = {
   fullName: "Fejiro Efiuvwere",
   title: "AI Product Builder | Technical Product Manager | Automation Systems Lead",
   studioName: "Una Labs",
-  studioLine: "Fast websites, lead automation, and practical AI systems",
+  studioLine: "Trusted AI workflow systems, lead operations, and practical delivery infrastructure",
   phoneDisplay: "+1 (416) 473-2732",
   phoneE164: "+14164732732",
   email: "hello@unalabs.cloud",
@@ -287,11 +287,11 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
   {
     slug: "ateam",
     name: "ATEAM",
-    tagline: "The AI lab where rough ideas become clear next steps.",
+    tagline: "Trusted AI workflow infrastructure for rough operational requests.",
     pillar: "business-intelligence",
     tags: ["Workflow OS", "Scoping", "Systems"],
     summary:
-      "ATEAM is Una Labs' intake-to-delivery engine for shaping rough ideas into structured runs, visible jobs, and artifact packs.",
+      "ATEAM is Una Labs' workflow layer for turning rough requests into structured plans, approval-ready runs, and decision-ready outputs.",
     status: "beta",
     availabilityLabel: "Cloud-native workflow",
     marketingBullets: [...ateamModeSupportPoints],
@@ -301,7 +301,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
       insight:
         "People move faster when they can see how context, ownership, and delivery surfaces line up before build work begins.",
       solution:
-        "ATEAM gives Una Labs a real workflow system where public intake becomes a run, jobs move through clear states, and artifacts accumulate value before handoff.",
+        "ATEAM gives Una Labs a real workflow system where public intake becomes a governed run, plans stay visible before approval, and artifacts accumulate value before handoff.",
       capabilities: [
         "Narrative intake and clarification",
         "Run, project, and job orchestration",
@@ -315,7 +315,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
         "Run-first artifact ownership and promotion"
       ],
       outcome:
-        `${ateamModeSummary} It presents ATEAM as a real product capability inside Una Labs instead of a local wrapper demo.`
+        `${ateamModeSummary} It presents ATEAM as a real product capability inside Una Labs instead of a generic AI app or local wrapper demo.`
     }
   }
 ];

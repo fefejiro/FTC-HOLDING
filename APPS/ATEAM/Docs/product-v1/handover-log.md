@@ -252,3 +252,49 @@ Push the layout cleanup, let Cloudflare deploy it, then visually QA `https://una
 - intake surface leading above the fold
 - cleaner demo-mode copy
 - secondary role/guidance content appearing lower on the page instead of competing with the first workflow action
+
+## 2026-04-07 Narrative Rewrite And Funding Memo Pack
+
+### Summary
+
+Repositioned the public ATEAM and Una Labs narrative away from "operator-led AI build studio" language and toward trusted AI workflow infrastructure, governed execution, and decision-ready outputs. Added a funding-positioning memo pack for ATEAM, Una Labs, and PeacePad so the product story is documented for future grant, partnership, and commercialization work.
+
+### Files Changed
+
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/app/components/OperatorOfficePanel.tsx`
+- `APPS/ftc-site/app/components/Header.tsx`
+- `APPS/ftc-site/app/components/HomePageExperience.tsx`
+- `APPS/ftc-site/app/layout.tsx`
+- `APPS/ftc-site/app/page.tsx`
+- `APPS/ftc-site/app/ateam/page.tsx`
+- `APPS/ftc-site/lib/ateamMode.ts`
+- `APPS/ftc-site/lib/content.ts`
+- `APPS/ATEAM/Docs/README.md`
+- `APPS/ATEAM/README.md`
+- `APPS/ATEAM/Docs/funding-positioning/README.md`
+- `APPS/ATEAM/Docs/funding-positioning/ateam-memo.md`
+- `APPS/ATEAM/Docs/funding-positioning/una-labs-memo.md`
+- `APPS/ATEAM/Docs/funding-positioning/peacepad-memo.md`
+
+### Decisions Made
+
+- made the public ATEAM hero and proof language center on structured intake, scoped plans, human approval, and decision-ready output
+- kept the working fallback behavior intact, but rewrote the copy to use cleaner demo-mode language without backend/debug phrasing
+- treated operator roles as a supporting workflow-stage concept instead of the main product identity
+- aligned the surrounding Una Labs metadata and homepage language to support a workflow-infrastructure story
+- documented claims intentionally avoided so the public narrative stays stronger than "AI app" language without overclaiming sovereignty, hosting, or durable shared persistence
+- verified the funding-positioning memos against official Canada, NRC, ISED, Vector, and Ontario sources on 2026-04-07
+
+### Validation
+
+- `npm --prefix APPS/ftc-site run build`
+
+### Unresolved Issues
+
+- the shared Railway `ateam-api` backend is still paused, so the live public demo still relies on fallback mode for run continuity
+- the new narrative is stronger than the old one, but some deeper public copy in adjacent Una Labs routes can still be aligned further if we want the entire site to tell one consistent infrastructure story
+
+### Exact Next Step
+
+Let Cloudflare deploy the narrative pass, QA `/ateam` and the Una Labs homepage copy on the public host, then decide whether to do a second-wave alignment pass across the products and work pages.

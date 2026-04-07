@@ -6,7 +6,7 @@ import AteamLandingExperience from "../components/AteamLandingExperience";
 export const metadata: Metadata = {
   title: "ATEAM | Una Labs",
   description:
-    "Use ATEAM inside Una Labs to turn a rough idea into a structured run, visible progress, preview artifacts, and a clear project handoff.",
+    "Use ATEAM to turn a rough request into a structured plan, human approval point, and decision-ready output with visible workflow state.",
   alternates: {
     canonical: "/ateam"
   }

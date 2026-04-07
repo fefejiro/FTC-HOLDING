@@ -18,8 +18,8 @@ const AGENTS: AgentDef[] = [
   {
     id: "lead",
     name: "Lead",
-    hook: "Own the outcome",
-    description: "Owns the goal, constraints, and outcome.",
+    hook: "Own the scope",
+    description: "Defines the goal, constraints, and success criteria.",
     stageLabel: "Stage 1 - Direction",
     activeIn: ["routing"],
     doneAfter: ["building", "packaging", "done"]
@@ -27,8 +27,8 @@ const AGENTS: AgentDef[] = [
   {
     id: "scout",
     name: "Scout",
-    hook: "Find the signal",
-    description: "Turns raw ideas into structured intake.",
+    hook: "Structure the request",
+    description: "Turns rough input into clearer context and request signals.",
     stageLabel: "Stage 2 - Discovery",
     activeIn: ["routing"],
     doneAfter: ["building", "packaging", "done"]
@@ -36,8 +36,8 @@ const AGENTS: AgentDef[] = [
   {
     id: "architect",
     name: "Architect",
-    hook: "Design the system",
-    description: "Designs the flow, logic, and system plan.",
+    hook: "Shape the plan",
+    description: "Builds the workflow path, logic, and first-pass scope.",
     stageLabel: "Stage 3 - System design",
     activeIn: ["routing", "building"],
     doneAfter: ["packaging", "done"]
@@ -45,8 +45,8 @@ const AGENTS: AgentDef[] = [
   {
     id: "builder",
     name: "Builder",
-    hook: "Make it real",
-    description: "Brings the system to life.",
+    hook: "Prepare the build path",
+    description: "Turns the approved plan into artifacts and implementation direction.",
     stageLabel: "Stage 4 - Execution",
     activeIn: ["building"],
     doneAfter: ["packaging", "done"]
@@ -54,8 +54,8 @@ const AGENTS: AgentDef[] = [
   {
     id: "designer",
     name: "Designer",
-    hook: "Make it usable",
-    description: "Shapes the experience into something clear and usable.",
+    hook: "Keep it decision-ready",
+    description: "Makes the output clear, legible, and reviewable.",
     stageLabel: "Stage 5 - Experience",
     activeIn: ["packaging"],
     doneAfter: ["done"]
@@ -63,8 +63,8 @@ const AGENTS: AgentDef[] = [
   {
     id: "operator",
     name: "Operator",
-    hook: "Run it live",
-    description: "Runs the system in the real world.",
+    hook: "Move into delivery",
+    description: "Carries the approved output into real execution when the path is ready.",
     stageLabel: "Stage 6 - Live operation",
     activeIn: ["packaging", "done"],
     doneAfter: []
@@ -282,7 +282,7 @@ export default function OperatorOfficePanel({ phase }: { phase: OfficePhase }) {
   return (
     <div className="opi-shell">
       <div className="opi-header">
-        <span className="opi-header-label">Execution team</span>
+        <span className="opi-header-label">Workflow stages</span>
         <span className={`opi-header-chip opi-header-chip--${phase}`}>
           {phase !== "idle" && <span className="opi-header-dot" aria-hidden="true" />}
           {PHASE_LABEL[phase]}
@@ -290,20 +290,20 @@ export default function OperatorOfficePanel({ phase }: { phase: OfficePhase }) {
       </div>
 
       <div className="opi-intro" aria-hidden="true">
-        <p className="opi-intro-title">
-          {phase === "idle"
-            ? "Each operator represents a stage in turning ideas into execution."
-            : phase === "done"
-              ? "Idea translated into a live-ready next step."
-              : "We take you from idea to live system through a structured operator flow."}
-        </p>
-        <p className="opi-intro-sub">
-          {phase === "idle"
-            ? "Lead -> Scout -> Architect -> Builder -> Designer -> Operator"
-            : phase === "done"
-              ? "Review the pack, confirm the path, and move into execution."
-              : "Each operator owns a clear step, from direction and intake to design, build, and live operation."}
-        </p>
+          <p className="opi-intro-title">
+            {phase === "idle"
+              ? "ATEAM moves requests through a clear, reviewable workflow."
+              : phase === "done"
+                ? "The request is now packaged into a decision-ready next step."
+                : "The workflow is shaping the request into a visible plan and output."}
+          </p>
+          <p className="opi-intro-sub">
+            {phase === "idle"
+              ? "Structured intake -> scoped plan -> approval -> output -> delivery handoff"
+              : phase === "done"
+                ? "Review the output, confirm the path, and move into execution."
+                : "Each stage protects scope, keeps decisions visible, and prepares a cleaner next move."}
+          </p>
       </div>
 
       <div className="opi-grid">

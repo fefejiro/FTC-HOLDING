@@ -4,9 +4,9 @@ import type { Metadata } from "next";
 import HomePageExperience from "./components/HomePageExperience";
 
 export const metadata: Metadata = {
-  title: "Una Labs | Products, Client Launches, and AI Workflow Systems",
+  title: "Una Labs | Trusted AI Workflow Systems, Products, and Delivery",
   description:
-    "Una Labs is the umbrella studio for shipped products, client launches, and ATEAM-guided workflow systems. Explore what the studio builds before diving into the dedicated ATEAM page.",
+    "Una Labs is the parent platform for trusted AI workflow systems, shipped products, and client delivery infrastructure. Explore ATEAM, public product proof, and live launch work.",
   alternates: {
     canonical: "https://unalabs.cloud"
   }

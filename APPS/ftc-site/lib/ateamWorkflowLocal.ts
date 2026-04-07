@@ -166,7 +166,7 @@ function buildStatusNarrative(run: WorkflowRun): StatusNarrative {
     return {
       currentStage: "Packaging",
       label: "Packaging output",
-      summary: "ATEAM has artifacts and is assembling the final decision pack.",
+      summary: "ATEAM has artifacts and is assembling the final decision-ready output.",
       movementReason: "The visible first pass is being bundled for handoff.",
       updatedAt: run.updatedTs,
     };
@@ -174,7 +174,7 @@ function buildStatusNarrative(run: WorkflowRun): StatusNarrative {
   if (state === "completed") {
     return {
       currentStage: "Completed",
-      label: "Decision pack ready",
+      label: "Decision-ready output",
       summary: "ATEAM finished the run and prepared the package for the next move.",
       movementReason: "The output is ready for review, download, and handoff.",
       updatedAt: run.updatedTs,
@@ -192,7 +192,7 @@ function buildStatusNarrative(run: WorkflowRun): StatusNarrative {
   return {
     currentStage: "Planning",
     label: "Structuring the run",
-    summary: "ATEAM is turning the rough idea into a visible plan and route.",
+    summary: "ATEAM is turning the request into a visible plan and route.",
     movementReason: "The request is being normalized into a first-pass structure.",
     updatedAt: run.updatedTs,
   };
@@ -203,14 +203,14 @@ function buildPublicFlow(run: WorkflowRun): PublicFlow {
   const title = toText(run.brief?.title, 160) || "What ATEAM understood";
   const summary =
     toText(run.brief?.summary, 280) ||
-    "ATEAM is turning the rough idea into a clearer request, visible plan, and scoped next move.";
+    "ATEAM is turning the request into a clearer brief, visible plan, and scoped next move.";
   return {
     modules: [
       {
         key: "intake",
         title: "Intake",
         state: run.idea ? "Run captured" : "Waiting for idea",
-        summary: "The rough idea is captured without forcing the user into a rigid early form.",
+        summary: "The request is captured without forcing the user into a rigid early form.",
         detail: "ATEAM uses guided prompts only where they improve clarity.",
       },
       {
@@ -232,10 +232,10 @@ function buildPublicFlow(run: WorkflowRun): PublicFlow {
       {
         key: "output",
         title: "Output",
-        state: run.state === "completed" ? "Decision pack ready" : "Building output",
+        state: run.state === "completed" ? "Decision-ready output" : "Building output",
         summary: run.recentArtifact
           ? "The primary artifact and next move are ready for review."
-          : "ATEAM returns a decision pack, not just a conversation.",
+          : "ATEAM returns a decision-ready output, not just a conversation.",
         detail: "The output is designed to be easy to inspect, download, and hand off.",
       },
     ],
@@ -436,7 +436,7 @@ function createLocalRun(payload: {
     snapshot: {
       state: "planning",
       phase: "analysis",
-      summary: "ATEAM normalized the rough idea into a structured request.",
+      summary: "ATEAM normalized the request into a structured workflow record.",
       updatedAt: createdAt,
     },
   }) as WorkflowRequest;
@@ -787,7 +787,7 @@ function generateLocalPack(runId: string) {
     state: "generating_artifact",
     reason: "pack_generating",
     actor: "system",
-    summary: "ATEAM generated the decision pack and is preparing the final handoff.",
+    summary: "ATEAM generated the decision-ready output and is preparing the final handoff.",
   });
   packaging.artifacts = buildWorkflowPackUnsafe({ run: packaging });
   packaging.approvals = {

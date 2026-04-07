@@ -192,6 +192,7 @@ Start here for architecture and cleanup context:
 ATEAM V1 product direction now lives under `Docs/product-v1/`.
 
 - `Docs/product-v1/README.md` is the entry point
+- `Docs/funding-positioning/README.md` holds the funding-positioning memo pack for ATEAM, Una Labs, and PeacePad
 - `DOCS/ATEAM_PUBLIC_OPERATOR_HANDOVER_2026-03-24.md` is historical context only
 
 Operator edge runtime:

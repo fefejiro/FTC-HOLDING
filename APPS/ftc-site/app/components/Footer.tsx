@@ -104,9 +104,10 @@ export default function Footer() {
         <div className="footer-grid">
           <div className="footer-brand">
             <p className="footer-title">Una Labs</p>
-            <p className="footer-subtitle">Operator-led studio</p>
+            <p className="footer-subtitle">Trusted workflow systems</p>
             <p className="footer-copy">
-              The fastest path from rough idea to live, production-grade digital system.
+              Trusted AI workflow systems, lead operations, and delivery infrastructure for teams
+              that need a clearer next move.
             </p>
             <p className="footer-powered">Powered by ATEAM | Built with Next.js, React, and Supabase.</p>
             <div className="footer-contact-row">

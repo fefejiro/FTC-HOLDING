@@ -13,6 +13,7 @@ This folder mixes current operating docs and older planning notes. Use this file
 - [`product-v1/architecture-v1.md`](product-v1/architecture-v1.md): practical V1 architecture
 - [`product-v1/implementation-plan.md`](product-v1/implementation-plan.md): phased build status
 - [`product-v1/handover-log.md`](product-v1/handover-log.md): continuation log for future sessions
+- [`funding-positioning/README.md`](funding-positioning/README.md): funding-positioning memo pack for ATEAM, Una Labs, and PeacePad
 - [`../RUNBOOK.md`](../RUNBOOK.md): install, startup, testing, and cleanup commands
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): system structure
 - [`MIGRATION_READINESS.md`](MIGRATION_READINESS.md): platform and deployment gaps

@@ -106,7 +106,7 @@ export default function PolarAnchorCaseStudy() {
         <article className="card final-cta-card">
           <div>
             <p className="eyebrow">Next step</p>
-            <h2>Need a similar operator-led build path?</h2>
+            <h2>Need a similar scoped-to-delivery path?</h2>
             <p className="muted">
               Una Labs can scope a website and quote system, then carry it through delivery,
               iteration, and handoff.

@@ -44,7 +44,7 @@ const PHASE_LABELS: Record<string, string> = {
   initiation: "Mapping the path...",
   prototype_pack: "Building the first pass...",
   pack_approval: "Reviewing the output...",
-  handoff: "Decision pack ready",
+  handoff: "Decision-ready output",
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ export default function AteamHomeWidget() {
   const [runId, setRunId] = useState<string | null>(null);
   const [run, setRun] = useState<RunData | null>(null);
   const [activeStage, setActiveStage] = useState(-1);
-  const [stageLabel, setStageLabel] = useState("ATEAM is live · Drop a rough idea below");
+  const [stageLabel, setStageLabel] = useState("ATEAM is live - start with a rough request");
   const [error, setError] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -139,7 +139,7 @@ export default function AteamHomeWidget() {
     setRunId(null);
     setRun(null);
     setActiveStage(-1);
-    setStageLabel("ATEAM is live · Drop a rough idea below");
+    setStageLabel("ATEAM is live - start with a rough request");
     setError("");
   }
 
@@ -150,7 +150,7 @@ export default function AteamHomeWidget() {
   const outputTitle =
     run?.brief?.title ||
     run?.publicFlow?.understanding?.title ||
-    "Decision pack ready";
+    "Decision-ready output";
   const outputVerdict =
     run?.brief?.quickVerdict ||
     run?.brief?.summary ||
@@ -202,7 +202,7 @@ export default function AteamHomeWidget() {
       </div>
 
       {/* Status line */}
-      <p className="ahw-status">{isWorking ? stageLabel : isDone ? "Decision pack ready" : stageLabel}</p>
+      <p className="ahw-status">{isWorking ? stageLabel : isDone ? "Decision-ready output" : stageLabel}</p>
 
       {/* ── IDLE: intake form ── */}
       {isIdle && (
@@ -210,7 +210,7 @@ export default function AteamHomeWidget() {
           <textarea
             className="ahw-textarea"
             rows={3}
-            placeholder="Drop a rough idea — ATEAM routes it, builds a first pass, and returns a decision pack."
+            placeholder="Describe the request - ATEAM structures it, scopes the plan, and returns a decision-ready output."
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
             onKeyDown={(e) => {
@@ -253,7 +253,7 @@ export default function AteamHomeWidget() {
           {outputLane && <span className="ahw-output-lane">{outputLane}</span>}
           <div className="ahw-row ahw-row--mt">
             <Link href={`/ateam?run=${runId}`} className="ahw-btn-primary" prefetch={false}>
-              View decision pack
+              View output
             </Link>
             <Link href="/work-with-ftc" className="ahw-link" prefetch={false}>
               Start this project →

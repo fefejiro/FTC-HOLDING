@@ -124,7 +124,7 @@ export default function Header() {
       ? ogTradesAcademyConfig.tagline
       : isPolarSite
         ? polarAnchorConfig.tagline
-        : "Fast websites | lead automation | AI delivery";
+        : "Trusted AI workflows | lead systems | delivery";
   const ogHeaderCta = (
     <a
       href={ogTradesAcademyConfig.coursePurchaseUrl}

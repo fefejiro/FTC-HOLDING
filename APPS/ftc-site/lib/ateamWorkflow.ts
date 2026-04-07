@@ -423,7 +423,7 @@ export const ateamWorkflowCategories = [
   {
     value: "auto",
     label: "Auto detect",
-    detail: "Let ATEAM pick the best lane from the rough idea."
+    detail: "Let ATEAM pick the best lane from the request."
   },
   {
     value: "website",
@@ -477,8 +477,8 @@ export const ateamWorkflowSteps = [
   },
   {
     key: "pack",
-    label: "Decision pack",
-    detail: "Bundle the output and next move."
+    label: "Output",
+    detail: "Bundle the artifact and next move."
   }
 ] as const;
 
@@ -489,7 +489,7 @@ const PHASE_LABELS: Record<string, string> = {
   initiation: "Route",
   prototype_pack: "Build pass",
   pack_approval: "Build pass",
-  handoff: "Decision pack",
+  handoff: "Output",
   archived: "Archived"
 };
 

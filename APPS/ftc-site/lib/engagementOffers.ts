@@ -38,11 +38,11 @@ export const engagementOffers: readonly EngagementOffer[] = [
     value: "build-execution-track",
     title: "Build Execution Track",
     summary:
-      "Best when you already know the system needs to get built and want operator-led delivery.",
+      "Best when you already know the system needs to get built and want governed delivery execution.",
     meta: "Phased delivery - execution, iteration, and handoff",
     price: "Starting from $5,000+",
     idealFor: "Teams that are ready to move from scope into delivery, launch, and iterative execution.",
-    proofPrompt: "See what full operator-led delivery looks like once the path is already clear."
+    proofPrompt: "See what full delivery execution looks like once the path is already clear."
   }
 ] as const;
 

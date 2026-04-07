@@ -6,7 +6,7 @@ import { engagementOffers } from "../../lib/engagementOffers";
 export const metadata = {
   title: "Start a Project | Una Labs",
   description:
-    "Send a project request to Una Labs for fast websites, lead systems, and AI-assisted workflow direction."
+    "Send a project request to Una Labs for trusted workflow systems, lead operations, and decision-ready delivery direction."
 };
 
 type WorkWithFtcPageProps = {

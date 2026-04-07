@@ -105,7 +105,7 @@ export const polarAnchorLaunch: ClientLaunch = {
     value: "build-execution-track",
     label: "Build Execution Track",
     rationale:
-      "Shows full operator-led delivery once the quote path, website structure, and shipping workflow are ready to move into execution."
+      "Shows full delivery execution once the quote path, website structure, and shipping workflow are ready to move into execution."
   },
   websiteUrl: "https://unalabs.cloud/polar-anchor",
   brand: {

@@ -26,9 +26,9 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk"
 });
 
-const defaultTitle = "Una Labs - AI Build Lab | Fast Websites, Lead Systems & ATEAM Workflows";
+const defaultTitle = "Una Labs | Trusted AI Workflow Systems and Delivery Infrastructure";
 const defaultDescription =
-  "Una Labs is an operator-led AI build lab delivering fast websites, lead automation, and ATEAM-guided workflows. Trusted by LCBO, Home Depot, and the Ontario Government.";
+  "Una Labs designs trusted AI workflow systems, lead operations, and delivery infrastructure. ATEAM turns rough requests into scoped plans, human-approved outputs, and decision-ready next steps.";
 const defaultOgImage = `${SITE_URL}/opengraph-image`;
 
 const organizationStructuredData = {
@@ -47,7 +47,7 @@ const organizationStructuredData = {
       availableLanguage: ["en"]
     }
   ],
-  description: "Operator-led AI build lab for fast websites, lead systems, and ATEAM workflows."
+  description: "Trusted AI workflow systems, lead operations, and delivery infrastructure."
 };
 
 export const metadata: Metadata = {
@@ -97,7 +97,7 @@ export const metadata: Metadata = {
         url: defaultOgImage,
         width: 1200,
         height: 630,
-        alt: "Una Labs - Creative AI Studio - Building AI products"
+        alt: "Una Labs trusted AI workflow systems and delivery infrastructure"
       }
     ]
   },

@@ -34,14 +34,14 @@ export default function HomePageExperience() {
                 <p className="eyebrow">Una Labs</p>
                 <p className="hero-urgency-pill">
                   <span>+</span>
-                  Operator-led AI build studio
+                  Trusted AI workflow infrastructure
                 </p>
                 <h1 className="hero-primary-title">
-                  Products, client launches, and clearer next systems.
+                  Trusted workflow systems, product proof, and delivery infrastructure.
                 </h1>
                 <p className="hero-subtitle">
-                  Una Labs is the umbrella studio for shipped products, live client delivery, and
-                  ATEAM-guided workflow shaping when an idea is still rough.
+                  Una Labs is the parent platform for shipped products, live client delivery, and
+                  governed AI workflow systems like ATEAM when a request is still rough.
                 </p>
                 <div className="hero-cta-row">
                   <Link href="/products" prefetch={false} className="btn btn-primary">
@@ -55,9 +55,9 @@ export default function HomePageExperience() {
                   </Link>
                 </div>
                 <ul className="hero-credibility-bullets home-studio-credibility">
-                  <li>Studio-owned products show how Una Labs ships and operates its own systems.</li>
-                  <li>Client Launches shows the delivery side with real business rollout proof.</li>
-                  <li>ATEAM is the dedicated workflow system for turning rough ideas into scoped next steps.</li>
+                  <li>Studio-owned products show how Una Labs designs and operates real systems.</li>
+                  <li>Client Launches shows the delivery side with real rollout and execution proof.</li>
+                  <li>ATEAM is the workflow layer for turning rough requests into scoped, reviewable next steps.</li>
                 </ul>
               </div>
 
@@ -144,7 +144,7 @@ export default function HomePageExperience() {
                     <div className="home-glance-row-copy">
                       <p className="card-kicker">ATEAM</p>
                       <strong>Workflow-first scoping</strong>
-                      <p className="muted">Rough idea in. Scoped next step out.</p>
+                      <p className="muted">Structured intake, human approval, decision-ready output.</p>
                     </div>
                   </article>
                 </div>
@@ -210,10 +210,10 @@ export default function HomePageExperience() {
             <article className="card home-lane-card home-lane-card--ateam">
               {ateamProject ? <ProductStatusBadge status={ateamProject.status} className="home-lane-status" /> : null}
               <p className="card-kicker">ATEAM</p>
-              <h3>The workflow system for rough ideas.</h3>
+              <h3>The workflow layer for rough operational requests.</h3>
               <p>
-                ATEAM lives inside Una Labs as the product route for messy starts. It turns rough
-                input into structure, visible work, and a cleaner handoff.
+                ATEAM lives inside Una Labs as the trusted workflow system for messy starts. It
+                turns rough requests into scoped plans, visible review points, and cleaner handoff.
               </p>
               <AteamProductPreview
                 title="ATEAM teaser preview"

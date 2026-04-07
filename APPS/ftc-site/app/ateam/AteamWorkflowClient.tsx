@@ -332,9 +332,7 @@ export default function AteamWorkflowClient({
     const handleFallback = () => {
       setLocalFallbackEnabled(true);
       setError("");
-      setNotice(
-        "ATEAM is running in local demo mode because the cloud backend is paused. Runs stay in this browser for now."
-      );
+      setNotice("Demo mode active. Runs currently stay in this browser.");
     };
     window.addEventListener(eventName, handleFallback as EventListener);
     return () => window.removeEventListener(eventName, handleFallback as EventListener);
@@ -881,7 +879,7 @@ export default function AteamWorkflowClient({
   }
 
   function handleContinueWithUnaLabs() {
-    if (!handoff) { setError("The decision pack isn't ready yet."); return; }
+    if (!handoff) { setError("The output bundle isn't ready yet."); return; }
     clearAteamDemoHandoff();
     saveAteamWorkflowHandoff(handoff);
     trackEvent("ateam_continue_to_intake", {
@@ -924,7 +922,7 @@ export default function AteamWorkflowClient({
       </header>
 
       <div className="wf-split">
-        <aside className="wf-office-col" aria-label="ATEAM agents">
+        <aside className="wf-office-col" aria-label="ATEAM workflow stages">
           <OperatorOfficePanel phase={officePhase} />
         </aside>
         <div className="wf-intake-col">
@@ -940,34 +938,34 @@ export default function AteamWorkflowClient({
           {!run && !isWorking && !workflowReady && (
             <section className="wf-stage wf-stage--intake">
               <div className="wf-intro">
-                <p className="wf-intro-eyebrow">Rough idea in - scoped plan - approval - artifact out</p>
+                <p className="wf-intro-eyebrow">Trusted AI workflow infrastructure</p>
                 <h1 className="wf-intro-headline">
-                  Start with the rough idea.
+                  Turn rough operational requests
                   <br />
-                  Get a scoped plan you can approve.
+                  into scoped, governed workflows.
                 </h1>
                 <p className="wf-intro-lead">
-                  ATEAM helps you frame the request, shape the first-pass plan, and package a
-                  concrete next move into delivery with Una Labs.
+                  Structured intake, visible planning, human approval, and decision-ready outputs
+                  in one workflow surface before anything moves into delivery.
                 </p>
               </div>
 
               <div className="wf-proof-strip" aria-label="How ATEAM moves work forward">
                 <div className="wf-proof-step">
-                  <span className="wf-proof-step-label">Idea in</span>
-                  <p>A rough problem, request, or opportunity enters the system.</p>
+                  <span className="wf-proof-step-label">Structured intake</span>
+                  <p>Capture the request, context, constraints, and non-goals without losing the signal.</p>
                 </div>
                 <div className="wf-proof-step">
-                  <span className="wf-proof-step-label">Operator flow</span>
-                  <p>Lead, Scout, Architect, Builder, Designer, and Operator each handle a clear stage.</p>
+                  <span className="wf-proof-step-label">Scoped plan</span>
+                  <p>ATEAM turns the request into a visible first-pass plan, expected artifact, and likely blockers.</p>
                 </div>
                 <div className="wf-proof-step">
-                  <span className="wf-proof-step-label">Decision pack</span>
-                  <p>ATEAM turns the work into a scoped first pass with next steps.</p>
+                  <span className="wf-proof-step-label">Human approval</span>
+                  <p>Review assumptions, tune the plan, and approve before artifact generation or delivery steps.</p>
                 </div>
                 <div className="wf-proof-step">
-                  <span className="wf-proof-step-label">Live path</span>
-                  <p>Una Labs picks up the handoff and moves it into real execution.</p>
+                  <span className="wf-proof-step-label">Decision-ready output</span>
+                  <p>Get a scoped pack, implementation direction, and a clear next move into Una Labs delivery.</p>
                 </div>
               </div>
 
@@ -975,8 +973,8 @@ export default function AteamWorkflowClient({
                 <div className="wf-template-card">
                   <div className="wf-template-head">
                     <div>
-                      <p className="wf-pack-panel-kicker">Request templates</p>
-                      <h2 className="wf-recent-title">Start from a stronger first-pass pattern</h2>
+                      <p className="wf-pack-panel-kicker">Workflow templates</p>
+                      <h2 className="wf-recent-title">Start from a stronger request pattern</h2>
                     </div>
                     <span className="wf-recent-count">{catalog.templates.length} curated</span>
                   </div>
@@ -999,7 +997,7 @@ export default function AteamWorkflowClient({
 
               <div className="wf-intake-card">
                 <div className="wf-intake-label-row">
-                  <label className="wf-field-label" htmlFor="wf-idea">Drop the rough idea</label>
+                  <label className="wf-field-label" htmlFor="wf-idea">Describe the request</label>
                   {supportsVoice && (
                     <button
                       type="button"
@@ -1113,15 +1111,15 @@ export default function AteamWorkflowClient({
                     onClick={handleStartRun}
                     disabled={busy !== "idle"}
                   >
-                    {busy !== "idle" ? "Starting..." : "Build the plan ->"}
+                    {busy !== "idle" ? "Starting..." : "Generate the scoped plan ->"}
                   </button>
                   <p className="wf-intake-hint">
-                    Start with the rough idea. These fields simply make the first plan cleaner.
+                    ATEAM structures the request first. Nothing moves forward until you approve the plan.
                   </p>
                 </div>
                 {localFallbackEnabled ? (
                   <p className="wf-local-note" aria-live="polite">
-                    Demo mode is active for now, so this run stays in this browser session.
+                    Demo mode active. Runs stay in this browser during beta.
                   </p>
                 ) : null}
               </div>
@@ -1129,10 +1127,10 @@ export default function AteamWorkflowClient({
               {/* What you'll get */}
               <div className="wf-expect-row" aria-label="What ATEAM produces">
                 {[
-                  { icon: "O", label: "Scoped first pass", detail: "Problem, audience, and the shortest believable path" },
-                  { icon: "[]", label: "Prototype direction", detail: "What the first version should do and prove" },
-                  { icon: "+", label: "Build note", detail: "Scope, risk, lane, and technical direction" },
-                  { icon: "->", label: "Next move", detail: "A handoff Una Labs can review and execute" },
+                  { icon: "O", label: "Structured intake", detail: "Goal, context, constraints, and non-goals captured in one request." },
+                  { icon: "[]", label: "Scoped plan", detail: "Visible steps, expected artifact, and likely blockers before execution." },
+                  { icon: "+", label: "Approval gate", detail: "A human review point before work is packaged into output." },
+                  { icon: "->", label: "Decision-ready output", detail: "A pack Una Labs can review, refine, and move into delivery." },
                 ].map((item) => (
                   <div key={item.label} className="wf-expect-item">
                     <span className="wf-expect-icon" aria-hidden="true">{item.icon}</span>
@@ -1149,7 +1147,7 @@ export default function AteamWorkflowClient({
                   <div className="wf-recent-head">
                     <div>
                       <p className="wf-pack-panel-kicker">Recent runs</p>
-                      <h2 className="wf-recent-title">Pick up a recent ATEAM workflow</h2>
+                      <h2 className="wf-recent-title">Resume a recent workflow</h2>
                     </div>
                     <span className="wf-recent-count">{recentRuns.length} visible</span>
                   </div>
@@ -1261,8 +1259,8 @@ export default function AteamWorkflowClient({
               <div className="wf-clarify-head">
                 <h2 className="wf-clarify-headline">Review the plan before ATEAM executes</h2>
                 <p className="wf-clarify-sub">
-                  This is the V1 trust layer: confirm what ATEAM understood, adjust any missing detail,
-                  then approve, reject, or regenerate the plan.
+                  Confirm what ATEAM understood, tighten the scope if needed, and approve before
+                  the output is generated.
                 </p>
               </div>
 
@@ -1320,7 +1318,7 @@ export default function AteamWorkflowClient({
 
                 <div className="wf-plan-card">
                   <p className="wf-pack-panel-kicker">Visible plan</p>
-                  <h3 className="wf-pack-panel-title">{run.plan?.expectedArtifact?.title || "Decision pack"}</h3>
+                  <h3 className="wf-pack-panel-title">{run.plan?.expectedArtifact?.title || "Decision-ready output"}</h3>
                   <p className="wf-pack-panel-body">{run.plan?.summary || "ATEAM is preparing a scoped first-pass plan."}</p>
 
                   {(run.plan?.proposedSteps || []).length > 0 && (
@@ -1352,7 +1350,7 @@ export default function AteamWorkflowClient({
                   <div className="wf-template-head">
                     <div>
                       <p className="wf-pack-panel-kicker">Role-aware execution</p>
-                      <h2 className="wf-recent-title">Phase 2 role library</h2>
+                      <h2 className="wf-recent-title">Workflow stage library</h2>
                     </div>
                     <span className="wf-recent-count">
                       {run.plan?.singleAgent?.lane || run.request?.routing?.recommendedLane || "Single lane"}
@@ -1433,9 +1431,9 @@ export default function AteamWorkflowClient({
 
               <div className="wf-plan-editor-card">
                 <div className="wf-template-head">
-                  <div>
-                    <p className="wf-pack-panel-kicker">Editable plan scaffolding</p>
-                    <h2 className="wf-recent-title">Tune the plan before execution</h2>
+                    <div>
+                      <p className="wf-pack-panel-kicker">Pre-approval plan edits</p>
+                      <h2 className="wf-recent-title">Tune the plan before output generation</h2>
                   </div>
                   <button
                     type="button"
@@ -1535,8 +1533,8 @@ export default function AteamWorkflowClient({
                   </div>
                 ) : (
                   <p className="wf-pack-panel-body">
-                    Phase 2 keeps plan editing safely before execution. Use it to refine wording,
-                    steps, and artifact framing without changing the route contract.
+                    Use this to refine wording, steps, and artifact framing without changing the
+                    underlying workflow contract.
                   </p>
                 )}
               </div>
@@ -1588,7 +1586,7 @@ export default function AteamWorkflowClient({
                   onClick={() => handlePlanDecision("approved")}
                   disabled={busy !== "idle"}
                 >
-                  Approve and build the pack {"->"}
+                  Approve and generate the output {"->"}
                 </button>
                 <button
                   type="button"
@@ -1615,12 +1613,12 @@ export default function AteamWorkflowClient({
             <section
               ref={outputRef}
               className="wf-stage wf-stage--output"
-              aria-label="Decision pack"
+              aria-label="Decision-ready output"
             >
               {/* Pack header */}
               <div className="wf-pack-head">
                 <div className="wf-pack-head-copy">
-                  <span className="wf-pack-badge">Decision pack ready</span>
+                  <span className="wf-pack-badge">Decision-ready output</span>
                   <h1 className="wf-pack-title">{run.brief?.title || "ATEAM result"}</h1>
                   {run.brief?.summary && (
                     <p className="wf-pack-summary">{run.brief.summary}</p>
@@ -1876,11 +1874,11 @@ export default function AteamWorkflowClient({
               </div>
               <div className="wf-placeholder-arrow">{"->"}</div>
               <div className="wf-placeholder-node">
-                <span>⬡</span><p>Operator flow</p>
+                <span>⬡</span><p>Scoped plan</p>
               </div>
               <div className="wf-placeholder-arrow">{"->"}</div>
               <div className="wf-placeholder-node">
-                <span>✦</span><p>Decision pack</p>
+                <span>✦</span><p>Approved output</p>
               </div>
               <div className="wf-placeholder-arrow">{"->"}</div>
               <div className="wf-placeholder-node wf-placeholder-node--cta">
@@ -1897,9 +1895,9 @@ export default function AteamWorkflowClient({
         <section className="wf-secondary-band" aria-label="ATEAM supporting information">
           <div className="container">
             <div className="wf-secondary-grid">
-              <div className="wf-fit-strip" aria-label="Who ATEAM is best for">
+                <div className="wf-fit-strip" aria-label="Who ATEAM is best for">
                 <div className="wf-fit-card">
-                  <p className="wf-fit-title">Best for teams that need a clear next step fast</p>
+                  <p className="wf-fit-title">Best for teams that need structured delivery decisions quickly</p>
                   <ul className="wf-fit-list">
                     <li>Local services businesses needing lead and ops systems</li>
                     <li>Founders who need a believable prototype path</li>
@@ -1918,7 +1916,7 @@ export default function AteamWorkflowClient({
                   <div className="wf-template-head">
                     <div>
                       <p className="wf-pack-panel-kicker">Agent role library</p>
-                      <h2 className="wf-recent-title">Who handles what inside ATEAM</h2>
+                      <h2 className="wf-recent-title">Workflow stages inside ATEAM</h2>
                     </div>
                   </div>
                   <div className="wf-role-grid">
