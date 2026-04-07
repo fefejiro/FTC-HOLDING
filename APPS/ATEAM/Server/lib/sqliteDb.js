@@ -29,6 +29,14 @@ function ensureDirForFile(filePath) {
   }
 }
 
+function ensureColumn(db, tableName, columnName, columnSql) {
+  const rows = db.prepare(`PRAGMA table_info(${tableName})`).all();
+  const exists = Array.isArray(rows) && rows.some((row) => String(row?.name || "").trim() === columnName);
+  if (!exists) {
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnSql}`);
+  }
+}
+
 function runMigrations(db) {
   // Core event stream backing Mission Control and Talk/Timeline.
   db.exec(`
@@ -125,6 +133,12 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_workflow_runs_updated
       ON workflow_runs(updated_ts);
   `);
+
+  ensureColumn(db, "workflow_runs", "request_json", "request_json TEXT NOT NULL DEFAULT '{}'");
+  ensureColumn(db, "workflow_runs", "plan_json", "plan_json TEXT NOT NULL DEFAULT '{}'");
+  ensureColumn(db, "workflow_runs", "evaluation_json", "evaluation_json TEXT NOT NULL DEFAULT '{}'");
+  ensureColumn(db, "workflow_runs", "state", "state TEXT NOT NULL DEFAULT 'queued'");
+  ensureColumn(db, "workflow_runs", "state_history_json", "state_history_json TEXT NOT NULL DEFAULT '[]'");
 }
 
 function openDb(dbPath) {

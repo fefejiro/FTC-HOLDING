@@ -1,6 +1,12 @@
 import crypto from "crypto";
 import { getDb } from "./sqliteDb.js";
-import { WORKFLOW_PHASES, normalizeWorkflowCategory } from "./workflowEngine.js";
+import {
+  WORKFLOW_PHASES,
+  WORKFLOW_STATES,
+  mapWorkflowPhaseToState,
+  normalizeWorkflowCategory,
+  normalizeWorkflowState
+} from "./workflowEngine.js";
 
 function safeText(value, limit = 220) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, limit);
@@ -37,6 +43,19 @@ function normalizeObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
+function normalizeStateHistory(value) {
+  return normalizeArray(value)
+    .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      state: normalizeWorkflowState(entry.state || entry.to || ""),
+      phase: normalizePhase(entry.phase || ""),
+      reason: safeText(entry.reason, 220),
+      actor: safeText(entry.actor, 80),
+      createdAt: safeText(entry.createdAt || entry.timestamp, 80) || new Date().toISOString()
+    }))
+    .slice(-20);
+}
+
 export function createWorkflowRunStore() {
   const db = getDb();
 
@@ -44,8 +63,9 @@ export function createWorkflowRunStore() {
     INSERT INTO workflow_runs (
       id, created_ts, updated_ts, phase, requested_by, category, idea, title,
       questions_json, answers_json, brief_json, recommended_lane, risks_json,
-      artifacts_json, approvals_json, links_json, handoff_json, meta_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      artifacts_json, approvals_json, links_json, handoff_json, meta_json,
+      request_json, plan_json, evaluation_json, state, state_history_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const selectStmt = db.prepare("SELECT * FROM workflow_runs WHERE id = ? LIMIT 1");
@@ -56,7 +76,8 @@ export function createWorkflowRunStore() {
     SET updated_ts = ?, phase = ?, requested_by = ?, category = ?, idea = ?, title = ?,
         questions_json = ?, answers_json = ?, brief_json = ?, recommended_lane = ?,
         risks_json = ?, artifacts_json = ?, approvals_json = ?, links_json = ?,
-        handoff_json = ?, meta_json = ?
+        handoff_json = ?, meta_json = ?, request_json = ?, plan_json = ?,
+        evaluation_json = ?, state = ?, state_history_json = ?
     WHERE id = ?
   `);
 
@@ -80,7 +101,12 @@ export function createWorkflowRunStore() {
       approvals: normalizeObject(safeJsonParse(row.approvals_json, {})),
       links: normalizeObject(safeJsonParse(row.links_json, {})),
       handoff: normalizeObject(safeJsonParse(row.handoff_json, {})),
-      meta: normalizeObject(safeJsonParse(row.meta_json, {}))
+      meta: normalizeObject(safeJsonParse(row.meta_json, {})),
+      request: normalizeObject(safeJsonParse(row.request_json, {})),
+      plan: normalizeObject(safeJsonParse(row.plan_json, {})),
+      evaluation: normalizeObject(safeJsonParse(row.evaluation_json, {})),
+      state: normalizeWorkflowState(row.state || mapWorkflowPhaseToState(row.phase)),
+      stateHistory: normalizeStateHistory(safeJsonParse(row.state_history_json, []))
     };
   }
 
@@ -99,7 +125,12 @@ export function createWorkflowRunStore() {
     approvals = {},
     links = {},
     handoff = {},
-    meta = {}
+    meta = {},
+    request = {},
+    plan = {},
+    evaluation = {},
+    state = "",
+    stateHistory = []
   } = {}) {
     const id = `wfr_${crypto.randomUUID()}`;
     const now = new Date().toISOString();
@@ -121,7 +152,12 @@ export function createWorkflowRunStore() {
       safeJsonStringify(normalizeObject(approvals)),
       safeJsonStringify(normalizeObject(links)),
       safeJsonStringify(normalizeObject(handoff)),
-      safeJsonStringify(normalizeObject(meta))
+      safeJsonStringify(normalizeObject(meta)),
+      safeJsonStringify(normalizeObject(request)),
+      safeJsonStringify(normalizeObject(plan)),
+      safeJsonStringify(normalizeObject(evaluation)),
+      normalizeWorkflowState(state || mapWorkflowPhaseToState(phase)),
+      safeJsonStringify(normalizeStateHistory(stateHistory), "[]")
     );
     return get(id);
   }
@@ -161,7 +197,12 @@ export function createWorkflowRunStore() {
       approvals: normalizeObject(patch.approvals ?? current.approvals),
       links: normalizeObject(patch.links ?? current.links),
       handoff: normalizeObject(patch.handoff ?? current.handoff),
-      meta: normalizeObject(patch.meta ?? current.meta)
+      meta: normalizeObject(patch.meta ?? current.meta),
+      request: normalizeObject(patch.request ?? current.request),
+      plan: normalizeObject(patch.plan ?? current.plan),
+      evaluation: normalizeObject(patch.evaluation ?? current.evaluation),
+      state: normalizeWorkflowState(patch.state ?? current.state ?? mapWorkflowPhaseToState(patch.phase ?? current.phase)),
+      stateHistory: normalizeStateHistory(patch.stateHistory ?? current.stateHistory)
     };
     const updatedTs = new Date().toISOString();
     updateStmt.run(
@@ -181,6 +222,11 @@ export function createWorkflowRunStore() {
       safeJsonStringify(next.links),
       safeJsonStringify(next.handoff),
       safeJsonStringify(next.meta),
+      safeJsonStringify(next.request),
+      safeJsonStringify(next.plan),
+      safeJsonStringify(next.evaluation),
+      next.state,
+      safeJsonStringify(next.stateHistory, "[]"),
       String(current.id)
     );
     return get(current.id);

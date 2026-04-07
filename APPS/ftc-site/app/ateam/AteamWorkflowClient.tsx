@@ -10,8 +10,7 @@ import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
 import ProductStatusBadge from "../components/ProductStatusBadge";
 import OperatorOfficePanel, { type OfficePhase } from "../components/OperatorOfficePanel";
 import {
-  ateamWorkflowCategories,
-  formatWorkflowPhaseLabel,
+  type WorkflowIntake,
   type WorkflowCategoryValue,
   type WorkflowRun,
 } from "../../lib/ateamWorkflow";
@@ -66,6 +65,15 @@ const WORKING_STAGES = [
   { label: "Preparing the handoff", detail: "Turning the work into a decision-ready next step." },
 ] as const;
 
+const V1_STATE_STEPS = [
+  "queued",
+  "planning",
+  "awaiting_approval",
+  "executing",
+  "generating_artifact",
+  "completed",
+] as const;
+
 // Compact type labels (no verbose descriptions)
 const COMPACT_TYPES = [
   { value: "auto", label: "Auto" },
@@ -87,6 +95,45 @@ function buildEmptyAnswers(run: WorkflowRun | null) {
     acc[q.id] = String(run?.answers?.[q.id] || "");
     return acc;
   }, {});
+}
+
+function buildInitialIntake(run: WorkflowRun | null): WorkflowIntake {
+  const requestIntake = run?.request?.intake || {};
+  return {
+    goal: String(requestIntake.goal || run?.answers?.goal || run?.answers?.firstWin || ""),
+    context: String(requestIntake.context || run?.answers?.context || run?.answers?.audience || ""),
+    desiredOutput: String(requestIntake.desiredOutput || run?.answers?.desiredOutput || ""),
+    constraints: String(requestIntake.constraints || run?.answers?.constraints || ""),
+    nonGoals: String(requestIntake.nonGoals || run?.answers?.nonGoals || ""),
+  };
+}
+
+function buildAnswersPayload(run: WorkflowRun | null, intake: WorkflowIntake, answers: Record<string, string>) {
+  const nextAnswers: Record<string, string> = {
+    ...answers,
+    goal: String(intake.goal || "").trim(),
+    context: String(intake.context || "").trim(),
+    desiredOutput: String(intake.desiredOutput || "").trim(),
+    constraints: String(intake.constraints || "").trim(),
+    nonGoals: String(intake.nonGoals || "").trim(),
+  };
+  if (!nextAnswers.firstWin && nextAnswers.goal) {
+    nextAnswers.firstWin = nextAnswers.goal;
+  }
+  if (!nextAnswers.audience && nextAnswers.context) {
+    nextAnswers.audience = nextAnswers.context;
+  }
+  return Object.fromEntries(
+    Object.entries(nextAnswers).filter(([, value]) => String(value || "").trim())
+  ) as Record<string, string>;
+}
+
+function formatWorkflowStateLabel(state?: string | null) {
+  const safe = String(state || "").trim().toLowerCase();
+  if (!safe) return "Queued";
+  return safe
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function wait(ms: number) {
@@ -182,8 +229,16 @@ export default function AteamWorkflowClient({
   const voiceSilenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [idea, setIdea] = useState("");
   const [category, setCategory] = useState<WorkflowCategoryValue>("auto");
+  const [intake, setIntake] = useState<WorkflowIntake>({
+    goal: "",
+    context: "",
+    desiredOutput: "",
+    constraints: "",
+    nonGoals: "",
+  });
   const [run, setRun] = useState<WorkflowRun | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [recentRuns, setRecentRuns] = useState<WorkflowRun[]>([]);
   const [busy, setBusy] = useState<BusyState>("idle");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -343,6 +398,7 @@ export default function AteamWorkflowClient({
         setRun(payload.run);
         setIdea(payload.run.idea || "");
         setCategory((payload.run.category as WorkflowCategoryValue) || "auto");
+        setIntake(buildInitialIntake(payload.run));
         setAnswers(buildEmptyAnswers(payload.run));
         setActivePrototypeFrameId(payload.run.artifacts?.prototype?.frames?.[0]?.id || "");
         setBusy("idle");
@@ -353,7 +409,24 @@ export default function AteamWorkflowClient({
 
   useEffect(() => {
     if (!run) return;
+    setIntake(buildInitialIntake(run));
     setAnswers(buildEmptyAnswers(run));
+  }, [run?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    requestJson<{ ok: true; runs: WorkflowRun[] }>("/api/ateam/workflow/runs?limit=5")
+      .then((payload) => {
+        if (!cancelled) {
+          setRecentRuns(Array.isArray(payload.runs) ? payload.runs : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setRecentRuns([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [run?.id]);
 
   useEffect(() => {
@@ -395,9 +468,11 @@ export default function AteamWorkflowClient({
   const nextSteps = (handoff?.nextSteps || run?.artifacts?.nextSteps || []).slice(0, 4);
   const humanStage = processingIndexToHumanStage(processingStageIndex);
   const isWorking = busy === "starting" || busy === "processing";
-  const showClarifiers = Boolean(run && !workflowReady && !isWorking && (run.questions?.length ?? 0) > 0);
+  const showPlanReview = Boolean(run && !workflowReady && !isWorking);
   const hasProductStatusBadge = Boolean(ateamProject && getProductStatusLabel(ateamProject.status));
   const showBarActions = Boolean(hasProductStatusBadge || run || operatorEnabled);
+  const currentState = String(run?.state || "").trim().toLowerCase() || "queued";
+  const currentStateIndex = Math.max(0, V1_STATE_STEPS.findIndex((step) => step === currentState));
 
   const officePhase: OfficePhase = workflowReady
     ? "done"
@@ -415,6 +490,7 @@ export default function AteamWorkflowClient({
     setRun(nextRun);
     setIdea(nextRun.idea || "");
     setCategory((nextRun.category as WorkflowCategoryValue) || "auto");
+    setIntake(buildInitialIntake(nextRun));
     setAnswers(buildEmptyAnswers(nextRun));
     if (nextRun.id && nextRun.id !== runId) {
       router.replace(buildWorkflowPath(basePath, nextRun.id));
@@ -438,6 +514,13 @@ export default function AteamWorkflowClient({
     setActivePrototypeFrameId("");
     setIdea("");
     setCategory("auto");
+    setIntake({
+      goal: "",
+      context: "",
+      desiredOutput: "",
+      constraints: "",
+      nonGoals: "",
+    });
     clearAteamDemoHandoff();
     router.replace(buildWorkflowPath(basePath));
   }
@@ -485,7 +568,14 @@ export default function AteamWorkflowClient({
       await wait(180);
       const payload = await requestJson<{ ok: true; run: WorkflowRun }>(
         "/api/ateam/workflow/runs",
-        { method: "POST", body: JSON.stringify({ idea, category: category === "auto" ? "" : category }) }
+        {
+          method: "POST",
+          body: JSON.stringify({
+            idea,
+            category: category === "auto" ? "" : category,
+            intake,
+          }),
+        }
       );
       trackEvent("ateam_run_started", {
         location: basePath === "/" ? "homepage" : "ateam_page",
@@ -509,31 +599,61 @@ export default function AteamWorkflowClient({
     }
   }
 
-  async function handleBuildPack() {
+  async function handlePlanDecision(decision: "approved" | "rejected" | "regenerate") {
     if (!run) return;
-    const missing = (run.questions || []).find((q) => !String(answers[q.id] || "").trim());
-    if (missing) {
-      setError("Answer both questions so ATEAM can shape the pack cleanly.");
-      trackEvent("ateam_pack_build_error", {
-        reason: "missing_answer",
-        location: basePath === "/" ? "homepage" : "ateam_page",
-        run_id: run.id,
-      });
+    const answerPayload = buildAnswersPayload(run, intake, answers);
+    const goalValue = String(intake.goal || answerPayload.firstWin || "").trim();
+    if (decision === "approved" && goalValue.length < 8) {
+      setError("Add the primary goal before approving the plan.");
       return;
     }
+
     setError("");
-    trackEvent("ateam_pack_build_start", {
+    trackEvent("ateam_plan_decision_start", {
       location: basePath === "/" ? "homepage" : "ateam_page",
       run_id: run.id,
+      decision,
       question_count: run.questions?.length || 0,
     });
     setBusy("processing");
     try {
       setProcessingStageIndex(1);
-      await requestJson<{ ok: true; run: WorkflowRun }>(
+      const captured = await requestJson<{ ok: true; run: WorkflowRun }>(
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/answers`,
-        { method: "POST", body: JSON.stringify({ answers }) }
+        { method: "POST", body: JSON.stringify({ answers: answerPayload }) }
       );
+      await syncRun(captured.run);
+
+      if (decision === "regenerate") {
+        setProcessingStageIndex(2);
+        await wait(180);
+        const regenerated = await requestJson<{ ok: true; run: WorkflowRun }>(
+          `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
+          { method: "POST", body: JSON.stringify({ gate: "brief", decision: "regenerate" }) }
+        );
+        trackEvent("ateam_plan_regenerated", {
+          location: basePath === "/" ? "homepage" : "ateam_page",
+          run_id: regenerated.run.id,
+        });
+        await syncRun(regenerated.run);
+        setNotice("ATEAM refreshed the plan with your latest guidance.");
+        return;
+      }
+
+      if (decision === "rejected") {
+        const rejected = await requestJson<{ ok: true; run: WorkflowRun }>(
+          `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
+          { method: "POST", body: JSON.stringify({ gate: "brief", decision: "rejected" }) }
+        );
+        trackEvent("ateam_plan_rejected", {
+          location: basePath === "/" ? "homepage" : "ateam_page",
+          run_id: rejected.run.id,
+        });
+        await syncRun(rejected.run);
+        setNotice("ATEAM marked the run as rejected. Start a new idea or adjust the intake and regenerate.");
+        return;
+      }
+
       setProcessingStageIndex(2);
       await wait(180);
       await requestJson<{ ok: true; run: WorkflowRun }>(
@@ -560,16 +680,43 @@ export default function AteamWorkflowClient({
       });
       await syncRun(result.run);
     } catch (err) {
-      trackEvent("ateam_pack_build_error", {
+      trackEvent("ateam_plan_decision_error", {
         reason: err instanceof Error ? err.message : "request_failed",
         location: basePath === "/" ? "homepage" : "ateam_page",
         run_id: run.id,
+        decision,
       });
-      setError(err instanceof Error ? err.message : "ATEAM could not build the pack right now.");
+      setError(err instanceof Error ? err.message : "ATEAM could not continue this run right now.");
     } finally {
       setBusy("idle");
       setProcessingStageIndex(-1);
     }
+  }
+
+  function handleDownloadBundle() {
+    if (!run) return;
+    const payload = {
+      request: run.request || null,
+      plan: run.plan || null,
+      evaluation: run.evaluation || null,
+      brief: run.brief || null,
+      artifacts: run.artifacts || null,
+      handoff: run.handoff || null,
+      recentArtifact: run.recentArtifact || null,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${run.id || "ateam-run"}-decision-pack.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    trackEvent("ateam_artifact_download", {
+      location: basePath === "/" ? "homepage" : "ateam_page",
+      run_id: run.id,
+      artifact_type: run.recentArtifact?.type || "decision_pack",
+    });
   }
 
   function handleContinueWithUnaLabs() {
@@ -689,6 +836,64 @@ export default function AteamWorkflowClient({
                   }}
                 />
 
+                <div className="wf-guided-grid" aria-label="Guided intake details">
+                  <div className="wf-guided-field">
+                    <label className="wf-field-label" htmlFor="wf-goal">Primary goal</label>
+                    <input
+                      id="wf-goal"
+                      className="wf-guided-input"
+                      type="text"
+                      value={intake.goal || ""}
+                      onChange={(e) => setIntake((prev) => ({ ...prev, goal: e.target.value }))}
+                      placeholder="What should feel clearly better first?"
+                    />
+                  </div>
+                  <div className="wf-guided-field">
+                    <label className="wf-field-label" htmlFor="wf-output">Desired output</label>
+                    <input
+                      id="wf-output"
+                      className="wf-guided-input"
+                      type="text"
+                      value={intake.desiredOutput || ""}
+                      onChange={(e) => setIntake((prev) => ({ ...prev, desiredOutput: e.target.value }))}
+                      placeholder="Spec, plan, prototype direction, research summary..."
+                    />
+                  </div>
+                  <div className="wf-guided-field wf-guided-field--full">
+                    <label className="wf-field-label" htmlFor="wf-context">Relevant context</label>
+                    <textarea
+                      id="wf-context"
+                      className="wf-question-textarea"
+                      rows={3}
+                      value={intake.context || ""}
+                      onChange={(e) => setIntake((prev) => ({ ...prev, context: e.target.value }))}
+                      placeholder="Who this is for, what already exists, and what ATEAM should keep in view."
+                    />
+                  </div>
+                  <div className="wf-guided-field">
+                    <label className="wf-field-label" htmlFor="wf-constraints">Constraints</label>
+                    <textarea
+                      id="wf-constraints"
+                      className="wf-question-textarea"
+                      rows={3}
+                      value={intake.constraints || ""}
+                      onChange={(e) => setIntake((prev) => ({ ...prev, constraints: e.target.value }))}
+                      placeholder="Timeline, budget, tools, team, compliance, or delivery constraints."
+                    />
+                  </div>
+                  <div className="wf-guided-field">
+                    <label className="wf-field-label" htmlFor="wf-nongoals">Non-goals</label>
+                    <textarea
+                      id="wf-nongoals"
+                      className="wf-question-textarea"
+                      rows={3}
+                      value={intake.nonGoals || ""}
+                      onChange={(e) => setIntake((prev) => ({ ...prev, nonGoals: e.target.value }))}
+                      placeholder="What should not be included in the first pass?"
+                    />
+                  </div>
+                </div>
+
                 {/* Compact type selector */}
                 <div className="wf-type-row" role="group" aria-label="What type of idea is this?">
                   {COMPACT_TYPES.map((t) => (
@@ -717,10 +922,10 @@ export default function AteamWorkflowClient({
                     onClick={handleStartRun}
                     disabled={busy !== "idle"}
                   >
-                    {busy !== "idle" ? "Starting..." : "Start ATEAM ->"}
+                    {busy !== "idle" ? "Starting..." : "Build the plan ->"}
                   </button>
                   <p className="wf-intake-hint">
-                    One paragraph is enough. ATEAM turns it into a scoped first pass.
+                    Start with the rough idea. These fields simply make the first plan cleaner.
                   </p>
                 </div>
               </div>
@@ -758,6 +963,34 @@ export default function AteamWorkflowClient({
                   direct owner.
                 </p>
               </div>
+
+              {recentRuns.length > 0 && (
+                <div className="wf-recent-card">
+                  <div className="wf-recent-head">
+                    <div>
+                      <p className="wf-pack-panel-kicker">Recent runs</p>
+                      <h2 className="wf-recent-title">Pick up a recent ATEAM workflow</h2>
+                    </div>
+                    <span className="wf-recent-count">{recentRuns.length} visible</span>
+                  </div>
+                  <div className="wf-recent-list">
+                    {recentRuns.map((recentRun) => (
+                      <Link
+                        key={recentRun.id}
+                        href={buildWorkflowPath(basePath, recentRun.id)}
+                        prefetch={false}
+                        className="wf-recent-link"
+                      >
+                        <div>
+                          <strong>{recentRun.brief?.title || recentRun.title || "ATEAM run"}</strong>
+                          <p>{recentRun.plan?.summary || recentRun.brief?.summary || recentRun.idea}</p>
+                        </div>
+                        <span>{formatWorkflowStateLabel(recentRun.state || recentRun.phase)}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -804,7 +1037,7 @@ export default function AteamWorkflowClient({
           )}
 
           {/* ── CLARIFIER QUESTIONS ── */}
-          {showClarifiers && (
+          {showPlanReview && run && (
             <section className="wf-stage wf-stage--clarify">
               {idea && (
                 <div className="wf-idea-echo">
@@ -816,14 +1049,155 @@ export default function AteamWorkflowClient({
               )}
 
               <div className="wf-clarify-head">
-                <h2 className="wf-clarify-headline">Two quick gaps</h2>
+                <h2 className="wf-clarify-headline">Review the plan before ATEAM executes</h2>
                 <p className="wf-clarify-sub">
-                  ATEAM needs these last two points to route cleanly and build a strong first pass.
+                  This is the V1 trust layer: confirm what ATEAM understood, adjust any missing detail,
+                  then approve, reject, or regenerate the plan.
                 </p>
               </div>
 
-              <div className="wf-questions">
-                {(run?.questions || []).map((question, idx) => (
+              <div className="wf-state-progress" aria-label="Workflow state progress">
+                {V1_STATE_STEPS.map((step, index) => {
+                  const isDone = currentStateIndex > index;
+                  const isActive = currentStateIndex === index;
+                  return (
+                    <div
+                      key={step}
+                      className={`wf-state-pill ${isDone ? "wf-state-pill--done" : ""} ${isActive ? "wf-state-pill--active" : ""}`}
+                    >
+                      {formatWorkflowStateLabel(step)}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="wf-plan-layout">
+                <div className="wf-plan-card">
+                  <p className="wf-pack-panel-kicker">What ATEAM understood</p>
+                  <h3 className="wf-pack-panel-title">
+                    {run.request?.normalized?.goal || run.brief?.primaryGoal || "ATEAM has a first goal in view"}
+                  </h3>
+                  <p className="wf-pack-panel-body">
+                    {run.publicFlow?.understanding?.summary || run.brief?.summary || run.plan?.summary}
+                  </p>
+
+                  <div className="wf-pack-meta">
+                    {[
+                      { label: "State", value: formatWorkflowStateLabel(run.state || run.phase) },
+                      { label: "Lane", value: run.request?.routing?.recommendedLane || run.brief?.recommendedLane || run.recommendedLane },
+                      { label: "Artifact", value: run.plan?.expectedArtifact?.title || run.request?.normalized?.desiredArtifactType },
+                    ]
+                      .filter((item) => item.value)
+                      .map((item) => (
+                        <div key={item.label} className="wf-pack-meta-cell">
+                          <span className="wf-pack-meta-label">{item.label}</span>
+                          <strong className="wf-pack-meta-value">{item.value}</strong>
+                        </div>
+                      ))}
+                  </div>
+
+                  {(run.request?.assumptions || run.plan?.assumptions || []).length > 0 && (
+                    <div className="wf-plan-list-card">
+                      <p className="wf-pack-panel-kicker">Assumptions</p>
+                      <ul className="wf-plan-list">
+                        {(run.plan?.assumptions || run.request?.assumptions || []).map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                <div className="wf-plan-card">
+                  <p className="wf-pack-panel-kicker">Visible plan</p>
+                  <h3 className="wf-pack-panel-title">{run.plan?.expectedArtifact?.title || "Decision pack"}</h3>
+                  <p className="wf-pack-panel-body">{run.plan?.summary || "ATEAM is preparing a scoped first-pass plan."}</p>
+
+                  {(run.plan?.proposedSteps || []).length > 0 && (
+                    <ol className="wf-plan-steps">
+                      {run.plan?.proposedSteps.map((step) => (
+                        <li key={step.id} className="wf-plan-step">
+                          <strong>{step.title}</strong>
+                          <p>{step.detail}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+
+                  {(run.plan?.blockers || []).length > 0 && (
+                    <div className="wf-plan-list-card">
+                      <p className="wf-pack-panel-kicker">Likely blockers</p>
+                      <ul className="wf-plan-list">
+                        {(run.plan?.blockers || []).map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="wf-guided-grid" aria-label="Adjust the request before approval">
+                <div className="wf-guided-field">
+                  <label className="wf-field-label" htmlFor="wf-review-goal">Primary goal</label>
+                  <input
+                    id="wf-review-goal"
+                    className="wf-guided-input"
+                    type="text"
+                    value={intake.goal || ""}
+                    onChange={(e) => setIntake((prev) => ({ ...prev, goal: e.target.value }))}
+                    placeholder="What should feel clearly better first?"
+                  />
+                </div>
+                <div className="wf-guided-field">
+                  <label className="wf-field-label" htmlFor="wf-review-output">Desired output</label>
+                  <input
+                    id="wf-review-output"
+                    className="wf-guided-input"
+                    type="text"
+                    value={intake.desiredOutput || ""}
+                    onChange={(e) => setIntake((prev) => ({ ...prev, desiredOutput: e.target.value }))}
+                    placeholder="What do you want ATEAM to hand back?"
+                  />
+                </div>
+                <div className="wf-guided-field wf-guided-field--full">
+                  <label className="wf-field-label" htmlFor="wf-review-context">Relevant context</label>
+                  <textarea
+                    id="wf-review-context"
+                    className="wf-question-textarea"
+                    rows={3}
+                    value={intake.context || ""}
+                    onChange={(e) => setIntake((prev) => ({ ...prev, context: e.target.value }))}
+                    placeholder="Anything ATEAM should preserve before execution starts."
+                  />
+                </div>
+                <div className="wf-guided-field">
+                  <label className="wf-field-label" htmlFor="wf-review-constraints">Constraints</label>
+                  <textarea
+                    id="wf-review-constraints"
+                    className="wf-question-textarea"
+                    rows={3}
+                    value={intake.constraints || ""}
+                    onChange={(e) => setIntake((prev) => ({ ...prev, constraints: e.target.value }))}
+                    placeholder="Timeline, tools, approvals, or delivery constraints."
+                  />
+                </div>
+                <div className="wf-guided-field">
+                  <label className="wf-field-label" htmlFor="wf-review-nongoals">Non-goals</label>
+                  <textarea
+                    id="wf-review-nongoals"
+                    className="wf-question-textarea"
+                    rows={3}
+                    value={intake.nonGoals || ""}
+                    onChange={(e) => setIntake((prev) => ({ ...prev, nonGoals: e.target.value }))}
+                    placeholder="What should not be included in this first pass?"
+                  />
+                </div>
+              </div>
+
+              {(run?.questions || []).length > 0 && (
+                <div className="wf-questions">
+                  {(run?.questions || []).map((question, idx) => (
                   <div key={question.id} className="wf-question-card">
                     <div className="wf-question-num" aria-hidden="true">{idx + 1}</div>
                     <div className="wf-question-body">
@@ -841,24 +1215,40 @@ export default function AteamWorkflowClient({
                         placeholder={question.placeholder || "Keep it short and direct."}
                       />
                       {question.hint && <small className="wf-field-hint">{question.hint}</small>}
+                      {question.reason && <small className="wf-field-hint">{question.reason}</small>}
                     </div>
                   </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               {error && <p className="wf-error" role="alert">{error}</p>}
+              {!error && notice && <p className="wf-notice">{notice}</p>}
 
               <div className="wf-clarify-actions">
                 <button
                   type="button"
                   className="wf-btn-primary"
-                  onClick={handleBuildPack}
+                  onClick={() => handlePlanDecision("approved")}
                   disabled={busy !== "idle"}
                 >
-                  Build my pack {"->"}
+                  Approve and build the pack {"->"}
                 </button>
-                <button type="button" className="wf-btn-ghost" onClick={resetFlow}>
-                  Start over
+                <button
+                  type="button"
+                  className="wf-btn-ghost"
+                  onClick={() => handlePlanDecision("regenerate")}
+                  disabled={busy !== "idle"}
+                >
+                  Regenerate plan
+                </button>
+                <button
+                  type="button"
+                  className="wf-btn-ghost"
+                  onClick={() => handlePlanDecision("rejected")}
+                  disabled={busy !== "idle"}
+                >
+                  Reject
                 </button>
               </div>
             </section>
@@ -887,6 +1277,44 @@ export default function AteamWorkflowClient({
                   </div>
                 )}
               </div>
+
+              <div className="wf-state-progress wf-state-progress--output" aria-label="Workflow state progress">
+                {V1_STATE_STEPS.map((step, index) => {
+                  const isDone = currentStateIndex > index;
+                  const isActive = currentStateIndex === index;
+                  return (
+                    <div
+                      key={step}
+                      className={`wf-state-pill ${isDone ? "wf-state-pill--done" : ""} ${isActive ? "wf-state-pill--active" : ""}`}
+                    >
+                      {formatWorkflowStateLabel(step)}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {run.recentArtifact && (
+                <div className="wf-artifact-preview">
+                  <div>
+                    <p className="wf-pack-panel-kicker">Primary artifact preview</p>
+                    <h3 className="wf-pack-panel-title">{run.recentArtifact.title}</h3>
+                    <p className="wf-pack-panel-body">{run.recentArtifact.summary}</p>
+                    {(run.recentArtifact.previewItems || []).length > 0 && (
+                      <div className="wf-pack-tags">
+                        {(run.recentArtifact.previewItems || []).map((item) => (
+                          <span key={item} className="wf-pack-tag">{item}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="wf-artifact-actions">
+                    <span className="wf-pack-meta-label">{formatWorkflowStateLabel(run.state || run.phase)}</span>
+                    <button type="button" className="wf-btn-ghost" onClick={handleDownloadBundle}>
+                      Download bundle
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* 3-cell meta: lane / audience / first win */}
               <div className="wf-pack-meta">

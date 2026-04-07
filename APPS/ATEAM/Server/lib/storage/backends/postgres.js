@@ -10,7 +10,7 @@ const { Pool } = pg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DEFAULT_SCHEMA_PATH = path.resolve(__dirname, "../../../../supabase/migrations/20260327000100_ateam_workflow_base.sql");
+const DEFAULT_MIGRATIONS_DIR = path.resolve(__dirname, "../../../../supabase/migrations");
 
 function readEnv(name) {
   return String(process.env[name] || "").trim();
@@ -59,10 +59,19 @@ function buildPoolConfig(databaseUrl) {
 }
 
 function readSchemaSql() {
-  if (!fs.existsSync(DEFAULT_SCHEMA_PATH)) {
-    throw new Error(`ATEAM workflow schema file not found: ${DEFAULT_SCHEMA_PATH}`);
+  if (!fs.existsSync(DEFAULT_MIGRATIONS_DIR)) {
+    throw new Error(`ATEAM workflow migrations directory not found: ${DEFAULT_MIGRATIONS_DIR}`);
   }
-  return fs.readFileSync(DEFAULT_SCHEMA_PATH, "utf8");
+  const files = fs
+    .readdirSync(DEFAULT_MIGRATIONS_DIR)
+    .filter((name) => name.toLowerCase().endsWith(".sql"))
+    .sort();
+  if (!files.length) {
+    throw new Error(`ATEAM workflow migrations directory is empty: ${DEFAULT_MIGRATIONS_DIR}`);
+  }
+  return files
+    .map((name) => fs.readFileSync(path.join(DEFAULT_MIGRATIONS_DIR, name), "utf8"))
+    .join("\n\n");
 }
 
 export function createPostgresRepositories({ memoryDir = "" } = {}) {

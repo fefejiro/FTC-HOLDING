@@ -177,6 +177,42 @@ function normalizePhase(value = "") {
   return "intake";
 }
 
+const WORKFLOW_STATES = [
+  "queued",
+  "planning",
+  "awaiting_approval",
+  "executing",
+  "generating_artifact",
+  "completed",
+  "failed",
+  "escalated"
+];
+
+function normalizeState(value = "", phase = "") {
+  const normalized = safeText(value, 40).toLowerCase();
+  if (WORKFLOW_STATES.includes(normalized)) return normalized;
+  const safePhase = normalizePhase(phase);
+  if (safePhase === "analysis" || safePhase === "intake") return "planning";
+  if (safePhase === "brief_approval") return "awaiting_approval";
+  if (safePhase === "initiation" || safePhase === "prototype_pack") return "executing";
+  if (safePhase === "pack_approval") return "generating_artifact";
+  if (safePhase === "handoff" || safePhase === "archived") return "completed";
+  return "queued";
+}
+
+function normalizeStateHistory(value) {
+  return normalizeArray(safeJsonParse(value, []))
+    .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      state: normalizeState(entry.state || entry.to || "", entry.phase || ""),
+      phase: normalizePhase(entry.phase || ""),
+      reason: safeText(entry.reason, 220),
+      actor: safeText(entry.actor, 80),
+      createdAt: safeText(entry.createdAt || entry.timestamp, 80) || new Date().toISOString()
+    }))
+    .slice(-20);
+}
+
 function wrapPostgresError(error, code, details = "") {
   const err = new Error(details || String(error?.message || code));
   err.code = code;
@@ -529,7 +565,12 @@ export function createPostgresCoreStores({ pool, tableNames = {}, ready } = {}) 
       approvals: normalizeObject(safeJsonParse(row.approvals_json, {})),
       links: normalizeObject(safeJsonParse(row.links_json, {})),
       handoff: normalizeObject(safeJsonParse(row.handoff_json, {})),
-      meta: normalizeObject(safeJsonParse(row.meta_json, {}))
+      meta: normalizeObject(safeJsonParse(row.meta_json, {})),
+      request: normalizeObject(safeJsonParse(row.request_json, {})),
+      plan: normalizeObject(safeJsonParse(row.plan_json, {})),
+      evaluation: normalizeObject(safeJsonParse(row.evaluation_json, {})),
+      state: normalizeState(row.state, row.phase),
+      stateHistory: normalizeStateHistory(row.state_history_json)
     };
   }
 
@@ -549,7 +590,12 @@ export function createPostgresCoreStores({ pool, tableNames = {}, ready } = {}) 
       approvals = {},
       links = {},
       handoff = {},
-      meta = {}
+      meta = {},
+      request = {},
+      plan = {},
+      evaluation = {},
+      state = "",
+      stateHistory = []
     } = {}) {
       const row = {
         id: `wfr_${crypto.randomUUID()}`,
@@ -576,17 +622,21 @@ export function createPostgresCoreStores({ pool, tableNames = {}, ready } = {}) 
           `insert into ${sqlTables.workflowRuns} (
             id, created_ts, updated_ts, phase, requested_by, category, idea, title,
             questions_json, answers_json, brief_json, recommended_lane, risks_json,
-            artifacts_json, approvals_json, links_json, handoff_json, meta_json
+            artifacts_json, approvals_json, links_json, handoff_json, meta_json,
+            request_json, plan_json, evaluation_json, state, state_history_json
           ) values (
             $1, $2, $3, $4, $5, $6, $7, $8,
             $9::jsonb, $10::jsonb, $11::jsonb, $12, $13::jsonb,
-            $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb
+            $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb,
+            $19::jsonb, $20::jsonb, $21::jsonb, $22, $23::jsonb
           ) returning *`,
           [
             row.id, row.created_ts, row.updated_ts, row.phase, row.requested_by, row.category, row.idea, row.title,
             JSON.stringify(row.questions_json), JSON.stringify(row.answers_json), JSON.stringify(row.brief_json), row.recommended_lane,
             JSON.stringify(row.risks_json), JSON.stringify(row.artifacts_json), JSON.stringify(row.approvals_json),
-            JSON.stringify(row.links_json), JSON.stringify(row.handoff_json), JSON.stringify(row.meta_json)
+            JSON.stringify(row.links_json), JSON.stringify(row.handoff_json), JSON.stringify(row.meta_json),
+            JSON.stringify(normalizeObject(request)), JSON.stringify(normalizeObject(plan)), JSON.stringify(normalizeObject(evaluation)),
+            normalizeState(state, phase), JSON.stringify(normalizeStateHistory(stateHistory))
           ]
         );
         return rowToWorkflowRun(result.rows[0]);
@@ -636,7 +686,12 @@ export function createPostgresCoreStores({ pool, tableNames = {}, ready } = {}) 
         approvals: normalizeObject(patch.approvals ?? current.approvals),
         links: normalizeObject(patch.links ?? current.links),
         handoff: normalizeObject(patch.handoff ?? current.handoff),
-        meta: normalizeObject(patch.meta ?? current.meta)
+        meta: normalizeObject(patch.meta ?? current.meta),
+        request: normalizeObject(patch.request ?? current.request),
+        plan: normalizeObject(patch.plan ?? current.plan),
+        evaluation: normalizeObject(patch.evaluation ?? current.evaluation),
+        state: normalizeState(patch.state ?? current.state, patch.phase ?? current.phase),
+        stateHistory: normalizeStateHistory(patch.stateHistory ?? current.stateHistory)
       };
       const updatedTs = new Date().toISOString();
       try {
@@ -645,13 +700,17 @@ export function createPostgresCoreStores({ pool, tableNames = {}, ready } = {}) 
            set updated_ts = $2, phase = $3, requested_by = $4, category = $5, idea = $6, title = $7,
                questions_json = $8::jsonb, answers_json = $9::jsonb, brief_json = $10::jsonb, recommended_lane = $11,
                risks_json = $12::jsonb, artifacts_json = $13::jsonb, approvals_json = $14::jsonb,
-               links_json = $15::jsonb, handoff_json = $16::jsonb, meta_json = $17::jsonb
+               links_json = $15::jsonb, handoff_json = $16::jsonb, meta_json = $17::jsonb,
+               request_json = $18::jsonb, plan_json = $19::jsonb, evaluation_json = $20::jsonb,
+               state = $21, state_history_json = $22::jsonb
            where id = $1`,
           [
             safeText(current.id, 120), updatedTs, next.phase, next.requestedBy, next.category, next.idea, next.title,
             JSON.stringify(next.questions), JSON.stringify(next.answers), JSON.stringify(next.brief), next.recommendedLane,
             JSON.stringify(next.risks), JSON.stringify(next.artifacts), JSON.stringify(next.approvals),
-            JSON.stringify(next.links), JSON.stringify(next.handoff), JSON.stringify(next.meta)
+            JSON.stringify(next.links), JSON.stringify(next.handoff), JSON.stringify(next.meta),
+            JSON.stringify(next.request), JSON.stringify(next.plan), JSON.stringify(next.evaluation),
+            next.state, JSON.stringify(next.stateHistory)
           ]
         );
         return this.get(current.id);

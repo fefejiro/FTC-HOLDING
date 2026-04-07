@@ -184,9 +184,15 @@ Primary groups:
 Start here for architecture and cleanup context:
 
 - `Docs/README.md`
+- `Docs/product-v1/README.md`
 - `Docs/ARCHITECTURE.md`
 - `Docs/MIGRATION_READINESS.md`
 - `RUNBOOK.md`
+
+ATEAM V1 product direction now lives under `Docs/product-v1/`.
+
+- `Docs/product-v1/README.md` is the entry point
+- `DOCS/ATEAM_PUBLIC_OPERATOR_HANDOVER_2026-03-24.md` is historical context only
 
 Operator edge runtime:
 

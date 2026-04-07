@@ -1246,6 +1246,7 @@ app.post("/api/workflow/runs", async (req, res) => {
     const run = await workflowService.startRun({
       idea: body.idea,
       category: body.category,
+      intake: body.intake && typeof body.intake === "object" ? body.intake : {},
       requestedBy: String(body.actor || body.requestedBy || "public").trim() || "public",
       sessionId,
       meta: body.meta && typeof body.meta === "object" ? body.meta : {}

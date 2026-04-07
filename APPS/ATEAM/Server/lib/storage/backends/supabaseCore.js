@@ -187,6 +187,42 @@ function normalizePhase(value = "") {
   return "intake";
 }
 
+const WORKFLOW_STATES = [
+  "queued",
+  "planning",
+  "awaiting_approval",
+  "executing",
+  "generating_artifact",
+  "completed",
+  "failed",
+  "escalated"
+];
+
+function normalizeState(value = "", phase = "") {
+  const normalized = safeText(value, 40).toLowerCase();
+  if (WORKFLOW_STATES.includes(normalized)) return normalized;
+  const safePhase = normalizePhase(phase);
+  if (safePhase === "analysis" || safePhase === "intake") return "planning";
+  if (safePhase === "brief_approval") return "awaiting_approval";
+  if (safePhase === "initiation" || safePhase === "prototype_pack") return "executing";
+  if (safePhase === "pack_approval") return "generating_artifact";
+  if (safePhase === "handoff" || safePhase === "archived") return "completed";
+  return "queued";
+}
+
+function normalizeStateHistory(value) {
+  return normalizeArray(safeJsonParse(value, []))
+    .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      state: normalizeState(entry.state || entry.to || "", entry.phase || ""),
+      phase: normalizePhase(entry.phase || ""),
+      reason: safeText(entry.reason, 220),
+      actor: safeText(entry.actor, 80),
+      createdAt: safeText(entry.createdAt || entry.timestamp, 80) || new Date().toISOString()
+    }))
+    .slice(-20);
+}
+
 function wrapSupabaseError(error, code, details = "") {
   const err = new Error(details || String(error?.message || code));
   err.code = code;
@@ -505,7 +541,12 @@ export function createSupabaseCoreStores({ client, tableNames = {} } = {}) {
       approvals: normalizeObject(safeJsonParse(row.approvals_json, {})),
       links: normalizeObject(safeJsonParse(row.links_json, {})),
       handoff: normalizeObject(safeJsonParse(row.handoff_json, {})),
-      meta: normalizeObject(safeJsonParse(row.meta_json, {}))
+      meta: normalizeObject(safeJsonParse(row.meta_json, {})),
+      request: normalizeObject(safeJsonParse(row.request_json, {})),
+      plan: normalizeObject(safeJsonParse(row.plan_json, {})),
+      evaluation: normalizeObject(safeJsonParse(row.evaluation_json, {})),
+      state: normalizeState(row.state, row.phase),
+      stateHistory: normalizeStateHistory(row.state_history_json)
     };
   }
 
@@ -525,7 +566,12 @@ export function createSupabaseCoreStores({ client, tableNames = {} } = {}) {
       approvals = {},
       links = {},
       handoff = {},
-      meta = {}
+      meta = {},
+      request = {},
+      plan = {},
+      evaluation = {},
+      state = "",
+      stateHistory = []
     } = {}) {
       const row = {
         id: `wfr_${crypto.randomUUID()}`,
@@ -545,7 +591,12 @@ export function createSupabaseCoreStores({ client, tableNames = {} } = {}) {
         approvals_json: normalizeObject(approvals),
         links_json: normalizeObject(links),
         handoff_json: normalizeObject(handoff),
-        meta_json: normalizeObject(meta)
+        meta_json: normalizeObject(meta),
+        request_json: normalizeObject(request),
+        plan_json: normalizeObject(plan),
+        evaluation_json: normalizeObject(evaluation),
+        state: normalizeState(state, phase),
+        state_history_json: normalizeStateHistory(stateHistory)
       };
       const { data, error } = await client.from(tables.workflowRuns).insert(row).select().single();
       if (error) throw wrapSupabaseError(error, "SUPABASE_WORKFLOW_RUN_CREATE_FAILED");
@@ -593,7 +644,12 @@ export function createSupabaseCoreStores({ client, tableNames = {} } = {}) {
         approvals: normalizeObject(patch.approvals ?? current.approvals),
         links: normalizeObject(patch.links ?? current.links),
         handoff: normalizeObject(patch.handoff ?? current.handoff),
-        meta: normalizeObject(patch.meta ?? current.meta)
+        meta: normalizeObject(patch.meta ?? current.meta),
+        request: normalizeObject(patch.request ?? current.request),
+        plan: normalizeObject(patch.plan ?? current.plan),
+        evaluation: normalizeObject(patch.evaluation ?? current.evaluation),
+        state: normalizeState(patch.state ?? current.state, patch.phase ?? current.phase),
+        stateHistory: normalizeStateHistory(patch.stateHistory ?? current.stateHistory)
       };
       const updatedTs = new Date().toISOString();
       const row = {
@@ -612,7 +668,12 @@ export function createSupabaseCoreStores({ client, tableNames = {} } = {}) {
         approvals_json: next.approvals,
         links_json: next.links,
         handoff_json: next.handoff,
-        meta_json: next.meta
+        meta_json: next.meta,
+        request_json: next.request,
+        plan_json: next.plan,
+        evaluation_json: next.evaluation,
+        state: next.state,
+        state_history_json: next.stateHistory
       };
       const { error } = await client.from(tables.workflowRuns).update(row).eq("id", safeText(current.id, 120));
       if (error) throw wrapSupabaseError(error, "SUPABASE_WORKFLOW_RUN_UPDATE_FAILED");

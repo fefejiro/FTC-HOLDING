@@ -4,7 +4,7 @@ function safeText(value, limit = 220) {
 
 function safeList(values = [], limit = 6) {
   return (Array.isArray(values) ? values : [])
-    .map((value) => safeText(value, 180))
+    .map((value) => safeText(value, 220))
     .filter(Boolean)
     .slice(0, limit);
 }
@@ -12,6 +12,18 @@ function safeList(values = [], limit = 6) {
 function answerText(answers, key, fallback = "", limit = 240) {
   const source = answers && typeof answers === "object" ? answers : {};
   return safeText(source[key], limit) || fallback;
+}
+
+function normalizeStringArray(value, limit = 6) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || "")
+        .split(/\n|,/)
+        .map((item) => item.trim());
+  return source
+    .map((item) => safeText(item, 220))
+    .filter(Boolean)
+    .slice(0, limit);
 }
 
 function titleCaseFromIdea(idea) {
@@ -110,6 +122,124 @@ function buildWorkflowDecision({ idea = "", firstWin = "", audience = "", preset
   };
 }
 
+function normalizeWorkflowIntake(rawValue = {}) {
+  const raw = rawValue && typeof rawValue === "object" && !Array.isArray(rawValue) ? rawValue : {};
+  return {
+    goal: safeText(raw.goal, 260),
+    context: safeText(raw.context, 360),
+    desiredOutput: safeText(raw.desiredOutput, 180),
+    constraints: safeText(raw.constraints, 260),
+    nonGoals: safeText(raw.nonGoals, 260)
+  };
+}
+
+function buildIntakeFromAnswers(answers = {}) {
+  return {
+    goal: answerText(answers, "goal") || answerText(answers, "firstWin") || answerText(answers, "coreOutcome"),
+    context: answerText(answers, "context") || answerText(answers, "audience"),
+    desiredOutput: answerText(answers, "desiredOutput"),
+    constraints: answerText(answers, "constraints"),
+    nonGoals: answerText(answers, "nonGoals")
+  };
+}
+
+function mergeWorkflowIntake({ intake = {}, answers = {} } = {}) {
+  const base = normalizeWorkflowIntake(intake);
+  const answerIntake = normalizeWorkflowIntake(buildIntakeFromAnswers(answers));
+  return {
+    goal: base.goal || answerIntake.goal,
+    context: base.context || answerIntake.context,
+    desiredOutput: base.desiredOutput || answerIntake.desiredOutput,
+    constraints: base.constraints || answerIntake.constraints,
+    nonGoals: base.nonGoals || answerIntake.nonGoals
+  };
+}
+
+function deriveAudience({ intake, answers, preset }) {
+  const explicitAudience = answerText(answers, "audience", "", 220);
+  if (explicitAudience) return explicitAudience;
+  if (safeText(intake.context, 220)) return safeText(intake.context, 220);
+  return preset.audienceHint;
+}
+
+function resolveDesiredOutput({ intake, preset }) {
+  const desiredOutput = safeText(intake.desiredOutput, 180);
+  if (desiredOutput) return desiredOutput;
+  return `${preset.label} decision pack`;
+}
+
+function collectRequestAssumptions({ idea, intake, desiredOutput, preset }) {
+  const assumptions = [];
+  if (!safeText(intake.goal, 220)) {
+    assumptions.push("Goal was inferred from the rough idea because no explicit primary goal was provided.");
+  }
+  if (!safeText(intake.context, 220)) {
+    assumptions.push(`Context defaults to ${preset.audienceHint} until the run captures something more specific.`);
+  }
+  if (!safeText(intake.desiredOutput, 220)) {
+    assumptions.push(`ATEAM will produce a ${lowerFirst(desiredOutput)} unless a different artifact is requested.`);
+  }
+  if (!safeText(intake.nonGoals, 220)) {
+    assumptions.push("No explicit non-goals were provided, so scope protection will rely on the first useful win.");
+  }
+  if (safeText(idea, 120).split(/\s+/).length < 8) {
+    assumptions.push("The rough idea is still compact, so the first pass may need a second review before build execution.");
+  }
+  return assumptions.slice(0, 4);
+}
+
+function buildClarifierPrompt({ id, label, prompt, hint, placeholder, reason }) {
+  return {
+    id,
+    label,
+    prompt,
+    hint,
+    placeholder,
+    reason
+  };
+}
+
+function collectWorkflowClarifiers({ idea = "", intake = {}, preset, desiredOutput = "" } = {}) {
+  const clarifiers = [];
+  if (!safeText(intake.goal, 220)) {
+    clarifiers.push(
+      buildClarifierPrompt({
+        id: "goal",
+        label: "Primary goal",
+        prompt: `What should feel clearly better first for "${titleCaseFromIdea(idea)}"?`,
+        hint: "Name the first useful win, not the full platform dream.",
+        placeholder: "Example: turn a rough request into a clear next step with visible status.",
+        reason: "ATEAM still needs the first useful win before it can lock the scope."
+      })
+    );
+  }
+  if (!safeText(intake.context, 220)) {
+    clarifiers.push(
+      buildClarifierPrompt({
+        id: "context",
+        label: "Relevant context",
+        prompt: "What important context should ATEAM keep in view while shaping the first pass?",
+        hint: `Keep it concrete: ${preset.audienceHint}.`,
+        placeholder: "Example: operators currently handle this manually and lose track during handoff.",
+        reason: "ATEAM needs a bit more context so the plan does not over-assume the environment."
+      })
+    );
+  }
+  if (!safeText(intake.desiredOutput, 220) && clarifiers.length < 2) {
+    clarifiers.push(
+      buildClarifierPrompt({
+        id: "desiredOutput",
+        label: "Desired output",
+        prompt: "What kind of output do you want back from ATEAM first?",
+        hint: `If you are unsure, ATEAM will default to a ${lowerFirst(desiredOutput)}.`,
+        placeholder: "Example: a scoped spec, prototype direction, or structured build brief.",
+        reason: "ATEAM can move faster when the expected artifact is explicit."
+      })
+    );
+  }
+  return clarifiers.slice(0, 2);
+}
+
 export const WORKFLOW_PHASES = [
   "intake",
   "analysis",
@@ -119,6 +249,17 @@ export const WORKFLOW_PHASES = [
   "pack_approval",
   "handoff",
   "archived"
+];
+
+export const WORKFLOW_STATES = [
+  "queued",
+  "planning",
+  "awaiting_approval",
+  "executing",
+  "generating_artifact",
+  "completed",
+  "failed",
+  "escalated"
 ];
 
 export const WORKFLOW_CATEGORY_PRESETS = {
@@ -191,60 +332,132 @@ export function getWorkflowCategoryPreset(rawValue = "", idea = "") {
   return WORKFLOW_CATEGORY_PRESETS[normalizeWorkflowCategory(rawValue, idea)];
 }
 
+export function normalizeWorkflowState(value = "") {
+  const normalized = safeText(value, 40).toLowerCase();
+  if (WORKFLOW_STATES.includes(normalized)) return normalized;
+  return "queued";
+}
+
+export function mapWorkflowPhaseToState(phase = "") {
+  const safePhase = safeText(phase, 40).toLowerCase();
+  if (safePhase === "analysis" || safePhase === "intake") return "planning";
+  if (safePhase === "brief_approval") return "awaiting_approval";
+  if (safePhase === "initiation" || safePhase === "prototype_pack") return "executing";
+  if (safePhase === "pack_approval") return "generating_artifact";
+  if (safePhase === "handoff" || safePhase === "archived") return "completed";
+  return "queued";
+}
+
 export function buildWorkflowProjectId(runId = "") {
   return `workflow_${slugify(runId) || "run"}`;
 }
 
-export function buildWorkflowQuestions({ idea = "", category = "website" } = {}) {
+export function buildWorkflowQuestions({ idea = "", category = "website", intake = {}, answers = {} } = {}) {
   const preset = getWorkflowCategoryPreset(category, idea);
-  const ideaTitle = titleCaseFromIdea(idea);
-
-  return [
-    {
-      id: "audience",
-      label: "Who it is for",
-      prompt: `Who needs this first in "${ideaTitle}"?`,
-      hint: `Keep it concrete: ${preset.audienceHint}.`,
-      placeholder: "Example: busy restaurant staff handling rush-hour orders on WhatsApp."
-    },
-    {
-      id: "firstWin",
-      label: "First useful win",
-      prompt: "What should feel clearly easier in the first version?",
-      hint: "Name the one useful win, plus any hard limit if it matters.",
-      placeholder: "Example: take a request, route it fast, and show status back clearly."
-    }
-  ];
+  const mergedIntake = mergeWorkflowIntake({ intake, answers });
+  const desiredOutput = resolveDesiredOutput({ intake: mergedIntake, preset });
+  return collectWorkflowClarifiers({
+    idea,
+    intake: mergedIntake,
+    preset,
+    desiredOutput
+  });
 }
 
-export function buildWorkflowBrief({ idea = "", category = "website", answers = {}, runId = "" } = {}) {
+export function buildWorkflowRequest({
+  idea = "",
+  category = "website",
+  intake = {},
+  answers = {},
+  runId = "",
+  previousRequest = {},
+  snapshot = null
+} = {}) {
   const resolvedCategory = normalizeWorkflowCategory(category, idea);
   const preset = getWorkflowCategoryPreset(resolvedCategory, idea);
-  const title = titleCaseFromIdea(idea);
-  const audience = answerText(answers, "audience", preset.audienceHint, 220);
-  const firstWin = answerText(
-    answers,
-    "firstWin",
-    answerText(
+  const mergedIntake = mergeWorkflowIntake({ intake, answers });
+  const audience = deriveAudience({ intake: mergedIntake, answers, preset });
+  const goal =
+    safeText(mergedIntake.goal, 220) ||
+    answerText(answers, "firstWin", "", 220) ||
+    `Give ${audience} a first pass that can ${preset.problemFrame}.`;
+  const desiredOutput = resolveDesiredOutput({ intake: mergedIntake, preset });
+  const assumptions = collectRequestAssumptions({
+    idea,
+    intake: mergedIntake,
+    desiredOutput,
+    preset
+  });
+  const clarifiers = collectWorkflowClarifiers({
+    idea,
+    intake: mergedIntake,
+    preset,
+    desiredOutput
+  });
+  const snapshots =
+    previousRequest && typeof previousRequest.snapshots === "object" && !Array.isArray(previousRequest.snapshots)
+      ? { ...previousRequest.snapshots }
+      : {};
+
+  if (snapshot && snapshot.state) {
+    snapshots[snapshot.state] = {
+      state: normalizeWorkflowState(snapshot.state),
+      phase: safeText(snapshot.phase || "", 40),
+      summary: safeText(snapshot.summary || "", 280),
+      updatedAt: safeText(snapshot.updatedAt || new Date().toISOString(), 80),
+      runId: safeText(runId, 120)
+    };
+  }
+
+  return {
+    rawInput: safeText(idea, 1200),
+    intake: mergedIntake,
+    normalized: {
+      goal,
+      requestType: resolvedCategory,
+      desiredArtifactType: safeText(desiredOutput, 180),
+      inferredLane: preset.recommendedLane,
+      audience,
+      scopeSummary: `ATEAM should ${preset.problemFrame} for ${audience}.`
+    },
+    assumptions,
+    clarifiers,
+    routing: {
+      recommendedLane: preset.recommendedLane,
+      ownerAgentId: preset.ownerAgentId,
+      reason: `ATEAM chose ${preset.recommendedLane} because the request reads like a ${preset.label.toLowerCase()} first pass.`
+    },
+    snapshots
+  };
+}
+
+export function buildWorkflowBrief({
+  idea = "",
+  category = "website",
+  answers = {},
+  intake = {},
+  request = null,
+  runId = ""
+} = {}) {
+  const resolvedCategory = normalizeWorkflowCategory(category, idea);
+  const preset = getWorkflowCategoryPreset(resolvedCategory, idea);
+  const resolvedRequest =
+    request ||
+    buildWorkflowRequest({
+      idea,
+      category: resolvedCategory,
+      intake,
       answers,
-      "coreOutcome",
-      `Give ${audience} a first version that can ${preset.problemFrame}.`,
-      220
-    ),
+      runId
+    });
+  const title = titleCaseFromIdea(idea);
+  const audience = safeText(resolvedRequest.normalized?.audience, 220) || preset.audienceHint;
+  const firstWin = safeText(resolvedRequest.normalized?.goal, 220);
+  const constraints = safeText(
+    resolvedRequest.intake?.constraints,
     220
-  );
-  const constraints = answerText(
-    answers,
-    "constraints",
-    inferConstraintNote(firstWin, preset),
-    220
-  );
-  const signals = answerText(
-    answers,
-    "signals",
-    inferSignalNote(idea, firstWin),
-    220
-  );
+  ) || inferConstraintNote(firstWin, preset);
+  const signals = answerText(answers, "signals", inferSignalNote(idea, firstWin), 220);
   const decision = buildWorkflowDecision({
     idea,
     firstWin,
@@ -296,15 +509,85 @@ export function buildWorkflowBrief({ idea = "", category = "website", answers = 
   };
 }
 
-export function buildWorkflowRisks({ brief, answers = {}, category = "website" } = {}) {
-  const preset = getWorkflowCategoryPreset(category);
-  const firstWin = answerText(
-    answers,
-    "firstWin",
-    answerText(answers, "coreOutcome", "", 220),
-    220
+export function buildWorkflowPlan({ request = {}, category = "website", brief = {}, runId = "" } = {}) {
+  const resolvedCategory = normalizeWorkflowCategory(category, request?.rawInput || "");
+  const preset = getWorkflowCategoryPreset(resolvedCategory, request?.rawInput || "");
+  const assumptions = safeList(request?.assumptions || [], 4);
+  const blockers = safeList(
+    (request?.clarifiers || []).map((clarifier) => clarifier.reason || clarifier.prompt),
+    4
   );
-  const constraints = answerText(answers, "constraints", inferConstraintNote(firstWin, preset), 220);
+  const firstWin =
+    safeText(request?.normalized?.goal, 220) || safeText(brief?.primaryGoal, 220) || preset.problemFrame;
+  const expectedArtifactTitle = brief?.title
+    ? `${brief.title} decision pack`
+    : `${titleCaseFromIdea(request?.rawInput || runId || "ATEAM")} decision pack`;
+
+  return {
+    summary: "ATEAM will turn this request into a visible, scoped first pass before any deeper execution work starts.",
+    proposedSteps: [
+      {
+        id: "normalize_request",
+        title: "Normalize the request",
+        detail: `Clarify ${lowerFirst(firstWin)} and preserve the original intent in a stable request object.`
+      },
+      {
+        id: "shape_first_pass",
+        title: "Shape the first pass",
+        detail: `Choose ${preset.recommendedLane} and keep the first useful version narrow enough to trust.`
+      },
+      {
+        id: "generate_decision_pack",
+        title: "Generate the decision pack",
+        detail: "Return a concrete artifact with prototype direction, scope notes, and the clearest next move."
+      }
+    ],
+    expectedArtifact: {
+      type: safeText(request?.normalized?.desiredArtifactType, 160) || "Decision pack",
+      title: expectedArtifactTitle,
+      summary: `A public-safe artifact bundle that proves ${lowerFirst(firstWin)} without pretending to be the full product.`
+    },
+    assumptions,
+    blockers,
+    approvalActions: ["approve", "reject", "regenerate"],
+    singleAgent: {
+      ownerAgentId: safeText(request?.routing?.ownerAgentId, 80) || preset.ownerAgentId,
+      lane: safeText(request?.routing?.recommendedLane, 120) || preset.recommendedLane
+    }
+  };
+}
+
+export function buildWorkflowEvaluation({ run = {}, outcome = "completed", failureReason = "" } = {}) {
+  const artifacts = run?.artifacts && typeof run.artifacts === "object" ? run.artifacts : {};
+  const hasDecisionPack = Boolean(artifacts?.prototype?.title || artifacts?.doc?.title);
+  const hasPlan = Boolean(run?.plan?.proposedSteps?.length);
+  const hasRequest = Boolean(run?.request?.normalized?.goal);
+  const failed = safeText(outcome, 40) === "failed";
+  const rejected = safeText(outcome, 40) === "rejected";
+
+  const baseScore = failed ? 1 : rejected ? 2 : 4;
+  const completenessBonus = hasDecisionPack ? 1 : 0;
+
+  return {
+    intentFidelity: Math.min(5, baseScore + (hasRequest ? 1 : 0)),
+    scopeAdherence: Math.min(5, baseScore + (hasPlan ? 1 : 0)),
+    artifactCompleteness: Math.min(5, baseScore + completenessBonus),
+    assumptionDiscipline: Math.min(5, baseScore + (Array.isArray(run?.request?.assumptions) ? 1 : 0)),
+    humanCorrectionNeeded: failed ? "high" : rejected ? "high" : "moderate",
+    finalStatus: failed ? "failed" : rejected ? "rejected" : "completed",
+    summary: failed
+      ? `ATEAM failed before finishing the run. ${safeText(failureReason, 220) || "Inspect the run log for the failure point."}`
+      : rejected
+        ? "The run was rejected before execution completed and needs another planning pass."
+        : "The run completed with a decision pack, visible routing, and a stored evaluation snapshot."
+  };
+}
+
+export function buildWorkflowRisks({ brief, answers = {}, category = "website", request = null } = {}) {
+  const preset = getWorkflowCategoryPreset(category);
+  const firstWin = safeText(request?.normalized?.goal, 220) || answerText(answers, "firstWin", "", 220);
+  const constraints =
+    safeText(request?.intake?.constraints, 220) || answerText(answers, "constraints", inferConstraintNote(firstWin, preset), 220);
   const signals = answerText(answers, "signals", "", 220);
 
   return safeList([
@@ -387,6 +670,16 @@ export function buildWorkflowPack({ run } = {}) {
       idea: run?.idea,
       category,
       answers: run?.answers,
+      intake: run?.request?.intake,
+      request: run?.request,
+      runId: run?.id
+    });
+  const plan =
+    run?.plan ||
+    buildWorkflowPlan({
+      request: run?.request,
+      category,
+      brief,
       runId: run?.id
     });
   const mockupScreens = buildMockupScreens({ ...run, brief }, preset);
@@ -430,12 +723,16 @@ export function buildWorkflowPack({ run } = {}) {
       summary: `Recommended move, risk watch, and system shape for ${brief.title}.`,
       sections: [
         {
-          title: "Recommended move",
+          title: "Normalized request",
           items: safeList([
-            brief.quickVerdict,
-            brief.recommendedLane,
-            brief.recommendedDirection
+            safeText(run?.request?.normalized?.goal, 220),
+            safeText(run?.request?.normalized?.scopeSummary, 220),
+            safeText(run?.request?.routing?.reason, 220)
           ], 4)
+        },
+        {
+          title: "Visible plan",
+          items: safeList((plan?.proposedSteps || []).map((step) => `${step.title}: ${step.detail}`), 4)
         },
         {
           title: "Systems / integrations",
@@ -444,10 +741,6 @@ export function buildWorkflowPack({ run } = {}) {
         {
           title: "Risk watch",
           items: safeList(run?.risks || [], 4)
-        },
-        {
-          title: "Operator notes",
-          items: safeList(brief.operatorNotes || [], 4)
         }
       ]
     },
@@ -468,6 +761,8 @@ export function buildWorkflowHandoff({ run } = {}) {
       idea: run?.idea,
       category,
       answers: run?.answers,
+      intake: run?.request?.intake,
+      request: run?.request,
       runId: run?.id
     });
   const artifacts = run?.artifacts || buildWorkflowPack({ run: { ...run, brief } });
@@ -513,6 +808,8 @@ export function buildWorkflowWorkItems(run) {
       idea: run?.idea,
       category,
       answers: run?.answers,
+      intake: run?.request?.intake,
+      request: run?.request,
       runId: run?.id
     });
   const projectId = buildWorkflowProjectId(run?.id);

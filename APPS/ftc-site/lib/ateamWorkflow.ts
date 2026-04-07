@@ -14,6 +14,76 @@ export type WorkflowQuestion = {
   prompt: string;
   hint?: string;
   placeholder?: string;
+  reason?: string;
+};
+
+export type WorkflowIntake = {
+  goal?: string;
+  context?: string;
+  desiredOutput?: string;
+  constraints?: string;
+  nonGoals?: string;
+};
+
+export type WorkflowRequest = {
+  rawInput: string;
+  intake: WorkflowIntake;
+  normalized: {
+    goal: string;
+    requestType: string;
+    desiredArtifactType: string;
+    inferredLane: string;
+    audience?: string;
+    scopeSummary?: string;
+  };
+  assumptions: string[];
+  clarifiers: WorkflowQuestion[];
+  routing: {
+    recommendedLane: string;
+    ownerAgentId: string;
+    reason: string;
+  };
+  snapshots?: Record<
+    string,
+    {
+      state: string;
+      phase: string;
+      summary: string;
+      updatedAt: string;
+      runId?: string;
+    }
+  >;
+};
+
+export type WorkflowPlan = {
+  summary: string;
+  proposedSteps: Array<{
+    id: string;
+    title: string;
+    detail: string;
+  }>;
+  expectedArtifact: {
+    type: string;
+    title: string;
+    summary: string;
+  };
+  assumptions: string[];
+  blockers: string[];
+  approvalActions: string[];
+  singleAgent?: {
+    ownerAgentId: string;
+    lane: string;
+  };
+};
+
+export type WorkflowEvaluation = {
+  intentFidelity: number;
+  scopeAdherence: number;
+  artifactCompleteness: number;
+  assumptionDiscipline: number;
+  humanCorrectionNeeded: string;
+  finalStatus: string;
+  summary: string;
 };
 
 export type WorkflowBrief = {
@@ -265,12 +335,23 @@ export type WorkflowRun = {
   createdTs: string;
   updatedTs: string;
   phase: WorkflowPhase;
+  state?: string;
+  stateHistory?: Array<{
+    state: string;
+    phase: string;
+    reason?: string;
+    actor?: string;
+    createdAt: string;
+  }>;
   requestedBy: string;
   category: string;
   idea: string;
   title: string;
   questions: WorkflowQuestion[];
   answers: Record<string, string>;
+  request?: WorkflowRequest;
+  plan?: WorkflowPlan;
+  evaluation?: WorkflowEvaluation;
   brief: Partial<WorkflowBrief>;
   recommendedLane: string;
   risks: string[];
@@ -282,6 +363,7 @@ export type WorkflowRun = {
   project?: ProjectSummary;
   jobs?: JobSummary[];
   artifactSummaries?: ArtifactSummary[];
+  recentArtifact?: ArtifactSummary | null;
   statusNarrative?: StatusNarrative;
   history?: TimelineEntry[];
   publicFlow?: PublicFlow;

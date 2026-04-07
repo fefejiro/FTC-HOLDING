@@ -1,12 +1,17 @@
 import {
   buildWorkflowBrief,
+  buildWorkflowEvaluation,
   buildWorkflowHandoff,
   buildWorkflowPack,
+  buildWorkflowPlan,
   buildWorkflowQuestions,
+  buildWorkflowRequest,
   buildWorkflowRisks,
   buildWorkflowWorkItems,
+  getWorkflowCategoryPreset,
+  mapWorkflowPhaseToState,
   normalizeWorkflowCategory,
-  getWorkflowCategoryPreset
+  normalizeWorkflowState
 } from "./workflowEngine.js";
 
 function safeText(value, limit = 220) {
@@ -23,6 +28,28 @@ function normalizeAnswers(rawAnswers) {
   }, {});
 }
 
+function normalizeIntake(rawIntake = {}) {
+  const raw = rawIntake && typeof rawIntake === "object" && !Array.isArray(rawIntake) ? rawIntake : {};
+  return {
+    goal: safeText(raw.goal, 260),
+    context: safeText(raw.context, 360),
+    desiredOutput: safeText(raw.desiredOutput, 180),
+    constraints: safeText(raw.constraints, 260),
+    nonGoals: safeText(raw.nonGoals, 260)
+  };
+}
+
+function buildAnswerPatchFromIntake(intake = {}) {
+  const normalized = normalizeIntake(intake);
+  const next = {};
+  if (normalized.goal) next.goal = normalized.goal;
+  if (normalized.context) next.context = normalized.context;
+  if (normalized.desiredOutput) next.desiredOutput = normalized.desiredOutput;
+  if (normalized.constraints) next.constraints = normalized.constraints;
+  if (normalized.nonGoals) next.nonGoals = normalized.nonGoals;
+  return next;
+}
+
 function ensureApprovalState(approvals = {}) {
   return approvals && typeof approvals === "object" && !Array.isArray(approvals) ? { ...approvals } : {};
 }
@@ -33,6 +60,48 @@ function ensureLinks(links = {}) {
 
 function ensureMeta(meta = {}) {
   return meta && typeof meta === "object" && !Array.isArray(meta) ? { ...meta } : {};
+}
+
+function ensureRequest(request = {}) {
+  return request && typeof request === "object" && !Array.isArray(request) ? { ...request } : {};
+}
+
+function ensurePlan(plan = {}) {
+  return plan && typeof plan === "object" && !Array.isArray(plan) ? { ...plan } : {};
+}
+
+function ensureEvaluation(evaluation = {}) {
+  return evaluation && typeof evaluation === "object" && !Array.isArray(evaluation) ? { ...evaluation } : {};
+}
+
+function normalizeStateHistory(entries = []) {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      state: normalizeWorkflowState(entry.state || entry.to || ""),
+      phase: safeText(entry.phase || "", 40),
+      reason: safeText(entry.reason, 220),
+      actor: safeText(entry.actor, 80),
+      createdAt: safeText(entry.createdAt || entry.timestamp, 80) || new Date().toISOString()
+    }))
+    .slice(-20);
+}
+
+function createStateHistoryEntry({ state = "", phase = "", reason = "", actor = "" } = {}) {
+  return {
+    state: normalizeWorkflowState(state || mapWorkflowPhaseToState(phase)),
+    phase: safeText(phase, 40),
+    reason: safeText(reason, 220),
+    actor: safeText(actor, 80),
+    createdAt: new Date().toISOString()
+  };
+}
+
+function appendStateHistory(current = [], entry = {}) {
+  const next = normalizeStateHistory(current);
+  next.push(createStateHistoryEntry(entry));
+  return next.slice(-20);
 }
 
 function safeList(value, limit = 8, itemLimit = 220) {
@@ -524,6 +593,76 @@ function linkArtifactsToJobs(artifacts = [], jobs = []) {
   });
 }
 
+function buildRecentArtifact(artifacts = []) {
+  const normalized = normalizeArtifactRecords(artifacts);
+  if (!normalized.length) return null;
+  const preferredTypeOrder = ["document", "prototype", "mockup", "smoke_report", "brief"];
+  const sorted = [...normalized].sort((left, right) => {
+    const leftTypeRank = preferredTypeOrder.indexOf(String(left.type || ""));
+    const rightTypeRank = preferredTypeOrder.indexOf(String(right.type || ""));
+    if (leftTypeRank !== rightTypeRank) return (leftTypeRank === -1 ? 99 : leftTypeRank) - (rightTypeRank === -1 ? 99 : rightTypeRank);
+    return String(right.updatedAt || right.createdAt || "").localeCompare(String(left.updatedAt || left.createdAt || ""));
+  });
+  return sorted[0] || null;
+}
+
+function buildWorkflowStateContext({
+  run,
+  phase,
+  state,
+  actor = "",
+  reason = "",
+  summary = "",
+  request,
+  plan
+} = {}) {
+  const nextPhase = safeText(phase || run?.phase || "", 40) || "intake";
+  const nextState = normalizeWorkflowState(state || run?.state || mapWorkflowPhaseToState(nextPhase));
+  const nextRequest = buildWorkflowRequest({
+    idea: run?.idea,
+    category: run?.category,
+    intake: ensureRequest(request || run?.request).intake,
+    answers: run?.answers,
+    runId: run?.id,
+    previousRequest: ensureRequest(request || run?.request),
+    snapshot: {
+      state: nextState,
+      phase: nextPhase,
+      summary,
+      updatedAt: new Date().toISOString()
+    }
+  });
+  const nextBrief = buildWorkflowBrief({
+    idea: run?.idea,
+    category: run?.category,
+    answers: run?.answers,
+    intake: nextRequest.intake,
+    request: nextRequest,
+    runId: run?.id
+  });
+  const nextPlan =
+    plan ||
+    buildWorkflowPlan({
+      request: nextRequest,
+      category: run?.category,
+      brief: nextBrief,
+      runId: run?.id
+    });
+  return {
+    phase: nextPhase,
+    state: nextState,
+    request: nextRequest,
+    brief: nextBrief,
+    plan: nextPlan,
+    stateHistory: appendStateHistory(run?.stateHistory, {
+      state: nextState,
+      phase: nextPhase,
+      reason,
+      actor
+    })
+  };
+}
+
 function createError(code, message, status = 400) {
   const error = new Error(message);
   error.code = code;
@@ -559,6 +698,39 @@ export function createWorkflowService({
     const rawRun = run && typeof run === "object" ? run : null;
     if (!rawRun) return null;
     const links = ensureLinks(rawRun.links);
+    const request =
+      Object.keys(ensureRequest(rawRun.request)).length > 0
+        ? ensureRequest(rawRun.request)
+        : buildWorkflowRequest({
+            idea: rawRun.idea,
+            category: rawRun.category,
+            intake: rawRun.answers,
+            answers: rawRun.answers,
+            runId: rawRun.id
+          });
+    const brief =
+      Object.keys(rawRun.brief || {}).length > 0
+        ? rawRun.brief
+        : buildWorkflowBrief({
+            idea: rawRun.idea,
+            category: rawRun.category,
+            answers: rawRun.answers,
+            intake: request.intake,
+            request,
+            runId: rawRun.id
+          });
+    const plan =
+      Object.keys(ensurePlan(rawRun.plan)).length > 0
+        ? ensurePlan(rawRun.plan)
+        : buildWorkflowPlan({
+            request,
+            category: rawRun.category,
+            brief,
+            runId: rawRun.id
+          });
+    const evaluation = ensureEvaluation(rawRun.evaluation);
+    const state = normalizeWorkflowState(rawRun.state || mapWorkflowPhaseToState(rawRun.phase));
+    const stateHistory = normalizeStateHistory(rawRun.stateHistory);
     const linkedIds = uniqueStrings([
       ...(Array.isArray(links.workItemIds) ? links.workItemIds : []),
       ...(Array.isArray(links.jobIds) ? links.jobIds : [])
@@ -568,12 +740,19 @@ export function createWorkflowService({
         ? await workItemStore.getMany(linkedIds)
         : (await Promise.all(linkedIds.map((id) => workItemStore.get(id)))).filter(Boolean);
     const jobs = items.map(mapJobSummary);
-    const artifactSummaries = linkArtifactsToJobs(buildArtifactRecords(rawRun), jobs);
-    const project = buildProjectSummary(rawRun, jobs, artifactSummaries);
+    const artifactSummaries = linkArtifactsToJobs(buildArtifactRecords({ ...rawRun, brief, request, plan }), jobs);
+    const project = buildProjectSummary({ ...rawRun, brief, request, plan, state }, jobs, artifactSummaries);
     const meta = ensureMeta(rawRun.meta);
+    const recentArtifact = buildRecentArtifact(artifactSummaries);
 
     return {
       ...rawRun,
+      brief,
+      request,
+      plan,
+      evaluation,
+      state,
+      stateHistory,
       links: {
         ...links,
         workItemIds: linkedIds,
@@ -582,35 +761,124 @@ export function createWorkflowService({
       project,
       jobs,
       artifactSummaries,
+      recentArtifact,
       statusNarrative: buildStatusNarrative(rawRun, jobs),
       history: normalizeTimeline(meta.workflowTimeline, "run", safeText(rawRun.id, 120)),
       publicFlow: buildPublicFlow(rawRun, jobs, artifactSummaries)
     };
   }
 
-  async function startRun({ idea, category, requestedBy = "public", sessionId = "global_podcast", meta = {} }) {
+  async function startRun({
+    idea,
+    category,
+    intake = {},
+    requestedBy = "public",
+    sessionId = "global_podcast",
+    meta = {}
+  }) {
     const safeIdea = safeText(idea, 1200);
     if (safeIdea.length < 12) {
       throw createError("INVALID_WORKFLOW_IDEA", "Share a bit more detail so ATEAM can shape the run.");
     }
     const normalizedCategory = normalizeWorkflowCategory(category, safeIdea);
     const preset = getWorkflowCategoryPreset(normalizedCategory);
-    const questions = buildWorkflowQuestions({ idea: safeIdea, category: normalizedCategory });
+    const normalizedIntake = normalizeIntake(intake);
+    const answers = buildAnswerPatchFromIntake(normalizedIntake);
+    const request = buildWorkflowRequest({
+      idea: safeIdea,
+      category: normalizedCategory,
+      intake: normalizedIntake,
+      answers
+    });
+    const brief = buildWorkflowBrief({
+      idea: safeIdea,
+      category: normalizedCategory,
+      answers,
+      intake: normalizedIntake,
+      request
+    });
+    const questions = buildWorkflowQuestions({
+      idea: safeIdea,
+      category: normalizedCategory,
+      intake: normalizedIntake,
+      answers
+    });
+    const plan = buildWorkflowPlan({
+      request,
+      category: normalizedCategory,
+      brief
+    });
+    const approval = await approvalStore.create({
+      policy: "workflow_brief",
+      summary: `Approve plan for ${brief.title}`,
+      requestedBy,
+      payload: {
+        idea: safeIdea,
+        category: normalizedCategory,
+        recommendedLane: brief.recommendedLane
+      }
+    });
+    const stateHistory = [
+      createStateHistoryEntry({
+        state: "queued",
+        phase: "intake",
+        reason: "The run was accepted from public intake.",
+        actor: requestedBy
+      }),
+      createStateHistoryEntry({
+        state: "planning",
+        phase: "analysis",
+        reason: "ATEAM normalized the request and prepared a visible plan.",
+        actor: "ateam_intake"
+      }),
+      createStateHistoryEntry({
+        state: "awaiting_approval",
+        phase: "brief_approval",
+        reason: "The visible plan is ready for review.",
+        actor: "henry"
+      })
+    ];
 
     const run = await workflowRunStore.create({
-      phase: "analysis",
+      phase: "brief_approval",
+      state: "awaiting_approval",
+      stateHistory,
       requestedBy,
       category: normalizedCategory,
       idea: safeIdea,
-      title: "",
+      title: brief.title,
       questions,
+      answers,
+      brief,
       recommendedLane: preset.recommendedLane,
+      request: buildWorkflowRequest({
+        idea: safeIdea,
+        category: normalizedCategory,
+        intake: normalizedIntake,
+        answers,
+        snapshot: {
+          state: "awaiting_approval",
+          phase: "brief_approval",
+          summary: "ATEAM normalized the request and produced a visible plan.",
+          updatedAt: new Date().toISOString()
+        }
+      }),
+      plan,
+      approvals: {
+        brief: {
+          approvalId: approval.id,
+          status: "pending",
+          requestedAt: new Date().toISOString(),
+          decidedAt: null,
+          decidedBy: ""
+        }
+      },
       meta: {
         ...ensureMeta(meta),
         lastTransition: {
-          currentStage: phaseToNarrativeStage("analysis"),
-          summary: "ATEAM captured the idea and started shaping the intake.",
-          reason: "A new run was created from public intake.",
+          currentStage: phaseToNarrativeStage("brief_approval"),
+          summary: "ATEAM captured the idea, normalized the request, and prepared the first plan.",
+          reason: "A new run was created from guided public intake.",
           responsible: "ateam_intake",
           timestamp: new Date().toISOString()
         }
@@ -624,7 +892,8 @@ export function createWorkflowService({
         metadata: {
           actor: requestedBy,
           category: normalizedCategory,
-          recommendedLane: preset.recommendedLane
+          recommendedLane: preset.recommendedLane,
+          approvalId: approval.id
         }
       })
     });
@@ -644,16 +913,39 @@ export function createWorkflowService({
       ...(run.answers || {}),
       ...normalizeAnswers(answers)
     };
+    const request = buildWorkflowRequest({
+      idea: run.idea,
+      category: run.category,
+      intake: ensureRequest(run.request).intake,
+      answers: mergedAnswers,
+      runId: run.id,
+      previousRequest: run.request,
+      snapshot: {
+        state: "awaiting_approval",
+        phase: "brief_approval",
+        summary: "ATEAM refreshed the visible plan from the latest user inputs.",
+        updatedAt: new Date().toISOString()
+      }
+    });
     const brief = buildWorkflowBrief({
       idea: run.idea,
       category: run.category,
       answers: mergedAnswers,
+      intake: request.intake,
+      request,
+      runId: run.id
+    });
+    const plan = buildWorkflowPlan({
+      request,
+      category: run.category,
+      brief,
       runId: run.id
     });
     const risks = buildWorkflowRisks({
       brief,
       answers: mergedAnswers,
-      category: run.category
+      category: run.category,
+      request
     });
 
     const approvals = ensureApprovalState(run.approvals);
@@ -696,8 +988,17 @@ export function createWorkflowService({
 
     const updated = await workflowRunStore.update(run.id, {
       phase: "brief_approval",
+      state: "awaiting_approval",
+      stateHistory: appendStateHistory(run.stateHistory, {
+        state: "awaiting_approval",
+        phase: "brief_approval",
+        reason: "ATEAM refreshed the plan from the latest intake details.",
+        actor
+      }),
       title: brief.title,
       answers: mergedAnswers,
+      request,
+      plan,
       brief,
       recommendedLane: brief.recommendedLane,
       risks,
@@ -780,29 +1081,110 @@ export function createWorkflowService({
     if (!["brief", "pack"].includes(safeGate)) {
       throw createError("INVALID_WORKFLOW_GATE", "Approval gate must be brief or pack.");
     }
-    if (!["approved", "rejected"].includes(safeDecision)) {
-      throw createError("INVALID_WORKFLOW_DECISION", "Decision must be approved or rejected.");
+    if (!["approved", "rejected", "regenerate"].includes(safeDecision)) {
+      throw createError("INVALID_WORKFLOW_DECISION", "Decision must be approved, rejected, or regenerate.");
     }
 
     const approvals = ensureApprovalState(run.approvals);
     const currentGate = approvals[safeGate] && typeof approvals[safeGate] === "object" ? { ...approvals[safeGate] } : {};
     const approvalId = safeText(currentGate.approvalId, 120);
-    if (approvalId) {
+    if (approvalId && safeDecision !== "regenerate") {
       await approvalStore.setStatus(approvalId, safeDecision);
     }
 
-    currentGate.status = safeDecision;
-    currentGate.decidedAt = new Date().toISOString();
-    currentGate.decidedBy = actor;
+    currentGate.status = safeDecision === "regenerate" ? "pending" : safeDecision;
+    currentGate.decidedAt = safeDecision === "regenerate" ? null : new Date().toISOString();
+    currentGate.decidedBy = safeDecision === "regenerate" ? "" : actor;
     approvals[safeGate] = currentGate;
 
     const patch = { approvals };
     const existingArtifacts = buildArtifactRecords(run);
 
     if (safeGate === "brief") {
-      if (safeDecision === "approved") {
+      if (safeDecision === "regenerate") {
+        const request = buildWorkflowRequest({
+          idea: run.idea,
+          category: run.category,
+          intake: ensureRequest(run.request).intake,
+          answers: run.answers,
+          runId: run.id,
+          previousRequest: run.request,
+          snapshot: {
+            state: "awaiting_approval",
+            phase: "brief_approval",
+            summary: "ATEAM regenerated the visible plan and reset the approval gate.",
+            updatedAt: new Date().toISOString()
+          }
+        });
+        const brief = buildWorkflowBrief({
+          idea: run.idea,
+          category: run.category,
+          answers: run.answers,
+          intake: request.intake,
+          request,
+          runId: run.id
+        });
+        patch.phase = "brief_approval";
+        patch.state = "awaiting_approval";
+        patch.stateHistory = appendStateHistory(run.stateHistory, {
+          state: "planning",
+          phase: "analysis",
+          reason: "The user asked ATEAM to regenerate the visible plan.",
+          actor
+        });
+        patch.stateHistory = appendStateHistory(patch.stateHistory, {
+          state: "awaiting_approval",
+          phase: "brief_approval",
+          reason: "ATEAM regenerated the plan and returned it for approval.",
+          actor: "henry"
+        });
+        patch.request = request;
+        patch.brief = brief;
+        patch.plan = buildWorkflowPlan({
+          request,
+          category: run.category,
+          brief,
+          runId: run.id
+        });
+        patch.risks = buildWorkflowRisks({
+          brief,
+          answers: run.answers,
+          category: run.category,
+          request
+        });
+        patch.meta = appendRunTimeline(
+          {
+            ...run,
+            meta: {
+              ...ensureMeta(run.meta),
+              lastTransition: {
+                currentStage: phaseToNarrativeStage("brief_approval"),
+                summary: "ATEAM regenerated the plan and sent it back for approval.",
+                reason: "The user asked for a fresh planning pass.",
+                responsible: "henry",
+                timestamp: new Date().toISOString()
+              }
+            }
+          },
+          {
+            eventType: "regenerated",
+            message: "Plan regenerated from approval gate",
+            metadata: {
+              actor,
+              gate: safeGate
+            }
+          }
+        );
+      } else if (safeDecision === "approved") {
         const linked = await ensureLinkedWork(run);
         patch.phase = "initiation";
+        patch.state = "executing";
+        patch.stateHistory = appendStateHistory(run.stateHistory, {
+          state: "executing",
+          phase: "initiation",
+          reason: "The plan was approved and ATEAM seeded the execution work.",
+          actor
+        });
         patch.links = {
           ...ensureLinks(run.links),
           projectId: linked.projectId,
@@ -842,6 +1224,18 @@ export function createWorkflowService({
         );
       } else {
         patch.phase = "analysis";
+        patch.state = "failed";
+        patch.stateHistory = appendStateHistory(run.stateHistory, {
+          state: "failed",
+          phase: "analysis",
+          reason: "The visible plan was rejected.",
+          actor
+        });
+        patch.evaluation = buildWorkflowEvaluation({
+          run,
+          outcome: "rejected",
+          failureReason: "The visible plan was rejected before execution."
+        });
         patch.meta = appendRunTimeline(
           {
             ...run,
@@ -874,12 +1268,26 @@ export function createWorkflowService({
       if (safeDecision === "approved") {
         const projectId = safeText(run.links?.projectId, 120);
         patch.phase = "handoff";
+        patch.state = "completed";
+        patch.stateHistory = appendStateHistory(run.stateHistory, {
+          state: "completed",
+          phase: "handoff",
+          reason: "The generated artifact passed the delivery gate.",
+          actor
+        });
         patch.handoff = {
           ...(run.handoff || {}),
           status: "ready",
           approvedAt: new Date().toISOString(),
           approvedBy: actor
         };
+        patch.evaluation = buildWorkflowEvaluation({
+          run: {
+            ...run,
+            phase: "handoff"
+          },
+          outcome: "completed"
+        });
         patch.meta = appendRunTimeline(
           {
             ...run,
@@ -907,6 +1315,18 @@ export function createWorkflowService({
         );
       } else {
         patch.phase = "initiation";
+        patch.state = "executing";
+        patch.stateHistory = appendStateHistory(run.stateHistory, {
+          state: "executing",
+          phase: "initiation",
+          reason: "The generated artifact needs another execution pass.",
+          actor
+        });
+        patch.evaluation = buildWorkflowEvaluation({
+          run,
+          outcome: "rejected",
+          failureReason: "The generated artifact was rejected and sent back for revision."
+        });
         patch.handoff = {
           ...(run.handoff || {}),
           status: "needs_revision"
@@ -1059,6 +1479,13 @@ export function createWorkflowService({
 
     const updated = await workflowRunStore.update(run.id, {
       phase: "pack_approval",
+      state: "generating_artifact",
+      stateHistory: appendStateHistory(run.stateHistory, {
+        state: "generating_artifact",
+        phase: "pack_approval",
+        reason: "ATEAM generated the decision pack and staged it for review.",
+        actor
+      }),
       artifacts,
       handoff: {
         ...handoff,

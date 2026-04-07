@@ -44,9 +44,12 @@ describe("workflowService", () => {
     });
 
     expect(started.history[0].eventType).toBe("created");
-    expect(started.statusNarrative.currentStage).toBe("understanding");
+    expect(started.statusNarrative.currentStage).toBe("routing");
+    expect(started.state).toBe("awaiting_approval");
+    expect(started.request?.rawInput).toContain("client intake system");
+    expect(started.plan?.approvalActions).toEqual(expect.arrayContaining(["approve", "reject", "regenerate"]));
     expect(started.project.workflowRunId).toBe(started.id);
-    expect(started.project.status).toBe("intake");
+    expect(started.project.status).toBe("discovery");
     expect(started.publicFlow?.modules.map((module) => module.key)).toEqual([
       "intake",
       "system",
@@ -71,6 +74,7 @@ describe("workflowService", () => {
     expect(briefArtifact.runId).toBe(withBrief.id);
     expect(briefArtifact.projectId).toBe("");
     expect(briefArtifact.promotionStatus).toBe("run_owned");
+    expect(withBrief.state).toBe("awaiting_approval");
 
     const initiated = await workflowService.approveRun(withBrief.id, {
       actor: "operator",
@@ -105,6 +109,37 @@ describe("workflowService", () => {
     expect(delivered.artifactSummaries.every((artifact) => artifact.runId === delivered.id)).toBe(true);
     expect(delivered.artifactSummaries.every((artifact) => artifact.projectId === delivered.project.id)).toBe(true);
     expect(delivered.publicFlow?.modules.find((module) => module.key === "output")?.state).toBe("Decision pack ready");
+    expect(delivered.evaluation?.finalStatus).toBe("completed");
+  });
+
+  test("regenerate loops the plan back to approval without losing request context", async () => {
+    const started = await workflowService.startRun({
+      idea: "Turn a rough services inquiry into a visible plan before any execution starts.",
+      category: "lead-automation",
+      requestedBy: "public"
+    });
+
+    const updated = await workflowService.captureAnswers(started.id, {
+      actor: "public",
+      answers: {
+        goal: "show the user a clear plan before any execution happens",
+        context: "public users do not know what will happen next",
+        desiredOutput: "a concise decision pack",
+        constraints: "keep the first pass public-safe",
+        nonGoals: "do not expose operator internals"
+      }
+    });
+
+    const regenerated = await workflowService.approveRun(updated.id, {
+      actor: "public",
+      gate: "brief",
+      decision: "regenerate"
+    });
+
+    expect(regenerated.state).toBe("awaiting_approval");
+    expect(regenerated.phase).toBe("brief_approval");
+    expect(regenerated.request?.intake?.goal).toContain("clear plan");
+    expect(regenerated.stateHistory?.some((entry) => entry.reason?.includes("regenerated"))).toBe(true);
   });
 
   test("job timelines persist stage movement and blocker reasons", async () => {

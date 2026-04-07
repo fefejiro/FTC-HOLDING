@@ -2,7 +2,9 @@ import {
   buildWorkflowBrief,
   buildWorkflowHandoff,
   buildWorkflowPack,
+  buildWorkflowPlan,
   buildWorkflowQuestions,
+  buildWorkflowRequest,
   buildWorkflowWorkItems,
   normalizeWorkflowCategory
 } from "../../lib/workflowEngine.js";
@@ -10,14 +12,35 @@ import {
 describe("workflowEngine", () => {
   test("normalizes categories and builds follow-up questions", () => {
     const category = normalizeWorkflowCategory("product-app");
+    const request = buildWorkflowRequest({
+      idea: "Build a restaurant booking assistant that works through WhatsApp",
+      category,
+      intake: {},
+      answers: {}
+    });
     const questions = buildWorkflowQuestions({
       idea: "Build a restaurant booking assistant that works through WhatsApp",
-      category
+      category,
+      request
+    });
+    const plan = buildWorkflowPlan({
+      request,
+      category,
+      brief: buildWorkflowBrief({
+        idea: "Build a restaurant booking assistant that works through WhatsApp",
+        category,
+        answers: {},
+        request,
+        runId: "wfr_test_001"
+      }),
+      runId: "wfr_test_001"
     });
 
     expect(category).toBe("product-app");
     expect(questions).toHaveLength(2);
-    expect(questions[0].id).toBe("audience");
+    expect(questions[0].id).toBe("goal");
+    expect(request.normalized.requestType).toBeTruthy();
+    expect(plan.expectedArtifact.title).toBeTruthy();
   });
 
   test("builds a brief, pack, and handoff payload from answers", () => {
