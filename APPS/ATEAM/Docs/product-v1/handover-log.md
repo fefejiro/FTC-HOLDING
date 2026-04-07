@@ -500,3 +500,30 @@ Followed up on two remaining public UX issues after the dynamic route fix. First
 
 - speech recognition still depends on browser support and user microphone permissions, so typed intake remains the safest fallback
 - the public route still needs a final live browser QA pass after deployment to confirm the wider shell and red voice control are what users actually see on the apex domain
+
+## 2026-04-07 Route-Scoped ATEAM Shell Override
+
+### Summary
+
+Followed up on one more live issue: `/ateam` was serving current HTML but still picking up an older global CSS bundle at the edge, which made the page look like a narrow embedded widget even after the wider-shell work was merged. To break that dependency, the route now ships its own critical ATEAM layout and voice styles inline at the page level so the main workflow surface can update without relying on a manual Cloudflare purge of shared stylesheet assets.
+
+### Files Changed
+
+- `APPS/ftc-site/app/ateam/page.tsx`
+
+### Root Cause: HTML Fresh, CSS Stale
+
+- route HTML was updating because `/ateam` is now dynamic and no-store
+- the shared global CSS asset could still lag on the custom domain, so the live page mixed new markup with older width rules
+- that mismatch is what kept the intake surface visually compressed and let older support/decorative patterns continue to influence the page
+
+### What Changed
+
+- added route-scoped global styles directly inside `app/ateam/page.tsx`
+- widened the ATEAM shell, hero, intake grid, support grid, and voice control through page-level styles that travel with the route HTML
+- explicitly hid the placeholder strip and office-support panel at the route level so the page reads like a native workflow surface instead of an embedded module
+
+### Remaining Gaps
+
+- the route should still be rechecked in a real browser after deployment because static CSS caching can differ between the custom domain and preview hosts
+- if Cloudflare continues serving stale shared CSS bundles, other page-level critical styles may need to be localized the same way
