@@ -3868,6 +3868,153 @@ nav.primary {
   margin-top: 18px;
 }
 
+/* 2026-04-07 ATEAM native-surface alignment */
+.wf-shell .container {
+  max-width: 1420px;
+  padding: 0 clamp(24px, 3vw, 40px);
+}
+
+.wf-bar {
+  padding: 10px clamp(24px, 3vw, 40px) 0;
+  background: transparent;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+.wf-body {
+  padding: 14px 0 64px;
+  gap: 28px;
+}
+
+.wf-stage--intake {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  grid-template-columns: minmax(0, 0.76fr) minmax(480px, 1.24fr);
+  grid-template-areas:
+    "intro intake"
+    "proof intake"
+    "templates intake"
+    "expect intake"
+    "recent recent";
+  gap: clamp(20px, 2.5vw, 30px);
+  align-items: start;
+}
+
+.wf-stage--intake > .wf-intro {
+  grid-area: intro;
+  align-self: start;
+  padding-top: 12px;
+}
+
+.wf-stage--intake > .wf-proof-strip {
+  grid-area: proof;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wf-stage--intake > .wf-template-card {
+  grid-area: templates;
+}
+
+.wf-stage--intake > .wf-intake-card {
+  grid-area: intake;
+  align-self: start;
+  margin: 0;
+  padding: clamp(22px, 2.5vw, 30px);
+  border-radius: 30px;
+}
+
+.wf-stage--intake > .wf-expect-row {
+  grid-area: expect;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wf-stage--intake > .wf-recent-card {
+  grid-area: recent;
+}
+
+.wf-intake-label-row {
+  align-items: flex-start;
+}
+
+.wf-intake-label-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wf-field-help--voice {
+  margin: 0;
+  max-width: 42ch;
+  color: #6a7697;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.wf-voice-btn {
+  flex-shrink: 0;
+}
+
+.wf-idea-textarea {
+  min-height: 194px;
+}
+
+.wf-intake-actions {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.wf-intake-hint {
+  max-width: 42ch;
+  color: #5d698b;
+}
+
+.wf-local-note {
+  padding-top: 4px;
+}
+
+.wf-placeholder-strip,
+.wf-office-support {
+  display: none;
+}
+
+.wf-secondary-band {
+  padding: 18px 0 56px;
+}
+
+.wf-secondary-grid {
+  grid-template-columns: minmax(280px, 0.76fr) minmax(0, 1.24fr);
+  align-items: stretch;
+}
+
+.wf-fit-card,
+.wf-role-card,
+.wf-template-card,
+.wf-recent-card,
+.wf-intake-card {
+  backdrop-filter: blur(10px);
+}
+
+@media (max-width: 1180px) {
+  .wf-stage--intake {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "intro"
+      "intake"
+      "proof"
+      "templates"
+      "expect"
+      "recent";
+  }
+
+  .wf-stage--intake > .wf-proof-strip,
+  .wf-stage--intake > .wf-expect-row,
+  .wf-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .followup-item {
   gap: 12px;
 }

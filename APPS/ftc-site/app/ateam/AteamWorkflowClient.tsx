@@ -91,8 +91,10 @@ const COMPACT_TYPES = [
   { value: "ai-feature", label: "AI workflow" },
 ] as const;
 
-const VOICE_AUTO_STOP_MS = 12000;
-const VOICE_SILENCE_STOP_MS = 2600;
+const VOICE_AUTO_STOP_MS = 45000;
+const VOICE_SILENCE_STOP_MS = 6500;
+const VOICE_RESTART_DELAY_MS = 240;
+const VOICE_MAX_RESTARTS = 2;
 
 const ateamProject = getProjectCaseStudy("ateam");
 
@@ -246,6 +248,21 @@ function mergeSpokenIdea(base: string, spoken: string) {
   return `${trimmedBase}${suffix}${trimmedSpoken}`;
 }
 
+function appendTranscriptSegment(base: string, next: string) {
+  const trimmedBase = base.trim();
+  const trimmedNext = next.trim().replace(/\s+/g, " ");
+  if (!trimmedNext) return trimmedBase;
+  if (!trimmedBase) return trimmedNext;
+  if (trimmedBase.toLowerCase().endsWith(trimmedNext.toLowerCase())) {
+    return trimmedBase;
+  }
+  return `${trimmedBase} ${trimmedNext}`.replace(/\s+/g, " ").trim();
+}
+
+function combineTranscript(finalText: string, interimText: string) {
+  return `${finalText} ${interimText}`.replace(/\s+/g, " ").trim();
+}
+
 function getSpeechErrorMessage(error?: string) {
   switch (error) {
     case "audio-capture":
@@ -279,9 +296,15 @@ export default function AteamWorkflowClient({
   const ideaRef = useRef("");
   const speechBaseIdeaRef = useRef("");
   const speechTranscriptRef = useRef("");
+  const speechFinalTranscriptRef = useRef("");
+  const speechInterimTranscriptRef = useRef("");
   const speechHadErrorRef = useRef(false);
   const voiceAutoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceSilenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceSessionDeadlineRef = useRef(0);
+  const voiceSessionActiveRef = useRef(false);
+  const voiceStopReasonRef = useRef<"" | "manual" | "timeout" | "silence" | "error">("");
+  const voiceRestartCountRef = useRef(0);
   const [idea, setIdea] = useState("");
   const [category, setCategory] = useState<WorkflowCategoryValue>("auto");
   const [intake, setIntake] = useState<WorkflowIntake>({
@@ -360,73 +383,158 @@ export default function AteamWorkflowClient({
       }
     }
 
+    function scheduleAutoStop() {
+      if (!voiceSessionActiveRef.current) return;
+      const remaining = Math.max(800, voiceSessionDeadlineRef.current - Date.now());
+      if (voiceAutoStopTimerRef.current) {
+        clearTimeout(voiceAutoStopTimerRef.current);
+      }
+      voiceAutoStopTimerRef.current = setTimeout(() => {
+        voiceStopReasonRef.current = "timeout";
+        try {
+          recognition.stop();
+        } catch {
+          voiceSessionActiveRef.current = false;
+          setIsListening(false);
+        }
+      }, remaining);
+    }
+
     function scheduleSilenceStop() {
       if (voiceSilenceTimerRef.current) {
         clearTimeout(voiceSilenceTimerRef.current);
       }
       voiceSilenceTimerRef.current = setTimeout(() => {
+        voiceStopReasonRef.current = "silence";
         try {
           recognition.stop();
         } catch {
+          voiceSessionActiveRef.current = false;
           setIsListening(false);
         }
       }, VOICE_SILENCE_STOP_MS);
     }
 
     const recognition = new Recognition();
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
     recognition.onstart = () => {
       speechHadErrorRef.current = false;
       setError("");
-      setNotice("Listening... speak your idea and ATEAM will stop automatically.");
+      if (!voiceSessionActiveRef.current) {
+        voiceSessionActiveRef.current = true;
+        voiceSessionDeadlineRef.current = Date.now() + VOICE_AUTO_STOP_MS;
+        voiceRestartCountRef.current = 0;
+      }
+      setNotice("Listening... speak naturally. Voice beta keeps appending while you talk.");
       setIsListening(true);
       clearVoiceTimers();
-      voiceAutoStopTimerRef.current = setTimeout(() => {
-        try {
-          recognition.stop();
-        } catch {
-          setIsListening(false);
-        }
-      }, VOICE_AUTO_STOP_MS);
+      scheduleAutoStop();
+      scheduleSilenceStop();
     };
     recognition.onresult = (event) => {
-      const parts: string[] = [];
-      for (let i = 0; i < event.results.length; i++) {
+      let nextFinal = speechFinalTranscriptRef.current;
+      const interimParts: string[] = [];
+      const startIndex = Math.max(0, Number(event.resultIndex || 0));
+      for (let i = startIndex; i < event.results.length; i++) {
         const result = event.results[i];
         const transcript = String(result[0]?.transcript || "").trim();
-        if (transcript) parts.push(transcript);
+        if (!transcript) continue;
+        if (result.isFinal) {
+          nextFinal = appendTranscriptSegment(nextFinal, transcript);
+        } else {
+          interimParts.push(transcript);
+        }
       }
-      if (!parts.length) return;
-      const spoken = parts.join(" ").replace(/\s+/g, " ").trim();
+      speechFinalTranscriptRef.current = nextFinal;
+      speechInterimTranscriptRef.current = interimParts.join(" ").replace(/\s+/g, " ").trim();
+      const spoken = combineTranscript(
+        speechFinalTranscriptRef.current,
+        speechInterimTranscriptRef.current
+      );
+      if (!spoken) return;
       speechTranscriptRef.current = spoken;
       setIdea(mergeSpokenIdea(speechBaseIdeaRef.current, spoken));
-      setNotice("Listening... ATEAM is transcribing your idea.");
+      voiceStopReasonRef.current = "";
+      setNotice(
+        speechInterimTranscriptRef.current
+          ? "Listening... ATEAM is still transcribing. Natural pauses are okay."
+          : "Listening... ATEAM is appending your request as you speak."
+      );
+      scheduleAutoStop();
       scheduleSilenceStop();
     };
     recognition.onend = () => {
       clearVoiceTimers();
-      setIsListening(false);
-      if (speechHadErrorRef.current) {
-        speechTranscriptRef.current = "";
+      const stopReason = voiceStopReasonRef.current;
+      const spoken = combineTranscript(
+        speechFinalTranscriptRef.current,
+        speechInterimTranscriptRef.current
+      );
+      const canRestart =
+        voiceSessionActiveRef.current &&
+        !speechHadErrorRef.current &&
+        !stopReason &&
+        Date.now() < voiceSessionDeadlineRef.current &&
+        voiceRestartCountRef.current < VOICE_MAX_RESTARTS;
+      if (canRestart) {
+        voiceRestartCountRef.current += 1;
+        setNotice("Listening paused briefly... reopening the mic.");
+        window.setTimeout(() => {
+          try {
+            recognition.start();
+          } catch {
+            voiceSessionActiveRef.current = false;
+            setIsListening(false);
+            setNotice("Voice paused unexpectedly. Tap Voice beta to continue or type the request.");
+          }
+        }, VOICE_RESTART_DELAY_MS);
         return;
       }
-      const spoken = speechTranscriptRef.current.trim();
+      setIsListening(false);
+      voiceSessionActiveRef.current = false;
+      voiceSessionDeadlineRef.current = 0;
+      voiceRestartCountRef.current = 0;
+      if (speechHadErrorRef.current) {
+        speechTranscriptRef.current = "";
+        speechFinalTranscriptRef.current = "";
+        speechInterimTranscriptRef.current = "";
+        voiceStopReasonRef.current = "";
+        return;
+      }
       if (spoken) {
         const nextIdea = mergeSpokenIdea(speechBaseIdeaRef.current, spoken);
         setIdea(nextIdea);
-        setNotice("Voice captured. Review the text, then start ATEAM.");
+        if (stopReason === "timeout") {
+          setNotice("Voice beta reached the current capture limit. Review the text, then continue.");
+        } else {
+          setNotice("Voice captured. Review the text, then generate the scoped plan.");
+        }
       } else {
         setNotice("No speech captured. Try again or type the idea instead.");
       }
       speechTranscriptRef.current = "";
+      speechFinalTranscriptRef.current = "";
+      speechInterimTranscriptRef.current = "";
+      voiceStopReasonRef.current = "";
     };
     recognition.onerror = (event) => {
       clearVoiceTimers();
+      if (event.error === "no-speech" && voiceSessionActiveRef.current) {
+        speechHadErrorRef.current = false;
+        setNotice("Listening... start speaking when you're ready.");
+        return;
+      }
       setIsListening(false);
       speechHadErrorRef.current = true;
       speechTranscriptRef.current = "";
+      speechFinalTranscriptRef.current = "";
+      speechInterimTranscriptRef.current = "";
+      voiceSessionActiveRef.current = false;
+      voiceSessionDeadlineRef.current = 0;
+      voiceRestartCountRef.current = 0;
+      voiceStopReasonRef.current = "error";
       const message = getSpeechErrorMessage(event.error);
       if (!message) return;
       if (event.error === "no-speech") {
@@ -442,6 +550,10 @@ export default function AteamWorkflowClient({
     return () => {
       clearVoiceTimers();
       try { recognition.abort?.(); } catch { /* ignore */ }
+      voiceSessionActiveRef.current = false;
+      voiceSessionDeadlineRef.current = 0;
+      voiceRestartCountRef.current = 0;
+      voiceStopReasonRef.current = "";
       recognitionRef.current = null;
     };
   }, []);
@@ -630,6 +742,7 @@ export default function AteamWorkflowClient({
     if (!recognition) return;
     try {
       if (isListening) {
+        voiceStopReasonRef.current = "manual";
         recognition.stop();
         return;
       }
@@ -637,9 +750,19 @@ export default function AteamWorkflowClient({
       setNotice("");
       speechBaseIdeaRef.current = ideaRef.current;
       speechTranscriptRef.current = "";
+      speechFinalTranscriptRef.current = "";
+      speechInterimTranscriptRef.current = "";
       speechHadErrorRef.current = false;
+      voiceSessionActiveRef.current = true;
+      voiceSessionDeadlineRef.current = Date.now() + VOICE_AUTO_STOP_MS;
+      voiceRestartCountRef.current = 0;
+      voiceStopReasonRef.current = "";
       recognition.start();
     } catch {
+      voiceSessionActiveRef.current = false;
+      voiceSessionDeadlineRef.current = 0;
+      voiceRestartCountRef.current = 0;
+      voiceStopReasonRef.current = "error";
       setIsListening(false);
       setError("Voice capture could not start. Check microphone permission and try again.");
     }
@@ -664,6 +787,14 @@ export default function AteamWorkflowClient({
   async function handleStartRun() {
     setError("");
     setNotice("");
+    if (isListening) {
+      voiceStopReasonRef.current = "manual";
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        setIsListening(false);
+      }
+    }
     if (idea.trim().length < 12) {
       setError("Add a bit more detail - one sentence is enough to start.");
       trackEvent("ateam_run_start_error", {
@@ -937,13 +1068,14 @@ export default function AteamWorkflowClient({
               <div className="wf-intro">
                 <p className="wf-intro-eyebrow">Trusted AI workflow infrastructure</p>
                 <h1 className="wf-intro-headline">
-                  Turn rough operational requests
+                  Start with the request.
                   <br />
-                  into scoped, governed workflows.
+                  Move only the approved next step.
                 </h1>
                 <p className="wf-intro-lead">
-                  Structured intake, visible planning, human approval, and decision-ready outputs
-                  in one workflow surface before anything moves into delivery.
+                  ATEAM is the workflow surface inside Una Labs: describe the request, review the
+                  scoped plan, approve what should move forward, and leave with a decision-ready
+                  output before delivery starts.
                 </p>
               </div>
 
@@ -994,7 +1126,14 @@ export default function AteamWorkflowClient({
 
               <div className="wf-intake-card">
                 <div className="wf-intake-label-row">
-                  <label className="wf-field-label" htmlFor="wf-idea">Describe the request</label>
+                  <div className="wf-intake-label-copy">
+                    <label className="wf-field-label" htmlFor="wf-idea">Describe the request</label>
+                    {supportsVoice ? (
+                      <p className="wf-field-help wf-field-help--voice">
+                        Type is the safest path today. Voice beta supports longer dictation and natural pauses.
+                      </p>
+                    ) : null}
+                  </div>
                   {supportsVoice && (
                     <button
                       type="button"
@@ -1005,7 +1144,7 @@ export default function AteamWorkflowClient({
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 15.2 14.47 17 12 17s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V21c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
                       </svg>
-                      {isListening ? "Listening..." : "Speak"}
+                      {isListening ? "Listening..." : "Voice beta"}
                     </button>
                   )}
                 </div>
@@ -1111,7 +1250,7 @@ export default function AteamWorkflowClient({
                     {busy !== "idle" ? "Starting..." : "Generate the scoped plan ->"}
                   </button>
                   <p className="wf-intake-hint">
-                    ATEAM structures the request first. Nothing moves forward until you approve the plan.
+                    Intake comes first. ATEAM only moves what you approve into the next step.
                   </p>
                 </div>
                 {localFallbackEnabled ? (

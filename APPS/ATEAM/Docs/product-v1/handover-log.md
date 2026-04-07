@@ -360,3 +360,63 @@ Verified the live public ATEAM surface on `https://unalabs.cloud/ateam` after th
 ### Exact Next Step
 
 If a later pass is needed, focus on content refinement or interaction polish rather than route visibility, because the current live issue is no longer "ATEAM missing from Una Labs."
+
+## 2026-04-07 Voice Reliability And Native-Surface Pass
+
+### Summary
+
+Fixed the two biggest public UX gaps on `/ateam`: voice intake was behaving like a short burst recorder instead of a usable dictation path, and the page still felt like a boxed module inside Una Labs instead of the core workflow surface. The voice input now supports longer dictation with gentler silence handling and limited automatic recovery, and the layout now gives more width and priority to the intake itself while demoting the extra support chrome.
+
+### Files Changed
+
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/styles/globals.css`
+
+### Root Cause: Voice
+
+- browser speech recognition was configured with `continuous = false`, so it behaved like a short one-shot capture instead of a true dictation flow
+- the silence-stop timer was only `2600ms`, so even natural speaking pauses triggered an early stop
+- transcript handling rebuilt the spoken content from a short-lived session rather than maintaining a stronger final + interim append model
+- the public UI presented voice as a normal action even though the behavior was still closer to beta quality
+
+### What Changed In Speech Input
+
+- switched speech recognition to continuous mode
+- increased the total capture window and silence tolerance so longer phrases and natural pauses are supported
+- split transcript handling into final and interim buffers so live text is appended more predictably instead of feeling truncated
+- added limited auto-restart behavior when recognition ends unexpectedly mid-session
+- updated the live notice copy to make the listening state clearer
+- demoted the trigger label to `Voice beta` so the typed path remains the primary trusted input during public beta
+
+### Root Cause: Layout
+
+- the ATEAM page had accumulated multiple override layers for the same shell, split, and intake-grid classes
+- those layered overrides still treated ATEAM like a contained module inside a broader Una Labs page shell
+- support blocks such as the placeholder rail and extra office-stage panel kept reinforcing the impression of an embedded widget rather than a native page-level workflow surface
+
+### What Changed In Layout And Hierarchy
+
+- widened the ATEAM container and shifted more width toward the intake side of the hero
+- removed the large boxed stage wrapper feel by making the intake stage itself transparent and letting the intake card own the visual priority
+- promoted the intake card and request form as the dominant right-column action area
+- hid the decorative idle placeholder rail and the extra office-stage support panel from the idle public surface
+- kept the supporting role library and fit guidance lower on the page so they wrap around the workflow instead of overshadowing it
+- refined the hero copy so ATEAM reads as the native workflow surface inside Una Labs, not a sub-tool dropped into the page
+
+### Validation
+
+- `npm --prefix APPS/ftc-site run build`
+
+### Remaining Gaps
+
+- browser speech recognition is still browser-dependent, so the typed path remains the most reliable intake path during public beta
+- the shared Railway `ateam-api` backend is still not the primary public persistence path, so the current demo/local-browser continuity behavior remains important
+- the Una Labs homepage still depends on Cloudflare serving the newest homepage deployment before the stronger ATEAM homepage placement is consistently visible on the apex domain
+
+### Exact Next Step
+
+Push this pass, let Cloudflare deploy it, then QA `https://unalabs.cloud/ateam` for:
+- longer voice capture with natural pauses
+- clearer listening notices and appended transcript behavior
+- a wider, less boxed intake surface
+- less empty dead space and less embedded-widget feel on desktop
