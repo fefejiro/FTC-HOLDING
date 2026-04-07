@@ -922,9 +922,6 @@ export default function AteamWorkflowClient({
       </header>
 
       <div className="wf-split">
-        <aside className="wf-office-col" aria-label="ATEAM workflow stages">
-          <OperatorOfficePanel phase={officePhase} />
-        </aside>
         <div className="wf-intake-col">
         <div className="container">
         <div className="wf-body">
@@ -1895,7 +1892,7 @@ export default function AteamWorkflowClient({
         <section className="wf-secondary-band" aria-label="ATEAM supporting information">
           <div className="container">
             <div className="wf-secondary-grid">
-                <div className="wf-fit-strip" aria-label="Who ATEAM is best for">
+              <div className="wf-fit-strip" aria-label="Who ATEAM is best for">
                 <div className="wf-fit-card">
                   <p className="wf-fit-title">Best for teams that need structured delivery decisions quickly</p>
                   <ul className="wf-fit-list">
@@ -1910,26 +1907,30 @@ export default function AteamWorkflowClient({
                   direct owner.
                 </p>
               </div>
-
-              {catalog.agentRoles.length > 0 && (
-                <div className="wf-role-card">
-                  <div className="wf-template-head">
-                    <div>
-                      <p className="wf-pack-panel-kicker">Agent role library</p>
-                      <h2 className="wf-recent-title">Workflow stages inside ATEAM</h2>
+              <div className="wf-support-stack">
+                {catalog.agentRoles.length > 0 && (
+                  <div className="wf-role-card">
+                    <div className="wf-template-head">
+                      <div>
+                        <p className="wf-pack-panel-kicker">Agent role library</p>
+                        <h2 className="wf-recent-title">Workflow stages inside ATEAM</h2>
+                      </div>
+                    </div>
+                    <div className="wf-role-grid">
+                      {catalog.agentRoles.map((role) => (
+                        <div key={role.id} className="wf-role-item">
+                          <span>{role.stage}</span>
+                          <strong>{role.label}</strong>
+                          <p>{role.summary}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="wf-role-grid">
-                    {catalog.agentRoles.map((role) => (
-                      <div key={role.id} className="wf-role-item">
-                        <span>{role.stage}</span>
-                        <strong>{role.label}</strong>
-                        <p>{role.summary}</p>
-                      </div>
-                    ))}
-                  </div>
+                )}
+                <div className="wf-office-support" aria-label="ATEAM workflow stages">
+                  <OperatorOfficePanel phase={officePhase} />
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </section>

@@ -298,3 +298,38 @@ Repositioned the public ATEAM and Una Labs narrative away from "operator-led AI 
 ### Exact Next Step
 
 Let Cloudflare deploy the narrative pass, QA `/ateam` and the Una Labs homepage copy on the public host, then decide whether to do a second-wave alignment pass across the products and work pages.
+
+## 2026-04-07 ATEAM Workflow-First Layout Cleanup
+
+### Summary
+
+Cleaned up the public `/ateam` idle surface so the workflow form reads as the primary action instead of feeling like a brochure wrapped around the operator cards. The main page shell no longer leads with the old split-panel treatment, and the operator-stage explainer now lives in the supporting section below the core intake path.
+
+### Files Changed
+
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/styles/globals.css`
+
+### Decisions Made
+
+- removed the top-level `wf-office-col` from the main `wf-split` shell so the page no longer reserves a dominant right-side explainer column before the workflow starts
+- kept the working intake, template, recent-run, and local-demo flow intact instead of redesigning the runtime logic
+- moved the `OperatorOfficePanel` into the secondary support band under the fit guidance and role library so it remains useful without dominating the first impression
+- converted the intake stage into a workflow-first desktop grid: intro and proof on the left, actual request form on the right, with templates, outputs, and recent runs following below
+- preserved a single natural page scroll and added responsive collapse rules so tablet/mobile return to a one-column stack cleanly
+
+### Validation
+
+- `npm --prefix APPS/ftc-site run build`
+
+### Unresolved Issues
+
+- the shared Railway `ateam-api` backend is still paused, so the live public flow still depends on browser-local demo mode for persistence
+- once the backend returns, the visual hierarchy can stay as-is, but recent runs and approvals should be re-verified against true shared data instead of fallback storage
+
+### Exact Next Step
+
+Let Cloudflare deploy this layout pass, then visually QA `https://unalabs.cloud/ateam` for:
+- the workflow form appearing above the fold without large empty dead space
+- operator/stage content appearing lower as supporting information
+- clean single-page scroll behavior on desktop and mobile

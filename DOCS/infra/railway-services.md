@@ -1,8 +1,11 @@
 # Railway Services
 
-Last updated: 2026-04-02
+Last updated: 2026-04-07
 
 This document defines the intended Railway surface for the monorepo under a lean Hobby plan.
+
+Related live-project note:
+- [railway-solo-budget-lively-simplicity.md](/C:/FTC%20HOLDING/DOCS/infra/railway-solo-budget-lively-simplicity.md)
 
 ## Active services
 
