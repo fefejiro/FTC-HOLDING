@@ -33,7 +33,7 @@ The main duplicate-repo risk is now reduced, but the locked remnant should be de
 
 - Cloudflare Pages remains the primary host for the Una Labs site.
 - Railway remains the primary host for the ATEAM API.
-- `workers/ateam-edge` remains the route-level fallback for `/ateam` and `/api/ateam/*` while the main Pages build path is being stabilized.
+- `workers/ateam-edge` remains the API/redirect edge layer for `/api/ateam/*` and mission-control paths while Cloudflare Pages owns `/ateam`.
 
 This keeps the public flow live even when the main Next/Pages adapter path is unhealthy.
 

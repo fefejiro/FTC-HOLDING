@@ -422,7 +422,7 @@ export default {
       return proxyWorkflowRequest(request, env);
     }
 
-    // /ateam and all sub-paths fall through to CF Pages (ftc-site)
+    // Pages owns /ateam and public page routes directly.
     return fetch(request);
   }
 };

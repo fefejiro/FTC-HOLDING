@@ -50,8 +50,12 @@ Operator expectation for `/ateam/operator/*`:
 
 Production note:
 
-- the Cloudflare Worker currently owns public `https://unalabs.cloud/ateam*`
-- that means `https://unalabs.cloud/ateam/operator/*` is intentionally masked on the public host
+- Cloudflare Pages owns public `https://unalabs.cloud/ateam`
+- the dedicated edge workers only own:
+  - `https://unalabs.cloud/api/ateam/*`
+  - `https://ops.unalabs.cloud`
+  - `https://unalabs.cloud/mission-control*` redirects
+- `https://unalabs.cloud/ateam/operator/*` is intentionally not exposed on the public host
 - use `https://ops.unalabs.cloud` for the full admin shell once the private worker and Cloudflare Access policy are active
 
 Private operator runtime:

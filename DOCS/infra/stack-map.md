@@ -17,7 +17,7 @@ This document is the canonical high-level deployment map for the FTC HOLDING / U
 | --- | --- | --- | --- | --- | --- |
 | PeacePad | Cloudflare Pages from `APPS/peacepad` | Railway service `FTC-HOLDING` | Supabase Postgres + auth/storage | `peacepad.ca`, `www.peacepad.ca`, `api.peacepad.ca` | Active |
 | Una Labs site (`ftc-site`) | Cloudflare Pages from `APPS/ftc-site` | No dedicated Railway service | Shared package layer, optional same-origin API proxies only | `unalabs.cloud`, `www.unalabs.cloud` | Active |
-| ATEAM public + ops | Cloudflare Workers from `workers/ateam-edge` and `workers/ateam-ops` | Railway service `ateam-api` from `APPS/ATEAM` | Shared Supabase-managed Postgres path preferred for workflow durability | `unalabs.cloud/ateam*`, `ops.unalabs.cloud`, Railway fallback origin | Active |
+| ATEAM public + ops | Cloudflare Pages from `APPS/ftc-site` for the public route, plus Workers from `workers/ateam-edge` and `workers/ateam-ops` for API/ops edges | Railway service `ateam-api` from `APPS/ATEAM` | Shared Supabase-managed Postgres path preferred for workflow durability | `unalabs.cloud/ateam`, `unalabs.cloud/api/ateam/*`, `ops.unalabs.cloud`, Railway fallback origin | Active |
 | Dispatch | Cloudflare Worker from `workers/dispatch-edge` | Railway service `dispatch-api` from `APPS/dispatch` | Supabase Postgres | `dispatch.unalabs.cloud`, `dispatch-admin.unalabs.cloud`, Railway fallback origin | Active after Railway restore |
 | SayWetin | Cloudflare Pages from `APPS/saywetin` | Railway service `sunny-acceptance` only when API runtime is needed | Supabase Postgres | `saywetin.app`, `www.saywetin.app`, optional `api.saywetin.app` | Paused by default |
 
@@ -35,8 +35,8 @@ This document is the canonical high-level deployment map for the FTC HOLDING / U
   - `dispatch.unalabs.cloud`
   - `dispatch-admin.unalabs.cloud`
 - `workers/ateam-edge` fronts:
-  - `unalabs.cloud/ateam*`
   - `unalabs.cloud/api/ateam/*`
+  - `unalabs.cloud/mission-control*` redirect path
 - `workers/ateam-ops` fronts:
   - `ops.unalabs.cloud`
 

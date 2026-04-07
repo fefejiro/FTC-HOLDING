@@ -577,3 +577,40 @@ Completed the remaining public polish pass driven by laptop screenshots at norma
 - browser speech recognition is still browser-dependent, so typed intake remains the most trustworthy default
 - the public ATEAM route is stronger now, but it still contains more supporting explanation than a fully hardened product surface would likely keep
 - the shared/persistent backend path for public ATEAM is still not the primary experience, so the demo/local-browser continuity behavior remains an important constraint
+
+## 2026-04-07 Cloudflare Route Ownership Fix
+
+### Summary
+
+Removed public `/ateam*` ownership from the legacy `workers/ateam-edge` worker so Cloudflare Pages can own `https://unalabs.cloud/ateam` directly. The worker now stays focused on public workflow API proxying and mission-control redirect behavior, which removes the main route conflict that was causing stale or mixed ATEAM responses on the custom domain.
+
+### Files Changed
+
+- `workers/ateam-edge/wrangler.toml`
+- `workers/ateam-edge/src/index.ts`
+- `APPS/ftc-site/RUNBOOK.md`
+- `APPS/ATEAM/README.md`
+- `DOCS/infra/stack-map.md`
+- `DOCS/REPO_STRUCTURE_GUIDE_2026-03-27.md`
+
+### Root Cause
+
+- the old `ateam-edge` worker was still bound to `unalabs.cloud/ateam*`
+- that left `/ateam` split between the Pages app and a legacy worker ownership layer
+- Pages deployments could become active while the custom domain still served an older or mixed route path because the worker continued intercepting `/ateam*`
+
+### What Changed
+
+- removed `unalabs.cloud/ateam*` and `www.unalabs.cloud/ateam*` from `workers/ateam-edge`
+- left the worker responsible only for:
+  - `unalabs.cloud/api/ateam/*`
+  - `www.unalabs.cloud/api/ateam/*`
+  - mission-control redirect paths
+- updated the docs so the public contract is now explicit:
+  - Pages owns `/ateam`
+  - edge worker owns ATEAM API and ops-related routing only
+
+### Remaining Follow-up
+
+- redeploy `workers/ateam-edge` so the route removal takes effect live
+- then recheck `https://unalabs.cloud/ateam` and confirm it is now coming straight from Pages without the old edge conflict
