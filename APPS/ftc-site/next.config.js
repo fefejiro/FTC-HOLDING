@@ -16,6 +16,37 @@ module.exports = {
   reactStrictMode: true,
   swcMinify: true,
   transpilePackages: ["@ftc/supabase", "@ftc/config", "@ftc/types", "@ftc/auth"],
+  async headers() {
+    const noStoreHeaders = [
+      {
+        key: "Cache-Control",
+        value: "private, no-store, no-cache, must-revalidate",
+      },
+      {
+        key: "CDN-Cache-Control",
+        value: "no-store",
+      },
+      {
+        key: "Cloudflare-CDN-Cache-Control",
+        value: "no-store",
+      },
+    ];
+
+    return [
+      {
+        source: "/",
+        headers: noStoreHeaders,
+      },
+      {
+        source: "/ateam",
+        headers: noStoreHeaders,
+      },
+      {
+        source: "/ateam/:path*",
+        headers: noStoreHeaders,
+      },
+    ];
+  },
   async redirects() {
     return [
       {

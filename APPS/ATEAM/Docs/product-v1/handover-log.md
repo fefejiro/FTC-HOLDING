@@ -522,6 +522,7 @@ Followed up on one more live issue: `/ateam` was serving current HTML but still 
 - added route-scoped global styles directly inside `app/ateam/page.tsx`
 - widened the ATEAM shell, hero, intake grid, support grid, and voice control through page-level styles that travel with the route HTML
 - explicitly hid the placeholder strip and office-support panel at the route level so the page reads like a native workflow surface instead of an embedded module
+- added explicit no-store headers for `/` and `/ateam` in `next.config.js` after confirming middleware-only headers were still being replaced by `s-maxage=60` on the live route
 
 ### Remaining Gaps
 
