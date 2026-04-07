@@ -215,3 +215,40 @@ Added an API-layer ATEAM edge fallback so `APPS/ftc-site` can answer `/api/ateam
 ### Exact Next Step
 
 Push the edge fallback, let Cloudflare deploy it, then re-run the public `/ateam` flow to confirm the live page can complete intake -> plan -> approve -> pack even while Railway stays paused.
+
+## 2026-04-07 Public UX Hierarchy And Scroll Cleanup
+
+### Summary
+
+Cleaned up the public `/ateam` surface so it behaves like a workflow tool instead of a trapped split-panel brochure. The nested-scroll issue came from the main ATEAM split container being locked to viewport height while both the operator column and intake column also used their own vertical scrolling. That created an internal page scroll inside the layout instead of one natural document scroll.
+
+### Files Changed
+
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/styles/globals.css`
+
+### Decisions Made
+
+- removed the viewport-locked split behavior by undoing the `height: calc(100vh - 52px)` plus `overflow-y: auto` column pattern
+- switched the public layout so the intake/workflow surface is the primary desktop column and the operator panel is now a smaller sticky reference panel
+- rewrote the fallback banner into cleaner user-facing language: demo mode active, runs stay in this browser
+- added a local-persistence note near the intake action area so users understand current run limits without seeing backend/debug language
+- moved the “best for” guidance and agent role library out of the primary intake stage into a secondary section below the main split
+- kept the current working fallback behavior intact while the shared backend remains paused
+
+### Validation
+
+- `npm --prefix APPS/ftc-site run build`
+
+### Unresolved Issues
+
+- the shared Railway `ateam-api` backend is still paused, so public runs still depend on the browser-local fallback path instead of durable shared persistence
+- once the backend returns, the live UI can keep this hierarchy cleanup but should switch back to true shared run persistence and history continuity
+
+### Exact Next Step
+
+Push the layout cleanup, let Cloudflare deploy it, then visually QA `https://unalabs.cloud/ateam` for:
+- single natural page scroll with no trapped inner column scroll
+- intake surface leading above the fold
+- cleaner demo-mode copy
+- secondary role/guidance content appearing lower on the page instead of competing with the first workflow action

@@ -932,8 +932,7 @@ export default function AteamWorkflowClient({
         <div className="wf-body">
           {localFallbackEnabled ? (
             <p className="wf-notice wf-fallback-banner" role="status">
-              Live workaround active: the Railway ATEAM backend is paused, so this page is using a
-              browser-local workflow simulator for testing.
+              Demo mode active. Runs currently stay in this browser.
             </p>
           ) : null}
 
@@ -941,16 +940,15 @@ export default function AteamWorkflowClient({
           {!run && !isWorking && !workflowReady && (
             <section className="wf-stage wf-stage--intake">
               <div className="wf-intro">
-                <p className="wf-intro-eyebrow">Operator-led AI build studio</p>
+                <p className="wf-intro-eyebrow">Rough idea in - scoped plan - approval - artifact out</p>
                 <h1 className="wf-intro-headline">
-                  Turn a rough idea into a
+                  Start with the rough idea.
                   <br />
-                  scoped, buildable system fast.
+                  Get a scoped plan you can approve.
                 </h1>
                 <p className="wf-intro-lead">
-                  Each operator represents a stage in turning ideas into execution. ATEAM takes
-                  you from rough input to a clearer objective, structured plan, and a real path
-                  into delivery with Una Labs.
+                  ATEAM helps you frame the request, shape the first-pass plan, and package a
+                  concrete next move into delivery with Una Labs.
                 </p>
               </div>
 
@@ -1121,6 +1119,11 @@ export default function AteamWorkflowClient({
                     Start with the rough idea. These fields simply make the first plan cleaner.
                   </p>
                 </div>
+                {localFallbackEnabled ? (
+                  <p className="wf-local-note" aria-live="polite">
+                    Demo mode is active for now, so this run stays in this browser session.
+                  </p>
+                ) : null}
               </div>
 
               {/* What you'll get */}
@@ -1139,22 +1142,6 @@ export default function AteamWorkflowClient({
                     </div>
                   </div>
                 ))}
-              </div>
-
-              <div className="wf-fit-strip" aria-label="Who ATEAM is best for">
-                <div className="wf-fit-card">
-                  <p className="wf-fit-title">Best for teams that need a clear next step fast</p>
-                  <ul className="wf-fit-list">
-                    <li>Local services businesses needing lead and ops systems</li>
-                    <li>Founders who need a believable prototype path</li>
-                    <li>Teams shaping workflow or internal tool direction</li>
-                    <li>Operators with messy process problems that need structure</li>
-                  </ul>
-                </div>
-                <p className="wf-fit-note">
-                  Not ideal for long procurement cycles, broad RFP shopping, or projects with no
-                  direct owner.
-                </p>
               </div>
 
               {recentRuns.length > 0 && (
@@ -1214,25 +1201,6 @@ export default function AteamWorkflowClient({
                 </div>
               )}
 
-              {catalog.agentRoles.length > 0 && (
-                <div className="wf-role-card">
-                  <div className="wf-template-head">
-                    <div>
-                      <p className="wf-pack-panel-kicker">Agent role library</p>
-                      <h2 className="wf-recent-title">Who handles what inside ATEAM</h2>
-                    </div>
-                  </div>
-                  <div className="wf-role-grid">
-                    {catalog.agentRoles.map((role) => (
-                      <div key={role.id} className="wf-role-item">
-                        <span>{role.stage}</span>
-                        <strong>{role.label}</strong>
-                        <p>{role.summary}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </section>
           )}
 
@@ -1925,6 +1893,49 @@ export default function AteamWorkflowClient({
         </div>{/* container */}
         </div>{/* wf-intake-col */}
       </div>{/* wf-split */}
+      {!run && !isWorking && !workflowReady && (
+        <section className="wf-secondary-band" aria-label="ATEAM supporting information">
+          <div className="container">
+            <div className="wf-secondary-grid">
+              <div className="wf-fit-strip" aria-label="Who ATEAM is best for">
+                <div className="wf-fit-card">
+                  <p className="wf-fit-title">Best for teams that need a clear next step fast</p>
+                  <ul className="wf-fit-list">
+                    <li>Local services businesses needing lead and ops systems</li>
+                    <li>Founders who need a believable prototype path</li>
+                    <li>Teams shaping workflow or internal tool direction</li>
+                    <li>Operators with messy process problems that need structure</li>
+                  </ul>
+                </div>
+                <p className="wf-fit-note">
+                  Not ideal for long procurement cycles, broad RFP shopping, or projects with no
+                  direct owner.
+                </p>
+              </div>
+
+              {catalog.agentRoles.length > 0 && (
+                <div className="wf-role-card">
+                  <div className="wf-template-head">
+                    <div>
+                      <p className="wf-pack-panel-kicker">Agent role library</p>
+                      <h2 className="wf-recent-title">Who handles what inside ATEAM</h2>
+                    </div>
+                  </div>
+                  <div className="wf-role-grid">
+                    {catalog.agentRoles.map((role) => (
+                      <div key={role.id} className="wf-role-item">
+                        <span>{role.stage}</span>
+                        <strong>{role.label}</strong>
+                        <p>{role.summary}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
