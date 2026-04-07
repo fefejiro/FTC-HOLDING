@@ -464,3 +464,39 @@ Followed up on two remaining public pain points: needing manual Cloudflare purge
 - browser speech recognition remains browser-dependent, so typed input is still the safest path
 - the public ATEAM flow still uses demo/local-browser persistence when the shared backend is unavailable
 - this dynamic/no-store change should remove the need for future manual purges on `/` and `/ateam`, but it should be rechecked after the next production deploy to confirm the stale-edge pattern is gone
+
+## 2026-04-07 Wide-Viewport Layout And Voice CTA Refinement
+
+### Summary
+
+Followed up on two remaining public UX issues after the dynamic route fix. First, ATEAM could still look too "lean" on very wide desktop viewports because the page shell was capped at a narrow fixed width, making the workflow feel like a centered embedded widget inside a huge empty canvas. Second, the voice control needed to read more like an intentional recording action and less like a small utility pill.
+
+### Files Changed
+
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/styles/globals.css`
+
+### Root Cause: Lean / Embedded Feel On Wide Screens
+
+- the base `.container` and `.wf-shell .container` widths were still conservative relative to very large desktop viewports
+- the intake stage grid was skewed too tightly, leaving the request surface visually boxed into a narrow center column
+- older placeholder/support patterns such as `.wf-placeholder-strip` and `.wf-office-support` were still able to reappear via later CSS layers, which reinforced the impression of an embedded module instead of a page-native workflow
+
+### What Changed In Layout
+
+- widened the global Una Labs container so the homepage and top-level studio pages use large screens more intentionally
+- widened the ATEAM shell further than the base site container so `/ateam` can behave like a primary workflow page instead of a standard brochure section
+- increased the intake column width and headline span so the hero and request form breathe properly on desktop
+- forced the placeholder strip and boxed office support module back out of the public idle surface with a final override layer
+- flattened the secondary support grid into a full-width stack so supporting content wraps beneath the workflow instead of splitting the page into smaller side modules
+
+### What Changed In Voice UI
+
+- strengthened the helper copy so voice is clearly described as a click-to-start / click-to-stop beta recorder
+- restyled the voice trigger as a prominent red recording control with stronger contrast and more obvious recording affordance
+- kept the pulsing indicator while active so the recording state is visible at a glance
+
+### Remaining Gaps
+
+- speech recognition still depends on browser support and user microphone permissions, so typed intake remains the safest fallback
+- the public route still needs a final live browser QA pass after deployment to confirm the wider shell and red voice control are what users actually see on the apex domain

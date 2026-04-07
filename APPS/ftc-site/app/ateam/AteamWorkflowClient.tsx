@@ -1130,7 +1130,8 @@ export default function AteamWorkflowClient({
                     <label className="wf-field-label" htmlFor="wf-idea">Describe the request</label>
                     {supportsVoice ? (
                       <p className="wf-field-help wf-field-help--voice">
-                        Voice beta supports longer dictation now. Click Record request to start, then click Stop recording when you're done.
+                        Voice beta supports longer dictation and natural pauses. Use the red record button to start,
+                        then stop when your draft is complete.
                       </p>
                     ) : null}
                   </div>
@@ -1147,7 +1148,7 @@ export default function AteamWorkflowClient({
                       </span>
                       <span className="wf-voice-copy">
                         <strong>{isListening ? "Stop recording" : "Record request"}</strong>
-                        <span>{isListening ? "Tap again to finish voice capture" : "Click once to start voice beta"}</span>
+                        <span>{isListening ? "Click again to finish voice capture" : "Click to start voice capture"}</span>
                       </span>
                     </button>
                   )}
