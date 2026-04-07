@@ -9,7 +9,7 @@ Related live-project note:
 
 ## Active services
 
-### FTC-HOLDING
+### @ftc/peacepad
 
 - Status: `active`
 - Purpose: PeacePad API runtime only
@@ -23,6 +23,9 @@ Related live-project note:
   - `/api/health`
 - Domain(s):
   - `api.peacepad.ca`
+- Live verification:
+  - `https://api.peacepad.ca/health`
+  - `https://api.peacepad.ca/api/health`
 - Required env vars:
   - `NODE_ENV=production`
   - `DEPLOY_ROLE=api`
@@ -36,6 +39,7 @@ Related live-project note:
   - `PORT`
   - feature envs only as needed: `OPENAI_API_KEY`, `MAILJET_*`, `VAPID_*`
 - Notes:
+  - Service now lives in Railway project `lively-simplicity`.
   - Use `APPS/peacepad/railway.json` for deploy expectations.
   - Keep Railway API-only. The web app remains on Cloudflare Pages.
 
@@ -69,83 +73,48 @@ Related live-project note:
   - Use `APPS/ATEAM/railway.json` as the canonical deploy config.
   - Keep it easy to disable later by preserving Cloudflare worker boundaries and avoiding direct public domain dependence on Railway.
 
-### dispatch-api
+### ateam-platform
 
-- Status: `active`
-- Purpose: Dispatch runtime behind the Dispatch Cloudflare edge worker
-- Repo/app path: `APPS/dispatch`
-- Builder: Dockerfile
-- Build command: handled by Dockerfile
-- Start command: `npm run start`
-- Health endpoint:
-  - `/health`
-  - `/api/health`
-- Domain(s):
-  - Railway fallback: `https://dispatch-api-production.up.railway.app`
-  - Public entry is Cloudflare worker owned:
-    - `https://dispatch.unalabs.cloud`
-    - `https://dispatch-admin.unalabs.cloud`
-- Required env vars:
-  - `NODE_ENV=production`
-  - `PORT`
-  - `DATABASE_URL`
-  - `DISPATCH_ADMIN_PIN`
-  - `DISPATCH_ADMIN_PROXY_KEY`
-  - `VAPID_PUBLIC_KEY`
-  - `VAPID_PRIVATE_KEY`
-  - `VAPID_EMAIL`
+- Status: `active but optional`
+- Purpose: ATEAM backend runtime when shared persistence is needed beyond the current public demo/fallback path
+- Repo/app path: `APPS/ATEAM`
+- Builder: standard Railway/Nixpacks flow from the app root
+- Start command: `npm run start --workspace=ateam-platform`
 - Notes:
-  - Deploy from `APPS/dispatch` only.
-  - `npm ci --workspaces=false` and `npm run build` both pass from the app root after the lockfile sync.
-  - The root-level duplicate `Dockerfile.dispatch` has been removed; `APPS/dispatch/Dockerfile` is now the only valid Railway Docker path.
+  - Keep only if the shared ATEAM backend is actively being used.
+  - Otherwise archive it to protect the solo budget.
 
-## Paused services
+## Inactive or archive-candidate services
 
-### sunny-acceptance
+### @ftc/ftc-site
 
-- Status: `paused`
-- Purpose: SayWetin API runtime when active server-side audio / AI processing is needed
-- Repo/app path: `APPS/saywetin`
-- Builder: Dockerfile
-- Build command: handled by Dockerfile
-- Start command: Docker default / `npm run start`
-- Health endpoint:
-  - `/health`
-  - `/api/health`
-- Domain(s):
-  - preferred when active: `api.saywetin.app`
-  - public web remains on:
-    - `https://saywetin.app`
-    - `https://www.saywetin.app`
-- Required env vars when reactivated:
-  - `NODE_ENV=production`
-  - `DEPLOY_ROLE=api`
-  - `PUBLIC_BASE_URL=https://api.saywetin.app`
-  - `DATABASE_URL`
-  - `SESSION_SECRET`
-  - `PORT`
-  - AI / recognition envs only if the feature set is live:
-    - `OPENAI_API_KEY`
-    - `ACRCLOUD_HOST`
-    - `ACRCLOUD_ACCESS_KEY`
-    - `ACRCLOUD_ACCESS_SECRET`
-- Notes:
-  - The app root is still deployment-ready, but a lean Hobby plan should treat this service as intentionally paused unless SayWetin needs always-available backend compute again.
-  - `APPS/saywetin/railway.json` remains the canonical reactivation config.
-
-## Archive candidates
-
-### ftc-site on Railway
-
-- Status: `archive candidate`
+- Status: `inactive / archive candidate`
 - Purpose: none
 - Repo/app path: `APPS/ftc-site`
-- Railway action: remove any stale Railway service from the dashboard
+- Railway action: active deployment already removed; remove the service from the dashboard when convenient
 - Correct platform:
   - Cloudflare Pages only
 - Notes:
   - `ftc-site` should not stay in the Railway surface area.
   - Canonical Cloudflare config lives with the app, not in Railway.
+
+### @ftc/dispatch
+
+- Status: `inactive / archive candidate`
+- Purpose: currently unnecessary on the solo budget plan
+- Repo/app path: `APPS/dispatch`
+- Notes:
+  - No active deployment is running.
+  - Do not reactivate unless Dispatch is being worked on intentionally.
+
+### @ftc/peacepad-extension
+
+- Status: `inactive / archive candidate`
+- Purpose: extension builds are not worth hobby-plan spend right now
+- Repo/app path: `APPS/peacepad-extension`
+- Notes:
+  - No active deployment is running.
+  - Remove from Railway when convenient.
 
 ## Root path rule
 

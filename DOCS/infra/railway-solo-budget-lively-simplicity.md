@@ -55,7 +55,8 @@ Notes:
 - Railway logs now confirm `Firebase Admin SDK initialized successfully`.
 - The Railway service boots successfully.
 - As of 2026-04-07, the generated Railway domain `https://ftcpeacepad-production.up.railway.app` returns `200` for both `/health` and `/api/health`.
-- At the same time, `api.peacepad.ca` resolves to an older Railway hostname (`uka7e8pj.up.railway.app`), so the Cloudflare DNS target is stale and must be updated.
+- As of 2026-04-07, the branded API domain `https://api.peacepad.ca` is also live and returns `200` for both `/health` and `/api/health`.
+- The custom domain `api.peacepad.ca` is now attached directly to `@ftc/peacepad` in Railway.
 - If the service ever falls back into a config crash again, inspect only the required vars listed in:
   - [RAILWAY_SETUP.md](/C:/FTC%20HOLDING/DOCS/RAILWAY_SETUP.md)
   - [PEACEPAD_RAILWAY_API_SETUP.md](/C:/FTC%20HOLDING/DOCS/PEACEPAD_RAILWAY_API_SETUP.md)
@@ -142,6 +143,7 @@ CLI work got the project linked and PeacePad configured, but the following still
 - remove or pause `@ftc/peacepad-extension`
 - remove or pause `@ftc/dispatch`
 - remove or archive `@ftc/ftc-site`
+- `@ftc/ftc-site` already had its active deployment removed with `railway down`, so it is no longer consuming runtime even though the service object still exists.
 
 ## Weekly low-cost checks
 
@@ -150,11 +152,14 @@ Run these once a week, not constantly:
 1. Railway service status
    - confirm only the intended services are active
    - if `dispatch`, `peacepad-extension`, or `ftc-site` are still present, pause or remove them
+   - `@ftc/ftc-site` now has no active deployment; leave it that way or remove the service entirely
 
 2. PeacePad runtime health
    - check Railway service status for `@ftc/peacepad`
-   - if the service is `SUCCESS` but the public domain still says `Application not found`, compare the Railway-generated domain against the Cloudflare CNAME target before debugging app code
-   - the current good target is `ftcpeacepad-production.up.railway.app`
+   - the current live endpoints should both return `200`:
+     - `https://api.peacepad.ca/health`
+     - `https://api.peacepad.ca/api/health`
+   - the current good Railway fallback domain is `ftcpeacepad-production.up.railway.app`
 
 3. Credit protection
    - avoid unnecessary pushes to this GitHub-connected Railway project
@@ -162,8 +167,8 @@ Run these once a week, not constantly:
    - do not keep failed, unused services rebuilding in the background
 
 4. Firebase reality check
-   - native push is not truly complete until a real Firebase Admin service-account JSON is pasted into `FIREBASE_SERVICE_ACCOUNT_JSON`
-   - `google-services.json` is not enough for admin push
+   - Firebase Admin service-account JSON is now present in Railway and logs show successful initialization
+   - `google-services.json` is still not enough on its own for admin push if this is ever reconfigured from scratch
 
 ## Root path rule
 

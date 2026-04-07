@@ -26,14 +26,16 @@ $checks = @(
     Url = "https://api.peacepad.ca/health";
     Expected = 200;
     ContentTypeContains = "application/json";
-    ServerContains = "railway";
+    HeaderName = "x-railway-edge";
+    HeaderContains = "railway/";
   },
   @{
     Name = "api.peacepad.ca /api/health";
     Url = "https://api.peacepad.ca/api/health";
     Expected = 200;
     ContentTypeContains = "application/json";
-    ServerContains = "railway";
+    HeaderName = "x-railway-edge";
+    HeaderContains = "railway/";
   },
   @{
     Name = "peacepad.ca /auth/callback";
@@ -92,11 +94,23 @@ function Invoke-CurlHeaders {
   $serverLine = @($rawHeaders | Select-String -Pattern "^Server:" | ForEach-Object { $_.Line.Trim() }) | Select-Object -Last 1
   $cacheControlLine = @($rawHeaders | Select-String -Pattern "^Cache-Control:" | ForEach-Object { $_.Line.Trim() }) | Select-Object -Last 1
 
+  $headerMap = @{}
+  foreach ($line in $rawHeaders) {
+    $trimmedLine = $line.ToString().Trim()
+    if ($trimmedLine -match "^[A-Za-z0-9\-]+:\s*") {
+      $headerName, $headerValue = $trimmedLine -split ":\s*", 2
+      if (-not [string]::IsNullOrWhiteSpace($headerName)) {
+        $headerMap[$headerName.ToLowerInvariant()] = if ($null -eq $headerValue) { "" } else { [string]$headerValue }
+      }
+    }
+  }
+
   [pscustomobject]@{
     StatusCode = $statusCode
     ContentType = if ($contentTypeLine) { [string]($contentTypeLine -replace "^Content-Type:\s*", "") } else { "" }
     Server = if ($serverLine) { [string]($serverLine -replace "^Server:\s*", "") } else { "" }
     CacheControl = if ($cacheControlLine) { [string]($cacheControlLine -replace "^Cache-Control:\s*", "") } else { "" }
+    Headers = $headerMap
   }
 }
 
@@ -137,6 +151,7 @@ function Invoke-EndpointCheck {
   $contentType = ""
   $server = ""
   $cacheControl = ""
+  $headerValue = ""
   $detail = ""
   $bundleAsset = ""
 
@@ -146,6 +161,12 @@ function Invoke-EndpointCheck {
     $contentType = $headers.ContentType
     $server = $headers.Server
     $cacheControl = $headers.CacheControl
+    if ($Check.ContainsKey("HeaderName")) {
+      $headerName = [string]$Check.HeaderName
+      if ($headers.Headers.ContainsKey($headerName.ToLowerInvariant())) {
+        $headerValue = [string]$headers.Headers[$headerName.ToLowerInvariant()]
+      }
+    }
 
     if ($Check.ContainsKey("RequireJsonField") -or $Check.ContainsKey("HtmlAssetPattern")) {
       $body = Invoke-CurlBody -Url $Check.Url -TimeoutSec $TimeoutSec
@@ -196,6 +217,7 @@ function Invoke-EndpointCheck {
   $typePass = $true
   $serverPass = $true
   $cachePass = $true
+  $headerPass = $true
 
   if ($Check.ContainsKey("ContentTypeContains")) {
     $requiredType = [string]$Check.ContentTypeContains
@@ -213,6 +235,15 @@ function Invoke-EndpointCheck {
     }
   }
 
+  if ($Check.ContainsKey("HeaderName") -and $Check.ContainsKey("HeaderContains")) {
+    $requiredHeaderName = [string]$Check.HeaderName
+    $requiredHeaderValue = [string]$Check.HeaderContains
+    $headerPass = -not [string]::IsNullOrWhiteSpace($headerValue) -and $headerValue.ToLowerInvariant().Contains($requiredHeaderValue.ToLowerInvariant())
+    if (-not $headerPass -and [string]::IsNullOrWhiteSpace($detail)) {
+      $detail = "Header '$requiredHeaderName' did not include '$requiredHeaderValue'."
+    }
+  }
+
   if ($Check.ContainsKey("CacheControlContains")) {
     $requiredCache = [string]$Check.CacheControlContains
     $cachePass = -not [string]::IsNullOrWhiteSpace($cacheControl) -and $cacheControl.ToLowerInvariant().Contains($requiredCache.ToLowerInvariant())
@@ -221,7 +252,7 @@ function Invoke-EndpointCheck {
     }
   }
 
-  $pass = $statusPass -and $typePass -and $serverPass -and $cachePass -and [string]::IsNullOrWhiteSpace($detail)
+  $pass = $statusPass -and $typePass -and $serverPass -and $cachePass -and $headerPass -and [string]::IsNullOrWhiteSpace($detail)
 
   if (-not $statusPass -and [string]::IsNullOrWhiteSpace($detail)) {
     $detail = "Expected HTTP $($Check.Expected), got $statusCode."
@@ -233,6 +264,7 @@ function Invoke-EndpointCheck {
     Status      = if ($null -ne $statusCode) { [string]$statusCode } else { "-" }
     ContentType = if ([string]::IsNullOrWhiteSpace($contentType)) { "-" } else { $contentType }
     Server      = if ([string]::IsNullOrWhiteSpace($server)) { "-" } else { $server }
+    HeaderValue = if ([string]::IsNullOrWhiteSpace($headerValue)) { "-" } else { $headerValue }
     Cache       = if ([string]::IsNullOrWhiteSpace($cacheControl)) { "-" } else { $cacheControl }
     BundleAsset = if ([string]::IsNullOrWhiteSpace($bundleAsset)) { "-" } else { $bundleAsset }
     Result      = if ($pass) { "PASS" } else { "FAIL" }
@@ -253,7 +285,7 @@ if ($failedCount -gt 0) {
   Write-Host "Failed check details:"
   $results |
     Where-Object { $_.Result -eq "FAIL" } |
-    Format-List Check, Url, Status, ContentType, Server, Cache, BundleAsset, Detail
+    Format-List Check, Url, Status, ContentType, Server, HeaderValue, Cache, BundleAsset, Detail
 
   Write-Host ""
   Write-Host ("FAIL: {0} check(s) failed." -f $failedCount)

@@ -333,3 +333,30 @@ Let Cloudflare deploy this layout pass, then visually QA `https://unalabs.cloud/
 - the workflow form appearing above the fold without large empty dead space
 - operator/stage content appearing lower as supporting information
 - clean single-page scroll behavior on desktop and mobile
+
+## 2026-04-07 Live ATEAM Verification After Public Polish
+
+### Summary
+
+Verified the live public ATEAM surface on `https://unalabs.cloud/ateam` after the latest polish pass. The route is rendering the intended workflow-first hero, guided intake form, demo-mode banner, template strip, recent-runs section, and supporting role/stage content.
+
+### What Was Verified
+
+- nav and footer both expose ATEAM as a first-class public route inside Una Labs
+- the live ATEAM page now leads with:
+  - trusted workflow infrastructure framing
+  - the intake form above the fold
+  - demo-mode messaging
+  - supporting content below the main workflow surface
+- the homepage also still links into ATEAM through:
+  - main nav
+  - studio lane card
+  - footer link
+
+### Remaining Gap
+
+- the page is live and visible, but it is still operating in demo/local-browser mode because the shared ATEAM backend path remains optional and not required for this public beta surface
+
+### Exact Next Step
+
+If a later pass is needed, focus on content refinement or interaction polish rather than route visibility, because the current live issue is no longer "ATEAM missing from Una Labs."
