@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, Copy, Mail, MessageSquare, RefreshCw, Sparkles, Upload } from "lucide-react";
+import { ArrowRight, CheckCircle, Copy, Mail, MessageSquare, RefreshCw, Sparkles, Upload } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { hasSupabaseAuthConfig, rememberAuthRedirectState, sendMagicLink } from "@/lib/supabaseAuth";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,7 +38,7 @@ export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [step, setStep] = useState<1 | 1.5 | 2 | 3 | 4 | 5>(1);
   const [authEmail, setAuthEmail] = useState("");
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [isSendingLink, setIsSendingLink] = useState(false);
@@ -191,6 +191,12 @@ export default function OnboardingPage() {
   };
 
   const handleContinueFromWelcome = async () => {
+    // Show mini-tour before auth
+    setStep(1.5);
+    return;
+  };
+
+  const handleContinueFromTour = async () => {
     if (hasSupabaseAuthConfig()) {
       setStep(2);
       return;
@@ -347,6 +353,38 @@ export default function OnboardingPage() {
                     <CardDescription className="text-base">
                       For co-parents who want to say the hard thing without making it worse.
                     </CardDescription>
+                  </div>
+                </>
+              )}
+
+              {step === 1.5 && (
+                <>
+                  <div className="space-y-2">
+                    <CardTitle>Here's how it works</CardTitle>
+                    <CardDescription>Three steps between conflict and clarity.</CardDescription>
+                  </div>
+                  <div className="grid gap-3">
+                    <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
+                      <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+                      <div>
+                        <p className="text-sm font-semibold">Write your message</p>
+                        <p className="text-xs text-muted-foreground">Type what you want to say — rough draft is fine.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
+                      <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                      <div>
+                        <p className="text-sm font-semibold">PeacePad checks your tone</p>
+                        <p className="text-xs text-muted-foreground">We flag anything that could escalate and suggest a calmer version.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
+                      <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                      <div>
+                        <p className="text-sm font-semibold">Send when you're ready</p>
+                        <p className="text-xs text-muted-foreground">You decide. We just make sure the message works for you.</p>
+                      </div>
+                    </div>
                   </div>
                 </>
               )}
@@ -509,6 +547,13 @@ export default function OnboardingPage() {
                 </>
               )}
 
+              {step === 1.5 && (
+                <Button type="button" onClick={() => void handleContinueFromTour()}>
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  Get started
+                </Button>
+              )}
+
               {step === 2 && !magicLinkSent && (
                 <Button type="button" onClick={() => void handleSendMagicLink()} disabled={isSendingLink}>
                   {isSendingLink ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
@@ -551,7 +596,9 @@ export default function OnboardingPage() {
                   onClick={() =>
                     setStep((current) => {
                       if (current === 4) return 3;
-                      if (current === 3) return hasSupabaseAuthConfig() ? 2 : 1;
+                      if (current === 3) return hasSupabaseAuthConfig() ? 2 : 1.5;
+                      if (current === 2) return 1.5;
+                      if (current === 1.5) return 1;
                       return 1;
                     })
                   }

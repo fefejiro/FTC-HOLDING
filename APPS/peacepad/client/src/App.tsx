@@ -1,4 +1,4 @@
-import { useCallback, lazy, Suspense, useEffect, useRef } from "react";
+import { useCallback, lazy, Suspense, useEffect, useMemo, useRef } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -195,7 +195,7 @@ function Router() {
           {needsTermsAcceptance && (
             <TermsAcceptanceDialog open={true} userId={user.id} />
           )}
-          <NotificationPermission />
+          <NotificationPermission user={user} />
         </Suspense>
       </>
     );
@@ -455,37 +455,40 @@ export default function App() {
 function WebRTCContextWrapper({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const needsRealtime = !!user;
-  const sessionId = typeof window !== 'undefined' ? (localStorage.getItem("peacepad_session_id") || user?.id || '') : '';
-  const wsUrl = user && typeof window !== 'undefined'
-    ? (() => {
-        const createdUrl = createWebSocketUrl({
-          path: '/ws/signaling',
-          params: {
-            sessionId: sessionId || '',
-            userId: user.id
-          }
-        });
 
-        // Last-resort guard: never let production web connect signaling via the Pages host.
-        if (
-          createdUrl.includes("://peacepad.ca/") ||
-          createdUrl.includes("://www.peacepad.ca/") ||
-          createdUrl.includes("://ftc-holding.pages.dev/")
-        ) {
-          const forcedUrl = createdUrl.replace(
-            /^wss?:\/\/(peacepad\.ca|www\.peacepad\.ca|ftc-holding\.pages\.dev)/i,
-            "wss://api.peacepad.ca",
-          );
-          console.warn("[WebSocket] Forced signaling host rewrite at App layer", {
-            createdUrl,
-            forcedUrl,
-          });
-          return forcedUrl;
-        }
+  // Stabilise the WS URL so it only changes when the user ID changes.
+  // Without useMemo the IIFE runs on every render (auth bootstrap fires
+  // several times), causing multiple simultaneous connections that Railway
+  // rejects with code 1008 "Too many connections", which then triggers an
+  // infinite reconnect loop that freezes the renderer.
+  const wsUrl = useMemo(() => {
+    if (!user || typeof window === 'undefined') return '';
+    const sessionId = localStorage.getItem("peacepad_session_id") || user.id;
+    const createdUrl = createWebSocketUrl({
+      path: '/ws/signaling',
+      params: { sessionId, userId: user.id },
+    });
 
-        return createdUrl;
-      })()
-    : '';
+    // Last-resort guard: never let production web connect signaling via the Pages host.
+    if (
+      createdUrl.includes("://peacepad.ca/") ||
+      createdUrl.includes("://www.peacepad.ca/") ||
+      createdUrl.includes("://ftc-holding.pages.dev/")
+    ) {
+      const forcedUrl = createdUrl.replace(
+        /^wss?:\/\/(peacepad\.ca|www\.peacepad\.ca|ftc-holding\.pages\.dev)/i,
+        "wss://api.peacepad.ca",
+      );
+      console.warn("[WebSocket] Forced signaling host rewrite at App layer", {
+        createdUrl,
+        forcedUrl,
+      });
+      return forcedUrl;
+    }
+
+    return createdUrl;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Only re-derive when the authenticated user changes
 
   const handleWebSocketMessage = useCallback(async (event: MessageEvent) => {
       try {

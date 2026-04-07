@@ -48,7 +48,15 @@ export function getAnalyticsDistinctId(): string {
   return generated;
 }
 
-export function identifyAnalyticsUser(user: { id: string; displayName?: string | null; isGuest?: boolean } | null | undefined): void {
+export function identifyAnalyticsUser(user: {
+  id: string;
+  displayName?: string | null;
+  isGuest?: boolean;
+  sessionCount?: number | null;
+  prepChatSessionCount?: number | null;
+  distinctDaysActive?: number | null;
+  activePartnershipId?: string | null;
+} | null | undefined): void {
   if (!user || typeof window === "undefined") {
     return;
   }
@@ -57,6 +65,10 @@ export function identifyAnalyticsUser(user: { id: string; displayName?: string |
   window.posthog?.identify?.(user.id, {
     display_name: user.displayName || undefined,
     is_guest: Boolean(user.isGuest),
+    session_count: user.sessionCount ?? undefined,
+    prep_chat_session_count: user.prepChatSessionCount ?? undefined,
+    distinct_days_active: user.distinctDaysActive ?? undefined,
+    has_partnership: user.activePartnershipId != null,
   });
 }
 

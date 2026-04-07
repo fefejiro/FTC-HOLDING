@@ -11,15 +11,26 @@ import {
   requestNativePushConsent 
 } from "@/utils/capacitor-notifications";
 
-export function NotificationPermission() {
+interface NotificationPermissionProps {
+  user?: { prepChatSessionCount?: number | null; totalMessagesSent?: number | null } | null;
+}
+
+export function NotificationPermission({ user }: NotificationPermissionProps = {}) {
   const [permissionState, setPermissionState] = useState<NotificationPermission>("default");
   const [showBanner, setShowBanner] = useState(false);
   const { toast } = useToast();
+
+  // Only show the prompt after the user has experienced value: completed a prep chat or sent a message.
+  const hasExperiencedValue =
+    (user?.prepChatSessionCount ?? 0) > 0 || (user?.totalMessagesSent ?? 0) > 0;
 
   useEffect(() => {
     const checkPermissions = async () => {
       if (!canUseNotifications()) {
         return;
+      }
+      if (!hasExperiencedValue) {
+        return; // Wait until user has sent a message or finished a prep chat session
       }
 
       const status = await getPermissionStatus();
@@ -27,13 +38,13 @@ export function NotificationPermission() {
 
       const dismissed = localStorage.getItem('push_notification_banner_dismissed');
       if (status === 'prompt' && !dismissed) {
-        const timer = setTimeout(() => setShowBanner(true), 5000);
+        const timer = setTimeout(() => setShowBanner(true), 3000);
         return () => clearTimeout(timer);
       }
     };
-    
+
     checkPermissions();
-  }, []);
+  }, [hasExperiencedValue]);
 
   const requestPermission = async () => {
     try {
@@ -114,7 +125,8 @@ export function NotificationPermission() {
           <div className="flex items-center gap-3 flex-1">
             <Bell className="h-5 w-5 shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium">Stay updated on urgent messages and schedule changes</p>
+              <p className="text-sm font-medium">Get notified when your co-parent replies</p>
+              <p className="text-xs opacity-80 mt-0.5">We only notify you for messages — nothing else.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">

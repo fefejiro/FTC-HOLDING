@@ -58,6 +58,14 @@ export const users = pgTable("users", {
   totalStructuredActions: integer("total_structured_actions").notNull().default(0), // Conch sessions, scheduled events
   distinctDaysActive: integer("distinct_days_active").notNull().default(0),
   lastActiveAt: timestamp("last_active_at").defaultNow(),
+  // Retention instrumentation
+  sessionCount: integer("session_count").notNull().default(0), // Times user has returned to the app
+  prepChatSessionCount: integer("prep_chat_session_count").notNull().default(0), // Total Prep Chat sessions lifetime
+  draftToSendCount: integer("draft_to_send_count").notNull().default(0), // Prep Chat drafts that reached Messages
+  firstPrepChatAt: timestamp("first_prep_chat_at"), // When user first used Prep Chat
+  firstMessageSentAt: timestamp("first_message_sent_at"), // When user first sent a real message
+  firstToneCheckAt: timestamp("first_tone_check_at"), // When user first ran tone analysis
+  lastReEngagementAt: timestamp("last_re_engagement_at"), // Last time a re-engagement push was sent
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

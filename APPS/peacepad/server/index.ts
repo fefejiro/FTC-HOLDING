@@ -7,6 +7,7 @@ import { startConchSessionCleanup } from "./conchSessionCleanup";
 import { startCallCleanup } from "./callCleanup";
 import { startGuestSessionCleanup } from "./guestSessionCleanup";
 import { initializeWeeklyReportScheduler } from "./weeklyReport";
+import { initializeReEngagementScheduler } from "./services/reEngagementScheduler";
 import { setupSoftAuth } from "./softAuth";
 import { killProcessOnPort, HealthMonitor, setupAutoCleanup } from "./autoRecovery";
 import path from "path";
@@ -478,6 +479,9 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
 
   // Initialize weekly report scheduler (sends reports every Monday at 9:00 AM)
   initializeWeeklyReportScheduler();
+
+  // Initialize re-engagement push scheduler (runs daily at 10:00 AM)
+  initializeReEngagementScheduler();
 
   // Graceful shutdown handlers to prevent EADDRINUSE errors
   const shutdown = (signal: string) => {

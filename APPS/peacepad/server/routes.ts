@@ -1561,14 +1561,21 @@ Crawl-delay: 1
         }
       }
 
-      // Track last login time and device info
+      // Track last login time, device info, and session count (debounced to once/hour)
       if (user) {
         try {
           const userAgent = req.headers['user-agent'] || null;
+          const now = new Date();
+          const lastLogin = user.lastLoginAt ? new Date(user.lastLoginAt) : null;
+          const hoursSinceLastLogin = lastLogin
+            ? (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60)
+            : Infinity;
+          const isNewSession = hoursSinceLastLogin >= 1;
           await storage.upsertUser({
             ...user,
-            lastLoginAt: new Date(),
+            lastLoginAt: now,
             lastUserAgent: userAgent,
+            sessionCount: isNewSession ? (user.sessionCount ?? 0) + 1 : (user.sessionCount ?? 0),
           });
         } catch (error) {
           console.warn("[Auth] Failed to update last login metadata:", error);
@@ -2210,8 +2217,15 @@ Crawl-delay: 1
       // Track usage
       await storage.incrementUserUsage(userId, { messages: 1 });
 
-      // Get sender info for notification
+      // Get sender info for notification + set firstMessageSentAt on first send
       const sender = await storage.getUser(userId);
+      if (sender && !sender.firstMessageSentAt) {
+        try {
+          await storage.upsertUser({ ...sender, firstMessageSentAt: new Date() });
+        } catch (err) {
+          console.warn("[Messages] Failed to set firstMessageSentAt:", err);
+        }
+      }
 
       // Broadcast immediately - no waiting for AI analysis
       await broadcastNewMessage(
@@ -9456,6 +9470,19 @@ Crawl-delay: 1
         messages: [],
       });
 
+      // Increment prep chat counters
+      if (user) {
+        try {
+          await storage.upsertUser({
+            ...user,
+            prepChatSessionCount: (user.prepChatSessionCount ?? 0) + 1,
+            firstPrepChatAt: user.firstPrepChatAt ?? new Date(),
+          });
+        } catch (err) {
+          console.warn("[PrepChat] Failed to update prep chat counters:", err);
+        }
+      }
+
       res.json(session);
     } catch (error) {
       console.error("Error creating prep chat session:", error);
@@ -9514,6 +9541,22 @@ Crawl-delay: 1
       }
 
       const updated = await storage.updatePrepChatSession(req.params.id, req.body);
+
+      // Track draft-to-send conversions
+      if (req.body.sentToChat === true) {
+        try {
+          const user = await storage.getUser(userId);
+          if (user) {
+            await storage.upsertUser({
+              ...user,
+              draftToSendCount: (user.draftToSendCount ?? 0) + 1,
+            });
+          }
+        } catch (err) {
+          console.warn("[PrepChat] Failed to update draftToSendCount:", err);
+        }
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating prep chat session:", error);

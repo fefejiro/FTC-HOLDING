@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Check, ClipboardList, MessageCircle, PenLine, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ClipboardList, MessageCircle, PenLine, Plus, RefreshCw, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -312,9 +312,22 @@ export default function PrepChatPage() {
                   Warm, practical coaching for the hard conversations.
                 </CardDescription>
               </div>
-              <Badge variant="outline" className="w-fit bg-muted/40">
-                AI communication coach
-              </Badge>
+              <div className="flex items-center gap-2">
+                {activeSession && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 gap-1 px-2 text-xs"
+                    onClick={() => { setActiveSessionId(null); setEntryMode(null); }}
+                  >
+                    <Plus className="h-3 w-3" />
+                    New session
+                  </Button>
+                )}
+                <Badge variant="outline" className="w-fit bg-muted/40">
+                  AI communication coach
+                </Badge>
+              </div>
             </div>
           </CardHeader>
         </Card>
@@ -416,6 +429,7 @@ export default function PrepChatPage() {
                     {/* Starter chips — horizontal scroll */}
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground">Common situations →</p>
+                      <div className="relative">
                       <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         {STARTERS.map((starter) => (
                           <button
@@ -427,6 +441,8 @@ export default function PrepChatPage() {
                             {starter}
                           </button>
                         ))}
+                      </div>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent" />
                       </div>
                     </div>
 
