@@ -130,7 +130,12 @@ export default function HomePageExperience() {
                     </div>
                   </article>
 
-                  <article className="home-glance-row">
+                  <Link
+                    href="/ateam"
+                    prefetch={false}
+                    className="home-glance-row home-glance-row--link"
+                    aria-label="Open ATEAM"
+                  >
                     <div className="home-glance-row-visual" aria-label="ATEAM lane logo">
                       <div className="home-glance-ateam-badge">
                         <Image
@@ -145,9 +150,9 @@ export default function HomePageExperience() {
                     <div className="home-glance-row-copy">
                       <p className="card-kicker">ATEAM</p>
                       <strong>Workflow-first scoping</strong>
-                      <p className="muted">Structured intake, human approval, decision-ready output.</p>
+                      <p className="muted">Structured intake, scoped plan, human approval, decision-ready output.</p>
                     </div>
-                  </article>
+                  </Link>
                 </div>
               </div>
             </div>

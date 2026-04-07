@@ -8507,6 +8507,17 @@ nav.primary {
   box-shadow: 0 10px 24px rgba(8, 26, 79, 0.08);
 }
 
+.home-glance-row--link {
+  text-decoration: none;
+  color: inherit;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.home-glance-row--link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(8, 26, 79, 0.14);
+}
+
 .home-glance-row-visual {
   display: flex;
   align-items: center;
@@ -10980,6 +10991,10 @@ body {
   grid-column: 1 / -1;
 }
 
+.wf-guided-field--wide {
+  grid-column: 1 / -1;
+}
+
 .wf-guided-input {
   width: 100%;
   min-height: 48px;
@@ -10994,6 +11009,7 @@ body {
 
 .wf-guided-input::placeholder {
   color: rgba(16, 33, 62, 0.5);
+  text-overflow: ellipsis;
 }
 
 .wf-guided-input:focus {

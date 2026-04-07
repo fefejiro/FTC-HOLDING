@@ -287,11 +287,11 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
   {
     slug: "ateam",
     name: "ATEAM",
-    tagline: "Trusted AI workflow infrastructure for rough operational requests.",
+    tagline: "Trusted AI workflow infrastructure for requests that still need structure.",
     pillar: "business-intelligence",
     tags: ["Workflow OS", "Scoping", "Systems"],
     summary:
-      "ATEAM is Una Labs' workflow layer for turning rough requests into structured plans, approval-ready runs, and decision-ready outputs.",
+      "ATEAM is Una Labs' workflow layer for turning early requests into structured plans, approval-ready runs, and decision-ready outputs.",
     status: "beta",
     availabilityLabel: "Cloud-native workflow",
     marketingBullets: [...ateamModeSupportPoints],

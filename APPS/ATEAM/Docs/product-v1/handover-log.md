@@ -614,3 +614,37 @@ Removed public `/ateam*` ownership from the legacy `workers/ateam-edge` worker s
 
 - redeploy `workers/ateam-edge` so the route removal takes effect live
 - then recheck `https://unalabs.cloud/ateam` and confirm it is now coming straight from Pages without the old edge conflict
+
+## 2026-04-07 Laptop Fit + ATEAM Page Uniformity Pass
+
+### Summary
+
+Finalized the remaining laptop-fit polish for the Una Labs home page and `/ateam` by tightening the route-level layout rules, removing the idle placeholder band from the ATEAM markup, and making the ATEAM lane on the homepage a true clickable entry point. Also removed the last “rough operational requests” wording from the public copy so the homepage and ATEAM page read as one unified workflow system.
+
+### Files Changed
+
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/app/ateam/page.tsx`
+- `APPS/ftc-site/app/components/HomePageExperience.tsx`
+- `APPS/ftc-site/styles/globals.css`
+- `APPS/ftc-site/lib/content.ts`
+
+### Root Cause: Haphazard Fit
+
+- multiple overlapping width systems caused the ATEAM hero and supporting sections to feel narrow and embedded on laptop widths
+- the idle placeholder strip was still rendering in markup, creating visual noise even when CSS attempted to hide it
+- the ATEAM lane preview on the homepage looked like a card but did not behave like a true entry point
+- outdated “rough operational requests” copy still showed in the product case-study data
+
+### What Changed
+
+- simplified and rebalanced `/ateam` route-scoped layout rules to use one consistent width system and clearer intake-first grid ratios
+- removed the idle placeholder strip from the render path
+- widened the “Primary goal” and “Desired output” fields by giving them a full-width class
+- made the ATEAM glance row on the homepage clickable and aligned the copy with the current ATEAM positioning
+- updated the ATEAM product tagline/summary to the new language
+
+### Remaining Gaps
+
+- browser speech recognition is still browser-dependent, so typed input remains the safest default
+- the ATEAM public flow still relies on demo/local-browser continuity while the shared backend remains optional

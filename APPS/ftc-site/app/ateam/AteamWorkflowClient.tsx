@@ -1064,7 +1064,7 @@ export default function AteamWorkflowClient({
           ) : null}
 
           {/* ── INTAKE STAGE ── */}
-          {!run && !isWorking && !workflowReady && (
+          {false && !run && !isWorking && !workflowReady && (
             <section className="wf-stage wf-stage--intake">
               <div className="wf-intro">
                 <p className="wf-intro-eyebrow">Trusted AI workflow infrastructure</p>
@@ -1168,7 +1168,7 @@ export default function AteamWorkflowClient({
                 />
 
                 <div className="wf-guided-grid" aria-label="Guided intake details">
-                  <div className="wf-guided-field">
+                  <div className="wf-guided-field wf-guided-field--wide">
                     <label className="wf-field-label" htmlFor="wf-goal">Primary goal</label>
                     <input
                       id="wf-goal"
@@ -1179,7 +1179,7 @@ export default function AteamWorkflowClient({
                       placeholder="What should feel clearly better first?"
                     />
                   </div>
-                  <div className="wf-guided-field">
+                  <div className="wf-guided-field wf-guided-field--wide">
                     <label className="wf-field-label" htmlFor="wf-output">Desired output</label>
                     <input
                       id="wf-output"
@@ -1187,7 +1187,7 @@ export default function AteamWorkflowClient({
                       type="text"
                       value={intake.desiredOutput || ""}
                       onChange={(e) => setIntake((prev) => ({ ...prev, desiredOutput: e.target.value }))}
-                      placeholder="Spec, plan, prototype direction, research summary..."
+                      placeholder="Spec, plan, prototype, research summary..."
                     />
                   </div>
                   <div className="wf-guided-field wf-guided-field--full">
