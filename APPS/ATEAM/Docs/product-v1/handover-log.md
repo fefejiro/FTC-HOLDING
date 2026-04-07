@@ -528,3 +528,52 @@ Followed up on one more live issue: `/ateam` was serving current HTML but still 
 
 - the route should still be rechecked in a real browser after deployment because static CSS caching can differ between the custom domain and preview hosts
 - if Cloudflare continues serving stale shared CSS bundles, other page-level critical styles may need to be localized the same way
+
+## 2026-04-07 Laptop Fit, Voice UX, And ATEAM Hierarchy Polish
+
+### Summary
+
+Completed the remaining public polish pass driven by laptop screenshots at normal browsing zoom. The main goals were to make the Una Labs home page and `/ateam` feel like one layout system, stop the ATEAM route from reading like a dropped-in widget, make the home ATEAM preview reliably open `/ateam`, and remove duplicate or noisy demo-state messaging. The voice path was also tightened again so it behaves more like a deliberate record control than a small secondary utility.
+
+### Files Changed
+
+- `APPS/ftc-site/app/components/HomePageExperience.tsx`
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/app/ateam/page.tsx`
+- `APPS/ftc-site/styles/globals.css`
+
+### Root Cause: Voice Trust Issue
+
+- the browser speech implementation was already improved technically, but the public surface still presented it too softly
+- a small secondary-style voice control, paired with repeated environment messaging, made the feature feel optional and unreliable even when recognition itself was working better
+- the public intake also still allowed the demo-state copy to repeat in multiple places, which diluted the main action and made the recording flow feel less intentional
+
+### What Changed In Speech Input Behavior
+
+- kept typed intake as the safest primary path
+- tightened the helper copy so voice is clearly framed as a beta recorder with click-to-start / click-to-stop behavior
+- updated the button copy to `Start recording` / `Stop recording`
+- kept the animated recording indicator while active
+- removed duplicate demo-state text around the intake so the voice control sits in a cleaner, less noisy surface
+
+### Root Cause: Embedded / Add-On Layout Feel
+
+- the intake hero was improved earlier, but the lower page still split into a support band with uneven visual weight
+- the "best for" note sat outside the main fit card, which created dead space and made the left column feel unfinished
+- the home ATEAM preview block also behaved more like a brochure card with a separate CTA than a native product entry point
+- section widths and hero proportions were still close, but not fully calibrated for laptop views where small inconsistencies become obvious
+
+### What Changed To Make ATEAM More Native To Una Labs
+
+- made the home ATEAM lane card itself clickable so the ATEAM preview behaves like a real product surface entry point
+- updated the ATEAM card copy on the homepage so it speaks in the current intake -> plan -> approval -> output language
+- tightened the home hero proportions and visual stack spacing for laptop widths
+- widened and rebalanced the `/ateam` route through route-scoped layout overrides so the intake surface leads and the lower sections read as support, not as separate stitched-on modules
+- moved the "not ideal for..." note inside the fit card so the secondary support band feels composed instead of sparse
+- removed the duplicate bottom demo-mode note from the public intake flow, keeping the environment message in one place
+
+### Remaining Gaps Between Public UX And Intended Product Direction
+
+- browser speech recognition is still browser-dependent, so typed intake remains the most trustworthy default
+- the public ATEAM route is stronger now, but it still contains more supporting explanation than a fully hardened product surface would likely keep
+- the shared/persistent backend path for public ATEAM is still not the primary experience, so the demo/local-browser continuity behavior remains an important constraint

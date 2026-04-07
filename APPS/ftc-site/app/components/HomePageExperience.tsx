@@ -58,7 +58,7 @@ export default function HomePageExperience() {
                 <ul className="hero-credibility-bullets home-studio-credibility">
                   <li>Studio-owned products show how Una Labs designs and operates real systems.</li>
                   <li>Client Launches shows the delivery side with real rollout and execution proof.</li>
-                  <li>ATEAM is the workflow layer for turning rough requests into scoped, reviewable next steps.</li>
+                  <li>ATEAM is the native intake and scoping surface for requests that still need structure.</li>
                 </ul>
               </div>
 
@@ -263,13 +263,13 @@ export default function HomePageExperience() {
               </Link>
             </article>
 
-            <article className="card home-lane-card home-lane-card--ateam">
+            <Link href="/ateam" prefetch={false} className="card home-lane-card home-lane-card--ateam home-lane-card--interactive">
               {ateamProject ? <ProductStatusBadge status={ateamProject.status} className="home-lane-status" /> : null}
               <p className="card-kicker">ATEAM</p>
-              <h3>The workflow layer for rough operational requests.</h3>
+              <h3>Structured intake, scoped plan, human approval, and decision-ready output.</h3>
               <p>
-                ATEAM lives inside Una Labs as the trusted workflow system for messy starts. It
-                turns rough requests into scoped plans, visible review points, and cleaner handoff.
+                Open ATEAM when the request still needs structure. It turns a messy start into a
+                visible first-pass plan, a reviewable next move, and a cleaner handoff into delivery.
               </p>
               <AteamProductPreview
                 title="ATEAM teaser preview"
@@ -278,10 +278,10 @@ export default function HomePageExperience() {
                 mp4Src={ATEAM_PRODUCT_PREVIEW_ASSET.mp4Src}
                 hasVideo={ATEAM_PRODUCT_PREVIEW_ASSET.hasVideo}
               />
-              <Link href="/ateam" prefetch={false} className="btn btn-primary">
-                Explore ATEAM
-              </Link>
-            </article>
+              <span className="btn btn-primary home-lane-card-cta">
+                Open ATEAM
+              </span>
+            </Link>
           </div>
         </div>
       </section>

@@ -95,6 +95,7 @@ const VOICE_AUTO_STOP_MS = 45000;
 const VOICE_SILENCE_STOP_MS = 6500;
 const VOICE_RESTART_DELAY_MS = 240;
 const VOICE_MAX_RESTARTS = 2;
+const LOCAL_DEMO_MESSAGE = "Demo mode active. Runs currently stay in this browser.";
 
 const ateamProject = getProjectCaseStudy("ateam");
 
@@ -355,7 +356,7 @@ export default function AteamWorkflowClient({
     const handleFallback = () => {
       setLocalFallbackEnabled(true);
       setError("");
-      setNotice("Demo mode active. Runs currently stay in this browser.");
+      setNotice("");
     };
     window.addEventListener(eventName, handleFallback as EventListener);
     return () => window.removeEventListener(eventName, handleFallback as EventListener);
@@ -427,7 +428,7 @@ export default function AteamWorkflowClient({
         voiceSessionDeadlineRef.current = Date.now() + VOICE_AUTO_STOP_MS;
         voiceRestartCountRef.current = 0;
       }
-      setNotice("Recording... speak naturally, then tap Stop recording when you're done.");
+      setNotice("Recording... speak naturally, then click Stop recording when you're done.");
       setIsListening(true);
       clearVoiceTimers();
       scheduleAutoStop();
@@ -487,7 +488,7 @@ export default function AteamWorkflowClient({
           } catch {
             voiceSessionActiveRef.current = false;
             setIsListening(false);
-            setNotice("Recording paused unexpectedly. Tap Record request to continue or type the request.");
+            setNotice("Recording paused unexpectedly. Click Start recording to continue or type the request.");
           }
         }, VOICE_RESTART_DELAY_MS);
         return;
@@ -1058,7 +1059,7 @@ export default function AteamWorkflowClient({
         <div className="wf-body">
           {localFallbackEnabled ? (
             <p className="wf-notice wf-fallback-banner" role="status">
-              Demo mode active. Runs currently stay in this browser.
+              {LOCAL_DEMO_MESSAGE}
             </p>
           ) : null}
 
@@ -1130,8 +1131,8 @@ export default function AteamWorkflowClient({
                     <label className="wf-field-label" htmlFor="wf-idea">Describe the request</label>
                     {supportsVoice ? (
                       <p className="wf-field-help wf-field-help--voice">
-                        Voice beta supports longer dictation and natural pauses. Use the red record button to start,
-                        then stop when your draft is complete.
+                        Type is the safest path today. Voice beta supports click-to-start, click-to-stop
+                        dictation with longer pauses than before.
                       </p>
                     ) : null}
                   </div>
@@ -1147,8 +1148,8 @@ export default function AteamWorkflowClient({
                         <span className="wf-voice-indicator-dot" />
                       </span>
                       <span className="wf-voice-copy">
-                        <strong>{isListening ? "Stop recording" : "Record request"}</strong>
-                        <span>{isListening ? "Click again to finish voice capture" : "Click to start voice capture"}</span>
+                        <strong>{isListening ? "Stop recording" : "Start recording"}</strong>
+                        <span>{isListening ? "Click to stop and keep this draft" : "Click to begin voice capture"}</span>
                       </span>
                     </button>
                   )}
@@ -1239,7 +1240,7 @@ export default function AteamWorkflowClient({
                 </div>
 
                 {error && <p className="wf-error" role="alert">{error}</p>}
-                {!error && notice && (
+                {!error && notice && !localFallbackEnabled && (
                   <p className="wf-notice" aria-live="polite">
                     {notice}
                   </p>
@@ -1258,11 +1259,6 @@ export default function AteamWorkflowClient({
                     Intake comes first. ATEAM only moves what you approve into the next step.
                   </p>
                 </div>
-                {localFallbackEnabled ? (
-                  <p className="wf-local-note" aria-live="polite">
-                    Demo mode active. Runs stay in this browser during beta.
-                  </p>
-                ) : null}
               </div>
 
               {/* What you'll get */}
@@ -2045,11 +2041,11 @@ export default function AteamWorkflowClient({
                     <li>Teams shaping workflow or internal tool direction</li>
                     <li>Operators with messy process problems that need structure</li>
                   </ul>
+                  <p className="wf-fit-note">
+                    Not ideal for long procurement cycles, broad RFP shopping, or projects with no
+                    direct owner.
+                  </p>
                 </div>
-                <p className="wf-fit-note">
-                  Not ideal for long procurement cycles, broad RFP shopping, or projects with no
-                  direct owner.
-                </p>
               </div>
               <div className="wf-support-stack">
                 {catalog.agentRoles.length > 0 && (
