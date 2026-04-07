@@ -37,6 +37,38 @@ function titleCaseFromIdea(idea) {
     .join(" ");
 }
 
+function trimTrailingJoiners(text = "") {
+  return String(text || "")
+    .replace(/\b(that|which|with|for|to|into|from|of|and|or|in|on|at)\b\s*$/i, "")
+    .trim();
+}
+
+function deriveWorkflowTitle(idea = "", fallback = "ATEAM Workflow Run") {
+  const cleaned = safeText(idea, 180).replace(/[.?!]+$/g, "");
+  if (!cleaned) return fallback;
+
+  let working = cleaned
+    .replace(/^(i want to|we want to|we need to|i need to)\s+/i, "")
+    .replace(/^(build|create|make|launch|design|turn|set up|setup)\s+/i, "")
+    .replace(/^(a|an|the)\s+/i, "");
+
+  const splitter = /\b(?:that|which|so|while|without|using|with)\b/i;
+  if (splitter.test(working)) {
+    working = working.split(splitter)[0].trim();
+  }
+
+  working = trimTrailingJoiners(working);
+  const words = working.split(/\s+/).filter(Boolean).slice(0, 7);
+  const normalized = trimTrailingJoiners(words.join(" "));
+
+  if (!normalized) return titleCaseFromIdea(cleaned);
+  return normalized
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function slugify(value) {
   return safeText(value, 120)
     .toLowerCase()
@@ -155,11 +187,47 @@ function mergeWorkflowIntake({ intake = {}, answers = {} } = {}) {
   };
 }
 
-function deriveAudience({ intake, answers, preset }) {
+function deriveAudienceFromContext(context = "", preset) {
+  const safeContext = safeText(context, 220);
+  if (!safeContext) return "";
+  const trimmed = safeContext.replace(/^for\s+/i, "").trim();
+  if (!trimmed) return "";
+
+  if (trimmed.length <= 72 && !/\b(should|must|need to|keep|allow|make|feels?|turns?|stays?|private|public)\b/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const audienceMatch = trimmed.match(
+    /\b(customers|clients|buyers|visitors|operators|teams|staff|managers|admins|founders|students|patients|parents|vendors|drivers|users)\b/i
+  );
+  if (audienceMatch) {
+    return safeText(audienceMatch[0], 80);
+  }
+
+  return "";
+}
+
+function deriveAudienceFromIdea(idea = "", preset) {
+  const safeIdea = safeText(idea, 240).toLowerCase();
+  if (!safeIdea) return preset?.audienceHint || "";
+  if (/\bclients?\b/.test(safeIdea)) return "clients";
+  if (/\bcustomers?\b/.test(safeIdea)) return "customers";
+  if (/\bvendors?\b/.test(safeIdea)) return "vendors";
+  if (/\bdrivers?\b/.test(safeIdea)) return "drivers";
+  if (/\boperators?\b/.test(safeIdea)) return "operators";
+  if (/\bteams?\b/.test(safeIdea)) return "teams";
+  if (/\bstudents?\b/.test(safeIdea)) return "students";
+  return preset?.audienceHint || "";
+}
+
+function deriveAudience({ idea = "", intake, answers, preset }) {
   const explicitAudience = answerText(answers, "audience", "", 220);
   if (explicitAudience) return explicitAudience;
-  if (safeText(intake.context, 220)) return safeText(intake.context, 220);
-  return preset.audienceHint;
+  if (safeText(intake.context, 220)) {
+    const contextAudience = deriveAudienceFromContext(intake.context, preset);
+    if (contextAudience) return contextAudience;
+  }
+  return deriveAudienceFromIdea(idea, preset);
 }
 
 function resolveDesiredOutput({ intake, preset }) {
@@ -376,11 +444,11 @@ export function buildWorkflowRequest({
   const resolvedCategory = normalizeWorkflowCategory(category, idea);
   const preset = getWorkflowCategoryPreset(resolvedCategory, idea);
   const mergedIntake = mergeWorkflowIntake({ intake, answers });
-  const audience = deriveAudience({ intake: mergedIntake, answers, preset });
+  const audience = deriveAudience({ idea, intake: mergedIntake, answers, preset });
   const goal =
     safeText(mergedIntake.goal, 220) ||
     answerText(answers, "firstWin", "", 220) ||
-    `Give ${audience} a first pass that can ${preset.problemFrame}.`;
+    `Deliver a first pass that can ${preset.problemFrame}.`;
   const desiredOutput = resolveDesiredOutput({ intake: mergedIntake, preset });
   const assumptions = collectRequestAssumptions({
     idea,
@@ -449,8 +517,8 @@ export function buildWorkflowBrief({
       intake,
       answers,
       runId
-    });
-  const title = titleCaseFromIdea(idea);
+  });
+  const title = deriveWorkflowTitle(idea);
   const audience = safeText(resolvedRequest.normalized?.audience, 220) || preset.audienceHint;
   const firstWin = safeText(resolvedRequest.normalized?.goal, 220);
   const constraints = safeText(
@@ -469,7 +537,7 @@ export function buildWorkflowBrief({
 
   return {
     title,
-    summary: `${title} should ${preset.problemFrame} for ${audience}. The first pass should prove ${lowerFirst(firstWin)} without pretending to be the whole product.`,
+    summary: `This first pass keeps ${title} focused on ${lowerFirst(firstWin)} for ${audience}, without pretending to be the whole product.`,
     audience,
     scope: firstWin,
     primaryGoal: firstWin,
@@ -521,7 +589,7 @@ export function buildWorkflowPlan({ request = {}, category = "website", brief = 
     safeText(request?.normalized?.goal, 220) || safeText(brief?.primaryGoal, 220) || preset.problemFrame;
   const expectedArtifactTitle = brief?.title
     ? `${brief.title} decision pack`
-    : `${titleCaseFromIdea(request?.rawInput || runId || "ATEAM")} decision pack`;
+    : `${deriveWorkflowTitle(request?.rawInput || runId || "ATEAM")} decision pack`;
 
   return {
     summary: "ATEAM will turn this request into a visible, scoped first pass before any deeper execution work starts.",
@@ -600,7 +668,7 @@ export function buildWorkflowRisks({ brief, answers = {}, category = "website", 
 
 function buildMockupScreens(run, preset) {
   const brief = run?.brief || {};
-  const title = brief.title || titleCaseFromIdea(run?.idea || "");
+  const title = brief.title || deriveWorkflowTitle(run?.idea || "");
   const firstWin = brief.primaryGoal || preset.problemFrame;
   const audience = brief.audience || preset.audienceHint;
 
@@ -627,7 +695,7 @@ function buildMockupScreens(run, preset) {
 
 function buildPrototypeFrames(run, preset) {
   const brief = run?.brief || {};
-  const title = brief.title || titleCaseFromIdea(run?.idea || "");
+  const title = brief.title || deriveWorkflowTitle(run?.idea || "");
   const firstWin = brief.primaryGoal || preset.problemFrame;
 
   return [

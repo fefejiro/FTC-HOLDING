@@ -82,7 +82,7 @@ describe("workflowEngine", () => {
       brief
     });
 
-    expect(brief.title).toContain("Build");
+    expect(brief.title).toBe("Vendor Ticketing Workflow For WhatsApp");
     expect(brief.recommendedLane).toBe("Internal Tool / Ops System");
     expect(brief.quickVerdict).toBeTruthy();
     expect(pack.mockup.screens.length).toBeGreaterThanOrEqual(3);
@@ -92,5 +92,24 @@ describe("workflowEngine", () => {
     expect(handoff.runId).toBe(run.id);
     expect(work.projectId).toContain("workflow");
     expect(work.items).toHaveLength(4);
+  });
+
+  test("derives cleaner titles and avoids overusing context as audience", () => {
+    const request = buildWorkflowRequest({
+      idea: "Build a public-facing project intake system that turns rough client requests into a visible plan before any operator work starts.",
+      category: "website",
+      intake: {
+        context: "The public side should feel trustworthy and simple while Mission Control stays private."
+      }
+    });
+    const brief = buildWorkflowBrief({
+      idea: "Build a public-facing project intake system that turns rough client requests into a visible plan before any operator work starts.",
+      category: "website",
+      request
+    });
+
+    expect(brief.title).toBe("Public-facing Project Intake System");
+    expect(brief.audience).toBe("clients");
+    expect(brief.summary).not.toContain("Mission Control stays private");
   });
 });

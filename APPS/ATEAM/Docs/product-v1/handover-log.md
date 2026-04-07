@@ -49,3 +49,30 @@ Implemented the ATEAM V1 reframe so the public workflow now follows a clearer `i
 ### Exact Next Step
 
 Run a focused live QA pass on `/ateam`, then deploy the updated `APPS/ATEAM` + `APPS/ftc-site` surfaces through the normal Una Labs release path.
+
+## 2026-04-07 Copy Polish Follow-up
+
+### Summary
+
+Tightened the workflow copy heuristics after live QA surfaced awkward truncated titles and over-inferred audience text.
+
+### Files Changed
+
+- `APPS/ATEAM/Server/lib/workflowEngine.js`
+- `APPS/ATEAM/Server/__tests__/unit/workflowEngine.test.js`
+
+### Decisions Made
+
+- derive cleaner titles from rough ideas instead of leading with verbs like `Build` or `Create`
+- only treat context as audience when it actually reads like one
+- fall back to audience clues in the original idea before using generic preset language
+- make brief summaries sound more intentional and less stitched together
+
+### Validation
+
+- `npm --prefix APPS/ATEAM run test:backend`
+- `npm --prefix APPS/ATEAM run verify:server`
+
+### Exact Next Step
+
+Push this polish pass, wait for deploy propagation, then rerun one short live QA pass on `/ateam` to confirm the improved titles and summaries are visible in production.
