@@ -6,6 +6,7 @@ import ClientLogoStrip from "./ClientLogoStrip";
 import BrandVideoPanel from "./BrandVideoPanel";
 import ProductBrandBadge from "./ProductBrandBadge";
 import ProductStatusBadge from "./ProductStatusBadge";
+import AteamHomeWidget from "./AteamHomeWidget";
 import AteamProductPreview from "./AteamProductPreview";
 import { projectCaseStudies } from "../../lib/content";
 import { clientLaunches } from "../../lib/recentWork";
@@ -44,14 +45,14 @@ export default function HomePageExperience() {
                   governed AI workflow systems like ATEAM when a request is still rough.
                 </p>
                 <div className="hero-cta-row">
-                  <Link href="/products" prefetch={false} className="btn btn-primary">
+                  <Link href="/ateam" prefetch={false} className="btn btn-primary">
+                    Start with ATEAM
+                  </Link>
+                  <Link href="/products" prefetch={false} className="btn btn-secondary">
                     Explore Products
                   </Link>
-                  <Link href="/work" prefetch={false} className="btn btn-secondary">
+                  <Link href="/work" prefetch={false} className="inline-link">
                     View Client Launches
-                  </Link>
-                  <Link href="/ateam" prefetch={false} className="inline-link">
-                    Explore ATEAM
                   </Link>
                 </div>
                 <ul className="hero-credibility-bullets home-studio-credibility">
@@ -155,6 +156,61 @@ export default function HomePageExperience() {
       </section>
 
       <ClientLogoStrip />
+
+      <section className="section">
+        <div className="container">
+          <section className="home-ateam-hero" aria-labelledby="home-ateam-hero-title">
+            <div className="home-ateam-hero-intro">
+              <p className="eyebrow">ATEAM inside Una Labs</p>
+              <p className="hero-urgency-pill">
+                <span>+</span>
+                Trusted AI workflow infrastructure
+              </p>
+              <h2 id="home-ateam-hero-title" className="hero-primary-title">
+                Turn rough requests into scoped, governed workflows before build starts.
+              </h2>
+              <p className="hero-subtitle">
+                Start with ATEAM when the request is still messy. It structures intake, proposes a
+                visible first-pass plan, keeps a human approval gate, and returns decision-ready
+                output before anything moves into delivery.
+              </p>
+            </div>
+
+            <div className="home-ateam-hero-surface">
+              <AteamHomeWidget />
+            </div>
+
+            <div className="home-ateam-hero-foot">
+              <div className="hero-cta-row">
+                <Link href="/ateam" prefetch={false} className="btn btn-primary">
+                  Open ATEAM
+                </Link>
+                <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
+                  Start a Project
+                </Link>
+                <Link href="/products" prefetch={false} className="inline-link">
+                  See studio products
+                </Link>
+              </div>
+
+              <ul className="home-ateam-hero-points">
+                <li>
+                  Structured intake captures goals, context, constraints, and non-goals before the
+                  workflow runs.
+                </li>
+                <li>
+                  ATEAM keeps a visible plan, a human approval point, and a decision-ready output
+                  path.
+                </li>
+                <li>
+                  Use it when the request is still rough and Una Labs needs a safer first pass
+                  before delivery.
+                </li>
+              </ul>
+            </div>
+          </section>
+        </div>
+      </section>
 
       <section className="section">
         <div className="container">
