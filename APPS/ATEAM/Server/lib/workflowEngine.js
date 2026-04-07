@@ -388,6 +388,152 @@ export const WORKFLOW_CATEGORY_PRESETS = {
   }
 };
 
+export const WORKFLOW_AGENT_LIBRARY = [
+  {
+    id: "lead",
+    ownerAgentId: "henry",
+    label: "Lead",
+    stage: "Direction",
+    summary: "Owns the outcome, success criteria, and scope protection for the run.",
+    responsibilities: [
+      "Clarify the real goal",
+      "Keep the first useful win narrow",
+      "Protect the run from scope drift"
+    ]
+  },
+  {
+    id: "scout",
+    ownerAgentId: "scout",
+    label: "Scout",
+    stage: "Discovery",
+    summary: "Turns rough input into structured context, request signals, and visible constraints.",
+    responsibilities: [
+      "Capture the real signal",
+      "Pull out context and blockers",
+      "Surface missing clarifiers"
+    ]
+  },
+  {
+    id: "architect",
+    ownerAgentId: "charlie",
+    label: "Architect",
+    stage: "System design",
+    summary: "Shapes the plan, route, and system logic before execution begins.",
+    responsibilities: [
+      "Map the workflow steps",
+      "Choose the safest lane",
+      "Define the first believable system shape"
+    ]
+  },
+  {
+    id: "builder",
+    ownerAgentId: "codex",
+    label: "Builder",
+    stage: "Execution",
+    summary: "Turns the approved plan into artifacts, work items, and a scoped next move.",
+    responsibilities: [
+      "Generate the first artifact pass",
+      "Keep execution aligned to the plan",
+      "Prepare the build-facing handoff"
+    ]
+  },
+  {
+    id: "designer",
+    ownerAgentId: "violet",
+    label: "Designer",
+    stage: "Experience",
+    summary: "Keeps the output legible, usable, and decision-ready for non-technical reviewers.",
+    responsibilities: [
+      "Make the flow understandable",
+      "Clarify the primary path",
+      "Reduce confusion before approval"
+    ]
+  },
+  {
+    id: "operator",
+    ownerAgentId: "operator",
+    label: "Operator",
+    stage: "Live operation",
+    summary: "Moves the approved artifact into real delivery and keeps the public/private boundary clean.",
+    responsibilities: [
+      "Review the final package",
+      "Protect operational boundaries",
+      "Move the run into delivery when ready"
+    ]
+  }
+];
+
+export const WORKFLOW_REQUEST_TEMPLATES = [
+  {
+    id: "public-intake-reframe",
+    label: "Public Intake Reframe",
+    category: "website",
+    summary: "For public request flows that need trust, clear planning, and a visible next step.",
+    exampleIdea: "Build a public-facing intake system that turns rough requests into a visible plan before execution.",
+    intake: {
+      goal: "Show the user a clear plan and next step before execution begins.",
+      desiredOutput: "Decision pack with request summary, plan, risks, and next move",
+      constraints: "Keep the experience public-safe and readable to non-technical users.",
+      nonGoals: "Do not expose operator-only tooling or turn the first pass into a full app builder."
+    },
+    recommendedFor: ["Client intake", "Public workflow framing", "Trust-first scoping"]
+  },
+  {
+    id: "local-service-lead-engine",
+    label: "Local Service Lead Engine",
+    category: "lead-automation",
+    summary: "For quote, booking, and follow-up systems that need a tight first-pass demand flow.",
+    exampleIdea: "Set up a local service lead workflow that captures requests, qualifies them, and routes follow-up automatically.",
+    intake: {
+      goal: "Capture and route leads without manual babysitting.",
+      desiredOutput: "Scoped lead-system plan with routing steps and operator visibility",
+      constraints: "Keep the first pass simple enough to launch quickly.",
+      nonGoals: "Do not connect every external system in the first version."
+    },
+    recommendedFor: ["Quotes", "Bookings", "Lead follow-up"]
+  },
+  {
+    id: "internal-ops-system",
+    label: "Internal Ops System",
+    category: "internal-tool",
+    summary: "For team-facing workflows that need visibility, routing, and repeatable status handling.",
+    exampleIdea: "Create an internal ops workflow that tracks incoming tasks, ownership, blockers, and review states.",
+    intake: {
+      goal: "Remove repeated manual steps and make the workflow status visible.",
+      desiredOutput: "Internal-tool decision pack with queue, task view, and reporting direction",
+      constraints: "Keep the first version narrow enough for one team to adopt.",
+      nonGoals: "Do not rebuild every admin process at once."
+    },
+    recommendedFor: ["Ops dashboards", "Internal workflows", "Queue management"]
+  },
+  {
+    id: "ai-assist-workflow",
+    label: "AI Assist Workflow",
+    category: "ai-feature",
+    summary: "For trust-sensitive AI assistance that still needs human review and scoped delivery.",
+    exampleIdea: "Design an AI-assisted review flow that helps a team respond faster without removing the human check.",
+    intake: {
+      goal: "Use AI to reduce friction while keeping the human review visible.",
+      desiredOutput: "Guardrailed AI workflow brief with review points and operator controls",
+      constraints: "Keep the model behavior inspectable and bounded.",
+      nonGoals: "Do not build a fully autonomous system in the first pass."
+    },
+    recommendedFor: ["AI copilots", "Assisted review", "Guardrailed decision support"]
+  }
+];
+
+export function getWorkflowTemplate(templateId = "") {
+  const safeTemplateId = safeText(templateId, 80).toLowerCase();
+  return WORKFLOW_REQUEST_TEMPLATES.find((template) => template.id === safeTemplateId) || null;
+}
+
+export function getWorkflowCatalog() {
+  return {
+    templates: WORKFLOW_REQUEST_TEMPLATES,
+    agentRoles: WORKFLOW_AGENT_LIBRARY
+  };
+}
+
 export function normalizeWorkflowCategory(rawValue = "", idea = "") {
   const normalized = safeText(rawValue, 40).toLowerCase();
   if (normalized && Object.prototype.hasOwnProperty.call(WORKFLOW_CATEGORY_PRESETS, normalized)) {
@@ -621,6 +767,90 @@ export function buildWorkflowPlan({ request = {}, category = "website", brief = 
     singleAgent: {
       ownerAgentId: safeText(request?.routing?.ownerAgentId, 80) || preset.ownerAgentId,
       lane: safeText(request?.routing?.recommendedLane, 120) || preset.recommendedLane
+    },
+    editable: {
+      version: 1,
+      edited: false,
+      editorNotes: "",
+      lastEditedAt: "",
+      editedBy: "",
+      templateId: ""
+    }
+  };
+}
+
+export function normalizeWorkflowPlanPatch(rawPatch = {}) {
+  const patch = rawPatch && typeof rawPatch === "object" && !Array.isArray(rawPatch) ? rawPatch : {};
+  const proposedSteps = (Array.isArray(patch.proposedSteps) ? patch.proposedSteps : [])
+    .map((step, index) => ({
+      id: safeText(step?.id, 80) || `step_${index + 1}`,
+      title: safeText(step?.title, 160),
+      detail: safeText(step?.detail, 280)
+    }))
+    .filter((step) => step.title || step.detail)
+    .slice(0, 6);
+  return {
+    summary: safeText(patch.summary, 320),
+    proposedSteps,
+    expectedArtifact: {
+      type: safeText(patch?.expectedArtifact?.type, 160),
+      title: safeText(patch?.expectedArtifact?.title, 180),
+      summary: safeText(patch?.expectedArtifact?.summary, 280)
+    },
+    blockers: normalizeStringArray(patch.blockers || [], 6),
+    editorNotes: safeText(patch.editorNotes, 280),
+    templateId: safeText(patch.templateId, 80)
+  };
+}
+
+export function applyWorkflowPlanPatch({ basePlan = {}, patch = {}, actor = "public" } = {}) {
+  const normalizedBase = basePlan && typeof basePlan === "object" && !Array.isArray(basePlan) ? basePlan : {};
+  const normalizedPatch = normalizeWorkflowPlanPatch(patch);
+  const nextSteps = normalizedPatch.proposedSteps.filter((step) => step.title || step.detail);
+  const contentEdited = Boolean(
+    normalizedPatch.summary ||
+      normalizedPatch.blockers.length ||
+      nextSteps.length ||
+      normalizedPatch.expectedArtifact.type ||
+      normalizedPatch.expectedArtifact.title ||
+      normalizedPatch.expectedArtifact.summary
+  );
+  const currentVersion = Number(normalizedBase?.editable?.version || 1);
+
+  return {
+    ...normalizedBase,
+    summary: normalizedPatch.summary || normalizedBase.summary || "",
+    proposedSteps: nextSteps.length
+      ? nextSteps.map((step, index) => ({
+          id: step.id || normalizedBase?.proposedSteps?.[index]?.id || `step_${index + 1}`,
+          title: step.title || normalizedBase?.proposedSteps?.[index]?.title || "",
+          detail: step.detail || normalizedBase?.proposedSteps?.[index]?.detail || ""
+        }))
+      : Array.isArray(normalizedBase.proposedSteps)
+        ? normalizedBase.proposedSteps
+        : [],
+    expectedArtifact: {
+      ...(normalizedBase.expectedArtifact || {}),
+      type: normalizedPatch.expectedArtifact.type || normalizedBase?.expectedArtifact?.type || "",
+      title: normalizedPatch.expectedArtifact.title || normalizedBase?.expectedArtifact?.title || "",
+      summary: normalizedPatch.expectedArtifact.summary || normalizedBase?.expectedArtifact?.summary || ""
+    },
+    blockers: normalizedPatch.blockers.length
+      ? normalizedPatch.blockers
+      : Array.isArray(normalizedBase.blockers)
+        ? normalizedBase.blockers
+        : [],
+    editable: {
+      ...(normalizedBase.editable && typeof normalizedBase.editable === "object" ? normalizedBase.editable : {}),
+      edited: Boolean(normalizedBase?.editable?.edited || contentEdited),
+      version: contentEdited ? currentVersion + 1 : currentVersion,
+      editorNotes:
+        normalizedPatch.editorNotes ||
+        safeText(normalizedBase?.editable?.editorNotes, 280),
+      lastEditedAt: new Date().toISOString(),
+      editedBy: safeText(actor, 80) || "public",
+      templateId: normalizedPatch.templateId || safeText(normalizedBase?.editable?.templateId, 80),
+      patch: normalizedPatch
     }
   };
 }

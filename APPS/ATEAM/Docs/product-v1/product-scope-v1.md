@@ -94,3 +94,14 @@ ATEAM V1 is healthy when:
 - Existing workflow routes stay stable
 - Existing decision-pack artifact remains the default V1 output bundle
 - `phase` remains for compatibility, but `state` is now the primary V1 lifecycle surface
+
+## Current Phase 2 Status
+
+The following V2-facing items are now scaffolded without changing the V1 product definition:
+
+- agent role library visibility
+- request templates
+- editable-plan support before approval
+- richer recent-run browsing with filters
+
+These should be treated as controlled extensions on top of the V1 trust loop, not as a license to expand into multi-agent or action-heavy behavior.

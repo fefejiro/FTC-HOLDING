@@ -71,5 +71,11 @@ describe("workflowRunStore", () => {
     const listed = await store.list({ limit: 10 });
     expect(listed).toHaveLength(1);
     expect(listed[0].id).toBe(created.id);
+
+    const byCategory = await store.list({ limit: 10, category: "website" });
+    expect(byCategory).toHaveLength(1);
+
+    const byState = await store.list({ limit: 10, state: "awaiting_approval" });
+    expect(byState).toHaveLength(1);
   });
 });

@@ -74,6 +74,49 @@ export type WorkflowPlan = {
     ownerAgentId: string;
     lane: string;
   };
+  editable?: {
+    version?: number;
+    edited?: boolean;
+    editorNotes?: string;
+    lastEditedAt?: string;
+    editedBy?: string;
+    templateId?: string;
+    patch?: {
+      summary?: string;
+      proposedSteps?: Array<{
+        id?: string;
+        title?: string;
+        detail?: string;
+      }>;
+      expectedArtifact?: {
+        type?: string;
+        title?: string;
+        summary?: string;
+      };
+      blockers?: string[];
+      editorNotes?: string;
+      templateId?: string;
+    };
+  };
+};
+
+export type WorkflowTemplate = {
+  id: string;
+  label: string;
+  category: WorkflowCategoryValue | string;
+  summary: string;
+  exampleIdea: string;
+  intake: WorkflowIntake;
+  recommendedFor: string[];
+};
+
+export type WorkflowAgentRole = {
+  id: string;
+  ownerAgentId: string;
+  label: string;
+  stage: string;
+  summary: string;
+  responsibilities: string[];
 };
 
 export type WorkflowEvaluation = {
@@ -364,9 +407,16 @@ export type WorkflowRun = {
   jobs?: JobSummary[];
   artifactSummaries?: ArtifactSummary[];
   recentArtifact?: ArtifactSummary | null;
+  availableTemplates?: WorkflowTemplate[];
+  agentRoles?: WorkflowAgentRole[];
   statusNarrative?: StatusNarrative;
   history?: TimelineEntry[];
   publicFlow?: PublicFlow;
+};
+
+export type WorkflowCatalog = {
+  templates: WorkflowTemplate[];
+  agentRoles: WorkflowAgentRole[];
 };
 
 export const ateamWorkflowCategories = [

@@ -10,8 +10,11 @@ import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
 import ProductStatusBadge from "../components/ProductStatusBadge";
 import OperatorOfficePanel, { type OfficePhase } from "../components/OperatorOfficePanel";
 import {
+  type WorkflowAgentRole,
+  type WorkflowCatalog,
   type WorkflowIntake,
   type WorkflowCategoryValue,
+  type WorkflowTemplate,
   type WorkflowRun,
 } from "../../lib/ateamWorkflow";
 import { getProjectCaseStudy } from "../../lib/content";
@@ -108,6 +111,45 @@ function buildInitialIntake(run: WorkflowRun | null): WorkflowIntake {
   };
 }
 
+function buildInitialPlanDraft(run: WorkflowRun | null) {
+  return {
+    summary: String(run?.plan?.summary || ""),
+    proposedSteps: (run?.plan?.proposedSteps || []).map((step) => ({
+      id: String(step.id || ""),
+      title: String(step.title || ""),
+      detail: String(step.detail || ""),
+    })),
+    expectedArtifact: {
+      type: String(run?.plan?.expectedArtifact?.type || ""),
+      title: String(run?.plan?.expectedArtifact?.title || ""),
+      summary: String(run?.plan?.expectedArtifact?.summary || ""),
+    },
+    blockers: [...(run?.plan?.blockers || [])],
+    editorNotes: String(run?.plan?.editable?.editorNotes || ""),
+  };
+}
+
+function trimPlanDraft(planDraft: ReturnType<typeof buildInitialPlanDraft>, templateId = "") {
+  return {
+    summary: String(planDraft.summary || "").trim(),
+    proposedSteps: planDraft.proposedSteps
+      .map((step) => ({
+        id: String(step.id || "").trim(),
+        title: String(step.title || "").trim(),
+        detail: String(step.detail || "").trim(),
+      }))
+      .filter((step) => step.title || step.detail),
+    expectedArtifact: {
+      type: String(planDraft.expectedArtifact.type || "").trim(),
+      title: String(planDraft.expectedArtifact.title || "").trim(),
+      summary: String(planDraft.expectedArtifact.summary || "").trim(),
+    },
+    blockers: planDraft.blockers.map((item) => String(item || "").trim()).filter(Boolean),
+    editorNotes: String(planDraft.editorNotes || "").trim(),
+    templateId,
+  };
+}
+
 function buildAnswersPayload(run: WorkflowRun | null, intake: WorkflowIntake, answers: Record<string, string>) {
   const nextAnswers: Record<string, string> = {
     ...answers,
@@ -119,9 +161,6 @@ function buildAnswersPayload(run: WorkflowRun | null, intake: WorkflowIntake, an
   };
   if (!nextAnswers.firstWin && nextAnswers.goal) {
     nextAnswers.firstWin = nextAnswers.goal;
-  }
-  if (!nextAnswers.audience && nextAnswers.context) {
-    nextAnswers.audience = nextAnswers.context;
   }
   return Object.fromEntries(
     Object.entries(nextAnswers).filter(([, value]) => String(value || "").trim())
@@ -239,6 +278,13 @@ export default function AteamWorkflowClient({
   const [run, setRun] = useState<WorkflowRun | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [recentRuns, setRecentRuns] = useState<WorkflowRun[]>([]);
+  const [catalog, setCatalog] = useState<WorkflowCatalog>({ templates: [], agentRoles: [] });
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyCategory, setHistoryCategory] = useState("all");
+  const [historyState, setHistoryState] = useState("all");
+  const [isEditingPlan, setIsEditingPlan] = useState(false);
+  const [planDraft, setPlanDraft] = useState(buildInitialPlanDraft(null));
   const [busy, setBusy] = useState<BusyState>("idle");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -390,16 +436,21 @@ export default function AteamWorkflowClient({
     if (!runId) return;
     let cancelled = false;
     setBusy("loading");
-    requestJson<{ ok: true; run: WorkflowRun }>(
+    requestJson<{ ok: true; run: WorkflowRun; catalog?: WorkflowCatalog }>(
       `/api/ateam/workflow/runs/${encodeURIComponent(runId)}`
     )
       .then((payload) => {
         if (cancelled) return;
         setRun(payload.run);
+        if (payload.catalog) setCatalog(payload.catalog);
         setIdea(payload.run.idea || "");
         setCategory((payload.run.category as WorkflowCategoryValue) || "auto");
         setIntake(buildInitialIntake(payload.run));
+        setSelectedTemplateId(
+          String(payload.run.plan?.editable?.templateId || payload.run.meta?.templateId || "")
+        );
         setAnswers(buildEmptyAnswers(payload.run));
+        setPlanDraft(buildInitialPlanDraft(payload.run));
         setActivePrototypeFrameId(payload.run.artifacts?.prototype?.frames?.[0]?.id || "");
         setBusy("idle");
       })
@@ -410,15 +461,19 @@ export default function AteamWorkflowClient({
   useEffect(() => {
     if (!run) return;
     setIntake(buildInitialIntake(run));
+    setSelectedTemplateId(String(run.plan?.editable?.templateId || run.meta?.templateId || ""));
     setAnswers(buildEmptyAnswers(run));
+    setPlanDraft(buildInitialPlanDraft(run));
+    setIsEditingPlan(false);
   }, [run?.id]);
 
   useEffect(() => {
     let cancelled = false;
-    requestJson<{ ok: true; runs: WorkflowRun[] }>("/api/ateam/workflow/runs?limit=5")
+    requestJson<{ ok: true; runs: WorkflowRun[]; catalog?: WorkflowCatalog }>("/api/ateam/workflow/runs?limit=12")
       .then((payload) => {
         if (!cancelled) {
           setRecentRuns(Array.isArray(payload.runs) ? payload.runs : []);
+          if (payload.catalog) setCatalog(payload.catalog);
         }
       })
       .catch(() => {
@@ -473,6 +528,16 @@ export default function AteamWorkflowClient({
   const showBarActions = Boolean(hasProductStatusBadge || run || operatorEnabled);
   const currentState = String(run?.state || "").trim().toLowerCase() || "queued";
   const currentStateIndex = Math.max(0, V1_STATE_STEPS.findIndex((step) => step === currentState));
+  const filteredRecentRuns = useMemo(() => {
+    return recentRuns.filter((recentRun) => {
+      const matchesSearch = !historySearch || `${recentRun.title || ""} ${recentRun.idea || ""} ${recentRun.plan?.summary || ""}`
+        .toLowerCase()
+        .includes(historySearch.toLowerCase());
+      const matchesCategory = historyCategory === "all" || recentRun.category === historyCategory;
+      const matchesState = historyState === "all" || String(recentRun.state || "").toLowerCase() === historyState;
+      return matchesSearch && matchesCategory && matchesState;
+    });
+  }, [historyCategory, historySearch, historyState, recentRuns]);
 
   const officePhase: OfficePhase = workflowReady
     ? "done"
@@ -491,7 +556,10 @@ export default function AteamWorkflowClient({
     setIdea(nextRun.idea || "");
     setCategory((nextRun.category as WorkflowCategoryValue) || "auto");
     setIntake(buildInitialIntake(nextRun));
+    setSelectedTemplateId(String(nextRun.plan?.editable?.templateId || nextRun.meta?.templateId || ""));
     setAnswers(buildEmptyAnswers(nextRun));
+    setPlanDraft(buildInitialPlanDraft(nextRun));
+    setIsEditingPlan(false);
     if (nextRun.id && nextRun.id !== runId) {
       router.replace(buildWorkflowPath(basePath, nextRun.id));
     }
@@ -514,6 +582,7 @@ export default function AteamWorkflowClient({
     setActivePrototypeFrameId("");
     setIdea("");
     setCategory("auto");
+    setSelectedTemplateId("");
     setIntake({
       goal: "",
       context: "",
@@ -521,6 +590,8 @@ export default function AteamWorkflowClient({
       constraints: "",
       nonGoals: "",
     });
+    setPlanDraft(buildInitialPlanDraft(null));
+    setIsEditingPlan(false);
     clearAteamDemoHandoff();
     router.replace(buildWorkflowPath(basePath));
   }
@@ -545,6 +616,22 @@ export default function AteamWorkflowClient({
     }
   }
 
+  function handleApplyTemplate(template: WorkflowTemplate) {
+    setSelectedTemplateId(template.id);
+    setCategory((template.category as WorkflowCategoryValue) || "auto");
+    setIntake((prev) => ({
+      goal: String(prev.goal || template.intake.goal || ""),
+      context: String(prev.context || template.intake.context || ""),
+      desiredOutput: String(prev.desiredOutput || template.intake.desiredOutput || ""),
+      constraints: String(prev.constraints || template.intake.constraints || ""),
+      nonGoals: String(prev.nonGoals || template.intake.nonGoals || ""),
+    }));
+    if (!idea.trim()) {
+      setIdea(template.exampleIdea);
+    }
+    setNotice(`Template applied: ${template.label}. Adjust anything before starting the run.`);
+  }
+
   async function handleStartRun() {
     setError("");
     setNotice("");
@@ -566,17 +653,19 @@ export default function AteamWorkflowClient({
     setProcessingStageIndex(0);
     try {
       await wait(180);
-      const payload = await requestJson<{ ok: true; run: WorkflowRun }>(
+      const payload = await requestJson<{ ok: true; run: WorkflowRun; catalog?: WorkflowCatalog }>(
         "/api/ateam/workflow/runs",
         {
           method: "POST",
           body: JSON.stringify({
             idea,
             category: category === "auto" ? "" : category,
+            templateId: selectedTemplateId,
             intake,
           }),
         }
       );
+      if (payload.catalog) setCatalog(payload.catalog);
       trackEvent("ateam_run_started", {
         location: basePath === "/" ? "homepage" : "ateam_page",
         run_id: payload.run.id,
@@ -602,6 +691,7 @@ export default function AteamWorkflowClient({
   async function handlePlanDecision(decision: "approved" | "rejected" | "regenerate") {
     if (!run) return;
     const answerPayload = buildAnswersPayload(run, intake, answers);
+    const planPayload = trimPlanDraft(planDraft, selectedTemplateId);
     const goalValue = String(intake.goal || answerPayload.firstWin || "").trim();
     if (decision === "approved" && goalValue.length < 8) {
       setError("Add the primary goal before approving the plan.");
@@ -618,19 +708,29 @@ export default function AteamWorkflowClient({
     setBusy("processing");
     try {
       setProcessingStageIndex(1);
-      const captured = await requestJson<{ ok: true; run: WorkflowRun }>(
+      const captured = await requestJson<{ ok: true; run: WorkflowRun; catalog?: WorkflowCatalog }>(
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/answers`,
-        { method: "POST", body: JSON.stringify({ answers: answerPayload }) }
+        {
+          method: "POST",
+          body: JSON.stringify({
+            answers: answerPayload,
+            intake,
+            plan: planPayload,
+            templateId: selectedTemplateId,
+          }),
+        }
       );
+      if (captured.catalog) setCatalog(captured.catalog);
       await syncRun(captured.run);
 
       if (decision === "regenerate") {
         setProcessingStageIndex(2);
         await wait(180);
-        const regenerated = await requestJson<{ ok: true; run: WorkflowRun }>(
+        const regenerated = await requestJson<{ ok: true; run: WorkflowRun; catalog?: WorkflowCatalog }>(
           `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
           { method: "POST", body: JSON.stringify({ gate: "brief", decision: "regenerate" }) }
         );
+        if (regenerated.catalog) setCatalog(regenerated.catalog);
         trackEvent("ateam_plan_regenerated", {
           location: basePath === "/" ? "homepage" : "ateam_page",
           run_id: regenerated.run.id,
@@ -641,10 +741,11 @@ export default function AteamWorkflowClient({
       }
 
       if (decision === "rejected") {
-        const rejected = await requestJson<{ ok: true; run: WorkflowRun }>(
+        const rejected = await requestJson<{ ok: true; run: WorkflowRun; catalog?: WorkflowCatalog }>(
           `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
           { method: "POST", body: JSON.stringify({ gate: "brief", decision: "rejected" }) }
         );
+        if (rejected.catalog) setCatalog(rejected.catalog);
         trackEvent("ateam_plan_rejected", {
           location: basePath === "/" ? "homepage" : "ateam_page",
           run_id: rejected.run.id,
@@ -656,22 +757,23 @@ export default function AteamWorkflowClient({
 
       setProcessingStageIndex(2);
       await wait(180);
-      await requestJson<{ ok: true; run: WorkflowRun }>(
+      await requestJson<{ ok: true; run: WorkflowRun; catalog?: WorkflowCatalog }>(
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
         { method: "POST", body: JSON.stringify({ gate: "brief", decision: "approved" }) }
       );
       setProcessingStageIndex(3);
       await wait(220);
-      await requestJson<{ ok: true; run: WorkflowRun }>(
+      await requestJson<{ ok: true; run: WorkflowRun; catalog?: WorkflowCatalog }>(
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/generate-pack`,
         { method: "POST", body: JSON.stringify({}) }
       );
       setProcessingStageIndex(4);
       await wait(220);
-      const result = await requestJson<{ ok: true; run: WorkflowRun }>(
+      const result = await requestJson<{ ok: true; run: WorkflowRun; catalog?: WorkflowCatalog }>(
         `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/approve`,
         { method: "POST", body: JSON.stringify({ gate: "pack", decision: "approved" }) }
       );
+      if (result.catalog) setCatalog(result.catalog);
       trackEvent("ateam_pack_ready", {
         location: basePath === "/" ? "homepage" : "ateam_page",
         run_id: result.run.id,
@@ -690,6 +792,34 @@ export default function AteamWorkflowClient({
     } finally {
       setBusy("idle");
       setProcessingStageIndex(-1);
+    }
+  }
+
+  async function handleSavePlanEdits() {
+    if (!run) return;
+    setError("");
+    setNotice("");
+    setBusy("processing");
+    try {
+      const payload = await requestJson<{ ok: true; run: WorkflowRun; catalog?: WorkflowCatalog }>(
+        `/api/ateam/workflow/runs/${encodeURIComponent(run.id)}/answers`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            answers: buildAnswersPayload(run, intake, answers),
+            intake,
+            plan: trimPlanDraft(planDraft, selectedTemplateId),
+            templateId: selectedTemplateId,
+          }),
+        }
+      );
+      if (payload.catalog) setCatalog(payload.catalog);
+      await syncRun(payload.run);
+      setNotice("ATEAM saved your plan edits and refreshed the review view.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ATEAM could not save the plan edits.");
+    } finally {
+      setBusy("idle");
     }
   }
 
@@ -805,6 +935,32 @@ export default function AteamWorkflowClient({
                   <p>Una Labs picks up the handoff and moves it into real execution.</p>
                 </div>
               </div>
+
+              {catalog.templates.length > 0 && (
+                <div className="wf-template-card">
+                  <div className="wf-template-head">
+                    <div>
+                      <p className="wf-pack-panel-kicker">Request templates</p>
+                      <h2 className="wf-recent-title">Start from a stronger first-pass pattern</h2>
+                    </div>
+                    <span className="wf-recent-count">{catalog.templates.length} curated</span>
+                  </div>
+                  <div className="wf-template-grid">
+                    {catalog.templates.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        className={`wf-template-item ${selectedTemplateId === template.id ? "wf-template-item--active" : ""}`}
+                        onClick={() => handleApplyTemplate(template)}
+                      >
+                        <strong>{template.label}</strong>
+                        <p>{template.summary}</p>
+                        <span>{template.recommendedFor.join(" · ")}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="wf-intake-card">
                 <div className="wf-intake-label-row">
@@ -973,8 +1129,37 @@ export default function AteamWorkflowClient({
                     </div>
                     <span className="wf-recent-count">{recentRuns.length} visible</span>
                   </div>
+                  <div className="wf-history-filters">
+                    <input
+                      className="wf-guided-input"
+                      type="text"
+                      value={historySearch}
+                      onChange={(e) => setHistorySearch(e.target.value)}
+                      placeholder="Search titles, ideas, or plan summaries"
+                    />
+                    <select
+                      className="wf-guided-input"
+                      value={historyCategory}
+                      onChange={(e) => setHistoryCategory(e.target.value)}
+                    >
+                      <option value="all">All categories</option>
+                      {Array.from(new Set(recentRuns.map((item) => item.category).filter(Boolean))).map((value) => (
+                        <option key={value} value={value}>{value}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="wf-guided-input"
+                      value={historyState}
+                      onChange={(e) => setHistoryState(e.target.value)}
+                    >
+                      <option value="all">All states</option>
+                      {Array.from(new Set(recentRuns.map((item) => String(item.state || "").toLowerCase()).filter(Boolean))).map((value) => (
+                        <option key={value} value={value}>{formatWorkflowStateLabel(value)}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="wf-recent-list">
-                    {recentRuns.map((recentRun) => (
+                    {filteredRecentRuns.map((recentRun) => (
                       <Link
                         key={recentRun.id}
                         href={buildWorkflowPath(basePath, recentRun.id)}
@@ -987,6 +1172,26 @@ export default function AteamWorkflowClient({
                         </div>
                         <span>{formatWorkflowStateLabel(recentRun.state || recentRun.phase)}</span>
                       </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {catalog.agentRoles.length > 0 && (
+                <div className="wf-role-card">
+                  <div className="wf-template-head">
+                    <div>
+                      <p className="wf-pack-panel-kicker">Agent role library</p>
+                      <h2 className="wf-recent-title">Who handles what inside ATEAM</h2>
+                    </div>
+                  </div>
+                  <div className="wf-role-grid">
+                    {catalog.agentRoles.map((role) => (
+                      <div key={role.id} className="wf-role-item">
+                        <span>{role.stage}</span>
+                        <strong>{role.label}</strong>
+                        <p>{role.summary}</p>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -1137,6 +1342,32 @@ export default function AteamWorkflowClient({
                 </div>
               </div>
 
+              {catalog.agentRoles.length > 0 && (
+                <div className="wf-role-card">
+                  <div className="wf-template-head">
+                    <div>
+                      <p className="wf-pack-panel-kicker">Role-aware execution</p>
+                      <h2 className="wf-recent-title">Phase 2 role library</h2>
+                    </div>
+                    <span className="wf-recent-count">
+                      {run.plan?.singleAgent?.lane || run.request?.routing?.recommendedLane || "Single lane"}
+                    </span>
+                  </div>
+                  <div className="wf-role-grid">
+                    {catalog.agentRoles.map((role) => (
+                      <div
+                        key={role.id}
+                        className={`wf-role-item ${run.plan?.singleAgent?.ownerAgentId === role.ownerAgentId ? "wf-role-item--active" : ""}`}
+                      >
+                        <span>{role.stage}</span>
+                        <strong>{role.label}</strong>
+                        <p>{role.summary}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="wf-guided-grid" aria-label="Adjust the request before approval">
                 <div className="wf-guided-field">
                   <label className="wf-field-label" htmlFor="wf-review-goal">Primary goal</label>
@@ -1195,6 +1426,116 @@ export default function AteamWorkflowClient({
                 </div>
               </div>
 
+              <div className="wf-plan-editor-card">
+                <div className="wf-template-head">
+                  <div>
+                    <p className="wf-pack-panel-kicker">Editable plan scaffolding</p>
+                    <h2 className="wf-recent-title">Tune the plan before execution</h2>
+                  </div>
+                  <button
+                    type="button"
+                    className="wf-btn-ghost"
+                    onClick={() => setIsEditingPlan((current) => !current)}
+                  >
+                    {isEditingPlan ? "Hide plan editor" : "Edit the plan"}
+                  </button>
+                </div>
+                {isEditingPlan ? (
+                  <div className="wf-guided-grid">
+                    <div className="wf-guided-field wf-guided-field--full">
+                      <label className="wf-field-label" htmlFor="wf-plan-summary">Plan summary</label>
+                      <textarea
+                        id="wf-plan-summary"
+                        className="wf-question-textarea"
+                        rows={3}
+                        value={planDraft.summary}
+                        onChange={(e) => setPlanDraft((prev) => ({ ...prev, summary: e.target.value }))}
+                      />
+                    </div>
+                    {planDraft.proposedSteps.map((step, index) => (
+                      <div key={step.id || index} className="wf-plan-step-editor">
+                        <label className="wf-field-label" htmlFor={`wf-step-title-${index}`}>Step {index + 1} title</label>
+                        <input
+                          id={`wf-step-title-${index}`}
+                          className="wf-guided-input"
+                          type="text"
+                          value={step.title}
+                          onChange={(e) =>
+                            setPlanDraft((prev) => ({
+                              ...prev,
+                              proposedSteps: prev.proposedSteps.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, title: e.target.value } : item
+                              ),
+                            }))
+                          }
+                        />
+                        <label className="wf-field-label" htmlFor={`wf-step-detail-${index}`}>Step {index + 1} detail</label>
+                        <textarea
+                          id={`wf-step-detail-${index}`}
+                          className="wf-question-textarea"
+                          rows={3}
+                          value={step.detail}
+                          onChange={(e) =>
+                            setPlanDraft((prev) => ({
+                              ...prev,
+                              proposedSteps: prev.proposedSteps.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, detail: e.target.value } : item
+                              ),
+                            }))
+                          }
+                        />
+                      </div>
+                    ))}
+                    <div className="wf-guided-field">
+                      <label className="wf-field-label" htmlFor="wf-plan-expected-title">Artifact title</label>
+                      <input
+                        id="wf-plan-expected-title"
+                        className="wf-guided-input"
+                        type="text"
+                        value={planDraft.expectedArtifact.title}
+                        onChange={(e) =>
+                          setPlanDraft((prev) => ({
+                            ...prev,
+                            expectedArtifact: { ...prev.expectedArtifact, title: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="wf-guided-field">
+                      <label className="wf-field-label" htmlFor="wf-plan-expected-summary">Artifact summary</label>
+                      <textarea
+                        id="wf-plan-expected-summary"
+                        className="wf-question-textarea"
+                        rows={3}
+                        value={planDraft.expectedArtifact.summary}
+                        onChange={(e) =>
+                          setPlanDraft((prev) => ({
+                            ...prev,
+                            expectedArtifact: { ...prev.expectedArtifact, summary: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="wf-guided-field wf-guided-field--full">
+                      <label className="wf-field-label" htmlFor="wf-plan-notes">Editor notes</label>
+                      <textarea
+                        id="wf-plan-notes"
+                        className="wf-question-textarea"
+                        rows={3}
+                        value={planDraft.editorNotes}
+                        onChange={(e) => setPlanDraft((prev) => ({ ...prev, editorNotes: e.target.value }))}
+                        placeholder="Optional note about what changed or why."
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="wf-pack-panel-body">
+                    Phase 2 keeps plan editing safely before execution. Use it to refine wording,
+                    steps, and artifact framing without changing the route contract.
+                  </p>
+                )}
+              </div>
+
               {(run?.questions || []).length > 0 && (
                 <div className="wf-questions">
                   {(run?.questions || []).map((question, idx) => (
@@ -1226,6 +1567,16 @@ export default function AteamWorkflowClient({
               {!error && notice && <p className="wf-notice">{notice}</p>}
 
               <div className="wf-clarify-actions">
+                {isEditingPlan && (
+                  <button
+                    type="button"
+                    className="wf-btn-ghost"
+                    onClick={handleSavePlanEdits}
+                    disabled={busy !== "idle"}
+                  >
+                    Save plan edits
+                  </button>
+                )}
                 <button
                   type="button"
                   className="wf-btn-primary"

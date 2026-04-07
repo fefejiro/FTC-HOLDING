@@ -37,6 +37,13 @@ Public V1 keeps the current workflow routes and decision-pack artifact, but make
 - normalized workflow state
 - recent run visibility
 
+Phase 2 scaffolding now also exists on the same public surface through:
+
+- request templates
+- agent role library visibility
+- filtered recent-run browsing
+- editable-plan scaffolding before approval
+
 ## Current Status
 
 Implemented in this reframe pass:
@@ -46,6 +53,13 @@ Implemented in this reframe pass:
 - workflow-service support for approval-gated V1 state transitions, including `regenerate`
 - expanded public run contract in `APPS/ftc-site/lib/ateamWorkflow.ts`
 - public `/ateam` UI updated for guided intake, plan review, approval actions, state progress, recent runs, and bundle download
+
+Implemented in the current Phase 2 extension pass:
+
+- reusable workflow templates exposed from the backend catalog and applied at run start or plan-update time
+- agent role library metadata exposed in the public contract so users can see the execution lane before approval
+- editable-plan scaffolding persisted through the workflow service without replacing the single approval gate
+- filtered recent-run browsing by search, category, and state in the public `/ateam` surface
 
 Validated:
 

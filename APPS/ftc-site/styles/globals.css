@@ -10611,6 +10611,98 @@ body {
   margin-top: 22px;
 }
 
+.wf-template-card,
+.wf-role-card,
+.wf-plan-editor-card {
+  margin-top: 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(27, 83, 255, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 40px rgba(18, 39, 82, 0.08);
+  padding: 20px;
+}
+
+.wf-template-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.wf-template-grid,
+.wf-role-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wf-template-item,
+.wf-role-item {
+  width: 100%;
+  text-align: left;
+  border-radius: 18px;
+  border: 1px solid rgba(27, 83, 255, 0.12);
+  background: rgba(245, 248, 255, 0.92);
+  padding: 14px 16px;
+}
+
+.wf-template-item {
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.wf-template-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(27, 83, 255, 0.22);
+  box-shadow: 0 12px 24px rgba(18, 39, 82, 0.08);
+}
+
+.wf-template-item--active,
+.wf-role-item--active {
+  border-color: rgba(27, 83, 255, 0.3);
+  box-shadow: 0 14px 28px rgba(27, 83, 255, 0.12);
+}
+
+.wf-template-item strong,
+.wf-role-item strong {
+  display: block;
+  color: #10213e;
+  margin-bottom: 6px;
+}
+
+.wf-template-item p,
+.wf-role-item p {
+  margin: 0;
+  color: rgba(16, 33, 62, 0.72);
+  line-height: 1.55;
+}
+
+.wf-template-item span,
+.wf-role-item span {
+  display: inline-block;
+  margin-top: 8px;
+  color: #1b53ff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.wf-history-filters {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  margin-bottom: 14px;
+}
+
+.wf-plan-step-editor {
+  display: grid;
+  gap: 8px;
+  border-radius: 18px;
+  border: 1px solid rgba(27, 83, 255, 0.1);
+  background: rgba(245, 248, 255, 0.92);
+  padding: 14px;
+}
+
 .wf-recent-head {
   display: flex;
   align-items: center;
@@ -10691,7 +10783,10 @@ body {
 
 @media (max-width: 900px) {
   .wf-plan-layout,
-  .wf-guided-grid {
+  .wf-guided-grid,
+  .wf-template-grid,
+  .wf-role-grid,
+  .wf-history-filters {
     grid-template-columns: 1fr;
   }
 

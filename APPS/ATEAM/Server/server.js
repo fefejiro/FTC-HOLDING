@@ -1231,9 +1231,11 @@ app.post("/events/:sessionId", async (req, res) => {
 app.get("/api/workflow/runs", async (req, res) => {
   try {
     const phase = String(req.query?.phase || "").trim();
+    const category = String(req.query?.category || "").trim();
+    const state = String(req.query?.state || "").trim();
     const limit = Math.max(1, Math.min(120, Number(req.query?.limit || 40)));
-    const runs = await workflowService.listRuns({ phase, limit });
-    res.json({ ok: true, runs });
+    const runs = await workflowService.listRuns({ phase, limit, category, state });
+    res.json({ ok: true, runs, catalog: workflowService.getCatalog() });
   } catch (err) {
     serverError(res, "failed_to_list_workflow_runs", err);
   }
@@ -1246,12 +1248,13 @@ app.post("/api/workflow/runs", async (req, res) => {
     const run = await workflowService.startRun({
       idea: body.idea,
       category: body.category,
+      templateId: body.templateId,
       intake: body.intake && typeof body.intake === "object" ? body.intake : {},
       requestedBy: String(body.actor || body.requestedBy || "public").trim() || "public",
       sessionId,
       meta: body.meta && typeof body.meta === "object" ? body.meta : {}
     });
-    res.status(201).json({ ok: true, run });
+    res.status(201).json({ ok: true, run, catalog: workflowService.getCatalog() });
   } catch (err) {
     if (scopeError(res, err)) return;
     if (workflowError(res, err)) return;
@@ -1262,7 +1265,7 @@ app.post("/api/workflow/runs", async (req, res) => {
 app.get("/api/workflow/runs/:runId", async (req, res) => {
   try {
     const run = await workflowService.getRun(String(req.params.runId || "").trim());
-    res.json({ ok: true, run });
+    res.json({ ok: true, run, catalog: workflowService.getCatalog() });
   } catch (err) {
     if (workflowError(res, err)) return;
     serverError(res, "failed_to_get_workflow_run", err);
@@ -1275,10 +1278,13 @@ app.post("/api/workflow/runs/:runId/answers", async (req, res) => {
     const sessionId = resolveScopedSessionId(req, body.sessionId || body.session_id || "global_podcast", "global_podcast");
     const run = await workflowService.captureAnswers(String(req.params.runId || "").trim(), {
       answers: body.answers,
+      intake: body.intake,
+      planPatch: body.plan,
+      templateId: body.templateId,
       actor: String(body.actor || body.requestedBy || "public").trim() || "public",
       sessionId
     });
-    res.json({ ok: true, run });
+    res.json({ ok: true, run, catalog: workflowService.getCatalog() });
   } catch (err) {
     if (scopeError(res, err)) return;
     if (workflowError(res, err)) return;
@@ -1296,7 +1302,7 @@ app.post("/api/workflow/runs/:runId/approve", async (req, res) => {
       actor: String(body.actor || body.requestedBy || "operator").trim() || "operator",
       sessionId
     });
-    res.json({ ok: true, run });
+    res.json({ ok: true, run, catalog: workflowService.getCatalog() });
   } catch (err) {
     if (scopeError(res, err)) return;
     if (workflowError(res, err)) return;
@@ -1312,7 +1318,7 @@ app.post("/api/workflow/runs/:runId/generate-pack", async (req, res) => {
       actor: String(body.actor || body.requestedBy || "operator").trim() || "operator",
       sessionId
     });
-    res.json({ ok: true, run });
+    res.json({ ok: true, run, catalog: workflowService.getCatalog() });
   } catch (err) {
     if (scopeError(res, err)) return;
     if (workflowError(res, err)) return;

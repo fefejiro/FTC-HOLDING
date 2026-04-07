@@ -168,13 +168,22 @@ export function createWorkflowRunStore() {
     return rowToRun(selectStmt.get(workflowRunId));
   }
 
-  function list({ phase = "", limit = 40 } = {}) {
+  function list({ phase = "", limit = 40, category = "", state = "" } = {}) {
     const normalizedPhase = safeText(phase, 40).toLowerCase();
     const lim = Math.max(1, Math.min(200, Number(limit) || 40));
     const rows = normalizedPhase
       ? listByPhaseStmt.all(normalizePhase(normalizedPhase), lim)
       : listStmt.all(lim);
-    return (Array.isArray(rows) ? rows : []).map(rowToRun).filter(Boolean);
+    return (Array.isArray(rows) ? rows : [])
+      .map(rowToRun)
+      .filter(Boolean)
+      .filter((run) => {
+        const categoryFilter = safeText(category, 40).toLowerCase();
+        const stateFilter = safeText(state, 40).toLowerCase();
+        if (categoryFilter && run.category !== normalizeWorkflowCategory(categoryFilter)) return false;
+        if (stateFilter && run.state !== normalizeWorkflowState(stateFilter)) return false;
+        return true;
+      });
   }
 
   function update(id, patch = {}) {

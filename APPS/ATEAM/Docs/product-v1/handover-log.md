@@ -76,3 +76,47 @@ Tightened the workflow copy heuristics after live QA surfaced awkward truncated 
 ### Exact Next Step
 
 Push this polish pass, wait for deploy propagation, then rerun one short live QA pass on `/ateam` to confirm the improved titles and summaries are visible in production.
+
+## 2026-04-07 Phase 2 Surface Extension
+
+### Summary
+
+Extended the public ATEAM surface with the first V2-facing scaffolding while keeping the V1 product definition intact. The current pass adds request templates, agent role visibility, filtered recent-run browsing, and editable-plan scaffolding before approval.
+
+### Files Changed
+
+- `APPS/ATEAM/Server/lib/workflowEngine.js`
+- `APPS/ATEAM/Server/lib/workflowService.js`
+- `APPS/ATEAM/Server/lib/workflowRunStore.js`
+- `APPS/ATEAM/Server/server.js`
+- `APPS/ATEAM/Server/__tests__/unit/workflowRunStore.test.js`
+- `APPS/ATEAM/Server/__tests__/unit/workflowService.test.js`
+- `APPS/ftc-site/lib/ateamWorkflow.ts`
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+- `APPS/ftc-site/styles/globals.css`
+- `APPS/ATEAM/Docs/product-v1/README.md`
+- `APPS/ATEAM/Docs/product-v1/product-scope-v1.md`
+- `APPS/ATEAM/Docs/product-v1/architecture-v1.md`
+- `APPS/ATEAM/Docs/product-v1/implementation-plan.md`
+
+### Decisions Made
+
+- keep templates and role metadata as catalog data from the backend instead of inventing new route families
+- keep editable plans as pre-approval scaffolding layered onto the existing normalized plan
+- keep recent-run improvements inside the current public list surface instead of building a full history product
+- preserve the single-agent contract and stable public routes
+
+### Validation
+
+- `npm --prefix APPS/ATEAM run test:backend`
+- `npm --prefix APPS/ATEAM run verify:server`
+- `npm --prefix APPS/ftc-site run build`
+
+### Unresolved Issues
+
+- live QA is still useful after deploy propagation to verify the new template and editable-plan affordances on production
+- plan editing remains intentionally lightweight and should not expand into full workflow authoring without a new product decision
+
+### Exact Next Step
+
+Push the Phase 2 pass, confirm the public `/ateam` deploy is live, then run a focused browser QA of template selection, plan editing, filtered recent runs, and final pack generation.

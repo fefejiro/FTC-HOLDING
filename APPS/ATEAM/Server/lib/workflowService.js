@@ -1,4 +1,5 @@
 import {
+  applyWorkflowPlanPatch,
   buildWorkflowBrief,
   buildWorkflowEvaluation,
   buildWorkflowHandoff,
@@ -8,8 +9,11 @@ import {
   buildWorkflowRequest,
   buildWorkflowRisks,
   buildWorkflowWorkItems,
+  getWorkflowCatalog,
+  getWorkflowTemplate,
   getWorkflowCategoryPreset,
   mapWorkflowPhaseToState,
+  normalizeWorkflowPlanPatch,
   normalizeWorkflowCategory,
   normalizeWorkflowState
 } from "./workflowEngine.js";
@@ -36,6 +40,18 @@ function normalizeIntake(rawIntake = {}) {
     desiredOutput: safeText(raw.desiredOutput, 180),
     constraints: safeText(raw.constraints, 260),
     nonGoals: safeText(raw.nonGoals, 260)
+  };
+}
+
+function mergeIntakeWithTemplate(intake = {}, template = null) {
+  const normalized = normalizeIntake(intake);
+  const templateIntake = normalizeIntake(template?.intake || {});
+  return {
+    goal: normalized.goal || templateIntake.goal,
+    context: normalized.context || templateIntake.context,
+    desiredOutput: normalized.desiredOutput || templateIntake.desiredOutput,
+    constraints: normalized.constraints || templateIntake.constraints,
+    nonGoals: normalized.nonGoals || templateIntake.nonGoals
   };
 }
 
@@ -606,6 +622,21 @@ function buildRecentArtifact(artifacts = []) {
   return sorted[0] || null;
 }
 
+function hasMeaningfulPlanPatch(planPatch = {}) {
+  if (!planPatch || typeof planPatch !== "object" || Array.isArray(planPatch)) return false;
+  const normalized = normalizeWorkflowPlanPatch(planPatch);
+  return Boolean(
+    normalized.summary ||
+      normalized.editorNotes ||
+      normalized.templateId ||
+      normalized.blockers.length ||
+      normalized.proposedSteps.length ||
+      normalized.expectedArtifact.type ||
+      normalized.expectedArtifact.title ||
+      normalized.expectedArtifact.summary
+  );
+}
+
 function buildWorkflowStateContext({
   run,
   phase,
@@ -744,6 +775,7 @@ export function createWorkflowService({
     const project = buildProjectSummary({ ...rawRun, brief, request, plan, state }, jobs, artifactSummaries);
     const meta = ensureMeta(rawRun.meta);
     const recentArtifact = buildRecentArtifact(artifactSummaries);
+    const catalog = getWorkflowCatalog();
 
     return {
       ...rawRun,
@@ -762,6 +794,8 @@ export function createWorkflowService({
       jobs,
       artifactSummaries,
       recentArtifact,
+      availableTemplates: catalog.templates,
+      agentRoles: catalog.agentRoles,
       statusNarrative: buildStatusNarrative(rawRun, jobs),
       history: normalizeTimeline(meta.workflowTimeline, "run", safeText(rawRun.id, 120)),
       publicFlow: buildPublicFlow(rawRun, jobs, artifactSummaries)
@@ -771,6 +805,7 @@ export function createWorkflowService({
   async function startRun({
     idea,
     category,
+    templateId = "",
     intake = {},
     requestedBy = "public",
     sessionId = "global_podcast",
@@ -780,9 +815,10 @@ export function createWorkflowService({
     if (safeIdea.length < 12) {
       throw createError("INVALID_WORKFLOW_IDEA", "Share a bit more detail so ATEAM can shape the run.");
     }
-    const normalizedCategory = normalizeWorkflowCategory(category, safeIdea);
+    const template = getWorkflowTemplate(templateId);
+    const normalizedCategory = normalizeWorkflowCategory(category || template?.category, safeIdea);
     const preset = getWorkflowCategoryPreset(normalizedCategory);
-    const normalizedIntake = normalizeIntake(intake);
+    const normalizedIntake = mergeIntakeWithTemplate(intake, template);
     const answers = buildAnswerPatchFromIntake(normalizedIntake);
     const request = buildWorkflowRequest({
       idea: safeIdea,
@@ -808,6 +844,16 @@ export function createWorkflowService({
       category: normalizedCategory,
       brief
     });
+    const templateAwarePlan = template
+      ? applyWorkflowPlanPatch({
+          basePlan: plan,
+          patch: {
+            templateId: template.id,
+            editorNotes: `Started from template: ${template.label}`
+          },
+          actor: requestedBy
+        })
+      : plan;
     const approval = await approvalStore.create({
       policy: "workflow_brief",
       summary: `Approve plan for ${brief.title}`,
@@ -863,7 +909,7 @@ export function createWorkflowService({
           updatedAt: new Date().toISOString()
         }
       }),
-      plan,
+      plan: templateAwarePlan,
       approvals: {
         brief: {
           approvalId: approval.id,
@@ -875,6 +921,8 @@ export function createWorkflowService({
       },
       meta: {
         ...ensureMeta(meta),
+        templateId: template?.id || "",
+        templateLabel: template?.label || "",
         lastTransition: {
           currentStage: phaseToNarrativeStage("brief_approval"),
           summary: "ATEAM captured the idea, normalized the request, and prepared the first plan.",
@@ -907,16 +955,27 @@ export function createWorkflowService({
     return await presentRun(updated);
   }
 
-  async function captureAnswers(runId, { answers, actor = "public", sessionId = "global_podcast" }) {
+  async function captureAnswers(
+    runId,
+    { answers, intake = {}, planPatch = {}, templateId = "", actor = "public", sessionId = "global_podcast" }
+  ) {
     const run = await getRunOrThrow(runId);
+    const template = getWorkflowTemplate(templateId || ensureMeta(run.meta).templateId);
     const mergedAnswers = {
       ...(run.answers || {}),
       ...normalizeAnswers(answers)
     };
+    const nextIntake = mergeIntakeWithTemplate(
+      {
+        ...ensureRequest(run.request).intake,
+        ...normalizeIntake(intake)
+      },
+      template
+    );
     const request = buildWorkflowRequest({
       idea: run.idea,
       category: run.category,
-      intake: ensureRequest(run.request).intake,
+      intake: nextIntake,
       answers: mergedAnswers,
       runId: run.id,
       previousRequest: run.request,
@@ -941,6 +1000,33 @@ export function createWorkflowService({
       brief,
       runId: run.id
     });
+    const persistedPlanPatch = run.plan?.editable?.patch;
+    const mergedPlan = hasMeaningfulPlanPatch(planPatch)
+      ? applyWorkflowPlanPatch({
+          basePlan: plan,
+          patch: {
+            ...normalizeWorkflowPlanPatch(planPatch),
+            templateId: template?.id || safeText(plan?.editable?.templateId, 80)
+          },
+          actor
+        })
+      : hasMeaningfulPlanPatch(persistedPlanPatch)
+        ? applyWorkflowPlanPatch({
+            basePlan: plan,
+            patch: persistedPlanPatch,
+            actor: run.plan?.editable?.editedBy || actor
+          })
+      : template
+        ? applyWorkflowPlanPatch({
+            basePlan: plan,
+            patch: {
+              templateId: template.id,
+              editorNotes:
+                safeText(plan?.editable?.editorNotes, 280) || `Using template: ${template.label}`
+            },
+            actor
+          })
+        : plan;
     const risks = buildWorkflowRisks({
       brief,
       answers: mergedAnswers,
@@ -998,7 +1084,7 @@ export function createWorkflowService({
       title: brief.title,
       answers: mergedAnswers,
       request,
-      plan,
+      plan: mergedPlan,
       brief,
       recommendedLane: brief.recommendedLane,
       risks,
@@ -1008,10 +1094,12 @@ export function createWorkflowService({
           ...run,
           meta: {
             ...ensureMeta(run.meta),
-            artifactRecords,
-            lastTransition: {
-              currentStage: phaseToNarrativeStage("brief_approval"),
-              summary: "ATEAM shaped the brief and queued the routing decision.",
+              artifactRecords,
+              templateId: template?.id || ensureMeta(run.meta).templateId || "",
+              templateLabel: template?.label || ensureMeta(run.meta).templateLabel || "",
+              lastTransition: {
+                currentStage: phaseToNarrativeStage("brief_approval"),
+                summary: "ATEAM shaped the brief and queued the routing decision.",
               reason: "The intake answers were converted into a scoped brief.",
               responsible: "henry",
               timestamp: new Date().toISOString()
@@ -1146,6 +1234,13 @@ export function createWorkflowService({
           brief,
           runId: run.id
         });
+        if (run.plan?.editable?.patch) {
+          patch.plan = applyWorkflowPlanPatch({
+            basePlan: patch.plan,
+            patch: run.plan.editable.patch,
+            actor: run.plan?.editable?.editedBy || actor
+          });
+        }
         patch.risks = buildWorkflowRisks({
           brief,
           answers: run.answers,
@@ -1532,9 +1627,10 @@ export function createWorkflowService({
     captureAnswers,
     approveRun,
     generatePack,
+    getCatalog: () => getWorkflowCatalog(),
     getRun: async (runId) => presentRun(await getRunOrThrow(runId)),
-    listRuns: async ({ phase, limit } = {}) => {
-      const runs = await workflowRunStore.list({ phase, limit });
+    listRuns: async ({ phase, limit, category, state } = {}) => {
+      const runs = await workflowRunStore.list({ phase, limit, category, state });
       return Promise.all(runs.map((run) => presentRun(run)));
     }
   };

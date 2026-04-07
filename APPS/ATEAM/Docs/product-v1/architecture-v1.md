@@ -21,6 +21,10 @@ Current public responsibilities:
 - progress/state display
 - artifact preview/download
 - recent runs visibility
+- request template selection
+- agent role library visibility
+- pre-approval editable-plan scaffolding
+- filtered history browsing by category and state
 
 ## Backend
 
@@ -37,6 +41,8 @@ Responsibilities:
 - generate visible plan
 - persist request, plan, evaluation, state, and state history
 - manage approvals
+- expose workflow catalog metadata for templates and roles
+- apply template defaults and persisted plan edits without changing the stable route surface
 - generate the decision-pack artifact bundle
 - return public-safe run views
 
@@ -84,3 +90,14 @@ In V1 documentation, treat it as a composed artifact bundle:
 OpenAI remains the primary provider for V1, with existing stub behavior retained for local fallback.
 
 V1 remains single-agent and artifact-first.
+
+## Phase 2 Additions
+
+Phase 2 deliberately stays inside the same architecture instead of introducing a second orchestration layer.
+
+Key additions in the current pass:
+
+- catalog-style backend metadata for workflow templates and agent roles
+- template-aware intake merging inside `workflowService.js`
+- persisted editable-plan patches layered on top of the normalized plan in `workflowEngine.js`
+- public UI support for templates, role visibility, editable-plan review, and richer recent-run browsing

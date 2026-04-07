@@ -48,6 +48,18 @@ Status:
 
 - completed in this pass for current local implementation
 
+### Phase 5: V2 Scaffolding Without Scope Drift
+
+- request templates on the public `/ateam` surface
+- agent role library visibility
+- filtered recent-run browsing
+- editable-plan scaffolding before approval
+
+Status:
+
+- implemented in the current pass
+- kept within the same route surface and single-agent architecture
+
 ## Reuse Decisions
 
 - keep current workflow routes stable
@@ -58,8 +70,8 @@ Status:
 
 ## Known Follow-Up Work
 
-- manual QA on the live `/ateam` surface
-- production migration/apply path for hosted Postgres if not already auto-applied on startup
+- live QA of templates, editable-plan saves, and filtered recent-run browsing on `/ateam`
+- decide whether plan edits should stay as freeform scaffolding or evolve into a more structured V2 editing model
 - optional recent-runs pagination and deeper artifact download formats
 - optional public auth layer if V1 expands beyond the current usage boundary
 
@@ -70,3 +82,4 @@ Status:
 - [x] `ftc-site` build passed
 - [x] docs spine created
 - [x] handover log updated
+- [x] Phase 2 template/history/editable-plan scaffolding documented

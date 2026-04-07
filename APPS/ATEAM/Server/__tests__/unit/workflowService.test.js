@@ -142,6 +142,39 @@ describe("workflowService", () => {
     expect(regenerated.stateHistory?.some((entry) => entry.reason?.includes("regenerated"))).toBe(true);
   });
 
+  test("supports template-aware starts and persists editable plan patches", async () => {
+    const started = await workflowService.startRun({
+      idea: "Build a public-facing intake system that turns rough client requests into a visible plan.",
+      templateId: "public-intake-reframe",
+      requestedBy: "public"
+    });
+
+    expect(started.availableTemplates?.length).toBeGreaterThan(0);
+    expect(started.agentRoles?.length).toBeGreaterThan(0);
+    expect(started.meta?.templateId).toBe("public-intake-reframe");
+    expect(started.plan?.editable?.templateId).toBe("public-intake-reframe");
+
+    const updated = await workflowService.captureAnswers(started.id, {
+      actor: "public",
+      intake: {
+        goal: "Show the user a visible plan before execution begins."
+      },
+      planPatch: {
+        summary: "Phase 2 edited plan summary",
+        proposedSteps: [
+          { id: "normalize_request", title: "Normalize intent", detail: "Capture the goal clearly." },
+          { id: "shape_first_pass", title: "Shape the first pass", detail: "Keep the first move narrow." }
+        ],
+        editorNotes: "Tightened the language before approval."
+      }
+    });
+
+    expect(updated.plan?.summary).toBe("Phase 2 edited plan summary");
+    expect(updated.plan?.proposedSteps?.[0]?.title).toBe("Normalize intent");
+    expect(updated.plan?.editable?.edited).toBe(true);
+    expect(updated.plan?.editable?.editorNotes).toContain("Tightened");
+  });
+
   test("job timelines persist stage movement and blocker reasons", async () => {
     const started = await workflowService.startRun({
       idea: "Build a workflow that can show why a delivery item got stuck and what it is waiting on.",
