@@ -1,10 +1,9 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import AteamHomeWidget from "./AteamHomeWidget";
+import AteamLandingExperience from "./AteamLandingExperience";
 import ProductBrandBadge from "./ProductBrandBadge";
 import ProductStatusBadge from "./ProductStatusBadge";
 import ClientLogoStrip from "./ClientLogoStrip";
-import CTABanner from "./CTABanner";
 import { projectCaseStudies } from "../../lib/content";
 import { clientLaunches } from "../../lib/recentWork";
 import { productCardBranding } from "../../lib/productCardBranding";
@@ -20,35 +19,10 @@ export default function HomePageExperience() {
   const primaryProducts = projectCaseStudies.filter((p) => p.slug !== "ateam");
 
   return (
-    <div className="home-page">
+    <div className="home-page home-page--ateam-first">
 
-      {/* ── 1. ATEAM intake — the whole first experience ───────────────────── */}
-      <section className="home-ateam-hero home-ateam-hero--hp">
-        <div className="container">
-          <div className="home-ateam-hero-intro">
-            <p className="eyebrow">Una Labs · ATEAM</p>
-            <h1 className="hero-primary-title">
-              Type your idea. ATEAM turns it into a structured, decision-ready plan.
-            </h1>
-            <p className="hero-subtitle">
-              Start here. No forms. No separate page. Just describe the request
-              and watch ATEAM scope, route, and deliver a usable output.
-            </p>
-          </div>
-
-          <div className="home-ateam-hero-surface">
-            <AteamHomeWidget />
-          </div>
-
-          <div className="home-ateam-hero-foot">
-            <ul className="home-ateam-hero-points">
-              <li>Intake captures goals, context, and constraints before anything moves.</li>
-              <li>A visible workflow runs in real time — route, build, review, pack.</li>
-              <li>Output is decision-ready: scoped plan, recommended lane, next step.</li>
-            </ul>
-          </div>
-        </div>
-      </section>
+      {/* ── 1. Full ATEAM workflow surface ─────────────────────────────────── */}
+      <AteamLandingExperience basePath="/" />
 
       {/* ── 2. Trust strip ─────────────────────────────────────────────────── */}
       <ClientLogoStrip />
@@ -59,9 +33,7 @@ export default function HomePageExperience() {
           <div className="section-heading home-section-heading">
             <p className="eyebrow">Studio products</p>
             <h2>Proof of what Una Labs ships</h2>
-            <p>
-              These are the studio-owned systems — built, branded, and operated inside Una Labs.
-            </p>
+            <p>Studio-owned systems — built, branded, and operated inside Una Labs.</p>
           </div>
 
           <div className="cards-grid cards-grid-3 home-product-preview-grid">
@@ -96,7 +68,7 @@ export default function HomePageExperience() {
         </div>
       </section>
 
-      {/* ── 4. Client launches — delivery proof ──────────────────────────── */}
+      {/* ── 4. Client launches ────────────────────────────────────────────── */}
       <section className="section">
         <div className="container">
           <div className="section-heading home-section-heading">
@@ -132,20 +104,6 @@ export default function HomePageExperience() {
               All Client Launches
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* ── 5. CTA ─────────────────────────────────────────────────────────── */}
-      <section className="section">
-        <div className="container">
-          <CTABanner
-            title="Ready to move from idea to structured plan?"
-            description="Type your idea above, or start a project with Una Labs directly."
-            primaryLabel="Start a Project"
-            primaryHref="/work-with-ftc"
-            secondaryLabel="View Products"
-            secondaryHref="/products"
-          />
         </div>
       </section>
 
