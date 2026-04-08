@@ -2469,6 +2469,10 @@ function renderMissionControlView(view) {
   }
   if (view === "ai_lab") {
     void renderAiLabPage();
+    return;
+  }
+  if (view === "tasks") {
+    void renderTasksPage();
   }
 }
 
@@ -4140,11 +4144,20 @@ function mcWorkflowProjectFromRun(run) {
   const risks = Array.isArray(run.risks) ? run.risks : [];
   const nextSteps = Array.isArray(artifacts.nextSteps) ? artifacts.nextSteps : [];
 
+  const runState = String(run.state || run.phase || "planning").trim();
+  const plan = run.plan && typeof run.plan === "object" ? run.plan : {};
+  const intake = run.intake && typeof run.intake === "object" ? run.intake : {};
+  const request = run.request && typeof run.request === "object" ? run.request : {};
+  const requestNormalized = request.normalized && typeof request.normalized === "object" ? request.normalized : {};
+  const rawAssumptions = Array.isArray(request.assumptions) ? request.assumptions : [];
+  const approvalBrief = approvals.brief && typeof approvals.brief === "object" ? approvals.brief : {};
+  const stateHistory = Array.isArray(run.stateHistory) ? run.stateHistory : [];
+
   return {
     id: String(links.projectId || `workflow_${workflowRunId}`).trim(),
     name: String(brief.title || run.title || compactText(run.idea, 72) || "Workflow Run").trim(),
-    ownerAgentId: String(links.ownerAgentId || "henry").trim() || "henry",
-    summary: String(brief.summary || `ATEAM workflow run in ${run.phase || "analysis"}.`).trim(),
+    ownerAgentId: String(links.ownerAgentId || brief.routing?.ownerAgentId || "henry").trim() || "henry",
+    summary: String(brief.summary || `ATEAM workflow run — ${runState.replaceAll("_", " ")}.`).trim(),
     outcome: String(
       artifacts?.prototype?.summary ||
         brief.primaryGoal ||
@@ -4155,6 +4168,7 @@ function mcWorkflowProjectFromRun(run) {
     docIds: [],
     workflowRunId,
     workflow: {
+      state: runState,
       phase: String(run.phase || "analysis").trim(),
       recommendedLane: String(run.recommendedLane || brief.recommendedLane || "").trim(),
       risks,
@@ -4163,10 +4177,18 @@ function mcWorkflowProjectFromRun(run) {
       prototypeTitle: String(artifacts?.prototype?.title || "").trim(),
       smokeSummary: String(artifacts?.smoke?.summary || "").trim(),
       handoffStatus: String(run?.handoff?.status || "").trim(),
-      audience: String(brief.audience || "").trim(),
+      audience: String(brief.audience || requestNormalized.audience || "").trim(),
       constraints: Array.isArray(brief.constraints) ? brief.constraints : [],
       successCriteria: Array.isArray(brief.successCriteria) ? brief.successCriteria : [],
-      approvals
+      approvals,
+      approvalStatus: String(approvalBrief.status || "pending").trim(),
+      approvalId: String(approvalBrief.approvalId || "").trim(),
+      briefSummary: String(brief.summary || "").trim(),
+      briefDirection: String(brief.recommendedDirection || "").trim(),
+      phasedPlan: Array.isArray(brief.phasedPlan) ? brief.phasedPlan : [],
+      assumptions: rawAssumptions.slice(0, 4),
+      goal: String(intake.goal || requestNormalized.goal || run.idea || "").trim(),
+      stateHistory: stateHistory.slice(-5)
     }
   };
 }
@@ -4220,6 +4242,7 @@ async function mcFocusProject(projectId, { scrollTarget = "" } = {}) {
   const project = mcProjectById(projectId);
   if (!project) return;
   missionControlState.projects.selectedId = project.id;
+  if (state.view !== "projects") setView("projects");
   await renderProjectsPage();
   if (scrollTarget === "detail") mcScrollIntoView(projectsDetail);
   if (scrollTarget === "ledger") mcScrollIntoView(projectsLedger);
@@ -4455,7 +4478,8 @@ async function renderProjectsPage({ force = false } = {}) {
             <div class="ops-inline-meta">
               <span>${escapeHtml(mcDisplayName(project.ownerAgentId) || project.ownerAgentId)}</span>
               <span>${escapeHtml(linkedLabel)}</span>
-              ${project.workflowRunId ? `<span>${escapeHtml(String(project?.workflow?.phase || "analysis").replaceAll("_", " "))}</span>` : ""}
+              ${project.workflowRunId ? `<span>${escapeHtml(String(project?.workflow?.state || project?.workflow?.phase || "planning").replaceAll("_", " "))}</span>` : ""}
+              ${project.workflowRunId && project?.workflow?.approvalStatus === "pending" ? `<span class="ops-badge-pending">Awaiting decision</span>` : ""}
             </div>
             <div class="ops-action-row ops-action-row-compact">
               <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="select-project" data-project-id="${escapeHtml(project.id)}" data-scroll-target="detail">Open overview</button>
@@ -4491,21 +4515,52 @@ async function renderProjectsPage({ force = false } = {}) {
             )
             .join("")
         : `<span class="ops-inline-empty">None</span>`;
+      const wf = project.workflow || {};
+      const wfState = String(wf.state || wf.phase || "planning").replaceAll("_", " ");
+      const wfApprovalPending = wf.approvalStatus === "pending";
+      const wfAssumptions = Array.isArray(wf.assumptions) ? wf.assumptions : [];
+      const wfPlan = Array.isArray(wf.phasedPlan) ? wf.phasedPlan : [];
+      const wfHistory = Array.isArray(wf.stateHistory) ? wf.stateHistory : [];
+      const wfHasOutput = wf.prototypeTitle || wf.mockupTitle || wf.smokeSummary;
+
       const workflowDetails = project.workflowRunId
         ? `
-            <div class="ops-key-value-row"><span>Workflow phase</span><strong>${escapeHtml(String(project?.workflow?.phase || "analysis").replaceAll("_", " "))}</strong></div>
-            <div class="ops-key-value-row"><span>Recommended lane</span><strong>${escapeHtml(project?.workflow?.recommendedLane || "Pending")}</strong></div>
-            <div class="ops-key-value-row"><span>Handoff status</span><strong>${escapeHtml(project?.workflow?.handoffStatus || "Not ready")}</strong></div>
-            <div class="ops-key-value-row"><span>Prototype pack</span><strong>${escapeHtml(project?.workflow?.prototypeTitle || project?.workflow?.mockupTitle || "Not generated yet")}</strong></div>
-            <div class="ops-key-value-row ops-key-value-row-stack">
-              <span>Next steps</span>
-              <div class="ops-chip-row">${
-                (Array.isArray(project?.workflow?.nextSteps) ? project.workflow.nextSteps : [])
-                  .slice(0, 3)
-                  .map((step) => `<span class="ops-chip-btn">${escapeHtml(step)}</span>`)
-                  .join("") || '<span class="ops-inline-empty">Generate the pack to see next steps</span>'
-              }</div>
-            </div>
+            <div class="ops-key-value-row"><span>State</span><strong>${escapeHtml(wfState)}</strong>${wfApprovalPending ? ' <span class="ops-badge-pending">Decision needed</span>' : ""}</div>
+            <div class="ops-key-value-row"><span>Lane</span><strong>${escapeHtml(wf.recommendedLane || "Not assigned")}</strong></div>
+            ${wf.goal ? `<div class="ops-key-value-row"><span>Goal</span><strong>${escapeHtml(wf.goal.slice(0, 120))}</strong></div>` : ""}
+            ${wf.briefSummary ? `<div class="ops-key-value-row ops-key-value-row-stack"><span>Brief</span><div class="ops-copy-block">${escapeHtml(wf.briefSummary)}</div></div>` : ""}
+            ${wf.audience ? `<div class="ops-key-value-row"><span>Audience</span><strong>${escapeHtml(wf.audience)}</strong></div>` : ""}
+            ${wfAssumptions.length ? `
+              <div class="ops-key-value-row ops-key-value-row-stack">
+                <span>Assumptions</span>
+                <div class="ops-chip-row">${wfAssumptions.map((a) => `<span class="ops-chip-btn">${escapeHtml(a)}</span>`).join("")}</div>
+              </div>` : ""}
+            ${wfPlan.length ? `
+              <div class="ops-key-value-row ops-key-value-row-stack">
+                <span>Plan</span>
+                <ol class="ops-ordered-list">${wfPlan.slice(0, 4).map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+              </div>` : ""}
+            ${wfApprovalPending && wf.approvalId ? `
+              <div class="ops-key-value-row">
+                <span>Approval gate</span>
+                <button class="ops-action-btn" type="button" data-action="approve-approval" data-approval-id="${escapeHtml(wf.approvalId)}">Approve brief</button>
+                <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="reject-approval" data-approval-id="${escapeHtml(wf.approvalId)}">Reject</button>
+              </div>` : ""}
+            ${wfHasOutput ? `
+              <div class="ops-key-value-row"><span>Pack output</span><strong>${escapeHtml(wf.prototypeTitle || wf.mockupTitle || "Generated")}</strong></div>
+              ${wf.smokeSummary ? `<div class="ops-key-value-row ops-key-value-row-stack"><span>Pack summary</span><div class="ops-copy-block">${escapeHtml(wf.smokeSummary)}</div></div>` : ""}
+            ` : ""}
+            ${wfHistory.length ? `
+              <div class="ops-key-value-row ops-key-value-row-stack">
+                <span>History</span>
+                <div class="ops-history-list">${wfHistory.map((entry) => `
+                  <div class="ops-history-entry">
+                    <span class="ops-history-state">${escapeHtml(String(entry.state || "").replaceAll("_", " "))}</span>
+                    ${entry.reason ? `<span class="ops-history-reason">${escapeHtml(entry.reason)}</span>` : ""}
+                    ${entry.actor ? `<span class="ops-history-actor">${escapeHtml(entry.actor)}</span>` : ""}
+                  </div>`).join("")}
+                </div>
+              </div>` : ""}
           `
         : "";
       projectsDetail.innerHTML = `
@@ -4541,7 +4596,7 @@ async function renderProjectsPage({ force = false } = {}) {
             <article class="ops-card">
               <div class="ops-card-head">
                 <div class="ops-card-title">Workflow pack</div>
-                <div class="ops-card-meta">${escapeHtml(String(activeRow.project?.workflow?.phase || "analysis").replaceAll("_", " ").toUpperCase())}</div>
+                <div class="ops-card-meta">${escapeHtml(String(activeRow.project?.workflow?.state || activeRow.project?.workflow?.phase || "planning").replaceAll("_", " ").toUpperCase())}</div>
               </div>
               <div class="ops-card-copy">${escapeHtml(activeRow.project?.workflow?.smokeSummary || activeRow.project?.summary || "Workflow pack not generated yet.")}</div>
               <div class="ops-inline-meta">
@@ -5065,7 +5120,7 @@ async function renderPipelinePage({ force = false } = {}) {
         title: "Workflow Intake",
         items: workflowRuns.slice(0, 8).map((run) => ({
           title: run?.brief?.title || run?.title || compactText(run?.idea, 80) || "Workflow run",
-          meta: String(run?.phase || "analysis").replaceAll("_", " "),
+          meta: String(run?.state || run?.phase || "planning").replaceAll("_", " "),
           body: run?.brief?.summary || run?.idea || "No workflow summary yet.",
           actions: `<button class="ops-action-btn" type="button" data-action="select-project" data-project-id="${escapeHtml(String(run?.links?.projectId || `workflow_${run?.id || ""}`))}" data-scroll-target="detail">Open project</button>`
         }))
@@ -5185,6 +5240,77 @@ async function renderPipelinePage({ force = false } = {}) {
           .join("")
       : mcEmptyHtml("No stalled items detected.");
   }
+}
+
+async function renderTasksPage({ force = false } = {}) {
+  const runsList = document.getElementById("mc-runs-list");
+  if (!runsList) return;
+  const overview = await mcLoadOverview({ force, includeSpeech: false });
+  const runs = (overview.workflowRuns || []).slice().sort((a, b) => {
+    const at = Date.parse(String(a?.createdAt || a?.created_at || "")) || 0;
+    const bt = Date.parse(String(b?.createdAt || b?.created_at || "")) || 0;
+    return bt - at;
+  });
+
+  const pendingApprovals = (overview.approvals || []).filter(
+    (ap) => String(ap?.status || "").toLowerCase() === "pending"
+  );
+  const pendingByRunId = new Map();
+  for (const ap of pendingApprovals) {
+    const rid = String(ap?.payload?.workflowRunId || "").trim();
+    if (rid) pendingByRunId.set(rid, ap);
+  }
+
+  if (!runs.length) {
+    runsList.innerHTML = `<p class="mc-runs-empty">No workflow runs yet. Submit an intent from the entry view to create one.</p>`;
+    return;
+  }
+
+  runsList.innerHTML = runs.slice(0, 20).map((run) => {
+    const runState = String(run.state || run.phase || "planning");
+    const displayState = runState.replaceAll("_", " ");
+    const title = run.brief?.title || run.title || compactText(run.idea, 72) || "Workflow run";
+    const lane = run.brief?.recommendedLane || run.recommendedLane || "";
+    const summary = run.brief?.summary || run.idea || "";
+    const ts = formatRelativeTime(run.createdAt || run.created_at) || "";
+    const projectId = run.links?.projectId || `workflow_${run.id}`;
+    const pendingAp = pendingByRunId.get(run.id);
+    const approvalStatus = run.approvals?.brief?.status || (pendingAp ? "pending" : "");
+    const stateClass = ["completed", "failed"].includes(runState)
+      ? runState
+      : ["executing", "approved"].includes(runState)
+      ? "active"
+      : "pending";
+
+    return `
+      <article class="mc-run-card mc-run-state-${escapeHtml(stateClass)}" data-run-id="${escapeHtml(run.id)}">
+        <div class="mc-run-head">
+          <div class="mc-run-title">${escapeHtml(title)}</div>
+          <div class="mc-run-state-badge">${escapeHtml(displayState)}</div>
+        </div>
+        ${summary ? `<div class="mc-run-summary">${escapeHtml(summary.slice(0, 160))}</div>` : ""}
+        <div class="mc-run-meta">
+          ${lane ? `<span>${escapeHtml(lane)}</span>` : ""}
+          ${ts ? `<span>${escapeHtml(ts)}</span>` : ""}
+          ${approvalStatus === "pending" ? `<span class="mc-run-pending-badge">Awaiting approval</span>` : ""}
+        </div>
+        <div class="mc-run-actions">
+          <button class="ops-action-btn ops-action-btn-secondary" type="button"
+            data-action="select-project" data-project-id="${escapeHtml(projectId)}" data-scroll-target="detail">
+            Inspect run
+          </button>
+          ${pendingAp ? `
+            <button class="ops-action-btn" type="button"
+              data-action="approve-approval" data-approval-id="${escapeHtml(pendingAp.id)}">
+              Approve brief
+            </button>
+            <button class="ops-action-btn ops-action-btn-secondary" type="button"
+              data-action="reject-approval" data-approval-id="${escapeHtml(pendingAp.id)}">
+              Reject
+            </button>` : ""}
+        </div>
+      </article>`;
+  }).join("");
 }
 
 async function renderAiLabPage({ force = false } = {}) {
@@ -11339,6 +11465,15 @@ function bindEvents() {
   if (pipelineOpenFactoryBtn) pipelineOpenFactoryBtn.addEventListener("click", () => setView("factory"));
   if (pipelineBoard) {
     pipelineBoard.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+
+  const mcRunsList = document.getElementById("mc-runs-list");
+  if (mcRunsList) {
+    mcRunsList.addEventListener("click", (e) => {
       const btn = e.target?.closest?.("[data-action]");
       if (!btn) return;
       void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
