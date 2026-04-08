@@ -5,10 +5,13 @@ function trimTrailingSlash(value = "") {
   return String(value || "").replace(/\/+$/, "");
 }
 
+const ATEAM_UPSTREAM_FALLBACK = "https://ateam-platform-production.up.railway.app";
+
 export function getAteamUpstreamOrigin() {
   const configuredOrigin = trimTrailingSlash(process.env.ATEAM_UPSTREAM_ORIGIN || "");
   if (configuredOrigin) return configuredOrigin;
-  return process.env.NODE_ENV === "development" ? "http://127.0.0.1:3000" : "";
+  if (process.env.NODE_ENV === "development") return "http://127.0.0.1:3000";
+  return ATEAM_UPSTREAM_FALLBACK;
 }
 
 function joinOrigin(origin: string, path: string) {
