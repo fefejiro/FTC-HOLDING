@@ -5,7 +5,7 @@ function trimTrailingSlash(value = "") {
   return String(value || "").replace(/\/+$/, "");
 }
 
-const ATEAM_UPSTREAM_FALLBACK = "https://ateam-platform-production.up.railway.app";
+const ATEAM_UPSTREAM_FALLBACK = "https://ateam-api.unalabs.cloud";
 
 export function getAteamUpstreamOrigin() {
   const configuredOrigin = trimTrailingSlash(process.env.ATEAM_UPSTREAM_ORIGIN || "");
