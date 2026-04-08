@@ -126,12 +126,15 @@ if (!AGENT_STATUS_ORDER || !safeJsonParse) {
 }
 
 const state = {
-  view: localStorage.getItem("ATEAM_VIEW") || "dashboard",
+  view: localStorage.getItem("ATEAM_VIEW") || "entry",
   activeTaskId: "",
   activeTaskTitle: "",
   activeAgent: "Coach",
   currentThread: [],
   talkState: "idle",
+  workflowState: "idle",
+  currentIntent: "",
+  workflowRunId: null,
   transcriptExpanded: false,
   apiOnline: false,
   mediaStream: null,
@@ -717,6 +720,26 @@ async function apiListWorkflowRuns({ phase = "", limit = 80 } = {}) {
   if (limit) qs.set("limit", String(limit));
   const data = await apiRequest(`/api/workflow/runs?${qs.toString()}`);
   return Array.isArray(data?.runs) ? data.runs : [];
+}
+
+async function apiApproveWorkflowRun(runId, { gate = "brief", decision = "approved", actor = "operator" } = {}) {
+  const safeId = String(runId || "").trim();
+  if (!safeId) return null;
+  const data = await apiRequest(`/api/workflow/runs/${encodeURIComponent(safeId)}/approve`, {
+    method: "POST",
+    body: { gate, decision, actor }
+  });
+  return data?.run || null;
+}
+
+async function apiGenerateWorkflowPack(runId, { actor = "operator" } = {}) {
+  const safeId = String(runId || "").trim();
+  if (!safeId) return null;
+  const data = await apiRequest(`/api/workflow/runs/${encodeURIComponent(safeId)}/generate-pack`, {
+    method: "POST",
+    body: { actor }
+  });
+  return data?.run || null;
 }
 
 async function apiCreateWorkItem(payload) {
@@ -2092,7 +2115,7 @@ function applyWorkflowShellChrome() {
 function mcViewFromPath(pathname) {
   const raw = String(stripBasePath(pathname) || "/").toLowerCase();
   const path = raw === "/index.html" ? "/" : raw;
-  if (path === "/") return "tasks";
+  if (path === "/") return "entry";
   const hit = Object.entries(MC_ROUTE_BY_VIEW).find(([, route]) => route === path);
   if (hit) return hit[0];
   const prefix = Object.entries(MC_ROUTE_BY_VIEW).find(([, route]) => path.startsWith(route + "/"));
@@ -2186,10 +2209,10 @@ function applyTalkUiModeFromLocation() {
 }
 
 function setView(view, options = {}) {
-  view = String(view || "tasks").toLowerCase();
+  view = String(view || "entry").toLowerCase();
   if (view === "dashboard") view = "tasks";
   const allowed = Object.keys(MC_ROUTE_BY_VIEW);
-  if (!allowed.includes(view)) view = "tasks";
+  if (!allowed.includes(view)) view = "entry";
   if (isWorkflowShellActive() && !isWorkflowShellView(view)) view = "office";
 
   state.view = view;
@@ -2223,6 +2246,13 @@ function setView(view, options = {}) {
       btn.classList.toggle("active", String(btn.dataset.view || "") === view);
     });
   }
+
+  // Hide MC chrome when in entry view
+  const entryOn = state.view === "entry";
+  if (document?.body) {
+    document.body.classList.toggle("mc-entry-mode", entryOn);
+  }
+
   applyWorkflowShellChrome();
 
   const talkOn = state.view === "talk";
@@ -5275,7 +5305,27 @@ async function mcHandleApprovalDecision(approvalId, decision) {
   const safeId = String(approvalId || "").trim();
   const safeDecision = String(decision || "").trim().toLowerCase();
   if (!safeId || !safeDecision) return;
-  await apiDecideApproval(safeId, safeDecision, { sessionId: GLOBAL_PODCAST_ID, actor: "user" });
+
+  // First update the approval record itself
+  const approval = await apiDecideApproval(safeId, safeDecision, { sessionId: GLOBAL_PODCAST_ID, actor: "user" });
+
+  // If this approval is linked to a workflow run, also advance the run state
+  const runId = String(approval?.payload?.workflowRunId || "").trim();
+  const gate = String(approval?.payload?.gate || "brief").trim();
+  if (runId) {
+    try {
+      const mcDecision = safeDecision === "approved" ? "approved" : safeDecision === "rejected" ? "rejected" : safeDecision;
+      await apiApproveWorkflowRun(runId, { gate, decision: mcDecision, actor: "operator" });
+      // If brief was approved, generate the decision pack
+      if (gate === "brief" && mcDecision === "approved") {
+        await apiGenerateWorkflowPack(runId, { actor: "operator" });
+        await apiApproveWorkflowRun(runId, { gate: "pack", decision: "approved", actor: "operator" });
+      }
+    } catch (err) {
+      console.warn("Workflow run advance failed:", err?.message || err);
+    }
+  }
+
   mcInvalidateOverview();
   showToast(`Approval ${safeDecision}.`, safeDecision === "approved" ? "ok" : "error");
   if (state.view === "approvals") {
@@ -10924,7 +10974,95 @@ async function viewSession(id) {
   }
 }
 
+async function revealWorkflowCards() {
+  // Hide input phase
+  const inputPhase = document.getElementById("entry-input-phase");
+  const workflowPhase = document.getElementById("entry-workflow-phase");
+  if (inputPhase) inputPhase.classList.add("hidden");
+  if (workflowPhase) workflowPhase.classList.remove("hidden");
+
+  // Reveal cards one by one with delays
+  const cards = [
+    "card-understanding",
+    "card-assumptions",
+    "card-plan",
+    "card-approval",
+    "card-execution",
+    "card-output"
+  ];
+
+  for (let i = 0; i < cards.length; i++) {
+    const card = document.getElementById(cards[i]);
+    if (card) {
+      // Add slight delay between reveals for visual effect
+      await new Promise(resolve => setTimeout(resolve, 300 + (i * 150)));
+      card.style.opacity = "0";
+      card.style.animation = "none";
+      // Trigger reflow to restart animation
+      card.offsetHeight;
+      card.style.animation = "slideInUp 0.4s ease";
+      card.style.opacity = "1";
+    }
+  }
+}
+
+async function handleEntrySubmit(e) {
+  e.preventDefault();
+  const entryForm = document.getElementById("entry-form");
+  const intentInput = document.getElementById("entry-intent");
+  if (!entryForm || !intentInput) return;
+
+  const intent = String(intentInput.value || "").trim();
+  if (!intent) return;
+
+  // Disable button during processing
+  const submitBtn = entryForm.querySelector("button[type='submit']");
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
+    // Store intent in state for the workflow
+    state.currentIntent = intent;
+    state.workflowState = "processing";
+
+    // Animate the workflow reveal
+    await revealWorkflowCards();
+
+    // TODO: In the future, send intent to backend and update cards with real data
+    // For now, cards show with their placeholder text
+
+  } catch (err) {
+    console.error("Entry submission failed:", err);
+    showToast("Failed to start workflow. Please try again.", "error");
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
 function bindEvents() {
+  // Entry form handler
+  const entryForm = document.getElementById("entry-form");
+  if (entryForm) {
+    entryForm.addEventListener("submit", handleEntrySubmit);
+  }
+
+  // Entry approval buttons
+  const approveBtn = document.getElementById("btn-approve");
+  const reviseBtn = document.getElementById("btn-revise");
+  if (approveBtn) {
+    approveBtn.addEventListener("click", () => {
+      state.workflowState = "approved";
+      showToast("Workflow approved. Executing...", "ok");
+      // TODO: Send approval to backend and start execution
+    });
+  }
+  if (reviseBtn) {
+    reviseBtn.addEventListener("click", () => {
+      state.workflowState = "revising";
+      showToast("Ready to revise workflow.", "info");
+      // TODO: Show revision interface
+    });
+  }
+
   // Mission Control routing.
   if (mcNavList) {
     mcNavList.addEventListener("click", (e) => {
@@ -11613,6 +11751,23 @@ function bindEvents() {
 
 async function bootstrap() {
   bindEvents();
+
+  // Determine initial view
+  const initialFromPath = mcViewFromPath(window.location.pathname);
+  if (initialFromPath) state.view = initialFromPath;
+
+  // Set view first to apply chrome visibility
+  applyWorkflowShellChrome();
+  setView(state.view, { silent: true, replace: true });
+
+  // Entry mode: minimal initialization
+  if (state.view === "entry") {
+    const entryIntent = document.getElementById("entry-intent");
+    if (entryIntent) entryIntent.focus();
+    return;
+  }
+
+  // Full initialization for non-entry views
   initOfficeSimulation();
   setSpeakerAnalyticsSort(speakerAnalyticsState.sortBy);
   renderSpeakerControlOptions();
@@ -11631,10 +11786,6 @@ async function bootstrap() {
   setApiOnline(false);
   ensureTalkDemoSeeded();
 
-  const initialFromPath = mcViewFromPath(window.location.pathname);
-  if (initialFromPath) state.view = initialFromPath;
-  applyWorkflowShellChrome();
-  setView(state.view, { silent: true, replace: true });
   requestAnimationFrame(() => {
     resizeOrbCanvas();
     requestAnimationFrame(drawOrb);

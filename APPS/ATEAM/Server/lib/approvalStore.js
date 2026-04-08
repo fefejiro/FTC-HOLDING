@@ -29,6 +29,7 @@ export function createApprovalStore() {
   );
 
   const updateStatusStmt = db.prepare("UPDATE approvals SET status = ? WHERE id = ?");
+  const updatePayloadStmt = db.prepare("UPDATE approvals SET payload_json = ? WHERE id = ?");
   const selectStmt = db.prepare("SELECT * FROM approvals WHERE id = ? LIMIT 1");
   const listStmt = db.prepare("SELECT * FROM approvals ORDER BY created_ts DESC LIMIT ?");
   const listByStatusStmt = db.prepare("SELECT * FROM approvals WHERE status = ? ORDER BY created_ts DESC LIMIT ?");
@@ -78,6 +79,16 @@ export function createApprovalStore() {
     return get(approvalId);
   }
 
+  function patchPayload(id, patch = {}) {
+    const approvalId = String(id || "").trim();
+    if (!approvalId) return null;
+    const current = get(approvalId);
+    if (!current) return null;
+    const next = { ...current.payload, ...patch };
+    updatePayloadStmt.run(JSON.stringify(next), approvalId);
+    return get(approvalId);
+  }
+
   function get(id) {
     const approvalId = String(id || "").trim();
     if (!approvalId) return null;
@@ -97,6 +108,7 @@ export function createApprovalStore() {
   return {
     create,
     setStatus,
+    patchPayload,
     get,
     list
   };

@@ -933,6 +933,9 @@ export function createWorkflowService({
       }
     });
 
+    // Patch approval payload to include runId so Mission Control can wire approval → run state
+    await approvalStore.patchPayload(approval.id, { workflowRunId: run.id, gate: "brief" });
+
     const updated = await workflowRunStore.update(run.id, {
       meta: appendRunTimeline(run, {
         eventType: "created",
@@ -1273,13 +1276,20 @@ export function createWorkflowService({
       } else if (safeDecision === "approved") {
         const linked = await ensureLinkedWork(run);
         patch.phase = "initiation";
-        patch.state = "executing";
+        patch.state = "approved";
         patch.stateHistory = appendStateHistory(run.stateHistory, {
-          state: "executing",
+          state: "approved",
           phase: "initiation",
-          reason: "The plan was approved and ATEAM seeded the execution work.",
+          reason: "The plan was approved. ATEAM is seeding execution work.",
           actor
         });
+        patch.stateHistory = appendStateHistory(patch.stateHistory, {
+          state: "executing",
+          phase: "initiation",
+          reason: "ATEAM seeded the execution work items.",
+          actor: "ateam_engine"
+        });
+        patch.state = "executing";
         patch.links = {
           ...ensureLinks(run.links),
           projectId: linked.projectId,

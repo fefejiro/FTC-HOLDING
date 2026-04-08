@@ -320,9 +320,11 @@ export const WORKFLOW_PHASES = [
 ];
 
 export const WORKFLOW_STATES = [
+  "draft",
   "queued",
   "planning",
   "awaiting_approval",
+  "approved",
   "executing",
   "generating_artifact",
   "completed",
@@ -554,9 +556,11 @@ export function normalizeWorkflowState(value = "") {
 
 export function mapWorkflowPhaseToState(phase = "") {
   const safePhase = safeText(phase, 40).toLowerCase();
-  if (safePhase === "analysis" || safePhase === "intake") return "planning";
+  if (safePhase === "intake") return "draft";
+  if (safePhase === "analysis") return "planning";
   if (safePhase === "brief_approval") return "awaiting_approval";
-  if (safePhase === "initiation" || safePhase === "prototype_pack") return "executing";
+  if (safePhase === "initiation") return "approved";
+  if (safePhase === "prototype_pack") return "executing";
   if (safePhase === "pack_approval") return "generating_artifact";
   if (safePhase === "handoff" || safePhase === "archived") return "completed";
   return "queued";
