@@ -1066,203 +1066,280 @@ export default function AteamWorkflowClient({
 
           {/* ── INTAKE STAGE ── */}
           {!run && !isWorking && !workflowReady && (
-            <section className="wf-stage wf-stage--intake">
-              <div className="wf-intro">
-                <p className="wf-intro-eyebrow">Trusted AI workflow infrastructure</p>
-                <h1 className="wf-intro-headline">
-                  Start with the request.
-                  <br />
-                  Move only the approved next step.
-                </h1>
-                <p className="wf-intro-lead">
-                  ATEAM is the workflow surface inside Una Labs: describe the request, review the
-                  scoped plan, approve what should move forward, and leave with a decision-ready
-                  output before delivery starts.
-                </p>
-              </div>
+            <section className={`wf-stage wf-stage--intake ${basePath === "/" ? "wf-stage--hp" : ""}`}>
 
-              <div className="wf-proof-strip" aria-label="How ATEAM moves work forward">
-                <div className="wf-proof-step">
-                  <span className="wf-proof-step-label">Structured intake</span>
-                  <p>Capture the request, context, constraints, and non-goals without losing the signal.</p>
-                </div>
-                <div className="wf-proof-step">
-                  <span className="wf-proof-step-label">Scoped plan</span>
-                  <p>ATEAM turns the request into a visible first-pass plan, expected artifact, and likely blockers.</p>
-                </div>
-                <div className="wf-proof-step">
-                  <span className="wf-proof-step-label">Human approval</span>
-                  <p>Review assumptions, tune the plan, and approve before artifact generation or delivery steps.</p>
-                </div>
-                <div className="wf-proof-step">
-                  <span className="wf-proof-step-label">Decision-ready output</span>
-                  <p>Get a scoped pack, implementation direction, and a clear next move into Una Labs delivery.</p>
-                </div>
-              </div>
+              {basePath === "/" ? (
+                /* ── HOMEPAGE MODE: minimal single-input hero ── */
+                <div className="wf-hp-hero">
+                  <p className="wf-hp-eyebrow">Una Labs · AI workflow</p>
+                  <h1 className="wf-hp-headline">Type your idea.</h1>
+                  <p className="wf-hp-sub">ATEAM turns it into a scoped plan, visible workflow, and decision-ready output.</p>
 
-              {catalog.templates.length > 0 && (
-                <div className="wf-template-card">
-                  <div className="wf-template-head">
-                    <div>
-                      <p className="wf-pack-panel-kicker">Workflow templates</p>
-                      <h2 className="wf-recent-title">Start from a stronger request pattern</h2>
-                    </div>
-                    <span className="wf-recent-count">{catalog.templates.length} curated</span>
-                  </div>
-                  <div className="wf-template-grid">
-                    {catalog.templates.map((template) => (
+                  <div className="wf-hp-input-wrap">
+                    <textarea
+                      id="wf-idea"
+                      className="wf-hp-textarea"
+                      rows={3}
+                      value={idea}
+                      onChange={(e) => setIdea(e.target.value)}
+                      placeholder="Describe what you need to build, fix, or figure out…"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleStartRun();
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <div className="wf-hp-input-foot">
+                      {supportsVoice && (
+                        <button
+                          type="button"
+                          className={`wf-hp-voice-btn ${isListening ? "wf-hp-voice-btn--active" : ""}`}
+                          onClick={toggleVoice}
+                          aria-label={isListening ? "Stop recording" : "Record idea"}
+                          aria-pressed={isListening}
+                        >
+                          <span className="wf-voice-indicator-dot" aria-hidden="true" />
+                          {isListening ? "Stop" : "Record"}
+                        </button>
+                      )}
                       <button
-                        key={template.id}
                         type="button"
-                        className={`wf-template-item ${selectedTemplateId === template.id ? "wf-template-item--active" : ""}`}
-                        onClick={() => handleApplyTemplate(template)}
+                        className="wf-hp-send-btn"
+                        onClick={handleStartRun}
+                        disabled={busy !== "idle"}
+                        aria-label="Submit idea"
                       >
-                        <strong>{template.label}</strong>
-                        <p>{template.summary}</p>
-                        <span>{template.recommendedFor.join(" · ")}</span>
+                        {busy !== "idle" ? (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                        ) : (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                        )}
                       </button>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              )}
 
-              <div className="wf-intake-card">
-                <div className="wf-intake-label-row">
-                  <div className="wf-intake-label-copy">
-                    <label className="wf-field-label" htmlFor="wf-idea">Describe the request</label>
-                    {supportsVoice ? (
-                      <p className="wf-field-help wf-field-help--voice">
-                        Type is the safest path today. Voice capture supports click-to-start, click-to-stop
-                        dictation with longer pauses than before.
-                      </p>
-                    ) : null}
-                  </div>
-                  {supportsVoice && (
-                    <button
-                      type="button"
-                      className={`wf-voice-btn ${isListening ? "wf-voice-btn--active" : ""}`}
-                      onClick={toggleVoice}
-                      aria-label={isListening ? "Stop voice capture" : "Start voice capture"}
-                      aria-pressed={isListening}
-                    >
-                      <span className="wf-voice-indicator" aria-hidden="true">
-                        <span className="wf-voice-indicator-dot" />
-                      </span>
-                      <span className="wf-voice-copy">
-                        <strong>{isListening ? "Stop recording" : "Start recording"}</strong>
-                        <span>{isListening ? "Click to stop and keep this draft" : "Click to begin voice capture"}</span>
-                      </span>
-                    </button>
+                  {error && <p className="wf-error wf-hp-error" role="alert">{error}</p>}
+
+                  {catalog.templates.length > 0 && (
+                    <div className="wf-hp-templates" role="list" aria-label="Quick start templates">
+                      {catalog.templates.slice(0, 4).map((template) => (
+                        <button
+                          key={template.id}
+                          type="button"
+                          role="listitem"
+                          className="wf-hp-template-chip"
+                          onClick={() => handleApplyTemplate(template)}
+                        >
+                          {template.label}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
-
-                <textarea
-                  id="wf-idea"
-                  className="wf-idea-textarea"
-                  rows={6}
-                  value={idea}
-                  onChange={(e) => setIdea(e.target.value)}
-                  placeholder="Example: We need a WhatsApp-first order flow that captures requests, routes them to staff, and shows live status without manual follow-up."
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleStartRun();
-                  }}
-                />
-
-                <div className="wf-guided-grid" aria-label="Guided intake details">
-                  <div className="wf-guided-field wf-guided-field--wide">
-                    <label className="wf-field-label" htmlFor="wf-goal">Primary goal</label>
-                    <input
-                      id="wf-goal"
-                      className="wf-guided-input"
-                      type="text"
-                      value={intake.goal || ""}
-                      onChange={(e) => setIntake((prev) => ({ ...prev, goal: e.target.value }))}
-                      placeholder="What should improve first?"
-                    />
+              ) : (
+                /* ── /ATEAM PAGE MODE: full intake form ── */
+                <>
+                  <div className="wf-intro">
+                    <p className="wf-intro-eyebrow">Trusted AI workflow infrastructure</p>
+                    <h1 className="wf-intro-headline">
+                      Start with the request.
+                      <br />
+                      Move only the approved next step.
+                    </h1>
+                    <p className="wf-intro-lead">
+                      ATEAM is the workflow surface inside Una Labs: describe the request, review the
+                      scoped plan, approve what should move forward, and leave with a decision-ready
+                      output before delivery starts.
+                    </p>
                   </div>
-                  <div className="wf-guided-field wf-guided-field--wide">
-                    <label className="wf-field-label" htmlFor="wf-output">Desired output</label>
-                    <input
-                      id="wf-output"
-                      className="wf-guided-input"
-                      type="text"
-                      value={intake.desiredOutput || ""}
-                      onChange={(e) => setIntake((prev) => ({ ...prev, desiredOutput: e.target.value }))}
-                      placeholder="Spec, plan, prototype, or research summary"
-                    />
+
+                  <div className="wf-proof-strip" aria-label="How ATEAM moves work forward">
+                    <div className="wf-proof-step">
+                      <span className="wf-proof-step-label">Structured intake</span>
+                      <p>Capture the request, context, constraints, and non-goals without losing the signal.</p>
+                    </div>
+                    <div className="wf-proof-step">
+                      <span className="wf-proof-step-label">Scoped plan</span>
+                      <p>ATEAM turns the request into a visible first-pass plan, expected artifact, and likely blockers.</p>
+                    </div>
+                    <div className="wf-proof-step">
+                      <span className="wf-proof-step-label">Human approval</span>
+                      <p>Review assumptions, tune the plan, and approve before artifact generation or delivery steps.</p>
+                    </div>
+                    <div className="wf-proof-step">
+                      <span className="wf-proof-step-label">Decision-ready output</span>
+                      <p>Get a scoped pack, implementation direction, and a clear next move into Una Labs delivery.</p>
+                    </div>
                   </div>
-                  <div className="wf-guided-field wf-guided-field--full">
-                    <label className="wf-field-label" htmlFor="wf-context">Relevant context</label>
+
+                  {catalog.templates.length > 0 && (
+                    <div className="wf-template-card">
+                      <div className="wf-template-head">
+                        <div>
+                          <p className="wf-pack-panel-kicker">Workflow templates</p>
+                          <h2 className="wf-recent-title">Start from a stronger request pattern</h2>
+                        </div>
+                        <span className="wf-recent-count">{catalog.templates.length} curated</span>
+                      </div>
+                      <div className="wf-template-grid">
+                        {catalog.templates.map((template) => (
+                          <button
+                            key={template.id}
+                            type="button"
+                            className={`wf-template-item ${selectedTemplateId === template.id ? "wf-template-item--active" : ""}`}
+                            onClick={() => handleApplyTemplate(template)}
+                          >
+                            <strong>{template.label}</strong>
+                            <p>{template.summary}</p>
+                            <span>{template.recommendedFor.join(" · ")}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="wf-intake-card">
+                    <div className="wf-intake-label-row">
+                      <div className="wf-intake-label-copy">
+                        <label className="wf-field-label" htmlFor="wf-idea">Describe the request</label>
+                        {supportsVoice ? (
+                          <p className="wf-field-help wf-field-help--voice">
+                            Type is the safest path today. Voice capture supports click-to-start, click-to-stop
+                            dictation with longer pauses than before.
+                          </p>
+                        ) : null}
+                      </div>
+                      {supportsVoice && (
+                        <button
+                          type="button"
+                          className={`wf-voice-btn ${isListening ? "wf-voice-btn--active" : ""}`}
+                          onClick={toggleVoice}
+                          aria-label={isListening ? "Stop voice capture" : "Start voice capture"}
+                          aria-pressed={isListening}
+                        >
+                          <span className="wf-voice-indicator" aria-hidden="true">
+                            <span className="wf-voice-indicator-dot" />
+                          </span>
+                          <span className="wf-voice-copy">
+                            <strong>{isListening ? "Stop recording" : "Start recording"}</strong>
+                            <span>{isListening ? "Click to stop and keep this draft" : "Click to begin voice capture"}</span>
+                          </span>
+                        </button>
+                      )}
+                    </div>
+
                     <textarea
-                      id="wf-context"
-                      className="wf-question-textarea"
-                      rows={3}
-                      value={intake.context || ""}
-                      onChange={(e) => setIntake((prev) => ({ ...prev, context: e.target.value }))}
-                      placeholder="Who this is for, what already exists, and what ATEAM should keep in view."
+                      id="wf-idea"
+                      className="wf-idea-textarea"
+                      rows={6}
+                      value={idea}
+                      onChange={(e) => setIdea(e.target.value)}
+                      placeholder="Example: We need a WhatsApp-first order flow that captures requests, routes them to staff, and shows live status without manual follow-up."
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleStartRun();
+                      }}
                     />
+
+                    <div className="wf-guided-grid" aria-label="Guided intake details">
+                      <div className="wf-guided-field wf-guided-field--wide">
+                        <label className="wf-field-label" htmlFor="wf-goal">Primary goal</label>
+                        <input
+                          id="wf-goal"
+                          className="wf-guided-input"
+                          type="text"
+                          value={intake.goal || ""}
+                          onChange={(e) => setIntake((prev) => ({ ...prev, goal: e.target.value }))}
+                          placeholder="What should improve first?"
+                        />
+                      </div>
+                      <div className="wf-guided-field wf-guided-field--wide">
+                        <label className="wf-field-label" htmlFor="wf-output">Desired output</label>
+                        <input
+                          id="wf-output"
+                          className="wf-guided-input"
+                          type="text"
+                          value={intake.desiredOutput || ""}
+                          onChange={(e) => setIntake((prev) => ({ ...prev, desiredOutput: e.target.value }))}
+                          placeholder="Spec, plan, prototype, or research summary"
+                        />
+                      </div>
+                      <div className="wf-guided-field wf-guided-field--full">
+                        <label className="wf-field-label" htmlFor="wf-context">Relevant context</label>
+                        <textarea
+                          id="wf-context"
+                          className="wf-question-textarea"
+                          rows={3}
+                          value={intake.context || ""}
+                          onChange={(e) => setIntake((prev) => ({ ...prev, context: e.target.value }))}
+                          placeholder="Who this is for, what already exists, and what ATEAM should keep in view."
+                        />
+                      </div>
+                      <div className="wf-guided-field">
+                        <label className="wf-field-label" htmlFor="wf-constraints">Constraints</label>
+                        <textarea
+                          id="wf-constraints"
+                          className="wf-question-textarea"
+                          rows={3}
+                          value={intake.constraints || ""}
+                          onChange={(e) => setIntake((prev) => ({ ...prev, constraints: e.target.value }))}
+                          placeholder="Timeline, budget, tools, team, compliance, or delivery constraints."
+                        />
+                      </div>
+                      <div className="wf-guided-field">
+                        <label className="wf-field-label" htmlFor="wf-nongoals">Non-goals</label>
+                        <textarea
+                          id="wf-nongoals"
+                          className="wf-question-textarea"
+                          rows={3}
+                          value={intake.nonGoals || ""}
+                          onChange={(e) => setIntake((prev) => ({ ...prev, nonGoals: e.target.value }))}
+                          placeholder="What should not be included in the first pass?"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Compact type selector */}
+                    <div className="wf-type-row" role="group" aria-label="What type of idea is this?">
+                      {COMPACT_TYPES.map((t) => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          className={`wf-type-chip ${category === t.value ? "wf-type-chip--active" : ""}`}
+                          onClick={() => setCategory(t.value as WorkflowCategoryValue)}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {error && <p className="wf-error" role="alert">{error}</p>}
+                    {!error && notice && !localFallbackEnabled && !isDemoNotice(notice) && (
+                      <p className="wf-notice" aria-live="polite">
+                        {notice}
+                      </p>
+                    )}
+
+                    <div className="wf-intake-actions">
+                      <button
+                        type="button"
+                        className="wf-btn-primary"
+                        onClick={handleStartRun}
+                        disabled={busy !== "idle"}
+                      >
+                        {busy !== "idle" ? "Starting..." : "Generate the scoped plan ->"}
+                      </button>
+                      <p className="wf-intake-hint">
+                        Intake comes first. ATEAM only moves what you approve into the next step.
+                      </p>
+                    </div>
                   </div>
-                  <div className="wf-guided-field">
-                    <label className="wf-field-label" htmlFor="wf-constraints">Constraints</label>
-                    <textarea
-                      id="wf-constraints"
-                      className="wf-question-textarea"
-                      rows={3}
-                      value={intake.constraints || ""}
-                      onChange={(e) => setIntake((prev) => ({ ...prev, constraints: e.target.value }))}
-                      placeholder="Timeline, budget, tools, team, compliance, or delivery constraints."
-                    />
-                  </div>
-                  <div className="wf-guided-field">
-                    <label className="wf-field-label" htmlFor="wf-nongoals">Non-goals</label>
-                    <textarea
-                      id="wf-nongoals"
-                      className="wf-question-textarea"
-                      rows={3}
-                      value={intake.nonGoals || ""}
-                      onChange={(e) => setIntake((prev) => ({ ...prev, nonGoals: e.target.value }))}
-                      placeholder="What should not be included in the first pass?"
-                    />
-                  </div>
-                </div>
+                </>
+              )}
 
-                {/* Compact type selector */}
-                <div className="wf-type-row" role="group" aria-label="What type of idea is this?">
-                  {COMPACT_TYPES.map((t) => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      className={`wf-type-chip ${category === t.value ? "wf-type-chip--active" : ""}`}
-                      onClick={() => setCategory(t.value as WorkflowCategoryValue)}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                {error && <p className="wf-error" role="alert">{error}</p>}
-                {!error && notice && !localFallbackEnabled && !isDemoNotice(notice) && (
-                  <p className="wf-notice" aria-live="polite">
-                    {notice}
-                  </p>
-                )}
-
-                <div className="wf-intake-actions">
-                  <button
-                    type="button"
-                    className="wf-btn-primary"
-                    onClick={handleStartRun}
-                    disabled={busy !== "idle"}
-                  >
-                    {busy !== "idle" ? "Starting..." : "Generate the scoped plan ->"}
-                  </button>
-                  <p className="wf-intake-hint">
-                    Intake comes first. ATEAM only moves what you approve into the next step.
-                  </p>
-                </div>
-              </div>
-
-              {/* What you'll get */}
+              {/* What you'll get — only on /ateam page */}
+              {basePath !== "/" && (
               <div className="wf-expect-row" aria-label="What ATEAM produces">
                 {[
                   { icon: "O", label: "Structured intake", detail: "Goal, context, constraints, and non-goals captured in one request." },
@@ -1279,6 +1356,7 @@ export default function AteamWorkflowClient({
                   </div>
                 ))}
               </div>
+              )}
 
               {recentRuns.length > 0 && (
                 <div className="wf-recent-card">

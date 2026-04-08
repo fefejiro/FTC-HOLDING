@@ -3,7 +3,8 @@ export const revalidate = 0;
 export const runtime = "edge";
 
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import AteamWorkflowClient from "./ateam/AteamWorkflowClient";
 
 export const metadata: Metadata = {
   title: "Una Labs | Type your idea. Get a structured plan.",
@@ -15,5 +16,11 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  redirect("/ateam");
+  return (
+    <div className="hp-ateam-surface">
+      <Suspense fallback={<div style={{ minHeight: "60vh" }} />}>
+        <AteamWorkflowClient basePath="/" />
+      </Suspense>
+    </div>
+  );
 }
