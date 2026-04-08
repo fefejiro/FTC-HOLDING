@@ -731,3 +731,44 @@ Deployed a focused unblock to stop Cloudflare Pages failures on new ATEAM commit
 - continue with next UX pass:
   - remove any remaining dense legacy support blocks
   - keep intake + plan + approval path dominant above the fold
+
+## 2026-04-08 - Live Routing Recovery for ATEAM API (No-Manual-Purge Path)
+
+Closed the primary "ATEAM still in demo mode" blocker by fixing upstream host resolution at both the Pages proxy layer and the `ateam-edge` worker config.
+
+### Root Cause
+
+- upstream host config drift:
+  - `workers/ateam-edge/wrangler.toml` pointed at `https://ateam-api-production.up.railway.app` (returns Railway `Application not found`)
+  - Pages API proxy defaulted to a single host and dropped to local fallback when that host failed
+- this forced the public workflow path into local demo behavior even when Railway service health was green
+
+### Files Changed
+
+- `APPS/ftc-site/lib/ateamUpstream.ts`
+- `workers/ateam-edge/wrangler.toml`
+
+### What Changed
+
+- upgraded upstream resolution in `ateamUpstream.ts`:
+  - now tries configured env origin first
+  - then falls back to:
+    - `https://ateam-api.unalabs.cloud`
+    - `https://ateam-platform-production.up.railway.app`
+  - skips bad Railway edge routes by detecting:
+    - `x-railway-fallback: true`
+    - `Application not found` body
+- updated `ateam-edge` worker default upstream to:
+  - `https://ateam-platform-production.up.railway.app`
+
+### Why this helps without manual purge
+
+- public runtime now has a resilient upstream chain; if one hostname is stale or mis-routed during DNS/SSL propagation, it can continue on the next valid origin
+- this reduces cache-propagation sensitivity and avoids "hard stop to demo mode" from one bad host
+
+### Remaining Follow-up
+
+- once Cloudflare DNS for `ateam-api.unalabs.cloud` is confirmed with Railway-required CNAME target, this can become the stable primary again
+- complete deploy + live smoke checks:
+  - `https://unalabs.cloud/api/ateam/workflow/runs?limit=1`
+  - `https://unalabs.cloud/ateam`

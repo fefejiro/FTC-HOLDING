@@ -13,6 +13,6 @@ routes = [
 ]
 
 [vars]
-ATEAM_UPSTREAM_ORIGIN = "https://ateam-api-production.up.railway.app"
+ATEAM_UPSTREAM_ORIGIN = "https://ateam-platform-production.up.railway.app"
 CANONICAL_SITE_ORIGIN = "https://unalabs.cloud"
 CANONICAL_OPS_ORIGIN = "https://ops.unalabs.cloud"
