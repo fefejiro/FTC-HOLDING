@@ -7,6 +7,8 @@ preview_urls = true
 
 routes = [
   { pattern = "ateam.unalabs.cloud", custom_domain = true },
+  { pattern = "unalabs.cloud/ateam*", zone_name = "unalabs.cloud" },
+  { pattern = "www.unalabs.cloud/ateam*", zone_name = "unalabs.cloud" },
   { pattern = "unalabs.cloud/mission-control*", zone_name = "unalabs.cloud" },
   { pattern = "www.unalabs.cloud/mission-control*", zone_name = "unalabs.cloud" },
   { pattern = "unalabs.cloud/api/ateam/*", zone_name = "unalabs.cloud" },

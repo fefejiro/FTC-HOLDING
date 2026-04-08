@@ -893,3 +893,71 @@ Confirmed the app/runtime split was already coded, but the standalone host still
   - `https://unalabs.cloud/`
   - `https://unalabs.cloud/ateam`
   - `https://ateam.unalabs.cloud/office`
+
+## 2026-04-08 - Public /ateam Route Takeover
+
+The main production bug was not that ATEAM was missing from the repo. The old live ATEAM shell was still present and healthy. The real problem was that Cloudflare Pages still owned `unalabs.cloud/ateam`, so users kept seeing the stale embedded public page even after the site/app split work had been pushed.
+
+### Root Cause
+
+- `workers/ateam-edge` only owned:
+  - `unalabs.cloud/api/ateam/*`
+  - `unalabs.cloud/mission-control*`
+  - `ateam.unalabs.cloud`
+- public `unalabs.cloud/ateam` traffic still fell through to Pages
+- Pages served the older embedded ATEAM route, which looked like the simplified brochure version and masked the restored app work
+- when `/ateam` was first proxied through the worker, the browser still resolved `style.css`, `app.js`, and module scripts against `/` instead of `/ateam/`, because the public integrated route needed a real base href
+
+### Files Changed
+
+- `workers/ateam-edge/src/index.ts`
+- `workers/ateam-edge/wrangler.toml`
+
+### What Changed
+
+- added explicit worker ownership for:
+  - `unalabs.cloud/ateam*`
+  - `www.unalabs.cloud/ateam*`
+- changed the public `/ateam*` path to proxy the real ATEAM app from Railway instead of letting Pages serve the stale embedded route
+- strip `/ateam` before proxying upstream so:
+  - `unalabs.cloud/ateam` -> upstream `/`
+  - `unalabs.cloud/ateam/office` -> upstream `/office`
+- keep `/ateam/operator*` redirected to the ops host
+- inject an integrated bootstrap for public `/ateam` responses:
+  - `window.ATEAM_API_BASE="/ateam"`
+  - `window.ATEAM_BASE_PATH="/ateam"`
+  - `<base href="/ateam/">`
+- this lets the older ATEAM app resolve:
+  - `style.css`
+  - `app.js`
+  - `/modules/*`
+  - `/ateam/api/*`
+  correctly under the public host
+
+### Source Of The Last Good ATEAM
+
+The still-usable older app shell lives under:
+
+- `APPS/ATEAM/Public/index.html`
+- `APPS/ATEAM/Public/app.js`
+- `APPS/ATEAM/Public/style.css`
+- `APPS/ATEAM/Public/modules/config.js`
+
+This is the dark live app shell with Mission Control, Office, Team, Factory, Pipeline, and agent-presence behavior. That older app is now what public `/ateam` proxies again.
+
+### Verification
+
+- `https://unalabs.cloud/ateam` now returns the ATEAM app HTML instead of the embedded site route
+- `https://unalabs.cloud/ateam/style.css` returns `200`
+- `https://unalabs.cloud/ateam/app.js` returns `200`
+- `https://unalabs.cloud/ateam/health` returns `200`
+- `https://unalabs.cloud/ateam/api/workflow/runs?limit=1` returns `200`
+- browser snapshot confirms the Mission Control shell is rendering on `unalabs.cloud/ateam`
+
+### Remaining Follow-up
+
+- provision and verify `ateam.unalabs.cloud` so the preferred standalone domain becomes the canonical live entry
+- once that host is stable, decide whether:
+  - `unalabs.cloud/ateam` should remain a compatibility bridge, or
+  - redirect fully to `https://ateam.unalabs.cloud`
+- continue the architecture cleanup so the public site stays company-first while ATEAM stays system-first

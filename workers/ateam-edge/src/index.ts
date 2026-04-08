@@ -130,23 +130,38 @@ async function proxyWorkflowRequest(request: Request, env: Env) {
   }
 }
 
-function injectStandaloneAteamBootstrap(document: string) {
-  const bootstrap = `<script>window.ATEAM_API_BASE=window.location.origin;window.ATEAM_BASE_PATH="";</script>`;
-  if (document.includes("window.ATEAM_API_BASE=window.location.origin")) return document;
-  if (document.includes("</head>")) {
-    return document.replace("</head>", `${bootstrap}</head>`);
+type AteamAppProxyOptions = {
+  htmlMode?: "standalone" | "integrated";
+  publicBasePath?: string;
+  upstreamPathname?: string;
+};
+
+function injectAteamBootstrap(
+  document: string,
+  { htmlMode = "standalone", publicBasePath = "" }: AteamAppProxyOptions = {}
+) {
+  const normalizedBasePath = trimTrailingSlash(publicBasePath || "/ateam") || "/ateam";
+  const bootstrap =
+    htmlMode === "integrated"
+      ? `<base href="${normalizedBasePath}/"><script data-ateam-bootstrap>window.ATEAM_API_BASE=${JSON.stringify(normalizedBasePath)};window.ATEAM_BASE_PATH=${JSON.stringify(normalizedBasePath)};</script>`
+      : `<script data-ateam-bootstrap>window.ATEAM_API_BASE=window.location.origin;window.ATEAM_BASE_PATH="";</script>`;
+
+  if (document.includes("data-ateam-bootstrap")) return document;
+  if (document.includes("<head>")) {
+    return document.replace("<head>", `<head>${bootstrap}`);
   }
   return `${bootstrap}${document}`;
 }
 
-async function proxyAteamAppRequest(request: Request, env: Env) {
+async function proxyAteamAppRequest(request: Request, env: Env, options: AteamAppProxyOptions = {}) {
   const origin = getUpstreamOrigin(env);
   if (!origin) {
     return json({ ok: false, message: "ATEAM app service is not connected yet." }, { status: 503 });
   }
 
   const url = new URL(request.url);
-  const upstreamUrl = new URL(origin + url.pathname + url.search);
+  const upstreamPathname = options.upstreamPathname || url.pathname;
+  const upstreamUrl = new URL(origin + upstreamPathname + url.search);
   const upstreamRequest = new Request(upstreamUrl.toString(), {
     method: request.method,
     headers: normalizeProxyHeaders(request.headers, request),
@@ -161,7 +176,7 @@ async function proxyAteamAppRequest(request: Request, env: Env) {
     const contentType = String(headers.get("content-type") || "").toLowerCase();
 
     if (contentType.includes("text/html")) {
-      const htmlText = injectStandaloneAteamBootstrap(await response.text());
+      const htmlText = injectAteamBootstrap(await response.text(), options);
       return new Response(htmlText, {
         status: response.status,
         statusText: response.statusText,
@@ -482,8 +497,20 @@ export default {
       return proxyAteamAppRequest(request, env);
     }
 
-    if (request.method === "HEAD" && url.pathname === "/ateam") {
-      return new Response(null, { status: 200 });
+    if (url.pathname === "/ateam/operator" || url.pathname.startsWith("/ateam/operator/")) {
+      return redirect(`${opsOrigin}${url.pathname}${url.search}`, 302);
+    }
+
+    if (url.pathname === "/ateam" || url.pathname === "/ateam/" || url.pathname.startsWith("/ateam/")) {
+      const strippedPathname =
+        url.pathname === "/ateam" || url.pathname === "/ateam/"
+          ? "/"
+          : url.pathname.slice("/ateam".length) || "/";
+      return proxyAteamAppRequest(request, env, {
+        htmlMode: "integrated",
+        publicBasePath: "/ateam",
+        upstreamPathname: strippedPathname
+      });
     }
 
     if (url.pathname === "/mission-control" || url.pathname.startsWith("/mission-control/")) {
@@ -504,7 +531,6 @@ export default {
       return proxyWorkflowRequest(request, env);
     }
 
-    // Pages owns /ateam and public page routes directly.
     return fetch(request);
   }
 };
