@@ -1,17 +1,13 @@
 import type { CSSProperties } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import CTABanner from "./CTABanner";
-import ClientLogoStrip from "./ClientLogoStrip";
-import BrandVideoPanel from "./BrandVideoPanel";
+import AteamHomeWidget from "./AteamHomeWidget";
 import ProductBrandBadge from "./ProductBrandBadge";
 import ProductStatusBadge from "./ProductStatusBadge";
-import AteamHomeWidget from "./AteamHomeWidget";
-import AteamProductPreview from "./AteamProductPreview";
+import ClientLogoStrip from "./ClientLogoStrip";
+import CTABanner from "./CTABanner";
 import { projectCaseStudies } from "../../lib/content";
 import { clientLaunches } from "../../lib/recentWork";
 import { productCardBranding } from "../../lib/productCardBranding";
-import { ATEAM_PRODUCT_PREVIEW_ASSET } from "../../lib/ateamEmbed";
 
 function getProductHref(slug: string) {
   if (slug === "peacepad") return "/peacepad";
@@ -21,291 +17,56 @@ function getProductHref(slug: string) {
 }
 
 export default function HomePageExperience() {
-  const primaryProducts = projectCaseStudies.filter((project) => project.slug !== "ateam");
-  const ateamProject = projectCaseStudies.find((project) => project.slug === "ateam");
+  const primaryProducts = projectCaseStudies.filter((p) => p.slug !== "ateam");
 
   return (
     <div className="home-page">
-      <section className="section section-hero">
+
+      {/* ── 1. ATEAM intake — the whole first experience ───────────────────── */}
+      <section className="home-ateam-hero home-ateam-hero--hp">
         <div className="container">
-          <section className="hero home-studio-hero">
-            <div className="hero-noise" aria-hidden="true" />
-            <div className="hero-grid premium-hero-grid">
-              <div className="premium-hero-copy home-studio-hero-copy">
-                <p className="eyebrow">Una Labs</p>
-                <p className="hero-urgency-pill">
-                  <span>+</span>
-                  Trusted AI workflow infrastructure
-                </p>
-                <h1 className="hero-primary-title">
-                  Trusted workflow systems, product proof, and delivery infrastructure.
-                </h1>
-                <p className="hero-subtitle">
-                  Una Labs is the parent platform for shipped products, live client delivery, and
-                  governed AI workflow systems like ATEAM when a request is still rough.
-                </p>
-                <div className="hero-cta-row">
-                  <Link href="/ateam" prefetch={false} className="btn btn-primary">
-                    Start with ATEAM
-                  </Link>
-                  <Link href="/products" prefetch={false} className="btn btn-secondary">
-                    Explore Products
-                  </Link>
-                  <Link href="/work" prefetch={false} className="inline-link">
-                    View Client Launches
-                  </Link>
-                </div>
-                <ul className="hero-credibility-bullets home-studio-credibility">
-                  <li>Studio-owned products show how Una Labs designs and operates real systems.</li>
-                  <li>Client Launches shows the delivery side with real rollout and execution proof.</li>
-                  <li>ATEAM is the native intake and scoping surface for requests that still need structure.</li>
-                </ul>
-              </div>
-
-              <div className="hero-collage hero-visual-stack home-studio-visual-stack">
-                <BrandVideoPanel
-                  src="/images/brand/unalabs-hero.mp4"
-                  poster="/images/brand/unalabs-hero.PNG"
-                  title="Una Labs studio reel"
-                  aspect="hero"
-                  preload="metadata"
-                  className="hero-feature-media"
-                  overlay={
-                    <div className="hero-media-note">
-                      <p className="card-kicker">Studio overview</p>
-                      <strong>One studio, three proof lanes: products, launches, and ATEAM.</strong>
-                    </div>
-                  }
-                  caption={
-                    <>
-                      <p className="card-kicker">Umbrella brand</p>
-                      <p className="muted">
-                        Una Labs is the studio layer above the products and systems it operates.
-                      </p>
-                    </>
-                  }
-                />
-
-                <div className="home-studio-glance-panel" aria-label="Studio lanes at a glance">
-                  <article className="home-glance-row">
-                    <div className="home-glance-row-visual" aria-label="Products lane logos">
-                      {primaryProducts.map((project) => {
-                        const logo = productCardBranding[project.slug]?.logo;
-                        if (!logo) return null;
-                        return (
-                          <ProductBrandBadge
-                            key={project.slug}
-                            logo={logo}
-                            className="home-glance-product-badge"
-                          />
-                        );
-                      })}
-                    </div>
-                    <div className="home-glance-row-copy">
-                      <p className="card-kicker">Products</p>
-                      <strong>Studio-owned portfolio</strong>
-                      <p className="muted">PeacePad, SayWetin, and Dispatch.</p>
-                    </div>
-                  </article>
-
-                  <article className="home-glance-row">
-                    <div className="home-glance-row-visual" aria-label="Client launch marks">
-                      {clientLaunches.slice(0, 3).map((launch) => {
-                        const style = {
-                          "--glance-accent": launch.brand.accent,
-                          "--glance-soft": launch.brand.accentSoft
-                        } as CSSProperties;
-
-                        return (
-                          <div key={launch.slug} className="home-glance-launch-badge" style={style}>
-                            <span>{launch.brand.mark}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="home-glance-row-copy">
-                      <p className="card-kicker">Client Launches</p>
-                      <strong>Live client delivery</strong>
-                      <p className="muted">Websites, lead systems, and rollout proof.</p>
-                    </div>
-                  </article>
-
-                  <Link
-                    href="/ateam"
-                    prefetch={false}
-                    className="home-glance-row home-glance-row--link"
-                    aria-label="Open ATEAM"
-                  >
-                    <div className="home-glance-row-visual" aria-label="ATEAM lane logo">
-                      <div className="home-glance-ateam-badge">
-                        <Image
-                          src="/images/brand/ateam-logo.png"
-                          alt="ATEAM logo"
-                          width={96}
-                          height={96}
-                          className="home-glance-ateam-image"
-                        />
-                      </div>
-                    </div>
-                    <div className="home-glance-row-copy">
-                      <p className="card-kicker">ATEAM</p>
-                      <strong>Workflow-first scoping</strong>
-                      <p className="muted">Structured intake, scoped plan, human approval, decision-ready output.</p>
-                    </div>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <ClientLogoStrip />
-
-      <section className="section">
-        <div className="container">
-          <section className="home-ateam-hero" aria-labelledby="home-ateam-hero-title">
-            <div className="home-ateam-hero-intro">
-              <p className="eyebrow">ATEAM inside Una Labs</p>
-              <p className="hero-urgency-pill">
-                <span>+</span>
-                Trusted AI workflow infrastructure
-              </p>
-              <h2 id="home-ateam-hero-title" className="hero-primary-title">
-                Turn rough requests into scoped, governed workflows before build starts.
-              </h2>
-              <p className="hero-subtitle">
-                Start with ATEAM when the request is still messy. It structures intake, proposes a
-                visible first-pass plan, keeps a human approval gate, and returns decision-ready
-                output before anything moves into delivery.
-              </p>
-            </div>
-
-            <div className="home-ateam-hero-surface">
-              <AteamHomeWidget />
-            </div>
-
-            <div className="home-ateam-hero-foot">
-              <div className="hero-cta-row">
-                <Link href="/ateam" prefetch={false} className="btn btn-primary">
-                  Open ATEAM
-                </Link>
-                <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
-                  Start a Project
-                </Link>
-                <Link href="/products" prefetch={false} className="inline-link">
-                  See studio products
-                </Link>
-              </div>
-
-              <ul className="home-ateam-hero-points">
-                <li>
-                  Structured intake captures goals, context, constraints, and non-goals before the
-                  workflow runs.
-                </li>
-                <li>
-                  ATEAM keeps a visible plan, a human approval point, and a decision-ready output
-                  path.
-                </li>
-                <li>
-                  Use it when the request is still rough and Una Labs needs a safer first pass
-                  before delivery.
-                </li>
-              </ul>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <div className="section-heading home-section-heading">
-            <p className="eyebrow">Studio map</p>
-            <h2>Three lanes inside Una Labs</h2>
-            <p>
-              Home answers what the studio does at a glance. Each lane below opens into its own
-              deeper route when you want the full story.
+          <div className="home-ateam-hero-intro">
+            <p className="eyebrow">Una Labs · ATEAM</p>
+            <h1 className="hero-primary-title">
+              Type your idea. ATEAM turns it into a structured, decision-ready plan.
+            </h1>
+            <p className="hero-subtitle">
+              Start here. No forms. No separate page. Just describe the request
+              and watch ATEAM scope, route, and deliver a usable output.
             </p>
           </div>
 
-          <div className="cards-grid cards-grid-3 home-lane-grid">
-            <article className="card home-lane-card">
-              <p className="card-kicker">Products</p>
-              <h3>Shipped tools built inside the studio.</h3>
-              <p>
-                PeacePad, SayWetin, and Dispatch show the product side of Una Labs: owned systems,
-                branded execution, and visible operating proof.
-              </p>
-              <div className="home-lane-product-row" aria-label="Featured products">
-                {primaryProducts.map((project) => {
-                  const logo = productCardBranding[project.slug]?.logo;
-                  if (!logo) return null;
-                  return <ProductBrandBadge key={project.slug} logo={logo} className="home-lane-product-badge" />;
-                })}
-              </div>
-              <Link href="/products" prefetch={false} className="btn btn-secondary">
-                Explore Products
-              </Link>
-            </article>
+          <div className="home-ateam-hero-surface">
+            <AteamHomeWidget />
+          </div>
 
-            <article className="card home-lane-card">
-              <p className="card-kicker">Client Launches</p>
-              <h3>Delivery proof for live business work.</h3>
-              <p>
-                Client Launches shows the commercial side of the studio: onboarding snapshots,
-                rollout progress, and systems shipped for real operating teams.
-              </p>
-              <div className="home-lane-launch-list" aria-label="Recent client launches">
-                {clientLaunches.slice(0, 3).map((launch) => (
-                  <div key={launch.slug} className="home-lane-launch-item">
-                    <strong>{launch.brand.wordmark}</strong>
-                    <span>{launch.status}</span>
-                  </div>
-                ))}
-              </div>
-              <Link href="/work" prefetch={false} className="btn btn-secondary">
-                View Client Launches
-              </Link>
-            </article>
-
-            <Link href="/ateam" prefetch={false} className="card home-lane-card home-lane-card--ateam home-lane-card--interactive">
-              {ateamProject ? <ProductStatusBadge status={ateamProject.status} className="home-lane-status" /> : null}
-              <p className="card-kicker">ATEAM</p>
-              <h3>Structured intake, scoped plan, human approval, and decision-ready output.</h3>
-              <p>
-                Open ATEAM when the request still needs structure. It turns a messy start into a
-                visible first-pass plan, a reviewable next move, and a cleaner handoff into delivery.
-              </p>
-              <AteamProductPreview
-                title="ATEAM teaser preview"
-                posterSrc={ATEAM_PRODUCT_PREVIEW_ASSET.posterSrc}
-                webmSrc={ATEAM_PRODUCT_PREVIEW_ASSET.webmSrc}
-                mp4Src={ATEAM_PRODUCT_PREVIEW_ASSET.mp4Src}
-                hasVideo={ATEAM_PRODUCT_PREVIEW_ASSET.hasVideo}
-              />
-              <span className="btn btn-primary home-lane-card-cta">
-                Open ATEAM
-              </span>
-            </Link>
+          <div className="home-ateam-hero-foot">
+            <ul className="home-ateam-hero-points">
+              <li>Intake captures goals, context, and constraints before anything moves.</li>
+              <li>A visible workflow runs in real time — route, build, review, pack.</li>
+              <li>Output is decision-ready: scoped plan, recommended lane, next step.</li>
+            </ul>
           </div>
         </div>
       </section>
 
+      {/* ── 2. Trust strip ─────────────────────────────────────────────────── */}
+      <ClientLogoStrip />
+
+      {/* ── 3. Products — secondary proof layer ───────────────────────────── */}
       <section className="section">
         <div className="container">
           <div className="section-heading home-section-heading">
-            <p className="eyebrow">Product proof</p>
-            <h2>Products built and operated inside Una Labs</h2>
+            <p className="eyebrow">Studio products</p>
+            <h2>Proof of what Una Labs ships</h2>
             <p>
-              These are the studio-owned systems. They show how Una Labs turns a capability into a
-              real product with branding, motion, and public-facing execution.
+              These are the studio-owned systems — built, branded, and operated inside Una Labs.
             </p>
           </div>
 
           <div className="cards-grid cards-grid-3 home-product-preview-grid">
             {primaryProducts.map((project) => {
               const branding = productCardBranding[project.slug];
-
               return (
                 <article key={project.slug} className="card home-product-preview-card">
                   <div className="project-card-top">
@@ -322,9 +83,7 @@ export default function HomePageExperience() {
                   <p>{project.summary}</p>
                   <ul className="chip-list">
                     {project.tags.slice(0, 3).map((tag) => (
-                      <li key={tag} className="chip">
-                        {tag}
-                      </li>
+                      <li key={tag} className="chip">{tag}</li>
                     ))}
                   </ul>
                   <Link href={getProductHref(project.slug)} prefetch={false} className="inline-link">
@@ -337,18 +96,59 @@ export default function HomePageExperience() {
         </div>
       </section>
 
+      {/* ── 4. Client launches — delivery proof ──────────────────────────── */}
+      <section className="section">
+        <div className="container">
+          <div className="section-heading home-section-heading">
+            <p className="eyebrow">Client launches</p>
+            <h2>Live delivery proof</h2>
+            <p>Real rollouts, real operating teams, real systems.</p>
+          </div>
+
+          <div className="cards-grid cards-grid-3 home-product-preview-grid">
+            {clientLaunches.slice(0, 3).map((launch) => {
+              const style = {
+                "--glance-accent": launch.brand.accent,
+                "--glance-soft": launch.brand.accentSoft,
+              } as CSSProperties;
+
+              return (
+                <article key={launch.slug} className="card home-product-preview-card">
+                  <div className="home-glance-launch-badge" style={style}>
+                    <span>{launch.brand.mark}</span>
+                  </div>
+                  <h3>{launch.brand.wordmark}</h3>
+                  <p className="muted">{launch.status}</p>
+                  <Link href={`/work/${launch.slug}`} prefetch={false} className="inline-link">
+                    View launch
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="home-section-heading" style={{ marginTop: "var(--space-4)" }}>
+            <Link href="/work" prefetch={false} className="btn btn-secondary">
+              All Client Launches
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 5. CTA ─────────────────────────────────────────────────────────── */}
       <section className="section">
         <div className="container">
           <CTABanner
-            title="Need Una Labs to shape the next system?"
-            description="Start with the studio if you already know the commercial path. Start with ATEAM if the idea still needs structure before build."
+            title="Ready to move from idea to structured plan?"
+            description="Type your idea above, or start a project with Una Labs directly."
             primaryLabel="Start a Project"
             primaryHref="/work-with-ftc"
-            secondaryLabel="Explore ATEAM"
-            secondaryHref="/ateam"
+            secondaryLabel="View Products"
+            secondaryHref="/products"
           />
         </div>
       </section>
+
     </div>
   );
 }

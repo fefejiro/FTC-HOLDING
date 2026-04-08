@@ -10123,6 +10123,43 @@ body {
   }
 }
 
+/* ── Homepage ATEAM hero — full-width variant ───────────────────────────── */
+
+.home-ateam-hero--hp {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: clamp(48px, 7vw, 96px) 0 clamp(32px, 5vw, 64px);
+  background:
+    radial-gradient(1200px 480px at 10% -10%, rgba(108, 92, 231, 0.22) 0%, transparent 60%),
+    radial-gradient(900px 400px at 90% -5%, rgba(0, 212, 255, 0.16) 0%, transparent 62%),
+    linear-gradient(160deg, rgba(11, 14, 24, 1), rgba(7, 9, 18, 1));
+}
+
+.home-ateam-hero--hp .container {
+  display: grid;
+  gap: clamp(20px, 3.2vw, 36px);
+}
+
+.home-ateam-hero--hp .home-ateam-hero-intro {
+  max-width: 800px;
+}
+
+.home-ateam-hero--hp .hero-primary-title {
+  max-width: 22ch;
+  font-size: clamp(2.2rem, 5.2vw, 4rem);
+}
+
+.home-ateam-hero--hp .home-ateam-hero-surface .ahw-shell {
+  max-width: 780px;
+}
+
+@media (max-width: 640px) {
+  .home-ateam-hero--hp {
+    padding: clamp(32px, 8vw, 52px) 0 clamp(24px, 5vw, 40px);
+  }
+}
+
 /* Homepage flow pruning */
 
 .ateam-flow-band {
