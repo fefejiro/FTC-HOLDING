@@ -692,3 +692,42 @@ Completed a focused stabilization pass on `/ateam` after additional live feedbac
 
 - verify on live `https://unalabs.cloud/ateam` at laptop browser zoom settings (90% and 100%) to confirm no stale route artifact
 - if stale HTML still appears on the custom domain, finish edge-route ownership and cache checks before new UI passes
+
+## 2026-04-08 — Edge Runtime Deploy Unblock + ATEAM Top-Bar/Voice Copy Polish
+
+Deployed a focused unblock to stop Cloudflare Pages failures on new ATEAM commits, then applied a small public-surface polish requested from live QA.
+
+### Files Changed
+
+- `APPS/ftc-site/app/page.tsx`
+- `APPS/ftc-site/app/ateam/page.tsx`
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+
+### Root Cause: “ATEAM not showing latest” after push
+
+- Cloudflare Pages deployment for `ftc-site-pages` was failing on recent commits because Next-on-Pages rejected non-edge routes:
+  - `/`
+  - `/ateam`
+- when deploys failed, the custom domain kept serving the older successful artifact
+
+### What Changed
+
+- added `export const runtime = "edge";` on:
+  - `app/page.tsx`
+  - `app/ateam/page.tsx`
+- this restored successful production deploys for latest commits
+- then removed public ATEAM top-bar status badge rendering (no visible `Private Beta` chip in workflow shell)
+- replaced wording from `Voice beta ...` to neutral `Voice capture ...` helper copy in intake
+
+### Validation
+
+- local build passed:
+  - `npm.cmd --prefix APPS/ftc-site run build`
+- production deploys are now succeeding again on `ftc-site-pages` (latest source commits show `Active` instead of `Failure`)
+
+### Remaining Follow-up
+
+- if any user still sees old ATEAM shell sections, verify browser cache and zone-level route precedence for `unalabs.cloud/ateam`
+- continue with next UX pass:
+  - remove any remaining dense legacy support blocks
+  - keep intake + plan + approval path dominant above the fold
