@@ -3,7 +3,7 @@ export const revalidate = 0;
 export const runtime = "edge";
 
 import type { Metadata } from "next";
-import HomePageExperience from "./components/HomePageExperience";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Una Labs | Type your idea. Get a structured plan.",
@@ -15,5 +15,5 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <HomePageExperience />;
+  redirect("/ateam");
 }
