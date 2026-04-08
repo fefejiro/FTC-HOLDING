@@ -722,6 +722,13 @@ async function apiListWorkflowRuns({ phase = "", limit = 80 } = {}) {
   return Array.isArray(data?.runs) ? data.runs : [];
 }
 
+async function apiCreateWorkflowRun(idea, { requestedBy = "operator", category = "" } = {}) {
+  const body = { idea, requestedBy };
+  if (category) body.category = category;
+  const data = await apiRequest("/api/workflow/runs", { method: "POST", body });
+  return data?.run || null;
+}
+
 async function apiApproveWorkflowRun(runId, { gate = "brief", decision = "approved", actor = "operator" } = {}) {
   const safeId = String(runId || "").trim();
   if (!safeId) return null;
@@ -2651,9 +2658,7 @@ function renderApprovalDetail(approval) {
         if (!decision) return;
         btn.disabled = true;
         try {
-          await apiDecideApproval(id, decision, { sessionId: GLOBAL_PODCAST_ID, actor: "user" });
-          showToast(`Approval ${decision}.`, decision === "approved" ? "ok" : "error");
-          void renderApprovalsPage({ preserveSelection: true });
+          await mcHandleApprovalDecision(id, decision);
         } catch (err) {
           showToast("Approval decision failed.", "error");
           btn.disabled = false;
@@ -11020,15 +11025,38 @@ async function handleEntrySubmit(e) {
   if (submitBtn) submitBtn.disabled = true;
 
   try {
-    // Store intent in state for the workflow
     state.currentIntent = intent;
     state.workflowState = "processing";
 
-    // Animate the workflow reveal
-    await revealWorkflowCards();
+    const run = await apiCreateWorkflowRun(intent, { requestedBy: "operator" });
+    if (!run) throw new Error("Server did not return a run");
 
-    // TODO: In the future, send intent to backend and update cards with real data
-    // For now, cards show with their placeholder text
+    state.workflowRunId = run.id;
+    state.approvalId = run.approvals?.brief?.approvalId || null;
+
+    const brief = run.brief || {};
+    const assumptions = Array.isArray(run.request?.assumptions)
+      ? run.request.assumptions.slice(0, 2).join(" \u00b7 ")
+      : null;
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el && text) el.textContent = text;
+    };
+
+    setText("understanding-text", brief.title || run.title || intent);
+    setText("assumptions-text", assumptions || brief.summary || "Intent captured.");
+    setText(
+      "plan-text",
+      brief.recommendedLane
+        ? brief.recommendedLane + (brief.recommendedDirection ? " \u2014 " + brief.recommendedDirection.slice(0, 120) : "")
+        : (Array.isArray(brief.phasedPlan) ? brief.phasedPlan[0] : null) || "Plan generated."
+    );
+    setText("approval-text", "Brief ready. Approve to start execution.");
+    setText("execution-text", "Awaiting approval before execution begins.");
+    setText("output-text", "Results will appear here after execution.");
+
+    await revealWorkflowCards();
 
   } catch (err) {
     console.error("Entry submission failed:", err);
@@ -11049,17 +11077,29 @@ function bindEvents() {
   const approveBtn = document.getElementById("btn-approve");
   const reviseBtn = document.getElementById("btn-revise");
   if (approveBtn) {
-    approveBtn.addEventListener("click", () => {
-      state.workflowState = "approved";
-      showToast("Workflow approved. Executing...", "ok");
-      // TODO: Send approval to backend and start execution
+    approveBtn.addEventListener("click", async () => {
+      if (!state.workflowRunId) {
+        setView("approvals");
+        return;
+      }
+      approveBtn.disabled = true;
+      try {
+        await apiApproveWorkflowRun(state.workflowRunId, { gate: "brief", decision: "approved", actor: "operator" });
+        state.workflowState = "approved";
+        showToast("Workflow approved. Starting execution\u2026", "ok");
+        await new Promise(r => setTimeout(r, 700));
+        setView("tasks");
+      } catch (err) {
+        console.warn("Entry approval failed:", err?.message || err);
+        showToast("Approval failed. Check Mission Control.", "error");
+      } finally {
+        approveBtn.disabled = false;
+      }
     });
   }
   if (reviseBtn) {
     reviseBtn.addEventListener("click", () => {
-      state.workflowState = "revising";
-      showToast("Ready to revise workflow.", "info");
-      // TODO: Show revision interface
+      setView("approvals");
     });
   }
 

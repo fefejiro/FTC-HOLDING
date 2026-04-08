@@ -94,3 +94,4 @@ Not part of the core approval loop.
 - The SQLite schema tables (`approvals`, `workflow_runs`, `tasks`)
 - The `window.ATEAMModules` namespace convention
 - The `data-mc-page` attribute as the routing mechanism for views
+- The 8 locked `agent_id` values — see `ateam-naming-registry.md`

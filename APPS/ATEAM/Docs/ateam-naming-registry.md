@@ -1,83 +1,108 @@
 ---
 title: ATEAM Naming Registry — Phase 0
-version: 1.0
+version: 1.1
 locked: 2026-04-08
 ---
 
 # ATEAM Naming Registry
 
-This document is the single source of truth for agent identities, role titles, and display names.
+This document is the single source of truth for agent identities.
 All code must match this. Where divergence exists, it is noted and flagged for update.
 
 ---
 
-## Agent Roster
+## Naming Model
 
-The canonical agent identity system uses three names per agent:
+Each agent has exactly four fields:
 
-| `agent_id` (stable, internal) | `canonicalName` (system name) | `displayName` (screen name) | Role | Lane |
-|-------------------------------|-------------------------------|------------------------------|------|------|
-| `henry` | Henry | Manchi | Coordinator | coordination |
-| `scout` | Scout | Tinye isi | Signals | signals |
-| `codex` | Codex | Billy | Builder | build |
-| `quill` | Quill | Eze | Writer | content |
-| `charlie` | Charlie | Abobis | Build Support | build |
-| `violet` | Violet | Violet | Think Tank | think_tank |
-| `ralph` | Ralph | Go Well Daughter | QA | qa |
-| `pixel` | Pixel | Nwa Baby | Design | design |
-| `echo` | Echo | Otota | Voice | voice |
-| `alex` | Alex | Alex | Ops | ops |
+| Field | What it is | Example |
+|-------|-----------|---------|
+| `agent_id` | Stable slug. Used in DB, API payloads, code references. Never changes. | `henry` |
+| `role_title` | What the agent does. Used in audit trail, handoff docs, system references. | `Coordinator` |
+| `display_name` | What shows on screen. Personal, friendly. May differ from role. | `Manchi` |
+| `lane` | Which office zone this agent belongs to. | `coordination` |
 
-### Naming Rules
-
-- `agent_id` — slug, lowercase, stable. Used in DB records, API payloads, code references.
-- `canonicalName` — the system identity (used in handoff docs, internal references).
-- `displayName` — the name shown to users in UI. Friendly, personal. May differ from canonical.
-- Never hardcode display names in logic. Always look up via `OFFICE2_AGENT_DIRECTORY` in `config.js`.
+No other name fields are part of the canonical model. See the note on `canonicalName` below.
 
 ---
 
-## Where Agent Identities Live in Code
+## Official Roster — 8 Agents
 
-### `APPS/ATEAM/Public/modules/config.js`
+| `agent_id` | `role_title` | `display_name` | `lane` |
+|------------|-------------|----------------|--------|
+| `henry` | Coordinator | Manchi | coordination |
+| `scout` | Signals | Tinye Isi | signals |
+| `codex` | Builder | Billy | build |
+| `quill` | Writer | Eze | content |
+| `charlie` | Build Support | Abobis | build |
+| `violet` | Think Tank | Violet | think_tank |
+| `ralph` | QA | Go Well Daughter | qa |
+| `pixel` | Design | Nwa Baby | design |
 
-The `OFFICE2_AGENT_DIRECTORY` array is the authoritative client-side registry.
-Each entry has: `id`, `canonicalName`, `displayName`, `role`, `lane`, `silhouetteIcon`, `emoji`.
-
-The older `OFFICE_AGENTS` array (4 entries: scout, quill, codex, henry) is a legacy UI fixture.
-It should not be used for new logic.
-
-### `APPS/ATEAM/Server/lib/workflowEngine.js`
-
-`ownerAgentId` fields in `WORKFLOW_CATEGORY_PRESETS` reference `agent_id` values.
-Current assignments: `henry` owns website, lead-automation, internal-tool, ai-lab; `codex` owns product-app.
-
-### `APPS/ATEAM/Public/app.js`
-
-`mcDisplayName(agentId)` — looks up displayName from `OFFICE2_AGENT_DIRECTORY`.
-`mcCanonicalName(agentId)` — looks up canonicalName from `OFFICE2_AGENT_DIRECTORY`.
+This is the complete locked roster for Phase 1 and Phase 2.
+Do not add agents to this table without an explicit decision.
 
 ---
 
-## UI Display Rules
+## Supporting Entries (Not in Locked Roster)
 
-- Mission Control header and agent cards: use `displayName`.
-- Handoff docs, approval records, audit trail: use `canonicalName`.
-- API payloads and DB records: use `agent_id`.
-- Never show raw `agent_id` in any user-facing surface.
+Two entries exist in `OFFICE2_AGENT_DIRECTORY` in `config.js` but are not part of the 8 official agents.
+They are present as system/channel slots and must not be given council seats, project ownership, or core loop roles.
+
+| `agent_id` | Status | Notes |
+|------------|--------|-------|
+| `echo` | Channel slot | Voice/podcast output channel. `display_name: Otota`. Not a named persona in the operating model. |
+| `alex` | System slot | Generic Ops placeholder. `display_name: Alex`. No distinct personality defined. |
+
+These remain in `OFFICE2_AGENT_DIRECTORY` to avoid breaking the office layout. They do not appear in
+the naming registry as authoritative agents.
 
 ---
 
-## Divergence Notes (as of 2026-04-08)
+## Note on `canonicalName` in Current Code
 
-The following code locations still reference legacy role labels or display names that do not
-match this registry and should be updated:
+The current codebase (`OFFICE2_AGENT_DIRECTORY` in `config.js`, `app.js`) uses a `canonicalName` field
+(e.g., "Henry", "Scout", "Codex") in addition to `displayName`.
 
-| Location | Issue |
-|----------|-------|
-| `OFFICE_AGENTS` array in `config.js` | Uses `Tinye isi` not `Tinye Isi` (minor), only 4 agents |
-| `DEFAULT_HUMOR_LINES` in `config.js` | References `henry`, `scout`, `quill`, `codex` — correct IDs, no change needed |
-| `WORKFLOW_CATEGORY_PRESETS` in `workflowEngine.js` | `ownerAgentId: "henry"` and `"codex"` — correct, no change needed |
-| `AGENT_STATUS_ORDER` in `config.js` | Uses role labels ("Coach", "Builder", etc.) not agent IDs — acceptable for status sorting |
+**This field is not part of the canonical naming model.** It exists because the old design had three
+layers: an internal ID, a system identity name, and a personal display name. That third layer is removed.
 
-No renames of `agent_id` values are needed. The IDs are correct. Only display-layer cleanup needed.
+**Current code uses `canonicalName` in these places:**
+- `mcCanonicalName(agentId)` — fallback when displayName not set (app.js:3164)
+- Agent card secondary label: `agent.canonicalName` (app.js:4804)
+- Tooltip title when canonicalName ≠ displayName (app.js:3739)
+- `data-canonical-name` DOM attribute on office entities (app.js:3585)
+- Ping button title (app.js:11088)
+
+**Going forward:** Use `display_name` for all user-facing labels. Use `role_title` for system/audit references.
+`canonicalName` should be treated as an alias for `display_name` until removed. No Phase 2 code should
+introduce new uses of `canonicalName`.
+
+**Code change needed (post-Phase 2 cleanup):** Remove `canonicalName` from `OFFICE2_AGENT_DIRECTORY`,
+update `mcCanonicalName()` to return `role_title` instead, and replace `agent.canonicalName` references
+with `agent.role` (role_title) in display contexts.
+
+---
+
+## Display Rules
+
+| Context | Use |
+|---------|-----|
+| Mission Control UI — names, cards, labels | `display_name` |
+| Approval records, handoff docs, audit trail | `role_title` |
+| API payloads, DB records, code references | `agent_id` |
+| Raw `agent_id` | Never shown in user-facing surfaces |
+
+---
+
+## Where These Fields Live in Code
+
+| Location | Field name in code | Maps to |
+|----------|-------------------|---------|
+| `OFFICE2_AGENT_DIRECTORY[].id` | `agent_id` | ✓ |
+| `OFFICE2_AGENT_DIRECTORY[].role` | `role_title` | ✓ |
+| `OFFICE2_AGENT_DIRECTORY[].displayName` | `display_name` | ✓ (rename pending) |
+| `OFFICE2_AGENT_DIRECTORY[].lane` | `lane` | ✓ |
+| `OFFICE2_AGENT_DIRECTORY[].canonicalName` | — | Remove after Phase 2 |
+| `mcDisplayName(id)` in `app.js` | Returns `display_name` | ✓ |
+| `mcCanonicalName(id)` in `app.js` | Returns `canonicalName` | Replace with role_title lookup |
