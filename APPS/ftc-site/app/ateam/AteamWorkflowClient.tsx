@@ -7,7 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { trackEvent } from "../../lib/analytics";
 import { ATEAM_BRAND_LOGO_PATH } from "../../lib/ateamEmbed";
 import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
-import ProductStatusBadge from "../components/ProductStatusBadge";
 import OperatorOfficePanel, { type OfficePhase } from "../components/OperatorOfficePanel";
 import {
   type WorkflowAgentRole,
@@ -18,7 +17,6 @@ import {
   type WorkflowRun,
 } from "../../lib/ateamWorkflow";
 import { getProjectCaseStudy } from "../../lib/content";
-import { getProductStatusLabel } from "../../lib/productStatus";
 import {
   clearAteamDemoHandoff,
   saveAteamWorkflowHandoff,
@@ -671,8 +669,7 @@ export default function AteamWorkflowClient({
   const humanStage = processingIndexToHumanStage(processingStageIndex);
   const isWorking = busy === "starting" || busy === "processing";
   const showPlanReview = Boolean(run && !workflowReady && !isWorking);
-  const hasProductStatusBadge = Boolean(ateamProject && getProductStatusLabel(ateamProject.status));
-  const showBarActions = Boolean(hasProductStatusBadge || run || operatorEnabled);
+  const showBarActions = Boolean(run || operatorEnabled);
   const currentState = String(run?.state || "").trim().toLowerCase() || "queued";
   const currentStateIndex = Math.max(0, V1_STATE_STEPS.findIndex((step) => step === currentState));
   const filteredRecentRuns = useMemo(() => {
@@ -1043,7 +1040,6 @@ export default function AteamWorkflowClient({
         </div>
         {showBarActions ? (
           <div className="wf-bar-right">
-            {ateamProject ? <ProductStatusBadge status={ateamProject.status} className="wf-product-badge" /> : null}
             {run ? (
               <button className="wf-reset-btn" onClick={resetFlow} aria-label="Start a new idea">
                 New idea
@@ -1136,7 +1132,7 @@ export default function AteamWorkflowClient({
                     <label className="wf-field-label" htmlFor="wf-idea">Describe the request</label>
                     {supportsVoice ? (
                       <p className="wf-field-help wf-field-help--voice">
-                        Type is the safest path today. Voice beta supports click-to-start, click-to-stop
+                        Type is the safest path today. Voice capture supports click-to-start, click-to-stop
                         dictation with longer pauses than before.
                       </p>
                     ) : null}
