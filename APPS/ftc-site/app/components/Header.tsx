@@ -7,6 +7,7 @@ import { gardenCleanersConfig } from "../../lib/gardenCleaners";
 import { ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
 import { siteNav } from "../../lib/content";
+import { ATEAM_SITE_URL } from "../../lib/site";
 import GardenBrandMark from "./garden-cleaners/GardenBrandMark";
 import OgTradesBrandMark from "./og-trades/OgTradesBrandMark";
 import PolarBrandMark from "./polar-anchor/PolarBrandMark";
@@ -27,11 +28,6 @@ const productMenuItems = [
     label: "Dispatch",
     href: "/products/dispatch",
     description: "Roadside intake, routing, and incident watch."
-  },
-  {
-    label: "ATEAM",
-    href: "/ateam",
-    description: "AI-assisted scoping and delivery workflow."
   }
 ] as const;
 
@@ -192,6 +188,9 @@ export default function Header() {
 
         {isDefaultUnaSite ? (
           <div className="header-actions">
+            <a href={ATEAM_SITE_URL} className="header-ateam-btn">
+              Enter ATEAM
+            </a>
             <a href="tel:+14164732732" className="header-call-chip">
               Talk to an Expert
               <strong>+1 (416) 473-2732</strong>
@@ -268,6 +267,9 @@ export default function Header() {
 
             {isDefaultUnaSite ? (
               <div className="mobile-products-group" aria-label="Products">
+                <a href={ATEAM_SITE_URL} className="mobile-project-btn" onClick={closeMenu}>
+                  Enter ATEAM
+                </a>
                 <p className="mobile-products-title">Products</p>
                 {productMenuItems.map((item) => (
                   <Link

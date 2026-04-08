@@ -1,4 +1,5 @@
 import { notFound, permanentRedirect } from "next/navigation";
+import { ATEAM_SITE_URL } from "../../../lib/site";
 
 export const runtime = "edge";
 
@@ -16,7 +17,7 @@ export default function WorkSlugPage({ params }: { params: { slug: string } }) {
   }
 
   if (slug === "ateam") {
-    permanentRedirect("/ateam");
+    permanentRedirect(ATEAM_SITE_URL);
   }
 
   if (slug === "polar-anchor") {

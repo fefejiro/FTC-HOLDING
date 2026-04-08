@@ -6,6 +6,7 @@ workers_dev = true
 preview_urls = true
 
 routes = [
+  { pattern = "ateam.unalabs.cloud", custom_domain = true },
   { pattern = "unalabs.cloud/mission-control*", zone_name = "unalabs.cloud" },
   { pattern = "www.unalabs.cloud/mission-control*", zone_name = "unalabs.cloud" },
   { pattern = "unalabs.cloud/api/ateam/*", zone_name = "unalabs.cloud" },
@@ -14,5 +15,6 @@ routes = [
 
 [vars]
 ATEAM_UPSTREAM_ORIGIN = "https://ateam-platform-production.up.railway.app"
+CANONICAL_ATEAM_ORIGIN = "https://ateam.unalabs.cloud"
 CANONICAL_SITE_ORIGIN = "https://unalabs.cloud"
 CANONICAL_OPS_ORIGIN = "https://ops.unalabs.cloud"

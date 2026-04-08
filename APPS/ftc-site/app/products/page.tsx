@@ -10,6 +10,7 @@ import { ATEAM_BRAND_LOGO_PATH, ATEAM_PRODUCT_PREVIEW_ASSET } from "../../lib/at
 import { ateamModeSummary } from "../../lib/ateamMode";
 import { projectCaseStudies, type ProjectCaseStudy } from "../../lib/content";
 import { productCardBranding } from "../../lib/productCardBranding";
+import { ATEAM_SITE_URL } from "../../lib/site";
 
 export const metadata = {
   title: "Products | Una Labs",
@@ -23,7 +24,7 @@ function getProductOverviewHref(project: ProjectCaseStudy): string {
       ? "/saywetin"
       : project.slug === "dispatch"
         ? "/products/dispatch"
-      : "/ateam";
+      : ATEAM_SITE_URL;
 }
 
 export default function ProductsPage() {
@@ -109,9 +110,9 @@ export default function ProductsPage() {
                 ))}
               </ul>
               <div className="product-actions">
-                <Link href="/ateam" prefetch={false} className="btn btn-primary">
-                  Open ATEAM
-                </Link>
+                <a href={ATEAM_SITE_URL} className="btn btn-primary">
+                  Enter ATEAM
+                </a>
                 <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
                   Start a Project
                 </Link>
@@ -150,9 +151,9 @@ export default function ProductsPage() {
           <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
             Start a Project
           </Link>
-          <Link href="/ateam" prefetch={false} className="btn btn-secondary">
-            Open ATEAM
-          </Link>
+          <a href={ATEAM_SITE_URL} className="btn btn-secondary">
+            Enter ATEAM
+          </a>
         </div>
       </article>
     </div>

@@ -135,7 +135,10 @@ npm run start:bridge
 
 - Local operator app: full `Server/server.js` + `Public/*`
 - Shared cloud runtime: same backend on Railway, now intended to run in `ATEAM_AUTH_MODE=trusted_proxy`
-- Public route layer: Cloudflare Pages owns `https://unalabs.cloud/ateam`; `workers/ateam-edge` only fronts public workflow API + mission-control redirect paths
+- Public site shell: Cloudflare Pages owns `https://unalabs.cloud`
+- Standalone ATEAM app: `https://ateam.unalabs.cloud` is the preferred public application host
+- Legacy compatibility: `https://unalabs.cloud/ateam` should redirect to `https://ateam.unalabs.cloud`
+- `workers/ateam-edge` fronts the standalone public app host, public workflow API, and mission-control redirect paths
 - Private route layer: `workers/ateam-ops` is the dedicated operator proxy for `https://ops.unalabs.cloud`
 
 Public flow contract:

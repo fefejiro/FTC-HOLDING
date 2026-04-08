@@ -1,7 +1,7 @@
 export const runtime = "edge";
 
 import { redirect } from "next/navigation";
-import { isAteamOperatorEnabled } from "../../../lib/ateamOperator";
+import { ATEAM_SITE_URL } from "../../../lib/site";
 
 type RouteProps = {
   params: {
@@ -14,10 +14,8 @@ export const dynamicParams = true;
 export default function AteamSurfacePage({ params }: RouteProps) {
   const safeSurface = String(params.surface || "").trim().toLowerCase();
   if (!safeSurface) {
-    redirect("/ateam");
+    redirect(ATEAM_SITE_URL);
   }
-  if (!isAteamOperatorEnabled()) {
-    redirect("/ateam");
-  }
-  redirect(`/ateam/operator/${safeSurface}`);
+  const destination = new URL(`/${safeSurface}`, ATEAM_SITE_URL);
+  redirect(destination.toString());
 }

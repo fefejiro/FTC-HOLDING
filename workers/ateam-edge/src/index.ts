@@ -1,5 +1,6 @@
 export interface Env {
   ATEAM_UPSTREAM_ORIGIN?: string;
+  CANONICAL_ATEAM_ORIGIN?: string;
   CANONICAL_SITE_ORIGIN?: string;
   CANONICAL_OPS_ORIGIN?: string;
 }
@@ -51,6 +52,10 @@ function getUpstreamOrigin(env: Env) {
 
 function getOpsOrigin(env: Env) {
   return trimTrailingSlash(env.CANONICAL_OPS_ORIGIN || "https://ops.unalabs.cloud");
+}
+
+function getAteamOrigin(env: Env) {
+  return trimTrailingSlash(env.CANONICAL_ATEAM_ORIGIN || "https://ateam.unalabs.cloud");
 }
 
 function redirect(location: string, status = 302) {
@@ -119,6 +124,61 @@ async function proxyWorkflowRequest(request: Request, env: Env) {
       {
         ok: false,
         message: error instanceof Error ? error.message : "Unable to reach the ATEAM workflow service."
+      },
+      { status: 502 }
+    );
+  }
+}
+
+function injectStandaloneAteamBootstrap(document: string) {
+  const bootstrap = `<script>window.ATEAM_API_BASE=window.location.origin;window.ATEAM_BASE_PATH="";</script>`;
+  if (document.includes("window.ATEAM_API_BASE=window.location.origin")) return document;
+  if (document.includes("</head>")) {
+    return document.replace("</head>", `${bootstrap}</head>`);
+  }
+  return `${bootstrap}${document}`;
+}
+
+async function proxyAteamAppRequest(request: Request, env: Env) {
+  const origin = getUpstreamOrigin(env);
+  if (!origin) {
+    return json({ ok: false, message: "ATEAM app service is not connected yet." }, { status: 503 });
+  }
+
+  const url = new URL(request.url);
+  const upstreamUrl = new URL(origin + url.pathname + url.search);
+  const upstreamRequest = new Request(upstreamUrl.toString(), {
+    method: request.method,
+    headers: normalizeProxyHeaders(request.headers, request),
+    body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
+    redirect: "follow"
+  });
+
+  try {
+    const response = await fetch(upstreamRequest);
+    const headers = new Headers(response.headers);
+    headers.set("cache-control", "no-store");
+    const contentType = String(headers.get("content-type") || "").toLowerCase();
+
+    if (contentType.includes("text/html")) {
+      const htmlText = injectStandaloneAteamBootstrap(await response.text());
+      return new Response(htmlText, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+      });
+    }
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+  } catch (error) {
+    return json(
+      {
+        ok: false,
+        message: error instanceof Error ? error.message : "Unable to reach the ATEAM app service."
       },
       { status: 502 }
     );
@@ -397,8 +457,30 @@ function buildPage(canonicalOrigin: string, opsOrigin: string) {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const ateamOrigin = getAteamOrigin(env);
     const canonicalOrigin = trimTrailingSlash(env.CANONICAL_SITE_ORIGIN || `${url.protocol}//${url.host}`);
     const opsOrigin = getOpsOrigin(env);
+    const ateamHost = new URL(ateamOrigin).host.toLowerCase();
+    const requestHost = url.host.toLowerCase();
+
+    if (requestHost === ateamHost) {
+      if (url.pathname === "/" || url.pathname === "") {
+        return redirect(`${ateamOrigin}/office${url.search}`, 302);
+      }
+      if (url.pathname === "/ateam" || url.pathname === "/ateam/") {
+        return redirect(`${ateamOrigin}/office${url.search}`, 302);
+      }
+      if (url.pathname.startsWith("/ateam/operator/") || url.pathname === "/ateam/operator") {
+        return redirect(`${opsOrigin}${url.pathname}${url.search}`, 302);
+      }
+      if (url.pathname.startsWith("/ateam/")) {
+        return redirect(`${ateamOrigin}${url.pathname.slice("/ateam".length)}${url.search}`, 302);
+      }
+      if (url.pathname === "/mission-control" || url.pathname.startsWith("/mission-control/")) {
+        return redirect(`${opsOrigin}/`, 302);
+      }
+      return proxyAteamAppRequest(request, env);
+    }
 
     if (request.method === "HEAD" && url.pathname === "/ateam") {
       return new Response(null, { status: 200 });

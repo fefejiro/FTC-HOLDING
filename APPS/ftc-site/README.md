@@ -1,6 +1,6 @@
 # Una Labs Site
 
-Next.js App Router site for the public-facing Una Labs build lab: products, client launches, the public ATEAM workflow, operator handoff, and project intake.
+Next.js App Router site for the public-facing Una Labs build lab: products, client launches, business trust, and project intake.
 
 ## Public route contract
 
@@ -10,7 +10,7 @@ Next.js App Router site for the public-facing Una Labs build lab: products, clie
 - `/work/[slug]`
 - `/og-trades-academy`
 - `/og-trades-academy/*`
-- `/ateam`
+- `/ateam` (legacy redirect route only)
 - `/work-with-ftc` (Start a Project)
 - `/capabilities` (Studio)
 - `/about`
@@ -60,7 +60,8 @@ When Una Labs is running locally:
 
 - Una Labs: `http://localhost:3001`
 - Real ATEAM upstream: `http://127.0.0.1:3000`
-- Public workflow route: `http://localhost:3001/ateam`
+- Public site redirect route: `http://localhost:3001/ateam`
+- Preferred standalone ATEAM app host in production: `https://ateam.unalabs.cloud`
 - Operator Mission Control proxy: `http://localhost:3001/ateam/operator`
 - Deep links also proxy through: `/ateam/operator/office`, `/ateam/operator/factory`, `/ateam/operator/memory`, `/ateam/operator/team`
 
@@ -83,23 +84,19 @@ Cloudflare Pages / Vercel-style build note:
 ## Core public journey
 
 1. Visitor lands on the public site and learns what Una Labs offers.
-2. Visitor opens `/ateam` and immediately sees ATEAM already alive on screen, with a visible preview of Intake, System, Work, and Output before any typing starts.
-3. Visitor speaks or types one rough idea, then answers only the two short clarifiers needed to move.
-4. ATEAM turns the idea into a live run with intent understanding, visible state, public-safe work steps, timeline movement, and run-owned artifacts.
-5. The output pack returns a recommended move, visual concept, prototype direction, build watch, and next step.
-6. `Start this with Una Labs` should keep the user inside the ATEAM flow long enough to send the handoff directly, instead of forcing a second idea form.
-7. `/work-with-ftc?from=ateam` remains the fallback handoff route, but it should not ask for the idea again; it should only ask for reply details and optional delivery context.
-8. Operator users keep the full ATEAM Mission Control shell in the private operator deployment without leaking those controls into the public view.
-9. Submitting the intake returns a success state with a request reference and response expectation.
+2. Visitor chooses `Enter ATEAM` and is sent into the standalone ATEAM app at `https://ateam.unalabs.cloud`.
+3. ATEAM opens as its own operating surface, not a marketing section inside the public site.
+4. Operator users keep the full Mission Control shell in the private operator deployment without leaking those controls into the public site.
+5. `/ateam` on the public site remains a compatibility redirect, not the canonical product surface.
 
-## Public vs private ATEAM
+## Public site vs standalone/private ATEAM
 
-- Public route: `/ateam`
-- Public modules: `Intake`, `System`, `Work`, `Output`
+- Public site compatibility route: `/ateam`
+- Preferred public ATEAM host: `https://ateam.unalabs.cloud`
 - Private operator host: `https://ops.unalabs.cloud`
 - Private operator proxy routes: `/ateam/operator/*` on the ops host, plus `/api/operator/ateam/*` for private JSON access
 
-The public flow is intentionally narrowed so clients only see the trustworthy high-level system narrative. Public ATEAM now behaves like a simple intent engine: the first screen should already feel alive, the intake box should already be visible, and the system/work/output story should unfold without sending the visitor into a second idea form. The public route deliberately hides operator wording, internal owner names, approvals, logs, and overrides so the experience reads like a client product, not a control room. On the public production host, the Cloudflare Worker currently owns `/ateam*`, so `/ateam/operator/*` is intentionally not exposed there.
+The public Una Labs site stays focused on company narrative, trust, proof, and CTA paths. ATEAM itself now belongs on its own host so it can feel like a live system instead of an embedded brochure section. The public site should link into ATEAM, not impersonate it. `/ateam` exists only as a compatibility redirect into the standalone host.
 
 Operator security model:
 

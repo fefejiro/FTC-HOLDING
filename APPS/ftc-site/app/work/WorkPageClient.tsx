@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { clientLaunches } from "../../lib/recentWork";
 import { engagementOffers } from "../../lib/engagementOffers";
+import { ATEAM_SITE_URL } from "../../lib/site";
 
 function getLaunchBrandStyle(accent?: string, accentSoft?: string, accentGlow?: string, accentSurface?: string) {
   return {
@@ -279,9 +280,9 @@ export default function WorkPageClient() {
           <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
             Start a Project
           </Link>
-          <Link href="/ateam" prefetch={false} className="btn btn-secondary">
-            Open ATEAM
-          </Link>
+          <a href={ATEAM_SITE_URL} className="btn btn-secondary">
+            Enter ATEAM
+          </a>
         </div>
       </article>
     </div>

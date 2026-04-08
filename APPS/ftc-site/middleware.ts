@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { LEGACY_CANONICAL_HOSTS, OPS_SITE_HOST, SITE_HOST } from "./lib/site";
+import { ATEAM_SITE_HOST, ATEAM_SITE_URL, LEGACY_CANONICAL_HOSTS, OPS_SITE_HOST, SITE_HOST } from "./lib/site";
 
 const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
   "/services": "/capabilities",
@@ -67,6 +67,15 @@ function withRuntimePageHeaders(req: NextRequest, response: NextResponse): NextR
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const host = resolveRequestHost(req);
+
+  if (pathname === "/ateam" || pathname === "/ateam/" || pathname.startsWith("/ateam/")) {
+    if (!isLocalHost(host) && host !== ATEAM_SITE_HOST && ATEAM_SITE_HOST !== SITE_HOST) {
+      const destination = new URL(ATEAM_SITE_URL);
+      destination.pathname = "/";
+      destination.search = req.nextUrl.search;
+      return NextResponse.redirect(destination, 308);
+    }
+  }
 
   if ((pathname === "/ateam/operator" || pathname.startsWith("/ateam/operator/")) && !isLocalHost(host) && !isAteamOperatorEnabled()) {
     return new NextResponse("Not Found", { status: 404 });

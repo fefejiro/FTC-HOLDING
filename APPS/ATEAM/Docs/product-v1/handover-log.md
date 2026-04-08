@@ -218,6 +218,93 @@ Push the edge fallback, let Cloudflare deploy it, then re-run the public `/ateam
 
 ## 2026-04-07 Public UX Hierarchy And Scroll Cleanup
 
+## 2026-04-08 Public Site / ATEAM Boundary Reset
+
+### Summary
+
+Reset the product boundary so `APPS/ATEAM` is once again treated as the canonical ATEAM application and `APPS/ftc-site` is treated as the Una Labs public shell. This pass removes the embedded-feature drift from the public site, restores a clean CTA path into ATEAM, and prepares the repo for the preferred domain split:
+
+- `unalabs.cloud` -> Una Labs public website
+- `ateam.unalabs.cloud` -> standalone ATEAM application
+
+### Source Of The Last Good ATEAM
+
+The last strong ATEAM implementation is still the app runtime in:
+
+- `APPS/ATEAM/Public/index.html`
+- `APPS/ATEAM/Public/style.css`
+- `APPS/ATEAM/Public/app.js`
+
+That surface preserves the stronger Mission Control / Office / live-system feel and remains the correct reference point for future restoration work.
+
+### Files Changed
+
+- `APPS/ftc-site/lib/site.ts`
+- `APPS/ftc-site/middleware.ts`
+- `APPS/ftc-site/lib/content.ts`
+- `APPS/ftc-site/app/components/Header.tsx`
+- `APPS/ftc-site/styles/globals.css`
+- `APPS/ftc-site/app/page.tsx`
+- `APPS/ftc-site/app/components/HomePageExperience.tsx`
+- `APPS/ftc-site/app/ateam/page.tsx`
+- `APPS/ftc-site/app/ateam/[surface]/page.tsx`
+- `APPS/ftc-site/lib/productCardBranding.ts`
+- `APPS/ftc-site/app/products/page.tsx`
+- `APPS/ftc-site/app/work/WorkPageClient.tsx`
+- `APPS/ftc-site/app/work/[slug]/page.tsx`
+- `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx`
+
+### What Was Restored
+
+- a clear distinction between the Una Labs public website and the ATEAM app boundary
+- a dedicated standalone ATEAM URL constant and host mapping in the public shell
+- header and CTA flows that send users into ATEAM instead of treating ATEAM like a normal product card
+- public-homepage composition focused on Una Labs trust, products, launches, and entry into ATEAM
+
+### What Was Removed
+
+- `ATEAM` as a normal top-level public-nav destination
+- embedded ATEAM workflow treatment on the Una Labs homepage
+- product and work links that routed ATEAM back into the embedded `/ateam` website surface
+- the typecheck bug in the reduced `AteamWorkflowClient` surface that blocked `ftc-site` production builds
+
+### Decisions Made
+
+- treat `APPS/ATEAM` as the app source of truth and stop using the embedded `ftc-site` workflow page as the product definition
+- keep legacy `/ateam` routes only as transition/redirect surfaces
+- remove `Open ATEAM` language from public-site information architecture and replace it with `Enter ATEAM`
+- keep the stronger standalone-domain target even if the current live host still needs DNS / deployment follow-through
+
+### Route / Domain Map
+
+Preferred target:
+
+- `unalabs.cloud` -> Una Labs public site (`APPS/ftc-site`)
+- `ateam.unalabs.cloud` -> standalone ATEAM app (`APPS/ATEAM`)
+- `dispatch.unalabs.cloud` -> Dispatch
+- `peacepad.unalabs.cloud` -> PeacePad
+- `saywetin.unalabs.cloud` -> SayWetin
+
+Transitional behavior implemented in this pass:
+
+- `unalabs.cloud/ateam` -> redirect to `https://ateam.unalabs.cloud`
+- `unalabs.cloud/ateam/[surface]` -> redirect to `https://ateam.unalabs.cloud/[surface]`
+- public-site CTA buttons now point at the standalone ATEAM URL constant instead of the embedded page
+
+### Validation
+
+- `npm --prefix APPS/ftc-site run build`
+
+### Unresolved Issues
+
+- the standalone `ateam.unalabs.cloud` deployment still needs to be fully wired to the real ATEAM runtime so the public redirect lands in the restored app instead of any stale or fallback surface
+- the current `APPS/ftc-site/app/ateam/AteamWorkflowClient.tsx` still exists as transitional code and should not be treated as the future ATEAM architecture
+- further restoration work is still needed to bring the old Mission Control / Office environment fully onto the standalone ATEAM domain
+
+### Exact Next Step
+
+Deploy the real `APPS/ATEAM` app shell onto `ateam.unalabs.cloud`, verify that `unalabs.cloud/ateam` redirects there cleanly, then continue the restoration pass by lifting the Mission Control / Office experience from `APPS/ATEAM/Public/*` into the final standalone production route without re-embedding it in the Una Labs website.
+
 ### Summary
 
 Cleaned up the public `/ateam` surface so it behaves like a workflow tool instead of a trapped split-panel brochure. The nested-scroll issue came from the main ATEAM split container being locked to viewport height while both the operator column and intake column also used their own vertical scrolling. That created an internal page scroll inside the layout instead of one natural document scroll.
@@ -772,3 +859,37 @@ Closed the primary "ATEAM still in demo mode" blocker by fixing upstream host re
 - complete deploy + live smoke checks:
   - `https://unalabs.cloud/api/ateam/workflow/runs?limit=1`
   - `https://unalabs.cloud/ateam`
+
+## 2026-04-08 - Standalone ATEAM Host Wiring
+
+Confirmed the app/runtime split was already coded, but the standalone host still did not resolve. That made production fall back to the legacy public-route behavior even though the preferred architecture had moved on.
+
+### Files Changed
+
+- `workers/ateam-edge/wrangler.toml`
+- `APPS/ATEAM/README.md`
+- `APPS/ftc-site/README.md`
+
+### Root Cause
+
+- `ateam.unalabs.cloud` was not provisioned as a first-class host
+- the edge worker had proxy logic ready for a standalone app host, but Cloudflare was still treating the host binding like a plain route pattern instead of a real custom domain
+- repo documentation still described the embedded `/ateam` model as canonical, which reinforced the wrong deployment shape
+
+### What Changed
+
+- switched `workers/ateam-edge` from `ateam.unalabs.cloud/*` route matching to a true Cloudflare custom-domain binding on `ateam.unalabs.cloud`
+- documented the preferred public boundary explicitly:
+  - `unalabs.cloud` = Una Labs public site
+  - `ateam.unalabs.cloud` = standalone ATEAM app
+  - `unalabs.cloud/ateam` = compatibility redirect
+- updated both app/site READMEs so the repo no longer treats the embedded public route as the target architecture
+
+### Remaining Follow-up
+
+- deploy `workers/ateam-edge` so Cloudflare provisions `ateam.unalabs.cloud`
+- push the `ftc-site` public-shell changes so `unalabs.cloud/ateam` stops serving the old embedded experience and redirects to the standalone host
+- smoke test:
+  - `https://unalabs.cloud/`
+  - `https://unalabs.cloud/ateam`
+  - `https://ateam.unalabs.cloud/office`

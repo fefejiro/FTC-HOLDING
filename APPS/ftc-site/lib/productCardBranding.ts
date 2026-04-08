@@ -69,7 +69,7 @@ export const productCardBranding: Record<string, ProductCardBranding> = {
   },
   ateam: {
     offerCopy: ateamModeSummary,
-    secondaryLabel: "Open ATEAM",
+    secondaryLabel: "Enter ATEAM",
     supportPoints: [...ateamModeSupportPoints]
   }
 };

@@ -3,24 +3,17 @@ export const revalidate = 0;
 export const runtime = "edge";
 
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import AteamWorkflowClient from "./ateam/AteamWorkflowClient";
+import HomePageExperience from "./components/HomePageExperience";
 
 export const metadata: Metadata = {
-  title: "Una Labs | Type your idea. Get a structured plan.",
+  title: "Una Labs | Trusted Workflow Systems, Product Proof, and Delivery",
   description:
-    "Una Labs is ATEAM — the AI workflow engine that turns a rough idea into a scoped plan, decision-ready output, and a clear next step. Start by typing your idea.",
+    "Una Labs is the public trust layer around shipped products, client launches, and ATEAM — the standalone operating system for rough requests that still need structure.",
   alternates: {
     canonical: "https://unalabs.cloud"
   }
 };
 
 export default function HomePage() {
-  return (
-    <div className="hp-ateam-surface">
-      <Suspense fallback={<div style={{ minHeight: "60vh" }} />}>
-        <AteamWorkflowClient basePath="/" />
-      </Suspense>
-    </div>
-  );
+  return <HomePageExperience />;
 }
