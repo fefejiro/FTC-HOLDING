@@ -12267,3 +12267,238 @@ footer {
     gap: 6px;
   }
 }
+
+/* ── Mobile fixes: ATEAM + Homepage ── */
+
+/* ── /ateam intake: stack grid on mobile ── */
+@media (max-width: 760px) {
+  .wf-stage--intake {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "intro"
+      "intake"
+      "proof"
+      "templates"
+      "expect"
+      "recent" !important;
+  }
+
+  .wf-stage--intake > .wf-intake-card {
+    min-width: 0;
+    max-width: 100%;
+    border-radius: 18px;
+  }
+
+  .wf-intake-label-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .wf-voice-btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+}
+
+/* ── Guided grid: single column on mobile ── */
+@media (max-width: 640px) {
+  .wf-guided-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wf-guided-field--wide,
+  .wf-guided-field--full {
+    grid-column: 1;
+  }
+
+  .wf-type-row {
+    flex-wrap: wrap;
+  }
+
+  .wf-type-chip {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .wf-pack-2col {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .wf-pack-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .wf-plan-layout {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  .wf-proof-strip {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wf-secondary-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wf-template-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wf-role-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wf-clarify-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wf-clarify-actions .wf-btn-primary,
+  .wf-clarify-actions .wf-btn-ghost {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .wf-intake-actions .wf-btn-primary {
+    width: 100%;
+  }
+
+  .wf-pack-head {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .wf-state-progress {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .wf-working-track {
+    gap: 14px;
+  }
+}
+
+/* ── Homepage hero: extra-small screens ── */
+@media (max-width: 480px) {
+  .wf-hp-headline {
+    font-size: 2.1rem;
+    letter-spacing: -0.015em;
+  }
+
+  .wf-hp-sub {
+    font-size: 0.95rem;
+  }
+
+  .wf-hp-textarea {
+    min-height: 80px;
+    font-size: 0.95rem;
+    padding: 14px 16px 10px;
+  }
+
+  .wf-hp-templates {
+    gap: 6px;
+  }
+
+  .wf-hp-template-chip {
+    font-size: 0.78rem;
+    padding: 5px 10px;
+  }
+
+  .hp-ateam-surface .wf-body {
+    padding: 0 12px;
+  }
+}
+
+/* ── Working stage: mobile ── */
+@media (max-width: 640px) {
+  .wf-stage--working {
+    padding: 24px 0;
+  }
+
+  .wf-idea-echo {
+    padding: 14px 16px;
+  }
+
+  .wf-idea-echo-text {
+    font-size: 0.92rem;
+  }
+
+  .wf-wnode {
+    gap: 10px;
+  }
+
+  .wf-wnode-label {
+    font-size: 0.92rem;
+  }
+
+  .wf-wnode-detail {
+    font-size: 0.8rem;
+  }
+}
+
+/* ── Output / pack: mobile ── */
+@media (max-width: 640px) {
+  .wf-pack-title {
+    font-size: clamp(1.4rem, 5vw, 2rem);
+  }
+
+  .wf-pack-panel-title {
+    font-size: 1rem;
+  }
+
+  .wf-artifact-preview {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .wf-artifact-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .wf-pack-output-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .wf-pack-output-actions .wf-btn-primary,
+  .wf-pack-output-actions .wf-btn-ghost {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+/* ── Nav: ensure header CTA doesn't overflow on small screens ── */
+@media (max-width: 480px) {
+  .site-header .container {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .header-cta,
+  .header-contact-btn {
+    display: none;
+  }
+
+  .brand-name,
+  .logo-name {
+    font-size: 0.9rem;
+  }
+}
+
+/* ── hp-ateam-surface: ensure wf-body doesn't clip on narrow screens ── */
+@media (max-width: 480px) {
+  .hp-ateam-surface .wf-stage--working,
+  .hp-ateam-surface .wf-stage--clarify,
+  .hp-ateam-surface .wf-stage--output {
+    max-width: 100%;
+  }
+}
