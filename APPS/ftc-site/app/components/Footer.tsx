@@ -124,7 +124,6 @@ export default function Footer() {
           <div className="footer-links">
             <a href="/products">Products</a>
             <a href="/work">Client Launches</a>
-            <a href="/ateam">Open ATEAM</a>
             <a href="/products/dispatch">Dispatch</a>
             <a href="/peacepad">PeacePad</a>
             <a href="/saywetin">SayWetin</a>

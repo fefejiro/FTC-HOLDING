@@ -6754,3 +6754,205 @@ body[data-office-studio="true"] .office-view {
     grid-template-columns: 1fr;
   }
 }
+
+/* ATEAM Intent Entry View */
+.ateam-entry-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(30, 50, 80, 0.95) 0%, rgba(40, 60, 100, 0.95) 100%);
+}
+
+/* Hide MC chrome in entry mode */
+body.mc-entry-mode .mc-nav,
+body.mc-entry-mode .mc-topbar,
+body.mc-entry-mode .legacy-top-bar {
+  display: none;
+}
+
+body.mc-entry-mode .mc-main {
+  margin-left: 0;
+}
+
+/* Hide legacy destination framing buttons in entry mode */
+body.mc-entry-mode #go-dashboard,
+body.mc-entry-mode #go-office,
+body.mc-entry-mode #go-content,
+body.mc-entry-mode #go-talk,
+body.mc-entry-mode #go-speech {
+  display: none;
+}
+
+.entry-container {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.entry-header {
+  text-align: center;
+}
+
+.entry-header h1 {
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: rgba(226, 241, 255, 0.95);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.entry-intent-input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(226, 241, 255, 0.2);
+  border-radius: 8px;
+  padding: 1.25rem;
+  font-family: inherit;
+  font-size: 1rem;
+  color: rgba(226, 241, 255, 0.95);
+  line-height: 1.6;
+  resize: none;
+  transition: all 0.2s ease;
+}
+
+.entry-intent-input::placeholder {
+  color: rgba(226, 241, 255, 0.4);
+}
+
+.entry-intent-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(226, 241, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(100, 200, 255, 0.1);
+}
+
+.entry-submit-btn {
+  background: linear-gradient(135deg, #4db8ff 0%, #2196f3 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+.entry-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(33, 150, 243, 0.4);
+}
+
+.entry-submit-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+}
+
+.entry-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Entry Workflow Phases */
+.entry-phase {
+  width: 100%;
+}
+
+.entry-phase.hidden {
+  display: none;
+}
+
+.workflow-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(226, 241, 255, 0.2);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  animation: slideInUp 0.4s ease;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-status {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(100, 200, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+}
+
+.card-content {
+  color: rgba(226, 241, 255, 0.85);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.card-content p {
+  margin: 0 0 1rem 0;
+}
+
+.approval-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.approval-btn {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(226, 241, 255, 0.2);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(226, 241, 255, 0.8);
+}
+
+.approval-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(226, 241, 255, 0.4);
+}
+
+.approval-btn.approve {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.3);
+  color: rgba(129, 199, 132, 0.95);
+}
+
+.approval-btn.approve:hover {
+  background: rgba(76, 175, 80, 0.25);
+  border-color: rgba(76, 175, 80, 0.5);
+}
+
+.approval-btn.revise {
+  background: rgba(255, 152, 0, 0.15);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: rgba(255, 179, 71, 0.95);
+}
+
+.approval-btn.revise:hover {
+  background: rgba(255, 152, 0, 0.25);
+  border-color: rgba(255, 152, 0, 0.5);
+}

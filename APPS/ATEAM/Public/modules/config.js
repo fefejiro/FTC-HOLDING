@@ -139,6 +139,7 @@
   ];
 
   const MC_ROUTE_BY_VIEW = {
+    entry: "/",
     tasks: "/tasks",
     agents: "/agents",
     content: "/content",

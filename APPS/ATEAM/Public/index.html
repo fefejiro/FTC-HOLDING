@@ -123,7 +123,78 @@
       <div class="mc-frame">
         <div class="mc-frame-inner">
 
-  <main id="dashboard-view" class="view dashboard-view" data-mc-page="tasks">
+  <!-- Intent Entry View -->
+  <main id="ateam-entry-view" class="view ateam-entry-view" data-mc-page="entry">
+    <div class="entry-container">
+      <!-- Entry Input Phase -->
+      <div id="entry-input-phase" class="entry-phase">
+        <div class="entry-header">
+          <h1>What would you like ATEAM to do?</h1>
+        </div>
+        <form id="entry-form" class="entry-form">
+          <textarea
+            id="entry-intent"
+            class="entry-intent-input"
+            placeholder="Describe your task or objective..."
+            rows="5"
+            required
+          ></textarea>
+          <button type="submit" class="entry-submit-btn">Start</button>
+        </form>
+      </div>
+
+      <!-- Workflow Cards (hidden until submitted) -->
+      <div id="entry-workflow-phase" class="entry-phase hidden">
+        <div class="workflow-card" id="card-understanding">
+          <div class="card-status">Understanding</div>
+          <div class="card-content">
+            <p id="understanding-text">Analyzing your intent...</p>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-assumptions">
+          <div class="card-status">Assumptions</div>
+          <div class="card-content">
+            <p id="assumptions-text">Identifying assumptions...</p>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-plan">
+          <div class="card-status">Plan</div>
+          <div class="card-content">
+            <p id="plan-text">Building execution plan...</p>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-approval">
+          <div class="card-status">Approval</div>
+          <div class="card-content">
+            <p id="approval-text">Awaiting your approval...</p>
+            <div class="approval-buttons">
+              <button class="approval-btn approve" id="btn-approve">Approve</button>
+              <button class="approval-btn revise" id="btn-revise">Revise</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-execution">
+          <div class="card-status">Execution</div>
+          <div class="card-content">
+            <p id="execution-text">Executing workflow...</p>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-output">
+          <div class="card-status">Output</div>
+          <div class="card-content">
+            <p id="output-text">Ready for results...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <main id="dashboard-view" class="view dashboard-view hidden" data-mc-page="tasks">
     <aside class="team-roster">
       <h2>Team</h2>
       <div class="agent-row" data-agent="Coach"><span class="agent-name">Coach</span><span class="agent-role">Coordinator</span><span class="agent-runtime-status" id="agent-status-coach">Idle</span></div>
