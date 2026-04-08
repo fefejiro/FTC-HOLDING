@@ -15,6 +15,9 @@ const isAteamOperatorEnabled = () =>
 module.exports = {
   reactStrictMode: true,
   swcMinify: true,
+  env: {
+    ATEAM_UPSTREAM_ORIGIN: process.env.ATEAM_UPSTREAM_ORIGIN || "",
+  },
   transpilePackages: ["@ftc/supabase", "@ftc/config", "@ftc/types", "@ftc/auth"],
   async headers() {
     const noStoreHeaders = [
