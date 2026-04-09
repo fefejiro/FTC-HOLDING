@@ -356,6 +356,7 @@ const aiLabCapabilities = document.getElementById("ai-lab-capabilities");
 const aiLabRefreshBtn = document.getElementById("ai-lab-refresh-btn");
 const aiLabOpenTalkBtn = document.getElementById("ai-lab-open-talk-btn");
 const aiLabOpenSpeechBtn = document.getElementById("ai-lab-open-speech-btn");
+const aiLabCaptureInput = document.getElementById("ai-lab-capture-input");
 
 const mcNavList = document.getElementById("mc-nav-list");
 const mcSearchInput = document.getElementById("mc-search-input");
@@ -2569,9 +2570,17 @@ async function apiDecideApproval(approvalId, decision, { sessionId = GLOBAL_PODC
 
 function renderApprovalsEmpty() {
   if (approvalsCountNode) approvalsCountNode.textContent = "0";
-  if (approvalsListNode) approvalsListNode.innerHTML = `<div class="control-empty">No approvals are waiting right now.</div>`;
+  if (approvalsListNode) approvalsListNode.innerHTML = `
+    <div class="approvals-empty">
+      <div class="approvals-empty-title">Queue is clear</div>
+      <div class="approvals-empty-sub">Pending approvals appear here when a workflow reaches a decision point.</div>
+    </div>`;
   if (approvalsDetailStatusNode) approvalsDetailStatusNode.textContent = "—";
-  if (approvalsDetailNode) approvalsDetailNode.innerHTML = `<div class="control-empty">Approval details will appear here when something needs review.</div>`;
+  if (approvalsDetailNode) approvalsDetailNode.innerHTML = `
+    <div class="approvals-empty">
+      <div class="approvals-empty-title">Nothing selected</div>
+      <div class="approvals-empty-sub">Select an approval from the queue to review its context and take action.</div>
+    </div>`;
 }
 
 function renderApprovalsList(items, selectedId) {
@@ -2579,7 +2588,11 @@ function renderApprovalsList(items, selectedId) {
   approvalsListNode.innerHTML = "";
 
   if (!items.length) {
-    approvalsListNode.innerHTML = `<div class="control-empty">No approvals are waiting right now.</div>`;
+    approvalsListNode.innerHTML = `
+      <div class="approvals-empty">
+        <div class="approvals-empty-title">Queue is clear</div>
+        <div class="approvals-empty-sub">Pending approvals appear here when a workflow reaches a decision point.</div>
+      </div>`;
     return;
   }
 
@@ -3081,7 +3094,7 @@ function renderMemoryPage() {
 // ===== Calendar Page =====
 function seedCalendarStore() {
   const stored = safeJsonParse(localStorage.getItem(MC_CALENDAR_KEY), null);
-  if (stored && Array.isArray(stored.tasks) && stored.tasks.length) return stored;
+  if (stored && Array.isArray(stored.tasks) && stored.tasks.length && (stored.version || 0) >= 2) return stored;
 
   const tasks = [];
   const add = (day, title, time, variant, recurringLabel = "") => {
@@ -3099,18 +3112,18 @@ function seedCalendarStore() {
     add(d, "Reaction Poller", "", "neutral", "Recurring");
     add(d, "Trend Radar", "12:00 PM", "orange");
     add(d, "Morning Kickoff", "6:55 AM", "neutral");
-    add(d, "YouTube OpenC…", "7:00 AM", "red");
-    add(d, "Scout Morning …", "8:00 AM", "green");
+    add(d, "YouTube Open Calls", "7:00 AM", "red");
+    add(d, "Signals Morning Scan", "8:00 AM", "green");
     add(d, "Morning Brief", "8:00 AM", "yellow");
-    add(d, "Quill Script Writer", "8:30 AM", "blue");
+    add(d, "Content Draft", "8:30 AM", "blue");
     add(d, "Daily Digest", "9:00 AM", "purple");
   }
-  // A little screenshot-specific spice.
-  add(1, "Stock Scarcity R…", "7:30 AM", "neutral");
-  add(2, "Trend Radar Daily…", "8:00 AM", "neutral");
-  add(4, "Trend Radar Daily…", "8:00 AM", "neutral");
+  // Day-specific tasks.
+  add(1, "Stock Scarcity Review", "7:30 AM", "neutral");
+  add(2, "Trend Radar Daily", "8:00 AM", "neutral");
+  add(4, "Trend Radar Daily", "8:00 AM", "neutral");
 
-  const seed = { version: 1, tasks };
+  const seed = { version: 2, tasks };
   localStorage.setItem(MC_CALENDAR_KEY, safeJsonStringify(seed));
   return seed;
 }
@@ -4496,24 +4509,23 @@ function renderFactoryCompletedRuns(runs) {
   factoryCompletedList.innerHTML = visibleRuns.map((run) => {
     const title = run.brief?.title || run.title || compactText(run.idea, 72) || "Workflow run";
     const meta = mcFactoryPackMeta(run);
-    const ownerLine = [meta.ownerRole, meta.ownerName].filter(Boolean).join(" / ");
-    const completedRelative = formatRelativeTime(meta.completedAt) || "";
-    const completedLabel = meta.completedAt
+    // Owner: "Role (DisplayName)" — single readable string
+    const ownerLine = meta.ownerRole
+      ? (meta.ownerName ? `${meta.ownerRole} (${meta.ownerName})` : meta.ownerRole)
+      : meta.ownerName || "";
+    // Single time display — prefer relative, fall back to absolute
+    const timeDisplay = formatRelativeTime(meta.completedAt) || (meta.completedAt
       ? new Date(meta.completedAt).toLocaleString(undefined, { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })
-      : "";
+      : "");
     const readinessTone = meta.handoffReady ? "ok" : "warn";
     const readinessLabel = meta.handoffReady ? "Handoff ready" : "Needs attention";
-    const artifactChips = meta.artifactChecks.map((check) =>
-      `<span class="factory-pack-chip factory-pack-chip-${check.present ? "ok" : "muted"}">${escapeHtml(check.label)}${check.present ? "" : " missing"}</span>`
+    // Skip "Decision Pack" chip — always present for completed runs, not informative
+    const notableChecks = meta.artifactChecks.filter((c) => c.label !== "Decision Pack");
+    const artifactChips = notableChecks.map((check) =>
+      `<span class="factory-pack-chip factory-pack-chip-${check.present ? "ok" : "muted"}" title="${escapeHtml(check.detail)}">${escapeHtml(check.label)}</span>`
     ).join("");
-    const readinessItems = meta.artifactChecks.map((check) => `
-      <div class="factory-readiness-item" data-tone="${check.present ? "ok" : "muted"}">
-        <span>${escapeHtml(check.label)}</span>
-        <strong>${escapeHtml(check.detail)}</strong>
-      </div>
-    `).join("");
     const isExpanded = missionControlState.factory.expandedRunId === run.id;
-    const summary = meta.summary ? compactText(meta.summary, 220) : "Completed workflow run. Open the pack to inspect the full handoff detail.";
+    const summary = meta.summary ? compactText(meta.summary, 220) : "Completed workflow run. Inspect the pack to review the full handoff detail.";
     const nextMove = meta.recommendedNextMove || "Review the pack and decide whether to hand off, ship, or request a follow-up artifact.";
 
     return `
@@ -4525,15 +4537,11 @@ function renderFactoryCompletedRuns(runs) {
         <div class="factory-pack-meta">
           ${ownerLine ? `<span>${escapeHtml(ownerLine)}</span>` : ""}
           ${meta.lane ? `<span>${escapeHtml(meta.lane)}</span>` : ""}
-          ${completedRelative ? `<span>${escapeHtml(completedRelative)}</span>` : ""}
-          ${completedLabel ? `<span>${escapeHtml(completedLabel)}</span>` : ""}
+          ${timeDisplay ? `<span>${escapeHtml(timeDisplay)}</span>` : ""}
         </div>
-        <div class="factory-pack-status-row">
-          <span class="factory-pack-status-pill" data-tone="${escapeHtml(readinessTone)}">${escapeHtml(meta.handoffStatus || readinessLabel)}</span>
-          <span class="factory-pack-status-note">${escapeHtml(meta.handoffDetail)}</span>
-        </div>
-        ${artifactChips ? `<div class="factory-pack-chips">${artifactChips}</div>` : ""}
         <div class="factory-pack-summary">${escapeHtml(summary)}</div>
+        ${artifactChips ? `<div class="factory-pack-chips">${artifactChips}</div>` : ""}
+        <p class="factory-pack-readiness-note">${escapeHtml(meta.handoffDetail)}</p>
         <div class="factory-pack-next">
           <span>Recommended next move</span>
           <strong>${escapeHtml(nextMove)}</strong>
@@ -4546,7 +4554,6 @@ function renderFactoryCompletedRuns(runs) {
           <button class="ops-action-btn ops-action-btn-secondary" type="button"
             data-action="select-project" data-project-id="${escapeHtml(run.links?.projectId || `workflow_${run.id}`)}" data-scroll-target="ledger">View in Projects</button>
         </div>
-        <div class="factory-readiness-grid">${readinessItems}</div>
         ${isExpanded ? `<div class="factory-pack-detail">${mcRenderDecisionPack(run)}</div>` : ""}
       </article>
     `;
@@ -4941,78 +4948,88 @@ function mcDecisionPackText(run) {
   const successCriteria = Array.isArray(brief.successCriteria) ? brief.successCriteria : [];
   const nextSteps = Array.isArray(artifacts.nextSteps) ? artifacts.nextSteps : Array.isArray(run.workflow?.nextSteps) ? run.workflow.nextSteps : [];
   const packMeta = mcFactoryPackMeta(run);
+
+  const fmtDate = (ts) => {
+    if (!ts) return "";
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return String(ts).slice(0, 16);
+    return d.toLocaleString(undefined, { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
   const approvalTrail = [
     approvals.brief?.status
-      ? `Brief: ${approvals.brief.status}${approvals.brief.decidedBy ? ` by ${mcPublicLabel(approvals.brief.decidedBy)}` : ""}${approvals.brief.decidedAt ? ` at ${approvals.brief.decidedAt}` : ""}`
+      ? `Brief: ${approvals.brief.status}${approvals.brief.decidedBy ? ` by ${mcPublicLabel(approvals.brief.decidedBy)}` : ""}${approvals.brief.decidedAt ? ` · ${fmtDate(approvals.brief.decidedAt)}` : ""}`
       : "",
     approvals.pack?.status
-      ? `Pack: ${approvals.pack.status}${approvals.pack.decidedBy ? ` by ${mcPublicLabel(approvals.pack.decidedBy)}` : ""}${approvals.pack.decidedAt ? ` at ${approvals.pack.decidedAt}` : ""}`
+      ? `Pack: ${approvals.pack.status}${approvals.pack.decidedBy ? ` by ${mcPublicLabel(approvals.pack.decidedBy)}` : ""}${approvals.pack.decidedAt ? ` · ${fmtDate(approvals.pack.decidedAt)}` : ""}`
       : "",
     ...history.map((e) => `${mcRunStateLabel(e.state)} — ${e.reason || "State change"}${e.actor ? ` (${mcPublicLabel(e.actor)})` : ""}`)
   ].filter(Boolean);
-  const metadataLines = [
-    packMeta.ownerRole ? `Owner role: ${packMeta.ownerRole}` : "",
-    packMeta.ownerName ? `Owner: ${packMeta.ownerName}` : "",
+
+  const metaLines = [
+    packMeta.ownerRole
+      ? `Owner: ${packMeta.ownerRole}${packMeta.ownerName ? ` (${packMeta.ownerName})` : ""}`
+      : "",
     packMeta.lane ? `Lane: ${packMeta.lane}` : "",
-    packMeta.completedAt ? `Completed: ${packMeta.completedAt}` : "",
-    `Handoff status: ${packMeta.handoffStatus || (packMeta.handoffReady ? "Handoff ready" : "Needs attention")}`
+    packMeta.completedAt ? `Completed: ${fmtDate(packMeta.completedAt)}` : "",
+    `Handoff: ${packMeta.handoffStatus || (packMeta.handoffReady ? "Ready" : "Needs attention")}`
   ].filter(Boolean);
-  const readinessLines = packMeta.artifactChecks.map((check) => `- ${check.label}: ${check.present ? check.detail : `Missing. ${check.detail}`}`);
+
+  // Only include artifacts that actually have data — skip "Not available" noise
+  const presentArtifacts = [
+    doc.title ? `Decision pack doc: ${doc.title}` : "",
+    mockup.title ? `Mockup: ${mockup.title}${mockup.summary ? ` — ${mockup.summary}` : ""}` : "",
+    prototype.title ? `Prototype: ${prototype.title}${prototype.summary ? ` — ${prototype.summary}` : ""}` : "",
+    smoke.summary ? `Smoke summary: ${smoke.summary}` : "",
+    nextSteps.length ? `Next steps: ${nextSteps.join("; ")}` : ""
+  ].filter(Boolean);
+
+  const missingArtifacts = packMeta.artifactChecks
+    .filter((c) => !c.present && c.label !== "Decision Pack")
+    .map((c) => `Missing: ${c.label}`);
 
   const lines = [
     `# Decision Pack — ${brief.title || run.title || "ATEAM Workflow Run"}`,
-    `State: ${mcRunStateLabel(run.state)}`,
-    `Run ID: ${run.id || ""}`,
-    `Created: ${run.createdAt || run.createdTs || ""}`,
+    `Completed: ${fmtDate(packMeta.completedAt) || "—"}  ·  State: ${mcRunStateLabel(run.state)}`,
     "",
-    "## Pack Status",
-    ...metadataLines,
+    "## Pack Metadata",
+    ...metaLines,
     "",
-    "## Request Summary",
+    "## Request",
     intake.goal || normalized.goal || run.idea || "No request summary captured.",
-    normalized.scopeSummary ? `Scope: ${normalized.scopeSummary}` : "",
+    ...(normalized.scopeSummary ? [`Scope: ${normalized.scopeSummary}`] : []),
     "",
-    "## What ATEAM Understood",
-    brief.quickVerdict || "No explicit understanding summary was captured.",
-    brief.decisionNote ? `${brief.decisionNote}` : "",
+    "## Analysis",
+    brief.quickVerdict || "No understanding summary captured.",
+    ...(brief.decisionNote ? [brief.decisionNote] : []),
     "",
-    "## Audience / Context",
-    brief.audience || normalized.audience || "No explicit audience was captured.",
-    intake.context ? `Context: ${intake.context}` : "",
-    "",
-    "## Assumptions",
-    ...(assumptions.length ? assumptions.map((a) => `- ${a}`) : ["- No explicit assumptions were captured."]),
-    "",
-    "## Proposed Plan",
-    ...(phasedPlan.length ? phasedPlan.map((step, i) => `${i + 1}. ${step}`) : ["1. No phased plan was captured."]),
-    "",
-    "## Blockers / Risks",
-    ...(risks.length ? risks.map((r) => `- ${r}`) : ["- No explicit blockers or risks were captured."]),
-    ...(constraints.length ? ["Constraints:", ...constraints.map((c) => `- ${c}`)] : []),
-    "",
+    ...((brief.audience || normalized.audience || intake.context) ? [
+      "## Audience & Context",
+      ...[brief.audience || normalized.audience, intake.context ? `Context: ${intake.context}` : ""].filter(Boolean),
+      ""
+    ] : []),
+    ...(assumptions.length ? ["## Assumptions", ...assumptions.map((a) => `- ${a}`), ""] : []),
+    ...(phasedPlan.length ? ["## Proposed Plan", ...phasedPlan.map((step, i) => `${i + 1}. ${step}`), ""] : []),
+    ...((risks.length || constraints.length) ? [
+      "## Risks & Constraints",
+      ...risks.map((r) => `- ${r}`),
+      ...constraints.map((c) => `Constraint: ${c}`),
+      ""
+    ] : []),
     "## Recommended Next Move",
     packMeta.recommendedNextMove || routing.reason || "Review the pack and choose the next operator action.",
-    ...(goals.length ? ["Goals:", ...goals.map((g) => `- ${g}`)] : []),
+    ...(goals.length ? ["", ...goals.map((g) => `- ${g}`)] : []),
     "",
-    "## Execution Direction",
-    brief.recommendedLane ? `Lane: ${brief.recommendedLane}` : "Lane: Not specified",
-    doc.title ? `Pack document: ${doc.title}` : "Pack document: Not available",
-    mockup.title ? `Mockup: ${mockup.title}${mockup.summary ? ` — ${mockup.summary}` : ""}` : "Mockup: Not available",
-    prototype.title ? `Prototype: ${prototype.title}${prototype.summary ? ` — ${prototype.summary}` : ""}` : "Prototype: Not available",
-    smoke.summary ? `Smoke summary: ${smoke.summary}` : "Smoke summary: Not available",
-    ...(nextSteps.length ? ["Next steps:", ...nextSteps.map((step) => `- ${step}`)] : []),
+    "## Delivery Artifacts",
+    ...(presentArtifacts.length ? presentArtifacts.map((a) => `- ${a}`) : ["No delivery artifacts recorded."]),
+    ...(missingArtifacts.length ? missingArtifacts.map((m) => `- ${m}`) : []),
     "",
-    "## Approval Trail",
-    ...(approvalTrail.length ? approvalTrail : ["No approval trail was captured."]),
-    "",
-    "## Output Summary",
-    packMeta.summary || "No explicit output summary was captured.",
-    "Readiness:",
-    ...readinessLines,
-    ...(successCriteria.length ? ["Success criteria:", ...successCriteria.map((c) => `- ${c}`)] : [])
+    ...(successCriteria.length ? ["## Success Criteria", ...successCriteria.map((c) => `- ${c}`), ""] : []),
+    ...(approvalTrail.length ? ["## Approval Trail", ...approvalTrail, ""] : []),
+    ...(packMeta.summary ? ["## Output Summary", packMeta.summary] : [])
   ];
 
-  return lines.filter(l => l !== null && l !== undefined).join("\n").trim();
+  return lines.filter((l) => l !== null && l !== undefined).join("\n").trim();
 }
 
 function mcRenderDecisionPack(run) {
@@ -5085,12 +5102,17 @@ function mcRenderDecisionPack(run) {
     goals.length ? `<div class="dp-sub-title">Goals</div>${list(goals)}` : ""
   ].filter(Boolean).join("");
 
+  const dpKv = (label, value, sub = "") =>
+    `<div class="dp-kv"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${sub ? `<span class="dp-sub">${escapeHtml(sub)}</span>` : ""}</div>`;
+  const dpKvMissing = (label) =>
+    `<div class="dp-kv dp-kv--missing"><span>${escapeHtml(label)}</span><strong>—</strong></div>`;
+
   const executionContent = [
-    packMeta.lane ? `<div class="dp-kv"><span>Lane</span><strong>${escapeHtml(packMeta.lane)}</strong></div>` : `<div class="dp-kv"><span>Lane</span><strong>Not specified</strong></div>`,
-    doc.title ? `<div class="dp-kv"><span>Pack doc</span><strong>${escapeHtml(doc.title)}</strong></div>` : `<div class="dp-kv"><span>Pack doc</span><strong>Not available</strong></div>`,
-    mockup.title ? `<div class="dp-kv"><span>Mockup</span><strong>${escapeHtml(mockup.title)}</strong>${mockup.summary ? `<span class="dp-sub">${escapeHtml(mockup.summary)}</span>` : ""}</div>` : `<div class="dp-kv"><span>Mockup</span><strong>Not available</strong></div>`,
-    prototype.title ? `<div class="dp-kv"><span>Prototype</span><strong>${escapeHtml(prototype.title)}</strong>${prototype.summary ? `<span class="dp-sub">${escapeHtml(prototype.summary)}</span>` : ""}</div>` : `<div class="dp-kv"><span>Prototype</span><strong>Not available</strong></div>`,
-    smoke.summary ? `<div class="dp-kv"><span>Smoke</span><strong>${escapeHtml(smoke.summary)}</strong></div>` : `<div class="dp-kv"><span>Smoke</span><strong>Not available</strong></div>`,
+    packMeta.lane ? dpKv("Lane", packMeta.lane) : dpKvMissing("Lane"),
+    doc.title ? dpKv("Pack doc", doc.title) : dpKvMissing("Pack doc"),
+    mockup.title ? dpKv("Mockup", mockup.title, mockup.summary) : dpKvMissing("Mockup"),
+    prototype.title ? dpKv("Prototype", prototype.title, prototype.summary) : dpKvMissing("Prototype"),
+    smoke.summary ? dpKv("Smoke", smoke.summary) : dpKvMissing("Smoke"),
     nextSteps.length ? `<div class="dp-sub-title">Next steps</div>${list(nextSteps)}` : "",
     docSections.length ? docSections.map(s => `<div class="dp-sub-title">${escapeHtml(s.title)}</div>${list(Array.isArray(s.items) ? s.items : [])}`).join("") : ""
   ].filter(Boolean).join("");
@@ -5104,7 +5126,7 @@ function mcRenderDecisionPack(run) {
 
   const approvalBriefLine = approvals.brief?.status ? `Brief — ${escapeHtml(approvals.brief.status)}${approvals.brief.decidedBy ? ` by ${escapeHtml(mcPublicLabel(approvals.brief.decidedBy))}` : ""}${approvals.brief.decidedAt ? ` · ${escapeHtml(String(approvals.brief.decidedAt).slice(0, 10))}` : ""}` : "";
   const approvalPackLine = approvals.pack?.status ? `Pack — ${escapeHtml(approvals.pack.status)}${approvals.pack.decidedBy ? ` by ${escapeHtml(mcPublicLabel(approvals.pack.decidedBy))}` : ""}${approvals.pack.decidedAt ? ` · ${escapeHtml(String(approvals.pack.decidedAt).slice(0, 10))}` : ""}` : "";
-  const trailItems = [approvalBriefLine, approvalPackLine, ...history.slice(-4).map(e => `${escapeHtml(mcRunStateLabel(e.state))} — ${escapeHtml(e.reason || "State change")}${e.actor ? ` (${escapeHtml(mcPublicLabel(e.actor))})` : ""}`).filter(Boolean)];
+  const trailItems = [approvalBriefLine, approvalPackLine, ...history.map(e => `${escapeHtml(mcRunStateLabel(e.state))} — ${escapeHtml(e.reason || "State change")}${e.actor ? ` (${escapeHtml(mcPublicLabel(e.actor))})` : ""}`).filter(Boolean)];
   const trailContent = trailItems.length ? `<ul class="dp-trail">${trailItems.map(t => `<li>${t}</li>`).join("")}</ul>` : "";
   const headerMeta = [
     packMeta.ownerRole ? `<div class="dp-header-kv"><span>Owner role</span><strong>${escapeHtml(packMeta.ownerRole)}</strong></div>` : "",
@@ -6070,117 +6092,136 @@ async function renderAiLabPage({ force = false } = {}) {
   const overview = await mcLoadOverview({ force, includeSpeech: true });
   const talkTurns = (timelineState.events || []).filter((event) => String(event?.type || "") === "talk_turn_committed");
   const recentTurns = (timelineState.events || [])
-    .filter((event) => ["talk_turn_committed", "assistant_response_completed"].includes(String(event?.type || "")))
-    .slice(-8)
+    .filter((event) => ["talk_turn_committed", "assistant_response_committed"].includes(String(event?.type || "")))
+    .slice(-6)
     .reverse();
   const speechSessions = overview.speechSessions || [];
   const availableProfiles = overview.voice?.synthesis?.availableProfiles || overview.health?.config?.voice?.availableProfiles || [];
 
+  // Hero summary — factual, no hype
   if (aiLabSummary) {
-    aiLabSummary.textContent = `Intake turns: ${talkTurns.length}. Speech sessions: ${speechSessions.length}. Voice profiles: ${availableProfiles.length}.`;
+    const parts = [];
+    if (talkTurns.length) parts.push(`${talkTurns.length} intake turn${talkTurns.length === 1 ? "" : "s"} captured`);
+    if (speechSessions.length) parts.push(`${speechSessions.length} speech session${speechSessions.length === 1 ? "" : "s"}`);
+    aiLabSummary.textContent = parts.length
+      ? parts.join(" · ") + ". Use Quick Capture or Intake to route signal into a workflow run."
+      : "No intake turns captured yet. Use Quick Capture or Open Intake to begin.";
   }
-  if (aiLabMetricTurns) aiLabMetricTurns.textContent = String(talkTurns.length);
-  if (aiLabMetricSessions) aiLabMetricSessions.textContent = String(speechSessions.length);
-  if (aiLabMetricVoices) aiLabMetricVoices.textContent = String(availableProfiles.length);
+
+  if (aiLabMetricTurns) aiLabMetricTurns.textContent = String(talkTurns.length || 0);
+  if (aiLabMetricSessions) aiLabMetricSessions.textContent = String(speechSessions.length || 0);
+  if (aiLabMetricVoices) aiLabMetricVoices.textContent = String(availableProfiles.length || 0);
   if (aiLabMetricRecognition) aiLabMetricRecognition.textContent = state.supportsRecognition ? "Ready" : "Fallback";
 
+  // Capture channels — what's available now, what's limited, what's not wired
   if (aiLabModules) {
-    const modules = [
+    const channels = [
       {
-        title: "Simple Intake",
-        copy: "Type the rough request or start voice intake first, then open session details only when needed.",
-        action: `<button class="ops-action-btn" type="button" data-action="open-talk-focus">Open Focus</button>`
+        title: "Typed Intake",
+        status: "available",
+        copy: "Type a rough request in Quick Capture or Open Intake. Creates a real workflow run immediately.",
+        action: `<button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk-focus">Open Intake</button>`
       },
       {
-        title: "Speech Clarity",
-        copy: "Record sessions, analyze transcript quality, and review reflections.",
-        action: `<button class="ops-action-btn" type="button" data-action="open-speech">Open Speech</button>`
+        title: "Speech Capture",
+        status: state.supportsRecognition ? "available" : "limited",
+        copy: state.supportsRecognition
+          ? "Browser speech recognition is available. Open Speech to start a clarity session."
+          : "Speech recognition is not available in this browser. Use typed intake instead.",
+        action: state.supportsRecognition
+          ? `<button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-speech">Open Speech</button>`
+          : ""
       },
       {
-        title: "Voice Stack",
-        copy: `${overview.health?.config?.voice?.provider || "unknown"} | ${(availableProfiles || []).join(", ") || "browser fallback"}`,
-        action: ""
-      },
-      {
-        title: "Vision + Context",
-        copy: state.screenStream || state.cameraStream ? "Capture is active right now." : "Screen/camera capture is available from the intake route.",
-        action: `<button class="ops-action-btn" type="button" data-action="open-talk">Open Intake</button>`
+        title: "Vision / Screen Context",
+        status: (state.screenStream || state.cameraStream) ? "active" : "available",
+        copy: (state.screenStream || state.cameraStream)
+          ? "Screen or camera capture is currently active via the Intake surface."
+          : "Screen and camera context can be attached via Open Intake. Not available from Quick Capture.",
+        action: `<button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk">Open Intake</button>`
       }
     ];
-    aiLabModules.innerHTML = modules
-      .map(
-        (module) => `
-          <article class="ops-card">
-            <div class="ops-card-head"><div class="ops-card-title">${escapeHtml(module.title)}</div></div>
-            <div class="ops-card-copy">${escapeHtml(module.copy)}</div>
-            ${module.action || ""}
-          </article>
-        `
-      )
-      .join("");
+    aiLabModules.innerHTML = channels.map((ch) => `
+      <article class="ops-card">
+        <div class="ops-card-head">
+          <div class="ops-card-title">${escapeHtml(ch.title)}</div>
+          <span class="ai-lab-channel-status ai-lab-channel-status--${escapeHtml(ch.status)}">${escapeHtml(ch.status)}</span>
+        </div>
+        <div class="ops-card-copy">${escapeHtml(ch.copy)}</div>
+        ${ch.action || ""}
+      </article>
+    `).join("");
   }
 
-  if (aiLabSessions) {
-    aiLabSessions.innerHTML = speechSessions.length
-      ? speechSessions
-          .slice(0, 8)
-          .map(
-            (session) => `
-              <article class="ops-card">
-                <div class="ops-card-head">
-                  <div class="ops-card-title">${escapeHtml(session.title || "Speech session")}</div>
-                  <div class="ops-card-meta">${escapeHtml(session.mode || "session")}</div>
-                </div>
-                <div class="ops-inline-meta">
-                  <span>${escapeHtml(formatRelativeTime(session.updatedAt || session.createdAt) || "Recently")}</span>
-                  <span>${escapeHtml(session.status || "saved")}</span>
-                </div>
-              </article>
-            `
-          )
-          .join("")
-      : mcEmptyHtml("No speech sessions yet.");
-  }
-
+  // Recent intake turns — what was captured
   if (aiLabTurns) {
-    aiLabTurns.innerHTML = recentTurns.length
-      ? recentTurns
-          .map((event) => {
-            const type = String(event?.type || "");
-            const speakerId = getEffectiveSpeakerId(event);
-            const label = type === "talk_turn_committed" ? speakerLabelById(speakerId) : event?.meta?.agent || "Assistant";
-            const body = type === "talk_turn_committed" ? event?.meta?.text || event?.summary || "" : event?.meta?.agentReply || event?.summary || "";
-            return `
-              <article class="ops-card">
-                <div class="ops-card-head">
-                  <div class="ops-card-title">${escapeHtml(label)}</div>
-                  <div class="ops-card-meta">${escapeHtml(formatRelativeTime(event?.timestamp) || "")}</div>
-                </div>
-                <div class="ops-card-copy">${escapeHtml(compactText(body, 180) || "No preview available.")}</div>
-              </article>
-            `;
-          })
-          .join("")
-      : mcEmptyHtml("No recent conversation turns yet.");
+    if (recentTurns.length) {
+      aiLabTurns.innerHTML = recentTurns.map((event) => {
+        const type = String(event?.type || "");
+        const speakerId = getEffectiveSpeakerId(event);
+        const label = type === "talk_turn_committed" ? speakerLabelById(speakerId) : (event?.meta?.agent || "Assistant");
+        const body = type === "talk_turn_committed"
+          ? (event?.meta?.text || event?.summary || "")
+          : (event?.meta?.agentReply || event?.summary || "");
+        return `
+          <article class="ops-card">
+            <div class="ops-card-head">
+              <div class="ops-card-title">${escapeHtml(label)}</div>
+              <div class="ops-card-meta">${escapeHtml(formatRelativeTime(event?.timestamp) || "")}</div>
+            </div>
+            <div class="ops-card-copy">${escapeHtml(compactText(body, 180) || "—")}</div>
+          </article>
+        `;
+      }).join("");
+    } else {
+      aiLabTurns.innerHTML = `
+        <div class="ops-empty">
+          <div class="ops-empty-title">No intake turns yet</div>
+          <div class="ops-empty-copy">Open Intake to capture a rough request via text or voice. Turns appear here as you speak or type.</div>
+        </div>`;
+    }
   }
 
+  // Speech sessions — link to the speech module
+  if (aiLabSessions) {
+    if (speechSessions.length) {
+      aiLabSessions.innerHTML = speechSessions.slice(0, 6).map((session) => `
+        <article class="ops-card">
+          <div class="ops-card-head">
+            <div class="ops-card-title">${escapeHtml(session.title || "Speech session")}</div>
+            <div class="ops-card-meta">${escapeHtml(session.mode || "clarity")}</div>
+          </div>
+          <div class="ops-inline-meta">
+            <span>${escapeHtml(formatRelativeTime(session.updatedAt || session.createdAt) || "Recently")}</span>
+            <span>${escapeHtml(session.status || "saved")}</span>
+          </div>
+        </article>
+      `).join("");
+    } else {
+      aiLabSessions.innerHTML = `
+        <div class="ops-empty">
+          <div class="ops-empty-title">No speech sessions yet</div>
+          <div class="ops-empty-copy">Open Speech to start a clarity session. Recordings and transcripts are reviewed there before routing to a run.</div>
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-speech" style="margin-top:10px">Open Speech</button>
+        </div>`;
+    }
+  }
+
+  // Stack status — read-only, honest
   if (aiLabCapabilities) {
-    const capabilities = [
-      `Speech recognition: ${state.supportsRecognition ? "browser-supported" : "not available in this browser"}`,
-      `Browser TTS: ${state.supportsTTS ? "available" : "unavailable"}`,
-      `Server voice: ${overview.health?.config?.voice?.ttsConfigured ? "configured" : "fallback only"}`,
-      `Timeline review mode: ${state.reviewMode ? "on" : "off"}`,
-      `Vision capture: ${navigator.mediaDevices ? "available" : "browser-limited"}`
+    const stack = [
+      { label: "Speech recognition", value: state.supportsRecognition ? "Available" : "Not available in this browser" },
+      { label: "Browser TTS", value: state.supportsTTS ? "Available" : "Not available" },
+      { label: "Server voice", value: overview.health?.config?.voice?.ttsConfigured ? "Configured" : "Browser fallback only" },
+      { label: "Voice profiles", value: availableProfiles.length ? availableProfiles.join(", ") : "None configured" },
+      { label: "Vision capture", value: navigator.mediaDevices ? "Available via Intake" : "Not available in this browser" }
     ];
-    aiLabCapabilities.innerHTML = capabilities
-      .map(
-        (line) => `
-          <article class="ops-card">
-            <div class="ops-card-copy">${escapeHtml(line)}</div>
-          </article>
-        `
-      )
-      .join("");
+    aiLabCapabilities.innerHTML = stack.map((item) => `
+      <div class="ai-lab-stack-row">
+        <span class="ai-lab-stack-label">${escapeHtml(item.label)}</span>
+        <span class="ai-lab-stack-value">${escapeHtml(item.value)}</span>
+      </div>
+    `).join("");
   }
 }
 
@@ -6349,6 +6390,29 @@ async function handleMissionAction(action, dataset = {}) {
   }
   if (safeAction === "open-speech") {
     setView("speech");
+    return;
+  }
+  if (safeAction === "lab-create-run") {
+    const idea = String(aiLabCaptureInput?.value || "").trim();
+    if (!idea) {
+      showToast("Enter a request before creating a run.", "error");
+      return;
+    }
+    try {
+      const run = await apiCreateWorkflowRun(idea, { requestedBy: "operator", category: "ai_lab" });
+      if (run?.id) {
+        if (aiLabCaptureInput) aiLabCaptureInput.value = "";
+        mcInvalidateOverview();
+        showToast("Workflow run created. Open Tasks to review and approve.", "ok");
+        setView("tasks");
+      } else {
+        showToast("Run creation failed — no run returned.", "error");
+      }
+    } catch (err) {
+      showToast("Failed to create workflow run.", "error");
+      console.warn("lab-create-run failed:", err?.message || err);
+    }
+    return;
   }
 }
 
@@ -12332,8 +12396,9 @@ function bindEvents() {
   }
   if (aiLabOpenTalkBtn) aiLabOpenTalkBtn.addEventListener("click", () => setView("talk"));
   if (aiLabOpenSpeechBtn) aiLabOpenSpeechBtn.addEventListener("click", () => setView("speech"));
-  if (aiLabModules) {
-    aiLabModules.addEventListener("click", (e) => {
+  // Single delegated handler for all [data-action] clicks within AI Lab
+  if (aiLabView) {
+    aiLabView.addEventListener("click", (e) => {
       const btn = e.target?.closest?.("[data-action]");
       if (!btn) return;
       void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});

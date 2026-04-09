@@ -814,8 +814,8 @@ body.ateam-integrated .mc-nav {
 .content-view {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px 16px 16px;
 }
 
 .content-header {
@@ -846,7 +846,7 @@ body.ateam-integrated .mc-nav {
 .content-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .content-panel {
@@ -4788,8 +4788,8 @@ body[data-office-studio="true"] .office-view {
 .cal-week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 12px;
-  min-height: 620px;
+  gap: 10px;
+  min-height: 0;
 }
 
 .cal-day {
@@ -4814,22 +4814,22 @@ body[data-office-studio="true"] .office-view {
 }
 
 .cal-day-body {
-  padding: 10px 10px 12px;
+  padding: 8px 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
   overflow: visible;
 }
 
 .cal-event {
-  border-radius: 14px;
-  padding: 10px 10px;
+  border-radius: 12px;
+  padding: 7px 8px;
   border: 1px solid rgba(226, 241, 255, 0.12);
   background: rgba(255, 255, 255, 0.03);
 }
 
 .cal-event-title {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 650;
   color: rgba(226, 241, 255, 0.92);
   white-space: nowrap;
@@ -4838,13 +4838,13 @@ body[data-office-studio="true"] .office-view {
 }
 
 .cal-event-meta {
-  margin-top: 6px;
+  margin-top: 4px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  font-size: 11px;
-  color: rgba(198, 213, 233, 0.6);
+  gap: 8px;
+  font-size: 10.5px;
+  color: rgba(198, 213, 233, 0.5);
 }
 
 .cal-event[data-variant="neutral"] {
@@ -5715,7 +5715,7 @@ body[data-office-studio="true"] .office-view {
   backdrop-filter: blur(18px);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
   overflow: hidden;
-  min-height: 560px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -5915,8 +5915,32 @@ body[data-office-studio="true"] .office-view {
     grid-template-columns: 1fr;
   }
   .approvals-panel {
-    min-height: 420px;
+    min-height: 0;
   }
+}
+
+.approvals-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  gap: 8px;
+}
+
+.approvals-empty-title {
+  font-size: 14px;
+  font-weight: 650;
+  color: rgba(226, 241, 255, 0.68);
+}
+
+.approvals-empty-sub {
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(198, 213, 233, 0.4);
+  max-width: 210px;
 }
 
 /* ===== Mission Control: Team ===== */
@@ -6531,6 +6555,13 @@ body[data-office-studio="true"] .office-view {
   line-height: 1.4;
 }
 
+.factory-pack-readiness-note {
+  font-size: 11px;
+  color: rgba(198, 213, 233, 0.48);
+  line-height: 1.45;
+  margin: 0;
+}
+
 .factory-pack-next {
   display: flex;
   flex-direction: column;
@@ -6934,6 +6965,130 @@ body[data-office-studio="true"] .office-view {
   padding: 14px 14px;
   color: rgba(198, 213, 233, 0.58);
   font-size: 12.5px;
+}
+
+.ops-empty-title {
+  font-size: 13px;
+  font-weight: 650;
+  color: rgba(226, 241, 255, 0.62);
+  margin-bottom: 4px;
+}
+
+.ops-empty-copy {
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(198, 213, 233, 0.48);
+}
+
+/* ===== AI Lab ===== */
+
+.ai-lab-capture-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.ai-lab-capture-input {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 241, 255, 0.12);
+  background: rgba(8, 12, 18, 0.6);
+  color: rgba(226, 241, 255, 0.88);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.ai-lab-capture-input::placeholder {
+  color: rgba(198, 213, 233, 0.32);
+}
+
+.ai-lab-capture-input:focus {
+  outline: none;
+  border-color: rgba(125, 211, 252, 0.28);
+}
+
+.ai-lab-capture-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ai-lab-channel-status {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 3px 8px;
+  border: 1px solid rgba(226, 241, 255, 0.1);
+  color: rgba(198, 213, 233, 0.6);
+  white-space: nowrap;
+}
+
+.ai-lab-channel-status--available {
+  color: rgba(110, 231, 183, 0.88);
+  border-color: rgba(52, 211, 153, 0.22);
+  background: rgba(52, 211, 153, 0.06);
+}
+
+.ai-lab-channel-status--active {
+  color: rgba(125, 211, 252, 0.92);
+  border-color: rgba(125, 211, 252, 0.28);
+  background: rgba(125, 211, 252, 0.06);
+}
+
+.ai-lab-channel-status--limited {
+  color: rgba(253, 224, 71, 0.82);
+  border-color: rgba(250, 204, 21, 0.2);
+  background: rgba(250, 204, 21, 0.06);
+}
+
+.ai-lab-stack-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(226, 241, 255, 0.05);
+  font-size: 12px;
+}
+
+.ai-lab-stack-row:last-child {
+  border-bottom: none;
+}
+
+.ai-lab-stack-label {
+  min-width: 130px;
+  flex-shrink: 0;
+  color: rgba(198, 213, 233, 0.45);
+  font-size: 11px;
+}
+
+.ai-lab-stack-value {
+  color: rgba(226, 241, 255, 0.72);
+}
+
+.ai-lab-context-note-panel .ops-panel-head {
+  padding-bottom: 8px;
+}
+
+.ai-lab-context-note {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-lab-context-note p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(198, 213, 233, 0.52);
 }
 
 .ops-action-row {
@@ -7771,6 +7926,15 @@ body.mc-entry-mode #go-speech {
 .dp-kv strong {
   color: rgba(226, 241, 255, 0.85);
   font-weight: 500;
+}
+
+.dp-kv--missing span:first-child {
+  color: rgba(226, 241, 255, 0.22);
+}
+
+.dp-kv--missing strong {
+  color: rgba(226, 241, 255, 0.22);
+  font-weight: 400;
 }
 
 .dp-list {

@@ -1180,8 +1180,8 @@
       <section class="ops-hero">
         <div>
           <div class="ops-kicker">AI Lab</div>
-          <h1 class="ops-title">Talk and speech modules</h1>
-          <p id="ai-lab-summary" class="ops-subtitle">The intake surface, voice stack, and speech clarity workflows in one place.</p>
+          <h1 class="ops-title">Intake capture and context</h1>
+          <p id="ai-lab-summary" class="ops-subtitle">Capture and review intake signal before routing it into a real ATEAM workflow run.</p>
         </div>
         <div class="ops-hero-actions">
           <button id="ai-lab-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
@@ -1192,7 +1192,7 @@
 
       <section class="ops-metric-grid">
         <article class="ops-metric-card">
-          <div class="ops-metric-label">Talk Turns</div>
+          <div class="ops-metric-label">Intake Turns</div>
           <div id="ai-lab-metric-turns" class="ops-metric-value">0</div>
         </article>
         <article class="ops-metric-card">
@@ -1213,18 +1213,46 @@
         <article class="ops-panel">
           <div class="ops-panel-head">
             <div>
-              <div class="ops-panel-title">Lab Modules</div>
-              <div class="ops-panel-copy">High-level access to the core AI-facing surfaces.</div>
+              <div class="ops-panel-title">Quick Capture</div>
+              <div class="ops-panel-copy">Type a rough request here to create a workflow run directly, or use Intake for speech and longer context.</div>
             </div>
           </div>
-          <div id="ai-lab-modules" class="ops-card-stack"></div>
+          <div class="ai-lab-capture-block">
+            <textarea id="ai-lab-capture-input" class="ai-lab-capture-input" rows="4" placeholder="Describe the request or paste a transcript excerpt…"></textarea>
+            <div class="ai-lab-capture-actions">
+              <button class="ops-action-btn" type="button" data-action="lab-create-run">Create workflow run</button>
+              <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk-focus">Open full Intake</button>
+            </div>
+          </div>
         </article>
 
         <article class="ops-panel">
           <div class="ops-panel-head">
             <div>
-              <div class="ops-panel-title">Recent Speech Sessions</div>
-              <div class="ops-panel-copy">Clarity sessions already recorded in the speech module.</div>
+              <div class="ops-panel-title">Capture Channels</div>
+              <div class="ops-panel-copy">Available methods for capturing intake signal into ATEAM.</div>
+            </div>
+          </div>
+          <div id="ai-lab-modules" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Recent Intake Turns</div>
+              <div class="ops-panel-copy">Latest captured turns from the live talk timeline.</div>
+            </div>
+          </div>
+          <div id="ai-lab-turns" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Speech Sessions</div>
+              <div class="ops-panel-copy">Recorded clarity sessions. Each session can be reviewed and sent to a workflow run.</div>
             </div>
           </div>
           <div id="ai-lab-sessions" class="ops-card-stack"></div>
@@ -1235,21 +1263,24 @@
         <article class="ops-panel">
           <div class="ops-panel-head">
             <div>
-              <div class="ops-panel-title">Recent Conversation</div>
-              <div class="ops-panel-copy">Latest turns from the live talk timeline.</div>
-            </div>
-          </div>
-          <div id="ai-lab-turns" class="ops-card-stack"></div>
-        </article>
-
-        <article class="ops-panel">
-          <div class="ops-panel-head">
-            <div>
-              <div class="ops-panel-title">Capabilities</div>
-              <div class="ops-panel-copy">What the current browser and server configuration expose.</div>
+              <div class="ops-panel-title">Stack Status</div>
+              <div class="ops-panel-copy">Current browser and server capability state. Read-only.</div>
             </div>
           </div>
           <div id="ai-lab-capabilities" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel ai-lab-context-note-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">How AI Lab connects to ATEAM</div>
+            </div>
+          </div>
+          <div class="ai-lab-context-note">
+            <p>AI Lab is the intake and context-capture layer. It does not run workflows on its own.</p>
+            <p>Signal captured here — typed, spoken, or from a speech session — moves into the main ATEAM workflow path when you create a run or use Intake.</p>
+            <p>Routing, approvals, execution, and the Decision Pack all happen in Mission Control after a run is created.</p>
+          </div>
         </article>
       </section>
     </div>
