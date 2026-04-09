@@ -3191,6 +3191,12 @@ function mcPublicAgentRole(value) {
 function mcPublicLabel(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
+  const humanizeToken = (token) =>
+    String(token || "")
+      .replace(/(?:[_-])v\d+\b/gi, "")
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (match) => match.toUpperCase())
+      .trim();
   const normalized = raw.toLowerCase().replace(/\s+/g, " ");
   if (normalized === "ai_podcast") return speakerLabelById("ai_podcast");
   const mappedAgentId = MC_PUBLIC_AGENT_ROLE_BY_RUNTIME[normalized];
@@ -3198,11 +3204,9 @@ function mcPublicLabel(value) {
   const directAgent = mcAgentById(normalized);
   if (directAgent) return mcDisplayName(normalized) || mcCanonicalName(normalized) || raw;
   if (SPEAKER_OPTIONS.some((option) => option.id === normalized)) return speakerLabelById(normalized);
-  if (/^[a-z0-9]+(?:[_-][a-z0-9]+)+$/i.test(raw)) {
-    return raw
-      .replace(/(?:[_-])v\d+\b/gi, "")
-      .replace(/[_-]+/g, " ")
-      .replace(/\b\w/g, (match) => match.toUpperCase());
+  if (/^[a-z0-9]+(?:[_-][a-z0-9]+)+$/i.test(raw)) return humanizeToken(raw);
+  if (/[a-z0-9]+(?:[_-][a-z0-9]+)+/i.test(raw)) {
+    return raw.replace(/\b[a-z0-9]+(?:[_-][a-z0-9]+)+\b/gi, (token) => humanizeToken(token));
   }
   return raw;
 }
