@@ -630,6 +630,11 @@ body.ateam-integrated .mc-nav {
   padding: 10px 12px;
 }
 
+#dashboard-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 #dashboard-send,
 .decision-btn {
   border: 1px solid #2a3650;
@@ -641,6 +646,14 @@ body.ateam-integrated .mc-nav {
   font-size: var(--fs-sm);
 }
 
+#dashboard-send:disabled,
+.decision-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #131b2a;
+  color: #8293ad;
+}
+
 .thread-log {
   margin-top: 10px;
   border: 1px solid #2a3650;
@@ -650,6 +663,10 @@ body.ateam-integrated .mc-nav {
   max-height: 280px;
   overflow-y: auto;
   padding: 10px;
+}
+
+.dashboard-empty-note {
+  margin: 0;
 }
 
 .thread-line {

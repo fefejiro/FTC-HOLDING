@@ -130,7 +130,7 @@ const state = {
   view: localStorage.getItem("ATEAM_VIEW") || "entry",
   activeTaskId: "",
   activeTaskTitle: "",
-  activeAgent: "Coach",
+  activeAgent: "",
   currentThread: [],
   talkState: "idle",
   workflowState: "idle",
@@ -3168,6 +3168,45 @@ function mcCanonicalName(agentId) {
   return String(agent?.role || agentId || "").trim();
 }
 
+const MC_PUBLIC_AGENT_ROLE_BY_RUNTIME = {
+  coach: "henry",
+  strategist: "quill",
+  builder: "codex",
+  scout: "scout",
+  "think tank": "violet",
+  podcast: "echo"
+};
+
+function mcPublicAgentRole(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const normalized = raw.toLowerCase().replace(/\s+/g, " ");
+  const mappedAgentId = MC_PUBLIC_AGENT_ROLE_BY_RUNTIME[normalized];
+  if (mappedAgentId) return mcCanonicalName(mappedAgentId) || raw;
+  const directAgent = mcAgentById(normalized);
+  if (directAgent) return mcCanonicalName(normalized) || raw;
+  return raw;
+}
+
+function mcPublicLabel(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const normalized = raw.toLowerCase().replace(/\s+/g, " ");
+  if (normalized === "ai_podcast") return speakerLabelById("ai_podcast");
+  const mappedAgentId = MC_PUBLIC_AGENT_ROLE_BY_RUNTIME[normalized];
+  if (mappedAgentId) return mcCanonicalName(mappedAgentId) || raw;
+  const directAgent = mcAgentById(normalized);
+  if (directAgent) return mcDisplayName(normalized) || mcCanonicalName(normalized) || raw;
+  if (SPEAKER_OPTIONS.some((option) => option.id === normalized)) return speakerLabelById(normalized);
+  if (/^[a-z0-9]+(?:[_-][a-z0-9]+)+$/i.test(raw)) {
+    return raw
+      .replace(/(?:[_-])v\d+\b/gi, "")
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (match) => match.toUpperCase());
+  }
+  return raw;
+}
+
 function mcRunStateLabel(state) {
   const s = String(state || "").trim().toLowerCase();
   const labels = {
@@ -3843,9 +3882,13 @@ async function renderOffice2Activity() {
     const timeLabel = ts && Number.isFinite(ts.getTime())
       ? ts.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })
       : "--:--:--";
-    const source = [String(event?.actor || ""), String(event?.lane || "")].filter(Boolean).join(" \u2022 ");
-    const summary = String(event?.summary || "").trim() || String(event?.type || "").trim();
-    const type = String(event?.type || "").trim();
+    const source = [String(event?.actor || ""), String(event?.lane || "")]
+      .map((value) => mcPublicLabel(value))
+      .filter(Boolean)
+      .join(" \u2022 ");
+    const rawSummary = String(event?.summary || "").trim() || String(event?.type || "").trim();
+    const summary = mcPublicLabel(rawSummary);
+    const type = mcPublicLabel(String(event?.type || "").trim());
     row.innerHTML = `
       <div class="office2-activity-time">${escapeHtml(timeLabel)}</div>
       <div class="office2-activity-main">
@@ -5874,9 +5917,48 @@ async function handleMissionAction(action, dataset = {}) {
 }
 
 function updateSelectionUi() {
-  if (chipTask) chipTask.textContent = `Task: ${state.activeTaskId || "none"}`;
-  if (chipAgent) chipAgent.textContent = `Agent: ${state.activeAgent || "Coach"}`;
+  const hasActiveTask = Boolean(state.activeTaskId);
+  const taskLabel = hasActiveTask ? (state.activeTaskTitle || state.activeTaskId) : "no run selected";
+  const agentLabel = hasActiveTask ? mcPublicAgentRole(state.activeAgent) || "Unassigned" : "no agent selected";
+  if (chipTask) chipTask.textContent = `Task: ${taskLabel}`;
+  if (chipAgent) chipAgent.textContent = `Agent: ${agentLabel}`;
   if (talkTaskLabel) talkTaskLabel.textContent = `Session Thread: ${GLOBAL_PODCAST_ID}`;
+  updateDashboardConsoleState();
+}
+
+function updateDashboardConsoleState() {
+  const hasActiveTask = Boolean(state.activeTaskId);
+  if (dashboardInput) {
+    dashboardInput.disabled = !hasActiveTask;
+    dashboardInput.placeholder = hasActiveTask
+      ? "Send a command for the selected workflow run"
+      : "Select a workflow run to send a command";
+  }
+  if (dashboardSend) {
+    dashboardSend.disabled = !hasActiveTask;
+    dashboardSend.setAttribute("aria-disabled", String(!hasActiveTask));
+  }
+  decisionButtons.forEach((button) => {
+    button.disabled = !hasActiveTask;
+    button.setAttribute("aria-disabled", String(!hasActiveTask));
+    button.title = hasActiveTask ? "" : "Select a workflow run first";
+  });
+  if (!dashboardThread) return;
+  if (!hasActiveTask) {
+    dashboardThread.innerHTML = `
+      <div class="mc-placeholder dashboard-empty-note">
+        No workflow run selected. Start from the entry view or choose a run from the list first.
+      </div>
+    `;
+    return;
+  }
+  if (!dashboardThread.childElementCount) {
+    dashboardThread.innerHTML = `
+      <div class="mc-placeholder dashboard-empty-note">
+        No messages yet for this workflow run.
+      </div>
+    `;
+  }
 }
 
 function formatRelativeTime(timestamp) {
@@ -5924,7 +6006,10 @@ function renderDashboardThread(thread) {
   if (!dashboardThread) return;
   dashboardThread.innerHTML = "";
 
-  if (!thread || !thread.length) return;
+  if (!thread || !thread.length) {
+    updateDashboardConsoleState();
+    return;
+  }
 
   // Group messages by time period
   const groups = {};
@@ -5971,6 +6056,7 @@ function renderDashboardThread(thread) {
       dashboardThread.appendChild(row);
     });
   }
+  updateDashboardConsoleState();
 }
 
 function renderTalkTranscript(thread) {
@@ -9459,6 +9545,10 @@ function selectTaskCard(card) {
 }
 
 async function handleDashboardSend() {
+  if (!state.activeTaskId) {
+    showToast("Select a workflow run first.", "error");
+    return;
+  }
   const text = String(dashboardInput?.value || "").trim();
   if (!text) return;
 

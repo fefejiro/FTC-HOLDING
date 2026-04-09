@@ -203,19 +203,21 @@
 
   <section class="console-wrap view" id="dashboard-console" data-mc-page="tasks">
     <div class="console-header">
-      <div class="chip" id="chip-task">Task: none</div>
-      <div class="chip" id="chip-agent">Agent: Coach</div>
+      <div class="chip" id="chip-task">Task: no run selected</div>
+      <div class="chip" id="chip-agent">Agent: no agent selected</div>
       <div class="chip" id="chip-api">API: disconnected</div>
     </div>
     <div class="console-row">
-      <input id="dashboard-input" type="text" placeholder="Send a command for selected task" />
-      <button id="dashboard-send">Send</button>
+      <input id="dashboard-input" type="text" placeholder="Select a workflow run to send a command" disabled />
+      <button id="dashboard-send" disabled aria-disabled="true">Send</button>
     </div>
-    <div id="dashboard-thread" class="thread-log"></div>
+    <div id="dashboard-thread" class="thread-log">
+      <div class="mc-placeholder dashboard-empty-note">No workflow run selected. Start from the entry view or choose a run from the list first.</div>
+    </div>
     <div class="decision-row">
-      <button class="decision-btn" data-action="approve">Approve</button>
-      <button class="decision-btn" data-action="revise">Revise</button>
-      <button class="decision-btn" data-action="kill">Kill</button>
+      <button class="decision-btn" data-action="approve" disabled aria-disabled="true">Approve</button>
+      <button class="decision-btn" data-action="revise" disabled aria-disabled="true">Revise</button>
+      <button class="decision-btn" data-action="kill" disabled aria-disabled="true">Kill</button>
     </div>
   </section>
 
