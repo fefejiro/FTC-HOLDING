@@ -1,15 +1,19 @@
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
-import { ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
-import { SITE_URL } from "../../../lib/site";
+import { getOgTradesMetadata, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
+import { getRequestHost } from "../../../lib/requestHost";
 
-export const metadata: Metadata = {
-  title: "Trading Resources and Video Library | OG_Trades Academy",
-  description:
-    "Free resources, SEO-ready content ideas, and the full embedded OG_Trades Academy YouTube video library.",
-  alternates: { canonical: `${SITE_URL}/og-trades-academy/resources` }
-};
+export function generateMetadata(): Metadata {
+  const requestHost = getRequestHost();
+  return getOgTradesMetadata({
+    title: "Trading Resources and Video Library | OG_Trades Academy",
+    description:
+      "Free resources, SEO-ready content ideas, and the full embedded OG_Trades Academy YouTube video library.",
+    pathname: "/resources",
+    host: requestHost
+  });
+}
 
 export default function OgTradesResourcesPage() {
   return (
@@ -92,4 +96,3 @@ export default function OgTradesResourcesPage() {
     </div>
   );
 }
-

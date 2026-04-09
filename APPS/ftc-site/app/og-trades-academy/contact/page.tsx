@@ -1,16 +1,20 @@
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import OgTradesEnrollmentForm from "../../components/og-trades/OgTradesEnrollmentForm";
-import { ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
-import { SITE_URL } from "../../../lib/site";
+import { getOgTradesMetadata, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
+import { getRequestHost } from "../../../lib/requestHost";
 
-export const metadata: Metadata = {
-  title: "Contact and Enrollment | OG_Trades Academy",
-  description:
-    "Contact OG_Trades Academy, request enrollment details, and connect through the active social and community channels.",
-  alternates: { canonical: `${SITE_URL}/og-trades-academy/contact` }
-};
+export function generateMetadata(): Metadata {
+  const requestHost = getRequestHost();
+  return getOgTradesMetadata({
+    title: "Contact and Enrollment | OG_Trades Academy",
+    description:
+      "Contact OG_Trades Academy, request enrollment details, and connect through the active social and community channels.",
+    pathname: "/contact",
+    host: requestHost
+  });
+}
 
 export default function OgTradesContactPage() {
   return (
@@ -60,4 +64,3 @@ export default function OgTradesContactPage() {
     </div>
   );
 }
-

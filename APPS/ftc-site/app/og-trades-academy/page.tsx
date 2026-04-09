@@ -1,81 +1,92 @@
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
 import CTABanner from "../components/CTABanner";
 import OgTradesHero from "../components/og-trades/OgTradesHero";
-import { ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
-import { SITE_URL } from "../../lib/site";
+import {
+  getOgTradesAbsoluteUrl,
+  getOgTradesBrandedPath,
+  getOgTradesMetadata,
+  ogTradesAcademyConfig
+} from "../../lib/ogTradesAcademy";
+import { getRequestHost } from "../../lib/requestHost";
 
-const organizationSchema = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: ogTradesAcademyConfig.companyName,
-  url: `${SITE_URL}/og-trades-academy`,
-  sameAs: [
-    ogTradesAcademyConfig.beaconsUrl,
-    ogTradesAcademyConfig.youtubeUrl,
-    ogTradesAcademyConfig.tiktokUrl,
-    ogTradesAcademyConfig.instagramUrl
-  ],
-  logo: ogTradesAcademyConfig.profileImageUrl
-};
-
-const courseSchema = {
-  "@context": "https://schema.org",
-  "@type": "Course",
-  name: ogTradesAcademyConfig.courseName,
-  description:
-    "An 8-week beginner forex course covering market structure, risk management, chart analysis, entry and exit planning, and trading mindset.",
-  provider: {
-    "@type": "Organization",
-    name: ogTradesAcademyConfig.companyName,
-    sameAs: ogTradesAcademyConfig.beaconsUrl
-  },
-  hasCourseInstance: {
-    "@type": "CourseInstance",
-    courseMode: "online",
-    instructor: {
-      "@type": "Person",
-      name: ogTradesAcademyConfig.founderName
-    }
-  },
-  offers: {
-    "@type": "Offer",
-    category: "Forex trading education",
-    price: "199",
-    priceCurrency: "USD",
-    url: ogTradesAcademyConfig.coursePurchaseUrl,
-    availability: "https://schema.org/InStock"
-  },
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "5",
-    reviewCount: "1"
-  }
-};
-
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: ogTradesAcademyConfig.faqs.map((faq) => ({
-    "@type": "Question",
-    name: faq.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: faq.answer
-    }
-  }))
-};
-
-export const metadata: Metadata = {
-  title: "OG_Trades Academy | Beginner Forex Education and Trading Community",
-  description:
-    "A premium forex education hub for beginner traders: 8-week beginner course, risk-first training, YouTube lessons, and community access.",
-  alternates: { canonical: `${SITE_URL}/og-trades-academy` }
-};
+export function generateMetadata(): Metadata {
+  const requestHost = getRequestHost();
+  return getOgTradesMetadata({
+    title: "OG_Trades Academy | Beginner Forex Education and Trading Community",
+    description:
+      "A premium forex education hub for beginner traders: 8-week beginner course, risk-first training, YouTube lessons, and community access.",
+    pathname: "/",
+    host: requestHost
+  });
+}
 
 export default function OgTradesAcademyHomePage() {
+  const requestHost = getRequestHost();
+  const canonicalUrl = getOgTradesAbsoluteUrl("/", { host: requestHost });
+  const aboutHref = getOgTradesBrandedPath("/about", { host: requestHost });
+  const courseHref = getOgTradesBrandedPath("/course", { host: requestHost });
+  const communityHref = getOgTradesBrandedPath("/community", { host: requestHost });
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: ogTradesAcademyConfig.companyName,
+    url: canonicalUrl,
+    sameAs: [
+      ogTradesAcademyConfig.beaconsUrl,
+      ogTradesAcademyConfig.youtubeUrl,
+      ogTradesAcademyConfig.tiktokUrl,
+      ogTradesAcademyConfig.instagramUrl
+    ],
+    logo: ogTradesAcademyConfig.profileImageUrl
+  };
+  const courseSchema = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: ogTradesAcademyConfig.courseName,
+    description:
+      "An 8-week beginner forex course covering market structure, risk management, chart analysis, entry and exit planning, and trading mindset.",
+    provider: {
+      "@type": "Organization",
+      name: ogTradesAcademyConfig.companyName,
+      sameAs: ogTradesAcademyConfig.beaconsUrl
+    },
+    hasCourseInstance: {
+      "@type": "CourseInstance",
+      courseMode: "online",
+      instructor: {
+        "@type": "Person",
+        name: ogTradesAcademyConfig.founderName
+      }
+    },
+    offers: {
+      "@type": "Offer",
+      category: "Forex trading education",
+      price: "199",
+      priceCurrency: "USD",
+      url: ogTradesAcademyConfig.coursePurchaseUrl,
+      availability: "https://schema.org/InStock"
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "5",
+      reviewCount: "1"
+    }
+  };
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: ogTradesAcademyConfig.faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer
+      }
+    }))
+  };
   const featuredVideos = ogTradesAcademyConfig.videos.slice(0, 3);
 
   return (
@@ -114,7 +125,7 @@ export default function OgTradesAcademyHomePage() {
                 ))}
               </ul>
               <div className="hero-cta-row">
-                <Link href="/og-trades-academy/about" prefetch={false} className="btn btn-secondary">
+                <Link href={aboutHref} prefetch={false} className="btn btn-secondary">
                   Read the founder story
                 </Link>
                 <a href={ogTradesAcademyConfig.youtubeUrl} target="_blank" rel="noreferrer" className="inline-link">
@@ -184,7 +195,7 @@ export default function OgTradesAcademyHomePage() {
                 ))}
               </ul>
               <div className="hero-cta-row">
-                <Link href="/og-trades-academy/course" prefetch={false} className="btn btn-primary">
+                <Link href={courseHref} prefetch={false} className="btn btn-primary">
                   See the full syllabus
                 </Link>
                 <a href={ogTradesAcademyConfig.coursePurchaseUrl} target="_blank" rel="noreferrer" className="btn btn-secondary">
@@ -273,12 +284,11 @@ export default function OgTradesAcademyHomePage() {
           title="Ready to turn OG_Trades Academy into a premium learning hub?"
           description="Explore the full course page, view the trading resources stack, or jump straight into the community pathway."
           primaryLabel="View the Course Page"
-          primaryHref="/og-trades-academy/course"
+          primaryHref={courseHref}
           secondaryLabel="Join the Community"
-          secondaryHref="/og-trades-academy/community"
+          secondaryHref={communityHref}
         />
       </div>
     </div>
   );
 }
-

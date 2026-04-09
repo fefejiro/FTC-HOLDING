@@ -1,16 +1,26 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { gardenCleanersConfig } from "../../lib/gardenCleaners";
-import { ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
+import { getOgTradesNavLinks, isOgTradesCustomHost, ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
 import SocialIcons from "./SocialIcons";
 
-export default function Footer() {
+export default function Footer({ initialHost = "" }: { initialHost?: string }) {
   const pathname = usePathname();
+  const [runtimeHost, setRuntimeHost] = useState(initialHost.toLowerCase());
   const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
-  const isOgTradesSite = pathname?.startsWith("/og-trades-academy") ?? false;
+  const isOgTradesSite =
+    (pathname?.startsWith("/og-trades-academy") ?? false) || isOgTradesCustomHost(runtimeHost);
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    setRuntimeHost(window.location.host.toLowerCase());
+  }, []);
 
   if (isGardenSite) {
     return (
@@ -53,7 +63,7 @@ export default function Footer() {
               </p>
             </div>
             <div className="footer-links">
-              {ogTradesAcademyConfig.nav.map((item) => (
+              {getOgTradesNavLinks({ host: runtimeHost }).map((item) => (
                 <a key={item.href} href={item.href}>{item.label}</a>
               ))}
             </div>

@@ -1,9 +1,9 @@
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import OgTradesEnrollmentForm from "../../components/og-trades/OgTradesEnrollmentForm";
-import { ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
-import { SITE_URL } from "../../../lib/site";
+import { getOgTradesMetadata, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
+import { getRequestHost } from "../../../lib/requestHost";
 
 const courseSchema = {
   "@context": "https://schema.org",
@@ -25,12 +25,16 @@ const courseSchema = {
   }
 };
 
-export const metadata: Metadata = {
-  title: "8 Week Beginner Forex Course | OG_Trades Academy",
-  description:
-    "Explore the OG_Trades Academy 8 Week Beginner Forex Course: structured weekly curriculum, course highlights, pricing, and enrollment details.",
-  alternates: { canonical: `${SITE_URL}/og-trades-academy/course` }
-};
+export function generateMetadata(): Metadata {
+  const requestHost = getRequestHost();
+  return getOgTradesMetadata({
+    title: "8 Week Beginner Forex Course | OG_Trades Academy",
+    description:
+      "Explore the OG_Trades Academy 8 Week Beginner Forex Course: structured weekly curriculum, course highlights, pricing, and enrollment details.",
+    pathname: "/course",
+    host: requestHost
+  });
+}
 
 export default function OgTradesCoursePage() {
   return (

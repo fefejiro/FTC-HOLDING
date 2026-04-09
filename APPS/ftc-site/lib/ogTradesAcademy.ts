@@ -1,3 +1,6 @@
+import type { Metadata } from "next";
+import { SITE_URL } from "./site";
+
 export type OgTradesNavLink = {
   label: string;
   href: string;
@@ -46,7 +49,105 @@ export type OgTradesVideo = {
   summary: string;
 };
 
+type OgTradesMetadataOptions = {
+  title: string;
+  description: string;
+  pathname?: string;
+  host?: string;
+};
+
 export const ogTradesAcademyBasePath = "/og-trades-academy" as const;
+const DEFAULT_OG_TRADES_SITE_URL = "https://www.ogtradesacademy.com";
+const configuredOgTradesSiteUrl =
+  process.env.NEXT_PUBLIC_OG_TRADES_SITE_URL ||
+  process.env.OG_TRADES_SITE_URL ||
+  DEFAULT_OG_TRADES_SITE_URL;
+
+export const OG_TRADES_SITE_URL = configuredOgTradesSiteUrl.replace(/\/+$/, "");
+export const OG_TRADES_SITE_HOST = new URL(OG_TRADES_SITE_URL).host.toLowerCase();
+export const OG_TRADES_APEX_HOST = OG_TRADES_SITE_HOST.replace(/^www\./, "");
+export const OG_TRADES_WWW_HOST = OG_TRADES_SITE_HOST.startsWith("www.")
+  ? OG_TRADES_SITE_HOST
+  : `www.${OG_TRADES_SITE_HOST}`;
+export const OG_TRADES_ALTERNATE_HOST =
+  OG_TRADES_SITE_HOST === OG_TRADES_APEX_HOST ? OG_TRADES_WWW_HOST : OG_TRADES_APEX_HOST;
+
+export const ogTradesAcademyNavItems = [
+  { label: "Home", path: "/" },
+  { label: "About", path: "/about" },
+  { label: "Course", path: "/course" },
+  { label: "Resources", path: "/resources" },
+  { label: "Community", path: "/community" },
+  { label: "Contact", path: "/contact" }
+] as const;
+
+export const ogTradesAcademyPublicPaths = new Set<string>(ogTradesAcademyNavItems.map((item) => item.path));
+
+function normalizeHost(host = "") {
+  return String(host || "").trim().toLowerCase().replace(/:\d+$/, "");
+}
+
+function normalizePathname(pathname = "/") {
+  const normalized = `/${String(pathname || "/").trim().replace(/^\/+/, "")}`.replace(/\/+$/, "");
+  return normalized === "" ? "/" : normalized;
+}
+
+export function isOgTradesCustomHost(host = "") {
+  const normalized = normalizeHost(host);
+  return normalized === OG_TRADES_SITE_HOST || normalized === OG_TRADES_ALTERNATE_HOST;
+}
+
+export function isOgTradesRedirectHost(host = "") {
+  return normalizeHost(host) === OG_TRADES_ALTERNATE_HOST;
+}
+
+export function isOgTradesPublicPath(pathname = "/") {
+  return ogTradesAcademyPublicPaths.has(normalizePathname(pathname));
+}
+
+export function getOgTradesInternalPath(pathname = "/") {
+  const normalized = normalizePathname(pathname);
+  return normalized === "/" ? ogTradesAcademyBasePath : `${ogTradesAcademyBasePath}${normalized}`;
+}
+
+export function getOgTradesBrandedPath(
+  pathname = "/",
+  options: { host?: string; customDomain?: boolean } = {}
+) {
+  const normalized = normalizePathname(pathname);
+  const useCustomDomain = options.customDomain ?? isOgTradesCustomHost(options.host || "");
+  if (useCustomDomain) {
+    return normalized;
+  }
+  return getOgTradesInternalPath(normalized);
+}
+
+export function stripOgTradesBasePath(pathname = "/") {
+  const normalized = normalizePathname(pathname);
+  if (normalized === ogTradesAcademyBasePath) {
+    return "/";
+  }
+  if (normalized.startsWith(`${ogTradesAcademyBasePath}/`)) {
+    return normalized.slice(ogTradesAcademyBasePath.length);
+  }
+  return null;
+}
+
+export function getOgTradesAbsoluteUrl(
+  pathname = "/",
+  options: { host?: string; customDomain?: boolean } = {}
+) {
+  const useCustomDomain = options.customDomain ?? isOgTradesCustomHost(options.host || "");
+  const origin = useCustomDomain ? OG_TRADES_SITE_URL : SITE_URL;
+  return new URL(getOgTradesBrandedPath(pathname, { customDomain: useCustomDomain }), `${origin}/`).toString();
+}
+
+export function getOgTradesNavLinks(options: { host?: string; customDomain?: boolean } = {}): OgTradesNavLink[] {
+  return ogTradesAcademyNavItems.map((item) => ({
+    label: item.label,
+    href: getOgTradesBrandedPath(item.path, options)
+  }));
+}
 
 export const ogTradesAcademyConfig = {
   companyName: "OG_Trades Academy",
@@ -69,15 +170,7 @@ export const ogTradesAcademyConfig = {
   priceWas: "$399",
   priceNote: "50% off the regular rate",
   primaryCta: { label: "Buy the 8-Week Course", href: "https://shop.beacons.ai/ogtradesacademy.com/f2481efd-649b-4c42-badf-f1626ace2ea3" },
-  secondaryCta: { label: "See the Course Details", href: `${ogTradesAcademyBasePath}/course` },
-  nav: [
-    { label: "Home", href: ogTradesAcademyBasePath },
-    { label: "About", href: `${ogTradesAcademyBasePath}/about` },
-    { label: "Course", href: `${ogTradesAcademyBasePath}/course` },
-    { label: "Resources", href: `${ogTradesAcademyBasePath}/resources` },
-    { label: "Community", href: `${ogTradesAcademyBasePath}/community` },
-    { label: "Contact", href: `${ogTradesAcademyBasePath}/contact` }
-  ] satisfies OgTradesNavLink[],
+  secondaryCta: { label: "See the Course Details", href: "/course" },
   hero: {
     eyebrow: "Structured forex training for beginners",
     headline: "Learn forex with a clear plan, real trading context, and a risk-first foundation.",
@@ -335,3 +428,51 @@ export const ogTradesAcademyConfig = {
   disclaimer:
     "OG_Trades Academy provides trading education only. Nothing on this site should be treated as financial advice or a guarantee of trading performance."
 } as const;
+
+export function getOgTradesMetadata({
+  title,
+  description,
+  pathname = "/",
+  host
+}: OgTradesMetadataOptions): Metadata {
+  const canonicalUrl = getOgTradesAbsoluteUrl(pathname, { host });
+
+  return {
+    title,
+    description,
+    keywords: [
+      "OG Trades Academy",
+      "forex education",
+      "beginner forex course",
+      "forex trading community",
+      "risk management trading",
+      "OG Trades"
+    ],
+    alternates: {
+      canonical: canonicalUrl
+    },
+    icons: {
+      icon: "/images/brand/og-trades-logo.jpg",
+      shortcut: "/images/brand/og-trades-logo.jpg"
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: ogTradesAcademyConfig.companyName,
+      images: [
+        {
+          url: ogTradesAcademyConfig.profileImageUrl,
+          alt: `${ogTradesAcademyConfig.companyName} profile`
+        }
+      ]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogTradesAcademyConfig.profileImageUrl]
+    }
+  };
+}

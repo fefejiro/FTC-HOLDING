@@ -1,18 +1,23 @@
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import CTABanner from "../../components/CTABanner";
-import { ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
-import { SITE_URL } from "../../../lib/site";
+import { getOgTradesBrandedPath, getOgTradesMetadata, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
+import { getRequestHost } from "../../../lib/requestHost";
 
-export const metadata: Metadata = {
-  title: "About OG_Trades Academy | Risk-First Forex Education",
-  description:
-    "Meet the founder, trading focus, and educational philosophy behind OG_Trades Academy.",
-  alternates: { canonical: `${SITE_URL}/og-trades-academy/about` }
-};
+export function generateMetadata(): Metadata {
+  const requestHost = getRequestHost();
+  return getOgTradesMetadata({
+    title: "About OG_Trades Academy | Risk-First Forex Education",
+    description:
+      "Meet the founder, trading focus, and educational philosophy behind OG_Trades Academy.",
+    pathname: "/about",
+    host: requestHost
+  });
+}
 
 export default function OgTradesAboutPage() {
+  const requestHost = getRequestHost();
   return (
     <div className="og-site-shell">
       <div className="container page-content og-page-content">
@@ -95,12 +100,11 @@ export default function OgTradesAboutPage() {
           title="Want the full OG_Trades learning experience?"
           description="Move from the founder story into the course syllabus, resources stack, and community pathway."
           primaryLabel="See the Course"
-          primaryHref="/og-trades-academy/course"
+          primaryHref={getOgTradesBrandedPath("/course", { host: requestHost })}
           secondaryLabel="Browse Resources"
-          secondaryHref="/og-trades-academy/resources"
+          secondaryHref={getOgTradesBrandedPath("/resources", { host: requestHost })}
         />
       </div>
     </div>
   );
 }
-

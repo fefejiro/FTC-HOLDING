@@ -1,18 +1,23 @@
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import CTABanner from "../../components/CTABanner";
-import { ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
-import { SITE_URL } from "../../../lib/site";
+import { getOgTradesBrandedPath, getOgTradesMetadata, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
+import { getRequestHost } from "../../../lib/requestHost";
 
-export const metadata: Metadata = {
-  title: "Community | OG_Trades Academy",
-  description:
-    "Community benefits, social channels, and the join path for the OG_Trades Academy audience.",
-  alternates: { canonical: `${SITE_URL}/og-trades-academy/community` }
-};
+export function generateMetadata(): Metadata {
+  const requestHost = getRequestHost();
+  return getOgTradesMetadata({
+    title: "Community | OG_Trades Academy",
+    description:
+      "Community benefits, social channels, and the join path for the OG_Trades Academy audience.",
+    pathname: "/community",
+    host: requestHost
+  });
+}
 
 export default function OgTradesCommunityPage() {
+  const requestHost = getRequestHost();
   return (
     <div className="og-site-shell">
       <div className="container page-content og-page-content">
@@ -77,12 +82,11 @@ export default function OgTradesCommunityPage() {
           title="Want to move from community interest into structured learning?"
           description="Use the course page for curriculum depth and the resources hub for embedded lessons and supporting content."
           primaryLabel="See the Course"
-          primaryHref="/og-trades-academy/course"
+          primaryHref={getOgTradesBrandedPath("/course", { host: requestHost })}
           secondaryLabel="Open Resources"
-          secondaryHref="/og-trades-academy/resources"
+          secondaryHref={getOgTradesBrandedPath("/resources", { host: requestHost })}
         />
       </div>
     </div>
   );
 }
-

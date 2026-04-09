@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
+import { getOgTradesBrandedPath, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
+import { getRequestHost } from "../../../lib/requestHost";
 
 export default function OgTradesHero() {
+  const requestHost = getRequestHost();
   const primaryIsExternal = ogTradesAcademyConfig.primaryCta.href.startsWith("http");
+  const courseHref = getOgTradesBrandedPath("/course", { host: requestHost });
+  const curriculumHref = `${courseHref}#curriculum`;
 
   return (
     <section className="hero og-hero">
@@ -38,10 +42,10 @@ export default function OgTradesHero() {
                 {ogTradesAcademyConfig.primaryCta.label}
               </Link>
             )}
-            <Link href={ogTradesAcademyConfig.secondaryCta.href} prefetch={false} className="btn btn-secondary">
+            <Link href={courseHref} prefetch={false} className="btn btn-secondary">
               {ogTradesAcademyConfig.secondaryCta.label}
             </Link>
-            <Link href="/og-trades-academy/course#curriculum" prefetch={false} className="inline-link">
+            <Link href={curriculumHref} prefetch={false} className="inline-link">
               Explore the curriculum
             </Link>
           </div>

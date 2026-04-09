@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { gardenCleanersConfig } from "../../lib/gardenCleaners";
-import { ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
+import { getOgTradesBrandedPath, getOgTradesNavLinks, isOgTradesCustomHost, ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
 import { siteNav } from "../../lib/content";
 import { ATEAM_SITE_URL } from "../../lib/site";
@@ -50,13 +50,22 @@ function isProductsPath(pathname: string | null) {
   );
 }
 
-export default function Header() {
+export default function Header({ initialHost = "" }: { initialHost?: string }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [runtimeHost, setRuntimeHost] = useState(initialHost.toLowerCase());
   const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
-  const isOgTradesSite = pathname?.startsWith("/og-trades-academy") ?? false;
+  const isOgTradesHost = isOgTradesCustomHost(runtimeHost);
+  const isOgTradesSite = (pathname?.startsWith("/og-trades-academy") ?? false) || isOgTradesHost;
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
   const isDefaultUnaSite = !isGardenSite && !isOgTradesSite && !isPolarSite;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    setRuntimeHost(window.location.host.toLowerCase());
+  }, []);
 
   useEffect(() => {
     setIsOpen(false);
@@ -90,7 +99,7 @@ export default function Header() {
       return gardenCleanersConfig.nav;
     }
     if (isOgTradesSite) {
-      return ogTradesAcademyConfig.nav;
+      return getOgTradesNavLinks({ host: runtimeHost });
     }
     if (isPolarSite) {
       return polarAnchorConfig.nav;
@@ -103,7 +112,7 @@ export default function Header() {
   const homeHref = isGardenSite
     ? "/garden-cleaners"
     : isOgTradesSite
-      ? "/og-trades-academy"
+      ? getOgTradesBrandedPath("/", { host: runtimeHost })
       : isPolarSite
         ? "/polar-anchor"
         : "/";

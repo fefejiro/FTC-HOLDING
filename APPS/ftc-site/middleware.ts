@@ -1,5 +1,13 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import {
+  getOgTradesInternalPath,
+  isOgTradesCustomHost,
+  isOgTradesPublicPath,
+  isOgTradesRedirectHost,
+  OG_TRADES_SITE_HOST,
+  stripOgTradesBasePath
+} from "./lib/ogTradesAcademy";
 import { ATEAM_SITE_HOST, ATEAM_SITE_URL, LEGACY_CANONICAL_HOSTS, OPS_SITE_HOST, SITE_HOST } from "./lib/site";
 
 const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
@@ -13,6 +21,28 @@ const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
 function resolveRequestHost(req: NextRequest): string {
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
   return host.toLowerCase();
+}
+
+function buildRequestHeaders(req: NextRequest, host: string) {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-request-host", host);
+  return requestHeaders;
+}
+
+function nextWithRequestHost(req: NextRequest, host: string) {
+  return NextResponse.next({
+    request: {
+      headers: buildRequestHeaders(req, host)
+    }
+  });
+}
+
+function rewriteWithRequestHost(req: NextRequest, host: string, url: URL) {
+  return NextResponse.rewrite(url, {
+    request: {
+      headers: buildRequestHeaders(req, host)
+    }
+  });
 }
 
 function truthy(value?: string): boolean {
@@ -67,6 +97,31 @@ function withRuntimePageHeaders(req: NextRequest, response: NextResponse): NextR
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const host = resolveRequestHost(req);
+  const hostWithoutPort = host.replace(/:\d+$/, "");
+
+  if (isOgTradesRedirectHost(hostWithoutPort)) {
+    const url = req.nextUrl.clone();
+    url.protocol = "https";
+    url.host = OG_TRADES_SITE_HOST;
+    return NextResponse.redirect(url, 308);
+  }
+
+  if (isOgTradesCustomHost(hostWithoutPort)) {
+    const brandedPath = stripOgTradesBasePath(pathname);
+    if (brandedPath) {
+      const url = req.nextUrl.clone();
+      url.pathname = brandedPath;
+      return NextResponse.redirect(url, 308);
+    }
+
+    if (isOgTradesPublicPath(pathname)) {
+      const url = req.nextUrl.clone();
+      url.pathname = getOgTradesInternalPath(pathname);
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+    }
+
+    return nextWithRequestHost(req, hostWithoutPort);
+  }
 
   if (pathname === "/ateam" || pathname === "/ateam/" || pathname.startsWith("/ateam/")) {
     if (!isLocalHost(host) && host !== ATEAM_SITE_HOST && ATEAM_SITE_HOST !== SITE_HOST) {
@@ -89,11 +144,11 @@ export function middleware(req: NextRequest) {
   }
 
   if (allowPagesPreviewBypass(req, host)) {
-    return withRuntimePageHeaders(req, NextResponse.next());
+    return withRuntimePageHeaders(req, nextWithRequestHost(req, hostWithoutPort || host));
   }
 
   if (!shouldRedirectToCanonical(host)) {
-    return withRuntimePageHeaders(req, NextResponse.next());
+    return withRuntimePageHeaders(req, nextWithRequestHost(req, hostWithoutPort || host));
   }
 
   const url = req.nextUrl.clone();
