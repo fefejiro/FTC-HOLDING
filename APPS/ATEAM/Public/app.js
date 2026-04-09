@@ -2799,7 +2799,7 @@ function renderTeamPage() {
     <section class="team-map-panel">
       <div class="team-map-header">
         <h2 class="team-map-title">Org Map</h2>
-        <p class="team-map-note">Full role picture. The locked operating roster is 8 agents: henry, scout, codex, quill, echo, violet, ralph, pixel.</p>
+        <p class="team-map-note">Full role picture. The locked operating roster covers Manchi, Maro, Bunur, Kevwe, Tobi, Ada, Seyi, and Ife.</p>
       </div>
       <div class="team-map">
         <div class="team-row team-row--top">${henry}</div>
@@ -3198,6 +3198,7 @@ function mcPublicLabel(value) {
       .replace(/\b\w/g, (match) => match.toUpperCase())
       .trim();
   const normalized = raw.toLowerCase().replace(/\s+/g, " ");
+  if (normalized === "system") return "System";
   if (normalized === "ai_podcast") return speakerLabelById("ai_podcast");
   const mappedAgentId = MC_PUBLIC_AGENT_ROLE_BY_RUNTIME[normalized];
   if (mappedAgentId) return mcCanonicalName(mappedAgentId) || raw;
@@ -4458,7 +4459,7 @@ async function renderCouncilPage({ force = false } = {}) {
       {
         seat: `Research Analyst / ${mcDisplayName("violet")}`,
         focus: signals.length ? `Signals are stacking. ${signals.length} intake item${signals.length === 1 ? "" : "s"} need framing.` : "No new external signal pressure.",
-        note: topics.length ? `${topics.length} topic${topics.length === 1 ? "" : "s"} already promoted into direction.` : "Scout has room to look wider."
+        note: topics.length ? `${topics.length} topic${topics.length === 1 ? "" : "s"} already promoted into direction.` : "Signals has room to widen coverage."
       },
       {
         seat: `QA Lead / ${mcDisplayName("ralph")}`,
@@ -4511,7 +4512,7 @@ async function renderCouncilPage({ force = false } = {}) {
       {
         title: "Signals",
         value: `${signals.length} live`,
-        note: topics.length ? `${topics.length} already promoted` : "Scout can sift these next"
+        note: topics.length ? `${topics.length} already promoted` : "Signals can sift these next"
       },
       {
         title: "Delivery",
