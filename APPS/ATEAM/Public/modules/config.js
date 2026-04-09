@@ -101,10 +101,10 @@
   };
 
   const OFFICE_AGENTS = [
-    { id: "scout", name: "Tinye isi", role: "Signals", initials: "TI", mapsTo: "Scout" },
-    { id: "quill", name: "Eze", role: "Writer", initials: "EZ", mapsTo: "Quill" },
-    { id: "codex", name: "Billy", role: "Builder", initials: "BI", mapsTo: "Builder" },
-    { id: "henry", name: "Manchi", role: "Coordinator", initials: "MA", mapsTo: "Coach" }
+    { id: "scout", name: "Tobi", role: "Signals Analyst", initials: "TO", mapsTo: "Scout" },
+    { id: "quill", name: "Kevwe", role: "Content Strategist", initials: "KE", mapsTo: "Quill" },
+    { id: "codex", name: "Maro", role: "Lead Engineer", initials: "MR", mapsTo: "Builder" },
+    { id: "henry", name: "Manchi", role: "Chief of Staff", initials: "MA", mapsTo: "Coach" }
   ];
 
   const OFFICE_COOLER_OFFSETS = [
@@ -231,10 +231,12 @@
     ops: "ops"
   };
 
+  // Locked roster of 8 official agents. alex is a supporting slot, not in the locked roster.
+  const OFFICE2_LOCKED_AGENT_IDS = ["henry", "scout", "codex", "quill", "echo", "violet", "ralph", "pixel"];
+
   const OFFICE2_AGENT_DIRECTORY = [
     {
       id: "alex",
-      canonicalName: "Alex",
       displayName: "Alex",
       role: "Ops",
       lane: OFFICE2_LANES.OPS,
@@ -244,9 +246,8 @@
     },
     {
       id: "henry",
-      canonicalName: "Henry",
       displayName: "Manchi",
-      role: "Coordinator",
+      role: "Chief of Staff",
       lane: OFFICE2_LANES.COORDINATION,
       silhouetteIcon: OFFICE2_ROLE_ICONS.coordinator,
       mapsTo: "henry",
@@ -254,9 +255,8 @@
     },
     {
       id: "scout",
-      canonicalName: "Scout",
-      displayName: "Tinye isi",
-      role: "Signals",
+      displayName: "Tobi",
+      role: "Signals Analyst",
       lane: OFFICE2_LANES.SIGNALS,
       silhouetteIcon: OFFICE2_ROLE_ICONS.signals,
       mapsTo: "scout",
@@ -264,9 +264,8 @@
     },
     {
       id: "quill",
-      canonicalName: "Quill",
-      displayName: "Eze",
-      role: "Writer",
+      displayName: "Kevwe",
+      role: "Content Strategist",
       lane: OFFICE2_LANES.CONTENT,
       silhouetteIcon: OFFICE2_ROLE_ICONS.writer,
       mapsTo: "quill",
@@ -274,9 +273,8 @@
     },
     {
       id: "pixel",
-      canonicalName: "Pixel",
-      displayName: "Nwa Baby",
-      role: "Design",
+      displayName: "Ada",
+      role: "Visual Designer",
       lane: OFFICE2_LANES.DESIGN,
       silhouetteIcon: OFFICE2_ROLE_ICONS.design,
       mapsTo: "",
@@ -284,9 +282,8 @@
     },
     {
       id: "echo",
-      canonicalName: "Echo",
-      displayName: "Otota",
-      role: "Voice",
+      displayName: "Seyi",
+      role: "Channel Manager",
       lane: OFFICE2_LANES.VOICE,
       silhouetteIcon: OFFICE2_ROLE_ICONS.voice,
       mapsTo: "",
@@ -294,29 +291,17 @@
     },
     {
       id: "codex",
-      canonicalName: "Codex",
-      displayName: "Billy",
-      role: "Builder",
+      displayName: "Maro",
+      role: "Lead Engineer",
       lane: OFFICE2_LANES.BUILD,
       silhouetteIcon: OFFICE2_ROLE_ICONS.builder,
       mapsTo: "codex",
       emoji: "🛠"
     },
     {
-      id: "charlie",
-      canonicalName: "Charlie",
-      displayName: "Abobis",
-      role: "Build Support",
-      lane: OFFICE2_LANES.BUILD,
-      silhouetteIcon: OFFICE2_ROLE_ICONS.builder,
-      mapsTo: "",
-      emoji: "🧩"
-    },
-    {
       id: "violet",
-      canonicalName: "Violet",
-      displayName: "Violet",
-      role: "Think Tank",
+      displayName: "Ife",
+      role: "Research Analyst",
       lane: OFFICE2_LANES.THINK_TANK,
       silhouetteIcon: OFFICE2_ROLE_ICONS.think_tank,
       mapsTo: "",
@@ -324,9 +309,8 @@
     },
     {
       id: "ralph",
-      canonicalName: "Ralph",
-      displayName: "Go Well Daughter",
-      role: "QA",
+      displayName: "Bunur",
+      role: "QA Lead",
       lane: OFFICE2_LANES.QA,
       silhouetteIcon: OFFICE2_ROLE_ICONS.qa,
       mapsTo: "",
@@ -365,7 +349,7 @@
     {
       id: "integrations",
       name: "Integrations",
-      ownerAgentId: "charlie",
+      ownerAgentId: "echo",
       summary: "Extend ATEAM beyond the local shell through gateways, approvals, and external touchpoints.",
       outcome: "Operational integrations that still respect the approval-first model.",
       linkedWorkItemIds: ["wi_seed_integrations"],
@@ -464,8 +448,10 @@
     OFFICE2_LANE_ACCENTS,
     OFFICE2_ROLE_ICONS,
     OFFICE2_AGENT_DIRECTORY,
+    OFFICE2_LOCKED_AGENT_IDS,
     PROJECT_PORTFOLIO,
     OFFICE2_ZONE_ANCHORS,
     OFFICE2_COOLER_CLUSTER
   });
 })();
+

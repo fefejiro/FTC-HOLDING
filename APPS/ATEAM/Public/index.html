@@ -112,7 +112,7 @@
         </div>
         <div class="mc-top-actions">
           <button id="mc-pause" class="mc-top-btn" type="button"><span aria-hidden="true">⏸</span> Pause</button>
-          <button id="mc-ping" class="mc-top-btn" type="button">Ping Manchi</button>
+          <button id="mc-ping" class="mc-top-btn" type="button">Ping Chief of Staff</button>
           <button id="mc-status" class="mc-icon-btn" type="button" aria-label="Status">
             <span class="mc-status-dot" aria-hidden="true"></span>
           </button>
@@ -195,49 +195,10 @@
   </main>
 
   <main id="dashboard-view" class="view dashboard-view hidden" data-mc-page="tasks">
-    <aside class="team-roster">
-      <h2>Team</h2>
-      <div class="agent-row" data-agent="Coach"><span class="agent-name">Coach</span><span class="agent-role">Coordinator</span><span class="agent-runtime-status" id="agent-status-coach">Idle</span></div>
-      <div class="agent-row" data-agent="Strategist"><span class="agent-name">Strategist</span><span class="agent-role">Architecture</span><span class="agent-runtime-status" id="agent-status-strategist">Idle</span></div>
-      <div class="agent-row" data-agent="Builder"><span class="agent-name">Builder</span><span class="agent-role">Apps Lab</span><span class="agent-runtime-status" id="agent-status-builder">Idle</span></div>
-      <div class="agent-row" data-agent="Scout"><span class="agent-name">Scout</span><span class="agent-role">Jobs Command</span><span class="agent-runtime-status" id="agent-status-scout">Idle</span></div>
-      <div class="agent-row" data-agent="Think Tank"><span class="agent-name">Think Tank</span><span class="agent-role">Learning</span><span class="agent-runtime-status" id="agent-status-thinker">Idle</span></div>
-      <div class="agent-row" data-agent="Podcast"><span class="agent-name">Podcast</span><span class="agent-role">Talk Agent</span><span class="agent-runtime-status" id="agent-status-podcast">Idle</span></div>
-    </aside>
-
-    <section class="map-panel">
-      <h2>Operations Map</h2>
-      <div class="map" id="map">
-        <div class="room" id="room-strategy">Strategy Core</div>
-        <div class="room" id="room-apps">Apps Lab</div>
-        <div class="room" id="room-jobs">Jobs Command</div>
-        <div class="room" id="room-think">Think Tank</div>
-        <div class="agent-token" id="token-coach" data-agent="Coach">Coach</div>
-        <div class="agent-token" id="token-strategist" data-agent="Strategist">Strategist</div>
-        <div class="agent-token" id="token-builder" data-agent="Builder">Builder</div>
-        <div class="agent-token" id="token-scout" data-agent="Scout">Scout</div>
-        <div class="agent-token" id="token-thinker" data-agent="Think Tank">Think Tank</div>
-      </div>
-    </section>
-
-    <aside class="task-panel">
-      <h2>Tasks</h2>
-      <div class="task-card" data-task-id="task_design_dashboard" data-agent="Builder" data-room="room-apps">
-        <div class="task-title">Design dashboard layout</div>
-        <div class="task-meta">Assigned to: Builder</div>
-        <div class="task-status">Status: <strong>created</strong></div>
-      </div>
-      <div class="task-card" data-task-id="task_define_roles" data-agent="Strategist" data-room="room-strategy">
-        <div class="task-title">Define AI roles</div>
-        <div class="task-meta">Assigned to: Strategist</div>
-        <div class="task-status">Status: <strong>created</strong></div>
-      </div>
-      <div class="task-card" data-task-id="task_jobs_pipeline" data-agent="Scout" data-room="room-jobs">
-        <div class="task-title">Build jobs pipeline</div>
-        <div class="task-meta">Assigned to: Scout</div>
-        <div class="task-status">Status: <strong>created</strong></div>
-      </div>
-    </aside>
+    <div class="mc-runs-header">
+      <h2>Workflow Runs</h2>
+    </div>
+    <div id="mc-runs-list" class="mc-runs-list"></div>
   </main>
 
   <section class="console-wrap view" id="dashboard-console" data-mc-page="tasks">
@@ -1133,7 +1094,19 @@
             <div class="factory-metric-label">AVG. PIPELINE TIME</div>
             <div id="factory-metric-avgtime" class="factory-metric-value">—</div>
           </div>
+          <div class="factory-metric" data-metric="completed">
+            <div class="factory-metric-label">COMPLETED PACKS</div>
+            <div id="factory-metric-completed" class="factory-metric-value">0</div>
+          </div>
         </div>
+      </section>
+
+      <section id="factory-completed-runs" class="factory-completed-section" aria-label="Completed decision packs">
+        <div class="factory-completed-header">
+          <div class="factory-completed-title">Completed Packs</div>
+          <div class="factory-completed-hint">Decision packs ready to hand off, export, or archive.</div>
+        </div>
+        <div id="factory-completed-list" class="factory-completed-list"></div>
       </section>
     </div>
   </main>

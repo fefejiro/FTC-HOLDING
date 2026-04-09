@@ -104,6 +104,7 @@ const {
   OFFICE2_LANE_ACCENTS,
   OFFICE2_ROLE_ICONS,
   OFFICE2_AGENT_DIRECTORY,
+  OFFICE2_LOCKED_AGENT_IDS,
   PROJECT_PORTFOLIO,
   OFFICE2_ZONE_ANCHORS,
   OFFICE2_COOLER_CLUSTER
@@ -398,6 +399,8 @@ const factoryMetricInProgress = document.getElementById("factory-metric-inprogre
 const factoryMetricBacklog = document.getElementById("factory-metric-backlog");
 const factoryMetricBlocked = document.getElementById("factory-metric-blocked");
 const factoryMetricAvgTime = document.getElementById("factory-metric-avgtime");
+const factoryMetricCompleted = document.getElementById("factory-metric-completed");
+const factoryCompletedList = document.getElementById("factory-completed-list");
 
 const chipTask = document.getElementById("chip-task");
 const chipAgent = document.getElementById("chip-agent");
@@ -720,6 +723,13 @@ async function apiListWorkflowRuns({ phase = "", limit = 80 } = {}) {
   if (limit) qs.set("limit", String(limit));
   const data = await apiRequest(`/api/workflow/runs?${qs.toString()}`);
   return Array.isArray(data?.runs) ? data.runs : [];
+}
+
+async function apiCreateWorkflowRun(idea, { requestedBy = "operator", category = "" } = {}) {
+  const body = { idea, requestedBy };
+  if (category) body.category = category;
+  const data = await apiRequest("/api/workflow/runs", { method: "POST", body });
+  return data?.run || null;
 }
 
 async function apiApproveWorkflowRun(runId, { gate = "brief", decision = "approved", actor = "operator" } = {}) {
@@ -2462,6 +2472,10 @@ function renderMissionControlView(view) {
   }
   if (view === "ai_lab") {
     void renderAiLabPage();
+    return;
+  }
+  if (view === "tasks") {
+    void renderTasksPage();
   }
 }
 
@@ -2651,9 +2665,7 @@ function renderApprovalDetail(approval) {
         if (!decision) return;
         btn.disabled = true;
         try {
-          await apiDecideApproval(id, decision, { sessionId: GLOBAL_PODCAST_ID, actor: "user" });
-          showToast(`Approval ${decision}.`, decision === "approved" ? "ok" : "error");
-          void renderApprovalsPage({ preserveSelection: true });
+          await mcHandleApprovalDecision(id, decision);
         } catch (err) {
           showToast("Approval decision failed.", "error");
           btn.disabled = false;
@@ -2709,51 +2721,39 @@ function renderTeamPage() {
   const agentById = (id) => OFFICE2_AGENT_DIRECTORY.find((a) => a.id === id) || null;
   const accentFor = (agent) => OFFICE2_LANE_ACCENTS[String(agent?.lane || "")] || "rgba(226, 241, 255, 0.7)";
 
+  // titleRole removed — role_title from locked registry shows directly via agent.role.
   const CARD_META = {
     henry: {
-      titleRole: "Chief of Staff",
-      blurb: "Coordinates, delegates, and keeps the map tight. First point of contact between tools and the commander.",
-      tags: ["Orchestration", "Clarity", "Delegation"]
-    },
-    charlie: {
-      titleRole: "Infrastructure Engineer",
-      blurb: "Keeps runtime stable. Builds the rails so shipping feels boring (in a good way).",
-      tags: ["testing", "infrastructure", "automation"]
+      blurb: "Keeps the operating picture tight, routes work across lanes, and makes sure decisions land cleanly.",
+      tags: ["Orchestration", "Alignment", "Delegation"]
     },
     ralph: {
-      titleRole: "Foreman / QA Manager",
-      blurb: "Checks the work, signs off on results, and blocks nonsense quality control.",
-      tags: ["Quality Assurance", "Monitoring", "Demo Recording"]
+      blurb: "Owns the quality gate, verifies outcomes, and blocks weak handoffs before they ship.",
+      tags: ["Quality", "Verification", "Sign-off"]
     },
     scout: {
-      titleRole: "Trend Analyst",
-      blurb: "Finds leads, tracks signals, surfaces opportunities.",
-      tags: ["Speed", "Radar", "Vibrant"]
+      blurb: "Tracks the market, spots live signals, and turns noise into actionable intelligence.",
+      tags: ["Signals", "Research", "Intelligence"]
     },
     quill: {
-      titleRole: "Content Writer",
-      blurb: "Turns raw signal into clear output. Keeps tone sharp and human.",
-      tags: ["Voice", "Clarity", "Design"]
+      blurb: "Shapes strategy into usable narratives, sharp briefs, and publish-ready messaging.",
+      tags: ["Strategy", "Messaging", "Clarity"]
     },
     pixel: {
-      titleRole: "Thumbnail Designer",
-      blurb: "Designs visuals that grab attention and stay on-brand.",
-      tags: ["Visual", "Attention", "Style"]
+      blurb: "Builds visuals that feel deliberate, persuasive, and consistent across the brand system.",
+      tags: ["Visual", "Brand", "Craft"]
     },
     echo: {
-      titleRole: "Social Media Manager",
-      blurb: "Posts, engages, and keeps the channel alive without getting banned.",
-      tags: ["Voice", "Speed", "Speech"]
+      blurb: "Runs channel execution so voice, podcast, and distribution work leave the system ready to publish.",
+      tags: ["Distribution", "Voice", "Operations"]
     },
     codex: {
-      titleRole: "Lead Engineer",
-      blurb: "Builds the system: code, runtime, and reliability.",
-      tags: ["Code", "Systems", "Reliability"]
+      blurb: "Owns the build lane from implementation through runtime reliability and technical delivery.",
+      tags: ["Engineering", "Systems", "Delivery"]
     },
     violet: {
-      titleRole: "Research Analyst",
       blurb: "Deep research and analysis. Turns ambiguity into options.",
-      tags: ["research", "analysis", "trends"]
+      tags: ["Research", "Analysis", "Options"]
     }
   };
 
@@ -2766,30 +2766,27 @@ function renderTeamPage() {
     const agent = agentById(agentId);
     const meta = CARD_META[agentId] || {};
     const accent = accentFor(agent);
-    const name = agent?.displayName || agent?.canonicalName || agentId;
-    const canonical = agent?.canonicalName || "";
-    const alias = canonical && canonical !== name ? canonical : "";
-    const role = meta.titleRole || agent?.role || "";
+    const role = agent?.role || "";
+    const displayName = agent?.displayName || agentId;
     const icon = agent?.emoji || "";
+    const slotNote = meta.channelSlot ? ` <span class="team-card-slot-note">channel slot</span>` : "";
 
     return `
-      <div class="team-card ${variant}" data-agent-id="${escapeHtml(agentId)}" style="--accent:${accent}">
+      <div class="team-card ${variant}${meta.channelSlot ? " team-card--slot" : ""}" data-agent-id="${escapeHtml(agentId)}" style="--accent:${accent}">
         <div class="team-card-head">
           <div class="team-card-avatar" aria-hidden="true">${escapeHtml(icon)}</div>
           <div class="team-card-head-meta">
-            <div class="team-card-name">${escapeHtml(name)}${alias ? ` <span class="team-card-alias">(${escapeHtml(alias)})</span>` : ""}</div>
-            <div class="team-card-role">${escapeHtml(role)}</div>
+            <div class="team-card-name">${escapeHtml(role || displayName)}${slotNote}</div>
+            <div class="team-card-role">${escapeHtml(displayName)}</div>
           </div>
         </div>
         <div class="team-card-desc">${escapeHtml(meta.blurb || "")}</div>
         ${renderTags(meta.tags)}
-        <div class="team-card-foot">ROLE CARD →</div>
       </div>
     `;
   };
 
   const henry = renderCard("henry", "team-card--primary");
-  const charlie = renderCard("charlie");
   const ralph = renderCard("ralph");
   const scout = renderCard("scout", "team-card--signal");
   const quill = renderCard("quill", "team-card--signal");
@@ -2800,11 +2797,15 @@ function renderTeamPage() {
 
   teamCanvas.innerHTML = `
     <section class="team-map-panel">
+      <div class="team-map-header">
+        <h2 class="team-map-title">Org Map</h2>
+        <p class="team-map-note">Full role picture. The locked operating roster is 8 agents: henry, scout, codex, quill, echo, violet, ralph, pixel.</p>
+      </div>
       <div class="team-map">
         <div class="team-row team-row--top">${henry}</div>
         <div class="team-connector team-connector--down" aria-hidden="true"></div>
-        <div class="team-divider"><span>FTC OPERATIONS (via Studio 2)</span></div>
-        <div class="team-row team-row--ops">${charlie}${ralph}</div>
+        <div class="team-divider"><span>FTC OPERATIONS</span></div>
+        <div class="team-row team-row--ops">${ralph}</div>
         <div class="team-divider team-divider--split" aria-hidden="true">
           <div class="team-divider-col"><span>INPUT SIGNAL</span></div>
           <div class="team-divider-col"><span>OUTPUT ACTION</span></div>
@@ -3158,12 +3159,29 @@ function mcAgentById(agentId) {
 
 function mcDisplayName(agentId) {
   const agent = mcAgentById(agentId);
-  return String(agent?.displayName || agent?.canonicalName || agentId || "").trim();
+  return String(agent?.displayName || agentId || "").trim();
 }
 
+// Returns the role_title for the agent. Used wherever a structured/audit label is needed.
 function mcCanonicalName(agentId) {
   const agent = mcAgentById(agentId);
-  return String(agent?.canonicalName || agentId || "").trim();
+  return String(agent?.role || agentId || "").trim();
+}
+
+function mcRunStateLabel(state) {
+  const s = String(state || "").trim().toLowerCase();
+  const labels = {
+    draft: "Draft",
+    planning: "Planning",
+    awaiting_approval: "Awaiting approval",
+    approved: "Approved",
+    executing: "Executing",
+    completed: "Completed",
+    failed: "Failed",
+    escalated: "Escalated",
+    queued: "Queued"
+  };
+  return labels[s] || s.replaceAll("_", " ");
 }
 
 let office2LiveTimer = null;
@@ -3323,9 +3341,10 @@ function stopOffice2LiveSync() {
 
 async function refreshOffice2Hud() {
   if (!officeRoomView || officeRoomView.classList.contains("hidden")) return;
-  const [approvals, workItems] = await Promise.all([
+  const [approvals, workItems, runsData] = await Promise.all([
     apiRequest("/api/approvals?status=pending&limit=50").then((d) => (Array.isArray(d?.approvals) ? d.approvals : [])).catch(() => []),
-    apiListWorkItems({ limit: 120 }).catch(() => [])
+    apiListWorkItems({ limit: 120 }).catch(() => []),
+    apiRequest("/api/workflow/runs?limit=20").then((d) => (Array.isArray(d?.runs) ? d.runs : [])).catch(() => [])
   ]);
 
   missionControlState.factory.workItems = Array.isArray(workItems) ? workItems : [];
@@ -3353,46 +3372,65 @@ async function refreshOffice2Hud() {
     meta[id] = { lastTask, nextAction };
   };
 
+  // Derive status from active WorkflowRuns — ownerAgentId shows who's carrying the run.
+  const activeRuns = (runsData || []).filter((r) => ["executing", "awaiting_approval", "approved"].includes(String(r?.state || "")));
+  const runByOwner = new Map();
+  for (const run of activeRuns) {
+    const ownerId = String(run?.ownerAgentId || "").trim();
+    if (ownerId && !runByOwner.has(ownerId)) runByOwner.set(ownerId, run);
+  }
+
+  // Store runs on state for Office activity feed
+  missionControlState.office2.activeRuns = activeRuns;
+
   const needsAttention = pendingApprovals.length > 0 || reviewItems.length > 0;
   if (needsAttention) {
     const attentionTask = pendingApprovals.length
       ? `Approval needed (${pendingApprovals.length})`
       : `Review queue (${reviewItems.length})`;
     setDerived("henry", "waiting_for_you", attentionTask, "Review with you");
+  } else if (runByOwner.has("henry")) {
+    const r = runByOwner.get("henry");
+    setDerived("henry", "working", r.brief?.title || r.title || "Active workflow", "Coordinating");
   } else {
     setDerived("henry", "idle", "No recent task", "");
   }
 
-  setDerived(
-    "codex",
-    buildItems.length ? "working" : "idle",
-    buildItems.length ? String(buildItems[0]?.title || "Build in progress") : "No recent task",
-    buildItems.length ? "Build" : ""
-  );
-  setDerived(
-    "charlie",
-    buildItems.length ? "working" : "idle",
-    buildItems.length ? String(buildItems[0]?.title || "Build support") : "No recent task",
-    buildItems.length ? "Support build" : ""
-  );
-  setDerived(
-    "ralph",
-    qaItems.length ? "working" : "idle",
-    qaItems.length ? String(qaItems[0]?.title || "QA checks") : "No recent task",
-    qaItems.length ? "Verify" : ""
-  );
-  setDerived(
-    "scout",
-    researchBacklog.length ? "working" : "idle",
-    researchBacklog.length ? String(researchBacklog[0]?.title || "Scanning signals") : "No recent task",
-    researchBacklog.length ? "Scan" : ""
-  );
-  setDerived(
-    "quill",
-    writeBacklog.length ? "working" : "idle",
-    writeBacklog.length ? String(writeBacklog[0]?.title || "Writing") : "No recent task",
-    writeBacklog.length ? "Draft" : ""
-  );
+  const runFallback = (id, ifWorkLabel, ifWorkAction) => {
+    if (runByOwner.has(id)) {
+      const r = runByOwner.get(id);
+      return setDerived(id, "working", r.brief?.title || r.title || "Active workflow", ifWorkAction || "Working");
+    }
+    setDerived(id, "idle", "No recent task", "");
+  };
+
+  if (buildItems.length) {
+    setDerived("codex", "working", String(buildItems[0]?.title || "Build in progress"), "Build");
+  } else {
+    runFallback("codex", "Build in progress", "Build");
+  }
+
+  if (qaItems.length) {
+    setDerived("ralph", "working", String(qaItems[0]?.title || "QA checks"), "Verify");
+  } else {
+    runFallback("ralph", "QA checks", "Verify");
+  }
+
+  if (researchBacklog.length) {
+    setDerived("scout", "working", String(researchBacklog[0]?.title || "Scanning signals"), "Scan");
+  } else {
+    runFallback("scout", "Scanning signals", "Scan");
+  }
+  if (writeBacklog.length) {
+    setDerived("quill", "working", String(writeBacklog[0]?.title || "Writing"), "Draft");
+  } else {
+    runFallback("quill", "Writing", "Draft");
+  }
+
+  // pixel, echo, and violet have no work-item signal — derive entirely from active runs.
+  runFallback("pixel", "Design work", "Design");
+  runFallback("echo", "Channel operations", "Manage channel");
+  runFallback("violet", "Research", "Research");
 
   missionControlState.office2.derivedStatus = derived;
   missionControlState.office2.derivedMeta = meta;
@@ -3417,7 +3455,9 @@ function stopOffice2HudSync() {
 
 function office2SeedRoster() {
   if (missionControlState.office2.roster.length) return missionControlState.office2.roster;
-  const roster = OFFICE2_AGENT_DIRECTORY.map((agent) => ({ ...agent }));
+  // Office shows only the 8 locked agents. alex is a supporting slot, not a crew member.
+  const locked = new Set(OFFICE2_LOCKED_AGENT_IDS);
+  const roster = OFFICE2_AGENT_DIRECTORY.filter((a) => locked.has(a.id)).map((agent) => ({ ...agent }));
   missionControlState.office2.roster = roster;
   return roster;
 }
@@ -3459,9 +3499,6 @@ function pixelPalette(agentId = "") {
   }
   if (id === "ralph") {
     return { skin: "#a56a48", body: "#f59e0b", pants: "#21273b", hair: "#50311a", accent: "#fde68a", glasses: true, hat: "cap" };
-  }
-  if (id === "charlie") {
-    return { skin: "#7c5639", body: "#64748b", pants: "#1a2236", hair: "#1f2433", accent: "#cbd5f5", glasses: true, hat: "" };
   }
   if (id === "alex") {
     return { skin: "#85543b", body: "#4f8cff", pants: "#1d2438", hair: "#0f172a", accent: "#bfdbfe", glasses: false, hat: "cap" };
@@ -3528,12 +3565,8 @@ function drawPixelPerson(canvas, agentId) {
   ctx.fillRect(9, 17, 2, 1);
 }
 
-function office2AgentHint(agent) {
-  return agent?.mapsTo ? "Open agent panel" : "Select crew member";
-}
-
 function office2AgentAriaLabel(agent) {
-  const display = String(agent?.displayName || agent?.canonicalName || agent?.id || "").trim();
+  const display = String(agent?.displayName || agent?.id || "").trim();
   const role = String(agent?.role || "Operator").trim();
   const status = office2StatusLabel(agent?.mapsTo || agent?.id);
   const task = office2TaskLabel(agent?.mapsTo || agent?.id);
@@ -3582,8 +3615,7 @@ function renderOffice2Entities() {
       el.type = "button";
       el.className = "office2-entity";
       el.dataset.agentId = agent.id;
-      el.dataset.canonicalName = agent.canonicalName || agent.displayName || agent.id;
-      el.dataset.displayName = agent.displayName || agent.canonicalName || agent.id;
+      el.dataset.displayName = agent.displayName || agent.id;
       el.dataset.lane = agent.lane || "";
       el.dataset.role = agent.role || "";
 
@@ -3610,7 +3642,8 @@ function renderOffice2Entities() {
       const label = document.createElement("div");
       label.className = "office2-entity-label";
       label.innerHTML = `
-        <div class="office2-entity-display">${escapeHtml(agent.displayName || agent.canonicalName || agent.id)}</div>
+        <div class="office2-entity-role">${escapeHtml(agent.role || "")}</div>
+        <div class="office2-entity-display">${escapeHtml(agent.displayName || agent.id)}</div>
       `;
 
       el.appendChild(spriteWrap);
@@ -3623,12 +3656,11 @@ function renderOffice2Entities() {
 
       el.addEventListener("mouseenter", () => {
         if (!office2Tooltip) return;
-        const display = String(agent.displayName || agent.canonicalName || "").trim();
-        const canonical = String(agent.canonicalName || "").trim();
+        const display = String(agent.displayName || agent.id || "").trim();
         const role = String(agent.role || "").trim();
         const task = office2TaskLabel(agent.mapsTo || agent.id);
 
-        const nameLine = canonical && display && display !== canonical ? `${display} (${canonical}) \u2013 ${role}` : `${display || canonical} \u2013 ${role}`;
+        const nameLine = role ? `${role} \u2013 ${display}` : display;
         const safeName = escapeHtml(nameLine.trim());
         const safeTask = task ? `<div class="office2-tip-task">${escapeHtml(task)}</div>` : "";
         office2Tooltip.innerHTML = `<div class="office2-tip-name">${safeName}</div>${safeTask}`;
@@ -3665,11 +3697,14 @@ function renderOffice2Entities() {
     const labelNode = el.querySelector(".office2-entity-label");
     if (labelNode) {
       const displayNode = labelNode.querySelector(".office2-entity-display");
-      if (displayNode) {
-        displayNode.textContent = agent.displayName || agent.canonicalName || agent.id;
+      if (displayNode) displayNode.textContent = agent.displayName || agent.id;
+      let roleNode = labelNode.querySelector(".office2-entity-role");
+      if (!roleNode && displayNode) {
+        roleNode = document.createElement("div");
+        roleNode.className = "office2-entity-role";
+        labelNode.insertBefore(roleNode, displayNode);
       }
-      const roleNode = labelNode.querySelector(".office2-entity-role");
-      if (roleNode) roleNode.remove();
+      if (roleNode) roleNode.textContent = agent.role || "";
     }
 
     const status = office2ComputeStatus(agent);
@@ -3731,19 +3766,19 @@ function renderOffice2AgentCards() {
   missionControlState.office2.selectedId = selected;
 
   office2AgentCards.innerHTML = "";
-  roster.slice(0, 7).forEach((agent) => {
+  roster.forEach((agent) => {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "office2-agent-card" + (agent.id === selected ? " active" : "");
     card.dataset.agentId = agent.id;
-    card.title = agent.canonicalName && agent.displayName && agent.canonicalName !== agent.displayName ? `${agent.displayName} (${agent.canonicalName}) \u00b7 ${agent.role}` : `${agent.displayName || agent.canonicalName} \u00b7 ${agent.role}`;
+    card.title = `${agent.role} \u00b7 ${agent.displayName || agent.id}`;
     card.setAttribute("aria-pressed", agent.id === selected ? "true" : "false");
     card.setAttribute("aria-label", office2AgentAriaLabel(agent));
     card.innerHTML = `
       <div class="office2-agent-avatar" aria-hidden="true"><canvas width="20" height="20"></canvas></div>
       <div class="office2-agent-meta">
-        <div class="office2-agent-name">${escapeHtml(agent.displayName || agent.canonicalName || agent.id)}</div>
-        <div class="office2-agent-hint">${escapeHtml(office2AgentHint(agent))}</div>
+        <div class="office2-agent-name">${escapeHtml(agent.role || agent.id)}</div>
+        <div class="office2-agent-hint">${escapeHtml(agent.displayName || "")}</div>
       </div>
       <div class="office2-agent-status">${escapeHtml(office2StatusLabel(agent.mapsTo || agent.id))}</div>
     `;
@@ -3778,7 +3813,20 @@ async function renderOffice2Activity() {
   const noisyTypes = new Set(["agent_status_updated", "speaker_analytics_generated", "segment_started", "speaker_labeled"]);
   events = events.filter((evt) => !noisyTypes.has(String(evt?.type || "")));
 
-  if (!events.length) {
+  // Prepend active workflow runs as synthetic events so Office shows live run context.
+  const activeRuns = missionControlState.office2?.activeRuns || [];
+  const runEvents = activeRuns.slice(0, 4).map((run) => ({
+    _synthetic: true,
+    timestamp: run.updatedAt || run.createdAt || "",
+    actor: mcCanonicalName(run.ownerAgentId) || run.ownerAgentId || "operator",
+    lane: run.brief?.recommendedLane || run.category || "",
+    summary: run.brief?.title || run.title || run.idea || "Active workflow",
+    type: mcRunStateLabel(run.state)
+  }));
+
+  const allRows = [...runEvents, ...events.slice(-24)];
+
+  if (!allRows.length) {
     office2ActivityEmpty.classList.remove("hidden");
     office2ActivityList.classList.add("hidden");
     return;
@@ -3788,28 +3836,26 @@ async function renderOffice2Activity() {
   office2ActivityList.classList.remove("hidden");
 
   office2ActivityList.innerHTML = "";
-  events
-    .slice(-28)
-    .forEach((event) => {
-      const row = document.createElement("div");
-      row.className = "office2-activity-row";
-      const ts = event?.timestamp ? new Date(event.timestamp) : null;
-      const timeLabel = ts
-        ? ts.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-        : "--:--:--";
-      const source = `${String(event?.actor || "system")} \u2022 ${String(event?.lane || "")}`.trim();
-      const summary = String(event?.summary || "").trim() || String(event?.type || "").trim();
-      const type = String(event?.type || "").trim();
-      row.innerHTML = `
-        <div class="office2-activity-time">${escapeHtml(timeLabel)}</div>
-        <div class="office2-activity-main">
-          <div class="office2-activity-src">${escapeHtml(source)}</div>
-          <div class="office2-activity-msg">${escapeHtml(summary)}</div>
-        </div>
-        <div class="office2-activity-type">${escapeHtml(type)}</div>
-      `;
-      office2ActivityList.appendChild(row);
-    });
+  allRows.forEach((event) => {
+    const row = document.createElement("div");
+    row.className = "office2-activity-row" + (event._synthetic ? " office2-activity-row-run" : "");
+    const ts = event?.timestamp ? new Date(event.timestamp) : null;
+    const timeLabel = ts && Number.isFinite(ts.getTime())
+      ? ts.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      : "--:--:--";
+    const source = [String(event?.actor || ""), String(event?.lane || "")].filter(Boolean).join(" \u2022 ");
+    const summary = String(event?.summary || "").trim() || String(event?.type || "").trim();
+    const type = String(event?.type || "").trim();
+    row.innerHTML = `
+      <div class="office2-activity-time">${escapeHtml(timeLabel)}</div>
+      <div class="office2-activity-main">
+        <div class="office2-activity-src">${escapeHtml(source)}</div>
+        <div class="office2-activity-msg">${escapeHtml(summary)}</div>
+      </div>
+      <div class="office2-activity-type">${escapeHtml(type)}</div>
+    `;
+    office2ActivityList.appendChild(row);
+  });
 }
 
 function renderOffice2Page() {
@@ -3955,7 +4001,7 @@ async function advanceFactoryItem(itemId) {
   void renderFactoryPage();
 }
 
-function renderFactoryMetrics(items) {
+function renderFactoryMetrics(items, completedCount = 0) {
   const shippedToday = items.filter((it) => it.stage === "ship").length;
   const inProgress = items.filter((it) => ["build", "qa", "review"].includes(it.stage)).length;
   const backlog = items.filter((it) => it.stage === "backlog").length;
@@ -3965,7 +4011,8 @@ function renderFactoryMetrics(items) {
   if (factoryMetricInProgress) factoryMetricInProgress.textContent = String(inProgress);
   if (factoryMetricBacklog) factoryMetricBacklog.textContent = String(backlog);
   if (factoryMetricBlocked) factoryMetricBlocked.textContent = String(blocked);
-  if (factoryMetricAvgTime) factoryMetricAvgTime.textContent = "2h 14m";
+  if (factoryMetricAvgTime) factoryMetricAvgTime.textContent = inProgress || shippedToday ? "—" : "—";
+  if (factoryMetricCompleted) factoryMetricCompleted.textContent = String(completedCount);
 }
 
 function renderFactoryBelt(items) {
@@ -4023,7 +4070,7 @@ function renderFactoryBelt(items) {
 function renderFactoryBuildAgents() {
   if (!factoryBuildAgents) return;
   factoryBuildAgents.innerHTML = "";
-  const buildRoster = ["charlie", "codex", "henry"];
+  const buildRoster = ["codex", "henry"];
   buildRoster.forEach((agentId) => {
     const wrap = document.createElement("div");
     wrap.className = "fx-px-agent";
@@ -4033,19 +4080,73 @@ function renderFactoryBuildAgents() {
     drawPixelPerson(canvas, agentId);
     const label = document.createElement("div");
     label.className = "fx-px-agent-name";
-    label.textContent = mcDisplayName(agentId) || agentId;
+    label.textContent = mcCanonicalName(agentId) || agentId;
     wrap.appendChild(canvas);
     wrap.appendChild(label);
     factoryBuildAgents.appendChild(wrap);
   });
 }
 
+function renderFactoryCompletedRuns(runs) {
+  if (!factoryCompletedList) return;
+  if (!runs.length) {
+    factoryCompletedList.innerHTML = `<p class="factory-completed-empty">No completed packs yet. Approve a workflow run to generate one.</p>`;
+    return;
+  }
+
+  factoryCompletedList.innerHTML = runs.map((run) => {
+    const title = run.brief?.title || run.title || compactText(run.idea, 72) || "Workflow run";
+    const lane = run.brief?.recommendedLane || run.category || "";
+    const owner = mcCanonicalName(run.ownerAgentId) || "";
+    const ts = formatRelativeTime(run.createdAt || run.createdTs) || "";
+    const artifacts = run.artifacts || {};
+    const hasDoc = artifacts.doc?.title;
+    const hasMockup = artifacts.mockup?.title;
+    const hasPrototype = artifacts.prototype?.title;
+    const hasSmoke = artifacts.smoke?.summary;
+    const packSummary = artifacts.smoke?.summary || artifacts.doc?.summary || run.brief?.summary || "";
+    const artifactChips = [
+      hasDoc ? `<span class="factory-pack-chip">Doc</span>` : "",
+      hasMockup ? `<span class="factory-pack-chip">Mockup</span>` : "",
+      hasPrototype ? `<span class="factory-pack-chip">Prototype</span>` : "",
+      hasSmoke ? `<span class="factory-pack-chip">Smoke</span>` : ""
+    ].filter(Boolean).join("");
+
+    return `
+      <article class="factory-pack-card" data-run-id="${escapeHtml(run.id)}">
+        <div class="factory-pack-head">
+          <div class="factory-pack-title">${escapeHtml(title)}</div>
+          <div class="factory-pack-state">Completed</div>
+        </div>
+        <div class="factory-pack-meta">
+          ${owner ? `<span>${escapeHtml(owner)}</span>` : ""}
+          ${lane ? `<span>${escapeHtml(lane)}</span>` : ""}
+          ${ts ? `<span>${escapeHtml(ts)}</span>` : ""}
+        </div>
+        ${artifactChips ? `<div class="factory-pack-chips">${artifactChips}</div>` : ""}
+        ${packSummary ? `<div class="factory-pack-summary">${escapeHtml(packSummary.slice(0, 180))}</div>` : ""}
+        <div class="factory-pack-actions">
+          <button class="ops-action-btn" type="button"
+            data-action="copy-pack" data-run-id="${escapeHtml(run.id)}">Copy pack</button>
+          <button class="ops-action-btn ops-action-btn-secondary" type="button"
+            data-action="select-project" data-project-id="${escapeHtml(run.links?.projectId || `workflow_${run.id}`)}" data-scroll-target="ledger">View in Projects</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
 async function renderFactoryPage() {
   if (!factoryView) return;
   renderFactoryBuildAgents();
-  const items = await loadFactoryItems();
+  const [items, runsData] = await Promise.all([
+    loadFactoryItems(),
+    apiRequest("/api/workflow/runs?limit=40").then((d) => (Array.isArray(d?.runs) ? d.runs : [])).catch(() => [])
+  ]);
+  const completedRuns = runsData.filter((r) => String(r?.state || "") === "completed");
   requestAnimationFrame(() => renderFactoryBelt(items));
-  renderFactoryMetrics(items);
+  renderFactoryMetrics(items, completedRuns.length);
+  renderFactoryCompletedRuns(completedRuns);
 }
 
 function mcBlockedWorkItem(item) {
@@ -4135,11 +4236,20 @@ function mcWorkflowProjectFromRun(run) {
   const risks = Array.isArray(run.risks) ? run.risks : [];
   const nextSteps = Array.isArray(artifacts.nextSteps) ? artifacts.nextSteps : [];
 
+  const runState = String(run.state || run.phase || "planning").trim();
+  const plan = run.plan && typeof run.plan === "object" ? run.plan : {};
+  const intake = run.intake && typeof run.intake === "object" ? run.intake : {};
+  const request = run.request && typeof run.request === "object" ? run.request : {};
+  const requestNormalized = request.normalized && typeof request.normalized === "object" ? request.normalized : {};
+  const rawAssumptions = Array.isArray(request.assumptions) ? request.assumptions : [];
+  const approvalBrief = approvals.brief && typeof approvals.brief === "object" ? approvals.brief : {};
+  const stateHistory = Array.isArray(run.stateHistory) ? run.stateHistory : [];
+
   return {
     id: String(links.projectId || `workflow_${workflowRunId}`).trim(),
     name: String(brief.title || run.title || compactText(run.idea, 72) || "Workflow Run").trim(),
-    ownerAgentId: String(links.ownerAgentId || "henry").trim() || "henry",
-    summary: String(brief.summary || `ATEAM workflow run in ${run.phase || "analysis"}.`).trim(),
+    ownerAgentId: String(links.ownerAgentId || brief.routing?.ownerAgentId || "henry").trim() || "henry",
+    summary: String(brief.summary || `ATEAM workflow run — ${runState.replaceAll("_", " ")}.`).trim(),
     outcome: String(
       artifacts?.prototype?.summary ||
         brief.primaryGoal ||
@@ -4150,6 +4260,7 @@ function mcWorkflowProjectFromRun(run) {
     docIds: [],
     workflowRunId,
     workflow: {
+      state: runState,
       phase: String(run.phase || "analysis").trim(),
       recommendedLane: String(run.recommendedLane || brief.recommendedLane || "").trim(),
       risks,
@@ -4158,10 +4269,18 @@ function mcWorkflowProjectFromRun(run) {
       prototypeTitle: String(artifacts?.prototype?.title || "").trim(),
       smokeSummary: String(artifacts?.smoke?.summary || "").trim(),
       handoffStatus: String(run?.handoff?.status || "").trim(),
-      audience: String(brief.audience || "").trim(),
+      audience: String(brief.audience || requestNormalized.audience || "").trim(),
       constraints: Array.isArray(brief.constraints) ? brief.constraints : [],
       successCriteria: Array.isArray(brief.successCriteria) ? brief.successCriteria : [],
-      approvals
+      approvals,
+      approvalStatus: String(approvalBrief.status || "pending").trim(),
+      approvalId: String(approvalBrief.approvalId || "").trim(),
+      briefSummary: String(brief.summary || "").trim(),
+      briefDirection: String(brief.recommendedDirection || "").trim(),
+      phasedPlan: Array.isArray(brief.phasedPlan) ? brief.phasedPlan : [],
+      assumptions: rawAssumptions.slice(0, 4),
+      goal: String(intake.goal || requestNormalized.goal || run.idea || "").trim(),
+      stateHistory: stateHistory.slice(-5)
     }
   };
 }
@@ -4215,6 +4334,7 @@ async function mcFocusProject(projectId, { scrollTarget = "" } = {}) {
   const project = mcProjectById(projectId);
   if (!project) return;
   missionControlState.projects.selectedId = project.id;
+  if (state.view !== "projects") setView("projects");
   await renderProjectsPage();
   if (scrollTarget === "detail") mcScrollIntoView(projectsDetail);
   if (scrollTarget === "ledger") mcScrollIntoView(projectsLedger);
@@ -4284,17 +4404,17 @@ async function renderCouncilPage({ force = false } = {}) {
   if (councilSeats) {
     const seatCards = [
       {
-        seat: `${mcDisplayName("henry")} / Coordinator`,
+        seat: `Chief of Staff / ${mcDisplayName("henry")}`,
         focus: approvals.length ? `Clear ${approvals.length} pending decision${approvals.length === 1 ? "" : "s"}.` : "Keep delivery lanes aligned.",
         note: activeItems.length ? `${activeItems.length} job${activeItems.length === 1 ? "" : "s"} moving right now.` : "No active delivery pressure."
       },
       {
-        seat: `${mcDisplayName("violet")} / Research`,
+        seat: `Research Analyst / ${mcDisplayName("violet")}`,
         focus: signals.length ? `Signals are stacking. ${signals.length} intake item${signals.length === 1 ? "" : "s"} need framing.` : "No new external signal pressure.",
         note: topics.length ? `${topics.length} topic${topics.length === 1 ? "" : "s"} already promoted into direction.` : "Scout has room to look wider."
       },
       {
-        seat: `${mcDisplayName("ralph")} / QA`,
+        seat: `QA Lead / ${mcDisplayName("ralph")}`,
         focus: blockedItems.length ? `${blockedItems.length} item${blockedItems.length === 1 ? "" : "s"} need unblock or explicit rejection.` : "Quality gate is clear enough to keep flow moving.",
         note: drafts.filter((draft) => draft.status === "pending_approval").length
           ? `${drafts.filter((draft) => draft.status === "pending_approval").length} content draft decision${drafts.filter((draft) => draft.status === "pending_approval").length === 1 ? "" : "s"} are waiting.`
@@ -4380,6 +4500,187 @@ async function renderCouncilPage({ force = false } = {}) {
   renderCouncilPageJournal();
 }
 
+function mcDecisionPackText(run) {
+  if (!run) return "";
+  const brief = run.brief || {};
+  const request = run.request || {};
+  const normalized = request.normalized || {};
+  const routing = request.routing || {};
+  const assumptions = Array.isArray(request.assumptions) ? request.assumptions : [];
+  const risks = Array.isArray(run.risks) ? run.risks : [];
+  const intake = run.intake || {};
+  const artifacts = run.artifacts || {};
+  const doc = artifacts.doc || {};
+  const smoke = artifacts.smoke || {};
+  const mockup = artifacts.mockup || {};
+  const prototype = artifacts.prototype || {};
+  const approvals = run.approvals || {};
+  const history = Array.isArray(run.stateHistory) ? run.stateHistory : [];
+  const constraints = Array.isArray(brief.constraints) ? brief.constraints : [];
+  const goals = Array.isArray(brief.goals) ? brief.goals : [];
+  const phasedPlan = Array.isArray(brief.phasedPlan) ? brief.phasedPlan : [];
+  const successCriteria = Array.isArray(brief.successCriteria) ? brief.successCriteria : [];
+
+  const lines = [
+    `# Decision Pack — ${brief.title || run.title || "ATEAM Workflow Run"}`,
+    `State: ${mcRunStateLabel(run.state)}`,
+    `Run ID: ${run.id || ""}`,
+    `Created: ${run.createdAt || run.createdTs || ""}`,
+    "",
+    "## Request Summary",
+    intake.goal || normalized.goal || run.idea || "",
+    normalized.scopeSummary ? `\nScope: ${normalized.scopeSummary}` : "",
+    "",
+    "## What ATEAM Understood",
+    brief.quickVerdict || "",
+    brief.decisionNote ? `\n${brief.decisionNote}` : "",
+    "",
+    "## Audience / Context",
+    brief.audience || normalized.audience || "",
+    intake.context ? `\nContext: ${intake.context}` : "",
+    "",
+    assumptions.length ? "## Assumptions\n" + assumptions.map(a => `- ${a}`).join("\n") : "",
+    "",
+    phasedPlan.length ? "## Proposed Plan\n" + phasedPlan.map((step, i) => `${i + 1}. ${step}`).join("\n") : "",
+    "",
+    risks.length ? "## Blockers / Risks\n" + risks.map(r => `- ${r}`).join("\n") : "",
+    constraints.length ? "\nConstraints:\n" + constraints.map(c => `- ${c}`).join("\n") : "",
+    "",
+    "## Recommended Next Move",
+    brief.recommendedDirection || routing.reason || "",
+    goals.length ? "\nGoals:\n" + goals.map(g => `- ${g}`).join("\n") : "",
+    "",
+    "## Execution Direction",
+    brief.recommendedLane ? `Lane: ${brief.recommendedLane}` : "",
+    mockup.title ? `Mockup: ${mockup.title} — ${mockup.summary || ""}` : "",
+    prototype.title ? `Prototype: ${prototype.title} — ${prototype.summary || ""}` : "",
+    doc.title ? `Pack document: ${doc.title}` : "",
+    "",
+    "## Output Summary",
+    smoke.summary || "",
+    successCriteria.length ? "\nSuccess criteria:\n" + successCriteria.map(c => `- ${c}`).join("\n") : "",
+    "",
+    "## Approval Trail",
+    approvals.brief?.status ? `Brief: ${approvals.brief.status}${approvals.brief.decidedBy ? " by " + approvals.brief.decidedBy : ""}${approvals.brief.decidedAt ? " at " + approvals.brief.decidedAt : ""}` : "",
+    approvals.pack?.status ? `Pack: ${approvals.pack.status}${approvals.pack.decidedBy ? " by " + approvals.pack.decidedBy : ""}${approvals.pack.decidedAt ? " at " + approvals.pack.decidedAt : ""}` : "",
+    history.length ? "\nState history:\n" + history.map(e => `  ${mcRunStateLabel(e.state)} — ${e.reason || ""} (${e.actor || ""})`).join("\n") : ""
+  ];
+
+  return lines.filter(l => l !== null && l !== undefined).join("\n").trim();
+}
+
+function mcRenderDecisionPack(run) {
+  if (!run) return "";
+  const brief = run.brief || {};
+  const request = run.request || {};
+  const normalized = request.normalized || {};
+  const routing = request.routing || {};
+  const assumptions = Array.isArray(request.assumptions) ? request.assumptions : [];
+  const risks = Array.isArray(run.risks) ? run.risks : [];
+  const intake = run.intake || {};
+  const artifacts = run.artifacts || {};
+  const doc = artifacts.doc || {};
+  const smoke = artifacts.smoke || {};
+  const mockup = artifacts.mockup || {};
+  const prototype = artifacts.prototype || {};
+  const handoff = run.handoff || {};
+  const approvals = run.approvals || {};
+  const history = Array.isArray(run.stateHistory) ? run.stateHistory : [];
+  const constraints = Array.isArray(brief.constraints) ? brief.constraints : [];
+  const goals = Array.isArray(brief.goals) ? brief.goals : [];
+  const phasedPlan = Array.isArray(brief.phasedPlan) ? brief.phasedPlan : [];
+  const successCriteria = Array.isArray(brief.successCriteria) ? brief.successCriteria : [];
+  const smokeChecks = Array.isArray(smoke.checks) ? smoke.checks : [];
+  const docSections = Array.isArray(doc.sections) ? doc.sections : [];
+  const runState = mcRunStateLabel(run.state);
+  const isCompleted = run.state === "completed";
+
+  const section = (title, content) =>
+    content ? `<div class="dp-section"><div class="dp-section-title">${escapeHtml(title)}</div><div class="dp-section-body">${content}</div></div>` : "";
+
+  const chips = (items) =>
+    items.length ? `<div class="dp-chips">${items.map(i => `<span class="dp-chip">${escapeHtml(i)}</span>`).join("")}</div>` : "";
+
+  const list = (items) =>
+    items.length ? `<ul class="dp-list">${items.map(i => `<li>${escapeHtml(i)}</li>`).join("")}</ul>` : "";
+
+  const ol = (items) =>
+    items.length ? `<ol class="dp-list">${items.map(i => `<li>${escapeHtml(i)}</li>`).join("")}</ol>` : "";
+
+  const requestSummary = [
+    intake.goal || normalized.goal || run.idea || "",
+    normalized.scopeSummary ? `<div class="dp-meta-line">${escapeHtml(normalized.scopeSummary)}</div>` : ""
+  ].filter(Boolean).join("");
+
+  const understoodContent = [
+    brief.quickVerdict ? `<p>${escapeHtml(brief.quickVerdict)}</p>` : "",
+    brief.decisionNote ? `<p class="dp-sub">${escapeHtml(brief.decisionNote)}</p>` : ""
+  ].filter(Boolean).join("");
+
+  const audienceContent = [
+    brief.audience || normalized.audience ? `<strong>${escapeHtml(brief.audience || normalized.audience)}</strong>` : "",
+    intake.context ? `<p class="dp-sub">${escapeHtml(intake.context)}</p>` : "",
+    brief.likelyUserValue ? `<p class="dp-sub">${escapeHtml(brief.likelyUserValue)}</p>` : ""
+  ].filter(Boolean).join("");
+
+  const planContent = phasedPlan.length ? ol(phasedPlan) : "";
+
+  const blockersContent = [
+    risks.length ? `<div class="dp-sub-title">Risks</div>${list(risks)}` : "",
+    constraints.length ? `<div class="dp-sub-title">Constraints</div>${list(constraints)}` : "",
+    intake.nonGoals ? `<div class="dp-sub-title">Non-goals</div><p class="dp-sub">${escapeHtml(intake.nonGoals)}</p>` : ""
+  ].filter(Boolean).join("");
+
+  const nextMoveContent = [
+    brief.recommendedDirection ? `<p>${escapeHtml(brief.recommendedDirection)}</p>` : "",
+    routing.reason ? `<p class="dp-sub">${escapeHtml(routing.reason)}</p>` : "",
+    goals.length ? `<div class="dp-sub-title">Goals</div>${list(goals)}` : ""
+  ].filter(Boolean).join("");
+
+  const executionContent = [
+    brief.recommendedLane ? `<div class="dp-kv"><span>Lane</span><strong>${escapeHtml(brief.recommendedLane)}</strong></div>` : "",
+    mockup.title ? `<div class="dp-kv"><span>Mockup</span><strong>${escapeHtml(mockup.title)}</strong>${mockup.summary ? `<span class="dp-sub">${escapeHtml(mockup.summary)}</span>` : ""}</div>` : "",
+    prototype.title ? `<div class="dp-kv"><span>Prototype</span><strong>${escapeHtml(prototype.title)}</strong>${prototype.summary ? `<span class="dp-sub">${escapeHtml(prototype.summary)}</span>` : ""}</div>` : "",
+    doc.title ? `<div class="dp-kv"><span>Pack doc</span><strong>${escapeHtml(doc.title)}</strong></div>` : "",
+    docSections.length ? docSections.map(s => `<div class="dp-sub-title">${escapeHtml(s.title)}</div>${list(Array.isArray(s.items) ? s.items : [])}`).join("") : ""
+  ].filter(Boolean).join("");
+
+  const outputContent = [
+    smoke.summary ? `<p>${escapeHtml(smoke.summary)}</p>` : "",
+    smokeChecks.length ? `<div class="dp-checks">${smokeChecks.map(c => `<div class="dp-check dp-check-${escapeHtml(c.result || "watch")}"><span>${escapeHtml(c.label)}</span><strong>${escapeHtml(c.result)}</strong>${c.note ? `<span class="dp-sub">${escapeHtml(c.note)}</span>` : ""}</div>`).join("")}</div>` : "",
+    successCriteria.length ? `<div class="dp-sub-title">Success criteria</div>${list(successCriteria)}` : ""
+  ].filter(Boolean).join("");
+
+  const approvalBriefLine = approvals.brief?.status ? `Brief — ${escapeHtml(approvals.brief.status)}${approvals.brief.decidedBy ? ` by ${escapeHtml(approvals.brief.decidedBy)}` : ""}${approvals.brief.decidedAt ? ` · ${escapeHtml(String(approvals.brief.decidedAt).slice(0, 10))}` : ""}` : "";
+  const approvalPackLine = approvals.pack?.status ? `Pack — ${escapeHtml(approvals.pack.status)}${approvals.pack.decidedBy ? ` by ${escapeHtml(approvals.pack.decidedBy)}` : ""}${approvals.pack.decidedAt ? ` · ${escapeHtml(String(approvals.pack.decidedAt).slice(0, 10))}` : ""}` : "";
+  const trailItems = [approvalBriefLine, approvalPackLine, ...history.slice(-4).map(e => `${escapeHtml(mcRunStateLabel(e.state))} — ${escapeHtml(e.reason || "")} (${escapeHtml(e.actor || "")})`).filter(Boolean)];
+  const trailContent = trailItems.length ? `<ul class="dp-trail">${trailItems.map(t => `<li>${t}</li>`).join("")}</ul>` : "";
+
+  return `
+    <div class="decision-pack" id="dp-${escapeHtml(run.id || "")}">
+      <div class="dp-header">
+        <div class="dp-title">${escapeHtml(brief.title || run.title || "Decision Pack")}</div>
+        <div class="dp-meta">
+          <span class="dp-state dp-state-${escapeHtml(run.state || "")}">${escapeHtml(runState)}</span>
+          ${isCompleted ? `<span class="dp-complete-badge">Complete</span>` : ""}
+          <button class="dp-copy-btn ops-action-btn ops-action-btn-secondary" type="button" data-action="copy-pack" data-run-id="${escapeHtml(run.id || "")}">Copy pack</button>
+        </div>
+      </div>
+      <div class="dp-body">
+        ${section("Request Summary", requestSummary)}
+        ${section("What ATEAM Understood", understoodContent)}
+        ${section("Audience / Context", audienceContent)}
+        ${assumptions.length ? section("Assumptions", chips(assumptions)) : ""}
+        ${planContent ? section("Proposed Plan", planContent) : ""}
+        ${blockersContent ? section("Blockers / Risks", blockersContent) : ""}
+        ${nextMoveContent ? section("Recommended Next Move", nextMoveContent) : ""}
+        ${executionContent ? section("Execution Direction", executionContent) : ""}
+        ${trailContent ? section("Approval Trail", trailContent) : ""}
+        ${outputContent ? section("Output Summary", outputContent) : ""}
+      </div>
+    </div>`;
+}
+
 function renderProjectsFormOptions(selectedProjectId) {
   const portfolio = mcProjectPortfolio();
   if (projectsWorkProject) {
@@ -4390,8 +4691,9 @@ function renderProjectsFormOptions(selectedProjectId) {
   }
 
   if (projectsWorkOwner) {
-    projectsWorkOwner.innerHTML = OFFICE2_AGENT_DIRECTORY.map(
-      (agent) => `<option value="${escapeHtml(agent.id)}">${escapeHtml(mcDisplayName(agent.id) || agent.id)} (${escapeHtml(agent.role || "Agent")})</option>`
+    const locked = new Set(OFFICE2_LOCKED_AGENT_IDS);
+    projectsWorkOwner.innerHTML = OFFICE2_AGENT_DIRECTORY.filter((a) => locked.has(a.id)).map(
+      (agent) => `<option value="${escapeHtml(agent.id)}">${escapeHtml(agent.role || agent.id)} — ${escapeHtml(agent.displayName || agent.id)}</option>`
     ).join("");
   }
 }
@@ -4448,9 +4750,10 @@ async function renderProjectsPage({ force = false } = {}) {
             </div>
             <div class="ops-card-copy">${escapeHtml(project.summary)}</div>
             <div class="ops-inline-meta">
-              <span>${escapeHtml(mcDisplayName(project.ownerAgentId) || project.ownerAgentId)}</span>
+              <span>${escapeHtml(mcCanonicalName(project.ownerAgentId) || project.ownerAgentId)}</span>
               <span>${escapeHtml(linkedLabel)}</span>
-              ${project.workflowRunId ? `<span>${escapeHtml(String(project?.workflow?.phase || "analysis").replaceAll("_", " "))}</span>` : ""}
+              ${project.workflowRunId ? `<span>${escapeHtml(mcRunStateLabel(project?.workflow?.state || project?.workflow?.phase || "planning"))}</span>` : ""}
+              ${project.workflowRunId && project?.workflow?.approvalStatus === "pending" ? `<span class="ops-badge-pending">Awaiting decision</span>` : ""}
             </div>
             <div class="ops-action-row ops-action-row-compact">
               <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="select-project" data-project-id="${escapeHtml(project.id)}" data-scroll-target="detail">Open overview</button>
@@ -4486,21 +4789,52 @@ async function renderProjectsPage({ force = false } = {}) {
             )
             .join("")
         : `<span class="ops-inline-empty">None</span>`;
+      const wf = project.workflow || {};
+      const wfState = mcRunStateLabel(wf.state || wf.phase || "planning");
+      const wfApprovalPending = wf.approvalStatus === "pending";
+      const wfAssumptions = Array.isArray(wf.assumptions) ? wf.assumptions : [];
+      const wfPlan = Array.isArray(wf.phasedPlan) ? wf.phasedPlan : [];
+      const wfHistory = Array.isArray(wf.stateHistory) ? wf.stateHistory : [];
+      const wfHasOutput = wf.prototypeTitle || wf.mockupTitle || wf.smokeSummary;
+
       const workflowDetails = project.workflowRunId
         ? `
-            <div class="ops-key-value-row"><span>Workflow phase</span><strong>${escapeHtml(String(project?.workflow?.phase || "analysis").replaceAll("_", " "))}</strong></div>
-            <div class="ops-key-value-row"><span>Recommended lane</span><strong>${escapeHtml(project?.workflow?.recommendedLane || "Pending")}</strong></div>
-            <div class="ops-key-value-row"><span>Handoff status</span><strong>${escapeHtml(project?.workflow?.handoffStatus || "Not ready")}</strong></div>
-            <div class="ops-key-value-row"><span>Prototype pack</span><strong>${escapeHtml(project?.workflow?.prototypeTitle || project?.workflow?.mockupTitle || "Not generated yet")}</strong></div>
-            <div class="ops-key-value-row ops-key-value-row-stack">
-              <span>Next steps</span>
-              <div class="ops-chip-row">${
-                (Array.isArray(project?.workflow?.nextSteps) ? project.workflow.nextSteps : [])
-                  .slice(0, 3)
-                  .map((step) => `<span class="ops-chip-btn">${escapeHtml(step)}</span>`)
-                  .join("") || '<span class="ops-inline-empty">Generate the pack to see next steps</span>'
-              }</div>
-            </div>
+            <div class="ops-key-value-row"><span>State</span><strong>${escapeHtml(wfState)}</strong>${wfApprovalPending ? ' <span class="ops-badge-pending">Decision needed</span>' : ""}</div>
+            <div class="ops-key-value-row"><span>Lane</span><strong>${escapeHtml(wf.recommendedLane || "Not assigned")}</strong></div>
+            ${wf.goal ? `<div class="ops-key-value-row"><span>Goal</span><strong>${escapeHtml(wf.goal.slice(0, 120))}</strong></div>` : ""}
+            ${wf.briefSummary ? `<div class="ops-key-value-row ops-key-value-row-stack"><span>Brief</span><div class="ops-copy-block">${escapeHtml(wf.briefSummary)}</div></div>` : ""}
+            ${wf.audience ? `<div class="ops-key-value-row"><span>Audience</span><strong>${escapeHtml(wf.audience)}</strong></div>` : ""}
+            ${wfAssumptions.length ? `
+              <div class="ops-key-value-row ops-key-value-row-stack">
+                <span>Assumptions</span>
+                <div class="ops-chip-row">${wfAssumptions.map((a) => `<span class="ops-chip-btn">${escapeHtml(a)}</span>`).join("")}</div>
+              </div>` : ""}
+            ${wfPlan.length ? `
+              <div class="ops-key-value-row ops-key-value-row-stack">
+                <span>Plan</span>
+                <ol class="ops-ordered-list">${wfPlan.slice(0, 4).map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+              </div>` : ""}
+            ${wfApprovalPending && wf.approvalId ? `
+              <div class="ops-key-value-row">
+                <span>Approval gate</span>
+                <button class="ops-action-btn" type="button" data-action="approve-approval" data-approval-id="${escapeHtml(wf.approvalId)}">Approve brief</button>
+                <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="reject-approval" data-approval-id="${escapeHtml(wf.approvalId)}">Reject</button>
+              </div>` : ""}
+            ${wfHasOutput ? `
+              <div class="ops-key-value-row"><span>Pack output</span><strong>${escapeHtml(wf.prototypeTitle || wf.mockupTitle || "Generated")}</strong></div>
+              ${wf.smokeSummary ? `<div class="ops-key-value-row ops-key-value-row-stack"><span>Pack summary</span><div class="ops-copy-block">${escapeHtml(wf.smokeSummary)}</div></div>` : ""}
+            ` : ""}
+            ${wfHistory.length ? `
+              <div class="ops-key-value-row ops-key-value-row-stack">
+                <span>History</span>
+                <div class="ops-history-list">${wfHistory.map((entry) => `
+                  <div class="ops-history-entry">
+                    <span class="ops-history-state">${escapeHtml(mcRunStateLabel(entry.state))}</span>
+                    ${entry.reason ? `<span class="ops-history-reason">${escapeHtml(entry.reason)}</span>` : ""}
+                    ${entry.actor ? `<span class="ops-history-actor">${escapeHtml(entry.actor)}</span>` : ""}
+                  </div>`).join("")}
+                </div>
+              </div>` : ""}
           `
         : "";
       projectsDetail.innerHTML = `
@@ -4511,7 +4845,7 @@ async function renderProjectsPage({ force = false } = {}) {
           </div>
           <div class="ops-card-copy">${escapeHtml(project.outcome)}</div>
           <div class="ops-key-value-list">
-            <div class="ops-key-value-row"><span>Owner</span><strong>${escapeHtml(mcDisplayName(project.ownerAgentId) || project.ownerAgentId)}</strong></div>
+            <div class="ops-key-value-row"><span>Owner</span><strong>${escapeHtml(mcCanonicalName(project.ownerAgentId) || project.ownerAgentId)}</strong></div>
             <div class="ops-key-value-row ops-key-value-row-stack">
               <span>Linked Docs</span>
               <div class="ops-chip-row">${docChips}</div>
@@ -4531,20 +4865,25 @@ async function renderProjectsPage({ force = false } = {}) {
     if (!activeRow || (!activeRow.items.length && !activeRow.project?.workflowRunId)) {
       projectsLedger.innerHTML = mcEmptyHtml("No jobs linked to this initiative yet.");
     } else {
+      // Look up full run for Decision Pack rendering
+      const activeRunForPack = activeRow.project?.workflowRunId
+        ? (missionControlState.overview.workflowRuns || []).find(r => r.id === activeRow.project.workflowRunId) || null
+        : null;
+      const hasArtifacts = activeRunForPack?.artifacts && (
+        activeRunForPack.artifacts.mockup?.title ||
+        activeRunForPack.artifacts.prototype?.title ||
+        activeRunForPack.artifacts.smoke?.summary
+      );
       const workflowCard = activeRow.project?.workflowRunId
-        ? `
-            <article class="ops-card">
-              <div class="ops-card-head">
-                <div class="ops-card-title">Workflow pack</div>
-                <div class="ops-card-meta">${escapeHtml(String(activeRow.project?.workflow?.phase || "analysis").replaceAll("_", " ").toUpperCase())}</div>
-              </div>
-              <div class="ops-card-copy">${escapeHtml(activeRow.project?.workflow?.smokeSummary || activeRow.project?.summary || "Workflow pack not generated yet.")}</div>
-              <div class="ops-inline-meta">
-                <span>${escapeHtml(activeRow.project?.workflow?.mockupTitle || "Mockup pending")}</span>
-                <span>${escapeHtml(activeRow.project?.workflow?.prototypeTitle || "Prototype pending")}</span>
-              </div>
-            </article>
-          `
+        ? (hasArtifacts
+            ? mcRenderDecisionPack(activeRunForPack)
+            : `<div class="ops-card dp-pending-card">
+                <div class="ops-card-head">
+                  <div class="ops-card-title">Decision Pack</div>
+                  <div class="ops-card-meta">${escapeHtml(mcRunStateLabel(activeRow.project?.workflow?.state || "planning").toUpperCase())}</div>
+                </div>
+                <div class="ops-card-copy">${escapeHtml(activeRow.project?.workflow?.smokeSummary || "Pack not generated yet. Approve the brief to generate it.")}</div>
+              </div>`)
         : "";
       const itemCards = activeRow.items
         .slice()
@@ -4732,7 +5071,7 @@ function buildPeopleHandoffs(contacts = []) {
     .slice(0, 5)
     .map((contact) => {
       let ownerAgentId = "henry";
-      let note = "Coordinator should keep context tight and route the next action.";
+      let note = "Chief of Staff should keep context tight and route the next action.";
       if (contact.speakerId === "unknown") {
         ownerAgentId = "scout";
         note = "Identity or intent is still fuzzy. Scout should clarify before build starts.";
@@ -4752,7 +5091,8 @@ function buildPeopleHandoffs(contacts = []) {
 function renderPeoplePage() {
   if (!peopleView || peopleView.classList.contains("hidden")) return;
   const contacts = buildPeopleContacts(timelineState.events || []);
-  const operators = OFFICE2_AGENT_DIRECTORY.filter((agent) => agent.id !== "alex");
+  const locked = new Set(OFFICE2_LOCKED_AGENT_IDS);
+  const operators = OFFICE2_AGENT_DIRECTORY.filter((agent) => locked.has(agent.id));
   const activeContacts = contacts.filter((contact) => contact.turns > 0);
   const handoffs = buildPeopleHandoffs(contacts);
   const derived = missionControlState.office2?.derivedStatus || {};
@@ -4795,13 +5135,12 @@ function renderPeoplePage() {
         return `
           <article class="ops-card">
             <div class="ops-card-head">
-              <div class="ops-card-title">${escapeHtml(mcDisplayName(agent.id) || agent.canonicalName || agent.id)}</div>
+              <div class="ops-card-title">${escapeHtml(agent.role || agent.id)}</div>
               <div class="ops-card-meta">${mcStageBadge(status)}</div>
             </div>
-            <div class="ops-card-copy">${escapeHtml(agent.role || "Operator")}</div>
+            <div class="ops-card-copy">${escapeHtml(agent.displayName || "")}</div>
             <div class="ops-inline-meta">
               <span>${escapeHtml(agent.lane || "")}</span>
-              <span>${escapeHtml(agent.canonicalName || "")}</span>
             </div>
           </article>
         `;
@@ -5060,7 +5399,7 @@ async function renderPipelinePage({ force = false } = {}) {
         title: "Workflow Intake",
         items: workflowRuns.slice(0, 8).map((run) => ({
           title: run?.brief?.title || run?.title || compactText(run?.idea, 80) || "Workflow run",
-          meta: String(run?.phase || "analysis").replaceAll("_", " "),
+          meta: mcRunStateLabel(run?.state || run?.phase || "planning"),
           body: run?.brief?.summary || run?.idea || "No workflow summary yet.",
           actions: `<button class="ops-action-btn" type="button" data-action="select-project" data-project-id="${escapeHtml(String(run?.links?.projectId || `workflow_${run?.id || ""}`))}" data-scroll-target="detail">Open project</button>`
         }))
@@ -5180,6 +5519,79 @@ async function renderPipelinePage({ force = false } = {}) {
           .join("")
       : mcEmptyHtml("No stalled items detected.");
   }
+}
+
+async function renderTasksPage({ force = false } = {}) {
+  const runsList = document.getElementById("mc-runs-list");
+  if (!runsList) return;
+  const overview = await mcLoadOverview({ force, includeSpeech: false });
+  const runs = (overview.workflowRuns || []).slice().sort((a, b) => {
+    const at = Date.parse(String(a?.createdAt || a?.created_at || "")) || 0;
+    const bt = Date.parse(String(b?.createdAt || b?.created_at || "")) || 0;
+    return bt - at;
+  });
+
+  const pendingApprovals = (overview.approvals || []).filter(
+    (ap) => String(ap?.status || "").toLowerCase() === "pending"
+  );
+  const pendingByRunId = new Map();
+  for (const ap of pendingApprovals) {
+    const rid = String(ap?.payload?.workflowRunId || "").trim();
+    if (rid) pendingByRunId.set(rid, ap);
+  }
+
+  if (!runs.length) {
+    runsList.innerHTML = `<p class="mc-runs-empty">No workflow runs yet. Submit an intent from the entry view to create one.</p>`;
+    return;
+  }
+
+  runsList.innerHTML = runs.slice(0, 20).map((run) => {
+    const runState = String(run.state || run.phase || "planning");
+    const displayState = mcRunStateLabel(runState);
+    const title = run.brief?.title || run.title || compactText(run.idea, 72) || "Workflow run";
+    const lane = run.brief?.recommendedLane || run.recommendedLane || "";
+    const summary = run.brief?.summary || run.idea || "";
+    const ts = formatRelativeTime(run.createdAt || run.createdTs) || "";
+    const projectId = run.links?.projectId || `workflow_${run.id}`;
+    const pendingAp = pendingByRunId.get(run.id);
+    const approvalStatus = run.approvals?.brief?.status || (pendingAp ? "pending" : "");
+    const ownerRole = run.ownerAgentId ? mcCanonicalName(run.ownerAgentId) : "";
+    const stateClass = ["completed", "failed"].includes(runState)
+      ? runState
+      : ["executing", "approved"].includes(runState)
+      ? "active"
+      : "pending";
+
+    return `
+      <article class="mc-run-card mc-run-state-${escapeHtml(stateClass)}" data-run-id="${escapeHtml(run.id)}">
+        <div class="mc-run-head">
+          <div class="mc-run-title">${escapeHtml(title)}</div>
+          <div class="mc-run-state-badge">${escapeHtml(displayState)}</div>
+        </div>
+        ${summary ? `<div class="mc-run-summary">${escapeHtml(summary.slice(0, 160))}</div>` : ""}
+        <div class="mc-run-meta">
+          ${ownerRole ? `<span>${escapeHtml(ownerRole)}</span>` : ""}
+          ${lane ? `<span>${escapeHtml(lane)}</span>` : ""}
+          ${ts ? `<span>${escapeHtml(ts)}</span>` : ""}
+          ${approvalStatus === "pending" ? `<span class="mc-run-pending-badge">Awaiting approval</span>` : ""}
+        </div>
+        <div class="mc-run-actions">
+          <button class="ops-action-btn ops-action-btn-secondary" type="button"
+            data-action="select-project" data-project-id="${escapeHtml(projectId)}" data-scroll-target="detail">
+            Inspect run
+          </button>
+          ${pendingAp ? `
+            <button class="ops-action-btn" type="button"
+              data-action="approve-approval" data-approval-id="${escapeHtml(pendingAp.id)}">
+              Approve brief
+            </button>
+            <button class="ops-action-btn ops-action-btn-secondary" type="button"
+              data-action="reject-approval" data-approval-id="${escapeHtml(pendingAp.id)}">
+              Reject
+            </button>` : ""}
+        </div>
+      </article>`;
+  }).join("");
 }
 
 async function renderAiLabPage({ force = false } = {}) {
@@ -5406,6 +5818,22 @@ async function handleMissionAction(action, dataset = {}) {
   }
   if (safeAction === "reject-approval") {
     await mcHandleApprovalDecision(dataset.approvalId, "rejected");
+    return;
+  }
+  if (safeAction === "copy-pack") {
+    const runId = String(dataset.runId || "").trim();
+    const run = runId
+      ? (missionControlState.overview.workflowRuns || []).find(r => r.id === runId) || null
+      : null;
+    if (run) {
+      const text = mcDecisionPackText(run);
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("Decision pack copied to clipboard.", "ok");
+      } catch {
+        showToast("Copy failed — check clipboard permissions.", "error");
+      }
+    }
     return;
   }
   if (safeAction === "advance-work-item") {
@@ -9732,7 +10160,7 @@ function initOfficeSimulation() {
     row.className = "office-agent-row";
     row.dataset.agent = agent.id;
     row.dataset.status = "idle";
-    row.title = `${agent.role} \u00b7 ${agent.mapsTo}`;
+    row.title = `${agent.role} \u00b7 ${agent.name}`;
 
     const dot = document.createElement("span");
     dot.className = "agent-dot";
@@ -11020,15 +11448,38 @@ async function handleEntrySubmit(e) {
   if (submitBtn) submitBtn.disabled = true;
 
   try {
-    // Store intent in state for the workflow
     state.currentIntent = intent;
     state.workflowState = "processing";
 
-    // Animate the workflow reveal
-    await revealWorkflowCards();
+    const run = await apiCreateWorkflowRun(intent, { requestedBy: "operator" });
+    if (!run) throw new Error("Server did not return a run");
 
-    // TODO: In the future, send intent to backend and update cards with real data
-    // For now, cards show with their placeholder text
+    state.workflowRunId = run.id;
+    state.approvalId = run.approvals?.brief?.approvalId || null;
+
+    const brief = run.brief || {};
+    const assumptions = Array.isArray(run.request?.assumptions)
+      ? run.request.assumptions.slice(0, 2).join(" \u00b7 ")
+      : null;
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el && text) el.textContent = text;
+    };
+
+    setText("understanding-text", brief.title || run.title || intent);
+    setText("assumptions-text", assumptions || brief.summary || "Intent captured.");
+    setText(
+      "plan-text",
+      brief.recommendedLane
+        ? brief.recommendedLane + (brief.recommendedDirection ? " \u2014 " + brief.recommendedDirection.slice(0, 120) : "")
+        : (Array.isArray(brief.phasedPlan) ? brief.phasedPlan[0] : null) || "Plan generated."
+    );
+    setText("approval-text", "Brief ready. Approve to start execution.");
+    setText("execution-text", "Awaiting approval before execution begins.");
+    setText("output-text", "Results will appear here after execution.");
+
+    await revealWorkflowCards();
 
   } catch (err) {
     console.error("Entry submission failed:", err);
@@ -11049,17 +11500,33 @@ function bindEvents() {
   const approveBtn = document.getElementById("btn-approve");
   const reviseBtn = document.getElementById("btn-revise");
   if (approveBtn) {
-    approveBtn.addEventListener("click", () => {
-      state.workflowState = "approved";
-      showToast("Workflow approved. Executing...", "ok");
-      // TODO: Send approval to backend and start execution
+    approveBtn.addEventListener("click", async () => {
+      if (!state.workflowRunId) {
+        setView("approvals");
+        return;
+      }
+      approveBtn.disabled = true;
+      try {
+        await apiApproveWorkflowRun(state.workflowRunId, { gate: "brief", decision: "approved", actor: "operator" });
+        await apiGenerateWorkflowPack(state.workflowRunId, { actor: "operator" });
+        await apiApproveWorkflowRun(state.workflowRunId, { gate: "pack", decision: "approved", actor: "operator" });
+        state.workflowState = "completed";
+        mcInvalidateOverview();
+        showToast("Workflow approved. Decision pack ready.", "ok");
+        await new Promise(r => setTimeout(r, 400));
+        setView("tasks");
+      } catch (err) {
+        console.warn("Entry approval failed:", err?.message || err);
+        mcInvalidateOverview();
+        showToast("Approval failed. Check Mission Control.", "error");
+      } finally {
+        approveBtn.disabled = false;
+      }
     });
   }
   if (reviseBtn) {
     reviseBtn.addEventListener("click", () => {
-      state.workflowState = "revising";
-      showToast("Ready to revise workflow.", "info");
-      // TODO: Show revision interface
+      setView("approvals");
     });
   }
 
@@ -11084,14 +11551,14 @@ function bindEvents() {
     mcPauseBtn.addEventListener("click", pauseAllOfficeAgents);
   }
   if (mcPingBtn) {
-    const pingName = mcDisplayName("henry") || "Henry";
-    const pingCanonical = mcCanonicalName("henry") || "Henry";
-    mcPingBtn.textContent = `Ping ${pingName || pingCanonical}`;
-    mcPingBtn.title = `Open ${pingCanonical}'s command panel`;
+    const pingRole = mcCanonicalName("henry") || "Chief of Staff";
+    const pingDisplay = mcDisplayName("henry") || "Manchi";
+    mcPingBtn.textContent = `Ping ${pingRole}`;
+    mcPingBtn.title = `${pingDisplay} \u2014 ${pingRole}`;
     mcPingBtn.addEventListener("click", () => {
       setView("agents");
       setOfficeActiveAgent("henry");
-      showToast(`Pinged ${pingName || pingCanonical}.`, "ok");
+      showToast(`Pinged ${pingRole}.`, "ok");
     });
   }
   if (mcRefreshBtn) {
@@ -11299,6 +11766,15 @@ function bindEvents() {
   if (pipelineOpenFactoryBtn) pipelineOpenFactoryBtn.addEventListener("click", () => setView("factory"));
   if (pipelineBoard) {
     pipelineBoard.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+
+  const mcRunsList = document.getElementById("mc-runs-list");
+  if (mcRunsList) {
+    mcRunsList.addEventListener("click", (e) => {
       const btn = e.target?.closest?.("[data-action]");
       if (!btn) return;
       void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
