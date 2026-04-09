@@ -9997,7 +9997,7 @@ function updateTaskCardStatus(taskId, status) {
 }
 
 function setActiveToken(agent, roomId) {
-  Object.values(tokens).forEach((token) => token.classList.remove("active"));
+  Object.values(tokens).filter(Boolean).forEach((token) => token.classList.remove("active"));
 
   const token = tokens[agent] || tokens.Coach;
   const room = rooms[roomId] || rooms["room-strategy"];
