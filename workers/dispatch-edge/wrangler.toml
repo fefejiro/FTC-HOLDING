@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2026-03-27"
 
 [vars]
-DISPATCH_UPSTREAM_ORIGIN = "https://dispatch-api-production.up.railway.app"
+DISPATCH_UPSTREAM_ORIGIN = "https://ftcdispatch-production.up.railway.app"
 
 [[routes]]
 pattern = "dispatch.unalabs.cloud"
