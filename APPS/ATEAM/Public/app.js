@@ -2554,9 +2554,9 @@ async function apiDecideApproval(approvalId, decision, { sessionId = GLOBAL_PODC
 
 function renderApprovalsEmpty() {
   if (approvalsCountNode) approvalsCountNode.textContent = "0";
-  if (approvalsListNode) approvalsListNode.innerHTML = `<div class="control-empty">No approvals.</div>`;
+  if (approvalsListNode) approvalsListNode.innerHTML = `<div class="control-empty">No approvals are waiting right now.</div>`;
   if (approvalsDetailStatusNode) approvalsDetailStatusNode.textContent = "—";
-  if (approvalsDetailNode) approvalsDetailNode.innerHTML = `<div class="control-empty">Select an approval to review.</div>`;
+  if (approvalsDetailNode) approvalsDetailNode.innerHTML = `<div class="control-empty">Approval details will appear here when something needs review.</div>`;
 }
 
 function renderApprovalsList(items, selectedId) {
@@ -2564,7 +2564,7 @@ function renderApprovalsList(items, selectedId) {
   approvalsListNode.innerHTML = "";
 
   if (!items.length) {
-    approvalsListNode.innerHTML = `<div class="control-empty">No approvals.</div>`;
+    approvalsListNode.innerHTML = `<div class="control-empty">No approvals are waiting right now.</div>`;
     return;
   }
 
@@ -2585,7 +2585,7 @@ function renderApprovalsList(items, selectedId) {
         <div class="approval-status-pill" data-tone="${escapeHtml(approvalStatusTone(status))}">${escapeHtml(approvalStatusLabel(status))}</div>
       </div>
       <div class="approval-summary">${escapeHtml(summary || "Approval requested")}</div>
-      <div class="approval-meta">${escapeHtml(requestedBy ? `Requested by ${requestedBy}` : "Requested")}${createdTs ? ` · ${escapeHtml(formatApprovalTime(createdTs))}` : ""}</div>
+      <div class="approval-meta">${escapeHtml(requestedBy ? `Requested by ${mcPublicLabel(requestedBy)}` : "Requested")}${createdTs ? ` · ${escapeHtml(formatApprovalTime(createdTs))}` : ""}</div>
     `;
     row.addEventListener("click", () => {
       approvalsSaveUiPrefs({ selectedId: id });
@@ -2600,7 +2600,7 @@ function renderApprovalDetail(approval) {
   if (!approvalsDetailNode || !approvalsDetailStatusNode) return;
   if (!approval) {
     approvalsDetailStatusNode.textContent = "—";
-    approvalsDetailNode.innerHTML = `<div class="control-empty">Select an approval to review.</div>`;
+    approvalsDetailNode.innerHTML = `<div class="control-empty">Approval details will appear here when something needs review.</div>`;
     return;
   }
 
@@ -2630,7 +2630,7 @@ function renderApprovalDetail(approval) {
   blocks.push(`
     <div class="approval-detail-block">
       <div class="approval-detail-label">Requested By</div>
-      <div class="approval-detail-value">${escapeHtml(requestedBy || "system")}</div>
+      <div class="approval-detail-value">${escapeHtml(mcPublicLabel(requestedBy || "system"))}</div>
     </div>
   `);
   blocks.push(`
@@ -5187,9 +5187,6 @@ function renderPeoplePage() {
               <div class="ops-card-meta">${mcStageBadge(status)}</div>
             </div>
             <div class="ops-card-copy">${escapeHtml(agent.displayName || "")}</div>
-            <div class="ops-inline-meta">
-              <span>${escapeHtml(agent.lane || "")}</span>
-            </div>
           </article>
         `;
       })
