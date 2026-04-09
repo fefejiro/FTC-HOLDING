@@ -2365,6 +2365,11 @@ const missionControlState = {
     roster: [],
     positions: {}
   },
+  tasks: {
+    selectedRunId: "",
+    runs: [],
+    pendingByRunId: {}
+  },
   factory: {
     items: [],
     workItems: [],
@@ -3238,6 +3243,195 @@ function mcRunStateLabel(state) {
   return labels[s] || s.replaceAll("_", " ");
 }
 
+function mcLaneLabel(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const normalized = raw.toLowerCase();
+  const known = {
+    [String(OFFICE2_LANES?.COORDINATION || "coordination")]: "Coordination",
+    [String(OFFICE2_LANES?.SIGNALS || "signals")]: "Signals",
+    [String(OFFICE2_LANES?.CONTENT || "content")]: "Content",
+    [String(OFFICE2_LANES?.BUILD || "build")]: "Build",
+    [String(OFFICE2_LANES?.QA || "qa")]: "QA",
+    [String(OFFICE2_LANES?.THINK_TANK || "think_tank")]: "Research",
+    [String(OFFICE2_LANES?.VOICE || "voice")]: "Voice",
+    [String(OFFICE2_LANES?.DESIGN || "design")]: "Design",
+    [String(OFFICE2_LANES?.OPS || "ops")]: "Operations"
+  };
+  if (known[normalized]) return known[normalized];
+  return mcPublicLabel(raw);
+}
+
+function mcShortRunRef(runId) {
+  const raw = String(runId || "").trim();
+  if (!raw) return "";
+  return `Run ${raw.replace(/[^a-z0-9]/gi, "").slice(0, 6).toUpperCase()}`;
+}
+
+function mcGetSelectedWorkflowRun() {
+  const selectedRunId = String(missionControlState.tasks?.selectedRunId || state.activeTaskId || "").trim();
+  if (!selectedRunId) return null;
+  return (missionControlState.tasks?.runs || []).find((run) => String(run?.id || "") === selectedRunId) || null;
+}
+
+function mcGetPendingApprovalForRun(runId) {
+  const key = String(runId || "").trim();
+  if (!key) return null;
+  return missionControlState.tasks?.pendingByRunId?.[key] || null;
+}
+
+function mcTaskSelectedRunSummary(run, pendingApproval) {
+  const runState = String(run?.state || run?.phase || "planning").trim().toLowerCase();
+  if (pendingApproval) {
+    return "Approve moves the brief forward. Revise sends it back for changes before execution continues.";
+  }
+  if (runState === "completed") {
+    return "This workflow run is complete. Review the output summary below or open the linked project for follow-through.";
+  }
+  if (runState === "failed") {
+    return "This workflow run stopped before completion. Review the latest history entry to decide the next move.";
+  }
+  if (runState === "executing" || runState === "approved") {
+    return "This workflow run is in motion. Decisions stay locked until a review gate opens.";
+  }
+  return "This workflow run is active in the system, but no operator decision is needed from Tasks right now.";
+}
+
+function mcTaskActionAvailability(run, pendingApproval) {
+  const hasRun = Boolean(run);
+  return {
+    hasRun,
+    canCommand: false,
+    canApprove: Boolean(hasRun && pendingApproval),
+    canRevise: Boolean(hasRun && pendingApproval),
+    canKill: false
+  };
+}
+
+function mcTaskThreadHtml(thread = []) {
+  if (!thread.length) {
+    return `
+      <div class="task-run-thread-empty">
+        No task messages were captured for this workflow run yet.
+      </div>
+    `;
+  }
+
+  const rendered = thread
+    .slice(-8)
+    .map((msg) => {
+      const who = String(msg?.agent || msg?.role || "system").trim();
+      const label = mcPublicLabel(who);
+      const body = escapeHtml(String(msg?.content || "").trim() || "No message body captured.");
+      const time = formatRelativeTime(msg?.ts) || "";
+      return `
+        <div class="thread-line ${escapeHtml(String(msg?.role || "assistant"))}">
+          <div class="line-label">${escapeHtml(label)}${time ? ` • ${escapeHtml(time)}` : ""}</div>
+          <div>${body}</div>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `<div class="task-run-thread-list">${rendered}</div>`;
+}
+
+function mcTaskHistoryHtml(run) {
+  const history = Array.isArray(run?.history) ? run.history.filter(Boolean) : [];
+  if (!history.length) {
+    return `<div class="task-run-history-empty">No workflow history captured yet.</div>`;
+  }
+  return `
+    <div class="ops-history-list">
+      ${history
+        .slice(-6)
+        .reverse()
+        .map((entry) => `
+          <div class="ops-history-entry">
+            <span class="ops-history-state">${escapeHtml(mcRunStateLabel(entry?.state || ""))}</span>
+            <span class="ops-history-reason">${escapeHtml(entry?.reason || "State change")}</span>
+            ${entry?.actor ? `<span class="ops-history-actor">${escapeHtml(mcPublicLabel(entry.actor))}</span>` : ""}
+          </div>
+        `)
+        .join("")}
+    </div>
+  `;
+}
+
+function mcTaskArtifactsSummary(run) {
+  const artifacts = run?.artifacts || {};
+  const checks = [
+    { label: "Decision Pack", present: Boolean(run?.decisionPack || artifacts?.decisionPack || artifacts?.packText) },
+    { label: "Mockup", present: Boolean(artifacts?.mockupTitle || artifacts?.mockupUrl || artifacts?.mockup) },
+    { label: "Prototype", present: Boolean(artifacts?.prototypeTitle || artifacts?.prototypeUrl || artifacts?.prototype) },
+    { label: "Smoke summary", present: Boolean(artifacts?.smokeSummary || run?.smokeSummary) }
+  ];
+  return checks
+    .map((item) => `<span class="task-run-artifact ${item.present ? "present" : "missing"}">${escapeHtml(item.label)}${item.present ? " ready" : " not available"}</span>`)
+    .join("");
+}
+
+function mcRenderTaskRunDetail(run, pendingApproval, thread = []) {
+  const title = run?.brief?.title || run?.title || compactText(run?.idea, 80) || "Workflow run";
+  const summary = run?.brief?.summary || run?.idea || "No request summary captured.";
+  const ownerRole = mcCanonicalName(run?.ownerAgentId) || "Unassigned";
+  const ownerName = mcDisplayName(run?.ownerAgentId) || "";
+  const lane = mcLaneLabel(run?.brief?.recommendedLane || run?.recommendedLane || run?.category || "");
+  const stateLabel = mcRunStateLabel(run?.state || run?.phase || "planning");
+  const approvalLabel = pendingApproval ? "Pending decision" : (run?.approvals?.brief?.status ? mcPublicLabel(run.approvals.brief.status) : "No open gate");
+  const runRef = mcShortRunRef(run?.id);
+  const updated = formatRelativeTime(run?.updatedAt || run?.createdAt || run?.createdTs) || "Recently";
+  const consequence = mcTaskSelectedRunSummary(run, pendingApproval);
+  const projectLabel = run?.links?.projectId ? mcPublicLabel(run.links.projectId) : "Workflow project";
+
+  return `
+    <div class="task-run-detail">
+      <div class="task-run-detail-head">
+        <div>
+          <div class="task-run-detail-title">${escapeHtml(title)}</div>
+          <div class="task-run-detail-meta">${escapeHtml([runRef, stateLabel, updated].filter(Boolean).join(" • "))}</div>
+        </div>
+        <div class="task-run-detail-badge">${escapeHtml(pendingApproval ? "Decision required" : stateLabel)}</div>
+      </div>
+
+      <div class="task-run-detail-summary">${escapeHtml(summary)}</div>
+
+      <div class="task-run-kv-grid">
+        <div class="task-run-kv"><span>Owner</span><strong>${escapeHtml(ownerRole)}${ownerName ? ` • ${escapeHtml(ownerName)}` : ""}</strong></div>
+        <div class="task-run-kv"><span>Lane</span><strong>${escapeHtml(lane || "Not assigned")}</strong></div>
+        <div class="task-run-kv"><span>Approval</span><strong>${escapeHtml(approvalLabel)}</strong></div>
+        <div class="task-run-kv"><span>Linked project</span><strong>${escapeHtml(projectLabel)}</strong></div>
+      </div>
+
+      <div class="task-run-consequence">${escapeHtml(consequence)}</div>
+
+      <div class="task-run-section">
+        <div class="task-run-section-title">Output readiness</div>
+        <div class="task-run-artifacts">${mcTaskArtifactsSummary(run)}</div>
+      </div>
+
+      <div class="task-run-section">
+        <div class="task-run-section-title">Workflow history</div>
+        ${mcTaskHistoryHtml(run)}
+      </div>
+
+      <div class="task-run-section">
+        <div class="task-run-section-title">Task thread</div>
+        ${mcTaskThreadHtml(thread)}
+      </div>
+    </div>
+  `;
+}
+
+function mcSetSelectedWorkflowRun(runId = "") {
+  const safeRunId = String(runId || "").trim();
+  missionControlState.tasks.selectedRunId = safeRunId;
+  const run = safeRunId ? mcGetSelectedWorkflowRun() : null;
+  state.activeTaskId = safeRunId;
+  state.activeTaskTitle = run ? (run.brief?.title || run.title || compactText(run.idea, 80) || safeRunId) : "";
+  state.activeAgent = run?.ownerAgentId ? mcCanonicalName(run.ownerAgentId) : "";
+}
+
 let office2LiveTimer = null;
 let office2HudTimer = null;
 
@@ -3648,6 +3842,30 @@ function office2TaskLabel(mapsTo) {
   return last;
 }
 
+function office2MetaLine(agent) {
+  const id = String(agent?.mapsTo || agent?.id || "").trim();
+  const status = office2ComputeStatus(agent);
+  const derivedMeta = missionControlState.office2?.derivedMeta || {};
+  const meta = derivedMeta?.[id] || {};
+  const laneLabel = mcLaneLabel(agent?.lane || "");
+  const lastTask = String(meta?.lastTask || "").trim();
+  const nextAction = String(meta?.nextAction || "").trim();
+
+  if (status === "working" && lastTask) {
+    return `${laneLabel || "Active lane"} • ${lastTask}`;
+  }
+  if (status === "waiting_for_you" && nextAction) {
+    return `Waiting on ${nextAction.toLowerCase()}`;
+  }
+  if (status === "blocked" && nextAction) {
+    return `Blocked • ${nextAction}`;
+  }
+  if (status === "done" && nextAction) {
+    return `Recently finished • ${nextAction}`;
+  }
+  return laneLabel ? `No active run in ${laneLabel.toLowerCase()} right now.` : "No active run affecting this agent right now.";
+}
+
 function setOffice2Selected(agentId) {
   missionControlState.office2.selectedId = agentId;
   const stored = safeJsonParse(localStorage.getItem(MC_OFFICE2_KEY), { version: 2, selectedId: agentId });
@@ -3833,6 +4051,7 @@ function renderOffice2AgentCards() {
       <div class="office2-agent-meta">
         <div class="office2-agent-name">${escapeHtml(agent.role || agent.id)}</div>
         <div class="office2-agent-hint">${escapeHtml(agent.displayName || "")}</div>
+        <div class="office2-agent-detail">${escapeHtml(office2MetaLine(agent))}</div>
       </div>
       <div class="office2-agent-status">${escapeHtml(office2StatusLabel(agent.mapsTo || agent.id))}</div>
     `;
@@ -3875,7 +4094,8 @@ async function renderOffice2Activity() {
     actor: mcCanonicalName(run.ownerAgentId) || run.ownerAgentId || "operator",
     lane: run.brief?.recommendedLane || run.category || "",
     summary: run.brief?.title || run.title || run.idea || "Active workflow",
-    type: mcRunStateLabel(run.state)
+    type: mcRunStateLabel(run.state),
+    reference: mcShortRunRef(run.id)
   }));
 
   const allRows = [...runEvents, ...events.slice(-24)];
@@ -3897,7 +4117,7 @@ async function renderOffice2Activity() {
     const timeLabel = ts && Number.isFinite(ts.getTime())
       ? ts.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })
       : "--:--:--";
-    const sourceParts = [String(event?.actor || ""), String(event?.lane || "")]
+    const sourceParts = [String(event?.actor || ""), mcLaneLabel(event?.lane || ""), String(event?.reference || "")]
       .map((value) => mcPublicLabel(value))
       .filter(Boolean);
     const source = Array.from(new Set(sourceParts)).join(" \u2022 ");
@@ -5776,9 +5996,18 @@ async function renderTasksPage({ force = false } = {}) {
     if (rid) pendingByRunId.set(rid, ap);
   }
 
+  missionControlState.tasks.runs = runs;
+  missionControlState.tasks.pendingByRunId = Object.fromEntries(pendingByRunId.entries());
+
   if (!runs.length) {
+    mcSetSelectedWorkflowRun("");
     runsList.innerHTML = `<p class="mc-runs-empty">No workflow runs yet. Submit an intent from the entry view to create one.</p>`;
+    updateSelectionUi();
     return;
+  }
+
+  if (missionControlState.tasks.selectedRunId && !runs.some((run) => String(run?.id || "") === String(missionControlState.tasks.selectedRunId || ""))) {
+    mcSetSelectedWorkflowRun("");
   }
 
   runsList.innerHTML = runs.slice(0, 20).map((run) => {
@@ -5797,9 +6026,10 @@ async function renderTasksPage({ force = false } = {}) {
       : ["executing", "approved"].includes(runState)
       ? "active"
       : "pending";
+    const isSelected = String(missionControlState.tasks.selectedRunId || "") === String(run.id || "");
 
     return `
-      <article class="mc-run-card mc-run-state-${escapeHtml(stateClass)}" data-run-id="${escapeHtml(run.id)}">
+      <article class="mc-run-card mc-run-state-${escapeHtml(stateClass)}${isSelected ? " active" : ""}" data-run-id="${escapeHtml(run.id)}">
         <div class="mc-run-head">
           <div class="mc-run-title">${escapeHtml(title)}</div>
           <div class="mc-run-state-badge">${escapeHtml(displayState)}</div>
@@ -5828,6 +6058,11 @@ async function renderTasksPage({ force = false } = {}) {
         </div>
       </article>`;
   }).join("");
+
+  if (missionControlState.tasks.selectedRunId) {
+    mcSetSelectedWorkflowRun(missionControlState.tasks.selectedRunId);
+  }
+  updateSelectionUi();
 }
 
 async function renderAiLabPage({ force = false } = {}) {
@@ -6125,41 +6360,83 @@ function updateSelectionUi() {
   if (chipAgent) chipAgent.textContent = `Agent: ${agentLabel}`;
   if (talkTaskLabel) talkTaskLabel.textContent = `Session Thread: ${GLOBAL_PODCAST_ID}`;
   updateDashboardConsoleState();
+  void renderSelectedTaskRun();
 }
 
 function updateDashboardConsoleState() {
-  const hasActiveTask = Boolean(state.activeTaskId);
+  const run = mcGetSelectedWorkflowRun();
+  const pendingApproval = mcGetPendingApprovalForRun(run?.id);
+  const actionState = mcTaskActionAvailability(run, pendingApproval);
+  const hasActiveTask = actionState.hasRun;
   if (dashboardInput) {
-    dashboardInput.disabled = !hasActiveTask;
+    dashboardInput.disabled = !actionState.canCommand;
     dashboardInput.placeholder = hasActiveTask
-      ? "Send a command for the selected workflow run"
-      : "Select a workflow run to send a command";
+      ? "Direct workflow-run commands stay in Intake for now"
+      : "Select a workflow run to review";
+    dashboardInput.title = hasActiveTask
+      ? "Use Intake to issue a new command. Tasks is a review and decision surface."
+      : "Select a workflow run first.";
   }
   if (dashboardSend) {
-    dashboardSend.disabled = !hasActiveTask;
-    dashboardSend.setAttribute("aria-disabled", String(!hasActiveTask));
+    dashboardSend.disabled = !actionState.canCommand;
+    dashboardSend.setAttribute("aria-disabled", String(!actionState.canCommand));
+    dashboardSend.title = hasActiveTask
+      ? "Direct workflow-run commands are not available from Tasks."
+      : "Select a workflow run first.";
   }
   decisionButtons.forEach((button) => {
-    button.disabled = !hasActiveTask;
-    button.setAttribute("aria-disabled", String(!hasActiveTask));
-    button.title = hasActiveTask ? "" : "Select a workflow run first";
+    const action = String(button.dataset.action || "");
+    const enabled = action === "approve"
+      ? actionState.canApprove
+      : action === "revise"
+      ? actionState.canRevise
+      : action === "kill"
+      ? actionState.canKill
+      : false;
+    button.disabled = !enabled;
+    button.setAttribute("aria-disabled", String(!enabled));
+    if (!hasActiveTask) {
+      button.title = "Select a workflow run first";
+    } else if (action === "approve") {
+      button.title = pendingApproval
+        ? "Approve the current brief and move it forward."
+        : "No approval is waiting on this workflow run.";
+    } else if (action === "revise") {
+      button.title = pendingApproval
+        ? "Send the current brief back for revision."
+        : "No revision gate is open for this workflow run.";
+    } else if (action === "kill") {
+      button.title = "Stop is not available from this surface.";
+    } else {
+      button.title = "";
+    }
   });
   if (!dashboardThread) return;
   if (!hasActiveTask) {
     dashboardThread.innerHTML = `
       <div class="mc-placeholder dashboard-empty-note">
-        No workflow run selected. Start from the entry view or choose a run from the list first.
+        No workflow run selected yet. Choose a run from the list to review its owner, state, history, and next decision.
       </div>
     `;
     return;
   }
-  if (!dashboardThread.childElementCount) {
-    dashboardThread.innerHTML = `
-      <div class="mc-placeholder dashboard-empty-note">
-        No messages yet for this workflow run.
-      </div>
-    `;
+}
+
+async function renderSelectedTaskRun() {
+  if (!dashboardThread) return;
+  const run = mcGetSelectedWorkflowRun();
+  const pendingApproval = mcGetPendingApprovalForRun(run?.id);
+  if (!run) return;
+
+  let thread = [];
+  try {
+    thread = await loadThread(run.id);
+  } catch {
+    thread = [];
   }
+
+  if (String(missionControlState.tasks.selectedRunId || "") !== String(run.id || "")) return;
+  dashboardThread.innerHTML = mcRenderTaskRunDetail(run, pendingApproval, Array.isArray(thread) ? thread : []);
 }
 
 function formatRelativeTime(timestamp) {
@@ -9746,96 +10023,44 @@ function selectTaskCard(card) {
 }
 
 async function handleDashboardSend() {
-  if (!state.activeTaskId) {
+  const run = mcGetSelectedWorkflowRun();
+  if (!run) {
     showToast("Select a workflow run first.", "error");
     return;
   }
-  const text = String(dashboardInput?.value || "").trim();
-  if (!text) return;
-
-  const officeAgentId = mapDashboardAgentToOffice(state.activeAgent);
-  recordOfficeNote(officeAgentId, { lastTask: text, nextAction: "Awaiting response" });
-  setOfficeOverride(officeAgentId, "working", 12000, {
-    lastTask: text,
-    nextAction: "Awaiting response"
-  });
-
-  // Show user message immediately
-  const userMsg = { role: "user", content: text, agent: state.activeAgent };
-  let currentThread = [];
-  try {
-    currentThread = await loadThread(state.activeTaskId || GLOBAL_TASK_ID);
-  } catch {
-    currentThread = [];
-  }
-  const displayThread = [...currentThread, userMsg];
-  renderDashboardThread(displayThread);
-
-  if (dashboardInput) dashboardInput.value = "";
-
-  try {
-    const data = await apiRequest("/agent/command", {
-      method: "POST",
-      body: {
-        taskId: state.activeTaskId || GLOBAL_TASK_ID,
-        agent: state.activeAgent,
-        message: text,
-        mode: "dashboard"
-      }
-    });
-
-    if (data?.reply) {
-      showToast("Agent replied.", "ok");
-      setOfficeOverride(officeAgentId, "done", 4000, {
-        lastTask: text,
-        nextAction: "Review output"
-      });
-      // Reload and display the full thread after response
-      let updatedThread = [];
-      try {
-        updatedThread = await loadThread(state.activeTaskId || GLOBAL_TASK_ID);
-      } catch {
-        updatedThread = displayThread;
-      }
-      renderDashboardThread(updatedThread);
-    }
-    setApiOnline(true);
-  } catch (err) {
-    setApiOnline(false);
-    setOfficeOverride(officeAgentId, "blocked", 6000, {
-      lastTask: text,
-      nextAction: "Retry or revise"
-    });
-    showToast("Dashboard request failed.", "error");
-  }
+  showToast("Direct workflow-run commands stay in Intake. Tasks is for review and decision.", "error");
 }
 
 async function handleDecision(action) {
-  if (!state.activeTaskId) {
-    showToast("Select a task before decision.", "error");
+  const run = mcGetSelectedWorkflowRun();
+  if (!run) {
+    showToast("Select a workflow run before making a decision.", "error");
+    return;
+  }
+
+  const pendingApproval = mcGetPendingApprovalForRun(run.id);
+  if (action === "kill") {
+    showToast("Stop is not available from Tasks for workflow runs.", "error");
+    return;
+  }
+  if (!pendingApproval) {
+    showToast("This workflow run does not need a decision right now.", "error");
     return;
   }
 
   try {
-    const result = await apiRequest("/task/update", {
-      method: "POST",
-      body: {
-        taskId: state.activeTaskId,
-        status: action,
-        decisionNote: `${action} from dashboard`
-      }
+    await mcHandleApprovalDecision(pendingApproval.id, action === "approve" ? "approved" : "rejected");
+    recordOfficeNote("henry", {
+      lastTask: action === "approve" ? "Approved workflow brief" : "Requested workflow revision",
+      nextAction: "Monitor run state"
     });
-
-    updateTaskCardStatus(state.activeTaskId, result.task?.status || action);
-    recordOfficeNote("henry", { lastTask: `Decision: ${action}`, nextAction: "Monitor outcomes" });
-    setOfficeOverride("henry", action === "kill" ? "blocked" : "done", 4000, {
-      lastTask: `Decision: ${action}`,
-      nextAction: "Monitor outcomes"
+    setOfficeOverride("henry", "done", 4000, {
+      lastTask: action === "approve" ? "Approved workflow brief" : "Requested workflow revision",
+      nextAction: "Monitor run state"
     });
-    void loadOfficeTasks().then(updateOfficeSimulation);
-    showToast(`Task updated: ${action}`, "ok");
+    await renderTasksPage({ force: true });
   } catch {
-    showToast("Failed to update task status.", "error");
+    showToast("Failed to update this workflow run.", "error");
   }
 }
 
@@ -12085,8 +12310,17 @@ function bindEvents() {
   if (mcRunsList) {
     mcRunsList.addEventListener("click", (e) => {
       const btn = e.target?.closest?.("[data-action]");
-      if (!btn) return;
-      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+      if (btn) {
+        void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+        return;
+      }
+      const card = e.target?.closest?.(".mc-run-card");
+      if (!card) return;
+      mcSetSelectedWorkflowRun(String(card.dataset.runId || ""));
+      Array.from(mcRunsList.querySelectorAll(".mc-run-card")).forEach((node) => {
+        node.classList.toggle("active", node === card);
+      });
+      updateSelectionUi();
     });
   }
 

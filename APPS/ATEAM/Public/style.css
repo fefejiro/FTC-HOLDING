@@ -669,6 +669,124 @@ body.ateam-integrated .mc-nav {
   margin: 0;
 }
 
+.task-run-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-run-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.task-run-detail-title {
+  font-size: 14px;
+  font-weight: 650;
+  color: rgba(226, 241, 255, 0.94);
+}
+
+.task-run-detail-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgba(198, 213, 233, 0.62);
+}
+
+.task-run-detail-badge {
+  border-radius: 999px;
+  border: 1px solid rgba(226, 241, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(226, 241, 255, 0.82);
+  padding: 5px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.task-run-detail-summary,
+.task-run-consequence,
+.task-run-thread-empty,
+.task-run-history-empty {
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(226, 241, 255, 0.72);
+}
+
+.task-run-kv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.task-run-kv {
+  border: 1px solid rgba(226, 241, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+}
+
+.task-run-kv span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(198, 213, 233, 0.52);
+}
+
+.task-run-kv strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: rgba(226, 241, 255, 0.9);
+}
+
+.task-run-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-run-section-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(198, 213, 233, 0.58);
+}
+
+.task-run-artifacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.task-run-artifact {
+  border-radius: 999px;
+  border: 1px solid rgba(226, 241, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 9px;
+  font-size: 11px;
+  color: rgba(226, 241, 255, 0.74);
+}
+
+.task-run-artifact.present {
+  border-color: rgba(34, 197, 94, 0.22);
+  background: rgba(34, 197, 94, 0.08);
+  color: rgba(187, 247, 208, 0.92);
+}
+
+.task-run-artifact.missing {
+  border-color: rgba(248, 113, 113, 0.16);
+  background: rgba(248, 113, 113, 0.06);
+  color: rgba(254, 202, 202, 0.84);
+}
+
+.task-run-thread-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .thread-line {
   border: 1px solid #243248;
   border-radius: 10px;
@@ -5323,35 +5441,35 @@ body[data-office-studio="true"] .office-view {
 }
 
 /* Role signatures (by lane) */
-.office2-entity[data-lane="signals"] .office2-sprite-role {
+.office2-entity:not([data-status="idle"])[data-lane="signals"] .office2-sprite-role {
   animation: office2-role-scan 2.6s ease-in-out infinite;
 }
 
-.office2-entity[data-lane="content"] .office2-sprite-role {
+.office2-entity:not([data-status="idle"])[data-lane="content"] .office2-sprite-role {
   animation: office2-role-type 1.2s ease-in-out infinite;
 }
 
-.office2-entity[data-lane="build"] .office2-sprite-role {
+.office2-entity:not([data-status="idle"])[data-lane="build"] .office2-sprite-role {
   animation: office2-role-steady 1.8s ease-in-out infinite;
 }
 
-.office2-entity[data-lane="qa"] .office2-sprite-role {
+.office2-entity:not([data-status="idle"])[data-lane="qa"] .office2-sprite-role {
   animation: office2-role-inspect 2.8s ease-in-out infinite;
 }
 
-.office2-entity[data-lane="think_tank"] .office2-sprite-role {
+.office2-entity:not([data-status="idle"])[data-lane="think_tank"] .office2-sprite-role {
   animation: office2-idle-breathe 3.6s ease-in-out infinite;
 }
 
-.office2-entity[data-lane="voice"] .office2-role-badge {
+.office2-entity:not([data-status="idle"])[data-lane="voice"] .office2-role-badge {
   animation: office2-badge-pulse 1.8s ease-in-out infinite;
 }
 
-.office2-entity[data-lane="design"] .office2-role-badge {
+.office2-entity:not([data-status="idle"])[data-lane="design"] .office2-role-badge {
   animation: office2-design-shimmer 2.4s ease-in-out infinite;
 }
 
-.office2-entity[data-lane="ops"] .office2-sprite-role {
+.office2-entity:not([data-status="idle"])[data-lane="ops"] .office2-sprite-role {
   animation: office2-role-type 1.6s ease-in-out infinite;
 }
 
@@ -5566,6 +5684,12 @@ body[data-office-studio="true"] .office-view {
 .office2-agent-hint {
   font-size: 11px;
   color: rgba(216, 229, 245, 0.84);
+}
+
+.office2-agent-detail {
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: rgba(198, 213, 233, 0.64);
 }
 
 .office2-agent-status {
@@ -7130,6 +7254,11 @@ body[data-office-studio="true"] .office-view {
 
 .mc-run-card:hover {
   border-color: rgba(226, 241, 255, 0.2);
+}
+
+.mc-run-card.active {
+  border-color: rgba(96, 165, 250, 0.28);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.14) inset;
 }
 
 .mc-run-card.mc-run-state-active {
