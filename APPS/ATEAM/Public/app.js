@@ -3887,10 +3887,10 @@ async function renderOffice2Activity() {
     const timeLabel = ts && Number.isFinite(ts.getTime())
       ? ts.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })
       : "--:--:--";
-    const source = [String(event?.actor || ""), String(event?.lane || "")]
+    const sourceParts = [String(event?.actor || ""), String(event?.lane || "")]
       .map((value) => mcPublicLabel(value))
-      .filter(Boolean)
-      .join(" \u2022 ");
+      .filter(Boolean);
+    const source = Array.from(new Set(sourceParts)).join(" \u2022 ");
     const rawSummary = String(event?.summary || "").trim() || String(event?.type || "").trim();
     const summary = mcPublicLabel(rawSummary);
     const type = mcPublicLabel(String(event?.type || "").trim());
@@ -5122,7 +5122,7 @@ function buildPeopleHandoffs(contacts = []) {
       let note = "Chief of Staff should keep context tight and route the next action.";
       if (contact.speakerId === "unknown") {
         ownerAgentId = "scout";
-        note = "Identity or intent is still fuzzy. Scout should clarify before build starts.";
+        note = "Identity or intent is still fuzzy. Signals Analyst should clarify before build starts.";
       } else if (contact.turns >= 3) {
         ownerAgentId = "quill";
         note = "There is enough conversational signal to turn into a clearer brief or summary.";
