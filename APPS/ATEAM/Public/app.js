@@ -401,6 +401,9 @@ const factoryMetricBlocked = document.getElementById("factory-metric-blocked");
 const factoryMetricAvgTime = document.getElementById("factory-metric-avgtime");
 const factoryMetricCompleted = document.getElementById("factory-metric-completed");
 const factoryCompletedList = document.getElementById("factory-completed-list");
+const factoryPackFilterLane = document.getElementById("factory-pack-filter-lane");
+const factoryPackFilterOwner = document.getElementById("factory-pack-filter-owner");
+const factoryPackFilterReadiness = document.getElementById("factory-pack-filter-readiness");
 
 const chipTask = document.getElementById("chip-task");
 const chipAgent = document.getElementById("chip-agent");
@@ -2364,7 +2367,14 @@ const missionControlState = {
   },
   factory: {
     items: [],
-    workItems: []
+    workItems: [],
+    completedRuns: [],
+    expandedRunId: "",
+    filters: {
+      lane: "",
+      owner: "",
+      readiness: ""
+    }
   }
 };
 
@@ -4135,50 +4145,189 @@ function renderFactoryBuildAgents() {
   });
 }
 
+function mcRunCompletedAt(run) {
+  const history = Array.isArray(run?.stateHistory) ? run.stateHistory : [];
+  const completedEntry = history
+    .slice()
+    .reverse()
+    .find((entry) => String(entry?.state || "").trim().toLowerCase() === "completed");
+  return completedEntry?.at || run?.completedAt || run?.updatedAt || run?.createdAt || run?.createdTs || "";
+}
+
+function mcFactoryPackMeta(run) {
+  const brief = run?.brief || {};
+  const workflow = run?.workflow || {};
+  const artifacts = run?.artifacts && typeof run.artifacts === "object" ? run.artifacts : {};
+  const approvals = run?.approvals || {};
+  const handoff = run?.handoff || {};
+  const doc = artifacts.doc || {};
+  const mockup = artifacts.mockup || {};
+  const prototype = artifacts.prototype || {};
+  const smoke = artifacts.smoke || {};
+  const nextSteps = Array.isArray(artifacts.nextSteps)
+    ? artifacts.nextSteps
+    : Array.isArray(workflow.nextSteps)
+      ? workflow.nextSteps
+      : [];
+  const ownerRole = mcCanonicalName(run?.ownerAgentId) || "";
+  const ownerName = mcDisplayName(run?.ownerAgentId) || "";
+  const lane = String(brief.recommendedLane || workflow.recommendedLane || run?.category || "").trim();
+  const completedAt = mcRunCompletedAt(run);
+  const trailPresent = Boolean(
+    approvals?.brief?.status ||
+    approvals?.pack?.status ||
+    (Array.isArray(run?.stateHistory) && run.stateHistory.length)
+  );
+  const handoffStatus = String(handoff?.status || workflow?.handoffStatus || "").trim();
+  const normalizedHandoff = handoffStatus.toLowerCase();
+  const artifactChecks = [
+    { label: "Decision Pack", present: true, detail: doc.title ? `Document: ${doc.title}` : "Structured from the completed workflow run." },
+    { label: "Mockup", present: Boolean(mockup.title), detail: mockup.title || "Not available" },
+    { label: "Prototype", present: Boolean(prototype.title), detail: prototype.title || "Not available" },
+    { label: "Smoke summary", present: Boolean(smoke.summary), detail: smoke.summary || "Not available" },
+    { label: "Approval trail", present: trailPresent, detail: trailPresent ? "Decision history captured." : "Approval trail not captured." }
+  ];
+  const readyByArtifacts = Boolean(smoke.summary) && (Boolean(mockup.title) || Boolean(prototype.title) || Boolean(doc.title));
+  const explicitReady = ["ready", "handoff_ready", "approved", "complete", "completed"].includes(normalizedHandoff);
+  const handoffReady = explicitReady || readyByArtifacts;
+  const handoffDetail = handoffStatus
+    ? mcPublicLabel(handoffStatus)
+    : handoffReady
+      ? "Pack and supporting evidence are present."
+      : "Completed, but still missing supporting handoff ingredients.";
+  const recommendedNextMove = String(
+    handoff?.nextAction ||
+    nextSteps[0] ||
+    brief.recommendedDirection ||
+    workflow.briefDirection ||
+    ""
+  ).trim();
+  const summary = String(
+    smoke.summary ||
+    prototype.summary ||
+    mockup.summary ||
+    doc.summary ||
+    workflow.smokeSummary ||
+    brief.summary ||
+    run?.outcome ||
+    ""
+  ).trim();
+
+  return {
+    ownerRole,
+    ownerName,
+    lane,
+    completedAt,
+    handoffStatus,
+    handoffReady,
+    handoffDetail,
+    artifactChecks,
+    recommendedNextMove,
+    summary
+  };
+}
+
+function renderFactoryCompletedControls(runs) {
+  const sortedRuns = (Array.isArray(runs) ? runs : []).slice().sort((a, b) => (Date.parse(mcRunCompletedAt(b)) || 0) - (Date.parse(mcRunCompletedAt(a)) || 0));
+  const uniqueSorted = (values = []) => Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const laneOptions = uniqueSorted(sortedRuns.map((run) => mcFactoryPackMeta(run).lane));
+  const ownerOptions = uniqueSorted(sortedRuns.map((run) => mcFactoryPackMeta(run).ownerRole));
+
+  if (factoryPackFilterLane) {
+    const current = missionControlState.factory.filters.lane || "";
+    factoryPackFilterLane.innerHTML = [`<option value="">All lanes</option>`, ...laneOptions.map((lane) => `<option value="${escapeHtml(lane)}">${escapeHtml(lane)}</option>`)].join("");
+    factoryPackFilterLane.value = current;
+  }
+  if (factoryPackFilterOwner) {
+    const current = missionControlState.factory.filters.owner || "";
+    factoryPackFilterOwner.innerHTML = [`<option value="">All owners</option>`, ...ownerOptions.map((owner) => `<option value="${escapeHtml(owner)}">${escapeHtml(owner)}</option>`)].join("");
+    factoryPackFilterOwner.value = current;
+  }
+  if (factoryPackFilterReadiness) {
+    factoryPackFilterReadiness.value = missionControlState.factory.filters.readiness || "";
+  }
+}
+
+function getFactoryCompletedRunsView(runs) {
+  const filters = missionControlState.factory.filters || {};
+  return (Array.isArray(runs) ? runs : [])
+    .slice()
+    .sort((a, b) => (Date.parse(mcRunCompletedAt(b)) || 0) - (Date.parse(mcRunCompletedAt(a)) || 0))
+    .filter((run) => {
+      const meta = mcFactoryPackMeta(run);
+      if (filters.lane && meta.lane !== filters.lane) return false;
+      if (filters.owner && meta.ownerRole !== filters.owner) return false;
+      if (filters.readiness === "ready" && !meta.handoffReady) return false;
+      if (filters.readiness === "needs_attention" && meta.handoffReady) return false;
+      return true;
+    });
+}
+
 function renderFactoryCompletedRuns(runs) {
   if (!factoryCompletedList) return;
-  if (!runs.length) {
-    factoryCompletedList.innerHTML = `<p class="factory-completed-empty">No completed packs yet. Approve a workflow run to generate one.</p>`;
+  const visibleRuns = getFactoryCompletedRunsView(runs);
+  if (!visibleRuns.length) {
+    factoryCompletedList.innerHTML = runs.length && (missionControlState.factory.filters.lane || missionControlState.factory.filters.owner || missionControlState.factory.filters.readiness)
+      ? `<p class="factory-completed-empty">No completed packs match the current filters.</p>`
+      : `<p class="factory-completed-empty">No completed packs yet. Approve a workflow run to generate one.</p>`;
     return;
   }
 
-  factoryCompletedList.innerHTML = runs.map((run) => {
+  factoryCompletedList.innerHTML = visibleRuns.map((run) => {
     const title = run.brief?.title || run.title || compactText(run.idea, 72) || "Workflow run";
-    const lane = run.brief?.recommendedLane || run.category || "";
-    const owner = mcCanonicalName(run.ownerAgentId) || "";
-    const ts = formatRelativeTime(run.createdAt || run.createdTs) || "";
-    const artifacts = run.artifacts || {};
-    const hasDoc = artifacts.doc?.title;
-    const hasMockup = artifacts.mockup?.title;
-    const hasPrototype = artifacts.prototype?.title;
-    const hasSmoke = artifacts.smoke?.summary;
-    const packSummary = artifacts.smoke?.summary || artifacts.doc?.summary || run.brief?.summary || "";
-    const artifactChips = [
-      hasDoc ? `<span class="factory-pack-chip">Doc</span>` : "",
-      hasMockup ? `<span class="factory-pack-chip">Mockup</span>` : "",
-      hasPrototype ? `<span class="factory-pack-chip">Prototype</span>` : "",
-      hasSmoke ? `<span class="factory-pack-chip">Smoke</span>` : ""
-    ].filter(Boolean).join("");
+    const meta = mcFactoryPackMeta(run);
+    const ownerLine = [meta.ownerRole, meta.ownerName].filter(Boolean).join(" / ");
+    const completedRelative = formatRelativeTime(meta.completedAt) || "";
+    const completedLabel = meta.completedAt
+      ? new Date(meta.completedAt).toLocaleString(undefined, { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+      : "";
+    const readinessTone = meta.handoffReady ? "ok" : "warn";
+    const readinessLabel = meta.handoffReady ? "Handoff ready" : "Needs attention";
+    const artifactChips = meta.artifactChecks.map((check) =>
+      `<span class="factory-pack-chip factory-pack-chip-${check.present ? "ok" : "muted"}">${escapeHtml(check.label)}${check.present ? "" : " missing"}</span>`
+    ).join("");
+    const readinessItems = meta.artifactChecks.map((check) => `
+      <div class="factory-readiness-item" data-tone="${check.present ? "ok" : "muted"}">
+        <span>${escapeHtml(check.label)}</span>
+        <strong>${escapeHtml(check.detail)}</strong>
+      </div>
+    `).join("");
+    const isExpanded = missionControlState.factory.expandedRunId === run.id;
+    const summary = meta.summary ? compactText(meta.summary, 220) : "Completed workflow run. Open the pack to inspect the full handoff detail.";
+    const nextMove = meta.recommendedNextMove || "Review the pack and decide whether to hand off, ship, or request a follow-up artifact.";
 
     return `
       <article class="factory-pack-card" data-run-id="${escapeHtml(run.id)}">
         <div class="factory-pack-head">
           <div class="factory-pack-title">${escapeHtml(title)}</div>
-          <div class="factory-pack-state">Completed</div>
+          <div class="factory-pack-state" data-tone="${escapeHtml(readinessTone)}">${escapeHtml(readinessLabel)}</div>
         </div>
         <div class="factory-pack-meta">
-          ${owner ? `<span>${escapeHtml(owner)}</span>` : ""}
-          ${lane ? `<span>${escapeHtml(lane)}</span>` : ""}
-          ${ts ? `<span>${escapeHtml(ts)}</span>` : ""}
+          ${ownerLine ? `<span>${escapeHtml(ownerLine)}</span>` : ""}
+          ${meta.lane ? `<span>${escapeHtml(meta.lane)}</span>` : ""}
+          ${completedRelative ? `<span>${escapeHtml(completedRelative)}</span>` : ""}
+          ${completedLabel ? `<span>${escapeHtml(completedLabel)}</span>` : ""}
+        </div>
+        <div class="factory-pack-status-row">
+          <span class="factory-pack-status-pill" data-tone="${escapeHtml(readinessTone)}">${escapeHtml(meta.handoffStatus || readinessLabel)}</span>
+          <span class="factory-pack-status-note">${escapeHtml(meta.handoffDetail)}</span>
         </div>
         ${artifactChips ? `<div class="factory-pack-chips">${artifactChips}</div>` : ""}
-        ${packSummary ? `<div class="factory-pack-summary">${escapeHtml(packSummary.slice(0, 180))}</div>` : ""}
+        <div class="factory-pack-summary">${escapeHtml(summary)}</div>
+        <div class="factory-pack-next">
+          <span>Recommended next move</span>
+          <strong>${escapeHtml(nextMove)}</strong>
+        </div>
         <div class="factory-pack-actions">
+          <button class="ops-action-btn ops-action-btn-secondary" type="button"
+            data-action="inspect-pack" data-run-id="${escapeHtml(run.id)}">${isExpanded ? "Hide pack" : "Inspect pack"}</button>
           <button class="ops-action-btn" type="button"
             data-action="copy-pack" data-run-id="${escapeHtml(run.id)}">Copy pack</button>
           <button class="ops-action-btn ops-action-btn-secondary" type="button"
             data-action="select-project" data-project-id="${escapeHtml(run.links?.projectId || `workflow_${run.id}`)}" data-scroll-target="ledger">View in Projects</button>
         </div>
+        <div class="factory-readiness-grid">${readinessItems}</div>
+        ${isExpanded ? `<div class="factory-pack-detail">${mcRenderDecisionPack(run)}</div>` : ""}
       </article>
     `;
   }).join("");
@@ -4192,6 +4341,8 @@ async function renderFactoryPage() {
     apiRequest("/api/workflow/runs?limit=40").then((d) => (Array.isArray(d?.runs) ? d.runs : [])).catch(() => [])
   ]);
   const completedRuns = runsData.filter((r) => String(r?.state || "") === "completed");
+  missionControlState.factory.completedRuns = completedRuns;
+  renderFactoryCompletedControls(completedRuns);
   requestAnimationFrame(() => renderFactoryBelt(items));
   renderFactoryMetrics(items, completedRuns.length);
   renderFactoryCompletedRuns(completedRuns);
@@ -4568,6 +4719,25 @@ function mcDecisionPackText(run) {
   const goals = Array.isArray(brief.goals) ? brief.goals : [];
   const phasedPlan = Array.isArray(brief.phasedPlan) ? brief.phasedPlan : [];
   const successCriteria = Array.isArray(brief.successCriteria) ? brief.successCriteria : [];
+  const nextSteps = Array.isArray(artifacts.nextSteps) ? artifacts.nextSteps : Array.isArray(run.workflow?.nextSteps) ? run.workflow.nextSteps : [];
+  const packMeta = mcFactoryPackMeta(run);
+  const approvalTrail = [
+    approvals.brief?.status
+      ? `Brief: ${approvals.brief.status}${approvals.brief.decidedBy ? ` by ${mcPublicLabel(approvals.brief.decidedBy)}` : ""}${approvals.brief.decidedAt ? ` at ${approvals.brief.decidedAt}` : ""}`
+      : "",
+    approvals.pack?.status
+      ? `Pack: ${approvals.pack.status}${approvals.pack.decidedBy ? ` by ${mcPublicLabel(approvals.pack.decidedBy)}` : ""}${approvals.pack.decidedAt ? ` at ${approvals.pack.decidedAt}` : ""}`
+      : "",
+    ...history.map((e) => `${mcRunStateLabel(e.state)} — ${e.reason || "State change"}${e.actor ? ` (${mcPublicLabel(e.actor)})` : ""}`)
+  ].filter(Boolean);
+  const metadataLines = [
+    packMeta.ownerRole ? `Owner role: ${packMeta.ownerRole}` : "",
+    packMeta.ownerName ? `Owner: ${packMeta.ownerName}` : "",
+    packMeta.lane ? `Lane: ${packMeta.lane}` : "",
+    packMeta.completedAt ? `Completed: ${packMeta.completedAt}` : "",
+    `Handoff status: ${packMeta.handoffStatus || (packMeta.handoffReady ? "Handoff ready" : "Needs attention")}`
+  ].filter(Boolean);
+  const readinessLines = packMeta.artifactChecks.map((check) => `- ${check.label}: ${check.present ? check.detail : `Missing. ${check.detail}`}`);
 
   const lines = [
     `# Decision Pack — ${brief.title || run.title || "ATEAM Workflow Run"}`,
@@ -4575,43 +4745,51 @@ function mcDecisionPackText(run) {
     `Run ID: ${run.id || ""}`,
     `Created: ${run.createdAt || run.createdTs || ""}`,
     "",
+    "## Pack Status",
+    ...metadataLines,
+    "",
     "## Request Summary",
-    intake.goal || normalized.goal || run.idea || "",
-    normalized.scopeSummary ? `\nScope: ${normalized.scopeSummary}` : "",
+    intake.goal || normalized.goal || run.idea || "No request summary captured.",
+    normalized.scopeSummary ? `Scope: ${normalized.scopeSummary}` : "",
     "",
     "## What ATEAM Understood",
-    brief.quickVerdict || "",
-    brief.decisionNote ? `\n${brief.decisionNote}` : "",
+    brief.quickVerdict || "No explicit understanding summary was captured.",
+    brief.decisionNote ? `${brief.decisionNote}` : "",
     "",
     "## Audience / Context",
-    brief.audience || normalized.audience || "",
-    intake.context ? `\nContext: ${intake.context}` : "",
+    brief.audience || normalized.audience || "No explicit audience was captured.",
+    intake.context ? `Context: ${intake.context}` : "",
     "",
-    assumptions.length ? "## Assumptions\n" + assumptions.map(a => `- ${a}`).join("\n") : "",
+    "## Assumptions",
+    ...(assumptions.length ? assumptions.map((a) => `- ${a}`) : ["- No explicit assumptions were captured."]),
     "",
-    phasedPlan.length ? "## Proposed Plan\n" + phasedPlan.map((step, i) => `${i + 1}. ${step}`).join("\n") : "",
+    "## Proposed Plan",
+    ...(phasedPlan.length ? phasedPlan.map((step, i) => `${i + 1}. ${step}`) : ["1. No phased plan was captured."]),
     "",
-    risks.length ? "## Blockers / Risks\n" + risks.map(r => `- ${r}`).join("\n") : "",
-    constraints.length ? "\nConstraints:\n" + constraints.map(c => `- ${c}`).join("\n") : "",
+    "## Blockers / Risks",
+    ...(risks.length ? risks.map((r) => `- ${r}`) : ["- No explicit blockers or risks were captured."]),
+    ...(constraints.length ? ["Constraints:", ...constraints.map((c) => `- ${c}`)] : []),
     "",
     "## Recommended Next Move",
-    brief.recommendedDirection || routing.reason || "",
-    goals.length ? "\nGoals:\n" + goals.map(g => `- ${g}`).join("\n") : "",
+    packMeta.recommendedNextMove || routing.reason || "Review the pack and choose the next operator action.",
+    ...(goals.length ? ["Goals:", ...goals.map((g) => `- ${g}`)] : []),
     "",
     "## Execution Direction",
-    brief.recommendedLane ? `Lane: ${brief.recommendedLane}` : "",
-    mockup.title ? `Mockup: ${mockup.title} — ${mockup.summary || ""}` : "",
-    prototype.title ? `Prototype: ${prototype.title} — ${prototype.summary || ""}` : "",
-    doc.title ? `Pack document: ${doc.title}` : "",
-    "",
-    "## Output Summary",
-    smoke.summary || "",
-    successCriteria.length ? "\nSuccess criteria:\n" + successCriteria.map(c => `- ${c}`).join("\n") : "",
+    brief.recommendedLane ? `Lane: ${brief.recommendedLane}` : "Lane: Not specified",
+    doc.title ? `Pack document: ${doc.title}` : "Pack document: Not available",
+    mockup.title ? `Mockup: ${mockup.title}${mockup.summary ? ` — ${mockup.summary}` : ""}` : "Mockup: Not available",
+    prototype.title ? `Prototype: ${prototype.title}${prototype.summary ? ` — ${prototype.summary}` : ""}` : "Prototype: Not available",
+    smoke.summary ? `Smoke summary: ${smoke.summary}` : "Smoke summary: Not available",
+    ...(nextSteps.length ? ["Next steps:", ...nextSteps.map((step) => `- ${step}`)] : []),
     "",
     "## Approval Trail",
-    approvals.brief?.status ? `Brief: ${approvals.brief.status}${approvals.brief.decidedBy ? " by " + approvals.brief.decidedBy : ""}${approvals.brief.decidedAt ? " at " + approvals.brief.decidedAt : ""}` : "",
-    approvals.pack?.status ? `Pack: ${approvals.pack.status}${approvals.pack.decidedBy ? " by " + approvals.pack.decidedBy : ""}${approvals.pack.decidedAt ? " at " + approvals.pack.decidedAt : ""}` : "",
-    history.length ? "\nState history:\n" + history.map(e => `  ${mcRunStateLabel(e.state)} — ${e.reason || ""} (${e.actor || ""})`).join("\n") : ""
+    ...(approvalTrail.length ? approvalTrail : ["No approval trail was captured."]),
+    "",
+    "## Output Summary",
+    packMeta.summary || "No explicit output summary was captured.",
+    "Readiness:",
+    ...readinessLines,
+    ...(successCriteria.length ? ["Success criteria:", ...successCriteria.map((c) => `- ${c}`)] : [])
   ];
 
   return lines.filter(l => l !== null && l !== undefined).join("\n").trim();
@@ -4640,8 +4818,10 @@ function mcRenderDecisionPack(run) {
   const successCriteria = Array.isArray(brief.successCriteria) ? brief.successCriteria : [];
   const smokeChecks = Array.isArray(smoke.checks) ? smoke.checks : [];
   const docSections = Array.isArray(doc.sections) ? doc.sections : [];
+  const nextSteps = Array.isArray(artifacts.nextSteps) ? artifacts.nextSteps : Array.isArray(run.workflow?.nextSteps) ? run.workflow.nextSteps : [];
   const runState = mcRunStateLabel(run.state);
   const isCompleted = run.state === "completed";
+  const packMeta = mcFactoryPackMeta(run);
 
   const section = (title, content) =>
     content ? `<div class="dp-section"><div class="dp-section-title">${escapeHtml(title)}</div><div class="dp-section-body">${content}</div></div>` : "";
@@ -4669,40 +4849,50 @@ function mcRenderDecisionPack(run) {
     brief.audience || normalized.audience ? `<strong>${escapeHtml(brief.audience || normalized.audience)}</strong>` : "",
     intake.context ? `<p class="dp-sub">${escapeHtml(intake.context)}</p>` : "",
     brief.likelyUserValue ? `<p class="dp-sub">${escapeHtml(brief.likelyUserValue)}</p>` : ""
-  ].filter(Boolean).join("");
+  ].filter(Boolean).join("") || `<p>No explicit audience or context was captured.</p>`;
 
-  const planContent = phasedPlan.length ? ol(phasedPlan) : "";
+  const planContent = phasedPlan.length ? ol(phasedPlan) : `<p>No phased plan was captured.</p>`;
 
   const blockersContent = [
-    risks.length ? `<div class="dp-sub-title">Risks</div>${list(risks)}` : "",
+    risks.length ? `<div class="dp-sub-title">Risks</div>${list(risks)}` : `<p>No explicit blockers or risks were captured.</p>`,
     constraints.length ? `<div class="dp-sub-title">Constraints</div>${list(constraints)}` : "",
     intake.nonGoals ? `<div class="dp-sub-title">Non-goals</div><p class="dp-sub">${escapeHtml(intake.nonGoals)}</p>` : ""
   ].filter(Boolean).join("");
 
   const nextMoveContent = [
-    brief.recommendedDirection ? `<p>${escapeHtml(brief.recommendedDirection)}</p>` : "",
+    packMeta.recommendedNextMove ? `<p>${escapeHtml(packMeta.recommendedNextMove)}</p>` : `<p>Review the pack and choose the next operator action.</p>`,
     routing.reason ? `<p class="dp-sub">${escapeHtml(routing.reason)}</p>` : "",
     goals.length ? `<div class="dp-sub-title">Goals</div>${list(goals)}` : ""
   ].filter(Boolean).join("");
 
   const executionContent = [
-    brief.recommendedLane ? `<div class="dp-kv"><span>Lane</span><strong>${escapeHtml(brief.recommendedLane)}</strong></div>` : "",
-    mockup.title ? `<div class="dp-kv"><span>Mockup</span><strong>${escapeHtml(mockup.title)}</strong>${mockup.summary ? `<span class="dp-sub">${escapeHtml(mockup.summary)}</span>` : ""}</div>` : "",
-    prototype.title ? `<div class="dp-kv"><span>Prototype</span><strong>${escapeHtml(prototype.title)}</strong>${prototype.summary ? `<span class="dp-sub">${escapeHtml(prototype.summary)}</span>` : ""}</div>` : "",
-    doc.title ? `<div class="dp-kv"><span>Pack doc</span><strong>${escapeHtml(doc.title)}</strong></div>` : "",
+    packMeta.lane ? `<div class="dp-kv"><span>Lane</span><strong>${escapeHtml(packMeta.lane)}</strong></div>` : `<div class="dp-kv"><span>Lane</span><strong>Not specified</strong></div>`,
+    doc.title ? `<div class="dp-kv"><span>Pack doc</span><strong>${escapeHtml(doc.title)}</strong></div>` : `<div class="dp-kv"><span>Pack doc</span><strong>Not available</strong></div>`,
+    mockup.title ? `<div class="dp-kv"><span>Mockup</span><strong>${escapeHtml(mockup.title)}</strong>${mockup.summary ? `<span class="dp-sub">${escapeHtml(mockup.summary)}</span>` : ""}</div>` : `<div class="dp-kv"><span>Mockup</span><strong>Not available</strong></div>`,
+    prototype.title ? `<div class="dp-kv"><span>Prototype</span><strong>${escapeHtml(prototype.title)}</strong>${prototype.summary ? `<span class="dp-sub">${escapeHtml(prototype.summary)}</span>` : ""}</div>` : `<div class="dp-kv"><span>Prototype</span><strong>Not available</strong></div>`,
+    smoke.summary ? `<div class="dp-kv"><span>Smoke</span><strong>${escapeHtml(smoke.summary)}</strong></div>` : `<div class="dp-kv"><span>Smoke</span><strong>Not available</strong></div>`,
+    nextSteps.length ? `<div class="dp-sub-title">Next steps</div>${list(nextSteps)}` : "",
     docSections.length ? docSections.map(s => `<div class="dp-sub-title">${escapeHtml(s.title)}</div>${list(Array.isArray(s.items) ? s.items : [])}`).join("") : ""
   ].filter(Boolean).join("");
 
   const outputContent = [
-    smoke.summary ? `<p>${escapeHtml(smoke.summary)}</p>` : "",
+    packMeta.summary ? `<p>${escapeHtml(packMeta.summary)}</p>` : `<p>No explicit output summary was captured.</p>`,
+    `<div class="dp-readiness-grid">${packMeta.artifactChecks.map((check) => `<div class="dp-readiness-item" data-tone="${check.present ? "ok" : "muted"}"><span>${escapeHtml(check.label)}</span><strong>${escapeHtml(check.detail)}</strong></div>`).join("")}</div>`,
     smokeChecks.length ? `<div class="dp-checks">${smokeChecks.map(c => `<div class="dp-check dp-check-${escapeHtml(c.result || "watch")}"><span>${escapeHtml(c.label)}</span><strong>${escapeHtml(c.result)}</strong>${c.note ? `<span class="dp-sub">${escapeHtml(c.note)}</span>` : ""}</div>`).join("")}</div>` : "",
     successCriteria.length ? `<div class="dp-sub-title">Success criteria</div>${list(successCriteria)}` : ""
   ].filter(Boolean).join("");
 
-  const approvalBriefLine = approvals.brief?.status ? `Brief — ${escapeHtml(approvals.brief.status)}${approvals.brief.decidedBy ? ` by ${escapeHtml(approvals.brief.decidedBy)}` : ""}${approvals.brief.decidedAt ? ` · ${escapeHtml(String(approvals.brief.decidedAt).slice(0, 10))}` : ""}` : "";
-  const approvalPackLine = approvals.pack?.status ? `Pack — ${escapeHtml(approvals.pack.status)}${approvals.pack.decidedBy ? ` by ${escapeHtml(approvals.pack.decidedBy)}` : ""}${approvals.pack.decidedAt ? ` · ${escapeHtml(String(approvals.pack.decidedAt).slice(0, 10))}` : ""}` : "";
-  const trailItems = [approvalBriefLine, approvalPackLine, ...history.slice(-4).map(e => `${escapeHtml(mcRunStateLabel(e.state))} — ${escapeHtml(e.reason || "")} (${escapeHtml(e.actor || "")})`).filter(Boolean)];
+  const approvalBriefLine = approvals.brief?.status ? `Brief — ${escapeHtml(approvals.brief.status)}${approvals.brief.decidedBy ? ` by ${escapeHtml(mcPublicLabel(approvals.brief.decidedBy))}` : ""}${approvals.brief.decidedAt ? ` · ${escapeHtml(String(approvals.brief.decidedAt).slice(0, 10))}` : ""}` : "";
+  const approvalPackLine = approvals.pack?.status ? `Pack — ${escapeHtml(approvals.pack.status)}${approvals.pack.decidedBy ? ` by ${escapeHtml(mcPublicLabel(approvals.pack.decidedBy))}` : ""}${approvals.pack.decidedAt ? ` · ${escapeHtml(String(approvals.pack.decidedAt).slice(0, 10))}` : ""}` : "";
+  const trailItems = [approvalBriefLine, approvalPackLine, ...history.slice(-4).map(e => `${escapeHtml(mcRunStateLabel(e.state))} — ${escapeHtml(e.reason || "State change")}${e.actor ? ` (${escapeHtml(mcPublicLabel(e.actor))})` : ""}`).filter(Boolean)];
   const trailContent = trailItems.length ? `<ul class="dp-trail">${trailItems.map(t => `<li>${t}</li>`).join("")}</ul>` : "";
+  const headerMeta = [
+    packMeta.ownerRole ? `<div class="dp-header-kv"><span>Owner role</span><strong>${escapeHtml(packMeta.ownerRole)}</strong></div>` : "",
+    packMeta.ownerName ? `<div class="dp-header-kv"><span>Owner</span><strong>${escapeHtml(packMeta.ownerName)}</strong></div>` : "",
+    packMeta.lane ? `<div class="dp-header-kv"><span>Lane</span><strong>${escapeHtml(packMeta.lane)}</strong></div>` : "",
+    packMeta.completedAt ? `<div class="dp-header-kv"><span>Completed</span><strong>${escapeHtml(formatRelativeTime(packMeta.completedAt) || String(packMeta.completedAt))}</strong></div>` : "",
+    `<div class="dp-header-kv"><span>Handoff</span><strong>${escapeHtml(packMeta.handoffStatus || (packMeta.handoffReady ? "Handoff ready" : "Needs attention"))}</strong></div>`
+  ].filter(Boolean).join("");
 
   return `
     <div class="decision-pack" id="dp-${escapeHtml(run.id || "")}">
@@ -4714,17 +4904,18 @@ function mcRenderDecisionPack(run) {
           <button class="dp-copy-btn ops-action-btn ops-action-btn-secondary" type="button" data-action="copy-pack" data-run-id="${escapeHtml(run.id || "")}">Copy pack</button>
         </div>
       </div>
+      <div class="dp-header-grid">${headerMeta}</div>
       <div class="dp-body">
-        ${section("Request Summary", requestSummary)}
-        ${section("What ATEAM Understood", understoodContent)}
+        ${section("Request Summary", requestSummary || "<p>No request summary captured.</p>")}
+        ${section("What ATEAM Understood", understoodContent || "<p>No explicit understanding summary was captured.</p>")}
         ${section("Audience / Context", audienceContent)}
-        ${assumptions.length ? section("Assumptions", chips(assumptions)) : ""}
-        ${planContent ? section("Proposed Plan", planContent) : ""}
-        ${blockersContent ? section("Blockers / Risks", blockersContent) : ""}
-        ${nextMoveContent ? section("Recommended Next Move", nextMoveContent) : ""}
-        ${executionContent ? section("Execution Direction", executionContent) : ""}
-        ${trailContent ? section("Approval Trail", trailContent) : ""}
-        ${outputContent ? section("Output Summary", outputContent) : ""}
+        ${section("Assumptions", assumptions.length ? chips(assumptions) : "<p>No explicit assumptions were captured.</p>")}
+        ${section("Proposed Plan", planContent)}
+        ${section("Blockers / Risks", blockersContent)}
+        ${section("Recommended Next Move", nextMoveContent)}
+        ${section("Execution Direction", executionContent)}
+        ${section("Approval Trail", trailContent || "<p>No approval trail was captured.</p>")}
+        ${section("Output Summary", outputContent)}
       </div>
     </div>`;
 }
@@ -5868,7 +6059,9 @@ async function handleMissionAction(action, dataset = {}) {
   if (safeAction === "copy-pack") {
     const runId = String(dataset.runId || "").trim();
     const run = runId
-      ? (missionControlState.overview.workflowRuns || []).find(r => r.id === runId) || null
+      ? (missionControlState.overview.workflowRuns || []).find(r => r.id === runId)
+        || (missionControlState.factory.completedRuns || []).find(r => r.id === runId)
+        || null
       : null;
     if (run) {
       const text = mcDecisionPackText(run);
@@ -5879,6 +6072,12 @@ async function handleMissionAction(action, dataset = {}) {
         showToast("Copy failed — check clipboard permissions.", "error");
       }
     }
+    return;
+  }
+  if (safeAction === "inspect-pack") {
+    const runId = String(dataset.runId || "").trim();
+    missionControlState.factory.expandedRunId = missionControlState.factory.expandedRunId === runId ? "" : runId;
+    renderFactoryCompletedRuns(missionControlState.factory.completedRuns || []);
     return;
   }
   if (safeAction === "advance-work-item") {
@@ -11721,6 +11920,24 @@ function bindEvents() {
   }
   if (calRefreshBtn) calRefreshBtn.addEventListener("click", renderCalendarPage);
   if (calWeekBtn) calWeekBtn.addEventListener("click", renderCalendarPage);
+  if (factoryPackFilterLane) {
+    factoryPackFilterLane.addEventListener("change", () => {
+      missionControlState.factory.filters.lane = String(factoryPackFilterLane.value || "");
+      renderFactoryCompletedRuns(missionControlState.factory.completedRuns || []);
+    });
+  }
+  if (factoryPackFilterOwner) {
+    factoryPackFilterOwner.addEventListener("change", () => {
+      missionControlState.factory.filters.owner = String(factoryPackFilterOwner.value || "");
+      renderFactoryCompletedRuns(missionControlState.factory.completedRuns || []);
+    });
+  }
+  if (factoryPackFilterReadiness) {
+    factoryPackFilterReadiness.addEventListener("change", () => {
+      missionControlState.factory.filters.readiness = String(factoryPackFilterReadiness.value || "");
+      renderFactoryCompletedRuns(missionControlState.factory.completedRuns || []);
+    });
+  }
 
   if (councilRefreshBtn) {
     councilRefreshBtn.addEventListener("click", () => {

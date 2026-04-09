@@ -1105,8 +1105,23 @@
 
       <section id="factory-completed-runs" class="factory-completed-section" aria-label="Completed decision packs">
         <div class="factory-completed-header">
-          <div class="factory-completed-title">Completed Packs</div>
-          <div class="factory-completed-hint">Decision packs ready to hand off, export, or archive.</div>
+          <div class="factory-completed-header-copy">
+            <div class="factory-completed-title">Completed Packs</div>
+            <div class="factory-completed-hint">Decision packs ready to hand off, export, or archive.</div>
+          </div>
+          <div class="factory-completed-controls">
+            <select id="factory-pack-filter-lane" class="factory-pack-filter" aria-label="Filter completed packs by lane">
+              <option value="">All lanes</option>
+            </select>
+            <select id="factory-pack-filter-owner" class="factory-pack-filter" aria-label="Filter completed packs by owner">
+              <option value="">All owners</option>
+            </select>
+            <select id="factory-pack-filter-readiness" class="factory-pack-filter" aria-label="Filter completed packs by handoff readiness">
+              <option value="">All readiness</option>
+              <option value="ready">Handoff ready</option>
+              <option value="needs_attention">Needs attention</option>
+            </select>
+          </div>
         </div>
         <div id="factory-completed-list" class="factory-completed-list"></div>
       </section>
