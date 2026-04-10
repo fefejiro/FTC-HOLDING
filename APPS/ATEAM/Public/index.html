@@ -1187,9 +1187,9 @@
           <p id="ai-lab-summary" class="ops-subtitle">Capture and review intake signal before routing it into a real ATEAM workflow run.</p>
         </div>
         <div class="ops-hero-actions">
+          <button class="mc-top-btn view-back-btn" type="button" data-action="go-tasks">← Tasks</button>
           <button id="ai-lab-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
-          <button id="ai-lab-open-talk-btn" class="mc-top-btn" type="button">Open Intake</button>
-          <button id="ai-lab-open-speech-btn" class="mc-top-btn" type="button">Open Speech</button>
+          <button id="ai-lab-open-speech-btn" class="mc-top-btn" type="button">Use Speech →</button>
         </div>
       </section>
 
@@ -1217,14 +1217,14 @@
           <div class="ops-panel-head">
             <div>
               <div class="ops-panel-title">Quick Capture</div>
-              <div class="ops-panel-copy">Type a rough request here to create a workflow run directly, or use Intake for speech and longer context.</div>
+              <div class="ops-panel-copy">Type a request and submit it directly as a workflow run. That's the primary path. Talk and Speech are secondary options for longer context.</div>
             </div>
           </div>
           <div class="ai-lab-capture-block">
             <textarea id="ai-lab-capture-input" class="ai-lab-capture-input" rows="4" placeholder="Describe the request or paste a transcript excerpt…"></textarea>
             <div class="ai-lab-capture-actions">
               <button class="ops-action-btn" type="button" data-action="lab-create-run">Create workflow run</button>
-              <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk-focus">Open full Intake</button>
+              <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk-focus">Use Talk →</button>
             </div>
             <div id="ai-lab-run-result" class="ai-lab-run-result hidden"></div>
           </div>
@@ -1298,8 +1298,9 @@
         <div class="talk-session">Use text or voice. Session controls stay available when you need them, but they no longer lead the page.</div>
       </div>
       <div class="talk-head-controls">
+        <button id="talk-back-btn" class="top-btn view-back-btn" type="button">← Tasks</button>
         <button id="talk-voice-toggle-btn" class="top-btn talk-voice-toggle-btn" type="button" aria-label="Start voice intake">
-          Start voice intake
+          Voice
         </button>
         <button
           id="talk-advanced-toggle-btn"
@@ -1307,7 +1308,7 @@
           type="button"
           aria-expanded="false"
           aria-controls="talk-settings-panel talk-advanced-sections">
-          Show session details
+          Details
         </button>
       </div>
     </div>
@@ -1357,7 +1358,7 @@
           rows="1"
           placeholder="Tell ATEAM what you want to build, fix, check, or move forward…"
           aria-label="Message ATEAM"></textarea>
-        <button id="talk-chat-send" class="top-btn talk-chat-send" type="button">Send intake</button>
+        <button id="talk-chat-send" class="top-btn talk-chat-send" type="button">Send</button>
       </div>
       <div class="talk-composer-sub">
         <div id="talk-state" class="talk-state-pill" data-state="idle" aria-label="Talk state">

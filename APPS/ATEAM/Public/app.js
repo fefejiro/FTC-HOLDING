@@ -6149,9 +6149,20 @@ async function renderAiLabPage({ force = false } = {}) {
   if (!aiLabView || aiLabView.classList.contains("hidden")) return;
   const overview = await mcLoadOverview({ force, includeSpeech: true });
   const talkTurns = (timelineState.events || []).filter((event) => String(event?.type || "") === "talk_turn_committed");
+  // Recent intake turns: user submissions only (no agent replies), deduplicated by id,
+  // min 5 chars to filter noise, newest-first, capped at 5 entries.
+  const seenTurnIds = new Set();
   const recentTurns = (timelineState.events || [])
-    .filter((event) => ["talk_turn_committed", "assistant_response_committed"].includes(String(event?.type || "")))
-    .slice(-6)
+    .filter((event) => {
+      if (String(event?.type || "") !== "talk_turn_committed") return false;
+      const text = String(event?.meta?.text || event?.summary || "").trim();
+      if (text.length < 5) return false;
+      const uid = String(event?.id || event?.meta?.turnId || "");
+      if (uid && seenTurnIds.has(uid)) return false;
+      if (uid) seenTurnIds.add(uid);
+      return true;
+    })
+    .slice(-5)
     .reverse();
   const speechSessions = overview.speechSessions || [];
   const availableProfiles = overview.voice?.synthesis?.availableProfiles || overview.health?.config?.voice?.availableProfiles || [];
@@ -6217,21 +6228,19 @@ async function renderAiLabPage({ force = false } = {}) {
     `).join("");
   }
 
-  // Recent intake turns — what was captured
+  // Recent intake turns — user submissions only, no agent replies
   if (aiLabTurns) {
     if (recentTurns.length) {
       aiLabTurns.innerHTML = recentTurns.map((event) => {
-        const type = String(event?.type || "");
         const speakerId = getEffectiveSpeakerId(event);
-        const label = type === "talk_turn_committed" ? speakerLabelById(speakerId) : (event?.meta?.agent || "Assistant");
-        const body = type === "talk_turn_committed"
-          ? (event?.meta?.text || event?.summary || "")
-          : (event?.meta?.agentReply || event?.summary || "");
+        const label = speakerLabelById(speakerId) || "Operator";
+        const body = String(event?.meta?.text || event?.summary || "").trim();
+        const ts = formatRelativeTime(event?.timestamp) || "";
         return `
           <article class="ops-card">
             <div class="ops-card-head">
               <div class="ops-card-title">${escapeHtml(label)}</div>
-              <div class="ops-card-meta">${escapeHtml(formatRelativeTime(event?.timestamp) || "")}</div>
+              <div class="ops-card-meta">${escapeHtml(ts)}</div>
             </div>
             <div class="ops-card-copy">${escapeHtml(compactText(body, 180) || "—")}</div>
           </article>
@@ -6241,7 +6250,7 @@ async function renderAiLabPage({ force = false } = {}) {
       aiLabTurns.innerHTML = `
         <div class="ops-empty">
           <div class="ops-empty-title">No intake turns yet</div>
-          <div class="ops-empty-copy">Open Intake to capture a rough request via text or voice. Turns appear here as you speak or type.</div>
+          <div class="ops-empty-copy">Submit from Quick Capture above or use Talk to capture ideas here.</div>
         </div>`;
     }
   }
@@ -6394,7 +6403,7 @@ function showLabRunConfirmation(run) {
 
   el.innerHTML = `
     <div class="ai-lab-run-confirm">
-      <div class="ai-lab-run-confirm-title">Run created</div>
+      <div class="ai-lab-run-confirm-title">Workflow run started</div>
       <div class="ai-lab-run-confirm-rows">
         <div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">ID</span><span class="ai-lab-run-confirm-val">${escapeHtml(id)}</span></div>
         <div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">Request</span><span class="ai-lab-run-confirm-val">${escapeHtml(title)}</span></div>
@@ -12603,6 +12612,12 @@ function bindEvents() {
   if (talkChatSendBtn && !talkChatSendBtn.dataset.bound) {
     talkChatSendBtn.dataset.bound = "1";
     talkChatSendBtn.addEventListener("click", handleTalkComposerSend);
+  }
+
+  const talkBackBtn = document.getElementById("talk-back-btn");
+  if (talkBackBtn && !talkBackBtn.dataset.bound) {
+    talkBackBtn.dataset.bound = "1";
+    talkBackBtn.addEventListener("click", () => setView("tasks"));
   }
   if (talkChatInput && !talkChatInput.dataset.bound) {
     talkChatInput.dataset.bound = "1";
