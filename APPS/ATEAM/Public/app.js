@@ -2372,6 +2372,8 @@ const missionControlState = {
     runs: [],
     pendingByRunId: {}
   },
+  lastCreatedRunId: "",
+  lastCreatedRun: null,
   factory: {
     items: [],
     workItems: [],
@@ -6089,7 +6091,20 @@ async function renderTasksPage({ force = false } = {}) {
       </article>`;
   }).join("");
 
-  if (missionControlState.tasks.selectedRunId) {
+  // Auto-select and scroll to a newly created run if one is pending.
+  const pendingId = missionControlState.lastCreatedRunId;
+  if (pendingId && runs.some((r) => String(r?.id || "") === pendingId)) {
+    missionControlState.lastCreatedRunId = "";
+    missionControlState.lastCreatedRun = null;
+    mcSetSelectedWorkflowRun(pendingId);
+    requestAnimationFrame(() => {
+      const card = runsList.querySelector(`[data-run-id="${CSS.escape(pendingId)}"]`);
+      if (card) {
+        card.classList.add("mc-run-just-created");
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    });
+  } else if (missionControlState.tasks.selectedRunId) {
     mcSetSelectedWorkflowRun(missionControlState.tasks.selectedRunId);
   }
   updateSelectionUi();
@@ -6112,8 +6127,8 @@ async function renderAiLabPage({ force = false } = {}) {
     if (talkTurns.length) parts.push(`${talkTurns.length} intake turn${talkTurns.length === 1 ? "" : "s"} captured`);
     if (speechSessions.length) parts.push(`${speechSessions.length} speech session${speechSessions.length === 1 ? "" : "s"}`);
     aiLabSummary.textContent = parts.length
-      ? parts.join(" · ") + ". Use Quick Capture or Intake to route signal into a workflow run."
-      : "No intake turns captured yet. Use Quick Capture or Open Intake to begin.";
+      ? parts.join(" · ") + ". Use Quick Capture to create a workflow run. Talk captures turns — not runs."
+      : "Use Quick Capture to submit a request as a workflow run. Open Talk for conversation-style capture.";
   }
 
   if (aiLabMetricTurns) aiLabMetricTurns.textContent = String(talkTurns.length || 0);
@@ -6125,10 +6140,16 @@ async function renderAiLabPage({ force = false } = {}) {
   if (aiLabModules) {
     const channels = [
       {
-        title: "Typed Intake",
+        title: "Quick Capture",
         status: "available",
-        copy: "Type a rough request in Quick Capture or Open Intake. Creates a real workflow run immediately.",
-        action: `<button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk-focus">Open Intake</button>`
+        copy: "Type a request above and click \"Create workflow run\" to submit it directly. The run appears immediately in Tasks and Projects.",
+        action: ``
+      },
+      {
+        title: "Intake via Talk",
+        status: "available",
+        copy: "Open the Talk interface to have a back-and-forth with ATEAM. Talk captures turns — not workflow runs. Use Quick Capture when you want a traceable run.",
+        action: `<button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk-focus">Open Talk</button>`
       },
       {
         title: "Speech Capture",
@@ -6144,9 +6165,9 @@ async function renderAiLabPage({ force = false } = {}) {
         title: "Vision / Screen Context",
         status: (state.screenStream || state.cameraStream) ? "active" : "available",
         copy: (state.screenStream || state.cameraStream)
-          ? "Screen or camera capture is currently active via the Intake surface."
-          : "Screen and camera context can be attached via Open Intake. Not available from Quick Capture.",
-        action: `<button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk">Open Intake</button>`
+          ? "Screen or camera capture is currently active via the Talk surface."
+          : "Screen and camera context can be attached via Talk. Not available from Quick Capture.",
+        action: `<button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk">Open Talk</button>`
       }
     ];
     aiLabModules.innerHTML = channels.map((ch) => `
@@ -6324,9 +6345,18 @@ function showLabRunConfirmation(run) {
     return;
   }
   const id = mcShortRunRef(run.id);
-  const lane = mcLaneLabel(run.lane || run.category || "");
-  const title = String(run.title || run.idea || "").trim().slice(0, 80) || "Untitled run";
-  const hasApproval = run.state === "awaiting_approval" || run.state === "draft";
+  const lane = mcLaneLabel(
+    run.brief?.recommendedLane || run.recommendedLane || run.lane || run.category || ""
+  );
+  const title = String(run.brief?.title || run.title || run.idea || "").trim().slice(0, 80) || "Untitled run";
+  const rawState = String(run.state || run.phase || "").toLowerCase();
+  const hasApproval =
+    rawState === "awaiting_approval" ||
+    rawState === "pending_approval" ||
+    rawState === "draft" ||
+    String(run.approvals?.brief?.status || "").toLowerCase() === "pending";
+  const statusLabel = hasApproval ? "Approval pending" : rawState === "executing" ? "Running" : "Queued";
+
   el.innerHTML = `
     <div class="ai-lab-run-confirm">
       <div class="ai-lab-run-confirm-title">Run created</div>
@@ -6334,10 +6364,12 @@ function showLabRunConfirmation(run) {
         <div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">ID</span><span class="ai-lab-run-confirm-val">${escapeHtml(id)}</span></div>
         <div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">Request</span><span class="ai-lab-run-confirm-val">${escapeHtml(title)}</span></div>
         ${lane ? `<div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">Lane</span><span class="ai-lab-run-confirm-val">${escapeHtml(lane)}</span></div>` : ""}
-        <div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">Status</span><span class="ai-lab-run-confirm-val">${hasApproval ? "Approval pending" : "Queued"}</span></div>
+        <div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">Status</span><span class="ai-lab-run-confirm-val">${escapeHtml(statusLabel)}</span></div>
       </div>
       <div class="ai-lab-run-confirm-actions">
         <button class="ops-action-btn" type="button" data-action="go-tasks">View in Tasks →</button>
+        <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="go-projects">View in Projects →</button>
+        ${hasApproval ? `<button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="go-approvals">View in Approvals →</button>` : ""}
       </div>
     </div>
   `;
@@ -6437,7 +6469,15 @@ async function handleMissionAction(action, dataset = {}) {
       const run = await apiCreateWorkflowRun(idea, { requestedBy: "operator", category: "ai_lab" });
       if (run?.id) {
         if (aiLabCaptureInput) aiLabCaptureInput.value = "";
-        mcInvalidateOverview();
+        // Optimistically inject into overview so Tasks/Projects see it immediately
+        // without waiting for the next server poll.
+        if (!Array.isArray(missionControlState.overview.workflowRuns)) {
+          missionControlState.overview.workflowRuns = [];
+        }
+        const alreadyPresent = missionControlState.overview.workflowRuns.some((r) => r?.id === run.id);
+        if (!alreadyPresent) missionControlState.overview.workflowRuns.unshift(run);
+        missionControlState.lastCreatedRunId = run.id;
+        missionControlState.lastCreatedRun = run;
         showLabRunConfirmation(run);
       } else {
         showToast("Run creation failed — no run returned.", "error");
@@ -6450,6 +6490,16 @@ async function handleMissionAction(action, dataset = {}) {
   }
   if (safeAction === "go-tasks") {
     setView("tasks");
+    // Force a fresh render so the newly created run is visible and selected.
+    void renderTasksPage({ force: true });
+    return;
+  }
+  if (safeAction === "go-projects") {
+    setView("projects");
+    return;
+  }
+  if (safeAction === "go-approvals") {
+    setView("approvals");
     return;
   }
 }

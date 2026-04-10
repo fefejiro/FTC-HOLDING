@@ -7508,6 +7508,16 @@ body[data-office-studio="true"] .office-view {
   box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.14) inset;
 }
 
+.mc-run-card.mc-run-just-created {
+  border-color: rgba(74, 222, 128, 0.45);
+  box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.18) inset;
+  animation: runCreatedPulse 1.8s ease-out forwards;
+}
+@keyframes runCreatedPulse {
+  0%   { box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.35); }
+  100% { box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.08) inset; }
+}
+
 .mc-run-card.mc-run-state-active {
   border-left: 2px solid rgba(96, 165, 250, 0.6);
 }
