@@ -1,3 +1,5 @@
+export const runtime = "edge";
+
 import type { MetadataRoute } from "next";
 import { blogPosts } from "../lib/blog";
 import { projectCaseStudies } from "../lib/content";

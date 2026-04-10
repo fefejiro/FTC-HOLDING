@@ -1,3 +1,5 @@
+export const runtime = "edge";
+
 import type { MetadataRoute } from "next";
 import { isOgTradesCustomHost, OG_TRADES_SITE_URL } from "../lib/ogTradesAcademy";
 import { getRequestHost } from "../lib/requestHost";
