@@ -2338,7 +2338,9 @@ const missionControlState = {
   },
   approvals: {
     selectedId: "",
-    items: []
+    items: [],
+    pendingFromRunId: "",
+    pendingFromRunRef: ""
   },
   calendar: {
     selectedDay: 2
@@ -2573,11 +2575,26 @@ async function apiDecideApproval(approvalId, decision, { sessionId = GLOBAL_PODC
 
 function renderApprovalsEmpty() {
   if (approvalsCountNode) approvalsCountNode.textContent = "0";
-  if (approvalsListNode) approvalsListNode.innerHTML = `
-    <div class="approvals-empty">
-      <div class="approvals-empty-title">Queue is clear</div>
-      <div class="approvals-empty-sub">Pending approvals appear here when a workflow reaches a decision point.</div>
-    </div>`;
+  const pendingRunRef = missionControlState.approvals.pendingFromRunRef || "";
+  const pendingRunId = missionControlState.approvals.pendingFromRunId || "";
+  // Clear the hint after using it.
+  missionControlState.approvals.pendingFromRunRef = "";
+  missionControlState.approvals.pendingFromRunId = "";
+
+  if (approvalsListNode) {
+    approvalsListNode.innerHTML = pendingRunRef
+      ? `
+        <div class="approvals-empty">
+          <div class="approvals-empty-title">Queue is clear — but a run was just submitted</div>
+          <div class="approvals-empty-sub">${escapeHtml(pendingRunRef)} was submitted with pending approval. If no item appears here, the approval record may still be processing on the server. Refresh this view in a moment.</div>
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="refresh-approvals" style="margin-top:0.75rem;">Refresh</button>
+        </div>`
+      : `
+        <div class="approvals-empty">
+          <div class="approvals-empty-title">Queue is clear</div>
+          <div class="approvals-empty-sub">Pending approvals appear here when a workflow reaches a decision point.</div>
+        </div>`;
+  }
   if (approvalsDetailStatusNode) approvalsDetailStatusNode.textContent = "—";
   if (approvalsDetailNode) approvalsDetailNode.innerHTML = `
     <div class="approvals-empty">
@@ -5223,6 +5240,11 @@ async function renderProjectsPage({ force = false } = {}) {
   if (projectsMetricBlocked) projectsMetricBlocked.textContent = String(blockedCount);
   if (projectsMetricShip) projectsMetricShip.textContent = String(shipCount);
 
+  // Scroll to and briefly highlight the newly created run's project entry.
+  const createdProjectId = missionControlState.lastCreatedRun?.id
+    ? String(missionControlState.lastCreatedRun.links?.projectId || `workflow_${missionControlState.lastCreatedRun.id}`).trim()
+    : "";
+
   if (projectsPortfolioList) {
     projectsPortfolioList.innerHTML = portfolioRows
       .map(({ project, items, status }) => {
@@ -5257,6 +5279,20 @@ async function renderProjectsPage({ force = false } = {}) {
         `;
       })
       .join("");
+
+    // Scroll to and highlight the newly created project if navigating from intake.
+    if (createdProjectId) {
+      requestAnimationFrame(() => {
+        const card = projectsPortfolioList.querySelector(`[data-project-id="${CSS.escape(createdProjectId)}"]`);
+        if (card) {
+          card.classList.add("mc-run-just-created");
+          card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+        // Clear the pending new-run state now that both Tasks and Projects have handled it.
+        missionControlState.lastCreatedRunId = "";
+        missionControlState.lastCreatedRun = null;
+      });
+    }
   }
 
   if (projectsDetail) {
@@ -6092,10 +6128,9 @@ async function renderTasksPage({ force = false } = {}) {
   }).join("");
 
   // Auto-select and scroll to a newly created run if one is pending.
+  // Do NOT clear lastCreatedRunId here — Projects navigation still needs it.
   const pendingId = missionControlState.lastCreatedRunId;
   if (pendingId && runs.some((r) => String(r?.id || "") === pendingId)) {
-    missionControlState.lastCreatedRunId = "";
-    missionControlState.lastCreatedRun = null;
     mcSetSelectedWorkflowRun(pendingId);
     requestAnimationFrame(() => {
       const card = runsList.querySelector(`[data-run-id="${CSS.escape(pendingId)}"]`);
@@ -6494,11 +6529,28 @@ async function handleMissionAction(action, dataset = {}) {
     void renderTasksPage({ force: true });
     return;
   }
+  if (safeAction === "refresh-approvals") {
+    void renderApprovalsPage();
+    return;
+  }
   if (safeAction === "go-projects") {
+    // Pre-select the newly created run's project so it is highlighted on render.
+    const createdRun = missionControlState.lastCreatedRun;
+    if (createdRun?.id) {
+      const projectId = String(createdRun.links?.projectId || `workflow_${createdRun.id}`).trim();
+      missionControlState.projects.selectedId = projectId;
+    }
     setView("projects");
     return;
   }
   if (safeAction === "go-approvals") {
+    // If the just-created run has a pending approval state, set a hint so
+    // renderApprovalsPage can show a contextual message if the queue looks empty.
+    const createdRun = missionControlState.lastCreatedRun;
+    if (createdRun?.id) {
+      missionControlState.approvals.pendingFromRunId = createdRun.id;
+      missionControlState.approvals.pendingFromRunRef = mcShortRunRef(createdRun.id);
+    }
     setView("approvals");
     return;
   }
@@ -12507,6 +12559,15 @@ function bindEvents() {
   // Delegated handler for [data-action] clicks within Agents/Office view (e.g. purpose bar)
   if (officeView) {
     officeView.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+
+  // Delegated handler for [data-action] clicks within Approvals view (e.g. Refresh button)
+  if (approvalsView) {
+    approvalsView.addEventListener("click", (e) => {
       const btn = e.target?.closest?.("[data-action]");
       if (!btn) return;
       void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
