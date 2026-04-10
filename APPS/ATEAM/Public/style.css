@@ -7602,6 +7602,34 @@ body[data-office-studio="true"] .office-view {
   font-size: 11px;
 }
 
+/* Canonical run reference — consistent across Tasks, Projects, Approvals */
+.mc-run-ref {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(147, 197, 253, 0.6);
+  font-family: monospace;
+}
+
+/* Approvals: run identity block at top of detail */
+.approval-run-identity {
+  background: rgba(147, 197, 253, 0.05);
+  border: 1px solid rgba(147, 197, 253, 0.12);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.approval-detail-meta-row {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: rgba(198, 213, 233, 0.5);
+}
+.approval-run-ref {
+  margin-bottom: 4px;
+}
+
 .mc-run-actions {
   display: flex;
   align-items: center;

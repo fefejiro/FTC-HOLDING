@@ -2623,6 +2623,8 @@ function renderApprovalsList(items, selectedId) {
     const summary = String(approval?.summary || "").trim();
     const requestedBy = String(approval?.requestedBy || "").trim();
     const createdTs = String(approval?.createdTs || approval?.created_ts || "");
+    const payload = approval?.payload && typeof approval.payload === "object" ? approval.payload : {};
+    const runRef = payload.workflowRunId ? mcShortRunRef(payload.workflowRunId) : "";
 
     const row = document.createElement("div");
     row.className = `approval-row${id === selectedId ? " active" : ""}`;
@@ -2632,6 +2634,7 @@ function renderApprovalsList(items, selectedId) {
         <div class="approval-policy">${escapeHtml(policy || "approval")}</div>
         <div class="approval-status-pill" data-tone="${escapeHtml(approvalStatusTone(status))}">${escapeHtml(approvalStatusLabel(status))}</div>
       </div>
+      ${runRef ? `<div class="approval-run-ref mc-run-ref">${escapeHtml(runRef)}</div>` : ""}
       <div class="approval-summary">${escapeHtml(summary || "Approval requested")}</div>
       <div class="approval-meta">${escapeHtml(requestedBy ? `Requested by ${mcPublicLabel(requestedBy)}` : "Requested")}${createdTs ? ` · ${escapeHtml(formatApprovalTime(createdTs))}` : ""}</div>
     `;
@@ -2660,9 +2663,30 @@ function renderApprovalDetail(approval) {
   const createdTs = String(approval?.createdTs || approval?.created_ts || "");
   const payload = approval?.payload && typeof approval.payload === "object" ? approval.payload : {};
 
+  // Canonical run identity fields surfaced from payload
+  const runRef = payload.workflowRunId ? mcShortRunRef(payload.workflowRunId) : "";
+  const runTitle = String(payload.title || payload.idea || payload.request || "").trim().slice(0, 120);
+  const runLane = mcLaneLabel(String(payload.lane || payload.recommendedLane || payload.category || "").trim());
+  const runState = payload.runState ? mcRunStateLabel(payload.runState) : "";
+
   approvalsDetailStatusNode.textContent = approvalStatusLabel(status);
 
   const blocks = [];
+
+  // Run identity block — mirrors post-submit confirmation card
+  if (runRef || runTitle || runLane) {
+    blocks.push(`
+      <div class="approval-detail-block approval-run-identity">
+        ${runRef ? `<div class="approval-run-ref mc-run-ref" style="margin-bottom:6px;">${escapeHtml(runRef)}</div>` : ""}
+        ${runTitle ? `<div class="approval-detail-value" style="margin-bottom:4px;">${escapeHtml(runTitle)}</div>` : ""}
+        <div class="approval-detail-meta-row">
+          ${runLane ? `<span>${escapeHtml(runLane)}</span>` : ""}
+          ${runState ? `<span>${escapeHtml(runState)}</span>` : ""}
+        </div>
+      </div>
+    `);
+  }
+
   blocks.push(`
     <div class="approval-detail-block">
       <div class="approval-detail-label">Summary</div>
@@ -2685,12 +2709,6 @@ function renderApprovalDetail(approval) {
     <div class="approval-detail-block">
       <div class="approval-detail-label">Created</div>
       <div class="approval-detail-value">${escapeHtml(createdTs ? formatApprovalTime(createdTs) : "")}</div>
-    </div>
-  `);
-  blocks.push(`
-    <div class="approval-detail-block">
-      <div class="approval-detail-label">Payload</div>
-      <div class="approval-detail-value">${escapeHtml(prettyJson(payload))}</div>
     </div>
   `);
 
@@ -3271,16 +3289,25 @@ function mcRunStateLabel(state) {
   const s = String(state || "").trim().toLowerCase();
   const labels = {
     draft: "Draft",
+    submitted: "Queued",
+    pending: "Queued",
+    queued: "Queued",
     planning: "Planning",
     awaiting_approval: "Awaiting approval",
+    waiting_for_approval: "Awaiting approval",
+    pending_approval: "Awaiting approval",
     approved: "Approved",
     executing: "Executing",
+    in_progress: "Executing",
+    running: "Executing",
+    in_review: "In review",
+    blocked: "Blocked",
     completed: "Completed",
+    done: "Completed",
     failed: "Failed",
-    escalated: "Escalated",
-    queued: "Queued"
+    escalated: "Escalated"
   };
-  return labels[s] || s.replaceAll("_", " ");
+  return labels[s] || (s ? s.replaceAll("_", " ") : "—");
 }
 
 function mcLaneLabel(value) {
@@ -5263,9 +5290,9 @@ async function renderProjectsPage({ force = false } = {}) {
             </div>
             <div class="ops-card-copy">${escapeHtml(project.summary)}</div>
             <div class="ops-inline-meta">
-              <span>${escapeHtml(mcCanonicalName(project.ownerAgentId) || project.ownerAgentId)}</span>
-              <span>${escapeHtml(linkedLabel)}</span>
-              ${project.workflowRunId ? `<span>${escapeHtml(mcRunStateLabel(project?.workflow?.state || project?.workflow?.phase || "planning"))}</span>` : ""}
+              ${project.workflowRunId ? `<span class="mc-run-ref">${escapeHtml(mcShortRunRef(project.workflowRunId))}</span>` : `<span>${escapeHtml(mcCanonicalName(project.ownerAgentId) || project.ownerAgentId)}</span>`}
+              ${project.workflow?.recommendedLane ? `<span>${escapeHtml(mcLaneLabel(project.workflow.recommendedLane))}</span>` : ""}
+              ${project.workflowRunId ? `<span>${escapeHtml(mcRunStateLabel(project?.workflow?.state || project?.workflow?.phase || "planning"))}</span>` : `<span>${escapeHtml(linkedLabel)}</span>`}
               ${project.workflowRunId && project?.workflow?.approvalStatus === "pending" ? `<span class="ops-badge-pending">Awaiting decision</span>` : ""}
             </div>
             <div class="ops-action-row ops-action-row-compact">
@@ -5326,8 +5353,9 @@ async function renderProjectsPage({ force = false } = {}) {
 
       const workflowDetails = project.workflowRunId
         ? `
+            <div class="ops-key-value-row"><span>Run</span><strong class="mc-run-ref">${escapeHtml(mcShortRunRef(project.workflowRunId))}</strong></div>
             <div class="ops-key-value-row"><span>State</span><strong>${escapeHtml(wfState)}</strong>${wfApprovalPending ? ' <span class="ops-badge-pending">Decision needed</span>' : ""}</div>
-            <div class="ops-key-value-row"><span>Lane</span><strong>${escapeHtml(wf.recommendedLane || "Not assigned")}</strong></div>
+            <div class="ops-key-value-row"><span>Lane</span><strong>${escapeHtml(mcLaneLabel(wf.recommendedLane) || "Not assigned")}</strong></div>
             ${wf.goal ? `<div class="ops-key-value-row"><span>Goal</span><strong>${escapeHtml(wf.goal.slice(0, 120))}</strong></div>` : ""}
             ${wf.briefSummary ? `<div class="ops-key-value-row ops-key-value-row-stack"><span>Brief</span><div class="ops-copy-block">${escapeHtml(wf.briefSummary)}</div></div>` : ""}
             ${wf.audience ? `<div class="ops-key-value-row"><span>Audience</span><strong>${escapeHtml(wf.audience)}</strong></div>` : ""}
@@ -6096,6 +6124,7 @@ async function renderTasksPage({ force = false } = {}) {
       : "pending";
     const isSelected = String(missionControlState.tasks.selectedRunId || "") === String(run.id || "");
 
+    const runRef = mcShortRunRef(run.id);
     return `
       <article class="mc-run-card mc-run-state-${escapeHtml(stateClass)}${isSelected ? " active" : ""}" data-run-id="${escapeHtml(run.id)}">
         <div class="mc-run-head">
@@ -6104,7 +6133,7 @@ async function renderTasksPage({ force = false } = {}) {
         </div>
         ${summary ? `<div class="mc-run-summary">${escapeHtml(summary.slice(0, 160))}</div>` : ""}
         <div class="mc-run-meta">
-          ${ownerRole ? `<span>${escapeHtml(ownerRole)}</span>` : ""}
+          <span class="mc-run-ref">${escapeHtml(runRef)}</span>
           ${lane ? `<span>${escapeHtml(lane)}</span>` : ""}
           ${ts ? `<span>${escapeHtml(ts)}</span>` : ""}
           ${approvalStatus === "pending" ? `<span class="mc-run-pending-badge">Awaiting approval</span>` : ""}
@@ -6112,7 +6141,7 @@ async function renderTasksPage({ force = false } = {}) {
         <div class="mc-run-actions">
           <button class="ops-action-btn ops-action-btn-secondary" type="button"
             data-action="select-project" data-project-id="${escapeHtml(projectId)}" data-scroll-target="detail">
-            Inspect run
+            View in Projects →
           </button>
           ${pendingAp ? `
             <button class="ops-action-btn" type="button"
