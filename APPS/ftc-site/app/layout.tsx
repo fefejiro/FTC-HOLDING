@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import { headers } from "next/headers";
 import { Inter, Space_Grotesk } from "next/font/google";
 import React from "react";
-import { isOgTradesCustomHost } from "../lib/ogTradesAcademy";
 import { SITE_URL } from "../lib/site";
 import { siteLinks } from "../lib/siteLinks";
 import "../styles/globals.css";
@@ -117,32 +115,23 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const requestHost =
-    headers().get("x-request-host") ||
-    headers().get("x-forwarded-host") ||
-    headers().get("host") ||
-    "";
-  const isOgTradesHost = isOgTradesCustomHost(requestHost);
-
   return (
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
-        {!isOgTradesHost ? (
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify(organizationStructuredData)
-            }}
-          />
-        ) : null}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationStructuredData)
+          }}
+        />
       </head>
       <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <ScrollReveal />
-        <Header initialHost={requestHost} />
+        <Header />
         <main className="main-shell">{children}</main>
-        <Footer initialHost={requestHost} />
+        <Footer />
         {GOOGLE_ANALYTICS_ID ? <Analytics /> : null}
       </body>
     </html>
