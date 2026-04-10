@@ -7091,6 +7091,98 @@ body[data-office-studio="true"] .office-view {
   color: rgba(198, 213, 233, 0.52);
 }
 
+/* AI Lab run confirmation card */
+.ai-lab-run-result {
+  margin-top: 12px;
+}
+.ai-lab-run-result.hidden {
+  display: none;
+}
+.ai-lab-run-confirm {
+  background: rgba(56, 189, 132, 0.08);
+  border: 1px solid rgba(56, 189, 132, 0.28);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.ai-lab-run-confirm-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #38bd84;
+  margin-bottom: 10px;
+}
+.ai-lab-run-confirm-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.ai-lab-run-confirm-row {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+}
+.ai-lab-run-confirm-label {
+  color: rgba(198, 213, 233, 0.45);
+  min-width: 58px;
+  flex-shrink: 0;
+}
+.ai-lab-run-confirm-val {
+  color: rgba(198, 213, 233, 0.85);
+}
+.ai-lab-run-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Calendar starter-mode badge */
+.cal-mode-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(198, 213, 233, 0.42);
+  background: rgba(198, 213, 233, 0.07);
+  border: 1px solid rgba(198, 213, 233, 0.12);
+  border-radius: 4px;
+  padding: 1px 6px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+/* Agents page purpose bar */
+.office-purpose-bar {
+  padding: 8px 20px;
+  background: rgba(198, 213, 233, 0.04);
+  border-bottom: 1px solid rgba(198, 213, 233, 0.07);
+}
+.office-purpose-text {
+  font-size: 12px;
+  color: rgba(198, 213, 233, 0.42);
+}
+.office-purpose-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: rgba(198, 213, 233, 0.65);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.office-purpose-link:hover {
+  color: rgba(198, 213, 233, 0.9);
+}
+
+/* Disabled agent action buttons */
+.command-actions button:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .ops-action-row {
   margin-top: 10px;
   display: flex;

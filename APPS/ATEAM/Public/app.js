@@ -357,6 +357,7 @@ const aiLabRefreshBtn = document.getElementById("ai-lab-refresh-btn");
 const aiLabOpenTalkBtn = document.getElementById("ai-lab-open-talk-btn");
 const aiLabOpenSpeechBtn = document.getElementById("ai-lab-open-speech-btn");
 const aiLabCaptureInput = document.getElementById("ai-lab-capture-input");
+const aiLabRunResult = document.getElementById("ai-lab-run-result");
 
 const mcNavList = document.getElementById("mc-nav-list");
 const mcSearchInput = document.getElementById("mc-search-input");
@@ -3094,7 +3095,7 @@ function renderMemoryPage() {
 // ===== Calendar Page =====
 function seedCalendarStore() {
   const stored = safeJsonParse(localStorage.getItem(MC_CALENDAR_KEY), null);
-  if (stored && Array.isArray(stored.tasks) && stored.tasks.length && (stored.version || 0) >= 2) return stored;
+  if (stored && Array.isArray(stored.tasks) && stored.tasks.length && (stored.version || 0) >= 3) return stored;
 
   const tasks = [];
   const add = (day, title, time, variant, recurringLabel = "") => {
@@ -3108,22 +3109,29 @@ function seedCalendarStore() {
     });
   };
 
+  // Daily core rhythm
   for (let d = 0; d < 7; d++) {
-    add(d, "Reaction Poller", "", "neutral", "Recurring");
-    add(d, "Trend Radar", "12:00 PM", "orange");
-    add(d, "Morning Kickoff", "6:55 AM", "neutral");
-    add(d, "YouTube Open Calls", "7:00 AM", "red");
-    add(d, "Signals Morning Scan", "8:00 AM", "green");
-    add(d, "Morning Brief", "8:00 AM", "yellow");
-    add(d, "Content Draft", "8:30 AM", "blue");
-    add(d, "Daily Digest", "9:00 AM", "purple");
+    add(d, "Morning Brief", "7:00 AM", "yellow");
+    add(d, "Trend Review", "8:00 AM", "orange");
+    add(d, "Content Draft", "9:00 AM", "blue");
+    add(d, "Daily Wrap-up", "5:00 PM", "purple");
   }
-  // Day-specific tasks.
-  add(1, "Stock Scarcity Review", "7:30 AM", "neutral");
-  add(2, "Trend Radar Daily", "8:00 AM", "neutral");
-  add(4, "Trend Radar Daily", "8:00 AM", "neutral");
+  // Weekday-specific: job search / LinkedIn / outreach
+  // Mon, Wed, Fri — LinkedIn review + application block
+  [1, 3, 5].forEach((d) => {
+    add(d, "LinkedIn Review", "8:30 AM", "green");
+    add(d, "Job Applications", "10:00 AM", "red");
+  });
+  // Tue, Thu — outreach follow-up + signals scan
+  [2, 4].forEach((d) => {
+    add(d, "Outreach Follow-up", "8:30 AM", "neutral");
+    add(d, "Signals Scan", "10:00 AM", "green");
+  });
+  // Weekly anchors
+  add(1, "Week Kickoff", "6:55 AM", "neutral");     // Monday
+  add(5, "Week Wrap-up", "4:30 PM", "neutral");     // Friday
 
-  const seed = { version: 2, tasks };
+  const seed = { version: 3, tasks };
   localStorage.setItem(MC_CALENDAR_KEY, safeJsonStringify(seed));
   return seed;
 }
@@ -6309,6 +6317,33 @@ async function handleProjectsCreateItem() {
   }
 }
 
+function showLabRunConfirmation(run) {
+  const el = aiLabRunResult;
+  if (!el) {
+    showToast("Run created. Open Tasks to review.", "ok");
+    return;
+  }
+  const id = mcShortRunRef(run.id);
+  const lane = mcLaneLabel(run.lane || run.category || "");
+  const title = String(run.title || run.idea || "").trim().slice(0, 80) || "Untitled run";
+  const hasApproval = run.state === "awaiting_approval" || run.state === "draft";
+  el.innerHTML = `
+    <div class="ai-lab-run-confirm">
+      <div class="ai-lab-run-confirm-title">Run created</div>
+      <div class="ai-lab-run-confirm-rows">
+        <div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">ID</span><span class="ai-lab-run-confirm-val">${escapeHtml(id)}</span></div>
+        <div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">Request</span><span class="ai-lab-run-confirm-val">${escapeHtml(title)}</span></div>
+        ${lane ? `<div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">Lane</span><span class="ai-lab-run-confirm-val">${escapeHtml(lane)}</span></div>` : ""}
+        <div class="ai-lab-run-confirm-row"><span class="ai-lab-run-confirm-label">Status</span><span class="ai-lab-run-confirm-val">${hasApproval ? "Approval pending" : "Queued"}</span></div>
+      </div>
+      <div class="ai-lab-run-confirm-actions">
+        <button class="ops-action-btn" type="button" data-action="go-tasks">View in Tasks →</button>
+      </div>
+    </div>
+  `;
+  el.classList.remove("hidden");
+}
+
 async function handleMissionAction(action, dataset = {}) {
   const safeAction = String(action || "").trim();
   if (!safeAction) return;
@@ -6403,8 +6438,7 @@ async function handleMissionAction(action, dataset = {}) {
       if (run?.id) {
         if (aiLabCaptureInput) aiLabCaptureInput.value = "";
         mcInvalidateOverview();
-        showToast("Workflow run created. Open Tasks to review and approve.", "ok");
-        setView("tasks");
+        showLabRunConfirmation(run);
       } else {
         showToast("Run creation failed — no run returned.", "error");
       }
@@ -6412,6 +6446,10 @@ async function handleMissionAction(action, dataset = {}) {
       showToast("Failed to create workflow run.", "error");
       console.warn("lab-create-run failed:", err?.message || err);
     }
+    return;
+  }
+  if (safeAction === "go-tasks") {
+    setView("tasks");
     return;
   }
 }
@@ -11135,6 +11173,7 @@ function updateOfficeCommandPanel() {
   if (!agent) {
     officeCommandActive.classList.add("hidden");
     officeCommandEmpty.classList.remove("hidden");
+    [officeActionApprove, officeActionEdit, officeActionRetry, officeActionCancel].forEach((btn) => { if (btn) { btn.disabled = true; btn.title = "Select an agent first"; } });
     return;
   }
 
@@ -11166,6 +11205,16 @@ function updateOfficeCommandPanel() {
     if (!logs.length) logs.push("Standing by.");
     officeCommandLogs.innerHTML = logs.map((line) => `<li>${line}</li>`).join("");
   }
+
+  // Wire action buttons to actual agent status — avoid showing meaningless controls
+  const canApprove = status === "waiting_for_you";
+  const canRetry = status === "working" || status === "blocked" || status === "done";
+  const canCancel = status === "working" || status === "waiting_for_you";
+  const canEdit = status === "waiting_for_you";
+  if (officeActionApprove) { officeActionApprove.disabled = !canApprove; officeActionApprove.title = canApprove ? "Approve and proceed" : "Agent is not waiting for approval"; }
+  if (officeActionEdit) { officeActionEdit.disabled = !canEdit; officeActionEdit.title = canEdit ? "Edit before approving" : "Available only when agent is waiting"; }
+  if (officeActionRetry) { officeActionRetry.disabled = !canRetry; officeActionRetry.title = canRetry ? "Retry task" : "No active task to retry"; }
+  if (officeActionCancel) { officeActionCancel.disabled = !canCancel; officeActionCancel.title = canCancel ? "Cancel current task" : "Nothing to cancel"; }
 
   officeCommandEmpty.classList.add("hidden");
   officeCommandActive.classList.remove("hidden");
@@ -12399,6 +12448,15 @@ function bindEvents() {
   // Single delegated handler for all [data-action] clicks within AI Lab
   if (aiLabView) {
     aiLabView.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+
+  // Delegated handler for [data-action] clicks within Agents/Office view (e.g. purpose bar)
+  if (officeView) {
+    officeView.addEventListener("click", (e) => {
       const btn = e.target?.closest?.("[data-action]");
       if (!btn) return;
       void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
