@@ -139,11 +139,8 @@ interface RecognizedTrackDetail {
   };
 }
 
-type InsightSourceTone = 'success' | 'default' | 'progress';
-
 interface InsightBadgeModel {
   label: string;
-  tone: InsightSourceTone;
 }
 
 interface PrimaryGistModel {
@@ -476,54 +473,27 @@ export default function RecognizedTrack() {
 
   const getInsightBadges = (
     detail: RecognizedTrackDetail,
-    artistInfo?: ArtistSongInfo,
   ): InsightBadgeModel[] => {
-    const confidenceLabel =
-      typeof detail.track.confidenceScore === 'number' && detail.track.confidenceScore < 80
-        ? 'Match - Strong lead'
-        : 'Match - Confirmed';
+    const badges: InsightBadgeModel[] = [];
+    const hasVerifiedMatch = Boolean(detail.track.id);
+    const hasMatchedLyrics = detail.status?.lyrics === 'complete' && Boolean(detail.lyrics?.text?.trim());
+    const hasDeeperMeaning = Boolean(
+      detail.culturalAnalysis?.some((analysis) => !String(analysis.id).startsWith('fallback-')),
+    );
 
-    const lyricsLabel =
-      detail.status?.lyrics === 'complete'
-        ? 'Lyrics - High confidence'
-        : detail.status?.lyrics === 'pending'
-          ? 'Lyrics - Checking'
-          : 'Lyrics - Based on current data';
+    if (hasVerifiedMatch) {
+      badges.push({ label: 'Verified match' });
+    }
 
-    const meaningLabel =
-      detail.culturalAnalysis && detail.culturalAnalysis.length > 0
-        ? 'Meaning - AI interpreted'
-        : detail.status?.analysis === 'pending'
-          ? 'Meaning - Still loading'
-          : 'Meaning - Based on current data';
+    if (hasMatchedLyrics) {
+      badges.push({ label: 'Lyrics matched' });
+    }
 
-    const artistLabel =
-      artistInfo?.verification === 'verified'
-        ? 'Artist - Verified'
-        : artistInfo
-          ? 'Artist - Partial'
-          : 'Artist - Checking';
+    if (hasDeeperMeaning) {
+      badges.push({ label: 'Deeper meaning' });
+    }
 
-    return [
-      { label: confidenceLabel, tone: 'success' },
-      {
-        label: lyricsLabel,
-        tone: detail.status?.lyrics === 'pending' ? 'progress' : 'default',
-      },
-      {
-        label: meaningLabel,
-        tone:
-          detail.status?.analysis === 'pending' || detail.track.analysisStatus === 'generating_analysis'
-            ? 'progress'
-            : detail.culturalAnalysis && detail.culturalAnalysis.length > 0
-              ? 'success'
-              : 'default',
-      },
-      {
-        label: artistLabel,
-        tone: artistInfo?.verification === 'verified' ? 'success' : 'default',
-      },
-    ];
+    return badges;
   };
 
   const analyzeFallback = async (lyricText: string) => {
@@ -951,8 +921,8 @@ export default function RecognizedTrack() {
   );
 
   const insightBadges = useMemo(
-    () => (data ? getInsightBadges(data, artistInfo) : []),
-    [data, artistInfo],
+    () => (data ? getInsightBadges(data) : []),
+    [data],
   );
 
   const artistStatusMessage = getArtistStatusCopy(artistInfo?.status);
@@ -1352,13 +1322,7 @@ export default function RecognizedTrack() {
                         <Badge
                           key={badge.label}
                           variant="secondary"
-                          className={
-                            badge.tone === 'success'
-                              ? 'bg-green-500/10 text-green-700 dark:text-green-300'
-                              : badge.tone === 'progress'
-                                ? 'bg-primary/10 text-primary'
-                                : ''
-                          }
+                          className="bg-green-500/10 text-green-700 dark:text-green-300"
                         >
                           {badge.label}
                         </Badge>
