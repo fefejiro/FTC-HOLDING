@@ -16,9 +16,12 @@ export interface MusixmatchLyricsResult {
     copyright?: string;
     trackId?: number;
     syncedLyrics?: string | null;
+    source?: string;
   };
   rawResponse?: any;
 }
+
+const PRIMARY_LYRICS_TIMEOUT_MS = 2000;
 
 function cleanSongData(title: string, artist: string) {
   const cleanTitle = title
@@ -155,7 +158,7 @@ async function searchLRCLIB(title: string, artist: string): Promise<{ plain: str
       const response = await axios.get('https://lrclib.net/api/get', {
         params,
         headers: { 'User-Agent': 'Saywetin/1.0 (https://saywetin.app)' },
-        timeout: 3000,
+        timeout: PRIMARY_LYRICS_TIMEOUT_MS,
       });
       
       const data = response.data;
@@ -174,7 +177,7 @@ async function searchLRCLIB(title: string, artist: string): Promise<{ plain: str
     const searchResponse = await axios.get('https://lrclib.net/api/search', {
       params: { q: `${baseTitleNoFeat} ${mainArtist}` },
       headers: { 'User-Agent': 'Saywetin/1.0 (https://saywetin.app)' },
-      timeout: 3000,
+      timeout: PRIMARY_LYRICS_TIMEOUT_MS,
     });
     
     const results = searchResponse.data;
@@ -209,7 +212,7 @@ async function searchLyricsOvh(title: string, artist: string): Promise<string | 
       console.log(`🎵 [Lyrics.ovh] Trying: "${pair.t}" by ${pair.a}`);
       
       try {
-        const response = await axios.get(url, { timeout: 5000 });
+        const response = await axios.get(url, { timeout: PRIMARY_LYRICS_TIMEOUT_MS });
         if (response.data?.lyrics) {
           console.log(`✅ [Lyrics.ovh] Found lyrics (${response.data.lyrics.length} chars)`);
           return response.data.lyrics.trim();
@@ -355,6 +358,42 @@ function getCacheKey(title: string, artist: string): string {
   return `${title.toLowerCase().trim()}|${artist.toLowerCase().trim()}`;
 }
 
+async function resolveFirstValidResult(
+  providers: Array<Promise<{ lyrics: string; source: string; syncedLyrics?: string | null } | null>>,
+): Promise<{ lyrics: string; source: string; syncedLyrics?: string | null } | null> {
+  return new Promise((resolve) => {
+    let pending = providers.length;
+    let settled = false;
+
+    const settle = (result: { lyrics: string; source: string; syncedLyrics?: string | null } | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
+    const markComplete = () => {
+      pending -= 1;
+      if (pending <= 0) {
+        settle(null);
+      }
+    };
+
+    providers.forEach((provider) => {
+      provider
+        .then((result) => {
+          if (result) {
+            settle(result);
+            return;
+          }
+          markComplete();
+        })
+        .catch(() => {
+          markComplete();
+        });
+    });
+  });
+}
+
 export async function fetchLyrics(
   title: string,
   artist: string
@@ -373,6 +412,7 @@ export async function fetchLyrics(
         language: detectLanguage(cached.lyrics),
         copyright: `Lyrics provided by ${cached.source} (cached)`,
         syncedLyrics: cached.syncedLyrics,
+        source: cached.source,
       },
     };
   }
@@ -459,11 +499,92 @@ export async function fetchLyrics(
         language: detectedLanguage,
         copyright: `Lyrics provided by ${bestResult.source}`,
         syncedLyrics: bestResult.syncedLyrics,
+        source: bestResult.source,
       },
     };
   }
   
   console.log(`⚠️ [Lyrics] No lyrics found for "${title}" by ${artist} (searched ${elapsed}ms)`);
+  return {
+    success: false,
+    errorMessage: `Lyrics not found for "${title}" by ${artist}. The song may be too new or not in our databases.`,
+  };
+}
+
+export async function fetchLyricsFast(
+  title: string,
+  artist: string,
+): Promise<MusixmatchLyricsResult> {
+  console.log(`🎵 [Lyrics] Fast search for "${title}" by ${artist}`);
+  const startTime = Date.now();
+
+  const cacheKey = getCacheKey(title, artist);
+  const cached = lyricsCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`⚡ [Lyrics] Fast cache hit! (${cached.source})`);
+    return {
+      success: true,
+      lyrics: {
+        fullText: cached.lyrics,
+        language: detectLanguage(cached.lyrics),
+        copyright: `Lyrics provided by ${cached.source} (cached)`,
+        syncedLyrics: cached.syncedLyrics,
+        source: cached.source,
+      },
+    };
+  }
+
+  console.log(`🎵 [Lyrics] Racing primary sources in parallel...`);
+  let bestResult = await resolveFirstValidResult([
+    searchLRCLIB(title, artist).then((result) =>
+      result ? { lyrics: result.plain, source: 'LRCLIB', syncedLyrics: result.synced } : null,
+    ),
+    searchLyricsOvh(title, artist).then((lyrics) =>
+      lyrics ? { lyrics, source: 'Lyrics.ovh' } : null,
+    ),
+  ]);
+
+  if (!bestResult) {
+    console.log(`🎵 [Lyrics] Primary sources missed, trying fallback sources...`);
+    bestResult = await resolveFirstValidResult([
+      searchGeniusWithClient(title, artist).then((lyrics) =>
+        lyrics ? { lyrics, source: 'Genius' } : null,
+      ),
+      searchAZLyrics(title, artist).then((lyrics) =>
+        lyrics ? { lyrics, source: 'AZLyrics' } : null,
+      ),
+      recallLyricsWithAI(title, artist).then((lyrics) =>
+        lyrics ? { lyrics, source: 'AI Recall' } : null,
+      ),
+    ]);
+  }
+
+  const elapsed = Date.now() - startTime;
+
+  if (bestResult) {
+    lyricsCache.set(cacheKey, {
+      lyrics: bestResult.lyrics,
+      source: bestResult.source,
+      syncedLyrics: bestResult.syncedLyrics || null,
+      timestamp: Date.now(),
+    });
+
+    const detectedLanguage = detectLanguage(bestResult.lyrics);
+    console.log(`✅ [Lyrics] Fast success from ${bestResult.source} in ${elapsed}ms (${bestResult.lyrics.length} chars, lang: ${detectedLanguage})`);
+
+    return {
+      success: true,
+      lyrics: {
+        fullText: bestResult.lyrics,
+        language: detectedLanguage,
+        copyright: `Lyrics provided by ${bestResult.source}`,
+        syncedLyrics: bestResult.syncedLyrics,
+        source: bestResult.source,
+      },
+    };
+  }
+
+  console.log(`⚠️ [Lyrics] Fast lookup found nothing for "${title}" by ${artist} (searched ${elapsed}ms)`);
   return {
     success: false,
     errorMessage: `Lyrics not found for "${title}" by ${artist}. The song may be too new or not in our databases.`,

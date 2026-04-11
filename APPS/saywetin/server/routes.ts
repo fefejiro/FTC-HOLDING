@@ -28,7 +28,7 @@ import multer from "multer";
 import crypto from "crypto";
 import { recognizeSong, isACRCloudConfigured } from "./acrcloud-service";
 import {
-  fetchLyrics,
+  fetchLyricsFast,
   getLyricsServiceStatus,
   isLyricsServiceAvailable,
 } from "./musixmatch-service";
@@ -430,6 +430,91 @@ async function buildRecognizedTrackResponse(trackId: string) {
   };
 }
 
+type LyricsResolutionSource = "cache" | "lrclib" | "lyrics_ovh" | "fallback" | "none";
+
+function getPersistentLyricsExpiry(): Date {
+  return new Date("2099-12-31T00:00:00.000Z");
+}
+
+function mapLyricsResolutionSource(source?: string | null): LyricsResolutionSource {
+  const normalized = (source || "").toLowerCase();
+  if (normalized.includes("cache")) return "cache";
+  if (normalized.includes("lrclib")) return "lrclib";
+  if (normalized.includes("lyrics.ovh")) return "lyrics_ovh";
+  if (normalized) return "fallback";
+  return "none";
+}
+
+async function persistLyricsForTrack(
+  trackId: string,
+  lyricsText: string,
+  lyricsLanguage: string,
+  source: string,
+): Promise<void> {
+  const contentHash = crypto.createHash("sha256").update(lyricsText).digest("hex");
+
+  await storage.createTransientLyrics({
+    recognizedTrackId: trackId,
+    fullLyrics: lyricsText,
+    language: lyricsLanguage,
+    contentHash,
+    source,
+    expiresAt: getPersistentLyricsExpiry(),
+  });
+}
+
+async function resolveLyricsForTrack(
+  trackId: string,
+  title: string,
+  artist: string,
+): Promise<{ text: string | null; language: string; source: LyricsResolutionSource }> {
+  const lyricsStartTime = Date.now();
+  const cachedLyrics = await storage.findCachedLyricsBySong(title, artist);
+
+  if (cachedLyrics) {
+    await persistLyricsForTrack(trackId, cachedLyrics.text, cachedLyrics.language, "cache");
+    const elapsed = Date.now() - lyricsStartTime;
+    console.log(`[lyrics] resolved in ${elapsed}ms via cache`);
+    return {
+      text: cachedLyrics.text,
+      language: cachedLyrics.language,
+      source: "cache",
+    };
+  }
+
+  if (!isLyricsServiceAvailable()) {
+    const elapsed = Date.now() - lyricsStartTime;
+    console.log(`[lyrics] resolved in ${elapsed}ms via none`);
+    return { text: null, language: "en", source: "none" };
+  }
+
+  try {
+    const lyricsResult = await fetchLyricsFast(title, artist);
+    if (lyricsResult.success && lyricsResult.lyrics) {
+      const lyricsText = lyricsResult.lyrics.fullText;
+      const lyricsLanguage = lyricsResult.lyrics.language;
+      const sourceLabel = lyricsResult.lyrics.source || lyricsResult.lyrics.copyright || "fallback";
+      const source = mapLyricsResolutionSource(sourceLabel);
+
+      await persistLyricsForTrack(trackId, lyricsText, lyricsLanguage, sourceLabel);
+      const elapsed = Date.now() - lyricsStartTime;
+      console.log(`[lyrics] resolved in ${elapsed}ms via ${source}`);
+
+      return {
+        text: lyricsText,
+        language: lyricsLanguage,
+        source,
+      };
+    }
+  } catch (error: any) {
+    console.error("❌ [LYRICS] Fetch error:", error.message);
+  }
+
+  const elapsed = Date.now() - lyricsStartTime;
+  console.log(`[lyrics] resolved in ${elapsed}ms via none`);
+  return { text: null, language: "en", source: "none" };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -748,8 +833,12 @@ export async function registerRoutes(
         });
 
         // Fetch lyrics
-        const cachedLyrics = await storage.findCachedLyricsBySong(track.title, track.artist);
-        if (cachedLyrics) {
+        const resolvedLyrics = await resolveLyricsForTrack(recognizedTrack.id, track.title, track.artist);
+        lyricsText = resolvedLyrics.text;
+        lyricsLanguage = resolvedLyrics.language;
+
+        const cachedLyrics: { text: string; language: string } | null = null;
+        if (false && cachedLyrics) {
           console.log(`⚡ [LYRICS] Using cached lyrics for "${track.title}" (skipped API call)`);
           await storage.updateRecognizedTrack(recognizedTrack.id, {
             lyricsStatus: 'completed',
@@ -770,9 +859,9 @@ export async function registerRoutes(
           
           lyricsText = cachedLyrics.text;
           lyricsLanguage = cachedLyrics.language;
-        } else if (isLyricsServiceAvailable()) {
+        } else if (false && isLyricsServiceAvailable()) {
           try {
-            const lyricsResult = await fetchLyrics(track.title, track.artist);
+            const lyricsResult = await fetchLyricsFast(track.title, track.artist);
             
             if (lyricsResult.success && lyricsResult.lyrics) {
               lyricsText = lyricsResult.lyrics.fullText;
@@ -810,6 +899,18 @@ export async function registerRoutes(
               processingCompletedAt: new Date(),
             });
           }
+        }
+
+        if (lyricsText) {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            lyricsStatus: 'completed',
+          });
+        } else {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            lyricsStatus: 'no_lyrics',
+            analysisStatus: 'no_lyrics',
+            processingCompletedAt: new Date(),
+          });
         }
 
         const lyricsElapsed = Date.now() - bgStartTime;
@@ -1075,9 +1176,26 @@ export async function registerRoutes(
         let lyricsText: string | null = null;
         let lyricsLanguage = 'en';
 
-        if (isLyricsServiceAvailable()) {
+        const resolvedLyrics = await resolveLyricsForTrack(recognizedTrack.id, title, artist);
+        lyricsText = resolvedLyrics.text;
+        lyricsLanguage = resolvedLyrics.language;
+
+        if (lyricsText) {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            lyricsStatus: 'completed',
+          });
+          console.log(`âœ… [MANUAL] Lyrics fetched (${lyricsText.split('\n').length} lines)`);
+        } else {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            lyricsStatus: 'no_lyrics',
+            analysisStatus: 'no_lyrics',
+            processingCompletedAt: new Date(),
+          });
+        }
+
+        if (false && isLyricsServiceAvailable()) {
           try {
-            const lyricsResult = await fetchLyrics(title, artist);
+            const lyricsResult = await fetchLyricsFast(title, artist);
             
             if (lyricsResult.success && lyricsResult.lyrics) {
               lyricsText = lyricsResult.lyrics.fullText;
@@ -1323,9 +1441,29 @@ Rules:
           let lyricsText: string | null = null;
           let lyricsLanguage = 'en';
 
-          if (isLyricsServiceAvailable()) {
+          const resolvedLyrics = await resolveLyricsForTrack(
+            recognizedTrack.id,
+            identified.title,
+            identified.artist,
+          );
+          lyricsText = resolvedLyrics.text;
+          lyricsLanguage = resolvedLyrics.language;
+
+          if (lyricsText) {
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              lyricsStatus: 'completed',
+            });
+          } else {
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              lyricsStatus: 'no_lyrics',
+              analysisStatus: 'no_lyrics',
+              processingCompletedAt: new Date(),
+            });
+          }
+
+          if (false && isLyricsServiceAvailable()) {
             try {
-              const lyricsResult = await fetchLyrics(identified.title, identified.artist);
+              const lyricsResult = await fetchLyricsFast(identified.title, identified.artist);
               if (lyricsResult.success && lyricsResult.lyrics) {
                 lyricsText = lyricsResult.lyrics.fullText;
                 lyricsLanguage = lyricsResult.lyrics.language;
@@ -1539,9 +1677,25 @@ Rules:
           let lyricsText: string | null = null;
           let lyricsLanguage = 'en';
 
-          if (isLyricsServiceAvailable()) {
+          const resolvedLyrics = await resolveLyricsForTrack(recognizedTrack.id, title, artist);
+          lyricsText = resolvedLyrics.text;
+          lyricsLanguage = resolvedLyrics.language;
+
+          if (lyricsText) {
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              lyricsStatus: 'completed',
+            });
+          } else {
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              lyricsStatus: 'no_lyrics',
+              analysisStatus: 'no_lyrics',
+              processingCompletedAt: new Date(),
+            });
+          }
+
+          if (false && isLyricsServiceAvailable()) {
             try {
-              const lyricsResult = await fetchLyrics(title, artist);
+              const lyricsResult = await fetchLyricsFast(title, artist);
               
               if (lyricsResult.success && lyricsResult.lyrics) {
                 lyricsText = lyricsResult.lyrics.fullText;

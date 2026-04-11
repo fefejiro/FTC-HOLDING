@@ -36,7 +36,15 @@ import {
   interactionLogs,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, asc, sql, and, ilike } from "drizzle-orm";
+import { eq, desc, asc, sql, and } from "drizzle-orm";
+
+function normalizeLyricsLookupValue(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ");
+}
 
 export interface IStorage {
   // Songs
@@ -446,6 +454,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async findCachedLyricsBySong(title: string, artist: string): Promise<{ text: string; language: string } | null> {
+    const normalizedTitle = normalizeLyricsLookupValue(title);
+    const normalizedArtist = normalizeLyricsLookupValue(artist);
+
     // Find any recognized track with matching title/artist that has non-expired lyrics
     const now = new Date();
     const results = await db
@@ -457,8 +468,8 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(recognizedTracks, eq(transientLyrics.recognizedTrackId, recognizedTracks.id))
       .where(
         and(
-          ilike(recognizedTracks.title, title),
-          ilike(recognizedTracks.artist, artist),
+          sql`trim(regexp_replace(lower(${recognizedTracks.title}), '[^a-z0-9]+', ' ', 'g')) = ${normalizedTitle}`,
+          sql`trim(regexp_replace(lower(${recognizedTracks.artist}), '[^a-z0-9]+', ' ', 'g')) = ${normalizedArtist}`,
           sql`${transientLyrics.expiresAt} > ${now}`
         )
       )
