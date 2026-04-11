@@ -44,7 +44,123 @@ interface AudioRecorderProps {
 
 type ApiError = Error & {
   code?: string;
+  status?: number;
 };
+
+type ListenErrorKind =
+  | 'offline'
+  | 'backend_unreachable'
+  | 'timeout'
+  | 'microphone_denied'
+  | 'capture_failed'
+  | 'empty_audio'
+  | 'no_result'
+  | 'provider_failed'
+  | 'context_failed'
+  | 'bad_response'
+  | 'database_unavailable'
+  | 'unknown';
+
+type ListenError = Error & {
+  kind?: ListenErrorKind;
+  code?: string;
+  status?: number;
+};
+
+const LISTEN_REQUEST_TIMEOUT_MS = 45_000;
+
+function createListenError(
+  kind: ListenErrorKind,
+  message: string,
+  extras?: { code?: string; status?: number },
+): ListenError {
+  const error = new Error(message) as ListenError;
+  error.kind = kind;
+  if (extras?.code) error.code = extras.code;
+  if (typeof extras?.status === 'number') error.status = extras.status;
+  return error;
+}
+
+function isPermissionDeniedError(error: unknown): boolean {
+  const message = String((error as any)?.message || '').toLowerCase();
+  const name = String((error as any)?.name || '').toLowerCase();
+
+  return (
+    message.includes('permission denied') ||
+    message.includes('microphone access denied') ||
+    message.includes('notallowederror') ||
+    name === 'notallowederror'
+  );
+}
+
+function classifyListenError(error: unknown): { title: string; description: string } {
+  const listenError = error as ListenError;
+  const kind = listenError?.kind;
+  const message = String(listenError?.message || '').trim();
+
+  switch (kind) {
+    case 'offline':
+      return {
+        title: 'Internet no dey',
+        description: 'Check your network, then try again.',
+      };
+    case 'backend_unreachable':
+      return {
+        title: 'Connection wahala',
+        description: 'We no fit reach Saywetin server right now. Try again shortly.',
+      };
+    case 'timeout':
+      return {
+        title: 'E dey take too long',
+        description: 'Server no answer in time. Try again.',
+      };
+    case 'microphone_denied':
+      return {
+        title: 'Mic permission needed',
+        description: 'Allow microphone access make we fit hear the music.',
+      };
+    case 'capture_failed':
+      return {
+        title: 'Recording no gree',
+        description: 'We no fit capture the sound well. Try again and keep the music close.',
+      };
+    case 'empty_audio':
+      return {
+        title: 'We no hear any song',
+        description: 'Make sure the music dey play loud. Then try again.',
+      };
+    case 'no_result':
+      return {
+        title: 'We no hear any song',
+        description: 'Make sure the music dey play loud. Then try again.',
+      };
+    case 'provider_failed':
+      return {
+        title: 'Music service wahala',
+        description: message || 'Song recognition no complete this time. Try again shortly.',
+      };
+    case 'context_failed':
+      return {
+        title: 'Song don show, story never land',
+        description: message || 'We found the track, but the deeper explanation no finish this time.',
+      };
+    case 'database_unavailable':
+      return {
+        title: 'Server dey rest small',
+        description: 'Saywetin store no answer well. Try again shortly.',
+      };
+    case 'bad_response':
+      return {
+        title: 'Server answer no clear',
+        description: 'We get invalid response from the server. Try again.',
+      };
+    default:
+      return {
+        title: 'E no work o',
+        description: message || 'We no fit find the song. Try again abeg.',
+      };
+  }
+}
 
 function getApiErrorMessage(payload: any): string | undefined {
   if (typeof payload?.error === "string") {
@@ -80,7 +196,62 @@ function createApiError(payload: any, fallbackMessage: string): ApiError {
   if (code) {
     error.code = code;
   }
+  if (typeof payload?.status === 'number') {
+    error.status = payload.status;
+  }
   return error;
+}
+
+function normalizeUploadError(error: unknown): ListenError {
+  if ((error as ListenError)?.kind) {
+    return error as ListenError;
+  }
+
+  const apiError = error as ApiError;
+  const code = typeof apiError?.code === 'string' ? apiError.code : undefined;
+  const status = typeof apiError?.status === 'number' ? apiError.status : undefined;
+  const message = String(apiError?.message || '').trim();
+  const normalizedMessage = message.toLowerCase();
+
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return createListenError('offline', 'Device is offline.');
+  }
+
+  if (code === 'DATABASE_UNAVAILABLE' || normalizedMessage.includes('database is currently unavailable')) {
+    return createListenError('database_unavailable', message, { code, status });
+  }
+
+  if (
+    code === 'ACRCLOUD_UPSTREAM_UNAVAILABLE' ||
+    code === 'ACRCLOUD_NOT_CONFIGURED' ||
+    normalizedMessage.includes('application not found') ||
+    normalizedMessage.includes('api route not found')
+  ) {
+    return createListenError('backend_unreachable', message || 'Backend unreachable.', { code, status });
+  }
+
+  if (
+    code === 'ACRCLOUD_RECOGNITION_FAILED' ||
+    normalizedMessage.includes('low-confidence match') ||
+    normalizedMessage.includes('match looked weak') ||
+    normalizedMessage.includes('music may be incorrect')
+  ) {
+    return createListenError('provider_failed', message, { code, status });
+  }
+
+  if (normalizedMessage.includes('no result') || normalizedMessage.includes('no music')) {
+    return createListenError('no_result', message || 'No music found.', { code, status });
+  }
+
+  if (normalizedMessage.includes('lyrics') || normalizedMessage.includes('breakdown')) {
+    return createListenError('context_failed', message, { code, status });
+  }
+
+  if (normalizedMessage === 'connection' || normalizedMessage.includes('network') || normalizedMessage.includes('fetch')) {
+    return createListenError('backend_unreachable', message || 'Could not reach backend.', { code, status });
+  }
+
+  return createListenError('unknown', message || 'Could not identify the song.', { code, status });
 }
 
 function delay(ms: number): Promise<void> {
@@ -159,6 +330,7 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
     try {
       console.log('[SAYWETIN] startNativeListening called, listenDuration:', listenDuration);
       setRecordingState('requesting');
+      audioChunksRef.current = [];
       setProgress(0);
 
       let hasPermission = await hasRecordingPermission();
@@ -167,14 +339,14 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
         hasPermission = await requestRecordingPermission();
         console.log('[SAYWETIN] requestPermission result:', hasPermission);
         if (!hasPermission) {
-          throw new Error('Permission denied');
+          throw createListenError('microphone_denied', 'Permission denied');
         }
       }
 
       const started = await startNativeRecording();
       console.log('[SAYWETIN] startNativeRecording result:', started);
       if (!started) {
-        throw new Error('Failed to start recording');
+        throw createListenError('capture_failed', 'Failed to start recording');
       }
 
       setRecordingState('listening');
@@ -190,15 +362,18 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
         const audioBlob = await stopNativeRecording();
         cleanup();
         console.log('[SAYWETIN] audioBlob after stop:', audioBlob ? `${audioBlob.size} bytes, type: ${audioBlob.type}` : 'NULL');
-        if (audioBlob) {
+        if (audioBlob && audioBlob.size > 0) {
           audioChunksRef.current = [audioBlob];
           handleUpload();
         } else {
           setRecordingState('error');
+          const issue = classifyListenError(
+            createListenError('capture_failed', 'Could not capture audio. Please try again.'),
+          );
           toast({
             variant: 'destructive',
-            title: 'Recording Failed',
-            description: 'Could not capture audio. Please try again.',
+            title: issue.title,
+            description: issue.description,
           });
         }
       }, listenDuration * 1000);
@@ -207,10 +382,17 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
       console.error('[SAYWETIN] Native recording failed:', error);
       cancelNativeRecording();
       cleanup();
+      const issue = classifyListenError(
+        isPermissionDeniedError(error)
+          ? createListenError('microphone_denied', 'Permission denied')
+          : (error as ListenError)?.kind
+            ? error
+            : createListenError('capture_failed', 'Failed to start recording'),
+      );
       toast({
         variant: 'destructive',
-        title: 'Microphone Access Denied',
-        description: 'Please allow microphone access to identify songs.',
+        title: issue.title,
+        description: issue.description,
       });
       setRecordingState('idle');
     }
@@ -299,10 +481,15 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
     } catch (error: any) {
       console.error('Failed to start recording:', error);
       cleanup();
+      const issue = classifyListenError(
+        isPermissionDeniedError(error)
+          ? createListenError('microphone_denied', 'Permission denied')
+          : createListenError('capture_failed', 'Failed to capture audio'),
+      );
       toast({
         variant: 'destructive',
-        title: 'Microphone Access Denied',
-        description: 'Please allow microphone access to identify songs.',
+        title: issue.title,
+        description: issue.description,
       });
       setRecordingState('idle');
     }
@@ -318,17 +505,41 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
   };
 
   const sendAudioToServer = async (audioBlob: Blob, mimeType: string, ext: string): Promise<any> => {
+    if (!audioBlob || audioBlob.size <= 0) {
+      throw createListenError('empty_audio', 'No audio sample captured.');
+    }
+
     const apiUrl = getApiUrl('/api/listen');
     console.log('[SAYWETIN-UPLOAD] Sending to:', apiUrl);
 
     const formData = new FormData();
     formData.append('audio', audioBlob, `recording.${ext}`);
+    formData.append('duration', String(listenDuration));
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      body: formData,
-      credentials: 'include',
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), LISTEN_REQUEST_TIMEOUT_MS);
+
+    let response: Response;
+
+    try {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        signal: controller.signal,
+      });
+    } catch (error: any) {
+      clearTimeout(timeout);
+      if (error?.name === 'AbortError') {
+        throw createListenError('timeout', 'Listen request timed out.');
+      }
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        throw createListenError('offline', 'Device is offline.');
+      }
+      throw createListenError('backend_unreachable', error?.message || 'Could not reach backend.');
+    }
+
+    clearTimeout(timeout);
 
     console.log('[SAYWETIN-UPLOAD] Response status:', response.status, response.statusText);
 
@@ -337,14 +548,21 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
     if (!contentType || !contentType.includes('application/json')) {
       const responseText = await response.text();
       console.error('[SAYWETIN-UPLOAD] Non-JSON response body (first 500 chars):', responseText.substring(0, 500));
-      throw new Error('connection');
+      if (responseText.startsWith('<!DOCTYPE') || responseText.startsWith('<html')) {
+        throw createListenError('bad_response', 'The listen request reached a web page instead of the API.');
+      }
+      throw createListenError('backend_unreachable', 'Server returned a non-JSON response.');
     }
 
     const result = await response.json();
     console.log('[SAYWETIN-UPLOAD] Result:', JSON.stringify(result).substring(0, 500));
 
     if (!response.ok || !result.success) {
-      throw createApiError(result, 'Could not identify the song');
+      const apiError = createApiError(
+        { ...result, status: response.status },
+        'Could not identify the song',
+      );
+      throw normalizeUploadError(apiError);
     }
 
     return result;
@@ -365,6 +583,10 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
         : mimeType.includes('mp3') ? 'mp3' 
         : mimeType.includes('wav') ? 'wav'
         : 'webm';
+
+      if (!audioBlob || audioBlob.size <= 0) {
+        throw createListenError('empty_audio', 'No audio sample captured.');
+      }
       
       console.log('[SAYWETIN-UPLOAD] Audio blob details:', {
         size: audioBlob.size,
@@ -438,31 +660,11 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
     } catch (error: any) {
       console.error('Upload failed:', error);
       setRecordingState('error');
-      
-      const isNoResult = error.message?.toLowerCase().includes('no result') || 
-                         error.message?.toLowerCase().includes('no music');
-      const isConnection = error.message === 'connection' || 
-                           error.message?.includes('SyntaxError') ||
-                           error.message?.includes('network') ||
-                           error.message?.includes('fetch');
-      
-      let title = 'E no work o';
-      let description = 'We no fit find the song. Try again abeg.';
-      
-      if (isNoResult) {
-        title = 'We no hear any song';
-        description = 'Make sure the music dey play loud. Then try again.';
-      } else if (isConnection) {
-        title = 'Connection wahala';
-        description = 'We no fit reach server. Check your internet, then try again.';
-      } else if (error.message) {
-        description = error.message;
-      }
-      
+      const issue = classifyListenError(normalizeUploadError(error));
       toast({
         variant: 'destructive',
-        title,
-        description,
+        title: issue.title,
+        description: issue.description,
       });
     }
   };

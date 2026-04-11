@@ -5,6 +5,19 @@ export function isNativeApp(): boolean {
          (window as any).Capacitor.isNativePlatform();
 }
 
+function normalizeNativeMimeType(rawMimeType?: string): string {
+  const normalized = String(rawMimeType || '').trim().toLowerCase();
+
+  if (normalized.includes('webm')) return 'audio/webm';
+  if (normalized.includes('wav')) return 'audio/wav';
+  if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'audio/mpeg';
+  if (normalized.includes('m4a') || normalized.includes('mp4')) return 'audio/mp4';
+  if (normalized.includes('aac')) return 'audio/aac';
+
+  // iOS commonly returns AAC/MP4-family audio. Keep the fallback explicit.
+  return 'audio/aac';
+}
+
 export async function hasRecordingPermission(): Promise<boolean> {
   if (!isNativeApp()) return true;
   
@@ -61,11 +74,7 @@ export async function stopNativeRecording(): Promise<Blob | null> {
     
     if (result.value && result.value.recordDataBase64) {
       const base64Data = result.value.recordDataBase64;
-      let mimeType = result.value.mimeType || 'audio/aac';
-      
-      if (mimeType === 'audio/webm' || mimeType === 'audio/webm;codecs=opus') {
-        mimeType = 'audio/aac';
-      }
+      const mimeType = normalizeNativeMimeType(result.value.mimeType);
       
       console.log('[SAYWETIN-NATIVE] Base64 data length:', base64Data.length);
       console.log('[SAYWETIN-NATIVE] Raw mimeType from recorder:', result.value.mimeType);

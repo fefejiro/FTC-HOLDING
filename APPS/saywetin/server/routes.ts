@@ -35,6 +35,7 @@ import {
 import { resolveTrackArtwork } from "./artwork-service";
 import {
   getAiProviderConfig,
+  getAiClient,
   getAiUnavailableMessage,
   isAiConfigured,
 } from "./lib/ai-config";
@@ -44,6 +45,7 @@ import {
   buildGlossaryLineAnalysis,
   buildStreamingGlossaryPayload,
 } from "./glossary-analysis";
+import { toFile } from "openai/uploads";
 
 interface InfrastructureIssue {
   statusCode: number;
@@ -188,6 +190,131 @@ async function withDatabaseRetry<T>(
   throw lastError;
 }
 
+interface IdentifiedSongCandidate {
+  title: string;
+  artist: string;
+  confidence: number;
+}
+
+function normalizeAudioMimeTypeForTranscription(mimeType?: string): { filename: string; contentType: string } {
+  const normalized = (mimeType || "").toLowerCase().trim();
+
+  if (normalized.includes("aac") || normalized.includes("m4a") || normalized.includes("mp4")) {
+    return { filename: "listen-snippet.m4a", contentType: "audio/mp4" };
+  }
+
+  if (normalized.includes("webm")) {
+    return { filename: "listen-snippet.webm", contentType: "audio/webm" };
+  }
+
+  if (normalized.includes("wav")) {
+    return { filename: "listen-snippet.wav", contentType: "audio/wav" };
+  }
+
+  if (normalized.includes("mpeg") || normalized.includes("mp3")) {
+    return { filename: "listen-snippet.mp3", contentType: "audio/mpeg" };
+  }
+
+  return { filename: "listen-snippet.m4a", contentType: "audio/mp4" };
+}
+
+async function identifySongFromTextQuery(query: string): Promise<IdentifiedSongCandidate | null> {
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 3) {
+    return null;
+  }
+
+  if (!isAiConfigured()) {
+    throw new Error(getAiUnavailableMessage("Text identification"));
+  }
+
+  const openai = getAiClient();
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a music identification expert specializing in African music (Nigerian, South African, Ghanaian, Kenyan, etc.) and global hits popular in Africa. Given a user's text input (which could be partial lyrics, a song description, humming description, or song/artist name), identify the most likely song.
+
+You MUST respond with valid JSON in this exact format:
+{"title": "Song Title", "artist": "Artist Name", "confidence": 85}
+
+Rules:
+- confidence should be 0-100 based on how certain you are
+- If the text clearly contains lyrics from a known song, confidence should be 70-95
+- If it's a vague description, confidence should be 30-60
+- If you cannot identify any song at all, respond with: {"title": "", "artist": "", "confidence": 0}
+- Always prioritize African/Nigerian music if the text contains Pidgin, Yoruba, Igbo, Hausa, or other African languages
+- For well-known songs, use the most common title and primary artist name`,
+      },
+      {
+        role: "user",
+        content: trimmedQuery,
+      },
+    ],
+    temperature: 0.3,
+    max_tokens: 200,
+  });
+
+  const responseText = completion.choices[0]?.message?.content?.trim() || "";
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : responseText) as Partial<IdentifiedSongCandidate>;
+
+  if (!parsed.title || !parsed.artist || !Number.isFinite(parsed.confidence) || Number(parsed.confidence) <= 0) {
+    return null;
+  }
+
+  return {
+    title: parsed.title,
+    artist: parsed.artist,
+    confidence: Math.max(0, Math.min(100, Math.round(Number(parsed.confidence)))),
+  };
+}
+
+async function transcribeAudioForSongIdentification(
+  audioBuffer: Buffer,
+  mimeType?: string,
+): Promise<string | null> {
+  if (!isAiConfigured()) {
+    return null;
+  }
+
+  const openai = getAiClient();
+  const fileInfo = normalizeAudioMimeTypeForTranscription(mimeType);
+  const audioFile = await toFile(audioBuffer, fileInfo.filename, {
+    type: fileInfo.contentType,
+  });
+
+  const transcriptionModels = ["gpt-4o-mini-transcribe", "whisper-1"] as const;
+
+  for (const model of transcriptionModels) {
+    try {
+      const transcription = await openai.audio.transcriptions.create({
+        model,
+        file: audioFile,
+        prompt:
+          "Transcribe the recognizable sung words or hook from this music clip. Return only the words you can confidently hear.",
+      });
+
+      const text =
+        typeof transcription === "string"
+          ? transcription.trim()
+          : typeof transcription.text === "string"
+            ? transcription.text.trim()
+            : "";
+
+      if (text.length > 0) {
+        console.log(`[AI LISTEN] Transcribed audio with ${model}: "${text.substring(0, 120)}"`);
+        return text;
+      }
+    } catch (error: any) {
+      console.warn(`[AI LISTEN] Transcription model ${model} failed: ${getErrorMessage(error) || "Unknown error"}`);
+    }
+  }
+
+  return null;
+}
+
 type PublicAsyncStatus = "pending" | "complete" | "unavailable" | "failed";
 
 function toPublicLyricsStatus(status?: string): PublicAsyncStatus {
@@ -225,7 +352,7 @@ function toPublicAnalysisStatus(
   }
 
   if (analysisStatus === "completed") {
-    return "failed";
+    return "unavailable";
   }
 
   if (analysisStatus === "failed") {
@@ -294,10 +421,10 @@ async function buildRecognizedTrackResponse(trackId: string) {
       analysisMessage:
         analysisStatus === "unavailable"
           ? culturalAnalysis.length === 0 && !aiConfig.configured
-            ? "AI breakdown is off right now. We can still show local glossary matches when a lyric contains known phrases."
-            : getAiUnavailableMessage("Deeper breakdown")
+            ? "We found the song already. Deeper gist will show when AI analysis is back on."
+            : "We found the song already. More meaning is still loading."
           : analysisStatus === "failed"
-            ? "We recognized the song, but the deeper breakdown did not finish this time."
+            ? "We found the song already. The deeper gist hit a delay, but you can retry it."
             : undefined,
     },
   };
@@ -491,8 +618,44 @@ export async function registerRoutes(
       await storage.updateListeningSession(sessionId, { status: 'recognizing' });
 
       const recognitionResult = await recognizeSong(audioBuffer, audioDuration / 1000, req.file.mimetype);
+      let track = recognitionResult.track;
+      let recognitionSource: "acrcloud" | "ai_transcript" = "acrcloud";
       
       if (!recognitionResult.success || !recognitionResult.track) {
+        const canAttemptAiFallback =
+          isAiConfigured() &&
+          (recognitionResult.errorCode === 'ACRCLOUD_RECOGNITION_FAILED' ||
+            recognitionResult.errorCode === 'ACRCLOUD_UPSTREAM_UNAVAILABLE' ||
+            recognitionResult.errorCode === 'ACRCLOUD_NOT_CONFIGURED');
+
+        if (canAttemptAiFallback) {
+          console.log('[LISTEN] ACRCloud failed, attempting AI transcript fallback...');
+          const transcript = await transcribeAudioForSongIdentification(audioBuffer, req.file.mimetype);
+
+          if (transcript) {
+            try {
+              const identifiedFromTranscript = await identifySongFromTextQuery(transcript);
+              if (identifiedFromTranscript) {
+                track = {
+                  title: identifiedFromTranscript.title,
+                  artist: identifiedFromTranscript.artist,
+                  confidenceScore: identifiedFromTranscript.confidence,
+                };
+                recognitionSource = 'ai_transcript';
+                console.log(`🎵 [LISTEN] AI transcript fallback identified: "${track.title}" by ${track.artist} (${track.confidenceScore}% confidence)`);
+              } else {
+                console.warn('[LISTEN] AI transcript fallback could not identify a song.');
+              }
+            } catch (fallbackError: any) {
+              console.error('[LISTEN] AI transcript fallback failed:', getErrorMessage(fallbackError) || fallbackError);
+            }
+          } else {
+            console.warn('[LISTEN] AI transcript fallback produced no transcript.');
+          }
+        }
+      }
+
+      if (!track) {
         await storage.updateListeningSession(sessionId, { 
           status: 'failed',
           errorMessage: recognitionResult.errorMessage || 'Song not recognized'
@@ -514,7 +677,6 @@ export async function registerRoutes(
         });
       }
 
-      const track = recognitionResult.track;
       console.log(`✅ [LISTEN] Recognized: "${track.title}" by ${track.artist}`);
       if (track.playOffsetMs) {
         console.log(`📍 [LISTEN] Play offset: ${Math.round(track.playOffsetMs / 1000)}s into the song`);
@@ -540,7 +702,7 @@ export async function registerRoutes(
         spotifyId: track.spotifyId,
         youtubeId: track.youtubeId,
         confidenceScore: track.confidenceScore,
-        recognitionSource: 'acrcloud',
+        recognitionSource,
         playOffsetMs: track.playOffsetMs,
         trackDurationMs: track.durationMs,
         lyricsStatus: 'pending',
@@ -725,9 +887,10 @@ export async function registerRoutes(
             2,
             onBatchComplete
           );
+          const glossaryFallbackResults = buildGlossaryAnalysesFromLyrics(lyricsText);
 
           await storage.updateRecognizedTrack(recognizedTrack.id, {
-            analysisStatus: sectionResults.length > 0 ? 'completed' : 'failed',
+            analysisStatus: sectionResults.length > 0 || glossaryFallbackResults.length > 0 ? 'completed' : 'failed',
             processingCompletedAt: new Date(),
           });
           
@@ -1598,6 +1761,126 @@ Rules:
   // Backward compatibility alias for older frontend bundles.
   app.get("/api/recognized-track/:id/stream", streamRecognizedTrack);
 
+  app.post("/api/recognized-tracks/:id/retry-analysis", async (req, res) => {
+    try {
+      const trackId = req.params.id;
+      const track = await storage.getRecognizedTrackById(trackId);
+
+      if (!track) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      const transientLyricsRecords = await storage.getTransientLyricsByTrackId(trackId);
+      const primaryLyrics = transientLyricsRecords[0];
+
+      if (!primaryLyrics?.fullLyrics) {
+        return res.status(409).json({
+          error: "Lyrics never land for this track yet, so deeper gist cannot run.",
+        });
+      }
+
+      const existingAnalyses = await storage.getAiTranslationsByRecognizedTrackId(trackId);
+      if (existingAnalyses.length > 0) {
+        await storage.updateRecognizedTrack(trackId, {
+          analysisStatus: "completed",
+          processingCompletedAt: new Date(),
+        });
+
+        return res.json({
+          success: true,
+          message: "Meaning don already dey here. We refreshed the track state.",
+        });
+      }
+
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          error: "Deeper gist no ready right now because the AI layer is offline.",
+        });
+      }
+
+      await storage.updateRecognizedTrack(trackId, {
+        analysisStatus: "generating_analysis",
+      });
+
+      res.json({
+        success: true,
+        message: "We don restart the deeper gist from the song we already matched.",
+      });
+
+      process.nextTick(async () => {
+        try {
+          const lyricsText = primaryLyrics.fullLyrics;
+          const lyricsLanguage = primaryLyrics.language || "en";
+          const lyricsData = lyricsText
+            .split("\n")
+            .filter((line: string) => line.trim().length > 0)
+            .map((text: string, idx: number) => ({
+              text,
+              lineNumber: idx + 1,
+            }));
+
+          const onBatchComplete = async (
+            batchResults: any[],
+            _startIndex: number,
+            originalLines: string[],
+          ) => {
+            await Promise.all(
+              batchResults.map(async (analysis, i) => {
+                const lineText = originalLines[i];
+                if (!lineText) return;
+
+                const textHash = crypto.createHash("sha256").update(lineText).digest("hex");
+
+                return storage.createAiTranslation({
+                  recognizedTrackId: trackId,
+                  lyricLineId: null,
+                  originalText: lineText,
+                  translation: analysis.translation,
+                  culturalContext: analysis.culturalContext,
+                  artistIntent: analysis.artistIntent,
+                  deeperMeaning: analysis.deeperMeaning,
+                  languageNotes: analysis.languageNotes || null,
+                  detectedLanguage: analysis.detectedLanguage,
+                  slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+                  textHash,
+                });
+              }),
+            );
+          };
+
+          const batchResults = await generateBatchCulturalAnalysis(
+            lyricsData,
+            track.title,
+            track.artist,
+            track.genre || undefined,
+            lyricsLanguage,
+            onBatchComplete,
+          );
+          const glossaryFallbackResults = buildGlossaryAnalysesFromLyrics(lyricsText);
+
+          await storage.updateRecognizedTrack(trackId, {
+            analysisStatus:
+              batchResults.length > 0 || glossaryFallbackResults.length > 0
+                ? "completed"
+                : "failed",
+            processingCompletedAt: new Date(),
+          });
+        } catch (error: any) {
+          console.error("[RETRY-ANALYSIS] Failed:", error?.message || error);
+          await storage.updateRecognizedTrack(trackId, {
+            analysisStatus: "failed",
+            processingCompletedAt: new Date(),
+          });
+        }
+      });
+    } catch (error) {
+      console.error("Error retrying deeper analysis:", error);
+      res.status(500).json({
+        error: "We no fit restart the deeper gist right now.",
+      });
+    }
+  });
+
   // X-Ray style artist and song info
   app.get("/api/artist-info/:trackId", async (req, res) => {
     try {
@@ -1616,7 +1899,7 @@ Rules:
             track.releaseYear || undefined,
           ),
           status: "unavailable",
-          message: getAiUnavailableMessage("Artist background"),
+          message: "We found the song already. More artist gist will show when the AI layer is back on.",
         });
       }
 
@@ -1643,7 +1926,7 @@ Rules:
             track.releaseYear || undefined,
           ),
           status: "failed",
-          message: "We recognized the song, but we could not load artist background right now.",
+          message: "We found the song already. More artist gist hit a delay this round.",
         });
       }
 
@@ -1654,13 +1937,13 @@ Rules:
     } catch (error) {
       console.error("Error generating artist info:", error);
       res.json({
-        artistBio: "We recognized the song, but the richer artist background did not load this time.",
+        artistBio: "We found the song already, but richer artist background is still loading.",
         artistOrigin: "",
-        musicStyle: "Artist style details are unavailable right now.",
-        songBackground: "Try again later after the AI provider is available.",
+        musicStyle: "Artist style details are still being checked.",
+        songBackground: "Try again shortly for more artist context.",
         verification: "unverified",
         status: "failed",
-        message: "We recognized the song, but we could not load artist background right now.",
+        message: "We found the song already. More artist gist hit a delay this round.",
       });
     }
   });
@@ -1682,7 +1965,7 @@ Rules:
             track.region || undefined,
           ),
           status: "unavailable",
-          message: getAiUnavailableMessage("Title interpretation"),
+          message: "We found the song already. More title gist will show when the AI layer is back on.",
         });
       }
 
@@ -1702,7 +1985,7 @@ Rules:
             track.region || undefined,
           ),
           status: "failed",
-          message: "We recognized the song, but deeper title interpretation did not finish this time.",
+          message: "We found the song already. More title gist hit a delay this round.",
         });
       }
 
@@ -1715,9 +1998,9 @@ Rules:
       res.json({
         detectedPhrases: [],
         likelyThemes: [],
-        culturalNote: "We recognized the song, but deeper title interpretation did not finish this time.",
+        culturalNote: "We found the song already. More title gist hit a delay this round.",
         status: "failed",
-        message: "We recognized the song, but deeper title interpretation did not finish this time.",
+        message: "We found the song already. More title gist hit a delay this round.",
       });
     }
   });
@@ -1808,7 +2091,7 @@ Rules:
         return res.status(503).json({
           success: false,
           status: 'unavailable',
-          message: 'Deeper breakdown is unavailable right now. Please try again shortly.',
+          message: 'We found the song already. More meaning is still loading.',
         });
       }
 

@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, useSearch } from 'wouter';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,19 +14,13 @@ import { useAuth } from '@/hooks/use-auth';
 import { AudioRecorder } from '@/components/audio-recorder';
 import { isListenModeLocation, LISTEN_MODE_PATH } from '@/lib/navigation';
 
-type ListenState = 'idle' | 'listening';
-
 export default function Home() {
   const [location, navigate] = useLocation();
+  const search = useSearch();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
-  
-  const [listenState, setListenState] = useState<ListenState>(() =>
-    isListenModeLocation() ? 'listening' : 'idle'
-  );
 
-  useEffect(() => {
-    setListenState(isListenModeLocation(location) ? 'listening' : 'idle');
-  }, [location]);
+  const listenLocation = search ? `${location}?${search}` : location;
+  const listenState = isListenModeLocation(listenLocation) ? 'listening' : 'idle';
 
   const openListenMode = () => {
     navigate(LISTEN_MODE_PATH);
@@ -129,17 +122,16 @@ export default function Home() {
                 <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-orange-500/20 via-amber-500/20 to-green-500/20 blur-xl animate-pulse-slow" />
                 <div className="absolute -inset-8 rounded-full bg-gradient-to-br from-orange-500/10 via-amber-500/10 to-green-500/10 blur-2xl animate-pulse-slower" />
                 
-                <div
-                  role="button"
-                  tabIndex={0}
+                <button
+                  type="button"
                   onClick={openListenMode}
-                  onKeyDown={(e) => e.key === 'Enter' && openListenMode()}
-                  className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 flex items-center justify-center shadow-2xl shadow-orange-500/25 cursor-pointer transition-shadow duration-300 hover-elevate active-elevate-2"
+                  className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 flex items-center justify-center shadow-2xl shadow-orange-500/25 cursor-pointer transition-shadow duration-300 hover-elevate active-elevate-2 touch-manipulation"
                   data-testid="button-listen-main"
+                  aria-label="Tap to Listen"
                 >
                   <div className="absolute inset-1 rounded-full bg-gradient-to-br from-orange-500 via-amber-500 to-green-600 opacity-80" />
                   <Mic className="relative z-10 h-14 w-14 sm:h-16 sm:w-16 text-white drop-shadow-lg" />
-                </div>
+                </button>
               </div>
 
               <div className="space-y-2">
@@ -152,24 +144,42 @@ export default function Home() {
               </div>
 
               <div className="flex items-center justify-center gap-6 pt-4">
-                <div className="flex flex-col items-center gap-1.5 text-muted-foreground/70">
+                <button
+                  type="button"
+                  onClick={openListenMode}
+                  className="flex flex-col items-center gap-1.5 text-muted-foreground/70 touch-manipulation"
+                  data-testid="button-listen-play"
+                  aria-label="Play am"
+                >
                   <div className="w-10 h-10 rounded-full bg-muted/50 dark:bg-muted flex items-center justify-center">
                     <Radio className="h-5 w-5" />
                   </div>
                   <span className="text-xs">Play am</span>
-                </div>
-                <div className="flex flex-col items-center gap-1.5 text-muted-foreground/70">
+                </button>
+                <button
+                  type="button"
+                  onClick={openListenMode}
+                  className="flex flex-col items-center gap-1.5 text-muted-foreground/70 touch-manipulation"
+                  data-testid="button-listen-hum"
+                  aria-label="Hum am"
+                >
                   <div className="w-10 h-10 rounded-full bg-muted/50 dark:bg-muted flex items-center justify-center">
                     <Music className="h-5 w-5" />
                   </div>
                   <span className="text-xs">Hum am</span>
-                </div>
-                <div className="flex flex-col items-center gap-1.5 text-muted-foreground/70">
+                </button>
+                <button
+                  type="button"
+                  onClick={openListenMode}
+                  className="flex flex-col items-center gap-1.5 text-muted-foreground/70 touch-manipulation"
+                  data-testid="button-listen-sing"
+                  aria-label="Sing am"
+                >
                   <div className="w-10 h-10 rounded-full bg-muted/50 dark:bg-muted flex items-center justify-center">
                     <Headphones className="h-5 w-5" />
                   </div>
                   <span className="text-xs">Sing am</span>
-                </div>
+                </button>
               </div>
             </div>
           </div>

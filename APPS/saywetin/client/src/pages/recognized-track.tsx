@@ -29,7 +29,6 @@ import {
   Loader2,
   CheckCircle2,
   Clock,
-  AlertCircle,
   FileText,
   Sparkles,
   MapPin,
@@ -138,6 +137,50 @@ interface RecognizedTrackDetail {
     lyricsProvider?: string;
     analysisMessage?: string;
   };
+}
+
+type InsightSourceTone = 'success' | 'default' | 'progress';
+
+interface InsightBadgeModel {
+  label: string;
+  tone: InsightSourceTone;
+}
+
+interface PrimaryGistModel {
+  title: string;
+  summary: string;
+  support?: string;
+  sourceLabel: string;
+}
+
+function getAnalysisStatusCopy(
+  status: RecognizedTrackDetail['status']['analysis'] | ProcessingStatus | undefined,
+): string {
+  if (status === 'pending' || status === 'generating_analysis') {
+    return 'We found the song already. Deeper gist is still loading.';
+  }
+
+  if (status === 'failed') {
+    return 'We found the song already. Deeper gist hit a small delay, but you can retry it without listening again.';
+  }
+
+  return 'We found the song already. More meaning is still loading.';
+}
+
+function getArtistStatusCopy(status: ArtistSongInfo['status'] | undefined): string {
+  if (status === 'failed') {
+    return 'We recognized the song already. More artist gist hit a small delay.';
+  }
+
+  return 'We recognized the song already. More artist gist is taking a little longer.';
+}
+
+function getFragmentStatusCopy(status: FragmentInterpretation['status'] | undefined): string {
+  if (status === 'failed') {
+    return 'We matched the song already. More title gist hit a small delay.';
+  }
+
+  return 'We matched the song already. More title gist is still loading.';
 }
 
 interface ProgressBarProps {
@@ -295,13 +338,160 @@ export default function RecognizedTrack() {
       normalized.includes('failed to generate analysis');
 
     return {
-      title: isUnavailable ? 'Deeper breakdown unavailable' : 'Analysis failed',
+      title: isUnavailable ? 'More meaning still loading' : 'We hit small delay',
       description:
-        message ||
-        (isUnavailable
-          ? 'Deeper breakdown is unavailable right now. Please try again shortly.'
-          : 'Could not analyze this line. Please try again.'),
+        isUnavailable
+          ? 'We found the song already. Deeper gist is taking a little longer, so you can try this line again shortly.'
+          : message || 'We already caught the song. Try this line again in a moment.',
     };
+  };
+
+  const firstSentence = (value?: string | null): string | undefined => {
+    if (!value) return undefined;
+    const trimmed = value.replace(/\s+/g, ' ').trim();
+    if (!trimmed) return undefined;
+
+    const sentenceMatch = trimmed.match(/.+?[.!?](?=\s+[A-Z"']|$)/);
+    return (sentenceMatch ? sentenceMatch[0] : trimmed).trim();
+  };
+
+  const compactText = (value?: string | null, maxLength = 180): string | undefined => {
+    const sentence = firstSentence(value);
+    if (!sentence) return undefined;
+    if (sentence.length <= maxLength) return sentence;
+    return `${sentence.slice(0, maxLength - 3).trimEnd()}...`;
+  };
+
+  const buildPrimaryGist = (
+    detail: RecognizedTrackDetail,
+    artistInfo?: ArtistSongInfo,
+    fragment?: FragmentInterpretation,
+  ): PrimaryGistModel => {
+    const firstAnalysis = detail.culturalAnalysis?.find(
+      (analysis) =>
+        analysis.deeperMeaning ||
+        analysis.artistIntent ||
+        analysis.culturalContext ||
+        analysis.translation,
+    );
+
+    const analysisSummary =
+      compactText(firstAnalysis?.deeperMeaning) ||
+      compactText(firstAnalysis?.artistIntent) ||
+      compactText(firstAnalysis?.culturalContext);
+
+    if (analysisSummary) {
+      return {
+        title: 'What this song really means',
+        summary: analysisSummary,
+        support:
+          compactText(firstAnalysis?.translation, 120) ||
+          compactText(detail.lyrics?.text?.split('\n').find((line) => line.trim().length > 0), 120),
+        sourceLabel: 'Source - lyric interpretation',
+      };
+    }
+
+    const fragmentSummary =
+      compactText(fragment?.titleMeaning) ||
+      compactText(fragment?.culturalNote) ||
+      compactText(fragment?.detectedPhrases?.[0]?.meaning);
+
+    if (fragmentSummary) {
+      return {
+        title: 'What this song really means',
+        summary: fragmentSummary,
+        support: compactText(fragment?.detectedPhrases?.[0]?.culturalContext, 140),
+        sourceLabel: 'Source - title and context clues',
+      };
+    }
+
+    const artistSummary =
+      compactText(artistInfo?.songBackground) ||
+      compactText(artistInfo?.musicStyle) ||
+      compactText(artistInfo?.artistBio);
+
+    if (artistSummary) {
+      return {
+        title: 'What this song really means',
+        summary: artistSummary,
+        support: compactText(artistInfo?.funFact, 140),
+        sourceLabel: 'Source - artist context',
+      };
+    }
+
+    const genreLabel = detail.track.genre ? `${detail.track.genre} energy` : 'the mood and story inside the track';
+    const firstLyricLine = compactText(
+      detail.lyrics?.text
+        ?.split('\n')
+        .map((line) => line.trim())
+        .find((line) => line.length > 0 && line.length < 80),
+      90,
+    );
+
+    return {
+      title: 'What this song really means',
+      summary: firstLyricLine
+        ? `${detail.track.title} leans into ${genreLabel}, using "${firstLyricLine}" as the emotional center of the record.`
+        : `${detail.track.title} leans into ${genreLabel}, with ${detail.track.artist} pushing a steady emotional mood through the record.`,
+      support: detail.track.album
+        ? `From ${detail.track.album}.`
+        : detail.track.genre
+          ? `Built around ${detail.track.genre.toLowerCase()} feeling.`
+          : undefined,
+      sourceLabel: 'Source - quick first pass',
+    };
+  };
+
+  const getInsightBadges = (
+    detail: RecognizedTrackDetail,
+    artistInfo?: ArtistSongInfo,
+  ): InsightBadgeModel[] => {
+    const confidenceLabel =
+      typeof detail.track.confidenceScore === 'number' && detail.track.confidenceScore < 80
+        ? 'Match - Strong lead'
+        : 'Match - Confirmed';
+
+    const lyricsLabel =
+      detail.status?.lyrics === 'complete'
+        ? 'Lyrics - High confidence'
+        : detail.status?.lyrics === 'pending'
+          ? 'Lyrics - Checking'
+          : 'Lyrics - Based on current data';
+
+    const meaningLabel =
+      detail.culturalAnalysis && detail.culturalAnalysis.length > 0
+        ? 'Meaning - AI interpreted'
+        : detail.status?.analysis === 'pending'
+          ? 'Meaning - Still loading'
+          : 'Meaning - Based on current data';
+
+    const artistLabel =
+      artistInfo?.verification === 'verified'
+        ? 'Artist - Verified'
+        : artistInfo
+          ? 'Artist - Partial'
+          : 'Artist - Checking';
+
+    return [
+      { label: confidenceLabel, tone: 'success' },
+      {
+        label: lyricsLabel,
+        tone: detail.status?.lyrics === 'pending' ? 'progress' : 'default',
+      },
+      {
+        label: meaningLabel,
+        tone:
+          detail.status?.analysis === 'pending' || detail.track.analysisStatus === 'generating_analysis'
+            ? 'progress'
+            : detail.culturalAnalysis && detail.culturalAnalysis.length > 0
+              ? 'success'
+              : 'default',
+      },
+      {
+        label: artistLabel,
+        tone: artistInfo?.verification === 'verified' ? 'success' : 'default',
+      },
+    ];
   };
 
   const analyzeFallback = async (lyricText: string) => {
@@ -339,7 +529,6 @@ export default function RecognizedTrack() {
         toast({
           title: issue.title,
           description: issue.description,
-          variant: 'destructive',
         });
       }
     } catch (err) {
@@ -350,7 +539,6 @@ export default function RecognizedTrack() {
       toast({
         title: issue.title,
         description: issue.description,
-        variant: 'destructive',
       });
     } finally {
       clearLineState(lyricText);
@@ -412,7 +600,6 @@ export default function RecognizedTrack() {
           toast({
             title: issue.title,
             description: issue.description,
-            variant: 'destructive',
           });
           eventSource.close();
         }
@@ -572,8 +759,9 @@ export default function RecognizedTrack() {
   const data = sseData || queryData;
   const isLoading = !data && queryLoading && !sseData;
   const analysisViewState = data?.status?.analysis;
-  const analysisUnavailableMessage =
-    data?.status?.analysisMessage || 'Song recognized. Deeper breakdown unavailable right now.';
+  const analysisUnavailableMessage = getAnalysisStatusCopy(
+    analysisViewState || data?.track?.analysisStatus,
+  );
 
   const handleBackNavigation = () => {
     if (typeof window !== 'undefined') {
@@ -652,6 +840,44 @@ export default function RecognizedTrack() {
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });
 
+  const retryEnrichmentMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(getApiUrl(`/api/recognized-tracks/${trackId}/retry-analysis`), {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.message ||
+            payload?.error ||
+            'We no fit restart the deeper gist right now.',
+        );
+      }
+
+      return payload;
+    },
+    onSuccess: (payload) => {
+      toast({
+        title: 'Deeper gist don restart',
+        description:
+          payload?.message || 'We dey pull more meaning from the song you already matched.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Retry no gree yet',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'We no fit restart the deeper gist right now.',
+      });
+    },
+  });
+
   // Continuation Engine - fetch song suggestion after analysis completes
   // Session-aware: Track where user came from to prevent back-and-forth loops
   const previousTrackId = sessionStorage.getItem('saywetin_prev_track');
@@ -686,6 +912,43 @@ export default function RecognizedTrack() {
     sessionStorage.setItem('saywetin_prev_track', trackId!);
     navigate(`/song/${suggestionId}`);
   };
+
+  const primaryGist = useMemo(
+    () => (data ? buildPrimaryGist(data, artistInfo, fragmentInterpretation) : null),
+    [data, artistInfo, fragmentInterpretation],
+  );
+
+  const insightBadges = useMemo(
+    () => (data ? getInsightBadges(data, artistInfo) : []),
+    [data, artistInfo],
+  );
+
+  const artistStatusMessage = getArtistStatusCopy(artistInfo?.status);
+  const fragmentStatusMessage = getFragmentStatusCopy(fragmentInterpretation?.status);
+
+  const lyricsPreviewLines = useMemo(
+    () =>
+      data?.lyrics?.text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .slice(0, 4) ?? [],
+    [data?.lyrics?.text],
+  );
+
+  const showInlineAnalysisFallback =
+    !!data &&
+    (analysisViewState === 'failed' ||
+      analysisViewState === 'unavailable' ||
+      data.track.analysisStatus === 'failed');
+
+  const canRetryEnrichment =
+    !!trackId &&
+    !!data?.lyrics &&
+    !retryEnrichmentMutation.isPending &&
+    (analysisViewState === 'failed' ||
+      data?.track.analysisStatus === 'failed' ||
+      ((data?.culturalAnalysis?.length || 0) === 0 && data?.track.analysisStatus !== 'generating_analysis'));
 
   // Show "Stories unlocked!" toast when processing completes
   useEffect(() => {
@@ -986,6 +1249,43 @@ export default function RecognizedTrack() {
                   {showXRay ? 'Hide' : 'About'} Artist & Song
                 </Button>
               </div>
+
+              {primaryGist && (
+                <Card className="border-primary/20 bg-background/80 shadow-lg shadow-orange-500/5">
+                  <CardContent className="p-4 sm:p-5 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                      <Sparkles className="h-4 w-4" />
+                      {primaryGist.title}
+                    </div>
+                    <p className="text-lg sm:text-xl font-semibold leading-relaxed text-foreground">
+                      {primaryGist.summary}
+                    </p>
+                    {primaryGist.support && (
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {primaryGist.support}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {insightBadges.map((badge) => (
+                        <Badge
+                          key={badge.label}
+                          variant="secondary"
+                          className={
+                            badge.tone === 'success'
+                              ? 'bg-green-500/10 text-green-700 dark:text-green-300'
+                              : badge.tone === 'progress'
+                                ? 'bg-primary/10 text-primary'
+                                : ''
+                          }
+                        >
+                          {badge.label}
+                        </Badge>
+                      ))}
+                      <Badge variant="outline">{primaryGist.sourceLabel}</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>
@@ -1005,7 +1305,7 @@ export default function RecognizedTrack() {
                   </CardTitle>
                   {theMoment.timestamp && (
                     <p className="text-sm text-muted-foreground">
-                      {theMoment.timestamp}{theMoment.blockLabel ? ` • ${theMoment.blockLabel}` : ''}
+                      {theMoment.timestamp}{theMoment.blockLabel ? ` - ${theMoment.blockLabel}` : ''}
                     </p>
                   )}
                 </div>
@@ -1106,10 +1406,10 @@ export default function RecognizedTrack() {
                     {artistInfo.status && artistInfo.status !== 'complete' && (
                       <div className="sm:col-span-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
                         <p className="text-xs font-semibold text-primary">
-                          Artist background limited right now
+                          More artist context still loading
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {artistInfo.message || 'We recognized the song, but the richer artist breakdown is unavailable right now.'}
+                          {artistStatusMessage}
                         </p>
                       </div>
                     )}
@@ -1286,7 +1586,7 @@ export default function RecognizedTrack() {
                         {fragmentInterpretation.status && fragmentInterpretation.status !== 'complete' && (
                           <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                             <p className="text-sm text-muted-foreground">
-                              {fragmentInterpretation.message || 'We recognized the song, but deeper title interpretation is unavailable right now.'}
+                              {fragmentStatusMessage}
                             </p>
                           </div>
                         )}
@@ -1485,6 +1785,38 @@ export default function RecognizedTrack() {
               <CardContent className="p-0">
                 {displayBlocks.length > 0 && displayBlocks.some(b => b.hasAnalyses) ? (
                   <div className="px-6 py-4">
+                    {showInlineAnalysisFallback && (
+                      <div className="mb-5 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-primary">
+                              More meaning loading...
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {analysisUnavailableMessage}
+                            </p>
+                          </div>
+                          {canRetryEnrichment && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => retryEnrichmentMutation.mutate()}
+                              disabled={retryEnrichmentMutation.isPending}
+                              data-testid="button-retry-deeper-gist-inline"
+                            >
+                              {retryEnrichmentMutation.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Retrying...
+                                </>
+                              ) : (
+                                'Retry deeper gist'
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {/* Clean flowing lyrics - only show blocks with analyses */}
                     {displayBlocks.filter(b => b.analyses.length > 0).map((block, blockIdx) => {
                       const isYouWereHereBlock = block.blockIndex === youWereHereBlockIndex;
@@ -1662,15 +1994,59 @@ export default function RecognizedTrack() {
                       );
                     })()}
                   </div>
-                ) : analysisViewState === 'unavailable' ? (
-                  <div className="text-center py-12 space-y-3">
-                    <AlertCircle className="h-5 w-5 text-primary mx-auto" />
-                    <p className="font-medium">
-                      Song recognized
-                    </p>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      {analysisUnavailableMessage}
-                    </p>
+                ) : analysisViewState === 'unavailable' || track.analysisStatus === 'failed' ? (
+                  <div className="px-6 py-6 space-y-5">
+                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-primary">
+                            More meaning loading...
+                          </p>
+                          <p className="text-sm text-muted-foreground max-w-xl">
+                            {analysisUnavailableMessage}
+                          </p>
+                        </div>
+                        {canRetryEnrichment && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => retryEnrichmentMutation.mutate()}
+                            disabled={retryEnrichmentMutation.isPending}
+                            data-testid="button-retry-deeper-gist"
+                          >
+                            {retryEnrichmentMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Retrying...
+                              </>
+                            ) : (
+                              'Retry deeper gist'
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {lyricsPreviewLines.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          Quick lyric preview
+                        </p>
+                        <div className="space-y-2">
+                          {lyricsPreviewLines.map((line, idx) => (
+                            <p key={`lyrics-preview-${idx}`} className="font-serif text-lg leading-relaxed text-foreground/90">
+                              {line}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">Song match confirmed</Badge>
+                      <Badge variant="secondary">Lyrics ready</Badge>
+                      <Badge variant="outline">More insight still loading</Badge>
+                    </div>
                   </div>
                 ) : track.analysisStatus === 'generating_analysis' || track.analysisStatus === 'pending' ? (
                   <div className="text-center py-12 space-y-3">
@@ -1687,7 +2063,7 @@ export default function RecognizedTrack() {
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">
-                      We found the song and lyrics, but the deeper breakdown did not finish this time.
+                      We found the song already. More meaning is still loading.
                     </p>
                   </div>
                 )}
