@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { initAnalytics, trackAppOpened } from "./lib/analytics";
 import { getCanonicalUrlForCurrentLocation, installApiFetchPatch } from "./lib/api-config";
 
 const SERVICE_WORKER_ENABLED = import.meta.env.VITE_ENABLE_SW === "true";
@@ -10,6 +11,7 @@ const shouldRedirectToCanonicalHost = Boolean(
 );
 
 installApiFetchPatch();
+initAnalytics();
 
 console.info("[Saywetin] Frontend build", {
   ...__SAYWETIN_FRONTEND_BUILD__,
@@ -19,6 +21,7 @@ console.info("[Saywetin] Frontend build", {
 if (shouldRedirectToCanonicalHost && canonicalRedirectTarget) {
   window.location.replace(canonicalRedirectTarget);
 } else {
+  trackAppOpened({ referrer: document.referrer || null });
   // Early native platform marker classes before React mounts.
   (async () => {
     try {

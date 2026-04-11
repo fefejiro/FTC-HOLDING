@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SlangMatchGame } from '@/components/slang-match-game';
+import { trackRecognitionSucceeded } from '@/lib/analytics';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { getApiUrl } from '@/lib/api-config';
 import { LISTEN_MODE_PATH } from '@/lib/navigation';
@@ -362,6 +363,7 @@ export default function RecognizedTrack() {
   // Anonymous interaction logging for behavioral analytics
   const { logInteraction } = useInteractionLogger(trackId, undefined);
   const hasLoggedRecognition = useRef(false);
+  const hasTrackedRecognitionEvent = useRef<string | null>(null);
   const prevShowXRay = useRef(showXRay);
 
   const clearLineState = (lyricText: string) => {
@@ -967,6 +969,19 @@ export default function RecognizedTrack() {
     () => (data ? buildPrimaryGist(data, artistInfo, fragmentInterpretation) : null),
     [data, artistInfo, fragmentInterpretation],
   );
+
+  useEffect(() => {
+    if (!data?.track?.id || hasTrackedRecognitionEvent.current === data.track.id) {
+      return;
+    }
+
+    hasTrackedRecognitionEvent.current = data.track.id;
+    trackRecognitionSucceeded({
+      trackId: data.track.id,
+      hasLyrics: Boolean(data.lyrics?.text?.trim()),
+      hasGist: Boolean(primaryGist?.summary),
+    });
+  }, [data?.track?.id, data?.lyrics?.text, primaryGist?.summary]);
 
   const insightBadges = useMemo(
     () => (data ? getInsightBadges(data) : []),

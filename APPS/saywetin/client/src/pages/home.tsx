@@ -196,7 +196,7 @@ export default function Home() {
                   Back
                 </Button>
               </div>
-              <AudioRecorder onSuccess={handleRecognitionSuccess} />
+              <AudioRecorder onSuccess={handleRecognitionSuccess} analyticsSource="home_cta" />
             </div>
           </div>
         )}

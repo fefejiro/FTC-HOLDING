@@ -3,6 +3,7 @@ import { Mic, Loader2, Music, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { trackListenStarted } from '@/lib/analytics';
 import { getApiUrl } from '@/lib/api-config';
 import { 
   isNativeApp, 
@@ -40,6 +41,7 @@ interface RecognitionResult {
 interface AudioRecorderProps {
   onSuccess?: (result: RecognitionResult) => void;
   listenDuration?: number;
+  analyticsSource?: 'home_cta' | 'results_page' | 'other';
 }
 
 type ApiError = Error & {
@@ -290,7 +292,11 @@ function getWebCaptureProfile(requestedDuration: number): WebCaptureProfile {
   };
 }
 
-export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderProps) {
+export function AudioRecorder({
+  onSuccess,
+  listenDuration = 5,
+  analyticsSource = 'other',
+}: AudioRecorderProps) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [progress, setProgress] = useState<number>(0);
   const { toast } = useToast();
@@ -349,6 +355,7 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
         throw createListenError('capture_failed', 'Failed to start recording');
       }
 
+      trackListenStarted({ source: analyticsSource });
       setRecordingState('listening');
 
       const startTime = Date.now();
@@ -463,6 +470,7 @@ export function AudioRecorder({ onSuccess, listenDuration = 5 }: AudioRecorderPr
       mediaRecorder.onstop = handleUpload;
 
       mediaRecorder.start();
+      trackListenStarted({ source: analyticsSource });
       setRecordingState('listening');
 
       const startTime = Date.now();
