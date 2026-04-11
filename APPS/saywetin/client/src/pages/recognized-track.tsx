@@ -169,18 +169,44 @@ function getAnalysisStatusCopy(
 
 function getArtistStatusCopy(status: ArtistSongInfo['status'] | undefined): string {
   if (status === 'failed') {
-    return 'We recognized the song already. More artist gist hit a small delay.';
+    return 'We already found the song. Richer artist context hit a small delay.';
   }
 
-  return 'We recognized the song already. More artist gist is taking a little longer.';
+  return 'We already found the song. Richer artist context is still coming in.';
 }
 
 function getFragmentStatusCopy(status: FragmentInterpretation['status'] | undefined): string {
   if (status === 'failed') {
-    return 'We matched the song already. More title gist hit a small delay.';
+    return 'We already found the song. More title meaning hit a small delay.';
   }
 
-  return 'We matched the song already. More title gist is still loading.';
+  return 'We already found the song. More title meaning is still coming in.';
+}
+
+function isFallbackInsightText(value?: string | null): boolean {
+  if (!value) return false;
+
+  const normalized = value.replace(/\s+/g, ' ').trim().toLowerCase();
+  if (!normalized) return false;
+
+  return [
+    'unavailable right now',
+    'still loading',
+    'hit a small delay',
+    'taking a little longer',
+    'we recognized the song already',
+    'we matched the song already',
+    'we found the song already',
+    'more title gist',
+    'more artist gist',
+    'more meaning',
+    'deeper gist',
+    'deeper breakdown',
+    'will show when the ai layer is back on',
+    'artist background still needs verification',
+    'profile hidden until we can verify',
+    'never fit verify a trusted public profile',
+  ].some((phrase) => normalized.includes(phrase));
 }
 
 interface ProgressBarProps {
@@ -362,6 +388,15 @@ export default function RecognizedTrack() {
     return `${sentence.slice(0, maxLength - 3).trimEnd()}...`;
   };
 
+  const cleanInsightText = (value?: string | null, maxLength = 180): string | undefined => {
+    const text = compactText(value, maxLength);
+    if (!text || isFallbackInsightText(text)) {
+      return undefined;
+    }
+
+    return text;
+  };
+
   const buildPrimaryGist = (
     detail: RecognizedTrackDetail,
     artistInfo?: ArtistSongInfo,
@@ -376,45 +411,45 @@ export default function RecognizedTrack() {
     );
 
     const analysisSummary =
-      compactText(firstAnalysis?.deeperMeaning) ||
-      compactText(firstAnalysis?.artistIntent) ||
-      compactText(firstAnalysis?.culturalContext);
+      cleanInsightText(firstAnalysis?.deeperMeaning) ||
+      cleanInsightText(firstAnalysis?.artistIntent) ||
+      cleanInsightText(firstAnalysis?.culturalContext);
 
     if (analysisSummary) {
       return {
         title: 'What this song really means',
         summary: analysisSummary,
         support:
-          compactText(firstAnalysis?.translation, 120) ||
-          compactText(detail.lyrics?.text?.split('\n').find((line) => line.trim().length > 0), 120),
+          cleanInsightText(firstAnalysis?.translation, 120) ||
+          cleanInsightText(detail.lyrics?.text?.split('\n').find((line) => line.trim().length > 0), 120),
         sourceLabel: 'Source - lyric interpretation',
       };
     }
 
     const fragmentSummary =
-      compactText(fragment?.titleMeaning) ||
-      compactText(fragment?.culturalNote) ||
-      compactText(fragment?.detectedPhrases?.[0]?.meaning);
+      cleanInsightText(fragment?.titleMeaning) ||
+      cleanInsightText(fragment?.culturalNote) ||
+      cleanInsightText(fragment?.detectedPhrases?.[0]?.meaning);
 
     if (fragmentSummary) {
       return {
         title: 'What this song really means',
         summary: fragmentSummary,
-        support: compactText(fragment?.detectedPhrases?.[0]?.culturalContext, 140),
+        support: cleanInsightText(fragment?.detectedPhrases?.[0]?.culturalContext, 140),
         sourceLabel: 'Source - title and context clues',
       };
     }
 
     const artistSummary =
-      compactText(artistInfo?.songBackground) ||
-      compactText(artistInfo?.musicStyle) ||
-      compactText(artistInfo?.artistBio);
+      cleanInsightText(artistInfo?.songBackground) ||
+      cleanInsightText(artistInfo?.musicStyle) ||
+      cleanInsightText(artistInfo?.artistBio);
 
     if (artistSummary) {
       return {
         title: 'What this song really means',
         summary: artistSummary,
-        support: compactText(artistInfo?.funFact, 140),
+        support: cleanInsightText(artistInfo?.funFact, 140),
         sourceLabel: 'Source - artist context',
       };
     }
@@ -432,7 +467,9 @@ export default function RecognizedTrack() {
       title: 'What this song really means',
       summary: firstLyricLine
         ? `${detail.track.title} leans into ${genreLabel}, using "${firstLyricLine}" as the emotional center of the record.`
-        : `${detail.track.title} leans into ${genreLabel}, with ${detail.track.artist} pushing a steady emotional mood through the record.`,
+        : detail.track.album
+          ? `${detail.track.title} feels built as one standout moment inside ${detail.track.album}, with ${detail.track.artist} leaning into ${genreLabel}.`
+          : `${detail.track.title} leans into ${genreLabel}, with ${detail.track.artist} pushing a steady emotional mood through the record.`,
       support: detail.track.album
         ? `From ${detail.track.album}.`
         : detail.track.genre
@@ -925,6 +962,40 @@ export default function RecognizedTrack() {
 
   const artistStatusMessage = getArtistStatusCopy(artistInfo?.status);
   const fragmentStatusMessage = getFragmentStatusCopy(fragmentInterpretation?.status);
+  const fragmentTitleMeaning = useMemo(
+    () => cleanInsightText(fragmentInterpretation?.titleMeaning),
+    [fragmentInterpretation],
+  );
+  const fragmentCulturalNote = useMemo(
+    () => cleanInsightText(fragmentInterpretation?.culturalNote),
+    [fragmentInterpretation],
+  );
+  const filteredDetectedPhrases = useMemo(
+    () =>
+      (fragmentInterpretation?.detectedPhrases || []).filter(
+        (phrase) =>
+          !isFallbackInsightText(phrase.meaning) &&
+          !isFallbackInsightText(phrase.culturalContext) &&
+          !isFallbackInsightText(phrase.emotionalIntent),
+      ),
+    [fragmentInterpretation],
+  );
+  const artistBioText = useMemo(
+    () =>
+      cleanInsightText(artistInfo?.artistBio) ||
+      'We dey hold back full biography until we verify trusted public profile details.',
+    [artistInfo],
+  );
+  const artistSongBackgroundText = useMemo(
+    () =>
+      cleanInsightText(artistInfo?.songBackground) ||
+      (data?.track.album
+        ? `${data.track.title} sits inside ${data.track.album}, with ${data.track.artist} leaning into ${data.track.genre || 'its current sound'}.`
+        : data?.track
+          ? `${data.track.title} stays rooted in the mood ${data.track.artist} is building here.`
+          : 'We recognized the song already, and the fuller story is still coming together.'),
+    [artistInfo, data?.track],
+  );
 
   const lyricsPreviewLines = useMemo(
     () =>
@@ -1416,7 +1487,7 @@ export default function RecognizedTrack() {
                     {artistInfo.verification === 'unverified' && (
                       <div className="sm:col-span-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10">
                         <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                          Profile never fully verified yet
+                          Trusted profile still being checked
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           {artistInfo.verificationNote || 'We dey show only safe details to avoid wrong artist story.'}
@@ -1428,7 +1499,7 @@ export default function RecognizedTrack() {
                         <User className="h-3.5 w-3.5" />
                         Who Be Dis Artist?
                       </div>
-                      <p className="text-sm leading-relaxed">{artistInfo.artistBio}</p>
+                      <p className="text-sm leading-relaxed">{artistBioText}</p>
                       {artistInfo.artistOrigin && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3" />
@@ -1448,7 +1519,7 @@ export default function RecognizedTrack() {
                         <Disc3 className="h-3.5 w-3.5" />
                         Dis Song Say Wetin?
                       </div>
-                      <p className="text-sm leading-relaxed">{artistInfo.songBackground}</p>
+                      <p className="text-sm leading-relaxed">{artistSongBackgroundText}</p>
                     </div>
                     {artistInfo.funFact && (
                       <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 dark:bg-muted/20">
@@ -1591,27 +1662,27 @@ export default function RecognizedTrack() {
                           </div>
                         )}
                         {/* Title Meaning */}
-                        {fragmentInterpretation.titleMeaning && (
+                        {fragmentTitleMeaning && (
                           <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm font-medium text-primary">
                               <Languages className="h-4 w-4" />
                               What the Title Means
                             </div>
                             <p className="text-sm leading-relaxed pl-6">
-                              {fragmentInterpretation.titleMeaning}
+                              {fragmentTitleMeaning}
                             </p>
                           </div>
                         )}
                         
                         {/* Detected Phrases */}
-                        {fragmentInterpretation.detectedPhrases.length > 0 && (
+                        {filteredDetectedPhrases.length > 0 && (
                           <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm font-medium text-primary">
                               <Sparkles className="h-4 w-4" />
                               Wetin Dem Talk?
                             </div>
                             <div className="space-y-3 pl-6">
-                              {fragmentInterpretation.detectedPhrases.map((phrase, idx) => (
+                              {filteredDetectedPhrases.map((phrase, idx) => (
                                 <div key={idx} className="bg-muted/50 rounded-lg p-3 space-y-1">
                                   <div className="font-medium">"{phrase.phrase}"</div>
                                   <p className="text-sm text-muted-foreground">{phrase.meaning}</p>
@@ -1640,10 +1711,10 @@ export default function RecognizedTrack() {
                         )}
                         
                         {/* Cultural Note */}
-                        {fragmentInterpretation.culturalNote && (
+                        {fragmentCulturalNote && (
                           <div className="bg-primary/5 rounded-lg p-4 border border-primary/10">
                             <p className="text-sm italic text-muted-foreground">
-                              {fragmentInterpretation.culturalNote}
+                              {fragmentCulturalNote}
                             </p>
                           </div>
                         )}
