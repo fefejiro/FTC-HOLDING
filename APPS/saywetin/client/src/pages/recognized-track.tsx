@@ -150,8 +150,10 @@ interface PrimaryGistModel {
   support?: string;
 }
 
+type AnalysisStatusValue = NonNullable<RecognizedTrackDetail["status"]>["analysis"];
+
 function getAnalysisStatusCopy(
-  status: RecognizedTrackDetail['status']['analysis'] | ProcessingStatus | undefined,
+  status: AnalysisStatusValue | ProcessingStatus | undefined,
 ): string {
   if (status === 'pending' || status === 'generating_analysis') {
     return 'We found the song already. Deeper gist is still loading.';

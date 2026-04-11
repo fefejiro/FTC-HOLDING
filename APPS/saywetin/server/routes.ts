@@ -835,7 +835,7 @@ export async function registerRoutes(
         lyricsText = resolvedLyrics.text;
         lyricsLanguage = resolvedLyrics.language;
 
-        const cachedLyrics: { text: string; language: string } | null = null;
+        /*
         if (false && cachedLyrics) {
           console.log(`⚡ [LYRICS] Using cached lyrics for "${track.title}" (skipped API call)`);
           await storage.updateRecognizedTrack(recognizedTrack.id, {
@@ -899,6 +899,7 @@ export async function registerRoutes(
           }
         }
 
+        */
         if (lyricsText) {
           await storage.updateRecognizedTrack(recognizedTrack.id, {
             lyricsStatus: 'completed',
@@ -1191,6 +1192,7 @@ export async function registerRoutes(
           });
         }
 
+        /*
         if (false && isLyricsServiceAvailable()) {
           try {
             const lyricsResult = await fetchLyricsFast(title, artist);
@@ -1219,6 +1221,8 @@ export async function registerRoutes(
             console.error('❌ [MANUAL] Lyrics fetch failed:', error.message);
           }
         }
+
+        */
 
         // Generate AI cultural analysis with progressive saving
         if (lyricsText) {
@@ -1459,6 +1463,7 @@ Rules:
             });
           }
 
+          /*
           if (false && isLyricsServiceAvailable()) {
             try {
               const lyricsResult = await fetchLyricsFast(identified.title, identified.artist);
@@ -1484,6 +1489,8 @@ Rules:
               console.error('❌ [TEXT] Lyrics fetch failed:', error.message);
             }
           }
+
+          */
 
           if (lyricsText) {
             try {
@@ -1691,6 +1698,7 @@ Rules:
             });
           }
 
+          /*
           if (false && isLyricsServiceAvailable()) {
             try {
               const lyricsResult = await fetchLyricsFast(title, artist);
@@ -1717,6 +1725,8 @@ Rules:
               console.error('❌ [SPOTIFY] Lyrics fetch failed:', error.message);
             }
           }
+
+          */
 
           if (lyricsText) {
             try {
