@@ -150,7 +150,6 @@ interface PrimaryGistModel {
   title: string;
   summary: string;
   support?: string;
-  sourceLabel: string;
 }
 
 function getAnalysisStatusCopy(
@@ -422,7 +421,6 @@ export default function RecognizedTrack() {
         support:
           cleanInsightText(firstAnalysis?.translation, 120) ||
           cleanInsightText(detail.lyrics?.text?.split('\n').find((line) => line.trim().length > 0), 120),
-        sourceLabel: 'Source - lyric interpretation',
       };
     }
 
@@ -436,7 +434,6 @@ export default function RecognizedTrack() {
         title: 'What this song really means',
         summary: fragmentSummary,
         support: cleanInsightText(fragment?.detectedPhrases?.[0]?.culturalContext, 140),
-        sourceLabel: 'Source - title and context clues',
       };
     }
 
@@ -450,7 +447,6 @@ export default function RecognizedTrack() {
         title: 'What this song really means',
         summary: artistSummary,
         support: cleanInsightText(artistInfo?.funFact, 140),
-        sourceLabel: 'Source - artist context',
       };
     }
 
@@ -475,7 +471,6 @@ export default function RecognizedTrack() {
         : detail.track.genre
           ? `Built around ${detail.track.genre.toLowerCase()} feeling.`
           : undefined,
-      sourceLabel: 'Source - quick first pass',
     };
   };
 
@@ -980,6 +975,12 @@ export default function RecognizedTrack() {
       ),
     [fragmentInterpretation],
   );
+  const gistPhraseChip = useMemo(() => {
+    const phrase = filteredDetectedPhrases[0];
+    if (!phrase) return null;
+
+    return `Known phrase: "${phrase.phrase}" = ${phrase.meaning}`;
+  }, [filteredDetectedPhrases]);
   const artistBioText = useMemo(
     () =>
       cleanInsightText(artistInfo?.artistBio) ||
@@ -1336,6 +1337,16 @@ export default function RecognizedTrack() {
                         {primaryGist.support}
                       </p>
                     )}
+                    {gistPhraseChip && (
+                      <div className="pt-1">
+                        <Badge
+                          variant="outline"
+                          className="border-primary/20 bg-primary/5 text-xs font-medium text-muted-foreground"
+                        >
+                          {gistPhraseChip}
+                        </Badge>
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-2 pt-1">
                       {insightBadges.map((badge) => (
                         <Badge
@@ -1352,7 +1363,6 @@ export default function RecognizedTrack() {
                           {badge.label}
                         </Badge>
                       ))}
-                      <Badge variant="outline">{primaryGist.sourceLabel}</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -1481,16 +1491,6 @@ export default function RecognizedTrack() {
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           {artistStatusMessage}
-                        </p>
-                      </div>
-                    )}
-                    {artistInfo.verification === 'unverified' && (
-                      <div className="sm:col-span-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10">
-                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                          Trusted profile still being checked
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {artistInfo.verificationNote || 'We dey show only safe details to avoid wrong artist story.'}
                         </p>
                       </div>
                     )}
