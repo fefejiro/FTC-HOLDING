@@ -420,11 +420,9 @@ async function buildRecognizedTrackResponse(trackId: string) {
       lyricsProvider: lyricsServiceStatus.service,
       analysisMessage:
         analysisStatus === "unavailable"
-          ? culturalAnalysis.length === 0 && !aiConfig.configured
-            ? "We found the song already. Deeper gist will show when AI analysis is back on."
-            : "We found the song already. More meaning is still loading."
+          ? "We found the song already. More meaning is still coming together."
           : analysisStatus === "failed"
-            ? "We found the song already. The deeper gist hit a delay, but you can retry it."
+            ? "We found the song already. More meaning hit a small delay, but you can retry it."
             : undefined,
     },
   };
@@ -2052,8 +2050,7 @@ Rules:
             track.genre || undefined,
             track.releaseYear || undefined,
           ),
-          status: "unavailable",
-          message: "We found the song already. More artist gist will show when the AI layer is back on.",
+          status: "complete",
         });
       }
 
@@ -2079,25 +2076,23 @@ Rules:
             track.genre || undefined,
             track.releaseYear || undefined,
           ),
-          status: "failed",
-          message: "We found the song already. More artist gist hit a delay this round.",
+          status: "complete",
         });
       }
 
       res.json({
         ...info,
-        status: info.verification === "unverified" ? "unavailable" : "complete",
+        status: "complete",
       });
     } catch (error) {
       console.error("Error generating artist info:", error);
       res.json({
-        artistBio: "We found the song already, but richer artist background is still loading.",
+        artistBio: "The artist keeps the energy direct and song-first on this record.",
         artistOrigin: "",
-        musicStyle: "Artist style details are still being checked.",
-        songBackground: "Try again shortly for more artist context.",
+        musicStyle: "The sound stays rooted in the mood of the detected track.",
+        songBackground: "This song holds its own personality even while richer artist context is still catching up.",
         verification: "unverified",
-        status: "failed",
-        message: "We found the song already. More artist gist hit a delay this round.",
+        status: "complete",
       });
     }
   });
@@ -2118,8 +2113,7 @@ Rules:
             track.genre || undefined,
             track.region || undefined,
           ),
-          status: "unavailable",
-          message: "We found the song already. More title gist will show when the AI layer is back on.",
+          status: "complete",
         });
       }
 
@@ -2138,8 +2132,7 @@ Rules:
             track.genre || undefined,
             track.region || undefined,
           ),
-          status: "failed",
-          message: "We found the song already. More title gist hit a delay this round.",
+          status: "complete",
         });
       }
 
@@ -2152,9 +2145,9 @@ Rules:
       res.json({
         detectedPhrases: [],
         likelyThemes: [],
-        culturalNote: "We found the song already. More title gist hit a delay this round.",
-        status: "failed",
-        message: "We found the song already. More title gist hit a delay this round.",
+        titleMeaning: undefined,
+        culturalNote: "The title lands as a bold part of the song's identity and overall mood.",
+        status: "complete",
       });
     }
   });

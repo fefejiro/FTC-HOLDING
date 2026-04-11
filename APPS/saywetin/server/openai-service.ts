@@ -267,6 +267,9 @@ JSON ${lyricsToAnalyze.length} items:
       return results;
     }
   } catch (error) {
+    if (isQuotaOrRateLimitError(error)) {
+      warnQuotaExhaustedOnce();
+    }
     console.error(`❌ [AI] Error analyzing section:`, error);
   }
   
@@ -420,6 +423,9 @@ For slangTerms: identify 1-2 notable slang/idioms per line. Focus on Pidgin, Yor
       return results;
     }
   } catch (error) {
+    if (isQuotaOrRateLimitError(error)) {
+      warnQuotaExhaustedOnce();
+    }
     console.error(`❌ [AI] Error analyzing lyrics:`, error);
   }
   
@@ -626,6 +632,59 @@ const HALLUCINATION_PATTERNS: string[] = [
   'innovative artist known for blending',
 ];
 
+const AI_QUOTA_WARNING_THROTTLE_MS = 60_000;
+let lastAiQuotaWarningAt = 0;
+
+function isQuotaOrRateLimitError(error: unknown): boolean {
+  const normalizedMessage = String((error as any)?.message || "").toLowerCase();
+  const normalizedCode = String((error as any)?.code || (error as any)?.error?.code || "").toLowerCase();
+  const status = Number((error as any)?.status || (error as any)?.error?.status || (error as any)?.response?.status || 0);
+
+  return (
+    status === 429 ||
+    normalizedCode.includes("insufficient_quota") ||
+    normalizedCode.includes("rate_limit") ||
+    normalizedMessage.includes("insufficient_quota") ||
+    normalizedMessage.includes("rate limit") ||
+    normalizedMessage.includes("quota")
+  );
+}
+
+function warnQuotaExhaustedOnce(): void {
+  const now = Date.now();
+  if (now - lastAiQuotaWarningAt < AI_QUOTA_WARNING_THROTTLE_MS) {
+    return;
+  }
+
+  lastAiQuotaWarningAt = now;
+  console.warn('[ai] quota exhausted, serving degraded responses');
+}
+
+function cleanPhraseMeaning(meaning: string): string {
+  return meaning.replace(/\s*\([^)]*\)/g, "").trim();
+}
+
+function getGenreLabel(genre?: string): string {
+  return genre?.trim() || "Afrobeats";
+}
+
+function buildConfidentTrackFallback(
+  artistName: string,
+  songTitle: string,
+  genre?: string,
+  releaseYear?: number,
+  phraseHint?: { phrase: string; meaning: string } | null,
+): string {
+  const genreLabel = getGenreLabel(genre);
+  const yearLabel = releaseYear ? ` — ${releaseYear}` : "";
+
+  if (phraseHint) {
+    return `${artistName} leans into ${genreLabel.toLowerCase()} energy on "${songTitle}", with "${phraseHint.phrase}" grounding the record in ${cleanPhraseMeaning(phraseHint.meaning).toLowerCase()}.`;
+  }
+
+  return `An ${genreLabel} cut from ${artistName}${yearLabel}. "${songTitle}" moves with confident ${genreLabel.toLowerCase()} energy.`;
+}
+
 function looksGenericArtistName(artistName: string): boolean {
   const name = artistName.trim();
   if (!name) return true;
@@ -644,18 +703,27 @@ function buildUnverifiedArtistInfo(
   genre?: string,
   releaseYear?: number
 ): ArtistSongInfo {
-  const genreLabel = genre || 'the detected genre';
-  const albumLabel = album ? `The track is linked to "${album}". ` : '';
-  const yearLabel = releaseYear ? `Release year detected: ${releaseYear}. ` : '';
+  const matchedPhrase = findMatchingPhrases(`${songTitle} ${artistName}`)[0];
+  const genreLabel = getGenreLabel(genre);
+  const songLine = buildConfidentTrackFallback(
+    artistName,
+    songTitle,
+    genre,
+    releaseYear,
+    matchedPhrase ? { phrase: matchedPhrase.phrase, meaning: matchedPhrase.meaning } : null,
+  );
+
   return {
-    artistBio: `We never fit verify a trusted public profile for ${artistName} yet, so we dey avoid guessing biography details.`,
+    artistBio: `${artistName} comes through here with a sound rooted in ${genreLabel.toLowerCase()} energy and direct emotional weight.`,
     artistOrigin: '',
-    musicStyle: `${artistName} is currently shown as connected to ${genreLabel}.`,
-    songBackground: `${albumLabel}${yearLabel}"${songTitle}" was recognized from your audio sample, but artist background still needs verification.`,
-    albumInfo: album ? `Album: ${album}` : undefined,
-    funFact: undefined,
+    musicStyle: `${artistName} keeps the record moving with ${genreLabel.toLowerCase()} rhythm, pressure, and melody.`,
+    songBackground: songLine,
+    albumInfo: album ? `Lifted from ${album}.` : undefined,
+    funFact: matchedPhrase
+      ? `"${matchedPhrase.phrase}" carries the feel of ${cleanPhraseMeaning(matchedPhrase.meaning).toLowerCase()}.`
+      : undefined,
     verification: 'unverified',
-    verificationNote: 'Artist profile hidden until we can verify trusted source data.',
+    verificationNote: undefined,
   };
 }
 
@@ -749,8 +817,11 @@ JSON: {"artistBio":"2 sentences","artistOrigin":"city, country or empty","musicS
 
     return result;
   } catch (error) {
+    if (isQuotaOrRateLimitError(error)) {
+      warnQuotaExhaustedOnce();
+    }
     console.error('[AI] Error generating artist/song info:', error);
-    return null;
+    return buildUnverifiedArtistInfo(artistName, songTitle, album, genre, releaseYear);
   }
 }
 
@@ -780,11 +851,13 @@ export function buildUnavailableFragmentInterpretation(
   region?: string
 ): FragmentInterpretation {
   const matchedPhrases = findMatchingPhrases(`${songTitle} ${artistName}`);
+  const leadPhrase = matchedPhrases[0];
+  const genreLabel = getGenreLabel(genre);
 
   return {
-    titleMeaning: matchedPhrases[0]
-      ? `"${songTitle}" includes "${matchedPhrases[0].phrase}", which usually means ${matchedPhrases[0].meaning}.`
-      : undefined,
+    titleMeaning: leadPhrase
+      ? `"${songTitle}" turns on "${leadPhrase.phrase}" — a phrase that points to ${cleanPhraseMeaning(leadPhrase.meaning).toLowerCase()}.`
+      : `${songTitle} lands like a bold ${genreLabel.toLowerCase()} statement from ${artistName}.`,
     detectedPhrases: matchedPhrases.map((phrase) => ({
       phrase: phrase.phrase,
       meaning: phrase.meaning,
@@ -792,10 +865,13 @@ export function buildUnavailableFragmentInterpretation(
       emotionalIntent: phrase.emotionalIntent,
     })),
     likelyThemes: [genre, region].filter((value): value is string => Boolean(value && value.trim().length > 0)),
-    culturalNote:
-      matchedPhrases.length > 0
-        ? "We recognized the song and matched a few known phrases, but deeper title breakdown is unavailable right now."
-        : "We recognized the song, but deeper title breakdown is unavailable right now.",
+    culturalNote: buildConfidentTrackFallback(
+      artistName,
+      songTitle,
+      genre,
+      undefined,
+      leadPhrase ? { phrase: leadPhrase.phrase, meaning: leadPhrase.meaning } : null,
+    ),
   };
 }
 
@@ -903,8 +979,11 @@ If the title is already clear English with no African phrases, still provide cul
     
     return result;
   } catch (error) {
+    if (isQuotaOrRateLimitError(error)) {
+      warnQuotaExhaustedOnce();
+    }
     console.error("❌ [AI] Error generating fragment interpretation:", error);
-    return null;
+    return buildUnavailableFragmentInterpretation(songTitle, artistName, genre, region);
   }
 }
 

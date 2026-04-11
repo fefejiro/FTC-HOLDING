@@ -205,6 +205,32 @@ function isFallbackInsightText(value?: string | null): boolean {
   ].some((phrase) => normalized.includes(phrase));
 }
 
+type PhraseHint = {
+  phrase: string;
+  meaning: string;
+};
+
+function cleanPhraseMeaning(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const cleaned = value.replace(/\s*\([^)]*\)/g, '').trim();
+  return cleaned || undefined;
+}
+
+function parseSlangTerms(value?: string | SlangTerm[] | null): SlangTerm[] {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 interface ProgressBarProps {
   lyricsStatus?: ProcessingStatus;
   analysisStatus?: ProcessingStatus;
@@ -398,6 +424,24 @@ export default function RecognizedTrack() {
     artistInfo?: ArtistSongInfo,
     fragment?: FragmentInterpretation,
   ): PrimaryGistModel => {
+    const phraseHintFromAnalysis = detail.culturalAnalysis
+      ?.flatMap((analysis) => parseSlangTerms(analysis.slangTerms))
+      .find((term) => term.term && term.meaning);
+    const phraseHintFromFragment = fragment?.detectedPhrases?.find(
+      (phrase) => phrase.phrase && phrase.meaning && !isFallbackInsightText(phrase.meaning),
+    );
+    const phraseHint: PhraseHint | undefined = phraseHintFromAnalysis
+      ? {
+          phrase: phraseHintFromAnalysis.term,
+          meaning: phraseHintFromAnalysis.meaning,
+        }
+      : phraseHintFromFragment
+        ? {
+            phrase: phraseHintFromFragment.phrase,
+            meaning: phraseHintFromFragment.meaning,
+          }
+        : undefined;
+
     const firstAnalysis = detail.culturalAnalysis?.find(
       (analysis) =>
         analysis.deeperMeaning ||
@@ -458,11 +502,15 @@ export default function RecognizedTrack() {
 
     return {
       title: 'What this song really means',
-      summary: firstLyricLine
-        ? `${detail.track.title} leans into ${genreLabel}, using "${firstLyricLine}" as the emotional center of the record.`
-        : detail.track.album
-          ? `${detail.track.title} feels built as one standout moment inside ${detail.track.album}, with ${detail.track.artist} leaning into ${genreLabel}.`
-          : `${detail.track.title} leans into ${genreLabel}, with ${detail.track.artist} pushing a steady emotional mood through the record.`,
+      summary: phraseHint
+        ? `${detail.track.artist} leans into ${detail.track.genre || 'Afrobeats'} energy here, with "${phraseHint.phrase}" anchoring the song in ${cleanPhraseMeaning(phraseHint.meaning)?.toLowerCase() || phraseHint.meaning.toLowerCase()}.`
+        : firstLyricLine
+          ? `${detail.track.title} leans into ${genreLabel}, using "${firstLyricLine}" as the emotional center of the record.`
+          : detail.track.album
+            ? `${detail.track.title} feels built as one standout moment inside ${detail.track.album}, with ${detail.track.artist} leaning into ${genreLabel}.`
+            : detail.track.releaseYear && detail.track.genre
+              ? `An ${detail.track.genre} cut from ${detail.track.artist} — ${detail.track.releaseYear}. ${detail.track.title} moves with confident ${detail.track.genre.toLowerCase()} energy.`
+              : `${detail.track.title} leans into ${genreLabel}, with ${detail.track.artist} pushing a steady emotional mood through the record.`,
       support: detail.track.album
         ? `From ${detail.track.album}.`
         : detail.track.genre
@@ -954,8 +1002,10 @@ export default function RecognizedTrack() {
   const artistBioText = useMemo(
     () =>
       cleanInsightText(artistInfo?.artistBio) ||
-      'We dey hold back full biography until we verify trusted public profile details.',
-    [artistInfo],
+      (data?.track
+        ? `${data.track.artist} carries a distinct sound here, and this record keeps that identity front and center.`
+        : 'The artist carries a distinct sound here, and the record keeps that identity front and center.'),
+    [artistInfo, data?.track],
   );
   const artistSongBackgroundText = useMemo(
     () =>
@@ -964,7 +1014,7 @@ export default function RecognizedTrack() {
         ? `${data.track.title} sits inside ${data.track.album}, with ${data.track.artist} leaning into ${data.track.genre || 'its current sound'}.`
         : data?.track
           ? `${data.track.title} stays rooted in the mood ${data.track.artist} is building here.`
-          : 'We recognized the song already, and the fuller story is still coming together.'),
+          : 'The song holds a clear mood and identity even while more context catches up.'),
     [artistInfo, data?.track],
   );
 

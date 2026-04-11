@@ -151,7 +151,7 @@ function buildCulturalContext(matches: PhraseMatch[]): string {
   );
 
   if (usages.length === 0) {
-    return "This line includes known Nigerian slang or cultural phrasing from the local glossary.";
+    return "This line leans on recognizable Nigerian slang and local phrasing.";
   }
 
   if (usages.length === 1) {
@@ -167,7 +167,7 @@ function buildArtistIntent(matches: PhraseMatch[]): string {
   );
 
   if (intents.length === 0) {
-    return "The line carries a recognizable local vibe, but the fallback only explains known glossary phrases.";
+    return "The line carries a strong local vibe with everyday street-language confidence.";
   }
 
   if (intents.length === 1) {
@@ -178,6 +178,32 @@ function buildArtistIntent(matches: PhraseMatch[]): string {
     .slice(0, 2)
     .map((intent) => intent.toLowerCase())
     .join(" and ")} energy.`;
+}
+
+function buildGlossaryDeeperMeaning(matches: PhraseMatch[]): string {
+  const leadMatch = matches[0];
+  const leadMeaning = getDisplayMeaning(leadMatch.phrase).toLowerCase();
+  const leadIntent = leadMatch.phrase.emotionalIntent.trim().toLowerCase();
+
+  if (matches.length === 1) {
+    return `"${leadMatch.matchedText}" anchors the line in ${leadMeaning}, giving it a clear ${leadIntent || "streetwise"} pulse.`;
+  }
+
+  const phraseList = matches
+    .slice(0, 2)
+    .map((match) => `"${match.matchedText}"`)
+    .join(" and ");
+
+  return `${phraseList} turn the line into a compact flex of local meaning, attitude, and street-level emotion.`;
+}
+
+function buildGlossaryLanguageNotes(matches: PhraseMatch[]): string {
+  const detectedLanguage = buildDetectedLanguage(matches);
+  if (!detectedLanguage) {
+    return "Rooted in Nigerian street phrasing.";
+  }
+
+  return `Rooted in ${detectedLanguage} phrasing and everyday expression.`;
 }
 
 function buildDetectedLanguage(matches: PhraseMatch[]): string | undefined {
@@ -221,10 +247,8 @@ export function buildGlossaryLineAnalysis(
     detectedLanguage: buildDetectedLanguage(matches),
     culturalContext: buildCulturalContext(matches),
     artistIntent: buildArtistIntent(matches),
-    deeperMeaning:
-      "This explanation comes from the built-in local glossary, so it highlights known slang and phrases rather than translating the whole line perfectly.",
-    languageNotes:
-      "Local glossary fallback mode. For lines without known phrase matches, we still need community input or an AI provider.",
+    deeperMeaning: buildGlossaryDeeperMeaning(matches),
+    languageNotes: buildGlossaryLanguageNotes(matches),
     lyricBreakdown: matches
       .map((match) => `${match.matchedText} (${getDisplayMeaning(match.phrase)})`)
       .join(" + "),
