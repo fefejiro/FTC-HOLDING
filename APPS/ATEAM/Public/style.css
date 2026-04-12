@@ -7092,6 +7092,20 @@ body[data-office-studio="true"] .office-view {
 }
 
 /* AI Lab run confirmation card */
+/* Inline action link inside key-value rows (e.g. "Review →" in Tasks detail) */
+.task-run-kv-link {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(147, 197, 253, 0.7);
+  text-decoration: none;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+.task-run-kv-link:hover {
+  color: rgba(147, 197, 253, 1);
+  text-decoration: underline;
+}
+
 /* Back button for deep views (AI Lab, Talk) */
 .view-back-btn {
   opacity: 0.62;

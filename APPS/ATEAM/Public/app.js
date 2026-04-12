@@ -3466,7 +3466,7 @@ function mcRenderTaskRunDetail(run, pendingApproval, thread = []) {
       <div class="task-run-kv-grid">
         <div class="task-run-kv"><span>Owner</span><strong>${escapeHtml(ownerRole)}${ownerName ? ` • ${escapeHtml(ownerName)}` : ""}</strong></div>
         <div class="task-run-kv"><span>Lane</span><strong>${escapeHtml(lane || "Not assigned")}</strong></div>
-        <div class="task-run-kv"><span>Approval</span><strong>${escapeHtml(approvalLabel)}</strong></div>
+        <div class="task-run-kv"><span>Approval</span><strong>${escapeHtml(approvalLabel)}${pendingApproval ? ` <button class="task-run-kv-link" type="button" data-action="go-to-approval" data-approval-id="${escapeHtml(pendingApproval.id)}">Review →</button>` : ""}</strong></div>
         <div class="task-run-kv"><span>Linked project</span><strong>${escapeHtml(projectLabel)}</strong></div>
       </div>
 
@@ -5308,7 +5308,11 @@ async function renderProjectsPage({ force = false } = {}) {
       .join("");
 
     // Scroll to and highlight the newly created project if navigating from intake.
+    // Also auto-select it so the detail panel opens immediately.
     if (createdProjectId) {
+      if (!missionControlState.projects.selectedId || missionControlState.projects.selectedId !== createdProjectId) {
+        missionControlState.projects.selectedId = createdProjectId;
+      }
       requestAnimationFrame(() => {
         const card = projectsPortfolioList.querySelector(`[data-project-id="${CSS.escape(createdProjectId)}"]`);
         if (card) {
@@ -6144,9 +6148,13 @@ async function renderTasksPage({ force = false } = {}) {
             View in Projects →
           </button>
           ${pendingAp ? `
+            <button class="ops-action-btn ops-action-btn-secondary" type="button"
+              data-action="go-to-approval" data-approval-id="${escapeHtml(pendingAp.id)}">
+              Review in Approvals →
+            </button>
             <button class="ops-action-btn" type="button"
               data-action="approve-approval" data-approval-id="${escapeHtml(pendingAp.id)}">
-              Approve brief
+              Approve
             </button>
             <button class="ops-action-btn ops-action-btn-secondary" type="button"
               data-action="reject-approval" data-approval-id="${escapeHtml(pendingAp.id)}">
@@ -6462,6 +6470,14 @@ async function handleMissionAction(action, dataset = {}) {
   }
   if (safeAction === "open-doc") {
     mcOpenDoc(dataset.docId, dataset.projectId);
+    return;
+  }
+  if (safeAction === "go-to-approval") {
+    const apId = String(dataset.approvalId || "").trim();
+    if (apId) {
+      approvalsSaveUiPrefs({ selectedId: apId });
+    }
+    setView("approvals");
     return;
   }
   if (safeAction === "approve-approval") {
@@ -12574,6 +12590,15 @@ function bindEvents() {
         node.classList.toggle("active", node === card);
       });
       updateSelectionUi();
+    });
+  }
+
+  // Delegated handler for [data-action] clicks within the Tasks detail panel
+  if (dashboardThread) {
+    dashboardThread.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
     });
   }
 
