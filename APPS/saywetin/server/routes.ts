@@ -352,7 +352,7 @@ function toPublicAnalysisStatus(
   }
 
   if (analysisStatus === "completed") {
-    return "unavailable";
+    return "complete";
   }
 
   if (analysisStatus === "failed") {
@@ -1907,15 +1907,15 @@ Rules:
       } finally {
         fetching = false;
       }
-    }, 800);
-    
+    }, 1500);
+
     setTimeout(() => {
       clearInterval(interval);
       if (!closed) {
         sendEvent('timeout', { message: 'Processing timeout' });
         res.end();
       }
-    }, 60000);
+    }, 120000);
   };
 
   app.get("/api/recognized-tracks/:id/stream", streamRecognizedTrack);

@@ -748,6 +748,7 @@ export default function RecognizedTrack() {
       setSseComplete(true);
       setIsProcessing(false);
       es.close();
+      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
     });
     
     es.addEventListener('error', () => {
@@ -795,6 +796,7 @@ export default function RecognizedTrack() {
   }, [trackId]);
   
   // Regular query as fallback (used when SSE is done or for cached data)
+  // refetchInterval kicks in when SSE has ended but analysis is still running
   const { data: queryData, isLoading: queryLoading, error } = useQuery<RecognizedTrackDetail>({
     queryKey: ['/api/recognized-tracks', trackId],
     staleTime: 0,
@@ -807,6 +809,12 @@ export default function RecognizedTrack() {
       return res.json();
     },
     enabled: sseComplete || !trackId,
+    refetchInterval: (query) => {
+      const d = query.state.data as RecognizedTrackDetail | undefined;
+      if (!d) return false;
+      const still = d.track.analysisStatus === 'generating_analysis' || d.track.analysisStatus === 'pending';
+      return still ? 3000 : false;
+    },
   });
   
   // Use SSE data while streaming, then switch to query data
