@@ -1150,6 +1150,7 @@ export default function RecognizedTrack() {
       data.track.analysisStatus === 'failed');
 
   const canRetryEnrichment =
+    STORY_MODE_ENABLED &&
     !!trackId &&
     !!data?.lyrics &&
     !retryEnrichmentMutation.isPending &&
@@ -1257,6 +1258,7 @@ export default function RecognizedTrack() {
 
   // Auto-trigger analysis on moment lines that haven't been analyzed yet
   useEffect(() => {
+    if (!STORY_MODE_ENABLED) return;
     if (hasTriggeredMomentAnalysis.current || !theMoment || !data) return;
     if (theMoment.hasAnalysis) return;
     if (theMoment.rawLines.length === 0) return;
