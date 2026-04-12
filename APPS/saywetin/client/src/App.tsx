@@ -138,7 +138,7 @@ function AppContent() {
       <div className={hideBottomNav ? '' : 'pb-20'}>
         <Router />
       </div>
-      <UpdateNotification />
+      {!hideBottomNav && <UpdateNotification />}
       {!hideBottomNav && <BottomNav />}
       <Toaster />
     </div>

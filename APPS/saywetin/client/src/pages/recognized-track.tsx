@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useInteractionLogger } from '@/hooks/use-interaction-logger';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ import { trackRecognitionSucceeded } from '@/lib/analytics';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { getApiUrl } from '@/lib/api-config';
 import { LISTEN_MODE_PATH } from '@/lib/navigation';
+import { STORY_MODE_ENABLED } from '@/lib/features';
 import { useToast } from '@/hooks/use-toast';
 import {
   parseAnalysesWithSlang,
@@ -245,6 +247,87 @@ const INITIAL_DOCUMENT_LOCATION =
     ? `${window.location.pathname}${window.location.search}${window.location.hash}`
     : null;
 
+function RecognitionHoldingScreen({
+  title,
+  description,
+  onBack,
+}: {
+  title: string;
+  description: string;
+  onBack: () => void;
+}) {
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <ThemeToggle />
+        </div>
+      </header>
+
+      <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
+        <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 via-background to-background dark:from-orange-500/15" />
+        <div className="absolute top-14 left-8 h-32 w-32 rounded-full bg-orange-500/12 blur-3xl" />
+        <div className="absolute bottom-10 right-6 h-36 w-36 rounded-full bg-green-500/10 blur-3xl" />
+
+        <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-6 text-center">
+          <div className="relative h-52 w-52">
+            {[0, 1, 2, 3].map((index) => (
+              <motion.div
+                key={`holding-ring-${index}`}
+                className="absolute inset-0 rounded-full border border-primary/20 bg-primary/5"
+                animate={{
+                  scale: [0.82, 1.16, 1.24],
+                  opacity: [0, 0.32 - index * 0.05, 0],
+                }}
+                transition={{
+                  duration: 1.9,
+                  ease: 'easeOut',
+                  repeat: Infinity,
+                  delay: index * 0.22,
+                }}
+              />
+            ))}
+
+            <motion.div
+              className="absolute inset-5 rounded-full bg-gradient-to-br from-orange-500/12 via-amber-500/12 to-green-500/12 blur-2xl"
+              animate={{ scale: [0.96, 1.05, 0.98], opacity: [0.28, 0.46, 0.3] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            />
+
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                className="h-28 w-28 rounded-full bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 flex items-center justify-center shadow-2xl shadow-orange-500/25"
+                animate={{ scale: [0.98, 1.04, 1], rotate: [0, 6, -6, 0] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+                >
+                  <Disc3 className="h-14 w-14 text-white" />
+                </motion.div>
+              </motion.div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-2xl font-semibold">{title}</p>
+            <p className="max-w-xs text-sm text-muted-foreground">{description}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProgressBar({ lyricsStatus, analysisStatus, analysisCount = 0 }: ProgressBarProps) {
   const getProgress = () => {
     if (lyricsStatus === 'pending') return 5;
@@ -266,8 +349,8 @@ function ProgressBar({ lyricsStatus, analysisStatus, analysisCount = 0 }: Progre
     if (lyricsStatus === 'fetching_lyrics') return 'Finding the lyrics...';
     if (lyricsStatus === 'no_lyrics') return 'Song recognized!';
     if (lyricsStatus === 'failed') return 'Song recognized!';
-    if (analysisStatus === 'generating_analysis') return 'Unlocking the story...';
-    if (analysisStatus === 'completed') return 'Story unlocked!';
+    if (analysisStatus === 'generating_analysis') return 'Building the meaning...';
+    if (analysisStatus === 'completed') return 'Meaning ready';
     return 'Almost there...';
   };
 
@@ -495,7 +578,7 @@ export default function RecognizedTrack() {
       };
     }
 
-    const genreLabel = detail.track.genre ? `${detail.track.genre} energy` : 'the mood and story inside the track';
+    const genreLabel = detail.track.genre ? `${detail.track.genre} energy` : 'the mood inside the track';
     const firstLyricLine = compactText(
       detail.lyrics?.text
         ?.split('\n')
@@ -820,6 +903,13 @@ export default function RecognizedTrack() {
   // Use SSE data while streaming, then switch to query data
   const data = sseData || queryData;
   const isLoading = !data && queryLoading && !sseData;
+  const isHydratingResult =
+    !!trackId &&
+    !data &&
+    (!sseComplete || queryLoading);
+  const hasFinalResultFailure =
+    !trackId ||
+    (!!trackId && !data && sseComplete && !queryLoading);
   const analysisViewState = data?.status?.analysis;
   const analysisUnavailableMessage = getAnalysisStatusCopy(
     analysisViewState || data?.track?.analysisStatus,
@@ -1069,6 +1159,10 @@ export default function RecognizedTrack() {
 
   // Show "Stories unlocked!" toast when processing completes
   useEffect(() => {
+    if (!STORY_MODE_ENABLED) {
+      return;
+    }
+
     if (data && !isInProcessingState && !hasShownUnlockedMessage && data.culturalAnalysis && data.culturalAnalysis.length > 0) {
       setHasShownUnlockedMessage(true);
       toast({
@@ -1183,32 +1277,17 @@ export default function RecognizedTrack() {
     }
   }, [theMoment, data]);
 
-  if (isLoading) {
+  if (isLoading || isHydratingResult) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-          <div className="container max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBackNavigation}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <ThemeToggle />
-          </div>
-        </header>
-        <div className="container max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-          <Skeleton className="h-12 w-3/4" />
-          <Skeleton className="h-8 w-1/2" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </div>
+      <RecognitionHoldingScreen
+        title="Matching the song"
+        description="Hold on while we lock it in."
+        onBack={handleBackNavigation}
+      />
     );
   }
 
-  if (error || !data) {
+  if (error || hasFinalResultFailure || !data) {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
@@ -1228,12 +1307,12 @@ export default function RecognizedTrack() {
           <Card data-testid="card-error">
             <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center">
               <Music className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Track Not Found</h3>
+              <h3 className="text-lg font-medium mb-2">We could not match that one</h3>
               <p className="text-sm text-muted-foreground mb-6">
-                The song you're looking for doesn't exist or has expired.
+                Try again with the song a bit louder. Make sure the music can be heard clearly.
               </p>
               <Button onClick={() => navigate(LISTEN_MODE_PATH)}>
-                Return Home
+                Try Again
               </Button>
             </CardContent>
           </Card>
@@ -1596,7 +1675,7 @@ export default function RecognizedTrack() {
           )}
 
           {/* Processing Status Card - Show when still loading (but NOT when no_lyrics detected) */}
-          {data && track.lyricsStatus !== 'no_lyrics' && track.lyricsStatus !== 'failed' && 
+          {data && !primaryGist && track.lyricsStatus !== 'no_lyrics' && track.lyricsStatus !== 'failed' && 
            (track.lyricsStatus === 'pending' || track.lyricsStatus === 'fetching_lyrics' || 
             track.analysisStatus === 'pending' || track.analysisStatus === 'generating_analysis') && (
             <Card data-testid="card-processing-status" className="border-primary/20 bg-primary/5">
@@ -1605,8 +1684,8 @@ export default function RecognizedTrack() {
                   <Sparkles className="h-10 w-10 text-primary mb-4" />
                   <h3 className="text-lg font-semibold mb-2">
                     {(data.culturalAnalysis?.length || 0) > 5 
-                      ? "E dey hot! Almost done o..." 
-                      : "Dey find am..."}
+                      ? "Meaning nearly ready"
+                      : "Matching the meaning"}
                   </h3>
                 </div>
                 
@@ -2181,11 +2260,11 @@ export default function RecognizedTrack() {
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="h-5 w-5 animate-spin text-primary" />
                       <p className="font-medium">
-                        Uncovering the story...
+                        Building the meaning...
                       </p>
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      Finding translations, slang meanings, and cultural context in each line.
+                      Pulling together lyric meaning and context for the lines you heard.
                     </p>
                   </div>
                 ) : (

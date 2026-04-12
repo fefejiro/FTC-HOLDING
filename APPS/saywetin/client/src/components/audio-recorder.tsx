@@ -15,6 +15,7 @@ import {
 } from '@/lib/native-audio';
 
 type RecordingState = 'idle' | 'requesting' | 'listening' | 'identifying' | 'success' | 'error';
+type RecognitionVisualMode = 'requesting' | 'listening' | 'matching' | 'success' | 'error';
 
 interface RecognitionResult {
   success: boolean;
@@ -145,8 +146,8 @@ function classifyListenError(error: unknown): { title: string; description: stri
       };
     case 'context_failed':
       return {
-        title: 'Song don show, story never land',
-        description: message || 'We found the track, but the deeper explanation no finish this time.',
+        title: 'Song don show, meaning never land',
+        description: message || 'We found the track, but the deeper meaning no finish this time.',
       };
     case 'database_unavailable':
       return {
@@ -260,6 +261,94 @@ function normalizeUploadError(error: unknown): ListenError {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function RecognitionStageVisual({
+  mode,
+  immersive,
+}: {
+  mode: RecognitionVisualMode;
+  immersive: boolean;
+}) {
+  const wrapperClass = immersive ? 'h-52 w-52' : 'h-36 w-36';
+  const coreClass = immersive ? 'h-28 w-28' : 'h-20 w-20';
+  const ringScale = mode === 'matching' ? 1.16 : mode === 'requesting' ? 1.1 : 1.3;
+  const ringDuration = mode === 'matching' ? 1.9 : mode === 'requesting' ? 2.4 : 2.8;
+  const coreAccent =
+    mode === 'success'
+      ? 'from-emerald-500 via-green-500 to-lime-500'
+      : mode === 'error'
+        ? 'from-muted via-muted to-muted'
+        : 'from-orange-500 via-amber-500 to-green-500';
+
+  return (
+    <div className={`relative ${wrapperClass}`}>
+      {[0, 1, 2, 3].map((index) => (
+        <motion.div
+          key={`${mode}-ring-${index}`}
+          className="absolute inset-0 rounded-full border border-primary/20 bg-primary/5"
+          animate={{
+            scale: [0.82, ringScale, ringScale + 0.08],
+            opacity: [0, 0.34 - index * 0.05, 0],
+          }}
+          transition={{
+            duration: ringDuration,
+            ease: 'easeOut',
+            repeat: Infinity,
+            delay: index * 0.22,
+          }}
+        />
+      ))}
+
+      <motion.div
+        className="absolute inset-5 rounded-full bg-gradient-to-br from-orange-500/12 via-amber-500/12 to-green-500/12 blur-2xl"
+        animate={{
+          scale: mode === 'matching' ? [0.96, 1.05, 0.98] : [0.94, 1.08, 0.96],
+          opacity: mode === 'matching' ? [0.28, 0.46, 0.3] : [0.22, 0.4, 0.24],
+        }}
+        transition={{
+          duration: mode === 'matching' ? 1.8 : 2.8,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      />
+
+      <div className="absolute inset-0 flex items-center justify-center">
+        <motion.div
+          className={`${coreClass} rounded-full bg-gradient-to-br ${coreAccent} flex items-center justify-center shadow-2xl shadow-orange-500/25`}
+          animate={
+            mode === 'success'
+              ? { scale: [0.96, 1.02, 1] }
+              : mode === 'error'
+                ? { scale: [1, 0.98, 1] }
+                : { scale: [0.98, 1.04, 1], rotate: mode === 'matching' ? [0, 6, -6, 0] : [0, 0, 0] }
+          }
+          transition={{
+            duration: mode === 'matching' ? 1.8 : 2.6,
+            repeat: mode === 'success' ? 0 : Infinity,
+            ease: 'easeInOut',
+          }}
+        >
+          {mode === 'requesting' ? (
+            <Loader2 className={`${immersive ? 'h-14 w-14' : 'h-10 w-10'} text-white animate-spin`} />
+          ) : mode === 'listening' ? (
+            <Volume2 className={`${immersive ? 'h-14 w-14' : 'h-10 w-10'} text-white`} />
+          ) : mode === 'matching' ? (
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+            >
+              <Music className={`${immersive ? 'h-14 w-14' : 'h-10 w-10'} text-white`} />
+            </motion.div>
+          ) : mode === 'success' ? (
+            <Music className={`${immersive ? 'h-16 w-16' : 'h-12 w-12'} text-white`} />
+          ) : (
+            <Mic className={`${immersive ? 'h-14 w-14' : 'h-10 w-10'} text-muted-foreground`} />
+          )}
+        </motion.div>
+      </div>
+    </div>
+  );
 }
 
 interface WebCaptureProfile {
@@ -746,11 +835,7 @@ export function AudioRecorder({
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4"
           >
-            <div className={`${immersive ? 'h-44 w-44' : 'h-32 w-32'} rounded-full bg-primary/10 flex items-center justify-center`}>
-              <div className={`${immersive ? 'h-28 w-28' : 'h-20 w-20'} rounded-full bg-primary/15 flex items-center justify-center`}>
-                <Loader2 className={`${immersive ? 'h-14 w-14' : 'h-12 w-12'} text-primary animate-spin`} />
-              </div>
-            </div>
+            <RecognitionStageVisual mode="requesting" immersive={immersive} />
             <div className="space-y-2 text-center">
               <p className="text-xl font-semibold text-foreground">Getting ready to listen</p>
               <p className="text-sm text-muted-foreground">
@@ -768,28 +853,7 @@ export function AudioRecorder({
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex flex-col items-center gap-4"
           >
-            <div className={`relative ${immersive ? 'h-52 w-52' : 'h-32 w-32'}`}>
-              <motion.div
-                className="absolute inset-0 rounded-full bg-primary/20"
-                animate={{ scale: [1, 1.3, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <motion.div
-                className="absolute inset-2 rounded-full bg-primary/30"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-              />
-              <motion.div
-                className="absolute inset-4 rounded-full bg-primary/40"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className={`${immersive ? 'h-28 w-28' : 'h-20 w-20'} rounded-full bg-primary flex items-center justify-center shadow-xl shadow-primary/20`}>
-                  <Volume2 className={`${immersive ? 'h-12 w-12' : 'h-8 w-8'} text-primary-foreground`} />
-                </div>
-              </div>
-            </div>
+            <RecognitionStageVisual mode="listening" immersive={immersive} />
             
             <div className="space-y-2 text-center">
               <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Listening for music</p>
@@ -815,12 +879,10 @@ export function AudioRecorder({
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4"
           >
-            <div className={`${immersive ? 'h-44 w-44' : 'h-32 w-32'} rounded-full bg-primary/90 flex items-center justify-center shadow-xl shadow-primary/20`}>
-              <Loader2 className={`${immersive ? 'h-14 w-14' : 'h-12 w-12'} text-primary-foreground animate-spin`} />
-            </div>
+            <RecognitionStageVisual mode="matching" immersive={immersive} />
             <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Finding the song</p>
-              <p className="max-w-xs text-sm text-muted-foreground">Hold on while we match the music and pull the meaning through.</p>
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Matching the song</p>
+              <p className="max-w-xs text-sm text-muted-foreground">Hold on while we lock it in.</p>
             </div>
           </motion.div>
         )}
@@ -833,9 +895,7 @@ export function AudioRecorder({
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex flex-col items-center gap-4"
           >
-            <div className={`${immersive ? 'h-44 w-44' : 'h-32 w-32'} rounded-full bg-green-500/15 flex items-center justify-center`}>
-              <Music className={`${immersive ? 'h-16 w-16' : 'h-12 w-12'} text-green-500`} />
-            </div>
+            <RecognitionStageVisual mode="success" immersive={immersive} />
             <div className="space-y-2 text-center">
               <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold text-green-600 dark:text-green-400`}>We don catch am!</p>
               {immersive ? (
@@ -862,12 +922,10 @@ export function AudioRecorder({
           >
             <button
               onClick={startListening}
-              className={`relative flex items-center justify-center rounded-full bg-muted transition-all active:scale-95 ${
-                immersive ? 'h-40 w-40 hover:scale-[1.02]' : 'h-32 w-32 hover:scale-105 hover:bg-muted/80'
-              }`}
+              className="transition-all active:scale-95"
               data-testid="button-try-again"
             >
-              <Mic className={`${immersive ? 'h-14 w-14' : 'h-12 w-12'} text-muted-foreground`} />
+              <RecognitionStageVisual mode="error" immersive={immersive} />
             </button>
             <div className="space-y-2 text-center">
               <p className={`${immersive ? 'text-xl' : 'text-lg'} font-medium`}>Tap to Try Again</p>
