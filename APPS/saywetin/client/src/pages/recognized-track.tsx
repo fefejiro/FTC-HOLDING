@@ -1913,12 +1913,12 @@ export default function RecognizedTrack() {
               <CardContent className="p-0">
                 {displayBlocks.length > 0 && displayBlocks.some(b => b.hasAnalyses) ? (
                   <div className="px-6 py-4">
-                    {showInlineAnalysisFallback && (
+                    {showInlineAnalysisFallback && !primaryGist && (
                       <div className="mb-5 rounded-xl border border-primary/20 bg-primary/5 p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-primary">
-                              More meaning loading...
+                              Quick take ready
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {analysisUnavailableMessage}
@@ -1938,7 +1938,7 @@ export default function RecognizedTrack() {
                                   Retrying...
                                 </>
                               ) : (
-                                'Retry deeper gist'
+                                'Load deeper context'
                               )}
                             </Button>
                           )}
@@ -2191,7 +2191,7 @@ export default function RecognizedTrack() {
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">
-                      We found the song already. More meaning is still loading.
+                      You already have the main takeaway. Open a line whenever you want deeper context.
                     </p>
                   </div>
                 )}
