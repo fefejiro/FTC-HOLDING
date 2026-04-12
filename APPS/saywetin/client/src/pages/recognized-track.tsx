@@ -348,7 +348,7 @@ export default function RecognizedTrack() {
   const [showContributeForm, setShowContributeForm] = useState(false);
   
   // X-Ray artist info state - auto-show when track loads
-  const [showXRay, setShowXRay] = useState(true);
+  const [showXRay, setShowXRay] = useState(false);
   const hasAutoShownXRay = useRef(false);
   const [hasShownUnlockedMessage, setHasShownUnlockedMessage] = useState(false);
   
@@ -461,7 +461,7 @@ export default function RecognizedTrack() {
 
     if (analysisSummary) {
       return {
-        title: 'What this song really means',
+        title: 'What this means',
         summary: analysisSummary,
         support:
           cleanInsightText(firstAnalysis?.translation, 120) ||
@@ -476,7 +476,7 @@ export default function RecognizedTrack() {
 
     if (fragmentSummary) {
       return {
-        title: 'What this song really means',
+        title: 'What this means',
         summary: fragmentSummary,
         support: cleanInsightText(fragment?.detectedPhrases?.[0]?.culturalContext, 140),
       };
@@ -489,7 +489,7 @@ export default function RecognizedTrack() {
 
     if (artistSummary) {
       return {
-        title: 'What this song really means',
+        title: 'What this means',
         summary: artistSummary,
         support: cleanInsightText(artistInfo?.funFact, 140),
       };
@@ -505,7 +505,7 @@ export default function RecognizedTrack() {
     );
 
     return {
-      title: 'What this song really means',
+      title: 'What this means',
       summary: phraseHint
         ? `${detail.track.artist} leans into ${detail.track.genre || 'Afrobeats'} energy here, with "${phraseHint.phrase}" anchoring the song in ${cleanPhraseMeaning(phraseHint.meaning)?.toLowerCase() || phraseHint.meaning.toLowerCase()}.`
         : firstLyricLine
@@ -861,11 +861,11 @@ export default function RecognizedTrack() {
   
   // Log auto-show of artist info once when track loads
   useEffect(() => {
-    if (data?.track?.id && !hasAutoShownXRay.current) {
+    if (data?.track?.id && showXRay && !hasAutoShownXRay.current) {
       hasAutoShownXRay.current = true;
       logInteraction('open_artist_info', { isAuto: true });
     }
-  }, [data?.track?.id, logInteraction]);
+  }, [data?.track?.id, logInteraction, showXRay]);
 
   // Log recognition success once when track data loads
   useEffect(() => {
@@ -1311,101 +1311,7 @@ export default function RecognizedTrack() {
                     {track.genre}
                   </Badge>
                 )}
-                {track.confidenceScore && (
-                  <Badge variant="default" data-testid="badge-confidence">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    {track.confidenceScore >= 80 ? 'E match well well' : `${track.confidenceScore}%`}
-                  </Badge>
-                )}
               </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {track.spotifyId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    data-testid="button-spotify"
-                    onClick={() => logInteraction('open_spotify')}
-                  >
-                    <a
-                      href={`https://open.spotify.com/track/${track.spotifyId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Spotify
-                    </a>
-                  </Button>
-                )}
-                {track.youtubeId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    data-testid="button-youtube"
-                  >
-                    <a
-                      href={`https://www.youtube.com/watch?v=${track.youtubeId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      YouTube
-                    </a>
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowXRay(!showXRay)}
-                  data-testid="button-xray"
-                  className={showXRay ? 'bg-primary/10' : ''}
-                >
-                  <Info className="h-4 w-4 mr-2" />
-                  {showXRay ? 'Hide' : 'About'} Artist & Song
-                </Button>
-              </div>
-
-              {primaryGist && (
-                <Card className="border-primary/20 bg-background/80 shadow-lg shadow-orange-500/5">
-                  <CardContent className="p-4 sm:p-5 space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                      <Sparkles className="h-4 w-4" />
-                      {primaryGist.title}
-                    </div>
-                    <p className="text-lg sm:text-xl font-semibold leading-relaxed text-foreground">
-                      {primaryGist.summary}
-                    </p>
-                    {primaryGist.support && (
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {primaryGist.support}
-                      </p>
-                    )}
-                    {gistPhraseChip && (
-                      <div className="pt-1">
-                        <Badge
-                          variant="outline"
-                          className="border-primary/20 bg-primary/5 text-xs font-medium text-muted-foreground"
-                        >
-                          {gistPhraseChip}
-                        </Badge>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {insightBadges.map((badge) => (
-                        <Badge
-                          key={badge.label}
-                          variant="secondary"
-                          className="bg-green-500/10 text-green-700 dark:text-green-300"
-                        >
-                          {badge.label}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           </div>
         </div>
@@ -1413,6 +1319,36 @@ export default function RecognizedTrack() {
 
       <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="space-y-6">
+          {primaryGist && (
+            <Card className="border-primary/25 bg-background/90 shadow-lg shadow-orange-500/5" data-testid="card-primary-gist">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  What this means
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-0">
+                <p className="text-xl font-semibold leading-relaxed text-foreground sm:text-2xl">
+                  {primaryGist.summary}
+                </p>
+                {primaryGist.support && (
+                  <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                    {primaryGist.support}
+                  </p>
+                )}
+                {gistPhraseChip && (
+                  <div className="pt-1">
+                    <Badge
+                      variant="outline"
+                      className="border-primary/20 bg-primary/5 text-xs font-medium text-muted-foreground"
+                    >
+                      {gistPhraseChip}
+                    </Badge>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* THE MOMENT - What the user just heard, shown first */}
           {theMoment && !showFullLyrics && (theMoment.hasAnalysis || theMoment.rawLines.length > 0) && (
@@ -1496,6 +1432,88 @@ export default function RecognizedTrack() {
                     <FileText className="h-4 w-4 mr-2" />
                     See full lyrics & meanings
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {(insightBadges.length > 0 || track.confidenceScore || track.spotifyId || track.youtubeId || artistInfo) && (
+            <Card className="border-border/70 bg-background/80" data-testid="card-more-context">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">More context</CardTitle>
+                <CardDescription>
+                  Extra details if you want to keep digging.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(insightBadges.length > 0 || track.confidenceScore) && (
+                  <div className="flex flex-wrap gap-2">
+                    {insightBadges.map((badge) => (
+                      <Badge
+                        key={badge.label}
+                        variant="secondary"
+                        className="bg-green-500/10 text-green-700 dark:text-green-300"
+                      >
+                        {badge.label}
+                      </Badge>
+                    ))}
+                    {track.confidenceScore ? (
+                      <Badge variant="outline" data-testid="badge-confidence">
+                        <TrendingUp className="mr-1 h-3 w-3" />
+                        {track.confidenceScore}% match
+                      </Badge>
+                    ) : null}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  {track.spotifyId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      data-testid="button-spotify"
+                      onClick={() => logInteraction('open_spotify')}
+                    >
+                      <a
+                        href={`https://open.spotify.com/track/${track.spotifyId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Spotify
+                      </a>
+                    </Button>
+                  )}
+                  {track.youtubeId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      data-testid="button-youtube"
+                    >
+                      <a
+                        href={`https://www.youtube.com/watch?v=${track.youtubeId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        YouTube
+                      </a>
+                    </Button>
+                  )}
+                  {artistInfo ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowXRay(!showXRay)}
+                      data-testid="button-xray"
+                      className={showXRay ? 'bg-primary/10' : ''}
+                    >
+                      <Info className="mr-2 h-4 w-4" />
+                      {showXRay ? 'Hide artist context' : 'See artist context'}
+                    </Button>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>

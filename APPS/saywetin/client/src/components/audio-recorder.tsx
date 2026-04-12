@@ -42,6 +42,8 @@ interface AudioRecorderProps {
   onSuccess?: (result: RecognitionResult) => void;
   listenDuration?: number;
   analyticsSource?: 'home_cta' | 'results_page' | 'other';
+  autoStart?: boolean;
+  immersive?: boolean;
 }
 
 type ApiError = Error & {
@@ -296,6 +298,8 @@ export function AudioRecorder({
   onSuccess,
   listenDuration = 5,
   analyticsSource = 'other',
+  autoStart = false,
+  immersive = false,
 }: AudioRecorderProps) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [progress, setProgress] = useState<number>(0);
@@ -307,6 +311,7 @@ export function AudioRecorder({
   const audioContextRef = useRef<AudioContext | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasAutoStartedRef = useRef(false);
 
   const cleanup = () => {
     if (streamRef.current) {
@@ -681,8 +686,22 @@ export function AudioRecorder({
     return cleanup;
   }, []);
 
+  useEffect(() => {
+    if (!autoStart || hasAutoStartedRef.current || recordingState !== 'idle') {
+      return;
+    }
+
+    hasAutoStartedRef.current = true;
+    startListening().catch((error) => {
+      console.error('Auto-start listening failed:', error);
+    });
+  }, [autoStart, recordingState]);
+
   return (
-    <div className="flex flex-col items-center gap-6 py-4" data-testid="audio-recorder">
+    <div
+      className={`flex w-full flex-col items-center gap-6 ${immersive ? 'max-w-sm py-8 text-center' : 'py-4'}`}
+      data-testid="audio-recorder"
+    >
       <AnimatePresence mode="wait">
         {recordingState === 'idle' && (
           <motion.div
@@ -694,12 +713,28 @@ export function AudioRecorder({
           >
             <button
               onClick={startListening}
-              className="relative w-32 h-32 rounded-full bg-primary hover:bg-primary/90 transition-all hover:scale-105 active:scale-95 flex items-center justify-center shadow-lg"
+              className={`relative flex items-center justify-center rounded-full transition-all active:scale-95 ${
+                immersive
+                  ? 'h-40 w-40 bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 shadow-2xl shadow-orange-500/25 hover:scale-[1.02]'
+                  : 'h-32 w-32 bg-primary shadow-lg hover:scale-105 hover:bg-primary/90'
+              }`}
               data-testid="button-start-listening"
             >
-              <Mic className="h-12 w-12 text-primary-foreground" />
+              {immersive ? (
+                <>
+                  <div className="absolute inset-1 rounded-full bg-gradient-to-br from-orange-500/95 via-amber-500/95 to-green-500/95" />
+                  <Mic className="relative z-10 h-16 w-16 text-white" />
+                </>
+              ) : (
+                <Mic className="h-12 w-12 text-primary-foreground" />
+              )}
             </button>
-            <p className="text-lg font-medium">Tap to Listen</p>
+            <div className="space-y-2 text-center">
+              <p className="text-lg font-medium">{immersive ? 'Tap to start listening' : 'Tap to Listen'}</p>
+              {immersive ? (
+                <p className="text-sm text-muted-foreground">Make sure your device can hear the song clearly</p>
+              ) : null}
+            </div>
           </motion.div>
         )}
 
@@ -711,10 +746,17 @@ export function AudioRecorder({
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4"
           >
-            <div className="w-32 h-32 rounded-full bg-primary/20 flex items-center justify-center">
-              <Loader2 className="h-12 w-12 text-primary animate-spin" />
+            <div className={`${immersive ? 'h-44 w-44' : 'h-32 w-32'} rounded-full bg-primary/10 flex items-center justify-center`}>
+              <div className={`${immersive ? 'h-28 w-28' : 'h-20 w-20'} rounded-full bg-primary/15 flex items-center justify-center`}>
+                <Loader2 className={`${immersive ? 'h-14 w-14' : 'h-12 w-12'} text-primary animate-spin`} />
+              </div>
             </div>
-            <p className="text-muted-foreground">Requesting microphone...</p>
+            <div className="space-y-2 text-center">
+              <p className="text-xl font-semibold text-foreground">Getting ready to listen</p>
+              <p className="text-sm text-muted-foreground">
+                {immersive ? 'Checking microphone access and preparing the recorder' : 'Requesting microphone...'}
+              </p>
+            </div>
           </motion.div>
         )}
 
@@ -726,7 +768,7 @@ export function AudioRecorder({
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex flex-col items-center gap-4"
           >
-            <div className="relative w-32 h-32">
+            <div className={`relative ${immersive ? 'h-52 w-52' : 'h-32 w-32'}`}>
               <motion.div
                 className="absolute inset-0 rounded-full bg-primary/20"
                 animate={{ scale: [1, 1.3, 1] }}
@@ -743,18 +785,20 @@ export function AudioRecorder({
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
               />
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center">
-                  <Volume2 className="h-8 w-8 text-primary-foreground" />
+                <div className={`${immersive ? 'h-28 w-28' : 'h-20 w-20'} rounded-full bg-primary flex items-center justify-center shadow-xl shadow-primary/20`}>
+                  <Volume2 className={`${immersive ? 'h-12 w-12' : 'h-8 w-8'} text-primary-foreground`} />
                 </div>
               </div>
             </div>
             
-            <div className="text-center">
-              <p className="text-lg font-medium">Dey hear am...</p>
-              <p className="text-sm text-muted-foreground">Make the music dey play</p>
+            <div className="space-y-2 text-center">
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Listening for music</p>
+              <p className="max-w-xs text-sm text-muted-foreground">
+                Make sure your device can hear the song clearly
+              </p>
             </div>
 
-            <div className="w-48 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className={`${immersive ? 'w-56' : 'w-48'} h-1.5 bg-muted rounded-full overflow-hidden`}>
               <motion.div 
                 className="h-full bg-primary rounded-full"
                 style={{ width: `${progress}%` }}
@@ -771,12 +815,12 @@ export function AudioRecorder({
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4"
           >
-            <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center">
-              <Loader2 className="h-12 w-12 text-primary-foreground animate-spin" />
+            <div className={`${immersive ? 'h-44 w-44' : 'h-32 w-32'} rounded-full bg-primary/90 flex items-center justify-center shadow-xl shadow-primary/20`}>
+              <Loader2 className={`${immersive ? 'h-14 w-14' : 'h-12 w-12'} text-primary-foreground animate-spin`} />
             </div>
-            <div className="text-center">
-              <p className="text-lg font-medium">Dey find am...</p>
-              <p className="text-sm text-muted-foreground">We dey check millions of songs</p>
+            <div className="space-y-2 text-center">
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Finding the song</p>
+              <p className="max-w-xs text-sm text-muted-foreground">Hold on while we match the music and pull the meaning through.</p>
             </div>
           </motion.div>
         )}
@@ -789,10 +833,15 @@ export function AudioRecorder({
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex flex-col items-center gap-4"
           >
-            <div className="w-32 h-32 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Music className="h-12 w-12 text-green-500" />
+            <div className={`${immersive ? 'h-44 w-44' : 'h-32 w-32'} rounded-full bg-green-500/15 flex items-center justify-center`}>
+              <Music className={`${immersive ? 'h-16 w-16' : 'h-12 w-12'} text-green-500`} />
             </div>
-            <p className="text-lg font-medium text-green-600 dark:text-green-400">We don catch am!</p>
+            <div className="space-y-2 text-center">
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold text-green-600 dark:text-green-400`}>We don catch am!</p>
+              {immersive ? (
+                <p className="text-sm text-muted-foreground">Taking you to the meaning now.</p>
+              ) : null}
+            </div>
             <Button
               variant="outline"
               onClick={() => setRecordingState('idle')}
@@ -813,14 +862,16 @@ export function AudioRecorder({
           >
             <button
               onClick={startListening}
-              className="relative w-32 h-32 rounded-full bg-muted hover:bg-muted/80 transition-all hover:scale-105 active:scale-95 flex items-center justify-center"
+              className={`relative flex items-center justify-center rounded-full bg-muted transition-all active:scale-95 ${
+                immersive ? 'h-40 w-40 hover:scale-[1.02]' : 'h-32 w-32 hover:scale-105 hover:bg-muted/80'
+              }`}
               data-testid="button-try-again"
             >
-              <Mic className="h-12 w-12 text-muted-foreground" />
+              <Mic className={`${immersive ? 'h-14 w-14' : 'h-12 w-12'} text-muted-foreground`} />
             </button>
-            <div className="text-center">
-              <p className="text-lg font-medium">Tap to Try Again</p>
-              <p className="text-sm text-muted-foreground">Make sure the music dey play loud</p>
+            <div className="space-y-2 text-center">
+              <p className={`${immersive ? 'text-xl' : 'text-lg'} font-medium`}>Tap to Try Again</p>
+              <p className="max-w-xs text-sm text-muted-foreground">Make sure your device can hear the song clearly</p>
             </div>
           </motion.div>
         )}
