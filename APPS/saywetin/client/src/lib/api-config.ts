@@ -8,6 +8,7 @@ declare global {
 
 const DEFAULT_DEV_API_BASE_URL = "http://127.0.0.1:8001";
 const CANONICAL_WEB_ORIGIN = "https://saywetin.app";
+const DEFAULT_PROD_API_BASE_URL = "https://ftcpeacepad-extension-production.up.railway.app";
 const API_PREFIXES = ["/api", "/health", "/__health"] as const;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
 
@@ -77,14 +78,16 @@ export function getApiBaseUrl(): string {
 
   if (typeof window !== "undefined") {
     try {
-      // Production fallback is same-origin so the app can run behind a unified host temporarily.
-      return trimTrailingSlash(window.location.origin);
+      const normalizedHost = normalizeHostname(window.location.hostname || "");
+      if (LOCAL_HOSTS.has(normalizedHost)) {
+        return trimTrailingSlash(window.location.origin);
+      }
     } catch {
-      return "";
+      return DEFAULT_PROD_API_BASE_URL;
     }
   }
 
-  return "";
+  return DEFAULT_PROD_API_BASE_URL;
 }
 
 export function getApiUrl(path: string): string {
