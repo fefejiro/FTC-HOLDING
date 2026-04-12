@@ -156,14 +156,14 @@ function getAnalysisStatusCopy(
   status: AnalysisStatusValue | ProcessingStatus | undefined,
 ): string {
   if (status === 'pending' || status === 'generating_analysis') {
-    return 'We found the song already. Deeper gist is still loading.';
+    return 'Quick meaning is ready now. Line-by-line context can keep building in the background.';
   }
 
   if (status === 'failed') {
-    return 'We found the song already. Deeper gist hit a small delay, but you can retry it without listening again.';
+    return 'You already have the main takeaway. Pull deeper line-by-line context whenever you want more detail.';
   }
 
-  return 'We found the song already. More meaning is still loading.';
+  return 'You already have the main takeaway. Extra context can still load when it is ready.';
 }
 
 function getArtistStatusCopy(status: ArtistSongInfo['status'] | undefined): string {
@@ -2124,11 +2124,11 @@ export default function RecognizedTrack() {
                   </div>
                 ) : analysisViewState === 'unavailable' || track.analysisStatus === 'failed' ? (
                   <div className="px-6 py-6 space-y-5">
-                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="space-y-1">
                           <p className="text-sm font-semibold text-primary">
-                            More meaning loading...
+                            Quick take ready
                           </p>
                           <p className="text-sm text-muted-foreground max-w-xl">
                             {analysisUnavailableMessage}
@@ -2148,7 +2148,7 @@ export default function RecognizedTrack() {
                                 Retrying...
                               </>
                             ) : (
-                              'Retry deeper gist'
+                              'Load deeper context'
                             )}
                           </Button>
                         )}
@@ -2170,11 +2170,11 @@ export default function RecognizedTrack() {
                       </div>
                     )}
 
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="secondary">Song match confirmed</Badge>
-                      <Badge variant="secondary">Lyrics ready</Badge>
-                      <Badge variant="outline">More insight still loading</Badge>
-                    </div>
+                    {primaryGist?.support ? (
+                      <p className="text-sm text-muted-foreground">
+                        {primaryGist.support}
+                      </p>
+                    ) : null}
                   </div>
                 ) : track.analysisStatus === 'generating_analysis' || track.analysisStatus === 'pending' ? (
                   <div className="text-center py-12 space-y-3">

@@ -210,6 +210,11 @@ export async function generateSectionCulturalAnalysis(
     console.log("[AI] Section analysis skipped - no AI provider configured");
     return [];
   }
+
+  if (isAiTemporarilyDegraded()) {
+    console.log("[AI] Section analysis skipped - degraded fallback mode active");
+    return [];
+  }
   
   // Filter out empty lines and very short lines
   const meaningfulLyrics = lyrics.filter(l => l.text.trim().length > 3);
@@ -293,6 +298,11 @@ export async function generateSingleLineAnalysis(
     console.log("[AI] Single-line analysis skipped - no AI provider configured");
     return null;
   }
+
+  if (isAiTemporarilyDegraded()) {
+    console.log("[AI] Single-line analysis skipped - degraded fallback mode active");
+    return null;
+  }
   
   if (lyricText.trim().length < 3) {
     return null;
@@ -359,6 +369,11 @@ export async function generateBatchCulturalAnalysis(
 
   if (!isAiConfigured()) {
     console.log("[AI] Batch analysis skipped - no AI provider configured");
+    return [];
+  }
+
+  if (isAiTemporarilyDegraded()) {
+    console.log("[AI] Batch analysis skipped - degraded fallback mode active");
     return [];
   }
   
@@ -532,6 +547,11 @@ export async function extractSongDNA(
   genre?: string,
   releaseYear?: number
 ): Promise<SongDNA | null> {
+  if (isAiTemporarilyDegraded()) {
+    console.log("[AI] Song DNA skipped - degraded fallback mode active");
+    return null;
+  }
+
   try {
     console.log(`🧬 [AI] Extracting Song DNA for "${songTitle}" by ${artistName}`);
     const startTime = Date.now();
@@ -633,7 +653,9 @@ const HALLUCINATION_PATTERNS: string[] = [
 ];
 
 const AI_QUOTA_WARNING_THROTTLE_MS = 60_000;
+const AI_DEGRADED_COOLDOWN_MS = 15 * 60_000;
 let lastAiQuotaWarningAt = 0;
+let aiDegradedUntil = 0;
 
 function isQuotaOrRateLimitError(error: unknown): boolean {
   const normalizedMessage = String((error as any)?.message || "").toLowerCase();
@@ -652,12 +674,17 @@ function isQuotaOrRateLimitError(error: unknown): boolean {
 
 function warnQuotaExhaustedOnce(): void {
   const now = Date.now();
+  aiDegradedUntil = Math.max(aiDegradedUntil, now + AI_DEGRADED_COOLDOWN_MS);
   if (now - lastAiQuotaWarningAt < AI_QUOTA_WARNING_THROTTLE_MS) {
     return;
   }
 
   lastAiQuotaWarningAt = now;
   console.warn('[ai] quota exhausted, serving degraded responses');
+}
+
+function isAiTemporarilyDegraded(): boolean {
+  return aiDegradedUntil > Date.now();
 }
 
 function cleanPhraseMeaning(meaning: string): string {
@@ -746,6 +773,10 @@ export async function generateArtistSongInfo(
   options?: ArtistInfoGenerationOptions
 ): Promise<ArtistSongInfo | null> {
   if (!isAiConfigured()) {
+    return buildUnverifiedArtistInfo(artistName, songTitle, album, genre, releaseYear);
+  }
+
+  if (isAiTemporarilyDegraded()) {
     return buildUnverifiedArtistInfo(artistName, songTitle, album, genre, releaseYear);
   }
 
@@ -882,6 +913,10 @@ export async function generateFragmentInterpretation(
   region?: string
 ): Promise<FragmentInterpretation | null> {
   if (!isAiConfigured()) {
+    return buildUnavailableFragmentInterpretation(songTitle, artistName, genre, region);
+  }
+
+  if (isAiTemporarilyDegraded()) {
     return buildUnavailableFragmentInterpretation(songTitle, artistName, genre, region);
   }
 

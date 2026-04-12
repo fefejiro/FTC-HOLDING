@@ -13,6 +13,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
 import { AudioRecorder } from '@/components/audio-recorder';
 import { isListenModeLocation, LISTEN_MODE_PATH } from '@/lib/navigation';
+import { queryClient } from '@/lib/queryClient';
 
 export default function Home() {
   const [location, navigate] = useLocation();
@@ -32,6 +33,22 @@ export default function Home() {
 
   const handleRecognitionSuccess = (result: any) => {
     if (result.recognizedTrack?.id) {
+      queryClient.setQueryData(['/api/recognized-tracks', result.recognizedTrack.id], {
+        track: {
+          ...result.recognizedTrack,
+          lyricsStatus: 'pending',
+          analysisStatus: 'failed',
+        },
+        lyrics: undefined,
+        culturalAnalysis: [],
+        status: {
+          lyrics: 'pending',
+          analysis: 'failed',
+          aiConfigured: true,
+          aiProvider: 'openai',
+          analysisMessage: 'Quick meaning is ready now. Deeper line-by-line context can still catch up.',
+        },
+      });
       navigate(`/song/${result.recognizedTrack.id}`);
     }
   };
