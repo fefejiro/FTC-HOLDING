@@ -390,11 +390,11 @@ export default function RecognizedTrack() {
       normalized.includes('failed to generate analysis');
 
     return {
-      title: isUnavailable ? 'More meaning still loading' : 'We hit small delay',
+      title: isUnavailable ? 'Quick take ready' : 'Quick take ready',
       description:
         isUnavailable
-          ? 'We found the song already. Deeper gist is taking a little longer, so you can try this line again shortly.'
-          : message || 'We already caught the song. Try this line again in a moment.',
+          ? 'You already have the main takeaway. Pull deeper line-by-line context whenever you want more detail.'
+          : message || 'You already have the main takeaway. Pull deeper line-by-line context whenever you want more detail.',
     };
   };
 
@@ -2122,7 +2122,7 @@ export default function RecognizedTrack() {
                       );
                     })()}
                   </div>
-                ) : analysisViewState === 'unavailable' || track.analysisStatus === 'failed' ? (
+                ) : (analysisViewState === 'unavailable' || track.analysisStatus === 'failed') && !primaryGist ? (
                   <div className="px-6 py-6 space-y-5">
                     <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
