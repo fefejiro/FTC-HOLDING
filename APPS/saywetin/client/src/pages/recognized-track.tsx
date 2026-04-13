@@ -151,21 +151,7 @@ interface PrimaryGistModel {
   support?: string;
 }
 
-type AnalysisStatusValue = NonNullable<RecognizedTrackDetail["status"]>["analysis"];
 
-function getAnalysisStatusCopy(
-  status: AnalysisStatusValue | ProcessingStatus | undefined,
-): string {
-  if (status === 'pending' || status === 'generating_analysis') {
-    return 'Quick meaning is ready now. Line-by-line context can keep building in the background.';
-  }
-
-  if (status === 'failed') {
-    return 'You already have the main takeaway. Pull deeper line-by-line context whenever you want more detail.';
-  }
-
-  return 'You already have the main takeaway. Extra context can still load when it is ready.';
-}
 
 function getArtistStatusCopy(status: ArtistSongInfo['status'] | undefined): string {
   if (status === 'failed') {
@@ -830,9 +816,6 @@ export default function RecognizedTrack() {
     !trackId ||
     (!!trackId && !data && sseComplete && !queryLoading);
   const analysisViewState = data?.status?.analysis;
-  const analysisUnavailableMessage = getAnalysisStatusCopy(
-    analysisViewState || data?.track?.analysisStatus,
-  );
 
   const handleBackNavigation = () => {
     // Always navigate to Home idle — never re-enter listen mode from Back
@@ -1873,36 +1856,24 @@ export default function RecognizedTrack() {
               <CardContent className="p-0">
                 {displayBlocks.length > 0 && displayBlocks.some(b => b.hasAnalyses) ? (
                   <div className="px-6 py-4">
-                    {showInlineAnalysisFallback && !primaryGist && (
-                      <div className="mb-5 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-primary">
-                              Quick take ready
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {analysisUnavailableMessage}
-                            </p>
-                          </div>
-                          {canRetryEnrichment && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => retryEnrichmentMutation.mutate()}
-                              disabled={retryEnrichmentMutation.isPending}
-                              data-testid="button-retry-deeper-gist-inline"
-                            >
-                              {retryEnrichmentMutation.isPending ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Retrying...
-                                </>
-                              ) : (
-                                'Load deeper context'
-                              )}
-                            </Button>
+                    {showInlineAnalysisFallback && !primaryGist && canRetryEnrichment && (
+                      <div className="mb-5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => retryEnrichmentMutation.mutate()}
+                          disabled={retryEnrichmentMutation.isPending}
+                          data-testid="button-retry-deeper-gist-inline"
+                        >
+                          {retryEnrichmentMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Retrying...
+                            </>
+                          ) : (
+                            'Load deeper context'
                           )}
-                        </div>
+                        </Button>
                       </div>
                     )}
                     {/* Clean flowing lyrics - only show blocks with analyses */}
@@ -2084,36 +2055,24 @@ export default function RecognizedTrack() {
                   </div>
                 ) : (analysisViewState === 'unavailable' || track.analysisStatus === 'failed') && !primaryGist ? (
                   <div className="px-6 py-6 space-y-5">
-                    <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-primary">
-                            Quick take ready
-                          </p>
-                          <p className="text-sm text-muted-foreground max-w-xl">
-                            {analysisUnavailableMessage}
-                          </p>
-                        </div>
-                        {canRetryEnrichment && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => retryEnrichmentMutation.mutate()}
-                            disabled={retryEnrichmentMutation.isPending}
-                            data-testid="button-retry-deeper-gist"
-                          >
-                            {retryEnrichmentMutation.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Retrying...
-                              </>
-                            ) : (
-                              'Load deeper context'
-                            )}
-                          </Button>
+                    {canRetryEnrichment && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => retryEnrichmentMutation.mutate()}
+                        disabled={retryEnrichmentMutation.isPending}
+                        data-testid="button-retry-deeper-gist"
+                      >
+                        {retryEnrichmentMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Retrying...
+                          </>
+                        ) : (
+                          'Load deeper context'
                         )}
-                      </div>
-                    </div>
+                      </Button>
+                    )}
 
                     {lyricsPreviewLines.length > 0 && (
                       <div className="space-y-3">
@@ -2148,13 +2107,7 @@ export default function RecognizedTrack() {
                       Pulling together lyric meaning and context for the lines you heard.
                     </p>
                   </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">
-                      You already have the main takeaway. Open a line whenever you want deeper context.
-                    </p>
-                  </div>
-                )}
+                ) : null}
               </CardContent>
             </Card>
           )}
