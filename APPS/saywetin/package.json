@@ -1,6 +1,6 @@
 {
     "name": "@ftc/saywetin",
-    "version": "1.0.1",
+    "version": "1.0.6",
     "type": "module",
     "license": "MIT",
     "scripts": {
