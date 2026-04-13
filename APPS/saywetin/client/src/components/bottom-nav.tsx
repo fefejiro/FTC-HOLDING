@@ -1,8 +1,9 @@
 import { useLocation } from 'wouter';
-import { Home, User } from 'lucide-react';
+import { Home, Clock, User } from 'lucide-react';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
+  { path: '/history', icon: Clock, label: 'Recent' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 

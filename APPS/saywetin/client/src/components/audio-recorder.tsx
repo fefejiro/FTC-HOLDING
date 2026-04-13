@@ -737,24 +737,6 @@ export function AudioRecorder({
       }
 
       setRecordingState('success');
-      toast({
-        title: 'We don catch am!',
-        description: (
-          <div className="flex items-center gap-3 mt-1">
-            {result.recognizedTrack.coverArtUrl && (
-              <img 
-                src={result.recognizedTrack.coverArtUrl} 
-                alt={result.recognizedTrack.title} 
-                className="w-10 h-10 rounded object-cover"
-              />
-            )}
-            <div>
-              <p className="font-semibold">{result.recognizedTrack.title}</p>
-              <p className="text-sm opacity-90">{result.recognizedTrack.artist}</p>
-            </div>
-          </div>
-        ) as any,
-      });
 
       if (onSuccess) {
         onSuccess(result);

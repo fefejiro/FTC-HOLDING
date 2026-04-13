@@ -49,7 +49,6 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { getApiUrl } from '@/lib/api-config';
 import { LISTEN_MODE_PATH } from '@/lib/navigation';
 import { STORY_MODE_ENABLED } from '@/lib/features';
-import { useToast } from '@/hooks/use-toast';
 import {
   parseAnalysesWithSlang,
   calculateYouWereHereIndex,
@@ -242,11 +241,6 @@ interface ProgressBarProps {
   analysisCount?: number;
 }
 
-const INITIAL_DOCUMENT_LOCATION =
-  typeof window !== 'undefined'
-    ? `${window.location.pathname}${window.location.search}${window.location.hash}`
-    : null;
-
 function RecognitionHoldingScreen({
   title,
   description,
@@ -421,7 +415,6 @@ function ProgressBar({ lyricsStatus, analysisStatus, analysisCount = 0 }: Progre
 export default function RecognizedTrack() {
   const params = useParams();
   const [, navigate] = useLocation();
-  const { toast } = useToast();
   const trackId = params.id;
   const [isProcessing, setIsProcessing] = useState(true);
   const [prevAnalysisCount, setPrevAnalysisCount] = useState(0);
@@ -433,8 +426,6 @@ export default function RecognizedTrack() {
   // X-Ray artist info state - auto-show when track loads
   const [showXRay, setShowXRay] = useState(false);
   const hasAutoShownXRay = useRef(false);
-  const [hasShownUnlockedMessage, setHasShownUnlockedMessage] = useState(false);
-  
   // Mini-game state
   const [showMiniGame, setShowMiniGame] = useState(false);
   
@@ -443,8 +434,6 @@ export default function RecognizedTrack() {
   // Streaming state - tracks partial content for typing effect
   const [streamingContent, setStreamingContent] = useState<Map<string, string>>(new Map());
   const [artworkLoadFailed, setArtworkLoadFailed] = useState(false);
-  const directEntryFallbackSeeded = useRef(false);
-
   // Anonymous interaction logging for behavioral analytics
   const { logInteraction } = useInteractionLogger(trackId, undefined);
   const hasLoggedRecognition = useRef(false);
@@ -462,23 +451,6 @@ export default function RecognizedTrack() {
       next.delete(lyricText);
       return next;
     });
-  };
-
-  const getAnalysisIssuePresentation = (message?: string) => {
-    const normalized = (message || '').toLowerCase();
-    const isUnavailable =
-      normalized.includes('unavailable') ||
-      normalized.includes('service unavailable') ||
-      normalized.includes('503') ||
-      normalized.includes('failed to generate analysis');
-
-    return {
-      title: isUnavailable ? 'Quick take ready' : 'Quick take ready',
-      description:
-        isUnavailable
-          ? 'You already have the main takeaway. Pull deeper line-by-line context whenever you want more detail.'
-          : message || 'You already have the main takeaway. Pull deeper line-by-line context whenever you want more detail.',
-    };
   };
 
   const firstSentence = (value?: string | null): string | undefined => {
@@ -657,26 +629,15 @@ export default function RecognizedTrack() {
         }
         throw new Error(failureMessage);
       }
-      
+
       const result = await response.json();
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
       } else {
-        const issue = getAnalysisIssuePresentation(result.message);
-        toast({
-          title: issue.title,
-          description: issue.description,
-        });
+        console.warn('[ANALYZE] Analysis issue:', result.message);
       }
     } catch (err) {
       console.error('[ANALYZE] Fetch fallback failed:', err);
-      const issue = getAnalysisIssuePresentation(
-        err instanceof Error ? err.message : undefined,
-      );
-      toast({
-        title: issue.title,
-        description: issue.description,
-      });
     } finally {
       clearLineState(lyricText);
     }
@@ -733,11 +694,7 @@ export default function RecognizedTrack() {
         } else if (parsed.type === 'error') {
           clearTimeout(sseTimeout);
           clearLineState(lyricText);
-          const issue = getAnalysisIssuePresentation(parsed.data);
-          toast({
-            title: issue.title,
-            description: issue.description,
-          });
+          console.warn('[ANALYZE] SSE error:', parsed.data);
           eventSource.close();
         }
       } catch (e) {
@@ -767,10 +724,6 @@ export default function RecognizedTrack() {
       return response;
     },
     onSuccess: () => {
-      toast({
-        title: 'Lyrics submitted!',
-        description: 'Generating cultural analysis now...',
-      });
       setShowContributeForm(false);
       setContributedLyrics('');
       setIsProcessing(true);
@@ -779,11 +732,7 @@ export default function RecognizedTrack() {
       queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
     },
     onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to submit lyrics. Please try again.',
-        variant: 'destructive',
-      });
+      console.error('[CONTRIBUTE] Failed to submit lyrics.');
     },
   });
 
@@ -847,36 +796,6 @@ export default function RecognizedTrack() {
     };
   }, [trackId]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !trackId || directEntryFallbackSeeded.current) {
-      return;
-    }
-
-    const currentLocation = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    const openedDirectlyOnCurrentTrack = INITIAL_DOCUMENT_LOCATION === currentLocation;
-
-    if (!openedDirectlyOnCurrentTrack) {
-      return;
-    }
-
-    const currentState = window.history.state || {};
-    if ((currentState as { __saywetinFallbackSeeded?: boolean }).__saywetinFallbackSeeded) {
-      directEntryFallbackSeeded.current = true;
-      return;
-    }
-
-    window.history.replaceState(
-      { ...(currentState as Record<string, unknown>), __saywetinListenFallback: true },
-      '',
-      LISTEN_MODE_PATH,
-    );
-    window.history.pushState(
-      { ...(currentState as Record<string, unknown>), __saywetinFallbackSeeded: true },
-      '',
-      currentLocation,
-    );
-    directEntryFallbackSeeded.current = true;
-  }, [trackId]);
   
   // Regular query as fallback (used when SSE is done or for cached data)
   // refetchInterval kicks in when SSE has ended but analysis is still running
@@ -916,23 +835,8 @@ export default function RecognizedTrack() {
   );
 
   const handleBackNavigation = () => {
-    if (typeof window !== 'undefined') {
-      const currentLocation = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-      const currentHistoryState = (window.history.state || {}) as { __saywetinFallbackSeeded?: boolean };
-      const hasUsefulHistoryTarget =
-        window.history.length > 1 &&
-        (
-          INITIAL_DOCUMENT_LOCATION !== currentLocation ||
-          currentHistoryState.__saywetinFallbackSeeded === true
-        );
-
-      if (hasUsefulHistoryTarget) {
-        window.history.back();
-        return;
-      }
-    }
-
-    navigate(LISTEN_MODE_PATH);
+    // Always navigate to Home idle — never re-enter listen mode from Back
+    navigate('/');
   };
 
   useEffect(() => {
@@ -1011,22 +915,11 @@ export default function RecognizedTrack() {
 
       return payload;
     },
-    onSuccess: (payload) => {
-      toast({
-        title: 'Deeper gist don restart',
-        description:
-          payload?.message || 'We dey pull more meaning from the song you already matched.',
-      });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
     },
     onError: (error) => {
-      toast({
-        title: 'Retry no gree yet',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'We no fit restart the deeper gist right now.',
-      });
+      console.error('[RETRY] Enrichment retry failed:', error);
     },
   });
 
@@ -1158,20 +1051,6 @@ export default function RecognizedTrack() {
       data?.track.analysisStatus === 'failed' ||
       ((data?.culturalAnalysis?.length || 0) === 0 && data?.track.analysisStatus !== 'generating_analysis'));
 
-  // Show "Stories unlocked!" toast when processing completes
-  useEffect(() => {
-    if (!STORY_MODE_ENABLED) {
-      return;
-    }
-
-    if (data && !isInProcessingState && !hasShownUnlockedMessage && data.culturalAnalysis && data.culturalAnalysis.length > 0) {
-      setHasShownUnlockedMessage(true);
-      toast({
-        title: "Stories unlocked!",
-        description: "Tap a line to explore.",
-      });
-    }
-  }, [data, isInProcessingState, hasShownUnlockedMessage, toast]);
 
 
   // Get step status for loading indicator

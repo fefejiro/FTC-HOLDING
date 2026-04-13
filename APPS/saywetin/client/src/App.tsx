@@ -13,6 +13,7 @@ import Home from "@/pages/home";
 import SongDetail from "@/pages/song-detail";
 import RecognizedTrack from "@/pages/recognized-track";
 import Explore from "@/pages/explore";
+import History from "@/pages/history";
 import Contribute from "@/pages/contribute";
 import Admin from "@/pages/admin";
 import Profile from "@/pages/profile";
@@ -26,6 +27,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/explore" component={Explore} />
+      <Route path="/history" component={History} />
       <Route path="/song/:id" component={RecognizedTrack} />
       <Route path="/recognized-track/:id" component={RecognizedTrack} />
       <Route path="/traditional/:id" component={SongDetail} />

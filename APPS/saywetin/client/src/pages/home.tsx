@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, LogOut, UserCircle, Mic, PenLine, X } from 'lucide-react';
+import { User, LogOut, UserCircle, Mic, PenLine, X, Clock } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
 import { AudioRecorder } from '@/components/audio-recorder';
@@ -150,14 +150,26 @@ export default function Home() {
                 </button>
               </div>
 
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/explore')}
-                className="mt-8 text-sm text-muted-foreground hover:text-foreground"
-                data-testid="button-type-lyrics-instead"
-              >
-                Type lyrics instead
-              </Button>
+              <div className="mt-8 flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/explore')}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                  data-testid="button-type-lyrics-instead"
+                >
+                  Type lyrics instead
+                </Button>
+                <span className="text-muted-foreground/40 text-xs">·</span>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/history')}
+                  className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5"
+                  data-testid="button-recent"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Recent
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
