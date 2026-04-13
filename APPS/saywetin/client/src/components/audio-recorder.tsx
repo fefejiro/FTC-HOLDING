@@ -773,7 +773,7 @@ export function AudioRecorder({
       className={`flex w-full flex-col items-center gap-6 ${immersive ? 'max-w-sm py-8 text-center' : 'py-4'}`}
       data-testid="audio-recorder"
     >
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="sync">
         {recordingState === 'idle' && (
           <motion.div
             key="idle"
@@ -830,13 +830,13 @@ export function AudioRecorder({
         {recordingState === 'listening' && (
           <motion.div
             key="listening"
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+            exit={{ opacity: 0, scale: 1, transition: { duration: 0.15 } }}
             className="flex flex-col items-center gap-4"
           >
             <RecognitionStageVisual mode="listening" immersive={immersive} />
-            
+
             <div className="space-y-2 text-center">
               <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Listening for music</p>
               <p className="max-w-xs text-sm text-muted-foreground">
@@ -845,7 +845,7 @@ export function AudioRecorder({
             </div>
 
             <div className={`${immersive ? 'w-56' : 'w-48'} h-1.5 bg-muted rounded-full overflow-hidden`}>
-              <motion.div 
+              <motion.div
                 className="h-full bg-primary rounded-full"
                 style={{ width: `${progress}%` }}
               />
@@ -857,8 +857,8 @@ export function AudioRecorder({
           <motion.div
             key="identifying"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: 0.2 } }}
+            exit={{ opacity: 0, transition: { duration: 0.15 } }}
             className="flex flex-col items-center gap-4"
           >
             <RecognitionStageVisual mode="matching" immersive={immersive} />

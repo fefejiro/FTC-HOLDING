@@ -420,6 +420,8 @@ export default function RecognizedTrack() {
   // Streaming state - tracks partial content for typing effect
   const [streamingContent, setStreamingContent] = useState<Map<string, string>>(new Map());
   const [artworkLoadFailed, setArtworkLoadFailed] = useState(false);
+  // Guard: true once SSE has started (connection opened), used to suppress premature error renders
+  const [sseStarted, setSseStarted] = useState(false);
   // Anonymous interaction logging for behavioral analytics
   const { logInteraction } = useInteractionLogger(trackId, undefined);
   const hasLoggedRecognition = useRef(false);
@@ -732,16 +734,25 @@ export default function RecognizedTrack() {
     setIsProcessing(true);
     setSseComplete(false);
     setSseData(null);
+    setSseStarted(false);
   }, [trackId]);
 
   useEffect(() => {
     if (!trackId) return;
-    
+
     const url = getApiUrl(`/api/recognized-tracks/${trackId}/stream`);
     const es = new EventSource(url);
     eventSourceRef.current = es;
-    
+
+    // Mark SSE as started as soon as the connection opens so we don't flash error
+    // screens from stale React Query cache before SSE has a chance to deliver data.
+    es.onopen = () => {
+      setSseStarted(true);
+    };
+    // Also mark started on first message in case onopen fires late
+
     es.addEventListener('update', (event) => {
+      setSseStarted(true);
       try {
         const parsed = JSON.parse(event.data) as RecognizedTrackDetail;
         setSseData(parsed);
@@ -808,10 +819,14 @@ export default function RecognizedTrack() {
   // Use SSE data while streaming, then switch to query data
   const data = sseData || queryData;
   const isLoading = !data && queryLoading && !sseData;
+  // Hydrating = we have a trackId, no data yet, and SSE hasn't finished (or query still running).
+  // Also treat as hydrating if SSE hasn't even started yet — prevents stale cache from flashing
+  // an error screen before the EventSource connection opens.
   const isHydratingResult =
     !!trackId &&
     !data &&
-    (!sseComplete || queryLoading);
+    (!sseStarted || !sseComplete || queryLoading);
+  // Only declare a hard failure after SSE has completed AND the fallback query has settled
   const hasFinalResultFailure =
     !trackId ||
     (!!trackId && !data && sseComplete && !queryLoading);
@@ -1151,7 +1166,7 @@ export default function RecognizedTrack() {
     );
   }
 
-  if (error || hasFinalResultFailure || !data) {
+  if ((error && sseComplete) || hasFinalResultFailure || !data) {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
