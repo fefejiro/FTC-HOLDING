@@ -15,9 +15,9 @@ import Logo from "./Logo";
 
 const productMenuItems = [
   {
-    label: "PeacePad",
-    href: "/products/peacepad",
-    description: "Pre-send communication safety."
+    label: "Dispatch",
+    href: "/products/dispatch",
+    description: "Roadside intake, routing, and incident watch."
   },
   {
     label: "SayWetin",
@@ -25,9 +25,9 @@ const productMenuItems = [
     description: "Nigerian music and context intelligence."
   },
   {
-    label: "Dispatch",
-    href: "/products/dispatch",
-    description: "Roadside intake, routing, and incident watch."
+    label: "PeacePad",
+    href: "/products/peacepad",
+    description: "Pre-send communication safety."
   }
 ] as const;
 

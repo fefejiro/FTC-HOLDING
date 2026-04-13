@@ -29,7 +29,7 @@ function getProductOverviewHref(project: ProjectCaseStudy): string {
 
 export default function ProductsPage() {
   const featuredAteam = projectCaseStudies.find((item) => item.slug === "ateam");
-  const primaryProducts = projectCaseStudies.filter((item) => item.slug !== "ateam");
+  const shippedProducts = projectCaseStudies.filter((item) => item.slug !== "ateam");
 
   return (
     <div className="container page-content products-page">
@@ -37,14 +37,57 @@ export default function ProductsPage() {
         <p className="eyebrow">Products</p>
         <h1>Products built inside Una Labs</h1>
         <p className="page-intro">
-          These products are proof that Una Labs ships real systems. PeacePad, SayWetin, and
-          Dispatch show public execution. ATEAM shows how rough ideas become structured next
-          steps and cleaner project handoff.
+          ATEAM is the core system — the workflow engine Una Labs runs internally. Dispatch,
+          SayWetin, and PeacePad are shipped products built and operated inside it.
         </p>
       </section>
 
+      {featuredAteam ? (
+        <article className="card product-spotlight-card product-spotlight-card--featured">
+          <ProductStatusBadge status={featuredAteam.status} className="product-status-badge--floating" />
+          <div className="product-spotlight-feature product-spotlight-feature--ateam">
+            <div className="product-spotlight-feature-copy">
+              <h2>ATEAM</h2>
+              <p className="muted">The core system. The workflow engine Una Labs runs internally.</p>
+              <p>
+                {ateamModeSummary} Dispatch, SayWetin, and PeacePad are built and operated inside it.
+              </p>
+              <ul className="feature-list compact-feature-list">
+                {(featuredAteam.marketingBullets ?? productCardBranding.ateam.supportPoints ?? []).map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
+              <div className="product-actions">
+                <a href={ATEAM_SITE_URL} className="btn btn-primary">
+                  Enter ATEAM
+                </a>
+                <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
+                  Start a Project
+                </Link>
+              </div>
+            </div>
+            <div className="product-ateam-visual">
+              <div className="product-ateam-visual-mark" aria-hidden="true">
+                <Image src={ATEAM_BRAND_LOGO_PATH} alt="" width={58} height={58} />
+              </div>
+              <AteamProductPreview
+                title="ATEAM workflow product preview"
+                posterSrc={ATEAM_PRODUCT_PREVIEW_ASSET.posterSrc}
+                webmSrc={ATEAM_PRODUCT_PREVIEW_ASSET.webmSrc}
+                mp4Src={ATEAM_PRODUCT_PREVIEW_ASSET.mp4Src}
+                hasVideo={ATEAM_PRODUCT_PREVIEW_ASSET.hasVideo}
+              />
+              <p className="muted">
+                Intake, routing, artifacts, and delivery state sit inside the same ATEAM flow so
+                a rough idea can become a real commercial handoff without starting over.
+              </p>
+            </div>
+          </div>
+        </article>
+      ) : null}
+
       <div className="cards-grid cards-grid-2 products-primary-grid">
-        {primaryProducts.map((project) => {
+        {shippedProducts.map((project) => {
           const branding = productCardBranding[project.slug];
           const supportPoints = project.marketingBullets ?? branding?.supportPoints ?? [];
 
@@ -92,51 +135,6 @@ export default function ProductsPage() {
           );
         })}
       </div>
-
-      {featuredAteam ? (
-        <article className="card product-spotlight-card product-spotlight-card--featured">
-          <ProductStatusBadge status={featuredAteam.status} className="product-status-badge--floating" />
-          <div className="product-spotlight-feature product-spotlight-feature--ateam">
-            <div className="product-spotlight-feature-copy">
-              <h2>ATEAM</h2>
-              <p className="muted">The intake-to-delivery engine behind the studio.</p>
-              <p>
-                {ateamModeSummary} It is strongest as the system that helps Una Labs turn rough
-                business and workflow ideas into scoped first passes, not as a detached demo.
-              </p>
-              <ul className="feature-list compact-feature-list">
-                {(featuredAteam.marketingBullets ?? productCardBranding.ateam.supportPoints ?? []).map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
-              <div className="product-actions">
-                <a href={ATEAM_SITE_URL} className="btn btn-primary">
-                  Enter ATEAM
-                </a>
-                <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
-                  Start a Project
-                </Link>
-              </div>
-            </div>
-            <div className="product-ateam-visual">
-              <div className="product-ateam-visual-mark" aria-hidden="true">
-                <Image src={ATEAM_BRAND_LOGO_PATH} alt="" width={58} height={58} />
-              </div>
-              <AteamProductPreview
-                title="ATEAM workflow product preview"
-                posterSrc={ATEAM_PRODUCT_PREVIEW_ASSET.posterSrc}
-                webmSrc={ATEAM_PRODUCT_PREVIEW_ASSET.webmSrc}
-                mp4Src={ATEAM_PRODUCT_PREVIEW_ASSET.mp4Src}
-                hasVideo={ATEAM_PRODUCT_PREVIEW_ASSET.hasVideo}
-              />
-              <p className="muted">
-                Intake, routing, artifacts, and delivery state sit inside the same ATEAM flow so
-                a rough idea can become a real commercial handoff without starting over.
-              </p>
-            </div>
-          </div>
-        </article>
-      ) : null}
 
       <article className="card final-cta-card">
         <div>

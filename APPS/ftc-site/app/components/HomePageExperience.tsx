@@ -80,7 +80,7 @@ export default function HomePageExperience() {
           <div className="section-heading home-section-heading">
             <p className="eyebrow">Products</p>
             <h2>Proof of what Una Labs ships</h2>
-            <p>Public products that show the studio can move from concept to usable system.</p>
+            <p>Dispatch, SayWetin, and PeacePad are shipped products built inside the ATEAM system.</p>
           </div>
 
           <div className="cards-grid cards-grid-3 home-product-preview-grid">

@@ -176,36 +176,74 @@ export const serviceTracks: ServiceTrack[] = [
 
 export const projectCaseStudies: ProjectCaseStudy[] = [
   {
-    slug: "peacepad",
-    name: "PeacePad",
-    tagline: "Pre-send communication safety for difficult conversations.",
-    pillar: "ai-systems",
-    tags: ["AI", "Communication", "Mobile"],
+    slug: "ateam",
+    name: "ATEAM",
+    tagline: "Trusted AI workflow infrastructure for requests that still need structure.",
+    pillar: "business-intelligence",
+    tags: ["Workflow OS", "Scoping", "Systems"],
     summary:
-      "PeacePad intervenes before a message is sent, helping users pause and choose a more constructive next action.",
-    status: "live",
-    availabilityLabel: "Live on Google Play",
-    googlePlayUrl: "https://play.google.com/store/apps/details?id=ca.peacepad.family",
+      "ATEAM is Una Labs' core workflow system. Dispatch, SayWetin, and PeacePad are shipped products built inside it.",
+    status: "beta",
+    availabilityLabel: "Cloud-native workflow",
+    marketingBullets: [...ateamModeSupportPoints],
     sections: {
       problem:
-        "High-stakes conversations often escalate because most messaging tools react only after a message is already sent.",
+        "Early project ideas are usually too fuzzy to estimate, prioritize, or move into clean execution.",
       insight:
-        "Intervening in the pre-send moment is more effective than trying to repair conflict after delivery.",
+        "People move faster when they can see how context, ownership, and delivery surfaces line up before build work begins.",
       solution:
-        "PeacePad analyzes message tone at composition time and prompts users with three choices: send original, edit manually, or send a calmer version.",
+        "ATEAM gives Una Labs a real workflow system where public intake becomes a governed run, plans stay visible before approval, and artifacts accumulate value before handoff.",
       capabilities: [
-        "Pre-send message analysis",
-        "Tone-sensitive rewrite options",
-        "Human-in-control decision flow",
-        "Communication coaching prompts"
+        "Narrative intake and clarification",
+        "Run, project, and job orchestration",
+        "Artifact generation with visible ownership",
+        "Operator review and approval gates",
+        "Conversion from preview pack into live delivery"
       ],
       technology: [
-        "Mobile-first interaction model",
-        "LLM-assisted text intervention",
-        "Cloud API integration"
+        "Cloud-backed ATEAM workflow API",
+        "Public and operator surfaces on the same model",
+        "Run-first artifact ownership and promotion"
       ],
       outcome:
-        "PeacePad is a production-facing product proving Una Labs' communication-intelligence capability."
+        `${ateamModeSummary} It presents ATEAM as a real product capability inside Una Labs instead of a generic AI app or local wrapper demo.`
+    }
+  },
+  {
+    slug: "dispatch",
+    name: "Dispatch",
+    tagline: "Ottawa roadside intake, operator routing, and live incident watch.",
+    pillar: "business-intelligence",
+    tags: ["Dispatch", "Roadside", "Operations"],
+    summary:
+      "Dispatch is Una Labs' roadside assistance system for direct customer intake, invited operator demos, and official Ottawa incident visibility.",
+    status: "early",
+    availabilityLabel: "Live on Una Labs",
+    marketingBullets: [
+      "Roadside intake in the browser",
+      "Operator workflow with live updates",
+      "Official no-key incident watch for Ottawa"
+    ],
+    sections: {
+      problem:
+        "Roadside service businesses lose time when requests, operator updates, and incident signals live in separate tools or get handled informally.",
+      insight:
+        "A lean dispatch product works best when customer intake, operator movement, and incident visibility share one live system.",
+      solution:
+        "Dispatch gives Ottawa roadside teams a browser-based request flow, invite-only operator sandbox, and continuous incident watch without depending on paid traffic feeds to get started.",
+      capabilities: [
+        "Customer roadside request intake",
+        "Operator console with live request updates",
+        "Client-safe demo flow with invite-only operator access",
+        "Official Ottawa-area incident monitoring"
+      ],
+      technology: [
+        "Cloud-hosted dispatch API and UI",
+        "Live operator/browser event feed",
+        "Public and private subdomain split"
+      ],
+      outcome:
+        "Dispatch is already live on Una Labs as a real roadside product, not a static concept page."
     }
   },
   {
@@ -247,74 +285,36 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     }
   },
   {
-    slug: "dispatch",
-    name: "Dispatch",
-    tagline: "Ottawa roadside intake, operator routing, and live incident watch.",
-    pillar: "business-intelligence",
-    tags: ["Dispatch", "Roadside", "Operations"],
+    slug: "peacepad",
+    name: "PeacePad",
+    tagline: "Pre-send communication safety for difficult conversations.",
+    pillar: "ai-systems",
+    tags: ["AI", "Communication", "Mobile"],
     summary:
-      "Dispatch is Una Labs' roadside assistance system for direct customer intake, invited operator demos, and official Ottawa incident visibility.",
-    status: "early",
-    availabilityLabel: "Live on Una Labs",
-    marketingBullets: [
-      "Roadside intake in the browser",
-      "Operator workflow with live updates",
-      "Official no-key incident watch for Ottawa"
-    ],
+      "PeacePad intervenes before a message is sent, helping users pause and choose a more constructive next action.",
+    status: "live",
+    availabilityLabel: "Live on Google Play",
+    googlePlayUrl: "https://play.google.com/store/apps/details?id=ca.peacepad.family",
     sections: {
       problem:
-        "Roadside service businesses lose time when requests, operator updates, and incident signals live in separate tools or get handled informally.",
+        "High-stakes conversations often escalate because most messaging tools react only after a message is already sent.",
       insight:
-        "A lean dispatch product works best when customer intake, operator movement, and incident visibility share one live system.",
+        "Intervening in the pre-send moment is more effective than trying to repair conflict after delivery.",
       solution:
-        "Dispatch gives Ottawa roadside teams a browser-based request flow, invite-only operator sandbox, and continuous incident watch without depending on paid traffic feeds to get started.",
+        "PeacePad analyzes message tone at composition time and prompts users with three choices: send original, edit manually, or send a calmer version.",
       capabilities: [
-        "Customer roadside request intake",
-        "Operator console with live request updates",
-        "Client-safe demo flow with invite-only operator access",
-        "Official Ottawa-area incident monitoring"
+        "Pre-send message analysis",
+        "Tone-sensitive rewrite options",
+        "Human-in-control decision flow",
+        "Communication coaching prompts"
       ],
       technology: [
-        "Cloud-hosted dispatch API and UI",
-        "Live operator/browser event feed",
-        "Public and private subdomain split"
+        "Mobile-first interaction model",
+        "LLM-assisted text intervention",
+        "Cloud API integration"
       ],
       outcome:
-        "Dispatch is already live on Una Labs as a real roadside product, not a static concept page."
-    }
-  },
-  {
-    slug: "ateam",
-    name: "ATEAM",
-    tagline: "Trusted AI workflow infrastructure for requests that still need structure.",
-    pillar: "business-intelligence",
-    tags: ["Workflow OS", "Scoping", "Systems"],
-    summary:
-      "ATEAM is Una Labs' workflow layer for turning early requests into structured plans, approval-ready runs, and decision-ready outputs.",
-    status: "beta",
-    availabilityLabel: "Cloud-native workflow",
-    marketingBullets: [...ateamModeSupportPoints],
-    sections: {
-      problem:
-        "Early project ideas are usually too fuzzy to estimate, prioritize, or move into clean execution.",
-      insight:
-        "People move faster when they can see how context, ownership, and delivery surfaces line up before build work begins.",
-      solution:
-        "ATEAM gives Una Labs a real workflow system where public intake becomes a governed run, plans stay visible before approval, and artifacts accumulate value before handoff.",
-      capabilities: [
-        "Narrative intake and clarification",
-        "Run, project, and job orchestration",
-        "Artifact generation with visible ownership",
-        "Operator review and approval gates",
-        "Conversion from preview pack into live delivery"
-      ],
-      technology: [
-        "Cloud-backed ATEAM workflow API",
-        "Public and operator surfaces on the same model",
-        "Run-first artifact ownership and promotion"
-      ],
-      outcome:
-        `${ateamModeSummary} It presents ATEAM as a real product capability inside Una Labs instead of a generic AI app or local wrapper demo.`
+        "PeacePad is a production-facing product proving Una Labs' communication-intelligence capability."
     }
   }
 ];
