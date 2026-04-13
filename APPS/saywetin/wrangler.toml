@@ -2,6 +2,3 @@ name = "saywetin-pages"
 pages_build_output_dir = "dist/public"
 compatibility_date = "2026-03-08"
 compatibility_flags = [ "nodejs_compat" ]
-
-[build]
-command = "echo 'Using pre-built dist'"
