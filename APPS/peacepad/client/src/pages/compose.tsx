@@ -5,10 +5,20 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { ensureGuestSession } from "@/lib/guestSession";
+import { markGuestUpgradeIntent } from "@/lib/guestUpgrade";
+import { trackEvent } from "@/lib/analytics";
 import { SEOHead } from "@/components/SEOHead";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
 type PreviewResponse = {
@@ -27,6 +37,15 @@ const TONE_STYLES: Record<PreviewResponse["tone"], string> = {
   escalating: "border-red-200 bg-red-50/80 text-red-950 dark:border-red-900 dark:bg-red-950/20 dark:text-red-100",
 };
 
+const COPY_COUNT_KEY = "peacepad_guest_copy_count";
+const UPGRADE_PROMPT_DISMISSED_KEY = "peacepad_guest_upgrade_prompt_dismissed";
+
+function readCopyCount(): number {
+  const raw = localStorage.getItem(COPY_COUNT_KEY);
+  const parsed = Number.parseInt(raw || "0", 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export default function ComposePage() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
@@ -35,6 +54,12 @@ export default function ComposePage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [isPreparingGuest, setIsPreparingGuest] = useState(false);
+  const [messageCopied, setMessageCopied] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [acceptedRewrite, setAcceptedRewrite] = useState(false);
+  const [copyCount, setCopyCount] = useState(0);
+  const [draftStartedAt, setDraftStartedAt] = useState<number | null>(null);
+  const [lastToneCategory, setLastToneCategory] = useState<PreviewResponse["tone"] | null>(null);
   const latestRequestId = useRef(0);
 
   useEffect(() => {
@@ -68,7 +93,14 @@ export default function ComposePage() {
       setAnalysis(null);
       setAnalysisError(null);
       setIsAnalyzing(false);
+      setAcceptedRewrite(false);
+      setDraftStartedAt(null);
+      setLastToneCategory(null);
       return;
+    }
+
+    if (!draftStartedAt) {
+      setDraftStartedAt(Date.now());
     }
 
     const requestId = ++latestRequestId.current;
@@ -84,6 +116,7 @@ export default function ComposePage() {
 
         if (latestRequestId.current === requestId) {
           setAnalysis(payload);
+          setLastToneCategory(payload.tone);
         }
       } catch (error) {
         if (latestRequestId.current === requestId) {
@@ -105,9 +138,14 @@ export default function ComposePage() {
       return;
     }
 
+    trackEvent("compose_rewrite_accepted", {
+      tone_category: analysis.tone,
+      message_length: message.trim().length,
+    });
     setMessage(analysis.rewordingSuggestion);
     setAnalysis(null);
     setAnalysisError(null);
+    setAcceptedRewrite(true);
   };
 
   const handleCopyMessage = async () => {
@@ -118,9 +156,35 @@ export default function ComposePage() {
 
     try {
       await navigator.clipboard.writeText(textToCopy);
+      const nextCopyCount = readCopyCount() + 1;
+      localStorage.setItem(COPY_COUNT_KEY, String(nextCopyCount));
+      setCopyCount(nextCopyCount);
+      setMessageCopied(true);
+      window.setTimeout(() => setMessageCopied(false), 3000);
+
+      trackEvent("guest_message_copied", {
+        tone_category: analysis?.tone ?? lastToneCategory ?? "unknown",
+        accepted_rewrite: acceptedRewrite,
+        had_tone_analysis: Boolean(analysis || lastToneCategory),
+        message_length: textToCopy.length,
+        copy_count: nextCopyCount,
+        time_spent_refining_ms: draftStartedAt ? Math.max(0, Date.now() - draftStartedAt) : null,
+      });
+
+      if (
+        nextCopyCount === 3 &&
+        localStorage.getItem(UPGRADE_PROMPT_DISMISSED_KEY) !== "true"
+      ) {
+        setShowUpgradePrompt(true);
+        trackEvent("upgrade_prompt_shown", {
+          trigger: "copy_threshold",
+          copy_count: nextCopyCount,
+        });
+      }
+
       toast({
         title: "Copied",
-        description: "Your calmer draft is ready to paste wherever you need it.",
+        description: "Paste it into your messaging app to send it to your co-parent.",
       });
     } catch {
       toast({
@@ -129,6 +193,21 @@ export default function ComposePage() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleUpgradeNow = () => {
+    markGuestUpgradeIntent();
+    trackEvent("guest_upgraded", {
+      source: "copy_threshold",
+      copy_count: copyCount,
+    });
+    setShowUpgradePrompt(false);
+    window.location.href = "/onboarding?auth=upgrade";
+  };
+
+  const handleUpgradeLater = () => {
+    localStorage.setItem(UPGRADE_PROMPT_DISMISSED_KEY, "true");
+    setShowUpgradePrompt(false);
   };
 
   return (
@@ -162,7 +241,13 @@ export default function ComposePage() {
             <div className="rounded-2xl border border-border/70 bg-background p-4 shadow-sm">
               <Textarea
                 value={message}
-                onChange={(event) => setMessage(event.target.value)}
+                onChange={(event) => {
+                  setMessage(event.target.value);
+                  setMessageCopied(false);
+                  if (acceptedRewrite) {
+                    setAcceptedRewrite(false);
+                  }
+                }}
                 placeholder="Type your message to your co-parent..."
                 className="min-h-[180px] resize-none border-0 bg-transparent p-0 text-base focus-visible:ring-0"
                 data-testid="textarea-compose-message"
@@ -215,9 +300,9 @@ export default function ComposePage() {
                           <Button type="button" size="sm" onClick={handleUseSuggestion} data-testid="button-compose-use-suggestion">
                             Use this version
                           </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={handleCopyMessage}>
+                          <Button type="button" size="sm" variant="outline" onClick={handleCopyMessage} data-testid="button-compose-copy-suggestion">
                             <Copy className="mr-2 h-4 w-4" />
-                            Copy calmer draft
+                            {messageCopied ? "Copied!" : "Copy to send"}
                           </Button>
                         </div>
                       </div>
@@ -226,6 +311,29 @@ export default function ComposePage() {
                 </div>
               </div>
             ) : null}
+
+            <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="font-medium">Ready to send it outside PeacePad?</p>
+                  <p className="text-sm text-muted-foreground">
+                    Copy your draft, then paste it into text, email, WhatsApp, or wherever you co-parent.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleCopyMessage}
+                  disabled={!message.trim()}
+                  data-testid="button-compose-copy-send"
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  {messageCopied ? "Copied!" : "Copy to Send"}
+                </Button>
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                PeacePad helps you refine the message first. You stay in control of where it gets sent.
+              </p>
+            </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="text-sm text-muted-foreground">
@@ -246,6 +354,41 @@ export default function ComposePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog
+        open={showUpgradePrompt}
+        onOpenChange={(open) => {
+          setShowUpgradePrompt(open);
+          if (!open) {
+            localStorage.setItem(UPGRADE_PROMPT_DISMISSED_KEY, "true");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md" data-testid="dialog-compose-upgrade-prompt">
+          <DialogHeader>
+            <DialogTitle>You're using PeacePad like a pro</DialogTitle>
+            <DialogDescription>
+              Sign in to keep your progress and unlock a smoother cross-device workflow.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>Sign in to unlock:</p>
+            <ul className="space-y-1">
+              <li>• Save message history</li>
+              <li>• Track your progress over time</li>
+              <li>• Access PeacePad from any device</li>
+            </ul>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button type="button" variant="outline" onClick={handleUpgradeLater}>
+              Maybe later
+            </Button>
+            <Button type="button" onClick={handleUpgradeNow} data-testid="button-compose-upgrade-now">
+              Sign in
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
