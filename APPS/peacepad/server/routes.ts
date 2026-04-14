@@ -6,6 +6,7 @@ import {
   isSoftAuthenticated,
   getUserId,
   isAuthenticatedEither,
+  requireSession,
   requireAuthOnly,
   createDemoPartnership,
   clearGuestCookie,
@@ -52,6 +53,7 @@ import {
   resolveConversationIdFromMetadata,
   type PreviewAnalysisResponse,
 } from "./services/preflightContract";
+import { analyzeTone as analyzeRuleBasedTone } from "./toneClassifier";
 
 // Build ID - generated once at module load
 const BUILD_ID = Date.now().toString();
@@ -2047,29 +2049,15 @@ Crawl-delay: 1
         return res.status(400).json({ message: "content is required" });
       }
 
-      let conversationHistory: string[] | undefined;
-      if (Array.isArray(req.body?.conversationHistory)) {
-        const normalized = req.body.conversationHistory
-          .filter((item: unknown): item is string => typeof item === "string")
-          .map((item: string) => sanitizeInput(item).trim())
-          .filter(Boolean)
-          .slice(-10);
-        if (normalized.length > 0) {
-          conversationHistory = normalized;
-        }
-      }
-
-      const { tone, summary, emoji, rewordingSuggestion } = await analyzeTone(
-        content,
-        undefined,
-        conversationHistory,
-      );
+      const toneResult = analyzeRuleBasedTone(content);
 
       return res.json({
-        tone,
-        summary,
-        emoji,
-        rewordingSuggestion: rewordingSuggestion ?? null,
+        tone: toneResult.category,
+        summary: toneResult.summary,
+        emoji: toneResult.emoji,
+        confidence: toneResult.confidence,
+        flags: toneResult.flags,
+        rewordingSuggestion: toneResult.rewordingSuggestion ?? null,
         originalMessage: content,
       });
     } catch (error) {
@@ -2080,23 +2068,29 @@ Crawl-delay: 1
 
   // Preview tone analysis without sending (AI-first feature)
   // Enhanced with Conflict Escalation Score (CES) for predictive harm prevention
-  app.post("/api/messages/preview", isAuthenticatedEither, async (req: any, res) => {
+  app.post("/api/messages/preview", requireSession, async (req: any, res) => {
     try {
-      const userId = getUserId(req);
-      const { content, conversationId } = req.body;
+      const { content } = req.body;
 
       if (!content || typeof content !== "string") {
         return res.status(400).json({ message: "Message content is required" });
       }
 
-      const previewPayload = await buildMessagePreviewPayload(
-        userId || undefined,
-        sanitizeInput(content),
-        typeof conversationId === "string" ? conversationId : undefined,
-      );
+      const sanitizedContent = sanitizeInput(content);
+      const toneResult = analyzeRuleBasedTone(sanitizedContent);
 
-      // Preserve existing route contract for current app clients.
-      res.json(mapPreviewToLegacyResponse(previewPayload));
+      res.json({
+        tone: toneResult.category,
+        summary: toneResult.summary,
+        emoji: toneResult.emoji,
+        toneSummary: toneResult.summary,
+        toneEmoji: toneResult.emoji,
+        confidence: toneResult.confidence,
+        flags: toneResult.flags,
+        rewordingSuggestion: toneResult.rewordingSuggestion ?? null,
+        originalMessage: sanitizedContent,
+        ces: null,
+      });
     } catch (error) {
       console.error("Error previewing tone:", error);
       res.status(500).json({ message: "Failed to analyze message tone" });

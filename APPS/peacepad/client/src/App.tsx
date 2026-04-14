@@ -46,6 +46,7 @@ import SettingsPage from "@/pages/settings";
 import HealthPanelPage from "@/pages/health-panel";
 import NotFound from "@/pages/not-found";
 import PrepChatPage from "@/pages/prep-chat";
+import ComposePage from "@/pages/compose";
 
 // Lazy load heavy/infrequently used pages for better performance
 const SchedulingPage = lazy(() => import("@/pages/scheduling"));
@@ -90,7 +91,7 @@ function HomeResolverPage() {
     }
 
     if (user.isGuest) {
-      setLocation("/prep-chat");
+      setLocation("/compose");
       return;
     }
 
@@ -99,7 +100,7 @@ function HomeResolverPage() {
       return;
     }
 
-    setLocation("/settings");
+    setLocation("/compose");
   }, [partnerships.length, setLocation, user]);
 
   return <PageLoader />;
@@ -173,6 +174,7 @@ function Router() {
         <Suspense fallback={<PageLoader />}>
           <Switch>
             <Route path="/" component={HomeResolverPage} />
+            <Route path="/compose" component={ComposePage} />
             <Route path="/chat" component={ChatPage} />
             <Route path="/onboarding" component={OnboardingPage} />
             <Route path="/auth/callback" component={AuthCallbackPage} />
@@ -232,7 +234,8 @@ function Router() {
           </div>
         )}
         <Switch>
-          <Route path="/" component={PrepChatPage} />
+          <Route path="/" component={ComposePage} />
+          <Route path="/compose" component={ComposePage} />
           <Route path="/prep-chat" component={PrepChatPage} />
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/auth/callback" component={AuthCallbackPage} />

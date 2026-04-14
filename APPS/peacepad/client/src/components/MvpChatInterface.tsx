@@ -100,7 +100,7 @@ function getAnalysisDisplay(preview: PreviewPayload | null): AnalysisDisplay | n
   const tone = preview.tone?.toLowerCase();
   const state = preview.ces?.state?.toLowerCase();
 
-  if (tone === "hostile" || state === "hostile" || state === "escalating") {
+  if (tone === "hostile" || tone === "escalating" || state === "hostile" || state === "escalating") {
     return "hostile";
   }
 
@@ -270,6 +270,26 @@ export default function MvpChatInterface() {
 
     localStorage.setItem(draftStorageKey, message);
   }, [draftStorageKey, message]);
+
+  useEffect(() => {
+    const draft = message.trim();
+    if (!conversation || !draft) {
+      return;
+    }
+
+    if (previewTone.isPending || analysisMessage === draft) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      trackEvent("tone_check_started", {
+        trigger: "auto",
+      });
+      previewTone.mutate(draft);
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [analysisMessage, conversation, message, previewTone]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
