@@ -65,7 +65,7 @@ export default function LandingPage() {
   return (
     <>
       <SEOHead
-        title="PeacePad | Say what you mean. Without the fight."
+        title="PeacePad | Find a softer tone for hard conversations."
         description="PeacePad helps co-parents communicate clearly with before-you-send tone guidance, Prep Chat, and custody schedule context."
         keywords="co-parenting app, co-parent communication app, calm messaging, prep chat, custody calendar, divorce communication app, separated parents app"
         ogImage="https://peacepad.ca/og-image.png"

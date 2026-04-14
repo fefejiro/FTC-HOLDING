@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Check, ClipboardList, MessageCircle, PenLine, Plus, RefreshCw, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { SEOHead } from "@/components/SEOHead";
 import { trackEvent } from "@/lib/analytics";
+import { ensureGuestSession } from "@/lib/guestSession";
 
 type PrepChatMessage = {
   role: "user" | "coach";
@@ -83,6 +85,7 @@ function formatTime(timestamp: string): string {
 
 export default function PrepChatPage() {
   const [location, setLocation] = useLocation();
+  const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const [topicInput, setTopicInput] = useState("");
   const [feeling, setFeeling] = useState("");
@@ -92,14 +95,46 @@ export default function PrepChatPage() {
   const [draftCard, setDraftCard] = useState<DraftCardState | null>(null);
   const [isEditingDraft, setIsEditingDraft] = useState(false);
   const [draftEditor, setDraftEditor] = useState("");
+  const [isBootstrappingGuest, setIsBootstrappingGuest] = useState(false);
+  const [guestBootstrapError, setGuestBootstrapError] = useState<string | null>(null);
 
   const entryPoint = useMemo(() => {
     const params = new URLSearchParams(location.split("?")[1] || "");
     return params.get("entry") || localStorage.getItem("peacepad_prep_chat_entry_point") || "nav";
   }, [location]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (isLoading || user) {
+      return;
+    }
+
+    setIsBootstrappingGuest(true);
+    setGuestBootstrapError(null);
+
+    ensureGuestSession()
+      .catch((error) => {
+        if (!cancelled) {
+          const message =
+            error instanceof Error ? error.message : "PeacePad could not start your guest session.";
+          setGuestBootstrapError(message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsBootstrappingGuest(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoading, user]);
+
   const { data: sessions = [] } = useQuery<PrepChatSession[]>({
     queryKey: ["/api/prep-chat/sessions"],
+    enabled: Boolean(user),
   });
 
   const activeSession = useMemo(
@@ -293,6 +328,68 @@ export default function PrepChatPage() {
 
   const latestUserTurnCount = activeSession?.messages.filter((item) => item.role === "user").length ?? 0;
   const coachBusy = sendPrepMessage.isPending || createSession.isPending;
+  const showBootstrapState = (!user && isLoading) || isBootstrappingGuest;
+
+  if (showBootstrapState || (!user && guestBootstrapError)) {
+    return (
+      <>
+        <SEOHead
+          title="Prep Chat - PeacePad"
+          description="Plan a hard conversation before you send it."
+          noindex
+        />
+
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 px-4 py-3">
+          <Card className="border-border/60 bg-card/80">
+            <CardHeader className="px-4 py-4">
+              <div className="space-y-1">
+                <CardTitle data-testid="text-prep-chat-title">Prep Chat</CardTitle>
+                <CardDescription>Warm, practical coaching for the hard conversations.</CardDescription>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card className="border-border/60">
+            <CardContent className="space-y-4 p-6">
+              {showBootstrapState ? (
+                <>
+                  <p className="text-sm font-medium">Preparing your private PeacePad session.</p>
+                  <p className="text-sm text-muted-foreground">
+                    We are restoring or creating a guest session so you can start writing right away.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">Guest session needs attention.</p>
+                  <p className="text-sm text-muted-foreground">{guestBootstrapError}</p>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setGuestBootstrapError(null);
+                      setIsBootstrappingGuest(true);
+                      ensureGuestSession()
+                        .catch((error) => {
+                          const message =
+                            error instanceof Error
+                              ? error.message
+                              : "PeacePad could not start your guest session.";
+                          setGuestBootstrapError(message);
+                        })
+                        .finally(() => {
+                          setIsBootstrappingGuest(false);
+                        });
+                    }}
+                  >
+                    Retry guest session
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -307,7 +404,7 @@ export default function PrepChatPage() {
           <CardHeader className="px-4 py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
-                <CardTitle>Prep Chat</CardTitle>
+                <CardTitle data-testid="text-prep-chat-title">Prep Chat</CardTitle>
                 <CardDescription>
                   Warm, practical coaching for the hard conversations.
                 </CardDescription>
@@ -367,6 +464,7 @@ export default function PrepChatPage() {
                       type="button"
                       className="rounded-2xl border border-border/70 bg-background p-4 text-left transition hover:bg-muted/30"
                       onClick={() => setEntryMode("received")}
+                      data-testid="button-prep-chat-received"
                     >
                       <div className="mb-2 flex items-center gap-2">
                         <ClipboardList className="h-5 w-5 text-sky-500" />
@@ -380,6 +478,7 @@ export default function PrepChatPage() {
                       type="button"
                       className="rounded-2xl border border-border/70 bg-background p-4 text-left transition hover:bg-muted/30"
                       onClick={() => setEntryMode("sending")}
+                      data-testid="button-prep-chat-sending"
                     >
                       <div className="mb-2 flex items-center gap-2">
                         <PenLine className="h-5 w-5 text-amber-500" />
@@ -404,8 +503,9 @@ export default function PrepChatPage() {
                     <Textarea
                       value={topicInput}
                       onChange={(event) => setTopicInput(event.target.value)}
-                      placeholder={entryMode === "received" ? "Paste what they sent..." : "What’s going on? Start anywhere."}
+                      placeholder={entryMode === "received" ? "Paste what they sent..." : "What's going on? Start anywhere."}
                       className="min-h-[112px] resize-none"
+                      data-testid="textarea-prep-chat-topic"
                     />
 
                     {/* Feeling chips — optional, after input */}
@@ -451,6 +551,7 @@ export default function PrepChatPage() {
                       onClick={handleStartSession}
                       disabled={!topicInput.trim() || coachBusy}
                       className="w-full sm:w-auto"
+                      data-testid="button-prep-chat-start"
                     >
                       {coachBusy ? (
                         <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -504,7 +605,10 @@ export default function PrepChatPage() {
                   )}
 
                   {draftCard && (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+                    <div
+                      className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900 dark:bg-amber-950/20"
+                      data-testid="card-prep-chat-draft"
+                    >
                       <div className="space-y-1">
                         <p className="font-medium">Your draft</p>
                         <p className="text-sm text-muted-foreground">{draftCard.note}</p>
@@ -548,6 +652,7 @@ export default function PrepChatPage() {
                     onChange={(event) => setComposer(event.target.value)}
                     placeholder="What would you like to work on next?"
                     className="min-h-[104px] resize-none"
+                    data-testid="textarea-prep-chat-composer"
                   />
 
                   <div className="flex flex-wrap gap-2">
@@ -585,6 +690,7 @@ export default function PrepChatPage() {
                       onClick={handleGenerateDraft}
                       disabled={latestUserTurnCount === 0 || generateDraft.isPending}
                       className="flex-1 sm:flex-none"
+                      data-testid="button-prep-chat-draft"
                     >
                       {generateDraft.isPending ? (
                         <RefreshCw className="mr-2 h-4 w-4 animate-spin" />

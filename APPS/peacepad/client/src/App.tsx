@@ -89,6 +89,11 @@ function HomeResolverPage() {
       return;
     }
 
+    if (user.isGuest) {
+      setLocation("/prep-chat");
+      return;
+    }
+
     if (user.activePartnershipId || partnerships.length > 0) {
       setLocation("/chat");
       return;
@@ -151,7 +156,8 @@ function Router() {
     const hasCompletedOnboarding = Boolean(localStorage.getItem(`onboarding_completed_${user.id}`));
     const needsOnboarding =
       !hasCompletedOnboarding &&
-      (!hasMeaningfulDisplayName(user.displayName) || Boolean(user.isGuest));
+      !Boolean(user.isGuest) &&
+      !hasMeaningfulDisplayName(user.displayName);
     const isOnOnboardingPage = location === "/onboarding";
     const isOnJoinPage = location.startsWith("/join/");
 
@@ -226,7 +232,8 @@ function Router() {
           </div>
         )}
         <Switch>
-          <Route path="/" component={OnboardingPage} />
+          <Route path="/" component={PrepChatPage} />
+          <Route path="/prep-chat" component={PrepChatPage} />
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/auth/callback" component={AuthCallbackPage} />
           <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />

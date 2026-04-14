@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Copy, Download, ExternalLink, LogOut, Mail, MessageSquare, Upload, Users } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -14,8 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { SEOHead } from "@/components/SEOHead";
 import { JoinPartnershipDialog } from "@/components/JoinPartnershipDialog";
 import { trackEvent } from "@/lib/analytics";
+import { markGuestUpgradeIntent } from "@/lib/guestUpgrade";
 
 export default function SettingsPage() {
+  const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -59,6 +61,86 @@ export default function SettingsPage() {
       activePartnership.partner?.email ||
       "your co-parent"
     : null;
+
+  const handleGuestUpgrade = () => {
+    markGuestUpgradeIntent();
+    setLocation("/onboarding?auth=upgrade");
+  };
+
+  if (user?.isGuest) {
+    return (
+      <>
+        <SEOHead title="You - PeacePad" description="Sign in to save and sync your PeacePad data." noindex />
+
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-4">
+          <Card className="border-border/60">
+            <CardHeader>
+              <CardTitle>Save your PeacePad progress</CardTitle>
+              <CardDescription>
+                You are using a guest session right now. Sign in when you want saved history, cross-device sync,
+                and full account management.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+                Prep Chat stays available as a guest. Signing in upgrades this session instead of starting over.
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button type="button" onClick={handleGuestUpgrade} data-testid="button-guest-upgrade-sign-in">
+                  Sign in to save and sync
+                </Button>
+                <Button asChild type="button" variant="outline">
+                  <Link href="/prep-chat">Keep using Prep Chat</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60">
+            <CardHeader>
+              <CardTitle className="text-lg">Available without login</CardTitle>
+              <CardDescription>Helpful links stay available while you keep testing the guest flow.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button asChild type="button" variant="outline" className="w-full justify-start">
+                <a href="/resources">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Support resources
+                </a>
+              </Button>
+              <Button asChild type="button" variant="outline" className="w-full justify-start">
+                <a href="/privacy">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Privacy policy
+                </a>
+              </Button>
+              <Button asChild type="button" variant="outline" className="w-full justify-start">
+                <a href="/terms">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Terms
+                </a>
+              </Button>
+              <Button
+                asChild
+                type="button"
+                variant="outline"
+                className="w-full justify-start"
+              >
+                <a href="mailto:peacepad@peacepad.ca?subject=PeacePad guest support">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Help and feedback
+                </a>
+              </Button>
+              <Button type="button" variant="ghost" className="w-full justify-start text-destructive" onClick={() => void logout()}>
+                <LogOut className="mr-2 h-4 w-4" />
+                End guest session
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
 
   const saveProfile = async (nextPhotoUrl?: string | null) => {
     if (!displayName.trim()) {

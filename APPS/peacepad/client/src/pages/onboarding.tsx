@@ -2,7 +2,7 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, CheckCircle, Copy, Mail, MessageSquare, RefreshCw, Sparkles, Upload } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { hasSupabaseAuthConfig, rememberAuthRedirectState, sendMagicLink } from "@/lib/supabaseAuth";
+import { rememberAuthRedirectState, sendMagicLink } from "@/lib/supabaseAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SEOHead } from "@/components/SEOHead";
 import { trackEvent } from "@/lib/analytics";
+import { ensureGuestSession } from "@/lib/guestSession";
 
 type PathChoice = "prep_chat" | "invite" | null;
 
@@ -35,11 +36,12 @@ function isMeaningfulDisplayName(value?: string | null): boolean {
 }
 
 export default function OnboardingPage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 1.5 | 2 | 3 | 4 | 5>(1);
   const [authEmail, setAuthEmail] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [isSendingLink, setIsSendingLink] = useState(false);
   const [displayName, setDisplayName] = useState("");
@@ -89,6 +91,17 @@ export default function OnboardingPage() {
   }, [isLoading, step, user?.id, user?.isGuest]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const authIntent = new URLSearchParams(window.location.search).get("auth");
+    if (authIntent === "upgrade" && step < 2) {
+      setStep(2);
+    }
+  }, [location, step]);
+
+  useEffect(() => {
     if (isLoading) {
       return;
     }
@@ -102,39 +115,16 @@ export default function OnboardingPage() {
     }
   }, [isLoading, onboardingComplete, setLocation, user]);
 
-  const ensureGuestSession = async () => {
+  const bootstrapGuestSession = async () => {
     if (user) {
       return user.id;
     }
 
     setIsBootstrapping(true);
     try {
-      const existingSessionId = localStorage.getItem("peacepad_session_id");
-      const response = await fetch("/api/auth/guest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          sessionId: existingSessionId || undefined,
-          hasAcceptedConsent: true,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Could not start your PeacePad session.");
-      }
-
-      const data = await response.json();
-      localStorage.setItem("hasSeenIntro", "true");
-      localStorage.setItem("hasAcceptedConsent", "true");
-      localStorage.setItem("aiMessageConsent", "true");
-
-      if (typeof data.sessionId === "string") {
-        localStorage.setItem("peacepad_session_id", data.sessionId);
-      }
-
+      const guestUser = await ensureGuestSession();
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      return data.user?.id as string | undefined;
+      return guestUser?.id;
     } finally {
       setIsBootstrapping(false);
     }
@@ -177,7 +167,7 @@ export default function OnboardingPage() {
     setPhotoPreview(previewUrl);
 
     try {
-      await ensureGuestSession();
+      await bootstrapGuestSession();
       const uploadedUrl = await uploadProfilePhoto(file);
       setUploadedPhotoUrl(uploadedUrl);
       setPhotoPreview(uploadedUrl);
@@ -197,12 +187,8 @@ export default function OnboardingPage() {
   };
 
   const handleContinueFromTour = async () => {
-    if (hasSupabaseAuthConfig()) {
-      setStep(2);
-      return;
-    }
     try {
-      await ensureGuestSession();
+      await bootstrapGuestSession();
       setStep(3);
     } catch (error) {
       toast({
@@ -224,14 +210,17 @@ export default function OnboardingPage() {
       return;
     }
     setIsSendingLink(true);
+    setAuthError(null);
     try {
       rememberAuthRedirectState("/onboarding");
       await sendMagicLink(email);
       setMagicLinkSent(true);
     } catch (error) {
+      const description = error instanceof Error ? error.message : "Please try again.";
+      setAuthError(description);
       toast({
         title: "Could not send link",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description,
         variant: "destructive",
       });
     } finally {
@@ -252,7 +241,7 @@ export default function OnboardingPage() {
 
     setIsSavingProfile(true);
     try {
-      await ensureGuestSession();
+      await bootstrapGuestSession();
       await apiRequest("PATCH", "/api/user/profile", {
         displayName: trimmedName,
         profileImageUrl: uploadedPhotoUrl || undefined,
@@ -340,7 +329,7 @@ export default function OnboardingPage() {
 
   return (
     <>
-      <SEOHead title="Welcome to PeacePad" description="Say what you mean. Without the fight." noindex />
+      <SEOHead title="Welcome to PeacePad" description="Find a softer tone before you send something hard." noindex />
 
       <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,_rgba(255,216,100,0.18),_transparent_32%),linear-gradient(180deg,_rgba(255,255,255,0.9),_rgba(255,255,255,1))] px-4 py-6 dark:bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.14),_transparent_30%),linear-gradient(180deg,_rgba(5,5,5,0.94),_rgba(0,0,0,1))]">
         <div className="mx-auto flex w-full max-w-md flex-col gap-4">
@@ -349,9 +338,9 @@ export default function OnboardingPage() {
               {step === 1 && (
                 <>
                   <div className="space-y-2">
-                    <CardTitle className="text-3xl leading-tight">Say what you mean. Without the fight.</CardTitle>
+                    <CardTitle className="text-3xl leading-tight">Find a softer tone for hard conversations.</CardTitle>
                     <CardDescription className="text-base">
-                      For co-parents who want to say the hard thing without making it worse.
+                      For co-parents who want help saying something difficult more calmly.
                     </CardDescription>
                   </div>
                 </>
@@ -409,6 +398,14 @@ export default function OnboardingPage() {
                           placeholder="you@example.com"
                           onKeyDown={(e) => { if (e.key === "Enter") void handleSendMagicLink(); }}
                         />
+                        {authError ? (
+                          <p className="text-sm text-destructive" data-testid="text-auth-magic-link-error">
+                            {authError}
+                          </p>
+                        ) : null}
+                        <p className="text-xs text-muted-foreground">
+                          PeacePad still works without login. Sign-in is only needed for saved history and sync.
+                        </p>
                       </div>
                     </>
                   ) : (
@@ -596,7 +593,7 @@ export default function OnboardingPage() {
                   onClick={() =>
                     setStep((current) => {
                       if (current === 4) return 3;
-                      if (current === 3) return hasSupabaseAuthConfig() ? 2 : 1.5;
+                      if (current === 3) return 1.5;
                       if (current === 2) return 1.5;
                       if (current === 1.5) return 1;
                       return 1;

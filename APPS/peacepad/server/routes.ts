@@ -6,6 +6,7 @@ import {
   isSoftAuthenticated,
   getUserId,
   isAuthenticatedEither,
+  requireAuthOnly,
   createDemoPartnership,
   clearGuestCookie,
   resolveGuestIdentity,
@@ -1887,7 +1888,7 @@ Crawl-delay: 1
   });
 
   // Export user data (GDPR compliance)
-  app.get("/api/user/export", isAuthenticatedEither, async (req: any, res) => {
+  app.get("/api/user/export", requireAuthOnly, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
