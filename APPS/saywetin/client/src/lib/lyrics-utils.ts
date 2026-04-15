@@ -299,8 +299,8 @@ export function estimateMomentLineIndex(
 }
 
 export type TrackMatchConfidence = "high" | "medium" | "low";
-export type PhraseAlignmentConfidence = "medium" | "low";
-export type PhraseCaptureKind = "approximate_match" | "instrumental" | "no_clear_lyric";
+export type PhraseAlignmentConfidence = "high" | "low";
+export type PhraseCaptureKind = "exact_match" | "instrumental" | "no_clear_lyric";
 
 export interface PhraseCaptureModel {
   kind: PhraseCaptureKind;
@@ -311,6 +311,7 @@ export interface PhraseCaptureModel {
   alignmentConfidence: PhraseAlignmentConfidence;
   sectionLabel?: string;
   highlightedLineIndexes: number[];
+  anchoredLineIndex?: number;
 }
 
 function getTrackMatchConfidence(confidenceScore?: number): TrackMatchConfidence {
@@ -367,14 +368,35 @@ export function buildPhraseCaptureModel(
   const endIndex = Math.min(orderedLines.length, estimatedIndex + 2);
   const highlightedLines = orderedLines.slice(startIndex, endIndex);
   const highlightedLineIndexes = highlightedLines.map((line) => line.lineIndex);
+  const anchoredLine = orderedLines[estimatedIndex];
   const analyzedCount = highlightedLines.filter((line) => line.analysis).length;
+  const hasAnchoredLyricAnalysis = Boolean(anchoredLine?.analysis);
+  const hasExactLyricAnchor =
+    hasAnchoredLyricAnalysis &&
+    analyzedCount >= 2 &&
+    trackMatchConfidence === "high";
+
+  if (hasExactLyricAnchor) {
+    return {
+      kind: "exact_match",
+      title: "Exact lyric captured",
+      description:
+        "The song and vocal moment are both locked tightly enough to show one specific lyric line.",
+      helper: "You can open the full lyrics below for more context around this line.",
+      trackMatchConfidence,
+      alignmentConfidence: "high",
+      sectionLabel,
+      highlightedLineIndexes,
+      anchoredLineIndex: anchoredLine.lineIndex,
+    };
+  }
 
   if (analyzedCount === 0) {
     return {
       kind: "instrumental",
       title: "No clear vocal line locked yet",
       description:
-        "This part of the song sounds instrumental or too loose for exact lyric timing, so we are showing the closest section instead of pretending.",
+        "This part of the song sounds instrumental or too loose for exact lyric timing, so we are not pretending to hear words that are not clearly there.",
       helper: "Try another listen when the vocals are clearer and we will narrow it down.",
       trackMatchConfidence,
       alignmentConfidence: "low",
@@ -384,13 +406,13 @@ export function buildPhraseCaptureModel(
   }
 
   return {
-    kind: "approximate_match",
-    title: "Closest lyric match",
+    kind: "no_clear_lyric",
+    title: "No clear lyric captured yet",
     description:
-      "The song match is solid, but this lyric timing is still approximate. We are not claiming an exact timestamped phrase here.",
-    helper: "Tap any line below for a full breakdown, or listen again during a stronger vocal moment.",
+      "We matched the song, but this listen does not support one exact lyric line strongly enough yet.",
+    helper: "Try again during a clearer vocal line for a more trustworthy lyric lock.",
     trackMatchConfidence,
-    alignmentConfidence: analyzedCount >= 2 && trackMatchConfidence === "high" ? "medium" : "low",
+    alignmentConfidence: "low",
     sectionLabel,
     highlightedLineIndexes,
   };

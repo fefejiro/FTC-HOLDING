@@ -1258,16 +1258,32 @@ export default function RecognizedTrack() {
   );
   const primaryGistSupport = primaryGist?.support;
   const primaryMomentRow = useMemo(
-    () => momentRows.find((row) => row.analysis) || momentRows[0] || null,
-    [momentRows],
+    () =>
+      phraseCapture.kind === 'exact_match' && typeof phraseCapture.anchoredLineIndex === 'number'
+        ? orderedLyricLines.find((row) => row.lineIndex === phraseCapture.anchoredLineIndex) || null
+        : null,
+    [orderedLyricLines, phraseCapture.anchoredLineIndex, phraseCapture.kind],
   );
   const primaryMomentMeaning = useMemo(
     () => getPrimaryMomentMeaning(primaryMomentRow),
     [primaryMomentRow],
   );
   const canShowPrimaryMoment = Boolean(
-    primaryMomentRow?.text?.trim() && phraseCapture.alignmentConfidence === 'medium',
+    primaryMomentRow?.analysis && primaryMomentRow.text?.trim() && phraseCapture.kind === 'exact_match',
   );
+  const primaryMomentFallback = useMemo(() => {
+    if (phraseCapture.kind === 'instrumental') {
+      return {
+        headline: 'This part sounds instrumental or has no clear vocal yet.',
+        detail: 'Try another vocal line.',
+      };
+    }
+
+    return {
+      headline: 'We found the song, but could not lock the exact lyric yet.',
+      detail: 'Try another vocal line.',
+    };
+  }, [phraseCapture.kind]);
   const primaryMeaningHeadline =
     primaryMomentMeaning.headline ||
     cleanInsightText(primaryGist?.summary) ||
@@ -1620,10 +1636,10 @@ export default function RecognizedTrack() {
               ) : (
                 <div className="space-y-2 rounded-2xl border border-dashed border-border/80 bg-background/70 px-5 py-5">
                   <p className="text-lg font-semibold text-foreground">
-                    We found the song, but could not lock the exact lyric yet.
+                    {primaryMomentFallback.headline}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Try another vocal line.
+                    {primaryMomentFallback.detail}
                   </p>
                 </div>
               )}
