@@ -272,26 +272,6 @@ export default function MvpChatInterface() {
   }, [draftStorageKey, message]);
 
   useEffect(() => {
-    const draft = message.trim();
-    if (!conversation || !draft) {
-      return;
-    }
-
-    if (previewTone.isPending || analysisMessage === draft) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      trackEvent("tone_check_started", {
-        trigger: "auto",
-      });
-      previewTone.mutate(draft);
-    }, 900);
-
-    return () => window.clearTimeout(timer);
-  }, [analysisMessage, conversation, message, previewTone]);
-
-  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, analysisMessage]);
 
@@ -361,6 +341,26 @@ export default function MvpChatInterface() {
       });
     },
   });
+
+  useEffect(() => {
+    const draft = message.trim();
+    if (!conversation || !draft) {
+      return;
+    }
+
+    if (previewTone.isPending || analysisMessage === draft) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      trackEvent("tone_check_started", {
+        trigger: "auto",
+      });
+      previewTone.mutate(draft);
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [analysisMessage, conversation, message, previewTone]);
 
   const sendTextMessage = useMutation({
     mutationFn: async (content: string) => {
