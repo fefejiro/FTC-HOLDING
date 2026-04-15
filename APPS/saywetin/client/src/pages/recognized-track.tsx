@@ -479,12 +479,6 @@ function parseSlangTerms(value?: string | SlangTerm[] | null): SlangTerm[] {
   }
 }
 
-interface ProgressBarProps {
-  lyricsStatus?: ProcessingStatus;
-  analysisStatus?: ProcessingStatus;
-  analysisCount?: number;
-}
-
 function RecognitionHoldingScreen({
   title,
   description,
@@ -528,92 +522,89 @@ function RecognitionHoldingScreen({
   );
 }
 
-function ProgressBar({ lyricsStatus, analysisStatus, analysisCount = 0 }: ProgressBarProps) {
-  const getProgress = () => {
-    if (lyricsStatus === 'pending') return 5;
-    if (lyricsStatus === 'fetching_lyrics') return 20;
-    if (lyricsStatus === 'no_lyrics' || lyricsStatus === 'failed') return 100;
-    if (lyricsStatus === 'completed') {
-      if (analysisStatus === 'pending') return 40;
-      if (analysisStatus === 'generating_analysis') {
-        return Math.min(40 + Math.max(analysisCount * 2, 10), 95);
-      }
-      if (analysisStatus === 'completed') return 100;
-      if (analysisStatus === 'failed' || analysisStatus === 'no_lyrics') return 100;
-    }
-    return 10;
-  };
+function ProcessingField({
+  lyricsStatus,
+  analysisStatus,
+  analysisCount = 0,
+}: {
+  lyricsStatus?: ProcessingStatus;
+  analysisStatus?: ProcessingStatus;
+  analysisCount?: number;
+}) {
+  const lyricsReady = lyricsStatus === 'completed';
+  const lyricsActive = lyricsStatus === 'pending' || lyricsStatus === 'fetching_lyrics';
+  const meaningReady = analysisStatus === 'completed';
+  const meaningActive = analysisStatus === 'pending' || analysisStatus === 'generating_analysis';
 
-  const getStatusMessage = () => {
-    if (lyricsStatus === 'pending') return 'Getting ready...';
-    if (lyricsStatus === 'fetching_lyrics') return 'Finding the lyrics...';
-    if (lyricsStatus === 'no_lyrics') return 'Song recognized!';
-    if (lyricsStatus === 'failed') return 'Song recognized!';
-    if (analysisStatus === 'generating_analysis') return 'Building the meaning...';
-    if (analysisStatus === 'completed') return 'Meaning ready';
-    return 'Almost there...';
-  };
+  const headline =
+    analysisStatus === 'generating_analysis'
+      ? 'Tightening the meaning'
+      : lyricsStatus === 'fetching_lyrics'
+        ? 'Listening deeper'
+        : 'Holding the match';
 
-  const progress = getProgress();
-  const statusMessage = getStatusMessage();
-  const isComplete = progress === 100;
-  // No lyrics is not an error - recognition succeeded, lyrics just aren't mapped yet
-  const isError = false;
+  const detail =
+    analysisStatus === 'generating_analysis'
+      ? 'The same listening field is still active while we sharpen the meaning.'
+      : lyricsStatus === 'fetching_lyrics'
+        ? 'We already caught the song. Now the field is narrowing around the words.'
+        : 'The song is locked in. We are keeping the motion alive while the next layer lands.';
 
   return (
-    <div className="w-full space-y-4 py-6">
-      <div className="flex items-center justify-between text-sm">
-        <span className={`font-medium ${isError ? 'text-orange-500' : isComplete ? 'text-green-600' : 'text-primary'}`}>
-          {statusMessage}
-        </span>
-        <span className="text-muted-foreground font-mono">{progress}%</span>
+    <div className="space-y-5 py-2">
+      <div className="flex flex-col items-center text-center">
+        <ListeningOrb mode="matching" size="compact" />
+        <p className="mt-2 text-lg font-semibold text-foreground">{headline}</p>
+        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{detail}</p>
       </div>
-      
-      {/* Wavy snake loader - Pixel 7 style */}
-      {!isComplete && !isError ? (
-        <div className="relative h-3 flex items-center justify-center">
-          <div className="wavy-loader flex gap-1">
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="w-2 h-2 rounded-full bg-primary"
-                style={{
-                  animation: `wavy-bounce 1.2s ease-in-out infinite`,
-                  animationDelay: `${i * 0.1}s`,
-                }}
-              />
-            ))}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-primary/10 bg-background/70 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            {lyricsReady ? (
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+            ) : lyricsActive ? (
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            ) : (
+              <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+            )}
+            Lyrics
           </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            {lyricsReady
+              ? 'The vocal layer is in view.'
+              : lyricsStatus === 'fetching_lyrics'
+                ? 'Pulling the strongest vocal lines into focus.'
+                : 'Opening the lyric layer.'}
+          </p>
         </div>
-      ) : (
-        <div className="relative h-3 bg-muted rounded-full overflow-hidden">
-          <div 
-            className={`absolute left-0 top-0 h-full rounded-full transition-all duration-500 ease-out ${
-              isError ? 'bg-orange-500' : 'bg-green-500'
-            }`}
-            style={{ width: `${progress}%` }}
-          />
+
+        <div className="rounded-2xl border border-primary/10 bg-background/70 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            {meaningReady ? (
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+            ) : meaningActive ? (
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            ) : (
+              <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+            )}
+            Meaning
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            {meaningReady
+              ? 'The interpretation is ready.'
+              : analysisStatus === 'generating_analysis'
+                ? 'Refining the meaning around the lines we just heard.'
+                : 'Waiting for the tighter read.'}
+          </p>
         </div>
-      )}
-      
-      {analysisCount > 0 && !isComplete && (
-        <p className="text-xs text-muted-foreground text-center">
-          {analysisCount} lines analyzed so far...
+      </div>
+
+      {analysisCount > 0 && !meaningReady ? (
+        <p className="text-center text-xs text-muted-foreground">
+          {analysisCount} lyric {analysisCount === 1 ? 'line is' : 'lines are'} already in view while the field keeps tightening.
         </p>
-      )}
-      
-      <style>{`
-        @keyframes wavy-bounce {
-          0%, 100% { 
-            transform: translateY(0) scale(1);
-            opacity: 1;
-          }
-          50% { 
-            transform: translateY(-8px) scale(1.2);
-            opacity: 0.7;
-          }
-        }
-      `}</style>
+      ) : null}
     </div>
   );
 }
@@ -1491,8 +1482,8 @@ export default function RecognizedTrack() {
   if (isLoading || isHydratingResult) {
     return (
       <RecognitionHoldingScreen
-        title="Matching the song"
-        description="Hold on while we lock it in."
+        title="Tightening the match"
+        description="The field is narrowing around the song now."
         onBack={handleBackNavigation}
       />
     );
@@ -1735,51 +1726,11 @@ export default function RecognizedTrack() {
             track.analysisStatus === 'pending' || track.analysisStatus === 'generating_analysis') && (
             <Card data-testid="card-processing-status" className="border-primary/20 bg-primary/5">
               <CardContent className="py-6 px-6">
-                <div className="flex flex-col items-center">
-                  <Sparkles className="h-10 w-10 text-primary mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">
-                    {(data.culturalAnalysis?.length || 0) > 5 
-                      ? "Meaning nearly ready"
-                      : "Matching the meaning"}
-                  </h3>
-                </div>
-                
-                <ProgressBar 
+                <ProcessingField
                   lyricsStatus={track.lyricsStatus}
                   analysisStatus={track.analysisStatus}
                   analysisCount={data.culturalAnalysis?.length || 0}
                 />
-
-                {/* Step indicators - compact version */}
-                <div className="flex items-center justify-center gap-6 mt-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    {track.lyricsStatus === 'completed' ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    ) : track.lyricsStatus === 'fetching_lyrics' ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    ) : (
-                      <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
-                    )}
-                    <span className={track.lyricsStatus === 'completed' ? 'text-green-600' : 'text-muted-foreground'}>
-                      Lyrics
-                    </span>
-                  </div>
-                  
-                  <div className="h-4 w-px bg-border" />
-                  
-                  <div className="flex items-center gap-2">
-                    {track.analysisStatus === 'completed' ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    ) : track.analysisStatus === 'generating_analysis' ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    ) : (
-                      <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
-                    )}
-                    <span className={track.analysisStatus === 'completed' ? 'text-green-600' : 'text-muted-foreground'}>
-                      Story
-                    </span>
-                  </div>
-                </div>
 
                 {/* X-Ray Artist Info - shown during loading to make wait engaging */}
                 {artistInfo && artistInfo.verification !== 'unverified' && artistInfo.status === 'complete' && (

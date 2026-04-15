@@ -275,7 +275,19 @@ function RecognitionStageVisual({
   mode: RecognitionVisualMode;
   immersive: boolean;
 }) {
-  return <ListeningOrb mode={mode} size={immersive ? 'immersive' : 'compact'} />;
+  return (
+    <motion.div
+      initial={false}
+      animate={{
+        scale: mode === 'matching' ? 0.985 : 1,
+        y: mode === 'matching' ? -3 : 0,
+        opacity: 1,
+      }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+    >
+      <ListeningOrb mode={mode} size={immersive ? 'immersive' : 'compact'} />
+    </motion.div>
+  );
 }
 
 interface WebCaptureProfile {
@@ -750,16 +762,16 @@ export function AudioRecorder({
         {recordingState === 'requesting' && (
           <motion.div
             key="requesting"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
             className="flex flex-col items-center gap-4"
           >
             <RecognitionStageVisual mode="requesting" immersive={immersive} />
             <div className="space-y-2 text-center">
-              <p className="text-xl font-semibold text-foreground">Getting ready to listen</p>
+              <p className="text-xl font-semibold text-foreground">Opening the listening field</p>
               <p className="text-sm text-muted-foreground">
-                {immersive ? 'Checking microphone access and preparing the recorder' : 'Requesting microphone...'}
+                {immersive ? 'Checking the mic and waking the room before we lean in.' : 'Preparing the microphone.'}
               </p>
             </div>
           </motion.div>
@@ -768,17 +780,17 @@ export function AudioRecorder({
         {recordingState === 'listening' && (
           <motion.div
             key="listening"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1, transition: { duration: 0.15 } }}
+            initial={{ opacity: 0, y: 10, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.985, transition: { duration: 0.18 } }}
             className="flex flex-col items-center gap-4"
           >
             <RecognitionStageVisual mode="listening" immersive={immersive} />
 
             <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Listening for music</p>
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Listening to the room</p>
               <p className="max-w-xs text-sm text-muted-foreground">
-                We are sampling the room now. Keep the music clear and let the field settle around it.
+                Let the field breathe while we catch the strongest part of the song.
               </p>
             </div>
           </motion.div>
@@ -787,15 +799,17 @@ export function AudioRecorder({
         {recordingState === 'identifying' && (
           <motion.div
             key="identifying"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { duration: 0.2 } }}
-            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+            initial={{ opacity: 0, y: 8, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.22 } }}
+            exit={{ opacity: 0, y: -6, scale: 0.99, transition: { duration: 0.16 } }}
             className="flex flex-col items-center gap-4"
           >
             <RecognitionStageVisual mode="matching" immersive={immersive} />
             <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Matching the song</p>
-              <p className="max-w-xs text-sm text-muted-foreground">We have the room. Now we are tightening the match.</p>
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Tightening the match</p>
+              <p className="max-w-xs text-sm text-muted-foreground">
+                Same field, narrower focus. We are locking the song now.
+              </p>
             </div>
           </motion.div>
         )}
