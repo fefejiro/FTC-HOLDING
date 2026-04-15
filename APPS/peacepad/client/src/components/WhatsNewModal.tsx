@@ -18,28 +18,28 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
-    version: "1.0.8",
-    date: "March 30, 2026",
+    version: "1.0.9",
+    date: "April 14, 2026",
     changes: [
       {
         type: "improvement",
-        title: "Messaging First",
-        description: "PeacePad now focuses on helping co-parents say what they mean without starting a fight, with simpler navigation and a cleaner flow into Messages.",
+        title: "Guest-First Start",
+        description: "First-time users can now open PeacePad and start drafting right away, without needing to sign in before they see the core product.",
       },
       {
         type: "improvement",
-        title: "Before-You-Send Coaching",
-        description: "Tone guidance now appears inline with calmer rewrites and clear choices to use the suggestion, keep editing, or send anyway.",
+        title: "Copy to Send",
+        description: "After refining a message, you can now copy it straight into text, email, or WhatsApp so PeacePad fits the tools co-parents already use.",
       },
       {
         type: "improvement",
-        title: "Prep Chat Refocus",
-        description: "Prep Chat is now a dedicated coaching space for planning hard conversations and moving a draft straight into Messages.",
+        title: "Faster Tone Feedback",
+        description: "Tone analysis and calmer rewrite suggestions now appear quickly while you draft, helping you soften the message before you send it.",
       },
       {
         type: "improvement",
-        title: "MVP Cleanup",
-        description: "Deferred tabs and extra tools are out of the way so the app stays focused on communication, schedule context, invites, and support resources.",
+        title: "Smoother Upgrade Path",
+        description: "Saving history and account features stay protected, but signing in now happens later in the flow when it adds real value.",
       },
     ],
   },

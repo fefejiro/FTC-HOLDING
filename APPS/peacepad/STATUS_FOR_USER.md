@@ -5,7 +5,7 @@
 - Web production is live at `https://peacepad.ca`
 - API production is live at `https://api.peacepad.ca`
 - Production ownership verification passed on March 30, 2026
-- Google Play production release `40 (1.0.8)` has been uploaded and is currently `In review`
+- Google Play production release `40 (1.0.8)` was the last uploaded bundle before the guest-first rollout
 
 ## What Shipped
 
@@ -24,9 +24,9 @@
 
 - Latest Android bundle:
   - `C:\FTC HOLDING\APPS\peacepad\android\app\build\outputs\bundle\release\app-release.aab`
-- Android version:
-  - `versionCode 40`
-  - `versionName 1.0.8`
+- Android version prepared for next release:
+  - `versionCode 41`
+  - `versionName 1.0.9`
 - Package:
   - `ca.peacepad.family`
 

@@ -3,22 +3,22 @@
 ## Current Release
 
 - Track: `Production`
-- Release: `40 (1.0.8)`
-- Status: `In review`
+- Release: `41 (1.0.9)`
+- Status: `Ready to upload`
 - Bundle path:
   - `C:\FTC HOLDING\APPS\peacepad\android\app\build\outputs\bundle\release\app-release.aab`
 
 ## Release Name
 
-- `1.0.8 (40)`
+- `1.0.9 (41)`
 
 ## Release Notes
 
-- Refocused PeacePad around calmer co-parent communication.
-- Improved before-send tone feedback and clearer rewording suggestions.
-- Updated Prep Chat to better coach difficult conversations before sending.
-- Simplified navigation and onboarding for a faster, more focused experience.
-- Improved stability, performance, and overall polish.
+- Removed login as a blocker so first-time users can reach PeacePad's core drafting flow immediately.
+- Added guest-first compose with live tone feedback and calmer rewrite suggestions.
+- Added copy-to-send so users can move a refined message into their existing messaging app.
+- Kept account-only features gated until users want history, sync, and profile features.
+- Improved overall stability and release readiness for the Android shell.
 
 ## After Google Approves
 
