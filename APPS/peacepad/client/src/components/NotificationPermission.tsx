@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "wouter";
 import { Bell, BellOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +17,7 @@ interface NotificationPermissionProps {
 }
 
 export function NotificationPermission({ user }: NotificationPermissionProps = {}) {
+  const [location] = useLocation();
   const [permissionState, setPermissionState] = useState<NotificationPermission>("default");
   const [showBanner, setShowBanner] = useState(false);
   const { toast } = useToast();
@@ -24,8 +26,25 @@ export function NotificationPermission({ user }: NotificationPermissionProps = {
   const hasExperiencedValue =
     (user?.prepChatSessionCount ?? 0) > 0 || (user?.totalMessagesSent ?? 0) > 0;
 
+  const shouldSuppressBanner = useMemo(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    const path = window.location.pathname || location;
+    return (
+      path.startsWith("/onboarding") ||
+      path.startsWith("/auth/") ||
+      path.startsWith("/join/")
+    );
+  }, [location]);
+
   useEffect(() => {
     const checkPermissions = async () => {
+      if (shouldSuppressBanner) {
+        setShowBanner(false);
+        return;
+      }
       if (!canUseNotifications()) {
         return;
       }
@@ -44,7 +63,7 @@ export function NotificationPermission({ user }: NotificationPermissionProps = {
     };
 
     checkPermissions();
-  }, [hasExperiencedValue]);
+  }, [hasExperiencedValue, shouldSuppressBanner]);
 
   const requestPermission = async () => {
     try {
@@ -113,7 +132,7 @@ export function NotificationPermission({ user }: NotificationPermissionProps = {
   };
 
   // Don't show anything if notifications not supported
-  if (!canUseNotifications()) {
+  if (shouldSuppressBanner || !canUseNotifications()) {
     return null;
   }
 
