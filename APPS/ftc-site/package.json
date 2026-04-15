@@ -16,25 +16,26 @@
     "check": "npm run lint && npm run build && npm run test:e2e"
   },
   "dependencies": {
+    "@ftc/auth": "0.0.0",
     "@ftc/config": "1.0.0",
     "@ftc/logger": "1.0.0",
-    "@ftc/types": "1.0.0",
     "@ftc/supabase": "0.0.0",
-    "@ftc/auth": "0.0.0",
+    "@ftc/types": "1.0.0",
     "clsx": "^2.1.1",
     "next": "^14.2.0",
     "qrcode": "^1.5.4",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "stripe": "^22.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.38.0",
     "@types/node": "^20.4.1",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "eslint": "8.0.0",
     "eslint-config-next": "14.2.35",
-    "typescript": "^5.3.3",
-    "@playwright/test": "^1.38.0"
+    "typescript": "^5.3.3"
   }
 }
