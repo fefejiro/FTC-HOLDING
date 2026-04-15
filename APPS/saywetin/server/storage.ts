@@ -367,6 +367,7 @@ export class DatabaseStorage implements IStorage {
         trackTitle: recognizedTracks.title,
         trackArtist: recognizedTracks.artist,
         trackAlbum: recognizedTracks.album,
+        trackCoverArtUrl: recognizedTracks.coverArtUrl,
         trackConfidenceScore: recognizedTracks.confidenceScore,
       })
       .from(listeningSessions)
@@ -389,6 +390,7 @@ export class DatabaseStorage implements IStorage {
         title: row.trackTitle!,
         artist: row.trackArtist!,
         album: row.trackAlbum,
+        coverArtUrl: row.trackCoverArtUrl,
         confidenceScore: row.trackConfidenceScore,
       } : undefined,
     }));

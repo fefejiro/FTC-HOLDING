@@ -168,6 +168,10 @@ function classifyListenError(error: unknown): { title: string; description: stri
   }
 }
 
+function shouldShowListenToast(error: ListenError): boolean {
+  return error.kind !== 'context_failed';
+}
+
 function getApiErrorMessage(payload: any): string | undefined {
   if (typeof payload?.error === "string") {
     return payload.error;
@@ -675,12 +679,15 @@ export function AudioRecorder({
     } catch (error: any) {
       console.error('Upload failed:', error);
       setRecordingState('error');
-      const issue = classifyListenError(normalizeUploadError(error));
-      toast({
-        variant: 'destructive',
-        title: issue.title,
-        description: issue.description,
-      });
+      const normalizedError = normalizeUploadError(error);
+      if (shouldShowListenToast(normalizedError)) {
+        const issue = classifyListenError(normalizedError);
+        toast({
+          variant: 'destructive',
+          title: issue.title,
+          description: issue.description,
+        });
+      }
     }
   };
 

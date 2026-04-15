@@ -34,22 +34,20 @@ function formatRelativeTime(dateString: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function CoverArt({ url, title }: { url?: string | null; title: string }) {
-  if (url) {
-    return (
-      <img
-        src={url}
-        alt={title}
-        className="h-14 w-14 rounded-lg object-cover"
-        referrerPolicy="no-referrer"
-        onError={(e) => {
-          (e.currentTarget as HTMLImageElement).style.display = 'none';
-          (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-        }}
-      />
-    );
+function formatRecognitionTimestamp(dateString?: string): string | null {
+  if (!dateString) return null;
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return null;
   }
-  return null;
+
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 export default function History() {
@@ -64,10 +62,13 @@ export default function History() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container max-w-4xl mx-auto px-4 h-14 flex items-center">
+        <div className="container max-w-4xl mx-auto px-4 py-3">
           <h1 className="text-xl font-bold" data-testid="heading-history">
             Recent
           </h1>
+          <p className="text-sm text-muted-foreground">
+            Reopen songs you already recognized.
+          </p>
         </div>
       </header>
 
@@ -92,6 +93,7 @@ export default function History() {
           <div className="space-y-3">
             {recognized.map((session) => {
               const track = session.recognizedTrack!;
+              const recognizedAt = formatRecognitionTimestamp(session.createdAt);
               return (
                 <Card
                   key={session.id}
@@ -126,6 +128,11 @@ export default function History() {
                         <p className="text-sm text-muted-foreground truncate">
                           {track.artist}
                         </p>
+                        {recognizedAt ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Recognized {recognizedAt}
+                          </p>
+                        ) : null}
                       </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                         <Clock className="h-3 w-3" />

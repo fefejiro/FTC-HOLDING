@@ -1112,7 +1112,7 @@ export default function RecognizedTrack() {
 
   const handleBackNavigation = () => {
     // Always navigate to Home idle — never re-enter listen mode from Back
-    navigate('/');
+    navigate('/', { replace: true });
   };
 
   useEffect(() => {

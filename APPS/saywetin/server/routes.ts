@@ -1041,6 +1041,11 @@ export async function registerRoutes(
       // Step 4: Return early with recognition results for progressive UX
       const recognitionTime = Date.now() - startTime;
       const coverArtUrl = await coverArtLookup;
+      if (coverArtUrl) {
+        await storage.updateRecognizedTrack(recognizedTrack.id, {
+          coverArtUrl,
+        });
+      }
       
       // Immediately return the recognized track so user can see metadata
       res.json({
@@ -1649,6 +1654,7 @@ Rules:
         artist,
         album,
         spotifyId,
+        coverArtUrl: resolvedCoverArtUrl,
         recognitionSource: 'spotify',
         confidenceScore: 100,
       });

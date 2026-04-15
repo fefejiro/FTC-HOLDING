@@ -28,7 +28,7 @@ export default function Home() {
   };
 
   const closeListenMode = () => {
-    navigate('/');
+    navigate('/', { replace: true });
   };
 
   const handleRecognitionSuccess = (result: any) => {
@@ -49,7 +49,7 @@ export default function Home() {
           analysisMessage: 'We matched the song. Lyric timing and deeper line-by-line context are still settling in.',
         },
       });
-      navigate(`/song/${result.recognizedTrack.id}`);
+      navigate(`/song/${result.recognizedTrack.id}`, { replace: true });
     }
   };
 
