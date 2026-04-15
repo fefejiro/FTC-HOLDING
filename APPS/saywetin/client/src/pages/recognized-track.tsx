@@ -21,10 +21,8 @@ import {
   Lightbulb,
   Languages,
   ExternalLink,
-  TrendingUp,
   Loader2,
   CheckCircle2,
-  Clock,
   FileText,
   Sparkles,
   MapPin,
@@ -386,6 +384,29 @@ function UnifiedLyricRow({
       ) : null}
     </div>
   );
+}
+
+function getPrimaryMomentMeaning(row?: OrderedLyricLine | null): {
+  headline?: string;
+  detail?: string;
+} {
+  const analysis = row?.analysis;
+  if (!analysis) {
+    return {};
+  }
+
+  return {
+    headline:
+      analysis.translation ||
+      analysis.deeperMeaning ||
+      analysis.culturalContext ||
+      analysis.artistIntent,
+    detail:
+      analysis.deeperMeaning ||
+      analysis.culturalContext ||
+      analysis.artistIntent ||
+      analysis.languageNotes,
+  };
 }
 
 
@@ -1245,6 +1266,25 @@ export default function RecognizedTrack() {
     [data, artistInfo, fragmentInterpretation],
   );
   const primaryGistSupport = primaryGist?.support;
+  const primaryMomentRow = useMemo(
+    () => momentRows.find((row) => row.analysis) || momentRows[0] || null,
+    [momentRows],
+  );
+  const primaryMomentMeaning = useMemo(
+    () => getPrimaryMomentMeaning(primaryMomentRow),
+    [primaryMomentRow],
+  );
+  const canShowPrimaryMoment = Boolean(
+    primaryMomentRow?.text?.trim() && phraseCapture.alignmentConfidence === 'medium',
+  );
+  const primaryMeaningHeadline =
+    primaryMomentMeaning.headline ||
+    cleanInsightText(primaryGist?.summary) ||
+    undefined;
+  const primaryMeaningDetail =
+    primaryMomentMeaning.detail ||
+    cleanInsightText(primaryGist?.support) ||
+    undefined;
 
   useEffect(() => {
     if (!data?.track?.id || hasTrackedRecognitionEvent.current === data.track.id) {
@@ -1258,11 +1298,6 @@ export default function RecognizedTrack() {
       hasGist: Boolean(primaryGist?.summary),
     });
   }, [data?.track?.id, data?.lyrics?.text, primaryGist?.summary]);
-
-  const insightBadges = useMemo(
-    () => (data ? getInsightBadges(data) : []),
-    [data],
-  );
 
   const artistStatusMessage = getArtistStatusCopy(artistInfo?.status);
   const fragmentStatusMessage = getFragmentStatusCopy(fragmentInterpretation?.status);
@@ -1548,25 +1583,6 @@ export default function RecognizedTrack() {
                   {track.artist}
                 </p>
               </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {track.album && (
-                  <Badge variant="secondary" data-testid="badge-album">
-                    <Music className="h-3 w-3 mr-1" />
-                    {track.album}
-                  </Badge>
-                )}
-                {track.releaseYear && (
-                  <Badge variant="secondary" data-testid="badge-year">
-                    {track.releaseYear}
-                  </Badge>
-                )}
-                {track.genre && (
-                  <Badge variant="secondary" data-testid="badge-genre">
-                    {track.genre}
-                  </Badge>
-                )}
-              </div>
             </div>
           </div>
         </div>
@@ -1574,194 +1590,68 @@ export default function RecognizedTrack() {
 
       <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="space-y-6">
-          {primaryGist && (
-            <Card className="border-primary/25 bg-background/90 shadow-lg shadow-orange-500/5" data-testid="card-primary-gist">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  What this means
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-0">
-                <p className="text-xl font-semibold leading-relaxed text-foreground sm:text-2xl">
-                  {primaryGist.summary}
-                </p>
-                {primaryGist.support && (
-                  <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                    {primaryGist.support}
-                  </p>
-                )}
-                {gistPhraseChip && (
-                  <div className="pt-1">
-                    <Badge
-                      variant="outline"
-                      className="border-primary/20 bg-primary/5 text-xs font-medium text-muted-foreground"
-                    >
-                      {gistPhraseChip}
-                    </Badge>
+          <Card
+            data-testid="card-the-moment"
+            className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 to-background"
+          >
+            <CardHeader className="border-b border-primary/20 pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Lyric you just heard
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 p-6">
+              {canShowPrimaryMoment && primaryMomentRow ? (
+                <>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                      Lyric
+                    </p>
+                    <blockquote className="max-w-3xl text-2xl font-semibold leading-relaxed text-foreground sm:text-3xl">
+                      "{primaryMomentRow.text}"
+                    </blockquote>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Phrase capture summary - honest about track confidence vs lyric alignment confidence */}
-          {lyrics && (
-            <Card data-testid="card-the-moment" className="border-primary/30 bg-gradient-to-br from-primary/5 to-background overflow-hidden">
-              <CardHeader className="border-b border-primary/20 pb-4">
-                <div className="space-y-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    {phraseCapture.title}
-                  </CardTitle>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">
-                      Track match: {phraseCapture.trackMatchConfidence}
-                    </Badge>
-                    <Badge variant="outline">
-                      Lyric alignment: {phraseCapture.alignmentConfidence}
-                    </Badge>
-                    {phraseCapture.sectionLabel ? (
-                      <Badge variant="secondary">{phraseCapture.sectionLabel}</Badge>
+                  <div className="space-y-3 rounded-2xl border border-primary/15 bg-background/80 p-5">
+                    <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                      What it means
+                    </p>
+                    <p className="text-lg font-semibold leading-relaxed text-foreground">
+                      {primaryMeaningHeadline || 'We are still unpacking what this line means.'}
+                    </p>
+                    {primaryMeaningDetail && primaryMeaningDetail !== primaryMeaningHeadline ? (
+                      <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                        {primaryMeaningDetail}
+                      </p>
                     ) : null}
                   </div>
-                  <p className="text-sm text-muted-foreground">{phraseCapture.description}</p>
+                </>
+              ) : (
+                <div className="space-y-2 rounded-2xl border border-dashed border-border/80 bg-background/70 px-5 py-5">
+                  <p className="text-lg font-semibold text-foreground">
+                    We found the song, but could not lock the exact lyric yet.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Try another vocal line.
+                  </p>
                 </div>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                {momentRows.length > 0 ? (
-                  <div className="space-y-3">
-                    {momentRows.map((row) => {
-                      const normalizedLine = normalizeLineKey(row.text);
-                      const feedback = lineFeedback.get(normalizedLine);
-                      const isExpanded = selectedLineKey === normalizedLine;
-                      const isCurrentMoment = phraseCapture.highlightedLineIndexes.includes(row.lineIndex);
+              )}
 
-                      return (
-                        <div
-                          key={`moment-${row.key}`}
-                          ref={estimatedMomentIndex === row.lineIndex ? youWereHereRef : undefined}
-                        >
-                          <UnifiedLyricRow
-                            row={row}
-                            feedback={feedback}
-                            isExpanded={isExpanded}
-                            isCurrentMoment={isCurrentMoment}
-                            onPress={() => handleLyricRowPress(row)}
-                            onRetry={() => handleLazyAnalyze(row.text)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-border/80 bg-background/70 px-4 py-4">
-                    <p className="text-sm text-muted-foreground">{phraseCapture.helper}</p>
-                  </div>
-                )}
-
-                <div className="pt-4 border-t border-border/50">
+              {lyrics && momentRows.length > 0 ? (
+                <div className="border-t border-border/50 pt-2">
                   <Button
                     variant="ghost"
                     className="w-full text-primary"
                     onClick={jumpToLyrics}
                     data-testid="button-jump-to-lyrics"
                   >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Jump into the full lyrics surface
+                    <FileText className="mr-2 h-4 w-4" />
+                    See the full lyrics
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {(insightBadges.length > 0 || track.confidenceScore || track.spotifyId || track.youtubeId || artistInfo) && (
-            <Card className="border-border/70 bg-background/80" data-testid="card-more-context">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">More context</CardTitle>
-                <CardDescription>
-                  Extra details if you want to keep digging.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {(insightBadges.length > 0 || track.confidenceScore) && (
-                  <div className="flex flex-wrap gap-2">
-                    {insightBadges.map((badge) => (
-                      <Badge
-                        key={badge.label}
-                        variant="secondary"
-                        className="bg-green-500/10 text-green-700 dark:text-green-300"
-                      >
-                        {badge.label}
-                      </Badge>
-                    ))}
-                    {track.confidenceScore ? (
-                      <Badge variant="outline" data-testid="badge-confidence">
-                        <TrendingUp className="mr-1 h-3 w-3" />
-                        {track.confidenceScore}% match
-                      </Badge>
-                    ) : null}
-                    {lyrics ? (
-                      <Badge variant="outline">
-                        <Clock className="mr-1 h-3 w-3" />
-                        Lyric timing: {phraseCapture.alignmentConfidence}
-                      </Badge>
-                    ) : null}
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  {track.spotifyId && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                      data-testid="button-spotify"
-                      onClick={() => logInteraction('open_spotify')}
-                    >
-                      <a
-                        href={`https://open.spotify.com/track/${track.spotifyId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Spotify
-                      </a>
-                    </Button>
-                  )}
-                  {track.youtubeId && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                      data-testid="button-youtube"
-                    >
-                      <a
-                        href={`https://www.youtube.com/watch?v=${track.youtubeId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        YouTube
-                      </a>
-                    </Button>
-                  )}
-                  {artistInfo ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowXRay(!showXRay)}
-                      data-testid="button-xray"
-                      className={showXRay ? 'bg-primary/10' : ''}
-                    >
-                      <Info className="mr-2 h-4 w-4" />
-                      {showXRay ? 'Hide artist context' : 'See artist context'}
-                    </Button>
-                  ) : null}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : null}
+            </CardContent>
+          </Card>
 
           {/* X-Ray Artist & Song Info Panel */}
           {showXRay && (
