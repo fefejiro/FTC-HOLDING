@@ -52,6 +52,12 @@ export default function OnboardingPage() {
   const [pathChoice, setPathChoice] = useState<PathChoice>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [trackedStart, setTrackedStart] = useState(false);
+  const authIntent = useMemo(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    return new URLSearchParams(window.location.search).get("auth");
+  }, [location]);
 
   const onboardingComplete = useMemo(() => {
     if (!user?.id) {
@@ -91,15 +97,10 @@ export default function OnboardingPage() {
   }, [isLoading, step, user?.id, user?.isGuest]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const authIntent = new URLSearchParams(window.location.search).get("auth");
     if (authIntent === "upgrade" && step < 2) {
       setStep(2);
     }
-  }, [location, step]);
+  }, [authIntent, step]);
 
   useEffect(() => {
     if (isLoading) {
@@ -325,6 +326,29 @@ export default function OnboardingPage() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleBack = () => {
+    if (authIntent === "upgrade" && step === 2) {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else if (user?.activePartnershipId) {
+        setLocation("/chat");
+      } else if (user) {
+        setLocation("/settings");
+      } else {
+        setLocation("/compose");
+      }
+      return;
+    }
+
+    setStep((current) => {
+      if (current === 4) return 3;
+      if (current === 3) return 1.5;
+      if (current === 2) return 1.5;
+      if (current === 1.5) return 1;
+      return 1;
+    });
   };
 
   return (
@@ -590,15 +614,7 @@ export default function OnboardingPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() =>
-                    setStep((current) => {
-                      if (current === 4) return 3;
-                      if (current === 3) return 1.5;
-                      if (current === 2) return 1.5;
-                      if (current === 1.5) return 1;
-                      return 1;
-                    })
-                  }
+                  onClick={handleBack}
                 >
                   Back
                 </Button>

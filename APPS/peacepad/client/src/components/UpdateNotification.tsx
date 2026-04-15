@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Clock3, RefreshCw } from "lucide-react";
 import {
@@ -11,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { sendWebUpdateTelemetryEvent, type WebUpdateTelemetrySessionType } from "@/lib/webUpdateTelemetry";
 
 export function UpdateNotification() {
+  const [location] = useLocation();
   const { isAuthenticated, user } = useAuth();
   const [updateStatus, setUpdateStatus] = useState<WebUpdateStatus | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -29,6 +31,29 @@ export function UpdateNotification() {
 
     return "authenticated";
   }, [isAuthenticated, user]);
+
+  const shouldSuppressNotification = useMemo(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    const path = window.location.pathname || location;
+    const isOnboardingFlow =
+      path.startsWith("/onboarding") ||
+      path.startsWith("/auth/") ||
+      path.startsWith("/join/");
+
+    const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+    const narrowViewport = window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
+    const isMobileUserAgent =
+      /android|iphone|ipad|ipod|mobile/i.test(window.navigator.userAgent);
+
+    const isMobileBrowser = isMobileUserAgent || (coarsePointer && narrowViewport);
+    const shouldAllowWebBanner = isStandalone || isMobileBrowser;
+
+    return isOnboardingFlow || !shouldAllowWebBanner;
+  }, [location]);
 
   const sendTelemetry = useCallback(
     (eventName: Parameters<typeof sendWebUpdateTelemetryEvent>[0], status: WebUpdateStatus) => {
@@ -101,6 +126,12 @@ export function UpdateNotification() {
   }, [applyUpdate, sendTelemetry]);
 
   useEffect(() => {
+    if (shouldSuppressNotification) {
+      setUpdateStatus(null);
+      setIsRefreshing(false);
+      return;
+    }
+
     evaluateUpdate();
 
     const handleVisibilityChange = () => {
@@ -135,7 +166,7 @@ export function UpdateNotification() {
       window.removeEventListener("peacepad:app-background", handleBackground);
       window.removeEventListener("peacepad:web-update-detected", handleDetected);
     };
-  }, [evaluateUpdate]);
+  }, [evaluateUpdate, shouldSuppressNotification]);
 
   const handleRefresh = async () => {
     if (!updateStatus) {
@@ -156,7 +187,7 @@ export function UpdateNotification() {
     setUpdateStatus(null);
   };
 
-  if (!updateStatus?.updateAvailable) {
+  if (shouldSuppressNotification || !updateStatus?.updateAvailable) {
     return null;
   }
 
