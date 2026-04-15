@@ -9,11 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -38,12 +33,13 @@ import {
   User,
   Info,
   ChevronDown,
-  Disc3,
   Zap,
   Gamepad2,
+  CircleAlert,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SlangMatchGame } from '@/components/slang-match-game';
+import { ListeningOrb } from '@/components/listening-orb';
 import { trackRecognitionSucceeded } from '@/lib/analytics';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { getApiUrl } from '@/lib/api-config';
@@ -51,16 +47,12 @@ import { LISTEN_MODE_PATH } from '@/lib/navigation';
 import { STORY_MODE_ENABLED } from '@/lib/features';
 import {
   parseAnalysesWithSlang,
-  calculateYouWereHereIndex,
-  buildBlocksWithAnalyses,
-  getDisplayBlocks,
-  extractTheMoment,
-  extractRawMomentLines,
+  buildOrderedLyricLines,
+  buildPhraseCaptureModel,
+  estimateMomentLineIndex,
   type LyricAnalysis,
   type SlangTerm,
-  type AnalysisWithBlock,
-  type LyricBlockWithAnalyses,
-  type TheMoment,
+  type OrderedLyricLine,
 } from '@/lib/lyrics-utils';
 
 interface AiTranslation {
@@ -149,6 +141,251 @@ interface PrimaryGistModel {
   title: string;
   summary: string;
   support?: string;
+}
+
+type LineFeedbackState = {
+  status: 'loading' | 'unavailable' | 'failed';
+  message?: string;
+};
+
+function normalizeLineKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function serializeSlangTerms(value?: string | SlangTerm[] | null): string | null {
+  if (!value) return null;
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+function buildOptimisticAnalysis(
+  lyricText: string,
+  analysis: Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null },
+): AiTranslation {
+  return {
+    id: `lazy-${normalizeLineKey(lyricText)}-${Date.now()}`,
+    originalText: lyricText.trim(),
+    translation: analysis.translation || 'Meaning ready',
+    culturalContext: analysis.culturalContext,
+    artistIntent: analysis.artistIntent,
+    deeperMeaning: analysis.deeperMeaning,
+    languageNotes: analysis.languageNotes,
+    detectedLanguage: analysis.detectedLanguage,
+    slangTerms: serializeSlangTerms(analysis.slangTerms),
+    upvotes: 0,
+    downvotes: 0,
+  };
+}
+
+function LineStateBadge({
+  row,
+  feedback,
+}: {
+  row: OrderedLyricLine;
+  feedback?: LineFeedbackState;
+}) {
+  if (feedback?.status === 'loading') {
+    return (
+      <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Loading
+      </Badge>
+    );
+  }
+
+  if (feedback?.status === 'unavailable' || feedback?.status === 'failed') {
+    return (
+      <Badge variant="outline" className="gap-1.5 border-amber-500/40 text-amber-700 dark:text-amber-300">
+        <CircleAlert className="h-3.5 w-3.5" />
+        Unavailable
+      </Badge>
+    );
+  }
+
+  if (row.analysis) {
+    return (
+      <Badge variant="secondary" className="gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Analyzed
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge variant="outline" className="gap-1.5 border-primary/25 text-primary">
+      <Sparkles className="h-3.5 w-3.5" />
+      Tap to analyze
+    </Badge>
+  );
+}
+
+function LyricInsightBody({
+  analysis,
+}: {
+  analysis: OrderedLyricLine['analysis'];
+}) {
+  if (!analysis) {
+    return null;
+  }
+
+  const hasContext =
+    analysis.culturalContext ||
+    analysis.artistIntent ||
+    analysis.deeperMeaning ||
+    analysis.languageNotes ||
+    analysis.lyricBreakdown;
+
+  if (!hasContext) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 border-t border-border/70 pt-4">
+      <div className="space-y-3 border-l-2 border-primary/25 pl-4 text-sm text-muted-foreground">
+        {analysis.lyricBreakdown && (
+          <p className="rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-foreground/85">
+            {analysis.lyricBreakdown}
+          </p>
+        )}
+        {analysis.culturalContext && (
+          <p>
+            <span className="font-medium text-primary">Story:</span> {analysis.culturalContext}
+          </p>
+        )}
+        {analysis.artistIntent && (
+          <p>
+            <span className="font-medium text-primary">Intent:</span> {analysis.artistIntent}
+          </p>
+        )}
+        {analysis.deeperMeaning && (
+          <p>
+            <span className="font-medium text-primary">Meaning:</span> {analysis.deeperMeaning}
+          </p>
+        )}
+        {analysis.languageNotes && (
+          <p>
+            <span className="font-medium text-primary">Language:</span> {analysis.languageNotes}
+          </p>
+        )}
+      </div>
+
+      {analysis.slangTerms && analysis.slangTerms.length > 0 ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {analysis.slangTerms.map((slang, slangIdx) => (
+            <Popover key={`${analysis.id}-${slangIdx}`}>
+              <PopoverTrigger asChild onClick={(event) => event.stopPropagation()}>
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer text-xs hover-elevate"
+                  data-testid={`slang-badge-${analysis.originalIndex}-${slangIdx}`}
+                >
+                  {slang.term}
+                </Badge>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-3" side="top">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{slang.term}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {slang.language}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{slang.meaning}</p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function UnifiedLyricRow({
+  row,
+  feedback,
+  isExpanded,
+  isCurrentMoment,
+  onPress,
+  onRetry,
+}: {
+  row: OrderedLyricLine;
+  feedback?: LineFeedbackState;
+  isExpanded: boolean;
+  isCurrentMoment: boolean;
+  onPress: () => void;
+  onRetry: () => void;
+}) {
+  const hasAnalysis = Boolean(row.analysis);
+
+  return (
+    <div
+      className={`rounded-2xl border px-4 py-4 transition-all ${
+        isExpanded
+          ? 'border-primary/40 bg-primary/5 shadow-sm shadow-primary/10'
+          : isCurrentMoment
+            ? 'border-primary/25 bg-primary/[0.03]'
+            : 'border-border/70 bg-background/80 hover:border-primary/20 hover:bg-muted/20'
+      }`}
+      data-testid={`lyric-row-${row.lineIndex}`}
+    >
+      <button
+        type="button"
+        onClick={onPress}
+        className="flex w-full items-start justify-between gap-4 text-left"
+        data-testid={`lyric-item-${row.lineIndex}`}
+      >
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {isCurrentMoment ? (
+              <Badge variant="outline" className="border-primary/35 bg-primary/5 text-primary">
+                Closest section
+              </Badge>
+            ) : null}
+            <LineStateBadge row={row} feedback={feedback} />
+          </div>
+
+          <p
+            className="font-serif text-lg leading-relaxed text-foreground"
+            data-testid={`text-original-${row.lineIndex}`}
+          >
+            {row.text}
+          </p>
+
+          {row.analysis?.translation ? (
+            <p className="text-sm italic text-muted-foreground">{row.analysis.translation}</p>
+          ) : feedback?.status === 'loading' ? (
+            <p className="text-sm text-primary">Breaking this line down now.</p>
+          ) : feedback?.message ? (
+            <p className="text-sm text-amber-700 dark:text-amber-300">{feedback.message}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Tap for meaning, context, and language notes.</p>
+          )}
+        </div>
+
+        <ChevronDown className={`mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isExpanded ? (
+        hasAnalysis ? (
+          <LyricInsightBody analysis={row.analysis} />
+        ) : feedback?.status === 'loading' ? (
+          <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-4 text-sm text-primary">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading the line meaning and context.</span>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
+            <p className="text-sm text-muted-foreground">
+              {feedback?.message || 'No deeper breakdown landed for this line yet.'}
+            </p>
+            <Button variant="outline" size="sm" onClick={onRetry} data-testid={`button-retry-line-${row.lineIndex}`}>
+              Try this line again
+            </Button>
+          </div>
+        )
+      ) : null}
+    </div>
+  );
 }
 
 
@@ -258,45 +495,7 @@ function RecognitionHoldingScreen({
         <div className="absolute bottom-10 right-6 h-36 w-36 rounded-full bg-green-500/10 blur-3xl" />
 
         <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-6 text-center">
-          <div className="relative h-52 w-52">
-            {[0, 1, 2, 3].map((index) => (
-              <motion.div
-                key={`holding-ring-${index}`}
-                className="absolute inset-0 rounded-full border border-primary/20 bg-primary/5"
-                animate={{
-                  scale: [0.82, 1.16, 1.24],
-                  opacity: [0, 0.32 - index * 0.05, 0],
-                }}
-                transition={{
-                  duration: 1.9,
-                  ease: 'easeOut',
-                  repeat: Infinity,
-                  delay: index * 0.22,
-                }}
-              />
-            ))}
-
-            <motion.div
-              className="absolute inset-5 rounded-full bg-gradient-to-br from-orange-500/12 via-amber-500/12 to-green-500/12 blur-2xl"
-              animate={{ scale: [0.96, 1.05, 0.98], opacity: [0.28, 0.46, 0.3] }}
-              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-            />
-
-            <div className="absolute inset-0 flex items-center justify-center">
-              <motion.div
-                className="h-28 w-28 rounded-full bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 flex items-center justify-center shadow-2xl shadow-orange-500/25"
-                animate={{ scale: [0.98, 1.04, 1], rotate: [0, 6, -6, 0] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
-                >
-                  <Disc3 className="h-14 w-14 text-white" />
-                </motion.div>
-              </motion.div>
-            </div>
-          </div>
+          <ListeningOrb mode="matching" size="hero" />
 
           <div className="space-y-2">
             <p className="text-2xl font-semibold">{title}</p>
@@ -415,10 +614,10 @@ export default function RecognizedTrack() {
   // Mini-game state
   const [showMiniGame, setShowMiniGame] = useState(false);
   
-  // Lazy-load analysis state - tracks which lines are being analyzed on-demand
+  // Line interaction state - explicit per-line status for the unified lyrics surface
   const [loadingLines, setLoadingLines] = useState<Set<string>>(new Set());
-  // Streaming state - tracks partial content for typing effect
-  const [streamingContent, setStreamingContent] = useState<Map<string, string>>(new Map());
+  const [lineFeedback, setLineFeedback] = useState<Map<string, LineFeedbackState>>(new Map());
+  const [selectedLineKey, setSelectedLineKey] = useState<string | null>(null);
   const [artworkLoadFailed, setArtworkLoadFailed] = useState(false);
   // Guard: true once SSE has started (connection opened), used to suppress premature error renders
   const [sseStarted, setSseStarted] = useState(false);
@@ -429,16 +628,50 @@ export default function RecognizedTrack() {
   const prevShowXRay = useRef(showXRay);
 
   const clearLineState = (lyricText: string) => {
+    const normalizedLine = normalizeLineKey(lyricText);
     setLoadingLines(prev => {
       const next = new Set(prev);
-      next.delete(lyricText);
+      next.delete(normalizedLine);
       return next;
     });
-    setStreamingContent(prev => {
+  };
+
+  const setLineFeedbackState = (lyricText: string, feedback?: LineFeedbackState) => {
+    const normalizedLine = normalizeLineKey(lyricText);
+    setLineFeedback(prev => {
       const next = new Map(prev);
-      next.delete(lyricText);
+      if (feedback) {
+        next.set(normalizedLine, feedback);
+      } else {
+        next.delete(normalizedLine);
+      }
       return next;
     });
+  };
+
+  const upsertAnalysisIntoCache = (lyricText: string, analysis: Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null }) => {
+    if (!trackId) return;
+
+    queryClient.setQueryData<RecognizedTrackDetail | undefined>(
+      ['/api/recognized-tracks', trackId],
+      (current) => {
+        if (!current) return current;
+
+        const normalizedLine = normalizeLineKey(lyricText);
+        const existingAnalysis = (current.culturalAnalysis || []).some(
+          (entry) => normalizeLineKey(entry.originalText) === normalizedLine,
+        );
+
+        if (existingAnalysis) {
+          return current;
+        }
+
+        return {
+          ...current,
+          culturalAnalysis: [...(current.culturalAnalysis || []), buildOptimisticAnalysis(lyricText, analysis)],
+        };
+      },
+    );
   };
 
   const firstSentence = (value?: string | null): string | undefined => {
@@ -609,33 +842,49 @@ export default function RecognizedTrack() {
 
       if (!response.ok) {
         let failureMessage = 'Could not analyze this line.';
+        let failureStatus: LineFeedbackState['status'] = 'failed';
         try {
           const payload = await response.json();
           failureMessage = payload?.message || payload?.error || failureMessage;
+          failureStatus = payload?.status === 'unavailable' ? 'unavailable' : 'failed';
         } catch {
           failureMessage = `HTTP ${response.status}`;
         }
-        throw new Error(failureMessage);
+        throw Object.assign(new Error(failureMessage), { feedbackStatus: failureStatus });
       }
 
       const result = await response.json();
       if (result.success) {
+        if (result.analysis) {
+          upsertAnalysisIntoCache(lyricText, result.analysis);
+        }
+        setLineFeedbackState(lyricText);
         queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
       } else {
         console.warn('[ANALYZE] Analysis issue:', result.message);
+        setLineFeedbackState(lyricText, {
+          status: result.status === 'unavailable' ? 'unavailable' : 'failed',
+          message: result.message || 'No deeper breakdown landed for this line yet.',
+        });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[ANALYZE] Fetch fallback failed:', err);
+      setLineFeedbackState(lyricText, {
+        status: err?.feedbackStatus === 'unavailable' ? 'unavailable' : 'failed',
+        message: err?.message || 'We could not analyze this line right now.',
+      });
     } finally {
       clearLineState(lyricText);
     }
   };
 
   const handleLazyAnalyze = (lyricText: string) => {
-    if (!data || loadingLines.has(lyricText)) return;
+    const normalizedLine = normalizeLineKey(lyricText);
+    if (!data || loadingLines.has(normalizedLine)) return;
     
-    setLoadingLines(prev => new Set(prev).add(lyricText));
-    setStreamingContent(prev => new Map(prev).set(lyricText, ''));
+    setSelectedLineKey(normalizedLine);
+    setLoadingLines(prev => new Set(prev).add(normalizedLine));
+    setLineFeedbackState(lyricText, { status: 'loading' });
 
     const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
 
@@ -670,18 +919,26 @@ export default function RecognizedTrack() {
         const parsed = JSON.parse(event.data);
         
         if (parsed.type === 'chunk') {
-          setStreamingContent(prev => {
-            const current = prev.get(lyricText) || '';
-            return new Map(prev).set(lyricText, current + parsed.data);
-          });
+          return;
         } else if (parsed.type === 'complete' || parsed.type === 'cached') {
           clearTimeout(sseTimeout);
+          try {
+            const analysis = JSON.parse(parsed.data);
+            upsertAnalysisIntoCache(lyricText, analysis);
+          } catch (parseError) {
+            console.warn('[ANALYZE] Could not parse streaming completion payload:', parseError);
+          }
           clearLineState(lyricText);
+          setLineFeedbackState(lyricText);
           queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
           eventSource.close();
         } else if (parsed.type === 'error') {
           clearTimeout(sseTimeout);
           clearLineState(lyricText);
+          setLineFeedbackState(lyricText, {
+            status: 'unavailable',
+            message: parsed.data || 'No deeper breakdown landed for this line yet.',
+          });
           console.warn('[ANALYZE] SSE error:', parsed.data);
           eventSource.close();
         }
@@ -956,10 +1213,38 @@ export default function RecognizedTrack() {
     navigate(`/song/${suggestionId}`);
   };
 
+  const jumpToLyrics = () => {
+    if (youWereHereRef.current) {
+      youWereHereRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    lyricsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleLyricRowPress = (row: OrderedLyricLine) => {
+    const normalizedLine = normalizeLineKey(row.text);
+    const feedback = lineFeedback.get(normalizedLine);
+
+    if (selectedLineKey === normalizedLine && row.analysis) {
+      setSelectedLineKey(null);
+      return;
+    }
+
+    setSelectedLineKey(normalizedLine);
+
+    if (row.analysis || feedback?.status === 'loading') {
+      return;
+    }
+
+    handleLazyAnalyze(row.text);
+  };
+
   const primaryGist = useMemo(
     () => (data ? buildPrimaryGist(data, artistInfo, fragmentInterpretation) : null),
     [data, artistInfo, fragmentInterpretation],
   );
+  const primaryGistSupport = primaryGist?.support;
 
   useEffect(() => {
     if (!data?.track?.id || hasTrackedRecognitionEvent.current === data.track.id) {
@@ -1063,98 +1348,110 @@ export default function RecognizedTrack() {
     }
   };
 
-  // State to toggle between priority view (first 5) and full view
-  const [showAllAnalyses, setShowAllAnalyses] = useState(false);
-  const [unanalyzedLimit, setUnanalyzedLimit] = useState(10);
-  const initialDisplayCount = 5;
-
-  // Parse analyses with slang terms, build block structure, and calculate "You were here" index
-  const { displayBlocks, youWereHereIndex, showYouWereHere, totalCount, youWereHereBlockIndex, theMoment, allBlocks } = useMemo(() => {
-    if (!data?.culturalAnalysis) {
-      return { displayBlocks: [], youWereHereIndex: 0, showYouWereHere: false, totalCount: 0, youWereHereBlockIndex: 0, theMoment: null, allBlocks: [] };
+  const orderedLyricLines = useMemo(() => {
+    const lyricsText = data?.lyrics?.text || '';
+    if (!lyricsText) {
+      return [];
     }
 
-    const parsed = parseAnalysesWithSlang(data.culturalAnalysis);
-    const lyricsText = data.lyrics?.text || '';
-    
-    const blockStructures = buildBlocksWithAnalyses(parsed, lyricsText);
-    const totalAnalyses = blockStructures.reduce((sum, b) => sum + b.analyses.length, 0);
-    
-    const youWereHereIdx = calculateYouWereHereIndex(
-      totalAnalyses,
-      data.track.playOffsetMs,
-      data.track.trackDurationMs
-    );
+    const parsedAnalyses = parseAnalysesWithSlang(data?.culturalAnalysis || []);
+    return buildOrderedLyricLines(lyricsText, parsedAnalyses);
+  }, [data?.culturalAnalysis, data?.lyrics?.text]);
 
-    const hasPlayOffset = !!data.track.playOffsetMs && data.track.playOffsetMs > 0;
-    
-    // Extract "the moment" - the specific lines the user was hearing
-    const moment = extractTheMoment(blockStructures, youWereHereIdx, data.track.playOffsetMs, lyricsText, data.track.trackDurationMs);
-    
-    const { blocks, totalAnalyses: total, youWereHereBlockIndex: youWereHereBlockIdx } = getDisplayBlocks(
-      blockStructures, 
-      youWereHereIdx, 
-      initialDisplayCount, 
-      showAllAnalyses
-    );
+  const estimatedMomentIndex = useMemo(
+    () => estimateMomentLineIndex(
+      orderedLyricLines.length,
+      data?.track.playOffsetMs,
+      data?.track.trackDurationMs,
+    ),
+    [orderedLyricLines.length, data?.track.playOffsetMs, data?.track.trackDurationMs],
+  );
 
-    return {
-      displayBlocks: blocks,
-      youWereHereIndex: youWereHereIdx,
-      showYouWereHere: hasPlayOffset && totalAnalyses > 1,
-      totalCount: total,
-      youWereHereBlockIndex: youWereHereBlockIdx,
-      theMoment: moment,
-      allBlocks: blockStructures,
-    };
-  }, [data?.culturalAnalysis, data?.lyrics?.text, data?.track.playOffsetMs, data?.track.trackDurationMs, showAllAnalyses]);
+  const phraseCapture = useMemo(
+    () => buildPhraseCaptureModel(
+      orderedLyricLines,
+      data?.track.playOffsetMs,
+      data?.track.trackDurationMs,
+      data?.track.confidenceScore,
+    ),
+    [orderedLyricLines, data?.track.playOffsetMs, data?.track.trackDurationMs, data?.track.confidenceScore],
+  );
 
-  // State to control showing full lyrics vs just the moment
-  const [showFullLyrics, setShowFullLyrics] = useState(false);
+  const momentRows = useMemo(
+    () =>
+      phraseCapture.highlightedLineIndexes
+        .map((lineIndex) => orderedLyricLines.find((line) => line.lineIndex === lineIndex))
+        .filter((line): line is OrderedLyricLine => Boolean(line)),
+    [orderedLyricLines, phraseCapture.highlightedLineIndexes],
+  );
 
-  // Ref for auto-scrolling to "You Were Here" line in full lyrics
+  const lyricsSectionRef = useRef<HTMLDivElement>(null);
+  // Ref for jumping to the closest matched line in the unified lyrics surface
   const youWereHereRef = useRef<HTMLDivElement>(null);
-  const hasAutoScrolled = useRef(false);
   const hasTriggeredMomentAnalysis = useRef(false);
 
   // Reset per-track refs when trackId changes
   useEffect(() => {
-    hasAutoScrolled.current = false;
     hasTriggeredMomentAnalysis.current = false;
+    setSelectedLineKey(null);
+    setLineFeedback(new Map());
   }, [trackId]);
-
-  // Auto-scroll to "You Were Here" line when switching to full lyrics view
-  useEffect(() => {
-    if (showFullLyrics && showYouWereHere && youWereHereRef.current && !hasAutoScrolled.current) {
-      hasAutoScrolled.current = true;
-      setTimeout(() => {
-        youWereHereRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
-    }
-  }, [showFullLyrics, showYouWereHere]);
 
   // Auto-trigger analysis on moment lines that haven't been analyzed yet
   useEffect(() => {
     if (!STORY_MODE_ENABLED) return;
-    if (hasTriggeredMomentAnalysis.current || !theMoment || !data) return;
-    if (theMoment.hasAnalysis) return;
-    if (theMoment.rawLines.length === 0) return;
+    if (hasTriggeredMomentAnalysis.current || !data) return;
     if (data.track.analysisStatus === 'generating_analysis' || data.track.analysisStatus === 'pending') return;
+    const unresolvedMomentRows = momentRows.filter((row) => !row.analysis);
+    if (unresolvedMomentRows.length === 0) return;
 
     hasTriggeredMomentAnalysis.current = true;
 
-    const analyzedTexts = new Set(
-      (data.culturalAnalysis || []).map((a: any) => a.originalText.trim().toLowerCase())
-    );
-
-    const unanalyzedMomentLines = theMoment.rawLines.filter(
-      line => !analyzedTexts.has(line.trim().toLowerCase()) && line.trim().length > 3
-    );
-
-    for (const line of unanalyzedMomentLines.slice(0, 3)) {
-      handleLazyAnalyze(line.trim());
+    for (const row of unresolvedMomentRows.slice(0, 3)) {
+      handleLazyAnalyze(row.text);
     }
-  }, [theMoment, data]);
+  }, [momentRows, data]);
+
+  useEffect(() => {
+    const analyzedKeys = new Set(
+      orderedLyricLines
+        .filter((row) => row.analysis)
+        .map((row) => normalizeLineKey(row.text)),
+    );
+
+    if (analyzedKeys.size === 0) {
+      return;
+    }
+
+    setLineFeedback((prev) => {
+      const next = new Map(prev);
+      let changed = false;
+
+      analyzedKeys.forEach((key) => {
+        if (next.has(key)) {
+          next.delete(key);
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [orderedLyricLines]);
+
+  useEffect(() => {
+    if (selectedLineKey || orderedLyricLines.length === 0) {
+      return;
+    }
+
+    const defaultLine =
+      (estimatedMomentIndex !== null
+        ? orderedLyricLines.find((line) => line.lineIndex === estimatedMomentIndex)
+        : undefined) || orderedLyricLines[0];
+
+    if (defaultLine) {
+      setSelectedLineKey(normalizeLineKey(defaultLine.text));
+    }
+  }, [orderedLyricLines, estimatedMomentIndex, selectedLineKey]);
 
   if (isLoading || isHydratingResult) {
     return (
@@ -1308,87 +1605,70 @@ export default function RecognizedTrack() {
             </Card>
           )}
 
-          {/* THE MOMENT - What the user just heard, shown first */}
-          {theMoment && !showFullLyrics && (theMoment.hasAnalysis || theMoment.rawLines.length > 0) && (
+          {/* Phrase capture summary - honest about track confidence vs lyric alignment confidence */}
+          {lyrics && (
             <Card data-testid="card-the-moment" className="border-primary/30 bg-gradient-to-br from-primary/5 to-background overflow-hidden">
               <CardHeader className="border-b border-primary/20 pb-4">
-                <div className="space-y-1">
+                <div className="space-y-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Sparkles className="h-5 w-5 text-primary" />
-                    What you just heard
+                    {phraseCapture.title}
                   </CardTitle>
-                  {theMoment.timestamp && (
-                    <p className="text-sm text-muted-foreground">
-                      {theMoment.timestamp}{theMoment.blockLabel ? ` - ${theMoment.blockLabel}` : ''}
-                    </p>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">
+                      Track match: {phraseCapture.trackMatchConfidence}
+                    </Badge>
+                    <Badge variant="outline">
+                      Lyric alignment: {phraseCapture.alignmentConfidence}
+                    </Badge>
+                    {phraseCapture.sectionLabel ? (
+                      <Badge variant="secondary">{phraseCapture.sectionLabel}</Badge>
+                    ) : null}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{phraseCapture.description}</p>
                 </div>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
-                {theMoment.hasAnalysis ? (
-                  theMoment.lines.map((line, idx) => (
-                    <div key={line.id || idx} className="space-y-2">
-                      <p className="font-serif text-lg font-medium text-foreground">
-                        "{line.originalText}"
-                      </p>
-                      {line.translation && (
-                        <p className="text-primary font-medium">
-                          {line.translation}
-                        </p>
-                      )}
-                      {line.culturalContext && (
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {line.culturalContext}
-                        </p>
-                      )}
-                      {line.artistIntent && (
-                        <p className="text-sm text-muted-foreground/80 italic">
-                          {line.artistIntent}
-                        </p>
-                      )}
-                      {idx < theMoment.lines.length - 1 && (
-                        <div className="border-b border-border/50 my-3" />
-                      )}
-                    </div>
-                  ))
+                {momentRows.length > 0 ? (
+                  <div className="space-y-3">
+                    {momentRows.map((row) => {
+                      const normalizedLine = normalizeLineKey(row.text);
+                      const feedback = lineFeedback.get(normalizedLine);
+                      const isExpanded = selectedLineKey === normalizedLine;
+                      const isCurrentMoment = phraseCapture.highlightedLineIndexes.includes(row.lineIndex);
+
+                      return (
+                        <div
+                          key={`moment-${row.key}`}
+                          ref={estimatedMomentIndex === row.lineIndex ? youWereHereRef : undefined}
+                        >
+                          <UnifiedLyricRow
+                            row={row}
+                            feedback={feedback}
+                            isExpanded={isExpanded}
+                            isCurrentMoment={isCurrentMoment}
+                            onPress={() => handleLyricRowPress(row)}
+                            onRetry={() => handleLazyAnalyze(row.text)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  theMoment.rawLines.map((line, idx) => {
-                    const isAnalyzing = loadingLines.has(line);
-                    const streamContent = streamingContent.get(line);
-                    return (
-                      <div key={`raw-moment-${idx}`} className="space-y-2">
-                        <p className="font-serif text-lg font-medium text-foreground">
-                          "{line}"
-                        </p>
-                        {isAnalyzing && !streamContent && (
-                          <div className="flex items-center gap-2 text-sm text-primary">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span>Breaking this line down...</span>
-                          </div>
-                        )}
-                        {streamContent && (
-                          <p className="text-primary font-medium animate-in fade-in">
-                            {streamContent}
-                          </p>
-                        )}
-                        {idx < theMoment.rawLines.length - 1 && (
-                          <div className="border-b border-border/50 my-3" />
-                        )}
-                      </div>
-                    );
-                  })
+                  <div className="rounded-2xl border border-dashed border-border/80 bg-background/70 px-4 py-4">
+                    <p className="text-sm text-muted-foreground">{phraseCapture.helper}</p>
+                  </div>
                 )}
-                
-                {/* See full lyrics button */}
+
                 <div className="pt-4 border-t border-border/50">
                   <Button
                     variant="ghost"
                     className="w-full text-primary"
-                    onClick={() => setShowFullLyrics(true)}
-                    data-testid="button-see-full-lyrics"
+                    onClick={jumpToLyrics}
+                    data-testid="button-jump-to-lyrics"
                   >
                     <FileText className="h-4 w-4 mr-2" />
-                    See full lyrics & meanings
+                    Jump into the full lyrics surface
                   </Button>
                 </div>
               </CardContent>
@@ -1419,6 +1699,12 @@ export default function RecognizedTrack() {
                       <Badge variant="outline" data-testid="badge-confidence">
                         <TrendingUp className="mr-1 h-3 w-3" />
                         {track.confidenceScore}% match
+                      </Badge>
+                    ) : null}
+                    {lyrics ? (
+                      <Badge variant="outline">
+                        <Clock className="mr-1 h-3 w-3" />
+                        Lyric timing: {phraseCapture.alignmentConfidence}
                       </Badge>
                     ) : null}
                   </div>
@@ -1531,7 +1817,7 @@ export default function RecognizedTrack() {
                     </div>
                     <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 dark:bg-muted/20">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
-                        <Disc3 className="h-3.5 w-3.5" />
+                        <Music className="h-3.5 w-3.5" />
                         Dis Song Say Wetin?
                       </div>
                       <p className="text-sm leading-relaxed">{artistSongBackgroundText}</p>
@@ -1626,7 +1912,7 @@ export default function RecognizedTrack() {
                         {artistInfo.songBackground && (
                           <div>
                             <span className="text-xs font-medium text-primary flex items-center gap-1 mb-1">
-                              <Disc3 className="h-3 w-3" /> About this track
+                              <Music className="h-3 w-3" /> About this track
                             </span>
                             <p className="text-muted-foreground text-xs leading-relaxed">{artistInfo.songBackground}</p>
                           </div>
@@ -1839,8 +2125,9 @@ export default function RecognizedTrack() {
             );
           })()}
 
-          {/* Lyrics and Cultural Analysis - Show when completed */}
-          {lyrics && (showFullLyrics || !theMoment?.hasAnalysis) && (
+          {/* Unified lyrics and cultural analysis surface */}
+          {lyrics && (
+            <div ref={lyricsSectionRef}>
             <Card data-testid="card-lyrics" className="border-border overflow-hidden">
               <CardHeader className="border-b bg-muted/30">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -1869,7 +2156,7 @@ export default function RecognizedTrack() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                {displayBlocks.length > 0 && displayBlocks.some(b => b.hasAnalyses) ? (
+                {orderedLyricLines.length > 0 ? (
                   <div className="px-6 py-4">
                     {showInlineAnalysisFallback && !primaryGist && canRetryEnrichment && (
                       <div className="mb-5">
@@ -1891,182 +2178,39 @@ export default function RecognizedTrack() {
                         </Button>
                       </div>
                     )}
-                    {/* Clean flowing lyrics - only show blocks with analyses */}
-                    {displayBlocks.filter(b => b.analyses.length > 0).map((block, blockIdx) => {
-                      const isYouWereHereBlock = block.blockIndex === youWereHereBlockIndex;
-                      
-                      return (
-                        <div key={`block-${block.blockIndex}`} className="mb-4 last:mb-0">
-                          {/* Subtle section divider (not on first block) */}
-                          {blockIdx > 0 && (
-                            <div className="h-3" />
-                          )}
-                          
-                          {/* Lyrics flow naturally */}
-                          <div className="space-y-1">
-                            {block.analyses.map((analysis) => {
-                              const originalIndex = analysis.originalIndex;
-                              const isYouWereHere = showYouWereHere && originalIndex === youWereHereIndex;
-                              const hasContext = analysis.culturalContext || analysis.artistIntent || analysis.deeperMeaning || analysis.languageNotes || analysis.lyricBreakdown;
-                              
-                              return (
-                                <div key={analysis.id} ref={isYouWereHere ? youWereHereRef : undefined}>
-                                <Collapsible 
-                                  data-testid={`lyric-item-${originalIndex}`}
-                                  className={`rounded-md transition-colors ${isYouWereHere ? 'bg-primary/10' : ''}`}
-                                >
-                                  <CollapsibleTrigger className="w-full text-left py-2 px-3 -mx-3 rounded-md hover:bg-muted/50 transition-colors group">
-                                    <div className="space-y-1.5">
-                                      {/* Original lyric - clean, poetic */}
-                                      <p className={`font-serif text-lg leading-relaxed ${hasContext ? 'border-b border-dotted border-primary/30 inline' : ''}`} data-testid={`text-original-${originalIndex}`}>
-                                        {analysis.originalText}
-                                      </p>
-                                      {/* Translation - subtle */}
-                                      <p className="text-sm text-muted-foreground italic">
-                                        {analysis.translation}
-                                      </p>
-                                      {/* Slang terms */}
-                                      {analysis.slangTerms && analysis.slangTerms.length > 0 && (
-                                        <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                          {analysis.slangTerms.map((slang, slangIdx) => (
-                                            <Popover key={slangIdx}>
-                                              <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                <Badge 
-                                                  variant="secondary" 
-                                                  className="cursor-pointer text-xs hover-elevate"
-                                                  data-testid={`slang-badge-${originalIndex}-${slangIdx}`}
-                                                >
-                                                  {slang.term}
-                                                </Badge>
-                                              </PopoverTrigger>
-                                              <PopoverContent className="w-64 p-3" side="top">
-                                                <div className="space-y-1">
-                                                  <div className="flex items-center gap-2">
-                                                    <span className="font-semibold">{slang.term}</span>
-                                                    <Badge variant="outline" className="text-xs">{slang.language}</Badge>
-                                                  </div>
-                                                  <p className="text-sm text-muted-foreground">{slang.meaning}</p>
-                                                </div>
-                                              </PopoverContent>
-                                            </Popover>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </CollapsibleTrigger>
-                                  {hasContext && (
-                                    <CollapsibleContent className="pb-2 pt-1">
-                                      <div className="pl-3 border-l-2 border-primary/30 space-y-1.5 text-sm text-muted-foreground">
-                                        {analysis.lyricBreakdown && (
-                                          <p data-testid={`text-breakdown-${originalIndex}`} className="font-mono text-xs bg-muted/50 px-2 py-1 rounded">
-                                            {analysis.lyricBreakdown}
-                                          </p>
-                                        )}
-                                        {analysis.culturalContext && (
-                                          <p data-testid={`text-cultural-${originalIndex}`}>
-                                            <span className="text-primary font-medium">Story:</span> {analysis.culturalContext}
-                                          </p>
-                                        )}
-                                        {analysis.artistIntent && (
-                                          <p data-testid={`text-intent-${originalIndex}`}>
-                                            <span className="text-primary font-medium">Intent:</span> {analysis.artistIntent}
-                                          </p>
-                                        )}
-                                        {analysis.deeperMeaning && (
-                                          <p data-testid={`text-meaning-${originalIndex}`}>
-                                            <span className="text-primary font-medium">Meaning:</span> {analysis.deeperMeaning}
-                                          </p>
-                                        )}
-                                        {analysis.languageNotes && (
-                                          <p data-testid={`text-language-notes-${originalIndex}`}>
-                                            <span className="text-primary font-medium">Language:</span> {analysis.languageNotes}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </CollapsibleContent>
-                                  )}
-                                </Collapsible>
-                                </div>
-                              );
-                            })}
+                    <div className="space-y-3">
+                      {orderedLyricLines.map((row, rowIndex) => {
+                        const normalizedLine = normalizeLineKey(row.text);
+                        const feedback = lineFeedback.get(normalizedLine);
+                        const isExpanded = selectedLineKey === normalizedLine;
+                        const isCurrentMoment = phraseCapture.highlightedLineIndexes.includes(row.lineIndex);
+                        const showBlockLabel =
+                          rowIndex === 0 ||
+                          orderedLyricLines[rowIndex - 1].blockIndex !== row.blockIndex;
+
+                        return (
+                          <div key={row.key} className="space-y-3">
+                            {showBlockLabel ? (
+                              <div className="pt-2 first:pt-0">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                  {row.blockLabel}
+                                </p>
+                              </div>
+                            ) : null}
+                            <div ref={estimatedMomentIndex === row.lineIndex ? youWereHereRef : undefined}>
+                              <UnifiedLyricRow
+                                row={row}
+                                feedback={feedback}
+                                isExpanded={isExpanded}
+                                isCurrentMoment={isCurrentMoment}
+                                onPress={() => handleLyricRowPress(row)}
+                                onRetry={() => handleLazyAnalyze(row.text)}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                    
-                    {/* See full lyrics link */}
-                    {!showAllAnalyses && (
-                      <div className="text-center pt-4 mt-4 border-t">
-                        <button 
-                          onClick={() => setShowAllAnalyses(true)}
-                          className="text-primary hover:underline text-sm font-medium inline-flex items-center gap-1.5"
-                          data-testid="button-see-full-lyrics"
-                        >
-                          See full lyrics & context
-                          <ChevronDown className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
-                    
-                    {/* Unanalyzed lines - tap to analyze on-demand */}
-                    {lyrics && showAllAnalyses && (() => {
-                      const analyzedTexts = new Set(
-                        (culturalAnalysis || []).map(a => a.originalText.trim().toLowerCase())
-                      );
-                      const allLines = lyrics.text.split('\n').filter(l => l.trim().length > 3);
-                      const unanalyzedLines = allLines.filter(
-                        line => !analyzedTexts.has(line.trim().toLowerCase())
-                      );
-                      
-                      if (unanalyzedLines.length === 0) return null;
-                      
-                      return (
-                        <div className="mt-6 pt-4 border-t">
-                          <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
-                            <Sparkles className="h-4 w-4" />
-                            {unanalyzedLines.length} more lines available - tap to analyze
-                          </p>
-                          <div className="space-y-1">
-                            {unanalyzedLines.slice(0, unanalyzedLimit).map((line, idx) => {
-                              const trimmedLine = line.trim();
-                              const isLoading = loadingLines.has(trimmedLine);
-                              
-                              return (
-                                <div key={`unanalyzed-${idx}`}>
-                                  <button
-                                    className="w-full text-left py-2 px-3 -mx-3 rounded-md hover:bg-muted/50 transition-colors group flex items-center gap-2"
-                                    onClick={() => handleLazyAnalyze(trimmedLine)}
-                                    disabled={isLoading}
-                                    data-testid={`unanalyzed-line-${idx}`}
-                                  >
-                                    <p className="font-serif text-lg leading-relaxed text-muted-foreground flex-1">
-                                      {line}
-                                    </p>
-                                    {isLoading ? (
-                                      <div className="flex items-center gap-1.5 text-xs text-primary">
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                        <span>Analyzing...</span>
-                                      </div>
-                                    ) : (
-                                      <Sparkles className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    )}
-                                  </button>
-                                </div>
-                              );
-                            })}
-                            {unanalyzedLines.length > unanalyzedLimit && (
-                              <button 
-                                onClick={() => setUnanalyzedLimit(prev => prev + 20)}
-                                className="w-full text-center py-3 text-sm text-primary hover:underline"
-                                data-testid="button-show-more-unanalyzed"
-                              >
-                                +{unanalyzedLines.length - unanalyzedLimit} more lines
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : (analysisViewState === 'unavailable' || track.analysisStatus === 'failed') && !primaryGist ? (
                   <div className="px-6 py-6 space-y-5">
@@ -2104,9 +2248,9 @@ export default function RecognizedTrack() {
                       </div>
                     )}
 
-                    {primaryGist?.support ? (
+                    {primaryGistSupport ? (
                       <p className="text-sm text-muted-foreground">
-                        {primaryGist.support}
+                        {primaryGistSupport}
                       </p>
                     ) : null}
                   </div>
@@ -2125,6 +2269,7 @@ export default function RecognizedTrack() {
                 ) : null}
               </CardContent>
             </Card>
+            </div>
           )}
 
           {/* Continuation Suggestion */}

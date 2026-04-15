@@ -210,6 +210,192 @@ export function parseAnalysesWithSlang(
   }));
 }
 
+function normalizeLyricLine(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function getBlockLabel(blockType: LyricBlock["type"], blockIndex: number): string {
+  if (blockType === "chorus") return "Chorus";
+  if (blockType === "bridge") return "Bridge";
+  if (blockType === "intro") return "Intro";
+  if (blockType === "outro") return "Outro";
+  return `Verse ${blockIndex + 1}`;
+}
+
+export interface OrderedLyricLine {
+  key: string;
+  text: string;
+  lineIndex: number;
+  blockIndex: number;
+  blockType: LyricBlock["type"];
+  blockLabel: string;
+  analysis?: LyricAnalysis;
+}
+
+export function buildOrderedLyricLines(
+  lyricsText: string,
+  analyses: LyricAnalysis[],
+): OrderedLyricLine[] {
+  const blocks = detectLyricBlocks(lyricsText);
+  if (blocks.length === 0) {
+    return [];
+  }
+
+  const availableAnalyses = analyses.map((analysis, index) => ({
+    index,
+    normalized: normalizeLyricLine(analysis.originalText),
+    analysis,
+  }));
+  const usedAnalyses = new Set<number>();
+
+  let lineIndex = 0;
+
+  return blocks.flatMap((block, blockIndex) =>
+    block.lines
+      .map((line) => line.trim())
+      .filter((line) => line.length > 3)
+      .map((line) => {
+        const normalizedLine = normalizeLyricLine(line);
+        const matchedAnalysis = availableAnalyses.find((candidate) => {
+          if (usedAnalyses.has(candidate.index)) return false;
+          return candidate.normalized === normalizedLine;
+        });
+
+        if (matchedAnalysis) {
+          usedAnalyses.add(matchedAnalysis.index);
+        }
+
+        const orderedLine: OrderedLyricLine = {
+          key: `${lineIndex}-${normalizedLine || "line"}`,
+          text: line,
+          lineIndex,
+          blockIndex,
+          blockType: block.type,
+          blockLabel: getBlockLabel(block.type, blockIndex),
+          analysis: matchedAnalysis?.analysis,
+        };
+
+        lineIndex += 1;
+        return orderedLine;
+      }),
+  );
+}
+
+export function estimateMomentLineIndex(
+  totalLines: number,
+  playOffsetMs: number | undefined,
+  trackDurationMs: number | undefined,
+): number | null {
+  if (!playOffsetMs || !trackDurationMs || trackDurationMs <= 0 || totalLines <= 0) {
+    return null;
+  }
+
+  const progress = Math.min(1, Math.max(0, playOffsetMs / trackDurationMs));
+  return Math.min(totalLines - 1, Math.floor(progress * totalLines));
+}
+
+export type TrackMatchConfidence = "high" | "medium" | "low";
+export type PhraseAlignmentConfidence = "medium" | "low";
+export type PhraseCaptureKind = "approximate_match" | "instrumental" | "no_clear_lyric";
+
+export interface PhraseCaptureModel {
+  kind: PhraseCaptureKind;
+  title: string;
+  description: string;
+  helper: string;
+  trackMatchConfidence: TrackMatchConfidence;
+  alignmentConfidence: PhraseAlignmentConfidence;
+  sectionLabel?: string;
+  highlightedLineIndexes: number[];
+}
+
+function getTrackMatchConfidence(confidenceScore?: number): TrackMatchConfidence {
+  if (typeof confidenceScore !== "number") {
+    return "medium";
+  }
+
+  if (confidenceScore >= 85) return "high";
+  if (confidenceScore >= 70) return "medium";
+  return "low";
+}
+
+function getApproximateSectionLabel(
+  playOffsetMs: number | undefined,
+  trackDurationMs: number | undefined,
+): string | undefined {
+  if (!playOffsetMs || !trackDurationMs || trackDurationMs <= 0) {
+    return undefined;
+  }
+
+  const progress = Math.min(1, Math.max(0, playOffsetMs / trackDurationMs));
+
+  if (progress < 0.18) return "Closest match from the opening section";
+  if (progress < 0.4) return "Closest match from the early section";
+  if (progress < 0.65) return "Closest match from the middle section";
+  if (progress < 0.85) return "Closest match from the later section";
+  return "Closest match from the closing section";
+}
+
+export function buildPhraseCaptureModel(
+  orderedLines: OrderedLyricLine[],
+  playOffsetMs: number | undefined,
+  trackDurationMs: number | undefined,
+  confidenceScore?: number,
+): PhraseCaptureModel {
+  const trackMatchConfidence = getTrackMatchConfidence(confidenceScore);
+  const estimatedIndex = estimateMomentLineIndex(orderedLines.length, playOffsetMs, trackDurationMs);
+  const sectionLabel = getApproximateSectionLabel(playOffsetMs, trackDurationMs);
+
+  if (estimatedIndex === null || orderedLines.length === 0) {
+    return {
+      kind: "no_clear_lyric",
+      title: "No clear lyric captured yet",
+      description:
+        "We matched the song, but we cannot honestly lock this listen to one exact lyric line yet.",
+      helper: "Try again during a clearer vocal moment for a tighter lyric match.",
+      trackMatchConfidence,
+      alignmentConfidence: "low",
+      highlightedLineIndexes: [],
+    };
+  }
+
+  const startIndex = Math.max(0, estimatedIndex - 1);
+  const endIndex = Math.min(orderedLines.length, estimatedIndex + 2);
+  const highlightedLines = orderedLines.slice(startIndex, endIndex);
+  const highlightedLineIndexes = highlightedLines.map((line) => line.lineIndex);
+  const analyzedCount = highlightedLines.filter((line) => line.analysis).length;
+
+  if (analyzedCount === 0) {
+    return {
+      kind: "instrumental",
+      title: "No clear vocal line locked yet",
+      description:
+        "This part of the song sounds instrumental or too loose for exact lyric timing, so we are showing the closest section instead of pretending.",
+      helper: "Try another listen when the vocals are clearer and we will narrow it down.",
+      trackMatchConfidence,
+      alignmentConfidence: "low",
+      sectionLabel,
+      highlightedLineIndexes,
+    };
+  }
+
+  return {
+    kind: "approximate_match",
+    title: "Closest lyric match",
+    description:
+      "The song match is solid, but this lyric timing is still approximate. We are not claiming an exact timestamped phrase here.",
+    helper: "Tap any line below for a full breakdown, or listen again during a stronger vocal moment.",
+    trackMatchConfidence,
+    alignmentConfidence: analyzedCount >= 2 && trackMatchConfidence === "high" ? "medium" : "low",
+    sectionLabel,
+    highlightedLineIndexes,
+  };
+}
+
 export function calculateYouWereHereIndex(
   totalAnalyses: number,
   playOffsetMs: number | undefined,

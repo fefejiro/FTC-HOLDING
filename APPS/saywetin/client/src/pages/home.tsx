@@ -37,16 +37,16 @@ export default function Home() {
         track: {
           ...result.recognizedTrack,
           lyricsStatus: 'pending',
-          analysisStatus: 'failed',
+          analysisStatus: 'pending',
         },
         lyrics: undefined,
         culturalAnalysis: [],
         status: {
           lyrics: 'pending',
-          analysis: 'failed',
+          analysis: 'pending',
           aiConfigured: true,
           aiProvider: 'openai',
-          analysisMessage: 'Quick meaning is ready now. Deeper line-by-line context can still catch up.',
+          analysisMessage: 'We matched the song. Lyric timing and deeper line-by-line context are still settling in.',
         },
       });
       navigate(`/song/${result.recognizedTrack.id}`);

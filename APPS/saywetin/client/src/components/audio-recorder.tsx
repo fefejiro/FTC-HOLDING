@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Mic, Loader2, Music, Volume2 } from 'lucide-react';
+import { Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +13,7 @@ import {
   stopNativeRecording,
   cancelNativeRecording
 } from '@/lib/native-audio';
+import { ListeningOrb } from '@/components/listening-orb';
 
 type RecordingState = 'idle' | 'requesting' | 'listening' | 'identifying' | 'success' | 'error';
 type RecognitionVisualMode = 'requesting' | 'listening' | 'matching' | 'success' | 'error';
@@ -270,85 +271,7 @@ function RecognitionStageVisual({
   mode: RecognitionVisualMode;
   immersive: boolean;
 }) {
-  const wrapperClass = immersive ? 'h-52 w-52' : 'h-36 w-36';
-  const coreClass = immersive ? 'h-28 w-28' : 'h-20 w-20';
-  const ringScale = mode === 'matching' ? 1.16 : mode === 'requesting' ? 1.1 : 1.3;
-  const ringDuration = mode === 'matching' ? 1.9 : mode === 'requesting' ? 2.4 : 2.8;
-  const coreAccent =
-    mode === 'success'
-      ? 'from-emerald-500 via-green-500 to-lime-500'
-      : mode === 'error'
-        ? 'from-muted via-muted to-muted'
-        : 'from-orange-500 via-amber-500 to-green-500';
-
-  return (
-    <div className={`relative ${wrapperClass}`}>
-      {[0, 1, 2, 3].map((index) => (
-        <motion.div
-          key={`${mode}-ring-${index}`}
-          className="absolute inset-0 rounded-full border border-primary/20 bg-primary/5"
-          animate={{
-            scale: [0.82, ringScale, ringScale + 0.08],
-            opacity: [0, 0.34 - index * 0.05, 0],
-          }}
-          transition={{
-            duration: ringDuration,
-            ease: 'easeOut',
-            repeat: Infinity,
-            delay: index * 0.22,
-          }}
-        />
-      ))}
-
-      <motion.div
-        className="absolute inset-5 rounded-full bg-gradient-to-br from-orange-500/12 via-amber-500/12 to-green-500/12 blur-2xl"
-        animate={{
-          scale: mode === 'matching' ? [0.96, 1.05, 0.98] : [0.94, 1.08, 0.96],
-          opacity: mode === 'matching' ? [0.28, 0.46, 0.3] : [0.22, 0.4, 0.24],
-        }}
-        transition={{
-          duration: mode === 'matching' ? 1.8 : 2.8,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      />
-
-      <div className="absolute inset-0 flex items-center justify-center">
-        <motion.div
-          className={`${coreClass} rounded-full bg-gradient-to-br ${coreAccent} flex items-center justify-center shadow-2xl shadow-orange-500/25`}
-          animate={
-            mode === 'success'
-              ? { scale: [0.96, 1.02, 1] }
-              : mode === 'error'
-                ? { scale: [1, 0.98, 1] }
-                : { scale: [0.98, 1.04, 1], rotate: mode === 'matching' ? [0, 6, -6, 0] : [0, 0, 0] }
-          }
-          transition={{
-            duration: mode === 'matching' ? 1.8 : 2.6,
-            repeat: mode === 'success' ? 0 : Infinity,
-            ease: 'easeInOut',
-          }}
-        >
-          {mode === 'requesting' ? (
-            <Loader2 className={`${immersive ? 'h-14 w-14' : 'h-10 w-10'} text-white animate-spin`} />
-          ) : mode === 'listening' ? (
-            <Volume2 className={`${immersive ? 'h-14 w-14' : 'h-10 w-10'} text-white`} />
-          ) : mode === 'matching' ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
-            >
-              <Music className={`${immersive ? 'h-14 w-14' : 'h-10 w-10'} text-white`} />
-            </motion.div>
-          ) : mode === 'success' ? (
-            <Music className={`${immersive ? 'h-16 w-16' : 'h-12 w-12'} text-white`} />
-          ) : (
-            <Mic className={`${immersive ? 'h-14 w-14' : 'h-10 w-10'} text-muted-foreground`} />
-          )}
-        </motion.div>
-      </div>
-    </div>
-  );
+  return <ListeningOrb mode={mode} size={immersive ? 'immersive' : 'compact'} />;
 }
 
 interface WebCaptureProfile {
@@ -391,18 +314,18 @@ export function AudioRecorder({
   immersive = false,
 }: AudioRecorderProps) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const [progress, setProgress] = useState<number>(0);
   const { toast } = useToast();
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoStartedRef = useRef(false);
+  const nativeRecordingActiveRef = useRef(false);
+  const webRecordingActiveRef = useRef(false);
 
-  const cleanup = () => {
+  const clearRuntimeResources = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -411,18 +334,35 @@ export function AudioRecorder({
       audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
     }
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
     if (recordingTimeoutRef.current) {
       clearTimeout(recordingTimeoutRef.current);
       recordingTimeoutRef.current = null;
     }
-    // Cancel any in-progress native recording
+  };
+
+  const cancelActiveCapture = () => {
     if (isNativeApp()) {
-      cancelNativeRecording();
+      if (nativeRecordingActiveRef.current) {
+        nativeRecordingActiveRef.current = false;
+        cancelNativeRecording().catch(() => {});
+      }
+    } else if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
     }
+
+    webRecordingActiveRef.current = false;
+    mediaRecorderRef.current = null;
+    clearRuntimeResources();
+  };
+
+  const cleanup = (cancelCapture = false) => {
+    if (cancelCapture) {
+      cancelActiveCapture();
+      return;
+    }
+
+    clearRuntimeResources();
   };
 
   // Native recording for Capacitor (Android/iOS)
@@ -431,7 +371,6 @@ export function AudioRecorder({
       console.log('[SAYWETIN] startNativeListening called, listenDuration:', listenDuration);
       setRecordingState('requesting');
       audioChunksRef.current = [];
-      setProgress(0);
 
       let hasPermission = await hasRecordingPermission();
       console.log('[SAYWETIN] hasPermission:', hasPermission);
@@ -449,19 +388,15 @@ export function AudioRecorder({
         throw createListenError('capture_failed', 'Failed to start recording');
       }
 
+      nativeRecordingActiveRef.current = true;
       trackListenStarted({ source: analyticsSource });
       setRecordingState('listening');
 
-      const startTime = Date.now();
-      progressIntervalRef.current = setInterval(() => {
-        const elapsed = (Date.now() - startTime) / 1000;
-        setProgress(Math.min((elapsed / listenDuration) * 100, 100));
-      }, 50);
-
       recordingTimeoutRef.current = setTimeout(async () => {
         console.log('[SAYWETIN] Recording timeout fired, stopping recording...');
+        nativeRecordingActiveRef.current = false;
         const audioBlob = await stopNativeRecording();
-        cleanup();
+        clearRuntimeResources();
         console.log('[SAYWETIN] audioBlob after stop:', audioBlob ? `${audioBlob.size} bytes, type: ${audioBlob.type}` : 'NULL');
         if (audioBlob && audioBlob.size > 0) {
           audioChunksRef.current = [audioBlob];
@@ -481,8 +416,8 @@ export function AudioRecorder({
 
     } catch (error: any) {
       console.error('[SAYWETIN] Native recording failed:', error);
-      cancelNativeRecording();
-      cleanup();
+      nativeRecordingActiveRef.current = false;
+      cleanup(true);
       const issue = classifyListenError(
         isPermissionDeniedError(error)
           ? createListenError('microphone_denied', 'Permission denied')
@@ -507,7 +442,6 @@ export function AudioRecorder({
 
       setRecordingState('requesting');
       audioChunksRef.current = [];
-      setProgress(0);
 
       // Request microphone with settings optimized for music recognition
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -564,25 +498,21 @@ export function AudioRecorder({
       mediaRecorder.onstop = handleUpload;
 
       mediaRecorder.start();
+      webRecordingActiveRef.current = true;
       trackListenStarted({ source: analyticsSource });
       setRecordingState('listening');
 
-      const startTime = Date.now();
-      progressIntervalRef.current = setInterval(() => {
-        const elapsed = (Date.now() - startTime) / 1000;
-        setProgress(Math.min((elapsed / effectiveListenDuration) * 100, 100));
-      }, 50);
-
       recordingTimeoutRef.current = setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          webRecordingActiveRef.current = false;
           mediaRecorderRef.current.stop();
-          cleanup();
+          clearRuntimeResources();
         }
       }, effectiveListenDuration * 1000);
 
     } catch (error: any) {
       console.error('Failed to start recording:', error);
-      cleanup();
+      cleanup(true);
       const issue = classifyListenError(
         isPermissionDeniedError(error)
           ? createListenError('microphone_denied', 'Permission denied')
@@ -671,8 +601,9 @@ export function AudioRecorder({
   };
 
   const handleUpload = async () => {
+    nativeRecordingActiveRef.current = false;
+    webRecordingActiveRef.current = false;
     setRecordingState('identifying');
-    setProgress(100);
 
     try {
       const firstBlob = audioChunksRef.current[0];
@@ -754,7 +685,7 @@ export function AudioRecorder({
   };
 
   useEffect(() => {
-    return cleanup;
+    return () => cleanup(true);
   }, []);
 
   useEffect(() => {
@@ -840,15 +771,8 @@ export function AudioRecorder({
             <div className="space-y-2 text-center">
               <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Listening for music</p>
               <p className="max-w-xs text-sm text-muted-foreground">
-                Make sure your device can hear the song clearly
+                We are sampling the room now. Keep the music clear and let the field settle around it.
               </p>
-            </div>
-
-            <div className={`${immersive ? 'w-56' : 'w-48'} h-1.5 bg-muted rounded-full overflow-hidden`}>
-              <motion.div
-                className="h-full bg-primary rounded-full"
-                style={{ width: `${progress}%` }}
-              />
             </div>
           </motion.div>
         )}
@@ -864,7 +788,7 @@ export function AudioRecorder({
             <RecognitionStageVisual mode="matching" immersive={immersive} />
             <div className="space-y-2 text-center">
               <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Matching the song</p>
-              <p className="max-w-xs text-sm text-muted-foreground">Hold on while we lock it in.</p>
+              <p className="max-w-xs text-sm text-muted-foreground">We have the room. Now we are tightening the match.</p>
             </div>
           </motion.div>
         )}
