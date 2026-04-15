@@ -146,6 +146,8 @@ type LineFeedbackState = {
   message?: string;
 };
 
+type LyricRowVisualState = 'idle' | 'loading' | 'analyzed' | 'unavailable';
+
 function normalizeLineKey(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -174,23 +176,48 @@ function buildOptimisticAnalysis(
   };
 }
 
-function LineStateBadge({
-  row,
-  feedback,
-}: {
-  row: OrderedLyricLine;
-  feedback?: LineFeedbackState;
-}) {
+function getLyricRowVisualState(
+  row: OrderedLyricLine,
+  feedback?: LineFeedbackState,
+): LyricRowVisualState {
   if (feedback?.status === 'loading') {
+    return 'loading';
+  }
+
+  if (feedback?.status === 'unavailable' || feedback?.status === 'failed') {
+    return 'unavailable';
+  }
+
+  if (row.analysis) {
+    return 'analyzed';
+  }
+
+  return 'idle';
+}
+
+function getLineFallbackMessage(feedback?: LineFeedbackState): string {
+  if (feedback?.status === 'unavailable') {
+    return 'Meaning for this line is not ready yet.';
+  }
+
+  return 'This line did not open this time.';
+}
+
+function LineStateBadge({
+  state,
+}: {
+  state: LyricRowVisualState;
+}) {
+  if (state === 'loading') {
     return (
       <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        Loading
+        Opening
       </Badge>
     );
   }
 
-  if (feedback?.status === 'unavailable' || feedback?.status === 'failed') {
+  if (state === 'unavailable') {
     return (
       <Badge variant="outline" className="gap-1.5 border-amber-500/40 text-amber-700 dark:text-amber-300">
         <CircleAlert className="h-3.5 w-3.5" />
@@ -199,11 +226,11 @@ function LineStateBadge({
     );
   }
 
-  if (row.analysis) {
+  if (state === 'analyzed') {
     return (
       <Badge variant="secondary" className="gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Analyzed
+        Meaning ready
       </Badge>
     );
   }
@@ -211,7 +238,7 @@ function LineStateBadge({
   return (
     <Badge variant="outline" className="gap-1.5 border-primary/25 text-primary">
       <Sparkles className="h-3.5 w-3.5" />
-      Tap to analyze
+      Open
     </Badge>
   );
 }
@@ -236,62 +263,85 @@ function LyricInsightBody({
     return null;
   }
 
+  const insightBlocks = [
+    analysis.deeperMeaning
+      ? { label: 'Meaning', value: analysis.deeperMeaning }
+      : null,
+    analysis.culturalContext
+      ? { label: 'Story', value: analysis.culturalContext }
+      : null,
+    analysis.artistIntent
+      ? { label: 'Artist intent', value: analysis.artistIntent }
+      : null,
+    analysis.languageNotes
+      ? { label: 'Language note', value: analysis.languageNotes }
+      : null,
+  ].filter((block): block is { label: string; value: string } => Boolean(block));
+
   return (
-    <div className="mt-4 border-t border-border/70 pt-4">
-      <div className="space-y-3 border-l-2 border-primary/25 pl-4 text-sm text-muted-foreground">
+    <div className="mt-5 border-t border-border/70 pt-5">
+      <div className="space-y-4">
         {analysis.lyricBreakdown && (
-          <p className="rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-foreground/85">
-            {analysis.lyricBreakdown}
-          </p>
+          <div className="rounded-2xl border border-border/70 bg-muted/35 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Line detail
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/90">
+              {analysis.lyricBreakdown}
+            </p>
+          </div>
         )}
-        {analysis.culturalContext && (
-          <p>
-            <span className="font-medium text-primary">Story:</span> {analysis.culturalContext}
-          </p>
-        )}
-        {analysis.artistIntent && (
-          <p>
-            <span className="font-medium text-primary">Intent:</span> {analysis.artistIntent}
-          </p>
-        )}
-        {analysis.deeperMeaning && (
-          <p>
-            <span className="font-medium text-primary">Meaning:</span> {analysis.deeperMeaning}
-          </p>
-        )}
-        {analysis.languageNotes && (
-          <p>
-            <span className="font-medium text-primary">Language:</span> {analysis.languageNotes}
-          </p>
-        )}
+
+        {insightBlocks.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {insightBlocks.map((block) => (
+              <div
+                key={block.label}
+                className="rounded-2xl border border-border/70 bg-background/85 px-4 py-3"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  {block.label}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">
+                  {block.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {analysis.slangTerms && analysis.slangTerms.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {analysis.slangTerms.map((slang, slangIdx) => (
-            <Popover key={`${analysis.id}-${slangIdx}`}>
-              <PopoverTrigger asChild onClick={(event) => event.stopPropagation()}>
-                <Badge
-                  variant="secondary"
-                  className="cursor-pointer text-xs hover-elevate"
-                  data-testid={`slang-badge-${analysis.originalIndex}-${slangIdx}`}
-                >
-                  {slang.term}
-                </Badge>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-3" side="top">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{slang.term}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {slang.language}
-                    </Badge>
+        <div className="mt-4 rounded-2xl border border-border/70 bg-muted/25 px-4 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Key phrases
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {analysis.slangTerms.map((slang, slangIdx) => (
+              <Popover key={`${analysis.id}-${slangIdx}`}>
+                <PopoverTrigger asChild onClick={(event) => event.stopPropagation()}>
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer text-xs hover-elevate"
+                    data-testid={`slang-badge-${analysis.originalIndex}-${slangIdx}`}
+                  >
+                    {slang.term}
+                  </Badge>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3" side="top">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{slang.term}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {slang.language}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{slang.meaning}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">{slang.meaning}</p>
-                </div>
-              </PopoverContent>
-            </Popover>
-          ))}
+                </PopoverContent>
+              </Popover>
+            ))}
+          </div>
         </div>
       ) : null}
     </div>
@@ -313,72 +363,111 @@ function UnifiedLyricRow({
   onPress: () => void;
   onRetry: () => void;
 }) {
-  const hasAnalysis = Boolean(row.analysis);
+  const visualState = getLyricRowVisualState(row, feedback);
+  const hasAnalysis = visualState === 'analyzed';
+  const collapsedSupportText =
+    visualState === 'analyzed'
+      ? row.analysis?.translation
+      : visualState === 'loading'
+        ? 'Opening meaning for this line...'
+        : visualState === 'unavailable'
+          ? getLineFallbackMessage(feedback)
+          : null;
 
   return (
     <div
-      className={`rounded-2xl border px-4 py-4 transition-all ${
+      className={`overflow-hidden rounded-[1.35rem] border transition-all ${
         isExpanded
-          ? 'border-primary/40 bg-primary/5 shadow-sm shadow-primary/10'
+          ? 'border-primary/35 bg-primary/[0.045] shadow-[0_16px_40px_rgba(249,115,22,0.08)]'
           : isCurrentMoment
-            ? 'border-primary/25 bg-primary/[0.03]'
-            : 'border-border/70 bg-background/80 hover:border-primary/20 hover:bg-muted/20'
+            ? 'border-primary/25 bg-primary/[0.03] shadow-[0_8px_24px_rgba(249,115,22,0.05)]'
+            : 'border-border/70 bg-background/85 hover:border-primary/20 hover:bg-muted/20'
       }`}
       data-testid={`lyric-row-${row.lineIndex}`}
     >
       <button
         type="button"
         onClick={onPress}
-        className="flex w-full items-start justify-between gap-4 text-left"
+        className="flex w-full items-start justify-between gap-4 px-5 py-5 text-left"
         data-testid={`lyric-item-${row.lineIndex}`}
       >
-        <div className="min-w-0 flex-1 space-y-2">
+        <div className="min-w-0 flex-1 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             {isCurrentMoment ? (
               <Badge variant="outline" className="border-primary/35 bg-primary/5 text-primary">
                 Closest section
               </Badge>
             ) : null}
-            <LineStateBadge row={row} feedback={feedback} />
+            <LineStateBadge state={visualState} />
           </div>
 
           <p
-            className="font-serif text-lg leading-relaxed text-foreground"
+            className="font-serif text-[1.05rem] leading-8 text-foreground sm:text-[1.12rem]"
             data-testid={`text-original-${row.lineIndex}`}
           >
             {row.text}
           </p>
 
-          {row.analysis?.translation ? (
-            <p className="text-sm italic text-muted-foreground">{row.analysis.translation}</p>
-          ) : feedback?.status === 'loading' ? (
-            <p className="text-sm text-primary">Breaking this line down now.</p>
-          ) : feedback?.message ? (
-            <p className="text-sm text-amber-700 dark:text-amber-300">{feedback.message}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">Tap for meaning, context, and language notes.</p>
-          )}
+          {collapsedSupportText ? (
+            <p
+              className={`text-sm leading-relaxed ${
+                visualState === 'loading'
+                  ? 'text-primary'
+                  : visualState === 'unavailable'
+                    ? 'text-amber-700 dark:text-amber-300'
+                    : 'italic text-muted-foreground'
+              }`}
+            >
+              {collapsedSupportText}
+            </p>
+          ) : null}
         </div>
 
-        <ChevronDown className={`mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/80">
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        </div>
       </button>
 
       {isExpanded ? (
         hasAnalysis ? (
-          <LyricInsightBody analysis={row.analysis} />
-        ) : feedback?.status === 'loading' ? (
-          <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-4 text-sm text-primary">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Loading the line meaning and context.</span>
+          <div className="px-5 pb-5">
+            <LyricInsightBody analysis={row.analysis} />
+          </div>
+        ) : visualState === 'loading' ? (
+          <div className="px-5 pb-5">
+            <div className="border-t border-border/70 pt-5">
+              <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Opening meaning
+                </div>
+                <div className="mt-4 space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-11/12" />
+                  <Skeleton className="h-4 w-9/12" />
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
-          <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
-            <p className="text-sm text-muted-foreground">
-              {feedback?.message || 'No deeper breakdown landed for this line yet.'}
-            </p>
-            <Button variant="outline" size="sm" onClick={onRetry} data-testid={`button-retry-line-${row.lineIndex}`}>
-              Try this line again
-            </Button>
+          <div className="px-5 pb-5">
+            <div className="border-t border-border/70 pt-5">
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {getLineFallbackMessage(feedback)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Try opening this line again.
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={onRetry} data-testid={`button-retry-line-${row.lineIndex}`}>
+                    Try again
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         )
       ) : null}
@@ -853,14 +942,17 @@ export default function RecognizedTrack() {
       });
 
       if (!response.ok) {
-        let failureMessage = 'Could not analyze this line.';
+        let failureMessage = 'This line did not open this time.';
         let failureStatus: LineFeedbackState['status'] = 'failed';
         try {
           const payload = await response.json();
-          failureMessage = payload?.message || payload?.error || failureMessage;
           failureStatus = payload?.status === 'unavailable' ? 'unavailable' : 'failed';
+          failureMessage =
+            failureStatus === 'unavailable'
+              ? 'Meaning for this line is not ready yet.'
+              : failureMessage;
         } catch {
-          failureMessage = `HTTP ${response.status}`;
+          failureMessage = 'This line did not open this time.';
         }
         throw Object.assign(new Error(failureMessage), { feedbackStatus: failureStatus });
       }
@@ -876,14 +968,20 @@ export default function RecognizedTrack() {
         console.warn('[ANALYZE] Analysis issue:', result.message);
         setLineFeedbackState(lyricText, {
           status: result.status === 'unavailable' ? 'unavailable' : 'failed',
-          message: result.message || 'No deeper breakdown landed for this line yet.',
+          message:
+            result.status === 'unavailable'
+              ? 'Meaning for this line is not ready yet.'
+              : 'This line did not open this time.',
         });
       }
     } catch (err: any) {
       console.error('[ANALYZE] Fetch fallback failed:', err);
       setLineFeedbackState(lyricText, {
         status: err?.feedbackStatus === 'unavailable' ? 'unavailable' : 'failed',
-        message: err?.message || 'We could not analyze this line right now.',
+        message:
+          err?.feedbackStatus === 'unavailable'
+            ? 'Meaning for this line is not ready yet.'
+            : 'This line did not open this time.',
       });
     } finally {
       clearLineState(lyricText);
@@ -949,7 +1047,7 @@ export default function RecognizedTrack() {
           clearLineState(lyricText);
           setLineFeedbackState(lyricText, {
             status: 'unavailable',
-            message: parsed.data || 'No deeper breakdown landed for this line yet.',
+            message: 'Meaning for this line is not ready yet.',
           });
           console.warn('[ANALYZE] SSE error:', parsed.data);
           eventSource.close();
@@ -1994,7 +2092,7 @@ export default function RecognizedTrack() {
                       Lyrics & What They Mean
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      Tap any line to break am down
+                      Open any line to explore the meaning
                     </CardDescription>
                   </div>
                   {/* Mini-game button - only show when we have slang terms */}
@@ -2014,9 +2112,9 @@ export default function RecognizedTrack() {
               </CardHeader>
               <CardContent className="p-0">
                 {orderedLyricLines.length > 0 ? (
-                  <div className="px-6 py-4">
+                  <div className="px-6 py-5">
                     {showInlineAnalysisFallback && !primaryGist && canRetryEnrichment && (
-                      <div className="mb-5">
+                      <div className="mb-6">
                         <Button
                           variant="outline"
                           size="sm"
@@ -2035,7 +2133,7 @@ export default function RecognizedTrack() {
                         </Button>
                       </div>
                     )}
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {orderedLyricLines.map((row, rowIndex) => {
                         const normalizedLine = normalizeLineKey(row.text);
                         const feedback = lineFeedback.get(normalizedLine);
@@ -2046,9 +2144,9 @@ export default function RecognizedTrack() {
                           orderedLyricLines[rowIndex - 1].blockIndex !== row.blockIndex;
 
                         return (
-                          <div key={row.key} className="space-y-3">
+                          <div key={row.key} className="space-y-4">
                             {showBlockLabel ? (
-                              <div className="pt-2 first:pt-0">
+                              <div className="pt-3 first:pt-0">
                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                                   {row.blockLabel}
                                 </p>
