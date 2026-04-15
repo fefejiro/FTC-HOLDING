@@ -32,10 +32,18 @@ export function NotificationPermission({ user }: NotificationPermissionProps = {
     }
 
     const path = window.location.pathname || location;
+    const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+    const narrowViewport = window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
+    const isMobileUserAgent =
+      /android|iphone|ipad|ipod|mobile/i.test(window.navigator.userAgent);
+    const isMobileBrowser = isMobileUserAgent || (coarsePointer && narrowViewport);
+
     return (
       path.startsWith("/onboarding") ||
       path.startsWith("/auth/") ||
-      path.startsWith("/join/")
+      path.startsWith("/join/") ||
+      !(isStandalone || isMobileBrowser || isNativeApp())
     );
   }, [location]);
 

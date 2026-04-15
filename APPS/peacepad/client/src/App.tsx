@@ -443,14 +443,7 @@ export default function App() {
                 </Suspense>
                 <Toaster />
                 <OfflineIndicator />
-                <Suspense fallback={null}>
-                  <AuthenticatedWhatsNew />
-                  <UpdateNotification />
-                  <InstallPWA />
-                  <AppRatingPrompt trigger="general-usage" />
-                  <RateLimitNotifier />
-                  <AccessibilityAnnouncer />
-                </Suspense>
+                <PromptSurfaceLayer />
                 </ErrorBoundary>
               </ActivityProvider>
             </LocationProvider>
@@ -700,4 +693,46 @@ function AuthenticatedWhatsNew() {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return null;
   return <WhatsNewModal />;
+}
+
+function PromptSurfaceLayer() {
+  const [location] = useLocation();
+
+  const path = useMemo(() => {
+    if (typeof window === "undefined") {
+      return location;
+    }
+
+    return window.location.pathname || location;
+  }, [location]);
+
+  const blocksPromptSurfaces =
+    path.startsWith("/onboarding") ||
+    path.startsWith("/auth/") ||
+    path.startsWith("/join/");
+
+  const shouldLoadBrowserPromptSurfaces = useMemo(() => {
+    if (typeof window === "undefined" || blocksPromptSurfaces) {
+      return false;
+    }
+
+    const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+    const narrowViewport = window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
+    const isMobileUserAgent =
+      /android|iphone|ipad|ipod|mobile/i.test(window.navigator.userAgent);
+
+    return isStandalone || isMobileUserAgent || (coarsePointer && narrowViewport);
+  }, [blocksPromptSurfaces]);
+
+  return (
+    <Suspense fallback={null}>
+      {!blocksPromptSurfaces && <AuthenticatedWhatsNew />}
+      {shouldLoadBrowserPromptSurfaces && <UpdateNotification />}
+      {shouldLoadBrowserPromptSurfaces && <InstallPWA />}
+      {!blocksPromptSurfaces && <AppRatingPrompt trigger="general-usage" />}
+      <RateLimitNotifier />
+      <AccessibilityAnnouncer />
+    </Suspense>
+  );
 }
