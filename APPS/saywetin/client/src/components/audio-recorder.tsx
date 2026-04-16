@@ -341,6 +341,7 @@ export function AudioRecorder({
   autoStart = false,
   immersive = false,
 }: AudioRecorderProps) {
+  const nativeAndroid = isNativeAndroidRuntime();
   const [recordingState, setRecordingState] = useState<RecordingState>(autoStart ? 'requesting' : 'idle');
   const [failureDisplay, setFailureDisplay] = useState<FailureDisplay | null>(null);
 
@@ -719,7 +720,7 @@ export function AudioRecorder({
       className={`flex w-full flex-col items-center gap-5 ${immersive ? 'max-w-md py-8 text-center' : 'py-4'}`}
       data-testid="audio-recorder"
     >
-      <AnimatePresence mode="sync">
+      <AnimatePresence mode={nativeAndroid ? 'wait' : 'sync'}>
         {recordingState === 'idle' && (
           <motion.div
             key="idle"
@@ -838,7 +839,11 @@ export function AudioRecorder({
             className="flex w-full flex-col items-center gap-5"
           >
             <RecognitionStageVisual mode={resolvedFailureDisplay.orbMode} immersive={immersive} />
-            <div className="w-full max-w-sm rounded-[1.75rem] border border-border/70 bg-background/75 px-5 py-5 text-center shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+            <div
+              className={`w-full max-w-sm rounded-[1.75rem] border border-border/70 px-5 py-5 text-center shadow-[0_20px_50px_rgba(15,23,42,0.18)] ${
+                nativeAndroid ? 'bg-background/94' : 'bg-background/75 backdrop-blur-xl'
+              }`}
+            >
               <div className="space-y-2">
                 <p className={`${immersive ? 'text-xl' : 'text-lg'} font-semibold text-foreground`}>
                   {resolvedFailureDisplay.title}

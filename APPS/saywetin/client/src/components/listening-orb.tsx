@@ -394,8 +394,14 @@ function MobileListeningOrb({
 
   const ripplePeakOpacity =
     mode === "listening" ? 0.34 : mode === "matching" ? 0.28 : 0.18;
+  const effectiveRippleCount = isNativeAndroid
+    ? Math.max(1, config.rippleCount)
+    : Math.max(4, config.rippleCount);
+  const effectiveFieldWaveCount = isNativeAndroid
+    ? fieldWaveCount
+    : Math.max(3, fieldWaveCount);
 
-  const outerGlowClass = isNativeAndroid ? "blur-[22px]" : "blur-[42px]";
+  const outerGlowClass = isNativeAndroid ? "blur-[16px]" : "blur-[42px]";
   const outerGlowInset = isNativeAndroid ? "inset-[-9%]" : "inset-[-14%]";
   const staticRingInset = isNativeAndroid ? "inset-[-3%]" : "inset-[-6%]";
   const waveInset = isNativeAndroid ? "inset-[-8%]" : "inset-[-12%]";
@@ -428,7 +434,7 @@ function MobileListeningOrb({
         }}
       />
 
-      {Array.from({ length: Math.max(4, config.rippleCount) }).map((_, index) => (
+      {Array.from({ length: effectiveRippleCount }).map((_, index) => (
         <motion.div
           key={`${mode}-mobile-ripple-${index}`}
           className={`absolute inset-0 rounded-full border ${isNativeAndroid ? "border-white/12 bg-white/[0.015]" : "border-white/16 bg-white/[0.03]"}`}
@@ -449,7 +455,7 @@ function MobileListeningOrb({
         />
       ))}
 
-      {Array.from({ length: Math.max(3, fieldWaveCount) }).map((_, index) => (
+      {Array.from({ length: effectiveFieldWaveCount }).map((_, index) => (
         <motion.div
           key={`${mode}-mobile-wave-${index}`}
           className={`absolute ${waveInset} rounded-full border ${isNativeAndroid ? "border-amber-100/8 bg-[radial-gradient(circle,transparent_56%,rgba(253,186,116,0.1)_61%,rgba(132,204,22,0.08)_65%,transparent_72%)]" : "border-amber-100/12 bg-[radial-gradient(circle,transparent_54%,rgba(253,186,116,0.14)_59%,rgba(132,204,22,0.1)_63%,transparent_70%)]"}`}

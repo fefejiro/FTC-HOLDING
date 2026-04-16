@@ -607,9 +607,18 @@ function RecognitionHoldingScreen({
   description: string;
   onBack: () => void;
 }) {
+  const isNativeAndroid =
+    typeof document !== 'undefined' && document.body.classList.contains('capacitor-android');
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+      <header
+        className={`sticky top-0 z-50 border-b ${
+          isNativeAndroid
+            ? 'bg-background/98'
+            : 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
+        }`}
+      >
         <div className="container max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <Button
             variant="ghost"
@@ -625,8 +634,14 @@ function RecognitionHoldingScreen({
 
       <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
         <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 via-background to-background dark:from-orange-500/15" />
-        <div className="absolute top-14 left-8 h-32 w-32 rounded-full bg-orange-500/12 blur-3xl" />
-        <div className="absolute bottom-10 right-6 h-36 w-36 rounded-full bg-green-500/10 blur-3xl" />
+        {isNativeAndroid ? (
+          <div className="absolute left-1/2 top-[42%] h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/12 via-amber-400/10 to-green-400/10 blur-2xl" />
+        ) : (
+          <>
+            <div className="absolute top-14 left-8 h-32 w-32 rounded-full bg-orange-500/12 blur-3xl" />
+            <div className="absolute bottom-10 right-6 h-36 w-36 rounded-full bg-green-500/10 blur-3xl" />
+          </>
+        )}
 
         <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-6 text-center">
           <ListeningOrb mode="matching" size="hero" />
