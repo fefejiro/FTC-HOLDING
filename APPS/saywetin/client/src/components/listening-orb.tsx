@@ -1,8 +1,24 @@
+import { useEffect, useState } from "react";
 import { Loader2, Mic, Music2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export type ListeningOrbMode = "requesting" | "listening" | "matching" | "success" | "error";
 type ListeningOrbSize = "compact" | "immersive" | "hero";
+type OrbRuntimeProfile = "full" | "mobile";
+type OrbMotionConfig = {
+  rippleCount: number;
+  rippleScale: number;
+  rippleDuration: number;
+  glowDuration: number;
+  hazeScale: number[];
+  hazeOpacity: number[];
+  shellScale: number[];
+  shellDuration: number;
+  particleDrift: number;
+  particleOpacity: number[];
+  particleScale: number[];
+  particleCount: number;
+};
 
 const SIZE_CLASSES: Record<ListeningOrbSize, { wrapper: string; core: string; icon: string }> = {
   compact: {
@@ -22,23 +38,7 @@ const SIZE_CLASSES: Record<ListeningOrbSize, { wrapper: string; core: string; ic
   },
 };
 
-const MODE_CONFIG: Record<
-  ListeningOrbMode,
-  {
-    rippleCount: number;
-    rippleScale: number;
-    rippleDuration: number;
-    glowDuration: number;
-    hazeScale: number[];
-    hazeOpacity: number[];
-    shellScale: number[];
-    shellDuration: number;
-    particleDrift: number;
-    particleOpacity: number[];
-    particleScale: number[];
-    particleCount: number;
-  }
-> = {
+const MODE_CONFIG: Record<ListeningOrbMode, OrbMotionConfig> = {
   requesting: {
     rippleCount: 4,
     rippleScale: 1.22,
@@ -111,6 +111,120 @@ const MODE_CONFIG: Record<
   },
 };
 
+function detectMobileOrbRuntime(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const native =
+    typeof document !== "undefined" &&
+    document.body.classList.contains("capacitor-native");
+
+  const narrowViewport = window.innerWidth < 768;
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+
+  return native || narrowViewport || coarsePointer;
+}
+
+function useOrbRuntimeProfile(): OrbRuntimeProfile {
+  const [profile, setProfile] = useState<OrbRuntimeProfile>(() =>
+    detectMobileOrbRuntime() ? "mobile" : "full",
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const updateProfile = () => {
+      setProfile(detectMobileOrbRuntime() ? "mobile" : "full");
+    };
+
+    updateProfile();
+    window.addEventListener("resize", updateProfile);
+    mediaQuery.addEventListener?.("change", updateProfile);
+
+    return () => {
+      window.removeEventListener("resize", updateProfile);
+      mediaQuery.removeEventListener?.("change", updateProfile);
+    };
+  }, []);
+
+  return profile;
+}
+
+function getRuntimeConfig(mode: ListeningOrbMode, profile: OrbRuntimeProfile): OrbMotionConfig {
+  const base = MODE_CONFIG[mode];
+
+  if (profile === "full") {
+    return base;
+  }
+
+  switch (mode) {
+    case "listening":
+      return {
+        ...base,
+        rippleCount: 5,
+        rippleScale: 1.62,
+        rippleDuration: 2.45,
+        hazeScale: [0.92, 1.18, 0.95],
+        hazeOpacity: [0.34, 0.68, 0.4],
+        shellScale: [0.97, 1.12, 0.995],
+        shellDuration: 2.2,
+        particleDrift: 18,
+        particleOpacity: [0.18, 0.38, 0.22],
+        particleScale: [0.84, 1.08, 0.88],
+        particleCount: 3,
+      };
+    case "matching":
+      return {
+        ...base,
+        rippleCount: 4,
+        rippleScale: 1.44,
+        rippleDuration: 1.55,
+        hazeScale: [0.96, 1.12, 0.98],
+        hazeOpacity: [0.3, 0.52, 0.34],
+        shellScale: [0.98, 1.08, 1],
+        shellDuration: 1.18,
+        particleDrift: 10,
+        particleOpacity: [0.14, 0.24, 0.16],
+        particleScale: [0.9, 1.02, 0.92],
+        particleCount: 2,
+      };
+    case "requesting":
+      return {
+        ...base,
+        particleCount: 2,
+        particleDrift: 8,
+      };
+    case "error":
+      return {
+        ...base,
+        rippleCount: 3,
+        particleCount: 1,
+        particleDrift: 6,
+        hazeOpacity: [0.16, 0.24, 0.18],
+      };
+    case "success":
+      return {
+        ...base,
+        particleCount: 1,
+        particleDrift: 6,
+      };
+    default:
+      return base;
+  }
+}
+
+function getFieldWaveCount(mode: ListeningOrbMode, profile: OrbRuntimeProfile): number {
+  if (mode !== "listening" && mode !== "matching") {
+    return 0;
+  }
+
+  if (profile === "mobile") {
+    return mode === "listening" ? 2 : 1;
+  }
+
+  return mode === "listening" ? 3 : 2;
+}
+
 function getAccent(mode: ListeningOrbMode): string {
   if (mode === "success") {
     return "from-emerald-500 via-green-500 to-lime-500";
@@ -162,26 +276,35 @@ export function ListeningOrb({
   mode: ListeningOrbMode;
   size?: ListeningOrbSize;
 }) {
+  const runtimeProfile = useOrbRuntimeProfile();
   const classes = SIZE_CLASSES[size];
   const accent = getAccent(mode);
   const fieldTint = getFieldTint(mode);
   const shellTint = getShellTint(mode);
-  const config = MODE_CONFIG[mode];
+  const config = getRuntimeConfig(mode, runtimeProfile);
+  const isMobileProfile = runtimeProfile === "mobile";
+  const fieldWaveCount = getFieldWaveCount(mode, runtimeProfile);
   const rippleClass =
     mode === "listening"
-      ? "border-white/18 bg-white/[0.04] shadow-[0_0_44px_rgba(249,115,22,0.1)]"
+      ? isMobileProfile
+        ? "border-white/18 bg-white/[0.05] shadow-[0_0_28px_rgba(249,115,22,0.12)]"
+        : "border-white/18 bg-white/[0.04] shadow-[0_0_44px_rgba(249,115,22,0.1)]"
       : mode === "matching"
-        ? "border-white/16 bg-white/[0.035] shadow-[0_0_34px_rgba(249,115,22,0.1)]"
+        ? isMobileProfile
+          ? "border-white/16 bg-white/[0.04] shadow-[0_0_24px_rgba(249,115,22,0.12)]"
+          : "border-white/16 bg-white/[0.035] shadow-[0_0_34px_rgba(249,115,22,0.1)]"
         : "border-white/12 bg-white/[0.02]";
 
   return (
-    <div className={`relative isolate ${classes.wrapper}`}>
+    <div className={`relative isolate transform-gpu ${classes.wrapper}`}>
       <motion.div
-        className={`absolute inset-[-24%] rounded-full bg-gradient-to-br ${fieldTint} blur-3xl`}
+        className={`absolute rounded-full bg-gradient-to-br ${fieldTint} transform-gpu ${
+          isMobileProfile ? "inset-[-18%] blur-2xl" : "inset-[-24%] blur-3xl"
+        }`}
         animate={{
           scale: config.hazeScale,
           opacity: config.hazeOpacity,
-          rotate: mode === "matching" ? [0, 8, 0] : [-4, 6, -2],
+          rotate: isMobileProfile ? 0 : mode === "matching" ? [0, 8, 0] : [-4, 6, -2],
         }}
         transition={{
           duration: config.glowDuration,
@@ -191,7 +314,9 @@ export function ListeningOrb({
       />
 
       <motion.div
-        className="absolute inset-[-12%] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.16)_0%,rgba(249,115,22,0.08)_22%,rgba(163,230,53,0.05)_38%,transparent_68%)] blur-2xl"
+        className={`absolute rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.16)_0%,rgba(249,115,22,0.08)_22%,rgba(163,230,53,0.05)_38%,transparent_68%)] transform-gpu ${
+          isMobileProfile ? "inset-[-8%] blur-xl" : "inset-[-12%] blur-2xl"
+        }`}
         animate={{
           scale: mode === "matching" ? [0.92, 1.04, 0.96] : [0.88, 1.12, 0.92],
           opacity: mode === "matching" ? [0.32, 0.5, 0.36] : [0.28, 0.62, 0.34],
@@ -204,7 +329,9 @@ export function ListeningOrb({
       />
 
       <motion.div
-        className="absolute inset-[8%] rounded-full border border-white/8 bg-white/[0.03] blur-2xl"
+        className={`absolute inset-[8%] rounded-full border border-white/8 bg-white/[0.03] transform-gpu ${
+          isMobileProfile ? "blur-xl" : "blur-2xl"
+        }`}
         animate={{
           scale: mode === "matching" ? [0.98, 1.03, 1] : [0.96, 1.07, 0.99],
           opacity: mode === "matching" ? [0.2, 0.3, 0.22] : [0.16, 0.28, 0.18],
@@ -219,7 +346,7 @@ export function ListeningOrb({
       {Array.from({ length: config.rippleCount }).map((_, index) => (
         <motion.div
           key={`${mode}-ripple-${index}`}
-          className={`absolute inset-0 rounded-full ${rippleClass}`}
+          className={`absolute inset-0 rounded-full transform-gpu ${rippleClass}`}
           animate={{
             scale: [0.54, config.rippleScale - index * 0.045, config.rippleScale + 0.14 - index * 0.045],
             opacity: [0, Math.max(0.12, 0.42 - index * 0.045), 0],
@@ -233,20 +360,36 @@ export function ListeningOrb({
         />
       ))}
 
-      {mode === "listening" || mode === "matching" ? (
-        Array.from({ length: mode === "listening" ? 3 : 2 }).map((_, index) => (
+      {fieldWaveCount > 0 ? (
+        Array.from({ length: fieldWaveCount }).map((_, index) => (
           <motion.div
             key={`${mode}-field-wave-${index}`}
-            className="absolute inset-[-28%] rounded-full bg-[radial-gradient(circle,transparent_53%,rgba(255,255,255,0.06)_56%,rgba(253,186,116,0.22)_58%,rgba(250,204,21,0.2)_60%,transparent_64%)] mix-blend-screen"
+            className={`absolute rounded-full transform-gpu ${
+              isMobileProfile
+                ? "inset-[-16%] border border-white/10 bg-[radial-gradient(circle,transparent_56%,rgba(253,186,116,0.14)_60%,rgba(250,204,21,0.12)_63%,transparent_68%)]"
+                : "inset-[-28%] bg-[radial-gradient(circle,transparent_53%,rgba(255,255,255,0.06)_56%,rgba(253,186,116,0.22)_58%,rgba(250,204,21,0.2)_60%,transparent_64%)] mix-blend-screen"
+            }`}
             animate={{
-              scale: mode === "matching" ? [0.7, 1.1, 1.36] : [0.62, 1.24, 1.56],
-              opacity: mode === "matching" ? [0, 0.18, 0] : [0, 0.24, 0],
+              scale: isMobileProfile
+                ? mode === "matching"
+                  ? [0.76, 1.04, 1.22]
+                  : [0.68, 1.18, 1.38]
+                : mode === "matching"
+                  ? [0.7, 1.1, 1.36]
+                  : [0.62, 1.24, 1.56],
+              opacity: isMobileProfile
+                ? mode === "matching"
+                  ? [0, 0.14, 0]
+                  : [0, 0.2, 0]
+                : mode === "matching"
+                  ? [0, 0.18, 0]
+                  : [0, 0.24, 0],
             }}
             transition={{
-              duration: mode === "matching" ? 2.1 : 2.5,
+              duration: isMobileProfile ? (mode === "matching" ? 1.85 : 2.2) : mode === "matching" ? 2.1 : 2.5,
               repeat: Infinity,
               ease: "easeOut",
-              delay: index * (mode === "matching" ? 0.26 : 0.34),
+              delay: index * (isMobileProfile ? (mode === "matching" ? 0.22 : 0.28) : mode === "matching" ? 0.26 : 0.34),
             }}
           />
         ))
@@ -260,7 +403,9 @@ export function ListeningOrb({
         return (
           <motion.div
             key={`${mode}-particle-${index}`}
-            className="absolute left-1/2 top-1/2 h-2.5 w-2.5 rounded-full bg-white/55 shadow-[0_0_16px_rgba(255,255,255,0.2)]"
+            className={`absolute left-1/2 top-1/2 rounded-full bg-white/55 shadow-[0_0_16px_rgba(255,255,255,0.2)] transform-gpu ${
+              isMobileProfile ? "h-2 w-2" : "h-2.5 w-2.5"
+            }`}
             animate={{
               x: [
                 baseX,
@@ -287,7 +432,7 @@ export function ListeningOrb({
 
       <div className="absolute inset-0 flex items-center justify-center">
         <motion.div
-          className={`absolute rounded-full border ${shellTint} shadow-[0_18px_60px_rgba(249,115,22,0.16)] ${classes.core}`}
+          className={`absolute rounded-full border ${shellTint} shadow-[0_18px_60px_rgba(249,115,22,0.16)] transform-gpu ${classes.core}`}
           animate={{
             scale: config.shellScale,
             opacity:
@@ -305,7 +450,7 @@ export function ListeningOrb({
         />
 
         <motion.div
-          className={`${classes.core} relative overflow-hidden rounded-full bg-gradient-to-br ${accent} flex items-center justify-center shadow-[0_24px_80px_rgba(249,115,22,0.24)]`}
+          className={`${classes.core} relative overflow-hidden rounded-full bg-gradient-to-br ${accent} flex items-center justify-center shadow-[0_24px_80px_rgba(249,115,22,0.24)] transform-gpu`}
           animate={
             mode === "success"
               ? { scale: [0.98, 1.03, 1] }

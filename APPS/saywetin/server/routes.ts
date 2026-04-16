@@ -1040,11 +1040,29 @@ export async function registerRoutes(
 
       // Step 4: Return early with recognition results for progressive UX
       const recognitionTime = Date.now() - startTime;
-      const coverArtUrl = await coverArtLookup;
+      let coverArtUrl: string | null = null;
+      try {
+        coverArtUrl = await coverArtLookup;
+      } catch (artworkError: any) {
+        console.warn(
+          `[LISTEN] Cover art lookup failed for "${track.title}" by ${track.artist}: ${
+            getErrorMessage(artworkError) || "Unknown error"
+          }`,
+        );
+      }
+
       if (coverArtUrl) {
-        await storage.updateRecognizedTrack(recognizedTrack.id, {
-          coverArtUrl,
-        });
+        try {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            coverArtUrl,
+          });
+        } catch (artworkPersistenceError: any) {
+          console.warn(
+            `[LISTEN] Cover art persistence failed for track ${recognizedTrack.id}: ${
+              getErrorMessage(artworkPersistenceError) || "Unknown error"
+            }`,
+          );
+        }
       }
       
       // Immediately return the recognized track so user can see metadata

@@ -173,6 +173,7 @@ export const recognizedTracks = pgTable("recognized_tracks", {
   isrc: text("isrc"),
   spotifyId: text("spotify_id"),
   youtubeId: text("youtube_id"),
+  coverArtUrl: text("cover_art_url"),
   // Song DNA for Continuation Engine (AI-extracted)
   emotionalTone: text("emotional_tone"), // e.g., "joyful", "nostalgic", "hype", "spiritual", "melancholic"
   emotionalToneConfidence: text("emotional_tone_confidence"), // 0-1 confidence score
