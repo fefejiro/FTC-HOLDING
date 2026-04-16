@@ -972,32 +972,50 @@ export default function RecognizedTrack() {
 
   const analyzeFallback = async (lyricText: string) => {
     try {
-      const response = await fetch(getApiUrl('/api/analyze-line'), {
+      const endpoint = getApiUrl('/api/analyze-line');
+      const requestBody = {
+        lyricText,
+        trackId: data!.track.id,
+        songTitle: data!.track.title,
+        artistName: data!.track.artist,
+        genre: data!.track.genre || '',
+        language: data!.lyrics?.language || '',
+      };
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          lyricText,
-          trackId: data!.track.id,
-          songTitle: data!.track.title,
-          artistName: data!.track.artist,
-          genre: data!.track.genre || '',
-          language: data!.lyrics?.language || '',
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
         let failureMessage = 'This line did not open this time.';
         let failureStatus: LineFeedbackState['status'] = 'failed';
+        const rawBody = await response.text();
         try {
-          const payload = await response.json();
+          const payload = rawBody ? JSON.parse(rawBody) : null;
           failureStatus = payload?.status === 'unavailable' ? 'unavailable' : 'failed';
           failureMessage =
             failureStatus === 'unavailable'
               ? 'Meaning for this line is not ready yet.'
               : failureMessage;
+          console.error('[ANALYZE] analyze-line request failed', {
+            endpoint,
+            httpStatus: response.status,
+            feedbackStatus: failureStatus,
+            trackId: requestBody.trackId,
+            lyricPreview: lyricText.slice(0, 80),
+            responseBody: payload,
+          });
         } catch {
           failureMessage = 'This line did not open this time.';
+          console.error('[ANALYZE] analyze-line request failed with non-JSON body', {
+            endpoint,
+            httpStatus: response.status,
+            trackId: requestBody.trackId,
+            lyricPreview: lyricText.slice(0, 80),
+            responseBody: rawBody,
+          });
         }
         throw Object.assign(new Error(failureMessage), { feedbackStatus: failureStatus });
       }

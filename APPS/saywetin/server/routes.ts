@@ -2196,13 +2196,30 @@ Rules:
         return res.status(400).json({ error: 'Lyric text is required' });
       }
 
+      const trimmedLyricText = lyricText.trim();
+      const aiConfig = getAiProviderConfig();
+
       console.log(`🔍 [LAZY] On-demand analysis requested for: "${lyricText.substring(0, 40)}..."`);
 
       // Check if analysis already exists for this line
       const textHash = crypto
         .createHash('sha256')
-        .update(lyricText.trim())
+        .update(trimmedLyricText)
         .digest('hex');
+
+      console.log('[LAZY] On-demand analysis requested', {
+        endpoint: '/api/analyze-line',
+        trackId: trackId || null,
+        songTitle: songTitle || null,
+        artistName: artistName || null,
+        genre: genre || null,
+        language: language || null,
+        lyricPreview: trimmedLyricText.substring(0, 80),
+        textHash,
+        aiConfigured: aiConfig.configured,
+        aiProvider: aiConfig.provider,
+        apiKeySource: aiConfig.apiKeySource,
+      });
 
       const existingAnalysis = await storage.getAiTranslationByTextHash(textHash);
       if (existingAnalysis) {
@@ -2214,7 +2231,7 @@ Rules:
         });
       }
 
-      const fallbackAnalysis = buildBestEffortLineAnalysis(lyricText.trim(), {
+      const fallbackAnalysis = buildBestEffortLineAnalysis(trimmedLyricText, {
         songTitle,
         artistName,
         genre,
@@ -2235,7 +2252,7 @@ Rules:
           cached: false,
           fallback: true,
           analysis: {
-            originalText: lyricText.trim(),
+            originalText: trimmedLyricText,
             translation: fallbackAnalysis.translation,
             culturalContext: fallbackAnalysis.culturalContext,
             artistIntent: fallbackAnalysis.artistIntent,
@@ -2249,7 +2266,7 @@ Rules:
 
       // Generate new analysis for this line
       const analysis = await generateSingleLineAnalysis(
-        lyricText.trim(),
+        trimmedLyricText,
         songTitle,
         artistName,
         genre,
@@ -2263,7 +2280,7 @@ Rules:
             cached: false,
             fallback: true,
             analysis: {
-              originalText: lyricText.trim(),
+              originalText: trimmedLyricText,
               translation: fallbackAnalysis.translation,
               culturalContext: fallbackAnalysis.culturalContext,
               artistIntent: fallbackAnalysis.artistIntent,
@@ -2287,7 +2304,7 @@ Rules:
         await storage.createAiTranslation({
           recognizedTrackId: trackId,
           lyricLineId: null,
-          originalText: lyricText.trim(),
+          originalText: trimmedLyricText,
           translation: analysis.translation,
           culturalContext: analysis.culturalContext,
           artistIntent: analysis.artistIntent,
@@ -2303,7 +2320,7 @@ Rules:
         success: true,
         cached: false,
         analysis: {
-          originalText: lyricText.trim(),
+          originalText: trimmedLyricText,
           translation: analysis.translation,
           culturalContext: analysis.culturalContext,
           artistIntent: analysis.artistIntent,
@@ -2315,6 +2332,13 @@ Rules:
       });
     } catch (error: any) {
       console.error('❌ [LAZY] Error:', error);
+      console.error('[LAZY] analyze-line failure context', {
+        endpoint: '/api/analyze-line',
+        trackId: req.body?.trackId || null,
+        songTitle: req.body?.songTitle || null,
+        artistName: req.body?.artistName || null,
+        lyricPreview: typeof req.body?.lyricText === 'string' ? req.body.lyricText.trim().slice(0, 80) : null,
+      });
       res.status(500).json({
         success: false,
         status: 'failed',
