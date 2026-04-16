@@ -25,6 +25,7 @@ const SIZE_CLASSES: Record<ListeningOrbSize, { wrapper: string; core: string; ic
 const MODE_CONFIG: Record<
   ListeningOrbMode,
   {
+    rippleCount: number;
     rippleScale: number;
     rippleDuration: number;
     glowDuration: number;
@@ -39,6 +40,7 @@ const MODE_CONFIG: Record<
   }
 > = {
   requesting: {
+    rippleCount: 4,
     rippleScale: 1.22,
     rippleDuration: 2.5,
     glowDuration: 2.8,
@@ -52,32 +54,35 @@ const MODE_CONFIG: Record<
     particleCount: 4,
   },
   listening: {
-    rippleScale: 1.34,
-    rippleDuration: 3.4,
-    glowDuration: 3.8,
-    hazeScale: [0.92, 1.12, 0.95],
-    hazeOpacity: [0.24, 0.48, 0.28],
-    shellScale: [0.97, 1.08, 0.99],
-    shellDuration: 3.1,
-    particleDrift: 20,
-    particleOpacity: [0.14, 0.42, 0.16],
-    particleScale: [0.86, 1.08, 0.88],
-    particleCount: 5,
+    rippleCount: 6,
+    rippleScale: 1.46,
+    rippleDuration: 3.2,
+    glowDuration: 3.6,
+    hazeScale: [0.9, 1.18, 0.94],
+    hazeOpacity: [0.28, 0.62, 0.34],
+    shellScale: [0.95, 1.13, 0.98],
+    shellDuration: 2.6,
+    particleDrift: 28,
+    particleOpacity: [0.18, 0.48, 0.22],
+    particleScale: [0.8, 1.14, 0.84],
+    particleCount: 6,
   },
   matching: {
-    rippleScale: 1.2,
-    rippleDuration: 2.2,
-    glowDuration: 2.4,
-    hazeScale: [0.96, 1.05, 0.98],
-    hazeOpacity: [0.28, 0.42, 0.3],
-    shellScale: [0.99, 1.04, 1],
-    shellDuration: 1.9,
-    particleDrift: 10,
-    particleOpacity: [0.16, 0.34, 0.18],
-    particleScale: [0.9, 1.02, 0.92],
+    rippleCount: 5,
+    rippleScale: 1.24,
+    rippleDuration: 1.9,
+    glowDuration: 2.2,
+    hazeScale: [0.95, 1.09, 0.97],
+    hazeOpacity: [0.32, 0.5, 0.35],
+    shellScale: [0.98, 1.07, 1],
+    shellDuration: 1.55,
+    particleDrift: 12,
+    particleOpacity: [0.16, 0.3, 0.18],
+    particleScale: [0.88, 1.04, 0.9],
     particleCount: 4,
   },
   success: {
+    rippleCount: 3,
     rippleScale: 1.12,
     rippleDuration: 2,
     glowDuration: 2.2,
@@ -91,17 +96,18 @@ const MODE_CONFIG: Record<
     particleCount: 3,
   },
   error: {
-    rippleScale: 1.1,
-    rippleDuration: 2.4,
-    glowDuration: 2.6,
-    hazeScale: [0.97, 1.02, 0.99],
-    hazeOpacity: [0.12, 0.2, 0.14],
-    shellScale: [1, 0.985, 1],
-    shellDuration: 2.2,
-    particleDrift: 8,
-    particleOpacity: [0.08, 0.16, 0.1],
-    particleScale: [0.94, 0.98, 0.95],
-    particleCount: 3,
+    rippleCount: 4,
+    rippleScale: 1.16,
+    rippleDuration: 2.3,
+    glowDuration: 2.5,
+    hazeScale: [0.96, 1.05, 0.98],
+    hazeOpacity: [0.18, 0.3, 0.2],
+    shellScale: [0.99, 1.015, 1],
+    shellDuration: 2.3,
+    particleDrift: 10,
+    particleOpacity: [0.1, 0.18, 0.12],
+    particleScale: [0.9, 1, 0.92],
+    particleCount: 4,
   },
 };
 
@@ -111,7 +117,7 @@ function getAccent(mode: ListeningOrbMode): string {
   }
 
   if (mode === "error") {
-    return "from-slate-500 via-slate-400 to-slate-500";
+    return "from-amber-500 via-orange-400 to-stone-500";
   }
 
   return "from-orange-500 via-amber-500 to-green-500";
@@ -123,7 +129,7 @@ function getFieldTint(mode: ListeningOrbMode): string {
   }
 
   if (mode === "error") {
-    return "from-slate-500/14 via-slate-300/10 to-slate-500/10";
+    return "from-amber-500/18 via-orange-300/14 to-stone-500/12";
   }
 
   if (mode === "matching") {
@@ -139,7 +145,7 @@ function getShellTint(mode: ListeningOrbMode): string {
   }
 
   if (mode === "error") {
-    return "border-white/10 bg-white/5";
+    return "border-white/14 bg-white/7";
   }
 
   if (mode === "matching") {
@@ -191,13 +197,13 @@ export function ListeningOrb({
         }}
       />
 
-      {Array.from({ length: 5 }).map((_, index) => (
+      {Array.from({ length: config.rippleCount }).map((_, index) => (
         <motion.div
           key={`${mode}-ripple-${index}`}
           className="absolute inset-0 rounded-full border border-white/12 bg-white/[0.02]"
           animate={{
-            scale: [0.7, config.rippleScale - index * 0.02, config.rippleScale + 0.08 - index * 0.02],
-            opacity: [0, Math.max(0.14, 0.26 - index * 0.04), 0],
+            scale: [0.64, config.rippleScale - index * 0.03, config.rippleScale + 0.12 - index * 0.03],
+            opacity: [0, Math.max(0.12, 0.34 - index * 0.05), 0],
           }}
           transition={{
             duration: config.rippleDuration,
@@ -246,7 +252,12 @@ export function ListeningOrb({
           className={`absolute rounded-full border ${shellTint} shadow-[0_18px_60px_rgba(249,115,22,0.16)] ${classes.core}`}
           animate={{
             scale: config.shellScale,
-            opacity: mode === "matching" ? [0.88, 1, 0.9] : [0.8, 0.96, 0.84],
+            opacity:
+              mode === "matching"
+                ? [0.9, 1, 0.92]
+                : mode === "error"
+                  ? [0.74, 0.84, 0.76]
+                  : [0.82, 0.98, 0.86],
           }}
           transition={{
             duration: config.shellDuration,
@@ -261,13 +272,13 @@ export function ListeningOrb({
             mode === "success"
               ? { scale: [0.98, 1.03, 1] }
               : mode === "error"
-                ? { scale: [1, 0.985, 1] }
+                ? { scale: [0.99, 1.015, 1], rotate: [0, 0.5, 0] }
                 : mode === "matching"
-                  ? { scale: [0.99, 1.045, 1], rotate: [0, 2, 0] }
-                  : { scale: [0.97, 1.06, 0.99], rotate: [0, -2, 0] }
+                  ? { scale: [0.98, 1.07, 1], rotate: [0, 1.5, 0] }
+                  : { scale: [0.95, 1.12, 0.97], rotate: [0, -2.6, 0] }
           }
           transition={{
-            duration: mode === "matching" ? 1.8 : 2.8,
+            duration: mode === "matching" ? 1.45 : mode === "error" ? 2.2 : 2.35,
             repeat: mode === "success" ? 0 : Infinity,
             ease: "easeInOut",
           }}
@@ -275,11 +286,21 @@ export function ListeningOrb({
           <motion.div
             className="absolute inset-[10%] rounded-full border border-white/18 bg-white/10"
             animate={{
-              scale: mode === "matching" ? [0.96, 1.02, 0.98] : [0.94, 1.04, 0.97],
-              opacity: mode === "matching" ? [0.24, 0.38, 0.28] : [0.18, 0.34, 0.22],
+              scale:
+                mode === "matching"
+                  ? [0.95, 1.035, 0.97]
+                  : mode === "error"
+                    ? [0.96, 1.01, 0.98]
+                    : [0.92, 1.07, 0.95],
+              opacity:
+                mode === "matching"
+                  ? [0.28, 0.44, 0.32]
+                  : mode === "error"
+                    ? [0.18, 0.28, 0.2]
+                    : [0.22, 0.42, 0.26],
             }}
             transition={{
-              duration: mode === "matching" ? 1.6 : 2.5,
+              duration: mode === "matching" ? 1.3 : mode === "error" ? 1.9 : 2.1,
               repeat: Infinity,
               ease: "easeInOut",
             }}
@@ -288,10 +309,15 @@ export function ListeningOrb({
           <motion.div
             className="absolute inset-0 bg-[radial-gradient(circle_at_30%_28%,rgba(255,255,255,0.42),transparent_34%),radial-gradient(circle_at_68%_72%,rgba(255,255,255,0.16),transparent_40%)]"
             animate={{
-              opacity: mode === "matching" ? [0.42, 0.58, 0.46] : [0.36, 0.54, 0.4],
+              opacity:
+                mode === "matching"
+                  ? [0.46, 0.64, 0.5]
+                  : mode === "error"
+                    ? [0.3, 0.42, 0.32]
+                    : [0.4, 0.64, 0.44],
             }}
             transition={{
-              duration: mode === "matching" ? 1.4 : 2.2,
+              duration: mode === "matching" ? 1.15 : mode === "error" ? 1.9 : 1.95,
               repeat: Infinity,
               ease: "easeInOut",
             }}
@@ -301,13 +327,15 @@ export function ListeningOrb({
             className="relative z-10"
             animate={
               mode === "matching"
-                ? { y: [0, -1.5, 0], scale: [1, 1.03, 1] }
+                ? { y: [0, -2, 0], scale: [1, 1.045, 1] }
                 : mode === "requesting"
                   ? { y: [0, -0.5, 0] }
-                  : { y: [0, -1, 0], scale: [1, 1.02, 1] }
+                  : mode === "error"
+                    ? { y: [0, -0.6, 0], scale: [1, 1.01, 1] }
+                    : { y: [0, -1.6, 0], scale: [1, 1.05, 1] }
             }
             transition={{
-              duration: mode === "matching" ? 1.3 : 2.1,
+              duration: mode === "matching" ? 1.05 : mode === "error" ? 1.8 : 1.7,
               repeat: Infinity,
               ease: "easeInOut",
             }}

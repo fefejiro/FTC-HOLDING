@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { trackListenStarted } from '@/lib/analytics';
 import { getApiUrl } from '@/lib/api-config';
@@ -73,6 +72,13 @@ type ListenError = Error & {
   status?: number;
 };
 
+type FailureDisplay = {
+  title: string;
+  body: string;
+  ctaLabel: string;
+  orbMode: RecognitionVisualMode;
+};
+
 const LISTEN_REQUEST_TIMEOUT_MS = 45_000;
 
 function createListenError(
@@ -99,77 +105,68 @@ function isPermissionDeniedError(error: unknown): boolean {
   );
 }
 
-function classifyListenError(error: unknown): { title: string; description: string } {
+function getFailureDisplay(error: unknown): FailureDisplay {
   const listenError = error as ListenError;
   const kind = listenError?.kind;
-  const message = String(listenError?.message || '').trim();
+  const message = String(listenError?.message || '').trim().toLowerCase();
 
   switch (kind) {
-    case 'offline':
-      return {
-        title: 'Internet no dey',
-        description: 'Check your network, then try again.',
-      };
-    case 'backend_unreachable':
-      return {
-        title: 'Connection wahala',
-        description: 'We no fit reach Saywetin server right now. Try again shortly.',
-      };
-    case 'timeout':
-      return {
-        title: 'E dey take too long',
-        description: 'Server no answer in time. Try again.',
-      };
     case 'microphone_denied':
       return {
-        title: 'Mic permission needed',
-        description: 'Allow microphone access make we fit hear the music.',
+        title: 'Microphone access is off',
+        body: 'Turn on microphone access, then try again.',
+        ctaLabel: 'Try again',
+        orbMode: 'error',
       };
     case 'capture_failed':
       return {
-        title: 'Recording no gree',
-        description: 'We no fit capture the sound well. Try again and keep the music close.',
+        title: 'We could not capture the sound',
+        body: 'Try again and keep the music close.',
+        ctaLabel: 'Try again',
+        orbMode: 'error',
       };
     case 'empty_audio':
-      return {
-        title: 'We no hear any song',
-        description: 'Make sure the music dey play loud. Then try again.',
-      };
     case 'no_result':
       return {
-        title: 'We no hear any song',
-        description: 'Make sure the music dey play loud. Then try again.',
+        title: 'We could not hear a clear song',
+        body: 'Move closer to the music and try again.',
+        ctaLabel: 'Try again',
+        orbMode: 'error',
       };
     case 'provider_failed':
-      return {
-        title: 'Music service wahala',
-        description: message || 'Song recognition no complete this time. Try again shortly.',
-      };
+      if (
+        message.includes('low-confidence') ||
+        message.includes('match looked weak') ||
+        message.includes('music may be incorrect') ||
+        message.includes('no music')
+      ) {
+        return {
+          title: 'We could not hear a clear song',
+          body: 'Move closer to the music and try again.',
+          ctaLabel: 'Try again',
+          orbMode: 'error',
+        };
+      }
+    case 'offline':
+    case 'backend_unreachable':
+    case 'timeout':
     case 'context_failed':
-      return {
-        title: 'Song don show, meaning never land',
-        description: message || 'We found the track, but the deeper meaning no finish this time.',
-      };
     case 'database_unavailable':
-      return {
-        title: 'Server dey rest small',
-        description: 'Saywetin store no answer well. Try again shortly.',
-      };
     case 'bad_response':
       return {
-        title: 'Server answer no clear',
-        description: 'We get invalid response from the server. Try again.',
+        title: 'Could not reach SayWetin right now',
+        body: 'Check connection and try again.',
+        ctaLabel: 'Try again',
+        orbMode: 'error',
       };
     default:
       return {
-        title: 'E no work o',
-        description: message || 'We no fit find the song. Try again abeg.',
+        title: 'Could not reach SayWetin right now',
+        body: 'Check connection and try again.',
+        ctaLabel: 'Try again',
+        orbMode: 'error',
       };
   }
-}
-
-function shouldShowListenToast(error: ListenError): boolean {
-  return error.kind !== 'context_failed';
 }
 
 function getApiErrorMessage(payload: any): string | undefined {
@@ -275,15 +272,24 @@ function RecognitionStageVisual({
   mode: RecognitionVisualMode;
   immersive: boolean;
 }) {
+  const modeMotion: Record<RecognitionVisualMode, { scale: number; y: number; rotate: number }> = {
+    requesting: { scale: 0.99, y: 0, rotate: 0 },
+    listening: { scale: 1.02, y: 0, rotate: 0 },
+    matching: { scale: 0.96, y: -10, rotate: 0.6 },
+    success: { scale: 1, y: -4, rotate: 0 },
+    error: { scale: 0.985, y: 2, rotate: 0 },
+  };
+
   return (
     <motion.div
       initial={false}
       animate={{
-        scale: mode === 'matching' ? 0.985 : 1,
-        y: mode === 'matching' ? -3 : 0,
+        scale: modeMotion[mode].scale,
+        y: modeMotion[mode].y,
+        rotate: modeMotion[mode].rotate,
         opacity: 1,
       }}
-      transition={{ duration: 0.35, ease: 'easeOut' }}
+      transition={{ type: 'spring', stiffness: 220, damping: 22, mass: 0.9 }}
     >
       <ListeningOrb mode={mode} size={immersive ? 'immersive' : 'compact'} />
     </motion.div>
@@ -329,8 +335,8 @@ export function AudioRecorder({
   autoStart = false,
   immersive = false,
 }: AudioRecorderProps) {
-  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const { toast } = useToast();
+  const [recordingState, setRecordingState] = useState<RecordingState>(autoStart ? 'requesting' : 'idle');
+  const [failureDisplay, setFailureDisplay] = useState<FailureDisplay | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -381,10 +387,17 @@ export function AudioRecorder({
     clearRuntimeResources();
   };
 
+  const showInlineFailure = (error: unknown) => {
+    const normalizedError = normalizeUploadError(error);
+    setFailureDisplay(getFailureDisplay(normalizedError));
+    setRecordingState('error');
+  };
+
   // Native recording for Capacitor (Android/iOS)
   const startNativeListening = async () => {
     try {
       console.log('[SAYWETIN] startNativeListening called, listenDuration:', listenDuration);
+      setFailureDisplay(null);
       setRecordingState('requesting');
       audioChunksRef.current = [];
 
@@ -418,15 +431,7 @@ export function AudioRecorder({
           audioChunksRef.current = [audioBlob];
           handleUpload();
         } else {
-          setRecordingState('error');
-          const issue = classifyListenError(
-            createListenError('capture_failed', 'Could not capture audio. Please try again.'),
-          );
-          toast({
-            variant: 'destructive',
-            title: issue.title,
-            description: issue.description,
-          });
+          showInlineFailure(createListenError('capture_failed', 'Could not capture audio. Please try again.'));
         }
       }, listenDuration * 1000);
 
@@ -434,19 +439,13 @@ export function AudioRecorder({
       console.error('[SAYWETIN] Native recording failed:', error);
       nativeRecordingActiveRef.current = false;
       cleanup(true);
-      const issue = classifyListenError(
+      showInlineFailure(
         isPermissionDeniedError(error)
           ? createListenError('microphone_denied', 'Permission denied')
           : (error as ListenError)?.kind
             ? error
             : createListenError('capture_failed', 'Failed to start recording'),
       );
-      toast({
-        variant: 'destructive',
-        title: issue.title,
-        description: issue.description,
-      });
-      setRecordingState('idle');
     }
   };
 
@@ -456,6 +455,7 @@ export function AudioRecorder({
       const captureProfile = getWebCaptureProfile(listenDuration);
       const effectiveListenDuration = captureProfile.listenDurationSec;
 
+      setFailureDisplay(null);
       setRecordingState('requesting');
       audioChunksRef.current = [];
 
@@ -529,17 +529,11 @@ export function AudioRecorder({
     } catch (error: any) {
       console.error('Failed to start recording:', error);
       cleanup(true);
-      const issue = classifyListenError(
+      showInlineFailure(
         isPermissionDeniedError(error)
           ? createListenError('microphone_denied', 'Permission denied')
           : createListenError('capture_failed', 'Failed to capture audio'),
       );
-      toast({
-        variant: 'destructive',
-        title: issue.title,
-        description: issue.description,
-      });
-      setRecordingState('idle');
     }
   };
 
@@ -619,6 +613,7 @@ export function AudioRecorder({
   const handleUpload = async () => {
     nativeRecordingActiveRef.current = false;
     webRecordingActiveRef.current = false;
+    setFailureDisplay(null);
     setRecordingState('identifying');
 
     try {
@@ -683,6 +678,7 @@ export function AudioRecorder({
         }
       }
 
+      setFailureDisplay(null);
       setRecordingState('success');
 
       if (onSuccess) {
@@ -690,16 +686,7 @@ export function AudioRecorder({
       }
     } catch (error: any) {
       console.error('Upload failed:', error);
-      setRecordingState('error');
-      const normalizedError = normalizeUploadError(error);
-      if (shouldShowListenToast(normalizedError)) {
-        const issue = classifyListenError(normalizedError);
-        toast({
-          variant: 'destructive',
-          title: issue.title,
-          description: issue.description,
-        });
-      }
+      showInlineFailure(error);
     }
   };
 
@@ -708,7 +695,7 @@ export function AudioRecorder({
   }, []);
 
   useEffect(() => {
-    if (!autoStart || hasAutoStartedRef.current || recordingState !== 'idle') {
+    if (!autoStart || hasAutoStartedRef.current || (recordingState !== 'idle' && recordingState !== 'requesting')) {
       return;
     }
 
@@ -718,9 +705,12 @@ export function AudioRecorder({
     });
   }, [autoStart, recordingState]);
 
+  const resolvedFailureDisplay =
+    failureDisplay || getFailureDisplay(createListenError('unknown', 'Could not reach backend.'));
+
   return (
     <div
-      className={`flex w-full flex-col items-center gap-6 ${immersive ? 'max-w-sm py-8 text-center' : 'py-4'}`}
+      className={`flex w-full flex-col items-center gap-5 ${immersive ? 'max-w-md py-8 text-center' : 'py-4'}`}
       data-testid="audio-recorder"
     >
       <AnimatePresence mode="sync">
@@ -753,7 +743,7 @@ export function AudioRecorder({
             <div className="space-y-2 text-center">
               <p className="text-lg font-medium">{immersive ? 'Tap to start listening' : 'Tap to Listen'}</p>
               {immersive ? (
-                <p className="text-sm text-muted-foreground">Make sure your device can hear the song clearly</p>
+                <p className="text-sm text-muted-foreground">Hold your device near the music.</p>
               ) : null}
             </div>
           </motion.div>
@@ -769,10 +759,8 @@ export function AudioRecorder({
           >
             <RecognitionStageVisual mode="requesting" immersive={immersive} />
             <div className="space-y-2 text-center">
-              <p className="text-xl font-semibold text-foreground">Opening the listening field</p>
-              <p className="text-sm text-muted-foreground">
-                {immersive ? 'Checking the mic and waking the room before we lean in.' : 'Preparing the microphone.'}
-              </p>
+              <p className="text-xl font-semibold text-foreground">Getting ready to listen</p>
+              <p className="text-sm text-muted-foreground">Checking the microphone.</p>
             </div>
           </motion.div>
         )}
@@ -788,10 +776,8 @@ export function AudioRecorder({
             <RecognitionStageVisual mode="listening" immersive={immersive} />
 
             <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Listening to the room</p>
-              <p className="max-w-xs text-sm text-muted-foreground">
-                Let the field breathe while we catch the strongest part of the song.
-              </p>
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Listening</p>
+              <p className="max-w-xs text-sm text-muted-foreground">Hold near the music.</p>
             </div>
           </motion.div>
         )}
@@ -806,10 +792,8 @@ export function AudioRecorder({
           >
             <RecognitionStageVisual mode="matching" immersive={immersive} />
             <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Tightening the match</p>
-              <p className="max-w-xs text-sm text-muted-foreground">
-                Same field, narrower focus. We are locking the song now.
-              </p>
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Matching the song</p>
+              <p className="max-w-xs text-sm text-muted-foreground">Locking in the strongest hit.</p>
             </div>
           </motion.div>
         )}
@@ -824,9 +808,9 @@ export function AudioRecorder({
           >
             <RecognitionStageVisual mode="success" immersive={immersive} />
             <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold text-green-600 dark:text-green-400`}>We don catch am!</p>
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold text-green-600 dark:text-green-400`}>Song found</p>
               {immersive ? (
-                <p className="text-sm text-muted-foreground">Taking you to the meaning now.</p>
+                <p className="text-sm text-muted-foreground">Opening the meaning now.</p>
               ) : null}
             </div>
             <Button
@@ -834,7 +818,7 @@ export function AudioRecorder({
               onClick={() => setRecordingState('idle')}
               data-testid="button-listen-again"
             >
-              Hear Another One
+              Listen again
             </Button>
           </motion.div>
         )}
@@ -845,19 +829,27 @@ export function AudioRecorder({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="flex flex-col items-center gap-4"
+            className="flex w-full flex-col items-center gap-5"
           >
-            <button
+            <RecognitionStageVisual mode={resolvedFailureDisplay.orbMode} immersive={immersive} />
+            <div className="w-full max-w-sm rounded-[1.75rem] border border-border/70 bg-background/75 px-5 py-5 text-center shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+              <div className="space-y-2">
+                <p className={`${immersive ? 'text-xl' : 'text-lg'} font-semibold text-foreground`}>
+                  {resolvedFailureDisplay.title}
+                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {resolvedFailureDisplay.body}
+                </p>
+              </div>
+            </div>
+            <Button
               onClick={startListening}
-              className="transition-all active:scale-95"
+              size={immersive ? 'lg' : 'default'}
+              className="min-w-[180px] rounded-full px-6 shadow-lg shadow-orange-500/20"
               data-testid="button-try-again"
             >
-              <RecognitionStageVisual mode="error" immersive={immersive} />
-            </button>
-            <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-xl' : 'text-lg'} font-medium`}>Tap to Try Again</p>
-              <p className="max-w-xs text-sm text-muted-foreground">Make sure your device can hear the song clearly</p>
-            </div>
+              {resolvedFailureDisplay.ctaLabel}
+            </Button>
           </motion.div>
         )}
       </AnimatePresence>
