@@ -86,6 +86,24 @@ export default function SummaryClient() {
   return (
     <div className="summary-layout">
       <div className="summary-main">
+        <div className="card summary-mobile-intro-card">
+          <p className="summary-mobile-intro-label">Quick check before payment</p>
+          <div className="summary-mobile-intro-grid">
+            <div className="summary-mobile-intro-item">
+              <strong>Is the scope right?</strong>
+              <p>Make sure this reflects the Version 1 you actually want built first.</p>
+            </div>
+            <div className="summary-mobile-intro-item">
+              <strong>Need to fix anything?</strong>
+              <p>Use edit intake before paying. This should feel accurate and usable.</p>
+            </div>
+            <div className="summary-mobile-intro-item">
+              <strong>Then choose your plan</strong>
+              <p>Deposit reserves your slot. Full payment starts the build immediately.</p>
+            </div>
+          </div>
+        </div>
+
         <div className="card summary-card">
           <div className="summary-card-header">
             <p className="eyebrow">Your project brief</p>

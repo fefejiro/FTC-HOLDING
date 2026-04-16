@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 function getStripe(): InstanceType<typeof Stripe> | null {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
-  return new Stripe(key, { apiVersion: "2026-03-25.dahlia" });
+  return new Stripe(key, {
+    apiVersion: "2026-03-25.dahlia",
+    httpClient: Stripe.createFetchHttpClient()
+  });
 }
 
 function sanitize(value: unknown, maxLen = 500): string {

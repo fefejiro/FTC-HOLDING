@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
 // Node runtime required — Stripe SDK uses Node APIs not available on edge
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 const PRICE_IDS = {
   full: process.env.STRIPE_PRICE_FULL,
@@ -14,7 +14,10 @@ function getStripe(): InstanceType<typeof Stripe> {
   if (!key) {
     throw new Error("STRIPE_SECRET_KEY is not configured.");
   }
-  return new Stripe(key, { apiVersion: "2026-03-25.dahlia" });
+  return new Stripe(key, {
+    apiVersion: "2026-03-25.dahlia",
+    httpClient: Stripe.createFetchHttpClient()
+  });
 }
 
 function getSiteUrl(): string {

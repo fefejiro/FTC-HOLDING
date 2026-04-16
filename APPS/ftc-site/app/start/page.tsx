@@ -1,5 +1,3 @@
-export const runtime = "edge";
-
 import type { Metadata } from "next";
 import IntakeForm from "./IntakeForm";
 
@@ -51,6 +49,24 @@ export default function BuildPage() {
 
       <section className="section">
         <div className="container">
+          <div className="build-mobile-intro card">
+            <p className="build-mobile-intro-label">How this works</p>
+            <div className="build-mobile-intro-grid">
+              <div className="build-mobile-intro-item">
+                <strong>Tell us the core idea</strong>
+                <p>Keep it practical. What are you building and who is it for?</p>
+              </div>
+              <div className="build-mobile-intro-item">
+                <strong>Review the generated brief</strong>
+                <p>We turn your answers into a clean summary before any payment happens.</p>
+              </div>
+              <div className="build-mobile-intro-item">
+                <strong>Choose deposit or full payment</strong>
+                <p>Secure Stripe checkout. No card details stored on our side.</p>
+              </div>
+            </div>
+          </div>
+
           <div className="build-layout">
             <div className="build-form-col">
               <div className="card build-form-card">

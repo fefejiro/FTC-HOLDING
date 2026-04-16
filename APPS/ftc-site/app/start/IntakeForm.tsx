@@ -87,6 +87,7 @@ export default function IntakeForm() {
             value={form.name}
             onChange={set("name")}
             autoComplete="name"
+            autoCapitalize="words"
           />
         </div>
 
@@ -102,6 +103,7 @@ export default function IntakeForm() {
             value={form.email}
             onChange={set("email")}
             autoComplete="email"
+            inputMode="email"
           />
         </div>
       </div>
@@ -118,6 +120,7 @@ export default function IntakeForm() {
           rows={4}
           value={form.idea}
           onChange={set("idea")}
+          enterKeyHint="next"
         />
       </div>
 
@@ -133,6 +136,7 @@ export default function IntakeForm() {
           rows={5}
           value={form.features}
           onChange={set("features")}
+          enterKeyHint="next"
         />
       </div>
 
@@ -148,6 +152,7 @@ export default function IntakeForm() {
           placeholder="e.g. Independent owner-operator truck drivers in Canada and the US"
           value={form.users}
           onChange={set("users")}
+          enterKeyHint="next"
         />
       </div>
 
@@ -182,6 +187,7 @@ export default function IntakeForm() {
           rows={3}
           value={form.references}
           onChange={set("references")}
+          enterKeyHint="done"
         />
       </div>
 
