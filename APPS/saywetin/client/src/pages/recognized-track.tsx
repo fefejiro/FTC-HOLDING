@@ -1350,6 +1350,43 @@ export default function RecognizedTrack() {
     handleLazyAnalyze(row.text);
   };
 
+  const orderedLyricLines = useMemo(() => {
+    const lyricsText = data?.lyrics?.text || '';
+    if (!lyricsText) {
+      return [];
+    }
+
+    const parsedAnalyses = parseAnalysesWithSlang(data?.culturalAnalysis || []);
+    return buildOrderedLyricLines(lyricsText, parsedAnalyses);
+  }, [data?.culturalAnalysis, data?.lyrics?.text]);
+
+  const estimatedMomentIndex = useMemo(
+    () => estimateMomentLineIndex(
+      orderedLyricLines.length,
+      data?.track.playOffsetMs,
+      data?.track.trackDurationMs,
+    ),
+    [orderedLyricLines.length, data?.track.playOffsetMs, data?.track.trackDurationMs],
+  );
+
+  const phraseCapture = useMemo(
+    () => buildPhraseCaptureModel(
+      orderedLyricLines,
+      data?.track.playOffsetMs,
+      data?.track.trackDurationMs,
+      data?.track.confidenceScore,
+    ),
+    [orderedLyricLines, data?.track.playOffsetMs, data?.track.trackDurationMs, data?.track.confidenceScore],
+  );
+
+  const momentRows = useMemo(
+    () =>
+      phraseCapture.highlightedLineIndexes
+        .map((lineIndex) => orderedLyricLines.find((line) => line.lineIndex === lineIndex))
+        .filter((line): line is OrderedLyricLine => Boolean(line)),
+    [orderedLyricLines, phraseCapture.highlightedLineIndexes],
+  );
+
   const primaryGist = useMemo(
     () => (data ? buildPrimaryGist(data, artistInfo, fragmentInterpretation) : null),
     [data, artistInfo, fragmentInterpretation],
@@ -1474,56 +1511,17 @@ export default function RecognizedTrack() {
       data?.track.analysisStatus === 'failed' ||
       ((data?.culturalAnalysis?.length || 0) === 0 && data?.track.analysisStatus !== 'generating_analysis'));
 
-
-
   // Get step status for loading indicator
   const getStepStatus = (status?: ProcessingStatus) => {
     switch (status) {
       case 'completed': return 'completed';
-      case 'fetching_lyrics': 
+      case 'fetching_lyrics':
       case 'generating_analysis': return 'in_progress';
       case 'failed': return 'failed';
       case 'no_lyrics': return 'no_lyrics';
       default: return 'pending';
     }
   };
-
-  const orderedLyricLines = useMemo(() => {
-    const lyricsText = data?.lyrics?.text || '';
-    if (!lyricsText) {
-      return [];
-    }
-
-    const parsedAnalyses = parseAnalysesWithSlang(data?.culturalAnalysis || []);
-    return buildOrderedLyricLines(lyricsText, parsedAnalyses);
-  }, [data?.culturalAnalysis, data?.lyrics?.text]);
-
-  const estimatedMomentIndex = useMemo(
-    () => estimateMomentLineIndex(
-      orderedLyricLines.length,
-      data?.track.playOffsetMs,
-      data?.track.trackDurationMs,
-    ),
-    [orderedLyricLines.length, data?.track.playOffsetMs, data?.track.trackDurationMs],
-  );
-
-  const phraseCapture = useMemo(
-    () => buildPhraseCaptureModel(
-      orderedLyricLines,
-      data?.track.playOffsetMs,
-      data?.track.trackDurationMs,
-      data?.track.confidenceScore,
-    ),
-    [orderedLyricLines, data?.track.playOffsetMs, data?.track.trackDurationMs, data?.track.confidenceScore],
-  );
-
-  const momentRows = useMemo(
-    () =>
-      phraseCapture.highlightedLineIndexes
-        .map((lineIndex) => orderedLyricLines.find((line) => line.lineIndex === lineIndex))
-        .filter((line): line is OrderedLyricLine => Boolean(line)),
-    [orderedLyricLines, phraseCapture.highlightedLineIndexes],
-  );
 
   const lyricsSectionRef = useRef<HTMLDivElement>(null);
   // Ref for jumping to the closest matched line in the unified lyrics surface

@@ -168,10 +168,10 @@ function getRuntimeConfig(mode: ListeningOrbMode, profile: OrbRuntimeProfile): O
         hazeOpacity: [0.34, 0.68, 0.4],
         shellScale: [0.97, 1.12, 0.995],
         shellDuration: 2.2,
-        particleDrift: 18,
-        particleOpacity: [0.18, 0.38, 0.22],
-        particleScale: [0.84, 1.08, 0.88],
-        particleCount: 3,
+        particleDrift: 0,
+        particleOpacity: [0, 0, 0],
+        particleScale: [1, 1, 1],
+        particleCount: 0,
       };
     case "matching":
       return {
@@ -183,30 +183,30 @@ function getRuntimeConfig(mode: ListeningOrbMode, profile: OrbRuntimeProfile): O
         hazeOpacity: [0.3, 0.52, 0.34],
         shellScale: [0.98, 1.08, 1],
         shellDuration: 1.18,
-        particleDrift: 10,
-        particleOpacity: [0.14, 0.24, 0.16],
-        particleScale: [0.9, 1.02, 0.92],
-        particleCount: 2,
+        particleDrift: 0,
+        particleOpacity: [0, 0, 0],
+        particleScale: [1, 1, 1],
+        particleCount: 0,
       };
     case "requesting":
       return {
         ...base,
-        particleCount: 2,
-        particleDrift: 8,
+        particleCount: 0,
+        particleDrift: 0,
       };
     case "error":
       return {
         ...base,
         rippleCount: 3,
-        particleCount: 1,
-        particleDrift: 6,
+        particleCount: 0,
+        particleDrift: 0,
         hazeOpacity: [0.16, 0.24, 0.18],
       };
     case "success":
       return {
         ...base,
-        particleCount: 1,
-        particleDrift: 6,
+        particleCount: 0,
+        particleDrift: 0,
       };
     default:
       return base;
@@ -219,7 +219,7 @@ function getFieldWaveCount(mode: ListeningOrbMode, profile: OrbRuntimeProfile): 
   }
 
   if (profile === "mobile") {
-    return mode === "listening" ? 2 : 1;
+    return mode === "listening" ? 3 : 2;
   }
 
   return mode === "listening" ? 3 : 2;
@@ -294,6 +294,34 @@ export function ListeningOrb({
           ? "border-white/16 bg-white/[0.04] shadow-[0_0_24px_rgba(249,115,22,0.12)]"
           : "border-white/16 bg-white/[0.035] shadow-[0_0_34px_rgba(249,115,22,0.1)]"
         : "border-white/12 bg-white/[0.02]";
+  const coreAnimate =
+    mode === "success"
+      ? { scale: [0.98, 1.03, 1] }
+      : mode === "error"
+        ? isMobileProfile
+          ? { scale: [0.995, 1.01, 1] }
+          : { scale: [0.99, 1.015, 1], rotate: [0, 0.5, 0] }
+        : mode === "matching"
+          ? isMobileProfile
+            ? { scale: [0.99, 1.045, 1] }
+            : { scale: [0.98, 1.07, 1], rotate: [0, 1.5, 0] }
+          : isMobileProfile
+            ? { scale: [0.97, 1.08, 0.99] }
+            : { scale: [0.95, 1.12, 0.97], rotate: [0, -2.6, 0] };
+  const iconAnimate =
+    mode === "matching"
+      ? isMobileProfile
+        ? { y: [0, -1.1, 0], scale: [1, 1.03, 1] }
+        : { y: [0, -2, 0], scale: [1, 1.045, 1] }
+      : mode === "requesting"
+        ? { y: [0, -0.5, 0] }
+        : mode === "error"
+          ? isMobileProfile
+            ? { y: [0, -0.4, 0], scale: [1, 1.005, 1] }
+            : { y: [0, -0.6, 0], scale: [1, 1.01, 1] }
+          : isMobileProfile
+            ? { y: [0, -0.9, 0], scale: [1, 1.025, 1] }
+            : { y: [0, -1.6, 0], scale: [1, 1.05, 1] };
 
   return (
     <div className={`relative isolate transform-gpu ${classes.wrapper}`}>
@@ -366,7 +394,7 @@ export function ListeningOrb({
             key={`${mode}-field-wave-${index}`}
             className={`absolute rounded-full transform-gpu ${
               isMobileProfile
-                ? "inset-[-16%] border border-white/10 bg-[radial-gradient(circle,transparent_56%,rgba(253,186,116,0.14)_60%,rgba(250,204,21,0.12)_63%,transparent_68%)]"
+                ? "inset-[-18%] border border-white/12 bg-[radial-gradient(circle,transparent_55%,rgba(253,186,116,0.18)_60%,rgba(250,204,21,0.16)_63%,transparent_69%)]"
                 : "inset-[-28%] bg-[radial-gradient(circle,transparent_53%,rgba(255,255,255,0.06)_56%,rgba(253,186,116,0.22)_58%,rgba(250,204,21,0.2)_60%,transparent_64%)] mix-blend-screen"
             }`}
             animate={{
@@ -379,8 +407,8 @@ export function ListeningOrb({
                   : [0.62, 1.24, 1.56],
               opacity: isMobileProfile
                 ? mode === "matching"
-                  ? [0, 0.14, 0]
-                  : [0, 0.2, 0]
+                  ? [0, 0.18, 0]
+                  : [0, 0.24, 0]
                 : mode === "matching"
                   ? [0, 0.18, 0]
                   : [0, 0.24, 0],
@@ -451,15 +479,7 @@ export function ListeningOrb({
 
         <motion.div
           className={`${classes.core} relative overflow-hidden rounded-full bg-gradient-to-br ${accent} flex items-center justify-center shadow-[0_24px_80px_rgba(249,115,22,0.24)] transform-gpu`}
-          animate={
-            mode === "success"
-              ? { scale: [0.98, 1.03, 1] }
-              : mode === "error"
-                ? { scale: [0.99, 1.015, 1], rotate: [0, 0.5, 0] }
-                : mode === "matching"
-                  ? { scale: [0.98, 1.07, 1], rotate: [0, 1.5, 0] }
-                  : { scale: [0.95, 1.12, 0.97], rotate: [0, -2.6, 0] }
-          }
+          animate={coreAnimate}
           transition={{
             duration: mode === "matching" ? 1.45 : mode === "error" ? 2.2 : 2.35,
             repeat: mode === "success" ? 0 : Infinity,
@@ -508,15 +528,7 @@ export function ListeningOrb({
 
           <motion.div
             className="relative z-10"
-            animate={
-              mode === "matching"
-                ? { y: [0, -2, 0], scale: [1, 1.045, 1] }
-                : mode === "requesting"
-                  ? { y: [0, -0.5, 0] }
-                  : mode === "error"
-                    ? { y: [0, -0.6, 0], scale: [1, 1.01, 1] }
-                    : { y: [0, -1.6, 0], scale: [1, 1.05, 1] }
-            }
+            animate={iconAnimate}
             transition={{
               duration: mode === "matching" ? 1.05 : mode === "error" ? 1.8 : 1.7,
               repeat: Infinity,
