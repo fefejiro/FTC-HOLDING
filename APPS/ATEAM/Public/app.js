@@ -39,6 +39,26 @@ function stripBasePath(pathname = "") {
   return normalizedPath;
 }
 
+// UI mode: "public" hides admin-only nav items, "admin" shows all.
+// Set by edge worker bootstrap injection (window.ATEAM_UI_MODE).
+// Fallback: ops.unalabs.cloud hostname → admin; everything else → public.
+const ATEAM_UI_MODE = (function resolveUiMode() {
+  const injected = typeof window.ATEAM_UI_MODE === "string" ? window.ATEAM_UI_MODE.trim().toLowerCase() : "";
+  if (injected === "admin") return "admin";
+  if (injected === "public") return "public";
+  const host = String(window.location.hostname || "").toLowerCase();
+  if (host === "ops.unalabs.cloud" || host.startsWith("ops.")) return "admin";
+  if (host === "localhost" || host === "127.0.0.1") return "admin";
+  return "public";
+})();
+
+function applyNavMode() {
+  const isPublic = ATEAM_UI_MODE === "public";
+  document.querySelectorAll("[data-admin-only='true']").forEach((el) => {
+    el.style.display = isPublic ? "none" : "";
+  });
+}
+
 const apiBaseOverride = typeof window.ATEAM_API_BASE === "string" ? String(window.ATEAM_API_BASE).trim() : "";
 const storedApiBase = ATEAM_BASE_PATH ? "" : (localStorage.getItem("ATEAM_API_BASE") || "");
 const API_BASE =
@@ -288,6 +308,23 @@ const projectsWorkProject = document.getElementById("projects-work-project");
 const projectsWorkStage = document.getElementById("projects-work-stage");
 const projectsWorkOwner = document.getElementById("projects-work-owner");
 const projectsWorkCreateBtn = document.getElementById("projects-work-create-btn");
+const projectDocsPanel = document.getElementById("project-docs-panel");
+const projectDocsSummary = document.getElementById("project-docs-summary");
+const projectDocsStageHint = document.getElementById("project-docs-stage-hint");
+const projectDocsList = document.getElementById("project-docs-list");
+const projectDocsGenerateType = document.getElementById("project-docs-generate-type");
+const projectDocsGenerateBtn = document.getElementById("project-docs-generate-btn");
+const docEditorOverlay = document.getElementById("doc-editor-overlay");
+const docEditorTitle = document.getElementById("doc-editor-title");
+const docEditorMeta = document.getElementById("doc-editor-meta");
+const docEditorStatusBadge = document.getElementById("doc-editor-status-badge");
+const docEditorFields = document.getElementById("doc-editor-fields");
+const docEditorPreview = document.getElementById("doc-editor-preview");
+const docEditorSaveBtn = document.getElementById("doc-editor-save-btn");
+const docEditorClose = document.getElementById("doc-editor-close");
+const docEditorExportMd = document.getElementById("doc-editor-export-md");
+const docEditorExportHtml = document.getElementById("doc-editor-export-html");
+const docEditorCopyBtn = document.getElementById("doc-editor-copy-btn");
 
 const docsSummary = document.getElementById("docs-summary");
 const docsMetricCount = document.getElementById("docs-metric-count");
@@ -2223,12 +2260,18 @@ function applyTalkUiModeFromLocation() {
   setTalkFocusMode(Boolean(prefs.focus), { persist: false });
 }
 
+const ADMIN_ONLY_VIEWS = new Set([
+  "agents", "content", "approvals", "council", "calendar",
+  "memory", "people", "system", "radar", "pipeline", "ai_lab"
+]);
+
 function setView(view, options = {}) {
   view = String(view || "entry").toLowerCase();
   if (view === "dashboard") view = "tasks";
   const allowed = Object.keys(MC_ROUTE_BY_VIEW);
   if (!allowed.includes(view)) view = "entry";
   if (isWorkflowShellActive() && !isWorkflowShellView(view)) view = "office";
+  if (ATEAM_UI_MODE === "public" && ADMIN_ONLY_VIEWS.has(view)) view = "tasks";
 
   state.view = view;
   try {
@@ -2357,6 +2400,10 @@ const missionControlState = {
   },
   projects: {
     selectedId: "mission_control"
+  },
+  projectDocs: {
+    byRunId: {},
+    activeDocId: ""
   },
   docs: {
     filter: "",
@@ -5476,6 +5523,8 @@ async function renderProjectsPage({ force = false } = {}) {
       projectsLedger.innerHTML = `${workflowCard}${itemCards}`;
     }
   }
+
+  void renderProjectDocsPanelForSelected();
 }
 
 async function mcLoadDocs({ force = false } = {}) {
@@ -5589,6 +5638,256 @@ async function renderDocsPage({ force = false } = {}) {
   }
   const detail = await mcLoadDocDetail(missionControlState.docs.selectedId, { force });
   renderDocsDetail(detail);
+}
+
+// ===== Project Document Operations (Live Document Layer - D1) =====
+
+const DOC_STAGE_HINTS = {
+  intake: { recommended: ["inquiry_form"], label: "Inquiry stage — Inquiry Form recommended." },
+  analysis: { recommended: ["inquiry_form", "proposal"], label: "Analysis stage — Proposal recommended." },
+  brief_approval: { recommended: ["proposal"], label: "Brief approval — Proposal should be ready." },
+  initiation: { recommended: ["kickoff"], label: "Initiation stage — Kickoff Document recommended." },
+  prototype_pack: { recommended: ["kickoff"], label: "Prototype stage — Kickoff Document should be finalised." },
+  pack_approval: { recommended: [], label: "Pack approval — review existing documents." },
+  handoff: { recommended: [], label: "Handoff — ensure all documents are approved." },
+  archived: { recommended: [], label: "" }
+};
+
+const DOC_TYPE_LABELS = {
+  inquiry_form: "Inquiry Form",
+  proposal: "Proposal",
+  kickoff: "Kickoff Document"
+};
+
+async function projectDocsLoad(runId, { force = false } = {}) {
+  const safeId = String(runId || "").trim();
+  if (!safeId) return [];
+  const cached = missionControlState.projectDocs.byRunId[safeId];
+  if (cached && !force) return cached;
+  try {
+    const res = await apiRequest(`/api/workflow/runs/${encodeURIComponent(safeId)}/documents`);
+    const docs = Array.isArray(res?.documents) ? res.documents : [];
+    missionControlState.projectDocs.byRunId[safeId] = docs;
+    return docs;
+  } catch {
+    return [];
+  }
+}
+
+async function projectDocsGenerate(runId, docType) {
+  const safeRunId = String(runId || "").trim();
+  const safeType = String(docType || "").trim();
+  if (!safeRunId || !safeType) return null;
+  try {
+    const res = await apiRequest(`/api/workflow/runs/${encodeURIComponent(safeRunId)}/documents/generate`, {
+      method: "POST",
+      body: { docType: safeType }
+    });
+    if (res?.ok && res?.doc) {
+      const cached = missionControlState.projectDocs.byRunId[safeRunId];
+      if (Array.isArray(cached)) cached.unshift(res.doc);
+      else missionControlState.projectDocs.byRunId[safeRunId] = [res.doc];
+      return res.doc;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function projectDocSaveFields(docId, fields) {
+  const safeId = String(docId || "").trim();
+  if (!safeId) return null;
+  try {
+    const res = await apiRequest(`/api/documents/${encodeURIComponent(safeId)}/fields`, {
+      method: "POST",
+      body: { fields }
+    });
+    return res?.ok ? res.doc : null;
+  } catch {
+    return null;
+  }
+}
+
+async function projectDocChangeStatus(docId, status) {
+  const safeId = String(docId || "").trim();
+  if (!safeId) return null;
+  try {
+    const res = await apiRequest(`/api/documents/${encodeURIComponent(safeId)}/status`, {
+      method: "POST",
+      body: { status }
+    });
+    return res?.ok ? res.doc : null;
+  } catch {
+    return null;
+  }
+}
+
+function docStatusLabel(status) {
+  const map = { draft: "Draft", generated: "Generated", sent: "Sent", approved: "Approved", archived: "Archived" };
+  return map[status] || status || "Draft";
+}
+
+function renderProjectDocsPanel(runId, phase) {
+  if (!projectDocsList) return;
+  const docs = missionControlState.projectDocs.byRunId[runId] || [];
+  const hint = DOC_STAGE_HINTS[phase] || null;
+
+  if (projectDocsStageHint) {
+    if (hint?.label) {
+      projectDocsStageHint.textContent = hint.label;
+      projectDocsStageHint.classList.remove("hidden");
+    } else {
+      projectDocsStageHint.classList.add("hidden");
+    }
+  }
+
+  if (projectDocsSummary) {
+    projectDocsSummary.textContent = docs.length
+      ? `${docs.length} document${docs.length === 1 ? "" : "s"} linked to this initiative.`
+      : "No documents yet — generate one from project data.";
+  }
+
+  if (!docs.length) {
+    projectDocsList.innerHTML = `<div class="ops-empty">No documents yet. Select a type above and click Generate.</div>`;
+    return;
+  }
+
+  projectDocsList.innerHTML = docs.map((doc) => `
+    <div class="project-doc-card" data-doc-id="${escapeHtml(doc.id)}">
+      <div class="project-doc-card-info">
+        <div class="project-doc-card-title">${escapeHtml(doc.title || DOC_TYPE_LABELS[doc.docType] || doc.docType)}</div>
+        <div class="project-doc-card-meta">
+          <span class="doc-status-badge" data-status="${escapeHtml(doc.status)}">${escapeHtml(docStatusLabel(doc.status))}</span>
+          &nbsp;v${escapeHtml(String(doc.version || 1))} &nbsp;·&nbsp; ${escapeHtml(formatRelativeTime(doc.updatedTs) || "just now")}
+        </div>
+      </div>
+      <div class="project-doc-card-actions">
+        <button class="ops-action-btn" type="button" data-action="open-live-doc" data-doc-id="${escapeHtml(doc.id)}" data-run-id="${escapeHtml(runId)}">Edit</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function docEditorOpen(doc) {
+  if (!docEditorOverlay || !doc) return;
+  missionControlState.projectDocs.activeDocId = doc.id;
+
+  if (docEditorTitle) docEditorTitle.textContent = doc.title || DOC_TYPE_LABELS[doc.docType] || "Document";
+  if (docEditorMeta) docEditorMeta.textContent = `${DOC_TYPE_LABELS[doc.docType] || doc.docType} · v${doc.version || 1} · ${formatRelativeTime(doc.updatedTs) || ""}`;
+  if (docEditorStatusBadge) {
+    docEditorStatusBadge.textContent = docStatusLabel(doc.status);
+    docEditorStatusBadge.setAttribute("data-status", doc.status || "draft");
+  }
+
+  const fields = doc.structuredFields || {};
+  const templateFields = {
+    inquiry_form: ["clientName", "projectTitle", "projectScope", "objectives", "timeline", "budget", "constraints"],
+    proposal: ["clientName", "projectTitle", "executiveSummary", "scope", "deliverables", "timeline", "investment", "terms"],
+    kickoff: ["clientName", "projectTitle", "projectGoal", "teamMembers", "approach", "keyMilestones", "successCriteria", "nextSteps"]
+  };
+  const fieldLabels = {
+    clientName: "Client Name", projectTitle: "Project Title", projectScope: "Project Scope",
+    objectives: "Objectives", timeline: "Timeline", budget: "Budget", constraints: "Constraints",
+    executiveSummary: "Executive Summary", scope: "Scope of Work", deliverables: "Deliverables",
+    investment: "Investment / Fee", terms: "Terms & Conditions",
+    projectGoal: "Project Goal", teamMembers: "Team Members", approach: "Approach & Methodology",
+    keyMilestones: "Key Milestones", successCriteria: "Success Criteria", nextSteps: "Next Steps"
+  };
+  const fieldKeys = templateFields[doc.docType] || Object.keys(fields);
+  const longFields = new Set(["projectScope", "objectives", "constraints", "executiveSummary", "scope", "deliverables", "terms", "projectGoal", "approach", "keyMilestones", "successCriteria", "nextSteps", "teamMembers"]);
+
+  if (docEditorFields) {
+    docEditorFields.innerHTML = fieldKeys.map((key) => {
+      const label = fieldLabels[key] || key;
+      const val = escapeHtml(String(fields[key] || ""));
+      return longFields.has(key)
+        ? `<div class="doc-editor-field"><label for="def-${escapeHtml(key)}">${escapeHtml(label)}</label><textarea id="def-${escapeHtml(key)}" data-field-key="${escapeHtml(key)}" rows="3">${val}</textarea></div>`
+        : `<div class="doc-editor-field"><label for="def-${escapeHtml(key)}">${escapeHtml(label)}</label><input id="def-${escapeHtml(key)}" data-field-key="${escapeHtml(key)}" type="text" value="${val}" /></div>`;
+    }).join("");
+  }
+
+  if (docEditorPreview) {
+    docEditorPreview.textContent = doc.renderedOutput || "";
+  }
+
+  docEditorOverlay.classList.remove("hidden");
+}
+
+function closeDocEditor() {
+  if (docEditorOverlay) docEditorOverlay.classList.add("hidden");
+  missionControlState.projectDocs.activeDocId = "";
+}
+
+function docEditorGetCurrentFields() {
+  if (!docEditorFields) return {};
+  const result = {};
+  docEditorFields.querySelectorAll("[data-field-key]").forEach((el) => {
+    result[el.dataset.fieldKey] = el.value || "";
+  });
+  return result;
+}
+
+function docEditorUpdateLocal(updatedDoc) {
+  if (!updatedDoc) return;
+  if (docEditorTitle) docEditorTitle.textContent = updatedDoc.title || DOC_TYPE_LABELS[updatedDoc.docType] || "Document";
+  if (docEditorMeta) docEditorMeta.textContent = `${DOC_TYPE_LABELS[updatedDoc.docType] || updatedDoc.docType} · v${updatedDoc.version || 1} · just now`;
+  if (docEditorStatusBadge) {
+    docEditorStatusBadge.textContent = docStatusLabel(updatedDoc.status);
+    docEditorStatusBadge.setAttribute("data-status", updatedDoc.status || "draft");
+  }
+  if (docEditorPreview) docEditorPreview.textContent = updatedDoc.renderedOutput || "";
+  const byRunId = missionControlState.projectDocs.byRunId;
+  for (const runId of Object.keys(byRunId)) {
+    const list = byRunId[runId];
+    const idx = list.findIndex((d) => d.id === updatedDoc.id);
+    if (idx !== -1) { list[idx] = updatedDoc; break; }
+  }
+}
+
+async function handleProjectDocsGenerate() {
+  const runId = currentProjectRunId();
+  const docType = projectDocsGenerateType?.value;
+  if (!runId) { showToast("No project selected.", "error"); return; }
+  if (!docType) { showToast("Select a document type first.", "error"); return; }
+  if (projectDocsGenerateBtn) projectDocsGenerateBtn.disabled = true;
+  try {
+    const doc = await projectDocsGenerate(runId, docType);
+    if (!doc) { showToast("Generation failed.", "error"); return; }
+    if (projectDocsGenerateType) projectDocsGenerateType.value = "";
+    renderProjectDocsPanel(runId, currentProjectPhase());
+    showToast(`${DOC_TYPE_LABELS[docType] || docType} generated.`, "ok");
+    docEditorOpen(doc);
+  } catch {
+    showToast("Generation failed.", "error");
+  } finally {
+    if (projectDocsGenerateBtn) projectDocsGenerateBtn.disabled = false;
+  }
+}
+
+function currentProjectRunId() {
+  const portfolio = mcProjectPortfolio();
+  const selected = portfolio.find((p) => p.id === missionControlState.projects.selectedId) || portfolio[0];
+  return selected?.workflowRunId || "";
+}
+
+function currentProjectPhase() {
+  const overview = missionControlState.overview.workflowRuns || [];
+  const runId = currentProjectRunId();
+  const run = overview.find((r) => r.id === runId);
+  return String(run?.phase || "intake");
+}
+
+async function renderProjectDocsPanelForSelected() {
+  const runId = currentProjectRunId();
+  if (!runId) {
+    if (projectDocsSummary) projectDocsSummary.textContent = "No workflow run linked to this initiative.";
+    if (projectDocsList) projectDocsList.innerHTML = `<div class="ops-empty">Link a workflow run to see documents.</div>`;
+    if (projectDocsStageHint) projectDocsStageHint.classList.add("hidden");
+    return;
+  }
+  await projectDocsLoad(runId);
+  renderProjectDocsPanel(runId, currentProjectPhase());
 }
 
 function buildPeopleContacts(events = []) {
@@ -6470,6 +6769,18 @@ async function handleMissionAction(action, dataset = {}) {
   }
   if (safeAction === "open-doc") {
     mcOpenDoc(dataset.docId, dataset.projectId);
+    return;
+  }
+  if (safeAction === "open-live-doc") {
+    const docId = String(dataset.docId || "").trim();
+    if (!docId) return;
+    try {
+      const res = await apiRequest(`/api/documents/${encodeURIComponent(docId)}`);
+      if (res?.ok && res?.doc) docEditorOpen(res.doc);
+      else showToast("Could not load document.", "error");
+    } catch {
+      showToast("Could not load document.", "error");
+    }
     return;
   }
   if (safeAction === "go-to-approval") {
@@ -12528,6 +12839,93 @@ function bindEvents() {
     });
   }
 
+  // Project Documents Panel
+  if (projectDocsGenerateBtn) {
+    projectDocsGenerateBtn.addEventListener("click", () => { void handleProjectDocsGenerate(); });
+  }
+  if (projectDocsList) {
+    projectDocsList.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]");
+      if (!btn) return;
+      void handleMissionAction(String(btn.dataset.action || ""), btn.dataset || {});
+    });
+  }
+
+  // Document Editor Overlay
+  if (docEditorClose) {
+    docEditorClose.addEventListener("click", () => closeDocEditor());
+    docEditorOverlay?.addEventListener("pointerdown", (e) => { if (e.target === docEditorOverlay) closeDocEditor(); });
+  }
+  if (docEditorSaveBtn) {
+    docEditorSaveBtn.addEventListener("click", async () => {
+      const docId = missionControlState.projectDocs.activeDocId;
+      if (!docId) return;
+      docEditorSaveBtn.disabled = true;
+      try {
+        const fields = docEditorGetCurrentFields();
+        const updated = await projectDocSaveFields(docId, fields);
+        if (updated) {
+          docEditorUpdateLocal(updated);
+          const runId = currentProjectRunId();
+          if (runId) renderProjectDocsPanel(runId, currentProjectPhase());
+          showToast("Document saved.", "ok");
+        } else {
+          showToast("Save failed.", "error");
+        }
+      } catch {
+        showToast("Save failed.", "error");
+      } finally {
+        docEditorSaveBtn.disabled = false;
+      }
+    });
+  }
+  if (docEditorOverlay) {
+    docEditorOverlay.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-doc-status-action]");
+      if (!btn) return;
+      const newStatus = String(btn.dataset.docStatusAction || "").trim();
+      const docId = missionControlState.projectDocs.activeDocId;
+      if (!docId || !newStatus) return;
+      void (async () => {
+        const updated = await projectDocChangeStatus(docId, newStatus);
+        if (updated) {
+          docEditorUpdateLocal(updated);
+          const runId = currentProjectRunId();
+          if (runId) renderProjectDocsPanel(runId, currentProjectPhase());
+          showToast(`Status set to ${newStatus}.`, "ok");
+        } else {
+          showToast("Status change failed.", "error");
+        }
+      })();
+    });
+  }
+  if (docEditorExportMd) {
+    docEditorExportMd.addEventListener("click", () => {
+      const docId = missionControlState.projectDocs.activeDocId;
+      if (!docId) return;
+      window.open(`/api/documents/${encodeURIComponent(docId)}/export/markdown`, "_blank");
+    });
+  }
+  if (docEditorExportHtml) {
+    docEditorExportHtml.addEventListener("click", () => {
+      const docId = missionControlState.projectDocs.activeDocId;
+      if (!docId) return;
+      window.open(`/api/documents/${encodeURIComponent(docId)}/export/html`, "_blank");
+    });
+  }
+  if (docEditorCopyBtn) {
+    docEditorCopyBtn.addEventListener("click", async () => {
+      const text = docEditorPreview?.textContent || "";
+      if (!text) { showToast("Nothing to copy.", "error"); return; }
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("Copied to clipboard.", "ok");
+      } catch {
+        showToast("Copy failed — check permissions.", "error");
+      }
+    });
+  }
+
   if (peopleOpenTalkBtn) peopleOpenTalkBtn.addEventListener("click", () => setView("talk"));
   if (peopleOpenTeamBtn) peopleOpenTeamBtn.addEventListener("click", () => setView("team"));
 
@@ -13072,6 +13470,7 @@ function bindEvents() {
 }
 
 async function bootstrap() {
+  applyNavMode();
   bindEvents();
 
   // Determine initial view

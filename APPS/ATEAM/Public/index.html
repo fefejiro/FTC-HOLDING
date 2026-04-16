@@ -50,31 +50,31 @@
         <button class="mc-nav-item active" type="button" data-route="/tasks" data-view="tasks">
           <span class="mc-nav-ico" aria-hidden="true">⌁</span><span class="mc-nav-label">Tasks</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/agents" data-view="agents">
+        <button class="mc-nav-item" type="button" data-route="/agents" data-view="agents" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">⎔</span><span class="mc-nav-label">Agents</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/content" data-view="content">
+        <button class="mc-nav-item" type="button" data-route="/content" data-view="content" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">▦</span><span class="mc-nav-label">Content</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/approvals" data-view="approvals">
+        <button class="mc-nav-item" type="button" data-route="/approvals" data-view="approvals" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">✓</span><span class="mc-nav-label">Approvals</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/council" data-view="council">
+        <button class="mc-nav-item" type="button" data-route="/council" data-view="council" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">⌂</span><span class="mc-nav-label">Council</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/calendar" data-view="calendar">
+        <button class="mc-nav-item" type="button" data-route="/calendar" data-view="calendar" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">▣</span><span class="mc-nav-label">Calendar</span>
         </button>
         <button class="mc-nav-item" type="button" data-route="/projects" data-view="projects">
           <span class="mc-nav-ico" aria-hidden="true">▤</span><span class="mc-nav-label">Projects</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/memory" data-view="memory">
+        <button class="mc-nav-item" type="button" data-route="/memory" data-view="memory" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">◎</span><span class="mc-nav-label">Memory</span>
         </button>
         <button class="mc-nav-item" type="button" data-route="/docs" data-view="docs">
           <span class="mc-nav-ico" aria-hidden="true">⌗</span><span class="mc-nav-label">Docs</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/people" data-view="people">
+        <button class="mc-nav-item" type="button" data-route="/people" data-view="people" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">⎇</span><span class="mc-nav-label">People</span>
         </button>
         <button class="mc-nav-item" type="button" data-route="/office" data-view="office">
@@ -83,19 +83,19 @@
         <button class="mc-nav-item" type="button" data-route="/team" data-view="team">
           <span class="mc-nav-ico" aria-hidden="true">⟟</span><span class="mc-nav-label">Team</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/system" data-view="system">
+        <button class="mc-nav-item" type="button" data-route="/system" data-view="system" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">⟐</span><span class="mc-nav-label">System</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/radar" data-view="radar">
+        <button class="mc-nav-item" type="button" data-route="/radar" data-view="radar" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">◌</span><span class="mc-nav-label">Radar</span>
         </button>
         <button class="mc-nav-item" type="button" data-route="/factory" data-view="factory">
           <span class="mc-nav-ico" aria-hidden="true">▥</span><span class="mc-nav-label">Factory</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/pipeline" data-view="pipeline">
+        <button class="mc-nav-item" type="button" data-route="/pipeline" data-view="pipeline" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">⇢</span><span class="mc-nav-label">Pipeline</span>
         </button>
-        <button class="mc-nav-item" type="button" data-route="/ai-lab" data-view="ai_lab">
+        <button class="mc-nav-item" type="button" data-route="/ai-lab" data-view="ai_lab" data-admin-only="true">
           <span class="mc-nav-ico" aria-hidden="true">◍</span><span class="mc-nav-label">AI Lab</span>
         </button>
       </nav>
@@ -635,8 +635,69 @@
           <div id="projects-ledger" class="ops-card-stack"></div>
         </article>
       </section>
+
+      <section class="ops-panel project-docs-panel" id="project-docs-panel">
+        <div class="ops-panel-head">
+          <div>
+            <div class="ops-panel-title">Project Documents</div>
+            <div class="ops-panel-copy" id="project-docs-summary">Live documents linked to this initiative.</div>
+          </div>
+          <div class="ops-hero-actions">
+            <select id="project-docs-generate-type" class="ops-select-inline">
+              <option value="">Generate document…</option>
+              <option value="inquiry_form">Inquiry Form</option>
+              <option value="proposal">Proposal</option>
+              <option value="kickoff">Kickoff Document</option>
+            </select>
+            <button id="project-docs-generate-btn" class="mc-top-btn" type="button">Generate</button>
+          </div>
+        </div>
+        <div id="project-docs-stage-hint" class="project-docs-stage-hint hidden"></div>
+        <div id="project-docs-list" class="project-docs-list"></div>
+      </section>
     </div>
   </main>
+
+  <div id="doc-editor-overlay" class="doc-editor-overlay hidden" aria-modal="true" role="dialog" aria-label="Document editor">
+    <div class="doc-editor-shell">
+      <div class="doc-editor-head">
+        <div>
+          <div id="doc-editor-title" class="doc-editor-title">Document</div>
+          <div id="doc-editor-meta" class="doc-editor-meta"></div>
+        </div>
+        <div class="doc-editor-head-actions">
+          <span id="doc-editor-status-badge" class="doc-status-badge"></span>
+          <button id="doc-editor-close" class="mc-icon-btn" type="button" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <div class="doc-editor-body">
+        <div class="doc-editor-fields-col">
+          <div class="doc-editor-section-label">Fields</div>
+          <div id="doc-editor-fields" class="doc-editor-fields"></div>
+          <div class="doc-editor-field-actions">
+            <button id="doc-editor-save-btn" class="mc-top-btn" type="button">Save &amp; Re-render</button>
+          </div>
+        </div>
+        <div class="doc-editor-preview-col">
+          <div class="doc-editor-section-label">Preview</div>
+          <div id="doc-editor-preview" class="doc-editor-preview"></div>
+        </div>
+      </div>
+      <div class="doc-editor-footer">
+        <div class="doc-editor-status-actions">
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-doc-status-action="generated">Mark Generated</button>
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-doc-status-action="sent">Mark Sent</button>
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-doc-status-action="approved">Mark Approved</button>
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-doc-status-action="archived">Archive</button>
+        </div>
+        <div class="doc-editor-export-actions">
+          <button id="doc-editor-export-md" class="ops-action-btn" type="button">Export Markdown</button>
+          <button id="doc-editor-export-html" class="ops-action-btn" type="button">Export HTML</button>
+          <button id="doc-editor-copy-btn" class="ops-action-btn" type="button">Copy Text</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <main id="memory-view" class="view mc-page hidden" data-mc-page="memory">
     <div class="memory-layout" aria-label="Memory journal layout">
