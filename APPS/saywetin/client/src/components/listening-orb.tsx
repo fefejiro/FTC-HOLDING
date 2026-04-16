@@ -11,14 +11,14 @@ const SIZE_CLASSES: Record<ListeningOrbSize, { wrapper: string; core: string; ic
     icon: "h-9 w-9",
   },
   immersive: {
-    wrapper: "h-56 w-56",
-    core: "h-28 w-28",
-    icon: "h-14 w-14",
+    wrapper: "h-[24rem] w-[24rem] sm:h-[28rem] sm:w-[28rem] lg:h-[34rem] lg:w-[34rem]",
+    core: "h-28 w-28 sm:h-32 sm:w-32",
+    icon: "h-14 w-14 sm:h-16 sm:w-16",
   },
   hero: {
-    wrapper: "h-60 w-60",
-    core: "h-32 w-32",
-    icon: "h-16 w-16",
+    wrapper: "h-[26rem] w-[26rem] sm:h-[30rem] sm:w-[30rem]",
+    core: "h-32 w-32 sm:h-36 sm:w-36",
+    icon: "h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem]",
   },
 };
 
@@ -54,32 +54,32 @@ const MODE_CONFIG: Record<
     particleCount: 4,
   },
   listening: {
-    rippleCount: 6,
-    rippleScale: 1.46,
-    rippleDuration: 3.2,
-    glowDuration: 3.6,
-    hazeScale: [0.9, 1.18, 0.94],
-    hazeOpacity: [0.28, 0.62, 0.34],
-    shellScale: [0.95, 1.13, 0.98],
-    shellDuration: 2.6,
-    particleDrift: 28,
-    particleOpacity: [0.18, 0.48, 0.22],
-    particleScale: [0.8, 1.14, 0.84],
-    particleCount: 6,
+    rippleCount: 7,
+    rippleScale: 1.74,
+    rippleDuration: 2.6,
+    glowDuration: 3.2,
+    hazeScale: [0.88, 1.28, 0.92],
+    hazeOpacity: [0.36, 0.82, 0.42],
+    shellScale: [0.94, 1.18, 0.98],
+    shellDuration: 2.15,
+    particleDrift: 40,
+    particleOpacity: [0.22, 0.56, 0.26],
+    particleScale: [0.76, 1.22, 0.8],
+    particleCount: 7,
   },
   matching: {
-    rippleCount: 5,
-    rippleScale: 1.24,
-    rippleDuration: 1.9,
-    glowDuration: 2.2,
-    hazeScale: [0.95, 1.09, 0.97],
-    hazeOpacity: [0.32, 0.5, 0.35],
-    shellScale: [0.98, 1.07, 1],
-    shellDuration: 1.55,
-    particleDrift: 12,
-    particleOpacity: [0.16, 0.3, 0.18],
-    particleScale: [0.88, 1.04, 0.9],
-    particleCount: 4,
+    rippleCount: 6,
+    rippleScale: 1.54,
+    rippleDuration: 1.65,
+    glowDuration: 1.95,
+    hazeScale: [0.94, 1.16, 0.97],
+    hazeOpacity: [0.34, 0.62, 0.38],
+    shellScale: [0.97, 1.1, 0.995],
+    shellDuration: 1.25,
+    particleDrift: 18,
+    particleOpacity: [0.18, 0.34, 0.2],
+    particleScale: [0.84, 1.08, 0.88],
+    particleCount: 5,
   },
   success: {
     rippleCount: 3,
@@ -136,7 +136,7 @@ function getFieldTint(mode: ListeningOrbMode): string {
     return "from-orange-500/20 via-amber-400/18 to-green-400/16";
   }
 
-  return "from-orange-500/18 via-amber-400/16 to-green-400/14";
+  return "from-orange-500/24 via-amber-300/22 to-green-400/18";
 }
 
 function getShellTint(mode: ListeningOrbMode): string {
@@ -167,11 +167,17 @@ export function ListeningOrb({
   const fieldTint = getFieldTint(mode);
   const shellTint = getShellTint(mode);
   const config = MODE_CONFIG[mode];
+  const rippleClass =
+    mode === "listening"
+      ? "border-white/18 bg-white/[0.04] shadow-[0_0_44px_rgba(249,115,22,0.1)]"
+      : mode === "matching"
+        ? "border-white/16 bg-white/[0.035] shadow-[0_0_34px_rgba(249,115,22,0.1)]"
+        : "border-white/12 bg-white/[0.02]";
 
   return (
     <div className={`relative isolate ${classes.wrapper}`}>
       <motion.div
-        className={`absolute inset-[-16%] rounded-full bg-gradient-to-br ${fieldTint} blur-3xl`}
+        className={`absolute inset-[-24%] rounded-full bg-gradient-to-br ${fieldTint} blur-3xl`}
         animate={{
           scale: config.hazeScale,
           opacity: config.hazeOpacity,
@@ -179,6 +185,19 @@ export function ListeningOrb({
         }}
         transition={{
           duration: config.glowDuration,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      <motion.div
+        className="absolute inset-[-12%] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.16)_0%,rgba(249,115,22,0.08)_22%,rgba(163,230,53,0.05)_38%,transparent_68%)] blur-2xl"
+        animate={{
+          scale: mode === "matching" ? [0.92, 1.04, 0.96] : [0.88, 1.12, 0.92],
+          opacity: mode === "matching" ? [0.32, 0.5, 0.36] : [0.28, 0.62, 0.34],
+        }}
+        transition={{
+          duration: mode === "matching" ? 1.8 : 2.4,
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -200,19 +219,38 @@ export function ListeningOrb({
       {Array.from({ length: config.rippleCount }).map((_, index) => (
         <motion.div
           key={`${mode}-ripple-${index}`}
-          className="absolute inset-0 rounded-full border border-white/12 bg-white/[0.02]"
+          className={`absolute inset-0 rounded-full ${rippleClass}`}
           animate={{
-            scale: [0.64, config.rippleScale - index * 0.03, config.rippleScale + 0.12 - index * 0.03],
-            opacity: [0, Math.max(0.12, 0.34 - index * 0.05), 0],
+            scale: [0.54, config.rippleScale - index * 0.045, config.rippleScale + 0.14 - index * 0.045],
+            opacity: [0, Math.max(0.12, 0.42 - index * 0.045), 0],
           }}
           transition={{
             duration: config.rippleDuration,
             repeat: Infinity,
             ease: "easeOut",
-            delay: index * (mode === "matching" ? 0.18 : 0.26),
+            delay: index * (mode === "matching" ? 0.14 : 0.2),
           }}
         />
       ))}
+
+      {mode === "listening" || mode === "matching" ? (
+        Array.from({ length: mode === "listening" ? 3 : 2 }).map((_, index) => (
+          <motion.div
+            key={`${mode}-field-wave-${index}`}
+            className="absolute inset-[-28%] rounded-full bg-[radial-gradient(circle,transparent_53%,rgba(255,255,255,0.06)_56%,rgba(253,186,116,0.22)_58%,rgba(250,204,21,0.2)_60%,transparent_64%)] mix-blend-screen"
+            animate={{
+              scale: mode === "matching" ? [0.7, 1.1, 1.36] : [0.62, 1.24, 1.56],
+              opacity: mode === "matching" ? [0, 0.18, 0] : [0, 0.24, 0],
+            }}
+            transition={{
+              duration: mode === "matching" ? 2.1 : 2.5,
+              repeat: Infinity,
+              ease: "easeOut",
+              delay: index * (mode === "matching" ? 0.26 : 0.34),
+            }}
+          />
+        ))
+      ) : null}
 
       {Array.from({ length: config.particleCount }).map((_, index) => {
         const direction = index % 2 === 0 ? 1 : -1;
