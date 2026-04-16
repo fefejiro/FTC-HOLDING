@@ -42,6 +42,7 @@ import {
 import { getBackendBuildInfo } from "./lib/build-info";
 import {
   buildGlossaryAnalysesFromLyrics,
+  buildBestEffortLineAnalysis,
   buildGlossaryLineAnalysis,
   buildStreamingGlossaryPayload,
 } from "./glossary-analysis";
@@ -2213,7 +2214,12 @@ Rules:
         });
       }
 
-      const fallbackAnalysis = buildGlossaryLineAnalysis(lyricText.trim());
+      const fallbackAnalysis = buildBestEffortLineAnalysis(lyricText.trim(), {
+        songTitle,
+        artistName,
+        genre,
+        language,
+      });
 
       if (!isAiConfigured()) {
         if (!fallbackAnalysis) {
@@ -2350,7 +2356,13 @@ Rules:
         return;
       }
 
-      const fallbackPayload = buildStreamingGlossaryPayload(text);
+      const fallbackAnalysis = buildBestEffortLineAnalysis(text, {
+        songTitle: String(songTitle || ''),
+        artistName: String(artistName || ''),
+        genre: String(genre || ''),
+        language: String(language || ''),
+      });
+      const fallbackPayload = fallbackAnalysis ? JSON.stringify(fallbackAnalysis) : buildStreamingGlossaryPayload(text);
 
       if (!isAiConfigured()) {
         if (fallbackPayload) {

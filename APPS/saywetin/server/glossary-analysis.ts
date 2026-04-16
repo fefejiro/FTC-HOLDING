@@ -256,6 +256,58 @@ export function buildGlossaryLineAnalysis(
   };
 }
 
+export function buildBestEffortLineAnalysis(
+  lyricText: string,
+  metadata?: {
+    songTitle?: string;
+    artistName?: string;
+    genre?: string;
+    language?: string;
+  },
+): GlossaryAnalysisResult | null {
+  const glossaryMatch = buildGlossaryLineAnalysis(lyricText);
+  if (glossaryMatch) {
+    return glossaryMatch;
+  }
+
+  const trimmed = lyricText.trim();
+  if (trimmed.length < 2) {
+    return null;
+  }
+
+  const songTitle = metadata?.songTitle?.trim();
+  const artistName = metadata?.artistName?.trim();
+  const genre = metadata?.genre?.trim();
+  const language = metadata?.language?.trim();
+  const hasLikelyAfricanLanguageMarkers = /[à-ÿ]|[\u0180-\u024f]/i.test(trimmed);
+  const hasQuotedPhrase = /["'“”]/.test(trimmed);
+
+  const contextLead =
+    songTitle && artistName
+      ? `This line sits inside "${songTitle}" by ${artistName}.`
+      : artistName
+        ? `This line lands as part of ${artistName}'s vocal phrasing.`
+        : `This line carries the emotional point of the section directly.`;
+
+  return {
+    translation: trimmed,
+    detectedLanguage: language || (hasLikelyAfricanLanguageMarkers ? "Likely mixed local phrasing" : undefined),
+    culturalContext: genre
+      ? `${contextLead} It reads more like a direct ${genre.toLowerCase()} mood line than a slang-heavy phrase, so the meaning comes through tone and delivery more than a coded expression.`
+      : `${contextLead} It reads more like a direct mood line than a slang-heavy phrase, so the meaning comes through tone and delivery more than a coded expression.`,
+    artistIntent: hasQuotedPhrase
+      ? `The artist is landing a clear emotional or memorable phrase here rather than hiding the point behind heavy slang.`
+      : `The artist is reinforcing the feeling of the moment here in a straightforward way.`,
+    deeperMeaning: songTitle
+      ? `This line helps ${songTitle} hold its emotional center in this section, even when there is no strong slang or proverb to unpack.`
+      : `This line helps hold the emotional center of the moment, even when there is no strong slang or proverb to unpack.`,
+    languageNotes:
+      language || hasLikelyAfricanLanguageMarkers
+        ? `The wording may still carry accent, cadence, or local phrasing that matters in performance even when the line reads plainly on the page.`
+        : `This line appears fairly direct, so performance and tone likely carry more of the nuance than coded vocabulary.`,
+  };
+}
+
 export function buildGlossaryAnalysesFromLyrics(
   lyricsText: string,
 ): GlossaryLyricAnalysisRecord[] {
