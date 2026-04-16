@@ -269,6 +269,192 @@ function getShellTint(mode: ListeningOrbMode): string {
   return "border-white/14 bg-white/8";
 }
 
+function MobileListeningOrb({
+  mode,
+  classes,
+  accent,
+  fieldTint,
+  shellTint,
+  config,
+  fieldWaveCount,
+}: {
+  mode: ListeningOrbMode;
+  classes: { wrapper: string; core: string; icon: string };
+  accent: string;
+  fieldTint: string;
+  shellTint: string;
+  config: OrbMotionConfig;
+  fieldWaveCount: number;
+}) {
+  const coreAnimate =
+    mode === "success"
+      ? { scale: [0.99, 1.025, 1] }
+      : mode === "matching"
+        ? { scale: [0.985, 1.045, 1] }
+        : mode === "error"
+          ? { scale: [0.995, 1.012, 1] }
+          : { scale: [0.97, 1.07, 0.99] };
+
+  const iconAnimate =
+    mode === "matching"
+      ? { scale: [1, 1.02, 1] }
+      : mode === "requesting"
+        ? { opacity: [0.88, 1, 0.9] }
+        : mode === "error"
+          ? { opacity: [0.9, 0.98, 0.92] }
+          : { scale: [1, 1.015, 1] };
+
+  const ripplePeakOpacity =
+    mode === "listening" ? 0.34 : mode === "matching" ? 0.28 : 0.18;
+
+  return (
+    <div className={`relative isolate ${classes.wrapper}`}>
+      <motion.div
+        className={`absolute inset-[-14%] rounded-full bg-gradient-to-br ${fieldTint} blur-[42px]`}
+        animate={{
+          scale: mode === "matching" ? [0.96, 1.04, 0.98] : [0.94, 1.1, 0.97],
+          opacity: mode === "error" ? [0.16, 0.26, 0.18] : [0.22, 0.42, 0.26],
+        }}
+        transition={{
+          duration: mode === "matching" ? 1.9 : 2.5,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      <motion.div
+        className="absolute inset-[-6%] rounded-full border border-white/8 bg-[radial-gradient(circle,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_38%,transparent_72%)]"
+        animate={{
+          scale: mode === "matching" ? [0.98, 1.02, 1] : [0.96, 1.05, 0.98],
+          opacity: mode === "error" ? [0.12, 0.18, 0.14] : [0.14, 0.24, 0.16],
+        }}
+        transition={{
+          duration: mode === "matching" ? 1.7 : 2.2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      {Array.from({ length: Math.max(4, config.rippleCount) }).map((_, index) => (
+        <motion.div
+          key={`${mode}-mobile-ripple-${index}`}
+          className="absolute inset-0 rounded-full border border-white/16 bg-white/[0.03]"
+          animate={{
+            scale: [
+              0.58,
+              config.rippleScale - index * 0.055,
+              config.rippleScale + 0.08 - index * 0.055,
+            ],
+            opacity: [0, Math.max(0.1, ripplePeakOpacity - index * 0.04), 0],
+          }}
+          transition={{
+            duration: config.rippleDuration,
+            repeat: Infinity,
+            ease: "easeOut",
+            delay: index * (mode === "matching" ? 0.16 : 0.22),
+          }}
+        />
+      ))}
+
+      {Array.from({ length: Math.max(3, fieldWaveCount) }).map((_, index) => (
+        <motion.div
+          key={`${mode}-mobile-wave-${index}`}
+          className="absolute inset-[-12%] rounded-full border border-amber-100/12 bg-[radial-gradient(circle,transparent_54%,rgba(253,186,116,0.14)_59%,rgba(132,204,22,0.1)_63%,transparent_70%)]"
+          animate={{
+            scale:
+              mode === "matching"
+                ? [0.78, 1.02, 1.18]
+                : [0.68, 1.14, 1.3],
+            opacity:
+              mode === "matching"
+                ? [0, 0.16, 0]
+                : [0, 0.22, 0],
+          }}
+          transition={{
+            duration: mode === "matching" ? 1.8 : 2.2,
+            repeat: Infinity,
+            ease: "easeOut",
+            delay: index * (mode === "matching" ? 0.2 : 0.26),
+          }}
+        />
+      ))}
+
+      <div className="absolute inset-0 flex items-center justify-center">
+        <motion.div
+          className={`absolute rounded-full border ${shellTint} ${classes.core}`}
+          animate={{
+            scale: config.shellScale,
+            opacity:
+              mode === "matching"
+                ? [0.84, 0.96, 0.88]
+                : mode === "error"
+                  ? [0.7, 0.8, 0.72]
+                  : [0.78, 0.94, 0.82],
+          }}
+          transition={{
+            duration: config.shellDuration,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        <motion.div
+          className={`${classes.core} relative overflow-hidden rounded-full bg-gradient-to-br ${accent} flex items-center justify-center shadow-[0_20px_48px_rgba(249,115,22,0.22)]`}
+          animate={coreAnimate}
+          transition={{
+            duration: mode === "matching" ? 1.35 : mode === "error" ? 2 : 2.1,
+            repeat: mode === "success" ? 0 : Infinity,
+            ease: "easeInOut",
+          }}
+        >
+          <motion.div
+            className="absolute inset-[11%] rounded-full border border-white/18 bg-white/10"
+            animate={{
+              scale:
+                mode === "matching"
+                  ? [0.97, 1.025, 0.985]
+                  : mode === "error"
+                    ? [0.985, 1.01, 0.99]
+                    : [0.94, 1.05, 0.96],
+              opacity:
+                mode === "matching"
+                  ? [0.22, 0.34, 0.24]
+                  : mode === "error"
+                    ? [0.14, 0.22, 0.16]
+                    : [0.18, 0.32, 0.2],
+            }}
+            transition={{
+              duration: mode === "matching" ? 1.2 : mode === "error" ? 1.8 : 1.95,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_26%,rgba(255,255,255,0.36),transparent_36%),radial-gradient(circle_at_66%_72%,rgba(255,255,255,0.14),transparent_44%)]" />
+
+          <motion.div
+            className="relative z-10"
+            animate={iconAnimate}
+            transition={{
+              duration: mode === "matching" ? 1.05 : mode === "error" ? 1.7 : 1.55,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            {mode === "requesting" ? (
+              <Loader2 className={`${classes.icon} text-white animate-spin`} />
+            ) : mode === "success" ? (
+              <Music2 className={`${classes.icon} text-white`} />
+            ) : (
+              <Mic className={`${classes.icon} ${mode === "error" ? "text-white/75" : "text-white"}`} />
+            )}
+          </motion.div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
 export function ListeningOrb({
   mode,
   size = "compact",
@@ -284,15 +470,26 @@ export function ListeningOrb({
   const config = getRuntimeConfig(mode, runtimeProfile);
   const isMobileProfile = runtimeProfile === "mobile";
   const fieldWaveCount = getFieldWaveCount(mode, runtimeProfile);
+
+  if (isMobileProfile) {
+    return (
+      <MobileListeningOrb
+        mode={mode}
+        classes={classes}
+        accent={accent}
+        fieldTint={fieldTint}
+        shellTint={shellTint}
+        config={config}
+        fieldWaveCount={fieldWaveCount}
+      />
+    );
+  }
+
   const rippleClass =
     mode === "listening"
-      ? isMobileProfile
-        ? "border-white/18 bg-white/[0.05] shadow-[0_0_28px_rgba(249,115,22,0.12)]"
-        : "border-white/18 bg-white/[0.04] shadow-[0_0_44px_rgba(249,115,22,0.1)]"
+      ? "border-white/18 bg-white/[0.04] shadow-[0_0_44px_rgba(249,115,22,0.1)]"
       : mode === "matching"
-        ? isMobileProfile
-          ? "border-white/16 bg-white/[0.04] shadow-[0_0_24px_rgba(249,115,22,0.12)]"
-          : "border-white/16 bg-white/[0.035] shadow-[0_0_34px_rgba(249,115,22,0.1)]"
+        ? "border-white/16 bg-white/[0.035] shadow-[0_0_34px_rgba(249,115,22,0.1)]"
         : "border-white/12 bg-white/[0.02]";
   const coreAnimate =
     mode === "success"

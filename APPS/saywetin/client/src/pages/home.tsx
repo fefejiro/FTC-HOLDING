@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,13 +17,37 @@ import { isListenModeLocation, LISTEN_MODE_PATH } from '@/lib/navigation';
 import { queryClient } from '@/lib/queryClient';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 
+function detectMobileListenRuntime(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth < 768 || (window.matchMedia?.('(pointer: coarse)')?.matches ?? false);
+}
+
 export default function Home() {
   const [location, navigate] = useLocation();
   const search = useSearch();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
+  const [isMobileListenRuntime, setIsMobileListenRuntime] = useState(() => detectMobileListenRuntime());
 
   const listenLocation = search ? `${location}?${search}` : location;
   const isListeningMode = isListenModeLocation(listenLocation);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const mediaQuery = window.matchMedia('(pointer: coarse)');
+    const updateRuntime = () => {
+      setIsMobileListenRuntime(detectMobileListenRuntime());
+    };
+
+    updateRuntime();
+    window.addEventListener('resize', updateRuntime);
+    mediaQuery.addEventListener?.('change', updateRuntime);
+
+    return () => {
+      window.removeEventListener('resize', updateRuntime);
+      mediaQuery.removeEventListener?.('change', updateRuntime);
+    };
+  }, []);
 
   const openListenMode = () => {
     navigate(LISTEN_MODE_PATH);
@@ -76,28 +101,28 @@ export default function Home() {
         <motion.div
           className="absolute top-12 left-8 h-24 w-24 rounded-full bg-orange-500/12 blur-2xl"
           animate={{
-            x: isListeningMode ? -8 : 0,
-            y: isListeningMode ? -10 : 0,
-            scale: isListeningMode ? 1.55 : 1,
-            opacity: isListeningMode ? 0.3 : 0.16,
+            x: isListeningMode ? (isMobileListenRuntime ? -3 : -8) : 0,
+            y: isListeningMode ? (isMobileListenRuntime ? -4 : -10) : 0,
+            scale: isListeningMode ? (isMobileListenRuntime ? 1.22 : 1.55) : 1,
+            opacity: isListeningMode ? (isMobileListenRuntime ? 0.22 : 0.3) : 0.16,
           }}
           transition={{ duration: 0.38, ease: 'easeOut' }}
         />
         <motion.div
           className="absolute bottom-16 right-8 h-32 w-32 rounded-full bg-green-500/10 blur-3xl"
           animate={{
-            x: isListeningMode ? 10 : 0,
-            y: isListeningMode ? 8 : 0,
-            scale: isListeningMode ? 1.65 : 1,
-            opacity: isListeningMode ? 0.28 : 0.14,
+            x: isListeningMode ? (isMobileListenRuntime ? 4 : 10) : 0,
+            y: isListeningMode ? (isMobileListenRuntime ? 4 : 8) : 0,
+            scale: isListeningMode ? (isMobileListenRuntime ? 1.28 : 1.65) : 1,
+            opacity: isListeningMode ? (isMobileListenRuntime ? 0.2 : 0.28) : 0.14,
           }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
         />
         <motion.div
           className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/18 via-amber-400/16 to-green-400/14 blur-3xl"
           animate={{
-            opacity: isListeningMode ? 0.78 : 0.18,
-            scale: isListeningMode ? 1.08 : 0.84,
+            opacity: isListeningMode ? (isMobileListenRuntime ? 0.5 : 0.78) : 0.18,
+            scale: isListeningMode ? (isMobileListenRuntime ? 0.98 : 1.08) : 0.84,
           }}
           transition={{ duration: 0.34, ease: 'easeOut' }}
         />
@@ -200,7 +225,7 @@ export default function Home() {
                   </div>
 
                   <motion.div
-                    layoutId="listen-entry-shell"
+                    layoutId={isMobileListenRuntime ? undefined : 'listen-entry-shell'}
                     transition={{ type: 'spring', stiffness: 260, damping: 26, mass: 0.95 }}
                     className="relative mt-10 flex h-52 w-52 items-center justify-center sm:h-60 sm:w-60"
                   >
@@ -279,12 +304,22 @@ export default function Home() {
 
                 <div className="relative z-10 flex flex-1 items-center justify-center">
                   <motion.div
-                    layoutId="listen-entry-shell"
+                    layoutId={isMobileListenRuntime ? undefined : 'listen-entry-shell'}
                     transition={{ type: 'spring', stiffness: 260, damping: 26, mass: 0.95 }}
-                    className="pointer-events-none absolute left-1/2 top-1/2 flex h-72 w-72 -translate-x-1/2 -translate-y-1/2 items-center justify-center sm:h-80 sm:w-80"
+                    className={`pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center ${
+                      isMobileListenRuntime ? 'h-64 w-64' : 'h-72 w-72 sm:h-80 sm:w-80'
+                    }`}
                   >
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-500/20 via-amber-400/18 to-green-400/16 blur-3xl" />
-                    <div className="absolute inset-[14%] rounded-full bg-white/[0.04] blur-2xl" />
+                    <div
+                      className={`absolute inset-0 rounded-full bg-gradient-to-br from-orange-500/20 via-amber-400/18 to-green-400/16 ${
+                        isMobileListenRuntime ? 'opacity-75 blur-2xl' : 'blur-3xl'
+                      }`}
+                    />
+                    <div
+                      className={`absolute rounded-full bg-white/[0.04] ${
+                        isMobileListenRuntime ? 'inset-[18%] blur-xl' : 'inset-[14%] blur-2xl'
+                      }`}
+                    />
                   </motion.div>
 
                   <motion.div
