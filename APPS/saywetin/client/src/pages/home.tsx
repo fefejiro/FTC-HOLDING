@@ -22,11 +22,17 @@ function detectMobileListenRuntime(): boolean {
   return window.innerWidth < 768 || (window.matchMedia?.('(pointer: coarse)')?.matches ?? false);
 }
 
+function detectNativeAndroidRuntime(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.body.classList.contains('capacitor-android');
+}
+
 export default function Home() {
   const [location, navigate] = useLocation();
   const search = useSearch();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
   const [isMobileListenRuntime, setIsMobileListenRuntime] = useState(() => detectMobileListenRuntime());
+  const [isNativeAndroidRuntime, setIsNativeAndroidRuntime] = useState(() => detectNativeAndroidRuntime());
 
   const listenLocation = search ? `${location}?${search}` : location;
   const isListeningMode = isListenModeLocation(listenLocation);
@@ -37,6 +43,7 @@ export default function Home() {
     const mediaQuery = window.matchMedia('(pointer: coarse)');
     const updateRuntime = () => {
       setIsMobileListenRuntime(detectMobileListenRuntime());
+      setIsNativeAndroidRuntime(detectNativeAndroidRuntime());
     };
 
     updateRuntime();
@@ -86,7 +93,7 @@ export default function Home() {
         initial={false}
         animate={{
           opacity: isListeningMode ? 1 : 0.92,
-          scale: isListeningMode ? 1.02 : 1,
+          scale: isListeningMode ? (isNativeAndroidRuntime ? 1.005 : 1.02) : 1,
         }}
         transition={{ duration: 0.32, ease: 'easeOut' }}
       >
@@ -94,35 +101,35 @@ export default function Home() {
           className="absolute inset-0 bg-gradient-to-b from-orange-500/8 via-amber-500/5 to-background dark:from-orange-500/12 dark:via-amber-900/8 dark:to-background"
           animate={{
             opacity: isListeningMode ? 1 : 0.8,
-            scale: isListeningMode ? 1.05 : 1,
+            scale: isListeningMode ? (isNativeAndroidRuntime ? 1.01 : 1.05) : 1,
           }}
           transition={{ duration: 0.36, ease: 'easeOut' }}
         />
         <motion.div
           className="absolute top-12 left-8 h-24 w-24 rounded-full bg-orange-500/12 blur-2xl"
           animate={{
-            x: isListeningMode ? (isMobileListenRuntime ? -3 : -8) : 0,
-            y: isListeningMode ? (isMobileListenRuntime ? -4 : -10) : 0,
-            scale: isListeningMode ? (isMobileListenRuntime ? 1.22 : 1.55) : 1,
-            opacity: isListeningMode ? (isMobileListenRuntime ? 0.22 : 0.3) : 0.16,
+            x: isListeningMode ? (isNativeAndroidRuntime ? 0 : isMobileListenRuntime ? -3 : -8) : 0,
+            y: isListeningMode ? (isNativeAndroidRuntime ? 0 : isMobileListenRuntime ? -4 : -10) : 0,
+            scale: isListeningMode ? (isNativeAndroidRuntime ? 1.08 : isMobileListenRuntime ? 1.22 : 1.55) : 1,
+            opacity: isListeningMode ? (isNativeAndroidRuntime ? 0.14 : isMobileListenRuntime ? 0.22 : 0.3) : 0.16,
           }}
           transition={{ duration: 0.38, ease: 'easeOut' }}
         />
         <motion.div
           className="absolute bottom-16 right-8 h-32 w-32 rounded-full bg-green-500/10 blur-3xl"
           animate={{
-            x: isListeningMode ? (isMobileListenRuntime ? 4 : 10) : 0,
-            y: isListeningMode ? (isMobileListenRuntime ? 4 : 8) : 0,
-            scale: isListeningMode ? (isMobileListenRuntime ? 1.28 : 1.65) : 1,
-            opacity: isListeningMode ? (isMobileListenRuntime ? 0.2 : 0.28) : 0.14,
+            x: isListeningMode ? (isNativeAndroidRuntime ? 0 : isMobileListenRuntime ? 4 : 10) : 0,
+            y: isListeningMode ? (isNativeAndroidRuntime ? 0 : isMobileListenRuntime ? 4 : 8) : 0,
+            scale: isListeningMode ? (isNativeAndroidRuntime ? 1.1 : isMobileListenRuntime ? 1.28 : 1.65) : 1,
+            opacity: isListeningMode ? (isNativeAndroidRuntime ? 0.12 : isMobileListenRuntime ? 0.2 : 0.28) : 0.14,
           }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
         />
         <motion.div
           className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/18 via-amber-400/16 to-green-400/14 blur-3xl"
           animate={{
-            opacity: isListeningMode ? (isMobileListenRuntime ? 0.5 : 0.78) : 0.18,
-            scale: isListeningMode ? (isMobileListenRuntime ? 0.98 : 1.08) : 0.84,
+            opacity: isListeningMode ? (isNativeAndroidRuntime ? 0.32 : isMobileListenRuntime ? 0.5 : 0.78) : 0.18,
+            scale: isListeningMode ? (isNativeAndroidRuntime ? 0.92 : isMobileListenRuntime ? 0.98 : 1.08) : 0.84,
           }}
           transition={{ duration: 0.34, ease: 'easeOut' }}
         />
@@ -225,7 +232,7 @@ export default function Home() {
                   </div>
 
                   <motion.div
-                    layoutId={isMobileListenRuntime ? undefined : 'listen-entry-shell'}
+                    layoutId={isMobileListenRuntime || isNativeAndroidRuntime ? undefined : 'listen-entry-shell'}
                     transition={{ type: 'spring', stiffness: 260, damping: 26, mass: 0.95 }}
                     className="relative mt-10 flex h-52 w-52 items-center justify-center sm:h-60 sm:w-60"
                   >
@@ -304,20 +311,20 @@ export default function Home() {
 
                 <div className="relative z-10 flex flex-1 items-center justify-center">
                   <motion.div
-                    layoutId={isMobileListenRuntime ? undefined : 'listen-entry-shell'}
+                    layoutId={isMobileListenRuntime || isNativeAndroidRuntime ? undefined : 'listen-entry-shell'}
                     transition={{ type: 'spring', stiffness: 260, damping: 26, mass: 0.95 }}
                     className={`pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center ${
-                      isMobileListenRuntime ? 'h-64 w-64' : 'h-72 w-72 sm:h-80 sm:w-80'
+                      isNativeAndroidRuntime ? 'h-60 w-60' : isMobileListenRuntime ? 'h-64 w-64' : 'h-72 w-72 sm:h-80 sm:w-80'
                     }`}
                   >
                     <div
                       className={`absolute inset-0 rounded-full bg-gradient-to-br from-orange-500/20 via-amber-400/18 to-green-400/16 ${
-                        isMobileListenRuntime ? 'opacity-75 blur-2xl' : 'blur-3xl'
+                        isNativeAndroidRuntime ? 'opacity-55 blur-xl' : isMobileListenRuntime ? 'opacity-75 blur-2xl' : 'blur-3xl'
                       }`}
                     />
                     <div
                       className={`absolute rounded-full bg-white/[0.04] ${
-                        isMobileListenRuntime ? 'inset-[18%] blur-xl' : 'inset-[14%] blur-2xl'
+                        isNativeAndroidRuntime ? 'inset-[20%] blur-md' : isMobileListenRuntime ? 'inset-[18%] blur-xl' : 'inset-[14%] blur-2xl'
                       }`}
                     />
                   </motion.div>

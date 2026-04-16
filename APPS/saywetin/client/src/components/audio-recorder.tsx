@@ -265,6 +265,11 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isNativeAndroidRuntime(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.body.classList.contains('capacitor-android');
+}
+
 function RecognitionStageVisual({
   mode,
   immersive,
@@ -272,12 +277,13 @@ function RecognitionStageVisual({
   mode: RecognitionVisualMode;
   immersive: boolean;
 }) {
+  const nativeAndroid = isNativeAndroidRuntime();
   const modeMotion: Record<RecognitionVisualMode, { scale: number; y: number; rotate: number }> = {
-    requesting: { scale: 0.99, y: 0, rotate: 0 },
-    listening: { scale: 1.02, y: 0, rotate: 0 },
-    matching: { scale: 0.96, y: -10, rotate: 0.6 },
-    success: { scale: 1, y: -4, rotate: 0 },
-    error: { scale: 0.985, y: 2, rotate: 0 },
+    requesting: { scale: nativeAndroid ? 0.995 : 0.99, y: 0, rotate: 0 },
+    listening: { scale: nativeAndroid ? 1 : 1.02, y: 0, rotate: 0 },
+    matching: { scale: nativeAndroid ? 0.99 : 0.96, y: nativeAndroid ? -2 : -10, rotate: nativeAndroid ? 0 : 0.6 },
+    success: { scale: 1, y: nativeAndroid ? 0 : -4, rotate: 0 },
+    error: { scale: nativeAndroid ? 0.998 : 0.985, y: nativeAndroid ? 0 : 2, rotate: 0 },
   };
 
   return (

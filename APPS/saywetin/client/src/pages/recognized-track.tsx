@@ -176,6 +176,36 @@ function buildOptimisticAnalysis(
   };
 }
 
+function parseStreamingAnalysisPayload(payload: unknown) {
+  if (payload && typeof payload === 'object') {
+    return payload as Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null };
+  }
+
+  if (typeof payload !== 'string') {
+    return null;
+  }
+
+  const trimmed = payload.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(trimmed) as Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null };
+  } catch {
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(jsonMatch[0]) as Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null };
+    } catch {
+      return null;
+    }
+  }
+}
+
 function getLyricRowVisualState(
   row: OrderedLyricLine,
   feedback?: LineFeedbackState,
@@ -1032,11 +1062,14 @@ export default function RecognizedTrack() {
           return;
         } else if (parsed.type === 'complete' || parsed.type === 'cached') {
           clearTimeout(sseTimeout);
-          try {
-            const analysis = JSON.parse(parsed.data);
+          const analysis = parseStreamingAnalysisPayload(parsed.data);
+          if (analysis) {
             upsertAnalysisIntoCache(lyricText, analysis);
-          } catch (parseError) {
-            console.warn('[ANALYZE] Could not parse streaming completion payload:', parseError);
+          } else {
+            console.warn('[ANALYZE] Could not parse streaming completion payload, falling back to fetch.');
+            eventSource.close();
+            analyzeFallback(lyricText);
+            return;
           }
           clearLineState(lyricText);
           setLineFeedbackState(lyricText);
