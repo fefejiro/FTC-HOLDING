@@ -337,6 +337,8 @@ const docsDetailTitle = document.getElementById("docs-detail-title");
 const docsDetailMeta = document.getElementById("docs-detail-meta");
 const docsDetailBody = document.getElementById("docs-detail-body");
 const docsRefreshBtn = document.getElementById("docs-refresh-btn");
+const docsCategoryFilter = document.getElementById("docs-category-filter");
+const docsCoverageBar = document.getElementById("docs-coverage-bar");
 
 const peopleSummary = document.getElementById("people-summary");
 const peopleMetricContacts = document.getElementById("people-metric-contacts");
@@ -397,9 +399,15 @@ const aiLabCaptureInput = document.getElementById("ai-lab-capture-input");
 const aiLabRunResult = document.getElementById("ai-lab-run-result");
 
 const mcNavList = document.getElementById("mc-nav-list");
+const mcNavSidebar = document.getElementById("mc-nav-sidebar");
+const mcNavBackdrop = document.getElementById("mc-nav-backdrop");
+const mcNavClose = document.getElementById("mc-nav-close");
+const mcMenuBtn = document.getElementById("mc-menu-btn");
 const mcSearchInput = document.getElementById("mc-search-input");
 const mcPauseBtn = document.getElementById("mc-pause");
 const mcPingBtn = document.getElementById("mc-ping");
+const mcPingSheet = document.getElementById("mc-ping-sheet");
+const mcPingSheetClose = document.getElementById("mc-ping-sheet-close");
 const mcStatusBtn = document.getElementById("mc-status");
 const mcRefreshBtn = document.getElementById("mc-refresh");
 const mcFeedbackBtn = document.getElementById("mc-feedback");
@@ -2407,6 +2415,7 @@ const missionControlState = {
   },
   docs: {
     filter: "",
+    categoryFilter: "all",
     selectedId: "",
     items: [],
     detailById: {}
@@ -5610,13 +5619,48 @@ async function renderDocsPage({ force = false } = {}) {
     return;
   }
   const filter = String(missionControlState.docs.filter || "").trim().toLowerCase();
+  const catFilter = String(missionControlState.docs.categoryFilter || "all");
   if (docsSearchInput && docsSearchInput.value !== missionControlState.docs.filter) {
     docsSearchInput.value = missionControlState.docs.filter;
   }
+
+  // Tally per-category counts for coverage bar and badges
+  const CAT_COLORS = {
+    overview: "#e2d9f3",
+    architecture: "#7dd3fc",
+    platform: "#a5b4fc",
+    operations: "#6ee7b7",
+    handover: "#fde68a",
+    integrations: "#f9a8d4",
+    reference: "#94a3b8",
+    runbooks: "#fb923c"
+  };
+  const catCounts = {};
+  docs.forEach((doc) => {
+    const c = String(doc.category || "reference");
+    catCounts[c] = (catCounts[c] || 0) + 1;
+  });
+  if (docsCoverageBar) {
+    docsCoverageBar.innerHTML = Object.entries(CAT_COLORS)
+      .filter(([c]) => catCounts[c] > 0)
+      .map(([c, color]) => `<span class="docs-coverage-segment" style="background:${color};flex:${catCounts[c]}" title="${c}: ${catCounts[c]}"></span>`)
+      .join("");
+  }
+  if (docsCategoryFilter) {
+    const allCats = Object.keys(CAT_COLORS).filter((c) => catCounts[c] > 0);
+    docsCategoryFilter.querySelectorAll(".docs-cat-btn").forEach((btn) => {
+      const c = btn.dataset.cat || "all";
+      btn.classList.toggle("active", c === catFilter);
+      const badge = btn.querySelector(".docs-cat-badge");
+      if (badge) badge.textContent = c === "all" ? String(docs.length) : String(catCounts[c] || 0);
+    });
+  }
+
   const filteredDocs = docs.filter((doc) => {
-    if (!filter) return true;
     const haystack = `${doc.title} ${doc.category} ${doc.summary} ${doc.relativePath} ${doc.excerpt}`.toLowerCase();
-    return haystack.includes(filter);
+    if (filter && !haystack.includes(filter)) return false;
+    if (catFilter && catFilter !== "all" && String(doc.category || "reference") !== catFilter) return false;
+    return true;
   });
 
   if (!filteredDocs.some((doc) => doc.id === missionControlState.docs.selectedId)) {
@@ -12646,17 +12690,72 @@ function bindEvents() {
     mcPauseBtn.title = "Pause all agents briefly";
     mcPauseBtn.addEventListener("click", pauseAllOfficeAgents);
   }
+  // Mobile nav drawer
+  function openMobileNav() {
+    if (!mcNavSidebar) return;
+    mcNavSidebar.classList.add("open");
+    mcNavBackdrop?.classList.add("open");
+    mcMenuBtn?.setAttribute("aria-expanded", "true");
+    document.body.style.overflow = "hidden";
+  }
+  function closeMobileNav() {
+    if (!mcNavSidebar) return;
+    mcNavSidebar.classList.remove("open");
+    mcNavBackdrop?.classList.remove("open");
+    mcMenuBtn?.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
+  }
+  if (mcMenuBtn) mcMenuBtn.addEventListener("click", openMobileNav);
+  if (mcNavClose) mcNavClose.addEventListener("click", closeMobileNav);
+  if (mcNavBackdrop) mcNavBackdrop.addEventListener("click", closeMobileNav);
+  // Close on nav item tap (mobile)
+  if (mcNavList) {
+    mcNavList.addEventListener("click", () => {
+      if (window.innerWidth <= 760) closeMobileNav();
+    }, { capture: false });
+  }
+
+  // Ping quick action sheet
+  function openPingSheet() {
+    mcPingSheet?.classList.remove("hidden");
+  }
+  function closePingSheet() {
+    mcPingSheet?.classList.add("hidden");
+  }
   if (mcPingBtn) {
-    const pingRole = mcCanonicalName("henry") || "Chief of Staff";
-    const pingDisplay = mcDisplayName("henry") || "Manchi";
-    mcPingBtn.textContent = `Ping ${pingRole}`;
-    mcPingBtn.title = `${pingDisplay} \u2014 ${pingRole}`;
-    mcPingBtn.addEventListener("click", () => {
-      setView("agents");
-      setOfficeActiveAgent("henry");
-      showToast(`Pinged ${pingRole}.`, "ok");
+    mcPingBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (mcPingSheet?.classList.contains("hidden")) openPingSheet();
+      else closePingSheet();
     });
   }
+  if (mcPingSheetClose) mcPingSheetClose.addEventListener("click", closePingSheet);
+  if (mcPingSheet) {
+    mcPingSheet.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.(".mc-ping-action");
+      if (!btn) return;
+      const action = String(btn.dataset.pingAction || "").trim();
+      closePingSheet();
+      if (action === "explain-page") {
+        showToast("Explaining this page\u2026 (wire to AI layer)", "ok");
+      } else if (action === "summarize-run") {
+        showToast("Summarizing current run\u2026 (wire to AI layer)", "ok");
+      } else if (action === "what-moves-next") {
+        showToast("Checking what moves next\u2026 (wire to AI layer)", "ok");
+      } else if (action === "create-task") {
+        setView("tasks");
+        showToast("Switched to Tasks \u2014 create a follow-up.", "ok");
+      } else if (action === "report-issue") {
+        showToast("Issue logged. (wire to feedback endpoint)", "ok");
+      } else if (action === "route-module") {
+        showToast("Routing recommendation\u2026 (wire to AI layer)", "ok");
+      }
+    });
+  }
+  document.addEventListener("click", (e) => {
+    if (!mcPingSheet || mcPingSheet.classList.contains("hidden")) return;
+    if (!mcPingSheet.contains(e.target) && e.target !== mcPingBtn) closePingSheet();
+  });
   if (mcRefreshBtn) {
     mcRefreshBtn.title = "Reload the current page";
     mcRefreshBtn.addEventListener("click", () => {
@@ -12819,6 +12918,18 @@ function bindEvents() {
   if (docsSearchInput) {
     docsSearchInput.addEventListener("input", (e) => {
       missionControlState.docs.filter = String(e.target?.value || "");
+      void renderDocsPage();
+    });
+  }
+  if (docsCategoryFilter) {
+    docsCategoryFilter.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.(".docs-cat-btn");
+      if (!btn) return;
+      const cat = String(btn.dataset.cat || "all");
+      missionControlState.docs.categoryFilter = cat;
+      docsCategoryFilter.querySelectorAll(".docs-cat-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.cat === cat);
+      });
       void renderDocsPage();
     });
   }

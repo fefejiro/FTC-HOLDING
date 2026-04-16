@@ -8458,3 +8458,326 @@ body.mc-entry-mode #go-speech {
   gap: 6px;
   flex-wrap: wrap;
 }
+
+/* ============================================================
+   PASS 3 — Mobile shell, Ping sheet, Docs dashboard
+   ============================================================ */
+
+/* Mobile-only controls — hidden on desktop */
+.mc-nav-close,
+.mc-menu-btn {
+  display: none;
+}
+
+/* Nav backdrop overlay */
+.mc-nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 149;
+  backdrop-filter: blur(2px);
+}
+.mc-nav-backdrop.open {
+  display: block;
+}
+
+/* Sidebar open state on mobile */
+@media (max-width: 760px) {
+  .mc-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    order: -1;
+    flex-shrink: 0;
+  }
+
+  /* Sidebar is off-screen by default on mobile */
+  .mc-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 88vw;
+    z-index: 150;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+  }
+  .mc-nav.open {
+    transform: translateX(0);
+  }
+
+  .mc-nav-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 12px;
+    right: 10px;
+    font-size: 1rem;
+    z-index: 2;
+  }
+
+  /* Main content takes full width */
+  .mc-shell {
+    flex-direction: column;
+  }
+  .mc-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    min-width: 0;
+  }
+  .mc-topbar {
+    gap: 6px;
+    padding: 8px 10px;
+    flex-wrap: nowrap;
+  }
+  .mc-search-hint-desktop,
+  .mc-top-btn-desktop {
+    display: none;
+  }
+
+  /* Tasks — readable cards */
+  .tasks-list-item {
+    padding: 10px 12px;
+    font-size: 0.88rem;
+  }
+  .tasks-meta-row {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  /* Office — stack agent cards */
+  .office-grid,
+  .ops-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+  .office-agent-card {
+    padding: 14px 14px;
+  }
+
+  /* Factory — stack columns */
+  .factory-body {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .factory-lane {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Projects — detail below list */
+  .projects-body {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .projects-portfolio {
+    max-width: 100%;
+  }
+  .projects-detail-panel {
+    width: 100%;
+  }
+}
+
+/* Desktop — keep search hint visible */
+@media (min-width: 761px) {
+  .mc-search-hint-desktop {
+    display: inline;
+  }
+  .mc-top-btn-desktop {
+    display: inline-flex;
+  }
+}
+
+/* ============================================================
+   Ping quick action sheet
+   ============================================================ */
+.mc-ping-btn {
+  font-size: 1.1rem;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+.mc-ping-sheet {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  width: 260px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  overflow: hidden;
+  animation: pingSheetIn 0.15s ease;
+}
+.mc-ping-sheet.hidden {
+  display: none;
+}
+
+@keyframes pingSheetIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.mc-ping-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mc-ping-sheet-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.mc-ping-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+}
+
+.mc-ping-action {
+  all: unset;
+  display: block;
+  padding: 9px 16px;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.mc-ping-action:hover {
+  background: rgba(226, 241, 255, 0.06);
+}
+.mc-ping-action:active {
+  background: rgba(125, 211, 252, 0.1);
+}
+
+/* ============================================================
+   Docs dashboard strip + category filter
+   ============================================================ */
+.docs-dashboard-strip {
+  display: flex;
+  gap: 10px;
+  padding: 0 0 16px;
+  flex-wrap: wrap;
+}
+
+.docs-dash-card {
+  flex: 1 1 110px;
+  min-width: 100px;
+  background: rgba(226, 241, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.docs-dash-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
+.docs-dash-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.2;
+  margin: 3px 0 0;
+}
+
+.docs-coverage-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 4px;
+  overflow: hidden;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.docs-coverage-segment {
+  flex: 1;
+  height: 100%;
+  border-radius: 2px;
+  min-width: 6px;
+}
+
+.docs-category-filter {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 0 12px;
+}
+
+.docs-cat-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(226, 241, 255, 0.05);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.docs-cat-btn:hover {
+  background: rgba(226, 241, 255, 0.09);
+  color: var(--text);
+}
+.docs-cat-btn.active {
+  background: rgba(125, 211, 252, 0.12);
+  border-color: rgba(125, 211, 252, 0.35);
+  color: var(--accent);
+}
+
+.docs-cat-badge {
+  background: rgba(226, 241, 255, 0.1);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.docs-list-stack .docs-list-item {
+  border-bottom: 1px solid var(--line);
+  padding: 11px 0;
+}
+.docs-list-stack .docs-list-item:last-child {
+  border-bottom: none;
+}
+
+.docs-detail-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+  .docs-dashboard-strip {
+    gap: 6px;
+  }
+  .docs-dash-card {
+    min-width: 80px;
+    padding: 8px 10px;
+  }
+  .docs-dash-value {
+    font-size: 1.1rem;
+  }
+}

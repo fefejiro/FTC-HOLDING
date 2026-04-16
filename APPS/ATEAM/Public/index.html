@@ -32,8 +32,9 @@
     </div>
   </header>
 
+  <div id="mc-nav-backdrop" class="mc-nav-backdrop" aria-hidden="true"></div>
   <div class="mc-shell">
-    <aside class="mc-nav" aria-label="Mission Control navigation">
+    <aside class="mc-nav" id="mc-nav-sidebar" aria-label="Mission Control navigation">
       <div class="mc-nav-head">
         <div class="mc-nav-mark" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -42,7 +43,8 @@
             <path d="M8 9.5H16" stroke="rgba(226,241,255,0.35)" stroke-width="1.2" stroke-linecap="round"/>
           </svg>
         </div>
-        <div class="mc-nav-title">Mission Control</div>
+        <div class="mc-nav-title">ATEAM</div>
+        <button id="mc-nav-close" class="mc-nav-close mc-icon-btn" type="button" aria-label="Close menu">✕</button>
       </div>
       <a id="mc-unalabs-link" class="mc-unalabs-link hidden" href="/">Back to Una Labs</a>
 
@@ -105,20 +107,35 @@
 
     <div class="mc-main">
       <header class="mc-topbar" aria-label="Top bar">
+        <button id="mc-menu-btn" class="mc-icon-btn mc-menu-btn" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
         <div class="mc-search" role="search">
           <span class="mc-search-ico" aria-hidden="true">⌕</span>
           <input id="mc-search-input" class="mc-search-input" type="text" placeholder="Search" />
-          <span class="mc-search-hint" aria-hidden="true">⌘ K</span>
+          <span class="mc-search-hint mc-search-hint-desktop" aria-hidden="true">⌘ K</span>
         </div>
         <div class="mc-top-actions">
-          <button id="mc-pause" class="mc-top-btn" type="button"><span aria-hidden="true">⏸</span> Pause</button>
-          <button id="mc-ping" class="mc-top-btn" type="button">Ping Chief of Staff</button>
+          <button id="mc-pause" class="mc-top-btn mc-top-btn-desktop" type="button"><span aria-hidden="true">⏸</span> Pause</button>
+          <button id="mc-ping" class="mc-icon-btn mc-ping-btn" type="button" aria-label="Quick actions" title="Quick actions">⚡</button>
           <button id="mc-status" class="mc-icon-btn" type="button" aria-label="Status">
             <span class="mc-status-dot" aria-hidden="true"></span>
           </button>
           <button id="mc-refresh" class="mc-icon-btn" type="button" aria-label="Refresh">↻</button>
         </div>
       </header>
+      <div id="mc-ping-sheet" class="mc-ping-sheet hidden" role="dialog" aria-label="Quick actions">
+        <div class="mc-ping-sheet-head">
+          <span class="mc-ping-sheet-title">Quick Actions</span>
+          <button id="mc-ping-sheet-close" class="mc-icon-btn" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="mc-ping-sheet-actions">
+          <button class="mc-ping-action" type="button" data-ping-action="explain-page">Explain this page</button>
+          <button class="mc-ping-action" type="button" data-ping-action="summarize-run">Summarize current run</button>
+          <button class="mc-ping-action" type="button" data-ping-action="what-moves-next">What should move next?</button>
+          <button class="mc-ping-action" type="button" data-ping-action="create-task">Create follow-up task</button>
+          <button class="mc-ping-action" type="button" data-ping-action="report-issue">Report issue</button>
+          <button class="mc-ping-action" type="button" data-ping-action="route-module">Route to right module</button>
+        </div>
+      </div>
 
       <div class="mc-frame">
         <div class="mc-frame-inner">
@@ -741,31 +758,35 @@
       <section class="ops-hero">
         <div>
           <div class="ops-kicker">Docs</div>
-          <h1 class="ops-title">Operating docs and references</h1>
-          <p id="docs-summary" class="ops-subtitle">A curated operating library for the parts of ATEAM that matter most.</p>
+          <h1 class="ops-title">Operating Reference</h1>
+          <p id="docs-summary" class="ops-subtitle">Architecture, runbooks, workflows, and module references for ATEAM.</p>
         </div>
         <div class="ops-hero-actions">
           <button id="docs-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
         </div>
       </section>
 
-      <section class="ops-metric-grid">
-        <article class="ops-metric-card">
-          <div class="ops-metric-label">Docs Indexed</div>
-          <div id="docs-metric-count" class="ops-metric-value">0</div>
-        </article>
-        <article class="ops-metric-card">
-          <div class="ops-metric-label">Architecture</div>
-          <div id="docs-metric-architecture" class="ops-metric-value">0</div>
-        </article>
-        <article class="ops-metric-card">
-          <div class="ops-metric-label">Platform</div>
-          <div id="docs-metric-platform" class="ops-metric-value">0</div>
-        </article>
-        <article class="ops-metric-card">
-          <div class="ops-metric-label">Operations</div>
-          <div id="docs-metric-operations" class="ops-metric-value">0</div>
-        </article>
+      <section class="docs-dashboard-strip">
+        <div class="docs-dash-card">
+          <div class="docs-dash-label">Total Docs</div>
+          <div id="docs-metric-count" class="docs-dash-value">0</div>
+        </div>
+        <div class="docs-dash-card">
+          <div class="docs-dash-label">Architecture</div>
+          <div id="docs-metric-architecture" class="docs-dash-value">0</div>
+        </div>
+        <div class="docs-dash-card">
+          <div class="docs-dash-label">Platform</div>
+          <div id="docs-metric-platform" class="docs-dash-value">0</div>
+        </div>
+        <div class="docs-dash-card">
+          <div class="docs-dash-label">Operations</div>
+          <div id="docs-metric-operations" class="docs-dash-value">0</div>
+        </div>
+        <div class="docs-dash-card docs-dash-card-bar" id="docs-coverage-card">
+          <div class="docs-dash-label">Category Coverage</div>
+          <div id="docs-coverage-bar" class="docs-coverage-bar"></div>
+        </div>
       </section>
 
       <section class="ops-docs-layout">
@@ -773,14 +794,22 @@
           <div class="ops-panel-head">
             <div>
               <div class="ops-panel-title">Library</div>
-              <div class="ops-panel-copy">Filter and open the core ATEAM references.</div>
             </div>
           </div>
           <label class="ops-field">
             <span>Search</span>
-            <input id="docs-search-input" type="text" placeholder="architecture, runbook, migration..." />
+            <input id="docs-search-input" type="text" placeholder="architecture, runbook, handover…" />
           </label>
-          <div id="docs-list" class="ops-card-stack"></div>
+          <div id="docs-category-filter" class="docs-category-filter">
+            <button class="docs-cat-btn active" data-cat="all">All</button>
+            <button class="docs-cat-btn" data-cat="overview">Overview</button>
+            <button class="docs-cat-btn" data-cat="architecture">Architecture</button>
+            <button class="docs-cat-btn" data-cat="platform">Platform</button>
+            <button class="docs-cat-btn" data-cat="operations">Operations</button>
+            <button class="docs-cat-btn" data-cat="handover">Handover</button>
+            <button class="docs-cat-btn" data-cat="integrations">Integrations</button>
+          </div>
+          <div id="docs-list" class="ops-card-stack docs-list-stack"></div>
         </aside>
 
         <section class="ops-panel ops-docs-preview-panel">
@@ -789,6 +818,7 @@
               <div id="docs-detail-title" class="ops-panel-title">Select a document</div>
               <div id="docs-detail-meta" class="ops-panel-copy">Preview will appear here.</div>
             </div>
+            <div id="docs-detail-actions" class="docs-detail-actions"></div>
           </div>
           <div id="docs-detail-body" class="docs-preview-body"></div>
         </section>
