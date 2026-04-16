@@ -15,6 +15,7 @@ import { createSpeechClarityRoutes } from "./lib/speechClarity/speechClarityRout
 import { sanitizeSessionId, createEvent, appendEvent, getEvents, getEventsAfterTimestamp } from "./lib/eventLog.js";
 import { planOrchestration } from "./lib/orchestrator.js";
 import { createWorkflowService } from "./lib/workflowService.js";
+import { createDocumentRoutes } from "./lib/documentRoutes.js";
 import { createRepositories } from "./lib/storage/repositories.js";
 import { createPrincipalScopeMiddleware, normalizeScopedResourceId } from "./lib/auth/principalScope.js";
 import { createCapabilityRoutes } from "./lib/capability/routes.js";
@@ -228,7 +229,8 @@ const {
   contentPipelineStore,
   approvalStore,
   workItemStore,
-  workflowRunStore
+  workflowRunStore,
+  documentStore
 } = createRepositories({
   backend: STORAGE_BACKEND,
   memoryDir: MEMORY_DIR
@@ -285,6 +287,13 @@ const workflowService = createWorkflowService({
     const event = createEvent(type, actor || "system", lane || "office", summary, meta);
     appendEvent(sanitizeSessionId(sessionId || "global_podcast"), event);
   }
+});
+
+const documentRoutes = createDocumentRoutes({
+  documentStore,
+  workflowRunStore,
+  serverErrorHandler: serverError,
+  badRequestHandler: badRequest
 });
 
 await speechClarityStore.ensure();
@@ -1401,6 +1410,71 @@ app.post("/api/approvals/:approvalId/decision", async (req, res) => {
   } catch (err) {
     if (scopeError(res, err)) return;
     serverError(res, "failed_to_decide_approval", err);
+  }
+});
+
+// Document API (Live document operations layer - D1)
+app.get("/api/documents/types", (req, res) => {
+  try {
+    documentRoutes.getDocumentTypes(req, res);
+  } catch (err) {
+    serverError(res, "failed_to_get_document_types", err);
+  }
+});
+
+app.get("/api/workflow/runs/:runId/documents", (req, res) => {
+  try {
+    documentRoutes.getRunDocuments(req, res);
+  } catch (err) {
+    serverError(res, "failed_to_get_run_documents", err);
+  }
+});
+
+app.post("/api/workflow/runs/:runId/documents/generate", (req, res) => {
+  try {
+    documentRoutes.generateDocument(req, res);
+  } catch (err) {
+    serverError(res, "failed_to_generate_document", err);
+  }
+});
+
+app.get("/api/documents/:docId", (req, res) => {
+  try {
+    documentRoutes.getDocument(req, res);
+  } catch (err) {
+    serverError(res, "failed_to_get_document", err);
+  }
+});
+
+app.post("/api/documents/:docId/fields", (req, res) => {
+  try {
+    documentRoutes.updateDocumentFields(req, res);
+  } catch (err) {
+    serverError(res, "failed_to_update_document_fields", err);
+  }
+});
+
+app.post("/api/documents/:docId/status", (req, res) => {
+  try {
+    documentRoutes.changeDocumentStatus(req, res);
+  } catch (err) {
+    serverError(res, "failed_to_change_document_status", err);
+  }
+});
+
+app.get("/api/documents/:docId/export/markdown", (req, res) => {
+  try {
+    documentRoutes.exportDocumentMarkdown(req, res);
+  } catch (err) {
+    serverError(res, "failed_to_export_markdown", err);
+  }
+});
+
+app.get("/api/documents/:docId/export/html", (req, res) => {
+  try {
+    documentRoutes.exportDocumentHtml(req, res);
+  } catch (err) {
+    serverError(res, "failed_to_export_html", err);
   }
 });
 

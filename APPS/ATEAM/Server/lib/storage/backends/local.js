@@ -6,6 +6,7 @@ import { createContentPipelineStore } from "../../contentPipelineStore.js";
 import { createApprovalStore } from "../../approvalStore.js";
 import { createWorkItemStore } from "../../workItemStore.js";
 import { createWorkflowRunStore } from "../../workflowRunStore.js";
+import { createDocumentStore } from "../../documentStore.js";
 
 export function createLocalRepositories({ memoryDir = "" } = {}) {
   const threadStore = createThreadStore({ memoryDir });
@@ -20,6 +21,7 @@ export function createLocalRepositories({ memoryDir = "" } = {}) {
   const approvalStore = createApprovalStore();
   const workItemStore = createWorkItemStore();
   const workflowRunStore = createWorkflowRunStore();
+  const documentStore = createDocumentStore();
 
   return {
     backend: "local",
@@ -35,6 +37,7 @@ export function createLocalRepositories({ memoryDir = "" } = {}) {
     contentPipelineStore,
     approvalStore,
     workItemStore,
-    workflowRunStore
+    workflowRunStore,
+    documentStore
   };
 }

@@ -132,6 +132,30 @@ function runMigrations(db) {
 
     CREATE INDEX IF NOT EXISTS idx_workflow_runs_updated
       ON workflow_runs(updated_ts);
+
+    CREATE TABLE IF NOT EXISTS documents (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      created_ts TEXT NOT NULL,
+      updated_ts TEXT NOT NULL,
+      doc_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',
+      title TEXT NOT NULL DEFAULT '',
+      summary TEXT NOT NULL DEFAULT '',
+      structured_fields_json TEXT NOT NULL DEFAULT '{}',
+      rendered_output TEXT NOT NULL DEFAULT '',
+      version INTEGER NOT NULL DEFAULT 1,
+      metadata_json TEXT NOT NULL DEFAULT '{}'
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_documents_run_id
+      ON documents(run_id, updated_ts);
+
+    CREATE INDEX IF NOT EXISTS idx_documents_status
+      ON documents(status, created_ts);
+
+    CREATE INDEX IF NOT EXISTS idx_documents_doc_type
+      ON documents(doc_type, updated_ts);
   `);
 
   ensureColumn(db, "workflow_runs", "request_json", "request_json TEXT NOT NULL DEFAULT '{}'");
