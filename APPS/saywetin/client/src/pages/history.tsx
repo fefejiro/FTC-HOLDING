@@ -1,22 +1,10 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Music, Clock } from 'lucide-react';
-
-interface RecognizedTrackInfo {
-  id: string;
-  title: string;
-  artist: string;
-  coverArtUrl?: string | null;
-}
-
-interface ListeningSession {
-  id: string;
-  status: string;
-  createdAt: string;
-  recognizedTrack?: RecognizedTrackInfo;
-}
+import { mergeRecentRecognitions, readRecentRecognitions, type RecentRecognitionSession } from '@/lib/recent-recognitions';
 
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
@@ -53,11 +41,14 @@ function formatRecognitionTimestamp(dateString?: string): string | null {
 export default function History() {
   const [, navigate] = useLocation();
 
-  const { data: sessions, isLoading } = useQuery<ListeningSession[]>({
+  const { data: sessions, isLoading } = useQuery<RecentRecognitionSession[]>({
     queryKey: ['/api/listening-history'],
   });
 
-  const recognized = sessions?.filter((s) => s.recognizedTrack) ?? [];
+  const recognized = useMemo(
+    () => mergeRecentRecognitions(sessions, readRecentRecognitions()),
+    [sessions],
+  );
 
   return (
     <div className="min-h-screen bg-background">

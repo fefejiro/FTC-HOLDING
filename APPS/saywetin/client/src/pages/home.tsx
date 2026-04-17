@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { AudioRecorder } from '@/components/audio-recorder';
 import { isListenModeLocation, LISTEN_MODE_PATH } from '@/lib/navigation';
 import { queryClient } from '@/lib/queryClient';
+import { mergeRecentRecognitions, saveRecentRecognition, type RecentRecognitionSession } from '@/lib/recent-recognitions';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 
 function detectMobileListenRuntime(): boolean {
@@ -66,6 +67,13 @@ export default function Home() {
 
   const handleRecognitionSuccess = (result: any) => {
     if (result.recognizedTrack?.id) {
+      const mergedRecentRecognitions = saveRecentRecognition({
+        id: result.recognizedTrack.id,
+        title: result.recognizedTrack.title,
+        artist: result.recognizedTrack.artist,
+        coverArtUrl: result.recognizedTrack.coverArtUrl || null,
+      });
+
       queryClient.setQueryData(['/api/recognized-tracks', result.recognizedTrack.id], {
         track: {
           ...result.recognizedTrack,
@@ -82,6 +90,10 @@ export default function Home() {
           analysisMessage: 'We matched the song. Lyric timing and deeper line-by-line context are still settling in.',
         },
       });
+      queryClient.setQueryData<RecentRecognitionSession[]>(
+        ['/api/listening-history'],
+        (current) => mergeRecentRecognitions(current, mergedRecentRecognitions),
+      );
       navigate(`/song/${result.recognizedTrack.id}`, { replace: true });
     }
   };

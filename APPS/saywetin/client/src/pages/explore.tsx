@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Music, Clock, ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { getApiUrl } from '@/lib/api-config';
+import { mergeRecentRecognitions, readRecentRecognitions, type RecentRecognitionSession } from '@/lib/recent-recognitions';
 
 interface SearchResult {
   id: string;
@@ -16,19 +17,6 @@ interface SearchResult {
   album?: string;
   genre?: string;
   createdAt: string;
-}
-
-interface RecognizedTrackInfo {
-  id: string;
-  title: string;
-  artist: string;
-  coverArtUrl?: string | null;
-}
-
-interface ListeningSession {
-  id: string;
-  createdAt: string;
-  recognizedTrack?: RecognizedTrackInfo;
 }
 
 function formatRelativeTime(input: string) {
@@ -84,9 +72,13 @@ export default function Explore() {
     },
   });
 
-  const { data: recentTracks = [] } = useQuery<ListeningSession[]>({
+  const { data: recentTracks = [] } = useQuery<RecentRecognitionSession[]>({
     queryKey: ['/api/listening-history'],
   });
+  const mergedRecentTracks = useMemo(
+    () => mergeRecentRecognitions(recentTracks, readRecentRecognitions()),
+    [recentTracks],
+  );
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -222,9 +214,9 @@ export default function Explore() {
               <h2 className="text-lg font-semibold">Recent recognitions</h2>
             </div>
 
-            {recentTracks.length > 0 ? (
+            {mergedRecentTracks.length > 0 ? (
               <div className="space-y-3">
-                {recentTracks
+                {mergedRecentTracks
                   .filter((session) => session.recognizedTrack)
                   .slice(0, 8)
                   .map((session) => {
