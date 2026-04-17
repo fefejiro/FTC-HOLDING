@@ -405,21 +405,19 @@ export default function FullLyricsPage() {
   const isNativeAndroid =
     typeof document !== 'undefined' && document.body.classList.contains('capacitor-android');
 
-  const clearLineState = (lyricText: string) => {
-    const key = normalizeLineKey(lyricText);
+  const clearLineState = (rowKey: string) => {
     setLoadingLines((prev) => {
       const next = new Set(prev);
-      next.delete(key);
+      next.delete(rowKey);
       return next;
     });
   };
 
-  const setLineFeedbackState = (lyricText: string, feedback?: LineFeedbackState) => {
-    const key = normalizeLineKey(lyricText);
+  const setLineFeedbackState = (rowKey: string, feedback?: LineFeedbackState) => {
     setLineFeedback((prev) => {
       const next = new Map(prev);
-      if (feedback) next.set(key, feedback);
-      else next.delete(key);
+      if (feedback) next.set(rowKey, feedback);
+      else next.delete(rowKey);
       return next;
     });
   };
@@ -433,9 +431,9 @@ export default function FullLyricsPage() {
       ['/api/recognized-tracks', trackId],
       (current) => {
         if (!current) return current;
-        const key = normalizeLineKey(lyricText);
+        const normalizedText = lyricText.trim().toLowerCase();
         const exists = (current.culturalAnalysis || []).some(
-          (e) => normalizeLineKey(e.originalText) === key,
+          (e) => e.originalText.trim().toLowerCase() === normalizedText,
         );
         if (exists) return current;
         return {
@@ -507,11 +505,11 @@ export default function FullLyricsPage() {
     navigate(`/song/${suggestionId}`);
   };
 
-  const analyzeFallback = async (lyricText: string) => {
+  const analyzeFallback = async (row: OrderedLyricLine) => {
     try {
       const endpoint = getApiUrl('/api/analyze-line');
       const requestBody = {
-        lyricText,
+        lyricText: row.text,
         trackId: data!.track.id,
         songTitle: data!.track.title,
         artistName: data!.track.artist,
@@ -536,7 +534,7 @@ export default function FullLyricsPage() {
             httpStatus: response.status,
             feedbackStatus: failureStatus,
             trackId: requestBody.trackId,
-            lyricPreview: lyricText.slice(0, 80),
+            lyricPreview: row.text.slice(0, 80),
             responseBody: payload,
           });
         } catch {
@@ -551,12 +549,12 @@ export default function FullLyricsPage() {
 
       const result = await response.json();
       if (result.success) {
-        if (result.analysis) upsertAnalysisIntoCache(lyricText, result.analysis);
-        setLineFeedbackState(lyricText);
+        if (result.analysis) upsertAnalysisIntoCache(row.text, result.analysis);
+        setLineFeedbackState(row.key);
         queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
       } else {
         console.warn('[ANALYZE] Analysis issue:', result.message);
-        setLineFeedbackState(lyricText, {
+        setLineFeedbackState(row.key, {
           status: result.status === 'unavailable' ? 'unavailable' : 'failed',
           message: result.status === 'unavailable'
             ? 'Meaning for this line is not ready yet.'
@@ -565,33 +563,32 @@ export default function FullLyricsPage() {
       }
     } catch (err: any) {
       console.error('[ANALYZE] Fetch fallback failed:', err);
-      setLineFeedbackState(lyricText, {
+      setLineFeedbackState(row.key, {
         status: err?.feedbackStatus === 'unavailable' ? 'unavailable' : 'failed',
         message: err?.feedbackStatus === 'unavailable'
           ? 'Meaning for this line is not ready yet.'
           : 'This line did not open this time.',
       });
     } finally {
-      clearLineState(lyricText);
+      clearLineState(row.key);
     }
   };
 
-  const handleLazyAnalyze = (lyricText: string) => {
-    const key = normalizeLineKey(lyricText);
-    if (!data || loadingLines.has(key)) return;
+  const handleLazyAnalyze = (row: OrderedLyricLine) => {
+    if (!data || loadingLines.has(row.key)) return;
 
-    setSelectedLineKey(key);
-    setLoadingLines((prev) => new Set(prev).add(key));
-    setLineFeedbackState(lyricText, { status: 'loading' });
+    setSelectedLineKey(row.key);
+    setLoadingLines((prev) => new Set(prev).add(row.key));
+    setLineFeedbackState(row.key, { status: 'loading' });
 
     const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
     if (isNative) {
-      analyzeFallback(lyricText);
+      analyzeFallback(row);
       return;
     }
 
     const searchParams = new URLSearchParams({
-      lyricText,
+      lyricText: row.text,
       trackId: data.track.id,
       songTitle: data.track.title,
       artistName: data.track.artist,
@@ -606,7 +603,7 @@ export default function FullLyricsPage() {
       if (!receivedMessage) {
         console.warn('[ANALYZE] SSE timeout, falling back to fetch');
         es.close();
-        analyzeFallback(lyricText);
+        analyzeFallback(row);
       }
     }, 8000);
 
@@ -619,21 +616,21 @@ export default function FullLyricsPage() {
           clearTimeout(sseTimeout);
           const analysis = parseStreamingAnalysisPayload(parsed.data);
           if (analysis) {
-            upsertAnalysisIntoCache(lyricText, analysis);
+            upsertAnalysisIntoCache(row.text, analysis);
           } else {
             console.warn('[ANALYZE] Could not parse streaming payload, falling back');
             es.close();
-            analyzeFallback(lyricText);
+            analyzeFallback(row);
             return;
           }
-          clearLineState(lyricText);
-          setLineFeedbackState(lyricText);
+          clearLineState(row.key);
+          setLineFeedbackState(row.key);
           queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
           es.close();
         } else if (parsed.type === 'error') {
           clearTimeout(sseTimeout);
-          clearLineState(lyricText);
-          setLineFeedbackState(lyricText, { status: 'unavailable', message: 'Meaning for this line is not ready yet.' });
+          clearLineState(row.key);
+          setLineFeedbackState(row.key, { status: 'unavailable', message: 'Meaning for this line is not ready yet.' });
           console.warn('[ANALYZE] SSE error event:', parsed.data);
           es.close();
         }
@@ -647,9 +644,9 @@ export default function FullLyricsPage() {
       es.close();
       if (!receivedMessage) {
         console.warn('[ANALYZE] SSE onerror before first message, falling back');
-        analyzeFallback(lyricText);
+        analyzeFallback(row);
       } else {
-        clearLineState(lyricText);
+        clearLineState(row.key);
       }
     };
   };
@@ -709,21 +706,22 @@ export default function FullLyricsPage() {
 
     // Auto-enrich the most likely heard line + 1 neighbor
     for (const row of unresolved.slice(0, 2)) {
-      handleLazyAnalyze(row.text);
+      handleLazyAnalyze(row);
     }
   }, [momentRows, data]);
 
   // Clear feedback for lines that got analyzed
   useEffect(() => {
-    const analyzedKeys = new Set(
-      orderedLyricLines.filter((r) => r.analysis).map((r) => normalizeLineKey(r.text)),
-    );
-    if (analyzedKeys.size === 0) return;
+    const hasAnyAnalyzedLine = orderedLyricLines.some((row) => row.analysis);
+    if (!hasAnyAnalyzedLine) return;
     setLineFeedback((prev) => {
       const next = new Map(prev);
       let changed = false;
-      analyzedKeys.forEach((key) => {
-        if (next.has(key)) { next.delete(key); changed = true; }
+      orderedLyricLines.forEach((row) => {
+        if (row.analysis && next.has(row.key)) {
+          next.delete(row.key);
+          changed = true;
+        }
       });
       return changed ? next : prev;
     });
@@ -736,21 +734,20 @@ export default function FullLyricsPage() {
       (estimatedMomentIndex !== null
         ? orderedLyricLines.find((line) => line.lineIndex === estimatedMomentIndex)
         : undefined) || orderedLyricLines[0];
-    if (defaultLine) setSelectedLineKey(normalizeLineKey(defaultLine.text));
+    if (defaultLine) setSelectedLineKey(defaultLine.key);
   }, [orderedLyricLines, estimatedMomentIndex, selectedLineKey]);
 
   const handleLyricRowPress = (row: OrderedLyricLine) => {
-    const key = normalizeLineKey(row.text);
-    const feedback = lineFeedback.get(key);
+    const feedback = lineFeedback.get(row.key);
 
-    if (selectedLineKey === key && row.analysis) {
+    if (selectedLineKey === row.key && row.analysis) {
       setSelectedLineKey(null);
       return;
     }
 
-    setSelectedLineKey(key);
+    setSelectedLineKey(row.key);
     if (row.analysis || feedback?.status === 'loading') return;
-    handleLazyAnalyze(row.text);
+    handleLazyAnalyze(row);
   };
 
   if (isLoading || !data) {
@@ -875,9 +872,8 @@ export default function FullLyricsPage() {
                 <div className="px-6 py-5">
                   <div className="space-y-4">
                     {orderedLyricLines.map((row, rowIndex) => {
-                      const key = normalizeLineKey(row.text);
-                      const feedback = lineFeedback.get(key);
-                      const isExpanded = selectedLineKey === key;
+                      const feedback = lineFeedback.get(row.key);
+                      const isExpanded = selectedLineKey === row.key;
                       const isCurrentMoment = phraseCapture.highlightedLineIndexes.includes(row.lineIndex);
                       const showBlockLabel =
                         rowIndex === 0 || orderedLyricLines[rowIndex - 1].blockIndex !== row.blockIndex;
@@ -898,7 +894,7 @@ export default function FullLyricsPage() {
                               isExpanded={isExpanded}
                               isCurrentMoment={isCurrentMoment}
                               onPress={() => handleLyricRowPress(row)}
-                              onRetry={() => handleLazyAnalyze(row.text)}
+                              onRetry={() => handleLazyAnalyze(row)}
                             />
                           </div>
                         </div>

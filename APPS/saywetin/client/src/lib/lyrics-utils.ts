@@ -245,12 +245,14 @@ export function buildOrderedLyricLines(
     return [];
   }
 
-  const availableAnalyses = analyses.map((analysis, index) => ({
-    index,
-    normalized: normalizeLyricLine(analysis.originalText),
-    analysis,
-  }));
-  const usedAnalyses = new Set<number>();
+  const analysisByNormalizedLine = new Map<string, LyricAnalysis>();
+  analyses.forEach((analysis) => {
+    const normalized = normalizeLyricLine(analysis.originalText);
+    if (!normalized || analysisByNormalizedLine.has(normalized)) {
+      return;
+    }
+    analysisByNormalizedLine.set(normalized, analysis);
+  });
 
   let lineIndex = 0;
 
@@ -260,14 +262,7 @@ export function buildOrderedLyricLines(
       .filter((line) => line.length > 3)
       .map((line) => {
         const normalizedLine = normalizeLyricLine(line);
-        const matchedAnalysis = availableAnalyses.find((candidate) => {
-          if (usedAnalyses.has(candidate.index)) return false;
-          return candidate.normalized === normalizedLine;
-        });
-
-        if (matchedAnalysis) {
-          usedAnalyses.add(matchedAnalysis.index);
-        }
+        const matchedAnalysis = analysisByNormalizedLine.get(normalizedLine);
 
         const orderedLine: OrderedLyricLine = {
           key: `${lineIndex}-${normalizedLine || "line"}`,
@@ -276,7 +271,7 @@ export function buildOrderedLyricLines(
           blockIndex,
           blockType: block.type,
           blockLabel: getBlockLabel(block.type, blockIndex),
-          analysis: matchedAnalysis?.analysis,
+          analysis: matchedAnalysis,
         };
 
         lineIndex += 1;
