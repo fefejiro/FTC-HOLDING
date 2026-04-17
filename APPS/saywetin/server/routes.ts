@@ -2265,6 +2265,13 @@ Rules:
       }
 
       // Generate new analysis for this line
+      console.log('[LAZY] Calling generateSingleLineAnalysis', {
+        lyricPreview: trimmedLyricText.slice(0, 60),
+        aiConfigured: aiConfig.configured,
+        aiProvider: aiConfig.provider,
+        apiKeySource: aiConfig.apiKeySource,
+      });
+
       const analysis = await generateSingleLineAnalysis(
         trimmedLyricText,
         songTitle,
@@ -2274,6 +2281,11 @@ Rules:
       );
 
       if (!analysis) {
+        console.warn('[LAZY] generateSingleLineAnalysis returned null', {
+          lyricPreview: trimmedLyricText.slice(0, 60),
+          hasFallback: !!fallbackAnalysis,
+        });
+
         if (fallbackAnalysis) {
           return res.json({
             success: true,

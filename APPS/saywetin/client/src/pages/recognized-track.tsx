@@ -2,17 +2,12 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useInteractionLogger } from '@/hooks/use-interaction-logger';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import {
   ArrowLeft,
   Music,
@@ -30,25 +25,19 @@ import {
   BookOpen,
   User,
   Info,
-  ChevronDown,
   Zap,
-  Gamepad2,
-  CircleAlert,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { SlangMatchGame } from '@/components/slang-match-game';
 import { ListeningOrb } from '@/components/listening-orb';
 import { trackRecognitionSucceeded } from '@/lib/analytics';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { getApiUrl } from '@/lib/api-config';
 import { LISTEN_MODE_PATH } from '@/lib/navigation';
-import { STORY_MODE_ENABLED } from '@/lib/features';
 import {
   parseAnalysesWithSlang,
   buildOrderedLyricLines,
   buildPhraseCaptureModel,
   estimateMomentLineIndex,
-  type LyricAnalysis,
   type SlangTerm,
   type OrderedLyricLine,
 } from '@/lib/lyrics-utils';
@@ -139,370 +128,6 @@ interface PrimaryGistModel {
   title: string;
   summary: string;
   support?: string;
-}
-
-type LineFeedbackState = {
-  status: 'loading' | 'unavailable' | 'failed';
-  message?: string;
-};
-
-type LyricRowVisualState = 'idle' | 'loading' | 'analyzed' | 'unavailable';
-
-function normalizeLineKey(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function serializeSlangTerms(value?: string | SlangTerm[] | null): string | null {
-  if (!value) return null;
-  return typeof value === 'string' ? value : JSON.stringify(value);
-}
-
-function buildOptimisticAnalysis(
-  lyricText: string,
-  analysis: Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null },
-): AiTranslation {
-  return {
-    id: `lazy-${normalizeLineKey(lyricText)}-${Date.now()}`,
-    originalText: lyricText.trim(),
-    translation: analysis.translation || 'Meaning ready',
-    culturalContext: analysis.culturalContext,
-    artistIntent: analysis.artistIntent,
-    deeperMeaning: analysis.deeperMeaning,
-    languageNotes: analysis.languageNotes,
-    detectedLanguage: analysis.detectedLanguage,
-    slangTerms: serializeSlangTerms(analysis.slangTerms),
-    upvotes: 0,
-    downvotes: 0,
-  };
-}
-
-function parseStreamingAnalysisPayload(payload: unknown) {
-  if (payload && typeof payload === 'object') {
-    return payload as Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null };
-  }
-
-  if (typeof payload !== 'string') {
-    return null;
-  }
-
-  const trimmed = payload.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(trimmed) as Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null };
-  } catch {
-    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(jsonMatch[0]) as Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null };
-    } catch {
-      return null;
-    }
-  }
-}
-
-function getLyricRowVisualState(
-  row: OrderedLyricLine,
-  feedback?: LineFeedbackState,
-): LyricRowVisualState {
-  if (feedback?.status === 'loading') {
-    return 'loading';
-  }
-
-  if (feedback?.status === 'unavailable' || feedback?.status === 'failed') {
-    return 'unavailable';
-  }
-
-  if (row.analysis) {
-    return 'analyzed';
-  }
-
-  return 'idle';
-}
-
-function getLineFallbackMessage(feedback?: LineFeedbackState): string {
-  if (feedback?.status === 'unavailable') {
-    return 'Meaning for this line is not ready yet.';
-  }
-
-  return 'This line did not open this time.';
-}
-
-function LineStateBadge({
-  state,
-}: {
-  state: LyricRowVisualState;
-}) {
-  if (state === 'loading') {
-    return (
-      <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        Opening
-      </Badge>
-    );
-  }
-
-  if (state === 'unavailable') {
-    return (
-      <Badge variant="outline" className="gap-1.5 border-amber-500/40 text-amber-700 dark:text-amber-300">
-        <CircleAlert className="h-3.5 w-3.5" />
-        Unavailable
-      </Badge>
-    );
-  }
-
-  if (state === 'analyzed') {
-    return (
-      <Badge variant="secondary" className="gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-        <CheckCircle2 className="h-3.5 w-3.5" />
-        Meaning ready
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="outline" className="gap-1.5 border-primary/25 text-primary">
-      <Sparkles className="h-3.5 w-3.5" />
-      Open
-    </Badge>
-  );
-}
-
-function LyricInsightBody({
-  analysis,
-}: {
-  analysis: OrderedLyricLine['analysis'];
-}) {
-  if (!analysis) {
-    return null;
-  }
-
-  const hasContext =
-    analysis.culturalContext ||
-    analysis.artistIntent ||
-    analysis.deeperMeaning ||
-    analysis.languageNotes ||
-    analysis.lyricBreakdown;
-
-  if (!hasContext) {
-    return null;
-  }
-
-  const insightBlocks = [
-    analysis.deeperMeaning
-      ? { label: 'Meaning', value: analysis.deeperMeaning }
-      : null,
-    analysis.culturalContext
-      ? { label: 'Story', value: analysis.culturalContext }
-      : null,
-    analysis.artistIntent
-      ? { label: 'Artist intent', value: analysis.artistIntent }
-      : null,
-    analysis.languageNotes
-      ? { label: 'Language note', value: analysis.languageNotes }
-      : null,
-  ].filter((block): block is { label: string; value: string } => Boolean(block));
-
-  return (
-    <div className="mt-5 border-t border-border/70 pt-5">
-      <div className="space-y-4">
-        {analysis.lyricBreakdown && (
-          <div className="rounded-2xl border border-border/70 bg-muted/35 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Line detail
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-foreground/90">
-              {analysis.lyricBreakdown}
-            </p>
-          </div>
-        )}
-
-        {insightBlocks.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {insightBlocks.map((block) => (
-              <div
-                key={block.label}
-                className="rounded-2xl border border-border/70 bg-background/85 px-4 py-3"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {block.label}
-                </p>
-                <p className="mt-2 text-sm leading-relaxed text-foreground/90">
-                  {block.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      {analysis.slangTerms && analysis.slangTerms.length > 0 ? (
-        <div className="mt-4 rounded-2xl border border-border/70 bg-muted/25 px-4 py-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Key phrases
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {analysis.slangTerms.map((slang, slangIdx) => (
-              <Popover key={`${analysis.id}-${slangIdx}`}>
-                <PopoverTrigger asChild onClick={(event) => event.stopPropagation()}>
-                  <Badge
-                    variant="secondary"
-                    className="cursor-pointer text-xs hover-elevate"
-                    data-testid={`slang-badge-${analysis.originalIndex}-${slangIdx}`}
-                  >
-                    {slang.term}
-                  </Badge>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 p-3" side="top">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{slang.term}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {slang.language}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{slang.meaning}</p>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function UnifiedLyricRow({
-  row,
-  feedback,
-  isExpanded,
-  isCurrentMoment,
-  onPress,
-  onRetry,
-}: {
-  row: OrderedLyricLine;
-  feedback?: LineFeedbackState;
-  isExpanded: boolean;
-  isCurrentMoment: boolean;
-  onPress: () => void;
-  onRetry: () => void;
-}) {
-  const visualState = getLyricRowVisualState(row, feedback);
-  const hasAnalysis = visualState === 'analyzed';
-  const collapsedSupportText =
-    visualState === 'analyzed'
-      ? row.analysis?.translation
-      : visualState === 'loading'
-        ? 'Opening meaning for this line...'
-        : visualState === 'unavailable'
-          ? getLineFallbackMessage(feedback)
-          : null;
-
-  return (
-    <div
-      className={`overflow-hidden rounded-[1.35rem] border transition-all ${
-        isExpanded
-          ? 'border-primary/35 bg-primary/[0.045] shadow-[0_16px_40px_rgba(249,115,22,0.08)]'
-          : isCurrentMoment
-            ? 'border-primary/25 bg-primary/[0.03] shadow-[0_8px_24px_rgba(249,115,22,0.05)]'
-            : 'border-border/70 bg-background/85 hover:border-primary/20 hover:bg-muted/20'
-      }`}
-      data-testid={`lyric-row-${row.lineIndex}`}
-    >
-      <button
-        type="button"
-        onClick={onPress}
-        className="flex w-full items-start justify-between gap-4 px-5 py-5 text-left"
-        data-testid={`lyric-item-${row.lineIndex}`}
-      >
-        <div className="min-w-0 flex-1 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {isCurrentMoment ? (
-              <Badge variant="outline" className="border-primary/35 bg-primary/5 text-primary">
-                Closest section
-              </Badge>
-            ) : null}
-            <LineStateBadge state={visualState} />
-          </div>
-
-          <p
-            className="font-serif text-[1.05rem] leading-8 text-foreground sm:text-[1.12rem]"
-            data-testid={`text-original-${row.lineIndex}`}
-          >
-            {row.text}
-          </p>
-
-          {collapsedSupportText ? (
-            <p
-              className={`text-sm leading-relaxed ${
-                visualState === 'loading'
-                  ? 'text-primary'
-                  : visualState === 'unavailable'
-                    ? 'text-amber-700 dark:text-amber-300'
-                    : 'italic text-muted-foreground'
-              }`}
-            >
-              {collapsedSupportText}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/80">
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-        </div>
-      </button>
-
-      {isExpanded ? (
-        hasAnalysis ? (
-          <div className="px-5 pb-5">
-            <LyricInsightBody analysis={row.analysis} />
-          </div>
-        ) : visualState === 'loading' ? (
-          <div className="px-5 pb-5">
-            <div className="border-t border-border/70 pt-5">
-              <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Opening meaning
-                </div>
-                <div className="mt-4 space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-11/12" />
-                  <Skeleton className="h-4 w-9/12" />
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="px-5 pb-5">
-            <div className="border-t border-border/70 pt-5">
-              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {getLineFallbackMessage(feedback)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Try opening this line again.
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={onRetry} data-testid={`button-retry-line-${row.lineIndex}`}>
-                    Try again
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      ) : null}
-    </div>
-  );
 }
 
 function getPrimaryMomentMeaning(row?: OrderedLyricLine | null): {
@@ -757,13 +382,6 @@ export default function RecognizedTrack() {
   // X-Ray artist info state - auto-show when track loads
   const [showXRay, setShowXRay] = useState(false);
   const hasAutoShownXRay = useRef(false);
-  // Mini-game state
-  const [showMiniGame, setShowMiniGame] = useState(false);
-  
-  // Line interaction state - explicit per-line status for the unified lyrics surface
-  const [loadingLines, setLoadingLines] = useState<Set<string>>(new Set());
-  const [lineFeedback, setLineFeedback] = useState<Map<string, LineFeedbackState>>(new Map());
-  const [selectedLineKey, setSelectedLineKey] = useState<string | null>(null);
   const [artworkLoadFailed, setArtworkLoadFailed] = useState(false);
   // Guard: true once SSE has started (connection opened), used to suppress premature error renders
   const [sseStarted, setSseStarted] = useState(false);
@@ -772,53 +390,6 @@ export default function RecognizedTrack() {
   const hasLoggedRecognition = useRef(false);
   const hasTrackedRecognitionEvent = useRef<string | null>(null);
   const prevShowXRay = useRef(showXRay);
-
-  const clearLineState = (lyricText: string) => {
-    const normalizedLine = normalizeLineKey(lyricText);
-    setLoadingLines(prev => {
-      const next = new Set(prev);
-      next.delete(normalizedLine);
-      return next;
-    });
-  };
-
-  const setLineFeedbackState = (lyricText: string, feedback?: LineFeedbackState) => {
-    const normalizedLine = normalizeLineKey(lyricText);
-    setLineFeedback(prev => {
-      const next = new Map(prev);
-      if (feedback) {
-        next.set(normalizedLine, feedback);
-      } else {
-        next.delete(normalizedLine);
-      }
-      return next;
-    });
-  };
-
-  const upsertAnalysisIntoCache = (lyricText: string, analysis: Partial<AiTranslation> & { slangTerms?: string | SlangTerm[] | null }) => {
-    if (!trackId) return;
-
-    queryClient.setQueryData<RecognizedTrackDetail | undefined>(
-      ['/api/recognized-tracks', trackId],
-      (current) => {
-        if (!current) return current;
-
-        const normalizedLine = normalizeLineKey(lyricText);
-        const existingAnalysis = (current.culturalAnalysis || []).some(
-          (entry) => normalizeLineKey(entry.originalText) === normalizedLine,
-        );
-
-        if (existingAnalysis) {
-          return current;
-        }
-
-        return {
-          ...current,
-          culturalAnalysis: [...(current.culturalAnalysis || []), buildOptimisticAnalysis(lyricText, analysis)],
-        };
-      },
-    );
-  };
 
   const firstSentence = (value?: string | null): string | undefined => {
     if (!value) return undefined;
@@ -970,170 +541,6 @@ export default function RecognizedTrack() {
     return badges;
   };
 
-  const analyzeFallback = async (lyricText: string) => {
-    try {
-      const endpoint = getApiUrl('/api/analyze-line');
-      const requestBody = {
-        lyricText,
-        trackId: data!.track.id,
-        songTitle: data!.track.title,
-        artistName: data!.track.artist,
-        genre: data!.track.genre || '',
-        language: data!.lyrics?.language || '',
-      };
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        let failureMessage = 'This line did not open this time.';
-        let failureStatus: LineFeedbackState['status'] = 'failed';
-        const rawBody = await response.text();
-        try {
-          const payload = rawBody ? JSON.parse(rawBody) : null;
-          failureStatus = payload?.status === 'unavailable' ? 'unavailable' : 'failed';
-          failureMessage =
-            failureStatus === 'unavailable'
-              ? 'Meaning for this line is not ready yet.'
-              : failureMessage;
-          console.error('[ANALYZE] analyze-line request failed', {
-            endpoint,
-            httpStatus: response.status,
-            feedbackStatus: failureStatus,
-            trackId: requestBody.trackId,
-            lyricPreview: lyricText.slice(0, 80),
-            responseBody: payload,
-          });
-        } catch {
-          failureMessage = 'This line did not open this time.';
-          console.error('[ANALYZE] analyze-line request failed with non-JSON body', {
-            endpoint,
-            httpStatus: response.status,
-            trackId: requestBody.trackId,
-            lyricPreview: lyricText.slice(0, 80),
-            responseBody: rawBody,
-          });
-        }
-        throw Object.assign(new Error(failureMessage), { feedbackStatus: failureStatus });
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        if (result.analysis) {
-          upsertAnalysisIntoCache(lyricText, result.analysis);
-        }
-        setLineFeedbackState(lyricText);
-        queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
-      } else {
-        console.warn('[ANALYZE] Analysis issue:', result.message);
-        setLineFeedbackState(lyricText, {
-          status: result.status === 'unavailable' ? 'unavailable' : 'failed',
-          message:
-            result.status === 'unavailable'
-              ? 'Meaning for this line is not ready yet.'
-              : 'This line did not open this time.',
-        });
-      }
-    } catch (err: any) {
-      console.error('[ANALYZE] Fetch fallback failed:', err);
-      setLineFeedbackState(lyricText, {
-        status: err?.feedbackStatus === 'unavailable' ? 'unavailable' : 'failed',
-        message:
-          err?.feedbackStatus === 'unavailable'
-            ? 'Meaning for this line is not ready yet.'
-            : 'This line did not open this time.',
-      });
-    } finally {
-      clearLineState(lyricText);
-    }
-  };
-
-  const handleLazyAnalyze = (lyricText: string) => {
-    const normalizedLine = normalizeLineKey(lyricText);
-    if (!data || loadingLines.has(normalizedLine)) return;
-    
-    setSelectedLineKey(normalizedLine);
-    setLoadingLines(prev => new Set(prev).add(normalizedLine));
-    setLineFeedbackState(lyricText, { status: 'loading' });
-
-    const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
-
-    if (isNative) {
-      analyzeFallback(lyricText);
-      return;
-    }
-
-    const params = new URLSearchParams({
-      lyricText,
-      trackId: data.track.id,
-      songTitle: data.track.title,
-      artistName: data.track.artist,
-      genre: data.track.genre || '',
-      language: data.lyrics?.language || '',
-    });
-
-    let receivedMessage = false;
-    const eventSource = new EventSource(getApiUrl(`/api/analyze-line/stream?${params.toString()}`));
-
-    const sseTimeout = setTimeout(() => {
-      if (!receivedMessage) {
-        console.warn('[ANALYZE] SSE timeout, falling back to fetch');
-        eventSource.close();
-        analyzeFallback(lyricText);
-      }
-    }, 8000);
-
-    eventSource.onmessage = (event) => {
-      receivedMessage = true;
-      try {
-        const parsed = JSON.parse(event.data);
-        
-        if (parsed.type === 'chunk') {
-          return;
-        } else if (parsed.type === 'complete' || parsed.type === 'cached') {
-          clearTimeout(sseTimeout);
-          const analysis = parseStreamingAnalysisPayload(parsed.data);
-          if (analysis) {
-            upsertAnalysisIntoCache(lyricText, analysis);
-          } else {
-            console.warn('[ANALYZE] Could not parse streaming completion payload, falling back to fetch.');
-            eventSource.close();
-            analyzeFallback(lyricText);
-            return;
-          }
-          clearLineState(lyricText);
-          setLineFeedbackState(lyricText);
-          queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
-          eventSource.close();
-        } else if (parsed.type === 'error') {
-          clearTimeout(sseTimeout);
-          clearLineState(lyricText);
-          setLineFeedbackState(lyricText, {
-            status: 'unavailable',
-            message: 'Meaning for this line is not ready yet.',
-          });
-          console.warn('[ANALYZE] SSE error:', parsed.data);
-          eventSource.close();
-        }
-      } catch (e) {
-        console.error('Error parsing SSE event:', e);
-      }
-    };
-
-    eventSource.onerror = () => {
-      clearTimeout(sseTimeout);
-      eventSource.close();
-      if (!receivedMessage) {
-        console.warn('[ANALYZE] SSE error, falling back to fetch');
-        analyzeFallback(lyricText);
-      } else {
-        clearLineState(lyricText);
-      }
-    };
-  };
 
   // Mutation for contributing lyrics
   const contributeLyricsMutation = useMutation({
@@ -1327,32 +734,6 @@ export default function RecognizedTrack() {
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });
 
-  const retryEnrichmentMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(getApiUrl(`/api/recognized-tracks/${trackId}/retry-analysis`), {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      const payload = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(
-          payload?.message ||
-            payload?.error ||
-            'We no fit restart the deeper gist right now.',
-        );
-      }
-
-      return payload;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
-    },
-    onError: (error) => {
-      console.error('[RETRY] Enrichment retry failed:', error);
-    },
-  });
 
   // Continuation Engine - fetch song suggestion after analysis completes
   // Session-aware: Track where user came from to prevent back-and-forth loops
@@ -1387,33 +768,6 @@ export default function RecognizedTrack() {
   const handleContinuationClick = (suggestionId: string) => {
     sessionStorage.setItem('saywetin_prev_track', trackId!);
     navigate(`/song/${suggestionId}`);
-  };
-
-  const jumpToLyrics = () => {
-    if (youWereHereRef.current) {
-      youWereHereRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-
-    lyricsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleLyricRowPress = (row: OrderedLyricLine) => {
-    const normalizedLine = normalizeLineKey(row.text);
-    const feedback = lineFeedback.get(normalizedLine);
-
-    if (selectedLineKey === normalizedLine && row.analysis) {
-      setSelectedLineKey(null);
-      return;
-    }
-
-    setSelectedLineKey(normalizedLine);
-
-    if (row.analysis || feedback?.status === 'loading') {
-      return;
-    }
-
-    handleLazyAnalyze(row.text);
   };
 
   const orderedLyricLines = useMemo(() => {
@@ -1552,110 +906,6 @@ export default function RecognizedTrack() {
     [artistInfo, data?.track],
   );
 
-  const lyricsPreviewLines = useMemo(
-    () =>
-      data?.lyrics?.text
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .slice(0, 4) ?? [],
-    [data?.lyrics?.text],
-  );
-
-  const showInlineAnalysisFallback =
-    !!data &&
-    (analysisViewState === 'failed' ||
-      analysisViewState === 'unavailable' ||
-      data.track.analysisStatus === 'failed');
-
-  const canRetryEnrichment =
-    STORY_MODE_ENABLED &&
-    !!trackId &&
-    !!data?.lyrics &&
-    !retryEnrichmentMutation.isPending &&
-    (analysisViewState === 'failed' ||
-      data?.track.analysisStatus === 'failed' ||
-      ((data?.culturalAnalysis?.length || 0) === 0 && data?.track.analysisStatus !== 'generating_analysis'));
-
-  // Get step status for loading indicator
-  const getStepStatus = (status?: ProcessingStatus) => {
-    switch (status) {
-      case 'completed': return 'completed';
-      case 'fetching_lyrics':
-      case 'generating_analysis': return 'in_progress';
-      case 'failed': return 'failed';
-      case 'no_lyrics': return 'no_lyrics';
-      default: return 'pending';
-    }
-  };
-
-  const lyricsSectionRef = useRef<HTMLDivElement>(null);
-  // Ref for jumping to the closest matched line in the unified lyrics surface
-  const youWereHereRef = useRef<HTMLDivElement>(null);
-  const hasTriggeredMomentAnalysis = useRef(false);
-
-  // Reset per-track refs when trackId changes
-  useEffect(() => {
-    hasTriggeredMomentAnalysis.current = false;
-    setSelectedLineKey(null);
-    setLineFeedback(new Map());
-  }, [trackId]);
-
-  // Auto-trigger analysis on moment lines that haven't been analyzed yet
-  useEffect(() => {
-    if (!STORY_MODE_ENABLED) return;
-    if (hasTriggeredMomentAnalysis.current || !data) return;
-    if (data.track.analysisStatus === 'generating_analysis' || data.track.analysisStatus === 'pending') return;
-    const unresolvedMomentRows = momentRows.filter((row) => !row.analysis);
-    if (unresolvedMomentRows.length === 0) return;
-
-    hasTriggeredMomentAnalysis.current = true;
-
-    for (const row of unresolvedMomentRows.slice(0, 3)) {
-      handleLazyAnalyze(row.text);
-    }
-  }, [momentRows, data]);
-
-  useEffect(() => {
-    const analyzedKeys = new Set(
-      orderedLyricLines
-        .filter((row) => row.analysis)
-        .map((row) => normalizeLineKey(row.text)),
-    );
-
-    if (analyzedKeys.size === 0) {
-      return;
-    }
-
-    setLineFeedback((prev) => {
-      const next = new Map(prev);
-      let changed = false;
-
-      analyzedKeys.forEach((key) => {
-        if (next.has(key)) {
-          next.delete(key);
-          changed = true;
-        }
-      });
-
-      return changed ? next : prev;
-    });
-  }, [orderedLyricLines]);
-
-  useEffect(() => {
-    if (selectedLineKey || orderedLyricLines.length === 0) {
-      return;
-    }
-
-    const defaultLine =
-      (estimatedMomentIndex !== null
-        ? orderedLyricLines.find((line) => line.lineIndex === estimatedMomentIndex)
-        : undefined) || orderedLyricLines[0];
-
-    if (defaultLine) {
-      setSelectedLineKey(normalizeLineKey(defaultLine.text));
-    }
-  }, [orderedLyricLines, estimatedMomentIndex, selectedLineKey]);
 
   if (isLoading || isHydratingResult) {
     return (
@@ -1719,6 +969,11 @@ export default function RecognizedTrack() {
         </div>
       </header>
 
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 via-amber-500/5 to-background dark:from-orange-500/20 dark:via-amber-900/10 dark:to-background" />
         <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-orange-500/5 dark:bg-orange-500/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
@@ -1806,16 +1061,16 @@ export default function RecognizedTrack() {
                 </div>
               )}
 
-              {lyrics && momentRows.length > 0 ? (
+              {lyrics ? (
                 <div className="border-t border-border/50 pt-2">
                   <Button
                     variant="ghost"
                     className="w-full text-primary"
-                    onClick={jumpToLyrics}
-                    data-testid="button-jump-to-lyrics"
+                    onClick={() => navigate(`/song/${track.id}/lyrics`)}
+                    data-testid="button-see-full-lyrics"
                   >
                     <FileText className="mr-2 h-4 w-4" />
-                    See the full lyrics
+                    See full lyrics &amp; meanings
                   </Button>
                 </div>
               ) : null}
@@ -2118,178 +1373,35 @@ export default function RecognizedTrack() {
             </Card>
           )}
 
-          {/* Mini-Game - Show when there are slang terms */}
-          {showMiniGame && culturalAnalysis && culturalAnalysis.length > 0 && (() => {
-            const allSlangTerms: SlangTerm[] = [];
-            culturalAnalysis.forEach(a => {
-              if (a.slangTerms) {
-                try {
-                  const parsed = typeof a.slangTerms === 'string' ? JSON.parse(a.slangTerms) : a.slangTerms;
-                  if (Array.isArray(parsed)) {
-                    parsed.forEach(term => {
-                      if (term.term && term.meaning) {
-                        allSlangTerms.push(term);
-                      }
-                    });
-                  }
-                } catch {}
-              }
-            });
-            if (allSlangTerms.length < 2) return null;
-            return (
-              <SlangMatchGame 
-                slangTerms={allSlangTerms} 
-                onClose={() => setShowMiniGame(false)} 
-              />
-            );
-          })()}
 
-          {/* Unified lyrics and cultural analysis surface */}
+          {/* Lightweight entry into full lyrics surface */}
           {lyrics && (
-            <div ref={lyricsSectionRef}>
-            <Card data-testid="card-lyrics" className="border-border overflow-hidden">
-              <CardHeader className="border-b bg-muted/30">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div>
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                      <Globe className="h-5 w-5 text-primary" />
-                      Lyrics & What They Mean
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      Open any line to explore the meaning
-                    </CardDescription>
-                  </div>
-                  {/* Mini-game button - only show when we have slang terms */}
-                  {culturalAnalysis && culturalAnalysis.some(a => a.slangTerms) && !showMiniGame && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowMiniGame(true)}
-                      data-testid="button-play-game"
-                      className="gap-2"
-                    >
-                      <Gamepad2 className="h-4 w-4" />
-                      Play Game
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {orderedLyricLines.length > 0 ? (
-                  <div className="px-6 py-5">
-                    {showInlineAnalysisFallback && !primaryGist && canRetryEnrichment && (
-                      <div className="mb-6">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => retryEnrichmentMutation.mutate()}
-                          disabled={retryEnrichmentMutation.isPending}
-                          data-testid="button-retry-deeper-gist-inline"
-                        >
-                          {retryEnrichmentMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Retrying...
-                            </>
-                          ) : (
-                            'Load deeper context'
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                    <div className="space-y-4">
-                      {orderedLyricLines.map((row, rowIndex) => {
-                        const normalizedLine = normalizeLineKey(row.text);
-                        const feedback = lineFeedback.get(normalizedLine);
-                        const isExpanded = selectedLineKey === normalizedLine;
-                        const isCurrentMoment = phraseCapture.highlightedLineIndexes.includes(row.lineIndex);
-                        const showBlockLabel =
-                          rowIndex === 0 ||
-                          orderedLyricLines[rowIndex - 1].blockIndex !== row.blockIndex;
-
-                        return (
-                          <div key={row.key} className="space-y-4">
-                            {showBlockLabel ? (
-                              <div className="pt-3 first:pt-0">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                                  {row.blockLabel}
-                                </p>
-                              </div>
-                            ) : null}
-                            <div ref={estimatedMomentIndex === row.lineIndex ? youWereHereRef : undefined}>
-                              <UnifiedLyricRow
-                                row={row}
-                                feedback={feedback}
-                                isExpanded={isExpanded}
-                                isCurrentMoment={isCurrentMoment}
-                                onPress={() => handleLyricRowPress(row)}
-                                onRetry={() => handleLazyAnalyze(row.text)}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (analysisViewState === 'unavailable' || track.analysisStatus === 'failed') && !primaryGist ? (
-                  <div className="px-6 py-6 space-y-5">
-                    {canRetryEnrichment && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => retryEnrichmentMutation.mutate()}
-                        disabled={retryEnrichmentMutation.isPending}
-                        data-testid="button-retry-deeper-gist"
-                      >
-                        {retryEnrichmentMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Retrying...
-                          </>
-                        ) : (
-                          'Load deeper context'
-                        )}
-                      </Button>
-                    )}
-
-                    {lyricsPreviewLines.length > 0 && (
-                      <div className="space-y-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          Quick lyric preview
-                        </p>
-                        <div className="space-y-2">
-                          {lyricsPreviewLines.map((line, idx) => (
-                            <p key={`lyrics-preview-${idx}`} className="font-serif text-lg leading-relaxed text-foreground/90">
-                              {line}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {primaryGistSupport ? (
-                      <p className="text-sm text-muted-foreground">
-                        {primaryGistSupport}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : track.analysisStatus === 'generating_analysis' || track.analysisStatus === 'pending' ? (
-                  <div className="text-center py-12 space-y-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                      <p className="font-medium">
-                        Building the meaning...
-                      </p>
-                    </div>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      Pulling together lyric meaning and context for the lines you heard.
+            <div>
+            <Card data-testid="card-lyrics-entry" className="border-border overflow-hidden">
+              <CardContent className="py-5 px-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Full lyrics</p>
+                    <p className="font-semibold text-foreground truncate">{track.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {orderedLyricLines.length} lines · tap any line to get meaning
                     </p>
                   </div>
-                ) : null}
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/song/${track.id}/lyrics`)}
+                    data-testid="button-explore-lyrics"
+                    className="gap-2 shrink-0"
+                  >
+                    <Globe className="h-4 w-4" />
+                    Explore
+                  </Button>
+                </div>
               </CardContent>
             </Card>
             </div>
           )}
+
 
           {/* Continuation Suggestion */}
           {continuation?.suggestion ? (
@@ -2336,6 +1448,7 @@ export default function RecognizedTrack() {
           </div>
         </div>
       </div>
+      </motion.div>
     </div>
   );
 }

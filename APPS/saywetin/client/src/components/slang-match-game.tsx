@@ -14,6 +14,7 @@ interface SlangTerm {
 interface SlangMatchGameProps {
   slangTerms: SlangTerm[];
   onClose?: () => void;
+  onRestart?: () => void;
 }
 
 const ROUND_TIME = 20; // seconds per round
@@ -31,7 +32,7 @@ function getRank(score: number, total: number): { label: string; emoji: string }
   return { label: 'Just Dey Try', emoji: '😅' };
 }
 
-export function SlangMatchGame({ slangTerms, onClose }: SlangMatchGameProps) {
+export function SlangMatchGame({ slangTerms, onClose, onRestart }: SlangMatchGameProps) {
   const uniqueTerms = useMemo(() => {
     const seen = new Set<string>();
     return slangTerms
@@ -261,7 +262,7 @@ export function SlangMatchGame({ slangTerms, onClose }: SlangMatchGameProps) {
               </div>
 
               <div className="flex gap-2 justify-center pt-2">
-                <Button variant="outline" onClick={resetGame} data-testid="button-play-again">
+                <Button variant="outline" onClick={onRestart ?? resetGame} data-testid="button-play-again">
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Try Again
                 </Button>

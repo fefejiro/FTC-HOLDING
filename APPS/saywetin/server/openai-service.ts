@@ -462,10 +462,18 @@ export async function* streamSingleLineAnalysis(
   const startTime = Date.now();
 
   if (!isAiConfigured()) {
+    console.warn('[AI][STREAM] Skipped — AI not configured');
     yield { type: 'error', data: 'Deeper breakdown is unavailable right now.' };
     return;
   }
-  
+
+  if (isAiTemporarilyDegraded()) {
+    const remainingMs = aiDegradedUntil - Date.now();
+    console.warn(`[AI][STREAM] Skipped — AI temporarily degraded for ${Math.ceil(remainingMs / 1000)}s more`);
+    yield { type: 'error', data: 'Analysis is temporarily paused. Try again in a few minutes.' };
+    return;
+  }
+
   if (lyricText.trim().length < 3) {
     yield { type: 'error', data: 'Line too short to analyze' };
     return;

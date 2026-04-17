@@ -21,6 +21,8 @@ import Login from "@/pages/login";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import DeleteData from "@/pages/delete-data";
 import NotFound from "@/pages/not-found";
+import GamePage from "@/pages/game";
+import FullLyricsPage from "@/pages/full-lyrics";
 
 function Router() {
   return (
@@ -54,6 +56,8 @@ function Router() {
       <Route path="/auth/signup" component={Login} />
       <Route path="/auth/sign-up" component={Login} />
       <Route path="/auth/register" component={Login} />
+      <Route path="/game" component={GamePage} />
+      <Route path="/song/:id/lyrics" component={FullLyricsPage} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/delete-data" component={DeleteData} />
       <Route path="/delete-account" component={DeleteData} />
@@ -67,10 +71,11 @@ function AppContent() {
   const [location] = useLocation();
   const search = useSearch();
   const currentLocation = search ? `${location}?${search}` : location;
-  const hideBottomNav = location.startsWith('/song/') || 
+  const hideBottomNav = location.startsWith('/song/') ||
                         location.startsWith('/recognized-track/') ||
                         location.startsWith('/traditional/') ||
                         location === '/admin' ||
+                        location.startsWith('/game') ||
                         isListenModeLocation(currentLocation);
 
   useEffect(() => {
