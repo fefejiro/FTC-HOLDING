@@ -1,5 +1,6 @@
 import { useLocation } from 'wouter';
 import { Home, Clock, User } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -9,6 +10,8 @@ const navItems = [
 
 export function BottomNav() {
   const [location, navigate] = useLocation();
+  const { isAuthenticated } = useAuth();
+  const visibleNavItems = navItems.filter((item) => item.path !== '/profile' || isAuthenticated);
 
   return (
     <nav 
@@ -16,7 +19,7 @@ export function BottomNav() {
       data-testid="bottom-nav"
     >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-4">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = location === item.path || 
             (item.path !== '/' && location.startsWith(item.path));
           const Icon = item.icon;
