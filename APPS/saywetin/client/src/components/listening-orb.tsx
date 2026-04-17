@@ -174,14 +174,14 @@ function getRuntimeConfig(mode: ListeningOrbMode, profile: OrbRuntimeProfile): O
       case "listening":
         return {
           ...base,
-          rippleCount: 4,
-          rippleScale: 1.42,
-          rippleDuration: 2.15,
-          glowDuration: 2.5,
-          hazeScale: [0.98, 1.04, 1],
-          hazeOpacity: [0.14, 0.22, 0.16],
-          shellScale: [0.99, 1.04, 1],
-          shellDuration: 1.9,
+          rippleCount: 5,
+          rippleScale: 1.58,
+          rippleDuration: 2.3,
+          glowDuration: 2.8,
+          hazeScale: [0.95, 1.12, 0.98],
+          hazeOpacity: [0.2, 0.34, 0.24],
+          shellScale: [0.985, 1.08, 0.992],
+          shellDuration: 2.05,
           particleDrift: 0,
           particleOpacity: [0, 0, 0],
           particleScale: [1, 1, 1],
@@ -190,14 +190,14 @@ function getRuntimeConfig(mode: ListeningOrbMode, profile: OrbRuntimeProfile): O
       case "matching":
         return {
           ...base,
-          rippleCount: 3,
-          rippleScale: 1.28,
-          rippleDuration: 1.55,
-          glowDuration: 1.8,
-          hazeScale: [0.99, 1.03, 1],
-          hazeOpacity: [0.12, 0.18, 0.14],
-          shellScale: [0.995, 1.03, 1],
-          shellDuration: 1.35,
+          rippleCount: 4,
+          rippleScale: 1.4,
+          rippleDuration: 1.7,
+          glowDuration: 2,
+          hazeScale: [0.97, 1.09, 0.99],
+          hazeOpacity: [0.18, 0.28, 0.2],
+          shellScale: [0.99, 1.06, 0.995],
+          shellDuration: 1.45,
           particleDrift: 0,
           particleOpacity: [0, 0, 0],
           particleScale: [1, 1, 1],
@@ -300,7 +300,7 @@ function getFieldWaveCount(mode: ListeningOrbMode, profile: OrbRuntimeProfile): 
   }
 
   if (profile === "nativeAndroid") {
-    return mode === "listening" ? 2 : 1;
+    return mode === "listening" ? 3 : 2;
   }
 
   if (profile === "mobile") {
@@ -401,21 +401,21 @@ function MobileListeningOrb({
     ? fieldWaveCount
     : Math.max(3, fieldWaveCount);
 
-  const outerGlowClass = isNativeAndroid ? "blur-[16px]" : "blur-[42px]";
-  const outerGlowInset = isNativeAndroid ? "inset-[-9%]" : "inset-[-14%]";
-  const staticRingInset = isNativeAndroid ? "inset-[-3%]" : "inset-[-6%]";
-  const waveInset = isNativeAndroid ? "inset-[-8%]" : "inset-[-12%]";
+  const outerGlowClass = isNativeAndroid ? "blur-[24px]" : "blur-[42px]";
+  const outerGlowInset = isNativeAndroid ? "inset-[-12%]" : "inset-[-14%]";
+  const staticRingInset = isNativeAndroid ? "inset-[-5%]" : "inset-[-6%]";
+  const waveInset = isNativeAndroid ? "inset-[-10%]" : "inset-[-12%]";
 
   return (
     <div className={`relative isolate ${classes.wrapper}`}>
       <motion.div
         className={`absolute ${outerGlowInset} rounded-full bg-gradient-to-br ${fieldTint} ${outerGlowClass}`}
         animate={{
-          scale: mode === "matching" ? [0.98, isNativeAndroid ? 1.01 : 1.04, 0.99] : [0.97, isNativeAndroid ? 1.04 : 1.1, 0.985],
-          opacity: mode === "error" ? [0.08, 0.14, 0.1] : isNativeAndroid ? [0.12, 0.22, 0.14] : [0.22, 0.42, 0.26],
+          scale: mode === "matching" ? [0.98, isNativeAndroid ? 1.03 : 1.04, 0.99] : [0.97, isNativeAndroid ? 1.08 : 1.1, 0.985],
+          opacity: mode === "error" ? [0.08, 0.14, 0.1] : isNativeAndroid ? [0.18, 0.32, 0.22] : [0.22, 0.42, 0.26],
         }}
         transition={{
-          duration: isNativeAndroid ? (mode === "matching" ? 1.6 : 2) : mode === "matching" ? 1.9 : 2.5,
+          duration: isNativeAndroid ? (mode === "matching" ? 1.7 : 2.2) : mode === "matching" ? 1.9 : 2.5,
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -424,11 +424,11 @@ function MobileListeningOrb({
       <motion.div
         className={`absolute ${staticRingInset} rounded-full border border-white/8 bg-[radial-gradient(circle,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_38%,transparent_72%)]`}
         animate={{
-          scale: mode === "matching" ? [0.99, isNativeAndroid ? 1.01 : 1.02, 1] : [0.98, isNativeAndroid ? 1.025 : 1.05, 0.99],
-          opacity: mode === "error" ? [0.08, 0.12, 0.09] : isNativeAndroid ? [0.1, 0.16, 0.11] : [0.14, 0.24, 0.16],
+          scale: mode === "matching" ? [0.99, isNativeAndroid ? 1.018 : 1.02, 1] : [0.98, isNativeAndroid ? 1.04 : 1.05, 0.99],
+          opacity: mode === "error" ? [0.08, 0.12, 0.09] : isNativeAndroid ? [0.14, 0.22, 0.16] : [0.14, 0.24, 0.16],
         }}
         transition={{
-          duration: isNativeAndroid ? (mode === "matching" ? 1.45 : 1.85) : mode === "matching" ? 1.7 : 2.2,
+          duration: isNativeAndroid ? (mode === "matching" ? 1.55 : 1.95) : mode === "matching" ? 1.7 : 2.2,
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -437,20 +437,20 @@ function MobileListeningOrb({
       {Array.from({ length: effectiveRippleCount }).map((_, index) => (
         <motion.div
           key={`${mode}-mobile-ripple-${index}`}
-          className={`absolute inset-0 rounded-full border ${isNativeAndroid ? "border-white/12 bg-white/[0.015]" : "border-white/16 bg-white/[0.03]"}`}
+          className={`absolute inset-0 rounded-full border ${isNativeAndroid ? "border-white/16 bg-white/[0.025]" : "border-white/16 bg-white/[0.03]"}`}
           animate={{
             scale: [
               0.58,
               config.rippleScale - index * 0.055,
-              config.rippleScale + 0.08 - index * 0.055,
+              config.rippleScale + (isNativeAndroid ? 0.12 : 0.08) - index * 0.055,
             ],
-            opacity: [0, Math.max(0.1, ripplePeakOpacity - index * 0.04), 0],
+            opacity: [0, Math.max(isNativeAndroid ? 0.14 : 0.1, ripplePeakOpacity - index * 0.04), 0],
           }}
           transition={{
-            duration: isNativeAndroid ? Math.min(config.rippleDuration, 2) : config.rippleDuration,
+            duration: isNativeAndroid ? Math.min(config.rippleDuration, 2.2) : config.rippleDuration,
             repeat: Infinity,
             ease: "easeOut",
-            delay: index * (isNativeAndroid ? (mode === "matching" ? 0.18 : 0.24) : mode === "matching" ? 0.16 : 0.22),
+            delay: index * (isNativeAndroid ? (mode === "matching" ? 0.16 : 0.2) : mode === "matching" ? 0.16 : 0.22),
           }}
         />
       ))}
@@ -458,22 +458,22 @@ function MobileListeningOrb({
       {Array.from({ length: effectiveFieldWaveCount }).map((_, index) => (
         <motion.div
           key={`${mode}-mobile-wave-${index}`}
-          className={`absolute ${waveInset} rounded-full border ${isNativeAndroid ? "border-amber-100/8 bg-[radial-gradient(circle,transparent_56%,rgba(253,186,116,0.1)_61%,rgba(132,204,22,0.08)_65%,transparent_72%)]" : "border-amber-100/12 bg-[radial-gradient(circle,transparent_54%,rgba(253,186,116,0.14)_59%,rgba(132,204,22,0.1)_63%,transparent_70%)]"}`}
+          className={`absolute ${waveInset} rounded-full border ${isNativeAndroid ? "border-amber-100/12 bg-[radial-gradient(circle,transparent_55%,rgba(253,186,116,0.14)_60%,rgba(132,204,22,0.12)_64%,transparent_72%)]" : "border-amber-100/12 bg-[radial-gradient(circle,transparent_54%,rgba(253,186,116,0.14)_59%,rgba(132,204,22,0.1)_63%,transparent_70%)]"}`}
           animate={{
             scale:
               mode === "matching"
-                ? [0.84, isNativeAndroid ? 0.98 : 1.02, isNativeAndroid ? 1.1 : 1.18]
-                : [0.76, isNativeAndroid ? 1.04 : 1.14, isNativeAndroid ? 1.2 : 1.3],
+                ? [0.82, isNativeAndroid ? 1.02 : 1.02, isNativeAndroid ? 1.18 : 1.18]
+                : [0.74, isNativeAndroid ? 1.1 : 1.14, isNativeAndroid ? 1.28 : 1.3],
             opacity:
               mode === "matching"
-                ? [0, isNativeAndroid ? 0.1 : 0.16, 0]
-                : [0, isNativeAndroid ? 0.14 : 0.22, 0],
+                ? [0, isNativeAndroid ? 0.14 : 0.16, 0]
+                : [0, isNativeAndroid ? 0.2 : 0.22, 0],
           }}
           transition={{
-            duration: isNativeAndroid ? (mode === "matching" ? 1.45 : 1.8) : mode === "matching" ? 1.8 : 2.2,
+            duration: isNativeAndroid ? (mode === "matching" ? 1.55 : 1.95) : mode === "matching" ? 1.8 : 2.2,
             repeat: Infinity,
             ease: "easeOut",
-            delay: index * (isNativeAndroid ? (mode === "matching" ? 0.24 : 0.3) : mode === "matching" ? 0.2 : 0.26),
+            delay: index * (isNativeAndroid ? (mode === "matching" ? 0.18 : 0.24) : mode === "matching" ? 0.2 : 0.26),
           }}
         />
       ))}
@@ -498,7 +498,7 @@ function MobileListeningOrb({
         />
 
         <motion.div
-          className={`${classes.core} relative overflow-hidden rounded-full bg-gradient-to-br ${accent} flex items-center justify-center ${isNativeAndroid ? "shadow-[0_12px_28px_rgba(249,115,22,0.14)]" : "shadow-[0_20px_48px_rgba(249,115,22,0.22)]"}`}
+          className={`${classes.core} relative overflow-hidden rounded-full bg-gradient-to-br ${accent} flex items-center justify-center ${isNativeAndroid ? "shadow-[0_18px_42px_rgba(249,115,22,0.22)]" : "shadow-[0_20px_48px_rgba(249,115,22,0.22)]"}`}
           animate={coreAnimate}
           transition={{
             duration: mode === "matching" ? 1.35 : mode === "error" ? 2 : 2.1,
@@ -529,7 +529,7 @@ function MobileListeningOrb({
             }}
           />
 
-          <div className={`absolute inset-0 ${isNativeAndroid ? "bg-[radial-gradient(circle_at_34%_28%,rgba(255,255,255,0.28),transparent_38%),radial-gradient(circle_at_66%_72%,rgba(255,255,255,0.1),transparent_46%)]" : "bg-[radial-gradient(circle_at_32%_26%,rgba(255,255,255,0.36),transparent_36%),radial-gradient(circle_at_66%_72%,rgba(255,255,255,0.14),transparent_44%)]"}`} />
+          <div className={`absolute inset-0 ${isNativeAndroid ? "bg-[radial-gradient(circle_at_34%_28%,rgba(255,255,255,0.34),transparent_38%),radial-gradient(circle_at_66%_72%,rgba(255,255,255,0.14),transparent_46%)]" : "bg-[radial-gradient(circle_at_32%_26%,rgba(255,255,255,0.36),transparent_36%),radial-gradient(circle_at_66%_72%,rgba(255,255,255,0.14),transparent_44%)]"}`} />
 
           <motion.div
             className="relative z-10"

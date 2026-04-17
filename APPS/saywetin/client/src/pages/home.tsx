@@ -234,42 +234,42 @@ export default function Home() {
           }}
           transition={{ duration: 0.32, ease: 'easeOut' }}
         >
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-b from-orange-500/8 via-amber-500/5 to-background dark:from-orange-500/12 dark:via-amber-900/8 dark:to-background"
-            animate={{
-              opacity: isListeningMode ? 1 : 0.8,
-              scale: isListeningMode ? 1.05 : 1,
-            }}
-            transition={{ duration: 0.36, ease: 'easeOut' }}
-          />
-          <motion.div
-            className="absolute top-12 left-8 h-24 w-24 rounded-full bg-orange-500/12 blur-2xl"
-            animate={{
-              x: isListeningMode ? (isMobileListenRuntime ? -3 : -8) : 0,
-              y: isListeningMode ? (isMobileListenRuntime ? -4 : -10) : 0,
-              scale: isListeningMode ? (isMobileListenRuntime ? 1.22 : 1.55) : 1,
-              opacity: isListeningMode ? (isMobileListenRuntime ? 0.22 : 0.3) : 0.16,
-            }}
-            transition={{ duration: 0.38, ease: 'easeOut' }}
-          />
-          <motion.div
-            className="absolute bottom-16 right-8 h-32 w-32 rounded-full bg-green-500/10 blur-3xl"
-            animate={{
-              x: isListeningMode ? (isMobileListenRuntime ? 4 : 10) : 0,
-              y: isListeningMode ? (isMobileListenRuntime ? 4 : 8) : 0,
-              scale: isListeningMode ? (isMobileListenRuntime ? 1.28 : 1.65) : 1,
-              opacity: isListeningMode ? (isMobileListenRuntime ? 0.2 : 0.28) : 0.14,
-            }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-          />
-          <motion.div
-            className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/18 via-amber-400/16 to-green-400/14 blur-3xl"
-            animate={{
-              opacity: isListeningMode ? (isMobileListenRuntime ? 0.5 : 0.78) : 0.18,
-              scale: isListeningMode ? (isMobileListenRuntime ? 0.98 : 1.08) : 0.84,
-            }}
-            transition={{ duration: 0.34, ease: 'easeOut' }}
-          />
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-b from-orange-500/12 via-amber-500/8 to-background dark:from-orange-500/18 dark:via-amber-900/12 dark:to-background"
+              animate={{
+                opacity: isListeningMode ? 1 : 0.8,
+                scale: isListeningMode ? 1.05 : 1,
+              }}
+              transition={{ duration: 0.36, ease: 'easeOut' }}
+            />
+            <motion.div
+              className="absolute top-12 left-8 h-28 w-28 rounded-full bg-orange-500/16 blur-2xl"
+              animate={{
+                x: isListeningMode ? (isMobileListenRuntime ? -3 : -8) : 0,
+                y: isListeningMode ? (isMobileListenRuntime ? -4 : -10) : 0,
+                scale: isListeningMode ? (isMobileListenRuntime ? 1.34 : 1.55) : 1,
+                opacity: isListeningMode ? (isMobileListenRuntime ? 0.3 : 0.3) : 0.16,
+              }}
+              transition={{ duration: 0.38, ease: 'easeOut' }}
+            />
+            <motion.div
+              className="absolute bottom-16 right-8 h-36 w-36 rounded-full bg-green-500/14 blur-3xl"
+              animate={{
+                x: isListeningMode ? (isMobileListenRuntime ? 4 : 10) : 0,
+                y: isListeningMode ? (isMobileListenRuntime ? 4 : 8) : 0,
+                scale: isListeningMode ? (isMobileListenRuntime ? 1.38 : 1.65) : 1,
+                opacity: isListeningMode ? (isMobileListenRuntime ? 0.28 : 0.28) : 0.14,
+              }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            />
+            <motion.div
+              className="absolute left-1/2 top-1/2 h-[22rem] w-[22rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/24 via-amber-400/20 to-green-400/18 blur-3xl"
+              animate={{
+                opacity: isListeningMode ? (isMobileListenRuntime ? 0.7 : 0.78) : 0.18,
+                scale: isListeningMode ? (isMobileListenRuntime ? 1.06 : 1.08) : 0.84,
+              }}
+              transition={{ duration: 0.34, ease: 'easeOut' }}
+            />
         </motion.div>
       )}
 
