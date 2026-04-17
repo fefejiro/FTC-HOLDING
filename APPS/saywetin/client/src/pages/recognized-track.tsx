@@ -85,6 +85,15 @@ interface FragmentInterpretation {
   message?: string;
 }
 
+interface ResultContinuationSuggestion {
+  suggestion: {
+    id: string;
+    title: string;
+    artist: string;
+  } | null;
+  reason?: string;
+}
+
 interface RecognizedTrackDetail {
   track: {
     id: string;
@@ -719,56 +728,10 @@ export default function RecognizedTrack() {
     }
   }, [showXRay, logInteraction]);
 
-  // X-Ray artist info query - always fetch when track is available
-  const { data: artistInfo, isLoading: isLoadingArtistInfo } = useQuery<ArtistSongInfo>({
-    queryKey: ['/api/artist-info', trackId],
-    enabled: !!trackId,
-    staleTime: 1000 * 60 * 30, // Cache for 30 minutes
-  });
-  
-  // Fragment interpretation - fetch when lyrics not available
-  const lyricsUnavailable = data?.track?.lyricsStatus === 'no_lyrics' || data?.track?.lyricsStatus === 'failed';
-  const { data: fragmentInterpretation, isLoading: isLoadingFragment } = useQuery<FragmentInterpretation>({
-    queryKey: ['/api/fragment-interpretation', trackId],
-    enabled: lyricsUnavailable && !!trackId,
-    staleTime: 1000 * 60 * 30, // Cache for 30 minutes
-  });
-
-
-  // Continuation Engine - fetch song suggestion after analysis completes
-  // Session-aware: Track where user came from to prevent back-and-forth loops
-  const previousTrackId = sessionStorage.getItem('saywetin_prev_track');
-  
-  interface ContinuationSuggestion {
-    suggestion: {
-      id: string;
-      title: string;
-      artist: string;
-      emotionalTone?: string;
-      genre?: string;
-    } | null;
-    matchReason?: 'emotional' | 'cultural' | 'regional';
-    reason?: string;
-  }
-  const { data: continuation } = useQuery<ContinuationSuggestion>({
-    queryKey: ['/api/continuation', trackId, previousTrackId],
-    queryFn: async () => {
-      const url = previousTrackId 
-        ? getApiUrl(`/api/continuation/${trackId}?excludeId=${previousTrackId}`)
-        : getApiUrl(`/api/continuation/${trackId}`);
-      const res = await fetch(url, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch continuation');
-      return res.json();
-    },
-    enabled: !isInProcessingState && !!trackId && (data?.culturalAnalysis?.length || 0) > 0,
-    staleTime: 1000 * 60 * 60, // Cache for 1 hour
-  });
-
-  // Store current track as previous when user navigates to a suggestion
-  const handleContinuationClick = (suggestionId: string) => {
-    sessionStorage.setItem('saywetin_prev_track', trackId!);
-    navigate(`/song/${suggestionId}`);
-  };
+  const artistInfo: ArtistSongInfo | undefined = undefined;
+  const fragmentInterpretation: FragmentInterpretation | undefined = undefined;
+  const continuation: ResultContinuationSuggestion | undefined = undefined;
+  const handleContinuationClick = (_suggestionId: string) => {};
 
   const orderedLyricLines = useMemo(() => {
     const lyricsText = data?.lyrics?.text || '';
@@ -1077,305 +1040,32 @@ export default function RecognizedTrack() {
             </CardContent>
           </Card>
 
-          {/* X-Ray Artist & Song Info Panel */}
-          {showXRay && (
-            <Card data-testid="card-xray" className="border-primary/20 overflow-hidden">
-              <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-green-500/10 dark:from-orange-500/15 dark:via-amber-500/10 dark:to-green-500/15">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
-                      <User className="h-4 w-4 text-white" />
-                    </div>
-                    About {track.artist}
-                  </CardTitle>
-                </CardHeader>
-              </div>
-              <CardContent className="space-y-4 pt-4">
-                {isLoadingArtistInfo ? (
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-5/6" />
-                  </div>
-                ) : artistInfo ? (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {artistInfo.status && artistInfo.status !== 'complete' && (
-                      <div className="sm:col-span-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
-                        <p className="text-xs font-semibold text-primary">
-                          More artist context still loading
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {artistStatusMessage}
-                        </p>
-                      </div>
-                    )}
-                    <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 dark:bg-muted/20">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
-                        <User className="h-3.5 w-3.5" />
-                        Who Be Dis Artist?
-                      </div>
-                      <p className="text-sm leading-relaxed">{artistBioText}</p>
-                      {artistInfo.artistOrigin && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <MapPin className="h-3 w-3" />
-                          {artistInfo.artistOrigin}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 dark:bg-muted/20">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                        <Music className="h-3.5 w-3.5" />
-                        Wetin Dem Dey Play
-                      </div>
-                      <p className="text-sm leading-relaxed">{artistInfo.musicStyle}</p>
-                    </div>
-                    <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 dark:bg-muted/20">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
-                        <Music className="h-3.5 w-3.5" />
-                        Dis Song Say Wetin?
-                      </div>
-                      <p className="text-sm leading-relaxed">{artistSongBackgroundText}</p>
-                    </div>
-                    {artistInfo.funFact && (
-                      <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 dark:bg-muted/20">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                          <Zap className="h-3.5 w-3.5" />
-                          You Know Say?
-                        </div>
-                        <p className="text-sm leading-relaxed">{artistInfo.funFact}</p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No wahala, richer artist info no load this time.</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Processing Status Card - Show when still loading (but NOT when no_lyrics detected) */}
-          {data && !primaryGist && track.lyricsStatus !== 'no_lyrics' && track.lyricsStatus !== 'failed' && 
-           (track.lyricsStatus === 'pending' || track.lyricsStatus === 'fetching_lyrics' || 
-            track.analysisStatus === 'pending' || track.analysisStatus === 'generating_analysis') && (
-            <Card data-testid="card-processing-status" className="border-primary/20 bg-primary/5">
-              <CardContent className="py-6 px-6">
-                <ProcessingField
-                  lyricsStatus={track.lyricsStatus}
-                  analysisStatus={track.analysisStatus}
-                  analysisCount={data.culturalAnalysis?.length || 0}
-                />
-
-                {/* X-Ray Artist Info - shown during loading to make wait engaging */}
-                {artistInfo && artistInfo.verification !== 'unverified' && artistInfo.status === 'complete' && (
-                  <div className="mt-6 pt-5 border-t border-primary/10">
-                    <div className="flex items-center gap-2 mb-3 text-sm font-medium text-primary">
-                      <User className="h-4 w-4" />
-                      While you wait, meet {track.artist}
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2 text-sm">
-                      <div>
-                        <p className="text-muted-foreground leading-relaxed">{artistInfo.artistBio}</p>
-                        {artistInfo.artistOrigin && (
-                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {artistInfo.artistOrigin}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        {artistInfo.songBackground && (
-                          <div>
-                            <span className="text-xs font-medium text-primary flex items-center gap-1 mb-1">
-                              <Music className="h-3 w-3" /> About this track
-                            </span>
-                            <p className="text-muted-foreground text-xs leading-relaxed">{artistInfo.songBackground}</p>
-                          </div>
-                        )}
-                        {artistInfo.funFact && (
-                          <div>
-                            <span className="text-xs font-medium text-primary flex items-center gap-1 mb-1">
-                              <Zap className="h-3 w-3" /> Fun fact
-                            </span>
-                            <p className="text-muted-foreground text-xs leading-relaxed">{artistInfo.funFact}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {isLoadingArtistInfo && (
-                  <div className="mt-6 pt-5 border-t border-primary/10">
-                    <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Dey load artist info...
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* No Lyrics Found State - With Fragment Interpretation & Contribution Form */}
           {data && (track.lyricsStatus === 'no_lyrics' || track.lyricsStatus === 'failed') && !lyrics && (
             <Card data-testid="card-no-lyrics" className="border-border">
               <CardContent className="py-6 px-6">
-                {!showContributeForm ? (
-                  <div className="space-y-6">
-                    {/* Fragment Interpretation Section */}
-                    {isLoadingFragment ? (
-                      <div className="flex flex-col items-center justify-center py-4">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-                        <p className="text-sm text-muted-foreground">Interpreting the title...</p>
-                      </div>
-                    ) : fragmentInterpretation ? (
-                      <div className="space-y-4">
-                        {fragmentInterpretation.status && fragmentInterpretation.status !== 'complete' && (
-                          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                            <p className="text-sm text-muted-foreground">
-                              {fragmentStatusMessage}
-                            </p>
-                          </div>
-                        )}
-                        {/* Title Meaning */}
-                        {fragmentTitleMeaning && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                              <Languages className="h-4 w-4" />
-                              What the Title Means
-                            </div>
-                            <p className="text-sm leading-relaxed pl-6">
-                              {fragmentTitleMeaning}
-                            </p>
-                          </div>
-                        )}
-                        
-                        {/* Detected Phrases */}
-                        {filteredDetectedPhrases.length > 0 && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                              <Sparkles className="h-4 w-4" />
-                              Wetin Dem Talk?
-                            </div>
-                            <div className="space-y-3 pl-6">
-                              {filteredDetectedPhrases.map((phrase, idx) => (
-                                <div key={idx} className="bg-muted/50 rounded-lg p-3 space-y-1">
-                                  <div className="font-medium">"{phrase.phrase}"</div>
-                                  <p className="text-sm text-muted-foreground">{phrase.meaning}</p>
-                                  <p className="text-xs text-muted-foreground/80 italic">{phrase.culturalContext}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Na Wetin E Mean - Themes */}
-                        {fragmentInterpretation.likelyThemes.length > 0 && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                              <Lightbulb className="h-4 w-4" />
-                              Na Wetin E Mean?
-                            </div>
-                            <div className="flex flex-wrap gap-2 pl-6">
-                              {fragmentInterpretation.likelyThemes.map((theme, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
-                                  {theme}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Cultural Note */}
-                        {fragmentCulturalNote && (
-                          <div className="bg-primary/5 rounded-lg p-4 border border-primary/10">
-                            <p className="text-sm italic text-muted-foreground">
-                              {fragmentCulturalNote}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-center py-4">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                          <Music className="h-6 w-6 text-primary" />
-                        </div>
-                        <p className="text-muted-foreground text-sm max-w-md">
-                          We recognized "{track.title}" but lyrics for this track haven't been mapped yet.
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Contribute Lyrics CTA */}
-                    <div className="flex flex-col items-center pt-2 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-3 text-center">
-                        Make you join epp am!
-                      </p>
-                      <Button 
-                        onClick={() => {
-                          setShowContributeForm(true);
-                          logInteraction('add_lyrics_click');
-                        }}
-                        data-testid="button-contribute-lyrics"
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                      >
-                        <Send className="h-3.5 w-3.5" />
-                        Add Lyrics
-                      </Button>
-                    </div>
+                <div className="space-y-4 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                    <Music className="h-6 w-6 text-primary" />
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <BookOpen className="h-5 w-5" />
-                        Add Lyrics for "{track.title}"
-                      </h3>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setShowContributeForm(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                    <Textarea
-                      placeholder="Paste the song lyrics here...&#10;&#10;Each line will be analyzed for cultural meaning, translations, and slang terms."
-                      value={contributedLyrics}
-                      onChange={(e) => setContributedLyrics(e.target.value)}
-                      className="min-h-[200px] font-serif"
-                      data-testid="textarea-contribute-lyrics"
-                    />
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">
-                        {contributedLyrics.length > 0 
-                          ? `${contributedLyrics.split('\n').filter(l => l.trim()).length} lines` 
-                          : 'Paste lyrics to get started'}
-                      </p>
-                      <Button 
-                        onClick={() => contributeLyricsMutation.mutate(contributedLyrics)}
-                        disabled={contributedLyrics.trim().length < 20 || contributeLyricsMutation.isPending}
-                        data-testid="button-submit-lyrics"
-                        className="gap-2"
-                      >
-                        {contributeLyricsMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-4 w-4" />
-                        )}
-                        {contributeLyricsMutation.isPending ? 'Working on it...' : 'Break Am Down'}
-                      </Button>
-                    </div>
+                  <div className="space-y-2">
+                    <p className="text-lg font-semibold text-foreground">
+                      We found the song, but not the exact lyric yet.
+                    </p>
+                    <p className="mx-auto max-w-md text-sm text-muted-foreground">
+                      Try another vocal part so we can lock the lyric and explain what it means.
+                    </p>
                   </div>
-                )}
+                  <Button onClick={() => navigate(LISTEN_MODE_PATH)} data-testid="button-try-another-vocal-part">
+                    Try another vocal part
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
 
 
           {/* Lightweight entry into full lyrics surface */}
-          {lyrics && (
+          {false && lyrics && (
             <div>
             <Card data-testid="card-lyrics-entry" className="border-border overflow-hidden">
               <CardContent className="py-5 px-6">
@@ -1404,7 +1094,7 @@ export default function RecognizedTrack() {
 
 
           {/* Continuation Suggestion */}
-          {continuation?.suggestion ? (
+          {false && continuation?.suggestion ? (
             <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-transparent to-amber-500/5 overflow-visible">
               <CardContent className="py-5 px-6">
                 <div className="flex items-center gap-4">
@@ -1443,7 +1133,7 @@ export default function RecognizedTrack() {
           ) : null}
 
           {/* Footer tagline */}
-          <div className="text-center py-6 text-xs text-muted-foreground/60">
+          <div className="hidden text-center py-6 text-xs text-muted-foreground/60">
             Feel the rhythm, know the roots.
           </div>
         </div>

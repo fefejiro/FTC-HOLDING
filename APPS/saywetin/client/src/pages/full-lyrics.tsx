@@ -853,7 +853,7 @@ export default function FullLyricsPage() {
                   </CardTitle>
                   <CardDescription className="mt-1">Open any line to explore the meaning</CardDescription>
                 </div>
-                {hasSlangTerms && (
+                {false && hasSlangTerms && (
                   <Button
                     variant="outline"
                     size="sm"
