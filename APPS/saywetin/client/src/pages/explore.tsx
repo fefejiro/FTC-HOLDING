@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Music, Clock, ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { getApiUrl } from '@/lib/api-config';
 
 interface SearchResult {
   id: string;
@@ -68,8 +69,19 @@ export default function Explore() {
   }, [trimmedActiveQuery]);
 
   const { data: searchResults = [], isFetching } = useQuery<SearchResult[]>({
-    queryKey: ['/api/search', queryString],
+    queryKey: ['explore-search', queryString],
     enabled: trimmedActiveQuery.length > 0,
+    queryFn: async () => {
+      const response = await fetch(getApiUrl(`/api/search?${queryString}`), {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to search songs');
+      }
+
+      return response.json();
+    },
   });
 
   const { data: recentTracks = [] } = useQuery<ListeningSession[]>({

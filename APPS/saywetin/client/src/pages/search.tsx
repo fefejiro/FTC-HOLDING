@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { getApiUrl } from '@/lib/api-config';
 
 interface SearchResult {
   id: string;
@@ -99,8 +100,19 @@ export default function Search() {
   const queryString = buildQueryString();
 
   const { data: results = [], isLoading } = useQuery<SearchResult[]>({
-    queryKey: ['/api/search', queryString],
+    queryKey: ['search-page-results', queryString],
     enabled: hasSearched,
+    queryFn: async () => {
+      const response = await fetch(getApiUrl(`/api/search?${queryString}`), {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to search songs');
+      }
+
+      return response.json();
+    },
   });
 
   const handleSearch = (e: React.FormEvent) => {
