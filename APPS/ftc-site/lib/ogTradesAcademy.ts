@@ -41,6 +41,14 @@ export type OgTradesCommunityBenefit = {
   summary: string;
 };
 
+export type OgTradesService = {
+  title: string;
+  summary: string;
+  audience: string;
+  price: string;
+  note: string;
+};
+
 export type OgTradesVideo = {
   title: string;
   href: string;
@@ -75,7 +83,7 @@ export const OG_TRADES_ALTERNATE_HOST =
 export const ogTradesAcademyNavItems = [
   { label: "Home", path: "/" },
   { label: "About", path: "/about" },
-  { label: "Course", path: "/course" },
+  { label: "Programs", path: "/course" },
   { label: "Resources", path: "/resources" },
   { label: "Community", path: "/community" },
   { label: "Contact", path: "/contact" }
@@ -151,7 +159,7 @@ export function getOgTradesNavLinks(options: { host?: string; customDomain?: boo
 
 export const ogTradesAcademyConfig = {
   companyName: "OG_Trades Academy",
-  tagline: "Forex education built around process, discipline, and risk-first execution",
+  tagline: "Founder-led forex education, mentorship, and community support for developing traders",
   founderName: "OG_Trades",
   beaconsUrl: "https://beacons.ai/ogtradesacademy.com",
   communityUrl: "https://tinyurl.com/ogtradesacademy",
@@ -168,60 +176,61 @@ export const ogTradesAcademyConfig = {
   courseDuration: "8 weeks",
   priceNow: "$199",
   priceWas: "$399",
-  priceNote: "50% off the regular rate",
-  primaryCta: { label: "Buy the 8-Week Course", href: "https://shop.beacons.ai/ogtradesacademy.com/f2481efd-649b-4c42-badf-f1626ace2ea3" },
-  secondaryCta: { label: "See the Course Details", href: "/course" },
+  priceNote: "Current public course price",
+  primaryCta: { label: "Explore Academy Services", href: "#services" },
+  secondaryCta: { label: "Meet the Founder", href: "/about" },
   hero: {
-    eyebrow: "Structured forex training for beginners",
-    headline: "Learn forex with a clear plan, real trading context, and a risk-first foundation.",
+    eyebrow: "Founder-led forex academy",
+    headline: "Learn forex with more structure, mentorship, and guidance through a founder-led academy.",
     subheadline:
-      "OG_Trades Academy turns scattered trading advice into a guided 8-week curriculum focused on market structure, entries, exits, psychology, and responsible risk management.",
+      "OG_Trades Academy is a premium forex learning environment built to help beginners and developing traders grow with clearer education, practical support, and a real sense of community.",
     bullets: [
-      "Built from the same themes already taught on YouTube: risk, execution, mindset, and prop-firm accountability.",
-      "Structured for beginners who need order, not information overload.",
-      "Designed to lead from theory into repeatable market preparation."
+      "Learn directly from OG_Trades through structured education, practical teaching, and mentorship-style support.",
+      "Access courses, crash trainings, signals, community, and guided trader support in one academy brand.",
+      "Built for beginners, curious learners, and traders who want to grow with clarity, discipline, and confidence."
     ]
   },
   founderHighlights: [
-    "Forex educator with public content centered on risk management and disciplined execution.",
-    "Shares FundingPips account progression and prop-firm context as part of the learning narrative.",
-    "Teaching style blends chart reading, trading mindset, and practical beginner repetition.",
-    "Background references banking experience alongside active trading education."
+    "Founder and lead instructor teaching directly through the academy's programs, lessons, and support offers.",
+    "Background shaped by both banking experience and a personal forex journey built on study, discipline, and market repetition.",
+    "Teaching style centers on chart understanding, risk management, patience, emotional control, and practical execution.",
+    "Built the academy to help beginners and developing traders learn forex in a more honest, personal, and supportive way."
   ],
   trustStatements: [
-    "Risk management before trade frequency",
-    "Prop-firm account progression context",
-    "Beginner-friendly structure with weekly milestones",
-    "Trading psychology and discipline built into the curriculum"
+    "Founder-led forex instruction",
+    "Beginner-friendly learning paths",
+    "Telegram community support",
+    "Courses, crash trainings, and signals"
   ],
   stats: [
     {
-      label: "Core offer",
+      label: "Led by",
+      value: "OG_Trades",
+      detail: "Learn directly from the founder and instructor behind the academy."
+    },
+    {
+      label: "Flagship path",
       value: "8 weeks",
-      detail: "A defined beginner curriculum instead of disconnected lessons."
+      detail: "A step-by-step beginner program with structure and progression."
     },
     {
-      label: "Launch price",
-      value: "$199",
-      detail: "Current discounted entry point for the flagship course."
+      label: "Support layer",
+      value: "Mentorship",
+      detail: "Grow with community, guidance, and support beyond one standalone course."
     },
     {
-      label: "Course focus",
+      label: "Learning style",
       value: "Risk first",
-      detail: "Position sizing, discipline, and survival come before aggressive setups."
-    },
-    {
-      label: "Social proof",
-      value: "5.0 / 5",
-      detail: "Current Beacons listing shows a 5-star rating from 1 review."
+      detail: "Discipline, capital protection, and clear process come before chasing trades."
     }
   ] satisfies OgTradesStat[],
   founderStory: {
-    headline: "A teaching style grounded in process, not hype.",
+    headline: "Meet the founder and instructor behind OG_Trades Academy.",
     paragraphs: [
-      "OG_Trades Academy is positioned around steady skill-building for traders who are new to forex and need a reliable structure.",
-      "Instead of promising unrealistic outcomes, the brand leads with risk control, chart literacy, entry and exit planning, and the emotional discipline needed to stay consistent.",
-      "Public content around FundingPips progression, the LASER strategy, and account development helps reinforce that the academy is rooted in active market context rather than generic theory."
+      "OG_Trades is the founder and lead instructor of the academy, bringing together banking experience, a disciplined forex journey, and hands-on teaching built around steady trader development.",
+      "His path in forex has been shaped by learning the market through repetition, risk management, chart study, and the kind of discipline that helps traders stay in the game long enough to improve.",
+      "He started OG_Trades Academy to create a more personal and structured place for people who want to learn forex seriously without getting lost in hype, confusion, or scattered information online.",
+      "The academy is built for people looking for extra income, people who are curious about trading, complete beginners, and developing traders who want to grow their forex knowledge with guidance and community."
     ]
   },
   curriculum: [
@@ -276,34 +285,29 @@ export const ogTradesAcademyConfig = {
   ] satisfies OgTradesCourseWeek[],
   faqs: [
     {
-      question: "Who is this course for?",
+      question: "Who is this for?",
       answer:
-        "The course is built for beginner traders who want a structured path into forex, especially people who feel overwhelmed by random videos and fragmented advice."
+        "This is for anyone looking for extra income, people who are curious about trading, complete beginners, and people who want to learn and grow in forex with a clear, beginner-friendly foundation."
     },
     {
       question: "Do I need trading experience before joining?",
       answer:
-        "No. The curriculum starts with foundations, chart setup, and risk basics before moving into execution, psychology, and prop-firm context."
+        "No. The curriculum starts with the basics, including chart setup, core forex concepts, and risk management before moving into execution, psychology, and strategy."
     },
     {
       question: "What makes this different from free content?",
       answer:
-        "The main difference is structure. Instead of isolated tips, students follow a sequenced plan with weekly progression, practical exercises, and a clearer learning arc."
+        "The difference is structure and support. Instead of isolated tips, students get a guided learning path, clearer explanations, practical examples, and a community that helps them stay connected as they grow."
     },
     {
       question: "Does the course guarantee profits?",
       answer:
-        "No. The academy is positioned as trading education, not guaranteed financial outcomes. Forex and prop-firm trading both involve real risk."
-    },
-    {
-      question: "How much time should I expect each week?",
-      answer:
-        "Students should expect time for lessons, chart review, note-taking, and practice. The strongest results usually come from consistent weekly repetition."
+        "No. OG_Trades Academy provides education and support, not guaranteed financial outcomes. Forex trading involves real risk, so the focus is on learning, discipline, and responsible decision-making."
     },
     {
       question: "Is there a community attached to the program?",
       answer:
-        "Yes. The academy also points students toward a community space where they can stay connected to updates, support, and future offers."
+        "Yes. There is a Telegram community where students and traders can stay connected, learn, ask questions, and grow together."
     }
   ] satisfies OgTradesFaq[],
   resources: [
@@ -330,21 +334,71 @@ export const ogTradesAcademyConfig = {
   ] satisfies OgTradesResource[],
   contentPillars: [
     {
-      title: "Risk management",
-      summary: "Capital protection, position sizing, and drawdown awareness stay central to the brand story.",
-      bullets: ["Risk-per-trade discipline", "Account protection habits", "Prop-firm rule awareness"]
+      title: "Structured learning",
+      summary: "Start with the essentials and move forward with clear steps instead of scattered information.",
+      bullets: ["Beginner foundations", "Step-by-step progression", "Practical chart study"]
     },
     {
-      title: "Strategy breakdowns",
-      summary: "Public education can keep unpacking setups like the LASER strategy and how they fit different market conditions.",
-      bullets: ["Entry logic", "Exit logic", "Context and invalidation"]
+      title: "Mentorship and guidance",
+      summary: "Learn from OG_Trades' teaching style through direct instruction, mentorship-style support, and clearer guidance.",
+      bullets: ["Founder-led instruction", "Risk-first mindset", "Actionable trade education"]
     },
     {
-      title: "Mindset and psychology",
-      summary: "The academy can own a strong lane around patience, discipline, and the emotional side of execution.",
-      bullets: ["Journal-driven review", "Avoiding impulsive trades", "Consistency over excitement"]
+      title: "Community support",
+      summary: "Stay connected between lessons through a learning community designed for questions, accountability, and growth.",
+      bullets: ["Telegram community", "Shared learning", "Long-term trader development"]
     }
   ] satisfies OgTradesContentPillar[],
+  services: [
+    {
+      title: "8 Week Course",
+      summary:
+        "A structured beginner program covering forex foundations, market structure, risk management, entries, exits, and trading mindset.",
+      audience: "Best for beginners who want a complete starting point and a step-by-step learning path.",
+      price: "$199",
+      note: "Current public course price"
+    },
+    {
+      title: "Crash Courses",
+      summary:
+        "Shorter focused trainings built to help traders learn a specific topic, concept, or trading skill in a faster format.",
+      audience: "Best for learners who want targeted education without committing to the full 8-week program.",
+      price: "Pricing coming soon",
+      note: "Public pricing can be added once finalized"
+    },
+    {
+      title: "Signals",
+      summary:
+        "Market ideas and trading signals designed to help traders stay connected to setups, analysis, and decision-making support.",
+      audience: "Best for traders who want added guidance while continuing to build their own chart understanding.",
+      price: "Pricing coming soon",
+      note: "Placeholder until the offer structure is finalized"
+    },
+    {
+      title: "Mentorship and Support",
+      summary:
+        "A higher-touch support path designed to help traders stay accountable, ask better questions, and grow with more direct guidance.",
+      audience: "Best for traders who want more personal support, feedback, and mentorship as they build consistency.",
+      price: "Pricing coming soon",
+      note: "Confirm format: private mentorship, group coaching, or office-hours model"
+    },
+    {
+      title: "Telegram Community",
+      summary:
+        "A connected space where students and traders can ask questions, stay in the loop, learn together, and keep growing outside the lessons.",
+      audience: "Best for students who want ongoing support, community, and accountability between learning sessions.",
+      price: "Pricing coming soon",
+      note: "Can also be bundled with select academy offers"
+    },
+    {
+      title: "Free Resources and Video Lessons",
+      summary:
+        "Open-access lessons, breakdowns, and educational content that help new traders keep learning before and after paid programs.",
+      audience: "Best for anyone who wants to start learning, revisit the basics, or stay connected to the academy's teaching style.",
+      price: "Free",
+      note: "Available through the academy's public content channels"
+    }
+  ] satisfies OgTradesService[],
   courseHighlights: [
     "Core principles of forex, currency pairs, and market structure",
     "Risk management techniques to protect trading capital",
@@ -355,21 +409,21 @@ export const ogTradesAcademyConfig = {
   ],
   communityBenefits: [
     {
-      title: "Stay close to the teaching flow",
-      summary: "Students can keep up with updates, reminders, and future drops without relying on scattered social posts."
+      title: "Stay connected between lessons",
+      summary: "The Telegram community gives students and traders a place to stay in touch with updates, learning conversations, and shared momentum."
     },
     {
-      title: "See what to focus on next",
-      summary: "A community layer helps turn passive watching into guided repetition and stronger follow-through."
+      title: "Ask questions and keep learning",
+      summary: "Community support helps people move from passive watching to active learning with more clarity and follow-through."
     },
     {
-      title: "Grow with future offers",
-      summary: "The platform is ready for more advanced tracks, challenge support, and members-only breakdowns over time."
+      title: "Grow with the academy",
+      summary: "As the academy expands with more services and support, the community stays at the center of the student experience."
     }
   ] satisfies OgTradesCommunityBenefit[],
   videos: [
     {
-      title: "$100K FundingPips Account in drawdown of -2%… My Next Trades",
+      title: "$100K FundingPips Account in drawdown of -2%... My Next Trades",
       href: "https://youtube.com/watch?v=4PPWpmXYBjo",
       embedUrl: "https://www.youtube.com/embed/4PPWpmXYBjo",
       duration: "2:41",
@@ -383,7 +437,7 @@ export const ogTradesAcademyConfig = {
       summary: "A stronger authority piece around process, structure, and business-minded execution."
     },
     {
-      title: "I Bought a $100K Prop Firm Account… Here's My Weekly Market Analysis",
+      title: "I Bought a $100K Prop Firm Account... Here's My Weekly Market Analysis",
       href: "https://youtube.com/watch?v=G5R0RX-qGCc",
       embedUrl: "https://www.youtube.com/embed/G5R0RX-qGCc",
       duration: "5:22",
@@ -404,11 +458,11 @@ export const ogTradesAcademyConfig = {
       summary: "Founder-story content that links banking experience to capital protection and trader discipline."
     },
     {
-      title: "Forex Trading Strategy for Beginners — LASER Strategy Breakdown Explained",
+      title: "Forex Trading Strategy for Beginners - LASER Strategy Breakdown Explained",
       href: "https://youtube.com/watch?v=ItzyXZQHxoo",
       embedUrl: "https://www.youtube.com/embed/ItzyXZQHxoo",
       duration: "8:46",
-      summary: "A core beginner strategy explainer that supports both course sales and blog clustering."
+      summary: "A core beginner strategy explainer that supports foundational learning and skill growth."
     },
     {
       title: "How I Took My $5K Account to #32 on FundingPips Leaderboard",

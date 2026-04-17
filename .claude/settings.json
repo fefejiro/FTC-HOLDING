@@ -28,7 +28,10 @@
       "Bash(grep -v \"^$\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(t.get\\('id',''\\), t.get\\('title',''\\), t.get\\('analysisStatus',''\\), t.get\\('lyricsStatus',''\\)\\) for t in \\(d.get\\('tracks'\\) or d.get\\('data'\\) or []\\)]\")",
       "Read(//c/Users/mikef/**)",
-      "Bash(VITE_API_BASE_URL=https://ftcpeacepad-extension-production.up.railway.app VITE_POSTHOG_KEY=phc_t8n2N8TWVFkPfZVc9bNduYDStuzSuRFWaWBR7qpMnz3x npm run build:frontend)"
+      "Bash(VITE_API_BASE_URL=https://ftcpeacepad-extension-production.up.railway.app VITE_POSTHOG_KEY=phc_t8n2N8TWVFkPfZVc9bNduYDStuzSuRFWaWBR7qpMnz3x npm run build:frontend)",
+      "Bash(grep -l \"don catch am\\\\|Stories unlocked\\\\|Unlocking the story\\\\|analyzing more lyrics\\\\|deeper context\" *.js)",
+      "Bash(grep -o \"don catch am\\\\|Stories unlocked\\\\|Unlocking the story\\\\|analyzing more lyrics\\\\|deeper context\" *.js)",
+      "Bash(sort -k5 -rn)"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [

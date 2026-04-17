@@ -4,9 +4,13 @@ import { getRequestHost } from "../../../lib/requestHost";
 
 export default function OgTradesHero() {
   const requestHost = getRequestHost();
-  const primaryIsExternal = ogTradesAcademyConfig.primaryCta.href.startsWith("http");
-  const courseHref = getOgTradesBrandedPath("/course", { host: requestHost });
-  const curriculumHref = `${courseHref}#curriculum`;
+  const primaryHref = ogTradesAcademyConfig.primaryCta.href;
+  const secondaryHref = ogTradesAcademyConfig.secondaryCta.href.startsWith("/")
+    ? getOgTradesBrandedPath(ogTradesAcademyConfig.secondaryCta.href, { host: requestHost })
+    : ogTradesAcademyConfig.secondaryCta.href;
+  const communityHref = getOgTradesBrandedPath("/community", { host: requestHost });
+  const primaryIsExternal = primaryHref.startsWith("http");
+  const primaryIsAnchor = primaryHref.startsWith("#");
 
   return (
     <section className="hero og-hero">
@@ -14,10 +18,6 @@ export default function OgTradesHero() {
       <div className="hero-grid premium-hero-grid og-hero-grid">
         <div className="premium-hero-copy og-hero-copy">
           <p className="eyebrow">{ogTradesAcademyConfig.hero.eyebrow}</p>
-          <span className="hero-urgency-pill">
-            <span>1</span>
-            {`${ogTradesAcademyConfig.courseName} | ${ogTradesAcademyConfig.priceNow}`}
-          </span>
           <h1 className="hero-primary-title og-hero-title">{ogTradesAcademyConfig.hero.headline}</h1>
           <p className="hero-subtitle">{ogTradesAcademyConfig.hero.subheadline}</p>
 
@@ -30,23 +30,27 @@ export default function OgTradesHero() {
           <div className="hero-cta-row">
             {primaryIsExternal ? (
               <a
-                href={ogTradesAcademyConfig.primaryCta.href}
+                href={primaryHref}
                 target="_blank"
                 rel="noreferrer"
                 className="btn btn-primary"
               >
                 {ogTradesAcademyConfig.primaryCta.label}
               </a>
+            ) : primaryIsAnchor ? (
+              <a href={primaryHref} className="btn btn-primary">
+                {ogTradesAcademyConfig.primaryCta.label}
+              </a>
             ) : (
-              <Link href={ogTradesAcademyConfig.primaryCta.href} prefetch={false} className="btn btn-primary">
+              <Link href={primaryHref} prefetch={false} className="btn btn-primary">
                 {ogTradesAcademyConfig.primaryCta.label}
               </Link>
             )}
-            <Link href={courseHref} prefetch={false} className="btn btn-secondary">
+            <Link href={secondaryHref} prefetch={false} className="btn btn-secondary">
               {ogTradesAcademyConfig.secondaryCta.label}
             </Link>
-            <Link href={curriculumHref} prefetch={false} className="inline-link">
-              Explore the curriculum
+            <Link href={communityHref} prefetch={false} className="inline-link">
+              Join the community
             </Link>
           </div>
         </div>
@@ -55,10 +59,10 @@ export default function OgTradesHero() {
           <div className="og-chart-card">
             <div className="og-chart-head">
               <div>
-                <p className="card-kicker">Trading flow preview</p>
+                <p className="card-kicker">Inside the academy</p>
                 <h2>Build a repeatable process before you chase setups.</h2>
               </div>
-              <span className="status-pill">Risk-first</span>
+              <span className="status-pill">Founder-led</span>
             </div>
 
             <div className="og-chart-shell" aria-hidden="true">

@@ -45,24 +45,24 @@ export default function OgTradesCoursePage() {
       <div className="container page-content og-page-content">
         <div className="og-course-hero">
           <section className="card og-course-hero-copy">
-            <p className="eyebrow">Flagship course</p>
+            <p className="eyebrow">Flagship program</p>
             <h1>{ogTradesAcademyConfig.courseName}</h1>
             <p className="page-intro">
-              A premium sales page for the academy’s core offer, built to replace the thin Beacons product experience with stronger trust, richer curriculum detail, and clearer conversion paths.
+              The academy's flagship beginner program helps new traders build their foundation with structure, guidance, and a risk-first approach to learning forex.
             </p>
 
             <div className="og-course-price-callout">
               <div>
-                <span>Now</span>
+                <span>Price</span>
                 <strong>{ogTradesAcademyConfig.priceNow}</strong>
-              </div>
-              <div>
-                <span>Was</span>
-                <strong>{ogTradesAcademyConfig.priceWas}</strong>
               </div>
               <div>
                 <span>Format</span>
                 <strong>{ogTradesAcademyConfig.courseDuration}</strong>
+              </div>
+              <div>
+                <span>Focus</span>
+                <strong>Beginner friendly</strong>
               </div>
             </div>
 
@@ -74,7 +74,7 @@ export default function OgTradesCoursePage() {
 
             <div className="hero-cta-row">
               <a href={ogTradesAcademyConfig.coursePurchaseUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
-                Buy now on Beacons
+                Enroll in the 8 Week Course
               </a>
               <a href="#enrollment" className="btn btn-secondary">Ask a question first</a>
               <a href="#curriculum" className="inline-link">Review the curriculum</a>
@@ -90,7 +90,7 @@ export default function OgTradesCoursePage() {
               />
             </div>
             <p className="muted">
-              This existing course artwork becomes a stronger hero asset when paired with syllabus depth, FAQs, and an enrollment form.
+              Students can use this program to move from confusion to a clearer forex learning routine with lessons, practice, and consistent review.
             </p>
           </aside>
         </div>
@@ -121,19 +121,19 @@ export default function OgTradesCoursePage() {
             <article className="card">
               <h2>Who this is built for</h2>
               <ul className="feature-list compact-feature-list">
-                <li>Complete beginners who need a clear learning path.</li>
-                <li>Early traders who understand the basics but lack structure.</li>
-                <li>Learners drawn to prop-firm challenges but not ready to rush execution.</li>
-                <li>Students who want risk management and psychology treated as core, not optional.</li>
+                <li>Anyone looking for extra income and a more structured way to learn forex.</li>
+                <li>People who are curious about trading and want a beginner-friendly entry point.</li>
+                <li>Complete beginners who need a clear path instead of random lessons.</li>
+                <li>Developing traders who want to grow their knowledge, discipline, and consistency.</li>
               </ul>
             </article>
             <article className="card">
-              <h2>What the page should convert on</h2>
+              <h2>What students build during the program</h2>
               <ul className="feature-list compact-feature-list">
-                <li>Direct course purchase through the current Beacons checkout.</li>
-                <li>High-intent enrollment inquiries for people with questions before buying.</li>
-                <li>Community joins for visitors who want to warm up before purchasing.</li>
-                <li>Email capture for launch reminders, future drops, and nurture campaigns.</li>
+                <li>A stronger understanding of market structure, chart setup, and core forex concepts.</li>
+                <li>Better habits around risk management, trade planning, and emotional discipline.</li>
+                <li>More confidence in how to prepare, review, and improve over time.</li>
+                <li>A practical foundation they can keep developing through community and future academy offers.</li>
               </ul>
             </article>
           </div>
@@ -143,9 +143,9 @@ export default function OgTradesCoursePage() {
           <div className="og-form-layout">
             <article className="card">
               <p className="eyebrow">Enrollment interest</p>
-              <h2>Capture serious leads even when they are not ready to buy on the first visit.</h2>
+              <h2>Ask a question before you enroll.</h2>
               <p className="muted">
-                This form gives OG_Trades Academy a first-party lead path that can later be connected to email automation, follow-up workflows, and student onboarding.
+                If you want help deciding whether this is the right starting point, send a note here and the academy can follow up with more guidance.
               </p>
               <OgTradesEnrollmentForm />
             </article>
@@ -173,7 +173,7 @@ export default function OgTradesCoursePage() {
           rel="noreferrer"
           className="btn btn-primary"
         >
-          Buy the Course for {ogTradesAcademyConfig.priceNow}
+          Enroll for {ogTradesAcademyConfig.priceNow}
         </a>
         <a href="#enrollment" className="btn btn-secondary">
           Ask a Question

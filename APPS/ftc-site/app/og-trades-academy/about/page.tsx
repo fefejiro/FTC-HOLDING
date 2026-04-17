@@ -9,9 +9,9 @@ import { getRequestHost } from "../../../lib/requestHost";
 export function generateMetadata(): Metadata {
   const requestHost = getRequestHost();
   return getOgTradesMetadata({
-    title: "About OG_Trades Academy | Risk-First Forex Education",
+    title: "About OG_Trades Academy | Meet the Founder and Instructor",
     description:
-      "Meet the founder, trading focus, and educational philosophy behind OG_Trades Academy.",
+      "Meet OG_Trades, the founder and instructor behind OG_Trades Academy, and learn about the academy's approach to forex education.",
     pathname: "/about",
     host: requestHost
   });
@@ -24,8 +24,8 @@ export default function OgTradesAboutPage() {
       <div className="container page-content og-page-content">
         <div className="og-founder-grid">
           <section className="card og-founder-card">
-            <p className="eyebrow">About the brand</p>
-            <h1>OG_Trades Academy is built around discipline, structure, and practical market education.</h1>
+            <p className="eyebrow">About the founder</p>
+            <h1>Meet OG_Trades, founder and lead instructor of OG_Trades Academy.</h1>
             {ogTradesAcademyConfig.founderStory.paragraphs.map((paragraph) => (
               <p key={paragraph} className="muted">
                 {paragraph}
@@ -43,8 +43,8 @@ export default function OgTradesAboutPage() {
             </div>
             <div className="proof-tags">
               <span className="proof-tag">Banking background</span>
-              <span className="proof-tag">FundingPips trader</span>
-              <span className="proof-tag">YouTube educator</span>
+              <span className="proof-tag">Forex educator</span>
+              <span className="proof-tag">Founder-led academy</span>
             </div>
           </aside>
         </div>
@@ -52,7 +52,7 @@ export default function OgTradesAboutPage() {
         <section className="section og-section">
           <div className="cards-grid cards-grid-2">
             <article className="card">
-              <h2>What the audience learns</h2>
+              <h2>What students come here to learn</h2>
               <ul className="feature-list compact-feature-list">
                 {ogTradesAcademyConfig.courseHighlights.map((item) => (
                   <li key={item}>{item}</li>
@@ -60,7 +60,7 @@ export default function OgTradesAboutPage() {
               </ul>
             </article>
             <article className="card">
-              <h2>What makes the teaching style credible</h2>
+              <h2>What shapes the teaching style</h2>
               <ul className="feature-list compact-feature-list">
                 {ogTradesAcademyConfig.founderHighlights.map((item) => (
                   <li key={item}>{item}</li>
@@ -72,35 +72,28 @@ export default function OgTradesAboutPage() {
 
         <section className="section og-section">
           <div className="section-heading">
-            <p className="eyebrow">Public proof points</p>
-            <h2>Existing content already supports a stronger premium positioning.</h2>
+            <p className="eyebrow">Academy approach</p>
+            <h2>A forex academy built around clarity, discipline, and long-term growth.</h2>
           </div>
           <div className="cards-grid cards-grid-3">
-            <article className="card">
-              <h3>Prop-firm accountability</h3>
-              <p className="muted">
-                Videos around $100K FundingPips challenges and drawdown management reinforce seriousness and active market context.
-              </p>
-            </article>
-            <article className="card">
-              <h3>Strategy depth</h3>
-              <p className="muted">
-                The LASER strategy breakdown and USDJPY trade analysis show enough specificity to become high-value education content.
-              </p>
-            </article>
-            <article className="card">
-              <h3>Mindset positioning</h3>
-              <p className="muted">
-                Risk management lessons tied to banking experience give the brand a disciplined voice instead of a hype-first posture.
-              </p>
-            </article>
+            {ogTradesAcademyConfig.contentPillars.map((pillar) => (
+              <article key={pillar.title} className="card">
+                <h3>{pillar.title}</h3>
+                <p className="muted">{pillar.summary}</p>
+                <ul className="feature-list compact-feature-list">
+                  {pillar.bullets.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
           </div>
         </section>
 
         <CTABanner
-          title="Want the full OG_Trades learning experience?"
-          description="Move from the founder story into the course syllabus, resources stack, and community pathway."
-          primaryLabel="See the Course"
+          title="Ready to learn inside OG_Trades Academy?"
+          description="Move from the founder story into the academy programs, resources, and community support."
+          primaryLabel="View Programs"
           primaryHref={getOgTradesBrandedPath("/course", { host: requestHost })}
           secondaryLabel="Browse Resources"
           secondaryHref={getOgTradesBrandedPath("/resources", { host: requestHost })}

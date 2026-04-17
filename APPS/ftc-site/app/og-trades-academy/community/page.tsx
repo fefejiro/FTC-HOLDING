@@ -11,7 +11,7 @@ export function generateMetadata(): Metadata {
   return getOgTradesMetadata({
     title: "Community | OG_Trades Academy",
     description:
-      "Community benefits, social channels, and the join path for the OG_Trades Academy audience.",
+      "Join the OG_Trades Academy community to stay connected, learn with other traders, and keep growing between lessons.",
     pathname: "/community",
     host: requestHost
   });
@@ -24,9 +24,9 @@ export default function OgTradesCommunityPage() {
       <div className="container page-content og-page-content">
         <section>
           <p className="eyebrow">Community</p>
-          <h1>Give the audience a reason to stay connected between lessons, launches, and market breakdowns.</h1>
+          <h1>Stay connected with OG_Trades Academy between lessons, market updates, and new learning opportunities.</h1>
           <p className="page-intro">
-            The community page turns a simple link-in-bio redirect into a stronger membership pathway with clearer expectations and channel hierarchy.
+            The academy community gives students and traders a place to stay engaged, ask questions, and keep learning together as they build confidence in forex.
           </p>
         </section>
 
@@ -45,16 +45,16 @@ export default function OgTradesCommunityPage() {
           <div className="og-community-grid">
             <article className="card">
               <p className="card-kicker">Primary join path</p>
-              <h2>Use the existing hub while the dedicated community stack grows.</h2>
+              <h2>Join the Telegram community and keep growing with the academy.</h2>
               <p className="muted">
-                The current redirect remains valuable for continuity, but this page adds enough structure that it feels like a real product surface instead of a loose outbound link.
+                This is the place for students and traders to stay connected, learn together, ask questions, and keep up with academy updates and future offers.
               </p>
               <div className="hero-cta-row">
                 <a href={ogTradesAcademyConfig.communityUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
-                  Open the community hub
+                  Join the Telegram community
                 </a>
                 <a href={ogTradesAcademyConfig.beaconsUrl} target="_blank" rel="noreferrer" className="btn btn-secondary">
-                  Visit the Beacons page
+                  Visit the academy hub
                 </a>
               </div>
             </article>
@@ -80,9 +80,9 @@ export default function OgTradesCommunityPage() {
         </section>
 
         <CTABanner
-          title="Want to move from community interest into structured learning?"
-          description="Use the course page for curriculum depth and the resources hub for embedded lessons and supporting content."
-          primaryLabel="See the Course"
+          title="Want to turn community interest into structured learning?"
+          description="Use the programs page for the full 8-week course and the resources page for more public lessons and support."
+          primaryLabel="View Programs"
           primaryHref={getOgTradesBrandedPath("/course", { host: requestHost })}
           secondaryLabel="Open Resources"
           secondaryHref={getOgTradesBrandedPath("/resources", { host: requestHost })}
