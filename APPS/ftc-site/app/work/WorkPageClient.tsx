@@ -4,7 +4,6 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { clientLaunches } from "../../lib/recentWork";
 import { engagementOffers } from "../../lib/engagementOffers";
-import { ATEAM_SITE_URL } from "../../lib/site";
 
 function getLaunchBrandStyle(accent?: string, accentSoft?: string, accentGlow?: string, accentSurface?: string) {
   return {
@@ -15,77 +14,133 @@ function getLaunchBrandStyle(accent?: string, accentSoft?: string, accentGlow?: 
   } as CSSProperties;
 }
 
+function PhaseBar({ current, total, label }: { current: number; total: number; label: string }) {
+  return (
+    <div className="wl-phase-bar" aria-label={`Phase ${current} of ${total}: ${label}`}>
+      <div className="wl-phase-track">
+        {Array.from({ length: total }).map((_, i) => (
+          <span
+            key={i}
+            className={`wl-phase-pip${i < current ? " wl-phase-pip--done" : i === current - 1 ? " wl-phase-pip--active" : ""}`}
+          />
+        ))}
+      </div>
+      <span className="wl-phase-label">{label} — Phase {current}/{total}</span>
+    </div>
+  );
+}
+
 export default function WorkPageClient() {
   const [featuredLaunch, ...additionalLaunches] = Array.from(clientLaunches);
-  const launchesByOffer = new Map(clientLaunches.map((launch) => [launch.offerProof.value, launch]));
+  const launchesByOffer = new Map(clientLaunches.map((l) => [l.offerProof.value, l]));
+  const totalLive = clientLaunches.filter((l) => String(l.status).toLowerCase().includes("live")).length;
 
   return (
     <div className="container page-content client-launches-page">
-      <section className="client-launches-hero">
-        <p className="eyebrow">Client Launches</p>
-        <h1>Proof that Una Labs can scope and ship real systems.</h1>
-        <p className="page-intro">
-          Client Launches shows the delivery side of the studio: real onboarding, real operating
-          context, and real systems in motion. Products stays reserved for Una Labs-owned tools
-          like PeacePad, SayWetin, Dispatch, and ATEAM.
-        </p>
-      </section>
 
-      <section className="client-launch-offer-map" aria-label="Offer proof map">
-        <div className="section-heading home-section-heading">
-          <p className="eyebrow">Choose the proof lane</p>
-          <h2>Each offer already has a live reference point.</h2>
-          <p>
-            Start with the kind of commercial path you need, then inspect the closest launch
-            snapshot before sending your own request.
+      {/* ── Hero ── */}
+      <section className="wl-hero">
+        <div className="wl-hero-copy">
+          <p className="eyebrow">Client Launches</p>
+          <h1>Proof that Una Labs scopes and ships real systems.</h1>
+          <p className="wl-hero-lead">
+            Every project below moved through structured intake, a clear scope decision, and governed
+            delivery execution. This is the delivery side of the studio — not a portfolio, a live track record.
           </p>
         </div>
-        <div className="cards-grid cards-grid-3 client-launch-offer-grid">
-          {engagementOffers.map((offer) => {
+        <div className="wl-hero-stats" aria-label="Studio delivery stats">
+          <div className="wl-stat">
+            <span className="wl-stat-value">{clientLaunches.length}</span>
+            <span className="wl-stat-label">Active launches</span>
+          </div>
+          <div className="wl-stat">
+            <span className="wl-stat-value">{totalLive}</span>
+            <span className="wl-stat-label">Live right now</span>
+          </div>
+          <div className="wl-stat">
+            <span className="wl-stat-value">3</span>
+            <span className="wl-stat-label">Offer tracks</span>
+          </div>
+          <div className="wl-stat">
+            <span className="wl-stat-value">48h</span>
+            <span className="wl-stat-label">Typical first reply</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Offer map ── */}
+      <section className="wl-offer-section" aria-label="Engagement offer paths">
+        <div className="wl-section-head">
+          <p className="eyebrow">Pick your path</p>
+          <h2>Each track has a live reference point.</h2>
+          <p className="wl-section-sub">
+            Start with the offer that matches where you are. Each one links directly to a live project
+            that came through the same path.
+          </p>
+        </div>
+        <div className="wl-offer-grid">
+          {engagementOffers.map((offer, i) => {
             const launch = launchesByOffer.get(offer.value);
             return (
-              <article key={offer.value} className="card client-launch-offer-card">
-                <div className="client-launch-offer-head">
-                  <p className="status-pill">{offer.title}</p>
-                  <p className="work-intake-offer-price">{offer.price}</p>
+              <article key={offer.value} className={`wl-offer-card${i === 1 ? " wl-offer-card--featured" : ""}`}>
+                <div className="wl-offer-card-head">
+                  <div className="wl-offer-track-badge">{offer.title}</div>
+                  <p className="wl-offer-price">{offer.price}</p>
                 </div>
-                <p>{offer.summary}</p>
-                <p className="muted">{offer.idealFor}</p>
+                <p className="wl-offer-summary">{offer.summary}</p>
+                <p className="wl-offer-ideal">
+                  <span className="wl-offer-ideal-label">Best for</span> {offer.idealFor}
+                </p>
                 {launch ? (
-                  <div className="client-launch-offer-example">
-                    <p className="eyebrow">Live example</p>
-                    <h3>{launch.brand.wordmark}</h3>
-                    <p className="muted">{offer.proofPrompt}</p>
-                    <div className="proof-tags" aria-label={`${launch.brand.wordmark} tags`}>
-                      {launch.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="proof-tag">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="client-launch-actions">
-                      <Link href={`/work/${launch.slug}`} prefetch={false} className="btn btn-secondary">
-                        View proof
-                      </Link>
-                      <Link
-                        href={`/work-with-ftc?offer=${offer.value}`}
-                        prefetch={false}
-                        className="btn btn-primary"
+                  <div className="wl-offer-example">
+                    <div className="wl-offer-example-head">
+                      <div
+                        className="wl-offer-example-mark"
+                        style={{ "--launch-accent": launch.brand.accent } as CSSProperties}
                       >
-                        Start this path
-                      </Link>
+                        {launch.brand.mark}
+                      </div>
+                      <div>
+                        <p className="wl-offer-example-kicker">Live reference</p>
+                        <p className="wl-offer-example-name">{launch.brand.wordmark}</p>
+                      </div>
+                    </div>
+                    <div className="proof-tags">
+                      {launch.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="proof-tag">{tag}</span>
+                      ))}
                     </div>
                   </div>
                 ) : null}
+                <div className="wl-offer-actions">
+                  {launch ? (
+                    <Link href={`/work/${launch.slug}`} prefetch={false} className="btn btn-secondary wl-btn-sm">
+                      View reference
+                    </Link>
+                  ) : null}
+                  <Link
+                    href={`/work-with-ftc?offer=${offer.value}`}
+                    prefetch={false}
+                    className={`btn wl-btn-sm${i === 1 ? " btn-primary" : " btn-secondary"}`}
+                  >
+                    Start this path →
+                  </Link>
+                </div>
               </article>
             );
           })}
         </div>
       </section>
 
+      {/* ── Divider ── */}
+      <div className="wl-divider" aria-hidden="true">
+        <span className="wl-divider-label">Live launches</span>
+      </div>
+
+      {/* ── Featured launch ── */}
       {featuredLaunch ? (
         <article
-          className="card client-launch-card client-launch-card--featured client-launch-card--brand"
+          className="wl-launch-card wl-launch-card--featured"
           style={getLaunchBrandStyle(
             featuredLaunch.brand.accent,
             featuredLaunch.brand.accentSoft,
@@ -93,76 +148,78 @@ export default function WorkPageClient() {
             featuredLaunch.brand.accentSurface
           )}
         >
-          <div className="client-launch-brand-bar">
-            <div className="client-launch-brand-lockup">
-              <div className="client-launch-brand-mark" aria-hidden="true">
-                {featuredLaunch.brand.mark}
-              </div>
-              <div className="client-launch-brand-copy">
-                <p className="eyebrow">Live client launch</p>
-                <h2>{featuredLaunch.brand.wordmark}</h2>
-                <p className="muted">{featuredLaunch.subtitle}</p>
+          <div className="wl-launch-header">
+            <div className="wl-launch-brand">
+              <div className="wl-launch-mark" aria-hidden="true">{featuredLaunch.brand.mark}</div>
+              <div className="wl-launch-brand-copy">
+                <div className="wl-launch-eyebrow">Featured launch</div>
+                <h2 className="wl-launch-name">{featuredLaunch.brand.wordmark}</h2>
+                <p className="wl-launch-subtitle">{featuredLaunch.subtitle}</p>
               </div>
             </div>
-            <div className="client-launch-brand-meta">
-              <p className="status-pill">{featuredLaunch.status}</p>
-              <a
-                href={featuredLaunch.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-link"
-              >
-                Visit live site
-              </a>
+            <div className="wl-launch-header-right">
+              <span className="wl-status-pill wl-status-pill--live">● Live</span>
+              {featuredLaunch.lastUpdatedLabel ? (
+                <span className="wl-update-label">{featuredLaunch.lastUpdatedLabel}</span>
+              ) : null}
             </div>
           </div>
 
-          <div className="featured-launch-head">
-            <div>
-              <p className="client-launch-service">{featuredLaunch.service}</p>
-              <p className="client-launch-summary">{featuredLaunch.summary}</p>
-              <p className="muted">
-                This is the kind of work Una Labs is built to do: take a rough operational or
-                growth problem, scope it quickly, and move it into a live system.
-              </p>
-            </div>
-            <div className="proof-tags" aria-label={`${featuredLaunch.tileTitle} tags`}>
+          <div className="wl-launch-service-row">
+            <span className="wl-launch-service">{featuredLaunch.service}</span>
+            <div className="proof-tags">
               {featuredLaunch.tags.map((tag) => (
-                <span key={tag} className="proof-tag">
-                  {tag}
-                </span>
+                <span key={tag} className="proof-tag">{tag}</span>
               ))}
             </div>
           </div>
 
-          <div className="featured-launch-grid">
-            <div className="client-launch-signal">
-              <p className="client-launch-signal-title">Current focus</p>
-              <ul className="client-launch-signal-list">
+          <p className="wl-launch-summary">{featuredLaunch.summary}</p>
+
+          {featuredLaunch.phase ? (
+            <PhaseBar
+              current={featuredLaunch.phase.current}
+              total={featuredLaunch.phase.total}
+              label={featuredLaunch.phase.label}
+            />
+          ) : null}
+
+          <div className="wl-launch-signals">
+            <div className="wl-signal-block">
+              <p className="wl-signal-title">Current focus</p>
+              <ul className="wl-signal-list">
                 {(featuredLaunch.currentFocus ?? []).map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             </div>
-            <div className="client-launch-signal">
-              <p className="client-launch-signal-title">Next milestone</p>
-              <ul className="client-launch-signal-list">
+            <div className="wl-signal-block">
+              <p className="wl-signal-title">Next milestone</p>
+              <ul className="wl-signal-list">
                 {(featuredLaunch.nextMilestone ?? []).map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             </div>
-            <div className="client-launch-signal client-launch-offer-proof">
-              <p className="client-launch-signal-title">Best-fit offer</p>
-              <p className="client-launch-offer-label">{featuredLaunch.offerProof.label}</p>
-              <p className="muted">{featuredLaunch.offerProof.rationale}</p>
+            <div className="wl-signal-block wl-signal-offer">
+              <p className="wl-signal-title">Engagement track</p>
+              <span className="wl-offer-badge">{featuredLaunch.offerProof.label}</span>
+              <p className="wl-signal-rationale">{featuredLaunch.offerProof.rationale}</p>
             </div>
           </div>
 
-          <div className="client-launch-actions">
+          <div className="wl-launch-actions">
             <Link href={`/work/${featuredLaunch.slug}`} prefetch={false} className="btn btn-secondary">
               View onboarding snapshot
             </Link>
+            <a
+              href={featuredLaunch.websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+            >
+              Visit live site ↗
+            </a>
             <Link
               href={`/work-with-ftc?offer=${featuredLaunch.offerProof.value}`}
               prefetch={false}
@@ -174,18 +231,21 @@ export default function WorkPageClient() {
         </article>
       ) : null}
 
+      {/* ── Additional launches ── */}
       {additionalLaunches.length > 0 ? (
-        <section className="client-launches-grid-section">
-          <div className="section-heading home-section-heading">
+        <section className="wl-grid-section">
+          <div className="wl-section-head">
             <p className="eyebrow">Also live</p>
-            <h2>More client launches</h2>
-            <p>Live websites, lead systems, and delivery tracks that show how Una Labs turns scoped work into operating reality.</p>
+            <h2>More active launches</h2>
+            <p className="wl-section-sub">
+              Live systems in motion — each with a delivery track, current focus, and an open path to start something similar.
+            </p>
           </div>
-          <div className="cards-grid cards-grid-2 client-launches-grid">
+          <div className="wl-launches-grid">
             {additionalLaunches.map((launch) => (
               <article
                 key={launch.slug}
-                className="card client-launch-card client-launch-card--brand"
+                className="wl-launch-card"
                 style={getLaunchBrandStyle(
                   launch.brand.accent,
                   launch.brand.accentSoft,
@@ -193,47 +253,48 @@ export default function WorkPageClient() {
                   launch.brand.accentSurface
                 )}
               >
-                <div className="client-launch-brand-bar">
-                  <div className="client-launch-brand-lockup">
-                    <div className="client-launch-brand-mark" aria-hidden="true">
-                      {launch.brand.mark}
-                    </div>
-                    <div className="client-launch-brand-copy">
-                      <h3>{launch.brand.wordmark}</h3>
-                      <p className="muted">{launch.subtitle}</p>
+                <div className="wl-launch-header">
+                  <div className="wl-launch-brand">
+                    <div className="wl-launch-mark wl-launch-mark--sm" aria-hidden="true">{launch.brand.mark}</div>
+                    <div className="wl-launch-brand-copy">
+                      <h3 className="wl-launch-name">{launch.brand.wordmark}</h3>
+                      <p className="wl-launch-subtitle">{launch.subtitle}</p>
                     </div>
                   </div>
-                  <p className="status-pill">{launch.status}</p>
+                  <span className="wl-status-pill wl-status-pill--live">● Live</span>
                 </div>
 
-                <p className="client-launch-service">{launch.service}</p>
-                <p className="client-launch-summary">{launch.summary}</p>
-
-                <div className="proof-tags" aria-label={`${launch.tileTitle} tags`}>
-                  {launch.tags.map((tag) => (
-                    <span key={tag} className="proof-tag">
-                      {tag}
-                    </span>
-                  ))}
+                <div className="wl-launch-service-row">
+                  <span className="wl-launch-service">{launch.service}</span>
+                  <div className="proof-tags">
+                    {launch.tags.slice(0, 3).map((tag) => (
+                      <span key={tag} className="proof-tag">{tag}</span>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="client-launch-proof-inline">
-                  <span className="client-launch-proof-pill">{launch.offerProof.label}</span>
-                  <p className="muted">{launch.offerProof.rationale}</p>
-                </div>
+                <p className="wl-launch-summary">{launch.summary}</p>
 
-                <div className="featured-launch-grid">
-                  <div className="client-launch-signal">
-                    <p className="client-launch-signal-title">Current focus</p>
-                    <ul className="client-launch-signal-list">
+                {launch.phase ? (
+                  <PhaseBar
+                    current={launch.phase.current}
+                    total={launch.phase.total}
+                    label={launch.phase.label}
+                  />
+                ) : null}
+
+                <div className="wl-launch-signals wl-launch-signals--compact">
+                  <div className="wl-signal-block">
+                    <p className="wl-signal-title">Current focus</p>
+                    <ul className="wl-signal-list">
                       {(launch.currentFocus ?? []).map((item) => (
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
                   </div>
-                  <div className="client-launch-signal">
-                    <p className="client-launch-signal-title">Next milestone</p>
-                    <ul className="client-launch-signal-list">
+                  <div className="wl-signal-block">
+                    <p className="wl-signal-title">Next milestone</p>
+                    <ul className="wl-signal-list">
                       {(launch.nextMilestone ?? []).map((item) => (
                         <li key={item}>{item}</li>
                       ))}
@@ -241,9 +302,16 @@ export default function WorkPageClient() {
                   </div>
                 </div>
 
-                <div className="client-launch-actions">
+                <div className="wl-offer-pill-row">
+                  <span className="wl-offer-badge">{launch.offerProof.label}</span>
+                  {launch.lastUpdatedLabel ? (
+                    <span className="wl-update-label">{launch.lastUpdatedLabel}</span>
+                  ) : null}
+                </div>
+
+                <div className="wl-launch-actions">
                   <Link href={`/work/${launch.slug}`} prefetch={false} className="btn btn-secondary">
-                    View launch snapshot
+                    View snapshot
                   </Link>
                   <a
                     href={launch.websiteUrl}
@@ -251,14 +319,14 @@ export default function WorkPageClient() {
                     rel="noopener noreferrer"
                     className="btn btn-secondary"
                   >
-                    Visit live site
+                    Visit site ↗
                   </a>
                   <Link
                     href={`/work-with-ftc?offer=${launch.offerProof.value}`}
                     prefetch={false}
                     className="btn btn-primary"
                   >
-                    Start a similar project
+                    Start similar
                   </Link>
                 </div>
               </article>
@@ -267,24 +335,26 @@ export default function WorkPageClient() {
         </section>
       ) : null}
 
-      <article className="card final-cta-card">
-        <div>
+      {/* ── Final CTA ── */}
+      <article className="wl-cta-card">
+        <div className="wl-cta-copy">
           <p className="eyebrow">Next step</p>
-          <h2>Need proof, then a clear project path?</h2>
-          <p className="muted">
-            If one of these launches looks close to your situation, use the matching offer path
-            and Una Labs will respond with the shortest credible next move.
+          <h2>One of these looks like your situation?</h2>
+          <p>
+            Pick the matching offer track and send a request. Una Labs will reply with the
+            shortest credible next move — usually within 48 hours.
           </p>
         </div>
-        <div className="product-actions">
+        <div className="wl-cta-actions">
           <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
-            Start a Project
+            Start a project
           </Link>
-          <a href={ATEAM_SITE_URL} className="btn btn-secondary">
-            Enter ATEAM
-          </a>
+          <Link href="/pricing" prefetch={false} className="btn btn-secondary">
+            View pricing
+          </Link>
         </div>
       </article>
+
     </div>
   );
 }
