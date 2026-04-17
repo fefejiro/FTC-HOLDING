@@ -13731,3 +13731,284 @@ footer {
   font-family: monospace;
   color: var(--muted);
 }
+
+/* ============================================================
+   HOME — intake-forward narrative (pass: story restructure)
+   ============================================================ */
+
+/* Hero sub-note */
+.hero-sub-note {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-top: -4px;
+}
+
+/* ── Flow visual (hero RHS) ── */
+.home-flow-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 22px 20px;
+}
+
+.home-flow-kicker {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin: 0;
+}
+
+.home-flow-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.home-flow-step {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.home-flow-step:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.home-flow-step-num {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: rgba(143, 220, 255, 0.6);
+  letter-spacing: 0.06em;
+  padding-top: 3px;
+}
+
+.home-flow-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.home-flow-step-body strong {
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.home-flow-step-body span {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.home-flow-engine-note {
+  font-size: 0.78rem;
+  color: rgba(143, 220, 255, 0.55);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 12px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Engagement offers grid ── */
+.home-offers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.home-offer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 22px;
+}
+
+.home-offer-card--featured {
+  border-color: rgba(0, 212, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.12), 0 20px 40px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(160deg, rgba(0, 212, 255, 0.05), rgba(108, 92, 231, 0.06));
+}
+
+.home-offer-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.home-offer-card-head h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.home-offer-price {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: rgba(143, 220, 255, 0.85);
+  margin: 0;
+}
+
+.home-offer-summary {
+  font-size: 0.9rem;
+  color: var(--copy);
+  line-height: 1.55;
+  flex: 1;
+  margin: 0;
+}
+
+.home-offer-ideal {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.home-offer-ideal-label {
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+
+/* ── Engine card ── */
+.home-engine-card {
+  padding: clamp(24px, 3.5vw, 40px);
+}
+
+.home-engine-card > * {
+  /* handled by grid below */
+}
+
+.home-engine-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: clamp(24px, 4vw, 48px);
+  align-items: center;
+}
+
+.home-engine-copy {
+  display: grid;
+  gap: 14px;
+}
+
+.home-engine-copy h2 {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+}
+
+.home-engine-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 9px;
+}
+
+.home-engine-bullets li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.92rem;
+  color: var(--copy);
+}
+
+.home-engine-bullets li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-top: 0.55em;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: rgba(143, 220, 255, 0.7);
+}
+
+.home-engine-stats {
+  display: grid;
+  gap: 12px;
+}
+
+.home-engine-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+}
+
+.home-engine-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: rgba(143, 220, 255, 0.9);
+  line-height: 1;
+}
+
+.home-engine-stat-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ── Proof badge on launch cards ── */
+.home-proof-offer-badge {
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(143, 220, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .home-offers-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .home-engine-card {
+    grid-template-columns: 1fr;
+  }
+
+  .home-engine-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .home-flow-visual {
+    padding: 16px 14px;
+  }
+
+  .home-engine-stats {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .home-engine-stat {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+  }
+
+  .home-engine-stat-value {
+    font-size: 1.4rem;
+  }
+}

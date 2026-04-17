@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import HomePageExperience from "./components/HomePageExperience";
 
 export const metadata: Metadata = {
-  title: "Una Labs | Trusted Workflow Systems, Product Proof, and Delivery",
+  title: "Una Labs | Rough Request In. Scoped Delivery Out.",
   description:
-    "Una Labs is the public trust layer around shipped products, client launches, and ATEAM — the standalone operating system for rough requests that still need structure.",
+    "Una Labs takes your need — no matter how unformed — through ATEAM: structured intake, clear scope, a real proposal, and governed delivery execution.",
   alternates: {
     canonical: "https://unalabs.cloud"
   }
