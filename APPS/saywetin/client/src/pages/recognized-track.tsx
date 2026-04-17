@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useInteractionLogger } from '@/hooks/use-interaction-logger';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,6 @@ import {
   Loader2,
   CheckCircle2,
   FileText,
-  Sparkles,
   MapPin,
   Send,
   BookOpen,
@@ -789,19 +788,10 @@ export default function RecognizedTrack() {
   const canShowPrimaryMoment = Boolean(
     primaryMomentRow?.analysis && primaryMomentRow.text?.trim() && phraseCapture.kind === 'exact_match',
   );
-  const primaryMomentFallback = useMemo(() => {
-    if (phraseCapture.kind === 'instrumental') {
-      return {
-        headline: 'This part sounds instrumental or has no clear vocal yet.',
-        detail: 'Try another vocal line.',
-      };
-    }
-
-    return {
-      headline: 'We found the song, but could not lock the exact lyric yet.',
-      detail: 'Try another vocal line.',
-    };
-  }, [phraseCapture.kind]);
+  const primaryMomentFallback = {
+    headline: 'We found the song, but not the exact lyric yet.',
+    detail: 'Try another vocal part.',
+  };
   const primaryMeaningHeadline =
     primaryMomentMeaning.headline ||
     cleanInsightText(primaryGist?.summary) ||
@@ -1009,12 +999,6 @@ export default function RecognizedTrack() {
             data-testid="card-the-moment"
             className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 to-background"
           >
-            <CardHeader className="border-b border-primary/20 pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Lyric you just heard
-              </CardTitle>
-            </CardHeader>
             <CardContent className="space-y-6 p-6">
               {canShowPrimaryMoment && primaryMomentRow ? (
                 <>
@@ -1029,7 +1013,7 @@ export default function RecognizedTrack() {
 
                   <div className="space-y-3 rounded-2xl border border-primary/15 bg-background/80 p-5">
                     <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
-                      What it means
+                      Meaning
                     </p>
                     <p className="text-lg font-semibold leading-relaxed text-foreground">
                       {primaryMeaningHeadline || 'We are still unpacking what this line means.'}
@@ -1042,13 +1026,23 @@ export default function RecognizedTrack() {
                   </div>
                 </>
               ) : (
-                <div className="space-y-2 rounded-2xl border border-dashed border-border/80 bg-background/70 px-5 py-5">
-                  <p className="text-lg font-semibold text-foreground">
-                    {primaryMomentFallback.headline}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {primaryMomentFallback.detail}
-                  </p>
+                <div className="space-y-4 rounded-2xl border border-dashed border-border/80 bg-background/70 px-5 py-5">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                      Lyric
+                    </p>
+                    <p className="text-lg font-semibold text-foreground">
+                      {primaryMomentFallback.headline}
+                    </p>
+                  </div>
+                  <div className="space-y-2 rounded-2xl border border-primary/15 bg-background/80 p-5">
+                    <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                      Meaning
+                    </p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {primaryMomentFallback.detail}
+                    </p>
+                  </div>
                 </div>
               )}
 

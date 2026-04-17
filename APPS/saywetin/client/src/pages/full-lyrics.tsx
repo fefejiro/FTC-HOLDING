@@ -61,6 +61,7 @@ interface SlangTerm {
 type LineFeedbackState = {
   status: 'loading' | 'unavailable' | 'failed';
   message?: string;
+  background?: boolean;
 };
 
 type LyricRowVisualState = 'idle' | 'loading' | 'analyzed' | 'unavailable';
@@ -159,7 +160,12 @@ function parseSlangTerms(value?: string | SlangTerm[] | null): SlangTerm[] {
   }
 }
 
-function getLyricRowVisualState(row: OrderedLyricLine, feedback?: LineFeedbackState): LyricRowVisualState {
+function getLyricRowVisualState(
+  row: OrderedLyricLine,
+  feedback: LineFeedbackState | undefined,
+  isExpanded: boolean,
+): LyricRowVisualState {
+  if (feedback?.background && !isExpanded) return row.analysis ? 'analyzed' : 'idle';
   if (feedback?.status === 'loading') return 'loading';
   if (feedback?.status === 'unavailable' || feedback?.status === 'failed') return 'unavailable';
   if (row.analysis) return 'analyzed';
@@ -178,7 +184,7 @@ function LineStateBadge({ state }: { state: LyricRowVisualState }) {
     return (
       <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        Opening
+        Loading meaning
       </Badge>
     );
   }
@@ -201,7 +207,7 @@ function LineStateBadge({ state }: { state: LyricRowVisualState }) {
   return (
     <Badge variant="outline" className="gap-1.5 border-primary/25 text-primary">
       <Sparkles className="h-3.5 w-3.5" />
-      Open
+      View meaning
     </Badge>
   );
 }
@@ -289,13 +295,13 @@ function UnifiedLyricRow({
   onPress: () => void;
   onRetry: () => void;
 }) {
-  const visualState = getLyricRowVisualState(row, feedback);
+  const visualState = getLyricRowVisualState(row, feedback, isExpanded);
   const hasAnalysis = visualState === 'analyzed';
   const collapsedSupportText =
     visualState === 'analyzed'
       ? row.analysis?.translation
       : visualState === 'loading'
-        ? 'Opening meaning for this line...'
+        ? 'Loading meaning for this line...'
         : visualState === 'unavailable'
           ? getLineFallbackMessage(feedback)
           : null;
@@ -357,7 +363,7 @@ function UnifiedLyricRow({
               <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-primary">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Opening meaning
+                  Loading meaning
                 </div>
                 <div className="mt-4 space-y-3">
                   <Skeleton className="h-4 w-full" />
@@ -505,7 +511,10 @@ export default function FullLyricsPage() {
     navigate(`/song/${suggestionId}`);
   };
 
-  const analyzeFallback = async (row: OrderedLyricLine) => {
+  const analyzeFallback = async (
+    row: OrderedLyricLine,
+    options?: { background?: boolean },
+  ) => {
     try {
       const endpoint = getApiUrl('/api/analyze-line');
       const requestBody = {
@@ -559,6 +568,7 @@ export default function FullLyricsPage() {
           message: result.status === 'unavailable'
             ? 'Meaning for this line is not ready yet.'
             : 'This line did not open this time.',
+          background: options?.background,
         });
       }
     } catch (err: any) {
@@ -568,22 +578,28 @@ export default function FullLyricsPage() {
         message: err?.feedbackStatus === 'unavailable'
           ? 'Meaning for this line is not ready yet.'
           : 'This line did not open this time.',
+        background: options?.background,
       });
     } finally {
       clearLineState(row.key);
     }
   };
 
-  const handleLazyAnalyze = (row: OrderedLyricLine) => {
+  const requestLineAnalysis = (
+    row: OrderedLyricLine,
+    options?: { activate?: boolean; background?: boolean },
+  ) => {
     if (!data || loadingLines.has(row.key)) return;
 
-    setSelectedLineKey(row.key);
+    if (options?.activate) {
+      setSelectedLineKey(row.key);
+    }
     setLoadingLines((prev) => new Set(prev).add(row.key));
-    setLineFeedbackState(row.key, { status: 'loading' });
+    setLineFeedbackState(row.key, { status: 'loading', background: options?.background });
 
     const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
     if (isNative) {
-      analyzeFallback(row);
+      analyzeFallback(row, options);
       return;
     }
 
@@ -603,7 +619,7 @@ export default function FullLyricsPage() {
       if (!receivedMessage) {
         console.warn('[ANALYZE] SSE timeout, falling back to fetch');
         es.close();
-        analyzeFallback(row);
+        analyzeFallback(row, options);
       }
     }, 8000);
 
@@ -620,7 +636,7 @@ export default function FullLyricsPage() {
           } else {
             console.warn('[ANALYZE] Could not parse streaming payload, falling back');
             es.close();
-            analyzeFallback(row);
+            analyzeFallback(row, options);
             return;
           }
           clearLineState(row.key);
@@ -630,7 +646,11 @@ export default function FullLyricsPage() {
         } else if (parsed.type === 'error') {
           clearTimeout(sseTimeout);
           clearLineState(row.key);
-          setLineFeedbackState(row.key, { status: 'unavailable', message: 'Meaning for this line is not ready yet.' });
+          setLineFeedbackState(row.key, {
+            status: 'unavailable',
+            message: 'Meaning for this line is not ready yet.',
+            background: options?.background,
+          });
           console.warn('[ANALYZE] SSE error event:', parsed.data);
           es.close();
         }
@@ -644,7 +664,7 @@ export default function FullLyricsPage() {
       es.close();
       if (!receivedMessage) {
         console.warn('[ANALYZE] SSE onerror before first message, falling back');
-        analyzeFallback(row);
+        analyzeFallback(row, options);
       } else {
         clearLineState(row.key);
       }
@@ -675,6 +695,40 @@ export default function FullLyricsPage() {
         .filter((line): line is OrderedLyricLine => Boolean(line)),
     [orderedLyricLines, phraseCapture.highlightedLineIndexes],
   );
+  const defaultMomentRow = useMemo(() => {
+    const anchoredRow =
+      typeof phraseCapture.anchoredLineIndex === 'number'
+        ? orderedLyricLines.find((line) => line.lineIndex === phraseCapture.anchoredLineIndex)
+        : undefined;
+
+    if (anchoredRow) return anchoredRow;
+    if (estimatedMomentIndex !== null) {
+      const estimatedRow = orderedLyricLines.find((line) => line.lineIndex === estimatedMomentIndex);
+      if (estimatedRow) return estimatedRow;
+    }
+
+    return orderedLyricLines[0] || null;
+  }, [estimatedMomentIndex, orderedLyricLines, phraseCapture.anchoredLineIndex]);
+  const prioritizedMomentRows = useMemo(() => {
+    if (!defaultMomentRow) return [];
+
+    const seen = new Set<string>([defaultMomentRow.key]);
+    const neighbors = [...momentRows]
+      .filter((row) => row.key !== defaultMomentRow.key)
+      .sort((left, right) => {
+        const leftDistance = Math.abs(left.lineIndex - defaultMomentRow.lineIndex);
+        const rightDistance = Math.abs(right.lineIndex - defaultMomentRow.lineIndex);
+        return leftDistance - rightDistance;
+      });
+
+    return [defaultMomentRow, ...neighbors]
+      .filter((row) => {
+        if (seen.has(row.key)) return row.key === defaultMomentRow.key;
+        seen.add(row.key);
+        return true;
+      })
+      .slice(0, 3);
+  }, [defaultMomentRow, momentRows]);
 
   const analysisViewState = data?.status?.analysis;
   const canRetryEnrichment =
@@ -695,20 +749,21 @@ export default function FullLyricsPage() {
     setLineFeedback(new Map());
   }, [trackId]);
 
-  // Auto-enrich moment lines (P3 & P4 — reduce manual friction)
+  // Auto-enrich the default line first, then nearby lines without stealing focus.
   useEffect(() => {
     if (hasTriggeredMomentAnalysis.current || !data) return;
     if (data.track.analysisStatus === 'generating_analysis' || data.track.analysisStatus === 'pending') return;
-    const unresolved = momentRows.filter((row) => !row.analysis);
+    const unresolved = prioritizedMomentRows.filter((row) => !row.analysis);
     if (unresolved.length === 0) return;
 
     hasTriggeredMomentAnalysis.current = true;
 
-    // Auto-enrich the most likely heard line + 1 neighbor
-    for (const row of unresolved.slice(0, 2)) {
-      handleLazyAnalyze(row);
-    }
-  }, [momentRows, data]);
+    unresolved.forEach((row, index) => {
+      requestLineAnalysis(row, {
+        background: index > 0,
+      });
+    });
+  }, [data, prioritizedMomentRows]);
 
   // Clear feedback for lines that got analyzed
   useEffect(() => {
@@ -727,15 +782,11 @@ export default function FullLyricsPage() {
     });
   }, [orderedLyricLines]);
 
-  // Default open the estimated moment line
+  // Default open the best matched line without waiting for a tap.
   useEffect(() => {
     if (selectedLineKey || orderedLyricLines.length === 0) return;
-    const defaultLine =
-      (estimatedMomentIndex !== null
-        ? orderedLyricLines.find((line) => line.lineIndex === estimatedMomentIndex)
-        : undefined) || orderedLyricLines[0];
-    if (defaultLine) setSelectedLineKey(defaultLine.key);
-  }, [orderedLyricLines, estimatedMomentIndex, selectedLineKey]);
+    if (defaultMomentRow) setSelectedLineKey(defaultMomentRow.key);
+  }, [defaultMomentRow, orderedLyricLines.length, selectedLineKey]);
 
   const handleLyricRowPress = (row: OrderedLyricLine) => {
     const feedback = lineFeedback.get(row.key);
@@ -747,7 +798,7 @@ export default function FullLyricsPage() {
 
     setSelectedLineKey(row.key);
     if (row.analysis || feedback?.status === 'loading') return;
-    handleLazyAnalyze(row);
+    requestLineAnalysis(row);
   };
 
   if (isLoading || !data) {
@@ -851,7 +902,7 @@ export default function FullLyricsPage() {
                     <Globe className="h-5 w-5 text-primary" />
                     Full lyrics
                   </CardTitle>
-                  <CardDescription className="mt-1">Open a line when you want the deeper meaning.</CardDescription>
+                  <CardDescription className="mt-1">Best-matched lines open first. Nearby meaning loads in the background.</CardDescription>
                 </div>
                 {false && hasSlangTerms && (
                   <Button
@@ -894,7 +945,7 @@ export default function FullLyricsPage() {
                               isExpanded={isExpanded}
                               isCurrentMoment={isCurrentMoment}
                               onPress={() => handleLyricRowPress(row)}
-                              onRetry={() => handleLazyAnalyze(row)}
+                              onRetry={() => requestLineAnalysis(row)}
                             />
                           </div>
                         </div>
