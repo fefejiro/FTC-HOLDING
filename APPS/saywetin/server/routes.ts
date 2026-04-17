@@ -63,6 +63,36 @@ function getErrorMessage(error: unknown): string {
   return "";
 }
 
+function parseStreamingAnalysisPayload(payload: unknown): Record<string, unknown> | null {
+  if (payload && typeof payload === "object") {
+    return payload as Record<string, unknown>;
+  }
+
+  if (typeof payload !== "string") {
+    return null;
+  }
+
+  const trimmed = payload.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(trimmed) as Record<string, unknown>;
+  } catch {
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+}
+
 function classifyDatabaseIssue(error: unknown): InfrastructureIssue | null {
   const message = getErrorMessage(error);
   if (!message) return null;
@@ -2428,18 +2458,33 @@ Rules:
         if (event.type === 'complete' && trackId) {
           // Save to database
           try {
-            const analysis = JSON.parse(event.data);
+            const analysis = parseStreamingAnalysisPayload(event.data);
+            if (!analysis || typeof analysis.translation !== 'string' || analysis.translation.trim().length === 0) {
+              console.warn('[STREAM] Completed analysis payload could not be parsed for persistence', {
+                trackId: String(trackId),
+                lyricPreview: text.slice(0, 80),
+                payloadPreview: typeof event.data === 'string' ? event.data.slice(0, 160) : null,
+              });
+              continue;
+            }
+
+            const serializedSlangTerms = Array.isArray(analysis.slangTerms)
+              ? JSON.stringify(analysis.slangTerms)
+              : typeof analysis.slangTerms === 'string'
+                ? analysis.slangTerms
+                : null;
+
             await storage.createAiTranslation({
               recognizedTrackId: String(trackId),
               lyricLineId: null,
               originalText: text,
               translation: analysis.translation,
-              culturalContext: analysis.culturalContext,
-              artistIntent: analysis.artistIntent,
-              deeperMeaning: analysis.deeperMeaning,
-              languageNotes: analysis.languageNotes || null,
-              detectedLanguage: analysis.detectedLanguage,
-              slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+              culturalContext: typeof analysis.culturalContext === 'string' ? analysis.culturalContext : null,
+              artistIntent: typeof analysis.artistIntent === 'string' ? analysis.artistIntent : null,
+              deeperMeaning: typeof analysis.deeperMeaning === 'string' ? analysis.deeperMeaning : null,
+              languageNotes: typeof analysis.languageNotes === 'string' ? analysis.languageNotes : null,
+              detectedLanguage: typeof analysis.detectedLanguage === 'string' ? analysis.detectedLanguage : null,
+              slangTerms: serializedSlangTerms,
               textHash,
             });
             console.log(`💾 [STREAM] Saved streaming analysis to database`);
