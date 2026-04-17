@@ -319,11 +319,11 @@ function UnifiedLyricRow({
       >
         <div className="min-w-0 flex-1 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            {isCurrentMoment && (
-              <Badge variant="outline" className="border-primary/35 bg-primary/5 text-primary">
-                Closest section
-              </Badge>
-            )}
+              {isCurrentMoment && (
+                <Badge variant="outline" className="border-primary/35 bg-primary/5 text-primary">
+                  Likely line
+                </Badge>
+              )}
             <LineStateBadge state={visualState} />
           </div>
           <p className="font-serif text-[1.05rem] leading-8 text-foreground sm:text-[1.12rem]" data-testid={`text-original-${row.lineIndex}`}>
@@ -823,7 +823,7 @@ export default function FullLyricsPage() {
             <h1 className="text-xl font-bold">{track.title}</h1>
             <p className="text-muted-foreground">{track.artist}</p>
             <p className="text-xs text-muted-foreground">
-              {orderedLyricLines.length} lines · tap any line to get meaning
+              {orderedLyricLines.length} lines ready to explore
             </p>
           </div>
 
@@ -849,9 +849,9 @@ export default function FullLyricsPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2 text-xl">
                     <Globe className="h-5 w-5 text-primary" />
-                    Lyrics &amp; What They Mean
+                    Full lyrics
                   </CardTitle>
-                  <CardDescription className="mt-1">Open any line to explore the meaning</CardDescription>
+                  <CardDescription className="mt-1">Open a line when you want the deeper meaning.</CardDescription>
                 </div>
                 {false && hasSlangTerms && (
                   <Button
