@@ -970,6 +970,34 @@ export default function RecognizedTrack() {
                   {track.artist}
                 </p>
               </div>
+              {(track.spotifyId || track.youtubeId) && (
+                <div className="flex flex-wrap gap-2">
+                  {track.spotifyId && (
+                    <a
+                      href={`https://open.spotify.com/track/${track.spotifyId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/85 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                      data-testid="link-result-spotify"
+                    >
+                      <span>Spotify</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                  {track.youtubeId && (
+                    <a
+                      href={`https://youtube.com/watch?v=${track.youtubeId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/85 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                      data-testid="link-result-youtube"
+                    >
+                      <span>YouTube</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
