@@ -1,187 +1,266 @@
-import { useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TagPill, GenreTag, LanguageTag } from '@/components/ui/tag-pill';
-import { DidYouKnowCard } from '@/components/did-you-know-card';
-import { Search, Music, TrendingUp, Clock } from 'lucide-react';
+import { Search, Music, Clock, ArrowLeft } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
+
+interface SearchResult {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  genre?: string;
+  createdAt: string;
+}
 
 interface RecognizedTrackInfo {
   id: string;
   title: string;
   artist: string;
-  album?: string;
-  genres?: string[];
-  languages?: string[];
+  coverArtUrl?: string | null;
 }
 
 interface ListeningSession {
   id: string;
-  status: string;
   createdAt: string;
   recognizedTrack?: RecognizedTrackInfo;
 }
 
-const culturalFacts = [
-  "Afrobeats fuse traditional Yoruba drums with modern electronic beats, creating a unique sound that's taken over the world.",
-  "Nigerian Pidgin English is spoken by over 75 million people across West Africa.",
-  "The 'Zanku' dance originated from the streets of Lagos and became a global phenomenon.",
-  "Many Afrobeats songs contain proverbs and sayings passed down through generations.",
-];
+function formatRelativeTime(input: string) {
+  const createdAt = new Date(input).getTime();
+  if (Number.isNaN(createdAt)) {
+    return 'Recently';
+  }
+
+  const diffMs = Date.now() - createdAt;
+  const diffMinutes = Math.max(1, Math.round(diffMs / 60000));
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} hr ago`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+}
 
 export default function Explore() {
   const [, navigate] = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [draftQuery, setDraftQuery] = useState('');
+  const [activeQuery, setActiveQuery] = useState('');
 
-  const { data: recentTracks, isLoading } = useQuery<ListeningSession[]>({
+  const trimmedActiveQuery = activeQuery.trim();
+  const queryString = useMemo(() => {
+    if (!trimmedActiveQuery) {
+      return '';
+    }
+
+    const params = new URLSearchParams({ q: trimmedActiveQuery });
+    return params.toString();
+  }, [trimmedActiveQuery]);
+
+  const { data: searchResults = [], isFetching } = useQuery<SearchResult[]>({
+    queryKey: ['/api/search', queryString],
+    enabled: trimmedActiveQuery.length > 0,
+  });
+
+  const { data: recentTracks = [] } = useQuery<ListeningSession[]>({
     queryKey: ['/api/listening-history'],
   });
 
-  const genres = ['Afrobeats', 'Amapiano', 'Highlife', 'Juju', 'Fuji', 'Afropop'];
-  const languages = ['Yoruba', 'Pidgin', 'Igbo', 'Hausa', 'English', 'Zulu'];
-
-  const randomFact = culturalFacts[Math.floor(Math.random() * culturalFacts.length)];
-
-  const handleTrackClick = (trackId: string) => {
-    navigate(`/song/${trackId}`);
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setActiveQuery(draftQuery);
   };
+
+  const showSearchResults = trimmedActiveQuery.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold mb-1" data-testid="heading-explore">
-            Explore
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              data-testid="button-explore-back"
+              aria-label="Back to home"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <Link href="/">
+              <button className="flex items-center gap-2" data-testid="button-home">
+                <Music className="h-6 w-6 text-primary" />
+                <span className="text-xl font-bold">Saywetin</span>
+              </button>
+            </Link>
+          </div>
+          <ThemeToggle />
+        </div>
+      </header>
+
+      <main className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6">
+        <section className="space-y-2">
+          <h1 className="text-2xl font-bold" data-testid="heading-explore">
+            Search songs
           </h1>
-          <p className="text-muted-foreground">
-            Discover songs and their meanings
+          <p className="text-sm text-muted-foreground">
+            Search by lyric, title, or artist. We hid the broken filters for now so this page stays reliable.
           </p>
-        </div>
+        </section>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by title, artist, or lyrics..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-            data-testid="input-search-explore"
-          />
-        </div>
-
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">Filter by Genre</p>
-          <div className="flex flex-wrap gap-2">
-            {genres.map((genre) => (
-              <button
-                key={genre}
-                onClick={() => setSelectedGenre(selectedGenre === genre ? null : genre)}
-                className={`transition-all ${selectedGenre === genre ? 'scale-105' : ''}`}
-                data-testid={`filter-genre-${genre.toLowerCase()}`}
-              >
-                <GenreTag 
-                  genre={genre} 
-                  className={selectedGenre === genre ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
-                />
-              </button>
-            ))}
+        <form onSubmit={handleSearch} className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Try a lyric like “vibe killer” or a song title"
+              value={draftQuery}
+              onChange={(event) => setDraftQuery(event.target.value)}
+              className="h-12 pl-10 text-base"
+              data-testid="input-search-explore"
+            />
           </div>
-        </div>
+          <Button
+            type="submit"
+            className="h-11 px-5"
+            disabled={draftQuery.trim().length === 0}
+            data-testid="button-search-explore"
+          >
+            Search
+          </Button>
+        </form>
 
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">Filter by Language</p>
-          <div className="flex flex-wrap gap-2">
-            {languages.map((lang) => (
-              <button
-                key={lang}
-                onClick={() => setSelectedLanguage(selectedLanguage === lang ? null : lang)}
-                className={`transition-all ${selectedLanguage === lang ? 'scale-105' : ''}`}
-                data-testid={`filter-lang-${lang.toLowerCase()}`}
-              >
-                <LanguageTag 
-                  language={lang} 
-                  className={selectedLanguage === lang ? 'ring-2 ring-gold ring-offset-2 ring-offset-background' : ''}
-                />
-              </button>
-            ))}
-          </div>
-        </div>
+        {showSearchResults ? (
+          <section className="space-y-4" data-testid="section-search-results">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">
+                Results for “{trimmedActiveQuery}”
+              </h2>
+              {!isFetching && (
+                <p className="text-sm text-muted-foreground">
+                  {searchResults.length} match{searchResults.length === 1 ? '' : 'es'}
+                </p>
+              )}
+            </div>
 
-        <DidYouKnowCard fact={randomFact} />
-
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold">Recently Explored</h2>
-          </div>
-
-          {isLoading ? (
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i}>
-                  <CardContent className="p-4">
-                    <div className="flex gap-4">
-                      <Skeleton className="h-14 w-14 rounded-lg" />
+            {isFetching ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, index) => (
+                  <Card key={index}>
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <Skeleton className="h-14 w-14 rounded-2xl" />
                       <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-2/3" />
                         <Skeleton className="h-3 w-1/2" />
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : searchResults.length > 0 ? (
+              <div className="space-y-3">
+                {searchResults.map((track) => (
+                  <Card
+                    key={track.id}
+                    className="cursor-pointer transition-shadow hover:shadow-lg"
+                    onClick={() => navigate(`/song/${track.id}`)}
+                    data-testid={`search-result-${track.id}`}
+                  >
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                        <Music className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate font-semibold">{track.title}</h3>
+                        <p className="truncate text-sm text-muted-foreground">{track.artist}</p>
+                        {track.album ? (
+                          <p className="truncate text-xs text-muted-foreground/80">{track.album}</p>
+                        ) : null}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Search className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+                  <h3 className="font-semibold">No songs found yet</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Try a different lyric line, artist name, or song title.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </section>
+        ) : (
+          <section className="space-y-4" data-testid="section-recent-search">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              <h2 className="text-lg font-semibold">Recent recognitions</h2>
             </div>
-          ) : recentTracks && recentTracks.length > 0 ? (
-            <div className="space-y-3">
-              {recentTracks
-                .filter(track => track.recognizedTrack)
-                .slice(0, 10)
-                .map((session) => {
-                  const track = session.recognizedTrack!;
-                  return (
-                    <Card 
-                      key={session.id} 
-                      className="hover-elevate cursor-pointer"
-                      onClick={() => handleTrackClick(track.id)}
-                      data-testid={`track-card-${track.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex gap-4 items-center">
-                          <div className="h-14 w-14 rounded-lg bg-muted flex items-center justify-center">
-                            <Music className="h-6 w-6 text-muted-foreground" />
+
+            {recentTracks.length > 0 ? (
+              <div className="space-y-3">
+                {recentTracks
+                  .filter((session) => session.recognizedTrack)
+                  .slice(0, 8)
+                  .map((session) => {
+                    const track = session.recognizedTrack!;
+                    return (
+                      <Card
+                        key={session.id}
+                        className="cursor-pointer transition-shadow hover:shadow-lg"
+                        onClick={() => navigate(`/song/${track.id}`)}
+                        data-testid={`recent-track-${track.id}`}
+                      >
+                        <CardContent className="flex items-center gap-4 p-4">
+                          {track.coverArtUrl ? (
+                            <img
+                              src={track.coverArtUrl}
+                              alt={`${track.title} cover art`}
+                              className="h-14 w-14 rounded-2xl object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                              <Music className="h-6 w-6 text-primary" />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate font-semibold">{track.title}</h3>
+                            <p className="truncate text-sm text-muted-foreground">{track.artist}</p>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium truncate" data-testid={`text-track-title-${track.id}`}>
-                              {track.title}
-                            </h3>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {track.artist}
-                            </p>
-                          </div>
-                          <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Music className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">No songs explored yet</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Use the Interpret tab to discover songs
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                          <p className="whitespace-nowrap text-xs text-muted-foreground">
+                            {formatRelativeTime(session.createdAt)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Music className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Recognize a song first, then it will show up here.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </section>
+        )}
       </main>
     </div>
   );

@@ -535,14 +535,15 @@ export class DatabaseStorage implements IStorage {
 
     const conditions: any[] = [];
 
-    // Text search across title, artist, album
+    // Text search across title, artist, album, and cached lyrics text
     if (query && query.trim()) {
       const searchTerm = `%${query.trim().toLowerCase()}%`;
       conditions.push(
         sql`(
           LOWER(${recognizedTracks.title}) LIKE ${searchTerm} OR
           LOWER(${recognizedTracks.artist}) LIKE ${searchTerm} OR
-          LOWER(${recognizedTracks.album}) LIKE ${searchTerm}
+          LOWER(COALESCE(${recognizedTracks.album}, '')) LIKE ${searchTerm} OR
+          LOWER(COALESCE(${transientLyrics.fullLyrics}, '')) LIKE ${searchTerm}
         )`
       );
     }
