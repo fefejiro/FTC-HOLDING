@@ -108,7 +108,7 @@ export default function BuildPage() {
                 </ul>
                 <div className="build-sidebar-price">
                   <span>Starting at</span>
-                  <strong>$3,999 USD</strong>
+                  <strong>$3,999 CAD</strong>
                 </div>
               </div>
             </aside>

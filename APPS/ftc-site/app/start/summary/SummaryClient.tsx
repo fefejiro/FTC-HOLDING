@@ -172,7 +172,7 @@ export default function SummaryClient() {
             <div className="summary-plan-card summary-plan-card--deposit">
               <div className="summary-plan-header">
                 <p className="summary-plan-name">Deposit</p>
-                <p className="summary-plan-price">$999 <span>USD</span></p>
+                <p className="summary-plan-price">$999 <span>CAD</span></p>
               </div>
               <p className="summary-plan-desc">
                 Lock in your spot and kick off the intake process. Remaining $3,000 due before build starts.
@@ -191,7 +191,7 @@ export default function SummaryClient() {
               <div className="summary-plan-badge">Best value</div>
               <div className="summary-plan-header">
                 <p className="summary-plan-name">Pay in Full</p>
-                <p className="summary-plan-price">$3,999 <span>USD</span></p>
+                <p className="summary-plan-price">$3,999 <span>CAD</span></p>
               </div>
               <p className="summary-plan-desc">
                 Full payment upfront. Build starts immediately after payment confirmation.

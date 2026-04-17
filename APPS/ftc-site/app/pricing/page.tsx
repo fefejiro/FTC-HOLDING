@@ -35,7 +35,7 @@ export default function PricingPage() {
                 <div className="pricing-card-price">
                   <span className="pricing-card-from">Starting at</span>
                   <span className="pricing-card-amount">$3,999</span>
-                  <span className="pricing-card-currency">USD</span>
+                  <span className="pricing-card-currency">CAD</span>
                 </div>
               </div>
 
