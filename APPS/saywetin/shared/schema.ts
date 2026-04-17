@@ -45,6 +45,8 @@ export const songs = pgTable("songs", {
 export const insertSongSchema = createInsertSchema(songs).omit({
   id: true,
   createdAt: true,
+}).extend({
+  licenseType: z.enum(licenseTypes),
 });
 
 export type InsertSong = z.infer<typeof insertSongSchema>;
@@ -188,6 +190,9 @@ export const recognizedTracks = pgTable("recognized_tracks", {
 export const insertRecognizedTrackSchema = createInsertSchema(recognizedTracks).omit({
   id: true,
   createdAt: true,
+}).extend({
+  lyricsStatus: z.enum(processingStatuses).optional(),
+  analysisStatus: z.enum(processingStatuses).optional(),
 });
 
 export type InsertRecognizedTrack = z.infer<typeof insertRecognizedTrackSchema>;

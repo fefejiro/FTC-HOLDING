@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Gamepad2, X, Trophy, RotateCcw, Flame, Zap, Clock } from 'lucide-react';
+import { Gamepad2, X, RotateCcw, Flame, Zap, Clock } from 'lucide-react';
 
 interface SlangTerm {
   term: string;
@@ -311,7 +311,6 @@ export function SlangMatchGame({ slangTerms, onClose, onRestart }: SlangMatchGam
                 {choices.map((choice, i) => {
                   const isCorrect = choice.meaning === currentTerm.meaning;
                   const isSelected = selected === choice.meaning;
-                  const isTimeout = selected === '__timeout__';
 
                   let state: 'default' | 'correct' | 'wrong' | 'reveal' = 'default';
                   if (feedback) {

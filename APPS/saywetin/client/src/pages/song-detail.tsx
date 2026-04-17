@@ -88,7 +88,7 @@ export default function SongDetail() {
           songId: song?.id,
         }
       );
-      return response as { translation: string; culturalMeaning: string };
+      return response as unknown as { translation: string; culturalMeaning: string };
     },
     onError: () => {
       toast({

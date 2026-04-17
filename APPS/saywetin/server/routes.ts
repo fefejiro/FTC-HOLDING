@@ -298,8 +298,8 @@ async function transcribeAudioForSongIdentification(
       });
 
       const text =
-        typeof transcription === "string"
-          ? transcription.trim()
+        typeof (transcription as unknown) === "string"
+          ? (transcription as unknown as string).trim()
           : typeof transcription.text === "string"
             ? transcription.text.trim()
             : "";

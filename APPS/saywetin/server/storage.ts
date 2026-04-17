@@ -284,26 +284,14 @@ export class DatabaseStorage implements IStorage {
 
   // Favorites
   async getFavoritesBySongId(userId: string): Promise<Song[]> {
-    const result = await db
-      .select({
-        id: songs.id,
-        title: songs.title,
-        artist: songs.artist,
-        language: songs.language,
-        languageName: songs.languageName,
-        licenseType: songs.licenseType,
-        licenseUrl: songs.licenseUrl,
-        lyricsStorageAllowed: songs.lyricsStorageAllowed,
-        coverArtUrl: songs.coverArtUrl,
-        userGeneratedMode: songs.userGeneratedMode,
-        createdAt: songs.createdAt,
-      })
-      .from(favorites)
-      .innerJoin(songs, eq(favorites.songId, songs.id))
+    const rows = await db
+      .select()
+      .from(songs)
+      .innerJoin(favorites, eq(favorites.songId, songs.id))
       .where(eq(favorites.userId, userId))
       .orderBy(desc(favorites.createdAt));
-    
-    return result;
+
+    return rows.map((r) => r.songs);
   }
 
   async isSongFavorited(userId: string, songId: string): Promise<boolean> {

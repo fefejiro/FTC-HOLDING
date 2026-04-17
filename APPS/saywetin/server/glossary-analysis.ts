@@ -17,7 +17,7 @@ export interface GlossaryAnalysisResult {
   slangTerms?: GlossarySlangTerm[];
 }
 
-export interface GlossaryLyricAnalysisRecord extends GlossaryAnalysisResult {
+export interface GlossaryLyricAnalysisRecord extends Omit<GlossaryAnalysisResult, 'slangTerms'> {
   id: string;
   originalText: string;
   slangTerms: string | null;

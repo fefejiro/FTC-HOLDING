@@ -1,4 +1,3 @@
-import { getApiUrl } from "@/lib/api-config";
 
 export function isUnauthorizedError(error: Error): boolean {
   return /^401: .*Unauthorized/.test(error.message);
@@ -14,10 +13,6 @@ export function redirectToLogin(toast?: (options: { title: string; description: 
     });
   }
   setTimeout(() => {
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    } else {
-      window.location.href = getApiUrl("/api/login");
-    }
+    window.location.href = "/login";
   }, 500);
 }
