@@ -51,13 +51,12 @@ export default function HomePageExperience() {
             <div className="premium-hero-grid">
 
               <div className="premium-hero-copy">
-                <p className="eyebrow">Una Labs · AI workflow infrastructure</p>
+             Una Labs · Digital and AI workflow systems
                 <h1 className="hero-primary-title">
-                  Rough request in. Scoped delivery out.
+ Rough need in. Scoped digital and AI solutions out.
                 </h1>
                 <p className="lead">
-                  Una Labs takes your need — no matter how unformed — and runs it through ATEAM:
-                  structured intake, clear scope, a real proposal, and governed delivery execution.
+                  structured intake, clear scope, a real proposal, and governed delivery across digital, SEO, AI, and automation.
                 </p>
                 <div className="hero-cta-row">
                   <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
