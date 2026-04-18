@@ -40,9 +40,14 @@ function sanitize(value: unknown, maxLen = 500): string {
   return String(value ?? '').trim().slice(0, maxLen);
 }
 
+function cleanSecret(val: string): string {
+  // Strip BOM (U+FEFF) and whitespace that PowerShell stdin may prepend
+  return val.replace(/^\uFEFF/, '').trim();
+}
+
 function getStripe(env: Env): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not configured.');
-  return new Stripe(env.STRIPE_SECRET_KEY, {
+  return new Stripe(cleanSecret(env.STRIPE_SECRET_KEY), {
     apiVersion: '2026-03-25.dahlia',
     httpClient: Stripe.createFetchHttpClient(),
   });
@@ -62,9 +67,10 @@ function getPriceId(env: Env, tier: string, billing: string): string | undefined
     agency_monthly: env.STRIPE_PRICE_AGENCY_MONTHLY,
     agency_annual: env.STRIPE_PRICE_AGENCY_ANNUAL,
     enterprise_monthly: env.STRIPE_PRICE_ENTERPRISE_MONTHLY,
-    enterprise_annual: env.STRIPE_PRICE_ENTERPRISE_MONTHLY, // same for enterprise
+    enterprise_annual: env.STRIPE_PRICE_ENTERPRISE_MONTHLY,
   };
-  return map[`${tier}_${billing}`];
+  const val = map[`${tier}_${billing}`];
+  return val ? cleanSecret(val) : undefined;
 }
 
 async function handleCreateCheckoutSession(req: Request, env: Env, origin: string | null): Promise<Response> {
