@@ -334,6 +334,14 @@ function getWebCaptureProfile(requestedDuration: number): WebCaptureProfile {
   };
 }
 
+function getNativeCaptureDurationSec(requestedDuration: number, nativeAndroid: boolean): number {
+  if (nativeAndroid) {
+    return Math.max(requestedDuration, 8);
+  }
+
+  return Math.max(requestedDuration, 5);
+}
+
 export function AudioRecorder({
   onSuccess,
   listenDuration = 5,
@@ -408,6 +416,7 @@ export function AudioRecorder({
       setFailureDisplay(null);
       setRecordingState('requesting');
       audioChunksRef.current = [];
+      const effectiveListenDuration = getNativeCaptureDurationSec(listenDuration, nativeAndroid);
 
       let hasPermission = await hasRecordingPermission();
       console.log('[SAYWETIN] hasPermission:', hasPermission);
@@ -419,7 +428,8 @@ export function AudioRecorder({
         }
       }
 
-      captureDurationMsRef.current = Math.max(listenDuration, 0) * 1000;
+      captureDurationMsRef.current = effectiveListenDuration * 1000;
+      console.log('[SAYWETIN] Native effective listen duration (s):', effectiveListenDuration);
       const started = await startNativeRecording();
       console.log('[SAYWETIN] startNativeRecording result:', started);
       if (!started) {
@@ -433,16 +443,25 @@ export function AudioRecorder({
       recordingTimeoutRef.current = setTimeout(async () => {
         console.log('[SAYWETIN] Recording timeout fired, stopping recording...');
         nativeRecordingActiveRef.current = false;
-        const audioBlob = await stopNativeRecording();
+        const nativeRecording = await stopNativeRecording();
         clearRuntimeResources();
-        console.log('[SAYWETIN] audioBlob after stop:', audioBlob ? `${audioBlob.size} bytes, type: ${audioBlob.type}` : 'NULL');
+        const audioBlob = nativeRecording?.blob ?? null;
+        if (nativeRecording?.msDuration) {
+          captureDurationMsRef.current = nativeRecording.msDuration;
+        }
+        console.log(
+          '[SAYWETIN] audioBlob after stop:',
+          audioBlob ? `${audioBlob.size} bytes, type: ${audioBlob.type}` : 'NULL',
+          'actualDurationMs:',
+          nativeRecording?.msDuration ?? 'unknown',
+        );
         if (audioBlob && audioBlob.size > 0) {
           audioChunksRef.current = [audioBlob];
           handleUpload();
         } else {
           showInlineFailure(createListenError('capture_failed', 'Could not capture audio. Please try again.'));
         }
-      }, listenDuration * 1000);
+      }, effectiveListenDuration * 1000);
 
     } catch (error: any) {
       console.error('[SAYWETIN] Native recording failed:', error);

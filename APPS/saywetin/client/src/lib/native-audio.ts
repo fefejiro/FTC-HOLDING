@@ -1,5 +1,11 @@
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 
+export interface NativeRecordingResult {
+  blob: Blob;
+  mimeType: string;
+  msDuration: number;
+}
+
 export function isNativeApp(): boolean {
   return typeof (window as any).Capacitor !== 'undefined' && 
          (window as any).Capacitor.isNativePlatform();
@@ -60,7 +66,7 @@ export async function startNativeRecording(): Promise<boolean> {
   }
 }
 
-export async function stopNativeRecording(): Promise<Blob | null> {
+export async function stopNativeRecording(): Promise<NativeRecordingResult | null> {
   if (!isNativeApp()) return null;
   
   try {
@@ -75,6 +81,7 @@ export async function stopNativeRecording(): Promise<Blob | null> {
     if (result.value && result.value.recordDataBase64) {
       const base64Data = result.value.recordDataBase64;
       const mimeType = normalizeNativeMimeType(result.value.mimeType);
+      const msDuration = Math.max(Number(result.value.msDuration) || 0, 0);
       
       console.log('[SAYWETIN-NATIVE] Base64 data length:', base64Data.length);
       console.log('[SAYWETIN-NATIVE] Raw mimeType from recorder:', result.value.mimeType);
@@ -88,8 +95,12 @@ export async function stopNativeRecording(): Promise<Blob | null> {
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: mimeType });
       
-      console.log('[SAYWETIN-NATIVE] Created blob - size:', blob.size, 'bytes, type:', blob.type);
-      return blob;
+      console.log('[SAYWETIN-NATIVE] Created blob - size:', blob.size, 'bytes, type:', blob.type, 'msDuration:', msDuration);
+      return {
+        blob,
+        mimeType,
+        msDuration,
+      };
     }
     
     console.warn('[SAYWETIN-NATIVE] No recording data returned from VoiceRecorder');
