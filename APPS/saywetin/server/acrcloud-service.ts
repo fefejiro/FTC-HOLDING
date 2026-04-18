@@ -287,14 +287,22 @@ export async function recognizeSong(
 
     let filename = 'audio.mp3';
     let contentType = 'audio/mpeg';
-    if (originalMimeType) {
-      if (originalMimeType.includes('aac') || originalMimeType.includes('m4a') || originalMimeType.includes('mp4')) {
+    const normalizedMimeType = String(originalMimeType || '').trim().toLowerCase();
+    if (normalizedMimeType) {
+      if (normalizedMimeType.includes('aac')) {
+        filename = 'audio.aac';
+        contentType = 'audio/aac';
+      } else if (
+        normalizedMimeType.includes('m4a') ||
+        normalizedMimeType.includes('x-m4a') ||
+        normalizedMimeType.includes('mp4')
+      ) {
         filename = 'audio.m4a';
         contentType = 'audio/mp4';
-      } else if (originalMimeType.includes('webm')) {
+      } else if (normalizedMimeType.includes('webm')) {
         filename = 'audio.webm';
         contentType = 'audio/webm';
-      } else if (originalMimeType.includes('wav')) {
+      } else if (normalizedMimeType.includes('wav')) {
         filename = 'audio.wav';
         contentType = 'audio/wav';
       }
