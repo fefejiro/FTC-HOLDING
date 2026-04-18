@@ -280,9 +280,9 @@ function RecognitionStageVisual({
   const nativeAndroid = isNativeAndroidRuntime();
   const modeMotion: Record<RecognitionVisualMode, { scale: number; y: number; rotate: number }> = {
     requesting: { scale: nativeAndroid ? 0.995 : 0.99, y: 0, rotate: 0 },
-    listening: { scale: nativeAndroid ? 1 : 1.02, y: 0, rotate: 0 },
-    matching: { scale: nativeAndroid ? 0.99 : 0.96, y: nativeAndroid ? -2 : -10, rotate: nativeAndroid ? 0 : 0.6 },
-    success: { scale: 1, y: nativeAndroid ? 0 : -4, rotate: 0 },
+    listening: { scale: nativeAndroid ? 1.01 : 1.02, y: 0, rotate: 0 },
+    matching: { scale: nativeAndroid ? 0.972 : 0.96, y: nativeAndroid ? -5 : -10, rotate: nativeAndroid ? 0.15 : 0.6 },
+    success: { scale: nativeAndroid ? 0.995 : 1, y: nativeAndroid ? -2 : -4, rotate: 0 },
     error: { scale: nativeAndroid ? 0.998 : 0.985, y: nativeAndroid ? 0 : 2, rotate: 0 },
   };
 
@@ -295,7 +295,7 @@ function RecognitionStageVisual({
         rotate: modeMotion[mode].rotate,
         opacity: 1,
       }}
-      transition={{ type: 'spring', stiffness: 220, damping: 22, mass: 0.9 }}
+      transition={{ type: 'spring', stiffness: 210, damping: 20, mass: 0.88 }}
     >
       <ListeningOrb mode={mode} size={immersive ? 'immersive' : 'compact'} />
     </motion.div>

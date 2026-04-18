@@ -407,6 +407,8 @@ export default function FullLyricsPage() {
   const [selectedLineKey, setSelectedLineKey] = useState<string | null>(null);
   const youWereHereRef = useRef<HTMLDivElement>(null);
   const hasTriggeredMomentAnalysis = useRef(false);
+  const prefetchTimeoutsRef = useRef<number[]>([]);
+  const scheduledRefreshRef = useRef<number | null>(null);
 
   const isNativeAndroid =
     typeof document !== 'undefined' && document.body.classList.contains('capacitor-android');
@@ -426,6 +428,47 @@ export default function FullLyricsPage() {
       else next.delete(rowKey);
       return next;
     });
+  };
+
+  const clearPrefetchTimeouts = () => {
+    if (typeof window === 'undefined') return;
+    prefetchTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    prefetchTimeoutsRef.current = [];
+  };
+
+  const clearScheduledRefresh = () => {
+    if (typeof window === 'undefined' || scheduledRefreshRef.current === null) {
+      scheduledRefreshRef.current = null;
+      return;
+    }
+    window.clearTimeout(scheduledRefreshRef.current);
+    scheduledRefreshRef.current = null;
+  };
+
+  const scheduleTrackRefresh = () => {
+    if (!trackId) return;
+    if (typeof window === 'undefined') {
+      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
+      return;
+    }
+    clearScheduledRefresh();
+    scheduledRefreshRef.current = window.setTimeout(() => {
+      scheduledRefreshRef.current = null;
+      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
+    }, 450);
+  };
+
+  const hasCachedAnalysisForLine = (lyricText: string): boolean => {
+    if (!trackId) return false;
+    const normalizedText = lyricText.trim().toLowerCase();
+    const current = queryClient.getQueryData<RecognizedTrackDetail | undefined>([
+      '/api/recognized-tracks',
+      trackId,
+    ]);
+
+    return (current?.culturalAnalysis || []).some(
+      (entry) => entry.originalText.trim().toLowerCase() === normalizedText,
+    );
   };
 
   const upsertAnalysisIntoCache = (
@@ -560,7 +603,7 @@ export default function FullLyricsPage() {
       if (result.success) {
         if (result.analysis) upsertAnalysisIntoCache(row.text, result.analysis);
         setLineFeedbackState(row.key);
-        queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
+        scheduleTrackRefresh();
       } else {
         console.warn('[ANALYZE] Analysis issue:', result.message);
         setLineFeedbackState(row.key, {
@@ -589,15 +632,31 @@ export default function FullLyricsPage() {
     row: OrderedLyricLine,
     options?: { activate?: boolean; background?: boolean },
   ) => {
-    if (!data || loadingLines.has(row.key)) return;
+    if (!data) return;
 
     if (options?.activate) {
       setSelectedLineKey(row.key);
     }
+    if (row.analysis || hasCachedAnalysisForLine(row.text) || loadingLines.has(row.key)) {
+      setLineFeedbackState(row.key);
+      return;
+    }
+
+    const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+    const streamEndpoint = getApiUrl('/api/analyze-line/stream');
+    console.info('[ANALYZE] Requesting line meaning', {
+      transport: isNative ? 'fetch' : 'sse',
+      endpoint: isNative ? getApiUrl('/api/analyze-line') : streamEndpoint,
+      trackId: data.track.id,
+      songTitle: data.track.title,
+      artistName: data.track.artist,
+      background: Boolean(options?.background),
+      lyricPreview: row.text.slice(0, 80),
+    });
+
     setLoadingLines((prev) => new Set(prev).add(row.key));
     setLineFeedbackState(row.key, { status: 'loading', background: options?.background });
 
-    const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
     if (isNative) {
       analyzeFallback(row, options);
       return;
@@ -613,7 +672,7 @@ export default function FullLyricsPage() {
     });
 
     let receivedMessage = false;
-    const es = new EventSource(getApiUrl(`/api/analyze-line/stream?${searchParams.toString()}`));
+    const es = new EventSource(`${streamEndpoint}?${searchParams.toString()}`);
 
     const sseTimeout = setTimeout(() => {
       if (!receivedMessage) {
@@ -641,7 +700,7 @@ export default function FullLyricsPage() {
           }
           clearLineState(row.key);
           setLineFeedbackState(row.key);
-          queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
+          scheduleTrackRefresh();
           es.close();
         } else if (parsed.type === 'error') {
           clearTimeout(sseTimeout);
@@ -745,6 +804,9 @@ export default function FullLyricsPage() {
   // Reset on track change
   useEffect(() => {
     hasTriggeredMomentAnalysis.current = false;
+    clearPrefetchTimeouts();
+    clearScheduledRefresh();
+    setLoadingLines(new Set());
     setSelectedLineKey(null);
     setLineFeedback(new Map());
   }, [trackId]);
@@ -757,13 +819,36 @@ export default function FullLyricsPage() {
     if (unresolved.length === 0) return;
 
     hasTriggeredMomentAnalysis.current = true;
+    clearPrefetchTimeouts();
 
-    unresolved.forEach((row, index) => {
-      requestLineAnalysis(row, {
-        background: index > 0,
-      });
+    const [primaryRow, ...nearbyRows] = unresolved;
+    requestLineAnalysis(primaryRow, { activate: true, background: false });
+
+    nearbyRows.slice(0, 2).forEach((row, index) => {
+      if (typeof window === 'undefined') {
+        requestLineAnalysis(row, { background: true });
+        return;
+      }
+
+      const timeoutId = window.setTimeout(() => {
+        requestLineAnalysis(row, { background: true });
+        prefetchTimeoutsRef.current = prefetchTimeoutsRef.current.filter((id) => id !== timeoutId);
+      }, 260 * (index + 1));
+
+      prefetchTimeoutsRef.current.push(timeoutId);
     });
+
+    return () => {
+      clearPrefetchTimeouts();
+    };
   }, [data, prioritizedMomentRows]);
+
+  useEffect(() => {
+    return () => {
+      clearPrefetchTimeouts();
+      clearScheduledRefresh();
+    };
+  }, []);
 
   // Clear feedback for lines that got analyzed
   useEffect(() => {
@@ -902,7 +987,7 @@ export default function FullLyricsPage() {
                     <Globe className="h-5 w-5 text-primary" />
                     Full lyrics
                   </CardTitle>
-                  <CardDescription className="mt-1">Best-matched lines open first. Nearby meaning loads in the background.</CardDescription>
+                  <CardDescription className="mt-1">Best-matched line opens first. Nearby meanings load in the background.</CardDescription>
                 </div>
                 {false && hasSlangTerms && (
                   <Button

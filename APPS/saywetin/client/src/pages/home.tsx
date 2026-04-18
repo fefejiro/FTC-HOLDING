@@ -191,7 +191,10 @@ export default function Home() {
 
       <div className="relative z-10 flex flex-1 items-center justify-center">
         {isNativeAndroidRuntime ? (
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/14 via-amber-400/10 to-green-400/10 blur-2xl" />
+          <>
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/18 via-amber-400/14 to-green-400/12 blur-3xl" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10 bg-white/[0.03] blur-2xl" />
+          </>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
@@ -222,7 +225,7 @@ export default function Home() {
       {isNativeAndroidRuntime ? (
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 via-background to-background dark:from-orange-500/14 dark:via-background dark:to-background" />
-          <div className="absolute left-1/2 top-[28%] h-64 w-64 -translate-x-1/2 rounded-full bg-gradient-to-br from-orange-500/14 via-amber-400/10 to-green-400/10 blur-2xl" />
+          <div className="absolute left-1/2 top-[28%] h-72 w-72 -translate-x-1/2 rounded-full bg-gradient-to-br from-orange-500/18 via-amber-400/14 to-green-400/12 blur-3xl" />
         </div>
       ) : (
         <motion.div

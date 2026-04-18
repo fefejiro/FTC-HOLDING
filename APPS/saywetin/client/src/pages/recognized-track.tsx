@@ -462,7 +462,7 @@ export default function RecognizedTrack() {
 
     if (analysisSummary) {
       return {
-        title: 'What this means',
+        title: 'Meaning',
         summary: analysisSummary,
         support:
           cleanInsightText(firstAnalysis?.translation, 120) ||
@@ -477,7 +477,7 @@ export default function RecognizedTrack() {
 
     if (fragmentSummary) {
       return {
-        title: 'What this means',
+        title: 'Meaning',
         summary: fragmentSummary,
         support: cleanInsightText(fragment?.detectedPhrases?.[0]?.culturalContext, 140),
       };
@@ -490,7 +490,7 @@ export default function RecognizedTrack() {
 
     if (artistSummary) {
       return {
-        title: 'What this means',
+        title: 'Meaning',
         summary: artistSummary,
         support: cleanInsightText(artistInfo?.funFact, 140),
       };
@@ -506,7 +506,7 @@ export default function RecognizedTrack() {
     );
 
     return {
-      title: 'What this means',
+      title: 'Meaning',
       summary: phraseHint
         ? `${detail.track.artist} leans into ${detail.track.genre || 'Afrobeats'} energy here, with "${phraseHint.phrase}" anchoring the song in ${cleanPhraseMeaning(phraseHint.meaning)?.toLowerCase() || phraseHint.meaning.toLowerCase()}.`
         : firstLyricLine
@@ -1055,35 +1055,24 @@ export default function RecognizedTrack() {
                     data-testid="button-see-full-lyrics"
                   >
                     <FileText className="mr-2 h-4 w-4" />
-                    See full lyrics &amp; meanings
+                    See full lyrics
+                  </Button>
+                </div>
+              ) : track.lyricsStatus === 'no_lyrics' || track.lyricsStatus === 'failed' ? (
+                <div className="border-t border-border/50 pt-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full text-primary"
+                    onClick={() => navigate(LISTEN_MODE_PATH)}
+                    data-testid="button-try-another-vocal-part"
+                  >
+                    <Music className="mr-2 h-4 w-4" />
+                    Try another vocal part
                   </Button>
                 </div>
               ) : null}
             </CardContent>
           </Card>
-
-          {data && (track.lyricsStatus === 'no_lyrics' || track.lyricsStatus === 'failed') && !lyrics && (
-            <Card data-testid="card-no-lyrics" className="border-border">
-              <CardContent className="py-6 px-6">
-                <div className="space-y-4 text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                    <Music className="h-6 w-6 text-primary" />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-lg font-semibold text-foreground">
-                      We found the song, but not the exact lyric yet.
-                    </p>
-                    <p className="mx-auto max-w-md text-sm text-muted-foreground">
-                      Try another vocal part so we can lock the lyric and explain what it means.
-                    </p>
-                  </div>
-                  <Button onClick={() => navigate(LISTEN_MODE_PATH)} data-testid="button-try-another-vocal-part">
-                    Try another vocal part
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
 
           {/* Lightweight entry into full lyrics surface */}
