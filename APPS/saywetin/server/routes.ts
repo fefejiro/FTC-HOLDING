@@ -713,8 +713,21 @@ export async function registerRoutes(
 
       const audioBuffer = req.file.buffer;
       const userId = getUserId(req);
-      const audioDuration = parseInt(req.body.duration || '0', 10);
-      console.log('🎵 [LISTEN] Audio buffer size:', audioBuffer.length, 'bytes, duration param:', audioDuration);
+      const rawAudioDuration = parseInt(req.body.duration || '0', 10);
+      const audioDuration =
+        Number.isFinite(rawAudioDuration) && rawAudioDuration > 0
+          ? rawAudioDuration < 1000
+            ? rawAudioDuration * 1000
+            : rawAudioDuration
+          : 0;
+      const audioDurationSeconds = audioDuration > 0 ? audioDuration / 1000 : undefined;
+      console.log('🎵 [LISTEN] Audio buffer details:', {
+        bytes: audioBuffer.length,
+        rawDurationParam: req.body.duration,
+        normalizedAudioDurationMs: audioDuration,
+        audioDurationSeconds,
+        durationSource: rawAudioDuration > 0 && rawAudioDuration < 1000 ? 'legacy_seconds_payload' : 'milliseconds_payload',
+      });
 
       // Step 1: Create listening session
       console.log('📝 [LISTEN] Creating listening session...');
@@ -731,7 +744,7 @@ export async function registerRoutes(
       console.log('🎧 [LISTEN] Recognizing song with ACRCloud...');
       await storage.updateListeningSession(sessionId, { status: 'recognizing' });
 
-      const recognitionResult = await recognizeSong(audioBuffer, audioDuration / 1000, req.file.mimetype);
+      const recognitionResult = await recognizeSong(audioBuffer, audioDurationSeconds, req.file.mimetype);
       let track = recognitionResult.track;
       let recognitionSource: "acrcloud" | "ai_transcript" = "acrcloud";
       

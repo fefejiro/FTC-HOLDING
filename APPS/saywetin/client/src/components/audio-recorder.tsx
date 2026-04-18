@@ -353,6 +353,7 @@ export function AudioRecorder({
   const hasAutoStartedRef = useRef(false);
   const nativeRecordingActiveRef = useRef(false);
   const webRecordingActiveRef = useRef(false);
+  const captureDurationMsRef = useRef(Math.max(listenDuration, 0) * 1000);
 
   const clearRuntimeResources = () => {
     if (streamRef.current) {
@@ -418,6 +419,7 @@ export function AudioRecorder({
         }
       }
 
+      captureDurationMsRef.current = Math.max(listenDuration, 0) * 1000;
       const started = await startNativeRecording();
       console.log('[SAYWETIN] startNativeRecording result:', started);
       if (!started) {
@@ -461,6 +463,7 @@ export function AudioRecorder({
     try {
       const captureProfile = getWebCaptureProfile(listenDuration);
       const effectiveListenDuration = captureProfile.listenDurationSec;
+      captureDurationMsRef.current = effectiveListenDuration * 1000;
 
       setFailureDisplay(null);
       setRecordingState('requesting');
@@ -560,10 +563,11 @@ export function AudioRecorder({
 
     const apiUrl = getApiUrl('/api/listen');
     console.log('[SAYWETIN-UPLOAD] Sending to:', apiUrl);
+    console.log('[SAYWETIN-UPLOAD] Duration payload (ms):', captureDurationMsRef.current);
 
     const formData = new FormData();
     formData.append('audio', audioBlob, `recording.${ext}`);
-    formData.append('duration', String(listenDuration));
+    formData.append('duration', String(captureDurationMsRef.current));
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), LISTEN_REQUEST_TIMEOUT_MS);
