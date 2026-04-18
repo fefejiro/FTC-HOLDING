@@ -156,7 +156,7 @@ export function SummaryClient() {
                 ['Trial starts immediately', '14 days full access to all ' + PLAN_LABELS[intake.plan] + ' features.'],
                 ['Card charged on day 15', 'CA$' + monthlyPrice + '/mo — cancel any time before then with no charge.'],
                 ['Invite your team', 'Add teammates, set up your first project, and configure your intake forms.'],
-                ['Dedicated onboarding', 'We send a setup guide and support link within 24 hours.'],
+                ['Workspace follow-through', 'After checkout, your activation and workspace follow-through can continue through the live worker flow and support path.'],
               ].map(([title, desc], i) => (
                 <li key={i} className="flex gap-3">
                   <span className="w-6 h-6 rounded-full bg-brand-teal text-white text-[11px] font-bold flex-shrink-0 flex items-center justify-center mt-0.5">

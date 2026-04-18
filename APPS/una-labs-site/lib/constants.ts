@@ -1,31 +1,34 @@
+import { productPages, proofHighlights, solutionPages } from '@/lib/site-content';
+
+const productLinks = Object.values(productPages);
+const solutionLinks = Object.values(solutionPages);
+
 export const NAV = {
   main: [
     {
       label: 'Product',
       children: [
         { label: 'Platform Overview', href: '/product', description: 'See the full Una Labs system' },
-        { label: 'Intake & Scoping', href: '/product/intake-scoping', description: 'Turn rough requests into structured briefs' },
-        { label: 'Real-Time Dashboard', href: '/product/dashboard', description: 'See every project at a glance' },
-        { label: 'Client Portal', href: '/product/client-portal', description: 'Give clients a window into progress' },
-        { label: 'Automated Reporting', href: '/product/reporting', description: 'Impact reports, generated automatically' },
-        { label: 'Approval & Sign-Off', href: '/product/approval-sign-off', description: 'Formalize delivery completion' },
+        ...productLinks.map((page) => ({
+          label: page.navLabel,
+          href: `/product/${page.slug}`,
+          description: page.navDescription,
+        })),
       ],
     },
     {
       label: 'Solutions',
-      children: [
-        { label: 'For Professional Services', href: '/solutions/professional-services', description: 'Consulting and advisory firms' },
-        { label: 'For Digital Agencies', href: '/solutions/agencies', description: 'Creative and digital studios' },
-        { label: 'For SaaS Product Teams', href: '/solutions/saas', description: 'Early-stage and scaling teams' },
-        { label: 'For Accounting & Tax', href: '/solutions/accounting', description: 'Accounting and bookkeeping firms' },
-      ],
+      children: solutionLinks.map((page) => ({
+        label: page.title,
+        href: `/solutions/${page.slug}`,
+        description: page.description,
+      })),
     },
     {
       label: 'Resources',
       children: [
-        { label: 'Blog', href: '/blog', description: undefined },
-        { label: 'Help Center', href: '/help', description: undefined },
-        { label: 'Community', href: '/community', description: undefined },
+        { label: 'Blog', href: '/blog', description: 'Field notes from shipped products and live delivery systems' },
+        { label: 'Help Center', href: '/help', description: 'Orientation for the intake, pricing, and support path' },
       ],
     },
     { label: 'Pricing', href: '/pricing' },
@@ -34,101 +37,25 @@ export const NAV = {
 };
 
 export const FEATURES = [
-  { id: 1, icon: '📋', label: 'Intake & Scoping', benefit: 'Turn rough requests into structured briefs in 48 hours.' },
-  { id: 2, icon: '📊', label: 'Real-Time Dashboard', benefit: 'Every project visible — status, gates, timeline, risks.' },
-  { id: 3, icon: '📄', label: 'Proposals & Pricing', benefit: 'One clear offer. No negotiation theatre.' },
-  { id: 4, icon: '✅', label: 'Approval Gates', benefit: 'Client signs off before money or work moves forward.' },
-  { id: 5, icon: '💳', label: 'Payments', benefit: 'Deposit collected upfront via Stripe. No chasing invoices.' },
-  { id: 6, icon: '🔗', label: 'Delivery Proof', benefit: 'Every output documented. Handoff-ready from day one.' },
-  { id: 7, icon: '🤖', label: 'AI Automation', benefit: 'Intake, brief generation, and notifications automated.' },
-  { id: 8, icon: '📈', label: 'Reporting', benefit: 'Impact documented. Reusable across every engagement.' },
+  { id: 1, icon: '📋', label: 'Intake & Scoping', benefit: 'Turn rough requests into structured briefs without a sales maze.' },
+  { id: 2, icon: '📊', label: 'Real-Time Dashboard', benefit: 'Keep delivery state visible instead of buried in chat and memory.' },
+  { id: 3, icon: '🪟', label: 'Client Portal', benefit: 'Give clients confidence without exposing every internal moving part.' },
+  { id: 4, icon: '✅', label: 'Approval Gates', benefit: 'Treat sign-off as a governed stage, not a fuzzy final email.' },
+  { id: 5, icon: '💳', label: 'Live Payments', benefit: 'Move from scoped summary into real Stripe checkout on the public site.' },
+  { id: 6, icon: '📦', label: 'Delivery Proof', benefit: 'Close projects with documentation, handoff context, and durable records.' },
+  { id: 7, icon: '🤖', label: 'ATEAM Handoff', benefit: 'Carry approved customer context into the internal operating system behind the scenes.' },
+  { id: 8, icon: '📈', label: 'Reporting', benefit: 'Turn project truth into client-ready proof instead of rebuilding it later.' },
 ];
 
-export const PROOF_METRICS = [
-  { value: '48h', label: 'Average first response', note: 'From rough request to structured brief' },
-  { value: '4.8', label: 'Client satisfaction average', note: 'Across all active engagements' },
-  { value: '100%', label: 'Delivery documented', note: 'Every output handoff-ready from day one' },
-];
+export const PROOF_METRICS = proofHighlights;
 
-export const TESTIMONIALS = [
-  {
-    id: 1,
-    quote: 'Una Labs took a half-baked idea and turned it into a scoped proposal within two days. Paid a deposit. Work started. No ambiguity.',
-    author: 'Sarah Chen',
-    title: 'Project Director',
-    company: 'Meridian Consulting',
-    rating: 5,
-  },
-  {
-    id: 2,
-    quote: 'I submitted a half-formed idea and got back a real scoped brief with options. First time I felt like the intake process added value.',
-    author: 'James Park',
-    title: 'Operations Manager',
-    company: 'Fortis Consulting',
-    rating: 5,
-  },
-  {
-    id: 3,
-    quote: 'The dashboard alone is worth it. Our clients stopped sending "where are we at?" emails the day we went live.',
-    author: 'Priya Nair',
-    title: 'Agency Principal',
-    company: 'Nair Creative',
-    rating: 5,
-  },
-  {
-    id: 4,
-    quote: "Reporting used to take us four hours per client per month. Now it's automated. That time went back into delivery.",
-    author: 'Marcus Webb',
-    title: 'Head of Client Success',
-    company: 'Webb & Partners',
-    rating: 4,
-  },
-];
-
-export const INDUSTRIES = [
-  {
-    icon: '🏢',
-    title: 'Professional Services',
-    description: 'Consulting, strategy, and advisory firms that need scoped, documented delivery without hiring a PM.',
-    href: '/solutions/professional-services',
-    slug: 'professional-services',
-  },
-  {
-    icon: '🎨',
-    title: 'Digital Agencies',
-    description: 'Studios and agencies that need structured client intake and delivery proof without the overhead.',
-    href: '/solutions/agencies',
-    slug: 'agencies',
-  },
-  {
-    icon: '⚙️',
-    title: 'SaaS Product Teams',
-    description: 'Early-stage teams that need AI and automation delivered fast without retaining a full agency.',
-    href: '/solutions/saas',
-    slug: 'saas',
-  },
-  {
-    icon: '📊',
-    title: 'Accounting & Tax',
-    description: 'Firms that need client-facing tools, intake automation, and operational systems that work.',
-    href: '/solutions/accounting',
-    slug: 'accounting',
-  },
-  {
-    icon: '⚖️',
-    title: 'Law Firms',
-    description: 'Legal practices that need document automation, intake systems, and professional delivery.',
-    href: '/solutions/law',
-    slug: 'law',
-  },
-  {
-    icon: '🚀',
-    title: 'Founders & Operators',
-    description: 'Solo operators who need real deliverables with minimal back-and-forth and clear outcomes.',
-    href: '/solutions/founders',
-    slug: 'founders',
-  },
-];
+export const INDUSTRIES = solutionLinks.map((page) => ({
+  icon: page.icon,
+  title: page.shortTitle,
+  description: page.description,
+  href: `/solutions/${page.slug}`,
+  slug: page.slug,
+}));
 
 export const PROBLEM_SOLUTIONS = [
   {
@@ -138,7 +65,7 @@ export const PROBLEM_SOLUTIONS = [
     bullets: [
       'Real-time progress tracking visible to clients',
       'Automated milestone notifications',
-      'Shared dashboard view — no login required for clients',
+      'Shared dashboard view with cleaner client-facing visibility',
       'No more "where\'s my project?" emails',
     ],
     ctaLabel: 'See dashboard in action',
@@ -150,9 +77,9 @@ export const PROBLEM_SOLUTIONS = [
     body: 'Manual report assembly consumes hours that should go to delivery. Clients want impact quantified. Automated insights cut reporting time while making every engagement look more professional.',
     bullets: [
       'Auto-generated from project data — no copy-paste',
-      'Customizable metrics and KPIs per client',
-      'Client-branded PDF or portal delivery',
-      'Trend analysis across engagements',
+      'Structured proof tied to actual delivery context',
+      'Client-ready reporting and handoff outputs',
+      'Trend visibility across engagements',
     ],
     ctaLabel: 'Explore reporting',
     ctaHref: '/product/reporting',
@@ -211,27 +138,20 @@ export const FOOTER_LINKS = [
   {
     heading: 'Product',
     links: [
-      { label: 'Intake & Scoping', href: '/product/intake-scoping' },
-      { label: 'Dashboard', href: '/product/dashboard' },
-      { label: 'Client Portal', href: '/product/client-portal' },
-      { label: 'Reporting', href: '/product/reporting' },
-      { label: 'Approval & Sign-Off', href: '/product/approval-sign-off' },
+      { label: 'Platform Overview', href: '/product' },
+      ...productLinks.map((page) => ({ label: page.navLabel, href: `/product/${page.slug}` })),
     ],
   },
   {
     heading: 'Solutions',
-    links: [
-      { label: 'Professional Services', href: '/solutions/professional-services' },
-      { label: 'Digital Agencies', href: '/solutions/agencies' },
-      { label: 'SaaS Teams', href: '/solutions/saas' },
-      { label: 'Accounting & Tax', href: '/solutions/accounting' },
-    ],
+    links: solutionLinks.map((page) => ({ label: page.shortTitle, href: `/solutions/${page.slug}` })),
   },
   {
     heading: 'Resources',
     links: [
       { label: 'Pricing', href: '/pricing' },
       { label: 'How It Works', href: '/how-it-works' },
+      { label: 'Demo', href: '/demo' },
       { label: 'Blog', href: '/blog' },
       { label: 'Help Center', href: '/help' },
     ],
@@ -240,6 +160,7 @@ export const FOOTER_LINKS = [
     heading: 'Company',
     links: [
       { label: 'About', href: '/about' },
+      { label: 'ATEAM', href: '/ateam' },
       { label: 'Contact', href: '/contact' },
       { label: 'Privacy', href: '/privacy' },
       { label: 'Terms', href: '/terms' },

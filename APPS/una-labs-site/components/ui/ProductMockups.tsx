@@ -18,7 +18,7 @@ function BrowserChrome({ title }: { title: string }) {
 // ── Dashboard mockup (Visibility problem) ──────────────────────────────────
 export function DashboardMockup() {
   const projects = [
-    { name: 'Brand Identity Refresh', pct: 78, status: 'On Track', color: 'bg-brand-teal' },
+    { name: 'Client Intake Refresh', pct: 78, status: 'On Track', color: 'bg-brand-teal' },
     { name: 'Q2 Reporting Automation', pct: 45, status: 'In Progress', color: 'bg-brand-orange' },
     { name: 'Onboarding Flow Redesign', pct: 92, status: 'Review', color: 'bg-[#8B5CF6]' },
     { name: 'API Integration Scoping', pct: 20, status: 'Starting', color: 'bg-[#6B7280]' },
@@ -99,7 +99,7 @@ export function ReportMockup() {
             <p className="text-[11px] font-semibold text-tx-heading">Impact Report — Q1 2026</p>
             <p className="text-[9px] text-tx-muted flex items-center gap-1">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-teal" />
-              Auto-generated · Meridian Consulting
+              Auto-generated · Client workspace
             </p>
           </div>
           <span className="px-2 py-0.5 bg-brand-teal-light text-brand-teal text-[8px] font-semibold rounded-full">
@@ -168,7 +168,7 @@ export function HandoffMockup() {
           </div>
           <div>
             <p className="text-[11px] font-semibold text-tx-heading">Project Sign-Off</p>
-            <p className="text-[9px] text-tx-muted">Brand Identity Refresh · Meridian Consulting</p>
+            <p className="text-[9px] text-tx-muted">Client Intake Refresh · Client workspace</p>
           </div>
         </div>
 
@@ -189,7 +189,7 @@ export function HandoffMockup() {
         {/* Approval stamp */}
         <div className="bg-white rounded-lg p-3 border border-border flex items-center justify-between">
           <div>
-            <p className="text-[9px] font-semibold text-tx-heading">Sarah Chen</p>
+            <p className="text-[9px] font-semibold text-tx-heading">Client approver</p>
             <p className="text-[8px] text-tx-muted">Approved · Apr 14, 2026 · 3:22 PM</p>
           </div>
           <div className="px-2.5 py-1 rounded-full border-2 border-brand-teal text-brand-teal text-[9px] font-bold uppercase tracking-wider">
@@ -212,8 +212,8 @@ export function IntakeFormCard() {
         <p className="text-[9px] text-tx-muted ml-1">Step 1 of 3</p>
       </div>
       {[
-        { label: 'Your name', value: 'Sarah Chen' },
-        { label: 'Work email', value: 'sarah@meridian.co' },
+        { label: 'Your name', value: 'Client lead' },
+        { label: 'Work email', value: 'client@company.com' },
       ].map((f) => (
         <div key={f.label}>
           <p className="text-[9px] text-tx-muted mb-0.5">{f.label}</p>
@@ -243,7 +243,7 @@ export function ProposalCard() {
         <p className="text-[10px] font-bold text-tx-heading">Scoped Proposal</p>
         <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-brand-teal-light text-brand-teal font-semibold">Ready</span>
       </div>
-      <p className="text-[9px] text-tx-muted">Brand Identity Refresh · Meridian Consulting</p>
+      <p className="text-[9px] text-tx-muted">Client Intake Refresh · Client workspace</p>
       <div className="grid grid-cols-2 gap-1.5">
         {[
           { label: 'Scope', val: '4 deliverables' },
@@ -337,7 +337,7 @@ export function StepRequestMockup() {
             ))}
           </div>
           <div className="bg-white rounded-xl p-5 border border-border shadow-sm space-y-3">
-            {[{ label: 'Your name', val: 'Sarah Chen' }, { label: 'Work email', val: 'sarah@meridian.co' }, { label: 'Company', val: 'Meridian Consulting' }].map(f => (
+            {[{ label: 'Your name', val: 'Client lead' }, { label: 'Work email', val: 'client@company.com' }, { label: 'Company', val: 'Client workspace' }].map(f => (
               <div key={f.label}>
                 <p className="text-[9px] text-tx-muted mb-0.5 font-medium">{f.label}</p>
                 <div className="border border-border rounded-md px-3 py-2 bg-white">
@@ -377,7 +377,7 @@ export function StepScopeMockup() {
             <p className="text-[12px] font-bold text-tx-heading">Scoped Brief — MRD-2041</p>
             <p className="text-[9px] text-tx-muted flex items-center gap-1.5">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-teal" />
-              AI-generated in 12 minutes · Meridian Consulting
+              AI-generated in 12 minutes · Client workspace
             </p>
           </div>
           <span className="ml-auto text-[8px] px-2 py-0.5 rounded-full bg-brand-teal-light text-brand-teal font-semibold border border-brand-teal/20">Ready for review</span>
@@ -428,7 +428,7 @@ export function StepProposalMockup() {
         <div className="flex items-start justify-between mb-4">
           <div>
             <p className="text-[12px] font-bold text-tx-heading">Proposal — PRP-2041</p>
-            <p className="text-[9px] text-tx-muted">Enterprise Onboarding Automation · Meridian Consulting</p>
+            <p className="text-[9px] text-tx-muted">Enterprise Intake Automation · Client workspace</p>
           </div>
           <span className="text-[8px] px-2 py-1 rounded-full bg-brand-orange-light text-brand-orange font-semibold">Awaiting acceptance</span>
         </div>
@@ -486,7 +486,7 @@ export function StepDeliveryMockup() {
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-[11px] font-bold text-tx-heading">Enterprise Onboarding Automation</p>
+              <p className="text-[11px] font-bold text-tx-heading">Enterprise Intake Automation</p>
               <span className="text-[8px] px-2 py-0.5 rounded-full bg-brand-teal-light text-brand-teal font-semibold">In Progress</span>
             </div>
             <div className="flex items-center gap-2">

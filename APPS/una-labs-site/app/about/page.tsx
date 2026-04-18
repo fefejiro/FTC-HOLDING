@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 
 export const metadata: Metadata = {
-  title: 'About — Una Labs',
+  title: 'About - Una Labs',
   description: 'Una Labs is a professional service delivery platform built for teams who deliver with confidence.',
 };
 
@@ -24,9 +24,13 @@ export default function AboutPage() {
             and money.
           </p>
           <p>
-            We built a platform that closes that gap — structured intake, scoped proposals, governed
+            We built a platform that closes that gap - structured intake, scoped proposals, governed
             delivery, and documented proof. Everything a team needs to deliver with confidence, from
             first request to final sign-off.
+          </p>
+          <p>
+            Behind that public experience sits ATEAM, the internal orchestration layer we built to help
+            carry intake context, workflow state, approvals, and operational follow-through.
           </p>
           <p>
             No retainers. No ambiguity. Just clear scope, agreed terms, and handoff-ready output.
@@ -35,6 +39,7 @@ export default function AboutPage() {
         <div className="mt-12 flex flex-wrap justify-center gap-4">
           <Button href="/start" variant="primary" size="lg">Start a request</Button>
           <Button href="/how-it-works" variant="secondary" size="lg">See how it works</Button>
+          <Button href="/ateam" variant="ghost" size="lg">Inside ATEAM →</Button>
         </div>
       </div>
     </section>

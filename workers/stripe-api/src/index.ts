@@ -40,6 +40,20 @@ function sanitize(value: unknown, maxLen = 500): string {
   return String(value ?? '').trim().slice(0, maxLen);
 }
 
+function sanitizeIntake(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const allowedKeys = ['intakeId', 'name', 'email', 'company', 'role', 'teamSize', 'plan', 'billing'];
+  const intake = value as Record<string, unknown>;
+  const entries = allowedKeys
+    .map((key) => [key, sanitize(intake[key], 200)] as const)
+    .filter(([, sanitizedValue]) => Boolean(sanitizedValue));
+
+  return Object.fromEntries(entries);
+}
+
 function cleanSecret(val: string): string {
   // Strip BOM (U+FEFF) and whitespace that PowerShell stdin may prepend
   return val.replace(/^\uFEFF/, '').trim();
@@ -118,9 +132,10 @@ async function handleCreateCheckoutSession(req: Request, env: Env, origin: strin
       success_url: `${siteUrl}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/pricing`,
       metadata: { email, tier, billing, intake_id: intakeId },
-      subscription_data: {
-        trial_period_days: 14,
-      },
+      subscription_data: { trial_period_days: 14 },
+      billing_address_collection: 'required',
+      phone_number_collection: { enabled: false },
+      locale: 'en',
     });
     return json({ url: session.url }, 200, origin);
   } catch (err) {
@@ -138,6 +153,7 @@ async function handleActivateProject(req: Request, env: Env, origin: string | nu
   }
 
   const sessionId = sanitize(body.session_id);
+  const intake = sanitizeIntake(body.intake);
   if (!sessionId) {
     return json({ error: 'session_id is required.' }, 400, origin);
   }
@@ -154,32 +170,43 @@ async function handleActivateProject(req: Request, env: Env, origin: string | nu
     if (session.payment_status !== 'paid' && session.status !== 'complete') {
       return json({ error: 'Payment not completed.' }, 402, origin);
     }
-    email = session.customer_email ?? sanitize(session.metadata?.email);
+    email = session.customer_email ?? sanitize(session.metadata?.email) ?? intake.email;
     tier = session.metadata?.tier ?? '';
     billing = session.metadata?.billing ?? '';
-    intakeId = session.metadata?.intake_id ?? '';
+    intakeId = session.metadata?.intake_id ?? intake.intakeId ?? '';
   } catch {
     return json({ error: 'Could not verify payment.' }, 500, origin);
   }
 
   const activation = {
     intake_id: intakeId,
-    email,
-    tier,
-    billing,
+    email: email || intake.email || '',
+    tier: tier || intake.plan || '',
+    billing: billing || intake.billing || '',
     payment_status: 'active',
     session_id: sessionId,
     created_at: new Date().toISOString(),
+    intake,
+  };
+
+  const projectWebhook = {
+    configured: Boolean(env.UNALABS_NEW_PROJECT_WEBHOOK_URL),
+    attempted: false,
+    delivered: false,
+    status: 0,
   };
 
   // Notify admin
   if (env.UNALABS_NEW_PROJECT_WEBHOOK_URL) {
     try {
-      await fetch(env.UNALABS_NEW_PROJECT_WEBHOOK_URL, {
+      projectWebhook.attempted = true;
+      const response = await fetch(env.UNALABS_NEW_PROJECT_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-unalabs-source': 'stripe-api-worker' },
-        body: JSON.stringify({ type: 'una_new_subscription', activation }),
+        body: JSON.stringify({ type: 'una_new_subscription', activation, intake }),
       });
+      projectWebhook.delivered = response.ok;
+      projectWebhook.status = response.status;
     } catch { /* non-fatal */ }
   }
 
@@ -195,7 +222,7 @@ async function handleActivateProject(req: Request, env: Env, origin: string | nu
     } catch { /* non-fatal */ }
   }
 
-  return json({ ok: true, activation }, 200, origin);
+  return json({ ok: true, activation, project_webhook: projectWebhook }, 200, origin);
 }
 
 export default {
