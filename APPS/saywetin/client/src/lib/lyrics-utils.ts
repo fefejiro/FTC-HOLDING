@@ -259,7 +259,7 @@ export function buildOrderedLyricLines(
   return blocks.flatMap((block, blockIndex) =>
     block.lines
       .map((line) => line.trim())
-      .filter((line) => line.length > 3)
+      .filter((line) => line.length > 3 && !/^\[.+\]$/.test(line))
       .map((line) => {
         const normalizedLine = normalizeLyricLine(line);
         const matchedAnalysis = analysisByNormalizedLine.get(normalizedLine);

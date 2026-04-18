@@ -14,8 +14,9 @@ export function BottomNav() {
   const visibleNavItems = navItems.filter((item) => item.path !== '/profile' || isAuthenticated);
 
   return (
-    <nav 
-      className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t border-border safe-area-bottom"
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border/30"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       data-testid="bottom-nav"
     >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-4">

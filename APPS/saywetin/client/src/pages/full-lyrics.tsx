@@ -27,6 +27,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { getApiUrl } from '@/lib/api-config';
 import { LISTEN_MODE_PATH } from '@/lib/navigation';
+import { hapticLight } from '@/lib/haptics';
 import { STORY_MODE_ENABLED } from '@/lib/features';
 import {
   parseAnalysesWithSlang,
@@ -298,13 +299,15 @@ function UnifiedLyricRow({
   const visualState = getLyricRowVisualState(row, feedback, isExpanded);
   const hasAnalysis = visualState === 'analyzed';
   const collapsedSupportText =
-    visualState === 'analyzed'
-      ? row.analysis?.translation
-      : visualState === 'loading'
-        ? 'Loading meaning for this line...'
-        : visualState === 'unavailable'
-          ? getLineFallbackMessage(feedback)
-          : null;
+    isExpanded
+      ? null
+      : visualState === 'analyzed'
+        ? row.analysis?.translation
+        : visualState === 'loading'
+          ? 'Loading meaning for this line...'
+          : visualState === 'unavailable'
+            ? getLineFallbackMessage(feedback)
+            : null;
 
   return (
     <div
@@ -874,6 +877,7 @@ export default function FullLyricsPage() {
   }, [defaultMomentRow, orderedLyricLines.length, selectedLineKey]);
 
   const handleLyricRowPress = (row: OrderedLyricLine) => {
+    hapticLight();
     const feedback = lineFeedback.get(row.key);
 
     if (selectedLineKey === row.key && row.analysis) {

@@ -391,6 +391,8 @@ export default function RecognizedTrack() {
   const [showXRay, setShowXRay] = useState(false);
   const hasAutoShownXRay = useRef(false);
   const [artworkLoadFailed, setArtworkLoadFailed] = useState(false);
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
+  const albumHeaderRef = useRef<HTMLDivElement>(null);
   // Guard: true once SSE has started (connection opened), used to suppress premature error renders
   const [sseStarted, setSseStarted] = useState(false);
   // Anonymous interaction logging for behavioral analytics
@@ -689,6 +691,17 @@ export default function RecognizedTrack() {
     setArtworkLoadFailed(false);
   }, [trackId, data?.track?.coverArtUrl]);
 
+  useEffect(() => {
+    const el = albumHeaderRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyHeader(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '-64px 0px 0px 0px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [data?.track?.id]);
+
   // Check if we're in processing state
   const isInProcessingState = data && 
     data.track.lyricsStatus !== 'no_lyrics' && 
@@ -922,6 +935,29 @@ export default function RecognizedTrack() {
         </div>
       </header>
 
+      {/* Sticky mini track header — slides in once album art scrolls out of view */}
+      <div
+        className={`sticky top-14 sm:top-16 z-40 transition-all duration-200 ${
+          showStickyHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+        } bg-background/90 backdrop-blur-md border-b border-border/40`}
+      >
+        <div className="container max-w-6xl mx-auto px-4 sm:px-6 h-12 flex items-center gap-3">
+          <div className="w-7 h-7 rounded-md overflow-hidden shrink-0 bg-muted/40">
+            {track?.coverArtUrl && !artworkLoadFailed ? (
+              <img src={track.coverArtUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Music className="h-3.5 w-3.5 text-muted-foreground/60" />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate leading-tight">{track?.title}</p>
+            <p className="text-xs text-muted-foreground truncate leading-tight">{track?.artist}</p>
+          </div>
+        </div>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -932,9 +968,9 @@ export default function RecognizedTrack() {
         <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-orange-500/5 dark:bg-orange-500/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-amber-500/5 dark:bg-amber-500/10 blur-3xl translate-x-1/3 -translate-y-1/3" />
 
-        <div className="relative container max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-6 sm:pt-12 sm:pb-8">
+        <div ref={albumHeaderRef} className="relative container max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-6 sm:pt-12 sm:pb-8">
           <div className="flex flex-col sm:flex-row items-start gap-6">
-            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden shadow-xl shadow-orange-500/20 shrink-0 bg-gradient-to-br from-orange-500 via-amber-500 to-green-500">
+            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden shadow-xl shadow-black/10 shrink-0 bg-muted/40">
               {track.coverArtUrl && !artworkLoadFailed ? (
                 <img
                   src={track.coverArtUrl}
@@ -945,8 +981,8 @@ export default function RecognizedTrack() {
                   onError={() => setArtworkLoadFailed(true)}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Music className="h-14 w-14 sm:h-16 sm:w-16 text-white/90" />
+                <div className="w-full h-full flex items-center justify-center bg-muted/50 rounded-2xl">
+                  <Music className="h-14 w-14 sm:h-16 sm:w-16 text-muted-foreground/60" />
                 </div>
               )}
             </div>
@@ -1015,34 +1051,50 @@ export default function RecognizedTrack() {
                     <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
                       Meaning
                     </p>
-                    <p className="text-lg font-semibold leading-relaxed text-foreground">
-                      {primaryMeaningHeadline || 'We are still unpacking what this line means.'}
-                    </p>
-                    {primaryMeaningDetail && primaryMeaningDetail !== primaryMeaningHeadline ? (
-                      <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                        {primaryMeaningDetail}
+                    {primaryMeaningHeadline ? (
+                      <>
+                        <p className="text-lg font-semibold leading-relaxed text-foreground">
+                          {primaryMeaningHeadline}
+                        </p>
+                        {primaryMeaningDetail && primaryMeaningDetail !== primaryMeaningHeadline ? (
+                          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                            {primaryMeaningDetail}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : isInProcessingState ? (
+                      <div className="space-y-2 pt-1">
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-4/5" />
+                        <Skeleton className="h-4 w-3/5 mt-3" />
+                      </div>
+                    ) : (
+                      <p className="text-base text-muted-foreground">
+                        Meaning not available for this line.
                       </p>
-                    ) : null}
+                    )}
                   </div>
                 </>
               ) : (
-                <div className="space-y-4 rounded-2xl border border-dashed border-border/80 bg-background/70 px-5 py-5">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
-                      Lyric
-                    </p>
-                    <p className="text-lg font-semibold text-foreground">
-                      {primaryMomentFallback.headline}
-                    </p>
+                <div className="rounded-xl border border-border/50 bg-card px-6 py-6 text-center space-y-3">
+                  <div className="flex items-center justify-center gap-2 text-primary">
+                    <Music className="h-5 w-5" />
+                    <span className="text-sm font-semibold">Song Identified</span>
                   </div>
-                  <div className="space-y-2 rounded-2xl border border-primary/15 bg-background/80 p-5">
-                    <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
-                      Meaning
-                    </p>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {primaryMomentFallback.detail}
-                    </p>
-                  </div>
+                  <p className="text-base font-medium text-foreground">
+                    We found the song, but didn't catch a clear lyric this time.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Try again during a vocal section for phrase-level meaning.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-1"
+                    onClick={() => navigate(LISTEN_MODE_PATH)}
+                  >
+                    Listen Again
+                  </Button>
                 </div>
               )}
 

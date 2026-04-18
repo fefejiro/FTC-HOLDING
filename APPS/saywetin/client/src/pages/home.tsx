@@ -14,6 +14,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
 import { AudioRecorder } from '@/components/audio-recorder';
 import { isListenModeLocation, LISTEN_MODE_PATH } from '@/lib/navigation';
+import { hapticTap, hapticSuccess } from '@/lib/haptics';
 import { queryClient } from '@/lib/queryClient';
 import { mergeRecentRecognitions, saveRecentRecognition, type RecentRecognitionSession } from '@/lib/recent-recognitions';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
@@ -58,6 +59,7 @@ export default function Home() {
   }, []);
 
   const openListenMode = () => {
+    hapticTap();
     navigate(LISTEN_MODE_PATH);
   };
 
@@ -94,7 +96,11 @@ export default function Home() {
         ['/api/listening-history'],
         (current) => mergeRecentRecognitions(current, mergedRecentRecognitions),
       );
-      navigate(`/song/${result.recognizedTrack.id}`, { replace: true });
+      // Brief pause so the success orb state is visible before navigating
+      hapticSuccess();
+      setTimeout(() => {
+        navigate(`/song/${result.recognizedTrack.id}`, { replace: true });
+      }, 700);
     }
   };
 
