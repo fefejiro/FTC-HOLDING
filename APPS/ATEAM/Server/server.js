@@ -43,6 +43,14 @@ function isPublicWorkflowRoute(pathname = "") {
   return route === "/api/workflow" || route.startsWith("/api/workflow/");
 }
 
+function isUnaLabsPublicAteamRequest(req) {
+  const host = String(req.headers.host || "").toLowerCase();
+  const path = String(req.path || req.url || "").toLowerCase();
+  const isUnaLabsHost = host === "unalabs.cloud" || host === "www.unalabs.cloud";
+  const isAteamPath = path === "/ateam" || path === "/ateam/" || path.startsWith("/ateam/");
+  return isUnaLabsHost && isAteamPath;
+}
+
 app.use(express.json({ limit: "2mb" }));
 app.use((req, res, next) => {
   const configuredOrigins = String(process.env.ATEAM_ALLOWED_ORIGINS || "")
@@ -1613,6 +1621,9 @@ app.use("/capability", capabilityRoutes);
 app.use(express.static(PUBLIC_DIR));
 
 app.use((req, res) => {
+  if (req.method === "GET" && isUnaLabsPublicAteamRequest(req)) {
+    return res.redirect(302, "https://unalabs.cloud/");
+  }
   if (req.method === "GET") {
     return res.sendFile(path.join(PUBLIC_DIR, "index.html"));
   }
