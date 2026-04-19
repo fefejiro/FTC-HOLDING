@@ -43,7 +43,7 @@ export const FEATURES = [
   { id: 4, icon: '✅', label: 'Approval Gates', benefit: 'Treat sign-off as a governed stage, not a fuzzy final email.' },
   { id: 5, icon: '💳', label: 'Live Payments', benefit: 'Move from scoped summary into real Stripe checkout on the public site.' },
   { id: 6, icon: '📦', label: 'Delivery Proof', benefit: 'Close projects with documentation, handoff context, and durable records.' },
-  { id: 7, icon: '🤖', label: 'ATEAM Handoff', benefit: 'Carry approved customer context into the internal operating system behind the scenes.' },
+  { id: 7, icon: '🤖', label: 'Automated Handoff', benefit: 'Carry approved customer context into the internal delivery workflow behind the scenes.' },
   { id: 8, icon: '📈', label: 'Reporting', benefit: 'Turn project truth into client-ready proof instead of rebuilding it later.' },
 ];
 
@@ -160,7 +160,6 @@ export const FOOTER_LINKS = [
     heading: 'Company',
     links: [
       { label: 'About', href: '/about' },
-      { label: 'ATEAM', href: '/ateam' },
       { label: 'Contact', href: '/contact' },
       { label: 'Privacy', href: '/privacy' },
       { label: 'Terms', href: '/terms' },

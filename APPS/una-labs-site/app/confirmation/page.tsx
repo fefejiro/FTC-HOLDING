@@ -5,10 +5,21 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { STRIPE_API_URL } from '@/lib/stripe-config';
 
+const PLAN_LABELS: Record<string, string> = {
+  starter: 'Starter',
+  professional: 'Professional',
+  agency: 'Agency',
+  enterprise: 'Enterprise',
+};
+
+type ActivationStatus = 'loading' | 'success' | 'already-active' | 'error';
+
 function ConfirmationContent() {
   const params = useSearchParams();
   const sessionId = params.get('session_id') ?? '';
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const activationParam = params.get('activation') ?? '';
+  const planParam = params.get('plan') ?? '';
+  const [status, setStatus] = useState<ActivationStatus>('loading');
   const [planLabel, setPlanLabel] = useState('');
 
   useEffect(() => {
@@ -31,25 +42,41 @@ function ConfirmationContent() {
       }
     }
 
-    const labels: Record<string, string> = {
-      starter: 'Starter',
-      professional: 'Professional',
-      agency: 'Agency',
-      enterprise: 'Enterprise',
-    };
+    const resolvedPlan = planParam || plan;
+    setPlanLabel(PLAN_LABELS[resolvedPlan] ?? 'Professional');
 
-    setPlanLabel(labels[plan] ?? 'Professional');
+    if (activationParam === 'success' || activationParam === 'already_active') {
+      sessionStorage.removeItem('una_intake');
+      setStatus(activationParam === 'already_active' ? 'already-active' : 'success');
+      return;
+    }
+
+    if (activationParam === 'error') {
+      setStatus('error');
+      return;
+    }
 
     fetch(`${STRIPE_API_URL}/api/activate-project`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, intake: parsedIntake }),
     })
-      .then((response) => {
-        setStatus(response.ok ? 'success' : 'error');
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({} as { activation?: { tier?: string }; already_activated?: boolean }));
+        const resolvedTier = payload.activation?.tier;
+        if (resolvedTier) {
+          setPlanLabel(PLAN_LABELS[resolvedTier] ?? 'Professional');
+        }
+
+        if (response.ok) {
+          sessionStorage.removeItem('una_intake');
+          setStatus(payload.already_activated ? 'already-active' : 'success');
+        } else {
+          setStatus('error');
+        }
       })
       .catch(() => setStatus('error'));
-  }, [sessionId]);
+  }, [activationParam, planParam, sessionId]);
 
   if (status === 'loading') {
     return (
@@ -82,6 +109,8 @@ function ConfirmationContent() {
     );
   }
 
+  const alreadyActive = status === 'already-active';
+
   return (
     <div className="min-h-screen bg-bg-offwhite flex items-center justify-center px-6">
       <div className="max-w-tight w-full bg-white rounded-2xl border border-border p-10 text-center shadow-sm">
@@ -91,16 +120,18 @@ function ConfirmationContent() {
           </svg>
         </div>
 
-        <h1 className="text-display-sm text-tx-heading mb-2">You're in. Trial started.</h1>
+        <h1 className="text-display-sm text-tx-heading mb-2">
+          {alreadyActive ? 'Your workspace is already active.' : "You're in. Trial started."}
+        </h1>
         <p className="text-body text-tx-secondary mb-8">
           Your <strong>{planLabel}</strong> 14-day free trial is active. No charge until day 15.
         </p>
 
         <div className="text-left flex flex-col gap-3 mb-8">
           {[
-            ['Check your access path', 'Use the login route once your workspace access is ready, or contact us if you need help getting in.'],
-            ['Set up your workspace', 'Add your team, configure intake forms, and shape the first real project flow.'],
-            ['Open the dashboard', 'The dashboard route is now wired for authenticated project visibility and Supabase-backed data.'],
+            ['Check your email', 'A confirmation has been sent to you. Use the login link to access your workspace anytime.'],
+            ['See your project status', 'Log in to your dashboard to track milestones, see what\'s next, and follow progress in real time.'],
+            ['We\'ll reach out within 1 business day', 'Expect a kick-off message from us to get things moving. You can also email hello@unalabs.cloud anytime.'],
           ].map(([title, desc], index) => (
             <div key={index} className="flex gap-3 p-4 bg-bg-offwhite rounded-xl">
               <span className="w-6 h-6 rounded-full bg-brand-teal text-white text-[11px] font-bold flex-shrink-0 flex items-center justify-center mt-0.5">

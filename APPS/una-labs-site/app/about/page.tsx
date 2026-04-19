@@ -24,13 +24,13 @@ export default function AboutPage() {
             and money.
           </p>
           <p>
-            We built a platform that closes that gap - structured intake, scoped proposals, governed
-            delivery, and documented proof. Everything a team needs to deliver with confidence, from
-            first request to final sign-off.
+            The platform closes that gap with structured intake, scoped proposals, governed
+            delivery, and documented proof. Everything your team needs to deliver with confidence,
+            from first request to final sign-off.
           </p>
           <p>
-            Behind that public experience sits ATEAM, the internal orchestration layer we built to help
-            carry intake context, workflow state, approvals, and operational follow-through.
+            Every part of the experience is designed to keep projects clear, accountable, and easy
+            to move forward without endless back-and-forth.
           </p>
           <p>
             No retainers. No ambiguity. Just clear scope, agreed terms, and handoff-ready output.
@@ -39,7 +39,6 @@ export default function AboutPage() {
         <div className="mt-12 flex flex-wrap justify-center gap-4">
           <Button href="/start" variant="primary" size="lg">Start a request</Button>
           <Button href="/how-it-works" variant="secondary" size="lg">See how it works</Button>
-          <Button href="/ateam" variant="ghost" size="lg">Inside ATEAM →</Button>
         </div>
       </div>
     </section>

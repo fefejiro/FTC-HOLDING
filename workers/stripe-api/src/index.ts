@@ -9,9 +9,14 @@ export interface Env {
   STRIPE_PRICE_AGENCY_MONTHLY: string;
   STRIPE_PRICE_AGENCY_ANNUAL: string;
   STRIPE_PRICE_ENTERPRISE_MONTHLY: string;
+  STRIPE_PRICE_ENTERPRISE_ANNUAL: string;
   UNALABS_SITE_URL: string;
   UNALABS_NEW_PROJECT_WEBHOOK_URL?: string;
   UNALABS_PROJECT_CONFIRMATION_EMAIL_WEBHOOK_URL?: string;
+  MAILJET_API_KEY?: string;
+  MAILJET_SECRET_KEY?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
 }
 
 const ALLOWED_ORIGINS = [
@@ -24,7 +29,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
   const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': allowed,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
 }
@@ -33,6 +38,13 @@ function json(data: unknown, status = 200, origin: string | null = null): Respon
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
+  });
+}
+
+function redirect(location: string): Response {
+  return new Response(null, {
+    status: 302,
+    headers: { Location: location },
   });
 }
 
@@ -54,6 +66,150 @@ function sanitizeIntake(value: unknown): Record<string, string> {
   return Object.fromEntries(entries);
 }
 
+type ActivationPayload = {
+  intake_id: string;
+  email: string;
+  tier: string;
+  billing: string;
+  payment_status: 'active';
+  session_id: string;
+  created_at: string;
+  intake: Record<string, string>;
+};
+
+type ProjectWriteResult = {
+  attempted: boolean;
+  inserted: boolean;
+  duplicate: boolean;
+  status: number;
+  error?: string;
+};
+
+type DeliveryResult = {
+  attempted: boolean;
+  delivered: boolean;
+  status: number;
+  error?: string;
+};
+
+type ActivationRunResult = {
+  activation: ActivationPayload;
+  alreadyActivated: boolean;
+  projectWrite: ProjectWriteResult;
+  projectWebhook: DeliveryResult;
+  emailWebhook: DeliveryResult;
+};
+
+function logEvent(event: string, details: Record<string, unknown>): void {
+  console.log(JSON.stringify({ event, ...details }));
+}
+
+async function sendIntakeNotification(env: Env, activation: {
+  email: string; tier: string; billing: string; intake_id: string; session_id: string; created_at: string;
+}, intake: Record<string, string>): Promise<void> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return;
+
+  const planLabel: Record<string, string> = { starter: 'Starter ($67/mo)', professional: 'Professional ($135/mo)', agency: 'Agency ($339/mo)', enterprise: 'Enterprise ($679/mo)' };
+  const billingLabel = activation.billing === 'annual' ? 'Annual' : 'Monthly';
+  const intakeLines = Object.entries(intake).map(([k, v]) => `<tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">${k}</td><td style="padding:4px 0;font-size:13px;color:#0B0E11">${v}</td></tr>`).join('');
+
+  const html = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">New Una Labs Customer</p>
+    <p style="color:rgba(255,255,255,0.85);font-size:13px;margin:4px 0 0">${activation.created_at}</p>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+    <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Email</td><td style="padding:4px 0;font-size:13px;font-weight:600;color:#0B0E11">${activation.email}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Plan</td><td style="padding:4px 0;font-size:13px;color:#0B0E11">${planLabel[activation.tier] ?? activation.tier} — ${billingLabel}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Session</td><td style="padding:4px 0;font-size:13px;color:#0B0E11">${activation.session_id}</td></tr>
+    ${intakeLines}
+  </table>
+  <p style="font-size:12px;color:#9CA3AF">Una Labs intake system · unalabs.cloud</p>
+</div>`;
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+    body: JSON.stringify({
+      Messages: [{
+        From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+        To: [{ Email: 'mike.fejiro@gmail.com', Name: 'Mike' }],
+        Subject: `New customer: ${activation.email} — ${activation.tier} (${billingLabel})`,
+        HTMLPart: html,
+        TextPart: `New Una Labs customer\n\nEmail: ${activation.email}\nPlan: ${activation.tier} (${billingLabel})\nSession: ${activation.session_id}\n\nIntake:\n${Object.entries(intake).map(([k, v]) => `${k}: ${v}`).join('\n')}`,
+      }],
+    }),
+  });
+}
+
+async function sendCustomerWelcome(env: Env, activation: {
+  email: string; tier: string; billing: string; session_id: string; created_at: string;
+}, name?: string): Promise<void> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return;
+
+  const planLabel: Record<string, string> = { starter: 'Starter', professional: 'Professional', agency: 'Agency', enterprise: 'Enterprise' };
+  const priceLabel: Record<string, string> = { starter: 'CA$67/mo', professional: 'CA$135/mo', agency: 'CA$339/mo', enterprise: 'CA$679/mo' };
+  const billingLabel = activation.billing === 'annual' ? 'Annual billing' : 'Monthly billing';
+  const plan = planLabel[activation.tier] ?? activation.tier;
+  const price = priceLabel[activation.tier] ?? '';
+  const firstName = name || activation.email.split('@')[0];
+  const dashboardUrl = 'https://unalabs.cloud/login?redirect=/dashboard';
+
+  const html = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#fff">
+  <div style="background:#4DB8A8;border-radius:10px;padding:20px 24px;margin-bottom:28px">
+    <p style="color:white;font-weight:700;font-size:18px;margin:0">You're in — trial started.</p>
+    <p style="color:rgba(255,255,255,0.85);font-size:13px;margin:6px 0 0">Una Labs · unalabs.cloud</p>
+  </div>
+
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:20px">Hey ${firstName},</p>
+  <p style="font-size:15px;color:#374151;margin-bottom:24px;line-height:1.6">
+    Your <strong>${plan}</strong> 14-day free trial is now active. Nothing is charged until day 15.
+  </p>
+
+  <table style="width:100%;border-collapse:collapse;margin-bottom:28px;background:#F9FAFB;border-radius:8px;overflow:hidden">
+    <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px;border-bottom:1px solid #E5E7EB">Plan</td><td style="padding:10px 16px;font-size:13px;font-weight:600;color:#0B0E11;border-bottom:1px solid #E5E7EB">${plan} — ${price}</td></tr>
+    <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px;border-bottom:1px solid #E5E7EB">Billing</td><td style="padding:10px 16px;font-size:13px;color:#0B0E11;border-bottom:1px solid #E5E7EB">${billingLabel}</td></tr>
+    <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px;border-bottom:1px solid #E5E7EB">Trial period</td><td style="padding:10px 16px;font-size:13px;color:#4DB8A8;font-weight:600;border-bottom:1px solid #E5E7EB">14 days free</td></tr>
+    <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px;border-bottom:1px solid #E5E7EB">Charged today</td><td style="padding:10px 16px;font-size:13px;font-weight:700;color:#0B0E11;border-bottom:1px solid #E5E7EB">CA$0</td></tr>
+    <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px">First charge</td><td style="padding:10px 16px;font-size:13px;color:#0B0E11">Day 15 of your trial</td></tr>
+  </table>
+
+  <p style="font-size:14px;color:#374151;margin-bottom:8px;font-weight:600">What happens next</p>
+  <ol style="padding-left:20px;margin:0 0 24px;color:#374151;font-size:14px;line-height:1.8">
+    <li>You'll hear from us within 1 business day to kick things off.</li>
+    <li>Log into your dashboard to track project progress and milestones.</li>
+    <li>Cancel any time before day 15 — no charge, no friction.</li>
+  </ol>
+
+  <a href="${dashboardUrl}" style="display:inline-block;background:#F97316;color:white;font-weight:700;font-size:15px;padding:14px 28px;border-radius:8px;text-decoration:none;margin-bottom:24px">
+    Open your dashboard →
+  </a>
+
+  <p style="font-size:13px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:16px;margin-top:16px">
+    Questions? Reply to this email or reach us at <a href="mailto:hello@unalabs.cloud" style="color:#4DB8A8">hello@unalabs.cloud</a><br>
+    Una Labs · unalabs.cloud
+  </p>
+</div>`;
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+    body: JSON.stringify({
+      Messages: [{
+        From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+        To: [{ Email: activation.email, Name: firstName }],
+        Subject: `Your ${plan} trial is active — Una Labs`,
+        HTMLPart: html,
+        TextPart: `Hey ${firstName},\n\nYour ${plan} 14-day free trial is now active. Nothing is charged until day 15.\n\nPlan: ${plan} — ${price}\nBilling: ${billingLabel}\nCharged today: CA$0\nFirst charge: Day 15\n\nOpen your dashboard: ${dashboardUrl}\n\nQuestions? Reply here or email hello@unalabs.cloud\n\nUna Labs · unalabs.cloud`,
+      }],
+    }),
+  });
+}
+
 function cleanSecret(val: string): string {
   // Strip BOM (U+FEFF) and whitespace that PowerShell stdin may prepend
   return val.replace(/^\uFEFF/, '').trim();
@@ -71,6 +227,11 @@ function getSiteUrl(env: Env): string {
   return (env.UNALABS_SITE_URL || 'https://unalabs.cloud').replace(/\/+$/, '');
 }
 
+function getCheckoutSuccessUrl(req: Request, env: Env): string {
+  const workerOrigin = new URL(req.url).origin;
+  return `${workerOrigin}/api/checkout-success?session_id={CHECKOUT_SESSION_ID}&site_url=${encodeURIComponent(getSiteUrl(env))}`;
+}
+
 // Maps plan tier to the correct Stripe price ID
 function getPriceId(env: Env, tier: string, billing: string): string | undefined {
   const map: Record<string, string | undefined> = {
@@ -81,7 +242,7 @@ function getPriceId(env: Env, tier: string, billing: string): string | undefined
     agency_monthly: env.STRIPE_PRICE_AGENCY_MONTHLY,
     agency_annual: env.STRIPE_PRICE_AGENCY_ANNUAL,
     enterprise_monthly: env.STRIPE_PRICE_ENTERPRISE_MONTHLY,
-    enterprise_annual: env.STRIPE_PRICE_ENTERPRISE_MONTHLY,
+    enterprise_annual: env.STRIPE_PRICE_ENTERPRISE_ANNUAL,
   };
   const val = map[`${tier}_${billing}`];
   return val ? cleanSecret(val) : undefined;
@@ -125,11 +286,20 @@ async function handleCreateCheckoutSession(req: Request, env: Env, origin: strin
   }
 
   try {
+    logEvent('create_checkout_session_start', {
+      email,
+      tier,
+      billing,
+      intakeId,
+      origin,
+      stripeConfigured: Boolean(env.STRIPE_SECRET_KEY),
+    });
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer_email: email,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${siteUrl}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: getCheckoutSuccessUrl(req, env),
       cancel_url: `${siteUrl}/pricing`,
       metadata: { email, tier, billing, intake_id: intakeId },
       subscription_data: { trial_period_days: 14 },
@@ -137,11 +307,267 @@ async function handleCreateCheckoutSession(req: Request, env: Env, origin: strin
       phone_number_collection: { enabled: false },
       locale: 'en',
     });
+    logEvent('create_checkout_session_success', {
+      email,
+      tier,
+      billing,
+      intakeId,
+      livemode: session.livemode,
+      sessionId: session.id,
+    });
     return json({ url: session.url }, 200, origin);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Stripe error.';
+    logEvent('create_checkout_session_error', {
+      email,
+      tier,
+      billing,
+      intakeId,
+      message,
+    });
     return json({ error: message }, 500, origin);
   }
+}
+
+async function writeProjectToSupabase(env: Env, activation: {
+  email: string; tier: string; billing: string; intake_id: string; session_id: string; created_at: string;
+}): Promise<ProjectWriteResult> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    return { attempted: false, inserted: false, duplicate: false, status: 0, error: 'Supabase env not configured.' };
+  }
+
+  const response = await fetch(`${cleanSecret(env.SUPABASE_URL)}/rest/v1/projects?on_conflict=stripe_session_id`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': cleanSecret(env.SUPABASE_ANON_KEY),
+      'Authorization': `Bearer ${cleanSecret(env.SUPABASE_ANON_KEY)}`,
+      'Prefer': 'resolution=ignore-duplicates,return=representation',
+    },
+    body: JSON.stringify({
+      email: activation.email,
+      intake_id: activation.intake_id,
+      tier: activation.tier,
+      billing: activation.billing,
+      stripe_session_id: activation.session_id,
+      status: 'intake',
+    }),
+  });
+
+  const raw = await response.text();
+  const payload = raw ? JSON.parse(raw) as Array<Record<string, unknown>> : [];
+  if (!response.ok) {
+    return {
+      attempted: true,
+      inserted: false,
+      duplicate: false,
+      status: response.status,
+      error: raw || 'Unknown Supabase error.',
+    };
+  }
+
+  return {
+    attempted: true,
+    inserted: payload.length > 0,
+    duplicate: payload.length === 0,
+    status: response.status,
+  };
+}
+
+async function deliverWebhook(
+  url: string | undefined,
+  headers: Record<string, string>,
+  body: Record<string, unknown>
+): Promise<DeliveryResult> {
+  if (!url) {
+    return { attempted: false, delivered: false, status: 0 };
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    return {
+      attempted: true,
+      delivered: response.ok,
+      status: response.status,
+      error: response.ok ? undefined : await response.text(),
+    };
+  } catch (error) {
+    return {
+      attempted: true,
+      delivered: false,
+      status: 0,
+      error: error instanceof Error ? error.message : 'Unknown delivery error.',
+    };
+  }
+}
+
+async function resolveActivation(
+  stripe: Stripe,
+  sessionId: string,
+  intake: Record<string, string>
+): Promise<{ activation: ActivationPayload; alreadyActivated: boolean; subscriptionId: string }> {
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  if (
+    session.payment_status !== 'paid'
+    && session.payment_status !== 'no_payment_required'
+    && session.status !== 'complete'
+  ) {
+    throw new Error(`Checkout session ${sessionId} is not complete.`);
+  }
+
+  const email = session.customer_email ?? sanitize(session.metadata?.email) ?? intake.email ?? '';
+  const tier = session.metadata?.tier ?? intake.plan ?? '';
+  const billing = session.metadata?.billing ?? intake.billing ?? '';
+  const intakeId = session.metadata?.intake_id ?? intake.intakeId ?? '';
+  const subscriptionId = typeof session.subscription === 'string'
+    ? session.subscription
+    : session.subscription?.id ?? '';
+
+  let alreadyActivated = false;
+  if (subscriptionId) {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    alreadyActivated = subscription.metadata.una_activation_status === 'active';
+  }
+
+  return {
+    activation: {
+      intake_id: intakeId,
+      email,
+      tier,
+      billing,
+      payment_status: 'active',
+      session_id: sessionId,
+      created_at: new Date().toISOString(),
+      intake,
+    },
+    alreadyActivated,
+    subscriptionId,
+  };
+}
+
+async function markSubscriptionActivated(
+  stripe: Stripe,
+  subscriptionId: string,
+  activation: ActivationPayload,
+  duplicateActivation: boolean
+): Promise<void> {
+  if (!subscriptionId) return;
+
+  await stripe.subscriptions.update(subscriptionId, {
+    metadata: {
+      una_activation_status: 'active',
+      una_activation_session_id: activation.session_id,
+      una_activation_at: activation.created_at,
+      una_activation_duplicate: duplicateActivation ? 'true' : 'false',
+    },
+  });
+}
+
+async function runActivation(
+  env: Env,
+  stripe: Stripe,
+  sessionId: string,
+  intake: Record<string, string>
+): Promise<ActivationRunResult> {
+  const { activation, alreadyActivated, subscriptionId } = await resolveActivation(stripe, sessionId, intake);
+
+  logEvent('activate_project_verified', {
+    sessionId,
+    email: activation.email,
+    tier: activation.tier,
+    billing: activation.billing,
+    alreadyActivated,
+    hasSupabaseUrl: Boolean(env.SUPABASE_URL),
+    hasSupabaseAnonKey: Boolean(env.SUPABASE_ANON_KEY),
+    hasMailjetKey: Boolean(env.MAILJET_API_KEY),
+    hasMailjetSecret: Boolean(env.MAILJET_SECRET_KEY),
+  });
+
+  if (alreadyActivated) {
+    return {
+      activation,
+      alreadyActivated: true,
+      projectWrite: { attempted: false, inserted: false, duplicate: true, status: 200 },
+      projectWebhook: { attempted: false, delivered: false, status: 0 },
+      emailWebhook: { attempted: false, delivered: false, status: 0 },
+    };
+  }
+
+  const projectWrite = await writeProjectToSupabase(env, activation);
+  logEvent('activate_project_supabase_write', {
+    sessionId,
+    inserted: projectWrite.inserted,
+    duplicate: projectWrite.duplicate,
+    status: projectWrite.status,
+    error: projectWrite.error,
+  });
+
+  if (!projectWrite.inserted && !projectWrite.duplicate) {
+    throw new Error(`Supabase project write failed: ${projectWrite.error ?? projectWrite.status}`);
+  }
+
+  const duplicateActivation = projectWrite.duplicate;
+  await markSubscriptionActivated(stripe, subscriptionId, activation, duplicateActivation);
+
+  if (duplicateActivation) {
+    logEvent('activate_project_duplicate', {
+      sessionId,
+      email: activation.email,
+    });
+
+    return {
+      activation,
+      alreadyActivated: true,
+      projectWrite,
+      projectWebhook: { attempted: false, delivered: false, status: 0 },
+      emailWebhook: { attempted: false, delivered: false, status: 0 },
+    };
+  }
+
+  const projectWebhook = await deliverWebhook(
+    env.UNALABS_NEW_PROJECT_WEBHOOK_URL,
+    { 'content-type': 'application/json', 'x-unalabs-source': 'stripe-api-worker' },
+    { type: 'una_new_subscription', activation, intake }
+  );
+
+  const emailWebhook = await deliverWebhook(
+    env.UNALABS_PROJECT_CONFIRMATION_EMAIL_WEBHOOK_URL,
+    { 'content-type': 'application/json', 'x-unalabs-source': 'stripe-api-worker' },
+    { type: 'una_subscription_confirmation', email: activation.email, tier: activation.tier, billing: activation.billing, session_id: activation.session_id }
+  );
+
+  logEvent('activate_project_delivery', {
+    sessionId,
+    projectWebhook,
+    emailWebhook,
+  });
+
+  try { await sendIntakeNotification(env, activation, intake); } catch (error) {
+    logEvent('activate_project_internal_email_error', {
+      sessionId,
+      error: error instanceof Error ? error.message : 'Unknown internal email error.',
+    });
+  }
+
+  try { await sendCustomerWelcome(env, activation, intake.name); } catch (error) {
+    logEvent('activate_project_customer_email_error', {
+      sessionId,
+      error: error instanceof Error ? error.message : 'Unknown customer email error.',
+    });
+  }
+
+  return {
+    activation,
+    alreadyActivated: false,
+    projectWrite,
+    projectWebhook,
+    emailWebhook,
+  };
 }
 
 async function handleActivateProject(req: Request, env: Env, origin: string | null): Promise<Response> {
@@ -158,71 +584,242 @@ async function handleActivateProject(req: Request, env: Env, origin: string | nu
     return json({ error: 'session_id is required.' }, 400, origin);
   }
 
-  let stripe: Stripe | null = null;
-  let email = '';
-  let tier = '';
-  let billing = '';
-  let intakeId = '';
-
   try {
-    stripe = getStripe(env);
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status !== 'paid' && session.status !== 'complete') {
-      return json({ error: 'Payment not completed.' }, 402, origin);
-    }
-    email = session.customer_email ?? sanitize(session.metadata?.email) ?? intake.email;
-    tier = session.metadata?.tier ?? '';
-    billing = session.metadata?.billing ?? '';
-    intakeId = session.metadata?.intake_id ?? intake.intakeId ?? '';
-  } catch {
+    const stripe = getStripe(env);
+    const result = await runActivation(env, stripe, sessionId, intake);
+    return json({
+      ok: true,
+      activation: result.activation,
+      already_activated: result.alreadyActivated,
+      project_write: result.projectWrite,
+      project_webhook: result.projectWebhook,
+      email_webhook: result.emailWebhook,
+    }, 200, origin);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Could not verify payment.';
+    logEvent('activate_project_error', {
+      sessionId,
+      message,
+    });
     return json({ error: 'Could not verify payment.' }, 500, origin);
   }
+}
 
-  const activation = {
-    intake_id: intakeId,
-    email: email || intake.email || '',
-    tier: tier || intake.plan || '',
-    billing: billing || intake.billing || '',
-    payment_status: 'active',
-    session_id: sessionId,
-    created_at: new Date().toISOString(),
-    intake,
-  };
+async function handleCheckoutSuccess(req: Request, env: Env): Promise<Response> {
+  const url = new URL(req.url);
+  const sessionId = sanitize(url.searchParams.get('session_id'));
+  const siteUrl = getSiteUrl(env);
 
-  const projectWebhook = {
-    configured: Boolean(env.UNALABS_NEW_PROJECT_WEBHOOK_URL),
-    attempted: false,
-    delivered: false,
-    status: 0,
-  };
-
-  // Notify admin
-  if (env.UNALABS_NEW_PROJECT_WEBHOOK_URL) {
-    try {
-      projectWebhook.attempted = true;
-      const response = await fetch(env.UNALABS_NEW_PROJECT_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-unalabs-source': 'stripe-api-worker' },
-        body: JSON.stringify({ type: 'una_new_subscription', activation, intake }),
-      });
-      projectWebhook.delivered = response.ok;
-      projectWebhook.status = response.status;
-    } catch { /* non-fatal */ }
+  if (!sessionId) {
+    return redirect(`${siteUrl}/confirmation?activation=error`);
   }
 
-  // Send confirmation email
-  const emailWebhook = env.UNALABS_PROJECT_CONFIRMATION_EMAIL_WEBHOOK_URL;
-  if (emailWebhook && email) {
-    try {
-      await fetch(emailWebhook, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-unalabs-source': 'stripe-api-worker' },
-        body: JSON.stringify({ type: 'una_subscription_confirmation', email, tier, billing, session_id: sessionId }),
-      });
-    } catch { /* non-fatal */ }
+  try {
+    const stripe = getStripe(env);
+    const result = await runActivation(env, stripe, sessionId, {});
+    const redirectUrl = new URL('/confirmation', siteUrl);
+    redirectUrl.searchParams.set('session_id', sessionId);
+    redirectUrl.searchParams.set('activation', result.alreadyActivated ? 'already_active' : 'success');
+    redirectUrl.searchParams.set('plan', result.activation.tier || 'professional');
+    return redirect(redirectUrl.toString());
+  } catch (error) {
+    logEvent('checkout_success_redirect_error', {
+      sessionId,
+      message: error instanceof Error ? error.message : 'Unknown checkout success error.',
+    });
+    return redirect(`${siteUrl}/confirmation?session_id=${encodeURIComponent(sessionId)}&activation=error`);
+  }
+}
+
+async function handleMilestoneAction(req: Request, env: Env, origin: string | null): Promise<Response> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) {
+    return json({ ok: true }, 200, origin); // non-fatal if email not configured
   }
 
-  return json({ ok: true, activation, project_webhook: projectWebhook }, 200, origin);
+  let body: Record<string, unknown>;
+  try { body = await req.json(); } catch { return json({ error: 'Invalid body.' }, 400, origin); }
+
+  const milestoneTitle = sanitize(body.milestone_title);
+  const projectTitle = sanitize(body.project_title);
+  const action = sanitize(body.action); // 'approve' | 'changes'
+  const clientEmail = sanitize(body.client_email);
+  const notes = sanitize(body.notes ?? '');
+
+  const isApprove = action === 'approve';
+  const subject = isApprove
+    ? `✓ Approved: "${milestoneTitle}" — ${clientEmail}`
+    : `⚠ Changes requested: "${milestoneTitle}" — ${clientEmail}`;
+
+  const html = `
+<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+  <div style="background:${isApprove ? '#4DB8A8' : '#F97316'};border-radius:8px;padding:16px 20px;margin-bottom:20px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">${isApprove ? '✓ Milestone Approved' : '⚠ Changes Requested'}</p>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Client</td><td style="padding:6px 0;font-size:13px;font-weight:600;color:#0B0E11">${clientEmail}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Milestone</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${milestoneTitle}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Project</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${projectTitle}</td></tr>
+  </table>
+  ${notes ? `<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:12px 16px;margin-bottom:16px"><p style="font-size:13px;color:#92400E;margin:0 0 4px;font-weight:600">Client notes</p><p style="font-size:14px;color:#0B0E11;margin:0">${notes}</p></div>` : ''}
+  <p style="font-size:12px;color:#9CA3AF">Una Labs client portal · unalabs.cloud</p>
+</div>`;
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  try {
+    await fetch('https://api.mailjet.com/v3.1/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+      body: JSON.stringify({
+        Messages: [{
+          From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+          ReplyTo: { Email: clientEmail, Name: clientEmail },
+          To: [{ Email: 'mike.fejiro@gmail.com', Name: 'Mike' }],
+          Subject: subject,
+          HTMLPart: html,
+          TextPart: `${subject}\n\nClient: ${clientEmail}\nMilestone: ${milestoneTitle}\nProject: ${projectTitle}${notes ? `\n\nNotes: ${notes}` : ''}`,
+        }],
+      }),
+    });
+  } catch { /* non-fatal */ }
+
+  return json({ ok: true }, 200, origin);
+}
+
+async function handleSubscribe(req: Request, env: Env, origin: string | null): Promise<Response> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) {
+    return json({ error: 'Email service not configured.' }, 500, origin);
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid request body.' }, 400, origin);
+  }
+
+  const email = sanitize(body.email);
+  if (!email || !email.includes('@')) {
+    return json({ error: 'A valid email is required.' }, 400, origin);
+  }
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+
+  const mailjetResponse = await fetch('https://api.mailjet.com/v3/REST/contact', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${credentials}`,
+    },
+    body: JSON.stringify({ Email: email, IsExcludedFromCampaigns: false }),
+  });
+
+  const alreadySubscribed = mailjetResponse.status === 400;
+  if (!mailjetResponse.ok && !alreadySubscribed) {
+    return json({ error: 'Could not save subscription.' }, 500, origin);
+  }
+
+  if (env.SUPABASE_URL && env.SUPABASE_ANON_KEY) {
+    try {
+      await fetch(`${cleanSecret(env.SUPABASE_URL)}/rest/v1/subscribers?on_conflict=email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': cleanSecret(env.SUPABASE_ANON_KEY),
+          'Authorization': `Bearer ${cleanSecret(env.SUPABASE_ANON_KEY)}`,
+          'Prefer': 'resolution=ignore-duplicates,return=minimal',
+        },
+        body: JSON.stringify({ email }),
+      });
+    } catch {
+      // Non-fatal. Mailjet is still the primary source of truth for the list add.
+    }
+  }
+
+  if (!alreadySubscribed) {
+    try {
+      const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Una Labs</p>
+  </div>
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:16px">You're in the loop.</p>
+  <p style="font-size:14px;color:#374151;margin-bottom:24px">We'll send you product updates, delivery insights, and professional service tips — no noise, no spam.</p>
+  <a href="https://unalabs.cloud" style="display:inline-block;background:#F97316;color:white;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none">Visit Una Labs</a>
+  <p style="font-size:12px;color:#9CA3AF;margin-top:24px;border-top:1px solid #E5E7EB;padding-top:16px">Una Labs · unalabs.cloud</p>
+</div>`;
+
+      await fetch('https://api.mailjet.com/v3.1/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+        body: JSON.stringify({
+          Messages: [{
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: email }],
+            Subject: 'You\'re subscribed to Una Labs',
+            HTMLPart: html,
+            TextPart: `You're in the loop.\n\nWe'll send you product updates, delivery insights, and professional service tips — no noise, no spam.\n\nUna Labs · unalabs.cloud`,
+          }],
+        }),
+      });
+    } catch {
+      // Non-fatal. The contact add already succeeded.
+    }
+  }
+
+  return json({ ok: true, already_subscribed: alreadySubscribed }, 200, origin);
+}
+
+async function handleIntakeConfirm(req: Request, env: Env, origin: string | null): Promise<Response> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return json({ ok: true }, 200, origin);
+
+  let body: Record<string, unknown>;
+  try { body = await req.json(); } catch { return json({ error: 'Invalid body.' }, 400, origin); }
+
+  const email = sanitize(body.email);
+  const name = sanitize(body.name) || email.split('@')[0];
+  const plan = sanitize(body.plan) || 'professional';
+  const billing = sanitize(body.billing) || 'monthly';
+
+  const planLabels: Record<string, string> = { starter: 'Starter', professional: 'Professional', agency: 'Agency', enterprise: 'Enterprise' };
+  const planLabel = planLabels[plan] ?? plan;
+  const billingLabel = billing === 'annual' ? 'Annual billing' : 'Monthly billing';
+  const firstName = name.split(' ')[0];
+
+  const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Una Labs</p>
+  </div>
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:8px">Hi ${firstName},</p>
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:20px">We've received your intake. You're one step away from starting your <strong>${planLabel}</strong> trial.</p>
+  <div style="background:#F9FAFB;border-radius:8px;padding:16px;margin-bottom:24px">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Plan</td><td style="font-size:13px;font-weight:600;color:#0B0E11">${planLabel}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Billing</td><td style="font-size:13px;color:#0B0E11">${billingLabel}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Due today</td><td style="font-size:13px;font-weight:700;color:#4DB8A8">CA$0 — 14-day free trial</td></tr>
+    </table>
+  </div>
+  <p style="font-size:13px;color:#6B7280;margin-bottom:20px">Complete your checkout to activate your workspace. Your card won't be charged until day 15.</p>
+  <a href="https://unalabs.cloud/start" style="display:inline-block;background:#F97316;color:white;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:24px">Complete checkout</a>
+  <p style="font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:16px">Questions? Reply to this email or reach us at <a href="mailto:hello@unalabs.cloud" style="color:#4DB8A8">hello@unalabs.cloud</a><br>Una Labs · unalabs.cloud</p>
+</div>`;
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  try {
+    await fetch('https://api.mailjet.com/v3.1/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+      body: JSON.stringify({
+        Messages: [{
+          From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+          To: [{ Email: email, Name: name }],
+          Subject: `Your Una Labs ${planLabel} intake is confirmed`,
+          HTMLPart: html,
+          TextPart: `Hi ${firstName},\n\nWe've received your intake. You're one step away from your ${planLabel} trial.\n\nPlan: ${planLabel}\nBilling: ${billingLabel}\nDue today: CA$0 (14-day free trial)\n\nComplete checkout: https://unalabs.cloud/start\n\nQuestions? Email hello@unalabs.cloud\n\nUna Labs · unalabs.cloud`,
+        }],
+      }),
+    });
+  } catch { /* non-fatal */ }
+
+  return json({ ok: true }, 200, origin);
 }
 
 export default {
@@ -235,6 +832,10 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/checkout-success') {
+      return handleCheckoutSuccess(req, env);
+    }
+
     if (req.method !== 'POST') {
       return json({ error: 'Method not allowed.' }, 405, origin);
     }
@@ -244,6 +845,12 @@ export default {
         return handleCreateCheckoutSession(req, env, origin);
       case '/api/activate-project':
         return handleActivateProject(req, env, origin);
+      case '/api/subscribe':
+        return handleSubscribe(req, env, origin);
+      case '/api/milestone-action':
+        return handleMilestoneAction(req, env, origin);
+      case '/api/intake-confirm':
+        return handleIntakeConfirm(req, env, origin);
       default:
         return json({ error: 'Not found.' }, 404, origin);
     }

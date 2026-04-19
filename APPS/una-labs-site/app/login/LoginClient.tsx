@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +18,7 @@ export function LoginClient() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const activeModeRef = useRef<Mode>('magic-link');
 
   useEffect(() => {
     let cancelled = false;
@@ -40,8 +41,25 @@ export function LoginClient() {
     };
   }, [redirectTo, router]);
 
+  useEffect(() => {
+    activeModeRef.current = mode;
+  }, [mode]);
+
+  function switchMode(nextMode: Mode) {
+    activeModeRef.current = nextMode;
+    setMode(nextMode);
+    setStatus('');
+    setError('');
+    setLoading(false);
+
+    if (nextMode === 'magic-link') {
+      setPassword('');
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const submitMode = mode;
     setLoading(true);
     setStatus('');
     setError('');
@@ -49,23 +67,32 @@ export function LoginClient() {
     try {
       if (mode === 'magic-link') {
         const { signInWithOtpEmail } = await import('@ftc/auth');
-        const { error: authError } = await signInWithOtpEmail(email);
+        const fullRedirect = `${window.location.origin}${redirectTo}`;
+        const { error: authError } = await signInWithOtpEmail(email, fullRedirect);
         if (authError) {
           throw authError;
         }
-        setStatus(`Magic link sent to ${email}. Open it from the same browser session when possible.`);
+        if (activeModeRef.current === submitMode) {
+          setStatus(`Magic link sent to ${email}. Open it from the same browser session when possible.`);
+        }
       } else {
         const { signInWithPassword } = await import('@ftc/auth');
         const { error: authError } = await signInWithPassword(email, password);
         if (authError) {
           throw authError;
         }
-        router.replace(redirectTo);
+        if (activeModeRef.current === submitMode) {
+          router.replace(redirectTo);
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to start sign-in.');
+      if (activeModeRef.current === submitMode) {
+        setError(err instanceof Error ? err.message : 'Unable to start sign-in.');
+      }
     } finally {
-      setLoading(false);
+      if (activeModeRef.current === submitMode) {
+        setLoading(false);
+      }
     }
   }
 
@@ -77,14 +104,14 @@ export function LoginClient() {
         </div>
         <h1 className="text-h2 text-tx-heading text-center mb-2">Log in to Una Labs</h1>
         <p className="text-body text-tx-secondary text-center mb-10">
-          This route is now wired for client-side Supabase auth. If you do not have an account yet,
-          start with the live intake flow first.
+          Access your Una Labs workspace to review project status and continue delivery. If you are new,
+          start by submitting a request through the intake flow.
         </p>
 
         <div className="mb-6 flex justify-center gap-3">
           <button
             type="button"
-            onClick={() => setMode('magic-link')}
+            onClick={() => switchMode('magic-link')}
             className={[
               'rounded-full px-4 py-2 text-body-sm font-semibold transition-colors',
               mode === 'magic-link'
@@ -96,7 +123,7 @@ export function LoginClient() {
           </button>
           <button
             type="button"
-            onClick={() => setMode('password')}
+            onClick={() => switchMode('password')}
             className={[
               'rounded-full px-4 py-2 text-body-sm font-semibold transition-colors',
               mode === 'password'
@@ -160,7 +187,7 @@ export function LoginClient() {
           </Button>
 
           <p className="text-center text-body-sm text-tx-secondary">
-            Need an account? <a href="/start" className="text-brand-teal hover:underline">Start with the live intake flow</a>.
+            New here? <a href="/start" className="text-brand-teal hover:underline">Start with the intake form</a>.
           </p>
         </form>
       </div>
