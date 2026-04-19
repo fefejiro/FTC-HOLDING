@@ -244,6 +244,71 @@ app.post("/run", async (req, res) => {
   }
 });
 
+// ── Una Labs intake webhook ───────────────────────────────────────────────────
+
+app.post("/webhook/intake", async (req, res) => {
+  const source = safeText(req.get("x-unalabs-source"));
+  if (source !== "stripe-api-worker") {
+    return res.status(401).json({ ok: false, error: "unauthorized" });
+  }
+
+  const { type, activation = {}, intake = {} } = req.body || {};
+  if (type !== "una_new_subscription") {
+    return res.status(400).json({ ok: false, error: "invalid_type" });
+  }
+
+  const { email = "", tier = "", billing = "", intake_id: intakeId = "", session_id: sessionId = "" } = activation;
+  console.log(`[ATEAM] New subscription: ${email} — ${tier} (${billing}) — session ${sessionId}`);
+
+  // Append to intake log
+  const logPath = path.join(__dirname, "..", "intake-log.jsonl");
+  const logEntry = { received_at: new Date().toISOString(), email, tier, billing, intake_id: intakeId, session_id: sessionId, intake };
+  try { fs.appendFileSync(logPath, JSON.stringify(logEntry) + "\n"); } catch (_) {}
+
+  // Respond immediately — Claude runs async
+  res.json({ ok: true, email });
+
+  // Generate scoped brief via Claude CLI
+  const briefId = (intakeId || email).replace(/[^a-z0-9]/gi, "-").slice(0, 60);
+  const briefDir = path.join(__dirname, "..", "intake-briefs");
+  try { fs.mkdirSync(briefDir, { recursive: true }); } catch (_) {}
+  const briefPath = path.join(briefDir, `${briefId}.md`);
+
+  const prompt = [
+    "ATEAM INTAKE — New Una Labs customer just activated.",
+    "",
+    `Email: ${email}`,
+    `Plan: ${tier} (${billing})`,
+    `Intake ID: ${intakeId}`,
+    `Intake data: ${JSON.stringify(intake, null, 2)}`,
+    "",
+    "Generate a project brief containing:",
+    "1. 3-5 bullet scope summary based on the intake data",
+    "2. First 3 milestones with estimated timeframes",
+    "3. A short, warm welcome email draft addressed to this customer",
+    "",
+    `Write the complete brief as a markdown file to: ${briefPath}`,
+  ].join("\n");
+
+  setImmediate(async () => {
+    try {
+      const child = spawn(
+        CLAUDE_BIN,
+        ["--print", "--dangerously-skip-permissions", "-p", `${AGENT_SYSTEM_PROMPT}\n\n${prompt}`],
+        { windowsHide: true, stdio: ["ignore", "pipe", "pipe"], cwd: path.join(__dirname, "..") }
+      );
+      let out = "";
+      child.stdout.on("data", (d) => { out += d; });
+      child.on("close", (code) => {
+        console.log(`[ATEAM] Brief for ${email}: exit ${code}. ${stripAnsi(out).slice(0, 200)}`);
+      });
+      child.on("error", (err) => console.error("[ATEAM] Claude spawn error:", err.message));
+    } catch (e) {
+      console.error("[ATEAM] Intake processing failed:", e.message);
+    }
+  });
+});
+
 // ── Telegram gateway compatibility routes ─────────────────────────────────────
 
 app.get("/health", (req, res) => {

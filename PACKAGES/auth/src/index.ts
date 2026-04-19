@@ -5,9 +5,12 @@ function getClient(): SupabaseClient {
   return createBrowserClient();
 }
 
-export async function signInWithOtpEmail(email: string) {
+export async function signInWithOtpEmail(email: string, redirectTo?: string) {
   const client = getClient();
-  return client.auth.signInWithOtp({ email });
+  return client.auth.signInWithOtp({
+    email,
+    options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+  });
 }
 
 export async function signInWithPassword(email: string, password: string) {

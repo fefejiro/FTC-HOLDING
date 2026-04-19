@@ -1,9 +1,30 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { FOOTER_LINKS } from '@/lib/constants';
+import { STRIPE_API_URL } from '@/lib/stripe-config';
 
 export function Footer() {
+  const [email, setEmail] = useState('');
+  const [subState, setSubState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.includes('@')) return;
+    setSubState('loading');
+    try {
+      const res = await fetch(`${STRIPE_API_URL}/api/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      setSubState(res.ok ? 'done' : 'error');
+    } catch {
+      setSubState('error');
+    }
+  };
+
   return (
     <footer className="bg-bg-subtle border-t border-border">
       <div className="max-w-content mx-auto px-6 py-16">
@@ -14,28 +35,32 @@ export function Footer() {
           <p className="text-body-sm text-tx-secondary mb-4">
             Product updates, delivery insights, and professional service tips.
           </p>
-          <form
-            className="flex gap-3"
-            onSubmit={(e) => e.preventDefault()}
-            aria-label="Newsletter signup"
-          >
-            <label htmlFor="footer-email" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="footer-email"
-              type="email"
-              placeholder="you@company.com"
-              required
-              className="flex-1 px-4 py-2 text-body border border-border rounded-lg focus:outline-none focus:border-border-focus"
-            />
-            <button
-              type="submit"
-              className="px-5 py-2 bg-brand-teal text-white font-semibold rounded-lg hover:bg-brand-teal/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2"
-            >
-              Subscribe
-            </button>
-          </form>
+          {subState === 'done' ? (
+            <p className="text-body-sm text-brand-teal font-medium">You're subscribed. We'll be in touch.</p>
+          ) : (
+            <form className="flex gap-3" onSubmit={handleSubscribe}>
+              <label htmlFor="footer-email" className="sr-only">Email address</label>
+              <input
+                id="footer-email"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                required
+                className="flex-1 px-4 py-2 text-body border border-border rounded-lg focus:outline-none focus:border-border-focus"
+              />
+              <button
+                type="submit"
+                disabled={subState === 'loading'}
+                className="px-5 py-2 bg-brand-teal text-white font-semibold rounded-lg hover:bg-brand-teal/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2 disabled:opacity-60"
+              >
+                {subState === 'loading' ? '…' : 'Subscribe'}
+              </button>
+            </form>
+          )}
+          {subState === 'error' && (
+            <p className="text-body-sm text-red-500 mt-2">Something went wrong. Try again.</p>
+          )}
         </div>
 
         {/* Link columns */}

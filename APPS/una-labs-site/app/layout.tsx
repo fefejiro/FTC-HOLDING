@@ -19,7 +19,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: {
     template: '%s | Una Labs',
-    default: 'Una Labs — The Professional Service Platform',
+    default: 'Una Labs - The Professional Service Platform',
   },
   description:
     'Structured intake, clear proposals, governed delivery, and measurable proof. The platform built for teams who deliver with confidence.',
@@ -27,14 +27,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'Una Labs',
-    title: 'Una Labs — The Professional Service Platform',
+    title: 'Una Labs - The Professional Service Platform',
     description:
       'Structured intake, clear proposals, governed delivery, and measurable proof.',
     images: [{ url: '/images/og/default.png', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Una Labs — The Professional Service Platform',
+    title: 'Una Labs - The Professional Service Platform',
     description:
       'Structured intake, clear proposals, governed delivery, and measurable proof.',
     images: ['/images/og/default.png'],

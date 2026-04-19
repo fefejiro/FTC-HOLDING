@@ -10,22 +10,27 @@ Last updated: 2026-04-18
 | /start intake form | ✓ https://unalabs.cloud/start |
 | /start/summary review + payment | ✓ https://unalabs.cloud/start/summary |
 | /confirmation post-payment | ✓ https://unalabs.cloud/confirmation |
-| Test Stripe key set | ✓ sk_test_...dQOo |
-| Test prices set | ✓ All 8 plans |
-| **Live mode** | ⏳ Needs sk_live key from dashboard |
+| Live Stripe key set | ✓ rk_live_ key in worker |
+| Live products + prices | ✓ All 8 live prices set in worker |
+| **Live checkout verified** | ✓ cs_live_ session created 2026-04-18 |
+| **RBC bank account** | ⏳ Manual step — see below |
 
 ---
 
-## Test mode price IDs (already set in worker)
+## Live mode price IDs (set in worker 2026-04-18)
 
 | Plan | Monthly | Annual |
 |------|---------|--------|
-| Starter | price_1TNarN5M2AZUCbReQFNxGzaX | price_1TNb0E5M2AZUCbReHNGOVrWi |
-| Professional | price_1TNb0C5M2AZUCbReZeBc43I5 | price_1TNb0F5M2AZUCbReZNya3cic |
-| Agency | price_1TNb0D5M2AZUCbReGSLyNjUK | price_1TNb0F5M2AZUCbRejpEXadBP |
-| Enterprise | price_1TNb0D5M2AZUCbRe0sb2clA7 | price_1TNb0G5M2AZUCbReUEXaUr4l |
+| Starter | price_1TNbbd5M2AZUCbReEyubdwVq | price_1TNbbe5M2AZUCbReJQVY14Qs |
+| Professional | price_1TNbbd5M2AZUCbRep5dLdnJ0 | price_1TNbbe5M2AZUCbReo3Ssc2tk |
+| Agency | price_1TNbbd5M2AZUCbRe5rCIGwQJ | price_1TNbbe5M2AZUCbRe89sEZlDU |
+| Enterprise | price_1TNbbd5M2AZUCbReTSrmgs8Q | price_1TNbbe5M2AZUCbRekGVcW0SP |
 
-Test card: `4242 4242 4242 4242` · any future date · any CVC
+Live products: Starter `prod_UMKF4H6Zxzv892` · Professional `prod_UMKF4LJinghWif` · Agency `prod_UMKFqA2XGQ0V4h` · Enterprise `prod_UMKFRlsQpirgks`
+
+Key in worker: `rk_live_51TMK0E5M2AZUCbRe...` (OAuth restricted key, has checkout + price read/write)
+
+Test card (test mode only): `4242 4242 4242 4242` · any future date · any CVC
 
 ---
 

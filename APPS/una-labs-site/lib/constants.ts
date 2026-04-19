@@ -60,7 +60,7 @@ export const INDUSTRIES = solutionLinks.map((page) => ({
 export const PROBLEM_SOLUTIONS = [
   {
     eyebrow: 'The visibility problem',
-    headline: 'Clients need to see progress — not just results',
+    headline: 'Clients need to see progress, not just results',
     body: 'When clients lack visibility into project progress, they get anxious. They send update emails. They interrupt the team. They doubt the timeline. Real-time visibility builds trust and reduces the cost of communication.',
     bullets: [
       'Real-time progress tracking visible to clients',
@@ -76,7 +76,7 @@ export const PROBLEM_SOLUTIONS = [
     headline: "Reporting shouldn't take weeks to assemble",
     body: 'Manual report assembly consumes hours that should go to delivery. Clients want impact quantified. Automated insights cut reporting time while making every engagement look more professional.',
     bullets: [
-      'Auto-generated from project data — no copy-paste',
+      'Auto-generated from project data, no copy-paste',
       'Structured proof tied to actual delivery context',
       'Client-ready reporting and handoff outputs',
       'Trend visibility across engagements',
@@ -87,7 +87,7 @@ export const PROBLEM_SOLUTIONS = [
   {
     eyebrow: 'The handoff problem',
     headline: "Delivery without proof isn't done",
-    body: "Work isn't done until it's documented. Every Una Labs engagement ends with handoff-ready output — access details, evidence, and a completion record — so clients have something durable.",
+    body: "Work isn't done until it's documented. Every Una Labs engagement ends with handoff-ready output, including access details, evidence, and a completion record, so clients have something durable.",
     bullets: [
       'Structured sign-off workflow with client approval',
       'Timestamped completion and approval records',

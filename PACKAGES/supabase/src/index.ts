@@ -5,26 +5,19 @@ export type Database = any;
 
 export type SupabaseClient = BaseClient<Database>;
 
-function requireEnv(name: string): string {
-  const val = process.env[name];
-  if (!val) {
-    throw new Error(`Environment variable ${name} is required for @ftc/supabase`);
-  }
-  return val;
-}
-
 export function createBrowserClient(): SupabaseClient {
-  const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
-  const key = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url) throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is required for @ftc/supabase');
+  if (!key) throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_ANON_KEY is required for @ftc/supabase');
   return createClient<Database>(url, key);
 }
 
-/**
- * Optionally pass cookies string or object (Next.js server) to persist auth.
- */
 export function createServerClient(cookies?: string | { [k: string]: string }): SupabaseClient {
-  const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
-  const key = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url) throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is required for @ftc/supabase');
+  if (!key) throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_ANON_KEY is required for @ftc/supabase');
   const opts: any = { auth: { persistSession: false } };
   if (cookies) {
     opts.headers = { cookie: typeof cookies === 'string' ? cookies : Object.entries(cookies).map(([k,v]) => `${k}=${v}`).join('; ') };

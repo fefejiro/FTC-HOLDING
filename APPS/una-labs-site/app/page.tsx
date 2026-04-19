@@ -9,7 +9,7 @@ import { PROBLEM_SOLUTIONS } from '@/lib/constants';
 import { DashboardMockup, ReportMockup, HandoffMockup } from '@/components/ui/ProductMockups';
 
 export const metadata: Metadata = {
-  title: 'Una Labs — The Professional Service Platform',
+  title: 'Una Labs - The Professional Service Platform',
   description:
     'Structured intake, clear proposals, governed delivery, and measurable proof. The platform built for teams who deliver with confidence.',
 };
@@ -23,14 +23,14 @@ export default function HomePage() {
     <>
       <HeroSection
         eyebrow="Una Labs"
-        headline="Deliver project insights into business value"
-        accentPhrase="business value"
-        subheadline="Structured intake, scoped proposals, governed delivery, and measurable proof. Everything your team needs to deliver with confidence."
+        headline="From client request to delivered project, with proof."
+        accentPhrase="with proof."
+        subheadline="Una Labs structures your intake, scopes the work, and gives every project a live client workspace. Your clients can see exactly where things stand and approve each milestone themselves."
         ctaPrimaryLabel="Start Free Trial"
         ctaPrimaryHref="/start"
         ctaSecondaryLabel="Watch a Demo"
         ctaSecondaryHref="/demo"
-        frictionNote="No credit card required. 14 days free."
+        frictionNote="14-day free trial. No credit card required."
       />
 
       <FeatureCarousel />
