@@ -1,5 +1,5 @@
 # Una Labs — Build Handover & Implementation Plan
-Last updated: 2026-04-18
+Last updated: 2026-04-19
 Author: Claude (Sonnet 4.6) via Mike (fejiro007)
 
 ---
@@ -99,25 +99,38 @@ The worker's `cleanSecret()` function already strips this. Never remove that fun
 
 ---
 
-## What Is Live and Working (as of 2026-04-18)
+## What Is Live and Working (as of 2026-04-19)
 
 | Feature | Status | Notes |
 |---|---|---|
 | `unalabs.cloud` | ✓ Live | Full marketing site |
 | `/start` intake form | ✓ Live | 2-step: details → plan picker |
 | `/start/summary` + Stripe | ✓ Live | Stripe Checkout, 14-day trial, CAD |
-| `/confirmation` | ✓ Live | Verifies session, fires webhooks |
-| Stripe Worker | ✓ Live | `una-stripe-api.fejiro-efiuvwere.workers.dev` |
+| `/confirmation` | ✓ Live | Server-verified via GET /api/checkout-success |
+| Stripe Worker | ✓ Live | `una-stripe-api.fejiro-efiuvwere.workers.dev` (v4bb4f250) |
 | Live Stripe key | ✓ Set | `rk_live_...` in worker secrets |
 | Live prices (all 8) | ✓ Set | All CAD monthly + annual in worker secrets |
 | RBC bank account | ✓ Connected | Payouts → RBC |
-| `/how-it-works` | ✓ Live | 4-step interactive, mockups, FAQ |
+| `/how-it-works` | ✓ Live | 4-step interactive, tabs dynamic per industry |
 | `/pricing` | ✓ Live | All 4 plans with toggle |
-| `/demo` | ✗ Missing | Homepage CTA links here — 404 |
-| Login → real auth | ✗ Placeholder | Form renders, no backend |
-| Industry tabs (filter) | ✗ Broken | Tabs exist, content doesn't change |
-| Webhooks (admin notify) | ✗ Not set | `UNALABS_NEW_PROJECT_WEBHOOK_URL` empty |
-| ATEAM → intake wire | ✗ Not built | Highest priority real-product step |
+| `/demo` | ✓ Live | Live workflow tabs, product cards, no 404 |
+| Login → real auth | ✓ Live | Magic link + password, Supabase, onAuthStateChange |
+| Client dashboard | ✓ Live | Real Supabase data, milestones, approval gates, delivery proof |
+| Approval gates | ✓ Live | Clients approve/request changes on milestones, notifies Mike |
+| Delivery proof | ✓ Live | proof_url + proof_note per milestone |
+| Admin reporting | ✓ Live | `/admin` — KPIs, projects, subscribers (Mike only) |
+| Intake confirm email | ✓ Live | Sends to client on checkout start (POST /api/intake-confirm) |
+| Trial active email | ✓ Live | Sends to client after payment activation |
+| Mike notification email | ✓ Live | Sends to mike.fejiro@gmail.com on new customer |
+| Newsletter subscribe | ✓ Live | Footer form → Mailjet + Supabase + confirmation email |
+| Branded email sender | ✓ Live | `hello@unalabs.cloud` — Mailjet domain verified, SPF+DKIM OK |
+| Supabase SMTP | ✓ Live | Magic links from `Una Labs <hello@unalabs.cloud>` |
+| Idempotent activation | ✓ Live | Deduped on stripe_session_id — no duplicate emails/projects |
+| Industry tabs | ✓ Fixed | Content changes per tab (was broken) |
+| Broken hrefs | ✓ Fixed | /product/* hrefs replaced with valid routes |
+| ATEAM → intake wire | ✗ Not built | **Highest priority next step** |
+| Post-payment BAT | ✗ Pending | Private live card test — do before going public |
+| `/ateam/` redirect | ⏳ In progress | Railway deploy b74dea10 — verify no ATEAM app showing publicly |
 
 ---
 
@@ -143,9 +156,9 @@ Stripe account: `acct_1TMK0E5M2AZUCbRe` (fejiro.efiuvwere@gmail.com)
 
 ## Implementation Plan — What to Build Next
 
-### Phase 1 — Fix Broken Things (Priority: Immediate, ~3–4 hours total)
+### Phase 1 — Fix Broken Things ✅ COMPLETE (as of 2026-04-19)
 
-#### 1A. Create `/demo` page
+#### 1A. Create `/demo` page ✅ DONE
 **File:** `APPS/una-labs-site/app/demo/page.tsx` (new)
 **What:** Tabbed page with embedded Loom recordings, one per product.
 The homepage has `ctaSecondaryHref="/demo"` — this 404s right now.
@@ -215,9 +228,9 @@ Add to nav (subtle): Footer only, or a small link in the About page. Not in main
 
 ---
 
-### Phase 2 — Make the Product Real (Priority: High, ~1–2 days)
+### Phase 2 — Make the Product Real (Priority: HIGH — DO THIS NEXT)
 
-#### 2A. Wire ATEAM to intake webhook
+#### 2A. Wire ATEAM to intake webhook ← HIGHEST PRIORITY
 **What:** When a customer completes Stripe checkout, `/confirmation` fires `POST /api/activate-project`.
 That worker currently sends a webhook to `UNALABS_NEW_PROJECT_WEBHOOK_URL` (currently empty).
 
