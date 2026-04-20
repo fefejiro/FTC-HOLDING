@@ -168,6 +168,19 @@ type InvoiceRecord = {
   created_at: string;
 };
 
+type InstantBillRecord = {
+  id: string;
+  project_id: string;
+  stripe_payment_link_id: string;
+  stripe_price_id: string;
+  amount_cad: number;
+  description: string;
+  payment_link_url: string;
+  status: string;
+  paid_at: string | null;
+  created_at: string;
+};
+
 function logEvent(event: string, details: Record<string, unknown>): void {
   console.log(JSON.stringify({ event, ...details }));
 }
@@ -1810,6 +1823,148 @@ async function handleAdminSubscriptionAction(req: Request, env: Env, origin: str
   }
 }
 
+async function handleAdminInstantBill(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid body.' }, 400, origin);
+  }
+
+  const projectId = sanitize(body.project_id, 80);
+  const description = sanitize(body.description, 180);
+  const amountRaw = Number(body.amount_cad);
+  const amountCad = Number.isFinite(amountRaw) ? Number(amountRaw.toFixed(2)) : 0;
+
+  if (!projectId) return json({ error: 'project_id required.' }, 400, origin);
+  if (!description) return json({ error: 'description required.' }, 400, origin);
+  if (amountCad <= 0 || amountCad > 50000) return json({ error: 'amount_cad must be between 0 and 50000.' }, 400, origin);
+
+  const serviceKey = getSupabaseServiceKey(env);
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+
+  const projectRes = await fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}&select=id,email,name`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+  if (!projectRes.ok) return json({ error: 'Project lookup failed.' }, 502, origin);
+  const projects = await projectRes.json() as ContractProject[];
+  const project = projects[0];
+  if (!project) return json({ error: 'Project not found.' }, 404, origin);
+
+  const stripe = getStripe(env);
+  const amountCents = Math.round(amountCad * 100);
+
+  let product: Stripe.Product;
+  let price: Stripe.Price;
+  let paymentLink: Stripe.PaymentLink;
+
+  try {
+    product = await stripe.products.create({
+      name: `Instant Bill - ${project.name || project.email}`,
+      description,
+      metadata: {
+        project_id: project.id,
+        type: 'instant_bill',
+      },
+    });
+
+    price = await stripe.prices.create({
+      currency: 'cad',
+      unit_amount: amountCents,
+      product: product.id,
+      metadata: {
+        project_id: project.id,
+        type: 'instant_bill',
+      },
+    });
+
+    paymentLink = await stripe.paymentLinks.create({
+      line_items: [{ price: price.id, quantity: 1 }],
+      metadata: {
+        project_id: project.id,
+        type: 'instant_bill',
+      },
+    });
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Stripe instant bill creation failed.' }, 500, origin);
+  }
+
+  const insertRes = await fetch(`${supabaseUrl}/rest/v1/instant_bills`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify({
+      project_id: project.id,
+      stripe_payment_link_id: paymentLink.id,
+      stripe_price_id: price.id,
+      amount_cad: amountCad,
+      description,
+      payment_link_url: paymentLink.url,
+      status: 'sent',
+    }),
+  });
+  if (!insertRes.ok) {
+    const message = await insertRes.text();
+    return json({ error: `Failed to persist instant bill: ${message}` }, 502, origin);
+  }
+  const createdRows = await insertRes.json() as InstantBillRecord[];
+  const instantBill = createdRows[0];
+
+  if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY) {
+    const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+    const subject = `Instant bill - CA$${amountCad.toLocaleString('en-CA')} - ${project.name || project.email}`;
+    const html = `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+  <div style="background:#F97316;border-radius:8px;padding:16px 20px;margin-bottom:20px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Instant payment link</p>
+  </div>
+  <p style="font-size:14px;color:#111827">Hi ${sanitize(project.name || project.email, 120)},</p>
+  <p style="font-size:14px;color:#111827">A one-off payment link has been created for this request: ${description}</p>
+  <table style="width:100%;border-collapse:collapse;margin:16px 0 20px">
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Amount</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">CA$${amountCad.toLocaleString('en-CA')}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Project</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${sanitize(project.name || project.id, 120)}</td></tr>
+  </table>
+  <p><a href="${paymentLink.url}" style="display:inline-block;padding:10px 16px;background:#0d9488;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Pay now</a></p>
+</div>`;
+
+    await fetch('https://api.mailjet.com/v3.1/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+      body: JSON.stringify({
+        Messages: [
+          {
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: project.email, Name: sanitize(project.name || project.email, 120) }],
+            Subject: subject,
+            HTMLPart: html,
+            TextPart: `${subject}\n\nDescription: ${description}\nAmount: CA$${amountCad}\nPay: ${paymentLink.url}`,
+          },
+          {
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }],
+            Subject: `[Admin] ${subject}`,
+            HTMLPart: html,
+            TextPart: `[Admin] ${subject}\n\nClient: ${project.email}\nDescription: ${description}\nAmount: CA$${amountCad}\nPay link: ${paymentLink.url}`,
+          },
+        ],
+      }),
+    }).catch(() => {
+      // Non-fatal.
+    });
+  }
+
+  return json({ ok: true, instant_bill: instantBill, payment_link_url: paymentLink.url }, 200, origin);
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -1853,6 +2008,8 @@ export default {
         return handleAdminBilling(req, env, origin);
       case '/api/admin/subscription-action':
         return handleAdminSubscriptionAction(req, env, origin);
+      case '/api/admin/instant-bill':
+        return handleAdminInstantBill(req, env, origin);
       default:
         return json({ error: 'Not found.' }, 404, origin);
     }

@@ -27,6 +27,7 @@ Honest time estimates only. No rounding down.
 | 2026-04-20 | Una Labs | Built and deployed static site to Cloudflare Pages | 15 min | Deploy success to https://cca823f1.ftc-site-pages.pages.dev | Dirty working tree warning only |
 | 2026-04-20 | Una Labs | Verified live routes and checkout redirect flow | 10 min | start, summary, confirmation return 200; checkout-success redirect validated | None |
 | 2026-04-20 | Una Labs | Phase 6 — milestone invoicing: DB migration, worker endpoints, invoice page, portal/dashboard/admin links | ~2h | All deployed, migration live, build clean | None |
+| 2026-04-20 | Una Labs | Phase 7 — instant bill: Payment Link endpoint, admin create-link UI, instant_bills schema | ~1.5h | Worker + site deployed, migration live, build clean | None |
 | [next entry] | | | | | |
 
 ---

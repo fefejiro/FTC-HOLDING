@@ -60,6 +60,19 @@ type Invoice = {
   created_at?: string;
 };
 
+type InstantBill = {
+  id: string;
+  project_id: string;
+  stripe_payment_link_id: string;
+  stripe_price_id: string;
+  amount_cad?: number;
+  description?: string;
+  payment_link_url?: string;
+  status?: string;
+  paid_at?: string;
+  created_at?: string;
+};
+
 type BillingInfo = {
   subscription_id: string | null;
   status: string;
@@ -73,7 +86,7 @@ type State =
   | { phase: 'loading' }
   | { phase: 'denied' }
   | { phase: 'error'; message: string }
-  | { phase: 'ready'; projects: Project[]; milestones: Milestone[]; subscribers: Subscriber[]; contracts: Contract[]; invoices: Invoice[] };
+  | { phase: 'ready'; projects: Project[]; milestones: Milestone[]; subscribers: Subscriber[]; contracts: Contract[]; invoices: Invoice[]; instantBills: InstantBill[] };
 
 const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
 
@@ -148,6 +161,11 @@ export function AdminClient() {
   const [view, setView] = useState<'pipeline' | 'table'>('pipeline');
   const [billing, setBilling] = useState<Record<string, BillingInfo>>({});
   const [billingLoading, setBillingLoading] = useState(false);
+  const [instantBillProjectId, setInstantBillProjectId] = useState('');
+  const [instantBillAmount, setInstantBillAmount] = useState('');
+  const [instantBillDescription, setInstantBillDescription] = useState('');
+  const [instantBillCreating, setInstantBillCreating] = useState(false);
+  const [instantBillLink, setInstantBillLink] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,12 +189,14 @@ export function AdminClient() {
           { data: subscribers, error: subscriberError },
           { data: contracts, error: contractError },
           { data: invoices, error: invoiceError },
+          { data: instantBills, error: instantBillsError },
         ] = await Promise.all([
           client.from('projects').select('*').order('created_at', { ascending: false }),
           client.from('milestones').select('*').order('due_date', { ascending: true }),
           client.from('subscribers').select('*').order('created_at', { ascending: false }),
           client.from('contracts').select('id,project_id,title,status,sent_at,signer_name,signer_email,signed_at,created_at').order('created_at', { ascending: false }),
           client.from('invoices').select('*').order('created_at', { ascending: false }),
+          client.from('instant_bills').select('*').order('created_at', { ascending: false }),
         ]);
 
         if (projectError) throw projectError;
@@ -184,6 +204,7 @@ export function AdminClient() {
         if (subscriberError) throw subscriberError;
         if (contractError) throw contractError;
         if (invoiceError) throw invoiceError;
+        if (instantBillsError) throw instantBillsError;
 
         if (!cancelled) {
           setState({
@@ -193,6 +214,7 @@ export function AdminClient() {
             subscribers: (subscribers as Subscriber[] | null) ?? [],
             contracts: (contracts as Contract[] | null) ?? [],
             invoices: (invoices as Invoice[] | null) ?? [],
+            instantBills: (instantBills as InstantBill[] | null) ?? [],
           });
 
           // Fetch billing status for projects with Stripe sessions
@@ -279,6 +301,73 @@ export function AdminClient() {
     }
   }
 
+  async function handleCreateInstantBill() {
+    if (state.phase !== 'ready') return;
+    const amount = Number(instantBillAmount);
+
+    if (!instantBillProjectId) {
+      alert('Select a project first.');
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert('Enter a valid amount.');
+      return;
+    }
+    if (!instantBillDescription.trim()) {
+      alert('Add a short description.');
+      return;
+    }
+
+    setInstantBillCreating(true);
+    setInstantBillLink(null);
+    try {
+      const { getSession } = await import('@ftc/auth');
+      const session = await getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`${STRIPE_API_URL}/api/admin/instant-bill`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          project_id: instantBillProjectId,
+          amount_cad: Number(amount.toFixed(2)),
+          description: instantBillDescription.trim(),
+        }),
+      });
+
+      const payload = await response.json() as {
+        ok?: boolean;
+        error?: string;
+        instant_bill?: InstantBill;
+        payment_link_url?: string;
+      };
+
+      if (!response.ok || !payload.ok || !payload.instant_bill) {
+        alert(payload.error ?? 'Failed to create instant bill.');
+        return;
+      }
+
+      setInstantBillLink(payload.payment_link_url ?? payload.instant_bill.payment_link_url ?? null);
+      setInstantBillAmount('');
+      setInstantBillDescription('');
+
+      setState((prev) => {
+        if (prev.phase !== 'ready') return prev;
+        return {
+          ...prev,
+          instantBills: [payload.instant_bill!, ...prev.instantBills],
+        };
+      });
+    } catch {
+      alert('Network error while creating instant bill.');
+    } finally {
+      setInstantBillCreating(false);
+    }
+  }
+
   if (state.phase === 'loading') {
     return (
       <div className="min-h-screen bg-bg-offwhite flex items-center justify-center">
@@ -310,7 +399,7 @@ export function AdminClient() {
     );
   }
 
-  const { projects, milestones, subscribers, contracts, invoices } = state;
+  const { projects, milestones, subscribers, contracts, invoices, instantBills } = state;
 
   const totalMRR = projects
     .filter((project) => !['paused', 'complete'].includes(project.status ?? ''))
@@ -603,6 +692,115 @@ export function AdminClient() {
                         </td>
                         <td className="px-6 py-4 text-tx-muted">{formatDate(invoice.due_date)}</td>
                         <td className="px-6 py-4 text-tx-muted">{formatDate(invoice.created_at)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Instant Bill */}
+        <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-6">
+          <div className="px-8 py-5 border-b border-border flex items-center justify-between">
+            <h2 className="text-h3 text-tx-heading">Instant Bill</h2>
+            <span className="text-body-sm text-tx-muted">{instantBills.length} sent</span>
+          </div>
+
+          <div className="px-8 py-6 border-b border-border grid gap-3 md:grid-cols-[1.5fr_1fr_2fr_auto] items-end">
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-tx-muted">Client project</label>
+              <select
+                value={instantBillProjectId}
+                onChange={(event) => setInstantBillProjectId(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-body-sm bg-white"
+              >
+                <option value="">Select project...</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name || project.email || project.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-tx-muted">Amount (CAD)</label>
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                value={instantBillAmount}
+                onChange={(event) => setInstantBillAmount(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-body-sm"
+                placeholder="250"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-tx-muted">Description</label>
+              <input
+                value={instantBillDescription}
+                onChange={(event) => setInstantBillDescription(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-body-sm"
+                placeholder="One-off scope expansion"
+              />
+            </div>
+
+            <div>
+              <Button variant="primary" size="sm" onClick={handleCreateInstantBill} disabled={instantBillCreating}>
+                {instantBillCreating ? 'Creating...' : 'Create link'}
+              </Button>
+            </div>
+          </div>
+
+          {instantBillLink && (
+            <div className="px-8 py-4 border-b border-border bg-brand-teal-light/30">
+              <p className="text-body-sm text-tx-body">
+                Link created:{' '}
+                <a href={instantBillLink} target="_blank" rel="noreferrer" className="font-semibold text-brand-teal hover:underline break-all">
+                  {instantBillLink}
+                </a>
+              </p>
+            </div>
+          )}
+
+          {instantBills.length === 0 ? (
+            <div className="px-8 py-8 text-center text-body text-tx-muted">No instant bills yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-body-sm">
+                <thead>
+                  <tr className="border-b border-border bg-bg-offwhite">
+                    {['Client', 'Description', 'Amount', 'Status', 'Created', 'Link'].map((heading) => (
+                      <th key={heading} className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">{heading}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {instantBills.map((bill, index) => {
+                    const project = projects.find((p) => p.id === bill.project_id);
+                    return (
+                      <tr key={bill.id} className={`border-b border-border hover:bg-bg-offwhite transition-colors ${index % 2 === 0 ? '' : 'bg-bg-offwhite/40'}`}>
+                        <td className="px-6 py-4 font-medium text-tx-heading">{project?.name || project?.email || '-'}</td>
+                        <td className="px-6 py-4 text-tx-body">{bill.description ?? '-'}</td>
+                        <td className="px-6 py-4 text-tx-body">CA${bill.amount_cad?.toLocaleString('en-CA') ?? '-'}</td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded capitalize ${bill.status === 'paid' ? 'bg-teal-100 text-teal-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {bill.status ?? 'sent'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-tx-muted">{formatDate(bill.created_at)}</td>
+                        <td className="px-6 py-4">
+                          {bill.payment_link_url ? (
+                            <a href={bill.payment_link_url} target="_blank" rel="noreferrer" className="text-[11px] font-semibold text-brand-teal hover:underline">
+                              Open
+                            </a>
+                          ) : (
+                            <span className="text-[11px] text-tx-muted">-</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
