@@ -155,6 +155,19 @@ function MilestoneCard({ milestone, clientEmail, projectTitle, onStatusChange }:
         // Keep the customer flow moving even if the notification send fails.
       });
 
+      if (action === 'approve') {
+        fetch(`${STRIPE_API_URL}/api/invoices/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({ milestone_id: milestone.id }),
+        }).catch(() => {
+          // Non-fatal. Invoice generation can be retried server-side.
+        });
+      }
+
       setActionState('done');
       onStatusChange(milestone.id, newStatus);
     } catch {
@@ -252,6 +265,14 @@ function MilestoneCard({ milestone, clientEmail, projectTitle, onStatusChange }:
       )}
       {actionState === 'error' && (
         <p className="text-body-sm text-red-500">Something went wrong. Try refreshing.</p>
+      )}
+      {(status === 'approved' || actionState === 'done') && (
+        <a
+          href={`/dashboard/invoice?milestone_id=${milestone.id}`}
+          className="text-[11px] font-semibold text-brand-teal hover:underline mt-1 block"
+        >
+          View Invoice -&gt;
+        </a>
       )}
     </div>
   );

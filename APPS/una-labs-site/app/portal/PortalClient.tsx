@@ -146,6 +146,19 @@ function MilestoneStatus({
         // Do not block the client flow if notification delivery fails.
       });
 
+      if (action === 'approve') {
+        fetch(`${STRIPE_API_URL}/api/invoices/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({ milestone_id: milestone.id }),
+        }).catch(() => {
+          // Non-fatal. Invoice generation can be retried server-side.
+        });
+      }
+
       setActionState('done');
       onStatusChange(milestone.id, newStatus);
     } catch {
@@ -228,6 +241,14 @@ function MilestoneStatus({
         {isReview && actionState === 'loading' && <p className="mt-3 text-body-sm text-tx-muted animate-pulse">Saving...</p>}
         {isReview && actionState === 'done' && <p className="mt-3 text-body-sm text-brand-teal font-medium">Saved - we've been notified.</p>}
         {actionState === 'error' && <p className="mt-3 text-body-sm text-red-500">Something went wrong. Try refreshing.</p>}
+        {(isApproved || actionState === 'done') && (
+          <a
+            href={`/dashboard/invoice?milestone_id=${milestone.id}`}
+            className="mt-2 block text-[11px] font-semibold text-brand-teal hover:underline"
+          >
+            View Invoice -&gt;
+          </a>
+        )}
       </div>
     </div>
   );

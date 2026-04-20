@@ -46,6 +46,20 @@ type Contract = {
   created_at?: string;
 };
 
+type Invoice = {
+  id: string;
+  project_id: string;
+  milestone_id: string;
+  invoice_number: string;
+  title?: string;
+  amount_cad?: number;
+  status?: string;
+  due_date?: string;
+  paid_at?: string;
+  client_email?: string;
+  created_at?: string;
+};
+
 type BillingInfo = {
   subscription_id: string | null;
   status: string;
@@ -59,7 +73,7 @@ type State =
   | { phase: 'loading' }
   | { phase: 'denied' }
   | { phase: 'error'; message: string }
-  | { phase: 'ready'; projects: Project[]; milestones: Milestone[]; subscribers: Subscriber[]; contracts: Contract[] };
+  | { phase: 'ready'; projects: Project[]; milestones: Milestone[]; subscribers: Subscriber[]; contracts: Contract[]; invoices: Invoice[] };
 
 const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
 
@@ -156,17 +170,20 @@ export function AdminClient() {
           { data: milestones, error: milestoneError },
           { data: subscribers, error: subscriberError },
           { data: contracts, error: contractError },
+          { data: invoices, error: invoiceError },
         ] = await Promise.all([
           client.from('projects').select('*').order('created_at', { ascending: false }),
           client.from('milestones').select('*').order('due_date', { ascending: true }),
           client.from('subscribers').select('*').order('created_at', { ascending: false }),
           client.from('contracts').select('id,project_id,title,status,sent_at,signer_name,signer_email,signed_at,created_at').order('created_at', { ascending: false }),
+          client.from('invoices').select('*').order('created_at', { ascending: false }),
         ]);
 
         if (projectError) throw projectError;
         if (milestoneError) throw milestoneError;
         if (subscriberError) throw subscriberError;
         if (contractError) throw contractError;
+        if (invoiceError) throw invoiceError;
 
         if (!cancelled) {
           setState({
@@ -175,6 +192,7 @@ export function AdminClient() {
             milestones: (milestones as Milestone[] | null) ?? [],
             subscribers: (subscribers as Subscriber[] | null) ?? [],
             contracts: (contracts as Contract[] | null) ?? [],
+            invoices: (invoices as Invoice[] | null) ?? [],
           });
 
           // Fetch billing status for projects with Stripe sessions
@@ -292,7 +310,7 @@ export function AdminClient() {
     );
   }
 
-  const { projects, milestones, subscribers, contracts } = state;
+  const { projects, milestones, subscribers, contracts, invoices } = state;
 
   const totalMRR = projects
     .filter((project) => !['paused', 'complete'].includes(project.status ?? ''))
@@ -336,12 +354,13 @@ export function AdminClient() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
           <Stat label="Total projects" value={projects.length} />
           <Stat label="Est. MRR" value={`CA$${totalMRR.toLocaleString('en-CA')}`} sub="Active plans only" />
           <Stat label="Needs approval" value={needsApproval.length} sub="Milestones in review" />
           <Stat label="Subscribers" value={subscribers.length} sub="Newsletter list" />
           <Stat label="Contracts signed" value={contracts.filter((c) => c.status === 'signed').length} sub={`${contracts.length} total sent`} />
+          <Stat label="Unpaid invoices" value={invoices.filter((invoice) => invoice.status === 'unpaid').length} sub={`${invoices.length} total`} />
         </div>
 
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-10">
@@ -542,6 +561,56 @@ export function AdminClient() {
           )}
         </div>
         )}
+
+        {/* Invoices table */}
+        <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-6">
+          <div className="px-8 py-5 border-b border-border flex items-center justify-between">
+            <h2 className="text-h3 text-tx-heading">Invoices</h2>
+            <span className="text-body-sm text-tx-muted">{invoices.length} total</span>
+          </div>
+          {invoices.length === 0 ? (
+            <div className="px-8 py-10 text-center text-body text-tx-muted">No invoices yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-body-sm">
+                <thead>
+                  <tr className="border-b border-border bg-bg-offwhite">
+                    {['Client', 'Milestone', 'Invoice #', 'Amount', 'Status', 'Due', 'Created'].map((heading) => (
+                      <th key={heading} className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">{heading}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map((invoice, index) => {
+                    const project = projects.find((p) => p.id === invoice.project_id);
+                    const milestone = milestones.find((m) => m.id === invoice.milestone_id);
+                    const isPaid = invoice.status === 'paid';
+                    return (
+                      <tr key={invoice.id} className={`border-b border-border hover:bg-bg-offwhite transition-colors ${index % 2 === 0 ? '' : 'bg-bg-offwhite/40'}`}>
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-tx-heading">{project?.name || invoice.client_email || '-'}</p>
+                          {project?.name && <p className="text-tx-muted text-[11px] mt-0.5">{invoice.client_email}</p>}
+                        </td>
+                        <td className="px-6 py-4 text-tx-body">{milestone?.title ?? invoice.title ?? '-'}</td>
+                        <td className="px-6 py-4 font-mono text-tx-body">{invoice.invoice_number}</td>
+                        <td className="px-6 py-4 text-tx-body">CA${invoice.amount_cad?.toLocaleString('en-CA') ?? '-'}</td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded capitalize ${
+                            isPaid ? 'bg-teal-100 text-teal-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {isPaid ? 'paid' : 'unpaid'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-tx-muted">{formatDate(invoice.due_date)}</td>
+                        <td className="px-6 py-4 text-tx-muted">{formatDate(invoice.created_at)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         {/* Contracts table */}
         <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-6">

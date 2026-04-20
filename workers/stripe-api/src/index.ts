@@ -148,6 +148,26 @@ type ContractRecord = {
   updated_at?: string;
 };
 
+type InvoiceMilestone = {
+  id: string;
+  project_id: string;
+  title?: string;
+};
+
+type InvoiceRecord = {
+  id: string;
+  project_id: string;
+  milestone_id: string;
+  invoice_number: string;
+  title: string;
+  amount_cad: number;
+  status: string;
+  due_date: string;
+  paid_at: string | null;
+  client_email: string;
+  created_at: string;
+};
+
 function logEvent(event: string, details: Record<string, unknown>): void {
   console.log(JSON.stringify({ event, ...details }));
 }
@@ -264,6 +284,13 @@ function cleanSecret(val: string): string {
 }
 
 const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
+
+const INVOICE_TIER_PRICE: Record<string, number> = {
+  starter: 67,
+  professional: 135,
+  agency: 339,
+  enterprise: 679,
+};
 
 function getSupabaseApiKey(env: Env): string {
   const key = env.SUPABASE_SERVICE_ROLE_KEY ?? env.SUPABASE_ANON_KEY;
@@ -1500,6 +1527,183 @@ async function handleSignContract(req: Request, env: Env, origin: string | null)
   }
 }
 
+async function handleGenerateInvoice(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyUser(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.status ?? 401, origin);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid body.' }, 400, origin);
+  }
+
+  const milestoneId = sanitize(body.milestone_id as string | undefined, 80);
+  if (!milestoneId) return json({ error: 'milestone_id required.' }, 400, origin);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  const milestoneRes = await fetch(`${supabaseUrl}/rest/v1/milestones?id=eq.${encodeURIComponent(milestoneId)}&select=id,project_id,title`, {
+    headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+  });
+  if (!milestoneRes.ok) return json({ error: 'Failed to fetch milestone.' }, 502, origin);
+  const milestones = await milestoneRes.json() as InvoiceMilestone[];
+  if (!milestones.length) return json({ error: 'Milestone not found.' }, 404, origin);
+  const milestone = milestones[0];
+
+  const projectRes = await fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(milestone.project_id)}&select=id,email,name,tier,billing,status,created_at`, {
+    headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+  });
+  if (!projectRes.ok) return json({ error: 'Failed to fetch project.' }, 502, origin);
+  const projects = await projectRes.json() as ContractProject[];
+  if (!projects.length) return json({ error: 'Project not found.' }, 404, origin);
+  const project = projects[0];
+
+  if (project.email.toLowerCase() !== auth.user.email.toLowerCase() && auth.user.email !== ADMIN_EMAIL) {
+    return json({ error: 'Forbidden.' }, 403, origin);
+  }
+
+  const existingRes = await fetch(`${supabaseUrl}/rest/v1/invoices?milestone_id=eq.${encodeURIComponent(milestoneId)}&select=*`, {
+    headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+  });
+  if (!existingRes.ok) return json({ error: 'Failed to check existing invoice.' }, 502, origin);
+  const existing = await existingRes.json() as InvoiceRecord[];
+  if (existing.length) {
+    return json({ ok: true, invoice: existing[0] }, 200, origin);
+  }
+
+  const countRes = await fetch(`${supabaseUrl}/rest/v1/invoices?select=id`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'count=exact',
+    },
+  });
+
+  let total = 0;
+  const range = countRes.headers.get('content-range');
+  if (range?.includes('/')) {
+    const parsed = Number(range.split('/')[1]);
+    if (!Number.isNaN(parsed)) total = parsed;
+  }
+
+  const year = new Date().getFullYear();
+  const invoiceNumber = `INV-${year}-${String(total + 1).padStart(3, '0')}`;
+  const amountCad = INVOICE_TIER_PRICE[project.tier?.toLowerCase() ?? ''] ?? 0;
+  const dueDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const title = `Invoice for: ${sanitize(milestone.title || 'Milestone', 160)}`;
+
+  const insertRes = await fetch(`${supabaseUrl}/rest/v1/invoices`, {
+    method: 'POST',
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify({
+      project_id: project.id,
+      milestone_id: milestoneId,
+      invoice_number: invoiceNumber,
+      title,
+      amount_cad: amountCad,
+      status: 'unpaid',
+      due_date: dueDate,
+      client_email: project.email,
+    }),
+  });
+
+  if (!insertRes.ok) {
+    const errText = await insertRes.text();
+    return json({ error: `Failed to insert invoice: ${errText}` }, 502, origin);
+  }
+
+  const inserted = await insertRes.json() as InvoiceRecord[];
+  const invoice = inserted[0];
+
+  if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY) {
+    const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+    const siteUrl = getSiteUrl(env);
+    const invoiceLink = `${siteUrl}/dashboard/invoice?milestone_id=${encodeURIComponent(milestoneId)}`;
+    const html = `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Invoice generated</p>
+  </div>
+  <p style="font-size:14px;color:#111827">Hi ${sanitize(project.name || project.email, 120)}, an invoice has been generated for your approved milestone.</p>
+  <table style="width:100%;border-collapse:collapse;margin:14px 0 20px">
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Invoice #</td><td style="padding:6px 0;font-size:13px;color:#0B0E11;font-weight:600">${invoiceNumber}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Milestone</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${sanitize(milestone.title || 'Milestone', 120)}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Amount</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">CA$${amountCad.toLocaleString('en-CA')}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Due date</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${dueDate}</td></tr>
+  </table>
+  <p><a href="${invoiceLink}" style="display:inline-block;padding:10px 16px;background:#0d9488;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">View invoice</a></p>
+</div>`;
+
+    await fetch('https://api.mailjet.com/v3.1/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+      body: JSON.stringify({
+        Messages: [
+          {
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: project.email, Name: sanitize(project.name || project.email, 120) }],
+            Subject: `Invoice ${invoiceNumber} - CA$${amountCad} due ${dueDate}`,
+            HTMLPart: html,
+            TextPart: `Invoice ${invoiceNumber}\nMilestone: ${milestone.title || 'Milestone'}\nAmount: CA$${amountCad}\nDue: ${dueDate}\nView: ${invoiceLink}`,
+          },
+          {
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }],
+            Subject: `[Admin] Invoice ${invoiceNumber} generated for ${project.email}`,
+            HTMLPart: html,
+            TextPart: `Invoice ${invoiceNumber} generated.\nClient: ${project.email}\nMilestone: ${milestone.title || 'Milestone'}\nAmount: CA$${amountCad}\nDue: ${dueDate}`,
+          },
+        ],
+      }),
+    }).catch(() => {
+      // non-fatal
+    });
+  }
+
+  return json({ ok: true, invoice }, 200, origin);
+}
+
+async function handleGetInvoices(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyUser(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.status ?? 401, origin);
+
+  const url = new URL(req.url);
+  const milestoneId = sanitize(url.searchParams.get('milestone_id') ?? '', 80);
+  const projectId = sanitize(url.searchParams.get('project_id') ?? '', 80);
+
+  if (!milestoneId && !projectId) {
+    return json({ error: 'milestone_id or project_id required.' }, 400, origin);
+  }
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const filter = milestoneId
+    ? `milestone_id=eq.${encodeURIComponent(milestoneId)}`
+    : `project_id=eq.${encodeURIComponent(projectId)}`;
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/invoices?${filter}&select=*&order=created_at.desc`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+
+  if (!response.ok) return json({ error: 'Failed to fetch invoices.' }, 502, origin);
+  const invoices = await response.json() as InvoiceRecord[];
+
+  const filtered = auth.user.email === ADMIN_EMAIL
+    ? invoices
+    : invoices.filter((invoice) => invoice.client_email.toLowerCase() === auth.user.email.toLowerCase());
+
+  return json({ ok: true, invoices: filtered }, 200, origin);
+}
+
 // ── Admin: Billing Status ─────────────────────────────────────────────
 async function handleAdminBilling(req: Request, env: Env, origin: string | null): Promise<Response> {
   const auth = await verifyAdmin(req, env);
@@ -1620,6 +1824,10 @@ export default {
       return handleCheckoutSuccess(req, env);
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/invoices') {
+      return handleGetInvoices(req, env, origin);
+    }
+
     if (req.method !== 'POST') {
       return json({ error: 'Method not allowed.' }, 405, origin);
     }
@@ -1633,6 +1841,8 @@ export default {
         return handleEnsureContract(req, env, origin);
       case '/api/contracts/sign':
         return handleSignContract(req, env, origin);
+      case '/api/invoices/generate':
+        return handleGenerateInvoice(req, env, origin);
       case '/api/subscribe':
         return handleSubscribe(req, env, origin);
       case '/api/milestone-action':

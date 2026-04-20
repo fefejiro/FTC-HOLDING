@@ -81,6 +81,17 @@ Priority is revenue-first. Do not move to a lower-priority project until the hig
 **Success:** Una Labs build passes, webhook path decision finalized, dashboard and portal routes validated
 **Do not work on:** New feature expansion in other products
 
+## Una Labs Sprint — Score: 8/13
+
+| Phase | What | Status |
+|-------|------|--------|
+| Phase 0–4 | Auth, proposals, reporting, pipeline, billing | ✅ Done |
+| Phase 5 | Contracts/E-sign | ✅ Done (e967a47) |
+| Phase 5b | Admin contracts table | ✅ Done (e59ede8) |
+| Phase 6 | Invoicing — auto-generate on milestone approval | ✅ Done |
+
+Next: Phase 7 — Instant Bill (one-off Stripe PaymentLink)
+
 ---
 
 ## Quick Commands

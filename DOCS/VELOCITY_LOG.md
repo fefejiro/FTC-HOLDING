@@ -26,6 +26,7 @@ Honest time estimates only. No rounding down.
 | 2026-04-20 | Una Labs | Deployed Stripe worker with pipeline mode worker_only | 10 min | Deploy success, live version 11bcecb6-96c9-4420-af79-25a9073acd32 | None |
 | 2026-04-20 | Una Labs | Built and deployed static site to Cloudflare Pages | 15 min | Deploy success to https://cca823f1.ftc-site-pages.pages.dev | Dirty working tree warning only |
 | 2026-04-20 | Una Labs | Verified live routes and checkout redirect flow | 10 min | start, summary, confirmation return 200; checkout-success redirect validated | None |
+| 2026-04-20 | Una Labs | Phase 6 — milestone invoicing: DB migration, worker endpoints, invoice page, portal/dashboard/admin links | ~2h | All deployed, migration live, build clean | None |
 | [next entry] | | | | | |
 
 ---
