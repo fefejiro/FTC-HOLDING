@@ -1,5 +1,5 @@
 # Una Labs — Build Handover & Implementation Plan
-Last updated: 2026-04-19
+Last updated: 2026-04-20
 Author: Claude (Sonnet 4.6) via Mike (fejiro007)
 
 ---
@@ -99,38 +99,42 @@ The worker's `cleanSecret()` function already strips this. Never remove that fun
 
 ---
 
-## What Is Live and Working (as of 2026-04-19)
+## What Is Live and Working (as of 2026-04-20)
 
 | Feature | Status | Notes |
 |---|---|---|
 | `unalabs.cloud` | ✓ Live | Full marketing site |
 | `/start` intake form | ✓ Live | 2-step: details → plan picker |
 | `/start/summary` + Stripe | ✓ Live | Stripe Checkout, 14-day trial, CAD |
-| `/confirmation` | ✓ Live | Server-verified via GET /api/checkout-success |
-| Stripe Worker | ✓ Live | `una-stripe-api.fejiro-efiuvwere.workers.dev` (v4bb4f250) |
-| Live Stripe key | ✓ Set | `rk_live_...` in worker secrets |
+| `/confirmation` | ✓ Live | Server-verified via GET /api/checkout-success → activation=success |
+| Stripe Worker | ✓ Live | `una-stripe-api.fejiro-efiuvwere.workers.dev` |
+| Live Stripe key | ✓ Set | `sk_live_...` (secret key, not restricted key) |
 | Live prices (all 8) | ✓ Set | All CAD monthly + annual in worker secrets |
 | RBC bank account | ✓ Connected | Payouts → RBC |
 | `/how-it-works` | ✓ Live | 4-step interactive, tabs dynamic per industry |
 | `/pricing` | ✓ Live | All 4 plans with toggle |
 | `/demo` | ✓ Live | Live workflow tabs, product cards, no 404 |
 | Login → real auth | ✓ Live | Magic link + password, Supabase, onAuthStateChange |
-| Client dashboard | ✓ Live | Real Supabase data, milestones, approval gates, delivery proof |
+| Client dashboard | ✓ Live | Real Supabase data, filtered by user email, milestones, approval gates |
 | Approval gates | ✓ Live | Clients approve/request changes on milestones, notifies Mike |
 | Delivery proof | ✓ Live | proof_url + proof_note per milestone |
 | Admin reporting | ✓ Live | `/admin` — KPIs, projects, subscribers (Mike only) |
-| Intake confirm email | ✓ Live | Sends to client on checkout start (POST /api/intake-confirm) |
+| Intake confirm email | ✓ Live | Sends to client on checkout start (no misleading CTA button) |
 | Trial active email | ✓ Live | Sends to client after payment activation |
 | Mike notification email | ✓ Live | Sends to mike.fejiro@gmail.com on new customer |
 | Newsletter subscribe | ✓ Live | Footer form → Mailjet + Supabase + confirmation email |
 | Branded email sender | ✓ Live | `hello@unalabs.cloud` — Mailjet domain verified, SPF+DKIM OK |
 | Supabase SMTP | ✓ Live | Magic links from `Una Labs <hello@unalabs.cloud>` |
 | Idempotent activation | ✓ Live | Deduped on stripe_session_id — no duplicate emails/projects |
+| Supabase projects table | ✓ Live | Schema created, service role key writes, email stored lowercase |
+| Supabase milestones table | ✓ Live | Schema created, linked to projects via project_id |
+| AI scope generation | ✓ Live | Worker calls OpenAI gpt-4o-mini post-checkout, writes 3 milestones |
 | Industry tabs | ✓ Fixed | Content changes per tab (was broken) |
 | Broken hrefs | ✓ Fixed | /product/* hrefs replaced with valid routes |
-| ATEAM → intake wire | ✗ Not built | **Highest priority next step** |
-| Post-payment BAT | ✗ Pending | Private live card test — do before going public |
-| `/ateam/` redirect | ⏳ In progress | Railway deploy b74dea10 — verify no ATEAM app showing publicly |
+| Dashboard user filter | ✓ Fixed | ilike email match — users only see their own projects |
+| Dashboard download | ✓ Fixed | Real .txt file download, not window.print() |
+| Supabase RLS | ✗ Not set | Tables have no RLS policies — client-side filter only. Add before scaling. |
+| UNALABS_NEW_PROJECT_WEBHOOK_URL | ✗ Stale | Points to dead ATEAM endpoint (404) — clear or remove |
 
 ---
 
@@ -138,7 +142,7 @@ The worker's `cleanSecret()` function already strips this. Never remove that fun
 
 | Secret | Value | Notes |
 |---|---|---|
-| `STRIPE_SECRET_KEY` | `rk_live_51TMK0E5M2AZUCbRe...` | OAuth restricted live key |
+| `STRIPE_SECRET_KEY` | `sk_live_51TMK0E5M2AZUCbRe...` | Full secret key (NOT restricted key) |
 | `STRIPE_PRICE_STARTER_MONTHLY` | `price_1TNbbd5M2AZUCbReEyubdwVq` | CA$67/mo |
 | `STRIPE_PRICE_STARTER_ANNUAL` | `price_1TNbbe5M2AZUCbReJQVY14Qs` | CA$684/yr |
 | `STRIPE_PRICE_PROFESSIONAL_MONTHLY` | `price_1TNbbd5M2AZUCbRep5dLdnJ0` | CA$135/mo |
@@ -228,24 +232,39 @@ Add to nav (subtle): Footer only, or a small link in the About page. Not in main
 
 ---
 
-### Phase 2 — Make the Product Real (Priority: HIGH — DO THIS NEXT)
+### Phase 2 — Remaining Production Gaps (Priority: HIGH)
 
-#### 2A. Wire ATEAM to intake webhook ← HIGHEST PRIORITY
-**What:** When a customer completes Stripe checkout, `/confirmation` fires `POST /api/activate-project`.
-That worker currently sends a webhook to `UNALABS_NEW_PROJECT_WEBHOOK_URL` (currently empty).
+#### 2A. Supabase RLS ← DO THIS BEFORE REAL CUSTOMERS
+**What:** The `projects` and `milestones` tables have no Row Level Security policies.
+The dashboard client-side filter (`ilike email`) keeps it working, but any authenticated
+user with direct Supabase access can read all rows.
 
-**Steps:**
-1. Start ATEAM bridge: `cd APPS/ATEAM && node Server/bridge.js`
-2. Expose via cloudflared: `tmp-bin\cloudflared.exe tunnel --url http://127.0.0.1:3001`
-3. Set the tunnel URL as the webhook secret:
-   ```powershell
-   Set-Location "c:\FTC HOLDING\workers\stripe-api"
-   cmd /c "echo https://YOUR-TUNNEL.trycloudflare.com/task" | npx wrangler secret put UNALABS_NEW_PROJECT_WEBHOOK_URL
-   ```
-4. ATEAM receives: `{ type: 'una_new_subscription', activation: { email, tier, billing, intake_id } }`
-5. ATEAM processes → Claude generates scoped brief → emails client
+Run in Supabase SQL Editor:
+```sql
+-- Enable RLS
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE milestones ENABLE ROW LEVEL SECURITY;
 
-**Result:** First real paying customer gets an AI-generated proposal. Product is real.
+-- Projects: users can only read their own rows
+CREATE POLICY "users_own_projects" ON projects
+  FOR SELECT USING (lower(email) = lower(auth.email()));
+
+-- Milestones: readable if the parent project belongs to the user
+CREATE POLICY "users_own_milestones" ON milestones
+  FOR SELECT USING (
+    project_id IN (
+      SELECT id FROM projects WHERE lower(email) = lower(auth.email())
+    )
+  );
+```
+
+#### 2B. Clear dead webhook URL
+```powershell
+Set-Location "c:\FTC HOLDING\workers\stripe-api"
+cmd /c "echo " | npx wrangler secret put UNALABS_NEW_PROJECT_WEBHOOK_URL
+```
+Or delete the secret entirely — the ATEAM webhook architecture was replaced by
+in-worker AI scoping (generateAndWriteScope). The webhook is now dead weight.
 
 #### 2B. Add `/products/` portfolio section
 New pages showing real deployed products as case studies:
@@ -361,25 +380,70 @@ Components available:
 
 ---
 
+## Switching Claude Accounts (VS Code Extension)
+
+Mike uses Claude Code via VS Code. When switching Anthropic accounts:
+
+```
+1. In Claude Code chat: type /logout
+   OR in terminal: claude logout
+
+2. Re-authenticate: claude  (opens browser login)
+
+3. Back in VS Code — new account is active immediately, no restart needed.
+```
+
+Memory persists at `C:\Users\mikef\.claude\projects\c--FTC-HOLDING\memory\`
+— this is account-independent (file-based). A new Claude account picks it up automatically
+as long as CLAUDE.md and MEMORY.md are in place.
+
+---
+
+## Worker Secrets — Current State (as of 2026-04-20)
+
+All secrets set on `una-stripe-api` worker:
+
+| Secret | Purpose |
+|---|---|
+| `STRIPE_SECRET_KEY` | Live Stripe secret key (`sk_live_...`) |
+| `STRIPE_PRICE_*` (8 keys) | All plan × billing price IDs |
+| `MAILJET_API_KEY` | Mailjet transactional email |
+| `MAILJET_SECRET_KEY` | Mailjet auth |
+| `SUPABASE_URL` | `https://aaaextkrfoqomzmjjkxe.supabase.co` |
+| `SUPABASE_ANON_KEY` | Supabase public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role (bypasses RLS, used for writes) |
+| `OPENAI_API_KEY` | gpt-4o-mini scope generation |
+| `UNALABS_NEW_PROJECT_WEBHOOK_URL` | Dead — points to old ATEAM endpoint. Clear it. |
+
+To reset any secret:
+```bash
+cd "c:/FTC HOLDING/workers/stripe-api"
+echo "VALUE" | npx wrangler secret put SECRET_NAME
+```
+
+---
+
 ## How to Start a New Session (Claude or Codex)
 
 Paste this at the start of every new session:
 
 ```
-Read these files before doing anything:
-1. C:\FTC HOLDING\DOCS\UNALABS_BUILD_HANDOVER.md  ← START HERE
-2. C:\FTC HOLDING\CLAUDE.md
-3. C:\FTC HOLDING\DOCS\stripe-setup-handover.md
+Read C:\FTC HOLDING\DOCS\UNALABS_BUILD_HANDOVER.md before doing anything.
 
 Context:
-- Working on Una Labs (unalabs.cloud) — Next.js 15 static export on Cloudflare Pages
-- Stripe payments are live (rk_live key set, all 8 prices set, RBC connected)
-- Site deploys via: cd APPS/una-labs-site && npm run build && npx wrangler pages deploy out --project-name=ftc-site-pages --branch=main
-- DO NOT run wrangler from the repo root (wrong project)
-- DO NOT add API routes to the Next.js app (static export only)
-- The Stripe Worker is separate: cd workers/stripe-api && npx wrangler deploy
+- Una Labs (unalabs.cloud) — Next.js 15 static export → Cloudflare Pages (ftc-site-pages)
+- Stripe live: sk_live key set, all 8 prices set, RBC connected, end-to-end checkout working
+- Supabase: projects + milestones tables exist, service role key set, RLS NOT yet enabled
+- Worker: una-stripe-api handles all backend (checkout, activation, emails, AI scoping)
+- AI scoping: worker calls gpt-4o-mini post-checkout, writes milestones to Supabase
+- Email: hello@unalabs.cloud via Mailjet — welcome, notification, intake confirm all working
+- Deploy site: cd APPS/una-labs-site && npm run build && npx wrangler pages deploy out --project-name=ftc-site-pages
+- Deploy worker: cd workers/stripe-api && npx wrangler deploy
+- DO NOT run wrangler from repo root (wrong project)
+- DO NOT add API routes to Next.js app (static export only)
+- Set secrets via bash: echo "VALUE" | npx wrangler secret put NAME (not PowerShell stdin)
 
-Current task: [DESCRIBE WHAT YOU WANT TO BUILD FROM THE PLAN ABOVE]
+Current task: [DESCRIBE WHAT YOU WANT]
 ```
 
 ---
@@ -389,9 +453,11 @@ Current task: [DESCRIBE WHAT YOU WANT TO BUILD FROM THE PLAN ABOVE]
 | Gotcha | What happens | Fix |
 |---|---|---|
 | Run `wrangler` from repo root | Targets wrong project (root wrangler.toml) | `Set-Location "c:\FTC HOLDING\workers\stripe-api"` first |
-| Pipe secrets via PowerShell | BOM (U+FEFF) prepended to value | Use `cmd /c "echo VALUE"` pipe, not direct PS pipe |
+| Pipe secrets via PowerShell directly | BOM (U+FEFF) prepended to value | Use `echo "VALUE" \| npx wrangler secret put NAME` via bash, or `cmd /c "echo VALUE"` in PS |
+| Set SUPABASE_URL via CMD terminal | Windows banner text gets prepended to value | Always set secrets via bash echo pipe — value becomes `Microsoft Windows...\r\n>` prefix |
+| Use restricted Stripe key (`rk_live_`) | Cannot retrieve checkout sessions — "No such checkout.session" | Must use full secret key `sk_live_...` from Stripe → Developers → API keys |
+| Email case mismatch (Stripe vs auth) | Dashboard shows no projects even after successful checkout | Worker stores email `.toLowerCase()`, dashboard uses `.ilike()` |
 | Add `app/api/` routes to site | Build fails — static export | All backend → Worker |
-| `rk_live_` key via Stripe CLI | Can't create products/prices | Use `Invoke-RestMethod` against REST API directly |
 | Path with spaces in PowerShell | Command fails | Always quote paths or `Set-Location` first |
 | `git push` to deploy site | Nothing happens | Must run `wrangler pages deploy` manually |
 | Dynamic routes without `runtime="edge"` | CF Pages build fails | Add `export const runtime = 'edge'` to dynamic pages |

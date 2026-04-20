@@ -17,6 +17,15 @@ export interface Env {
   MAILJET_SECRET_KEY?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  OPENAI_API_KEY?: string;
+  ATEAM_KEY?: string;
+  UNALABS_PROJECT_PIPELINE_MODE?: string;
+}
+
+function shouldDeliverBridgeWebhook(env: Env): boolean {
+  const mode = (env.UNALABS_PROJECT_PIPELINE_MODE ?? 'worker_only').trim().toLowerCase();
+  return mode === 'hybrid' && Boolean(env.UNALABS_NEW_PROJECT_WEBHOOK_URL);
 }
 
 const ALLOWED_ORIGINS = [
@@ -81,6 +90,7 @@ type ProjectWriteResult = {
   attempted: boolean;
   inserted: boolean;
   duplicate: boolean;
+  projectId?: string;
   status: number;
   error?: string;
 };
@@ -331,22 +341,25 @@ async function handleCreateCheckoutSession(req: Request, env: Env, origin: strin
 
 async function writeProjectToSupabase(env: Env, activation: {
   email: string; tier: string; billing: string; intake_id: string; session_id: string; created_at: string;
-}): Promise<ProjectWriteResult> {
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+}, intake: Record<string, string>): Promise<ProjectWriteResult> {
+  if (!env.SUPABASE_URL || (!env.SUPABASE_SERVICE_ROLE_KEY && !env.SUPABASE_ANON_KEY)) {
     return { attempted: false, inserted: false, duplicate: false, status: 0, error: 'Supabase env not configured.' };
   }
+
+  const supabaseKey = cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY ?? env.SUPABASE_ANON_KEY ?? '');
 
   const response = await fetch(`${cleanSecret(env.SUPABASE_URL)}/rest/v1/projects?on_conflict=stripe_session_id`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'apikey': cleanSecret(env.SUPABASE_ANON_KEY),
-      'Authorization': `Bearer ${cleanSecret(env.SUPABASE_ANON_KEY)}`,
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`,
       'Prefer': 'resolution=ignore-duplicates,return=representation',
     },
     body: JSON.stringify({
-      email: activation.email,
+      email: activation.email.toLowerCase(),
       intake_id: activation.intake_id,
+      name: sanitize(intake.name, 120),
       tier: activation.tier,
       billing: activation.billing,
       stripe_session_id: activation.session_id,
@@ -366,10 +379,12 @@ async function writeProjectToSupabase(env: Env, activation: {
     };
   }
 
+  const projectId = payload.length > 0 ? String(payload[0].id ?? '') : undefined;
   return {
     attempted: true,
     inserted: payload.length > 0,
     duplicate: payload.length === 0,
+    projectId,
     status: response.status,
   };
 }
@@ -403,6 +418,284 @@ async function deliverWebhook(
       status: 0,
       error: error instanceof Error ? error.message : 'Unknown delivery error.',
     };
+  }
+}
+
+async function generateAndWriteScope(
+  projectId: string | undefined,
+  intake: Record<string, string>,
+  activation: ActivationPayload,
+  env: Env
+): Promise<void> {
+  if (!projectId) {
+    console.log('generateAndWriteScope: projectId missing, skipping.');
+    return;
+  }
+
+  // Step 1: Call OpenAI API to generate milestones
+  let milestones: Array<{ title: string; description: string; due_offset_days: number }> = [];
+  if (env.OPENAI_API_KEY && env.SUPABASE_SERVICE_ROLE_KEY && env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY) {
+    try {
+      const intakePayload = {
+        name: intake.name || '',
+        email: intake.email || activation.email,
+        company: intake.company || '',
+        role: intake.role || '',
+        teamSize: intake.teamSize || '',
+        plan: intake.plan || activation.tier,
+        billing: intake.billing || activation.billing,
+      };
+
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${cleanSecret(env.OPENAI_API_KEY)}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a project scoping assistant for Una Labs, a Canadian digital agency. Given a client intake, produce exactly 3 milestones in JSON. Each milestone has: title (string), description (string, 1-2 sentences), due_offset_days (integer — days from today: 7, 21, 45). Return ONLY a JSON array of 3 objects. No prose.',
+            },
+            {
+              role: 'user',
+              content: JSON.stringify(intakePayload),
+            },
+          ],
+          temperature: 0.4,
+          max_tokens: 400,
+        }),
+      });
+
+      if (!openaiResponse.ok) {
+        const error = await openaiResponse.text();
+        logEvent('generate_scope_openai_error', {
+          projectId,
+          status: openaiResponse.status,
+          error,
+        });
+        return;
+      }
+
+      const openaiData = (await openaiResponse.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const content = openaiData.choices?.[0]?.message?.content ?? '';
+
+      // Parse JSON from content (may be wrapped in markdown code blocks)
+      let jsonStr = content;
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1].trim();
+      }
+
+      milestones = JSON.parse(jsonStr) as Array<{ title: string; description: string; due_offset_days: number }>;
+      if (!Array.isArray(milestones) || milestones.length !== 3) {
+        logEvent('generate_scope_parse_error', {
+          projectId,
+          error: 'Expected 3 milestones',
+          received: milestones.length,
+        });
+        return;
+      }
+    } catch (error) {
+      logEvent('generate_scope_openai_exception', {
+        projectId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return;
+    }
+  } else {
+    logEvent('generate_scope_env_missing', {
+      projectId,
+      hasOpenaiKey: Boolean(env.OPENAI_API_KEY),
+      hasSupabaseServiceKey: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
+      hasMailjetKey: Boolean(env.MAILJET_API_KEY),
+    });
+    return;
+  }
+
+  // Step 2: Write milestones to Supabase
+  try {
+    const today = new Date();
+    const milestonesToWrite = milestones.map((m) => {
+      const dueDate = new Date(today);
+      dueDate.setDate(dueDate.getDate() + m.due_offset_days);
+      return {
+        project_id: projectId,
+        title: m.title,
+        description: m.description,
+        due_date: dueDate.toISOString().split('T')[0],
+        status: 'pending',
+      };
+    });
+
+    const milestonesResponse = await fetch(`${cleanSecret(env.SUPABASE_URL)}/rest/v1/milestones`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY),
+        'Authorization': `Bearer ${cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY)}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify(milestonesToWrite),
+    });
+
+    if (!milestonesResponse.ok) {
+      const error = await milestonesResponse.text();
+      logEvent('generate_scope_supabase_write_error', {
+        projectId,
+        status: milestonesResponse.status,
+        error,
+      });
+      return;
+    }
+
+    logEvent('generate_scope_milestones_written', {
+      projectId,
+      count: milestones.length,
+    });
+  } catch (error) {
+    logEvent('generate_scope_supabase_write_exception', {
+      projectId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return;
+  }
+
+  // Step 3: Update project status to 'scoped'
+  try {
+    const updateResponse = await fetch(`${cleanSecret(env.SUPABASE_URL)}/rest/v1/projects?id=eq.${projectId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY),
+        'Authorization': `Bearer ${cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY)}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ status: 'scoped' }),
+    });
+
+    if (!updateResponse.ok) {
+      const error = await updateResponse.text();
+      logEvent('generate_scope_status_update_error', {
+        projectId,
+        status: updateResponse.status,
+        error,
+      });
+    }
+  } catch (error) {
+    logEvent('generate_scope_status_update_exception', {
+      projectId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+
+  // Step 4: Send kickoff email to client
+  try {
+    const name = intake.name || activation.email.split('@')[0];
+    const firstName = name.split(' ')[0];
+    const today = new Date();
+
+    const milestonesHtml = milestones
+      .map((m) => {
+        const dueDate = new Date(today);
+        dueDate.setDate(dueDate.getDate() + m.due_offset_days);
+        const dateStr = dueDate.toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' });
+        return `<tr><td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;color:#0B0E11;font-size:14px">${m.title}</td><td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:14px">${dateStr}</td></tr>`;
+      })
+      .join('');
+
+    const html = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Your project scope is ready</p>
+  </div>
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:16px">Hi ${firstName},</p>
+  <p style="font-size:14px;color:#374151;margin-bottom:20px">We've generated your project scope with 3 milestones. Review them below and let us know if you'd like any adjustments.</p>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+    <tr><th style="padding:8px 12px;text-align:left;background:#F9FAFB;color:#6B7280;font-size:13px;font-weight:600;border-bottom:1px solid #E5E7EB">Milestone</th><th style="padding:8px 12px;text-align:left;background:#F9FAFB;color:#6B7280;font-size:13px;font-weight:600;border-bottom:1px solid #E5E7EB">Due Date</th></tr>
+    ${milestonesHtml}
+  </table>
+  <a href="https://unalabs.cloud/login?redirect=/dashboard" style="display:inline-block;background:#F97316;color:white;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:24px">View in dashboard</a>
+  <p style="font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:16px">Questions? Reply here or email hello@unalabs.cloud<br>Una Labs · unalabs.cloud</p>
+</div>`;
+
+    const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+    await fetch('https://api.mailjet.com/v3.1/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+      body: JSON.stringify({
+        Messages: [
+          {
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: activation.email, Name: name }],
+            Subject: 'Your project scope is ready — Una Labs',
+            HTMLPart: html,
+            TextPart: `Hi ${firstName},\n\nYour project scope is ready with 3 milestones:\n\n${milestones.map((m) => `• ${m.title}`).join('\n')}\n\nView in dashboard: https://unalabs.cloud/login?redirect=/dashboard\n\nQuestions? Reply here or email hello@unalabs.cloud\n\nUna Labs · unalabs.cloud`,
+          },
+        ],
+      }),
+    });
+
+    logEvent('generate_scope_kickoff_email_sent', {
+      projectId,
+      email: activation.email,
+    });
+  } catch (error) {
+    logEvent('generate_scope_kickoff_email_exception', {
+      projectId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+
+  // Step 5: Send summary email to Mike
+  try {
+    const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+    const company = intake.company || 'N/A';
+
+    const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:20px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">New scope generated</p>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Company</td><td style="padding:6px 0;font-size:13px;font-weight:600;color:#0B0E11">${company}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Plan</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${activation.tier}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Email</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${activation.email}</td></tr>
+  </table>
+  <p style="font-size:13px;color:#6B7280;margin-bottom:12px;font-weight:600">Milestones:</p>
+  <ul style="padding-left:20px;margin:0 0 20px;color:#0B0E11;font-size:13px;line-height:1.8">
+    ${milestones.map((m) => `<li>${m.title}</li>`).join('')}
+  </ul>
+  <p style="font-size:12px;color:#9CA3AF">Project ID: ${projectId}</p>
+</div>`;
+
+    await fetch('https://api.mailjet.com/v3.1/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+      body: JSON.stringify({
+        Messages: [
+          {
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: 'mike.fejiro@gmail.com', Name: 'Mike' }],
+            Subject: `New scope generated — ${company}`,
+            HTMLPart: html,
+            TextPart: `New scope generated\n\nCompany: ${company}\nPlan: ${activation.tier}\nEmail: ${activation.email}\n\nMilestones:\n${milestones.map((m) => `• ${m.title}`).join('\n')}\n\nProject ID: ${projectId}`,
+          },
+        ],
+      }),
+    });
+
+    logEvent('generate_scope_mike_email_sent', {
+      projectId,
+      company,
+    });
+  } catch (error) {
+    logEvent('generate_scope_mike_email_exception', {
+      projectId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 }
 
@@ -498,11 +791,12 @@ async function runActivation(
     };
   }
 
-  const projectWrite = await writeProjectToSupabase(env, activation);
+  const projectWrite = await writeProjectToSupabase(env, activation, intake);
   logEvent('activate_project_supabase_write', {
     sessionId,
     inserted: projectWrite.inserted,
     duplicate: projectWrite.duplicate,
+    projectId: projectWrite.projectId,
     status: projectWrite.status,
     error: projectWrite.error,
   });
@@ -529,11 +823,30 @@ async function runActivation(
     };
   }
 
-  const projectWebhook = await deliverWebhook(
-    env.UNALABS_NEW_PROJECT_WEBHOOK_URL,
-    { 'content-type': 'application/json', 'x-unalabs-source': 'stripe-api-worker' },
-    { type: 'una_new_subscription', activation, intake }
-  );
+  // Generate and write project scope
+  if (projectWrite.projectId) {
+    try {
+      await generateAndWriteScope(projectWrite.projectId, intake, activation, env);
+    } catch (error) {
+      logEvent('generate_scope_error', {
+        sessionId,
+        projectId: projectWrite.projectId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  const projectWebhook = shouldDeliverBridgeWebhook(env)
+    ? await deliverWebhook(
+        env.UNALABS_NEW_PROJECT_WEBHOOK_URL,
+        {
+          'content-type': 'application/json',
+          'x-unalabs-source': 'stripe-api-worker',
+          'authorization': env.ATEAM_KEY ? `Bearer ${cleanSecret(env.ATEAM_KEY)}` : '',
+        },
+        { type: 'una_new_subscription', activation, intake }
+      )
+    : { attempted: false, delivered: false, status: 0 };
 
   const emailWebhook = await deliverWebhook(
     env.UNALABS_PROJECT_CONFIRMATION_EMAIL_WEBHOOK_URL,
@@ -797,8 +1110,7 @@ async function handleIntakeConfirm(req: Request, env: Env, origin: string | null
       <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Due today</td><td style="font-size:13px;font-weight:700;color:#4DB8A8">CA$0 — 14-day free trial</td></tr>
     </table>
   </div>
-  <p style="font-size:13px;color:#6B7280;margin-bottom:20px">Complete your checkout to activate your workspace. Your card won't be charged until day 15.</p>
-  <a href="https://unalabs.cloud/start" style="display:inline-block;background:#F97316;color:white;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:24px">Complete checkout</a>
+  <p style="font-size:13px;color:#6B7280;margin-bottom:20px">Check your inbox after checkout — we'll send your trial confirmation and next steps.</p>
   <p style="font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:16px">Questions? Reply to this email or reach us at <a href="mailto:hello@unalabs.cloud" style="color:#4DB8A8">hello@unalabs.cloud</a><br>Una Labs · unalabs.cloud</p>
 </div>`;
 
@@ -813,7 +1125,7 @@ async function handleIntakeConfirm(req: Request, env: Env, origin: string | null
           To: [{ Email: email, Name: name }],
           Subject: `Your Una Labs ${planLabel} intake is confirmed`,
           HTMLPart: html,
-          TextPart: `Hi ${firstName},\n\nWe've received your intake. You're one step away from your ${planLabel} trial.\n\nPlan: ${planLabel}\nBilling: ${billingLabel}\nDue today: CA$0 (14-day free trial)\n\nComplete checkout: https://unalabs.cloud/start\n\nQuestions? Email hello@unalabs.cloud\n\nUna Labs · unalabs.cloud`,
+          TextPart: `Hi ${firstName},\n\nWe've received your intake. You're one step away from your ${planLabel} trial.\n\nPlan: ${planLabel}\nBilling: ${billingLabel}\nDue today: CA$0 (14-day free trial)\n\nCheck your inbox after checkout — we'll send your trial confirmation and next steps.\n\nQuestions? Email hello@unalabs.cloud\n\nUna Labs · unalabs.cloud`,
         }],
       }),
     });

@@ -329,6 +329,18 @@ function ProjectCard({
           <p className="text-body text-tx-secondary">Milestones will appear here once your project kicks off.</p>
         </div>
       )}
+
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Button href={`/dashboard/report`} variant="secondary" size="sm">
+          View Report
+        </Button>
+        <Button href={`/dashboard/proposal?id=${project.id}`} variant="secondary" size="sm" external>
+          View Proposal
+        </Button>
+        <Button href={`/portal?id=${project.id}`} variant="secondary" size="sm" external>
+          Client View
+        </Button>
+      </div>
     </div>
   );
 }
@@ -344,13 +356,25 @@ export function DashboardClient() {
     async function loadForSession(session: { user: { email?: string } }) {
       const { createBrowserClient } = await import('@ftc/supabase');
       const client = createBrowserClient();
-      const [{ data: projects, error: projectError }, { data: milestones, error: milestoneError }] = await Promise.all([
-        client.from('projects').select('*').order('created_at', { ascending: false }),
-        client.from('milestones').select('*').order('due_date', { ascending: true }),
-      ]);
+      const projectResult = await client
+        .from('projects')
+        .select('*')
+        .ilike('email', session.user.email ?? '')
+        .order('created_at', { ascending: false });
 
-      if (projectError) throw projectError;
-      if (milestoneError) throw milestoneError;
+      const projectIds = ((projectResult.data as ProjectRecord[] | null) ?? []).map((p) => p.id);
+      const milestoneResult = projectIds.length > 0
+        ? await client
+            .from('milestones')
+            .select('*')
+            .in('project_id', projectIds)
+            .order('due_date', { ascending: true })
+        : { data: [] as MilestoneRecord[] | null, error: null };
+
+      const projects = projectResult.data;
+      const milestones = milestoneResult.data;
+      if (projectResult.error) throw projectResult.error;
+      if (milestoneResult.error) throw milestoneResult.error;
 
       if (!cancelled) {
         setState({
@@ -414,6 +438,52 @@ export function DashboardClient() {
 
   const handleMilestoneStatusChange = (id: string, newStatus: string) => {
     setMilestoneStatuses((previous) => ({ ...previous, [id]: newStatus }));
+  };
+
+  const handleDownloadSummary = () => {
+    if (state.phase !== 'ready') return;
+
+    const generatedDate = new Date().toLocaleDateString('en-CA', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    const lines: string[] = [
+      'Una Labs — Project Summary',
+      `Generated: ${generatedDate}`,
+      `Account: ${state.email}`,
+      '',
+    ];
+
+    state.projects.forEach((project) => {
+      lines.push(`Plan: ${project.tier ?? 'Unknown'}`);
+      lines.push(`Billing: ${project.billing ?? 'Unknown'}`);
+      lines.push(`Status: ${project.status ?? 'Unknown'}`);
+      lines.push(`Start date: ${formatDate(project.created_at)}`);
+
+      const projectMilestones = milestonesByProject.get(project.id) ?? [];
+      if (projectMilestones.length > 0) {
+        lines.push('Milestones:');
+        projectMilestones.forEach((milestone) => {
+          lines.push(`  - ${milestone.title ?? 'Untitled'} | Due: ${formatDate(milestone.due_date)} | Status: ${milestone.status ?? 'Unknown'}`);
+        });
+      } else {
+        lines.push('Milestones: None');
+      }
+
+      lines.push('');
+    });
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'una-labs-summary.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const milestonesByProject = useMemo(() => {
@@ -497,8 +567,8 @@ export function DashboardClient() {
             <p className="mt-3 text-body text-tx-muted">{state.email}</p>
           </div>
           <Button
-            variant="secondary"
-            size="md"
+            variant="ghost"
+            size="sm"
             onClick={async () => {
               const { signOut } = await import('@ftc/auth');
               await signOut();
@@ -543,7 +613,7 @@ export function DashboardClient() {
             <Button
               variant="ghost"
               size="md"
-              onClick={() => window.print()}
+              onClick={handleDownloadSummary}
             >
               Download summary
             </Button>

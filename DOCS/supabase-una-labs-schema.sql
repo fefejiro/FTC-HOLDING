@@ -7,6 +7,7 @@ create table if not exists projects (
   id                 uuid primary key default gen_random_uuid(),
   email              text not null,
   intake_id          text,
+  name               text,
   tier               text,
   billing            text,
   stripe_session_id  text unique,
@@ -18,6 +19,7 @@ create table if not exists milestones (
   id           uuid primary key default gen_random_uuid(),
   project_id   uuid references projects(id) on delete cascade,
   title        text,
+  description  text,
   status       text default 'pending',
   due_date     date,
   completed_at timestamptz,
@@ -48,6 +50,17 @@ create policy "anon insert milestones"
 -- Users see milestones for their own projects
 create policy "users read own milestones"
   on milestones for select
+  using (
+    exists (
+      select 1 from projects p
+      where p.id = milestones.project_id
+        and auth.jwt() ->> 'email' = p.email
+    )
+  );
+
+-- Users can update milestones for their own projects (approve/request changes)
+create policy "users_update_own_milestones"
+  on milestones for update
   using (
     exists (
       select 1 from projects p

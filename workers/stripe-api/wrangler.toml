@@ -6,3 +6,8 @@ workers_dev = true
 
 [vars]
 UNALABS_SITE_URL = "https://unalabs.cloud"
+UNALABS_PROJECT_PIPELINE_MODE = "worker_only"
+
+# Secrets (set via: npx wrangler secret put SECRET_NAME)
+# SUPABASE_SERVICE_ROLE_KEY — set via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# OPENAI_API_KEY — set via: npx wrangler secret put OPENAI_API_KEY
