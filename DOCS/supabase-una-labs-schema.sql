@@ -68,3 +68,20 @@ create policy "users_update_own_milestones"
         and auth.jwt() ->> 'email' = p.email
     )
   );
+
+-- Admin can see all projects (pipeline view)
+create policy "admin_read_all_projects"
+  on projects for select
+  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+
+-- Admin can update any project (pipeline status changes)
+create policy "admin_update_projects"
+  on projects for update
+  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+
+-- Admin can see all milestones (pipeline milestone counts)
+create policy "admin_read_all_milestones"
+  on milestones for select
+  using (
+    (select auth.jwt() ->> 'email') = 'mike.fejiro@gmail.com'
+  );

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 type Project = {
   id: string;
   email?: string;
+  name?: string;
   tier?: string;
   billing?: string;
   status?: string;
@@ -49,11 +50,14 @@ const TIER_PRICE: Record<string, number> = {
 
 const STATUS_COLORS: Record<string, string> = {
   intake: 'bg-blue-100 text-blue-700',
+  scoped: 'bg-purple-100 text-purple-700',
   active: 'bg-orange-100 text-orange-700',
   review: 'bg-yellow-100 text-yellow-700',
   complete: 'bg-teal-100 text-teal-700',
   paused: 'bg-gray-100 text-gray-500',
 };
+
+const PIPELINE_STAGES = ['intake', 'scoped', 'active', 'review', 'complete', 'paused'] as const;
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -76,6 +80,7 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
 
 export function AdminClient() {
   const [state, setState] = useState<State>({ phase: 'loading' });
+  const [view, setView] = useState<'pipeline' | 'table'>('pipeline');
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +133,23 @@ export function AdminClient() {
       cancelled = true;
     };
   }, []);
+
+  async function handleStatusChange(projectId: string, newStatus: string) {
+    const { createBrowserClient } = await import('@ftc/supabase');
+    const client = createBrowserClient();
+    const { error } = await client.from('projects').update({ status: newStatus }).eq('id', projectId);
+    if (error) {
+      alert(`Failed to update: ${error.message}`);
+      return;
+    }
+    setState((prev) => {
+      if (prev.phase !== 'ready') return prev;
+      return {
+        ...prev,
+        projects: prev.projects.map((p) => (p.id === projectId ? { ...p, status: newStatus } : p)),
+      };
+    });
+  }
 
   if (state.phase === 'loading') {
     return (
@@ -211,8 +233,8 @@ export function AdminClient() {
           <Stat label="Subscribers" value={subscribers.length} sub="Newsletter list" />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-10">
-          {(['intake', 'active', 'review', 'complete', 'paused'] as const).map((status) => (
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-10">
+          {(['intake', 'scoped', 'active', 'review', 'complete', 'paused'] as const).map((status) => (
             <div key={status} className="bg-white rounded-xl border border-border px-4 py-3 flex items-center justify-between">
               <span className="text-body-sm text-tx-secondary capitalize">{status}</span>
               <span className={`text-body-sm font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[status]}`}>
@@ -222,6 +244,77 @@ export function AdminClient() {
           ))}
         </div>
 
+        {/* View toggle */}
+        <div className="flex items-center gap-2 mb-6">
+          <button
+            className={`px-4 py-2 rounded-xl text-body-sm font-semibold transition-colors ${view === 'pipeline' ? 'bg-brand-teal text-white' : 'bg-white text-tx-secondary border border-border hover:bg-bg-offwhite'}`}
+            onClick={() => setView('pipeline')}
+          >
+            Pipeline
+          </button>
+          <button
+            className={`px-4 py-2 rounded-xl text-body-sm font-semibold transition-colors ${view === 'table' ? 'bg-brand-teal text-white' : 'bg-white text-tx-secondary border border-border hover:bg-bg-offwhite'}`}
+            onClick={() => setView('table')}
+          >
+            Table
+          </button>
+        </div>
+
+        {/* Pipeline view */}
+        {view === 'pipeline' && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+            {PIPELINE_STAGES.map((stage) => {
+              const stageProjects = projects.filter((p) => (p.status ?? 'intake') === stage);
+              return (
+                <div key={stage} className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+                  <div className={`px-4 py-3 border-b border-border ${STATUS_COLORS[stage] ?? 'bg-gray-100 text-gray-600'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-body-sm font-bold capitalize">{stage}</span>
+                      <span className="text-[11px] font-bold rounded-full bg-white/60 px-1.5">{stageProjects.length}</span>
+                    </div>
+                  </div>
+                  <div className="p-2 space-y-2 min-h-[100px]">
+                    {stageProjects.length === 0 ? (
+                      <p className="text-[11px] text-tx-muted text-center py-6">&mdash;</p>
+                    ) : (
+                      stageProjects.map((project) => {
+                        const pm = milestonesByProject[project.id] ?? [];
+                        const done = pm.filter((m) => ['done', 'complete', 'completed', 'approved'].includes(m.status ?? '')).length;
+                        return (
+                          <div key={project.id} className="bg-bg-offwhite rounded-xl border border-border p-3">
+                            <p className="text-body-sm font-semibold text-tx-heading truncate">{project.name || project.email}</p>
+                            {project.name && <p className="text-[11px] text-tx-muted truncate">{project.email}</p>}
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              {project.tier && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-teal/10 text-brand-teal capitalize">{project.tier}</span>
+                              )}
+                              {pm.length > 0 && (
+                                <span className="text-[10px] text-tx-muted">{done}/{pm.length}</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-tx-muted mt-1">{formatDate(project.created_at)}</p>
+                            <select
+                              className="mt-2 w-full text-[11px] border border-border rounded-lg px-2 py-1.5 bg-white text-tx-body cursor-pointer"
+                              value={project.status ?? 'intake'}
+                              onChange={(e) => handleStatusChange(project.id, e.target.value)}
+                            >
+                              {PIPELINE_STAGES.map((s) => (
+                                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Table view */}
+        {view === 'table' && (
         <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-10">
           <div className="px-8 py-5 border-b border-border flex items-center justify-between">
             <h2 className="text-h3 text-tx-heading">All Projects</h2>
@@ -248,16 +341,23 @@ export function AdminClient() {
                     return (
                       <tr key={project.id} className={`border-b border-border hover:bg-bg-offwhite transition-colors ${index % 2 === 0 ? '' : 'bg-bg-offwhite/40'}`}>
                         <td className="px-6 py-4">
-                          <p className="font-medium text-tx-heading">{project.email}</p>
+                          <p className="font-medium text-tx-heading">{project.name || project.email}</p>
+                          {project.name && <p className="text-tx-muted text-[11px] mt-0.5">{project.email}</p>}
                           {project.intake_id && <p className="text-tx-muted text-[11px] mt-0.5">{project.intake_id}</p>}
                         </td>
                         <td className="px-6 py-4 capitalize text-tx-body">{project.tier ?? '-'}</td>
                         <td className="px-6 py-4 capitalize text-tx-body">{project.billing ?? '-'}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold capitalize ${STATUS_COLORS[project.status ?? 'intake']}`}>
-                              {project.status ?? 'intake'}
-                            </span>
+                            <select
+                              className={`text-[11px] font-bold capitalize border border-border rounded-lg px-2 py-1 cursor-pointer ${STATUS_COLORS[project.status ?? 'intake']}`}
+                              value={project.status ?? 'intake'}
+                              onChange={(e) => handleStatusChange(project.id, e.target.value)}
+                            >
+                              {PIPELINE_STAGES.map((s) => (
+                                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                              ))}
+                            </select>
                             {hasReview && <span className="text-[10px] font-bold text-brand-orange">review</span>}
                           </div>
                         </td>
@@ -273,6 +373,7 @@ export function AdminClient() {
             </div>
           )}
         </div>
+        )}
 
         <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden">
           <div className="px-8 py-5 border-b border-border flex items-center justify-between">
