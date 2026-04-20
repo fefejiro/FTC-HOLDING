@@ -9,9 +9,9 @@ import { PROBLEM_SOLUTIONS } from '@/lib/constants';
 import { DashboardMockup, ReportMockup, HandoffMockup } from '@/components/ui/ProductMockups';
 
 export const metadata: Metadata = {
-  title: 'Una Labs - The Professional Service Platform',
+  title: 'Una Labs — AI Launchpad for Founders',
   description:
-    'Structured intake, clear proposals, governed delivery, and measurable proof. The platform built for teams who deliver with confidence.',
+    'Una Labs is an AI-powered professional service platform for founders. Structured intake, clear proposals, governed delivery, and measurable proof — from client request to delivered project.',
 };
 
 const IMAGE_POSITIONS = ['right', 'left', 'right'] as const;
@@ -22,10 +22,10 @@ export default function HomePage() {
   return (
     <>
       <HeroSection
-        eyebrow="Una Labs"
+        eyebrow="Una Labs — AI Launchpad for Founders"
         headline="From client request to delivered project, with proof."
         accentPhrase="with proof."
-        subheadline="Una Labs structures your intake, scopes the work, and gives every project a live client workspace. Your clients can see exactly where things stand and approve each milestone themselves."
+        subheadline="Una Labs structures your intake, scopes the work with AI, and gives every project a live client workspace. Your clients see exactly where things stand and approve each milestone themselves."
         ctaPrimaryLabel="Start Free Trial"
         ctaPrimaryHref="/start"
         ctaSecondaryLabel="Watch a Demo"

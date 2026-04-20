@@ -16,34 +16,88 @@ const plusJakarta = Plus_Jakarta_Sans({
   display: 'swap',
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://unalabs.cloud';
+
+const defaultTitle = 'Una Labs — AI Launchpad for Founders';
+const defaultDescription =
+  'Una Labs is an AI-powered professional service platform for founders. Structured intake, clear proposals, governed delivery, and measurable proof — from client request to delivered project.';
+
 export const metadata: Metadata = {
   title: {
-    template: '%s | Una Labs',
-    default: 'Una Labs - The Professional Service Platform',
+    template: '%s | Una Labs — AI Launchpad for Founders',
+    default: defaultTitle,
   },
-  description:
-    'Structured intake, clear proposals, governed delivery, and measurable proof. The platform built for teams who deliver with confidence.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://unalabs.cloud'),
+  description: defaultDescription,
+  metadataBase: new URL(SITE_URL),
+  keywords: [
+    'Una Labs',
+    'AI Launchpad for Founders',
+    'professional service platform',
+    'AI project delivery',
+    'client intake automation',
+    'milestone tracking',
+    'proposal generator',
+    'AI scoping',
+    'founder tools',
+    'service business software',
+  ],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  alternates: {
+    canonical: './',
+  },
   openGraph: {
     type: 'website',
     siteName: 'Una Labs',
-    title: 'Una Labs - The Professional Service Platform',
-    description:
-      'Structured intake, clear proposals, governed delivery, and measurable proof.',
-    images: [{ url: '/images/og/default.png', width: 1200, height: 630 }],
+    title: defaultTitle,
+    description: defaultDescription,
+    url: SITE_URL,
+    images: [{ url: '/images/og/default.png', width: 1200, height: 630, alt: 'Una Labs — AI Launchpad for Founders' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Una Labs - The Professional Service Platform',
-    description:
-      'Structured intake, clear proposals, governed delivery, and measurable proof.',
+    title: defaultTitle,
+    description: defaultDescription,
     images: ['/images/og/default.png'],
   },
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Una Labs',
+  url: SITE_URL,
+  logo: `${SITE_URL}/images/og/default.png`,
+  description: defaultDescription,
+  contactPoint: [
+    {
+      '@type': 'ContactPoint',
+      contactType: 'sales',
+      email: 'mike.fejiro@gmail.com',
+      areaServed: 'CA',
+      availableLanguage: ['en'],
+    },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${plusJakarta.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body>
         <Header />
         <main>{children}</main>
