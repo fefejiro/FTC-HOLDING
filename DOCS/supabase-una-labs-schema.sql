@@ -27,10 +27,28 @@ create table if not exists milestones (
   proof_note   text
 );
 
+create table if not exists contracts (
+  id                uuid primary key default gen_random_uuid(),
+  project_id        uuid not null unique references projects(id) on delete cascade,
+  title             text,
+  body              text not null,
+  status            text default 'sent',
+  sent_at           timestamptz default now(),
+  signer_name       text,
+  signer_email      text,
+  signature_text    text,
+  signed_at         timestamptz,
+  signed_ip         text,
+  signed_user_agent text,
+  created_at        timestamptz default now(),
+  updated_at        timestamptz default now()
+);
+
 -- ── Row Level Security ────────────────────────────────────────────────────────
 
 alter table projects  enable row level security;
 alter table milestones enable row level security;
+alter table contracts enable row level security;
 
 -- Worker can insert projects (anon key, server-side — trusted)
 create policy "anon insert projects"
@@ -69,6 +87,17 @@ create policy "users_update_own_milestones"
     )
   );
 
+-- Users can read their own contracts
+create policy "users_read_own_contracts"
+  on contracts for select
+  using (
+    exists (
+      select 1 from projects p
+      where p.id = contracts.project_id
+        and auth.jwt() ->> 'email' = p.email
+    )
+  );
+
 -- Admin can see all projects (pipeline view)
 create policy "admin_read_all_projects"
   on projects for select
@@ -85,3 +114,13 @@ create policy "admin_read_all_milestones"
   using (
     (select auth.jwt() ->> 'email') = 'mike.fejiro@gmail.com'
   );
+
+-- Admin can see all contracts
+create policy "admin_read_all_contracts"
+  on contracts for select
+  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+
+-- Admin can update any contract
+create policy "admin_update_contracts"
+  on contracts for update
+  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');

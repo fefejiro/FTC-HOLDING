@@ -384,6 +384,24 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
             </div>
           )}
 
+          <div className="mb-8 rounded-2xl border border-border bg-bg-subtle p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <h2 className="text-h3 text-tx-heading font-semibold">Engagement Letter</h2>
+              <Badge variant="orange">Review and sign</Badge>
+            </div>
+            <p className="text-body text-tx-body leading-relaxed">
+              Your contract confirms the scope, delivery model, approvals, and working terms for this project.
+            </p>
+            <div className="mt-5">
+              <a
+                href={`/dashboard/contract?id=${state.project.id}`}
+                className="inline-flex items-center justify-center rounded-lg bg-brand-orange px-6 py-3 text-body font-semibold text-white hover:bg-brand-orange-hover transition-colors"
+              >
+                Open engagement letter
+              </a>
+            </div>
+          </div>
+
           {state.milestones.length > 0 && (
             <div>
               <h2 className="text-h3 text-tx-heading font-semibold mb-6">Milestones</h2>

@@ -337,6 +337,9 @@ function ProjectCard({
         <Button href={`/dashboard/proposal?id=${project.id}`} variant="secondary" size="sm" external>
           View Proposal
         </Button>
+        <Button href={`/dashboard/contract?id=${project.id}`} variant="secondary" size="sm">
+          View Contract
+        </Button>
         <Button href={`/portal?id=${project.id}`} variant="secondary" size="sm" external>
           Client View
         </Button>

@@ -218,6 +218,9 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
             <Button variant="secondary" size="sm" onClick={handleCopyLink}>
               {copyState === 'copied' ? 'Link copied' : copyState === 'error' ? 'Copy failed' : 'Copy share link'}
             </Button>
+            <Button variant="secondary" size="sm" href={`/dashboard/contract?id=${state.project.id}`}>
+              Review Contract
+            </Button>
             <Button variant="primary" size="sm" onClick={() => window.print()}>
               Print / Save PDF
             </Button>
@@ -267,6 +270,17 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
         </div>
 
         <div className="text-center border-t border-border pt-12">
+          <div className="mb-8 rounded-2xl border border-border bg-bg-subtle p-6 no-print">
+            <h2 className="text-h3 text-tx-heading font-semibold">Next step</h2>
+            <p className="mt-3 text-body text-tx-body">
+              Review the engagement letter to confirm scope, approvals, and working terms before delivery moves forward.
+            </p>
+            <div className="mt-5 flex justify-center">
+              <Button href={`/dashboard/contract?id=${state.project.id}`} variant="primary" size="md">
+                Open engagement letter
+              </Button>
+            </div>
+          </div>
           <p className="text-body text-tx-secondary">
             Questions? Contact us at{' '}
             <a href="mailto:hello@unalabs.cloud" className="text-brand-teal hover:underline">

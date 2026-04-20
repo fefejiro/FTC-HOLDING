@@ -110,6 +110,44 @@ type ActivationRunResult = {
   emailWebhook: DeliveryResult;
 };
 
+type AuthenticatedUser = {
+  email: string;
+};
+
+type ContractProject = {
+  id: string;
+  email: string;
+  name?: string;
+  tier?: string;
+  billing?: string;
+  status?: string;
+  created_at?: string;
+};
+
+type ContractMilestone = {
+  id: string;
+  title?: string;
+  due_date?: string;
+  status?: string;
+};
+
+type ContractRecord = {
+  id: string;
+  project_id: string;
+  title?: string;
+  body: string;
+  status?: string;
+  sent_at?: string;
+  signer_name?: string;
+  signer_email?: string;
+  signature_text?: string;
+  signed_at?: string;
+  signed_ip?: string;
+  signed_user_agent?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 function logEvent(event: string, details: Record<string, unknown>): void {
   console.log(JSON.stringify({ event, ...details }));
 }
@@ -227,25 +265,229 @@ function cleanSecret(val: string): string {
 
 const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
 
-async function verifyAdmin(req: Request, env: Env): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
+function getSupabaseApiKey(env: Env): string {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY ?? env.SUPABASE_ANON_KEY;
+  if (!env.SUPABASE_URL || !key) throw new Error('Supabase not configured.');
+  return cleanSecret(key);
+}
+
+function getSupabaseServiceKey(env: Env): string {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Supabase service role not configured.');
+  return cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+async function verifyUser(req: Request, env: Env): Promise<{ ok: true; user: AuthenticatedUser } | { ok: false; error: string; status: number }> {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
-    return { ok: false, error: 'Missing Authorization header.' };
+    return { ok: false, error: 'Missing Authorization header.', status: 401 };
   }
-  const token = authHeader.slice(7);
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    return { ok: false, error: 'Supabase not configured.' };
+
+  try {
+    const token = authHeader.slice(7);
+    const apiKey = getSupabaseApiKey(env);
+    const res = await fetch(`${cleanSecret(env.SUPABASE_URL!)}/auth/v1/user`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': apiKey,
+      },
+    });
+    if (!res.ok) return { ok: false, error: 'Invalid token.', status: 401 };
+    const user = await res.json() as { email?: string };
+    if (!user.email) return { ok: false, error: 'User email unavailable.', status: 401 };
+    return { ok: true, user: { email: user.email.toLowerCase() } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Authentication failed.', status: 401 };
   }
-  const res = await fetch(`${cleanSecret(env.SUPABASE_URL)}/auth/v1/user`, {
+}
+
+async function verifyAdmin(req: Request, env: Env): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
+  const auth = await verifyUser(req, env);
+  if (!auth.ok) return { ok: false, error: auth.error };
+  if (auth.user.email !== ADMIN_EMAIL) return { ok: false, error: 'Forbidden.' };
+  return { ok: true, email: auth.user.email };
+}
+
+function renderContractBody(project: ContractProject, milestones: ContractMilestone[]): string {
+  const projectTitle = sanitize(project.name || `Project ${project.id.slice(0, 8)}`, 160);
+  const tierLabel = sanitize(project.tier || 'professional', 60);
+  const billingLabel = sanitize(project.billing || 'monthly', 60);
+  const kickoffDate = project.created_at ? new Date(project.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : 'the activation date';
+  const milestoneLines = milestones.length > 0
+    ? milestones.map((milestone, index) => `${index + 1}. ${sanitize(milestone.title || `Milestone ${index + 1}`, 160)}${milestone.due_date ? ` — target ${sanitize(milestone.due_date, 40)}` : ''}`).join('\n')
+    : '1. Scope definition and execution milestones will be managed inside the Una Labs dashboard.';
+
+  return [
+    `ENGAGEMENT LETTER`,
+    ``,
+    `This engagement letter confirms that Una Labs will deliver the project work for ${projectTitle}. The engagement begins on ${kickoffDate}.`,
+    ``,
+    `SERVICE MODEL`,
+    `Una Labs will provide implementation, delivery coordination, and milestone-based approvals through the client dashboard and portal.`,
+    ``,
+    `PLAN AND BILLING`,
+    `The project is attached to the ${tierLabel} plan with ${billingLabel} billing. Trial, billing, and subscription handling continue through Stripe and the Una Labs billing flow already accepted at checkout.`,
+    ``,
+    `INITIAL DELIVERY SCOPE`,
+    milestoneLines,
+    ``,
+    `CLIENT RESPONSIBILITIES`,
+    `The client will provide timely access, required materials, and feedback during milestone review. Delays in approvals or dependencies may shift delivery dates.`,
+    ``,
+    `APPROVAL AND CHANGE CONTROL`,
+    `Milestones submitted in the portal may be approved or returned with requested changes. Approval marks that milestone as accepted for the current scope.`,
+    ``,
+    `CONFIDENTIALITY`,
+    `Una Labs will treat project information as confidential and will not disclose sensitive materials except as required to deliver the work or comply with law.`,
+    ``,
+    `TERM`,
+    `This engagement remains in effect while the project is active unless cancelled under the billing terms or replaced by a later written agreement.`,
+    ``,
+    `SIGNATURE`,
+    `By signing below, the client confirms authority to enter this engagement and accepts the project scope and operating terms described above.`,
+  ].join('\n');
+}
+
+async function fetchProjectForContract(env: Env, projectId: string): Promise<ContractProject | null> {
+  const serviceKey = getSupabaseServiceKey(env);
+  const response = await fetch(`${cleanSecret(env.SUPABASE_URL!)}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}&select=id,email,name,tier,billing,status,created_at`, {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'apikey': cleanSecret(env.SUPABASE_ANON_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY),
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
     },
   });
-  if (!res.ok) return { ok: false, error: 'Invalid token.' };
-  const user = await res.json() as { email?: string };
-  if (user.email !== ADMIN_EMAIL) return { ok: false, error: 'Forbidden.' };
-  return { ok: true, email: user.email };
+  if (!response.ok) throw new Error(`Project lookup failed: ${response.status}`);
+  const payload = await response.json() as ContractProject[];
+  return payload[0] ?? null;
+}
+
+async function fetchMilestonesForContract(env: Env, projectId: string): Promise<ContractMilestone[]> {
+  const serviceKey = getSupabaseServiceKey(env);
+  const response = await fetch(`${cleanSecret(env.SUPABASE_URL!)}/rest/v1/milestones?project_id=eq.${encodeURIComponent(projectId)}&select=id,title,due_date,status&order=due_date.asc`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+  if (!response.ok) throw new Error(`Milestone lookup failed: ${response.status}`);
+  return await response.json() as ContractMilestone[];
+}
+
+async function fetchExistingContract(env: Env, projectId: string): Promise<ContractRecord | null> {
+  const serviceKey = getSupabaseServiceKey(env);
+  const response = await fetch(`${cleanSecret(env.SUPABASE_URL!)}/rest/v1/contracts?project_id=eq.${encodeURIComponent(projectId)}&select=*`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+  if (!response.ok) throw new Error(`Contract lookup failed: ${response.status}`);
+  const payload = await response.json() as ContractRecord[];
+  return payload[0] ?? null;
+}
+
+async function upsertContractDraft(env: Env, project: ContractProject, milestones: ContractMilestone[], existing: ContractRecord | null): Promise<ContractRecord> {
+  const serviceKey = getSupabaseServiceKey(env);
+  const now = new Date().toISOString();
+  const title = `${sanitize(project.name || 'Project', 120)} Engagement Letter`;
+  const body = renderContractBody(project, milestones);
+
+  if (existing?.status === 'signed') {
+    return existing;
+  }
+
+  const payload = existing
+    ? {
+        title,
+        body,
+        updated_at: now,
+      }
+    : {
+        project_id: project.id,
+        title,
+        body,
+        status: 'sent',
+        sent_at: now,
+        updated_at: now,
+      };
+
+  const target = existing
+    ? `${cleanSecret(env.SUPABASE_URL!)}/rest/v1/contracts?id=eq.${encodeURIComponent(existing.id)}`
+    : `${cleanSecret(env.SUPABASE_URL!)}/rest/v1/contracts`;
+
+  const response = await fetch(target, {
+    method: existing ? 'PATCH' : 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`Contract upsert failed: ${response.status}`);
+  const rows = await response.json() as ContractRecord[];
+  return rows[0];
+}
+
+async function ensureContractForProject(env: Env, projectId: string, userEmail: string): Promise<{ project: ContractProject; milestones: ContractMilestone[]; contract: ContractRecord }> {
+  const project = await fetchProjectForContract(env, projectId);
+  if (!project) throw new Error('Project not found.');
+  if (userEmail !== ADMIN_EMAIL && project.email.toLowerCase() !== userEmail.toLowerCase()) {
+    throw new Error('Forbidden.');
+  }
+
+  const [milestones, existing] = await Promise.all([
+    fetchMilestonesForContract(env, projectId),
+    fetchExistingContract(env, projectId),
+  ]);
+  const contract = await upsertContractDraft(env, project, milestones, existing);
+  return { project, milestones, contract };
+}
+
+async function sendContractSignedNotifications(env: Env, project: ContractProject, contract: ContractRecord): Promise<void> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return;
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  const projectTitle = project.name || `Project ${project.id.slice(0, 8)}`;
+  const signedAt = contract.signed_at ? new Date(contract.signed_at).toLocaleString('en-CA') : 'just now';
+  const signerName = contract.signer_name || contract.signer_email || 'Client';
+  const subject = `Contract signed: ${projectTitle}`;
+  const html = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Engagement letter signed</p>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+    <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Project</td><td style="padding:4px 0;font-size:13px;color:#0B0E11">${projectTitle}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Signer</td><td style="padding:4px 0;font-size:13px;color:#0B0E11">${signerName}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Email</td><td style="padding:4px 0;font-size:13px;color:#0B0E11">${contract.signer_email ?? project.email}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Signed at</td><td style="padding:4px 0;font-size:13px;color:#0B0E11">${signedAt}</td></tr>
+  </table>
+  <p style="font-size:12px;color:#9CA3AF">Una Labs contracts · unalabs.cloud</p>
+</div>`;
+
+  await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+    body: JSON.stringify({
+      Messages: [
+        {
+          From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+          To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }],
+          Subject: subject,
+          HTMLPart: html,
+          TextPart: `${subject}\n\nProject: ${projectTitle}\nSigner: ${signerName}\nEmail: ${contract.signer_email ?? project.email}\nSigned at: ${signedAt}`,
+        },
+        {
+          From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+          To: [{ Email: contract.signer_email ?? project.email, Name: signerName }],
+          Subject: `Signed copy received — ${projectTitle}`,
+          HTMLPart: html,
+          TextPart: `Signed copy received for ${projectTitle}.\n\nSigner: ${signerName}\nSigned at: ${signedAt}\n\nUna Labs · unalabs.cloud`,
+        },
+      ],
+    }),
+  });
 }
 
 function getStripe(env: Env): Stripe {
@@ -542,6 +784,8 @@ async function generateAndWriteScope(
 
   // Step 2: Write milestones to Supabase
   try {
+    const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+    const serviceKey = getSupabaseServiceKey(env);
     const today = new Date();
     const milestonesToWrite = milestones.map((m) => {
       const dueDate = new Date(today);
@@ -555,12 +799,12 @@ async function generateAndWriteScope(
       };
     });
 
-    const milestonesResponse = await fetch(`${cleanSecret(env.SUPABASE_URL)}/rest/v1/milestones`, {
+    const milestonesResponse = await fetch(`${supabaseUrl}/rest/v1/milestones`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY),
-        'Authorization': `Bearer ${cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY)}`,
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
         'Prefer': 'return=minimal',
       },
       body: JSON.stringify(milestonesToWrite),
@@ -590,12 +834,14 @@ async function generateAndWriteScope(
 
   // Step 3: Update project status to 'scoped'
   try {
-    const updateResponse = await fetch(`${cleanSecret(env.SUPABASE_URL)}/rest/v1/projects?id=eq.${projectId}`, {
+    const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+    const serviceKey = getSupabaseServiceKey(env);
+    const updateResponse = await fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${projectId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY),
-        'Authorization': `Bearer ${cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY)}`,
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
         'Prefer': 'return=minimal',
       },
       body: JSON.stringify({ status: 'scoped' }),
@@ -1157,6 +1403,103 @@ async function handleIntakeConfirm(req: Request, env: Env, origin: string | null
   return json({ ok: true }, 200, origin);
 }
 
+async function handleEnsureContract(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyUser(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.status, origin);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid request body.' }, 400, origin);
+  }
+
+  const projectId = sanitize(body.project_id, 80);
+  if (!projectId) return json({ error: 'project_id is required.' }, 400, origin);
+
+  try {
+    const result = await ensureContractForProject(env, projectId, auth.user.email);
+    return json({
+      ok: true,
+      project: result.project,
+      milestones: result.milestones,
+      contract: result.contract,
+    }, 200, origin);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to prepare contract.';
+    const status = message === 'Forbidden.' ? 403 : message === 'Project not found.' ? 404 : 500;
+    return json({ error: message }, status, origin);
+  }
+}
+
+async function handleSignContract(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyUser(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.status, origin);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid request body.' }, 400, origin);
+  }
+
+  const projectId = sanitize(body.project_id, 80);
+  const signerName = sanitize(body.signer_name, 120);
+  const accepted = body.accepted === true;
+  if (!projectId) return json({ error: 'project_id is required.' }, 400, origin);
+  if (!signerName) return json({ error: 'signer_name is required.' }, 400, origin);
+  if (!accepted) return json({ error: 'You must accept the engagement letter.' }, 400, origin);
+
+  try {
+    const ensured = await ensureContractForProject(env, projectId, auth.user.email);
+    if (ensured.contract.status === 'signed') {
+      return json({ ok: true, project: ensured.project, contract: ensured.contract }, 200, origin);
+    }
+
+    const serviceKey = getSupabaseServiceKey(env);
+    const now = new Date().toISOString();
+    const signedIp = sanitize(req.headers.get('cf-connecting-ip') || req.headers.get('x-forwarded-for') || '', 120);
+    const signedUserAgent = sanitize(req.headers.get('user-agent') || '', 500);
+    const response = await fetch(`${cleanSecret(env.SUPABASE_URL!)}/rest/v1/contracts?id=eq.${encodeURIComponent(ensured.contract.id)}&select=*`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({
+        status: 'signed',
+        signer_name: signerName,
+        signer_email: auth.user.email,
+        signature_text: signerName,
+        signed_at: now,
+        signed_ip: signedIp || null,
+        signed_user_agent: signedUserAgent || null,
+        updated_at: now,
+      }),
+    });
+    if (!response.ok) throw new Error(`Contract sign failed: ${response.status}`);
+    const rows = await response.json() as ContractRecord[];
+    const contract = rows[0];
+
+    try {
+      await sendContractSignedNotifications(env, ensured.project, contract);
+    } catch (error) {
+      logEvent('contract_signed_email_error', {
+        projectId,
+        error: error instanceof Error ? error.message : 'Unknown contract email error.',
+      });
+    }
+
+    return json({ ok: true, project: ensured.project, contract }, 200, origin);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to sign contract.';
+    const status = message === 'Forbidden.' ? 403 : message === 'Project not found.' ? 404 : 500;
+    return json({ error: message }, status, origin);
+  }
+}
+
 // ── Admin: Billing Status ─────────────────────────────────────────────
 async function handleAdminBilling(req: Request, env: Env, origin: string | null): Promise<Response> {
   const auth = await verifyAdmin(req, env);
@@ -1286,6 +1629,10 @@ export default {
         return handleCreateCheckoutSession(req, env, origin);
       case '/api/activate-project':
         return handleActivateProject(req, env, origin);
+      case '/api/contracts/ensure':
+        return handleEnsureContract(req, env, origin);
+      case '/api/contracts/sign':
+        return handleSignContract(req, env, origin);
       case '/api/subscribe':
         return handleSubscribe(req, env, origin);
       case '/api/milestone-action':
