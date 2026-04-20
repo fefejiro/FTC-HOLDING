@@ -26,6 +26,7 @@ test-results/
 **/.env
 **/.env.*
 !**/.env.example
+APPS/una-labs-site/out/
 **/android/.gradle/
 **/android/app/build/
 **/ios/Pods/
