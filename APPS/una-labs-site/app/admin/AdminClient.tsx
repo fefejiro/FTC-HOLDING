@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { STRIPE_API_URL } from '@/lib/stripe-config';
 
 type Project = {
   id: string;
@@ -33,6 +34,15 @@ type Subscriber = {
   created_at: string;
 };
 
+type BillingInfo = {
+  subscription_id: string | null;
+  status: string;
+  current_period_end: number | null;
+  cancel_at_period_end: boolean;
+  pause_collection: boolean;
+  trial_end: number | null;
+};
+
 type State =
   | { phase: 'loading' }
   | { phase: 'denied' }
@@ -59,6 +69,35 @@ const STATUS_COLORS: Record<string, string> = {
 
 const PIPELINE_STAGES = ['intake', 'scoped', 'active', 'review', 'complete', 'paused'] as const;
 
+const BILLING_STATUS_COLORS: Record<string, string> = {
+  active: 'bg-green-100 text-green-700',
+  trialing: 'bg-blue-100 text-blue-700',
+  past_due: 'bg-red-100 text-red-700',
+  canceled: 'bg-gray-100 text-gray-500',
+  unpaid: 'bg-red-100 text-red-700',
+  incomplete: 'bg-yellow-100 text-yellow-700',
+  paused: 'bg-orange-100 text-orange-600',
+  no_subscription: 'bg-gray-50 text-gray-400',
+  error: 'bg-gray-50 text-gray-400',
+};
+
+function billingLabel(info: BillingInfo): string {
+  if (info.pause_collection) return 'paused';
+  if (info.cancel_at_period_end) return 'canceling';
+  return info.status;
+}
+
+function billingColor(info: BillingInfo): string {
+  if (info.pause_collection) return BILLING_STATUS_COLORS.paused;
+  if (info.cancel_at_period_end) return 'bg-amber-100 text-amber-700';
+  return BILLING_STATUS_COLORS[info.status] ?? 'bg-gray-50 text-gray-400';
+}
+
+function formatUnix(ts: number | null): string {
+  if (!ts) return '-';
+  return new Date(ts * 1000).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function formatDate(value?: string) {
   if (!value) return '-';
   try {
@@ -81,6 +120,8 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
 export function AdminClient() {
   const [state, setState] = useState<State>({ phase: 'loading' });
   const [view, setView] = useState<'pipeline' | 'table'>('pipeline');
+  const [billing, setBilling] = useState<Record<string, BillingInfo>>({});
+  const [billingLoading, setBillingLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +160,32 @@ export function AdminClient() {
             milestones: (milestones as Milestone[] | null) ?? [],
             subscribers: (subscribers as Subscriber[] | null) ?? [],
           });
+
+          // Fetch billing status for projects with Stripe sessions
+          const projectList = (projects as Project[] | null) ?? [];
+          const sessionIds = projectList
+            .map((p) => p.stripe_session_id)
+            .filter((id): id is string => Boolean(id));
+
+          if (sessionIds.length > 0) {
+            setBillingLoading(true);
+            try {
+              const token = session?.access_token;
+              const res = await fetch(`${STRIPE_API_URL}/api/admin/billing`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ stripe_session_ids: sessionIds }),
+              });
+              if (res.ok) {
+                const data = await res.json() as { billing: Record<string, BillingInfo> };
+                if (!cancelled) setBilling(data.billing);
+              }
+            } catch { /* non-fatal */ }
+            if (!cancelled) setBillingLoading(false);
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -149,6 +216,33 @@ export function AdminClient() {
         projects: prev.projects.map((p) => (p.id === projectId ? { ...p, status: newStatus } : p)),
       };
     });
+  }
+
+  async function handleBillingAction(sessionId: string, subscriptionId: string, action: 'pause' | 'resume' | 'cancel') {
+    if (action === 'cancel' && !confirm('Cancel this subscription at period end?')) return;
+    try {
+      const { getSession } = await import('@ftc/auth');
+      const session = await getSession();
+      const token = session?.access_token;
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/subscription-action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ subscription_id: subscriptionId, action }),
+      });
+      const data = await res.json() as { ok?: boolean; subscription?: BillingInfo; error?: string };
+      if (!res.ok || !data.ok) {
+        alert(data.error ?? 'Action failed.');
+        return;
+      }
+      if (data.subscription) {
+        setBilling((prev) => ({ ...prev, [sessionId]: data.subscription as BillingInfo }));
+      }
+    } catch {
+      alert('Network error.');
+    }
   }
 
   if (state.phase === 'loading') {
@@ -302,6 +396,33 @@ export function AdminClient() {
                                 <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                               ))}
                             </select>
+                            {/* Billing status */}
+                            {project.stripe_session_id && billing[project.stripe_session_id] && (() => {
+                              const bi = billing[project.stripe_session_id!];
+                              return (
+                                <div className="mt-2">
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded capitalize ${billingColor(bi)}`}>
+                                    {billingLabel(bi)}
+                                  </span>
+                                  {bi.current_period_end && (
+                                    <p className="text-[9px] text-tx-muted mt-0.5">ends {formatUnix(bi.current_period_end)}</p>
+                                  )}
+                                  {bi.subscription_id && (
+                                    <div className="flex gap-1 mt-1 flex-wrap">
+                                      {!bi.pause_collection && bi.status === 'active' && (
+                                        <button className="text-[9px] px-1.5 py-0.5 rounded bg-orange-50 text-orange-600 hover:bg-orange-100" onClick={() => handleBillingAction(project.stripe_session_id!, bi.subscription_id!, 'pause')}>Pause</button>
+                                      )}
+                                      {bi.pause_collection && (
+                                        <button className="text-[9px] px-1.5 py-0.5 rounded bg-green-50 text-green-600 hover:bg-green-100" onClick={() => handleBillingAction(project.stripe_session_id!, bi.subscription_id!, 'resume')}>Resume</button>
+                                      )}
+                                      {!bi.cancel_at_period_end && ['active', 'trialing'].includes(bi.status) && (
+                                        <button className="text-[9px] px-1.5 py-0.5 rounded bg-red-50 text-red-600 hover:bg-red-100" onClick={() => handleBillingAction(project.stripe_session_id!, bi.subscription_id!, 'cancel')}>Cancel</button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         );
                       })
@@ -327,7 +448,7 @@ export function AdminClient() {
               <table className="w-full text-body-sm">
                 <thead>
                   <tr className="border-b border-border bg-bg-offwhite">
-                    {['Client', 'Plan', 'Billing', 'Status', 'Milestones', 'Started'].map((heading) => (
+                    {['Client', 'Plan', 'Billing', 'Status', 'Subscription', 'Milestones', 'Started'].map((heading) => (
                       <th key={heading} className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">{heading}</th>
                     ))}
                   </tr>
@@ -360,6 +481,36 @@ export function AdminClient() {
                             </select>
                             {hasReview && <span className="text-[10px] font-bold text-brand-orange">review</span>}
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {(() => {
+                            const bi = project.stripe_session_id ? billing[project.stripe_session_id] : undefined;
+                            if (billingLoading && !bi) return <span className="text-[11px] text-tx-muted animate-pulse">...</span>;
+                            if (!bi) return <span className="text-[11px] text-tx-muted">-</span>;
+                            return (
+                              <div>
+                                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded capitalize ${billingColor(bi)}`}>
+                                  {billingLabel(bi)}
+                                </span>
+                                {bi.current_period_end && (
+                                  <p className="text-[10px] text-tx-muted mt-1">ends {formatUnix(bi.current_period_end)}</p>
+                                )}
+                                {bi.subscription_id && (
+                                  <div className="flex gap-1 mt-1.5 flex-wrap">
+                                    {!bi.pause_collection && bi.status === 'active' && (
+                                      <button className="text-[10px] px-2 py-0.5 rounded bg-orange-50 text-orange-600 hover:bg-orange-100" onClick={() => handleBillingAction(project.stripe_session_id!, bi.subscription_id!, 'pause')}>Pause</button>
+                                    )}
+                                    {bi.pause_collection && (
+                                      <button className="text-[10px] px-2 py-0.5 rounded bg-green-50 text-green-600 hover:bg-green-100" onClick={() => handleBillingAction(project.stripe_session_id!, bi.subscription_id!, 'resume')}>Resume</button>
+                                    )}
+                                    {!bi.cancel_at_period_end && ['active', 'trialing'].includes(bi.status) && (
+                                      <button className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 hover:bg-red-100" onClick={() => handleBillingAction(project.stripe_session_id!, bi.subscription_id!, 'cancel')}>Cancel</button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-4 text-tx-body">
                           {projectMilestones.length > 0 ? `${done}/${projectMilestones.length}` : '-'}

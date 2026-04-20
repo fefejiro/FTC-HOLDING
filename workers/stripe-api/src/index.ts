@@ -39,7 +39,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 }
 
@@ -223,6 +223,29 @@ async function sendCustomerWelcome(env: Env, activation: {
 function cleanSecret(val: string): string {
   // Strip BOM (U+FEFF) and whitespace that PowerShell stdin may prepend
   return val.replace(/^\uFEFF/, '').trim();
+}
+
+const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
+
+async function verifyAdmin(req: Request, env: Env): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { ok: false, error: 'Missing Authorization header.' };
+  }
+  const token = authHeader.slice(7);
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { ok: false, error: 'Supabase not configured.' };
+  }
+  const res = await fetch(`${cleanSecret(env.SUPABASE_URL)}/auth/v1/user`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'apikey': cleanSecret(env.SUPABASE_ANON_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY),
+    },
+  });
+  if (!res.ok) return { ok: false, error: 'Invalid token.' };
+  const user = await res.json() as { email?: string };
+  if (user.email !== ADMIN_EMAIL) return { ok: false, error: 'Forbidden.' };
+  return { ok: true, email: user.email };
 }
 
 function getStripe(env: Env): Stripe {
@@ -1134,6 +1157,112 @@ async function handleIntakeConfirm(req: Request, env: Env, origin: string | null
   return json({ ok: true }, 200, origin);
 }
 
+// ── Admin: Billing Status ─────────────────────────────────────────────
+async function handleAdminBilling(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  const body = await req.json() as { stripe_session_ids?: string[] };
+  const sessionIds = body.stripe_session_ids;
+  if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
+    return json({ error: 'stripe_session_ids required.' }, 400, origin);
+  }
+
+  // Cap at 50 to prevent abuse
+  const ids = sessionIds.slice(0, 50).filter((id) => typeof id === 'string' && id.startsWith('cs_'));
+  const stripe = getStripe(env);
+
+  const results: Record<string, {
+    subscription_id: string | null;
+    status: string;
+    current_period_end: number | null;
+    cancel_at_period_end: boolean;
+    pause_collection: boolean;
+    trial_end: number | null;
+  }> = {};
+
+  await Promise.all(ids.map(async (sessionId) => {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+      if (!subId) {
+        results[sessionId] = { subscription_id: null, status: 'no_subscription', current_period_end: null, cancel_at_period_end: false, pause_collection: false, trial_end: null };
+        return;
+      }
+      const sub = await stripe.subscriptions.retrieve(subId, { expand: ['items.data'] });
+      const periodEnd = sub.items?.data?.[0]?.current_period_end ?? null;
+      results[sessionId] = {
+        subscription_id: sub.id,
+        status: sub.status,
+        current_period_end: periodEnd,
+        cancel_at_period_end: sub.cancel_at_period_end,
+        pause_collection: sub.pause_collection !== null,
+        trial_end: sub.trial_end,
+      };
+    } catch {
+      results[sessionId] = { subscription_id: null, status: 'error', current_period_end: null, cancel_at_period_end: false, pause_collection: false, trial_end: null };
+    }
+  }));
+
+  return json({ billing: results }, 200, origin);
+}
+
+// ── Admin: Subscription Action ────────────────────────────────────────
+async function handleAdminSubscriptionAction(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  const body = await req.json() as { subscription_id?: string; action?: string };
+  const { subscription_id, action } = body;
+  if (!subscription_id || typeof subscription_id !== 'string' || !subscription_id.startsWith('sub_')) {
+    return json({ error: 'Valid subscription_id required.' }, 400, origin);
+  }
+  if (!action || !['pause', 'resume', 'cancel'].includes(action)) {
+    return json({ error: 'Action must be pause, resume, or cancel.' }, 400, origin);
+  }
+
+  const stripe = getStripe(env);
+
+  try {
+    let sub: Stripe.Subscription;
+    switch (action) {
+      case 'pause':
+        sub = await stripe.subscriptions.update(subscription_id, {
+          pause_collection: { behavior: 'mark_uncollectible' },
+        });
+        break;
+      case 'resume':
+        sub = await stripe.subscriptions.update(subscription_id, {
+          pause_collection: '',
+        } as Stripe.SubscriptionUpdateParams);
+        break;
+      case 'cancel':
+        sub = await stripe.subscriptions.update(subscription_id, {
+          cancel_at_period_end: true,
+        });
+        break;
+      default:
+        return json({ error: 'Unknown action.' }, 400, origin);
+    }
+
+    const periodEnd = sub.items?.data?.[0]?.current_period_end ?? null;
+    return json({
+      ok: true,
+      subscription: {
+        id: sub.id,
+        status: sub.status,
+        current_period_end: periodEnd,
+        cancel_at_period_end: sub.cancel_at_period_end,
+        pause_collection: sub.pause_collection !== null,
+        trial_end: sub.trial_end,
+      },
+    }, 200, origin);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Stripe error';
+    return json({ error: message }, 500, origin);
+  }
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -1163,6 +1292,10 @@ export default {
         return handleMilestoneAction(req, env, origin);
       case '/api/intake-confirm':
         return handleIntakeConfirm(req, env, origin);
+      case '/api/admin/billing':
+        return handleAdminBilling(req, env, origin);
+      case '/api/admin/subscription-action':
+        return handleAdminSubscriptionAction(req, env, origin);
       default:
         return json({ error: 'Not found.' }, 404, origin);
     }
