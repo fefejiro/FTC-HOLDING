@@ -814,6 +814,32 @@ async function generateAndWriteScope(
         billing: intake.billing || activation.billing,
       };
 
+      // Determine if this is a realtor lead intake
+      const isRealtorLead = intakeId?.includes('realtor_') || intake.type === 'realtor_lead';
+      
+      let systemPrompt = 'You are a project scoping assistant for Una Labs, a Canadian digital agency. Given a client intake, return ONLY valid JSON with this exact shape: {"milestones":[{"title":"...","description":"...","due_offset_days":7},{"title":"...","description":"...","due_offset_days":21},{"title":"...","description":"...","due_offset_days":45}],"pricing":{"suggested_min_cad":number,"suggested_max_cad":number,"rationale":"1-2 concise sentences","confidence":"low|medium|high"}}. Keep pricing realistic for the plan tier and company context. No markdown fences. No prose.';
+      
+      if (isRealtorLead) {
+        systemPrompt = `You are a real estate lead qualification system designer for Una Labs. Given a realtor's intake about their lead management challenges, generate a scope for their AI-powered lead qualification system.
+
+Return ONLY valid JSON with this exact shape:
+{"milestones":[
+  {"title":"...","description":"...","due_offset_days":7},
+  {"title":"...","description":"...","due_offset_days":21},
+  {"title":"...","description":"...","due_offset_days":45}
+],
+"pricing":{"suggested_min_cad":number,"suggested_max_cad":number,"rationale":"1-2 concise sentences","confidence":"low|medium|high"}}
+
+For realtors, focus milestones on:
+1. AI voice system setup (incoming lead answering and qualification)
+2. Lead scoring and qualification automation (property type, budget, timeline, motivation)
+3. Hot/warm/cold lead tagging, CRM integration, and handoff
+4. SMS and email follow-up automation
+
+Price based on lead volume: starter ($600), professional ($1200), agency ($2400), enterprise ($4800) CAD/month base.
+No markdown fences. No prose. Be specific and actionable.`;
+      }
+
       const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -825,7 +851,7 @@ async function generateAndWriteScope(
           messages: [
             {
               role: 'system',
-              content: 'You are a project scoping assistant for Una Labs, a Canadian digital agency. Given a client intake, return ONLY valid JSON with this exact shape: {"milestones":[{"title":"...","description":"...","due_offset_days":7},{"title":"...","description":"...","due_offset_days":21},{"title":"...","description":"...","due_offset_days":45}],"pricing":{"suggested_min_cad":number,"suggested_max_cad":number,"rationale":"1-2 concise sentences","confidence":"low|medium|high"}}. Keep pricing realistic for the plan tier and company context. No markdown fences. No prose.',
+              content: systemPrompt,
             },
             {
               role: 'user',
