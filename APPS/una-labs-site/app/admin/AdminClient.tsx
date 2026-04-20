@@ -34,6 +34,18 @@ type Subscriber = {
   created_at: string;
 };
 
+type Contract = {
+  id: string;
+  project_id: string;
+  title?: string;
+  status?: string;
+  sent_at?: string;
+  signer_name?: string;
+  signer_email?: string;
+  signed_at?: string;
+  created_at?: string;
+};
+
 type BillingInfo = {
   subscription_id: string | null;
   status: string;
@@ -47,7 +59,7 @@ type State =
   | { phase: 'loading' }
   | { phase: 'denied' }
   | { phase: 'error'; message: string }
-  | { phase: 'ready'; projects: Project[]; milestones: Milestone[]; subscribers: Subscriber[] };
+  | { phase: 'ready'; projects: Project[]; milestones: Milestone[]; subscribers: Subscriber[]; contracts: Contract[] };
 
 const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
 
@@ -143,15 +155,18 @@ export function AdminClient() {
           { data: projects, error: projectError },
           { data: milestones, error: milestoneError },
           { data: subscribers, error: subscriberError },
+          { data: contracts, error: contractError },
         ] = await Promise.all([
           client.from('projects').select('*').order('created_at', { ascending: false }),
           client.from('milestones').select('*').order('due_date', { ascending: true }),
           client.from('subscribers').select('*').order('created_at', { ascending: false }),
+          client.from('contracts').select('id,project_id,title,status,sent_at,signer_name,signer_email,signed_at,created_at').order('created_at', { ascending: false }),
         ]);
 
         if (projectError) throw projectError;
         if (milestoneError) throw milestoneError;
         if (subscriberError) throw subscriberError;
+        if (contractError) throw contractError;
 
         if (!cancelled) {
           setState({
@@ -159,6 +174,7 @@ export function AdminClient() {
             projects: (projects as Project[] | null) ?? [],
             milestones: (milestones as Milestone[] | null) ?? [],
             subscribers: (subscribers as Subscriber[] | null) ?? [],
+            contracts: (contracts as Contract[] | null) ?? [],
           });
 
           // Fetch billing status for projects with Stripe sessions
@@ -276,7 +292,7 @@ export function AdminClient() {
     );
   }
 
-  const { projects, milestones, subscribers } = state;
+  const { projects, milestones, subscribers, contracts } = state;
 
   const totalMRR = projects
     .filter((project) => !['paused', 'complete'].includes(project.status ?? ''))
@@ -325,6 +341,7 @@ export function AdminClient() {
           <Stat label="Est. MRR" value={`CA$${totalMRR.toLocaleString('en-CA')}`} sub="Active plans only" />
           <Stat label="Needs approval" value={needsApproval.length} sub="Milestones in review" />
           <Stat label="Subscribers" value={subscribers.length} sub="Newsletter list" />
+          <Stat label="Contracts signed" value={contracts.filter((c) => c.status === 'signed').length} sub={`${contracts.length} total sent`} />
         </div>
 
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-10">
@@ -525,6 +542,66 @@ export function AdminClient() {
           )}
         </div>
         )}
+
+        {/* Contracts table */}
+        <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-6">
+          <div className="px-8 py-5 border-b border-border flex items-center justify-between">
+            <h2 className="text-h3 text-tx-heading">Engagement Letters</h2>
+            <span className="text-body-sm text-tx-muted">{contracts.length} total</span>
+          </div>
+          {contracts.length === 0 ? (
+            <div className="px-8 py-10 text-center text-body text-tx-muted">No contracts yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-body-sm">
+                <thead>
+                  <tr className="border-b border-border bg-bg-offwhite">
+                    {['Client', 'Title', 'Status', 'Signer', 'Signed', 'Sent', 'View'].map((heading) => (
+                      <th key={heading} className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">{heading}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {contracts.map((contract, index) => {
+                    const project = projects.find((p) => p.id === contract.project_id);
+                    const isSigned = contract.status === 'signed';
+                    return (
+                      <tr key={contract.id} className={`border-b border-border hover:bg-bg-offwhite transition-colors ${index % 2 === 0 ? '' : 'bg-bg-offwhite/40'}`}>
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-tx-heading">{project?.name || project?.email || contract.signer_email || '-'}</p>
+                          {project?.name && <p className="text-tx-muted text-[11px] mt-0.5">{project.email}</p>}
+                        </td>
+                        <td className="px-6 py-4 text-tx-body">{contract.title ?? 'Engagement Letter'}</td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded capitalize ${
+                            isSigned ? 'bg-teal-100 text-teal-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {isSigned ? 'signed' : 'pending'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-tx-body">{contract.signer_name ?? '-'}</td>
+                        <td className="px-6 py-4 text-tx-muted">{formatDate(contract.signed_at)}</td>
+                        <td className="px-6 py-4 text-tx-muted">{formatDate(contract.sent_at ?? contract.created_at)}</td>
+                        <td className="px-6 py-4">
+                          {project && (
+                            <a
+                              href={`/dashboard/contract?id=${project.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] font-semibold text-brand-teal hover:underline"
+                            >
+                              View
+                            </a>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden">
           <div className="px-8 py-5 border-b border-border flex items-center justify-between">
