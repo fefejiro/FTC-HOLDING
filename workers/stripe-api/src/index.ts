@@ -114,6 +114,13 @@ type AuthenticatedUser = {
   email: string;
 };
 
+type PriceInsight = {
+  suggested_min_cad: number;
+  suggested_max_cad: number;
+  rationale: string;
+  confidence: 'low' | 'medium' | 'high';
+};
+
 type ContractProject = {
   id: string;
   email: string;
@@ -304,6 +311,61 @@ const INVOICE_TIER_PRICE: Record<string, number> = {
   agency: 339,
   enterprise: 679,
 };
+
+const AI_PRICE_BOUNDS: Record<string, { min: number; max: number }> = {
+  starter: { min: 300, max: 1200 },
+  professional: { min: 1200, max: 5000 },
+  agency: { min: 5000, max: 12000 },
+  enterprise: { min: 12000, max: 30000 },
+};
+
+function normalizePriceInsight(raw: unknown, tierRaw: string): PriceInsight | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const parsed = raw as {
+    suggested_min_cad?: unknown;
+    suggested_max_cad?: unknown;
+    rationale?: unknown;
+    confidence?: unknown;
+  };
+
+  const tier = tierRaw.toLowerCase();
+  const bounds = AI_PRICE_BOUNDS[tier] ?? AI_PRICE_BOUNDS.professional;
+  const parsedMin = Number(parsed.suggested_min_cad);
+  const parsedMax = Number(parsed.suggested_max_cad);
+
+  if (!Number.isFinite(parsedMin) || !Number.isFinite(parsedMax)) return null;
+
+  let min = Math.round(parsedMin);
+  let max = Math.round(parsedMax);
+
+  if (min > max) {
+    const tmp = min;
+    min = max;
+    max = tmp;
+  }
+
+  min = Math.max(bounds.min, min);
+  max = Math.min(bounds.max, max);
+
+  if (min > max) {
+    min = bounds.min;
+    max = bounds.max;
+  }
+
+  const rationale = sanitize(String(parsed.rationale ?? ''), 400);
+  if (!rationale) return null;
+
+  const confidenceRaw = String(parsed.confidence ?? '').toLowerCase();
+  const confidence: PriceInsight['confidence'] =
+    confidenceRaw === 'low' || confidenceRaw === 'high' ? confidenceRaw : 'medium';
+
+  return {
+    suggested_min_cad: min,
+    suggested_max_cad: max,
+    rationale,
+    confidence,
+  };
+}
 
 function getSupabaseApiKey(env: Env): string {
   const key = env.SUPABASE_SERVICE_ROLE_KEY ?? env.SUPABASE_ANON_KEY;
@@ -737,8 +799,9 @@ async function generateAndWriteScope(
     return;
   }
 
-  // Step 1: Call OpenAI API to generate milestones
+  // Step 1: Call OpenAI API to generate milestones and a price insight range
   let milestones: Array<{ title: string; description: string; due_offset_days: number }> = [];
+  let priceInsight: PriceInsight | null = null;
   if (env.OPENAI_API_KEY && env.SUPABASE_SERVICE_ROLE_KEY && env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY) {
     try {
       const intakePayload = {
@@ -762,7 +825,7 @@ async function generateAndWriteScope(
           messages: [
             {
               role: 'system',
-              content: 'You are a project scoping assistant for Una Labs, a Canadian digital agency. Given a client intake, produce exactly 3 milestones in JSON. Each milestone has: title (string), description (string, 1-2 sentences), due_offset_days (integer — days from today: 7, 21, 45). Return ONLY a JSON array of 3 objects. No prose.',
+              content: 'You are a project scoping assistant for Una Labs, a Canadian digital agency. Given a client intake, return ONLY valid JSON with this exact shape: {"milestones":[{"title":"...","description":"...","due_offset_days":7},{"title":"...","description":"...","due_offset_days":21},{"title":"...","description":"...","due_offset_days":45}],"pricing":{"suggested_min_cad":number,"suggested_max_cad":number,"rationale":"1-2 concise sentences","confidence":"low|medium|high"}}. Keep pricing realistic for the plan tier and company context. No markdown fences. No prose.',
             },
             {
               role: 'user',
@@ -796,7 +859,24 @@ async function generateAndWriteScope(
         jsonStr = jsonMatch[1].trim();
       }
 
-      milestones = JSON.parse(jsonStr) as Array<{ title: string; description: string; due_offset_days: number }>;
+      const parsed = JSON.parse(jsonStr) as unknown;
+
+      if (Array.isArray(parsed)) {
+        // Backward compatibility with previous response shape.
+        milestones = parsed as Array<{ title: string; description: string; due_offset_days: number }>;
+      } else if (parsed && typeof parsed === 'object') {
+        const candidate = parsed as {
+          milestones?: Array<{ title?: string; description?: string; due_offset_days?: number }>;
+          pricing?: unknown;
+        };
+        milestones = (candidate.milestones ?? []).map((milestone) => ({
+          title: sanitize(String(milestone.title ?? ''), 120),
+          description: sanitize(String(milestone.description ?? ''), 280),
+          due_offset_days: Number(milestone.due_offset_days ?? 0),
+        }));
+        priceInsight = normalizePriceInsight(candidate.pricing, intake.plan || activation.tier);
+      }
+
       if (!Array.isArray(milestones) || milestones.length !== 3) {
         logEvent('generate_scope_parse_error', {
           projectId,
@@ -804,6 +884,23 @@ async function generateAndWriteScope(
           received: milestones.length,
         });
         return;
+      }
+
+      milestones = milestones.map((milestone, index) => ({
+        title: sanitize(milestone.title || `Milestone ${index + 1}`, 120),
+        description: sanitize(milestone.description || 'Milestone details will be finalized during kickoff.', 280),
+        due_offset_days: [7, 21, 45][index],
+      }));
+
+      if (!priceInsight) {
+        const tier = (intake.plan || activation.tier || '').toLowerCase();
+        const bounds = AI_PRICE_BOUNDS[tier] ?? AI_PRICE_BOUNDS.professional;
+        priceInsight = {
+          suggested_min_cad: bounds.min,
+          suggested_max_cad: bounds.max,
+          rationale: 'Initial range inferred from selected plan tier and the current intake context. Final estimate is confirmed after kickoff discovery.',
+          confidence: 'medium',
+        };
       }
     } catch (error) {
       logEvent('generate_scope_openai_exception', {
@@ -884,7 +981,14 @@ async function generateAndWriteScope(
         'Authorization': `Bearer ${serviceKey}`,
         'Prefer': 'return=minimal',
       },
-      body: JSON.stringify({ status: 'scoped' }),
+      body: JSON.stringify({
+        status: 'scoped',
+        ai_price_min_cad: priceInsight?.suggested_min_cad ?? null,
+        ai_price_max_cad: priceInsight?.suggested_max_cad ?? null,
+        ai_price_rationale: priceInsight?.rationale ?? null,
+        ai_price_confidence: priceInsight?.confidence ?? null,
+        ai_price_generated_at: new Date().toISOString(),
+      }),
     });
 
     if (!updateResponse.ok) {
@@ -923,6 +1027,7 @@ async function generateAndWriteScope(
   </div>
   <p style="font-size:15px;color:#0B0E11;margin-bottom:16px">Hi ${firstName},</p>
   <p style="font-size:14px;color:#374151;margin-bottom:20px">We've generated your project scope with 3 milestones. Review them below and let us know if you'd like any adjustments.</p>
+  ${priceInsight ? `<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:12px 14px;margin-bottom:20px"><p style="margin:0 0 4px;color:#6B7280;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">AI price insight</p><p style="margin:0;color:#0B0E11;font-size:14px;font-weight:700">CA$${priceInsight.suggested_min_cad.toLocaleString('en-CA')} - CA$${priceInsight.suggested_max_cad.toLocaleString('en-CA')}</p><p style="margin:6px 0 0;color:#374151;font-size:12px">${priceInsight.rationale}</p></div>` : ''}
   <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
     <tr><th style="padding:8px 12px;text-align:left;background:#F9FAFB;color:#6B7280;font-size:13px;font-weight:600;border-bottom:1px solid #E5E7EB">Milestone</th><th style="padding:8px 12px;text-align:left;background:#F9FAFB;color:#6B7280;font-size:13px;font-weight:600;border-bottom:1px solid #E5E7EB">Due Date</th></tr>
     ${milestonesHtml}
@@ -942,7 +1047,7 @@ async function generateAndWriteScope(
             To: [{ Email: activation.email, Name: name }],
             Subject: 'Your project scope is ready — Una Labs',
             HTMLPart: html,
-            TextPart: `Hi ${firstName},\n\nYour project scope is ready with 3 milestones:\n\n${milestones.map((m) => `• ${m.title}`).join('\n')}\n\nView in dashboard: https://unalabs.cloud/login?redirect=/dashboard\n\nQuestions? Reply here or email hello@unalabs.cloud\n\nUna Labs · unalabs.cloud`,
+            TextPart: `Hi ${firstName},\n\nYour project scope is ready with 3 milestones.\n${priceInsight ? `\nAI price insight: CA$${priceInsight.suggested_min_cad.toLocaleString('en-CA')} - CA$${priceInsight.suggested_max_cad.toLocaleString('en-CA')} (${priceInsight.confidence} confidence)\n${priceInsight.rationale}\n` : ''}\n${milestones.map((m) => `• ${m.title}`).join('\n')}\n\nView in dashboard: https://unalabs.cloud/login?redirect=/dashboard\n\nQuestions? Reply here or email hello@unalabs.cloud\n\nUna Labs · unalabs.cloud`,
           },
         ],
       }),
@@ -972,6 +1077,7 @@ async function generateAndWriteScope(
     <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Company</td><td style="padding:6px 0;font-size:13px;font-weight:600;color:#0B0E11">${company}</td></tr>
     <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Plan</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${activation.tier}</td></tr>
     <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Email</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${activation.email}</td></tr>
+    ${priceInsight ? `<tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">AI price insight</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">CA$${priceInsight.suggested_min_cad.toLocaleString('en-CA')} - CA$${priceInsight.suggested_max_cad.toLocaleString('en-CA')} (${priceInsight.confidence})</td></tr>` : ''}
   </table>
   <p style="font-size:13px;color:#6B7280;margin-bottom:12px;font-weight:600">Milestones:</p>
   <ul style="padding-left:20px;margin:0 0 20px;color:#0B0E11;font-size:13px;line-height:1.8">
@@ -990,7 +1096,7 @@ async function generateAndWriteScope(
             To: [{ Email: 'mike.fejiro@gmail.com', Name: 'Mike' }],
             Subject: `New scope generated — ${company}`,
             HTMLPart: html,
-            TextPart: `New scope generated\n\nCompany: ${company}\nPlan: ${activation.tier}\nEmail: ${activation.email}\n\nMilestones:\n${milestones.map((m) => `• ${m.title}`).join('\n')}\n\nProject ID: ${projectId}`,
+            TextPart: `New scope generated\n\nCompany: ${company}\nPlan: ${activation.tier}\nEmail: ${activation.email}${priceInsight ? `\nAI price insight: CA$${priceInsight.suggested_min_cad.toLocaleString('en-CA')} - CA$${priceInsight.suggested_max_cad.toLocaleString('en-CA')} (${priceInsight.confidence})\nRationale: ${priceInsight.rationale}` : ''}\n\nMilestones:\n${milestones.map((m) => `• ${m.title}`).join('\n')}\n\nProject ID: ${projectId}`,
           },
         ],
       }),

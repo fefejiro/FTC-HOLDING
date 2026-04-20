@@ -12,6 +12,11 @@ create table if not exists projects (
   billing            text,
   stripe_session_id  text unique,
   status             text default 'intake',
+  ai_price_min_cad   integer,
+  ai_price_max_cad   integer,
+  ai_price_rationale text,
+  ai_price_confidence text,
+  ai_price_generated_at timestamptz,
   created_at         timestamptz default now()
 );
 

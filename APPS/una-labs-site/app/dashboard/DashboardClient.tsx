@@ -13,6 +13,11 @@ type ProjectRecord = {
   status?: string;
   intake_id?: string;
   stripe_session_id?: string;
+  ai_price_min_cad?: number | null;
+  ai_price_max_cad?: number | null;
+  ai_price_rationale?: string | null;
+  ai_price_confidence?: string | null;
+  ai_price_generated_at?: string | null;
   created_at?: string;
 };
 
@@ -80,6 +85,11 @@ function formatDate(value?: string) {
   } catch {
     return value;
   }
+}
+
+function formatPriceRange(min?: number | null, max?: number | null) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  return `CA$${Number(min).toLocaleString('en-CA')} - CA$${Number(max).toLocaleString('en-CA')}`;
 }
 
 function PlanLabel({ tier, billing }: { tier?: string; billing?: string }) {
@@ -295,6 +305,7 @@ function ProjectCard({
   const total = milestones.length;
   const hasReview = milestones.some((m) => m.status?.toLowerCase() === 'review');
   const projectTitle = project.intake_id || project.id;
+  const priceRange = formatPriceRange(project.ai_price_min_cad, project.ai_price_max_cad);
 
   return (
     <div className="rounded-[28px] border border-border bg-white p-8 shadow-sm">
@@ -314,6 +325,18 @@ function ProjectCard({
             <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold mb-1">What&apos;s next</p>
             <p className="text-body text-tx-heading">{cfg.next}</p>
           </div>
+          {priceRange && (
+            <div className="mt-3 rounded-xl bg-white border border-border px-4 py-3">
+              <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold mb-1">AI price insight</p>
+              <p className="text-body font-semibold text-tx-heading">{priceRange}</p>
+              {project.ai_price_confidence && (
+                <p className="text-body-sm text-tx-muted capitalize mt-1">{project.ai_price_confidence} confidence</p>
+              )}
+              {project.ai_price_rationale && (
+                <p className="text-body-sm text-tx-secondary mt-1 leading-relaxed">{project.ai_price_rationale}</p>
+              )}
+            </div>
+          )}
         </div>
         <div className="text-body-sm text-tx-muted lg:text-right shrink-0">
           <p>Started {formatDate(project.created_at)}</p>
@@ -485,6 +508,10 @@ export function DashboardClient() {
       lines.push(`Billing: ${project.billing ?? 'Unknown'}`);
       lines.push(`Status: ${project.status ?? 'Unknown'}`);
       lines.push(`Start date: ${formatDate(project.created_at)}`);
+      const priceRange = formatPriceRange(project.ai_price_min_cad, project.ai_price_max_cad);
+      if (priceRange) {
+        lines.push(`AI price insight: ${priceRange}${project.ai_price_confidence ? ` (${project.ai_price_confidence} confidence)` : ''}`);
+      }
 
       const projectMilestones = milestonesByProject.get(project.id) ?? [];
       if (projectMilestones.length > 0) {

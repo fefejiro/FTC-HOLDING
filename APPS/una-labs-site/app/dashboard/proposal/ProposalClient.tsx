@@ -13,6 +13,11 @@ type ProjectRecord = {
   tier?: string;
   billing?: string;
   status?: string;
+  ai_price_min_cad?: number | null;
+  ai_price_max_cad?: number | null;
+  ai_price_rationale?: string | null;
+  ai_price_confidence?: string | null;
+  ai_price_generated_at?: string | null;
   created_at?: string;
 };
 
@@ -53,6 +58,11 @@ function formatDate(value?: string) {
   } catch {
     return value;
   }
+}
+
+function formatPriceRange(min?: number | null, max?: number | null) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  return `CA$${Number(min).toLocaleString('en-CA')} - CA$${Number(max).toLocaleString('en-CA')}`;
 }
 
 function MilestoneItem({ milestone }: { milestone: MilestoneRecord }) {
@@ -199,6 +209,7 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
       ? planPrice.annual
       : planPrice.monthly
     : null;
+  const aiPriceRange = formatPriceRange(state.project.ai_price_min_cad, state.project.ai_price_max_cad);
 
   return (
     <div className="min-h-screen bg-white">
@@ -249,6 +260,18 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
                 <p className="text-body text-tx-secondary">Pricing will appear once plan details are finalized.</p>
               )}
             </div>
+            {aiPriceRange && (
+              <div className="mb-6 rounded-xl border border-border bg-white p-5">
+                <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold mb-1">AI Scope Price Insight</p>
+                <p className="text-h4 text-tx-heading font-semibold">{aiPriceRange}</p>
+                {state.project.ai_price_confidence && (
+                  <p className="text-body-sm text-tx-muted capitalize mt-1">{state.project.ai_price_confidence} confidence</p>
+                )}
+                {state.project.ai_price_rationale && (
+                  <p className="text-body text-tx-secondary leading-relaxed mt-2">{state.project.ai_price_rationale}</p>
+                )}
+              </div>
+            )}
             {state.project.description && (
               <div>
                 <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold mb-2">Description</p>

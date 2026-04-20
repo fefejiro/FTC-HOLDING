@@ -14,6 +14,11 @@ type Project = {
   status?: string;
   intake_id?: string;
   stripe_session_id?: string;
+  ai_price_min_cad?: number | null;
+  ai_price_max_cad?: number | null;
+  ai_price_rationale?: string | null;
+  ai_price_confidence?: string | null;
+  ai_price_generated_at?: string | null;
   created_at?: string;
 };
 
@@ -144,6 +149,11 @@ function formatDate(value?: string) {
   } catch {
     return value;
   }
+}
+
+function formatPriceRange(min?: number | null, max?: number | null) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  return `CA$${Number(min).toLocaleString('en-CA')} - CA$${Number(max).toLocaleString('en-CA')}`;
 }
 
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
@@ -499,6 +509,7 @@ export function AdminClient() {
                       stageProjects.map((project) => {
                         const pm = milestonesByProject[project.id] ?? [];
                         const done = pm.filter((m) => ['done', 'complete', 'completed', 'approved'].includes(m.status ?? '')).length;
+                        const priceRange = formatPriceRange(project.ai_price_min_cad, project.ai_price_max_cad);
                         return (
                           <div key={project.id} className="bg-bg-offwhite rounded-xl border border-border p-3">
                             <p className="text-body-sm font-semibold text-tx-heading truncate">{project.name || project.email}</p>
@@ -512,6 +523,12 @@ export function AdminClient() {
                               )}
                             </div>
                             <p className="text-[10px] text-tx-muted mt-1">{formatDate(project.created_at)}</p>
+                            {priceRange && (
+                              <p className="text-[10px] text-tx-secondary mt-1">
+                                AI: {priceRange}
+                                {project.ai_price_confidence ? ` (${project.ai_price_confidence})` : ''}
+                              </p>
+                            )}
                             <select
                               className="mt-2 w-full text-[11px] border border-border rounded-lg px-2 py-1.5 bg-white text-tx-body cursor-pointer"
                               value={project.status ?? 'intake'}
@@ -573,7 +590,7 @@ export function AdminClient() {
               <table className="w-full text-body-sm">
                 <thead>
                   <tr className="border-b border-border bg-bg-offwhite">
-                    {['Client', 'Plan', 'Billing', 'Status', 'Subscription', 'Milestones', 'Started'].map((heading) => (
+                    {['Client', 'Plan', 'Billing', 'Status', 'AI Price', 'Subscription', 'Milestones', 'Started'].map((heading) => (
                       <th key={heading} className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">{heading}</th>
                     ))}
                   </tr>
@@ -606,6 +623,20 @@ export function AdminClient() {
                             </select>
                             {hasReview && <span className="text-[10px] font-bold text-brand-orange">review</span>}
                           </div>
+                        </td>
+                        <td className="px-6 py-4 text-tx-body">
+                          {(() => {
+                            const priceRange = formatPriceRange(project.ai_price_min_cad, project.ai_price_max_cad);
+                            if (!priceRange) return <span className="text-[11px] text-tx-muted">-</span>;
+                            return (
+                              <div>
+                                <p className="text-[11px] font-semibold text-tx-heading">{priceRange}</p>
+                                {project.ai_price_confidence && (
+                                  <p className="text-[10px] text-tx-muted capitalize">{project.ai_price_confidence} confidence</p>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-4">
                           {(() => {
