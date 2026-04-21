@@ -2,7 +2,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { initAnalytics, trackAppOpened } from "./lib/analytics";
-import { getCanonicalUrlForCurrentLocation, installApiFetchPatch } from "./lib/api-config";
+import {
+  getApiBaseUrl,
+  getApiBaseUrlSource,
+  getCanonicalUrlForCurrentLocation,
+  installApiFetchPatch,
+} from "./lib/api-config";
 
 const SERVICE_WORKER_ENABLED = import.meta.env.VITE_ENABLE_SW === "true";
 const canonicalRedirectTarget = getCanonicalUrlForCurrentLocation();
@@ -16,6 +21,10 @@ initAnalytics();
 console.info("[Saywetin] Frontend build", {
   ...__SAYWETIN_FRONTEND_BUILD__,
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || "auto",
+});
+console.info("[Saywetin] API routing", {
+  selectedBaseUrl: getApiBaseUrl(),
+  source: getApiBaseUrlSource(),
 });
 
 if (shouldRedirectToCanonicalHost && canonicalRedirectTarget) {
