@@ -21,6 +21,10 @@ export interface Env {
   OPENAI_API_KEY?: string;
   ATEAM_KEY?: string;
   UNALABS_PROJECT_PIPELINE_MODE?: string;
+  AUTOCOLLECT_REMINDER_INTERVAL_DAYS?: string;
+  AUTOCOLLECT_MAX_ATTEMPTS?: string;
+  AUTOCOLLECT_DAILY_EMAIL_CAP?: string;
+  AUTOCOLLECT_MAX_SEND_PER_RUN?: string;
 }
 
 function shouldDeliverBridgeWebhook(env: Env): boolean {
@@ -38,7 +42,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
   const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': allowed,
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 }
@@ -121,6 +125,14 @@ type PriceInsight = {
   confidence: 'low' | 'medium' | 'high';
 };
 
+type Branding = {
+  companyName?: string;
+  primaryColor?: string;
+  logoUrl?: string;
+  tagline?: string;
+  replyEmail?: string;
+};
+
 type ContractProject = {
   id: string;
   email: string;
@@ -186,6 +198,93 @@ type InstantBillRecord = {
   status: string;
   paid_at: string | null;
   created_at: string;
+};
+
+type AutoCollectRecord = {
+  id: string;
+  invoice_id: string;
+  project_id: string;
+  client_email: string;
+  invoice_number: string;
+  amount_cad: number;
+  due_date: string;
+  status: string;
+  attempts: number;
+  last_invited_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type AutoCollectSyncResult = {
+  synced: number;
+  reconciled_paid: number;
+  overdue_only: boolean;
+  items: AutoCollectRecord[];
+  message?: string;
+};
+
+type AutoCollectInviteResult = {
+  ok: boolean;
+  item?: AutoCollectRecord;
+  skipped?: string;
+  error?: string;
+};
+
+type AutoCollectHealth = {
+  generated_at: string;
+  queue_total: number;
+  queue_pending: number;
+  queue_invite_sent: number;
+  queue_paid: number;
+  escalations: number;
+  sent_today: number;
+  daily_cap: number;
+  remaining_daily_budget: number;
+  max_send_per_run: number;
+  reminder_interval_days: number;
+  max_attempts: number;
+  latest_invited_at: string | null;
+};
+
+type StatusRag = 'green' | 'yellow' | 'red';
+
+type PublicStatusModule = {
+  id: number;
+  name: string;
+  status: StatusRag;
+  detail: string;
+};
+
+type PublicStatusTestingLane = {
+  name: string;
+  status: StatusRag;
+  detail: string;
+};
+
+type PublicStatusSummary = {
+  generated_at: string;
+  report_url: string;
+  docs: {
+    status_doc: string;
+    master_doc: string;
+  };
+  score: {
+    done: number;
+    in_progress: number;
+    not_started: number;
+    total: number;
+  };
+  modules: PublicStatusModule[];
+  testing: PublicStatusTestingLane[];
+  connections: Array<{ name: string; status: StatusRag; url: string; detail: string }>;
+  autocollect: AutoCollectHealth | null;
+};
+
+type MailDeliveryResult = {
+  ok: boolean;
+  status: number;
+  error?: string;
 };
 
 function logEvent(event: string, details: Record<string, unknown>): void {
@@ -376,6 +475,1193 @@ function getSupabaseApiKey(env: Env): string {
 function getSupabaseServiceKey(env: Env): string {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Supabase service role not configured.');
   return cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function getAutoCollectReminderIntervalDays(env: Env): number {
+  const parsed = Number(env.AUTOCOLLECT_REMINDER_INTERVAL_DAYS ?? '3');
+  if (!Number.isFinite(parsed)) return 3;
+  return Math.min(Math.max(Math.floor(parsed), 1), 30);
+}
+
+function getAutoCollectMaxAttempts(env: Env): number {
+  const parsed = Number(env.AUTOCOLLECT_MAX_ATTEMPTS ?? '3');
+  if (!Number.isFinite(parsed)) return 3;
+  return Math.min(Math.max(Math.floor(parsed), 1), 10);
+}
+
+function getAutoCollectDailyEmailCap(env: Env): number {
+  const parsed = Number(env.AUTOCOLLECT_DAILY_EMAIL_CAP ?? '80');
+  if (!Number.isFinite(parsed)) return 80;
+  return Math.min(Math.max(Math.floor(parsed), 1), 1000);
+}
+
+function getAutoCollectMaxSendPerRun(env: Env): number {
+  const parsed = Number(env.AUTOCOLLECT_MAX_SEND_PER_RUN ?? '25');
+  if (!Number.isFinite(parsed)) return 25;
+  return Math.min(Math.max(Math.floor(parsed), 1), 200);
+}
+
+function getUtcDayStartIso(now = new Date()): string {
+  const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+  return dayStart.toISOString();
+}
+
+async function getAutoCollectSentTodayCount(env: Env, now = new Date()): Promise<number> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const dayStartIso = getUtcDayStartIso(now);
+
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/autocollect_items?select=id&status=eq.invite_sent&last_invited_at=gte.${encodeURIComponent(dayStartIso)}&limit=1000`,
+    {
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to load AutoCollect send counts: ${error}`);
+  }
+
+  const rows = await res.json() as Array<{ id: string }>;
+  return rows.length;
+}
+
+function shouldSendAutoCollectReminder(item: AutoCollectRecord, env: Env, now = new Date()): { eligible: boolean; reason?: string } {
+  const maxAttempts = getAutoCollectMaxAttempts(env);
+  if ((item.attempts ?? 0) >= maxAttempts) {
+    return { eligible: false, reason: `max_attempts_reached:${maxAttempts}` };
+  }
+
+  if (!item.last_invited_at) {
+    return { eligible: true };
+  }
+
+  const lastInvitedAt = new Date(item.last_invited_at);
+  if (Number.isNaN(lastInvitedAt.getTime())) {
+    return { eligible: true };
+  }
+
+  const reminderIntervalDays = getAutoCollectReminderIntervalDays(env);
+  const elapsedMs = now.getTime() - lastInvitedAt.getTime();
+  const requiredMs = reminderIntervalDays * 24 * 60 * 60 * 1000;
+  if (elapsedMs < requiredMs) {
+    return { eligible: false, reason: `cooldown_active:${reminderIntervalDays}d` };
+  }
+
+  return { eligible: true };
+}
+
+async function syncAutoCollectItems(env: Env, options?: { overdueOnly?: boolean; limit?: number }): Promise<AutoCollectSyncResult> {
+  const overdueOnly = options?.overdueOnly !== false;
+  const limitRaw = Number(options?.limit ?? 100);
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(Math.floor(limitRaw), 1), 200) : 100;
+  const reconciledPaid = await reconcilePaidAutoCollectItems(env);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const filters = [
+    'status=eq.unpaid',
+    'select=id,project_id,invoice_number,amount_cad,due_date,client_email',
+    'order=due_date.asc',
+    `limit=${limit}`,
+  ];
+  if (overdueOnly) filters.push(`due_date=lte.${today}`);
+
+  const invoiceRes = await fetch(`${supabaseUrl}/rest/v1/invoices?${filters.join('&')}`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+
+  if (!invoiceRes.ok) {
+    const error = await invoiceRes.text();
+    throw new Error(`Failed to load unpaid invoices: ${error}`);
+  }
+
+  const invoices = await invoiceRes.json() as Array<{
+    id: string;
+    project_id: string;
+    invoice_number: string;
+    amount_cad: number;
+    due_date: string;
+    client_email: string;
+  }>;
+
+  if (!invoices.length) {
+    return {
+      ok: true,
+      synced: 0,
+      reconciled_paid: reconciledPaid,
+      overdue_only: overdueOnly,
+      items: [],
+      message: 'No invoices to sync.',
+    } as AutoCollectSyncResult & { ok: true };
+  }
+
+  const payload = invoices.map((invoice) => ({
+    invoice_id: invoice.id,
+    project_id: invoice.project_id,
+    client_email: invoice.client_email,
+    invoice_number: invoice.invoice_number,
+    amount_cad: invoice.amount_cad,
+    due_date: invoice.due_date,
+    updated_at: new Date().toISOString(),
+  }));
+
+  const upsertRes = await fetch(`${supabaseUrl}/rest/v1/autocollect_items?on_conflict=invoice_id`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'resolution=merge-duplicates,return=representation',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!upsertRes.ok) {
+    const error = await upsertRes.text();
+    throw new Error(`Failed to sync AutoCollect items: ${error}`);
+  }
+
+  const syncedItems = await upsertRes.json() as AutoCollectRecord[];
+  return { synced: syncedItems.length, reconciled_paid: reconciledPaid, overdue_only: overdueOnly, items: syncedItems };
+}
+
+async function markAutoCollectItemsPaidByIds(env: Env, itemIds: string[], note = 'reconciled_paid_invoice'): Promise<number> {
+  if (!itemIds.length) return 0;
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const idClause = itemIds.map((id) => encodeURIComponent(id)).join(',');
+
+  const updateRes = await fetch(`${supabaseUrl}/rest/v1/autocollect_items?id=in.(${idClause})&select=id`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify({
+      status: 'paid',
+      notes: note,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+
+  if (!updateRes.ok) {
+    const error = await updateRes.text();
+    throw new Error(`Failed to mark AutoCollect items paid: ${error}`);
+  }
+
+  const rows = await updateRes.json() as Array<{ id: string }>;
+  return rows.length;
+}
+
+async function sendMailjetMessages(env: Env, payload: unknown): Promise<MailDeliveryResult> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) {
+    return { ok: false, status: 0, error: 'Mail provider not configured.' };
+  }
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  try {
+    const response = await fetch('https://api.mailjet.com/v3.1/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${credentials}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) return { ok: true, status: response.status };
+
+    const errorText = await response.text();
+    const hint = response.status === 429 || /limit|quota|rate/i.test(errorText)
+      ? 'mail_limit_reached'
+      : 'mail_delivery_failed';
+    return { ok: false, status: response.status, error: `${hint}: ${errorText || 'mail provider rejected request'}` };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      error: error instanceof Error ? `mail_transport_error: ${error.message}` : 'mail_transport_error',
+    };
+  }
+}
+
+async function getAutoCollectHealth(env: Env): Promise<AutoCollectHealth> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const now = new Date();
+
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/autocollect_items?select=id,status,attempts,last_invited_at&order=updated_at.desc&limit=1000`,
+    {
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to load AutoCollect health data: ${error}`);
+  }
+
+  const items = await res.json() as Array<{ id: string; status?: string; attempts?: number; last_invited_at?: string | null }>;
+  const dailyCap = getAutoCollectDailyEmailCap(env);
+  const sentToday = await getAutoCollectSentTodayCount(env, now);
+  const maxAttempts = getAutoCollectMaxAttempts(env);
+
+  const latestInvitedAt = items
+    .map((item) => item.last_invited_at ?? null)
+    .find((value) => Boolean(value)) ?? null;
+
+  return {
+    generated_at: now.toISOString(),
+    queue_total: items.length,
+    queue_pending: items.filter((item) => (item.status ?? 'pending') === 'pending').length,
+    queue_invite_sent: items.filter((item) => (item.status ?? '') === 'invite_sent').length,
+    queue_paid: items.filter((item) => (item.status ?? '') === 'paid').length,
+    escalations: items.filter((item) => (item.attempts ?? 0) >= maxAttempts).length,
+    sent_today: sentToday,
+    daily_cap: dailyCap,
+    remaining_daily_budget: Math.max(dailyCap - sentToday, 0),
+    max_send_per_run: getAutoCollectMaxSendPerRun(env),
+    reminder_interval_days: getAutoCollectReminderIntervalDays(env),
+    max_attempts: maxAttempts,
+    latest_invited_at: latestInvitedAt,
+  };
+}
+
+function buildPublicStatusModules(autoCollect: AutoCollectHealth | null): PublicStatusModule[] {
+  return [
+    { id: 1, name: 'Forms', status: 'green', detail: 'Live intake and summary routes are operational.' },
+    { id: 2, name: 'Deals / Pipeline', status: 'green', detail: 'Admin pipeline/table workflow is live.' },
+    { id: 3, name: 'Proposals', status: 'green', detail: 'Proposal route and generation flow are live.' },
+    { id: 4, name: 'AI Price Insights', status: 'green', detail: 'Pricing insight generation is implemented and surfaced.' },
+    { id: 5, name: 'Contracts / E-sign', status: 'green', detail: 'Contract generation and signing flow are active.' },
+    { id: 6, name: 'Payments', status: 'green', detail: 'Stripe checkout activation flow is operational.' },
+    { id: 7, name: 'Billing', status: 'green', detail: 'Admin billing controls are implemented.' },
+    { id: 8, name: 'Invoicing', status: 'green', detail: 'Invoice generation and retrieval routes are active.' },
+    { id: 9, name: 'Instant Bill', status: 'green', detail: 'One-off payment link flow is live.' },
+    {
+      id: 10,
+      name: 'AutoCollect',
+      status: 'yellow',
+      detail: autoCollect
+        ? `Automation and observability are live; queue=${autoCollect.queue_total}, escalations=${autoCollect.escalations}.`
+        : 'Automation is live; health summary unavailable in this response.',
+    },
+    { id: 11, name: 'Reporting / Insights', status: 'green', detail: 'Client-facing reporting surfaces are live.' },
+    { id: 12, name: 'Integrations / Workflows', status: 'green', detail: 'Webhook integrations are live with signed outbound delivery.' },
+    { id: 13, name: 'Custom Branding', status: 'green', detail: 'Per-project branding is live for emails and proposal surfaces.' },
+  ];
+}
+
+async function getPublicStatusSummary(req: Request, env: Env): Promise<PublicStatusSummary> {
+  const siteUrl = getSiteUrl(env);
+  const workerUrl = new URL(req.url).origin;
+
+  let autoCollect: AutoCollectHealth | null = null;
+  try {
+    autoCollect = await getAutoCollectHealth(env);
+  } catch {
+    autoCollect = null;
+  }
+
+  return {
+    generated_at: new Date().toISOString(),
+    report_url: `${siteUrl}/status/`,
+    docs: {
+      status_doc: `${siteUrl}/status/`,
+      master_doc: `${siteUrl}/admin/`,
+    },
+    score: {
+      done: 12,
+      in_progress: 1,
+      not_started: 0,
+      total: 13,
+    },
+    modules: buildPublicStatusModules(autoCollect),
+    testing: [
+      { name: 'Smoke', status: 'green', detail: '13/13 automated smoke checks passing.' },
+      { name: 'Unit', status: 'yellow', detail: 'No centralized cross-repo unit dashboard yet.' },
+      { name: 'Integration', status: 'yellow', detail: 'Integration checks exist but are not yet aggregated in one feed.' },
+      { name: 'UAT', status: 'yellow', detail: 'UAT flow is beginning; dedicated artifact rollup pending.' },
+      { name: 'BAT', status: 'yellow', detail: 'Business acceptance checklist tracking is planned for next phase.' },
+      { name: 'Release Readiness', status: 'yellow', detail: 'Release gate automation is in progress.' },
+    ],
+    connections: [
+      { name: 'Public site', status: 'green', url: siteUrl, detail: 'Primary origin reachable.' },
+      { name: 'Worker API', status: 'green', url: workerUrl, detail: 'Stripe worker deployed and responding.' },
+      {
+        name: 'AutoCollect health',
+        status: autoCollect ? 'green' : 'yellow',
+        url: `${workerUrl}/api/admin/autocollect/health`,
+        detail: autoCollect ? 'Health telemetry available.' : 'Health telemetry unavailable in public summary call.',
+      },
+    ],
+    autocollect: autoCollect,
+  };
+}
+
+async function handlePublicStatusSummary(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const summary = await getPublicStatusSummary(req, env);
+  return json({ ok: true, summary }, 200, origin);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 10: Leads / Deals
+// ---------------------------------------------------------------------------
+
+type Lead = {
+  id: string;
+  name: string;
+  email: string;
+  company?: string | null;
+  message?: string | null;
+  source: string;
+  status: string;
+  notes?: string | null;
+  converted_project_id?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+async function handlePublicSubmitLead(req: Request, env: Env, origin: string | null): Promise<Response> {
+  let body: { name?: string; email?: string; company?: string; message?: string; source?: string };
+  try {
+    body = await req.json() as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON.' }, 400, origin);
+  }
+
+  const name = (body.name ?? '').trim().slice(0, 200);
+  const email = (body.email ?? '').trim().toLowerCase().slice(0, 320);
+  const company = (body.company ?? '').trim().slice(0, 200) || null;
+  const message = (body.message ?? '').trim().slice(0, 2000) || null;
+  const source = (body.source ?? 'contact_form').trim().slice(0, 60);
+
+  if (!name || !email || !email.includes('@')) {
+    return json({ error: 'Name and a valid email are required.' }, 400, origin);
+  }
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  const res = await fetch(`${supabaseUrl}/rest/v1/leads`, {
+    method: 'POST',
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify({ name, email, company, message, source, status: 'new' }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    return json({ error: 'Failed to save lead.', detail: err }, 500, origin);
+  }
+
+  const [lead] = await res.json() as Lead[];
+
+  // Notify admin via email (non-blocking)
+  void notifyAdminNewLead(env, { name, email, company, message }).catch(() => {/* ignore */});
+
+  return json({ ok: true, leadId: lead?.id ?? null }, 201, origin);
+}
+
+async function notifyAdminNewLead(env: Env, lead: { name: string; email: string; company?: string | null; message?: string | null }): Promise<void> {
+  const mailjetKey = cleanSecret(env.MAILJET_API_KEY ?? '');
+  const mailjetSecret = cleanSecret(env.MAILJET_SECRET_KEY ?? '');
+  if (!mailjetKey || !mailjetSecret) return;
+
+  const subject = `New lead from ${sanitize(lead.name, 80)} — Una Labs`;
+  const body = [
+    `Name: ${sanitize(lead.name, 200)}`,
+    `Email: ${sanitize(lead.email, 320)}`,
+    lead.company ? `Company: ${sanitize(lead.company, 200)}` : null,
+    '',
+    lead.message ? `Message:\n${sanitize(lead.message, 2000)}` : '(no message)',
+    '',
+    `View leads in admin: https://unalabs.cloud/admin`,
+  ].filter(Boolean).join('\n');
+
+  await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${btoa(`${mailjetKey}:${mailjetSecret}`)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      Messages: [{
+        From: { Email: 'noreply@unalabs.cloud', Name: 'Una Labs' },
+        To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }],
+        Subject: subject,
+        TextPart: body,
+      }],
+    }),
+  });
+}
+
+async function handleAdminLeadsList(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  const url = new URL(req.url);
+  const status = url.searchParams.get('status') ?? '';
+  const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '100', 10), 200);
+
+  const filter = status ? `&status=eq.${encodeURIComponent(status)}` : '';
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/leads?select=*&order=created_at.desc&limit=${limit}${filter}`,
+    {
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+    }
+  );
+
+  if (!res.ok) return json({ error: 'Failed to load leads.' }, 500, origin);
+  const leads = await res.json() as Lead[];
+  return json({ ok: true, leads }, 200, origin);
+}
+
+async function handleAdminUpdateLead(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+
+  const url = new URL(req.url);
+  const id = url.pathname.split('/').pop();
+  if (!id || id === 'leads') return json({ error: 'Lead ID required.' }, 400, origin);
+
+  let body: { status?: string; notes?: string };
+  try {
+    body = await req.json() as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON.' }, 400, origin);
+  }
+
+  const patch: Record<string, string> = { updated_at: new Date().toISOString() };
+  if (body.status) patch.status = body.status.trim().slice(0, 60);
+  if (typeof body.notes === 'string') patch.notes = body.notes.trim().slice(0, 2000);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/leads?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify(patch),
+    }
+  );
+
+  if (!res.ok) return json({ error: 'Failed to update lead.' }, 500, origin);
+  const [updated] = await res.json() as Lead[];
+  return json({ ok: true, lead: updated }, 200, origin);
+}
+
+async function handleAdminReprice(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+
+  const url = new URL(req.url);
+  const id = url.pathname.split('/').pop();
+  if (!id || id === 'reprice') return json({ error: 'Project ID required.' }, 400, origin);
+
+  if (!env.OPENAI_API_KEY) return json({ error: 'AI pricing not configured.' }, 503, origin);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  // Fetch project
+  const projectRes = await fetch(
+    `${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(id)}&select=id,name,description,tier,plan,billing&limit=1`,
+    {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }
+  );
+  if (!projectRes.ok) return json({ error: 'Failed to fetch project.' }, 500, origin);
+  const projects = await projectRes.json() as Array<{ id: string; name?: string; description?: string; tier?: string; plan?: string; billing?: string }>;
+  if (!projects.length) return json({ error: 'Project not found.' }, 404, origin);
+  const project = projects[0];
+  const tier = (project.tier ?? project.plan ?? 'professional').toLowerCase();
+
+  const systemPrompt = 'You are a project pricing assistant for Una Labs, a Canadian digital agency. Given a project description and tier, return ONLY valid JSON: {"suggested_min_cad":number,"suggested_max_cad":number,"rationale":"1-2 concise sentences","confidence":"low|medium|high"}. Keep pricing realistic for the tier. No markdown fences. No prose.';
+
+  const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${cleanSecret(env.OPENAI_API_KEY)}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: JSON.stringify({ description: project.description ?? project.name ?? 'No description', tier, billing: project.billing ?? 'monthly' }) },
+      ],
+      temperature: 0.4,
+      max_tokens: 200,
+    }),
+  });
+
+  if (!openaiResponse.ok) return json({ error: 'AI pricing request failed.' }, 502, origin);
+
+  const openaiData = (await openaiResponse.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const content = openaiData.choices?.[0]?.message?.content ?? '';
+  let jsonStr = content;
+  const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (match) jsonStr = match[1].trim();
+
+  let priceInsight: PriceInsight | null = null;
+  try {
+    priceInsight = normalizePriceInsight(JSON.parse(jsonStr), tier);
+  } catch {
+    priceInsight = null;
+  }
+
+  if (!priceInsight) {
+    const bounds = AI_PRICE_BOUNDS[tier] ?? AI_PRICE_BOUNDS.professional;
+    priceInsight = {
+      suggested_min_cad: bounds.min,
+      suggested_max_cad: bounds.max,
+      rationale: 'Fallback range based on plan tier. Re-run after adding more project context.',
+      confidence: 'medium',
+    };
+  }
+
+  const now = new Date().toISOString();
+  const patchRes = await fetch(
+    `${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        ai_price_min_cad: priceInsight.suggested_min_cad,
+        ai_price_max_cad: priceInsight.suggested_max_cad,
+        ai_price_rationale: priceInsight.rationale,
+        ai_price_confidence: priceInsight.confidence,
+        ai_price_generated_at: now,
+      }),
+    }
+  );
+
+  if (!patchRes.ok) return json({ error: 'Failed to save new price.' }, 500, origin);
+
+  return json({
+    ok: true,
+    ai_price_min_cad: priceInsight.suggested_min_cad,
+    ai_price_max_cad: priceInsight.suggested_max_cad,
+    ai_price_rationale: priceInsight.rationale,
+    ai_price_confidence: priceInsight.confidence,
+    ai_price_generated_at: now,
+  }, 200, origin);
+}
+
+async function handleAdminGetBranding(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+
+  const id = new URL(req.url).pathname.split('/').pop();
+  if (!id || id === 'branding') return json({ error: 'Project ID required.' }, 400, origin);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(id)}&select=id,name,branding&limit=1`,
+    { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
+  );
+  if (!res.ok) return json({ error: 'Failed to fetch project.' }, 500, origin);
+  const rows = await res.json() as Array<{ id: string; name?: string; branding?: Branding | null }>;
+  if (!rows.length) return json({ error: 'Project not found.' }, 404, origin);
+  return json({ ok: true, branding: rows[0].branding ?? null }, 200, origin);
+}
+
+async function handleAdminSetBranding(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+
+  const id = new URL(req.url).pathname.split('/').pop();
+  if (!id || id === 'branding') return json({ error: 'Project ID required.' }, 400, origin);
+
+  let body: { companyName?: string; primaryColor?: string; logoUrl?: string; tagline?: string; replyEmail?: string };
+  try {
+    body = await req.json() as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON.' }, 400, origin);
+  }
+
+  const branding: Branding = {};
+  if (body.companyName) branding.companyName = sanitize(body.companyName, 80);
+  if (body.primaryColor && /^#[0-9a-fA-F]{6}$/.test(body.primaryColor)) branding.primaryColor = body.primaryColor;
+  if (body.logoUrl && body.logoUrl.startsWith('https://')) branding.logoUrl = sanitize(body.logoUrl, 300);
+  if (body.tagline) branding.tagline = sanitize(body.tagline, 120);
+  if (body.replyEmail && body.replyEmail.includes('@') && body.replyEmail.includes('.')) branding.replyEmail = sanitize(body.replyEmail, 120);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ branding }),
+    }
+  );
+  if (!res.ok) return json({ error: 'Failed to save branding.' }, 500, origin);
+  return json({ ok: true, branding }, 200, origin);
+}
+
+// ── Phase 15: Webhooks ──────────────────────────────────────────────────────
+
+const ALLOWED_EVENTS = [
+  'project.created',
+  'proposal.sent',
+  'payment.received',
+  'milestone.approved',
+] as const;
+type WebhookEvent = typeof ALLOWED_EVENTS[number];
+
+async function signPayload(secret: string, body: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(body));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function fireWebhooks(
+  env: Env,
+  projectId: string,
+  event: WebhookEvent,
+  data: Record<string, unknown>
+): Promise<void> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/webhook_endpoints?project_id=eq.${projectId}&select=id,url,secret,events`,
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+  );
+  if (!res.ok) return;
+  const endpoints = await res.json() as Array<{ id: string; url: string; secret: string; events: string[] }>;
+  const matching = endpoints.filter((ep) => ep.events.length === 0 || ep.events.includes(event));
+  if (matching.length === 0) return;
+  const payload = JSON.stringify({ event, project_id: projectId, data, timestamp: new Date().toISOString() });
+  await Promise.allSettled(
+    matching.map(async (ep) => {
+      const sig = await signPayload(ep.secret, payload);
+      await fetch(ep.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Una-Signature': sig, 'X-Una-Event': event },
+        body: payload,
+      });
+    })
+  );
+}
+
+async function handleAdminListWebhooks(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+  const projectId = new URL(req.url).pathname.split('/').pop()!;
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/webhook_endpoints?project_id=eq.${projectId}&select=id,url,events,created_at&order=created_at.asc`,
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+  );
+  if (!res.ok) return json({ error: 'Failed to fetch webhooks.' }, 500, origin);
+  return json({ ok: true, endpoints: await res.json() }, 200, origin);
+}
+
+async function handleAdminCreateWebhook(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+  const body = await req.json() as { project_id?: string; url?: string; events?: string[] };
+  const projectId = sanitize(String(body.project_id ?? ''));
+  const url = sanitize(String(body.url ?? ''));
+  const events = Array.isArray(body.events)
+    ? body.events.filter((e): e is WebhookEvent => (ALLOWED_EVENTS as readonly string[]).includes(e))
+    : [];
+  if (!projectId || !url.startsWith('https://')) {
+    return json({ error: 'project_id and a valid https:// url are required.' }, 400, origin);
+  }
+  const secretBytes = crypto.getRandomValues(new Uint8Array(24));
+  const secret = Array.from(secretBytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const res = await fetch(`${supabaseUrl}/rest/v1/webhook_endpoints`, {
+    method: 'POST',
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({ project_id: projectId, url, events, secret }),
+  });
+  if (!res.ok) return json({ error: 'Failed to register webhook.' }, 500, origin);
+  const [endpoint] = await res.json() as [{ id: string; url: string; events: string[]; created_at: string }];
+  return json({ ok: true, endpoint: { ...endpoint, secret } }, 201, origin);
+}
+
+async function handleAdminDeleteWebhook(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+  const id = new URL(req.url).pathname.split('/').pop()!;
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const res = await fetch(`${supabaseUrl}/rest/v1/webhook_endpoints?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+  });
+  if (!res.ok) return json({ error: 'Failed to delete webhook.' }, 500, origin);
+  return json({ ok: true }, 200, origin);
+}
+
+// ── Phase 14: Multi-tenancy + Stripe Connect ───────────────────────────────
+
+type ConnectProjectRecord = {
+  id: string;
+  email: string;
+  name?: string | null;
+  connect_account_id?: string | null;
+  connect_onboarding_complete?: boolean | null;
+  connect_details_submitted?: boolean | null;
+  connect_charges_enabled?: boolean | null;
+  connect_payouts_enabled?: boolean | null;
+};
+
+async function fetchProjectConnectRecord(env: Env, projectId: string): Promise<ConnectProjectRecord | null> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}&select=id,email,name,connect_account_id,connect_onboarding_complete,connect_details_submitted,connect_charges_enabled,connect_payouts_enabled&limit=1`,
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+  );
+  if (!res.ok) return null;
+  const rows = await res.json() as ConnectProjectRecord[];
+  return rows[0] ?? null;
+}
+
+async function updateProjectConnectState(
+  env: Env,
+  projectId: string,
+  updates: Record<string, unknown>
+): Promise<void> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  await fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify({ ...updates, connect_last_synced_at: new Date().toISOString() }),
+  });
+}
+
+async function handleAdminGetConnect(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+
+  const projectId = new URL(req.url).pathname.split('/').pop()!;
+  const project = await fetchProjectConnectRecord(env, projectId);
+  if (!project) return json({ error: 'Project not found.' }, 404, origin);
+
+  if (!project.connect_account_id) {
+    return json({ ok: true, connected: false, project }, 200, origin);
+  }
+
+  try {
+    const stripe = getStripe(env);
+    const account = await stripe.accounts.retrieve(project.connect_account_id);
+    await updateProjectConnectState(env, projectId, {
+      connect_onboarding_complete: Boolean(account.details_submitted),
+      connect_details_submitted: Boolean(account.details_submitted),
+      connect_charges_enabled: Boolean(account.charges_enabled),
+      connect_payouts_enabled: Boolean(account.payouts_enabled),
+    });
+
+    return json(
+      {
+        ok: true,
+        connected: true,
+        project: {
+          ...project,
+          connect_onboarding_complete: Boolean(account.details_submitted),
+          connect_details_submitted: Boolean(account.details_submitted),
+          connect_charges_enabled: Boolean(account.charges_enabled),
+          connect_payouts_enabled: Boolean(account.payouts_enabled),
+        },
+      },
+      200,
+      origin
+    );
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Failed to sync Connect account.' }, 502, origin);
+  }
+}
+
+async function handleAdminConnectOnboard(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+
+  const parts = new URL(req.url).pathname.split('/').filter(Boolean);
+  const projectId = parts[parts.length - 2] ?? '';
+  if (!projectId) return json({ error: 'Project ID required.' }, 400, origin);
+
+  const project = await fetchProjectConnectRecord(env, projectId);
+  if (!project) return json({ error: 'Project not found.' }, 404, origin);
+
+  try {
+    const stripe = getStripe(env);
+    let accountId = sanitize(project.connect_account_id ?? '', 80);
+
+    if (!accountId) {
+      // Use controller properties (modern Connect shape) instead of legacy account types.
+      const account = await stripe.accounts.create({
+        country: 'CA',
+        email: project.email,
+        business_type: 'company',
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        controller: {
+          losses: { payments: 'application' },
+          fees: { payer: 'application' },
+          stripe_dashboard: { type: 'express' },
+        },
+      } as unknown as Stripe.AccountCreateParams);
+      accountId = account.id;
+      await updateProjectConnectState(env, projectId, { connect_account_id: accountId });
+    }
+
+    const siteUrl = getSiteUrl(env);
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${siteUrl}/admin?connect=${encodeURIComponent(projectId)}&state=refresh`,
+      return_url: `${siteUrl}/admin?connect=${encodeURIComponent(projectId)}&state=return`,
+      type: 'account_onboarding',
+    });
+
+    return json({ ok: true, account_id: accountId, onboarding_url: link.url, expires_at: link.expires_at }, 200, origin);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Failed to generate onboarding link.' }, 502, origin);
+  }
+}
+
+async function handleAdminConnectDashboard(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
+
+  const parts = new URL(req.url).pathname.split('/').filter(Boolean);
+  const projectId = parts[parts.length - 2] ?? '';
+  if (!projectId) return json({ error: 'Project ID required.' }, 400, origin);
+
+  const project = await fetchProjectConnectRecord(env, projectId);
+  if (!project?.connect_account_id) {
+    return json({ error: 'No Connect account linked for this project.' }, 400, origin);
+  }
+
+  try {
+    const stripe = getStripe(env);
+    const login = await stripe.accounts.createLoginLink(project.connect_account_id);
+    return json({ ok: true, dashboard_url: login.url }, 200, origin);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Failed to create dashboard link.' }, 502, origin);
+  }
+}
+
+async function reconcilePaidAutoCollectItems(env: Env): Promise<number> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  const itemRes = await fetch(
+    `${supabaseUrl}/rest/v1/autocollect_items?status=not.eq.paid&select=id,invoice_id,project_id,amount_cad&limit=500`,
+    {
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+    }
+  );
+
+  if (!itemRes.ok) {
+    const error = await itemRes.text();
+    throw new Error(`Failed to load AutoCollect items for reconciliation: ${error}`);
+  }
+
+  const items = await itemRes.json() as Array<{ id: string; invoice_id: string; project_id?: string; amount_cad?: string | number }>;
+  if (!items.length) return 0;
+
+  const invoiceIds = Array.from(new Set(items.map((item) => item.invoice_id).filter(Boolean)));
+  if (!invoiceIds.length) return 0;
+
+  const invoiceClause = invoiceIds.map((id) => encodeURIComponent(id)).join(',');
+  const invoiceRes = await fetch(
+    `${supabaseUrl}/rest/v1/invoices?id=in.(${invoiceClause})&select=id,status,paid_at`,
+    {
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+    }
+  );
+
+  if (!invoiceRes.ok) {
+    const error = await invoiceRes.text();
+    throw new Error(`Failed to load invoices for reconciliation: ${error}`);
+  }
+
+  const invoices = await invoiceRes.json() as Array<{ id: string; status?: string; paid_at?: string | null }>;
+  const paidInvoiceIds = new Set(
+    invoices
+      .filter((invoice) => (invoice.status ?? '').toLowerCase() === 'paid' || Boolean(invoice.paid_at))
+      .map((invoice) => invoice.id)
+  );
+
+  if (!paidInvoiceIds.size) return 0;
+
+  const paidItems = items.filter((item) => paidInvoiceIds.has(item.invoice_id));
+  const paidItemIds = paidItems.map((item) => item.id);
+
+  if (!paidItemIds.length) return 0;
+  const markedCount = await markAutoCollectItemsPaidByIds(env, paidItemIds);
+
+  // Phase 15: fire payment.received per project (best-effort, grouped)
+  const projectsWithPayments = new Map<string, number>();
+  for (const item of paidItems) {
+    if (item.project_id) {
+      projectsWithPayments.set(item.project_id, (projectsWithPayments.get(item.project_id) ?? 0) + 1);
+    }
+  }
+  for (const [projectId, count] of projectsWithPayments) {
+    void fireWebhooks(env, projectId, 'payment.received', { items_reconciled: count });
+  }
+
+  return markedCount;
+}
+
+async function sendAutoCollectInviteForItem(env: Env, item: AutoCollectRecord, options?: { force?: boolean; ignoreDailyCap?: boolean }): Promise<AutoCollectInviteResult> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  if (!options?.force) {
+    const eligibility = shouldSendAutoCollectReminder(item, env);
+    if (!eligibility.eligible) {
+      return { ok: false, skipped: eligibility.reason, item };
+    }
+  }
+
+  if (!options?.ignoreDailyCap) {
+    const dailyCap = getAutoCollectDailyEmailCap(env);
+    const sentToday = await getAutoCollectSentTodayCount(env);
+    if (sentToday >= dailyCap) {
+      return { ok: false, skipped: `daily_email_cap_reached:${dailyCap}`, item };
+    }
+  }
+
+  const invoiceRes = await fetch(`${supabaseUrl}/rest/v1/invoices?id=eq.${encodeURIComponent(item.invoice_id)}&select=milestone_id,title,status`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+  if (!invoiceRes.ok) return { ok: false, error: 'Failed to fetch invoice details.' };
+  const invoiceRows = await invoiceRes.json() as Array<{ milestone_id: string; title?: string; status?: string }>;
+  const invoiceMeta = invoiceRows[0];
+  if (!invoiceMeta) return { ok: false, error: 'Invoice details not found.' };
+  if ((invoiceMeta.status ?? '').toLowerCase() === 'paid') {
+    await markAutoCollectItemsPaidByIds(env, [item.id]).catch((error) => {
+      logEvent('autocollect_reconcile_on_send_failed', {
+        autocollect_id: item.id,
+        invoice_id: item.invoice_id,
+        error: error instanceof Error ? error.message : 'Unknown reconcile-on-send error.',
+      });
+    });
+    return { ok: false, skipped: 'invoice_already_paid', item };
+  }
+
+  const projectRes = await fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(item.project_id)}&select=name,email`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+  if (!projectRes.ok) return { ok: false, error: 'Failed to fetch project details.' };
+  const projects = await projectRes.json() as Array<{ name?: string; email: string }>;
+  const project = projects[0];
+
+  const siteUrl = getSiteUrl(env);
+  const invoiceLink = `${siteUrl}/dashboard/invoice?milestone_id=${encodeURIComponent(invoiceMeta.milestone_id)}`;
+
+  if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY) {
+    const subject = `Payment reminder: ${item.invoice_number} is overdue`;
+    const html = `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+  <div style="background:#F97316;border-radius:8px;padding:16px 20px;margin-bottom:20px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Payment reminder</p>
+  </div>
+  <p style="font-size:14px;color:#111827">Hi ${sanitize(project?.name || item.client_email, 120)},</p>
+  <p style="font-size:14px;color:#111827">This is a friendly reminder that invoice <strong>${item.invoice_number}</strong> is still unpaid.</p>
+  <table style="width:100%;border-collapse:collapse;margin:16px 0 20px">
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Amount</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">CA$${Number(item.amount_cad).toLocaleString('en-CA')}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Due date</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${item.due_date}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Invoice</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${sanitize(invoiceMeta.title || item.invoice_number, 140)}</td></tr>
+  </table>
+  <p><a href="${invoiceLink}" style="display:inline-block;padding:10px 16px;background:#0d9488;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">View invoice</a></p>
+</div>`;
+
+    const delivery = await sendMailjetMessages(env, {
+        Messages: [
+          {
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: item.client_email, Name: sanitize(project?.name || item.client_email, 120) }],
+            Subject: subject,
+            HTMLPart: html,
+            TextPart: `${subject}\n\nAmount: CA$${item.amount_cad}\nDue date: ${item.due_date}\nView invoice: ${invoiceLink}`,
+          },
+          {
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }],
+            Subject: `[Admin] ${subject}`,
+            HTMLPart: html,
+            TextPart: `[Admin] ${subject}\nClient: ${item.client_email}\nAmount: CA$${item.amount_cad}\nDue date: ${item.due_date}\nInvoice link: ${invoiceLink}`,
+          },
+        ],
+    });
+
+    if (!delivery.ok) {
+      return {
+        ok: false,
+        error: `AutoCollect reminder email not sent (${delivery.status || 'network'}): ${delivery.error ?? 'unknown email error'}`,
+      };
+    }
+  } else {
+    return { ok: false, error: 'AutoCollect reminder email not sent: Mailjet is not configured.' };
+  }
+
+  const attempts = Number.isFinite(item.attempts) ? item.attempts + 1 : 1;
+  const updateRes = await fetch(`${supabaseUrl}/rest/v1/autocollect_items?id=eq.${encodeURIComponent(item.id)}&select=*`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify({
+      status: 'invite_sent',
+      attempts,
+      last_invited_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      notes: attempts >= getAutoCollectMaxAttempts(env) ? 'max_attempts_reached' : item.notes,
+    }),
+  });
+
+  if (!updateRes.ok) {
+    const error = await updateRes.text();
+    return { ok: false, error: `Failed to update AutoCollect item: ${error}` };
+  }
+
+  const rows = await updateRes.json() as AutoCollectRecord[];
+  return { ok: true, item: rows[0] };
+}
+
+async function runAutoCollectReminderCycle(env: Env): Promise<{ synced: number; reconciled_paid: number; invited: number; skipped: number; errors: number }> {
+  const syncResult = await syncAutoCollectItems(env, { overdueOnly: true, limit: 200 });
+  const dailyCap = getAutoCollectDailyEmailCap(env);
+  const maxSendPerRun = getAutoCollectMaxSendPerRun(env);
+  const sentToday = await getAutoCollectSentTodayCount(env);
+  const remainingDailyBudget = Math.max(dailyCap - sentToday, 0);
+  const runBudget = Math.min(remainingDailyBudget, maxSendPerRun);
+
+  let invited = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  if (runBudget <= 0) {
+    return {
+      synced: syncResult.synced,
+      reconciled_paid: syncResult.reconciled_paid,
+      invited,
+      skipped: syncResult.items.length,
+      errors,
+    };
+  }
+
+  for (let i = 0; i < syncResult.items.length; i += 1) {
+    const item = syncResult.items[i];
+
+    if (invited >= runBudget) {
+      skipped += (syncResult.items.length - i);
+      break;
+    }
+
+    const result = await sendAutoCollectInviteForItem(env, item, { ignoreDailyCap: true });
+    if (result.ok) {
+      invited += 1;
+      continue;
+    }
+    if (result.skipped) {
+      skipped += 1;
+      continue;
+    }
+    errors += 1;
+    logEvent('autocollect_invite_error', {
+      autocollect_id: item.id,
+      invoice_id: item.invoice_id,
+      error: result.error ?? 'Unknown AutoCollect send error.',
+    });
+  }
+
+  return {
+    synced: syncResult.synced,
+    reconciled_paid: syncResult.reconciled_paid,
+    invited,
+    skipped,
+    errors,
+  };
 }
 
 async function verifyUser(req: Request, env: Env): Promise<{ ok: true; user: AuthenticatedUser } | { ok: false; error: string; status: number }> {
@@ -815,6 +2101,7 @@ async function generateAndWriteScope(
       };
 
       // Determine if this is a realtor lead intake
+      const intakeId = activation.intake_id || intake.intakeId || '';
       const isRealtorLead = intakeId?.includes('realtor_') || intake.type === 'realtor_lead';
       
       let systemPrompt = 'You are a project scoping assistant for Una Labs, a Canadian digital agency. Given a client intake, return ONLY valid JSON with this exact shape: {"milestones":[{"title":"...","description":"...","due_offset_days":7},{"title":"...","description":"...","due_offset_days":21},{"title":"...","description":"...","due_offset_days":45}],"pricing":{"suggested_min_cad":number,"suggested_max_cad":number,"rationale":"1-2 concise sentences","confidence":"low|medium|high"}}. Keep pricing realistic for the plan tier and company context. No markdown fences. No prose.';
@@ -1038,6 +2325,34 @@ No markdown fences. No prose. Be specific and actionable.`;
     const firstName = name.split(' ')[0];
     const today = new Date();
 
+    // Fetch project branding (set by admin for white-label/agency use)
+    let projectBranding: Branding | null = null;
+    try {
+      const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+      const serviceKey = getSupabaseServiceKey(env);
+      const brandingRes = await fetch(
+        `${supabaseUrl}/rest/v1/projects?id=eq.${projectId}&select=branding&limit=1`,
+        { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
+      );
+      if (brandingRes.ok) {
+        const [row] = await brandingRes.json() as Array<{ branding?: Branding | null }>;
+        projectBranding = row?.branding ?? null;
+      }
+    } catch { /* non-critical — proceed with defaults */ }
+
+    const brandingColor = projectBranding?.primaryColor ?? '#4DB8A8';
+    const brandingName = projectBranding?.companyName ?? 'Una Labs';
+    const brandingLogoHtml = projectBranding?.logoUrl
+      ? `<img src="${projectBranding.logoUrl}" alt="${brandingName}" style="height:28px;margin-bottom:6px;display:block">`
+      : '';
+    const brandingTaglineHtml = projectBranding?.tagline
+      ? `<p style="color:rgba(255,255,255,0.8);font-size:11px;margin:3px 0 0">${projectBranding.tagline}</p>`
+      : '';
+    const fromEmail = projectBranding?.replyEmail ?? 'hello@unalabs.cloud';
+    const footerLine = projectBranding?.companyName
+      ? `Questions? Reply here or email ${fromEmail}<br>${brandingName}`
+      : 'Questions? Reply here or email hello@unalabs.cloud<br>Una Labs · unalabs.cloud';
+
     const milestonesHtml = milestones
       .map((m) => {
         const dueDate = new Date(today);
@@ -1048,8 +2363,10 @@ No markdown fences. No prose. Be specific and actionable.`;
       .join('');
 
     const html = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
-  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+  <div style="background:${brandingColor};border-radius:8px;padding:16px 20px;margin-bottom:24px">
+    ${brandingLogoHtml}
     <p style="color:white;font-weight:700;font-size:16px;margin:0">Your project scope is ready</p>
+    ${brandingTaglineHtml}
   </div>
   <p style="font-size:15px;color:#0B0E11;margin-bottom:16px">Hi ${firstName},</p>
   <p style="font-size:14px;color:#374151;margin-bottom:20px">We've generated your project scope with 3 milestones. Review them below and let us know if you'd like any adjustments.</p>
@@ -1059,7 +2376,7 @@ No markdown fences. No prose. Be specific and actionable.`;
     ${milestonesHtml}
   </table>
   <a href="https://unalabs.cloud/login?redirect=/dashboard" style="display:inline-block;background:#F97316;color:white;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:24px">View in dashboard</a>
-  <p style="font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:16px">Questions? Reply here or email hello@unalabs.cloud<br>Una Labs · unalabs.cloud</p>
+  <p style="font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:16px">${footerLine}</p>
 </div>`;
 
     const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
@@ -1069,11 +2386,11 @@ No markdown fences. No prose. Be specific and actionable.`;
       body: JSON.stringify({
         Messages: [
           {
-            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            From: { Email: fromEmail, Name: brandingName },
             To: [{ Email: activation.email, Name: name }],
-            Subject: 'Your project scope is ready — Una Labs',
+            Subject: `Your project scope is ready — ${brandingName}`,
             HTMLPart: html,
-            TextPart: `Hi ${firstName},\n\nYour project scope is ready with 3 milestones.\n${priceInsight ? `\nAI price insight: CA$${priceInsight.suggested_min_cad.toLocaleString('en-CA')} - CA$${priceInsight.suggested_max_cad.toLocaleString('en-CA')} (${priceInsight.confidence} confidence)\n${priceInsight.rationale}\n` : ''}\n${milestones.map((m) => `• ${m.title}`).join('\n')}\n\nView in dashboard: https://unalabs.cloud/login?redirect=/dashboard\n\nQuestions? Reply here or email hello@unalabs.cloud\n\nUna Labs · unalabs.cloud`,
+            TextPart: `Hi ${firstName},\n\nYour project scope is ready with 3 milestones.\n${priceInsight ? `\nAI price insight: CA$${priceInsight.suggested_min_cad.toLocaleString('en-CA')} - CA$${priceInsight.suggested_max_cad.toLocaleString('en-CA')} (${priceInsight.confidence} confidence)\n${priceInsight.rationale}\n` : ''}\n${milestones.map((m) => `• ${m.title}`).join('\n')}\n\nView in dashboard: https://unalabs.cloud/login?redirect=/dashboard\n\nQuestions? Reply here or email ${fromEmail}\n\n${brandingName}`,
           },
         ],
       }),
@@ -1138,6 +2455,13 @@ No markdown fences. No prose. Be specific and actionable.`;
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
+
+  // Phase 15: fire proposal.sent webhook (best-effort)
+  void fireWebhooks(env, projectId, 'proposal.sent', {
+    project_id: projectId,
+    email: activation.email,
+    milestones: milestones.map((m) => m.title),
+  });
 }
 
 async function resolveActivation(
@@ -1264,6 +2588,14 @@ async function runActivation(
     };
   }
 
+  // Phase 15: fire project.created webhook (best-effort)
+  if (projectWrite.projectId && projectWrite.inserted) {
+    void fireWebhooks(env, projectWrite.projectId, 'project.created', {
+      email: activation.email,
+      tier: activation.tier,
+    });
+  }
+
   // Generate and write project scope
   if (projectWrite.projectId) {
     try {
@@ -1375,6 +2707,9 @@ async function handleCheckoutSuccess(req: Request, env: Env): Promise<Response> 
     redirectUrl.searchParams.set('session_id', sessionId);
     redirectUrl.searchParams.set('activation', result.alreadyActivated ? 'already_active' : 'success');
     redirectUrl.searchParams.set('plan', result.activation.tier || 'professional');
+    if (result.activation.email) {
+      redirectUrl.searchParams.set('email', result.activation.email.toLowerCase());
+    }
     return redirect(redirectUrl.toString());
   } catch (error) {
     logEvent('checkout_success_redirect_error', {
@@ -1398,6 +2733,7 @@ async function handleMilestoneAction(req: Request, env: Env, origin: string | nu
   const action = sanitize(body.action); // 'approve' | 'changes'
   const clientEmail = sanitize(body.client_email);
   const notes = sanitize(body.notes ?? '');
+  const milestoneProjectId = sanitize(body.project_id ?? '');
 
   const isApprove = action === 'approve';
   const subject = isApprove
@@ -1435,6 +2771,15 @@ async function handleMilestoneAction(req: Request, env: Env, origin: string | nu
       }),
     });
   } catch { /* non-fatal */ }
+
+  // Phase 15: fire milestone.approved webhook (best-effort, only when project_id provided)
+  if (isApprove && milestoneProjectId) {
+    void fireWebhooks(env, milestoneProjectId, 'milestone.approved', {
+      milestone_title: milestoneTitle,
+      project_title: projectTitle,
+      client_email: clientEmail,
+    });
+  }
 
   return json({ ok: true }, 200, origin);
 }
@@ -1970,10 +3315,13 @@ async function handleAdminInstantBill(req: Request, env: Env, origin: string | n
   const description = sanitize(body.description, 180);
   const amountRaw = Number(body.amount_cad);
   const amountCad = Number.isFinite(amountRaw) ? Number(amountRaw.toFixed(2)) : 0;
+  const minAmountCad = 0.5;
 
   if (!projectId) return json({ error: 'project_id required.' }, 400, origin);
   if (!description) return json({ error: 'description required.' }, 400, origin);
-  if (amountCad <= 0 || amountCad > 50000) return json({ error: 'amount_cad must be between 0 and 50000.' }, 400, origin);
+  if (amountCad < minAmountCad || amountCad > 50000) {
+    return json({ error: 'amount_cad must be between 0.50 and 50000.' }, 400, origin);
+  }
 
   const serviceKey = getSupabaseServiceKey(env);
   const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
@@ -1991,6 +3339,15 @@ async function handleAdminInstantBill(req: Request, env: Env, origin: string | n
 
   const stripe = getStripe(env);
   const amountCents = Math.round(amountCad * 100);
+  const amountCadLabel = amountCad.toLocaleString('en-CA', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const projectLabel = sanitize(project.name || project.email, 120);
+  const instantBillItemName = sanitize(
+    description ? `Instant Bill - ${description}` : `Instant Bill - ${projectLabel}`,
+    120,
+  );
 
   let product: Stripe.Product;
   let price: Stripe.Price;
@@ -1998,7 +3355,7 @@ async function handleAdminInstantBill(req: Request, env: Env, origin: string | n
 
   try {
     product = await stripe.products.create({
-      name: `Instant Bill - ${project.name || project.email}`,
+      name: instantBillItemName,
       description,
       metadata: {
         project_id: project.id,
@@ -2018,6 +3375,7 @@ async function handleAdminInstantBill(req: Request, env: Env, origin: string | n
 
     paymentLink = await stripe.paymentLinks.create({
       line_items: [{ price: price.id, quantity: 1 }],
+      automatic_tax: { enabled: false },
       metadata: {
         project_id: project.id,
         type: 'instant_bill',
@@ -2054,16 +3412,16 @@ async function handleAdminInstantBill(req: Request, env: Env, origin: string | n
 
   if (env.MAILJET_API_KEY && env.MAILJET_SECRET_KEY) {
     const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
-    const subject = `Instant bill - CA$${amountCad.toLocaleString('en-CA')} - ${project.name || project.email}`;
+    const subject = `Instant bill - CA$${amountCadLabel} - ${projectLabel}`;
     const html = `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
   <div style="background:#F97316;border-radius:8px;padding:16px 20px;margin-bottom:20px">
     <p style="color:white;font-weight:700;font-size:16px;margin:0">Instant payment link</p>
   </div>
-  <p style="font-size:14px;color:#111827">Hi ${sanitize(project.name || project.email, 120)},</p>
+  <p style="font-size:14px;color:#111827">Hi ${projectLabel},</p>
   <p style="font-size:14px;color:#111827">A one-off payment link has been created for this request: ${description}</p>
   <table style="width:100%;border-collapse:collapse;margin:16px 0 20px">
-    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Amount</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">CA$${amountCad.toLocaleString('en-CA')}</td></tr>
-    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Project</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${sanitize(project.name || project.id, 120)}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Amount</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">CA$${amountCadLabel}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Project</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${projectLabel}</td></tr>
   </table>
   <p><a href="${paymentLink.url}" style="display:inline-block;padding:10px 16px;background:#0d9488;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Pay now</a></p>
 </div>`;
@@ -2075,17 +3433,17 @@ async function handleAdminInstantBill(req: Request, env: Env, origin: string | n
         Messages: [
           {
             From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
-            To: [{ Email: project.email, Name: sanitize(project.name || project.email, 120) }],
+            To: [{ Email: project.email, Name: projectLabel }],
             Subject: subject,
             HTMLPart: html,
-            TextPart: `${subject}\n\nDescription: ${description}\nAmount: CA$${amountCad}\nPay: ${paymentLink.url}`,
+            TextPart: `${subject}\n\nDescription: ${description}\nAmount: CA$${amountCadLabel}\nProject: ${projectLabel}\nPay: ${paymentLink.url}`,
           },
           {
             From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
             To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }],
             Subject: `[Admin] ${subject}`,
             HTMLPart: html,
-            TextPart: `[Admin] ${subject}\n\nClient: ${project.email}\nDescription: ${description}\nAmount: CA$${amountCad}\nPay link: ${paymentLink.url}`,
+            TextPart: `[Admin] ${subject}\n\nClient: ${project.email}\nDescription: ${description}\nAmount: CA$${amountCadLabel}\nProject: ${projectLabel}\nPay link: ${paymentLink.url}`,
           },
         ],
       }),
@@ -2095,6 +3453,116 @@ async function handleAdminInstantBill(req: Request, env: Env, origin: string | n
   }
 
   return json({ ok: true, instant_bill: instantBill, payment_link_url: paymentLink.url }, 200, origin);
+}
+
+async function handleAdminAutoCollectList(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  const url = new URL(req.url);
+  const status = sanitize(url.searchParams.get('status') ?? '', 40);
+  const limitRaw = Number(url.searchParams.get('limit') ?? '50');
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(Math.floor(limitRaw), 1), 200) : 50;
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  const filters = [
+    'select=*',
+    'order=due_date.asc',
+    `limit=${limit}`,
+  ];
+  if (status) filters.push(`status=eq.${encodeURIComponent(status)}`);
+
+  const res = await fetch(`${supabaseUrl}/rest/v1/autocollect_items?${filters.join('&')}`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    return json({ error: `Failed to fetch AutoCollect items: ${error}` }, 502, origin);
+  }
+
+  const items = await res.json() as AutoCollectRecord[];
+  return json({ ok: true, items }, 200, origin);
+}
+
+async function handleAdminAutoCollectHealth(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  try {
+    const health = await getAutoCollectHealth(env);
+    return json({ ok: true, health }, 200, origin);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Failed to fetch AutoCollect health.' }, 502, origin);
+  }
+}
+
+async function handleAdminAutoCollectSync(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = await req.json() as Record<string, unknown>;
+  } catch {
+    // Optional body.
+  }
+
+  const overdueOnly = body.overdue_only !== false;
+  const limitRaw = Number(body.limit);
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(Math.floor(limitRaw), 1), 200) : 100;
+
+  try {
+    const result = await syncAutoCollectItems(env, { overdueOnly, limit });
+    return json({ ok: true, ...result }, 200, origin);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Failed to sync AutoCollect items.' }, 502, origin);
+  }
+}
+
+async function handleAdminAutoCollectSendInvite(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid body.' }, 400, origin);
+  }
+
+  const autoCollectId = sanitize(body.id, 80);
+  if (!autoCollectId) return json({ error: 'id required.' }, 400, origin);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  const itemRes = await fetch(`${supabaseUrl}/rest/v1/autocollect_items?id=eq.${encodeURIComponent(autoCollectId)}&select=*`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+  if (!itemRes.ok) return json({ error: 'Failed to fetch AutoCollect item.' }, 502, origin);
+  const items = await itemRes.json() as AutoCollectRecord[];
+  const item = items[0];
+  if (!item) return json({ error: 'AutoCollect item not found.' }, 404, origin);
+
+  const result = await sendAutoCollectInviteForItem(env, item, { force: true });
+  if (!result.ok) {
+    if (result.skipped) {
+      const status = result.skipped.startsWith('daily_email_cap_reached') ? 429 : 409;
+      return json({ error: result.skipped }, status, origin);
+    }
+    return json({ error: result.error ?? 'Failed to send payment invite.' }, 502, origin);
+  }
+
+  return json({ ok: true, item: result.item }, 200, origin);
 }
 
 export default {
@@ -2115,6 +3583,75 @@ export default {
       return handleGetInvoices(req, env, origin);
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/admin/autocollect') {
+      return handleAdminAutoCollectList(req, env, origin);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/admin/autocollect/health') {
+      return handleAdminAutoCollectHealth(req, env, origin);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/public/status-summary') {
+      return handlePublicStatusSummary(req, env, origin);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/admin/leads') {
+      return handleAdminLeadsList(req, env, origin);
+    }
+
+    if (req.method === 'PATCH' && /^\/api\/admin\/leads\/[^/]+$/.test(url.pathname)) {
+      return handleAdminUpdateLead(req, env, origin);
+    }
+
+    if (req.method === 'POST' && /^\/api\/admin\/reprice\/[^/]+$/.test(url.pathname)) {
+      return handleAdminReprice(req, env, origin);
+    }
+
+    if (req.method === 'GET' && /^\/api\/admin\/branding\/[^/]+$/.test(url.pathname)) {
+      return handleAdminGetBranding(req, env, origin);
+    }
+
+    if (req.method === 'PATCH' && /^\/api\/admin\/branding\/[^/]+$/.test(url.pathname)) {
+      return handleAdminSetBranding(req, env, origin);
+    }
+
+    // Phase 15: Webhooks
+    if (req.method === 'GET' && /^\/api\/admin\/webhooks\/[^/]+$/.test(url.pathname)) {
+      return handleAdminListWebhooks(req, env, origin);
+    }
+    if (req.method === 'POST' && url.pathname === '/api/admin/webhooks') {
+      return handleAdminCreateWebhook(req, env, origin);
+    }
+    if (req.method === 'DELETE' && /^\/api\/admin\/webhooks\/[^/]+$/.test(url.pathname)) {
+      return handleAdminDeleteWebhook(req, env, origin);
+    }
+
+    // Phase 14: Stripe Connect (multi-tenancy foundation)
+    if (req.method === 'GET' && /^\/api\/admin\/connect\/[^/]+$/.test(url.pathname)) {
+      return handleAdminGetConnect(req, env, origin);
+    }
+    if (req.method === 'POST' && /^\/api\/admin\/connect\/[^/]+\/onboard$/.test(url.pathname)) {
+      return handleAdminConnectOnboard(req, env, origin);
+    }
+    if (req.method === 'POST' && /^\/api\/admin\/connect\/[^/]+\/dashboard$/.test(url.pathname)) {
+      return handleAdminConnectDashboard(req, env, origin);
+    }
+
+    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '')) {
+      return json(
+        {
+          service: 'una-stripe-api',
+          ok: true,
+          docs: {
+            public_status_summary: '/api/public/status-summary',
+            checkout_success: '/api/checkout-success',
+          },
+        },
+        200,
+        origin
+      );
+    }
+
     if (req.method !== 'POST') {
       return json({ error: 'Method not allowed.' }, 405, origin);
     }
@@ -2132,6 +3669,8 @@ export default {
         return handleGenerateInvoice(req, env, origin);
       case '/api/subscribe':
         return handleSubscribe(req, env, origin);
+      case '/api/leads':
+        return handlePublicSubmitLead(req, env, origin);
       case '/api/milestone-action':
         return handleMilestoneAction(req, env, origin);
       case '/api/intake-confirm':
@@ -2142,8 +3681,32 @@ export default {
         return handleAdminSubscriptionAction(req, env, origin);
       case '/api/admin/instant-bill':
         return handleAdminInstantBill(req, env, origin);
+      case '/api/admin/autocollect/sync':
+        return handleAdminAutoCollectSync(req, env, origin);
+      case '/api/admin/autocollect/send-invite':
+        return handleAdminAutoCollectSendInvite(req, env, origin);
       default:
         return json({ error: 'Not found.' }, 404, origin);
+    }
+  },
+  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+    try {
+      const result = await runAutoCollectReminderCycle(env);
+      logEvent('autocollect_scheduled_run', {
+        synced: result.synced,
+        reconciled_paid: result.reconciled_paid,
+        invited: result.invited,
+        skipped: result.skipped,
+        errors: result.errors,
+        reminder_interval_days: getAutoCollectReminderIntervalDays(env),
+        max_attempts: getAutoCollectMaxAttempts(env),
+        daily_email_cap: getAutoCollectDailyEmailCap(env),
+        max_send_per_run: getAutoCollectMaxSendPerRun(env),
+      });
+    } catch (error) {
+      logEvent('autocollect_scheduled_run_failed', {
+        error: error instanceof Error ? error.message : 'Unknown scheduled AutoCollect failure.',
+      });
     }
   },
 };

@@ -19,8 +19,10 @@ function ConfirmationContent() {
   const sessionId = params.get('session_id') ?? '';
   const activationParam = params.get('activation') ?? '';
   const planParam = params.get('plan') ?? '';
+  const emailParam = (params.get('email') ?? '').trim().toLowerCase();
   const [status, setStatus] = useState<ActivationStatus>('loading');
   const [planLabel, setPlanLabel] = useState('');
+  const [loginEmail, setLoginEmail] = useState(emailParam);
 
   useEffect(() => {
     if (!sessionId) {
@@ -37,6 +39,10 @@ function ConfirmationContent() {
       try {
         parsedIntake = JSON.parse(raw) as Record<string, unknown>;
         plan = typeof parsedIntake.plan === 'string' ? parsedIntake.plan : '';
+        const intakeEmail = typeof parsedIntake.email === 'string' ? parsedIntake.email.trim().toLowerCase() : '';
+        if (intakeEmail) {
+          setLoginEmail(intakeEmail);
+        }
       } catch {
         // Ignore invalid session storage payloads and continue with activation.
       }
@@ -51,7 +57,9 @@ function ConfirmationContent() {
       return;
     }
 
-    if (activationParam === 'error') {
+    // If checkout redirect flagged activation=error but we still have session_id,
+    // attempt activation again here because payment may have completed successfully.
+    if (activationParam === 'error' && !sessionId) {
       setStatus('error');
       return;
     }
@@ -62,10 +70,16 @@ function ConfirmationContent() {
       body: JSON.stringify({ session_id: sessionId, intake: parsedIntake }),
     })
       .then(async (response) => {
-        const payload = await response.json().catch(() => ({} as { activation?: { tier?: string }; already_activated?: boolean }));
+        const payload = await response.json().catch(() => ({} as { activation?: { tier?: string; email?: string }; already_activated?: boolean }));
         const resolvedTier = payload.activation?.tier;
         if (resolvedTier) {
           setPlanLabel(PLAN_LABELS[resolvedTier] ?? 'Professional');
+        }
+        const resolvedEmail = typeof payload.activation?.email === 'string'
+          ? payload.activation.email.trim().toLowerCase()
+          : '';
+        if (resolvedEmail) {
+          setLoginEmail(resolvedEmail);
         }
 
         if (response.ok) {
@@ -77,6 +91,8 @@ function ConfirmationContent() {
       })
       .catch(() => setStatus('error'));
   }, [activationParam, planParam, sessionId]);
+
+  const loginHref = `/login?redirect=/dashboard${loginEmail ? `&email=${encodeURIComponent(loginEmail)}` : ''}`;
 
   if (status === 'loading') {
     return (
@@ -146,7 +162,7 @@ function ConfirmationContent() {
         </div>
 
         <Link
-          href="/login?redirect=/dashboard"
+          href={loginHref}
           className="inline-block px-8 py-4 bg-brand-teal text-white font-semibold rounded-lg hover:bg-brand-teal/90 transition-colors"
         >
           Log in to dashboard

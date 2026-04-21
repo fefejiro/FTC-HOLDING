@@ -1,0 +1,9 @@
+import { defineConfig } from 'vitest';
+
+export default defineConfig({
+  test: {
+    include: ['tests/smoke/**/*.spec.ts', 'tests/integration/**/*.test.ts', 'tests/security/**/*.spec.ts', 'tests/performance/**/*.spec.ts', 'tests/uat/**/*.spec.ts', 'tests/e2e/**/*.spec.ts'],
+    reporters: 'default',
+    testTimeout: 10000,
+  },
+});

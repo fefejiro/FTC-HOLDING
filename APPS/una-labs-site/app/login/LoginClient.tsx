@@ -7,10 +7,22 @@ import { Button } from '@/components/ui/Button';
 
 type Mode = 'magic-link' | 'password';
 
+function normalizeRedirectPath(value: string | null): string {
+  if (!value) return '/dashboard';
+  if (!value.startsWith('/')) return '/dashboard';
+  if (value.startsWith('//')) return '/dashboard';
+  return value;
+}
+
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/dashboard';
+  const redirectTo = normalizeRedirectPath(searchParams.get('redirect'));
+  const loginEmailHint = normalizeEmail(searchParams.get('email') ?? '');
 
   const [mode, setMode] = useState<Mode>('magic-link');
   const [email, setEmail] = useState('');
@@ -45,6 +57,11 @@ export function LoginClient() {
     activeModeRef.current = mode;
   }, [mode]);
 
+  useEffect(() => {
+    if (!loginEmailHint) return;
+    setEmail((prev) => prev || loginEmailHint);
+  }, [loginEmailHint]);
+
   function switchMode(nextMode: Mode) {
     activeModeRef.current = nextMode;
     setMode(nextMode);
@@ -65,19 +82,20 @@ export function LoginClient() {
     setError('');
 
     try {
+      const normalizedEmail = normalizeEmail(email);
       if (mode === 'magic-link') {
         const { signInWithOtpEmail } = await import('@ftc/auth');
-        const fullRedirect = `${window.location.origin}${redirectTo}`;
-        const { error: authError } = await signInWithOtpEmail(email, fullRedirect);
+        const callbackRedirect = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}&email=${encodeURIComponent(normalizedEmail)}`;
+        const { error: authError } = await signInWithOtpEmail(normalizedEmail, callbackRedirect);
         if (authError) {
           throw authError;
         }
         if (activeModeRef.current === submitMode) {
-          setStatus(`Magic link sent to ${email}. Open it from the same browser session when possible.`);
+          setStatus(`Magic link sent to ${normalizedEmail}. Open it from the same browser session when possible.`);
         }
       } else {
         const { signInWithPassword } = await import('@ftc/auth');
-        const { error: authError } = await signInWithPassword(email, password);
+        const { error: authError } = await signInWithPassword(normalizedEmail, password);
         if (authError) {
           throw authError;
         }
@@ -87,7 +105,12 @@ export function LoginClient() {
       }
     } catch (err) {
       if (activeModeRef.current === submitMode) {
-        setError(err instanceof Error ? err.message : 'Unable to start sign-in.');
+        const rawMessage = err instanceof Error ? err.message : 'Unable to start sign-in.';
+        if (/email rate limit exceeded/i.test(rawMessage)) {
+          setError('Email rate limit reached. Wait a few minutes, then request one magic link only once.');
+        } else {
+          setError(rawMessage);
+        }
       }
     } finally {
       if (activeModeRef.current === submitMode) {

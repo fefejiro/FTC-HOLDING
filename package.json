@@ -31,6 +31,9 @@
     "doctor": "node -v && npm -v && (test -d APPS && echo APPS ok)",
     "postinstall": "node scripts/cf-pages-postinstall.mjs",
     "audit:secrets": "node scripts/audit-secrets.cjs",
+    "metrics:peacepad:weekly": "node scripts/update-peacepad-weekly-metrics.mjs",
+    "status:unalabs:sync": "node scripts/update-unalabs-status.mjs",
+    "howitworks:videos": "node scripts/set-howitworks-videos.mjs",
     "verify:peacepad:prod": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-prod.ps1",
     "verify:peacepad:local": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-local.ps1",
     "verify:peacepad:ownership": "npm --workspace=@ftc/peacepad run verify:deployment-ownership"

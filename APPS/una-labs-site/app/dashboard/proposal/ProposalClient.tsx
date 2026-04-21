@@ -89,9 +89,15 @@ function MilestoneItem({ milestone }: { milestone: MilestoneRecord }) {
   );
 }
 
+const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
+const STRIPE_API_URL = process.env.NEXT_PUBLIC_STRIPE_API_URL ?? 'https://una-stripe-api.fejiro-efiuvwere.workers.dev';
+
 export function ProposalClient({ initialProjectId }: { initialProjectId?: string }) {
   const [state, setState] = useState<ProposalState>({ phase: 'loading' });
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [repriceState, setRepriceState] = useState<'idle' | 'loading' | 'error'>('idle');
   const searchParams = useSearchParams();
   const id = initialProjectId || searchParams.get('id');
 
@@ -100,6 +106,45 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
     const origin = window.location.origin;
     return `${origin}/dashboard/proposal/?id=${encodeURIComponent(id)}`;
   }, [id]);
+
+  const handleReprice = async () => {
+    if (!id || !accessToken || state.phase !== 'ready') return;
+    setRepriceState('loading');
+    try {
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/reprice/${encodeURIComponent(id)}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) throw new Error('Reprice request failed');
+      const data = await res.json() as {
+        ok: boolean;
+        ai_price_min_cad: number;
+        ai_price_max_cad: number;
+        ai_price_rationale: string;
+        ai_price_confidence: string;
+        ai_price_generated_at: string;
+      };
+      setState((prev) =>
+        prev.phase === 'ready'
+          ? {
+              ...prev,
+              project: {
+                ...prev.project,
+                ai_price_min_cad: data.ai_price_min_cad,
+                ai_price_max_cad: data.ai_price_max_cad,
+                ai_price_rationale: data.ai_price_rationale,
+                ai_price_confidence: data.ai_price_confidence,
+                ai_price_generated_at: data.ai_price_generated_at,
+              },
+            }
+          : prev
+      );
+      setRepriceState('idle');
+    } catch {
+      setRepriceState('error');
+      window.setTimeout(() => setRepriceState('idle'), 3000);
+    }
+  };
 
   const handleCopyLink = async () => {
     if (!shareUrl || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
@@ -133,6 +178,11 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
         if (!session?.user) {
           setState({ phase: 'unauthenticated', redirectUrl: `/login?redirect=/dashboard/proposal?id=${id}` });
           return;
+        }
+
+        if (session.user.email === ADMIN_EMAIL) {
+          setIsAdmin(true);
+          setAccessToken(session.access_token ?? null);
         }
 
         const client = createBrowserClient();
@@ -235,6 +285,11 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
             <Button variant="primary" size="sm" onClick={() => window.print()}>
               Print / Save PDF
             </Button>
+            {isAdmin && (
+              <Button variant="secondary" size="sm" onClick={handleReprice} disabled={repriceState === 'loading'}>
+                {repriceState === 'loading' ? 'Repricing…' : repriceState === 'error' ? 'Reprice failed' : 'Recalculate price'}
+              </Button>
+            )}
           </div>
         </div>
 

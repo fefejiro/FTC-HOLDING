@@ -1,0 +1,6 @@
+test('Hello World UAT Test', async () => {
+    const response = await page.goto('http://localhost:3000');
+    expect(response.status()).toBe(200);
+    const content = await page.textContent('h1');
+    expect(content).toBe('Welcome to the Application');
+});

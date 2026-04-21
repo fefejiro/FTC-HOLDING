@@ -85,3 +85,30 @@ Do not combine these phases in one pass.
 - Strategy docs are low-risk and high-value.
 - Repo cleanup is medium-risk and should happen only with verification.
 - Domain or brand changes are highest-risk and should be handled separately from product release work.
+
+## Una Labs Rollout Ops Snapshot (Auto)
+
+<!-- AUTO:UNALABS_ROLLOUT:START -->
+- Updated at: 2026-04-21T02:56:54.089Z
+- Done count: 12
+- In progress count: 1
+- Blocked count: 0
+- Done:
+  - Phase 0–4: Auth, proposals, reporting, pipeline, billing
+  - Phase 5: Contracts/E-sign
+  - Phase 5b: Admin contracts table
+  - Phase 6: Invoicing — auto-generate on milestone approval
+  - Phase 7: Instant Bill — one-off Stripe PaymentLink
+  - Phase 8: AI Price Insights — recommended pricing bands in scoping output
+  - Phase 10: Deals / Leads — pre-intake prospect pipeline
+  - Phase 11: /how-it-works — narrated module demo page
+  - Phase 12: AutoPricing self-serve — re-trigger AI price from proposal view
+  - Phase 13: Custom Branding — per-project logo + accent on proposals/emails
+  - Phase 14: Multi-tenancy + Stripe Connect — sell platform to other agencies
+  - Phase 15: Zapier / Webhooks — outbound event hooks for Xero, Slack, QBO
+- In progress:
+  - Phase 9: AutoCollect — collection queue, reminders, payout-ready tracking
+- Blocked:
+  - None
+- Next: Execute full test plan end-to-end and finalize launch signoff package.
+<!-- AUTO:UNALABS_ROLLOUT:END -->

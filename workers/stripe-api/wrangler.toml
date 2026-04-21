@@ -7,6 +7,13 @@ workers_dev = true
 [vars]
 UNALABS_SITE_URL = "https://unalabs.cloud"
 UNALABS_PROJECT_PIPELINE_MODE = "worker_only"
+AUTOCOLLECT_REMINDER_INTERVAL_DAYS = "3"
+AUTOCOLLECT_MAX_ATTEMPTS = "3"
+AUTOCOLLECT_DAILY_EMAIL_CAP = "80"
+AUTOCOLLECT_MAX_SEND_PER_RUN = "25"
+
+[triggers]
+crons = ["0 13 * * *"]
 
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
 # SUPABASE_SERVICE_ROLE_KEY — set via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY

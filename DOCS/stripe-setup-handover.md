@@ -1,5 +1,5 @@
 # Una Labs — Stripe Payment Setup
-Last updated: 2026-04-18
+Last updated: 2026-04-20
 
 ## Status
 
@@ -13,6 +13,7 @@ Last updated: 2026-04-18
 | Live Stripe key set | ✓ rk_live_ key in worker |
 | Live products + prices | ✓ All 8 live prices set in worker |
 | **Live checkout verified** | ✓ cs_live_ session created 2026-04-18 |
+| **Connect sandbox verification** | ✓ Completed 2026-04-20 via Una Labs admin onboarding flow |
 | **RBC bank account** | ⏳ Manual step — see below |
 
 ---
@@ -115,3 +116,4 @@ cd "c:\FTC HOLDING\APPS\una-labs-site"
 npm run build
 npx wrangler pages deploy out --project-name=ftc-site-pages --branch=main
 ```
+

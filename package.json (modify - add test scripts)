@@ -1,0 +1,17 @@
+{
+  "name": "your-project-name",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "npm run test:smoke && npm run test:integration && npm run test:security && npm run test:performance && npm run test:uat && npm run test:e2e",
+    "test:smoke": "vitest run tests/smoke/smoke.spec.ts",
+    "test:integration": "vitest run tests/integration/api.integration.test.ts",
+    "test:security": "vitest run tests/security/headers.security.spec.ts",
+    "test:performance": "vitest run tests/performance/load.performance.spec.ts",
+    "test:uat": "vitest run tests/uat/user-journey.uat.spec.ts",
+    "test:e2e": "playwright test tests/e2e/hello-world.e2e.spec.ts"
+  },
+  "devDependencies": {
+    "vitest": "^latest",
+    "playwright": "^latest"
+  }
+}

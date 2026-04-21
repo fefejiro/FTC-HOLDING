@@ -1,0 +1,8 @@
+test('Hello World Performance Test', async () => {
+    const start = performance.now();
+    // Simulate load
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const end = performance.now();
+    const duration = end - start;
+    expect(duration).toBeLessThan(2000);
+});

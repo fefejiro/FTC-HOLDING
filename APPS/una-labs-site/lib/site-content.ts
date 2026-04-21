@@ -920,9 +920,9 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     eyebrow: 'Case study',
     headline: 'Dispatch is a live operational system, not a concept deck',
     subheadline:
-      'Dispatch is the clearest proof that Una Labs builds software tied to real-world flow: requests come in, operators act, status moves, and customers get signal they can use.',
+      'Dispatch is the clearest proof that Una Labs builds software tied to real-world flow: requests come in, operators act, status moves, and customers get signal they can use. Built through the same intake-to-delivery process you can start today.',
     primaryAction: { label: 'Visit Dispatch', href: 'https://dispatch.unalabs.cloud', external: true },
-    secondaryAction: { label: 'Start a similar build', href: '/start' },
+    secondaryAction: { label: 'Start a similar build', href: '/start?source=case_study_dispatch&product=dispatch' },
     liveUrl: 'https://dispatch.unalabs.cloud',
     heroStats: [
       { value: 'Live', label: 'Ottawa deployment', detail: 'The system is running in the real world, not a design mockup.' },
@@ -995,9 +995,9 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     eyebrow: 'Case study',
     headline: 'PeacePad shows how Una Labs handles trust-sensitive product design',
     subheadline:
-      'PeacePad is not a toy AI feature. It is a product that depends on calmer UX, careful flow design, and real operational follow-through across web, mobile, and browser contexts.',
+      'PeacePad is not a toy AI feature. It is a product that depends on calmer UX, careful flow design, and real operational follow-through across web, mobile, and browser contexts. Every surface — web, Android, and browser extension — scoped and shipped through the Una Labs delivery model.',
     primaryAction: { label: 'Visit PeacePad', href: 'https://peacepad.ca', external: true },
-    secondaryAction: { label: 'Commission a similar build', href: '/start' },
+    secondaryAction: { label: 'Commission a similar build', href: '/start?source=case_study_peacepad&product=peacepad' },
     liveUrl: 'https://peacepad.ca',
     heroStats: [
       { value: 'Web + mobile', label: 'Multi-surface product', detail: 'The experience has to survive beyond a single marketing page.' },
@@ -1070,9 +1070,9 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     eyebrow: 'Case study',
     headline: 'Saywetin is real AI product work shipped into the world',
     subheadline:
-      'Saywetin shows a different side of the Una Labs capability set: language intelligence, product craft, and a real consumer-facing surface with actual complexity behind it.',
+      'Saywetin shows a different side of the Una Labs capability set: language intelligence, product craft, and a real consumer-facing surface with actual complexity behind it. From language recognition to live consumer app — scoped, built, and deployed through the same process available to you today.',
     primaryAction: { label: 'Visit Saywetin', href: 'https://saywetin.app', external: true },
-    secondaryAction: { label: 'Start a similar build', href: '/start' },
+    secondaryAction: { label: 'Start a similar build', href: '/start?source=case_study_saywetin&product=saywetin' },
     liveUrl: 'https://saywetin.app',
     heroStats: [
       { value: 'AI', label: 'Product depth', detail: 'This is not a brochure site hiding behind an AI headline.' },

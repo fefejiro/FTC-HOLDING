@@ -211,7 +211,7 @@ export function RealtorIntakeForm() {
                     type="button"
                     onClick={() => setForm(f => ({ ...f, plan: plan.id }))}
                     className={[
-                      'relative text-left p-5 rounded-xl border-2 transition-all',
+                      'relative text-left p-5 rounded-xl border-2 transition-all h-full flex flex-col',
                       selected ? 'border-brand-teal bg-brand-teal/5 shadow-teal shadow-md' : 'border-border bg-white hover:border-brand-teal/50',
                     ].join(' ')}
                   >
@@ -221,8 +221,8 @@ export function RealtorIntakeForm() {
                       </span>
                     )}
                     <p className="text-body font-bold text-tx-heading mb-0.5">{plan.label}</p>
-                    <p className="text-body-sm text-tx-muted mb-3">{plan.desc}</p>
-                    <div className="flex items-baseline gap-0.5 mb-1">
+                    <p className="text-body-sm text-tx-muted mb-3 min-h-[40px]">{plan.desc}</p>
+                    <div className="mt-auto flex items-baseline gap-0.5 mb-1">
                       <span className="text-[10px] font-bold text-tx-muted uppercase tracking-wide">CA</span>
                       <span className="text-2xl font-bold text-tx-heading">${p}</span>
                       <span className="text-body-sm text-tx-muted">/mo</span>

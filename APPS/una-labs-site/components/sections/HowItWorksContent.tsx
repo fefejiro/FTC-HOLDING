@@ -150,8 +150,61 @@ const FEATURES = [
   },
 ];
 
-const FAQ = [
-  {
+type ModuleDemoItem = {
+  label: string;
+  icon: string;
+  bg: string;
+  duration: string;
+  live: boolean;
+  description: string;
+  href: string;
+  arcadeUrl?: string;
+};
+
+// Paste Arcade share or embed links here. Share links are auto-normalized to /embed.
+const ARCADE_DEMO_URLS: Partial<Record<string, string>> = {
+  'Forms & Intake': '',
+  'Proposals': '',
+  'Billing & Payments': '',
+};
+
+function toArcadeEmbedUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  const trimmed = url.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.includes('/share/') && !trimmed.includes('/embed')) {
+    try {
+      const parsed = new URL(trimmed);
+      parsed.pathname = parsed.pathname.replace(/\/$/, '') + '/embed';
+      return parsed.toString();
+    } catch {
+      return trimmed.replace(/\/$/, '') + '/embed';
+    }
+  }
+  return trimmed;
+}
+
+const MODULE_DEMOS_BASE: ModuleDemoItem[] = [
+  { label: 'Forms & Intake', icon: '📋', bg: 'bg-blue-50', duration: '2 min', live: true, description: 'Submit your project request. We structure it into a scoped brief in under 48 hours.', href: '/start' },
+  { label: 'Proposals', icon: '📄', bg: 'bg-orange-50', duration: '3 min', live: true, description: 'Start a request to receive a fixed-fee CAD proposal. One clear offer per engagement.', href: '/start' },
+  { label: 'Billing & Payments', icon: '💳', bg: 'bg-green-50', duration: '3 min', live: true, description: 'Stripe-powered checkout. 50% deposit on project acceptance, balance on delivery.', href: '/start' },
+  { label: 'Contracts & E-sign', icon: '✍️', bg: 'bg-purple-50', duration: '2 min', live: false, description: 'Engagement letter generated per project. Client e-signature workflow coming soon.', href: '/contact' },
+  { label: 'Instant Bill', icon: '⚡', bg: 'bg-yellow-50', duration: '2 min', live: false, description: 'One-off payment links for ad hoc or out-of-scope work. Coming soon.', href: '/contact' },
+  { label: 'AutoCollect', icon: '🔄', bg: 'bg-teal-50', duration: '3 min', live: false, description: 'Automated invoice reminders and payment collection. Zero manual follow-up. Coming soon.', href: '/contact' },
+  { label: 'AI Price Insights', icon: '🤖', bg: 'bg-indigo-50', duration: '3 min', live: false, description: 'AI-recommended price bands with rationale and confidence score per project. Coming soon.', href: '/contact' },
+  { label: 'Insights & Reporting', icon: '📊', bg: 'bg-rose-50', duration: '3 min', live: false, description: 'MRR, pipeline, contracts, and collection health in one real-time board. Coming soon.', href: '/contact' },
+  { label: 'Deals Pipeline', icon: '🎯', bg: 'bg-amber-50', duration: '2 min', live: false, description: 'Track prospects from lead to signed engagement. Contact form leads flow in automatically. Coming soon.', href: '/contact' },
+  { label: 'AutoPricing', icon: '🏷️', bg: 'bg-cyan-50', duration: '2 min', live: false, description: 'Re-trigger AI pricing from the proposal view. Update rates without re-intake. Coming soon.', href: '/contact' },
+  { label: 'Custom Branding', icon: '🎨', bg: 'bg-fuchsia-50', duration: '2 min', live: false, description: 'Your logo and colors on every proposal, contract, and email your clients receive. Coming soon.', href: '/contact' },
+  { label: 'Integrations', icon: '🔌', bg: 'bg-gray-50', duration: '3 min', live: false, description: 'Connect Xero, QuickBooks, Slack, and Zapier to your Una Labs workspace. Coming soon.', href: '/contact' },
+];
+
+const MODULE_DEMOS: ModuleDemoItem[] = MODULE_DEMOS_BASE.map((mod) => ({
+  ...mod,
+  arcadeUrl: toArcadeEmbedUrl(ARCADE_DEMO_URLS[mod.label]),
+}));
+
+const FAQ = [  {
     q: 'Do I need to know exactly what I want before submitting?',
     a: "No - that's the whole point. Describe the problem or goal in plain language. We turn it into a structured scope. The rougher your input, the more value the process adds.",
   },
@@ -177,11 +230,63 @@ const FAQ = [
   },
 ];
 
+function ModuleCard({ mod }: { mod: ModuleDemoItem }) {
+  const statusLabel = mod.arcadeUrl ? 'Video live' : mod.live ? 'Product live' : 'Coming soon';
+  const statusClasses = mod.arcadeUrl
+    ? 'bg-teal-100 text-teal-700'
+    : mod.live
+      ? 'bg-green-100 text-green-700'
+      : 'bg-amber-100 text-amber-700';
+
+  if (mod.arcadeUrl) {
+    return (
+      <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="relative w-full aspect-video">
+          <iframe
+            src={mod.arcadeUrl}
+            title={mod.label}
+            loading="lazy"
+            allowFullScreen
+            allow="clipboard-write"
+            className="absolute inset-0 w-full h-full border-0"
+          />
+        </div>
+        <div className="p-5 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-body font-semibold text-tx-heading">{mod.label}</p>
+            <p className="mt-1 text-body-sm text-tx-secondary leading-snug">{mod.description}</p>
+          </div>
+          <Link
+            href={mod.href}
+            className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-brand-teal hover:underline whitespace-nowrap mt-0.5"
+          >
+            Try live →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <Link href={mod.href} className="group bg-white rounded-2xl border border-border shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      <div className={`h-36 flex items-center justify-center ${mod.bg} relative`}>
+        <span className="text-4xl">{mod.icon}</span>
+        <span className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wider text-tx-muted bg-white/80 rounded-full px-2 py-0.5">{mod.duration}</span>
+        <span className={`absolute bottom-3 left-3 text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 ${statusClasses}`}>{statusLabel}</span>
+      </div>
+      <div className="p-5">
+        <p className="text-body font-semibold text-tx-heading group-hover:text-brand-teal transition-colors">{mod.label}</p>
+        <p className="mt-1 text-body-sm text-tx-secondary leading-snug">{mod.description}</p>
+      </div>
+    </Link>
+  );
+}
+
 export function HowItWorksContent() {
   const [activeTab, setActiveTab] = useState('All');
   const [activeStep, setActiveStep] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const proofStudies = Object.values(caseStudies);
+  const videoCount = MODULE_DEMOS.filter((mod) => Boolean(mod.arcadeUrl)).length;
 
   const ActiveMockup = STEPS[activeStep].Mockup;
 
@@ -431,6 +536,30 @@ export function HowItWorksContent() {
             </Button>
             <p className="mt-3 text-caption text-tx-muted">No account needed. No credit card. Response within 48h.</p>
           </div>
+        </div>
+      </section>
+
+      {/* Module Demo Grid — Ignition-style per-feature showcase */}
+      <section className="bg-bg-subtle border-t border-border py-20">
+        <div className="max-w-content mx-auto px-6">
+          <div className="text-center mb-12">
+            <Badge variant="teal">Platform modules</Badge>
+            <h2 className="mt-4 text-h2 text-tx-heading">See every feature in action</h2>
+            <p className="mt-3 text-body-lg text-tx-secondary max-w-xl mx-auto">
+              {videoCount > 0
+                ? `${videoCount} interactive walkthrough${videoCount > 1 ? 's' : ''} live now. Everything from lead capture to automated payment collection.`
+                : 'Eight live modules. One platform. Everything from lead capture to automated payment collection.'}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {MODULE_DEMOS.map((mod) => (
+              <ModuleCard key={mod.label} mod={mod} />
+            ))}
+          </div>
+          <p className="mt-8 text-center text-body-sm text-tx-muted">
+            Interactive walkthroughs dropping soon.{' '}
+            <Link href="/start" className="text-brand-teal hover:underline">Start with a free request</Link> to see it live.
+          </p>
         </div>
       </section>
 

@@ -28,6 +28,11 @@ Honest time estimates only. No rounding down.
 | 2026-04-20 | Una Labs | Verified live routes and checkout redirect flow | 10 min | start, summary, confirmation return 200; checkout-success redirect validated | None |
 | 2026-04-20 | Una Labs | Phase 6 — milestone invoicing: DB migration, worker endpoints, invoice page, portal/dashboard/admin links | ~2h | All deployed, migration live, build clean | None |
 | 2026-04-20 | Una Labs | Phase 7 — instant bill: Payment Link endpoint, admin create-link UI, instant_bills schema | ~1.5h | Worker + site deployed, migration live, build clean | None |
+| 2026-04-20 | Una Labs | Phase 9 — AutoCollect (migration, worker endpoints, admin queue UI/actions) | ~1.5h | Initial vertical slice implemented, site build/typecheck clean | None |
+| 2026-04-20 | Una Labs | Phase 9 — AutoCollect automation (daily worker cron, reminder cadence, max-attempt safeguards) | ~1h | Scheduled reminder loop implemented, worker typecheck clean, admin UI updated with automation policy | Live scheduled run still needs production verification |
+| 2026-04-20 | PeacePad | Weekly metrics sync (2026-04-13 to 2026-04-20) | 10 min | Metrics docs updated via automation script | Source data from weekly report email |
+| 2026-04-20 | Una Labs | Status sync + closeout refresh (FTC_MASTER + UNALABS_STATUS) | 10 min | Smoke refreshed (15/15), sprint tracker aligned for closeout | None |
+| 2026-04-20 | Una Labs | Stripe Connect sandbox verification complete | 15 min | Connect onboarding verified in sandbox via admin flow; Phase 14 marked verified done | None |
 | [next entry] | | | | | |
 
 ---
@@ -52,3 +57,4 @@ Honest time estimates only. No rounding down.
 **Next week sprint target:**
 - Project: ___________
 - Goal: ___________
+

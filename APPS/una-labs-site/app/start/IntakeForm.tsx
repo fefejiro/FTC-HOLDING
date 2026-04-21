@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 
@@ -25,8 +25,28 @@ const PLANS = [
 
 const TEAM_SIZES = ['Just me', '2–5', '6–15', '16–50', '50+'];
 
+function normalizeTrackingValue(raw: string | null): string {
+  if (!raw) return '';
+  return raw.trim().replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 80);
+}
+
+function prettyProductName(product: string): string {
+  switch (product) {
+    case 'dispatch':
+      return 'Dispatch';
+    case 'peacepad':
+      return 'PeacePad';
+    case 'saywetin':
+      return 'Saywetin';
+    default:
+      return product;
+  }
+}
+
 export function IntakeForm() {
   const router = useRouter();
+  const [source, setSource] = useState('');
+  const [product, setProduct] = useState('');
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormData>({
     name: '', email: '', company: '', role: '',
@@ -46,7 +66,12 @@ export function IntakeForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const intakeId = `intake_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    sessionStorage.setItem('una_intake', JSON.stringify({ ...form, intakeId }));
+    const tracking = {
+      source: source || 'start_page',
+      ...(product ? { product } : {}),
+      ...(source ? { campaign: source } : {}),
+    };
+    sessionStorage.setItem('una_intake', JSON.stringify({ ...form, intakeId, ...tracking }));
     router.push('/start/summary');
   };
 
@@ -54,6 +79,12 @@ export function IntakeForm() {
   const price = form.billing === 'annual'
     ? selectedPlan.price.annual
     : selectedPlan.price.monthly;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setSource(normalizeTrackingValue(params.get('source')));
+    setProduct(normalizeTrackingValue(params.get('product')));
+  }, []);
 
   return (
     <div className="min-h-screen bg-bg-offwhite">
@@ -87,6 +118,13 @@ export function IntakeForm() {
       </div>
 
       <div className="max-w-tight mx-auto px-6 py-10">
+        {source && product && (
+          <div className="mb-5 rounded-xl border border-brand-teal/30 bg-brand-teal/10 px-4 py-3">
+            <p className="text-body-sm text-tx-heading">
+              Starting from <span className="font-semibold">{prettyProductName(product)}</span> case study.
+            </p>
+          </div>
+        )}
         {step === 1 ? (
           <form onSubmit={handleStep1} className="bg-white rounded-2xl border border-border p-8 flex flex-col gap-5 shadow-sm">
             <h2 className="text-h3 text-tx-heading">Tell us about yourself</h2>
@@ -165,7 +203,7 @@ export function IntakeForm() {
                     type="button"
                     onClick={() => setForm(f => ({ ...f, plan: plan.id }))}
                     className={[
-                      'relative text-left p-5 rounded-xl border-2 transition-all',
+                      'relative text-left p-5 rounded-xl border-2 transition-all h-full flex flex-col',
                       selected ? 'border-brand-teal bg-brand-teal/5 shadow-teal shadow-md' : 'border-border bg-white hover:border-brand-teal/50',
                     ].join(' ')}
                   >
@@ -175,8 +213,8 @@ export function IntakeForm() {
                       </span>
                     )}
                     <p className="text-body font-bold text-tx-heading mb-0.5">{plan.label}</p>
-                    <p className="text-body-sm text-tx-muted mb-3">{plan.desc}</p>
-                    <div className="flex items-baseline gap-0.5 mb-1">
+                    <p className="text-body-sm text-tx-muted mb-3 min-h-[40px]">{plan.desc}</p>
+                    <div className="mt-auto flex items-baseline gap-0.5 mb-1">
                       <span className="text-[10px] font-bold text-tx-muted uppercase tracking-wide">CA</span>
                       <span className="text-2xl font-bold text-tx-heading">${p}</span>
                       <span className="text-body-sm text-tx-muted">/mo</span>

@@ -1,5 +1,5 @@
 # FTC Master Orchestration
-Last updated: 2026-04-20
+Last updated: 2026-04-21
 
 Single source of truth for cross-project status, priority, burn, and next actions.
 Paste the relevant section into any AI tool to seed context instantly.
@@ -76,22 +76,30 @@ Priority is revenue-first. Do not move to a lower-priority project until the hig
 
 ## Active Sprint (Week of 2026-04-20)
 
-**Project:** Una Labs site (unalabs.cloud)
-**Goal:** Close production gaps and stabilize intake-to-delivery flow
-**Success:** Una Labs build passes, webhook path decision finalized, dashboard and portal routes validated
+**Project:** Una Labs — Ignition parity build-out
+**Goal:** Close the 5 remaining Ignition module gaps to reach full feature parity, then enable multi-tenancy for platform sale
+**Success:** Deals/leads live, /how-it-works page deployed, custom branding scaffolded, AutoPricing self-serve wired
 **Do not work on:** New feature expansion in other products
 
-## Una Labs Sprint — Score: 9/13
+## Una Labs Sprint — Ignition Parity Tracker (8/13 live → target 13/13)
 
-| Phase | What | Status |
-|-------|------|--------|
-| Phase 0–4 | Auth, proposals, reporting, pipeline, billing | ✅ Done |
-| Phase 5 | Contracts/E-sign | ✅ Done (e967a47) |
-| Phase 5b | Admin contracts table | ✅ Done (e59ede8) |
-| Phase 6 | Invoicing — auto-generate on milestone approval | ✅ Done |
-| Phase 7 | Instant Bill — one-off Stripe PaymentLink | ✅ Done |
+| Phase | What | Ignition Module | Status |
+|-------|------|-----------------|--------|
+| Phase 0–4 | Auth, proposals, reporting, pipeline, billing | Proposals, Billing, Reporting | ✅ Done |
+| Phase 5 | Contracts/E-sign | Contracts | ✅ Done (e967a47) |
+| Phase 5b | Admin contracts table | Contracts (admin) | ✅ Done (e59ede8) |
+| Phase 6 | Invoicing — auto-generate on milestone approval | Billing & payments | ✅ Done |
+| Phase 7 | Instant Bill — one-off Stripe PaymentLink | Instant Bill | ✅ Done |
+| Phase 8 | AI Price Insights — recommended pricing bands in scoping output | Price Insights | ✅ Done |
+| Phase 9 | AutoCollect — collection queue, reminders, payout-ready tracking | AutoCollect | ✅ Build done — cron live daily at 1 PM UTC; first live run → test plan |
+| Phase 10 | Deals / Leads — pre-intake prospect pipeline | Deals | ✅ Done |
+| Phase 11 | /how-it-works — narrated module demo page | (Marketing) | ✅ Done (456d4c70) |
+| Phase 12 | AutoPricing self-serve — re-trigger AI price from proposal view | AutoPricing | ✅ Done (5963be0a) |
+| Phase 13 | Custom Branding — per-project logo + accent on proposals/emails | Custom Branding | ✅ Done (3a78a272) |
+| Phase 14 | Multi-tenancy + Stripe Connect — sell platform to other agencies | (Platform) | ✅ Verified done — sandbox onboarding completed and status verified via admin Connect flow |
+| Phase 15 | Zapier / Webhooks — outbound event hooks for Xero, Slack, QBO | Integrations | ✅ Done (ab8c4026) |
 
-Next: AI Price Insights (extend worker scoping output with recommended pricing band)
+Next: Execute full test plan end-to-end and finalize launch signoff package.
 
 ---
 
@@ -111,6 +119,9 @@ npm --prefix APPS/saywetin run verify:frontend-build
 # Secrets audit (run weekly)
 npm run audit:secrets
 
+# PeacePad weekly metrics doc sync (example)
+npm run metrics:peacepad:weekly -- --weekStart 2026-04-13 --weekEnd 2026-04-20 --totalUsers 229 --newUsers 22 --activeUsers 24 --partnerships 108 --messagesSent 192 --feedbackSubmitted 0 --p1Errors 0 --p2Errors 1 --source "PeacePad Weekly Report email"
+
 # Git status
 git -C "C:\FTC HOLDING" status -sb
 ```
@@ -124,6 +135,8 @@ git -C "C:\FTC HOLDING" status -sb
 | Repo structure + ownership | DOCS/REPO_OWNERSHIP_AND_TRACKING.md |
 | Deploy commands | DOCS/DEPLOY_COMMANDS.md |
 | Runbook (all apps) | DOCS/RUNBOOK.md |
+| PeacePad weekly metrics | DOCS/PEACEPAD_WEEKLY_METRICS.md |
+| Una Labs live status snapshot | DOCS/UNALABS_STATUS.md |
 | Domain map | DOCS/DOMAIN_AND_OWNERSHIP_MAP.md |
 | Dispatch context | APPS/dispatch/DOCS/CONTEXT.md |
 | Dispatch decisions | APPS/dispatch/DOCS/DECISIONS.md |
@@ -137,3 +150,28 @@ git -C "C:\FTC HOLDING" status -sb
 ## Copilot Onboarding Prompt (Paste at start of every new session)
 
 > I am Manchi, solo founder of Fejiro Technology Consultancy Inc. (FTC Holding / Una Labs). Stack: React, React Native, Node.js, Next.js, Supabase, Cloudflare, Railway. Projects: Dispatch (live, paying clients), PeacePad (live), OG Trades Academy (pre-launch), ATEAM (internal), SayWetin (live), GuardSignal (pre-build). Principles: optimize existing systems first, minimize burn, defer paid services until revenue-positive, 70% planning 30% building. IDE: VS Code on Windows. No contractions, no em dashes, direct tone. Lean, revenue-first solutions always. Active sprint: Dispatch reliability hardening.
+
+---
+
+## PeacePad Weekly Metrics (Auto)
+
+<!-- AUTO:PEACEPAD_MASTER:START -->
+- Reporting week: 2026-04-13 to 2026-04-20
+- Users: 229 total, 22 new, 24 active
+- Engagement: 192 messages, 0 feedback items
+- System health: P1=0, P2=1
+- Partnerships: 108
+- Source: PeacePad Weekly Report email
+- Canonical log: DOCS/PEACEPAD_WEEKLY_METRICS.md
+<!-- AUTO:PEACEPAD_MASTER:END -->
+
+
+## Una Labs Ops Snapshot (Auto)
+
+<!-- AUTO:UNALABS_MASTER:START -->
+- Updated at: 2026-04-21T02:56:54.089Z
+- Smoke checks: 15/15 passing
+- Admin verification: unauthenticated admin guard smoke only
+- Canonical status doc: DOCS/UNALABS_STATUS.md
+<!-- AUTO:UNALABS_MASTER:END -->
+

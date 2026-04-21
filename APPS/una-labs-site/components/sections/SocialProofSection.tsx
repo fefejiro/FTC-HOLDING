@@ -19,6 +19,23 @@ export function SocialProofSection() {
             This is not placeholder credibility. The public brand is supported by real products,
             live payments, and an actual request-to-activation flow.
           </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            {studies.map((study) => (
+              <a
+                key={study.slug}
+                href={study.liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-full text-body-sm font-semibold text-tx-secondary hover:text-brand-teal hover:border-brand-teal transition-colors"
+              >
+                <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
+                {study.title}
+              </a>
+            ))}
+          </div>
+          <p className="mt-3 text-caption text-tx-muted">
+            We ship our own products through the same process. Yours is next.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 mb-12">

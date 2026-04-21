@@ -19,6 +19,12 @@ type Project = {
   ai_price_rationale?: string | null;
   ai_price_confidence?: string | null;
   ai_price_generated_at?: string | null;
+  connect_account_id?: string | null;
+  connect_onboarding_complete?: boolean | null;
+  connect_details_submitted?: boolean | null;
+  connect_charges_enabled?: boolean | null;
+  connect_payouts_enabled?: boolean | null;
+  connect_last_synced_at?: string | null;
   created_at?: string;
 };
 
@@ -36,6 +42,18 @@ type Milestone = {
 type Subscriber = {
   id: string;
   email: string;
+  created_at: string;
+};
+
+type Lead = {
+  id: string;
+  name: string;
+  email: string;
+  company?: string | null;
+  message?: string | null;
+  source: string;
+  status: string;
+  notes?: string | null;
   created_at: string;
 };
 
@@ -78,6 +96,36 @@ type InstantBill = {
   created_at?: string;
 };
 
+type AutoCollectItem = {
+  id: string;
+  invoice_id: string;
+  project_id: string;
+  client_email: string;
+  invoice_number: string;
+  amount_cad?: number;
+  due_date?: string;
+  status?: string;
+  attempts?: number;
+  last_invited_at?: string | null;
+  created_at?: string;
+};
+
+type AutoCollectHealth = {
+  generated_at: string;
+  queue_total: number;
+  queue_pending: number;
+  queue_invite_sent: number;
+  queue_paid: number;
+  escalations: number;
+  sent_today: number;
+  daily_cap: number;
+  remaining_daily_budget: number;
+  max_send_per_run: number;
+  reminder_interval_days: number;
+  max_attempts: number;
+  latest_invited_at: string | null;
+};
+
 type BillingInfo = {
   subscription_id: string | null;
   status: string;
@@ -89,9 +137,9 @@ type BillingInfo = {
 
 type State =
   | { phase: 'loading' }
-  | { phase: 'denied' }
+  | { phase: 'denied'; reason: 'unauthenticated' | 'unauthorized' }
   | { phase: 'error'; message: string }
-  | { phase: 'ready'; projects: Project[]; milestones: Milestone[]; subscribers: Subscriber[]; contracts: Contract[]; invoices: Invoice[]; instantBills: InstantBill[] };
+  | { phase: 'ready'; projects: Project[]; milestones: Milestone[]; subscribers: Subscriber[]; contracts: Contract[]; invoices: Invoice[]; instantBills: InstantBill[]; leads: Lead[] };
 
 const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
 
@@ -166,105 +214,191 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
   );
 }
 
+const DASHBOARD_REFRESH_INTERVAL_MS = 60_000;
+
+const OPS_QUICK_LINKS = [
+  { label: 'Realtor entry point', href: '/realtor', description: 'Open the vertical intake flow now live on the site.' },
+  { label: 'Client portal', href: '/portal', description: 'View the client-facing progress surface.' },
+  { label: 'Proposal view', href: '/dashboard/proposal', description: 'Open the shareable scope and pricing surface.' },
+  { label: 'Reporting view', href: '/dashboard/report', description: 'Open the client-ready reporting surface.' },
+];
+
 export function AdminClient() {
   const [state, setState] = useState<State>({ phase: 'loading' });
   const [view, setView] = useState<'pipeline' | 'table'>('pipeline');
   const [billing, setBilling] = useState<Record<string, BillingInfo>>({});
   const [billingLoading, setBillingLoading] = useState(false);
+  const [autoCollectItems, setAutoCollectItems] = useState<AutoCollectItem[]>([]);
+  const [autoCollectHealth, setAutoCollectHealth] = useState<AutoCollectHealth | null>(null);
+  const [autoCollectLoading, setAutoCollectLoading] = useState(false);
+  const [autoCollectSyncing, setAutoCollectSyncing] = useState(false);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [storedToken, setStoredToken] = useState<string | null>(null);
+  const [brandingProjectId, setBrandingProjectId] = useState('');
+  const [brandingForm, setBrandingForm] = useState({ companyName: '', primaryColor: '#4DB8A8', logoUrl: '', tagline: '', replyEmail: '' });
+  const [brandingSaving, setBrandingSaving] = useState(false);
+  const [brandingSaveMsg, setBrandingSaveMsg] = useState<string | null>(null);
+
+  // Phase 15: Webhooks
+  type WebhookEndpoint = { id: string; url: string; events: string[]; created_at: string };
+  const WEBHOOK_EVENT_OPTIONS = ['project.created', 'proposal.sent', 'payment.received', 'milestone.approved'] as const;
+  const [webhookProjectId, setWebhookProjectId] = useState('');
+  const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookEvents, setWebhookEvents] = useState<string[]>([]);
+  const [webhookAdding, setWebhookAdding] = useState(false);
+  const [webhookMsg, setWebhookMsg] = useState<string | null>(null);
+  const [newWebhookSecret, setNewWebhookSecret] = useState<string | null>(null);
+
+  // Phase 14: Stripe Connect
+  type ConnectStatus = {
+    connected: boolean;
+    project: Project;
+  };
+  const [connectProjectId, setConnectProjectId] = useState('');
+  const [connectStatus, setConnectStatus] = useState<ConnectStatus | null>(null);
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [connectMsg, setConnectMsg] = useState<string | null>(null);
+
   const [instantBillProjectId, setInstantBillProjectId] = useState('');
   const [instantBillAmount, setInstantBillAmount] = useState('');
   const [instantBillDescription, setInstantBillDescription] = useState('');
   const [instantBillCreating, setInstantBillCreating] = useState(false);
   const [instantBillLink, setInstantBillLink] = useState<string | null>(null);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function refreshAutoCollect(accessToken?: string, options?: { silent?: boolean }) {
+    if (!options?.silent) setAutoCollectLoading(true);
+    try {
+      const headers = {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      };
+      const [queueRes, healthRes] = await Promise.all([
+        fetch(`${STRIPE_API_URL}/api/admin/autocollect?limit=100`, { method: 'GET', headers }),
+        fetch(`${STRIPE_API_URL}/api/admin/autocollect/health`, { method: 'GET', headers }),
+      ]);
+
+      const queuePayload = await queueRes.json() as { items?: AutoCollectItem[]; error?: string };
+      if (queueRes.ok) {
+        setAutoCollectItems(queuePayload.items ?? []);
+      }
+
+      const healthPayload = await healthRes.json() as { health?: AutoCollectHealth; error?: string };
+      if (healthRes.ok) {
+        setAutoCollectHealth(healthPayload.health ?? null);
+      }
+    } catch {
+      // Non-fatal for admin page.
+    }
+    if (!options?.silent) setAutoCollectLoading(false);
+  }
+
+  async function loadDashboardData(options?: { silent?: boolean }) {
+    const silent = options?.silent === true;
+    if (!silent) setRefreshing(true);
+
+    try {
+      const [{ getSession }, { createBrowserClient }] = await Promise.all([
+        import('@ftc/auth'),
+        import('@ftc/supabase'),
+      ]);
+      const session = await getSession();
+      if (!session?.user) {
+        setState({ phase: 'denied', reason: 'unauthenticated' });
+        return;
+      }
+      if (session.user.email !== ADMIN_EMAIL) {
+        setState({ phase: 'denied', reason: 'unauthorized' });
+        return;
+      }
+
+      const client = createBrowserClient();
+      const accessToken = session.access_token ?? '';
+      setStoredToken(accessToken);
+      const [
+        { data: projects, error: projectError },
+        { data: milestones, error: milestoneError },
+        { data: subscribers, error: subscriberError },
+        { data: contracts, error: contractError },
+        { data: invoices, error: invoiceError },
+        { data: instantBills, error: instantBillsError },
+        leadsRes,
+      ] = await Promise.all([
+        client.from('projects').select('*').order('created_at', { ascending: false }),
+        client.from('milestones').select('*').order('due_date', { ascending: true }),
+        client.from('subscribers').select('*').order('created_at', { ascending: false }),
+        client.from('contracts').select('id,project_id,title,status,sent_at,signer_name,signer_email,signed_at,created_at').order('created_at', { ascending: false }),
+        client.from('invoices').select('*').order('created_at', { ascending: false }),
+        client.from('instant_bills').select('*').order('created_at', { ascending: false }),
+        fetch(`${STRIPE_API_URL}/api/admin/leads?limit=100`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+      ]);
+
+      if (projectError) throw projectError;
+      if (milestoneError) throw milestoneError;
+      if (subscriberError) throw subscriberError;
+      if (contractError) throw contractError;
+      if (invoiceError) throw invoiceError;
+      if (instantBillsError) throw instantBillsError;
+
+      const leadsPayload = leadsRes.ok ? await leadsRes.json() as { leads?: Lead[] } : { leads: [] };
+      setLeads(leadsPayload.leads ?? []);
+
+      setState({
+        phase: 'ready',
+        projects: (projects as Project[] | null) ?? [],
+        milestones: (milestones as Milestone[] | null) ?? [],
+        subscribers: (subscribers as Subscriber[] | null) ?? [],
+        contracts: (contracts as Contract[] | null) ?? [],
+        invoices: (invoices as Invoice[] | null) ?? [],
+        instantBills: (instantBills as InstantBill[] | null) ?? [],
+        leads: leadsPayload.leads ?? [],
+      });
+
+      const projectList = (projects as Project[] | null) ?? [];
+      const sessionIds = projectList
+        .map((p) => p.stripe_session_id)
+        .filter((id): id is string => Boolean(id));
+
+      if (sessionIds.length > 0) {
+        setBillingLoading(true);
+        try {
+          const token = session.access_token;
+          const res = await fetch(`${STRIPE_API_URL}/api/admin/billing`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ stripe_session_ids: sessionIds }),
+          });
+          if (res.ok) {
+            const data = await res.json() as { billing: Record<string, BillingInfo> };
+            setBilling(data.billing);
+          }
+        } catch {
+          // Non-fatal.
+        }
+        setBillingLoading(false);
+      }
+
+      await refreshAutoCollect(session.access_token, { silent });
+      setLastRefreshedAt(new Date().toISOString());
+    } catch (error) {
+      setState({ phase: 'error', message: error instanceof Error ? error.message : 'Unknown error' });
+    } finally {
+      if (!silent) setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
-    let cancelled = false;
+    void loadDashboardData();
+    const intervalId = window.setInterval(() => {
+      void loadDashboardData({ silent: true });
+    }, DASHBOARD_REFRESH_INTERVAL_MS);
 
-    async function load() {
-      try {
-        const [{ getSession }, { createBrowserClient }] = await Promise.all([
-          import('@ftc/auth'),
-          import('@ftc/supabase'),
-        ]);
-        const session = await getSession();
-        if (!session?.user || session.user.email !== ADMIN_EMAIL) {
-          if (!cancelled) setState({ phase: 'denied' });
-          return;
-        }
-
-        const client = createBrowserClient();
-        const [
-          { data: projects, error: projectError },
-          { data: milestones, error: milestoneError },
-          { data: subscribers, error: subscriberError },
-          { data: contracts, error: contractError },
-          { data: invoices, error: invoiceError },
-          { data: instantBills, error: instantBillsError },
-        ] = await Promise.all([
-          client.from('projects').select('*').order('created_at', { ascending: false }),
-          client.from('milestones').select('*').order('due_date', { ascending: true }),
-          client.from('subscribers').select('*').order('created_at', { ascending: false }),
-          client.from('contracts').select('id,project_id,title,status,sent_at,signer_name,signer_email,signed_at,created_at').order('created_at', { ascending: false }),
-          client.from('invoices').select('*').order('created_at', { ascending: false }),
-          client.from('instant_bills').select('*').order('created_at', { ascending: false }),
-        ]);
-
-        if (projectError) throw projectError;
-        if (milestoneError) throw milestoneError;
-        if (subscriberError) throw subscriberError;
-        if (contractError) throw contractError;
-        if (invoiceError) throw invoiceError;
-        if (instantBillsError) throw instantBillsError;
-
-        if (!cancelled) {
-          setState({
-            phase: 'ready',
-            projects: (projects as Project[] | null) ?? [],
-            milestones: (milestones as Milestone[] | null) ?? [],
-            subscribers: (subscribers as Subscriber[] | null) ?? [],
-            contracts: (contracts as Contract[] | null) ?? [],
-            invoices: (invoices as Invoice[] | null) ?? [],
-            instantBills: (instantBills as InstantBill[] | null) ?? [],
-          });
-
-          // Fetch billing status for projects with Stripe sessions
-          const projectList = (projects as Project[] | null) ?? [];
-          const sessionIds = projectList
-            .map((p) => p.stripe_session_id)
-            .filter((id): id is string => Boolean(id));
-
-          if (sessionIds.length > 0) {
-            setBillingLoading(true);
-            try {
-              const token = session?.access_token;
-              const res = await fetch(`${STRIPE_API_URL}/api/admin/billing`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-                },
-                body: JSON.stringify({ stripe_session_ids: sessionIds }),
-              });
-              if (res.ok) {
-                const data = await res.json() as { billing: Record<string, BillingInfo> };
-                if (!cancelled) setBilling(data.billing);
-              }
-            } catch { /* non-fatal */ }
-            if (!cancelled) setBillingLoading(false);
-          }
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setState({ phase: 'error', message: error instanceof Error ? error.message : 'Unknown error' });
-        }
-      }
-    }
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => window.clearInterval(intervalId);
   }, []);
 
   async function handleStatusChange(projectId: string, newStatus: string) {
@@ -314,13 +448,14 @@ export function AdminClient() {
   async function handleCreateInstantBill() {
     if (state.phase !== 'ready') return;
     const amount = Number(instantBillAmount);
+    const minAmountCad = 0.5;
 
     if (!instantBillProjectId) {
       alert('Select a project first.');
       return;
     }
-    if (!Number.isFinite(amount) || amount <= 0) {
-      alert('Enter a valid amount.');
+    if (!Number.isFinite(amount) || amount < minAmountCad) {
+      alert('Enter a valid amount. Stripe minimum is CA$0.50.');
       return;
     }
     if (!instantBillDescription.trim()) {
@@ -378,6 +513,231 @@ export function AdminClient() {
     }
   }
 
+  async function handleAutoCollectSync() {
+    setAutoCollectSyncing(true);
+    try {
+      const { getSession } = await import('@ftc/auth');
+      const session = await getSession();
+
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/autocollect/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ overdue_only: true, limit: 100 }),
+      });
+      const payload = await res.json() as { error?: string; items?: AutoCollectItem[]; synced?: number };
+      if (!res.ok) {
+        alert(payload.error ?? 'Failed to sync AutoCollect queue.');
+        return;
+      }
+      if (payload.items) setAutoCollectItems(payload.items);
+      await refreshAutoCollect(session?.access_token);
+    } catch {
+      alert('Network error while syncing AutoCollect queue.');
+    }
+    setAutoCollectSyncing(false);
+  }
+
+  async function handleAutoCollectSendInvite(id: string) {
+    try {
+      const { getSession } = await import('@ftc/auth');
+      const session = await getSession();
+
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/autocollect/send-invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      const payload = await res.json() as { item?: AutoCollectItem; error?: string };
+      if (!res.ok || !payload.item) {
+        alert(payload.error ?? 'Failed to send payment invite.');
+        return;
+      }
+
+      setAutoCollectItems((prev) => prev.map((item) => (item.id === id ? payload.item! : item)));
+    } catch {
+      alert('Network error while sending payment invite.');
+    }
+  }
+
+  async function handleUpdateLeadStatus(id: string, status: string) {
+    try {
+      const { getSession } = await import('@ftc/auth');
+      const session = await getSession();
+
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/leads/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      const payload = await res.json() as { lead?: Lead; error?: string };
+      if (!res.ok || !payload.lead) {
+        alert(payload.error ?? 'Failed to update lead.');
+        return;
+      }
+
+      setLeads((prev) => prev.map((lead) => (lead.id === id ? payload.lead! : lead)));
+    } catch {
+      alert('Network error while updating lead.');
+    }
+  }
+
+  async function handleLoadBranding(id: string) {
+    if (!id || !storedToken) return;
+    try {
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/branding/${id}`, {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+      const data = await res.json() as { branding?: { companyName?: string; primaryColor?: string; logoUrl?: string; tagline?: string; replyEmail?: string } | null };
+      const b = data.branding ?? {};
+      setBrandingForm({
+        companyName: b.companyName ?? '',
+        primaryColor: b.primaryColor ?? '#4DB8A8',
+        logoUrl: b.logoUrl ?? '',
+        tagline: b.tagline ?? '',
+        replyEmail: b.replyEmail ?? '',
+      });
+    } catch { /* silent */ }
+  }
+
+  async function handleSaveBranding() {
+    if (!brandingProjectId || !storedToken) return;
+    setBrandingSaving(true);
+    setBrandingSaveMsg(null);
+    try {
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/branding/${brandingProjectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${storedToken}` },
+        body: JSON.stringify(brandingForm),
+      });
+      const data = await res.json() as { ok?: boolean; error?: string };
+      setBrandingSaveMsg(data.ok ? 'Branding saved.' : (data.error ?? 'Failed to save.'));
+      window.setTimeout(() => setBrandingSaveMsg(null), 3000);
+    } catch {
+      setBrandingSaveMsg('Network error.');
+    }
+    setBrandingSaving(false);
+  }
+
+  async function handleLoadWebhooks(id: string) {
+    if (!id || !storedToken) return;
+    setWebhooks([]);
+    try {
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/webhooks/${id}`, {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+      const data = await res.json() as { endpoints?: WebhookEndpoint[] };
+      setWebhooks(data.endpoints ?? []);
+    } catch { /* silent */ }
+  }
+
+  async function handleAddWebhook() {
+    if (!webhookProjectId || !storedToken || !webhookUrl) return;
+    setWebhookAdding(true);
+    setWebhookMsg(null);
+    setNewWebhookSecret(null);
+    try {
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/webhooks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${storedToken}` },
+        body: JSON.stringify({ project_id: webhookProjectId, url: webhookUrl, events: webhookEvents }),
+      });
+      const data = await res.json() as { ok?: boolean; endpoint?: WebhookEndpoint & { secret?: string }; error?: string };
+      if (!data.ok) throw new Error(data.error ?? 'Failed');
+      setWebhooks((prev) => [...prev, data.endpoint!]);
+      setNewWebhookSecret(data.endpoint?.secret ?? null);
+      setWebhookUrl('');
+      setWebhookEvents([]);
+      setWebhookMsg('Endpoint registered.');
+    } catch (e) {
+      setWebhookMsg(e instanceof Error ? e.message : 'Failed to register endpoint.');
+    }
+    setWebhookAdding(false);
+  }
+
+  async function handleDeleteWebhook(id: string) {
+    if (!storedToken) return;
+    try {
+      await fetch(`${STRIPE_API_URL}/api/admin/webhooks/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+      setWebhooks((prev) => prev.filter((ep) => ep.id !== id));
+    } catch { /* silent */ }
+  }
+
+  async function handleLoadConnectStatus(id: string) {
+    if (!id || !storedToken) return;
+    setConnectLoading(true);
+    setConnectMsg(null);
+    setConnectStatus(null);
+    try {
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/connect/${id}`, {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+      const data = await res.json() as { connected?: boolean; project?: Project; error?: string };
+      if (!res.ok || !data.project) {
+        throw new Error(data.error ?? 'Failed to load Connect status.');
+      }
+      setConnectStatus({ connected: Boolean(data.connected), project: data.project });
+    } catch (error) {
+      setConnectMsg(error instanceof Error ? error.message : 'Failed to load Connect status.');
+    }
+    setConnectLoading(false);
+  }
+
+  async function handleStartConnectOnboarding() {
+    if (!connectProjectId || !storedToken) return;
+    setConnectLoading(true);
+    setConnectMsg(null);
+    try {
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/connect/${connectProjectId}/onboard`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+      const data = await res.json() as { onboarding_url?: string; error?: string };
+      if (!res.ok || !data.onboarding_url) {
+        throw new Error(data.error ?? 'Failed to start onboarding.');
+      }
+      window.open(data.onboarding_url, '_blank', 'noopener,noreferrer');
+      setConnectMsg('Onboarding link opened in a new tab. Refresh status after completion.');
+      await handleLoadConnectStatus(connectProjectId);
+    } catch (error) {
+      setConnectMsg(error instanceof Error ? error.message : 'Failed to start onboarding.');
+    }
+    setConnectLoading(false);
+  }
+
+  async function handleOpenConnectDashboard() {
+    if (!connectProjectId || !storedToken) return;
+    setConnectLoading(true);
+    setConnectMsg(null);
+    try {
+      const res = await fetch(`${STRIPE_API_URL}/api/admin/connect/${connectProjectId}/dashboard`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+      const data = await res.json() as { dashboard_url?: string; error?: string };
+      if (!res.ok || !data.dashboard_url) {
+        throw new Error(data.error ?? 'Dashboard link unavailable.');
+      }
+      window.open(data.dashboard_url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      setConnectMsg(error instanceof Error ? error.message : 'Failed to open dashboard link.');
+    }
+    setConnectLoading(false);
+  }
+
   if (state.phase === 'loading') {
     return (
       <div className="min-h-screen bg-bg-offwhite flex items-center justify-center">
@@ -387,13 +747,21 @@ export function AdminClient() {
   }
 
   if (state.phase === 'denied') {
+    const isUnauthenticated = state.reason === 'unauthenticated';
     return (
       <div className="min-h-screen bg-bg-offwhite flex items-center justify-center px-6">
         <div className="text-center max-w-sm">
-          <Badge variant="muted">Access denied</Badge>
+          <Badge variant="muted">{isUnauthenticated ? 'Sign in required' : 'Access denied'}</Badge>
           <h1 className="mt-4 text-h2 text-tx-heading">Admin only</h1>
-          <p className="mt-3 text-body text-tx-secondary">This page is restricted.</p>
-          <div className="mt-6">
+          <p className="mt-3 text-body text-tx-secondary">
+            {isUnauthenticated
+              ? 'You need to sign in to access this page.'
+              : 'This page is restricted to the site administrator.'}
+          </p>
+          <div className="mt-6 flex flex-col gap-3 items-center">
+            {isUnauthenticated && (
+              <Button href="/login?redirect=/admin" variant="primary" size="md">Sign in</Button>
+            )}
             <Button href="/" variant="secondary" size="md">Go home</Button>
           </div>
         </div>
@@ -430,6 +798,9 @@ export function AdminClient() {
   const needsApproval = projects.filter((project) =>
     (milestonesByProject[project.id] ?? []).some((milestone) => milestone.status === 'review')
   );
+  const realtorProjects = projects.filter((project) => (project.intake_id ?? '').startsWith('realtor_')).length;
+  const collectionEscalations = autoCollectItems.filter((item) => (item.attempts ?? 0) >= 3).length;
+  const paidInvoices = invoices.filter((invoice) => invoice.status === 'paid').length;
 
   return (
     <section className="bg-bg-offwhite min-h-screen">
@@ -438,19 +809,52 @@ export function AdminClient() {
           <div>
             <Badge variant="teal">Admin</Badge>
             <h1 className="mt-3 text-display-sm text-tx-heading">Una Labs - Reporting</h1>
-            <p className="mt-1 text-body text-tx-muted">All projects, milestones, and subscribers.</p>
+            <p className="mt-1 text-body text-tx-muted">Live operating view for projects, billing, collections, and realtor intake.</p>
+            <p className="mt-2 text-[11px] text-tx-muted">Auto-refreshes every 60 seconds{lastRefreshedAt ? ` · Last refreshed ${formatDate(lastRefreshedAt)}` : ''}</p>
           </div>
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={async () => {
-              const { signOut } = await import('@ftc/auth');
-              await signOut();
-              window.location.href = '/login';
-            }}
-          >
-            Sign out
-          </Button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button variant="secondary" size="md" onClick={() => void loadDashboardData()} disabled={refreshing}>
+              {refreshing ? 'Refreshing...' : 'Refresh now'}
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={async () => {
+                const { signOut } = await import('@ftc/auth');
+                await signOut();
+                window.location.href = '/login';
+              }}
+            >
+              Sign out
+            </Button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[28px] border border-border shadow-sm p-8 mb-8">
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+            <div>
+              <Badge variant="orange">Ops Command Center</Badge>
+              <h2 className="mt-3 text-h2 text-tx-heading">One screen for live operating state</h2>
+              <p className="mt-2 text-body text-tx-secondary max-w-3xl">This page is the realtime founder board: it polls Supabase and the billing worker, keeps collection pressure visible, and gives you fast access to the public routes clients actually touch.</p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-4 mb-6">
+            <Stat label="Realtor projects" value={realtorProjects} sub="intake_id starts with realtor_" />
+            <Stat label="Paid invoices" value={paidInvoices} sub={`${invoices.length} total invoices`} />
+            <Stat label="Collection escalations" value={collectionEscalations} sub="3+ reminders already sent" />
+            <Stat label="Auto updates" value="On" sub="dashboard polling + scheduled doc sync" />
+          </div>
+
+          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {OPS_QUICK_LINKS.map((link) => (
+              <a key={link.href} href={link.href} className="rounded-2xl border border-border bg-bg-offwhite p-5 hover:border-brand-teal/50 transition-colors">
+                <p className="text-body font-semibold text-tx-heading">{link.label}</p>
+                <p className="mt-2 text-body-sm text-tx-secondary">{link.description}</p>
+                <p className="mt-3 text-[11px] font-semibold text-brand-teal">Open route →</p>
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
@@ -460,6 +864,7 @@ export function AdminClient() {
           <Stat label="Subscribers" value={subscribers.length} sub="Newsletter list" />
           <Stat label="Contracts signed" value={contracts.filter((c) => c.status === 'signed').length} sub={`${contracts.length} total sent`} />
           <Stat label="Unpaid invoices" value={invoices.filter((invoice) => invoice.status === 'unpaid').length} sub={`${invoices.length} total`} />
+          <Stat label="AutoCollect queue" value={autoCollectItems.length} sub="Overdue follow-ups" />
         </div>
 
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-10">
@@ -760,13 +1165,14 @@ export function AdminClient() {
               <label className="text-[11px] font-semibold uppercase tracking-wide text-tx-muted">Amount (CAD)</label>
               <input
                 type="number"
-                min="1"
+                min="0.5"
                 step="0.01"
                 value={instantBillAmount}
                 onChange={(event) => setInstantBillAmount(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-body-sm"
-                placeholder="250"
+                placeholder="250.00"
               />
+              <p className="mt-1 text-[11px] text-tx-muted">Stripe minimum charge is CA$0.50. Tax is excluded for instant bills.</p>
             </div>
 
             <div>
@@ -841,6 +1247,72 @@ export function AdminClient() {
           )}
         </div>
 
+        {/* AutoCollect */}
+        <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-6">
+          <div className="px-8 py-5 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-h3 text-tx-heading">AutoCollect</h2>
+                <span className="text-body-sm text-tx-muted">{autoCollectItems.length} queued</span>
+              </div>
+              <p className="text-[11px] text-tx-muted mt-1">
+                Daily worker run sends reminders every {autoCollectHealth?.reminder_interval_days ?? 3} days, up to {autoCollectHealth?.max_attempts ?? 3} attempts per invoice.
+              </p>
+              {autoCollectHealth && (
+                <div className="mt-2 flex items-center gap-2 flex-wrap text-[11px]">
+                  <span className="px-2 py-0.5 rounded-full bg-bg-offwhite text-tx-secondary">Sent today: {autoCollectHealth.sent_today}/{autoCollectHealth.daily_cap}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-bg-offwhite text-tx-secondary">Remaining budget: {autoCollectHealth.remaining_daily_budget}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-bg-offwhite text-tx-secondary">Per-run cap: {autoCollectHealth.max_send_per_run}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-bg-offwhite text-tx-secondary">Escalations: {autoCollectHealth.escalations}</span>
+                </div>
+              )}
+            </div>
+            <Button variant="secondary" size="sm" onClick={handleAutoCollectSync} disabled={autoCollectSyncing}>
+              {autoCollectSyncing ? 'Syncing...' : 'Sync overdue invoices'}
+            </Button>
+          </div>
+
+          {autoCollectLoading ? (
+            <div className="px-8 py-8 text-center text-body text-tx-muted animate-pulse">Loading AutoCollect queue...</div>
+          ) : autoCollectItems.length === 0 ? (
+            <div className="px-8 py-8 text-center text-body text-tx-muted">No queued overdue invoices.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-body-sm">
+                <thead>
+                  <tr className="border-b border-border bg-bg-offwhite">
+                    {['Client', 'Invoice #', 'Amount', 'Due', 'Status', 'Attempts', 'Last Invite', 'Action'].map((heading) => (
+                      <th key={heading} className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">{heading}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {autoCollectItems.map((item, index) => (
+                    <tr key={item.id} className={`border-b border-border hover:bg-bg-offwhite transition-colors ${index % 2 === 0 ? '' : 'bg-bg-offwhite/40'}`}>
+                      <td className="px-6 py-4 text-tx-heading font-medium">{item.client_email}</td>
+                      <td className="px-6 py-4 font-mono text-tx-body">{item.invoice_number}</td>
+                      <td className="px-6 py-4 text-tx-body">CA${item.amount_cad?.toLocaleString('en-CA') ?? '-'}</td>
+                      <td className="px-6 py-4 text-tx-muted">{formatDate(item.due_date)}</td>
+                      <td className="px-6 py-4">
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded capitalize ${item.status === 'invite_sent' ? 'bg-orange-100 text-orange-700' : item.status === 'paid' ? 'bg-teal-100 text-teal-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {item.status ?? 'pending'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-tx-body">{item.attempts ?? 0}</td>
+                      <td className="px-6 py-4 text-tx-muted">{formatDate(item.last_invited_at ?? undefined)}</td>
+                      <td className="px-6 py-4">
+                        <Button variant="secondary" size="sm" onClick={() => handleAutoCollectSendInvite(item.id)}>
+                          Send invite
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
         {/* Contracts table */}
         <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-6">
           <div className="px-8 py-5 border-b border-border flex items-center justify-between">
@@ -899,6 +1371,277 @@ export function AdminClient() {
               </table>
             </div>
           )}
+        </div>
+
+        {/* Leads / Deals Pipeline */}
+        <div className="mt-8 bg-white rounded-[28px] border border-border shadow-sm overflow-hidden">
+          <div className="px-8 py-5 border-b border-border flex items-center justify-between">
+            <div>
+              <h2 className="text-h3 text-tx-heading">Leads</h2>
+              <p className="text-body-sm text-tx-muted mt-0.5">Pre-intake prospects from the contact form.</p>
+            </div>
+            <span className="text-body-sm text-tx-muted">{leads.length} total</span>
+          </div>
+          {leadsLoading ? (
+            <div className="px-8 py-10 text-center text-body text-tx-muted animate-pulse">Loading leads...</div>
+          ) : leads.length === 0 ? (
+            <div className="px-8 py-10 text-center text-body text-tx-muted">No leads yet. They will appear here when someone submits the contact form.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-body-sm">
+                <thead>
+                  <tr className="border-b border-border bg-bg-offwhite">
+                    {['Name', 'Email', 'Company', 'Message', 'Status', 'Received'].map((h) => (
+                      <th key={h} className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.map((lead, idx) => (
+                    <tr key={lead.id} className={`border-b border-border hover:bg-bg-offwhite transition-colors ${idx % 2 === 0 ? '' : 'bg-bg-offwhite/40'}`}>
+                      <td className="px-6 py-4 font-medium text-tx-heading whitespace-nowrap">{lead.name}</td>
+                      <td className="px-6 py-4 text-tx-secondary"><a href={`mailto:${lead.email}`} className="hover:underline">{lead.email}</a></td>
+                      <td className="px-6 py-4 text-tx-muted">{lead.company ?? '—'}</td>
+                      <td className="px-6 py-4 text-tx-secondary max-w-xs truncate" title={lead.message ?? ''}>{lead.message ?? '—'}</td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={lead.status}
+                          onChange={(e) => void handleUpdateLeadStatus(lead.id, e.target.value)}
+                          className="text-body-sm border border-border rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-border-focus"
+                        >
+                          {['new', 'contacted', 'qualified', 'converted', 'lost'].map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 text-tx-muted whitespace-nowrap">{formatDate(lead.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden">
+          <div className="px-8 py-5 border-b border-border">
+            <h2 className="text-h3 text-tx-heading">Branding Editor</h2>
+            <p className="text-body-sm text-tx-muted mt-0.5">Customize emails and proposals per project for white-label use.</p>
+          </div>
+          <div className="px-8 py-6 space-y-5">
+            <div>
+              <label className="block text-body-sm font-semibold text-tx-heading mb-1">Project</label>
+              <select
+                value={brandingProjectId}
+                onChange={(e) => {
+                  setBrandingProjectId(e.target.value);
+                  void handleLoadBranding(e.target.value);
+                }}
+                className="w-full max-w-sm text-body-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-border-focus"
+              >
+                <option value="">— Select a project —</option>
+                {state.phase === 'ready' && state.projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name || p.email || p.id.slice(0, 8)}</option>
+                ))}
+              </select>
+            </div>
+            {brandingProjectId && (
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-1">Company Name</label>
+                  <input type="text" value={brandingForm.companyName} onChange={(e) => setBrandingForm((f) => ({ ...f, companyName: e.target.value }))} placeholder="e.g. Acme Agency" className="w-full text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" />
+                </div>
+                <div>
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-1">Primary Color</label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={brandingForm.primaryColor} onChange={(e) => setBrandingForm((f) => ({ ...f, primaryColor: e.target.value }))} className="w-10 h-10 rounded border border-border cursor-pointer p-0.5" />
+                    <input type="text" value={brandingForm.primaryColor} onChange={(e) => setBrandingForm((f) => ({ ...f, primaryColor: e.target.value }))} className="flex-1 text-body-sm border border-border rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-border-focus" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-1">Logo URL <span className="text-tx-muted font-normal">(https)</span></label>
+                  <input type="url" value={brandingForm.logoUrl} onChange={(e) => setBrandingForm((f) => ({ ...f, logoUrl: e.target.value }))} placeholder="https://yourco.com/logo.png" className="w-full text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" />
+                </div>
+                <div>
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-1">Tagline <span className="text-tx-muted font-normal">(shown in email header)</span></label>
+                  <input type="text" value={brandingForm.tagline} onChange={(e) => setBrandingForm((f) => ({ ...f, tagline: e.target.value }))} placeholder="e.g. Powered by Acme" className="w-full text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-1">Reply Email</label>
+                  <input type="email" value={brandingForm.replyEmail} onChange={(e) => setBrandingForm((f) => ({ ...f, replyEmail: e.target.value }))} placeholder="hello@yourclient.com" className="w-full max-w-sm text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" />
+                </div>
+              </div>
+            )}
+            {brandingProjectId && (
+              <div className="flex items-center gap-4 pt-2">
+                <Button variant="primary" size="sm" onClick={() => void handleSaveBranding()} disabled={brandingSaving}>
+                  {brandingSaving ? 'Saving…' : 'Save branding'}
+                </Button>
+                {brandingSaveMsg && <span className="text-body-sm text-tx-secondary">{brandingSaveMsg}</span>}
+              </div>
+            )}
+            {!brandingProjectId && (
+              <p className="text-body-sm text-tx-muted">Select a project above to set its branding.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Phase 15: Webhooks */}
+        <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden">
+          <div className="px-8 py-5 border-b border-border">
+            <h2 className="text-h3 text-tx-heading">Outbound Webhooks</h2>
+            <p className="text-body-sm text-tx-muted mt-0.5">Send real-time events to Zapier, Slack, Xero, or any HTTPS endpoint.</p>
+          </div>
+          <div className="px-8 py-6 space-y-6">
+            <div>
+              <label className="block text-body-sm font-semibold text-tx-heading mb-1">Project</label>
+              <select
+                value={webhookProjectId}
+                onChange={(e) => {
+                  setWebhookProjectId(e.target.value);
+                  void handleLoadWebhooks(e.target.value);
+                  setNewWebhookSecret(null);
+                  setWebhookMsg(null);
+                }}
+                className="w-full max-w-sm text-body-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-border-focus"
+              >
+                <option value="">— Select a project —</option>
+                {state.projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name || p.email || p.id.slice(0, 8)}</option>
+                ))}
+              </select>
+            </div>
+
+            {webhookProjectId && (
+              <>
+                {webhooks.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-body-sm font-semibold text-tx-heading">Registered endpoints</p>
+                    {webhooks.map((ep) => (
+                      <div key={ep.id} className="flex items-start justify-between gap-4 rounded-xl border border-border px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="text-body-sm font-mono text-tx-heading truncate">{ep.url}</p>
+                          <p className="text-[11px] text-tx-muted mt-0.5">{ep.events.length > 0 ? ep.events.join(', ') : 'All events'}</p>
+                        </div>
+                        <button
+                          onClick={() => void handleDeleteWebhook(ep.id)}
+                          className="shrink-0 text-[11px] text-red-500 hover:text-red-700 font-semibold mt-0.5"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {newWebhookSecret && (
+                  <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                    <p className="text-body-sm font-semibold text-green-800 mb-1">Signing secret — copy now, shown once</p>
+                    <code className="text-[12px] font-mono text-green-900 break-all">{newWebhookSecret}</code>
+                    <p className="text-[11px] text-green-700 mt-1">Use this in your endpoint to verify <code>X-Una-Signature</code> (HMAC-SHA256).</p>
+                  </div>
+                )}
+
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <p className="text-body-sm font-semibold text-tx-heading pt-2">Register new endpoint</p>
+                  <div>
+                    <label className="block text-body-sm font-semibold text-tx-heading mb-1">URL <span className="text-tx-muted font-normal">(https)</span></label>
+                    <input type="url" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="https://hooks.zapier.com/..." className="w-full text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" />
+                  </div>
+                  <div>
+                    <label className="block text-body-sm font-semibold text-tx-heading mb-1">Events <span className="text-tx-muted font-normal">(leave empty = all)</span></label>
+                    <div className="flex flex-wrap gap-3 mt-1">
+                      {WEBHOOK_EVENT_OPTIONS.map((evt) => (
+                        <label key={evt} className="flex items-center gap-1.5 text-body-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={webhookEvents.includes(evt)}
+                            onChange={(e) => setWebhookEvents((prev) => e.target.checked ? [...prev, evt] : prev.filter((v) => v !== evt))}
+                          />
+                          {evt}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Button variant="primary" size="sm" onClick={() => void handleAddWebhook()} disabled={webhookAdding || !webhookUrl}>
+                      {webhookAdding ? 'Registering…' : 'Register endpoint'}
+                    </Button>
+                    {webhookMsg && <span className="text-body-sm text-tx-secondary">{webhookMsg}</span>}
+                  </div>
+                </div>
+              </>
+            )}
+            {!webhookProjectId && (
+              <p className="text-body-sm text-tx-muted">Select a project above to manage its webhooks.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Phase 14: Connect onboarding */}
+        <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden">
+          <div className="px-8 py-5 border-b border-border">
+            <h2 className="text-h3 text-tx-heading">Stripe Connect</h2>
+            <p className="text-body-sm text-tx-muted mt-0.5">Onboard each agency/project owner to receive payouts through Connect.</p>
+          </div>
+          <div className="px-8 py-6 space-y-5">
+            <div>
+              <label className="block text-body-sm font-semibold text-tx-heading mb-1">Project</label>
+              <select
+                value={connectProjectId}
+                onChange={(e) => {
+                  setConnectProjectId(e.target.value);
+                  void handleLoadConnectStatus(e.target.value);
+                }}
+                className="w-full max-w-sm text-body-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-border-focus"
+              >
+                <option value="">— Select a project —</option>
+                {state.projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name || p.email || p.id.slice(0, 8)}</option>
+                ))}
+              </select>
+            </div>
+
+            {connectProjectId && (
+              <div className="rounded-xl border border-border px-4 py-4 bg-bg-offwhite/30">
+                {connectLoading ? (
+                  <p className="text-body-sm text-tx-muted">Loading Connect status...</p>
+                ) : connectStatus ? (
+                  <div className="space-y-3">
+                    <div className="grid sm:grid-cols-2 gap-3 text-body-sm">
+                      <p><span className="text-tx-muted">Account:</span> <span className="font-mono text-tx-heading">{connectStatus.project.connect_account_id || 'Not linked yet'}</span></p>
+                      <p><span className="text-tx-muted">Onboarding:</span> <span className="text-tx-heading">{connectStatus.project.connect_onboarding_complete ? 'Complete' : 'Pending'}</span></p>
+                      <p><span className="text-tx-muted">Charges:</span> <span className="text-tx-heading">{connectStatus.project.connect_charges_enabled ? 'Enabled' : 'Disabled'}</span></p>
+                      <p><span className="text-tx-muted">Payouts:</span> <span className="text-tx-heading">{connectStatus.project.connect_payouts_enabled ? 'Enabled' : 'Disabled'}</span></p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 pt-1">
+                      <Button variant="primary" size="sm" onClick={() => void handleStartConnectOnboarding()} disabled={connectLoading}>
+                        {connectStatus.project.connect_account_id ? 'Resume onboarding' : 'Start onboarding'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void handleOpenConnectDashboard()}
+                        disabled={!connectStatus.project.connect_account_id || connectLoading}
+                      >
+                        Open Stripe dashboard
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => void handleLoadConnectStatus(connectProjectId)} disabled={connectLoading}>
+                        Refresh status
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-body-sm text-tx-muted">No Connect status loaded yet.</p>
+                )}
+                {connectMsg && <p className="text-body-sm text-tx-secondary mt-3">{connectMsg}</p>}
+              </div>
+            )}
+
+            {!connectProjectId && (
+              <p className="text-body-sm text-tx-muted">Select a project above to manage its Connect onboarding.</p>
+            )}
+          </div>
         </div>
 
         <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden">
