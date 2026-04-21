@@ -114,11 +114,27 @@ const MODE_CONFIG: Record<ListeningOrbMode, OrbMotionConfig> = {
 function detectOrbRuntimeProfile(): OrbRuntimeProfile {
   if (typeof window === "undefined") return "full";
 
-  const nativeAndroid =
+  // Primary: use Capacitor runtime API — reliable on all Capacitor versions.
+  // document.body class-based detection is unreliable because Capacitor does
+  // not set "capacitor-android" automatically; it requires manual app init code.
+  const capacitor = (window as any).Capacitor;
+  const isCapacitorNative = typeof capacitor?.isNativePlatform === 'function'
+    ? capacitor.isNativePlatform()
+    : false;
+  const capacitorPlatform: string = typeof capacitor?.getPlatform === 'function'
+    ? capacitor.getPlatform()
+    : '';
+
+  if (isCapacitorNative && capacitorPlatform === 'android') {
+    return "nativeAndroid";
+  }
+
+  // Fallback: legacy body-class detection (manual init path).
+  const nativeAndroidClass =
     typeof document !== "undefined" &&
     document.body.classList.contains("capacitor-android");
 
-  if (nativeAndroid) {
+  if (nativeAndroidClass) {
     return "nativeAndroid";
   }
 
@@ -129,7 +145,7 @@ function detectOrbRuntimeProfile(): OrbRuntimeProfile {
   const narrowViewport = window.innerWidth < 768;
   const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
 
-  if (native || narrowViewport || coarsePointer) {
+  if (isCapacitorNative || native || narrowViewport || coarsePointer) {
     return "mobile";
   }
 

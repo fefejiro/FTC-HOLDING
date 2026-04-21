@@ -18,10 +18,12 @@ function normalizeNativeMimeType(rawMimeType?: string): string {
   if (normalized.includes('wav')) return 'audio/wav';
   if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'audio/mpeg';
   if (normalized.includes('m4a') || normalized.includes('mp4')) return 'audio/mp4';
-  if (normalized.includes('aac')) return 'audio/aac';
+  // AAC audio on Android is always wrapped in an MPEG-4 container.
+  // Sending bare audio/aac causes ACRCloud to reject the upload silently.
+  if (normalized.includes('aac')) return 'audio/mp4';
 
-  // iOS commonly returns AAC/MP4-family audio. Keep the fallback explicit.
-  return 'audio/aac';
+  // Android and iOS both record AAC-in-MP4 by default.
+  return 'audio/mp4';
 }
 
 export async function hasRecordingPermission(): Promise<boolean> {
@@ -88,11 +90,12 @@ export async function stopNativeRecording(): Promise<NativeRecordingResult | nul
       console.log('[SAYWETIN-NATIVE] Using mimeType:', mimeType);
       
       const byteCharacters = atob(base64Data);
-      const byteNumbers = new Array(byteCharacters.length);
+      // Write directly into Uint8Array — avoids creating an intermediate Array<number>
+      // which doubles heap usage and causes OOM on mid-range Android devices.
+      const byteArray = new Uint8Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+        byteArray[i] = byteCharacters.charCodeAt(i);
       }
-      const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: mimeType });
       
       console.log('[SAYWETIN-NATIVE] Created blob - size:', blob.size, 'bytes, type:', blob.type, 'msDuration:', msDuration);
