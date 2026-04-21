@@ -816,7 +816,9 @@ async function getPublicStatusSummary(req: Request, env: Env): Promise<PublicSta
   };
 }
 
-async function handlePublicStatusSummary(req: Request, env: Env, origin: string | null): Promise<Response> {
+async function handleAdminStatusSummary(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, 401, origin);
   const summary = await getPublicStatusSummary(req, env);
   return json({ ok: true, summary }, 200, origin);
 }
@@ -3591,8 +3593,8 @@ export default {
       return handleAdminAutoCollectHealth(req, env, origin);
     }
 
-    if (req.method === 'GET' && url.pathname === '/api/public/status-summary') {
-      return handlePublicStatusSummary(req, env, origin);
+    if (req.method === 'GET' && url.pathname === '/api/admin/status-summary') {
+      return handleAdminStatusSummary(req, env, origin);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/admin/leads') {
@@ -3643,7 +3645,7 @@ export default {
           service: 'una-stripe-api',
           ok: true,
           docs: {
-            public_status_summary: '/api/public/status-summary',
+            admin_status_summary: '/api/admin/status-summary',
             checkout_success: '/api/checkout-success',
           },
         },

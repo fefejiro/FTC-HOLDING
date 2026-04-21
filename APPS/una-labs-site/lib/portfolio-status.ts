@@ -101,9 +101,13 @@ function projectTimestamp(): string {
   return new Date().toISOString();
 }
 
-async function fetchWorkerSummary(): Promise<WorkerSummary | null> {
+async function fetchWorkerSummary(token?: string): Promise<WorkerSummary | null> {
   try {
-    const res = await fetch(`${STRIPE_API_URL}/api/public/status-summary`, { method: 'GET' });
+    if (!token) return null;
+    const res = await fetch(`${STRIPE_API_URL}/api/admin/status-summary`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    });
     const payload = (await res.json()) as { ok?: boolean; summary?: WorkerSummary };
     if (!res.ok || !payload.summary) return null;
     return payload.summary;
@@ -217,7 +221,7 @@ function transformWorkerSummary(summary: WorkerSummary): ProjectStatusSummary {
     blockers,
     nextActions,
     quickLinks: [
-      { label: 'Open Status Endpoint', href: `${STRIPE_API_URL}/api/public/status-summary`, external: true },
+      { label: 'Open Status Endpoint', href: `${STRIPE_API_URL}/api/admin/status-summary`, external: true },
       { label: 'Start Free Trial', href: '/start' },
       { label: 'Open Admin', href: '/admin' },
     ],
@@ -736,22 +740,22 @@ function buildFallbackUnaLabsSummary(): ProjectStatusSummary {
       {
         name: 'Worker status endpoint',
         status: 'yellow',
-        url: `${STRIPE_API_URL}/api/public/status-summary`,
-        detail: 'Open the endpoint directly to confirm payload availability.',
+        url: `${STRIPE_API_URL}/api/admin/status-summary`,
+        detail: 'Open the admin endpoint directly to confirm payload availability.',
         probeMode: 'manual',
       },
     ],
     blockers: ['Live worker summary was not available in this browser session.'],
     nextActions: ['Verify the worker endpoint and keep the shared dashboard shell active.'],
     quickLinks: [
-      { label: 'Open Worker Summary', href: `${STRIPE_API_URL}/api/public/status-summary`, external: true },
+      { label: 'Open Worker Summary', href: `${STRIPE_API_URL}/api/admin/status-summary`, external: true },
       { label: 'Open Admin', href: '/admin' },
     ],
   };
 }
 
-export async function loadPortfolioStatus(): Promise<ProjectStatusSummary[]> {
-  const workerSummary = await fetchWorkerSummary();
+export async function loadPortfolioStatus(token?: string): Promise<ProjectStatusSummary[]> {
+  const workerSummary = await fetchWorkerSummary(token);
 
   const projects = [
     workerSummary ? transformWorkerSummary(workerSummary) : buildFallbackUnaLabsSummary(),
