@@ -1136,6 +1136,156 @@ export const caseStudies: Record<string, CaseStudyContent> = {
       },
     ],
   },
+  'garden-cleaners': {
+    slug: 'garden-cleaners',
+    title: 'Garden Cleaners',
+    metaTitle: 'Garden Cleaners Case Study',
+    metaDescription:
+      'A local cleaning services website built by Una Labs as a vertical demo — full brand, quote flow, and SEO-ready local landing pages.',
+    eyebrow: 'Case study',
+    headline: 'A full local-services site built from brief to launch',
+    subheadline:
+      'Garden Cleaners is a demo build that shows Una Labs can deliver a complete, production-quality local business presence: brand identity, service pages, quote request flow, and local SEO metadata — all scoped and shipped through the same delivery process available today.',
+    primaryAction: { label: 'Start a similar build', href: '/start?source=case_study_garden_cleaners&product=local-services' },
+    secondaryAction: { label: 'See how it works', href: '/how-it-works' },
+    liveUrl: '',
+    heroStats: [
+      { value: 'Full site', label: 'Not a mockup', detail: 'Home, about, services, contact, and quote pages — all live routes.' },
+      { value: 'Local SEO', label: 'Built in', detail: 'Canonical URLs, structured metadata, and local business schema on every page.' },
+      { value: 'Quote flow', label: 'Functional', detail: 'Quote request form and API route wired end to end.' },
+    ],
+    heroVisual: 'delivery',
+    challenge: {
+      eyebrow: 'What the build proved',
+      title: 'Local businesses need more than a landing page',
+      body:
+        'A local service business needs a credible web presence: a real brand, a service story, a way for customers to reach out, and enough SEO signal to get found. Getting all of that right takes product thinking, not just a template.',
+      points: [
+        'Brand identity and copy have to feel local and trustworthy.',
+        'The quote flow needs to work end to end, not just look good.',
+        'Local SEO requires deliberate structure, not just a page title.',
+      ],
+    },
+    shipped: [
+      {
+        icon: '🏡',
+        title: 'Full multi-page site',
+        description: 'Home, about, services, contact, and quote pages built as isolated, route-aware surfaces with their own brand chrome.',
+      },
+      {
+        icon: '📋',
+        title: 'End-to-end quote request flow',
+        description: 'Quote form and API route wired together so customer requests reach the business without manual forwarding.',
+      },
+      {
+        icon: '📍',
+        title: 'Local SEO metadata',
+        description: 'Canonical URLs, structured schema, and location-specific metadata across every page in the subsite.',
+      },
+    ],
+    impact: {
+      eyebrow: 'Why it matters for Una Labs',
+      title: 'Vertical demo builds are proof at the product level',
+      body:
+        'Garden Cleaners shows that Una Labs can scope, design, and ship a complete vertical product for a local service business. The execution standard here applies directly to any small or mid-size business that needs a real web presence, not a placeholder.',
+      points: [
+        'It proves Una Labs can deliver for local and service businesses, not only tech clients.',
+        'The same patterns apply to trades, health, wellness, legal, and other verticals.',
+        'It is a reference build for what "done" looks like at the local business tier.',
+      ],
+    },
+    related: [
+      {
+        eyebrow: 'Related case study',
+        title: 'Polar Anchor',
+        description: 'Another demo vertical build — this time for a freight and logistics business with more complex service architecture.',
+        href: '/products/polar-anchor',
+        hrefLabel: 'See Polar Anchor',
+      },
+      {
+        eyebrow: 'Related solution',
+        title: 'Professional Services',
+        description: 'See how structured intake and delivery applies across service-based businesses.',
+        href: '/solutions/professional-services',
+        hrefLabel: 'View solution',
+      },
+    ],
+  },
+  'polar-anchor': {
+    slug: 'polar-anchor',
+    title: 'Polar Anchor',
+    metaTitle: 'Polar Anchor Case Study',
+    metaDescription:
+      'A freight forwarding and logistics website built by Una Labs as a vertical demo — multi-service architecture, quote flow, and full local brand presence.',
+    eyebrow: 'Case study',
+    headline: 'A logistics company site built with real operational depth',
+    subheadline:
+      'Polar Anchor is a demo build for a freight forwarding and logistics business. It covers the full brand surface — service pages, import/export, vehicle handling, warehousing — with a working quote flow and structured metadata. Built to show Una Labs can handle verticals with more complex service architecture.',
+    primaryAction: { label: 'Start a similar build', href: '/start?source=case_study_polar_anchor&product=logistics' },
+    secondaryAction: { label: 'See how it works', href: '/how-it-works' },
+    liveUrl: '',
+    heroStats: [
+      { value: '4 services', label: 'Fully scoped', detail: 'Commercial cargo, import/export, vehicle shipping, and warehousing — each with its own page structure.' },
+      { value: 'Quote flow', label: 'End to end', detail: 'Customer quote requests wired from form to API.' },
+      { value: 'Schema', label: 'FreightForwarder', detail: 'Structured data and local SEO built in across the site.' },
+    ],
+    heroVisual: 'delivery',
+    challenge: {
+      eyebrow: 'What the build proved',
+      title: 'Logistics businesses need more than a brochure',
+      body:
+        'A freight and logistics company has multiple service lines, each requiring its own clear value proposition and call to action. Building a site that holds that complexity without becoming confusing requires structural thinking, not just visual design.',
+      points: [
+        'Multiple service lines need their own clear positioning.',
+        'Trust signals (professional handling, reliability, cost-efficiency) must feel earned, not claimed.',
+        'A working quote flow is table stakes — it cannot just be a contact form.',
+      ],
+    },
+    shipped: [
+      {
+        icon: '🚢',
+        title: 'Multi-service architecture',
+        description: 'Commercial cargo, import/export, vehicle shipping, and warehousing — each presented as a distinct, fully scoped service.',
+      },
+      {
+        icon: '📋',
+        title: 'Quote request system',
+        description: 'End-to-end quote request flow from the customer-facing form through to an API route the business can act on.',
+      },
+      {
+        icon: '🏢',
+        title: 'Full brand and site presence',
+        description: 'Brand-aware header, footer, service pages, about, contact, and local SEO metadata across all routes.',
+      },
+    ],
+    impact: {
+      eyebrow: 'Why it matters for Una Labs',
+      title: 'Complex verticals need a build partner who understands service architecture',
+      body:
+        'Polar Anchor shows Una Labs can handle the structural complexity of a multi-service business. The service hierarchy, the trust language, and the operational flow all needed deliberate thinking — not just a template swap.',
+      points: [
+        'It proves Una Labs can scope and ship complex local B2B verticals.',
+        'The same delivery pattern applies to trades, logistics, health, legal, and other multi-service industries.',
+        'It demonstrates that demo builds here are execution artifacts, not design concepts.',
+      ],
+    },
+    related: [
+      {
+        eyebrow: 'Related case study',
+        title: 'Garden Cleaners',
+        description: 'Another demo vertical build for a local service business — same delivery standard, simpler service structure.',
+        href: '/products/garden-cleaners',
+        hrefLabel: 'See Garden Cleaners',
+      },
+      {
+        eyebrow: 'Related case study',
+        title: 'Dispatch',
+        description: 'A live operational system that handles real-world logistics flow for Ottawa roadside assistance.',
+        href: '/products/dispatch',
+        hrefLabel: 'See Dispatch',
+      },
+    ],
+  },
 };
 
 export const demoModules: DemoModule[] = [

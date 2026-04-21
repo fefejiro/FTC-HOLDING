@@ -27,3 +27,9 @@
 /og-trades-academy /about/ 301
 /og-trades-academy/ /about/ 301
 /og-trades-academy/* /about/
+/polar-anchor /products/polar-anchor/ 301
+/polar-anchor/ /products/polar-anchor/ 301
+/polar-anchor/* /products/polar-anchor/ 301
+/garden-cleaners /products/garden-cleaners/ 301
+/garden-cleaners/ /products/garden-cleaners/ 301
+/garden-cleaners/* /products/garden-cleaners/ 301
