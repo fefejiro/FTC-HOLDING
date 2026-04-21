@@ -107,18 +107,23 @@ export default function StatusPage() {
   }, [projects]);
 
   return (
-    <section className="bg-bg-offwhite min-h-screen">
-      <div className="max-w-content mx-auto px-6 pt-14 pb-20">
-        <div className="bg-white rounded-[28px] border border-border shadow-sm p-8">
-          <Badge variant="teal">Portfolio Status</Badge>
-          <h1 className="mt-4 text-display-sm text-tx-heading">Project Delivery Control Tower</h1>
-          <p className="mt-3 text-body text-tx-secondary max-w-3xl">
-            One operating board for Una Labs, SayWetin, PeacePad, and the next products behind them. This page refreshes every 60 seconds and mixes live endpoint probes with project delivery lanes so build health, release posture, and execution velocity can live in one place.
-          </p>
-          <p className="mt-2 text-[11px] text-tx-muted">
-            {selectedProject ? `Current view: ${selectedProject.name} · Last refreshed: ${formatDate(selectedProject.generatedAt)}` : 'Loading portfolio status...'}
-          </p>
-          <div className="mt-5 flex gap-3 flex-wrap">
+    <section className="bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 min-h-screen">
+      <div className="max-w-content mx-auto px-6 pt-16 pb-20">
+        {/* Hero Header */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-10 mb-10">
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex-1">
+              <Badge variant="teal">Portfolio Status</Badge>
+              <h1 className="mt-5 text-4xl font-bold tracking-tight text-slate-900">Project Delivery Control Tower</h1>
+              <p className="mt-4 text-lg text-slate-600 max-w-3xl leading-relaxed">
+                One operating board for Una Labs, SayWetin, PeacePad, Dispatch, and ATEAM. This page refreshes every 60 seconds with live endpoint probes and project delivery telemetry.
+              </p>
+              <p className="mt-3 text-sm text-slate-500 font-medium">
+                {selectedProject ? `Viewing: ${selectedProject.name} · Last refreshed: ${formatDate(selectedProject.generatedAt)}` : 'Loading portfolio status...'}
+              </p>
+            </div>
+          </div>
+          <div className="mt-7 flex gap-3 flex-wrap">
             <Button href="/start" variant="primary" size="md">Start Free Trial</Button>
             <Button href="/admin" variant="secondary" size="md">Open Admin</Button>
             {selectedProject?.quickLinks[0] && (
@@ -135,14 +140,14 @@ export default function StatusPage() {
         </div>
 
         {error && (
-          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 text-body-sm">
-            {error}
+          <div className="mt-6 rounded-xl border border-red-300 bg-red-50 p-6 text-red-700 text-sm font-medium shadow-md">
+            <span className="font-bold">⚠️ Error: </span>{error}
           </div>
         )}
 
         {projectCards.length > 0 && (
           <>
-            <div className="grid lg:grid-cols-3 gap-4 mt-6">
+            <div className="grid lg:grid-cols-3 gap-5 mb-10">
               {projectCards.map((project) => {
                 const active = selectedProject?.key === project.key;
                 return (
@@ -150,35 +155,35 @@ export default function StatusPage() {
                     key={project.key}
                     type="button"
                     onClick={() => setSelectedKey(project.key)}
-                    className={`text-left bg-white rounded-[24px] border p-5 shadow-sm transition-all ${
-                      active ? 'border-brand-teal ring-2 ring-brand-teal/20' : 'border-border hover:border-border-hover'
+                    className={`text-left bg-white rounded-xl border-2 p-6 shadow-md transition-all duration-200 hover:shadow-lg ${
+                      active ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-[11px] uppercase tracking-wide text-tx-muted">{project.tag}</p>
-                        <h2 className="mt-2 text-h3 text-tx-heading">{project.name}</h2>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{project.tag}</p>
+                        <h2 className="mt-2 text-xl font-bold text-slate-900">{project.name}</h2>
                       </div>
-                      <span className={`inline-flex px-2 py-0.5 border rounded font-bold text-[11px] uppercase ${ragStyles(project.counts.red > 0 ? 'red' : project.counts.yellow > 0 ? 'yellow' : 'green')}`}>
-                        {project.counts.red > 0 ? 'at risk' : project.counts.yellow > 0 ? 'active' : 'green'}
+                      <span className={`inline-flex px-3 py-1 border rounded-lg font-bold text-xs uppercase whitespace-nowrap ${ragStyles(project.counts.red > 0 ? 'red' : project.counts.yellow > 0 ? 'yellow' : 'green')}`}>
+                        {project.counts.red > 0 ? '🔴 At Risk' : project.counts.yellow > 0 ? '🟡 Active' : '✅ Green'}
                       </span>
                     </div>
-                    <p className="mt-3 text-body-sm text-tx-secondary">{project.description}</p>
-                    <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded-xl bg-bg-offwhite px-3 py-2">
-                        <p className="text-[11px] uppercase tracking-wide text-tx-muted">Green</p>
-                        <p className="mt-1 font-semibold text-teal-700">{project.counts.green}</p>
+                    <p className="mt-3 text-sm text-slate-600 leading-relaxed">{project.description}</p>
+                    <div className="mt-5 grid grid-cols-3 gap-2">
+                      <div className="rounded-lg bg-gradient-to-br from-teal-50 to-cyan-50 px-3 py-3 border border-teal-100">
+                        <p className="text-xs font-bold uppercase tracking-wide text-teal-700">Green</p>
+                        <p className="mt-1.5 text-lg font-bold text-teal-900">{project.counts.green}</p>
                       </div>
-                      <div className="rounded-xl bg-bg-offwhite px-3 py-2">
-                        <p className="text-[11px] uppercase tracking-wide text-tx-muted">Yellow</p>
-                        <p className="mt-1 font-semibold text-yellow-700">{project.counts.yellow}</p>
+                      <div className="rounded-lg bg-gradient-to-br from-amber-50 to-yellow-50 px-3 py-3 border border-amber-100">
+                        <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Yellow</p>
+                        <p className="mt-1.5 text-lg font-bold text-amber-900">{project.counts.yellow}</p>
                       </div>
-                      <div className="rounded-xl bg-bg-offwhite px-3 py-2">
-                        <p className="text-[11px] uppercase tracking-wide text-tx-muted">Red</p>
-                        <p className="mt-1 font-semibold text-red-700">{project.counts.red}</p>
+                      <div className="rounded-lg bg-gradient-to-br from-red-50 to-pink-50 px-3 py-3 border border-red-100">
+                        <p className="text-xs font-bold uppercase tracking-wide text-red-700">Red</p>
+                        <p className="mt-1.5 text-lg font-bold text-red-900">{project.counts.red}</p>
                       </div>
                     </div>
-                    <p className="mt-4 text-[11px] text-tx-muted">{project.sourceLabel}</p>
+                    <p className="mt-4 text-xs text-slate-500 font-medium">{project.sourceLabel}</p>
                   </button>
                 );
               })}
@@ -186,48 +191,48 @@ export default function StatusPage() {
 
             {selectedProject && (
               <>
-                <div className="grid md:grid-cols-4 gap-4 mt-6">
+                <div className="grid md:grid-cols-4 gap-5 mb-10">
                   {selectedProject.metrics.map((metric) => (
-                    <div key={metric.label} className="bg-white rounded-2xl border border-border p-5">
-                      <p className="text-[11px] uppercase tracking-wide text-tx-muted">{metric.label}</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <p className="text-h2 text-tx-heading">{metric.value}</p>
+                    <div key={metric.label} className="bg-white rounded-xl border border-slate-200 p-6 shadow-md hover:shadow-lg transition-all">
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{metric.label}</p>
+                      <div className="mt-3 flex items-center gap-3">
+                        <p className="text-3xl font-bold text-slate-900">{metric.value}</p>
                         {metric.status && (
-                          <span className={`inline-flex px-2 py-0.5 border rounded font-bold text-[11px] uppercase ${ragStyles(metric.status)}`}>
-                            {metric.status}
+                          <span className={`inline-flex px-2.5 py-1 border rounded-lg font-bold text-xs uppercase whitespace-nowrap ${ragStyles(metric.status)}`}>
+                            {metric.status === 'green' ? '✓' : metric.status === 'yellow' ? '⚠' : '✕'} {metric.status}
                           </span>
                         )}
                       </div>
-                      <p className="mt-2 text-body-sm text-tx-muted">{metric.detail}</p>
+                      <p className="mt-3 text-sm text-slate-600">{metric.detail}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="grid xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.9fr)] gap-6 mt-6">
-                  <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden">
-                    <div className="px-8 py-5 border-b border-border">
-                      <h2 className="text-h3 text-tx-heading">Delivery Lanes</h2>
-                      <p className="mt-1 text-body-sm text-tx-secondary">{selectedProject.refreshNote}</p>
+                <div className="grid xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.9fr)] gap-8">
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
+                    <div className="px-8 py-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50/50">
+                      <h2 className="text-2xl font-bold text-slate-900">Delivery Lanes</h2>
+                      <p className="mt-2 text-sm text-slate-600">{selectedProject.refreshNote}</p>
                     </div>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-body-sm">
+                      <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-border bg-bg-offwhite">
-                            <th className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">Lane</th>
-                            <th className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">Status</th>
-                            <th className="px-6 py-3 text-left font-semibold text-tx-muted uppercase tracking-wide text-[11px]">Detail</th>
+                          <tr className="border-b border-slate-200 bg-slate-50">
+                            <th className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider text-xs">Lane</th>
+                            <th className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider text-xs">Status</th>
+                            <th className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider text-xs">Detail</th>
                           </tr>
                         </thead>
                         <tbody>
                           {selectedProject.delivery.map((lane) => (
-                            <tr key={lane.name} className="border-b border-border hover:bg-bg-offwhite/60 transition-colors">
-                              <td className="px-6 py-4 font-medium text-tx-heading">{lane.name}</td>
+                            <tr key={lane.name} className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+                              <td className="px-6 py-4 font-semibold text-slate-900">{lane.name}</td>
                               <td className="px-6 py-4">
-                                <span className={`inline-flex px-2 py-0.5 border rounded font-bold text-[11px] uppercase ${ragStyles(lane.status)}`}>
-                                  {lane.status}
+                                <span className={`inline-flex px-3 py-1.5 border rounded-lg font-bold text-xs uppercase ${ragStyles(lane.status)}`}>
+                                  {lane.status === 'green' ? '✓ Green' : lane.status === 'yellow' ? '⚠ Yellow' : '✕ Red'}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 text-tx-body">{lane.detail}</td>
+                              <td className="px-6 py-4 text-slate-600">{lane.detail}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -236,72 +241,78 @@ export default function StatusPage() {
                   </div>
 
                   <div className="space-y-6">
-                    <div className="bg-white rounded-[28px] border border-border shadow-sm p-8">
-                      <div className="flex items-center justify-between gap-3">
-                        <h2 className="text-h3 text-tx-heading">Testing Lanes</h2>
-                        <span className={`inline-flex px-2 py-0.5 border rounded font-bold text-[11px] uppercase ${ragStyles(deliveryCounts.red > 0 ? 'red' : deliveryCounts.yellow > 0 ? 'yellow' : 'green')}`}>
-                          {deliveryCounts.red > 0 ? 'needs focus' : deliveryCounts.yellow > 0 ? 'moving' : 'stable'}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8">
+                      <div className="flex items-center justify-between gap-3 mb-6">
+                        <h2 className="text-2xl font-bold text-slate-900">Testing Lanes</h2>
+                        <span className={`inline-flex px-3.5 py-2 border rounded-lg font-bold text-xs uppercase ${ragStyles(deliveryCounts.red > 0 ? 'red' : deliveryCounts.yellow > 0 ? 'yellow' : 'green')}`}>
+                          {deliveryCounts.red > 0 ? '🔴 Focus' : deliveryCounts.yellow > 0 ? '🟡 Active' : '✅ Stable'}
                         </span>
                       </div>
-                      <div className="mt-4 space-y-3">
+                      <div className="space-y-3">
                         {selectedProject.testing.map((lane) => (
-                          <div key={lane.name} className="rounded-xl border border-border p-4">
+                          <div key={lane.name} className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 hover:bg-slate-50 transition-colors">
                             <div className="flex items-center justify-between gap-2">
-                              <p className="font-semibold text-tx-heading">{lane.name}</p>
-                              <span className={`inline-flex px-2 py-0.5 border rounded font-bold text-[11px] uppercase ${ragStyles(lane.status)}`}>
-                                {lane.status}
+                              <p className="font-semibold text-slate-900">{lane.name}</p>
+                              <span className={`inline-flex px-2.5 py-1 border rounded font-bold text-xs uppercase ${ragStyles(lane.status)}`}>
+                                {lane.status === 'green' ? '✓' : lane.status === 'yellow' ? '⚠' : '✕'}
                               </span>
                             </div>
-                            <p className="mt-2 text-body-sm text-tx-secondary">{lane.detail}</p>
+                            <p className="mt-2 text-sm text-slate-600">{lane.detail}</p>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-[28px] border border-border shadow-sm p-8">
-                      <h2 className="text-h3 text-tx-heading">Current Blockers</h2>
-                      <div className="mt-4 space-y-3">
-                        {selectedProject.blockers.map((item) => (
-                          <div key={item} className="rounded-xl border border-red-100 bg-red-50/70 p-4 text-body-sm text-red-700">
-                            {item}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-6">Current Blockers</h2>
+                      <div className="space-y-3">
+                        {selectedProject.blockers.length > 0 ? selectedProject.blockers.map((item) => (
+                          <div key={item} className="rounded-xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-700 font-medium flex gap-3">
+                            <span className="text-lg leading-none">🚫</span>
+                            <span>{item}</span>
                           </div>
-                        ))}
+                        )) : (
+                          <div className="rounded-xl border border-green-200 bg-green-50/80 p-4 text-sm text-green-700 font-medium flex gap-3">
+                            <span className="text-lg leading-none">✅</span>
+                            <span>No active blockers</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid lg:grid-cols-2 gap-6 mt-6">
-                  <div className="bg-white rounded-[28px] border border-border shadow-sm p-8">
-                    <h2 className="text-h3 text-tx-heading">Connection Health</h2>
-                    <div className="mt-4 space-y-3">
+                <div className="grid lg:grid-cols-2 gap-8">
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8">
+                    <h2 className="text-2xl font-bold text-slate-900 mb-6">Connection Health</h2>
+                    <div className="space-y-4">
                       {selectedProject.connections.map((connection) => (
-                        <div key={connection.name} className="rounded-xl border border-border p-4">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-semibold text-tx-heading">{connection.name}</p>
-                            <span className={`inline-flex px-2 py-0.5 border rounded font-bold text-[11px] uppercase ${ragStyles(connection.status)}`}>
-                              {connection.status}
+                        <div key={connection.name} className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            <p className="font-semibold text-slate-900">{connection.name}</p>
+                            <span className={`inline-flex px-3 py-1.5 border rounded-lg font-bold text-xs uppercase ${ragStyles(connection.status)}`}>
+                              {connection.status === 'green' ? '✓ OK' : connection.status === 'yellow' ? '⚠ Slow' : '✕ Down'}
                             </span>
                           </div>
-                          <p className="mt-2 text-body-sm text-tx-secondary">{connection.detail}</p>
-                          <a href={connection.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-[11px] font-semibold text-brand-teal hover:underline">
-                            Open endpoint
+                          <p className="text-sm text-slate-600 mb-3">{connection.detail}</p>
+                          <a href={connection.url} target="_blank" rel="noreferrer" className="inline-block text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors">
+                            → Open endpoint
                           </a>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-[28px] border border-border shadow-sm p-8">
-                    <h2 className="text-h3 text-tx-heading">Next Actions</h2>
-                    <div className="mt-4 space-y-3">
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8">
+                    <h2 className="text-2xl font-bold text-slate-900 mb-6">Next Actions</h2>
+                    <div className="space-y-3 mb-7">
                       {selectedProject.nextActions.map((item) => (
-                        <div key={item} className="rounded-xl border border-border bg-bg-offwhite p-4 text-body-sm text-tx-secondary">
-                          {item}
+                        <div key={item} className="rounded-xl border border-slate-200 bg-gradient-to-r from-blue-50/50 to-slate-50/50 p-4 text-sm text-slate-700 leading-relaxed">
+                          • {item}
                         </div>
                       ))}
                     </div>
-                    <div className="mt-6 flex gap-3 flex-wrap">
+                    <div className="flex flex-wrap gap-2">
                       {selectedProject.quickLinks.map((link) => (
                         <Button key={`${selectedProject.key}-${link.label}`} href={link.href} external={link.external} variant="secondary" size="sm">
                           {link.label}
