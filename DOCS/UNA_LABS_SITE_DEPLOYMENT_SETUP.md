@@ -1,8 +1,8 @@
 # UNA-LABS-SITE DEPLOYMENT SETUP
 
 **Status**: ✅ Live deployment configured and tested
-**Live URL**: https://unalabs.cloud/status
-**Latest Deploy**: https://92e297a3.ftc-site-pages.pages.dev
+**Live URL**: https://unalabs.cloud/admin/status
+**Latest Deploy**: https://aac12f99.ftc-site-pages.pages.dev
 
 ## What Was Done
 
@@ -65,14 +65,36 @@ Result: ✅ Deployed successfully to `ftc-site-pages` project
 
 ## What to Test
 
-1. Visit https://unalabs.cloud/status in a browser
-2. Verify the portfolio dashboard loads with 5 project cards
+### 2026-04-21 Security Update
+
+The status-board exposure model changed after the original deployment note.
+
+- Public route:
+  - `https://unalabs.cloud/status`
+  - now redirects to `/admin/status`
+- Admin route:
+  - `https://unalabs.cloud/admin/status`
+  - requires authenticated admin session
+- Worker summary route:
+  - `https://una-stripe-api.fejiro-efiuvwere.workers.dev/api/admin/status-summary`
+  - returns `401` without an admin bearer token
+
+Security deploy verified live with:
+
+- Pages preview:
+  - `https://aac12f99.ftc-site-pages.pages.dev`
+- Worker:
+  - `https://una-stripe-api.fejiro-efiuvwere.workers.dev`
+
+1. Visit https://unalabs.cloud/status and confirm it redirects to `/admin/status`
+2. Verify the portfolio dashboard loads only after admin login
 3. Click through each project to see:
    - Delivery lanes (module status table)
    - Testing lanes
    - Connection health probes
    - Next actions and blockers
 4. Verify auto-refresh works every 60 seconds
+5. Confirm unauthenticated calls to `https://una-stripe-api.fejiro-efiuvwere.workers.dev/api/admin/status-summary` return `401`
 
 ## Next: Portfolio Status Feeds
 

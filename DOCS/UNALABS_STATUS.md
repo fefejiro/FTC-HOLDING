@@ -38,6 +38,11 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 
 ## Notes
 
+- Manual note on 2026-04-21:
+  - The live status-board security model changed after this auto snapshot.
+  - `/status` now redirects to `/admin/status`.
+  - `/api/public/status-summary` should no longer be treated as the live source of truth.
+  - The protected worker summary path is `/api/admin/status-summary`.
 - Public route smoke checks always run.
 - Admin AutoCollect API checks run in unauthenticated mode by default and verify auth boundaries.
 - If `UNALABS_SMOKE_BEARER_TOKEN` is set, the script also performs authenticated admin endpoint checks.

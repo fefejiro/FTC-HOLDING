@@ -1,5 +1,5 @@
 # Una Labs — Build Handover & Implementation Plan
-Last updated: 2026-04-20
+Last updated: 2026-04-21
 Author: Claude (Sonnet 4.6) via Mike (fejiro007)
 
 ---
@@ -420,6 +420,30 @@ To reset any secret:
 cd "c:/FTC HOLDING/workers/stripe-api"
 echo "VALUE" | npx wrangler secret put SECRET_NAME
 ```
+
+---
+
+## Status Board Security Notes (2026-04-21)
+
+- The status board is no longer a public surface.
+- Public site behavior:
+  - `/status` redirects to `/admin/status`
+- Admin site behavior:
+  - `/admin/status` requires a valid logged-in admin session
+- Worker summary behavior:
+  - protected path: `/api/admin/status-summary`
+  - required header: `Authorization: Bearer <admin-token>`
+
+Verified live on 2026-04-21:
+
+- Worker deploy:
+  - `https://una-stripe-api.fejiro-efiuvwere.workers.dev`
+- Pages preview deploy:
+  - `https://aac12f99.ftc-site-pages.pages.dev`
+- Unauthenticated worker check:
+  - `GET /api/admin/status-summary` -> `401 Missing Authorization header.`
+- Public route check:
+  - `/status` returns a redirect to `/admin/status`
 
 ---
 
