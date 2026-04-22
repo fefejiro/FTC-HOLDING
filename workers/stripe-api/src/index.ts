@@ -822,7 +822,6 @@ async function writeScopeDraftToSupabase(
     },
     body: JSON.stringify({
       status,
-      description: sanitize(draft.summary, 600),
       tier: draft.activation_band,
       ai_price_min_cad: draft.pricing?.suggested_min_cad ?? null,
       ai_price_max_cad: draft.pricing?.suggested_max_cad ?? null,
@@ -2784,7 +2783,6 @@ async function createScopedProjectDraft(
       tier: draft.activation_band,
       billing: 'one_time',
       status: 'scoped',
-      description: sanitize(draft.summary, 600),
       ...(options?.stripeSessionId ? { stripe_session_id: options.stripeSessionId } : {}),
     }),
   });
@@ -4411,7 +4409,7 @@ async function handleAdminPublishScope(req: Request, env: Env, origin: string | 
   if (!milestones.length) return json({ error: 'Project has no milestones to publish.' }, 409, origin);
 
   const draft: ScopeDraft = {
-    summary: sanitize(project.description, 600) || 'Your project scope has been prepared and is ready for review.',
+    summary: sanitize(project.name, 600) || 'Your project scope has been prepared and is ready for review.',
     problem_statement: 'We translated your intake into a structured scope and decision-ready plan.',
     solution_direction: 'Review the scoped plan, confirm the engagement letter, and approve the next build step.',
     activation_band: normalizeActivationBand(sanitize(project.tier, 80) || 'standard_activation'),
@@ -4652,8 +4650,8 @@ async function handleProjectHome(req: Request, env: Env, origin: string | null):
       title: 'Selected service track',
       detail: getTierLabel(sanitize(project.tier, 80) || 'standard_activation'),
     },
-    sanitize(project.description, 600)
-      ? { title: 'Project summary', detail: sanitize(project.description, 600) }
+    sanitize(project.name, 600)
+      ? { title: 'Project summary', detail: sanitize(project.name, 600) }
       : null,
     project.ai_price_min_cad && project.ai_price_max_cad
       ? {
