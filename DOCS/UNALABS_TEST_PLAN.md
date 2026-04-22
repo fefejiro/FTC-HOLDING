@@ -29,7 +29,7 @@ Una Labs is considered launch-safe only if all of the following are true:
 1. A prospect can move from public proof page to `/start` to Stripe checkout without confusion or breakage.
 2. A client can authenticate and access their portal, proposal, invoice, contract, and report surfaces with the correct guardrails.
 3. An admin can view projects, leads, billing state, AutoCollect state, webhooks, and Connect state without data corruption.
-4. The public status board reflects live worker status without exposing secrets or PII.
+4. The admin-protected status board reflects live worker status without exposing secrets or PII.
 5. Critical failures in auth, payment, routing, or data visibility block release.
 
 ---
@@ -45,7 +45,6 @@ Public routes:
 - `/how-it-works`
 - `/demo`
 - `/contact`
-- `/status`
 - `/products/dispatch`
 - `/products/peacepad`
 - `/products/saywetin`
@@ -67,7 +66,7 @@ Authenticated routes:
 
 ### 3.2 Worker endpoints and service behavior
 
-- Public status summary endpoint
+- Admin-protected status summary endpoint
 - Checkout session creation
 - Intake confirmation notification
 - Invoice generation after milestone approval
@@ -261,7 +260,7 @@ Minimum smoke routes:
 - `/dashboard/proposal`
 - `/dashboard/report`
 - `/admin`
-- `/api/public/status-summary`
+- `/api/admin/status-summary` (requires admin bearer token)
 
 ### 11.2 Functional regression lane
 
@@ -311,7 +310,7 @@ Primary focus:
 
 - Status page refresh stability
 - Dashboard loading states
-- Worker latency for public summary and admin actions
+- Worker latency for admin summary and admin actions
 - Repeat-action idempotency for invoices and reminders
 
 ---
@@ -406,10 +405,10 @@ Primary focus:
 
 | ID | Scenario | Steps | Expected result | Priority |
 |---|---|---|---|---|
-| OBS-01 | Public status endpoint | Call `/api/public/status-summary` | `200`, structured JSON, no secrets | P0 |
-| OBS-02 | Status page render | Open `/status` | Cards, module table, testing lanes, and connection health render | P1 |
+| OBS-01 | Admin status endpoint | Call `/api/admin/status-summary` with admin bearer token | `200`, structured JSON, no secrets | P0 |
+| OBS-02 | Admin status page render | Open `/admin/status` (authenticated) | Cards, module table, testing lanes, and connection health render | P1 |
 | OBS-03 | Status auto-refresh | Keep page open for more than 60 seconds | Refresh occurs without breaking UI | P2 |
-| OBS-04 | Status-doc sync script | Run `npm run status:unalabs:sync` | Status docs update without crashing | P1 |
+| OBS-04 | Status-doc sync script with admin auth | Run `npm run status:unalabs:sync` with `UNALABS_SMOKE_BEARER_TOKEN` set | Status docs update without crashing | P1 |
 
 ## 12.8 Mobile, accessibility, and presentation quality
 
@@ -429,7 +428,8 @@ These checks are mandatory before signoff.
 
 | ID | Check | Expected |
 |---|---|---|
-| SEC-01 | Public status endpoint contains no secrets, tokens, or client emails | Pass |
+| SEC-01 | Admin status endpoint requires valid bearer token | Pass |
+| SEC-01b | Admin status endpoint contains no secrets, tokens, or client emails beyond authorization | Pass |
 | SEC-02 | Admin worker routes reject unauthenticated access | Pass |
 | SEC-03 | Client report and portal never reveal another client's data | Pass |
 | SEC-04 | Login redirect does not create open redirect risk | Pass |
@@ -445,7 +445,7 @@ Performance does not need enterprise benchmarking yet, but these practical check
 |---|---|---|
 | PERF-01 | Homepage visible load on production broadband | Feels immediate, no blank-screen hang |
 | PERF-02 | `/start` step transitions | Under 1 second perceived response |
-| PERF-03 | Status summary endpoint | Stable response, no repeated timeout |
+| PERF-03 | Admin status summary endpoint | Stable response under bearer auth, no repeated timeout |
 | PERF-04 | Admin dashboard initial load | Data appears without prolonged indefinite spinner |
 | PERF-05 | Repeated polling pages | No visible memory-leak or refresh breakage over 3 minutes |
 
@@ -511,7 +511,7 @@ Implement in `tests/smoke`:
 - Start route check
 - Summary route guard check
 - Status route check
-- Public status endpoint check
+- Admin status endpoint check (with bearer token)
 - Case-study CTA attribution presence
 
 ### Phase 2: e2e Playwright
@@ -528,7 +528,7 @@ Implement in `tests/e2e`:
 Implement in `tests/integration`:
 
 - Worker endpoint auth guards
-- Status summary response contract
+- Admin status summary response contract (with bearer token)
 - AutoCollect sync and validation behavior
 
 ### Phase 4: security

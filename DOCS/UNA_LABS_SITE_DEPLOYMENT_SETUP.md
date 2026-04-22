@@ -61,7 +61,7 @@ Result: ✅ Deployed successfully to `ftc-site-pages` project
 | GitHub Actions | ✅ Configured for una-labs-site | Job name: `una-labs-site` |
 | Cloudflare Pages | ✅ Auto-deploy enabled | Project: `ftc-site-pages` |
 | unalabs.cloud domain | ✅ Routes to deployment | 81 files deployed |
-| /status route | ✅ Live with portfolio dashboard | 5 projects visible: Una Labs, SayWetin, PeacePad, Dispatch, ATEAM |
+| /status route | ✅ Redirects to /admin/status | Portfolio dashboard protected by auth |
 
 ## What to Test
 
@@ -134,5 +134,5 @@ npx wrangler pages deploy out --project-name=ftc-site-pages --branch=main
 
 ---
 
-**Status Dashboard**: https://unalabs.cloud/status ✅
+**Status Dashboard**: https://unalabs.cloud/admin/status (authenticated) ✅
 **Deployment Timeline**: Push → GitHub Actions (2 min) → Cloudflare Deploy (1 min) → Live

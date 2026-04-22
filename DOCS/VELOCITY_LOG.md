@@ -33,6 +33,7 @@ Honest time estimates only. No rounding down.
 | 2026-04-20 | PeacePad | Weekly metrics sync (2026-04-13 to 2026-04-20) | 10 min | Metrics docs updated via automation script | Source data from weekly report email |
 | 2026-04-20 | Una Labs | Status sync + closeout refresh (FTC_MASTER + UNALABS_STATUS) | 10 min | Smoke refreshed (15/15), sprint tracker aligned for closeout | None |
 | 2026-04-20 | Una Labs | Stripe Connect sandbox verification complete | 15 min | Connect onboarding verified in sandbox via admin flow; Phase 14 marked verified done | None |
+| 2026-04-21 | Una Labs | Security doc closeout: status board hardened to admin-only model | 45 min | Removed public `/api/public/status-summary` endpoint check from smoke; updated UNALABS_TEST_PLAN with admin-only assertions; updated deployment and velocity docs for accuracy; script align complete | None |
 | [next entry] | | | | | |
 
 ---

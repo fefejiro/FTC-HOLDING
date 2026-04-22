@@ -179,13 +179,12 @@ async function main() {
     { name: 'Start flow', url: `${BASE_URL}/start`, expectedStatus: [200, 308], locationIncludes: '/start/' },
     { name: 'Summary page', url: `${BASE_URL}/start/summary`, expectedStatus: [200, 308], locationIncludes: '/start/summary/' },
     { name: 'Confirmation page', url: `${BASE_URL}/confirmation`, expectedStatus: [200, 308], locationIncludes: '/confirmation/' },
-    { name: 'Status page', url: `${BASE_URL}/status`, expectedStatus: [200, 308], locationIncludes: '/status/' },
+    { name: 'Status page (protected)', url: `${BASE_URL}/status`, expectedStatus: [308], locationIncludes: '/status' },
     { name: 'Realtor route', url: `${BASE_URL}/realtor`, expectedStatus: [200, 308], locationIncludes: '/realtor/' },
     { name: 'Portal page', url: `${BASE_URL}/portal`, expectedStatus: [200, 308], locationIncludes: '/portal/' },
     { name: 'Proposal page', url: `${BASE_URL}/dashboard/proposal`, expectedStatus: [200, 308], locationIncludes: '/dashboard/proposal/' },
     { name: 'Report page', url: `${BASE_URL}/dashboard/report`, expectedStatus: [200, 308], locationIncludes: '/dashboard/report/' },
     { name: 'Admin page', url: `${BASE_URL}/admin`, expectedStatus: [200, 308], locationIncludes: '/admin/' },
-    { name: 'Public status summary endpoint', url: `${WORKER_URL}/api/public/status-summary`, expectedStatus: [200] },
   ];
 
   const unauthAdminChecks = [
