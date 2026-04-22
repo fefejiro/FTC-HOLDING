@@ -301,7 +301,7 @@ export default function Home() {
   const listeningExperience = (
     <div className="relative flex flex-1 flex-col overflow-hidden px-4 py-6 sm:px-6">
       <div className="relative z-10 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#B5A8FF]">
           Saywetin
         </p>
         <Button
@@ -319,7 +319,7 @@ export default function Home() {
       <div className="relative z-10 flex flex-1 items-center justify-center">
         {isNativeAndroidRuntime ? (
           <>
-            <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/18 via-amber-400/14 to-green-400/12 blur-3xl" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-[#8E60FF]/22 via-[#B5A8FF]/16 to-[#7AD6A5]/10 blur-3xl" />
             <div className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10 bg-white/[0.03] blur-2xl" />
           </>
         ) : (
@@ -330,7 +330,7 @@ export default function Home() {
               isMobileListenRuntime ? 'h-64 w-64' : 'h-72 w-72 sm:h-80 sm:w-80'
             }`}
           >
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-500/20 via-amber-400/18 to-green-400/16 opacity-75 blur-2xl" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#8E60FF]/22 via-[#B5A8FF]/18 to-[#7AD6A5]/12 opacity-75 blur-2xl" />
             <div className="absolute inset-[18%] rounded-full bg-white/[0.04] blur-xl" />
           </motion.div>
         )}

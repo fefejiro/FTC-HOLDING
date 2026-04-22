@@ -810,14 +810,14 @@ export function AudioRecorder({
               onClick={startListening}
               className={`relative flex items-center justify-center rounded-full transition-all active:scale-95 ${
                 immersive
-                  ? 'h-40 w-40 bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 shadow-2xl shadow-orange-500/25 hover:scale-[1.02]'
+                  ? 'h-40 w-40 bg-gradient-to-br from-[#B5A8FF] via-[#8E60FF] to-[#5B4ACB] shadow-2xl shadow-[#8E60FF]/30 hover:scale-[1.02]'
                   : 'h-32 w-32 bg-primary shadow-lg hover:scale-105 hover:bg-primary/90'
               }`}
               data-testid="button-start-listening"
             >
               {immersive ? (
                 <>
-                  <div className="absolute inset-1 rounded-full bg-gradient-to-br from-orange-500/95 via-amber-500/95 to-green-500/95" />
+                  <div className="absolute inset-1 rounded-full bg-gradient-to-br from-[#C3B6FF] via-[#8E60FF] to-[#6450D8]" />
                   <Mic className="relative z-10 h-16 w-16 text-white" />
                 </>
               ) : (
@@ -892,7 +892,7 @@ export function AudioRecorder({
           >
             <RecognitionStageVisual mode="success" immersive={immersive} />
             <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold text-green-600 dark:text-green-400`}>Song found</p>
+              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold text-[#7AD6A5]`}>Song found</p>
               {immersive ? (
                 <p className="text-sm text-muted-foreground">Opening the meaning now.</p>
               ) : null}
@@ -933,7 +933,7 @@ export function AudioRecorder({
             <Button
               onClick={startListening}
               size={immersive ? 'lg' : 'default'}
-              className="min-w-[180px] rounded-full px-6 shadow-lg shadow-orange-500/20"
+              className="min-w-[180px] rounded-full border-0 bg-[#8E60FF] px-6 text-white shadow-lg shadow-[#8E60FF]/30 hover:bg-[#7C6CFF]"
               data-testid="button-try-again"
             >
               {resolvedFailureDisplay.ctaLabel}
