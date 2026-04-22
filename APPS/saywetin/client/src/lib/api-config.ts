@@ -90,6 +90,10 @@ export function getApiBaseUrl(): string {
   return DEFAULT_PROD_API_BASE_URL;
 }
 
+export function getProdFallbackApiBaseUrl(): string {
+  return DEFAULT_PROD_API_BASE_URL;
+}
+
 export function getApiUrl(path: string): string {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;

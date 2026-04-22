@@ -1,5 +1,53 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { getApiUrl } from "./api-config";
+import { getApiUrl, getProdFallbackApiBaseUrl } from "./api-config";
+
+const RAILWAY_APP_NOT_FOUND = "application not found";
+
+async function shouldFallbackToProdRailway(res: Response): Promise<boolean> {
+  if (res.status !== 404) {
+    return false;
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    return false;
+  }
+
+  try {
+    const payload = await res.clone().json();
+    const message =
+      (typeof payload?.message === "string" ? payload.message : "") ||
+      (typeof payload?.error === "string" ? payload.error : "") ||
+      (typeof payload?.error?.message === "string" ? payload.error.message : "");
+
+    return message.toLowerCase().includes(RAILWAY_APP_NOT_FOUND);
+  } catch {
+    return false;
+  }
+}
+
+async function fetchWithRailwayFallback(path: string, init: RequestInit): Promise<Response> {
+  const primaryUrl = getApiUrl(path);
+  let res = await fetch(primaryUrl, init);
+
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return res;
+  }
+
+  const fallbackBase = getProdFallbackApiBaseUrl();
+  const fallbackUrl = `${fallbackBase}${path.startsWith("/") ? path : `/${path}`}`;
+
+  if (
+    fallbackBase &&
+    fallbackBase.length > 0 &&
+    !primaryUrl.startsWith(fallbackBase) &&
+    (await shouldFallbackToProdRailway(res))
+  ) {
+    res = await fetch(fallbackUrl, init);
+  }
+
+  return res;
+}
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -26,12 +74,14 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(getApiUrl(url), {
+  const requestInit: RequestInit = {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
-  });
+  };
+
+  const res = await fetchWithRailwayFallback(url, requestInit);
 
   await throwIfResNotOk(res);
   return res;
@@ -44,7 +94,7 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const url = queryKey.join("/") as string;
-    const res = await fetch(getApiUrl(url), {
+    const res = await fetchWithRailwayFallback(url, {
       credentials: "include",
     });
 
