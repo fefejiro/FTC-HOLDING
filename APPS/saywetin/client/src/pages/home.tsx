@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearch } from 'wouter';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,15 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, LogOut, UserCircle, Mic, PenLine, X, Clock } from 'lucide-react';
+import { User, LogOut, UserCircle, Mic, PenLine, X, Clock, Search, ChevronRight } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/hooks/use-auth';
 import { AudioRecorder } from '@/components/audio-recorder';
+import { getApiUrl } from '@/lib/api-config';
 import { isListenModeLocation, LISTEN_MODE_PATH } from '@/lib/navigation';
 import { hapticTap, hapticSuccess } from '@/lib/haptics';
 import { isNativeAndroidApp } from '@/lib/native-audio';
 import { queryClient } from '@/lib/queryClient';
-import { mergeRecentRecognitions, saveRecentRecognition, type RecentRecognitionSession } from '@/lib/recent-recognitions';
+import { LIVE_COLORS } from '@/lib/live-tokens';
+import { mergeRecentRecognitions, readRecentRecognitions, saveRecentRecognition, type RecentRecognitionSession } from '@/lib/recent-recognitions';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 
 function detectMobileListenRuntime(): boolean {
@@ -29,15 +32,56 @@ function detectNativeAndroidRuntime(): boolean {
   return isNativeAndroidApp();
 }
 
+function formatRelativeTime(input: string): string {
+  const createdAt = new Date(input).getTime();
+  if (Number.isNaN(createdAt)) {
+    return 'Recently';
+  }
+
+  const diffMs = Date.now() - createdAt;
+  const diffMinutes = Math.max(1, Math.round(diffMs / 60000));
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} hr ago`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+}
+
 export default function Home() {
   const [location, navigate] = useLocation();
   const search = useSearch();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
   const [isMobileListenRuntime, setIsMobileListenRuntime] = useState(() => detectMobileListenRuntime());
   const [isNativeAndroidRuntime, setIsNativeAndroidRuntime] = useState(() => detectNativeAndroidRuntime());
+  const { data: recentTracks = [] } = useQuery<RecentRecognitionSession[]>({
+    queryKey: ['/api/listening-history'],
+    queryFn: async () => {
+      const response = await fetch(getApiUrl('/api/listening-history'), {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        return [];
+      }
+
+      return response.json();
+    },
+    retry: false,
+  });
 
   const listenLocation = search ? `${location}?${search}` : location;
   const isListeningMode = isListenModeLocation(listenLocation);
+  const mergedRecentTracks = useMemo(
+    () => mergeRecentRecognitions(recentTracks, readRecentRecognitions()).slice(0, 3),
+    [recentTracks],
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -105,73 +149,150 @@ export default function Home() {
   };
 
   const headerSurfaceClass = isNativeAndroidRuntime
-    ? 'sticky top-0 z-50 border-b bg-background/98'
-    : 'sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60';
+    ? 'sticky top-0 z-50 border-b border-white/5 bg-[#0A0A0F]/98'
+    : 'sticky top-0 z-50 border-b border-white/5 bg-[#0A0A0F]/88 backdrop-blur-xl';
 
   const idleExperience = (
-    <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-10 sm:py-14">
-      <div className="relative z-10 flex w-full max-w-md flex-col items-center text-center">
-        <div className="space-y-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80">
-            Saywetin
-          </p>
-          <h2 className="text-4xl font-bold tracking-tight sm:text-5xl" data-testid="heading-app-title">
-            Listen
+    <div className="relative flex flex-1 flex-col overflow-hidden px-4 pb-10 pt-8 sm:px-6 sm:pt-10">
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(90% 60% at 50% 0%, oklch(0.3 0.18 272 / 0.35) 0%, transparent 60%)',
+          }}
+        />
+        <div
+          className="absolute left-1/2 top-52 h-72 w-72 -translate-x-1/2 rounded-full blur-3xl"
+          style={{
+            background: `radial-gradient(circle, ${LIVE_COLORS.violet} 0%, transparent 68%)`,
+            opacity: 0.22,
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col">
+        <div className="pt-4">
+          <p className="mb-3 text-[11px] uppercase tracking-[0.28em] text-white/45">Now listening from here</p>
+          <h2
+            className="font-serif text-4xl leading-[0.95] tracking-tight text-white sm:text-5xl"
+            data-testid="heading-app-title"
+          >
+            What's playing,
+            <br />
+            <span style={{ color: '#B5A8FF', fontStyle: 'italic' }}>wetin dem dey talk?</span>
           </h2>
-          <p className="mx-auto max-w-xs text-base text-muted-foreground sm:text-lg" data-testid="text-app-description">
-            Hear the song. Understand the meaning.
+          <p
+            className="mt-4 max-w-sm text-base leading-7 text-white/68 sm:text-lg"
+            data-testid="text-app-description"
+          >
+            Hear the song. Follow the lyrics live. Understand the meaning without leaving the moment.
           </p>
         </div>
 
-        <div className="relative mt-10 flex h-52 w-52 items-center justify-center sm:h-60 sm:w-60">
-          {isNativeAndroidRuntime ? (
-            <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-orange-500/20 via-amber-500/16 to-green-500/14 blur-2xl" />
-          ) : (
-            <>
-              <motion.div
-                className="absolute -inset-4 rounded-full bg-gradient-to-br from-orange-500/24 via-amber-500/22 to-green-500/20 blur-2xl"
-                animate={{ scale: [0.98, 1.08, 1], opacity: [0.3, 0.56, 0.34] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              <motion.div
-                className="absolute -inset-10 rounded-full bg-gradient-to-br from-orange-500/12 via-amber-500/12 to-green-500/10 blur-3xl"
-                animate={{ scale: [0.96, 1.12, 1], opacity: [0.18, 0.34, 0.2] }}
-                transition={{ duration: 3.1, repeat: Infinity, ease: 'easeInOut' }}
-              />
-            </>
-          )}
+        <div className="relative flex justify-center pb-4 pt-10">
+          <motion.div
+            className="absolute inset-x-0 top-3 mx-auto h-64 w-64 rounded-full blur-3xl"
+            animate={{ opacity: [0.18, 0.32, 0.2], scale: [0.96, 1.06, 1] }}
+            transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              background: `radial-gradient(circle, ${LIVE_COLORS.violet} 0%, transparent 68%)`,
+            }}
+          />
 
           <button
             type="button"
             onClick={openListenMode}
-            className="relative flex h-44 w-44 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 shadow-2xl shadow-orange-500/30 transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] touch-manipulation sm:h-52 sm:w-52"
+            className="relative flex h-44 w-44 touch-manipulation flex-col items-center justify-center rounded-full transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] sm:h-48 sm:w-48"
             data-testid="button-listen-main"
             aria-label="Listen"
+            style={{
+              background:
+                'radial-gradient(circle at 30% 30%, #A89AFF 0%, oklch(0.72 0.18 272) 48%, #3f2466 100%)',
+              boxShadow:
+                '0 24px 60px -10px rgba(142, 96, 255, 0.45), inset 0 -12px 24px rgba(0,0,0,.35), inset 0 2px 4px rgba(255,255,255,.35)',
+            }}
           >
-            <div className="absolute inset-1 rounded-full bg-gradient-to-br from-orange-500/95 via-amber-500/95 to-green-500/95" />
-            <Mic className="relative z-10 h-16 w-16 text-white drop-shadow-lg sm:h-20 sm:w-20" />
+            <Mic className="mb-2 h-14 w-14 text-[#0A0A0F] sm:h-16 sm:w-16" strokeWidth={1.7} />
+            <span className="font-serif text-2xl italic text-[#0A0A0F]">Listen</span>
           </button>
         </div>
 
-        <div className="mt-8 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/explore')}
-            className="text-sm text-muted-foreground hover:text-foreground"
-            data-testid="button-type-lyrics-instead"
-          >
-            Type lyrics instead
-          </Button>
-          <span className="text-muted-foreground/40 text-xs">|</span>
+        <p className="mt-2 text-center text-sm text-white/58">Tap to identify what's playing around you</p>
+
+        <button
+          type="button"
+          onClick={() => navigate('/explore')}
+          className="mt-7 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-left backdrop-blur-sm transition hover:border-white/15 hover:bg-white/[0.06]"
+          data-testid="button-type-lyrics-instead"
+        >
+          <div className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-white/70">
+            <Search className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-white">Search a lyric, slang, or artist</p>
+            <p className="mt-1 text-xs text-white/45">Type instead when the song has already left the room.</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-white/40" />
+        </button>
+
+        <div className="mt-8 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Recent listens</p>
+            <p className="mt-2 text-sm text-white/60">Jump back into the last songs you matched.</p>
+          </div>
           <Button
             variant="ghost"
             onClick={() => navigate('/history')}
-            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5"
+            className="h-auto px-0 text-xs uppercase tracking-[0.2em] text-[oklch(0.72_0.18_272)] hover:bg-transparent hover:text-white"
             data-testid="button-recent"
           >
-            <Clock className="h-3.5 w-3.5" />
-            Recent
+            See all
           </Button>
+        </div>
+
+        <div className="mt-4 space-y-3 pb-4">
+          {mergedRecentTracks.length > 0 ? (
+            mergedRecentTracks.map((session) => (
+              <button
+                key={session.id}
+                type="button"
+                onClick={() => navigate(`/song/${session.recognizedTrack?.id}`)}
+                className="flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3 text-left transition hover:border-white/15 hover:bg-white/[0.05]"
+                data-testid={`recent-track-${session.recognizedTrack?.id}`}
+              >
+                <div className="h-12 w-12 overflow-hidden rounded-xl bg-white/[0.08]">
+                  {session.recognizedTrack?.coverArtUrl ? (
+                    <img
+                      src={session.recognizedTrack.coverArtUrl}
+                      alt={`${session.recognizedTrack.title} cover`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[oklch(0.72_0.18_272_/_0.16)] text-white/80">
+                      <Mic className="h-5 w-5" />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-white">
+                    {session.recognizedTrack?.title || 'Recognized song'}
+                  </p>
+                  <p className="truncate text-xs text-white/52">
+                    {session.recognizedTrack?.artist || 'Unknown artist'} · {formatRelativeTime(session.createdAt)}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-white/35" />
+              </button>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-5">
+              <p className="text-sm font-medium text-white">Nothing recent yet.</p>
+              <p className="mt-1 text-xs leading-6 text-white/50">
+                Your last matched songs will land here so you can jump straight back into meaning and live lyrics.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -227,11 +348,20 @@ export default function Home() {
   );
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background" style={{ backgroundColor: LIVE_COLORS.obsidian }}>
       {isNativeAndroidRuntime ? (
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 via-background to-background dark:from-orange-500/14 dark:via-background dark:to-background" />
-          <div className="absolute left-1/2 top-[28%] h-72 w-72 -translate-x-1/2 rounded-full bg-gradient-to-br from-orange-500/18 via-amber-400/14 to-green-400/12 blur-3xl" />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(79,51,134,0.18) 0%, rgba(10,10,15,0.96) 38%, rgba(10,10,15,1) 100%)',
+            }}
+          />
+          <div
+            className="absolute left-1/2 top-[28%] h-72 w-72 -translate-x-1/2 rounded-full blur-3xl"
+            style={{ background: `radial-gradient(circle, ${LIVE_COLORS.violet} 0%, transparent 70%)`, opacity: 0.2 }}
+          />
         </div>
       ) : (
         <motion.div
@@ -244,15 +374,19 @@ export default function Home() {
           transition={{ duration: 0.32, ease: 'easeOut' }}
         >
             <motion.div
-              className="absolute inset-0 bg-gradient-to-b from-orange-500/12 via-amber-500/8 to-background dark:from-orange-500/18 dark:via-amber-900/12 dark:to-background"
+              className="absolute inset-0"
               animate={{
                 opacity: isListeningMode ? 1 : 0.8,
                 scale: isListeningMode ? 1.05 : 1,
               }}
               transition={{ duration: 0.36, ease: 'easeOut' }}
+              style={{
+                background:
+                  'linear-gradient(180deg, rgba(79,51,134,0.22) 0%, rgba(32,24,44,0.55) 24%, rgba(10,10,15,1) 100%)',
+              }}
             />
             <motion.div
-              className="absolute top-12 left-8 h-28 w-28 rounded-full bg-orange-500/16 blur-2xl"
+              className="absolute left-8 top-12 h-28 w-28 rounded-full blur-2xl"
               animate={{
                 x: isListeningMode ? (isMobileListenRuntime ? -3 : -8) : 0,
                 y: isListeningMode ? (isMobileListenRuntime ? -4 : -10) : 0,
@@ -260,9 +394,10 @@ export default function Home() {
                 opacity: isListeningMode ? (isMobileListenRuntime ? 0.3 : 0.3) : 0.16,
               }}
               transition={{ duration: 0.38, ease: 'easeOut' }}
+              style={{ background: `radial-gradient(circle, ${LIVE_COLORS.violet} 0%, transparent 70%)` }}
             />
             <motion.div
-              className="absolute bottom-16 right-8 h-36 w-36 rounded-full bg-green-500/14 blur-3xl"
+              className="absolute bottom-16 right-8 h-36 w-36 rounded-full blur-3xl"
               animate={{
                 x: isListeningMode ? (isMobileListenRuntime ? 4 : 10) : 0,
                 y: isListeningMode ? (isMobileListenRuntime ? 4 : 8) : 0,
@@ -270,14 +405,18 @@ export default function Home() {
                 opacity: isListeningMode ? (isMobileListenRuntime ? 0.28 : 0.28) : 0.14,
               }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
+              style={{ background: 'radial-gradient(circle, rgba(122,214,165,0.22) 0%, transparent 70%)' }}
             />
             <motion.div
-              className="absolute left-1/2 top-1/2 h-[22rem] w-[22rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/24 via-amber-400/20 to-green-400/18 blur-3xl"
+              className="absolute left-1/2 top-1/2 h-[22rem] w-[22rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
               animate={{
                 opacity: isListeningMode ? (isMobileListenRuntime ? 0.7 : 0.78) : 0.18,
                 scale: isListeningMode ? (isMobileListenRuntime ? 1.06 : 1.08) : 0.84,
               }}
               transition={{ duration: 0.34, ease: 'easeOut' }}
+              style={{
+                background: `radial-gradient(circle at 35% 35%, rgba(168,154,255,0.42) 0%, ${LIVE_COLORS.violet} 38%, transparent 72%)`,
+              }}
             />
         </motion.div>
       )}
@@ -291,16 +430,16 @@ export default function Home() {
             exit={{ opacity: 0, y: -18, transition: { duration: 0.18, ease: 'easeInOut' } }}
             className={headerSurfaceClass}
           >
-            <div className="container max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+            <div className="container mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-6 sm:gap-4">
               <div className="flex items-center gap-2 min-w-0" data-testid="text-logo">
-                <img src="/app-icon.jpg" alt="Saywetin" className="h-9 w-9 rounded-lg" />
-                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-orange-600 via-amber-500 to-green-500 bg-clip-text text-transparent truncate">
+                <img src="/app-icon.jpg" alt="Saywetin" className="h-9 w-9 rounded-xl border border-white/10" />
+                <h1 className="truncate text-xl font-semibold text-white sm:text-2xl">
                   Saywetin
                 </h1>
               </div>
 
               <nav className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
-                <ThemeToggle className="h-9 w-9" />
+                <ThemeToggle className="h-9 w-9 border border-white/8 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white" />
 
                 {isAuthenticated ? (
                   <DropdownMenu>
@@ -310,7 +449,7 @@ export default function Home() {
                         size="icon"
                         data-testid="button-user-menu"
                         aria-label="User menu"
-                        className="h-9 w-9"
+                        className="h-9 w-9 border border-white/8 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white"
                       >
                         <User className="h-5 w-5" />
                       </Button>
