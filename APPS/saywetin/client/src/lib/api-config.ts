@@ -11,6 +11,7 @@ const CANONICAL_WEB_ORIGIN = "https://saywetin.app";
 const DEFAULT_PROD_API_BASE_URL = "https://ftcpeacepad-extension-production.up.railway.app";
 const API_PREFIXES = ["/api", "/health", "/__health"] as const;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
+const RAILWAY_APP_NOT_FOUND = "application not found";
 
 function normalizeHostname(hostname: string): string {
   return hostname.trim().toLowerCase();
@@ -94,6 +95,54 @@ export function getProdFallbackApiBaseUrl(): string {
   return DEFAULT_PROD_API_BASE_URL;
 }
 
+async function shouldFallbackToProdRailway(res: Response): Promise<boolean> {
+  if (res.status !== 404) {
+    return false;
+  }
+
+  if ((res.headers.get("x-railway-fallback") || "").toLowerCase() === "true") {
+    return true;
+  }
+
+  try {
+    const payload = await res.clone().json();
+    const message =
+      (typeof payload?.message === "string" ? payload.message : "") ||
+      (typeof payload?.error === "string" ? payload.error : "") ||
+      (typeof payload?.error?.message === "string" ? payload.error.message : "");
+
+    return message.toLowerCase().includes(RAILWAY_APP_NOT_FOUND);
+  } catch {
+    return false;
+  }
+}
+
+function toFallbackUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${getProdFallbackApiBaseUrl()}${normalizedPath}`;
+}
+
+async function fetchWithRailwayFallback(
+  nativeFetch: typeof fetch,
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const primaryUrl = getApiUrl(path);
+  const fallbackBase = getProdFallbackApiBaseUrl();
+
+  let response = await nativeFetch(primaryUrl, init);
+  if (
+    import.meta.env.PROD &&
+    fallbackBase &&
+    !primaryUrl.startsWith(fallbackBase) &&
+    (await shouldFallbackToProdRailway(response))
+  ) {
+    response = await nativeFetch(toFallbackUrl(path), init);
+  }
+
+  return response;
+}
+
 export function getApiUrl(path: string): string {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
@@ -142,15 +191,15 @@ export function installApiFetchPatch(): void {
   }
 
   const nativeFetch = window.fetch.bind(window);
-  window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (typeof input === "string" && input.startsWith("/") && isApiPath(input)) {
-      return nativeFetch(getApiUrl(input), init);
+      return fetchWithRailwayFallback(nativeFetch, input, init);
     }
 
     if (input instanceof URL && input.origin === window.location.origin) {
       const normalized = `${input.pathname}${input.search}${input.hash}`;
       if (isApiPath(normalized)) {
-        return nativeFetch(getApiUrl(normalized), init);
+        return fetchWithRailwayFallback(nativeFetch, normalized, init);
       }
     }
 

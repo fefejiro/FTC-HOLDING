@@ -8,9 +8,8 @@ async function shouldFallbackToProdRailway(res: Response): Promise<boolean> {
     return false;
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    return false;
+  if ((res.headers.get("x-railway-fallback") || "").toLowerCase() === "true") {
+    return true;
   }
 
   try {
