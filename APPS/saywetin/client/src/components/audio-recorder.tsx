@@ -139,7 +139,9 @@ function getFailureDisplay(error: unknown): FailureDisplay {
         message.includes('low-confidence') ||
         message.includes('match looked weak') ||
         message.includes('music may be incorrect') ||
-        message.includes('no music')
+        message.includes('no music') ||
+        message.includes("can't generate fingerprint") ||
+        message.includes('fingerprint')
       ) {
         return {
           title: 'We could not hear a clear song',
@@ -148,6 +150,12 @@ function getFailureDisplay(error: unknown): FailureDisplay {
           orbMode: 'error',
         };
       }
+      return {
+        title: 'We could not hear a clear song',
+        body: 'Move closer to the music and try again.',
+        ctaLabel: 'Try again',
+        orbMode: 'error',
+      };
     case 'offline':
     case 'backend_unreachable':
     case 'timeout':
