@@ -1,5 +1,5 @@
 # FTC Master Orchestration
-Last updated: 2026-04-21
+Last updated: 2026-04-22
 
 Single source of truth for cross-project status, priority, burn, and next actions.
 Paste the relevant section into any AI tool to seed context instantly.
@@ -169,8 +169,8 @@ git -C "C:\FTC HOLDING" status -sb
 ## Una Labs Ops Snapshot (Auto)
 
 <!-- AUTO:UNALABS_MASTER:START -->
-- Updated at: 2026-04-21T02:56:54.089Z
-- Smoke checks: 15/15 passing
+- Updated at: 2026-04-22T00:47:59.879Z
+- Smoke checks: 14/14 passing
 - Admin verification: unauthenticated admin guard smoke only
 - Canonical status doc: DOCS/UNALABS_STATUS.md
 <!-- AUTO:UNALABS_MASTER:END -->

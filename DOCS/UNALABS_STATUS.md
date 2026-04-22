@@ -5,10 +5,10 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 ## Latest Snapshot
 
 <!-- AUTO:UNALABS_SNAPSHOT:START -->
-- Generated at: 2026-04-21T02:56:54.089Z
+- Generated at: 2026-04-22T00:47:59.879Z
 - Site origin: https://unalabs.cloud
 - Worker origin: https://una-stripe-api.fejiro-efiuvwere.workers.dev
-- Smoke status: 15/15 checks passed
+- Smoke status: 14/14 checks passed
 - Admin smoke mode: unauthenticated admin guard smoke only
 - Phase 9 focus: AutoCollect automation and health observability are live; scheduled run verification and paid-invoice reconciliation are the close-out steps.
 - Sprint source: FTC_MASTER.md
@@ -23,13 +23,12 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 | Start flow | PASS | 308 \| /start/ |
 | Summary page | PASS | 308 \| /start/summary/ |
 | Confirmation page | PASS | 308 \| /confirmation/ |
-| Status page | PASS | 308 \| /status/ |
+| Status page (protected) | PASS | 308 \| /status/ |
 | Realtor route | PASS | 308 \| /realtor/ |
 | Portal page | PASS | 308 \| /portal/ |
 | Proposal page | PASS | 308 \| /dashboard/proposal/ |
 | Report page | PASS | 308 \| /dashboard/report/ |
 | Admin page | PASS | 308 \| /admin/ |
-| Public status summary endpoint | PASS | 200 |
 | AutoCollect list auth guard | PASS | 401 |
 | AutoCollect health auth guard | PASS | 401 |
 | AutoCollect sync auth guard | PASS | 401 |
