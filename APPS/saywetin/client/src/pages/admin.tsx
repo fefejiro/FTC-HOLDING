@@ -175,6 +175,12 @@ export default function Admin() {
             Back to Home
           </Button>
         </Link>
+        <Link href="/ops/live-lyrics">
+          <Button variant="outline" size="sm" className="mb-4 ml-2" data-testid="button-open-live-lyrics-ops">
+            Live lyrics
+            <Badge className="ml-2" variant="secondary">NEW</Badge>
+          </Button>
+        </Link>
         <h1 className="text-3xl font-bold mb-2">Batch Import Tool</h1>
         <p className="text-muted-foreground">
           Import Public Domain and Creative Commons licensed African songs with lyrics

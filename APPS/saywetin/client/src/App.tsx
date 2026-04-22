@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BottomNav } from "@/components/bottom-nav";
+import { LiveMiniPlayer } from "@/components/live-mini-player";
 import { UpdateNotification } from "@/components/update-notification";
 import { VersionGuard } from "@/components/version-guard";
 import { isListenModeLocation } from "@/lib/navigation";
@@ -23,6 +24,9 @@ import DeleteData from "@/pages/delete-data";
 import NotFound from "@/pages/not-found";
 import GamePage from "@/pages/game";
 import FullLyricsPage from "@/pages/full-lyrics";
+import LiveLyricsPage from "@/pages/live-lyrics";
+import MeaningDetailPage from "@/pages/meaning-detail";
+import OpsLiveLyricsPage from "@/pages/ops-live-lyrics";
 
 function Router() {
   return (
@@ -58,6 +62,9 @@ function Router() {
       <Route path="/auth/register" component={Login} />
       <Route path="/game" component={GamePage} />
       <Route path="/song/:id/lyrics" component={FullLyricsPage} />
+      <Route path="/song/:id/live" component={LiveLyricsPage} />
+      <Route path="/song/:id/live/explain/:lineId" component={MeaningDetailPage} />
+      <Route path="/ops/live-lyrics" component={OpsLiveLyricsPage} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/delete-data" component={DeleteData} />
       <Route path="/delete-account" component={DeleteData} />
@@ -145,6 +152,7 @@ function AppContent() {
       <div className={hideBottomNav ? '' : 'pb-20'}>
         <Router />
       </div>
+      {!hideBottomNav && <LiveMiniPlayer />}
       {!hideBottomNav && <UpdateNotification />}
       {!hideBottomNav && <BottomNav />}
       <Toaster />

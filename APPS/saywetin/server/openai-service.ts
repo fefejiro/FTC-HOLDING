@@ -1030,3 +1030,74 @@ If the title is already clear English with no African phrases, still provide cul
   }
 }
 
+export interface LineAlternate {
+  title: string;
+  body: string;
+  confidence: number;
+}
+
+/**
+ * Ask the AI whether a lyric line carries multiple plausible meanings.
+ * Returns an array of alternates only when genuine ambiguity exists (≥2).
+ * Returns empty array when the line has a single clear meaning.
+ */
+export async function generateLineAlternates(
+  lyricText: string,
+  songTitle: string,
+  artistName: string,
+  genre?: string,
+  language?: string,
+): Promise<LineAlternate[]> {
+  if (!isAiConfigured()) return [];
+  if (isAiTemporarilyDegraded()) return [];
+  if (lyricText.trim().length < 4) return [];
+
+  try {
+    const contextParts = [
+      songTitle && artistName ? `Song: "${songTitle}" by ${artistName}` : "",
+      genre ? `Genre: ${genre}` : "",
+      language ? `Language: ${language}` : "",
+    ].filter(Boolean).join(" | ");
+
+    const prompt = `You are an expert in African music, slang, and cultural meaning.
+${contextParts}
+
+Lyric line: "${lyricText}"
+
+Does this line have multiple genuinely distinct cultural or literal interpretations that a Nigerian/African listener might debate? 
+- If YES (ambiguous): return 2–3 alternate readings as JSON.
+- If NO (clear meaning): return an empty array.
+
+Return ONLY valid JSON in this format (no markdown):
+{"alternates": [{"title": "Short label", "body": "1–2 sentence explanation", "confidence": 0.0}]}
+
+Rules:
+- confidence values must sum to approximately 1.0
+- Only include alternates if they are meaningfully different, not just paraphrases
+- If the line is clear, return: {"alternates": []}`;
+
+    const response = await getOpenAIClient().chat.completions.create({
+      model: MODEL,
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      max_tokens: 400,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) return [];
+
+    const parsed = JSON.parse(content) as { alternates?: LineAlternate[] };
+    const alts = parsed.alternates;
+    if (!Array.isArray(alts) || alts.length < 2) return [];
+
+    return alts.map((a) => ({
+      title: String(a.title || "").trim(),
+      body: String(a.body || "").trim(),
+      confidence: Math.max(0, Math.min(1, Number(a.confidence) || 0)),
+    })).filter((a) => a.title && a.body);
+  } catch (error) {
+    console.warn("[AI] generateLineAlternates failed (non-critical):", error);
+    return [];
+  }
+}
+

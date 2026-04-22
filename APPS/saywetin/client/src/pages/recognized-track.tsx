@@ -1101,6 +1101,15 @@ export default function RecognizedTrack() {
               {lyrics ? (
                 <div className="border-t border-border/50 pt-2">
                   <Button
+                    variant="default"
+                    className="mb-2 w-full"
+                    onClick={() => navigate(`/song/${track.id}/live`)}
+                    data-testid="button-follow-live-lyrics"
+                  >
+                    <Zap className="mr-2 h-4 w-4" />
+                    Follow live lyrics
+                  </Button>
+                  <Button
                     variant="ghost"
                     className="w-full text-primary"
                     onClick={() => navigate(`/song/${track.id}/lyrics`)}

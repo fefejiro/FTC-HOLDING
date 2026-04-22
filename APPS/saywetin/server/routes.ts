@@ -21,6 +21,7 @@ import {
   generateLyricTranslation,
   generateSectionCulturalAnalysis,
   generateSingleLineAnalysis,
+  generateLineAlternates,
   streamSingleLineAnalysis,
 } from "./openai-service";
 import { ExportService } from "./export-service";
@@ -187,6 +188,18 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function makeAnonymousSessionId(req: any): string {
+  const existing = String(req.headers["x-session-id"] || "").trim();
+  if (existing) {
+    return existing.slice(0, 64);
+  }
+
+  const ip = String(req.ip || req.socket?.remoteAddress || "unknown");
+  const userAgent = String(req.headers["user-agent"] || "unknown");
+  const seed = `${ip}|${userAgent}|saywetin-live`;
+  return `anon_${crypto.createHash("sha1").update(seed).digest("hex").slice(0, 16)}`;
+}
+
 async function withDatabaseRetry<T>(
   operationName: string,
   operation: () => Promise<T>,
@@ -348,6 +361,14 @@ async function transcribeAudioForSongIdentification(
 
 type PublicAsyncStatus = "pending" | "complete" | "unavailable" | "failed";
 
+type SyncedLyricLine = {
+  id: string;
+  t: string;
+  startMs: number;
+  endMs: number;
+  tappable: boolean;
+};
+
 function toPublicLyricsStatus(status?: string): PublicAsyncStatus {
   if (status === "completed") {
     return "complete";
@@ -472,6 +493,65 @@ function mapLyricsResolutionSource(source?: string | null): LyricsResolutionSour
   if (normalized.includes("lyrics.ovh")) return "lyrics_ovh";
   if (normalized) return "fallback";
   return "none";
+}
+
+function parseLyricsTextToSyncedLines(lyricsText: string, trackDurationMs?: number | null): SyncedLyricLine[] {
+  const rows = lyricsText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const safeDurationMs =
+    typeof trackDurationMs === "number" && trackDurationMs > 0
+      ? trackDurationMs
+      : Math.max(rows.length * 3200, 18_000);
+  const perLineMs = Math.max(1600, Math.floor(safeDurationMs / rows.length));
+
+  return rows.map((text, index) => {
+    const startMs = index * perLineMs;
+    const endMs = index === rows.length - 1 ? safeDurationMs : (index + 1) * perLineMs;
+    const id = crypto.createHash("sha1").update(`${index}:${text}`).digest("hex").slice(0, 12);
+
+    return {
+      id,
+      t: text,
+      startMs,
+      endMs,
+      tappable: true,
+    };
+  });
+}
+
+function parseSlangTermsFromUnknown(value: unknown): Array<{ word: string; meaning: string; region: string }> {
+  if (!value) return [];
+
+  const normalize = (items: any[]) =>
+    items
+      .map((item) => ({
+        word: String(item?.term || item?.word || "").trim(),
+        meaning: String(item?.meaning || "").trim(),
+        region: String(item?.language || item?.region || "Nigeria").trim() || "Nigeria",
+      }))
+      .filter((item) => item.word.length > 0 && item.meaning.length > 0);
+
+  if (Array.isArray(value)) {
+    return normalize(value);
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? normalize(parsed) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
 }
 
 async function persistLyricsForTrack(
@@ -1917,6 +1997,336 @@ Rules:
 
   // Backward compatibility alias for older frontend bundles.
   app.get("/api/recognized-track/:id", sendRecognizedTrack);
+
+  app.get("/v1/tracks/:trackId/synced-lyrics", async (req, res) => {
+    try {
+      const payload = await buildRecognizedTrackResponse(req.params.trackId);
+
+      if (!payload) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      const lyricsText = payload.lyrics?.text || "";
+      const lines = lyricsText ? parseLyricsTextToSyncedLines(lyricsText, payload.track.trackDurationMs) : [];
+      const source = payload.lyrics?.source || "none";
+      const confidence = lines.length > 0 ? (source === "cache" ? 0.78 : 0.7) : 0;
+
+      return res.json({
+        lines,
+        confidence,
+        source,
+      });
+    } catch (error) {
+      console.error("[LIVE-LYRICS] synced-lyrics failed", error);
+      return res.status(500).json({ error: "Failed to fetch synced lyrics" });
+    }
+  });
+
+  app.post("/v1/meaning/explain", async (req, res) => {
+    try {
+      const trackId = String(req.body?.trackId || "").trim();
+      const lyric = String(req.body?.lyric || "").trim();
+      const lineId = String(req.body?.lineId || "").trim();
+      const positionMs = Number(req.body?.positionMs || 0);
+
+      if (!trackId || !lyric) {
+        return res.status(400).json({ error: "trackId and lyric are required" });
+      }
+
+      const payload = await buildRecognizedTrackResponse(trackId);
+      if (!payload) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      const fallback = buildBestEffortLineAnalysis(lyric, {
+        songTitle: payload.track.title,
+        artistName: payload.track.artist,
+        genre: payload.track.genre || undefined,
+        language: payload.lyrics?.language || undefined,
+      });
+
+      const existing = (payload.culturalAnalysis || []).find(
+        (analysis: any) => String(analysis?.originalText || "").trim().toLowerCase() === lyric.toLowerCase(),
+      );
+
+      const aiResult =
+        existing ||
+        (isAiConfigured()
+          ? await generateSingleLineAnalysis(
+              lyric,
+              payload.track.title,
+              payload.track.artist,
+              payload.track.genre || undefined,
+              payload.lyrics?.language || undefined,
+            )
+          : null);
+
+      const literal =
+        String(aiResult?.translation || fallback?.translation || "").trim() ||
+        "This line reflects the direct meaning in context.";
+      const cultural =
+        String(aiResult?.culturalContext || aiResult?.deeperMeaning || fallback?.culturalContext || "").trim() ||
+        "Cultural context is still loading for this line.";
+
+      const slangMap = parseSlangTermsFromUnknown(aiResult?.slangTerms || fallback?.slangTerms);
+      const relatedPhrases = slangMap.map((item) => item.word).slice(0, 5);
+
+      const confidence = aiResult ? 0.78 : fallback ? 0.62 : 0.5;
+
+      // Generate alternates when ambiguity is possible (confidence < 0.8 or AI result exists)
+      // Fire concurrently with the response build — only when AI is configured
+      let alternates: { title: string; body: string; confidence: number }[] | undefined;
+      if (isAiConfigured() && lyric.trim().length > 4) {
+        try {
+          const alts = await generateLineAlternates(
+            lyric,
+            payload.track.title,
+            payload.track.artist,
+            payload.track.genre || undefined,
+            payload.lyrics?.language || undefined,
+          );
+          if (alts.length >= 2) alternates = alts;
+        } catch {
+          // non-critical — omit alternates silently
+        }
+      }
+
+      return res.json({
+        lineId,
+        trackId,
+        positionMs: Number.isFinite(positionMs) ? positionMs : 0,
+        literal,
+        cultural,
+        slangMap,
+        region: Array.from(new Set(slangMap.map((item) => item.region))).slice(0, 3),
+        confidence,
+        ...(alternates ? { alternates } : {}),
+        relatedPhrases,
+        artistNote: String(aiResult?.artistIntent || fallback?.artistIntent || "").trim() || undefined,
+      });
+    } catch (error) {
+      console.error("[LIVE-LYRICS] meaning explain failed", error);
+      return res.status(500).json({ error: "Failed to explain lyric line" });
+    }
+  });
+
+  app.post("/v1/signals", async (req, res) => {
+    try {
+      const type = String(req.body?.type || "").trim();
+      const allowedTypes = new Set(["tap", "flag", "resync", "dwell", "exit", "fallback"]);
+
+      if (!allowedTypes.has(type)) {
+        return res.status(400).json({ error: "Invalid signal type" });
+      }
+
+      const signalPayload = {
+        type,
+        lineId: req.body?.lineId ? String(req.body.lineId) : null,
+        trackId: req.body?.trackId ? String(req.body.trackId) : null,
+        dwellMs: Number.isFinite(Number(req.body?.dwellMs)) ? Number(req.body?.dwellMs) : null,
+        reason: req.body?.reason ? String(req.body.reason) : null,
+        createdAt: new Date().toISOString(),
+      };
+
+      const interactionType =
+        type === "fallback" && signalPayload.reason
+          ? `live_fallback_${signalPayload.reason}`
+          : `live_${type}`;
+
+      await storage.logInteraction({
+        sessionId: makeAnonymousSessionId(req),
+        trackId: signalPayload.trackId || undefined,
+        interactionType,
+        // For tap signals, store lineId in confidenceBucket so we can aggregate by line in ops.
+        // For fallback signals, store the reason string as before.
+        confidenceBucket:
+          type === "tap" && signalPayload.lineId
+            ? signalPayload.lineId
+            : signalPayload.reason || undefined,
+        isAuto: type === "fallback",
+        dwellTime: signalPayload.dwellMs ? Math.max(0, Math.round(signalPayload.dwellMs / 1000)) : undefined,
+      });
+
+      console.info("[LIVE-LYRICS] signal", signalPayload);
+      return res.status(202).json({ accepted: true });
+    } catch (error) {
+      console.error("[LIVE-LYRICS] signals ingestion failed", error);
+      return res.status(500).json({ error: "Failed to record signal" });
+    }
+  });
+
+  app.get("/ops/api/live-lyrics/stats", isAuthenticated, async (_req, res) => {
+    try {
+      const [coverageResult, confidenceResult, weeklyTapResult, fallbackResult, byCatalogResult, topTappedResult, driftResult, ambiguousResult] =
+        await Promise.all([
+          pool.query(
+            `
+            SELECT
+              COUNT(*) FILTER (WHERE rt.lyrics_status = 'completed')::float AS with_synced,
+              COUNT(*)::float AS total
+            FROM recognized_tracks rt
+          `,
+          ),
+          pool.query(
+            `
+            SELECT AVG(CASE
+              WHEN interaction_type LIKE 'live_fallback%' THEN 0.45
+              WHEN interaction_type = 'live_resync' THEN 0.6
+              ELSE 0.82
+            END) AS confidence
+            FROM interaction_logs
+            WHERE interaction_type LIKE 'live_%'
+              AND created_at >= NOW() - INTERVAL '7 days'
+          `,
+          ),
+          pool.query(
+            `
+            SELECT COUNT(*)::int AS taps
+            FROM interaction_logs
+            WHERE interaction_type = 'live_tap'
+              AND created_at >= NOW() - INTERVAL '7 days'
+          `,
+          ),
+          pool.query(
+            `
+            WITH per_session AS (
+              SELECT
+                session_id,
+                BOOL_OR(interaction_type LIKE 'live_fallback%') AS had_fallback
+              FROM interaction_logs
+              WHERE interaction_type LIKE 'live_%'
+                AND created_at >= NOW() - INTERVAL '7 days'
+              GROUP BY session_id
+            )
+            SELECT
+              COALESCE(SUM(CASE WHEN had_fallback THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0), 0) AS fallback_rate
+            FROM per_session
+          `,
+          ),
+          pool.query(
+            `
+            SELECT
+              CASE
+                WHEN COALESCE(LOWER(rt.genre), '') LIKE '%gospel%' THEN 'Gospel'
+                WHEN COALESCE(LOWER(rt.genre), '') LIKE '%alte%' THEN 'Alté'
+                WHEN COALESCE(LOWER(rt.genre), '') LIKE '%afro%' THEN 'Afrobeats'
+                WHEN COALESCE(LOWER(rt.language), '') IN ('ha', 'hau', 'hausa') THEN 'Hausa'
+                ELSE 'Afrobeats'
+              END AS group_name,
+              COUNT(*)::int AS total,
+              COUNT(*) FILTER (WHERE rt.lyrics_status = 'completed')::int AS synced
+            FROM recognized_tracks rt
+            GROUP BY 1
+          `,
+          ),
+          pool.query(
+            `
+            SELECT
+              il.track_id,
+              COALESCE(rt.title, 'Unknown song') AS title,
+              COALESCE(rt.artist, 'Unknown artist') AS artist,
+              il.confidence_bucket AS line_id,
+              COUNT(*)::int AS taps
+            FROM interaction_logs il
+            LEFT JOIN recognized_tracks rt ON rt.id = il.track_id
+            WHERE il.interaction_type = 'live_tap'
+              AND il.created_at >= NOW() - INTERVAL '24 hours'
+            GROUP BY il.track_id, rt.title, rt.artist, il.confidence_bucket
+            ORDER BY taps DESC
+            LIMIT 8
+          `,
+          ),
+          pool.query(
+            `
+            SELECT
+              interaction_type,
+              COUNT(*)::int AS occurrences
+            FROM interaction_logs
+            WHERE interaction_type IN ('live_resync', 'live_fallback_syncwarn')
+              AND created_at >= NOW() - INTERVAL '7 days'
+            GROUP BY interaction_type
+            ORDER BY occurrences DESC
+          `,
+          ),
+          pool.query(
+            `
+            SELECT
+              il.track_id,
+              COALESCE(rt.title, 'Unknown song') AS title,
+              COALESCE(rt.artist, 'Unknown artist') AS artist,
+              COUNT(*)::int AS flags
+            FROM interaction_logs il
+            LEFT JOIN recognized_tracks rt ON rt.id = il.track_id
+            WHERE il.interaction_type = 'live_flag'
+              AND il.created_at >= NOW() - INTERVAL '7 days'
+            GROUP BY il.track_id, rt.title, rt.artist
+            ORDER BY flags DESC
+            LIMIT 10
+          `,
+          ),
+        ]);
+
+      const withSynced = Number(coverageResult.rows[0]?.with_synced || 0);
+      const total = Number(coverageResult.rows[0]?.total || 0);
+      const syncCoverage = total > 0 ? withSynced / total : 0;
+      const syncConfidence = Number(confidenceResult.rows[0]?.confidence || 0);
+      const tapToExplainVolume = Number(weeklyTapResult.rows[0]?.taps || 0);
+      const fallbackRate = Number(fallbackResult.rows[0]?.fallback_rate || 0);
+
+      const defaultGroups = ["Afrobeats", "Alté", "Hausa", "Gospel"];
+      const coverageByCatalog = defaultGroups.map((name) => {
+        const row = byCatalogResult.rows.find((item: any) => item.group_name === name);
+        const groupTotal = Number(row?.total || 0);
+        const groupSynced = Number(row?.synced || 0);
+        return {
+          group: name,
+          synced: groupSynced,
+          total: groupTotal,
+          coverage: groupTotal > 0 ? groupSynced / groupTotal : 0,
+        };
+      });
+
+      const syncHealth = driftResult.rows.map((row: any) => ({
+        issue: row.interaction_type === 'live_resync' ? 'Re-sync requested' : 'Sync drift fallback',
+        count: Number(row.occurrences || 0),
+      }));
+
+      const ambiguousQueue = ambiguousResult.rows.map((row: any, index: number) => ({
+        trackId: row.track_id,
+        title: row.title,
+        artist: row.artist,
+        flags: Number(row.flags || 0),
+        reviewer: 'Ops queue',
+        priority: index < 3 ? 'high' : 'normal',
+      }));
+
+      const mostTappedLines = topTappedResult.rows.map((row: any) => ({
+        trackId: row.track_id,
+        title: row.title,
+        artist: row.artist,
+        lineId: row.line_id || null,
+        taps: Number(row.taps || 0),
+      }));
+
+      return res.json({
+        kpis: {
+          syncCoverage,
+          syncConfidence,
+          tapToExplainVolume,
+          fallbackRate,
+        },
+        panels: {
+          coverageByCatalog,
+          syncHealth,
+          ambiguousQueue,
+          mostTappedLines,
+        },
+      });
+    } catch (error) {
+      console.error("[LIVE-LYRICS] ops stats failed", error);
+      return res.status(500).json({ error: "Failed to load live lyrics stats" });
+    }
+  });
 
   // SSE endpoint for real-time track processing updates
   // Eliminates polling - client gets instant updates as processing progresses

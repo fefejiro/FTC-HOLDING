@@ -99,6 +99,13 @@ export default {
           DEFAULT: "hsl(var(--orange) / <alpha-value>)",
           foreground: "hsl(var(--orange-foreground) / <alpha-value>)",
         },
+        // Live Lyrics feature tokens — keep in sync with client/src/lib/live-tokens.ts
+        live: {
+          obsidian: "#0A0A0F",
+          obsidian2: "#14131A",
+          mint: "#7AD6A5",
+          amber: "#E8B84C",
+        },
       },
       fontFamily: {
         sans: ["Inter", "var(--font-sans)"],
