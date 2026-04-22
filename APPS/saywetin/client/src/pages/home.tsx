@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { AudioRecorder } from '@/components/audio-recorder';
 import { isListenModeLocation, LISTEN_MODE_PATH } from '@/lib/navigation';
 import { hapticTap, hapticSuccess } from '@/lib/haptics';
+import { isNativeAndroidApp } from '@/lib/native-audio';
 import { queryClient } from '@/lib/queryClient';
 import { mergeRecentRecognitions, saveRecentRecognition, type RecentRecognitionSession } from '@/lib/recent-recognitions';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
@@ -25,8 +26,7 @@ function detectMobileListenRuntime(): boolean {
 }
 
 function detectNativeAndroidRuntime(): boolean {
-  if (typeof document === 'undefined') return false;
-  return document.body.classList.contains('capacitor-android');
+  return isNativeAndroidApp();
 }
 
 export default function Home() {

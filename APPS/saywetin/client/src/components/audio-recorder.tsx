@@ -6,6 +6,7 @@ import { trackListenStarted } from '@/lib/analytics';
 import { getApiUrl } from '@/lib/api-config';
 import { 
   isNativeApp, 
+  isNativeAndroidApp,
   hasRecordingPermission, 
   requestRecordingPermission,
   startNativeRecording,
@@ -265,11 +266,6 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function isNativeAndroidRuntime(): boolean {
-  if (typeof document === 'undefined') return false;
-  return document.body.classList.contains('capacitor-android');
-}
-
 function RecognitionStageVisual({
   mode,
   immersive,
@@ -277,7 +273,7 @@ function RecognitionStageVisual({
   mode: RecognitionVisualMode;
   immersive: boolean;
 }) {
-  const nativeAndroid = isNativeAndroidRuntime();
+  const nativeAndroid = isNativeAndroidApp();
   const modeMotion: Record<RecognitionVisualMode, { scale: number; y: number; rotate: number }> = {
     requesting: { scale: nativeAndroid ? 0.995 : 0.99, y: 0, rotate: 0 },
     listening: { scale: nativeAndroid ? 1.01 : 1.02, y: 0, rotate: 0 },
@@ -349,7 +345,7 @@ export function AudioRecorder({
   autoStart = false,
   immersive = false,
 }: AudioRecorderProps) {
-  const nativeAndroid = isNativeAndroidRuntime();
+  const nativeAndroid = isNativeAndroidApp();
   const [recordingState, setRecordingState] = useState<RecordingState>(autoStart ? 'requesting' : 'idle');
   const [failureDisplay, setFailureDisplay] = useState<FailureDisplay | null>(null);
 
@@ -359,6 +355,7 @@ export function AudioRecorder({
   const audioContextRef = useRef<AudioContext | null>(null);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoStartedRef = useRef(false);
+  const startAttemptInFlightRef = useRef(false);
   const nativeRecordingActiveRef = useRef(false);
   const webRecordingActiveRef = useRef(false);
   const captureDurationMsRef = useRef(Math.max(listenDuration, 0) * 1000);
@@ -568,10 +565,37 @@ export function AudioRecorder({
 
   // Main entry point - routes to native or web recording
   const startListening = async () => {
+    if (startAttemptInFlightRef.current) {
+      console.info('[SAYWETIN] Ignoring duplicate startListening call: start already in progress');
+      return;
+    }
+
+    if (nativeRecordingActiveRef.current || webRecordingActiveRef.current) {
+      console.info('[SAYWETIN] Ignoring duplicate startListening call: capture already active');
+      return;
+    }
+
+    if (recordingState === 'requesting' || recordingState === 'listening' || recordingState === 'identifying') {
+      console.info('[SAYWETIN] Ignoring duplicate startListening call: state already active', recordingState);
+      return;
+    }
+
+    startAttemptInFlightRef.current = true;
+    console.info('[SAYWETIN] startListening accepted', {
+      autoStart,
+      isNative: isNativeApp(),
+      nativeAndroid,
+      recordingState,
+    });
+
+    try {
     if (isNativeApp()) {
       await startNativeListening();
     } else {
       await startWebListening();
+    }
+    } finally {
+      startAttemptInFlightRef.current = false;
     }
   };
 

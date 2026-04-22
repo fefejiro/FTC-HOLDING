@@ -11,6 +11,27 @@ export function isNativeApp(): boolean {
          (window as any).Capacitor.isNativePlatform();
 }
 
+export function isNativeAndroidApp(): boolean {
+  if (typeof document !== 'undefined' && document.body.classList.contains('capacitor-android')) {
+    return true;
+  }
+
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const capacitor = (window as any).Capacitor;
+
+  try {
+    if (capacitor?.isNativePlatform?.() && typeof capacitor.getPlatform === 'function') {
+      return capacitor.getPlatform() === 'android';
+    }
+  } catch {
+  }
+
+  return false;
+}
+
 function normalizeNativeMimeType(rawMimeType?: string): string {
   const normalized = String(rawMimeType || '').trim().toLowerCase();
 
