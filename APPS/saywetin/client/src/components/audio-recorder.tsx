@@ -57,6 +57,7 @@ type ListenErrorKind =
   | 'offline'
   | 'backend_unreachable'
   | 'timeout'
+  | 'provider_unavailable'
   | 'microphone_denied'
   | 'capture_failed'
   | 'empty_audio'
@@ -81,6 +82,8 @@ type FailureDisplay = {
 };
 
 const LISTEN_REQUEST_TIMEOUT_MS = 45_000;
+const MIN_CAPTURE_DURATION_MS = 2_500;
+const MIN_AUDIO_BLOB_BYTES = 8_000;
 
 function createListenError(
   kind: ListenErrorKind,
@@ -153,6 +156,13 @@ function getFailureDisplay(error: unknown): FailureDisplay {
       return {
         title: 'We could not hear a clear song',
         body: 'Move closer to the music and try again.',
+        ctaLabel: 'Try again',
+        orbMode: 'error',
+      };
+    case 'provider_unavailable':
+      return {
+        title: 'Song matching is temporarily unavailable',
+        body: 'Please try again in a moment.',
         ctaLabel: 'Try again',
         orbMode: 'error',
       };
@@ -237,8 +247,11 @@ function normalizeUploadError(error: unknown): ListenError {
     return createListenError('database_unavailable', message, { code, status });
   }
 
+  if (code === 'ACRCLOUD_UPSTREAM_UNAVAILABLE' || normalizedMessage.includes('upstream unavailable')) {
+    return createListenError('provider_unavailable', message || 'Recognition provider unavailable.', { code, status });
+  }
+
   if (
-    code === 'ACRCLOUD_UPSTREAM_UNAVAILABLE' ||
     code === 'ACRCLOUD_NOT_CONFIGURED' ||
     normalizedMessage.includes('application not found') ||
     normalizedMessage.includes('api route not found')
@@ -461,6 +474,15 @@ export function AudioRecorder({
           nativeRecording?.msDuration ?? 'unknown',
         );
         if (audioBlob && audioBlob.size > 0) {
+          if ((nativeRecording?.msDuration ?? 0) < MIN_CAPTURE_DURATION_MS || audioBlob.size < MIN_AUDIO_BLOB_BYTES) {
+            showInlineFailure(
+              createListenError(
+                'capture_failed',
+                'Recording was too short to identify. Keep the phone near the music and try again.',
+              ),
+            );
+            return;
+          }
           audioChunksRef.current = [audioBlob];
           handleUpload();
         } else {
