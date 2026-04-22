@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>SayWetin — Design System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+  html,body { margin: 0; padding: 0; background: #f0eee9; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="mobile-screens.jsx"></script>
+<script type="text/babel" src="dashboard.jsx"></script>
+<script type="text/babel" src="architecture.jsx"></script>
+<script type="text/babel" src="live-lyrics.jsx"></script>
+<script type="text/babel" src="live-ops.jsx"></script>
+<script type="text/babel" src="architecture-live.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+// ── Tweaks ───────────────────────────────────────────────────────
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "accentHue": 148,
+  "serifFont": "Playfair",
+  "density": "spacious"
+}/*EDITMODE-END*/;
+
+function applyTweaks(t) {
+  // Accent hue swap — recompute violet family from hue
+  const h = t.accentHue;
+  SW_TOKENS.violet = `oklch(0.72 0.18 ${h})`;
+  SW_TOKENS.violetDim = `oklch(0.58 0.18 ${h})`;
+  SW_TOKENS.violetWash = `oklch(0.72 0.18 ${h} / 0.14)`;
+  SW_TOKENS.violetEdge = `oklch(0.72 0.18 ${h} / 0.35)`;
+  // Font
+  const serifMap = {
+    'Instrument Serif': '"Instrument Serif", Georgia, serif',
+    'Cormorant Garamond': '"Cormorant Garamond", Georgia, serif',
+    'Playfair': '"Playfair Display", Georgia, serif',
+  };
+  SW_TOKENS.serif = serifMap[t.serifFont] || serifMap['Instrument Serif'];
+  // Font injection
+  if (!document.getElementById('tweak-fonts-' + t.serifFont)) {
+    const l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.id = 'tweak-fonts-' + t.serifFont;
+    const q = t.serifFont.replace(/ /g, '+');
+    l.href = `https://fonts.googleapis.com/css2?family=${q}:ital@0;1&display=swap`;
+    document.head.appendChild(l);
+  }
+}
+
+function TweaksPanel({ tweaks, setTweaks, onClose }) {
+  return (
+    <div style={{
+      position: 'fixed', bottom: 16, right: 16, width: 280, padding: 16,
+      background: '#fff', borderRadius: 12, border: '1px solid rgba(0,0,0,.12)',
+      boxShadow: '0 20px 50px rgba(0,0,0,.18)', zIndex: 9999,
+      fontFamily: '-apple-system, sans-serif', fontSize: 12,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontWeight: 600, fontSize: 13 }}>Tweaks</div>
+        <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', fontSize:16 }}>×</button>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 11, color: '#666', marginBottom: 6, textTransform:'uppercase', letterSpacing:1 }}>Accent hue · {tweaks.accentHue}°</div>
+        <input type="range" min="0" max="360" value={tweaks.accentHue}
+          onChange={e => setTweaks({ ...tweaks, accentHue: +e.target.value })}
+          style={{ width: '100%' }}/>
+        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+          {[272, 210, 30, 150, 340].map(h => (
+            <button key={h} onClick={() => setTweaks({ ...tweaks, accentHue: h })}
+              style={{
+                width: 24, height: 24, borderRadius: 12, border: tweaks.accentHue === h ? '2px solid #000' : '1px solid rgba(0,0,0,.1)',
+                background: `oklch(0.72 0.18 ${h})`, cursor: 'pointer',
+              }}/>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 11, color: '#666', marginBottom: 6, textTransform:'uppercase', letterSpacing:1 }}>Display serif</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+          {['Instrument Serif','Cormorant Garamond','Playfair'].map(f => (
+            <button key={f} onClick={() => setTweaks({ ...tweaks, serifFont: f })}
+              style={{
+                padding: '6px 8px', borderRadius: 6, fontSize: 11,
+                border: tweaks.serifFont === f ? '1.5px solid #000' : '1px solid rgba(0,0,0,.14)',
+                background: tweaks.serifFont === f ? 'rgba(0,0,0,.04)' : '#fff',
+                cursor: 'pointer', fontFamily: `'${f}', serif`, fontStyle: 'italic',
+              }}>{f.split(' ')[0]}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 11, color: '#666', marginBottom: 6, textTransform:'uppercase', letterSpacing:1 }}>Density</div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {['compact','comfortable','spacious'].map(d => (
+            <button key={d} onClick={() => setTweaks({ ...tweaks, density: d })}
+              style={{
+                flex: 1, padding: '6px 4px', borderRadius: 6, fontSize: 11, textTransform:'capitalize',
+                border: tweaks.density === d ? '1.5px solid #000' : '1px solid rgba(0,0,0,.14)',
+                background: tweaks.density === d ? 'rgba(0,0,0,.04)' : '#fff', cursor: 'pointer',
+              }}>{d}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ fontSize: 10, color: '#999', marginTop: 10, lineHeight: 1.5 }}>
+        Changes re-render on next paint. Hue + font are live; density affects card spacing in next build.
+      </div>
+    </div>
+  );
+}
+
+// ── Phone wrap ───────────────────────────────────────────────────
+function Phone({ children, label }) {
+  return (
+    <IOSDevice width={402} height={874} dark={true}>
+      {children}
+    </IOSDevice>
+  );
+}
+
+// ── App ──────────────────────────────────────────────────────────
+function App() {
+  const [tweaks, setTweaks] = useState(TWEAKS);
+  const [showTweaks, setShowTweaks] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    applyTweaks(tweaks);
+    setTick(t => t + 1);
+  }, [tweaks.accentHue, tweaks.serifFont, tweaks.density]);
+
+  useEffect(() => {
+    const h = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setShowTweaks(true);
+      if (e.data?.type === '__deactivate_edit_mode') setShowTweaks(false);
+    };
+    window.addEventListener('message', h);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', h);
+  }, []);
+
+  const persist = (next) => {
+    setTweaks(next);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: next }, '*');
+  };
+
+  return (
+    <div key={tick}>
+      <DesignCanvas>
+        <DCSection id="mobile" title="Module 1 · Mobile flow" subtitle="Dark-rich premium · iPhone · 10 screens">
+          <DCArtboard id="home" label="A · Home" width={402} height={874}>
+            <Phone><ScreenHome/></Phone>
+          </DCArtboard>
+          <DCArtboard id="listening" label="B · Listening" width={402} height={874}>
+            <Phone><ScreenListening/></Phone>
+          </DCArtboard>
+          <DCArtboard id="matching" label="C · Matching" width={402} height={874}>
+            <Phone><ScreenMatching/></Phone>
+          </DCArtboard>
+          <DCArtboard id="result" label="D · Song result" width={402} height={874}>
+            <Phone><ScreenResult/></Phone>
+          </DCArtboard>
+          <DCArtboard id="meaning" label="E · Meaning" width={402} height={874}>
+            <Phone><ScreenMeaning/></Phone>
+          </DCArtboard>
+          <DCArtboard id="deeper" label="F · Deeper context" width={402} height={874}>
+            <Phone><ScreenDeeper/></Phone>
+          </DCArtboard>
+          <DCArtboard id="ambig" label="G · Low confidence" width={402} height={874}>
+            <Phone><ScreenAmbiguous/></Phone>
+          </DCArtboard>
+          <DCArtboard id="report" label="H · Report" width={402} height={874}>
+            <Phone><ScreenReport/></Phone>
+          </DCArtboard>
+          <DCArtboard id="explore" label="I · Explore" width={402} height={874}>
+            <Phone><ScreenExplore/></Phone>
+          </DCArtboard>
+          <DCArtboard id="history" label="J · History" width={402} height={874}>
+            <Phone><ScreenHistory/></Phone>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="live-mobile" title="Module 4 · Live Lyrics · Follow Mode" subtitle="3 screens + mini-player overlay · consolidated states">
+          <DCArtboard id="live-active" label="K · Live lyrics · active" width={402} height={874}>
+            <Phone><ScreenLiveLyrics/></Phone>
+          </DCArtboard>
+          <DCArtboard id="live-sync" label="K2 · Low sync state (inline)" width={402} height={874}>
+            <Phone><ScreenLiveLyrics syncWarn={true}/></Phone>
+          </DCArtboard>
+          <DCArtboard id="live-nolyrics" label="K3 · No lyrics fallback (inline)" width={402} height={874}>
+            <Phone><ScreenLiveLyrics noLyrics={true}/></Phone>
+          </DCArtboard>
+          <DCArtboard id="tap-explain" label="L · Tap-to-explain sheet" width={402} height={874}>
+            <Phone><ScreenTapExplain/></Phone>
+          </DCArtboard>
+          <DCArtboard id="tap-alt" label="L2 · Alternate meanings (tab)" width={402} height={874}>
+            <Phone><ScreenTapExplain alternate={true}/></Phone>
+          </DCArtboard>
+          <DCArtboard id="meaning-detail" label="M · Meaning-first detail" width={402} height={874}>
+            <Phone><ScreenMeaningDetail/></Phone>
+          </DCArtboard>
+          <DCArtboard id="mini-player" label="N · Mini-player overlay (on Home)" width={402} height={874}>
+            <Phone><MiniPlayerOverlay><ScreenHome/></MiniPlayerOverlay></Phone>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="live-ops" title="Module 5 · Live Lyrics · Operations" subtitle="Single consolidated panel · 4 quadrants">
+          <DCArtboard id="live-ops-board" label="Live ops · all-in-one" width={1440} height={900}>
+            <LiveLyricsOps/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="live-arch" title="Module 6 · Live Lyrics · System flow" subtitle="Linear 8-step flow + feedback loop">
+          <DCArtboard id="live-arch-diagram" label="From song to meaning" width={1200} height={900}>
+            <ArchitectureLive/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="dashboard" title="Module 2 · Admin dashboard" subtitle="Light · operational · GitHub + MCP backed">
+          <DCArtboard id="overview" label="A · Overview · hi-fi" width={1440} height={900}>
+            <OverviewDash/>
+          </DCArtboard>
+          <DCArtboard id="review" label="C · Review queue · hi-fi" width={1440} height={900}>
+            <ReviewQueueDash/>
+          </DCArtboard>
+          <DCArtboard id="wireframes" label="B · D · E · F · G · H · I · wireframes" width={1440} height={900}>
+            <WireframesDash/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="architecture" title="Module 3 · System architecture" subtitle="Hub + spokes · investor-ready">
+          <DCArtboard id="arch" label="The SayWetin System" width={1200} height={900}>
+            <ArchitectureDiagram/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCPostIt top={20} left={40} rotate={-3} width={220}>
+          Dark mobile · light ops · violet everywhere.
+          Editorial serif for moments, clean sans for UI.
+        </DCPostIt>
+      </DesignCanvas>
+
+      {showTweaks && <TweaksPanel tweaks={tweaks} setTweaks={persist} onClose={() => setShowTweaks(false)}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
