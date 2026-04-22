@@ -175,3 +175,13 @@ git -C "C:\FTC HOLDING" status -sb
 - Canonical status doc: DOCS/UNALABS_STATUS.md
 <!-- AUTO:UNALABS_MASTER:END -->
 
+
+## SayWetin Ops Snapshot (Auto)
+
+<!-- AUTO:SAYWETIN_MASTER:START -->
+- Updated at: 2026-04-22T06:48:17.439Z
+- Smoke checks: 1/3 passing
+- Test suite: 12 tests across 3 files
+- Velocity: 69 commits (14d), 72 commits (30d)
+- Canonical status doc: DOCS/SAYWETIN_STATUS.md
+<!-- AUTO:SAYWETIN_MASTER:END -->

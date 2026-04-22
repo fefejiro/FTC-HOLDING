@@ -1,13 +1,15 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getApiUrl } from "@/lib/api-config";
 import { Upload, FileJson, FileSpreadsheet, AlertCircle, CheckCircle2, Music, ArrowLeft, Eye } from "lucide-react";
 import { Link } from "wouter";
 
@@ -31,7 +33,46 @@ export default function Admin() {
   const [importData, setImportData] = useState("");
   const [importFormat, setImportFormat] = useState<"json" | "csv">("json");
   const [showPreview, setShowPreview] = useState(false);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  const [loginUsername, setLoginUsername] = useState("mike.fejiro@gmail.com");
+  const [loginPassword, setLoginPassword] = useState("");
   const { toast } = useToast();
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadAdminSession = async () => {
+      try {
+        const response = await fetch(getApiUrl("/api/admin/session"), {
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        const payload = (await response.json().catch(() => null)) as { authenticated?: boolean } | null;
+        if (!mounted) {
+          return;
+        }
+
+        setAdminAuthenticated(payload?.authenticated === true);
+      } catch {
+        if (!mounted) {
+          return;
+        }
+        setAdminAuthenticated(false);
+      } finally {
+        if (mounted) {
+          setSessionLoading(false);
+        }
+      }
+    };
+
+    loadAdminSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
   
   const parsedPreview = useMemo((): { songs: ParsedSong[]; errors: string[] } => {
     if (!importData.trim()) return { songs: [], errors: [] };
@@ -131,6 +172,59 @@ export default function Admin() {
     },
   });
 
+  const loginMutation = useMutation({
+    mutationFn: async (data: { username: string; password: string }) => {
+      return await apiRequest("POST", "/api/admin/login", data);
+    },
+    onSuccess: async () => {
+      setAdminAuthenticated(true);
+      setLoginPassword("");
+      toast({
+        title: "Admin access granted",
+        description: "Welcome back. Import tools are now unlocked.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Login failed",
+        description: "Invalid admin username or password.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/admin/logout");
+    },
+    onSuccess: () => {
+      setAdminAuthenticated(false);
+      setLoginPassword("");
+      toast({
+        title: "Signed out",
+        description: "Admin session closed.",
+      });
+    },
+  });
+
+  const handleAdminLogin = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!loginUsername.trim() || !loginPassword.trim()) {
+      toast({
+        title: "Missing credentials",
+        description: "Enter both username and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    loginMutation.mutate({
+      username: loginUsername.trim(),
+      password: loginPassword,
+    });
+  };
+
   const handleImport = () => {
     if (!importData.trim()) {
       toast({
@@ -186,6 +280,70 @@ export default function Admin() {
           Import Public Domain and Creative Commons licensed African songs with lyrics
         </p>
       </div>
+
+      {sessionLoading ? (
+        <Card className="p-6 mb-6">
+          <p className="text-sm text-muted-foreground" data-testid="text-admin-auth-loading">Checking admin session...</p>
+        </Card>
+      ) : !adminAuthenticated ? (
+        <Card className="p-6 mb-6">
+          <CardHeader className="px-0 pt-0">
+            <CardTitle>Admin login required</CardTitle>
+          </CardHeader>
+          <CardContent className="px-0 pb-0">
+            <form className="space-y-4" onSubmit={handleAdminLogin}>
+              <div className="space-y-2">
+                <Label htmlFor="admin-username">Username</Label>
+                <Input
+                  id="admin-username"
+                  value={loginUsername}
+                  onChange={(event) => setLoginUsername(event.target.value)}
+                  autoComplete="username"
+                  data-testid="input-admin-username"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-password">Password</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  value={loginPassword}
+                  onChange={(event) => setLoginPassword(event.target.value)}
+                  autoComplete="current-password"
+                  data-testid="input-admin-password"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={loginMutation.isPending}
+                data-testid="button-admin-login"
+              >
+                {loginMutation.isPending ? "Signing in..." : "Sign in to Admin"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="p-4 mb-6">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground" data-testid="text-admin-authenticated">
+              Signed in as admin
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              data-testid="button-admin-logout"
+            >
+              {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {!sessionLoading && !adminAuthenticated ? null : (
+        <>
 
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
@@ -364,6 +522,8 @@ export default function Admin() {
           <li><code>cc_by_sa</code> - Creative Commons Attribution-ShareAlike (CC BY-SA 4.0)</li>
         </ul>
       </Card>
+      </>
+      )}
     </div>
   );
 }

@@ -37,6 +37,8 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Saywetin Release Policy](SAYWETIN_RELEASE_POLICY.md)
 - [Saywetin Split Deploy Runbook](SAYWETIN_SPLIT_DEPLOY_RUNBOOK.md)
 - [Saywetin Android Release Guide](SAYWETIN_ANDROID_RELEASE.md)
+- [Saywetin Status](SAYWETIN_STATUS.md)
+- [Saywetin Test And Velocity Log](SAYWETIN_TEST_VELOCITY.md)
 
 ## Umbrella Site / Unalabs Site
 

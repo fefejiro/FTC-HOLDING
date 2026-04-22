@@ -33,6 +33,7 @@
     "audit:secrets": "node scripts/audit-secrets.cjs",
     "metrics:peacepad:weekly": "node scripts/update-peacepad-weekly-metrics.mjs",
     "status:unalabs:sync": "node scripts/update-unalabs-status.mjs",
+    "status:saywetin:sync": "node scripts/update-saywetin-status.mjs",
     "howitworks:videos": "node scripts/set-howitworks-videos.mjs",
     "verify:peacepad:prod": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-prod.ps1",
     "verify:peacepad:local": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-local.ps1",

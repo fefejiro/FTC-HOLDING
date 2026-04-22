@@ -51,6 +51,8 @@ A new AAB is required only for native-shell changes, including:
    - Confirm lyrics/cultural sections return data for recognized tracks.
 6. Run verifier:
    - `powershell -ExecutionPolicy Bypass -File scripts/verify-saywetin-prod.ps1`
+7. Sync status + velocity docs:
+   - `npm run status:saywetin:sync`
 
 ## Temporary Fallback (If API Domain Is Blocked)
 

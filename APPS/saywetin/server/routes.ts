@@ -42,6 +42,13 @@ import {
 } from "./lib/ai-config";
 import { getBackendBuildInfo } from "./lib/build-info";
 import {
+  authenticateAdminCredentials,
+  getAdminSessionSummary,
+  isAdminAuthenticated,
+  setAdminAuthenticated,
+  clearAdminAuthenticated,
+} from "./admin-auth";
+import {
   buildGlossaryAnalysesFromLyrics,
   buildBestEffortLineAnalysis,
   buildGlossaryLineAnalysis,
@@ -637,6 +644,44 @@ export async function registerRoutes(
     if (!req.isAuthenticated() || !req.user?.claims?.sub) return null;
     return req.user.claims.sub;
   };
+
+  const requireAdminAuth = (req: any, res: any, next: any) => {
+    if (!isAdminAuthenticated(req)) {
+      return res.status(401).json({
+        error: "Admin authentication required",
+        code: "ADMIN_AUTH_REQUIRED",
+      });
+    }
+
+    return next();
+  };
+
+  app.get("/api/admin/session", (req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.json(getAdminSessionSummary(req));
+  });
+
+  app.post("/api/admin/login", (req, res) => {
+    const username = typeof req.body?.username === "string" ? req.body.username : "";
+    const password = typeof req.body?.password === "string" ? req.body.password : "";
+
+    const result = authenticateAdminCredentials(username, password);
+    if (!result.ok) {
+      return res.status(401).json({
+        error: "Invalid admin username or password",
+        code: "ADMIN_AUTH_INVALID",
+      });
+    }
+
+    setAdminAuthenticated(req, result.username);
+    return res.json(getAdminSessionSummary(req));
+  });
+
+  app.post("/api/admin/logout", (req, res) => {
+    clearAdminAuthenticated(req);
+    return res.status(204).send();
+  });
 
   // Configure multer for audio file uploads
   const upload = multer({
@@ -3621,7 +3666,7 @@ Rules:
   });
 
   // Admin: Batch import songs
-  app.post("/api/admin/import-songs", async (req, res) => {
+  app.post("/api/admin/import-songs", requireAdminAuth, async (req, res) => {
     try {
       const { format, data } = req.body;
       
