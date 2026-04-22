@@ -1,19 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { useSearchParams } from 'next/navigation';
 import { STRIPE_API_URL } from '@/lib/stripe-config';
-
-type ProjectRecord = {
-  id: string;
-  intake_id?: string;
-  name?: string;
-  description?: string;
-  plan?: string;
-  status?: string;
-  created_at?: string;
-};
+import { getCommercialLabel } from '@/lib/service-engagement';
 
 type MilestoneRecord = {
   id: string;
@@ -22,65 +13,79 @@ type MilestoneRecord = {
   description?: string;
   due_date?: string;
   status?: string;
-  created_at?: string;
   completed_at?: string | null;
   proof_url?: string;
   proof_note?: string;
+};
+
+type PortalPayload = {
+  project: {
+    id: string;
+    email?: string;
+    intake_id?: string;
+    name?: string;
+    description?: string;
+    plan?: string;
+    tier?: string;
+    status?: string;
+    created_at?: string;
+    ai_price_min_cad?: number | null;
+    ai_price_max_cad?: number | null;
+  };
+  client_status: {
+    label: string;
+    description: string;
+  };
+  current_phase: {
+    title: string;
+    meaning: string;
+    expected_outcome: string;
+  };
+  decisions: Array<{ title: string; detail: string }>;
+  awaiting_on_us: Array<{ title: string; detail: string }>;
+  awaiting_on_client: Array<{ title: string; detail: string; action_url?: string }>;
+  artifacts: Array<{ title: string; type: string; url?: string; note?: string; created_at?: string }>;
+  payments: {
+    activation_fee_status?: string;
+    deposit_status?: string;
+    invoices_sent?: number;
+    invoices_paid?: number;
+    outstanding_balance_cad?: number;
+    next_payment_link?: string;
+  };
+  progress_notes: Array<{ title: string; body: string; created_at?: string }>;
+  next_milestone?: MilestoneRecord | null;
+  approvals: Array<{ title: string; status: string; action_url?: string }>;
+  milestones: MilestoneRecord[];
 };
 
 type PortalState =
   | { phase: 'loading' }
   | { phase: 'unauthenticated'; redirectUrl: string }
   | { phase: 'error'; message: string }
-  | { phase: 'ready'; email: string; project: ProjectRecord; milestones: MilestoneRecord[] };
+  | { phase: 'ready'; email: string; payload: PortalPayload };
 
-const TIER_LABELS: Record<string, string> = {
-  starter: 'Starter Plan',
-  professional: 'Professional Plan',
-  agency: 'Agency Plan',
-  enterprise: 'Enterprise Plan',
-};
-
-const STATUS_MESSAGES: Record<string, { title: string; description: string; variant: 'teal' | 'orange' | 'muted' }> = {
-  intake: {
-    title: 'Project Intake',
-    description: 'We\'re reviewing your requirements and preparing a detailed proposal.',
-    variant: 'teal',
-  },
-  scoped: {
-    title: 'Proposal Ready',
-    description: 'Your project proposal is ready for review. We\'ll send you a link to view it.',
-    variant: 'orange',
-  },
-  active: {
-    title: 'Project Active',
-    description: 'Your project is currently in development. Check back for updates.',
-    variant: 'orange',
-  },
-  review: {
-    title: 'Under Review',
-    description: 'Your project is being reviewed for quality assurance.',
-    variant: 'orange',
-  },
-  complete: {
-    title: 'Project Complete',
-    description: 'Your project has been completed successfully!',
-    variant: 'teal',
-  },
-  paused: {
-    title: 'Project Paused',
-    description: 'Your project is currently paused. Contact us for updates.',
-    variant: 'muted',
-  },
-};
-
-function formatDate(value?: string) {
+function formatDate(value?: string | null) {
   if (!value) return '-';
   try {
     return new Date(value).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
   } catch {
     return value;
   }
+}
+
+function formatMoney(value?: number | null) {
+  if (!Number.isFinite(value)) return 'CA$0';
+  return `CA$${Number(value).toLocaleString('en-CA')}`;
+}
+
+function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+      <h2 className="text-h4 text-tx-heading font-semibold mb-4">{title}</h2>
+      {children}
+    </section>
+  );
 }
 
 function MilestoneStatus({
@@ -94,12 +99,10 @@ function MilestoneStatus({
   projectTitle: string;
   onStatusChange: (id: string, status: string) => void;
 }) {
-  const isComplete = milestone.status === 'complete';
-  const isInProgress = milestone.status === 'in_progress';
-  const isApproved = milestone.status === 'approved';
-  const isDone = isComplete || isApproved;
-  const isReview = milestone.status === 'review';
-  const isChangesRequested = milestone.status === 'changes_requested';
+  const status = milestone.status?.toLowerCase() ?? 'pending';
+  const isDone = ['complete', 'completed', 'approved', 'done'].includes(status);
+  const isReview = status === 'review';
+  const isChangesRequested = status === 'changes_requested';
   const [actionState, setActionState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState('');
@@ -112,7 +115,6 @@ function MilestoneStatus({
         import('@ftc/auth'),
         import('@ftc/supabase'),
       ]);
-
       const session = await getSession();
       if (!session?.user) {
         setActionState('error');
@@ -142,21 +144,17 @@ function MilestoneStatus({
           notes: notes.trim() || undefined,
           client_email: clientEmail,
         }),
-      }).catch(() => {
-        // Do not block the client flow if notification delivery fails.
-      });
+      }).catch(() => undefined);
 
       if (action === 'approve') {
         fetch(`${STRIPE_API_URL}/api/invoices/generate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(session.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+            ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
           },
           body: JSON.stringify({ milestone_id: milestone.id }),
-        }).catch(() => {
-          // Non-fatal. Invoice generation can be retried server-side.
-        });
+        }).catch(() => undefined);
       }
 
       setActionState('done');
@@ -167,95 +165,60 @@ function MilestoneStatus({
   };
 
   return (
-    <div className="flex items-start gap-4 p-4 bg-bg-subtle rounded-lg">
-      <div className="flex-shrink-0 mt-0.5">
-        <div className={`w-6 h-6 rounded-full border-2 ${isDone ? 'bg-brand-teal border-brand-teal' : isInProgress ? 'border-brand-orange' : 'border-border'}`}>
-          {isDone && (
-            <svg className="w-4 h-4 text-white m-0.5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
+    <div className="rounded-xl border border-border bg-bg-subtle p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-body font-semibold text-tx-heading">{milestone.title || 'Milestone'}</p>
+          {milestone.description && <p className="mt-1 text-body-sm text-tx-secondary">{milestone.description}</p>}
+        </div>
+        <Badge variant={isDone ? 'teal' : isReview || isChangesRequested ? 'orange' : 'muted'}>{milestone.status || 'pending'}</Badge>
+      </div>
+      <div className="mt-3 flex items-center gap-3 text-body-sm text-tx-muted flex-wrap">
+        <span>Due {formatDate(milestone.due_date)}</span>
+        {milestone.completed_at && isDone && <span>Completed {formatDate(milestone.completed_at)}</span>}
+      </div>
+      {(milestone.proof_url || milestone.proof_note) && (
+        <div className="mt-3 rounded-lg border border-brand-teal/30 bg-white px-3 py-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-brand-teal">Latest artifact</p>
+          {milestone.proof_note && <p className="mt-1 text-body-sm text-tx-body">{milestone.proof_note}</p>}
+          {milestone.proof_url && (
+            <a href={milestone.proof_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-body-sm font-semibold text-brand-teal hover:underline">
+              Open proof link
+            </a>
           )}
         </div>
-      </div>
-      <div className="flex-1">
-        <h4 className="text-body font-semibold text-tx-heading mb-1">{milestone.title || 'Milestone'}</h4>
-        {milestone.description && (
-          <p className="text-body-sm text-tx-secondary mb-2">{milestone.description}</p>
-        )}
-        <div className="flex items-center gap-2">
-          <Badge variant={isDone ? 'teal' : isInProgress || isReview ? 'orange' : isChangesRequested ? 'orange' : 'muted'}>
-            {milestone.status || 'pending'}
-          </Badge>
-          {milestone.due_date && (
-            <span className="text-body-sm text-tx-muted">Due {formatDate(milestone.due_date)}</span>
+      )}
+      {isReview && actionState === 'idle' && (
+        <div className="mt-3 space-y-2">
+          {showNotes && (
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Describe what needs to change..."
+              className="w-full px-3 py-2 text-body-sm border border-border rounded-lg focus:outline-none focus:border-border-focus resize-none"
+            />
           )}
+          <div className="flex gap-2">
+            <button onClick={() => void handleAction('approve')} className="flex-1 px-3 py-2 bg-brand-teal text-white text-body-sm font-semibold rounded-lg hover:bg-brand-teal/90 transition-colors">
+              Approve
+            </button>
+            <button onClick={() => showNotes ? void handleAction('changes') : setShowNotes(true)} className="flex-1 px-3 py-2 border border-red-300 text-red-600 text-body-sm font-semibold rounded-lg hover:bg-red-50 transition-colors">
+              {showNotes ? 'Send feedback' : 'Request changes'}
+            </button>
+          </div>
         </div>
-
-        {(milestone.proof_url || milestone.proof_note) && (
-          <div className="mt-3 rounded-lg border border-brand-teal/30 bg-white px-3 py-2 flex flex-col gap-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-brand-teal">Delivery proof</p>
-            {milestone.proof_note && <p className="text-body-sm text-tx-body">{milestone.proof_note}</p>}
-            {milestone.proof_url && (
-              <a href={milestone.proof_url} target="_blank" rel="noreferrer" className="text-body-sm font-semibold text-brand-teal hover:underline break-all">
-                Open proof link
-              </a>
-            )}
-          </div>
-        )}
-
-        {isReview && actionState === 'idle' && (
-          <div className="mt-3 flex flex-col gap-2">
-            {showNotes && (
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Describe what needs to change..."
-                rows={3}
-                className="w-full px-3 py-2 text-body-sm border border-border rounded-lg focus:outline-none focus:border-border-focus resize-none"
-              />
-            )}
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleAction('approve')}
-                className="flex-1 px-3 py-2 bg-brand-teal text-white text-body-sm font-semibold rounded-lg hover:bg-brand-teal/90 transition-colors"
-              >
-                Approve
-              </button>
-              <button
-                onClick={() => (showNotes ? handleAction('changes') : setShowNotes(true))}
-                className="flex-1 px-3 py-2 border border-red-300 text-red-600 text-body-sm font-semibold rounded-lg hover:bg-red-50 transition-colors"
-              >
-                {showNotes ? 'Send feedback' : 'Request changes'}
-              </button>
-            </div>
-
-            {showNotes && (
-              <button onClick={() => setShowNotes(false)} className="text-body-sm text-tx-muted hover:text-tx-secondary text-center">
-                Cancel
-              </button>
-            )}
-          </div>
-        )}
-
-        {isReview && actionState === 'loading' && <p className="mt-3 text-body-sm text-tx-muted animate-pulse">Saving...</p>}
-        {isReview && actionState === 'done' && <p className="mt-3 text-body-sm text-brand-teal font-medium">Saved - we've been notified.</p>}
-        {actionState === 'error' && <p className="mt-3 text-body-sm text-red-500">Something went wrong. Try refreshing.</p>}
-        {(isApproved || actionState === 'done') && (
-          <a
-            href={`/dashboard/invoice?milestone_id=${milestone.id}`}
-            className="mt-2 block text-[11px] font-semibold text-brand-teal hover:underline"
-          >
-            View Invoice -&gt;
-          </a>
-        )}
-      </div>
+      )}
+      {actionState === 'loading' && <p className="mt-3 text-body-sm text-tx-muted animate-pulse">Saving...</p>}
+      {actionState === 'done' && <p className="mt-3 text-body-sm text-brand-teal font-medium">Saved. We have the update.</p>}
+      {actionState === 'error' && <p className="mt-3 text-body-sm text-red-500">Something went wrong. Try refreshing.</p>}
     </div>
   );
 }
 
 export function PortalClient({ initialProjectId }: { initialProjectId?: string }) {
   const [state, setState] = useState<PortalState>({ phase: 'loading' });
+  const [milestoneOverrides, setMilestoneOverrides] = useState<Record<string, string>>({});
   const searchParams = useSearchParams();
   const id = initialProjectId || searchParams.get('id');
 
@@ -264,35 +227,31 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
       setState({ phase: 'error', message: 'No project ID provided.' });
       return;
     }
+    const projectId = id;
 
     async function loadPortal() {
       try {
-        const [{ getSession }, { createBrowserClient }] = await Promise.all([
-          import('@ftc/auth'),
-          import('@ftc/supabase'),
-        ]);
-
+        const { getSession } = await import('@ftc/auth');
         const session = await getSession();
         if (!session?.user) {
-          setState({ phase: 'unauthenticated', redirectUrl: `/login?redirect=/portal?id=${id}` });
+          setState({ phase: 'unauthenticated', redirectUrl: `/login?redirect=/portal?id=${projectId}` });
           return;
         }
 
-        const client = createBrowserClient();
-
-        const [projectResult, milestoneResult] = await Promise.all([
-          client.from('projects').select('*').eq('id', id).single(),
-          client.from('milestones').select('*').eq('project_id', id).order('due_date', { ascending: true }),
-        ]);
-
-        if (projectResult.error) throw projectResult.error;
-        if (milestoneResult.error) throw milestoneResult.error;
+        const response = await fetch(`${STRIPE_API_URL}/api/project-home?project_id=${encodeURIComponent(projectId)}`, {
+          headers: {
+            ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+        });
+        const payload = await response.json() as PortalPayload & { error?: string };
+        if (!response.ok) {
+          throw new Error(payload.error ?? 'Unable to load project portal.');
+        }
 
         setState({
           phase: 'ready',
           email: session.user.email ?? '',
-          project: projectResult.data as ProjectRecord,
-          milestones: (milestoneResult.data as MilestoneRecord[] | null) ?? [],
+          payload,
         });
       } catch (error) {
         setState({
@@ -304,6 +263,14 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
 
     void loadPortal();
   }, [id]);
+
+  const milestones = useMemo(() => {
+    if (state.phase !== 'ready') return [];
+    return state.payload.milestones.map((milestone) => ({
+      ...milestone,
+      status: milestoneOverrides[milestone.id] ?? milestone.status,
+    }));
+  }, [state, milestoneOverrides]);
 
   if (state.phase === 'loading') {
     return (
@@ -319,9 +286,7 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
         <div className="max-w-md text-center">
           <Badge variant="muted">Authentication required</Badge>
           <h1 className="mt-4 text-display-sm text-tx-heading">Sign in to view your project</h1>
-          <p className="mt-4 text-body text-tx-secondary">
-            This portal is only visible to the project owner.
-          </p>
+          <p className="mt-4 text-body text-tx-secondary">This portal is only visible to the project owner.</p>
           <div className="mt-6">
             <a href={state.redirectUrl} className="inline-block bg-brand-teal text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
               Sign in
@@ -344,111 +309,211 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
     );
   }
 
-  const tierLabel = TIER_LABELS[state.project.plan?.toLowerCase() ?? ''] ?? state.project.plan ?? 'Your plan';
-  const statusInfo = STATUS_MESSAGES[state.project.status?.toLowerCase() ?? 'intake'] ?? STATUS_MESSAGES.intake;
-  const projectTitle = state.project.name || state.project.intake_id || state.project.id;
-
-  const handleMilestoneStatusChange = (milestoneId: string, newStatus: string) => {
-    setState((previous) => {
-      if (previous.phase !== 'ready') return previous;
-
-      return {
-        ...previous,
-        milestones: previous.milestones.map((milestone) => (
-          milestone.id === milestoneId
-            ? {
-                ...milestone,
-                status: newStatus,
-                completed_at: newStatus === 'approved' ? new Date().toISOString() : null,
-              }
-            : milestone
-        )),
-      };
-    });
-  };
+  const { payload, email } = state;
+  const project = payload.project;
+  const projectTitle = project.name || project.intake_id || project.id;
+  const tierLabel = getCommercialLabel(project.tier ?? project.plan);
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto px-6 py-16">
-        <div className="text-center mb-16">
-          <h1 className="text-display text-tx-heading font-semibold mb-4">
-            {state.project.name || `Project ${state.project.id.slice(0, 8)}`}
-          </h1>
-          <p className="text-body-lg text-tx-secondary">Project Portal</p>
+    <div className="min-h-screen bg-bg-offwhite">
+      <div className="max-w-6xl mx-auto px-6 py-16">
+        <div className="mb-10">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Badge variant="teal">{payload.client_status.label}</Badge>
+            <Badge variant="muted">{tierLabel}</Badge>
+          </div>
+          <h1 className="mt-4 text-display-sm text-tx-heading">{projectTitle}</h1>
+          <p className="mt-3 text-body text-tx-secondary max-w-3xl">{payload.client_status.description}</p>
         </div>
 
-        <div className="mb-16">
-          <div className="bg-bg-subtle rounded-2xl p-8 mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-h3 text-tx-heading font-semibold">Current Status</h2>
-              <Badge variant={statusInfo.variant}>{state.project.status || 'intake'}</Badge>
-            </div>
-            <h3 className="text-h4 text-tx-heading font-semibold mb-2">{statusInfo.title}</h3>
-            <p className="text-body text-tx-body leading-relaxed">{statusInfo.description}</p>
-          </div>
+        <div className="grid xl:grid-cols-[1.25fr_.85fr] gap-6">
+          <div className="space-y-6">
+            <SectionCard title="Project Overview">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Service type</p>
+                  <p className="mt-1 text-body text-tx-heading">{tierLabel}</p>
+                </div>
+                <div>
+                  <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Started</p>
+                  <p className="mt-1 text-body text-tx-heading">{formatDate(project.created_at)}</p>
+                </div>
+                <div>
+                  <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Current status</p>
+                  <p className="mt-1 text-body text-tx-heading">{payload.client_status.label}</p>
+                </div>
+                <div>
+                  <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Project owner</p>
+                  <p className="mt-1 text-body text-tx-heading">{email}</p>
+                </div>
+              </div>
+              {project.description && <p className="mt-5 text-body text-tx-body leading-relaxed">{project.description}</p>}
+            </SectionCard>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            <div>
-              <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold mb-1">Plan</p>
-              <p className="text-body text-tx-heading">{tierLabel}</p>
-            </div>
-            <div>
-              <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold mb-1">Started</p>
-              <p className="text-body text-tx-heading">{formatDate(state.project.created_at)}</p>
-            </div>
-          </div>
+            <SectionCard title="Current Phase">
+              <p className="text-body text-tx-body leading-relaxed">{payload.current_phase.meaning}</p>
+              <div className="mt-4 rounded-xl border border-border bg-bg-subtle p-4">
+                <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Expected outcome</p>
+                <p className="mt-1 text-body text-tx-heading">{payload.current_phase.expected_outcome}</p>
+              </div>
+            </SectionCard>
 
-          {state.project.description && (
-            <div className="mb-8">
-              <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold mb-2">Description</p>
-              <p className="text-body text-tx-body leading-relaxed">{state.project.description}</p>
-            </div>
-          )}
-
-          <div className="mb-8 rounded-2xl border border-border bg-bg-subtle p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <h2 className="text-h3 text-tx-heading font-semibold">Engagement Letter</h2>
-              <Badge variant="orange">Review and sign</Badge>
-            </div>
-            <p className="text-body text-tx-body leading-relaxed">
-              Your contract confirms the scope, delivery model, approvals, and working terms for this project.
-            </p>
-            <div className="mt-5">
-              <a
-                href={`/dashboard/contract?id=${state.project.id}`}
-                className="inline-flex items-center justify-center rounded-lg bg-brand-orange px-6 py-3 text-body font-semibold text-white hover:bg-brand-orange-hover transition-colors"
-              >
-                Open engagement letter
-              </a>
-            </div>
-          </div>
-
-          {state.milestones.length > 0 && (
-            <div>
-              <h2 className="text-h3 text-tx-heading font-semibold mb-6">Milestones</h2>
+            <SectionCard title="What Has Been Decided">
               <div className="space-y-4">
-                {state.milestones.map((milestone) => (
+                {payload.decisions.map((item) => (
+                  <div key={item.title} className="rounded-xl border border-border bg-bg-subtle p-4">
+                    <p className="text-body-sm font-semibold text-tx-heading">{item.title}</p>
+                    <p className="mt-1 text-body-sm text-tx-secondary leading-relaxed">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <SectionCard title="Awaiting on Us">
+                <div className="space-y-3">
+                  {payload.awaiting_on_us.length === 0 ? (
+                    <p className="text-body-sm text-tx-muted">Nothing is blocked on our side right now.</p>
+                  ) : payload.awaiting_on_us.map((item) => (
+                    <div key={item.title} className="rounded-xl border border-border bg-bg-subtle p-4">
+                      <p className="text-body-sm font-semibold text-tx-heading">{item.title}</p>
+                      <p className="mt-1 text-body-sm text-tx-secondary">{item.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Awaiting on You">
+                <div className="space-y-3">
+                  {payload.awaiting_on_client.length === 0 ? (
+                    <p className="text-body-sm text-tx-muted">No client actions are blocking progress right now.</p>
+                  ) : payload.awaiting_on_client.map((item) => (
+                    <div key={item.title} className="rounded-xl border border-brand-orange/20 bg-orange-50/40 p-4">
+                      <p className="text-body-sm font-semibold text-tx-heading">{item.title}</p>
+                      <p className="mt-1 text-body-sm text-tx-secondary">{item.detail}</p>
+                      {item.action_url && (
+                        <a href={item.action_url} className="mt-2 inline-block text-body-sm font-semibold text-brand-teal hover:underline">
+                          Open action
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            </div>
+
+            <SectionCard title="Latest Artifacts">
+              <div className="space-y-3">
+                {payload.artifacts.length === 0 ? (
+                  <p className="text-body-sm text-tx-muted">Artifacts will appear here as the project moves forward.</p>
+                ) : payload.artifacts.map((artifact, index) => (
+                  <div key={`${artifact.title}-${index}`} className="rounded-xl border border-border bg-bg-subtle p-4 flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-body-sm font-semibold text-tx-heading">{artifact.title}</p>
+                      <p className="mt-1 text-body-sm text-tx-secondary capitalize">{artifact.type.replace(/_/g, ' ')}</p>
+                      {artifact.note && <p className="mt-1 text-body-sm text-tx-secondary">{artifact.note}</p>}
+                      {artifact.created_at && <p className="mt-1 text-[11px] text-tx-muted">Added {formatDate(artifact.created_at)}</p>}
+                    </div>
+                    {artifact.url && (
+                      <a href={artifact.url} target="_blank" rel="noreferrer" className="text-body-sm font-semibold text-brand-teal hover:underline whitespace-nowrap">
+                        View
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Latest Progress Notes">
+              <div className="space-y-3">
+                {payload.progress_notes.map((note, index) => (
+                  <div key={`${note.title}-${index}`} className="rounded-xl border border-border bg-bg-subtle p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-body-sm font-semibold text-tx-heading">{note.title}</p>
+                      <span className="text-[11px] text-tx-muted">{formatDate(note.created_at)}</span>
+                    </div>
+                    <p className="mt-1 text-body-sm text-tx-secondary">{note.body}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+
+          <div className="space-y-6">
+            <SectionCard title="Payment Status">
+              <div className="space-y-4">
+                <div className="rounded-xl border border-border bg-bg-subtle p-4">
+                  <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Activation fee</p>
+                  <p className="mt-1 text-body text-tx-heading capitalize">{payload.payments.activation_fee_status || 'not tracked'}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-bg-subtle p-4">
+                  <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Build deposit</p>
+                  <p className="mt-1 text-body text-tx-heading capitalize">{payload.payments.deposit_status || 'not requested'}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-bg-subtle p-4">
+                  <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Invoices</p>
+                  <p className="mt-1 text-body text-tx-heading">{payload.payments.invoices_paid ?? 0} paid / {payload.payments.invoices_sent ?? 0} sent</p>
+                </div>
+                <div className="rounded-xl border border-border bg-bg-subtle p-4">
+                  <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Outstanding balance</p>
+                  <p className="mt-1 text-h4 text-tx-heading font-semibold">{formatMoney(payload.payments.outstanding_balance_cad)}</p>
+                  {payload.payments.next_payment_link && (
+                    <a href={payload.payments.next_payment_link} target="_blank" rel="noreferrer" className="mt-2 inline-block text-body-sm font-semibold text-brand-teal hover:underline">
+                      Pay now
+                    </a>
+                  )}
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Next Milestone">
+              {payload.next_milestone ? (
+                <div className="rounded-xl border border-border bg-bg-subtle p-4">
+                  <p className="text-body font-semibold text-tx-heading">{payload.next_milestone.title || 'Upcoming milestone'}</p>
+                  {payload.next_milestone.description && <p className="mt-1 text-body-sm text-tx-secondary">{payload.next_milestone.description}</p>}
+                  <p className="mt-3 text-body-sm text-tx-muted">Due {formatDate(payload.next_milestone.due_date)}</p>
+                </div>
+              ) : (
+                <p className="text-body-sm text-tx-muted">No next milestone is queued yet.</p>
+              )}
+            </SectionCard>
+
+            <SectionCard title="Approvals">
+              <div className="space-y-3">
+                {payload.approvals.map((approval) => (
+                  <div key={approval.title} className="rounded-xl border border-border bg-bg-subtle p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-body-sm font-semibold text-tx-heading">{approval.title}</p>
+                      <Badge variant={approval.status === 'approved' ? 'teal' : approval.status === 'pending' ? 'orange' : 'muted'}>
+                        {approval.status}
+                      </Badge>
+                    </div>
+                    {approval.action_url && (
+                      <a href={approval.action_url} className="mt-2 inline-block text-body-sm font-semibold text-brand-teal hover:underline">
+                        Open
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Milestones">
+              <div className="space-y-4">
+                {milestones.length === 0 ? (
+                  <p className="text-body-sm text-tx-muted">Milestones will appear here once the scoped plan is published.</p>
+                ) : milestones.map((milestone) => (
                   <MilestoneStatus
                     key={milestone.id}
                     milestone={milestone}
-                    clientEmail={state.email}
+                    clientEmail={email}
                     projectTitle={projectTitle}
-                    onStatusChange={handleMilestoneStatusChange}
+                    onStatusChange={(milestoneId, newStatus) => setMilestoneOverrides((prev) => ({ ...prev, [milestoneId]: newStatus }))}
                   />
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-
-        <div className="text-center border-t border-border pt-12">
-          <p className="text-body text-tx-secondary">
-            Need help? Contact us at{' '}
-            <a href="mailto:hello@unalabs.cloud" className="text-brand-teal hover:underline">
-              hello@unalabs.cloud
-            </a>
-          </p>
-          <p className="text-body-sm text-tx-muted mt-2">Powered by Una Labs · unalabs.cloud</p>
+            </SectionCard>
+          </div>
         </div>
       </div>
     </div>

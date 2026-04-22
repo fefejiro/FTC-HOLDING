@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getCommercialLabel } from '@/lib/service-engagement';
 
 type ProjectRecord = {
   id: string;
@@ -40,13 +41,6 @@ type ContractState =
   | { phase: 'unauthenticated'; redirectUrl: string }
   | { phase: 'error'; message: string }
   | { phase: 'ready'; email: string; project: ProjectRecord; milestones: MilestoneRecord[]; contract: ContractRecord };
-
-const TIER_LABELS: Record<string, string> = {
-  starter: 'Starter Plan',
-  professional: 'Professional Plan',
-  agency: 'Agency Plan',
-  enterprise: 'Enterprise Plan',
-};
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -203,7 +197,7 @@ export function ContractClient({ initialProjectId }: { initialProjectId?: string
     );
   }
 
-  const planLabel = TIER_LABELS[state.project.tier?.toLowerCase() ?? ''] ?? state.project.tier ?? 'Your plan';
+  const planLabel = getCommercialLabel(state.project.tier);
   const isSigned = state.contract.status === 'signed';
 
   return (

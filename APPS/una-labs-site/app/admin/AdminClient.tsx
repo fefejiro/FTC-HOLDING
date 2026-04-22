@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { ACTIVATION_BANDS, getCommercialBillingLabel, getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
 
 type Project = {
   id: string;
   email?: string;
   name?: string;
+  description?: string;
   tier?: string;
   billing?: string;
   status?: string;
@@ -148,18 +150,24 @@ const TIER_PRICE: Record<string, number> = {
   professional: 135,
   agency: 339,
   enterprise: 679,
+  founding_pilot_activation: 67,
+  simple_activation: 250,
+  standard_activation: 500,
+  complex_activation: 1000,
 };
 
 const STATUS_COLORS: Record<string, string> = {
   intake: 'bg-blue-100 text-blue-700',
   scoped: 'bg-purple-100 text-purple-700',
+  awaiting_approval: 'bg-amber-100 text-amber-700',
   active: 'bg-orange-100 text-orange-700',
   review: 'bg-yellow-100 text-yellow-700',
   complete: 'bg-teal-100 text-teal-700',
   paused: 'bg-gray-100 text-gray-500',
+  support: 'bg-emerald-100 text-emerald-700',
 };
 
-const PIPELINE_STAGES = ['intake', 'scoped', 'active', 'review', 'complete', 'paused'] as const;
+const PIPELINE_STAGES = ['intake', 'scoped', 'awaiting_approval', 'active', 'review', 'complete', 'paused', 'support'] as const;
 
 const BILLING_STATUS_COLORS: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
@@ -268,6 +276,25 @@ export function AdminClient() {
   const [instantBillLink, setInstantBillLink] = useState<string | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [projectActionLoading, setProjectActionLoading] = useState<string | null>(null);
+  const [conciergeSubmitting, setConciergeSubmitting] = useState(false);
+  const [conciergeMessage, setConciergeMessage] = useState<string | null>(null);
+  const [conciergePreview, setConciergePreview] = useState<{
+    summary?: string;
+    problem_statement?: string;
+    solution_direction?: string;
+    activation_band?: string;
+    pricing?: { suggested_min_cad?: number; suggested_max_cad?: number; confidence?: string } | null;
+  } | null>(null);
+  const [conciergeForm, setConciergeForm] = useState({
+    name: '',
+    email: '',
+    company: '',
+    role: '',
+    project_title: '',
+    transcript: '',
+    activation_band_override: 'standard_activation',
+  });
 
   async function refreshAutoCollect(accessToken?: string, options?: { silent?: boolean }) {
     if (!options?.silent) setAutoCollectLoading(true);
@@ -402,20 +429,131 @@ export function AdminClient() {
   }, []);
 
   async function handleStatusChange(projectId: string, newStatus: string) {
-    const { createBrowserClient } = await import('@ftc/supabase');
-    const client = createBrowserClient();
-    const { error } = await client.from('projects').update({ status: newStatus }).eq('id', projectId);
-    if (error) {
-      alert(`Failed to update: ${error.message}`);
+    try {
+      const { getSession } = await import('@ftc/auth');
+      const session = await getSession();
+      const response = await fetch(`${STRIPE_API_URL}/api/admin/projects/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ project_id: projectId, status: newStatus }),
+      });
+      const payload = await response.json() as { project?: Project; error?: string };
+      if (!response.ok || !payload.project) {
+        alert(payload.error ?? 'Failed to update project status.');
+        return;
+      }
+      setState((prev) => {
+        if (prev.phase !== 'ready') return prev;
+        return {
+          ...prev,
+          projects: prev.projects.map((project) => (project.id === projectId ? { ...project, ...payload.project } : project)),
+        };
+      });
+    } catch {
+      alert('Network error while updating project status.');
+    }
+  }
+
+  async function handleCreateConciergeDraft() {
+    if (!conciergeForm.email || !conciergeForm.project_title || !conciergeForm.transcript.trim()) {
+      alert('Client email, project title, and intake notes are required.');
       return;
     }
-    setState((prev) => {
-      if (prev.phase !== 'ready') return prev;
-      return {
-        ...prev,
-        projects: prev.projects.map((p) => (p.id === projectId ? { ...p, status: newStatus } : p)),
+
+    setConciergeSubmitting(true);
+    setConciergeMessage(null);
+    try {
+      const { getSession } = await import('@ftc/auth');
+      const session = await getSession();
+      const response = await fetch(`${STRIPE_API_URL}/api/admin/intake-draft`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify(conciergeForm),
+      });
+
+      const payload = await response.json() as {
+        ok?: boolean;
+        error?: string;
+        project?: Project;
+        milestones?: Milestone[];
+        draft?: {
+          summary?: string;
+          problem_statement?: string;
+          solution_direction?: string;
+          activation_band?: string;
+          pricing?: { suggested_min_cad?: number; suggested_max_cad?: number; confidence?: string } | null;
+        };
       };
-    });
+
+      if (!response.ok || !payload.ok || !payload.project) {
+        alert(payload.error ?? 'Failed to create concierge intake draft.');
+        return;
+      }
+
+      setState((prev) => {
+        if (prev.phase !== 'ready') return prev;
+        return {
+          ...prev,
+          projects: [payload.project!, ...prev.projects],
+          milestones: [...(payload.milestones ?? []), ...prev.milestones],
+        };
+      });
+      setConciergePreview(payload.draft ?? null);
+      setConciergeMessage('Concierge draft created. Review it below, then publish when ready.');
+      setConciergeForm({
+        name: '',
+        email: '',
+        company: '',
+        role: '',
+        project_title: '',
+        transcript: '',
+        activation_band_override: conciergeForm.activation_band_override,
+      });
+    } catch {
+      alert('Network error while creating concierge draft.');
+    } finally {
+      setConciergeSubmitting(false);
+    }
+  }
+
+  async function handlePublishScope(projectId: string) {
+    setProjectActionLoading(projectId);
+    try {
+      const { getSession } = await import('@ftc/auth');
+      const session = await getSession();
+      const response = await fetch(`${STRIPE_API_URL}/api/admin/projects/publish-scope`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ project_id: projectId }),
+      });
+      const payload = await response.json() as { ok?: boolean; project?: Project; error?: string };
+      if (!response.ok || !payload.ok || !payload.project) {
+        alert(payload.error ?? 'Failed to publish scoped plan.');
+        return;
+      }
+
+      setState((prev) => {
+        if (prev.phase !== 'ready') return prev;
+        return {
+          ...prev,
+          projects: prev.projects.map((project) => (project.id === projectId ? { ...project, ...payload.project } : project)),
+        };
+      });
+      setConciergeMessage('Scope published to client portal. Engagement letter is ready for signature.');
+    } catch {
+      alert('Network error while publishing scope.');
+    } finally {
+      setProjectActionLoading(null);
+    }
   }
 
   async function handleBillingAction(sessionId: string, subscriptionId: string, action: 'pause' | 'resume' | 'cancel') {
@@ -780,7 +918,7 @@ export function AdminClient() {
   const { projects, milestones, subscribers, contracts, invoices, instantBills } = state;
 
   const totalMRR = projects
-    .filter((project) => !['paused', 'complete'].includes(project.status ?? ''))
+    .filter((project) => !['paused', 'complete'].includes(project.status ?? '') && !isActivationCommercial(project.tier))
     .reduce((sum, project) => sum + (TIER_PRICE[project.tier?.toLowerCase() ?? ''] ?? 0), 0);
 
   const byStatus = projects.reduce<Record<string, number>>((accumulator, project) => {
@@ -857,6 +995,94 @@ export function AdminClient() {
           </div>
         </div>
 
+        <div className="bg-white rounded-[28px] border border-border shadow-sm p-8 mb-8">
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+            <div>
+              <Badge variant="teal">Concierge Onboarding</Badge>
+              <h2 className="mt-3 text-h3 text-tx-heading">Turn an intake call into a scoped project</h2>
+              <p className="mt-2 text-body text-tx-secondary max-w-3xl">Paste your call notes or transcript here to create the project record, generate the first scope draft, and hold it in internal review until you publish it.</p>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-[1.4fr_.9fr] gap-6">
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-2">Client name</label>
+                  <input value={conciergeForm.name} onChange={(e) => setConciergeForm((prev) => ({ ...prev, name: e.target.value }))} className="w-full text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" placeholder="e.g. David Jumbo" />
+                </div>
+                <div>
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-2">Client email</label>
+                  <input value={conciergeForm.email} onChange={(e) => setConciergeForm((prev) => ({ ...prev, email: e.target.value }))} className="w-full text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" placeholder="client@example.com" />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-2">Company</label>
+                  <input value={conciergeForm.company} onChange={(e) => setConciergeForm((prev) => ({ ...prev, company: e.target.value }))} className="w-full text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" placeholder="Client company" />
+                </div>
+                <div>
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-2">Role</label>
+                  <input value={conciergeForm.role} onChange={(e) => setConciergeForm((prev) => ({ ...prev, role: e.target.value }))} className="w-full text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" placeholder="Founder / Ops / Sales" />
+                </div>
+                <div>
+                  <label className="block text-body-sm font-semibold text-tx-heading mb-2">Activation band</label>
+                  <select value={conciergeForm.activation_band_override} onChange={(e) => setConciergeForm((prev) => ({ ...prev, activation_band_override: e.target.value }))} className="w-full text-body-sm border border-border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-border-focus">
+                    {ACTIVATION_BANDS.map((band) => (
+                      <option key={band.id} value={band.id}>{band.label} - CA${band.price}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-body-sm font-semibold text-tx-heading mb-2">Project title</label>
+                <input value={conciergeForm.project_title} onChange={(e) => setConciergeForm((prev) => ({ ...prev, project_title: e.target.value }))} className="w-full text-body-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-border-focus" placeholder="Client portal, AI qualification flow, mobile app, etc." />
+              </div>
+              <div>
+                <label className="block text-body-sm font-semibold text-tx-heading mb-2">Intake notes or transcript</label>
+                <textarea value={conciergeForm.transcript} onChange={(e) => setConciergeForm((prev) => ({ ...prev, transcript: e.target.value }))} rows={10} className="w-full text-body-sm border border-border rounded-lg px-3 py-3 focus:outline-none focus:border-border-focus resize-y" placeholder="Paste the call transcript, structured notes, constraints, budget signals, and what the client wants solved." />
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button variant="primary" size="md" onClick={() => void handleCreateConciergeDraft()} disabled={conciergeSubmitting}>
+                  {conciergeSubmitting ? 'Creating draft...' : 'Create concierge draft'}
+                </Button>
+                {conciergeMessage && <p className="text-body-sm text-tx-secondary">{conciergeMessage}</p>}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-bg-offwhite p-5">
+              <p className="text-body-sm font-semibold text-tx-heading mb-2">Latest draft preview</p>
+              {conciergePreview ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-tx-muted font-semibold">Summary</p>
+                    <p className="mt-1 text-body-sm text-tx-body leading-relaxed">{conciergePreview.summary}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-tx-muted font-semibold">Problem statement</p>
+                    <p className="mt-1 text-body-sm text-tx-body leading-relaxed">{conciergePreview.problem_statement}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-tx-muted font-semibold">Solution direction</p>
+                    <p className="mt-1 text-body-sm text-tx-body leading-relaxed">{conciergePreview.solution_direction}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-tx-muted font-semibold">Commercial guidance</p>
+                    <p className="mt-1 text-body-sm text-tx-body">
+                      {conciergePreview.activation_band ? getCommercialLabel(conciergePreview.activation_band) : 'Activation band pending'}
+                      {conciergePreview.pricing?.suggested_min_cad && conciergePreview.pricing?.suggested_max_cad
+                        ? ` - CA$${Number(conciergePreview.pricing.suggested_min_cad).toLocaleString('en-CA')} - CA$${Number(conciergePreview.pricing.suggested_max_cad).toLocaleString('en-CA')}`
+                        : ''}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-body-sm text-tx-muted">Create a concierge draft to preview the generated scope summary here.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
           <Stat label="Total projects" value={projects.length} />
           <Stat label="Est. MRR" value={`CA$${totalMRR.toLocaleString('en-CA')}`} sub="Active plans only" />
@@ -867,8 +1093,8 @@ export function AdminClient() {
           <Stat label="AutoCollect queue" value={autoCollectItems.length} sub="Overdue follow-ups" />
         </div>
 
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-10">
-          {(['intake', 'scoped', 'active', 'review', 'complete', 'paused'] as const).map((status) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-10">
+          {(['intake', 'scoped', 'awaiting_approval', 'active', 'review', 'complete', 'paused', 'support'] as const).map((status) => (
             <div key={status} className="bg-white rounded-xl border border-border px-4 py-3 flex items-center justify-between">
               <span className="text-body-sm text-tx-secondary capitalize">{status}</span>
               <span className={`text-body-sm font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[status]}`}>
@@ -921,7 +1147,7 @@ export function AdminClient() {
                             {project.name && <p className="text-[11px] text-tx-muted truncate">{project.email}</p>}
                             <div className="flex items-center gap-2 mt-2 flex-wrap">
                               {project.tier && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-teal/10 text-brand-teal capitalize">{project.tier}</span>
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-teal/10 text-brand-teal">{getCommercialLabel(project.tier)}</span>
                               )}
                               {pm.length > 0 && (
                                 <span className="text-[10px] text-tx-muted">{done}/{pm.length}</span>
@@ -943,6 +1169,15 @@ export function AdminClient() {
                                 <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                               ))}
                             </select>
+                            {project.status === 'scoped' && (
+                              <button
+                                className="mt-2 w-full text-[10px] font-semibold px-2 py-1.5 rounded-lg bg-brand-teal text-white hover:bg-brand-teal/90 disabled:opacity-60"
+                                onClick={() => void handlePublishScope(project.id)}
+                                disabled={projectActionLoading === project.id}
+                              >
+                                {projectActionLoading === project.id ? 'Publishing...' : 'Publish scope'}
+                              </button>
+                            )}
                             {/* Billing status */}
                             {project.stripe_session_id && billing[project.stripe_session_id] && (() => {
                               const bi = billing[project.stripe_session_id!];
@@ -1013,8 +1248,8 @@ export function AdminClient() {
                           {project.name && <p className="text-tx-muted text-[11px] mt-0.5">{project.email}</p>}
                           {project.intake_id && <p className="text-tx-muted text-[11px] mt-0.5">{project.intake_id}</p>}
                         </td>
-                        <td className="px-6 py-4 capitalize text-tx-body">{project.tier ?? '-'}</td>
-                        <td className="px-6 py-4 capitalize text-tx-body">{project.billing ?? '-'}</td>
+                        <td className="px-6 py-4 text-tx-body">{project.tier ? getCommercialLabel(project.tier) : '-'}</td>
+                        <td className="px-6 py-4 text-tx-body">{project.billing ? (getCommercialBillingLabel(project.billing) || 'One-time') : '-'}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <select
@@ -1026,6 +1261,15 @@ export function AdminClient() {
                                 <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                               ))}
                             </select>
+                            {project.status === 'scoped' && (
+                              <button
+                                className="text-[10px] px-2 py-1 rounded bg-brand-teal text-white hover:bg-brand-teal/90 disabled:opacity-60"
+                                onClick={() => void handlePublishScope(project.id)}
+                                disabled={projectActionLoading === project.id}
+                              >
+                                {projectActionLoading === project.id ? 'Publishing...' : 'Publish scope'}
+                              </button>
+                            )}
                             {hasReview && <span className="text-[10px] font-bold text-brand-orange">review</span>}
                           </div>
                         </td>

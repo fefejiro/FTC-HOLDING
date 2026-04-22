@@ -140,8 +140,8 @@ export function Header() {
           >
             Login
           </Link>
-          <Button href="/start" variant="primary" size="sm">
-            Start Free Trial
+          <Button href="/start-project" variant="primary" size="sm">
+            Start Your Project
           </Button>
         </div>
 
@@ -206,8 +206,8 @@ export function Header() {
             ))}
 
             <div className="pt-4 mt-2 border-t border-border flex flex-col gap-3">
-              <Button href="/start" variant="primary" size="md" className="w-full justify-center">
-                Start Free Trial
+              <Button href="/start-project" variant="primary" size="md" className="w-full justify-center">
+                Start Your Project
               </Button>
               <Link
                 href="/login"

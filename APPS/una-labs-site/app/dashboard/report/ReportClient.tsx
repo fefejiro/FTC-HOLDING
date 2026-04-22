@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { getCommercialLabel } from '@/lib/service-engagement';
 
 type ProjectRecord = {
   id: string;
@@ -10,6 +11,7 @@ type ProjectRecord = {
   name?: string;
   description?: string;
   plan?: string;
+  tier?: string;
   status?: string;
   created_at?: string;
 };
@@ -30,13 +32,6 @@ type ReportState =
   | { phase: 'error'; message: string }
   | { phase: 'ready'; email: string; projects: ProjectRecord[]; milestones: MilestoneRecord[] };
 
-const TIER_LABELS: Record<string, string> = {
-  starter: 'Starter Plan',
-  professional: 'Professional Plan',
-  agency: 'Agency Plan',
-  enterprise: 'Enterprise Plan',
-};
-
 const STATUS_BADGES: Record<string, 'teal' | 'orange' | 'muted'> = {
   intake: 'teal',
   scoped: 'orange',
@@ -56,7 +51,7 @@ function formatDate(value?: string) {
 }
 
 function ProjectSection({ project, milestones }: { project: ProjectRecord; milestones: MilestoneRecord[] }) {
-  const tierLabel = TIER_LABELS[project.plan?.toLowerCase() ?? ''] ?? project.plan ?? 'Your plan';
+  const tierLabel = getCommercialLabel(project.tier ?? project.plan);
   const statusBadge = STATUS_BADGES[project.status?.toLowerCase() ?? 'intake'] ?? 'muted';
   const completedCount = milestones.filter((milestone) => milestone.status === 'complete').length;
   const completionRate = milestones.length > 0

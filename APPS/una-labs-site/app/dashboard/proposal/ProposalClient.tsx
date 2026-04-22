@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useSearchParams } from 'next/navigation';
+import { getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
 
 type ProjectRecord = {
   id: string;
@@ -36,13 +37,6 @@ type ProposalState =
   | { phase: 'unauthenticated'; redirectUrl: string }
   | { phase: 'error'; message: string }
   | { phase: 'ready'; project: ProjectRecord; milestones: MilestoneRecord[] };
-
-const TIER_LABELS: Record<string, string> = {
-  starter: 'Starter Plan',
-  professional: 'Professional Plan',
-  agency: 'Agency Plan',
-  enterprise: 'Enterprise Plan',
-};
 
 const PLAN_PRICES: Record<string, { monthly: number; annual: number }> = {
   starter: { monthly: 67, annual: 57 },
@@ -251,8 +245,14 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
   }
 
   const planKey = (state.project.tier ?? state.project.plan ?? '').toLowerCase();
-  const tierLabel = TIER_LABELS[planKey] ?? state.project.tier ?? state.project.plan ?? 'Your plan';
-  const billingLabel = state.project.billing ? `${state.project.billing} billing` : 'Billing pending';
+  const commercialKey = state.project.tier ?? state.project.plan;
+  const tierLabel = getCommercialLabel(commercialKey);
+  const activationProject = isActivationCommercial(commercialKey);
+  const billingLabel = activationProject
+    ? 'One-time activation'
+    : state.project.billing
+      ? `${state.project.billing} billing`
+      : 'Billing pending';
   const planPrice = PLAN_PRICES[planKey];
   const monthlyPrice = planPrice
     ? state.project.billing?.toLowerCase() === 'annual'
@@ -260,6 +260,7 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
       : planPrice.monthly
     : null;
   const aiPriceRange = formatPriceRange(state.project.ai_price_min_cad, state.project.ai_price_max_cad);
+  const holdForReview = !isAdmin && (state.project.status ?? '').toLowerCase() === 'scoped';
 
   return (
     <div className="min-h-screen bg-white">
@@ -293,6 +294,15 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
           </div>
         </div>
 
+        {holdForReview ? (
+          <div className="mb-16 rounded-2xl border border-border bg-bg-subtle p-8 text-center">
+            <Badge variant="orange">Internal review</Badge>
+            <h2 className="mt-4 text-h3 text-tx-heading font-semibold">This scope pack has not been published yet</h2>
+            <p className="mt-3 text-body text-tx-secondary max-w-2xl mx-auto">
+              Your project is active in our onboarding pipeline, but we are still reviewing the scoped plan internally before it is shared here.
+            </p>
+          </div>
+        ) : (
         <div className="mb-16">
           <div className="bg-bg-subtle rounded-2xl p-8 mb-8">
             <h2 className="text-h3 text-tx-heading font-semibold mb-4">Project Overview</h2>
@@ -309,7 +319,9 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
             </div>
             <div className="mb-6 rounded-xl border border-border bg-white p-5">
               <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold mb-1">Estimated Plan Price</p>
-              {monthlyPrice ? (
+              {activationProject ? (
+                <p className="text-body text-tx-secondary">Build quote is prepared after scope approval.</p>
+              ) : monthlyPrice ? (
                 <p className="text-h3 text-tx-heading font-semibold">CA${monthlyPrice}/mo</p>
               ) : (
                 <p className="text-body text-tx-secondary">Pricing will appear once plan details are finalized.</p>
@@ -346,6 +358,7 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
             )}
           </div>
         </div>
+        )}
 
         <div className="text-center border-t border-border pt-12">
           <div className="mb-8 rounded-2xl border border-border bg-bg-subtle p-6 no-print">

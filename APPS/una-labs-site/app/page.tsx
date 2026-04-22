@@ -11,9 +11,9 @@ import { PROBLEM_SOLUTIONS } from '@/lib/constants';
 import { DashboardMockup, ReportMockup, HandoffMockup } from '@/components/ui/ProductMockups';
 
 export const metadata: Metadata = {
-  title: 'Una Labs — AI Launchpad for Founders',
+  title: 'Una Labs - AI Launchpad for Founders',
   description:
-    'Una Labs is an AI-powered professional service platform for founders. Structured intake, clear proposals, governed delivery, and measurable proof — from client request to delivered project.',
+    'Una Labs is a concierge custom-project operating system for founders. Structured intake, scoped plans, governed delivery, and measurable proof from first conversation to delivered work.',
 };
 
 const IMAGE_POSITIONS = ['right', 'left', 'right'] as const;
@@ -24,15 +24,15 @@ export default function HomePage() {
   return (
     <>
       <HeroSection
-        eyebrow="Una Labs — AI Launchpad for Founders"
+        eyebrow="Una Labs - AI Launchpad for Founders"
         headline="From client request to delivered project, with proof."
         accentPhrase="with proof."
-        subheadline="Una Labs structures your intake, scopes the work with AI, and gives every project a live client workspace. Your clients see exactly where things stand and approve each milestone themselves."
-        ctaPrimaryLabel="Start Free Trial"
-        ctaPrimaryHref="/start"
+        subheadline="Una Labs structures your intake, scopes the work with AI, and gives every project a live client workspace. Your clients see exactly where things stand, what is waiting on them, and what comes next."
+        ctaPrimaryLabel="Start Your Project"
+        ctaPrimaryHref="/start-project"
         ctaSecondaryLabel="Watch a Demo"
         ctaSecondaryHref="/demo"
-        frictionNote="14-day free trial. No credit card required."
+        frictionNote="Activation opens the workspace and scoped plan. Build deposit comes after approval."
       />
 
       <section className="bg-bg-offwhite border-y border-border/70">

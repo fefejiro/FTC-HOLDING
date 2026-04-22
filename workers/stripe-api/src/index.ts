@@ -70,7 +70,24 @@ function sanitizeIntake(value: unknown): Record<string, string> {
     return {};
   }
 
-  const allowedKeys = ['intakeId', 'name', 'email', 'company', 'role', 'teamSize', 'plan', 'billing'];
+  const allowedKeys = [
+    'intakeId',
+    'name',
+    'email',
+    'company',
+    'role',
+    'teamSize',
+    'plan',
+    'billing',
+    'projectTitle',
+    'projectSummary',
+    'activationBand',
+    'activationFee',
+    'checkoutType',
+    'serviceType',
+    'founderOverride',
+    'creditTowardBuild',
+  ];
   const intake = value as Record<string, unknown>;
   const entries = allowedKeys
     .map((key) => [key, sanitize(intake[key], 200)] as const)
@@ -84,6 +101,11 @@ type ActivationPayload = {
   email: string;
   tier: string;
   billing: string;
+  checkout_type: 'subscription' | 'activation';
+  service_type: string;
+  amount_cad: number;
+  founder_override: boolean;
+  credit_toward_build: boolean;
   payment_status: 'active';
   session_id: string;
   created_at: string;
@@ -123,6 +145,21 @@ type PriceInsight = {
   suggested_max_cad: number;
   rationale: string;
   confidence: 'low' | 'medium' | 'high';
+};
+
+type ScopeDraftMilestone = {
+  title: string;
+  description: string;
+  due_offset_days: number;
+};
+
+type ScopeDraft = {
+  summary: string;
+  problem_statement: string;
+  solution_direction: string;
+  activation_band: string;
+  milestones: ScopeDraftMilestone[];
+  pricing: PriceInsight | null;
 };
 
 type Branding = {
@@ -332,9 +369,66 @@ async function sendIntakeNotification(env: Env, activation: {
 }
 
 async function sendCustomerWelcome(env: Env, activation: {
-  email: string; tier: string; billing: string; session_id: string; created_at: string;
+  email: string; tier: string; billing: string; session_id: string; created_at: string; checkout_type?: string; amount_cad?: number; credit_toward_build?: boolean;
 }, name?: string): Promise<void> {
   if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return;
+
+  if (normalizeCheckoutType(activation.checkout_type) === 'activation') {
+    const firstName = name || activation.email.split('@')[0];
+    const dashboardUrl = 'https://unalabs.cloud/login?redirect=/dashboard';
+    const offerLabel = getTierLabel(activation.tier);
+    const chargedToday = typeof activation.amount_cad === 'number'
+      ? activation.amount_cad
+      : ACTIVATION_TIER_PRICES[activation.tier as keyof typeof ACTIVATION_TIER_PRICES] ?? 0;
+    const creditLine = activation.credit_toward_build
+      ? 'This activation fee will be credited toward your first build payment.'
+      : 'Build deposit is handled separately after scope approval.';
+    const html = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#fff">
+  <div style="background:#4DB8A8;border-radius:10px;padding:20px 24px;margin-bottom:28px">
+    <p style="color:white;font-weight:700;font-size:18px;margin:0">Project activation confirmed.</p>
+    <p style="color:rgba(255,255,255,0.85);font-size:13px;margin:6px 0 0">Una Labs | unalabs.cloud</p>
+  </div>
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:20px">Hey ${firstName},</p>
+  <p style="font-size:15px;color:#374151;margin-bottom:24px;line-height:1.6">
+    Your <strong>${offerLabel}</strong> payment has gone through. We are opening your workspace and preparing the scope pack now.
+  </p>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:28px;background:#F9FAFB;border-radius:8px;overflow:hidden">
+    <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px;border-bottom:1px solid #E5E7EB">Service</td><td style="padding:10px 16px;font-size:13px;font-weight:600;color:#0B0E11;border-bottom:1px solid #E5E7EB">${offerLabel}</td></tr>
+    <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px;border-bottom:1px solid #E5E7EB">Charged today</td><td style="padding:10px 16px;font-size:13px;font-weight:700;color:#0B0E11;border-bottom:1px solid #E5E7EB">CA$${chargedToday}</td></tr>
+    <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px">Next payment</td><td style="padding:10px 16px;font-size:13px;color:#0B0E11">Build deposit after scope approval</td></tr>
+  </table>
+  <p style="font-size:14px;color:#374151;margin-bottom:8px;font-weight:600">What happens next</p>
+  <ol style="padding-left:20px;margin:0 0 24px;color:#374151;font-size:14px;line-height:1.8">
+    <li>We turn your intake into a structured workspace and scoped plan.</li>
+    <li>You review the scope pack, roadmap, and recommendation.</li>
+    <li>${creditLine}</li>
+  </ol>
+  <a href="${dashboardUrl}" style="display:inline-block;background:#F97316;color:white;font-weight:700;font-size:15px;padding:14px 28px;border-radius:8px;text-decoration:none;margin-bottom:24px">
+    Open your dashboard ->
+  </a>
+  <p style="font-size:13px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:16px;margin-top:16px">
+    Questions? Reply to this email or reach us at <a href="mailto:hello@unalabs.cloud" style="color:#4DB8A8">hello@unalabs.cloud</a><br>
+    Una Labs | unalabs.cloud
+  </p>
+</div>`;
+    const text = `Hey ${firstName},\n\nYour ${offerLabel} payment has gone through. We are opening your workspace and preparing the scope pack now.\n\nService: ${offerLabel}\nCharged today: CA$${chargedToday}\nNext payment: Build deposit after scope approval\n\n${creditLine}\n\nOpen your dashboard: ${dashboardUrl}\n\nQuestions? Reply here or email hello@unalabs.cloud\n\nUna Labs | unalabs.cloud`;
+    const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+    await fetch('https://api.mailjet.com/v3.1/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+      body: JSON.stringify({
+        Messages: [{
+          From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+          To: [{ Email: activation.email, Name: firstName }],
+          Subject: `Your ${offerLabel} is confirmed - Una Labs`,
+          HTMLPart: html,
+          TextPart: text,
+        }],
+      }),
+    });
+    return;
+  }
 
   const planLabel: Record<string, string> = { starter: 'Starter', professional: 'Professional', agency: 'Agency', enterprise: 'Enterprise' };
   const priceLabel: Record<string, string> = { starter: 'CA$67/mo', professional: 'CA$135/mo', agency: 'CA$339/mo', enterprise: 'CA$679/mo' };
@@ -402,6 +496,55 @@ function cleanSecret(val: string): string {
   return val.replace(/^\uFEFF/, '').trim();
 }
 
+const SUBSCRIPTION_TIERS = ['starter', 'professional', 'agency', 'enterprise'] as const;
+const ACTIVATION_TIERS = [
+  'founding_pilot_activation',
+  'simple_activation',
+  'standard_activation',
+  'complex_activation',
+] as const;
+
+const ACTIVATION_TIER_PRICES: Record<(typeof ACTIVATION_TIERS)[number], number> = {
+  founding_pilot_activation: 67,
+  simple_activation: 250,
+  standard_activation: 500,
+  complex_activation: 1000,
+};
+
+const ACTIVATION_TIER_LABELS: Record<(typeof ACTIVATION_TIERS)[number], string> = {
+  founding_pilot_activation: 'Founding Pilot Activation',
+  simple_activation: 'Simple Project Activation',
+  standard_activation: 'Standard Custom Scoping',
+  complex_activation: 'Complex Discovery and Architecture',
+};
+
+function isSubscriptionTier(value: string): value is (typeof SUBSCRIPTION_TIERS)[number] {
+  return (SUBSCRIPTION_TIERS as readonly string[]).includes(value);
+}
+
+function isActivationTier(value: string): value is (typeof ACTIVATION_TIERS)[number] {
+  return (ACTIVATION_TIERS as readonly string[]).includes(value);
+}
+
+function normalizeCheckoutType(value: string): 'subscription' | 'activation' {
+  return value === 'activation' ? 'activation' : 'subscription';
+}
+
+function getTierLabel(tier: string): string {
+  const subscriptionLabels: Record<string, string> = {
+    starter: 'Starter',
+    professional: 'Professional',
+    agency: 'Agency',
+    enterprise: 'Enterprise',
+  };
+
+  if (isActivationTier(tier)) {
+    return ACTIVATION_TIER_LABELS[tier];
+  }
+
+  return subscriptionLabels[tier] ?? tier;
+}
+
 const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
 
 const INVOICE_TIER_PRICE: Record<string, number> = {
@@ -464,6 +607,235 @@ function normalizePriceInsight(raw: unknown, tierRaw: string): PriceInsight | nu
     rationale,
     confidence,
   };
+}
+
+function normalizeActivationBand(value: string): string {
+  const normalized = sanitize(value, 80).toLowerCase();
+  if (isActivationTier(normalized)) return normalized;
+  if (isSubscriptionTier(normalized)) return normalized;
+  return 'standard_activation';
+}
+
+function getScopeDraftFallback(intake: Record<string, string>, activation: Pick<ActivationPayload, 'email' | 'tier' | 'billing' | 'intake_id'>): ScopeDraft {
+  const activationBand = normalizeActivationBand(
+    intake.activationBand || intake.plan || activation.tier || 'standard_activation',
+  );
+  const projectTitle = sanitize(intake.projectTitle || intake.company || intake.name || 'Custom project', 140);
+  const summarySeed = sanitize(intake.projectSummary || '', 400);
+  const summary = summarySeed
+    || `${projectTitle} is entering concierge onboarding so Una Labs can turn the intake into a structured scope, roadmap, and build recommendation.`;
+  const companyOrClient = sanitize(intake.company || intake.name || activation.email.split('@')[0], 120);
+  const problemStatement = `The current brief for ${companyOrClient} still needs structured scoping, pricing guidance, and a clear approval path before build starts.`;
+  const solutionDirection = `Prepare a service-led scope pack for ${projectTitle}, align milestones to the agreed activation band, and move the project to approval before requesting the build deposit.`;
+  const bounds = AI_PRICE_BOUNDS[activationBand] ?? AI_PRICE_BOUNDS.professional;
+
+  return {
+    summary,
+    problem_statement: problemStatement,
+    solution_direction: solutionDirection,
+    activation_band: activationBand,
+    milestones: [
+      {
+        title: 'Intake synthesis and project brief',
+        description: 'Turn the intake call, notes, and constraints into a clear brief with goals, scope edges, and a recommended direction.',
+        due_offset_days: 7,
+      },
+      {
+        title: 'Roadmap and commercial recommendation',
+        description: 'Define the implementation phases, timeline assumptions, and the first build recommendation for approval.',
+        due_offset_days: 21,
+      },
+      {
+        title: 'Approval package and build readiness',
+        description: 'Finalize the scope pack, engagement letter, and deposit readiness so build can move to active once approved.',
+        due_offset_days: 45,
+      },
+    ],
+    pricing: {
+      suggested_min_cad: bounds.min,
+      suggested_max_cad: bounds.max,
+      rationale: 'Initial range inferred from the activation band and available intake context. Final pricing is confirmed after review and approval.',
+      confidence: 'medium',
+    },
+  };
+}
+
+async function generateScopeDraftFromIntake(
+  intake: Record<string, string>,
+  activation: Pick<ActivationPayload, 'email' | 'tier' | 'billing' | 'intake_id'>,
+  env: Env,
+): Promise<ScopeDraft> {
+  const fallback = getScopeDraftFallback(intake, activation);
+  if (!env.OPENAI_API_KEY) {
+    logEvent('scope_draft_openai_missing', {
+      email: activation.email,
+      activation_band: fallback.activation_band,
+    });
+    return fallback;
+  }
+
+  try {
+    const intakeId = activation.intake_id || intake.intakeId || '';
+    const isRealtorLead = intakeId.includes('realtor_') || intake.type === 'realtor_lead';
+    const systemPrompt = isRealtorLead
+      ? `You are a real estate lead qualification system designer for Una Labs. Return ONLY valid JSON with this exact shape: {"summary":"...","problem_statement":"...","solution_direction":"...","activation_band":"simple_activation|standard_activation|complex_activation|founding_pilot_activation","milestones":[{"title":"...","description":"...","due_offset_days":7},{"title":"...","description":"...","due_offset_days":21},{"title":"...","description":"...","due_offset_days":45}],"pricing":{"suggested_min_cad":number,"suggested_max_cad":number,"rationale":"1-2 concise sentences","confidence":"low|medium|high"}}. Focus on AI voice qualification, lead scoring, CRM handoff, and follow-up automation. No markdown fences. No prose.`
+      : `You are a project scoping assistant for Una Labs, a Canadian digital agency. Return ONLY valid JSON with this exact shape: {"summary":"...","problem_statement":"...","solution_direction":"...","activation_band":"simple_activation|standard_activation|complex_activation|founding_pilot_activation","milestones":[{"title":"...","description":"...","due_offset_days":7},{"title":"...","description":"...","due_offset_days":21},{"title":"...","description":"...","due_offset_days":45}],"pricing":{"suggested_min_cad":number,"suggested_max_cad":number,"rationale":"1-2 concise sentences","confidence":"low|medium|high"}}. Keep it practical, concise, and grounded in service-led onboarding. No markdown fences. No prose.`;
+
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cleanSecret(env.OPENAI_API_KEY)}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.35,
+        max_tokens: 700,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'user',
+            content: JSON.stringify({
+              name: intake.name || '',
+              email: intake.email || activation.email,
+              company: intake.company || '',
+              role: intake.role || '',
+              teamSize: intake.teamSize || '',
+              projectTitle: intake.projectTitle || '',
+              projectSummary: intake.projectSummary || '',
+              transcript: intake.transcript || '',
+              plan: intake.plan || activation.tier,
+              activationBand: intake.activationBand || activation.tier,
+              billing: intake.billing || activation.billing,
+            }),
+          },
+        ],
+      }),
+    });
+
+    if (!openaiResponse.ok) {
+      logEvent('scope_draft_openai_error', {
+        email: activation.email,
+        status: openaiResponse.status,
+      });
+      return fallback;
+    }
+
+    const openaiData = (await openaiResponse.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = openaiData.choices?.[0]?.message?.content ?? '';
+    let jsonStr = content;
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) jsonStr = jsonMatch[1].trim();
+    const parsed = JSON.parse(jsonStr) as Partial<ScopeDraft> & { pricing?: unknown };
+    const activationBand = normalizeActivationBand(
+      String(parsed.activation_band || fallback.activation_band || activation.tier),
+    );
+    const pricing = normalizePriceInsight(parsed.pricing, activationBand) ?? fallback.pricing;
+    const milestones = Array.isArray(parsed.milestones) && parsed.milestones.length > 0
+      ? parsed.milestones.slice(0, 3).map((milestone, index) => ({
+          title: sanitize(milestone?.title || fallback.milestones[index]?.title || `Milestone ${index + 1}`, 120),
+          description: sanitize(
+            milestone?.description || fallback.milestones[index]?.description || 'Milestone details will be finalized during review.',
+            280,
+          ),
+          due_offset_days: [7, 21, 45][index],
+        }))
+      : fallback.milestones;
+
+    return {
+      summary: sanitize(parsed.summary || fallback.summary, 600),
+      problem_statement: sanitize(parsed.problem_statement || fallback.problem_statement, 600),
+      solution_direction: sanitize(parsed.solution_direction || fallback.solution_direction, 600),
+      activation_band: activationBand,
+      milestones,
+      pricing,
+    };
+  } catch (error) {
+    logEvent('scope_draft_openai_exception', {
+      email: activation.email,
+      error: error instanceof Error ? error.message : 'Unknown scope draft error.',
+    });
+    return fallback;
+  }
+}
+
+async function writeScopeDraftToSupabase(
+  projectId: string,
+  draft: ScopeDraft,
+  env: Env,
+  options?: { status?: string },
+): Promise<void> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const today = new Date();
+  const milestonesToWrite = draft.milestones.map((milestone, index) => {
+    const dueDate = new Date(today);
+    dueDate.setDate(dueDate.getDate() + ([7, 21, 45][index] ?? milestone.due_offset_days ?? 0));
+    return {
+      project_id: projectId,
+      title: sanitize(milestone.title, 120),
+      description: sanitize(milestone.description, 280),
+      due_date: dueDate.toISOString().split('T')[0],
+      status: 'pending',
+    };
+  });
+
+  const deleteMilestonesResponse = await fetch(`${supabaseUrl}/rest/v1/milestones?project_id=eq.${encodeURIComponent(projectId)}`, {
+    method: 'DELETE',
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+
+  if (!deleteMilestonesResponse.ok) {
+    const error = await deleteMilestonesResponse.text();
+    throw new Error(`Failed to reset milestones: ${error}`);
+  }
+
+  const milestonesResponse = await fetch(`${supabaseUrl}/rest/v1/milestones`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify(milestonesToWrite),
+  });
+
+  if (!milestonesResponse.ok) {
+    const error = await milestonesResponse.text();
+    throw new Error(`Failed to write milestones: ${error}`);
+  }
+
+  const status = sanitize(options?.status || 'scoped', 80) || 'scoped';
+  const updateResponse = await fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({
+      status,
+      description: sanitize(draft.summary, 600),
+      tier: draft.activation_band,
+      ai_price_min_cad: draft.pricing?.suggested_min_cad ?? null,
+      ai_price_max_cad: draft.pricing?.suggested_max_cad ?? null,
+      ai_price_rationale: draft.pricing?.rationale ?? null,
+      ai_price_confidence: draft.pricing?.confidence ?? null,
+      ai_price_generated_at: new Date().toISOString(),
+    }),
+  });
+
+  if (!updateResponse.ok) {
+    const error = await updateResponse.text();
+    throw new Error(`Failed to update project scope fields: ${error}`);
+  }
 }
 
 function getSupabaseApiKey(env: Env): string {
@@ -1485,6 +1857,97 @@ async function reconcilePaidAutoCollectItems(env: Env): Promise<number> {
   return markedCount;
 }
 
+async function reconcilePaidInstantBills(env: Env, projectId?: string): Promise<number> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const stripe = getStripe(env);
+  const filters = [
+    'select=id,project_id,stripe_payment_link_id,status,paid_at',
+    'status=not.eq.paid',
+    'limit=100',
+  ];
+  if (projectId) filters.push(`project_id=eq.${encodeURIComponent(projectId)}`);
+
+  const res = await fetch(`${supabaseUrl}/rest/v1/instant_bills?${filters.join('&')}`, {
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+  });
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to load instant bills for reconciliation: ${error}`);
+  }
+
+  const items = await res.json() as Array<{
+    id: string;
+    project_id: string;
+    stripe_payment_link_id?: string;
+    status?: string;
+    paid_at?: string | null;
+  }>;
+  if (!items.length) return 0;
+
+  let updated = 0;
+  for (const item of items) {
+    if (!item.stripe_payment_link_id) continue;
+    try {
+      const sessions = await stripe.checkout.sessions.list({
+        payment_link: item.stripe_payment_link_id,
+        limit: 10,
+      } as Stripe.Checkout.SessionListParams);
+      const paidSession = sessions.data.find((session) =>
+        session.payment_status === 'paid' || session.status === 'complete',
+      );
+      if (!paidSession) continue;
+
+      const patchRes = await fetch(`${supabaseUrl}/rest/v1/instant_bills?id=eq.${encodeURIComponent(item.id)}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          status: 'paid',
+          paid_at: paidSession.created ? new Date(paidSession.created * 1000).toISOString() : new Date().toISOString(),
+        }),
+      });
+      if (patchRes.ok) updated += 1;
+    } catch (error) {
+      logEvent('instant_bill_reconcile_error', {
+        projectId: item.project_id,
+        instantBillId: item.id,
+        error: error instanceof Error ? error.message : 'Unknown instant bill reconciliation error.',
+      });
+    }
+  }
+
+  return updated;
+}
+
+function mapClientStatus(internalStatus: string): { label: string; description: string } {
+  switch ((internalStatus || 'intake').toLowerCase()) {
+    case 'scoped':
+      return { label: 'Discovery', description: 'We are drafting and reviewing the initial scope pack internally.' };
+    case 'awaiting_approval':
+      return { label: 'Plan Pending Approval', description: 'Your scope pack is ready and waiting on your review, signature, or deposit approval.' };
+    case 'active':
+      return { label: 'In Progress', description: 'Build work is underway.' };
+    case 'review':
+      return { label: 'Waiting on Feedback', description: 'We are waiting on your review before the next step can begin.' };
+    case 'complete':
+      return { label: 'Delivered', description: 'The agreed delivery is complete.' };
+    case 'support':
+      return { label: 'Ongoing Support', description: 'The project is in its support or maintenance lane.' };
+    case 'paused':
+      return { label: 'Pending Next Step', description: 'The project is paused until the next explicit action is taken.' };
+    default:
+      return { label: 'Discovery', description: 'We are capturing context and opening the project workspace.' };
+  }
+}
+
 async function sendAutoCollectInviteForItem(env: Env, item: AutoCollectRecord, options?: { force?: boolean; ignoreDailyCap?: boolean }): Promise<AutoCollectInviteResult> {
   const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
   const serviceKey = getSupabaseServiceKey(env);
@@ -1922,23 +2385,17 @@ async function handleCreateCheckoutSession(req: Request, env: Env, origin: strin
   }
 
   const email = sanitize(body.email);
-  const tier = sanitize(body.tier).toLowerCase(); // starter | professional | agency | enterprise
-  const billing = sanitize(body.billing).toLowerCase(); // monthly | annual
+  const tier = sanitize(body.tier).toLowerCase();
+  const billing = sanitize(body.billing).toLowerCase();
   const intakeId = sanitize(body.intake_id);
+  const checkoutType = normalizeCheckoutType(sanitize(body.checkout_type).toLowerCase());
+  const serviceType = sanitize(body.service_type).toLowerCase() || 'custom_project_activation';
+  const founderOverride = sanitize(body.founder_override).toLowerCase() === 'true';
+  const creditTowardBuild = sanitize(body.credit_toward_build).toLowerCase() === 'true';
+  const requestedAmountCad = Number(body.amount_cad);
 
   if (!email || !email.includes('@')) {
     return json({ error: 'A valid email is required.' }, 400, origin);
-  }
-  if (!['starter', 'professional', 'agency', 'enterprise'].includes(tier)) {
-    return json({ error: 'Invalid plan tier.' }, 400, origin);
-  }
-  if (!['monthly', 'annual'].includes(billing)) {
-    return json({ error: 'Billing must be monthly or annual.' }, 400, origin);
-  }
-
-  const priceId = getPriceId(env, tier, billing);
-  if (!priceId) {
-    return json({ error: `Stripe price for ${tier}/${billing} is not configured.` }, 500, origin);
   }
 
   const siteUrl = getSiteUrl(env);
@@ -1955,27 +2412,103 @@ async function handleCreateCheckoutSession(req: Request, env: Env, origin: strin
       email,
       tier,
       billing,
+      checkoutType,
+      serviceType,
       intakeId,
       origin,
       stripeConfigured: Boolean(env.STRIPE_SECRET_KEY),
     });
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      customer_email: email,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: getCheckoutSuccessUrl(req, env),
-      cancel_url: `${siteUrl}/pricing`,
-      metadata: { email, tier, billing, intake_id: intakeId },
-      subscription_data: { trial_period_days: 14 },
-      billing_address_collection: 'required',
-      phone_number_collection: { enabled: false },
-      locale: 'en',
-    });
+    let session: Stripe.Checkout.Session;
+
+    if (checkoutType === 'activation') {
+      if (!isActivationTier(tier)) {
+        return json({ error: 'Invalid activation band.' }, 400, origin);
+      }
+
+      const amountCad = Number.isFinite(requestedAmountCad)
+        ? requestedAmountCad
+        : ACTIVATION_TIER_PRICES[tier];
+
+      const metadata = {
+        email,
+        tier,
+        billing: 'one_time',
+        intake_id: intakeId,
+        checkout_type: 'activation',
+        service_type: serviceType,
+        amount_cad: String(amountCad),
+        founder_override: founderOverride ? 'true' : 'false',
+        credit_toward_build: creditTowardBuild ? 'true' : 'false',
+      };
+
+      session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        customer_email: email,
+        line_items: [
+          {
+            price_data: {
+              currency: 'cad',
+              unit_amount: Math.round(amountCad * 100),
+              product_data: {
+                name: ACTIVATION_TIER_LABELS[tier],
+                description:
+                  'Project activation for intake capture, scoped brief, roadmap, and initial pricing recommendation.',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: getCheckoutSuccessUrl(req, env),
+        cancel_url: `${siteUrl}/start-project/summary`,
+        metadata,
+        payment_intent_data: { metadata },
+        billing_address_collection: 'required',
+        phone_number_collection: { enabled: false },
+        locale: 'en',
+      });
+    } else {
+      if (!isSubscriptionTier(tier)) {
+        return json({ error: 'Invalid plan tier.' }, 400, origin);
+      }
+      if (!['monthly', 'annual'].includes(billing)) {
+        return json({ error: 'Billing must be monthly or annual.' }, 400, origin);
+      }
+
+      const priceId = getPriceId(env, tier, billing);
+      if (!priceId) {
+        return json({ error: `Stripe price for ${tier}/${billing} is not configured.` }, 500, origin);
+      }
+
+      session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer_email: email,
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: getCheckoutSuccessUrl(req, env),
+        cancel_url: `${siteUrl}/pricing`,
+        metadata: {
+          email,
+          tier,
+          billing,
+          intake_id: intakeId,
+          checkout_type: 'subscription',
+          service_type: 'platform_subscription',
+          amount_cad: '0',
+          founder_override: 'false',
+          credit_toward_build: 'false',
+        },
+        subscription_data: { trial_period_days: 14 },
+        billing_address_collection: 'required',
+        phone_number_collection: { enabled: false },
+        locale: 'en',
+      });
+    }
+
     logEvent('create_checkout_session_success', {
       email,
       tier,
       billing,
+      checkoutType,
       intakeId,
       livemode: session.livemode,
       sessionId: session.id,
@@ -1987,6 +2520,7 @@ async function handleCreateCheckoutSession(req: Request, env: Env, origin: strin
       email,
       tier,
       billing,
+      checkoutType,
       intakeId,
       message,
     });
@@ -1995,7 +2529,17 @@ async function handleCreateCheckoutSession(req: Request, env: Env, origin: strin
 }
 
 async function writeProjectToSupabase(env: Env, activation: {
-  email: string; tier: string; billing: string; intake_id: string; session_id: string; created_at: string;
+  email: string;
+  tier: string;
+  billing: string;
+  checkout_type: 'subscription' | 'activation';
+  service_type: string;
+  amount_cad: number;
+  founder_override: boolean;
+  credit_toward_build: boolean;
+  intake_id: string;
+  session_id: string;
+  created_at: string;
 }, intake: Record<string, string>): Promise<ProjectWriteResult> {
   if (!env.SUPABASE_URL || (!env.SUPABASE_SERVICE_ROLE_KEY && !env.SUPABASE_ANON_KEY)) {
     return { attempted: false, inserted: false, duplicate: false, status: 0, error: 'Supabase env not configured.' };
@@ -2014,7 +2558,7 @@ async function writeProjectToSupabase(env: Env, activation: {
     body: JSON.stringify({
       email: activation.email.toLowerCase(),
       intake_id: activation.intake_id,
-      name: sanitize(intake.name, 120),
+      name: sanitize(intake.projectTitle || intake.name, 120),
       tier: activation.tier,
       billing: activation.billing,
       stripe_session_id: activation.session_id,
@@ -2073,6 +2617,222 @@ async function deliverWebhook(
       status: 0,
       error: error instanceof Error ? error.message : 'Unknown delivery error.',
     };
+  }
+}
+
+async function fetchProjectBranding(env: Env, projectId: string): Promise<Branding | null> {
+  try {
+    const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+    const serviceKey = getSupabaseServiceKey(env);
+    const brandingRes = await fetch(
+      `${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}&select=branding&limit=1`,
+      { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } },
+    );
+    if (!brandingRes.ok) return null;
+    const [row] = await brandingRes.json() as Array<{ branding?: Branding | null }>;
+    return row?.branding ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function sendScopeReadyClientEmail(
+  env: Env,
+  projectId: string,
+  activation: Pick<ActivationPayload, 'email' | 'tier' | 'billing'>,
+  intake: Record<string, string>,
+  draft: ScopeDraft,
+): Promise<void> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return;
+
+  const name = intake.name || activation.email.split('@')[0];
+  const firstName = name.split(' ')[0];
+  const today = new Date();
+  const projectBranding = await fetchProjectBranding(env, projectId);
+  const brandingColor = projectBranding?.primaryColor ?? '#4DB8A8';
+  const brandingName = projectBranding?.companyName ?? 'Una Labs';
+  const brandingLogoHtml = projectBranding?.logoUrl
+    ? `<img src="${projectBranding.logoUrl}" alt="${brandingName}" style="height:28px;margin-bottom:6px;display:block">`
+    : '';
+  const brandingTaglineHtml = projectBranding?.tagline
+    ? `<p style="color:rgba(255,255,255,0.8);font-size:11px;margin:3px 0 0">${projectBranding.tagline}</p>`
+    : '';
+  const fromEmail = projectBranding?.replyEmail ?? 'hello@unalabs.cloud';
+  const footerLine = projectBranding?.companyName
+    ? `Questions? Reply here or email ${fromEmail}<br>${brandingName}`
+    : 'Questions? Reply here or email hello@unalabs.cloud<br>Una Labs | unalabs.cloud';
+  const dashboardLink = `https://unalabs.cloud/login?redirect=/portal?id=${encodeURIComponent(projectId)}`;
+  const milestonesHtml = draft.milestones
+    .map((milestone, index) => {
+      const dueDate = new Date(today);
+      dueDate.setDate(dueDate.getDate() + ([7, 21, 45][index] ?? milestone.due_offset_days ?? 0));
+      const dateStr = dueDate.toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' });
+      return `<tr><td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;color:#0B0E11;font-size:14px">${milestone.title}</td><td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:14px">${dateStr}</td></tr>`;
+    })
+    .join('');
+
+  const html = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+  <div style="background:${brandingColor};border-radius:8px;padding:16px 20px;margin-bottom:24px">
+    ${brandingLogoHtml}
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Your scoped plan is ready for review</p>
+    ${brandingTaglineHtml}
+  </div>
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:16px">Hi ${firstName},</p>
+  <p style="font-size:14px;color:#374151;margin-bottom:14px">We've finished the structured scope pack for your project. You can now review the plan, milestones, and next approval step in your client portal.</p>
+  <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:12px 14px;margin-bottom:20px">
+    <p style="margin:0 0 6px;color:#6B7280;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Why this phase matters</p>
+    <p style="margin:0;color:#0B0E11;font-size:14px;font-weight:600">${sanitize(draft.problem_statement, 220)}</p>
+    <p style="margin:8px 0 0;color:#374151;font-size:13px;line-height:1.6">${sanitize(draft.solution_direction, 260)}</p>
+  </div>
+  ${draft.pricing ? `<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:12px 14px;margin-bottom:20px"><p style="margin:0 0 4px;color:#6B7280;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Build recommendation</p><p style="margin:0;color:#0B0E11;font-size:14px;font-weight:700">CA$${draft.pricing.suggested_min_cad.toLocaleString('en-CA')} - CA$${draft.pricing.suggested_max_cad.toLocaleString('en-CA')}</p><p style="margin:6px 0 0;color:#374151;font-size:12px">${draft.pricing.rationale}</p></div>` : ''}
+  <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+    <tr><th style="padding:8px 12px;text-align:left;background:#F9FAFB;color:#6B7280;font-size:13px;font-weight:600;border-bottom:1px solid #E5E7EB">Milestone</th><th style="padding:8px 12px;text-align:left;background:#F9FAFB;color:#6B7280;font-size:13px;font-weight:600;border-bottom:1px solid #E5E7EB">Target date</th></tr>
+    ${milestonesHtml}
+  </table>
+  <a href="${dashboardLink}" style="display:inline-block;background:#F97316;color:white;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:24px">Review project portal</a>
+  <p style="font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:16px">${footerLine}</p>
+</div>`;
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+    body: JSON.stringify({
+      Messages: [
+        {
+          From: { Email: fromEmail, Name: brandingName },
+          To: [{ Email: activation.email, Name: name }],
+          Subject: `Your scoped plan is ready - ${brandingName}`,
+          HTMLPart: html,
+          TextPart: `Hi ${firstName},\n\nYour scoped plan is ready for review.\n\n${draft.problem_statement}\n\n${draft.solution_direction}\n\nReview it here: ${dashboardLink}\n\nQuestions? Reply here or email ${fromEmail}\n\n${brandingName}`,
+        },
+      ],
+    }),
+  });
+}
+
+async function sendScopeGeneratedAdminEmail(
+  env: Env,
+  projectId: string,
+  activation: Pick<ActivationPayload, 'email' | 'tier'>,
+  intake: Record<string, string>,
+  draft: ScopeDraft,
+): Promise<void> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return;
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  const company = intake.company || intake.name || activation.email;
+  const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:20px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Scope draft generated</p>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Client</td><td style="padding:6px 0;font-size:13px;font-weight:600;color:#0B0E11">${company}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Activation band</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${getTierLabel(draft.activation_band)}</td></tr>
+    <tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">Email</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">${activation.email}</td></tr>
+    ${draft.pricing ? `<tr><td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px">AI price insight</td><td style="padding:6px 0;font-size:13px;color:#0B0E11">CA$${draft.pricing.suggested_min_cad.toLocaleString('en-CA')} - CA$${draft.pricing.suggested_max_cad.toLocaleString('en-CA')} (${draft.pricing.confidence})</td></tr>` : ''}
+  </table>
+  <p style="font-size:13px;color:#6B7280;margin-bottom:12px;font-weight:600">Recommended milestones:</p>
+  <ul style="padding-left:20px;margin:0 0 20px;color:#0B0E11;font-size:13px;line-height:1.8">
+    ${draft.milestones.map((milestone) => `<li>${milestone.title}</li>`).join('')}
+  </ul>
+  <p style="font-size:12px;color:#9CA3AF">Project ID: ${projectId}</p>
+</div>`;
+
+  await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+    body: JSON.stringify({
+      Messages: [
+        {
+          From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+          To: [{ Email: 'mike.fejiro@gmail.com', Name: 'Mike' }],
+          Subject: `Scope draft ready - ${company}`,
+          HTMLPart: html,
+          TextPart: `Scope draft ready\n\nClient: ${company}\nActivation band: ${getTierLabel(draft.activation_band)}\nEmail: ${activation.email}\nProject ID: ${projectId}`,
+        },
+      ],
+    }),
+  });
+}
+
+async function createScopedProjectDraft(
+  env: Env,
+  intake: Record<string, string>,
+  draft: ScopeDraft,
+  options?: { stripeSessionId?: string },
+): Promise<{ project: Record<string, unknown>; projectId: string }> {
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const syntheticIntakeId = sanitize(
+    intake.intakeId || `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    120,
+  );
+  const name = sanitize(intake.projectTitle || intake.name || intake.company || 'Custom project', 120);
+  const response = await fetch(`${supabaseUrl}/rest/v1/projects`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify({
+      email: sanitize(intake.email, 160).toLowerCase(),
+      intake_id: syntheticIntakeId,
+      name,
+      tier: draft.activation_band,
+      billing: 'one_time',
+      status: 'scoped',
+      description: sanitize(draft.summary, 600),
+      ...(options?.stripeSessionId ? { stripe_session_id: options.stripeSessionId } : {}),
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Project draft insert failed: ${error}`);
+  }
+
+  const rows = await response.json() as Array<Record<string, unknown>>;
+  const project = rows[0];
+  const projectId = String(project?.id ?? '');
+  if (!projectId) throw new Error('Project draft insert returned no id.');
+  return { project, projectId };
+}
+
+async function generateAndWriteScopeDraft(
+  projectId: string | undefined,
+  intake: Record<string, string>,
+  activation: ActivationPayload,
+  env: Env,
+): Promise<ScopeDraft | null> {
+  if (!projectId) {
+    logEvent('generate_scope_project_missing', {});
+    return null;
+  }
+
+  try {
+    const draft = await generateScopeDraftFromIntake(intake, activation, env);
+    await writeScopeDraftToSupabase(projectId, draft, env, { status: 'scoped' });
+    await sendScopeGeneratedAdminEmail(env, projectId, activation, intake, draft);
+    void fireWebhooks(env, projectId, 'proposal.sent', {
+      project_id: projectId,
+      email: activation.email,
+      milestones: draft.milestones.map((milestone) => milestone.title),
+    });
+    logEvent('generate_scope_written', {
+      projectId,
+      milestones: draft.milestones.length,
+      activation_band: draft.activation_band,
+    });
+    return draft;
+  } catch (error) {
+    logEvent('generate_scope_write_exception', {
+      projectId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return null;
   }
 }
 
@@ -2481,8 +3241,23 @@ async function resolveActivation(
   }
 
   const email = session.customer_email ?? sanitize(session.metadata?.email) ?? intake.email ?? '';
-  const tier = session.metadata?.tier ?? intake.plan ?? '';
+  const tier = session.metadata?.tier ?? intake.activationBand ?? intake.plan ?? '';
   const billing = session.metadata?.billing ?? intake.billing ?? '';
+  const checkoutType = normalizeCheckoutType(
+    sanitize(session.metadata?.checkout_type) || sanitize(intake.checkoutType),
+  );
+  const serviceType = sanitize(session.metadata?.service_type) || sanitize(intake.serviceType) || 'custom_project_activation';
+  const amountCad = Number(
+    sanitize(session.metadata?.amount_cad) ||
+      sanitize(intake.activationFee) ||
+      (isActivationTier(tier) ? ACTIVATION_TIER_PRICES[tier] : 0),
+  ) || 0;
+  const founderOverride =
+    sanitize(session.metadata?.founder_override).toLowerCase() === 'true' ||
+    sanitize(intake.founderOverride).toLowerCase() === 'true';
+  const creditTowardBuild =
+    sanitize(session.metadata?.credit_toward_build).toLowerCase() === 'true' ||
+    sanitize(intake.creditTowardBuild).toLowerCase() === 'true';
   const intakeId = session.metadata?.intake_id ?? intake.intakeId ?? '';
   const subscriptionId = typeof session.subscription === 'string'
     ? session.subscription
@@ -2500,6 +3275,11 @@ async function resolveActivation(
       email,
       tier,
       billing,
+      checkout_type: checkoutType,
+      service_type: serviceType,
+      amount_cad: amountCad,
+      founder_override: founderOverride,
+      credit_toward_build: creditTowardBuild,
       payment_status: 'active',
       session_id: sessionId,
       created_at: new Date().toISOString(),
@@ -2601,7 +3381,7 @@ async function runActivation(
   // Generate and write project scope
   if (projectWrite.projectId) {
     try {
-      await generateAndWriteScope(projectWrite.projectId, intake, activation, env);
+      await generateAndWriteScopeDraft(projectWrite.projectId, intake, activation, env);
     } catch (error) {
       logEvent('generate_scope_error', {
         sessionId,
@@ -2709,6 +3489,7 @@ async function handleCheckoutSuccess(req: Request, env: Env): Promise<Response> 
     redirectUrl.searchParams.set('session_id', sessionId);
     redirectUrl.searchParams.set('activation', result.alreadyActivated ? 'already_active' : 'success');
     redirectUrl.searchParams.set('plan', result.activation.tier || 'professional');
+    redirectUrl.searchParams.set('checkout_type', normalizeCheckoutType(result.activation.checkout_type));
     if (result.activation.email) {
       redirectUrl.searchParams.set('email', result.activation.email.toLowerCase());
     }
@@ -2877,8 +3658,55 @@ async function handleIntakeConfirm(req: Request, env: Env, origin: string | null
 
   const email = sanitize(body.email);
   const name = sanitize(body.name) || email.split('@')[0];
-  const plan = sanitize(body.plan) || 'professional';
+  const plan = sanitize(body.plan || body.tier) || 'professional';
   const billing = sanitize(body.billing) || 'monthly';
+  const checkoutType = normalizeCheckoutType(body.checkout_type);
+  const amountCad = Number(body.amount_cad);
+
+  if (checkoutType === 'activation') {
+    const offerLabel = getTierLabel(plan);
+    const chargedToday = Number.isFinite(amountCad)
+      ? amountCad
+      : ACTIVATION_TIER_PRICES[plan as keyof typeof ACTIVATION_TIER_PRICES] ?? 0;
+    const creditLine = body.credit_toward_build
+      ? 'If you proceed to build, this activation fee is credited toward your first build payment.'
+      : 'Build deposit is handled separately after scope approval.';
+    const firstName = name.split(' ')[0];
+    const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+  <div style="background:#4DB8A8;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+    <p style="color:white;font-weight:700;font-size:16px;margin:0">Una Labs</p>
+  </div>
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:8px">Hi ${firstName},</p>
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:20px">We've received your intake. You're one step away from activating your <strong>${offerLabel}</strong>.</p>
+  <div style="background:#F9FAFB;border-radius:8px;padding:16px;margin-bottom:24px">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Service</td><td style="font-size:13px;font-weight:600;color:#0B0E11">${offerLabel}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Charged today</td><td style="font-size:13px;font-weight:700;color:#0B0E11">CA$${chargedToday}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px">Next step</td><td style="font-size:13px;color:#0B0E11">Scope pack first, build deposit after approval</td></tr>
+    </table>
+  </div>
+  <p style="font-size:13px;color:#6B7280;margin-bottom:20px">${creditLine}</p>
+  <p style="font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:16px">Questions? Reply to this email or reach us at <a href="mailto:hello@unalabs.cloud" style="color:#4DB8A8">hello@unalabs.cloud</a><br>Una Labs | unalabs.cloud</p>
+</div>`;
+    const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+    try {
+      await fetch('https://api.mailjet.com/v3.1/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+        body: JSON.stringify({
+          Messages: [{
+            From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+            To: [{ Email: email, Name: name }],
+            Subject: `Your Una Labs ${offerLabel} intake is confirmed`,
+            HTMLPart: html,
+            TextPart: `Hi ${firstName},\n\nWe've received your intake. You're one step away from activating your ${offerLabel}.\n\nService: ${offerLabel}\nCharged today: CA$${chargedToday}\nNext step: Scope pack first, build deposit after approval\n\n${creditLine}\n\nQuestions? Email hello@unalabs.cloud\n\nUna Labs | unalabs.cloud`,
+          }],
+        }),
+      });
+    } catch { /* non-fatal */ }
+
+    return json({ ok: true }, 200, origin);
+  }
 
   const planLabels: Record<string, string> = { starter: 'Starter', professional: 'Professional', agency: 'Agency', enterprise: 'Enterprise' };
   const planLabel = planLabels[plan] ?? plan;
@@ -3457,6 +4285,465 @@ async function handleAdminInstantBill(req: Request, env: Env, origin: string | n
   return json({ ok: true, instant_bill: instantBill, payment_link_url: paymentLink.url }, 200, origin);
 }
 
+async function handleAdminIntakeDraft(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid body.' }, 400, origin);
+  }
+
+  const email = sanitize(body.email, 160).toLowerCase();
+  const name = sanitize(body.name, 120);
+  const company = sanitize(body.company, 120);
+  const role = sanitize(body.role, 120);
+  const projectTitle = sanitize(body.project_title, 140);
+  const transcript = sanitize(body.transcript, 4000);
+  const activationBand = normalizeActivationBand(sanitize(body.activation_band_override || body.activation_band, 80));
+
+  if (!email || !email.includes('@')) return json({ error: 'Valid client email required.' }, 400, origin);
+  if (!projectTitle && !transcript) return json({ error: 'Project title or intake transcript is required.' }, 400, origin);
+
+  const intake: Record<string, string> = {
+    email,
+    name,
+    company,
+    role,
+    projectTitle: projectTitle || name || company || 'Custom project',
+    projectSummary: transcript,
+    transcript,
+    activationBand,
+    plan: activationBand,
+    billing: 'one_time',
+    intakeId: `manual_${Date.now()}`,
+  };
+
+  const activation: ActivationPayload = {
+    intake_id: intake.intakeId,
+    email,
+    tier: activationBand,
+    billing: 'one_time',
+    checkout_type: 'activation',
+    service_type: 'custom_project_activation',
+    amount_cad: ACTIVATION_TIER_PRICES[activationBand as keyof typeof ACTIVATION_TIER_PRICES] ?? 0,
+    founder_override: activationBand === 'founding_pilot_activation',
+    credit_toward_build: activationBand === 'founding_pilot_activation',
+    payment_status: 'active',
+    session_id: `manual_${Date.now()}`,
+    created_at: new Date().toISOString(),
+    intake,
+  };
+
+  try {
+    const draft = await generateScopeDraftFromIntake(intake, activation, env);
+    const created = await createScopedProjectDraft(env, intake, draft);
+    await writeScopeDraftToSupabase(created.projectId, draft, env, { status: 'scoped' });
+    await sendScopeGeneratedAdminEmail(env, created.projectId, activation, intake, draft);
+
+    const milestonesRes = await fetch(`${cleanSecret(env.SUPABASE_URL!)}/rest/v1/milestones?project_id=eq.${encodeURIComponent(created.projectId)}&select=*&order=due_date.asc`, {
+      headers: {
+        'apikey': getSupabaseServiceKey(env),
+        'Authorization': `Bearer ${getSupabaseServiceKey(env)}`,
+      },
+    });
+    const milestones = milestonesRes.ok ? await milestonesRes.json() : [];
+
+    return json({
+      ok: true,
+      project: {
+        ...created.project,
+        id: created.projectId,
+        email,
+        name: intake.projectTitle,
+        tier: draft.activation_band,
+        billing: 'one_time',
+        status: 'scoped',
+        description: draft.summary,
+        ai_price_min_cad: draft.pricing?.suggested_min_cad ?? null,
+        ai_price_max_cad: draft.pricing?.suggested_max_cad ?? null,
+        ai_price_rationale: draft.pricing?.rationale ?? null,
+        ai_price_confidence: draft.pricing?.confidence ?? null,
+      },
+      milestones,
+      draft,
+    }, 200, origin);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Could not create intake draft.' }, 500, origin);
+  }
+}
+
+async function handleAdminPublishScope(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid body.' }, 400, origin);
+  }
+
+  const projectId = sanitize(body.project_id, 80);
+  if (!projectId) return json({ error: 'project_id required.' }, 400, origin);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  const [projectRes, milestonesRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}&select=*`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/milestones?project_id=eq.${encodeURIComponent(projectId)}&select=*&order=due_date.asc`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+  ]);
+
+  if (!projectRes.ok || !milestonesRes.ok) {
+    return json({ error: 'Could not load project scope.' }, 502, origin);
+  }
+
+  const projects = await projectRes.json() as Array<Record<string, unknown>>;
+  const milestones = await milestonesRes.json() as Array<{ title?: string; description?: string; due_date?: string }>;
+  const project = projects[0];
+  if (!project) return json({ error: 'Project not found.' }, 404, origin);
+  if (!milestones.length) return json({ error: 'Project has no milestones to publish.' }, 409, origin);
+
+  const draft: ScopeDraft = {
+    summary: sanitize(project.description, 600) || 'Your project scope has been prepared and is ready for review.',
+    problem_statement: 'We translated your intake into a structured scope and decision-ready plan.',
+    solution_direction: 'Review the scoped plan, confirm the engagement letter, and approve the next build step.',
+    activation_band: normalizeActivationBand(sanitize(project.tier, 80) || 'standard_activation'),
+    milestones: milestones.slice(0, 3).map((milestone, index) => ({
+      title: sanitize(milestone.title, 120) || `Milestone ${index + 1}`,
+      description: sanitize(milestone.description, 280) || 'Milestone details are ready for review.',
+      due_offset_days: [7, 21, 45][index],
+    })),
+    pricing: normalizePriceInsight({
+      suggested_min_cad: project.ai_price_min_cad,
+      suggested_max_cad: project.ai_price_max_cad,
+      rationale: project.ai_price_rationale,
+      confidence: project.ai_price_confidence,
+    }, sanitize(project.tier, 80)),
+  };
+
+  try {
+    await ensureContractForProject(env, projectId, ADMIN_EMAIL);
+    await sendScopeReadyClientEmail(env, projectId, {
+      email: sanitize(project.email, 160).toLowerCase(),
+      tier: sanitize(project.tier, 80),
+      billing: sanitize(project.billing, 80) || 'one_time',
+    }, {
+      name: sanitize(project.name, 120),
+      email: sanitize(project.email, 160).toLowerCase(),
+      company: sanitize(project.name, 120),
+      projectTitle: sanitize(project.name, 120),
+    }, draft);
+
+    const updateRes = await fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({ status: 'awaiting_approval' }),
+    });
+    if (!updateRes.ok) {
+      const error = await updateRes.text();
+      return json({ error: `Could not move project to awaiting approval: ${error}` }, 502, origin);
+    }
+    const updatedRows = await updateRes.json() as Array<Record<string, unknown>>;
+    return json({ ok: true, project: updatedRows[0], milestones }, 200, origin);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Could not publish scope.' }, 500, origin);
+  }
+}
+
+async function handleAdminProjectStatus(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid body.' }, 400, origin);
+  }
+
+  const projectId = sanitize(body.project_id, 80);
+  const nextStatus = sanitize(body.status, 80).toLowerCase();
+  const override = body.override === true;
+  if (!projectId || !nextStatus) return json({ error: 'project_id and status are required.' }, 400, origin);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  await reconcilePaidInstantBills(env, projectId).catch(() => undefined);
+
+  const [projectRes, contractRes, invoiceRes, instantBillRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}&select=*`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/contracts?project_id=eq.${encodeURIComponent(projectId)}&select=id,status,signed_at&order=created_at.desc&limit=1`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/invoices?project_id=eq.${encodeURIComponent(projectId)}&select=id,status,due_date,amount_cad`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/instant_bills?project_id=eq.${encodeURIComponent(projectId)}&select=id,status,amount_cad,description,payment_link_url,paid_at`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+  ]);
+
+  if (!projectRes.ok || !contractRes.ok || !invoiceRes.ok || !instantBillRes.ok) {
+    return json({ error: 'Could not load project payment state.' }, 502, origin);
+  }
+
+  const [project] = await projectRes.json() as Array<Record<string, unknown>>;
+  const [contract] = await contractRes.json() as Array<{ id: string; status?: string; signed_at?: string | null }>;
+  const invoices = await invoiceRes.json() as Array<{ id: string; status?: string; amount_cad?: number }>;
+  const instantBills = await instantBillRes.json() as Array<{ id: string; status?: string; amount_cad?: number; description?: string; payment_link_url?: string }>;
+  if (!project) return json({ error: 'Project not found.' }, 404, origin);
+
+  const paidInstantBills = instantBills.filter((bill) => (bill.status ?? '').toLowerCase() === 'paid');
+  const outstandingInvoices = invoices.filter((invoice) => !['paid', 'void'].includes((invoice.status ?? '').toLowerCase()));
+  const outstandingInstantBills = instantBills.filter((bill) => !['paid', 'void'].includes((bill.status ?? '').toLowerCase()));
+
+  if (nextStatus === 'active' && !override) {
+    if ((contract?.status ?? '').toLowerCase() !== 'signed') {
+      return json({ error: 'Cannot move to active without a signed engagement letter.' }, 409, origin);
+    }
+    if (paidInstantBills.length === 0 && invoices.every((invoice) => (invoice.status ?? '').toLowerCase() !== 'paid')) {
+      return json({ error: 'Cannot move to active without a paid build deposit.' }, 409, origin);
+    }
+  }
+
+  if (nextStatus === 'complete' && !override) {
+    if (outstandingInvoices.length > 0 || outstandingInstantBills.length > 0) {
+      return json({ error: 'Cannot mark complete while payments are still outstanding.' }, 409, origin);
+    }
+  }
+
+  const updateRes = await fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': `Bearer ${serviceKey}`,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify({ status: nextStatus }),
+  });
+  if (!updateRes.ok) {
+    const error = await updateRes.text();
+    return json({ error: `Could not update project status: ${error}` }, 502, origin);
+  }
+  const updatedRows = await updateRes.json() as Array<Record<string, unknown>>;
+
+  return json({
+    ok: true,
+    project: updatedRows[0],
+    gates: {
+      contract_signed: (contract?.status ?? '').toLowerCase() === 'signed',
+      deposit_paid: paidInstantBills.length > 0 || invoices.some((invoice) => (invoice.status ?? '').toLowerCase() === 'paid'),
+      outstanding_invoices: outstandingInvoices.length,
+      outstanding_instant_bills: outstandingInstantBills.length,
+    },
+  }, 200, origin);
+}
+
+async function handleProjectHome(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyUser(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.status ?? 401, origin);
+
+  const url = new URL(req.url);
+  const projectId = sanitize(url.searchParams.get('project_id') ?? url.searchParams.get('id') ?? '', 80);
+  if (!projectId) return json({ error: 'project_id required.' }, 400, origin);
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL!);
+  const serviceKey = getSupabaseServiceKey(env);
+  await reconcilePaidInstantBills(env, projectId).catch(() => undefined);
+
+  const [projectRes, milestonesRes, contractRes, invoiceRes, instantBillRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/projects?id=eq.${encodeURIComponent(projectId)}&select=*`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/milestones?project_id=eq.${encodeURIComponent(projectId)}&select=*&order=due_date.asc`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/contracts?project_id=eq.${encodeURIComponent(projectId)}&select=*&order=created_at.desc&limit=1`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/invoices?project_id=eq.${encodeURIComponent(projectId)}&select=*&order=created_at.desc`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/instant_bills?project_id=eq.${encodeURIComponent(projectId)}&select=*&order=created_at.desc`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    }),
+  ]);
+
+  if (!projectRes.ok || !milestonesRes.ok || !contractRes.ok || !invoiceRes.ok || !instantBillRes.ok) {
+    return json({ error: 'Could not load project home.' }, 502, origin);
+  }
+
+  const [project] = await projectRes.json() as Array<Record<string, unknown>>;
+  if (!project) return json({ error: 'Project not found.' }, 404, origin);
+  if (auth.user.email !== ADMIN_EMAIL && sanitize(project.email, 160).toLowerCase() !== auth.user.email.toLowerCase()) {
+    return json({ error: 'Forbidden.' }, 403, origin);
+  }
+
+  const milestones = await milestonesRes.json() as Array<Record<string, unknown>>;
+  const [contract] = await contractRes.json() as Array<Record<string, unknown>>;
+  const invoices = await invoiceRes.json() as Array<Record<string, unknown>>;
+  const instantBills = await instantBillRes.json() as Array<Record<string, unknown>>;
+  const siteUrl = getSiteUrl(env);
+  const clientStatus = mapClientStatus(sanitize(project.status, 80));
+  const nextMilestone = milestones.find((milestone) => !['approved', 'complete', 'completed', 'done'].includes(sanitize(milestone.status, 80).toLowerCase())) ?? null;
+  const paidInstantBills = instantBills.filter((bill) => sanitize(bill.status, 80).toLowerCase() === 'paid');
+  const unpaidInstantBills = instantBills.filter((bill) => !['paid', 'void'].includes(sanitize(bill.status, 80).toLowerCase()));
+  const unpaidInvoices = invoices.filter((invoice) => !['paid', 'void'].includes(sanitize(invoice.status, 80).toLowerCase()));
+  const awaitingOnClient: Array<{ title: string; detail: string; action_url?: string }> = [];
+  const awaitingOnUs: Array<{ title: string; detail: string }> = [];
+
+  if (sanitize(project.status, 80).toLowerCase() === 'scoped') {
+    awaitingOnUs.push({
+      title: 'Internal scope review',
+      detail: 'We are finalizing the scope pack before we publish it to your portal.',
+    });
+  }
+  if ((contract?.status ?? '').toString().toLowerCase() !== 'signed') {
+    awaitingOnClient.push({
+      title: 'Sign the engagement letter',
+      detail: 'We need the engagement letter signed before build can move forward.',
+      action_url: `${siteUrl}/dashboard/contract?id=${encodeURIComponent(projectId)}`,
+    });
+  }
+  if (paidInstantBills.length === 0 && unpaidInstantBills.length > 0) {
+    const depositBill = unpaidInstantBills[0];
+    awaitingOnClient.push({
+      title: 'Pay the build deposit',
+      detail: 'Build starts once the build deposit is paid.',
+      action_url: sanitize(depositBill.payment_link_url, 500) || undefined,
+    });
+  }
+  const reviewMilestone = milestones.find((milestone) => sanitize(milestone.status, 80).toLowerCase() === 'review');
+  if (reviewMilestone) {
+    awaitingOnClient.push({
+      title: `Review ${sanitize(reviewMilestone.title, 120) || 'current milestone'}`,
+      detail: 'We are waiting on your approval or change request for the current review item.',
+    });
+  }
+  if (!nextMilestone) {
+    awaitingOnUs.push({
+      title: 'Preparing the next update',
+      detail: 'We are packaging the next deliverable and update notes.',
+    });
+  } else if (sanitize(project.status, 80).toLowerCase() === 'active') {
+    awaitingOnUs.push({
+      title: `Working on ${sanitize(nextMilestone.title, 120) || 'the next milestone'}`,
+      detail: 'This is the current focus on our side.',
+    });
+  }
+
+  const decisions = [
+    {
+      title: 'Selected service track',
+      detail: getTierLabel(sanitize(project.tier, 80) || 'standard_activation'),
+    },
+    sanitize(project.description, 600)
+      ? { title: 'Project summary', detail: sanitize(project.description, 600) }
+      : null,
+    project.ai_price_min_cad && project.ai_price_max_cad
+      ? {
+          title: 'Build recommendation',
+          detail: `CA$${Number(project.ai_price_min_cad).toLocaleString('en-CA')} - CA$${Number(project.ai_price_max_cad).toLocaleString('en-CA')}`,
+        }
+      : null,
+  ].filter(Boolean);
+
+  const artifacts = [
+    { title: 'Proposal view', type: 'proposal', url: `${siteUrl}/dashboard/proposal?id=${encodeURIComponent(projectId)}` },
+    { title: 'Engagement letter', type: 'contract', url: `${siteUrl}/dashboard/contract?id=${encodeURIComponent(projectId)}` },
+    ...invoices.map((invoice) => ({
+      title: sanitize(invoice.invoice_number, 120) || 'Invoice',
+      type: 'invoice',
+      url: invoice.milestone_id ? `${siteUrl}/dashboard/invoice?milestone_id=${encodeURIComponent(String(invoice.milestone_id))}` : undefined,
+      created_at: invoice.created_at,
+    })),
+    ...milestones
+      .filter((milestone) => Boolean(sanitize(milestone.proof_url, 500)))
+      .map((milestone) => ({
+        title: sanitize(milestone.title, 120) || 'Milestone proof',
+        type: 'deliverable',
+        url: sanitize(milestone.proof_url, 500),
+        note: sanitize(milestone.proof_note, 280),
+      })),
+  ];
+
+  const progressNotes = [
+    { title: 'Project created', body: 'Your workspace is open and the project record is active.', created_at: project.created_at },
+    project.ai_price_generated_at
+      ? { title: 'Scope priced', body: sanitize(project.ai_price_rationale, 320) || 'We generated the first commercial recommendation for this project.', created_at: project.ai_price_generated_at }
+      : null,
+    contract?.sent_at
+      ? { title: 'Engagement letter sent', body: 'The engagement letter is ready for review and signature.', created_at: contract.sent_at }
+      : null,
+    contract?.signed_at
+      ? { title: 'Engagement letter signed', body: 'The engagement letter has been signed.', created_at: contract.signed_at }
+      : null,
+  ].filter(Boolean);
+
+  const approvals = [
+    {
+      title: 'Scope approval',
+      status: sanitize(project.status, 80).toLowerCase() === 'awaiting_approval' ? 'pending' : 'in_progress',
+      action_url: `${siteUrl}/dashboard/proposal?id=${encodeURIComponent(projectId)}`,
+    },
+    {
+      title: 'Engagement letter',
+      status: (contract?.status ?? '').toString().toLowerCase() === 'signed' ? 'approved' : 'pending',
+      action_url: `${siteUrl}/dashboard/contract?id=${encodeURIComponent(projectId)}`,
+    },
+  ];
+
+  const outstandingBalance = unpaidInvoices.reduce((sum, invoice) => sum + Number(invoice.amount_cad ?? 0), 0)
+    + unpaidInstantBills.reduce((sum, bill) => sum + Number(bill.amount_cad ?? 0), 0);
+
+  return json({
+    ok: true,
+    project,
+    client_status: clientStatus,
+    current_phase: {
+      title: clientStatus.label,
+      meaning: clientStatus.description,
+      expected_outcome: nextMilestone
+        ? `Next checkpoint: ${sanitize(nextMilestone.title, 120) || 'Upcoming milestone'}`
+        : 'Complete the outstanding approval and payment items to move to the next phase.',
+    },
+    decisions,
+    awaiting_on_us: awaitingOnUs,
+    awaiting_on_client: awaitingOnClient,
+    artifacts,
+    payments: {
+      activation_fee_status: sanitize(project.stripe_session_id, 120) ? 'paid' : 'not_tracked',
+      deposit_status: paidInstantBills.length > 0 ? 'paid' : unpaidInstantBills.length > 0 ? 'due' : 'not_requested',
+      invoices_sent: invoices.length,
+      invoices_paid: invoices.filter((invoice) => sanitize(invoice.status, 80).toLowerCase() === 'paid').length,
+      outstanding_balance_cad: outstandingBalance,
+      next_payment_link: sanitize(unpaidInstantBills[0]?.payment_link_url, 500) || undefined,
+    },
+    progress_notes: progressNotes,
+    next_milestone: nextMilestone,
+    approvals,
+    milestones,
+    contract: contract ?? null,
+    invoices,
+    instant_bills: instantBills,
+  }, 200, origin);
+}
+
 async function handleAdminAutoCollectList(req: Request, env: Env, origin: string | null): Promise<Response> {
   const auth = await verifyAdmin(req, env);
   if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
@@ -3585,6 +4872,10 @@ export default {
       return handleGetInvoices(req, env, origin);
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/project-home') {
+      return handleProjectHome(req, env, origin);
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/admin/autocollect') {
       return handleAdminAutoCollectList(req, env, origin);
     }
@@ -3683,6 +4974,12 @@ export default {
         return handleAdminSubscriptionAction(req, env, origin);
       case '/api/admin/instant-bill':
         return handleAdminInstantBill(req, env, origin);
+      case '/api/admin/intake-draft':
+        return handleAdminIntakeDraft(req, env, origin);
+      case '/api/admin/projects/publish-scope':
+        return handleAdminPublishScope(req, env, origin);
+      case '/api/admin/projects/status':
+        return handleAdminProjectStatus(req, env, origin);
       case '/api/admin/autocollect/sync':
         return handleAdminAutoCollectSync(req, env, origin);
       case '/api/admin/autocollect/send-invite':

@@ -15,13 +15,13 @@ export function FinalCTASection() {
         </h2>
 
         <p className="text-body-lg text-tx-secondary mb-10 max-w-narrow mx-auto">
-          Submit a request. Get a scoped brief. Agree on terms. Deliver with proof.
-          No retainers, no ambiguity.
+          Start with activation. Get a scoped brief. Approve the plan. Move into build with proof.
+          Clear phases, clear payment, no ambiguity.
         </p>
 
         <div className="flex flex-wrap justify-center gap-4">
-          <Button href="/start" variant="primary" size="lg">
-            Start Free Trial
+          <Button href="/start-project" variant="primary" size="lg">
+            Start Your Project
           </Button>
           <Button href="/how-it-works" variant="secondary" size="lg">
             See How It Works
@@ -32,7 +32,7 @@ export function FinalCTASection() {
         </div>
 
         <p className="mt-6 text-caption text-tx-muted">
-          No credit card required. No account needed to get a scope.
+          Activation covers scope and planning. Build deposit comes after approval.
         </p>
 
       </div>

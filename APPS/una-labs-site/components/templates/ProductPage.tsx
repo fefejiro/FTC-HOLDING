@@ -71,11 +71,11 @@ export function ProductPage({
               {ctaPrimaryLabel}
             </Button>
             <Button href="/how-it-works" variant="ghost" size="lg">
-              See how it works →
+              See how it works {'->'}
             </Button>
           </div>
           <p className="mt-3 text-caption text-tx-muted">
-            No credit card required. 14 days free.
+            Service-led onboarding. Activation opens the workspace and scoped plan.
           </p>
         </div>
       </section>

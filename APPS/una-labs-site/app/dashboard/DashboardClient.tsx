@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getCommercialBillingLabel, getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
 
 type ProjectRecord = {
   id: string;
@@ -38,19 +39,24 @@ type DashboardState =
   | { phase: 'error'; message: string }
   | { phase: 'ready'; email: string; projects: ProjectRecord[]; milestones: MilestoneRecord[] };
 
-const TIER_LABELS: Record<string, string> = {
-  starter: 'Starter Plan',
-  professional: 'Professional Plan',
-  agency: 'Agency Plan',
-  enterprise: 'Enterprise Plan',
-};
-
 const STATUS_CONFIG: Record<string, { label: string; description: string; next: string; badge: 'teal' | 'orange' | 'muted' }> = {
   intake: {
     label: 'Getting started',
     description: "We've received your request and are setting up your workspace.",
     next: 'Expect a kick-off message within 1 business day.',
     badge: 'teal',
+  },
+  scoped: {
+    label: 'Discovery',
+    description: 'Your project is in internal scope review while we prepare the plan pack for approval.',
+    next: 'We will publish the scoped plan to your portal once review is complete.',
+    badge: 'teal',
+  },
+  awaiting_approval: {
+    label: 'Plan pending approval',
+    description: 'Your scoped plan is ready and waiting on your review, signature, or deposit step.',
+    next: 'Open the proposal and engagement letter to keep the project moving.',
+    badge: 'orange',
   },
   active: {
     label: 'In progress',
@@ -76,6 +82,12 @@ const STATUS_CONFIG: Record<string, { label: string; description: string; next: 
     next: 'Reply to your last email to get things moving again.',
     badge: 'muted',
   },
+  support: {
+    label: 'Ongoing support',
+    description: 'The project is now in a support or maintenance lane.',
+    next: 'Use the portal to track updates, requests, and support milestones.',
+    badge: 'teal',
+  },
 };
 
 function formatDate(value?: string) {
@@ -93,11 +105,12 @@ function formatPriceRange(min?: number | null, max?: number | null) {
 }
 
 function PlanLabel({ tier, billing }: { tier?: string; billing?: string }) {
-  const tierLabel = TIER_LABELS[tier?.toLowerCase() ?? ''] ?? tier ?? 'Your plan';
-  const billingLabel = billing === 'annual' ? 'Annual' : billing === 'monthly' ? 'Monthly' : billing ?? '';
+  const tierLabel = getCommercialLabel(tier);
+  const billingLabel = getCommercialBillingLabel(billing);
+  const isActivation = isActivationCommercial(tier);
   return (
     <span className="text-body text-tx-secondary">
-      {tierLabel}{billingLabel ? ` | ${billingLabel}` : ''}
+      {tierLabel}{billingLabel && !isActivation ? ` | ${billingLabel}` : ''}
     </span>
   );
 }
@@ -568,7 +581,7 @@ export function DashboardClient() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Button href="/login?redirect=/dashboard" variant="primary" size="lg">Log in</Button>
-            <Button href="/start" variant="secondary" size="lg">Start a request</Button>
+            <Button href="/start-project" variant="secondary" size="lg">Start your project</Button>
           </div>
         </div>
       </section>
@@ -638,7 +651,7 @@ export function DashboardClient() {
               Once you complete the intake and payment, your project will appear here with live status updates.
             </p>
             <div className="mt-8">
-              <Button href="/start" variant="primary" size="lg">Start a request</Button>
+              <Button href="/start-project" variant="primary" size="lg">Start your project</Button>
             </div>
           </div>
         ) : (

@@ -168,7 +168,7 @@ export default function AdminStatusPage() {
             </div>
           </div>
           <div className="mt-7 flex gap-3 flex-wrap">
-            <Button href="/start" variant="primary" size="md">Start Free Trial</Button>
+            <Button href="/start-project" variant="primary" size="md">Start Your Project</Button>
             <Button href="/admin" variant="secondary" size="md">Open Admin</Button>
             {selectedProject?.quickLinks[0] && (
               <Button

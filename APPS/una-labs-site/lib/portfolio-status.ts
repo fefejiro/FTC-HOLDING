@@ -222,7 +222,7 @@ function transformWorkerSummary(summary: WorkerSummary): ProjectStatusSummary {
     nextActions,
     quickLinks: [
       { label: 'Open Status Endpoint', href: `${STRIPE_API_URL}/api/admin/status-summary`, external: true },
-      { label: 'Start Free Trial', href: '/start' },
+      { label: 'Start Your Project', href: '/start-project' },
       { label: 'Open Admin', href: '/admin' },
     ],
   };
