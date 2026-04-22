@@ -575,7 +575,7 @@ export function AudioRecorder({
       return;
     }
 
-    if (recordingState === 'requesting' || recordingState === 'listening' || recordingState === 'identifying') {
+    if (recordingState === 'listening' || recordingState === 'identifying') {
       console.info('[SAYWETIN] Ignoring duplicate startListening call: state already active', recordingState);
       return;
     }
