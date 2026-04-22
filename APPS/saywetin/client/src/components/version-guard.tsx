@@ -90,17 +90,24 @@ export function VersionGuard({ children }: { children: React.ReactNode }) {
 
   if (isClearing) {
     return (
-      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-3 bg-background">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Updating Saywetin to v{getCurrentVersion()}...</p>
+      <div
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-3"
+        style={{ backgroundColor: "#0a0a0f", color: "#ffffff" }}
+      >
+        <RefreshCw className="h-8 w-8 animate-spin" style={{ color: "#7c3aed" }} />
+        <p className="text-sm" style={{ color: "#a1a1aa" }}>Updating Saywetin to v{getCurrentVersion()}...</p>
       </div>
     );
   }
 
   if (!isReady) {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background" aria-live="polite">
-        <span className="text-sm text-muted-foreground">Loading Saywetin...</span>
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center"
+        style={{ backgroundColor: "#0a0a0f", color: "#ffffff" }}
+        aria-live="polite"
+      >
+        <span className="text-sm" style={{ color: "#a1a1aa" }}>Loading Saywetin...</span>
       </div>
     );
   }

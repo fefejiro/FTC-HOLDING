@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { Component, useEffect } from "react";
+import type { ReactNode } from "react";
 import { Switch, Route, useLocation, useSearch } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -27,6 +28,47 @@ import FullLyricsPage from "@/pages/full-lyrics";
 import LiveLyricsPage from "@/pages/live-lyrics";
 import MeaningDetailPage from "@/pages/meaning-detail";
 import OpsLiveLyricsPage from "@/pages/ops-live-lyrics";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message: string }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { hasError: true, message };
+  }
+
+  componentDidCatch(error: unknown, info: unknown) {
+    console.error("[Saywetin ErrorBoundary] Uncaught render error:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-4 p-6"
+          style={{ backgroundColor: "#0a0a0f", color: "#ffffff" }}
+        >
+          <p className="text-base font-semibold">Something went wrong.</p>
+          <p className="max-w-xs text-center text-sm" style={{ color: "#a1a1aa" }}>
+            {this.state.message || "An unexpected error occurred. Please close and reopen the app."}
+          </p>
+          <button
+            type="button"
+            className="mt-2 rounded-lg px-5 py-2.5 text-sm font-medium"
+            style={{ backgroundColor: "#7c3aed", color: "#ffffff" }}
+            onClick={() => window.location.reload()}
+          >
+            Reload app
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function Router() {
   return (
@@ -166,7 +208,9 @@ export default function App() {
       <VersionGuard>
         <ThemeProvider defaultTheme="dark">
           <TooltipProvider>
-            <AppContent />
+            <ErrorBoundary>
+              <AppContent />
+            </ErrorBoundary>
           </TooltipProvider>
         </ThemeProvider>
       </VersionGuard>
