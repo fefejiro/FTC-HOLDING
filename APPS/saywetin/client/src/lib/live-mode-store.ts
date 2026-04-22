@@ -64,5 +64,6 @@ function subscribe(listener: () => void) {
 }
 
 export function useLiveModeStore<T>(selector: (value: LiveModeState) => T): T {
-  return useSyncExternalStore(subscribe, () => selector(state), () => selector(state));
+  const snapshot = useSyncExternalStore(subscribe, getLiveModeState, getLiveModeState);
+  return selector(snapshot);
 }

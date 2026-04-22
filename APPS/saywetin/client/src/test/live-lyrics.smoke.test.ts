@@ -8,7 +8,10 @@
  *
  * Heavy router/query-client integration tests belong in e2e (Playwright).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
+import { cleanup, render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { resetLiveModeState, setLiveModeState, useLiveModeStore } from '../lib/live-mode-store';
 
 // ─── Token shape ──────────────────────────────────────────────────────────────
 
@@ -89,5 +92,32 @@ describe('ops live-lyrics auth guard', () => {
     const isAuthenticated = true;
     const queryEnabled = isAuthenticated;
     expect(queryEnabled).toBe(true);
+  });
+});
+
+function LiveModeSelectorProbe() {
+  const { isLiveActive, currentTrackId } = useLiveModeStore((value) => ({
+    isLiveActive: value.isLiveActive,
+    currentTrackId: value.currentTrackId,
+  }));
+
+  return React.createElement('div', null, isLiveActive ? currentTrackId : 'idle');
+}
+
+describe('live-mode store', () => {
+  afterEach(() => {
+    cleanup();
+    resetLiveModeState();
+  });
+
+  it('supports object selectors without triggering recursive re-render loops', () => {
+    setLiveModeState({
+      isLiveActive: true,
+      currentTrackId: 'track-1',
+    });
+
+    render(React.createElement(LiveModeSelectorProbe));
+
+    expect(screen.getByText('track-1')).toBeInTheDocument();
   });
 });
