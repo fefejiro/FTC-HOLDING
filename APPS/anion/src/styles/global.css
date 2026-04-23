@@ -1,0 +1,15 @@
+:root {
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #1e1f1a;
+  background: linear-gradient(180deg, #f7f2e8 0%, #efe3cc 100%);
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  padding: 2rem;
+  display: grid;
+  gap: 1.5rem;
+}

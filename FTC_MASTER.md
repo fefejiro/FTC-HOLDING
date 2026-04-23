@@ -28,6 +28,7 @@ Priority is revenue-first. Do not move to a lower-priority project until the hig
 | 4 | **ATEAM** | Live (demo mode) | $0 | Internal tool | Phase 1 capability decoupling, hardening |
 | 5 | **SayWetin** | Live (Android) | $0 | No revenue | iOS blocked; API routing fixed 2026-04-23; awaiting real-device test |
 | 6 | **GuardSignal** | Pre-build | $0 | No revenue | Validate core loop before any build |
+| 7 | **Anion Class App** | Foundation scaffold | $0 | No revenue | Implement auth, tutor discovery, and booking flow |
 
 **Total monthly burn:** ~$10 USD ($5 Railway Dispatch + $5 Railway PeacePad) + $10 USD GitHub Copilot Pro = **$20 USD/month**
 
@@ -43,6 +44,7 @@ Priority is revenue-first. Do not move to a lower-priority project until the hig
 | SayWetin | Cloudflare Pages | Railway | saywetin.app (verify) |
 | ATEAM | Cloudflare Pages | Railway (paused) | unalabs.cloud/ateam |
 | OG Trades Academy | TBD | TBD | ogtradesacademy.ca (domain held) |
+| Anion Class App | Cloudflare Pages + mobile stores | Supabase + Stripe + Daily React | TBD |
 
 ---
 
@@ -116,6 +118,9 @@ npm --prefix APPS/peacepad run verify:deployment-ownership
 # SayWetin build check
 npm --prefix APPS/saywetin run verify:frontend-build
 
+# Anion status sync
+npm run status:anion:sync
+
 # Secrets audit (run weekly)
 npm run audit:secrets
 
@@ -144,6 +149,8 @@ git -C "C:\FTC HOLDING" status -sb
 | ATEAM phase status | APPS/ATEAM/Docs/current_phase.md |
 | ATEAM decisions | APPS/ATEAM/Docs/DECISIONS.md |
 | ATEAM velocity | APPS/ATEAM/Docs/VELOCITY_LOG.md |
+| Anion product docs | DOCS/ANION/README.md |
+| Anion status | DOCS/ANION/status/STATUS.md |
 
 ---
 
@@ -189,3 +196,15 @@ git -C "C:\FTC HOLDING" status -sb
 - Awaiting: real-device test feedback from user
 - Canonical status doc: DOCS/SAYWETIN_STATUS.md
 <!-- AUTO:SAYWETIN_MASTER:END -->
+
+
+## Anion Ops Snapshot (Auto)
+
+<!-- AUTO:ANION_MASTER:START -->
+- Updated at: 2026-04-23T00:00:00.000Z
+- Overall: yellow
+- Stage: foundation
+- Metrics tracked: 4
+- Checks tracked: 3
+- Canonical status doc: DOCS/ANION/status/STATUS.md
+<!-- AUTO:ANION_MASTER:END -->
