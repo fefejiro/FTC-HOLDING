@@ -94,7 +94,7 @@ export default function History() {
                 >
                   <CardContent className="p-4">
                     <div className="flex gap-4 items-center">
-                      <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 shrink-0 flex items-center justify-center overflow-hidden">
+                      <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-[#8E60FF] via-[#B5A8FF] to-[#6450D8] shrink-0 flex items-center justify-center overflow-hidden">
                         {track.coverArtUrl ? (
                           <img
                             src={track.coverArtUrl}

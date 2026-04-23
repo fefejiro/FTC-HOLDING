@@ -266,13 +266,13 @@ function RecognitionHoldingScreen({
       </header>
 
       <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
-        <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 via-background to-background dark:from-orange-500/15" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#8E60FF]/12 via-background to-background dark:from-[#8E60FF]/18" />
         {isNativeAndroid ? (
-          <div className="absolute left-1/2 top-[42%] h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-orange-500/12 via-amber-400/10 to-green-400/10 blur-2xl" />
+          <div className="absolute left-1/2 top-[42%] h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-[#8E60FF]/14 via-[#B5A8FF]/8 to-transparent blur-2xl" />
         ) : (
           <>
-            <div className="absolute top-14 left-8 h-32 w-32 rounded-full bg-orange-500/12 blur-3xl" />
-            <div className="absolute bottom-10 right-6 h-36 w-36 rounded-full bg-green-500/10 blur-3xl" />
+            <div className="absolute top-14 left-8 h-32 w-32 rounded-full bg-[#8E60FF]/10 blur-3xl" />
+            <div className="absolute bottom-10 right-6 h-36 w-36 rounded-full bg-[#B5A8FF]/8 blur-3xl" />
           </>
         )}
 
@@ -964,9 +964,9 @@ export default function RecognizedTrack() {
         transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 via-amber-500/5 to-background dark:from-orange-500/20 dark:via-amber-900/10 dark:to-background" />
-        <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-orange-500/5 dark:bg-orange-500/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-amber-500/5 dark:bg-amber-500/10 blur-3xl translate-x-1/3 -translate-y-1/3" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#8E60FF]/18 via-[#1B1328]/40 to-background" />
+        <div className="absolute top-0 left-0 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#8E60FF]/10 blur-3xl" />
+        <div className="absolute top-0 right-0 h-48 w-48 translate-x-1/3 -translate-y-1/3 rounded-full bg-[#B5A8FF]/10 blur-3xl" />
 
         <div ref={albumHeaderRef} className="relative container max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-6 sm:pt-12 sm:pb-8">
           <div className="flex flex-col sm:flex-row items-start gap-6">
@@ -1033,13 +1033,13 @@ export default function RecognizedTrack() {
         <div className="space-y-6">
           <Card
             data-testid="card-the-moment"
-            className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 to-background"
+            className="overflow-hidden border-white/10 bg-[linear-gradient(160deg,rgba(142,96,255,0.09),rgba(10,10,15,0.98)_40%)]"
           >
             <CardContent className="space-y-6 p-6">
               {canShowPrimaryMoment && primaryMomentRow ? (
                 <>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                  <div className="space-y-3">
+                    <p className="text-xs font-medium uppercase tracking-[0.24em] text-white/45">
                       Lyric
                     </p>
                     <blockquote className="max-w-3xl text-2xl font-semibold leading-relaxed text-foreground sm:text-3xl">
@@ -1047,13 +1047,13 @@ export default function RecognizedTrack() {
                     </blockquote>
                   </div>
 
-                  <div className="space-y-3 rounded-2xl border border-primary/15 bg-background/80 p-5">
-                    <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                  <div className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-5">
+                    <p className="text-xs font-medium uppercase tracking-[0.24em] text-white/45">
                       Meaning
                     </p>
                     {primaryMeaningHeadline ? (
                       <>
-                        <p className="text-lg font-semibold leading-relaxed text-foreground">
+                        <p className="text-xl font-semibold leading-relaxed text-foreground">
                           {primaryMeaningHeadline}
                         </p>
                         {primaryMeaningDetail && primaryMeaningDetail !== primaryMeaningHeadline ? (
@@ -1076,47 +1076,52 @@ export default function RecognizedTrack() {
                   </div>
                 </>
               ) : (
-                <div className="rounded-xl border border-border/50 bg-card px-6 py-6 text-center space-y-3">
-                  <div className="flex items-center justify-center gap-2 text-primary">
-                    <Music className="h-5 w-5" />
-                    <span className="text-sm font-semibold">Song Identified</span>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-full border border-white/10 bg-white/[0.05] p-2 text-[#B5A8FF]">
+                      <Music className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground">Song matched. Lyric not clear enough yet.</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Try again during a vocal line.</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-[#B5A8FF] hover:bg-white/[0.04] hover:text-white"
+                      onClick={() => navigate(LISTEN_MODE_PATH)}
+                    >
+                      Try again
+                    </Button>
                   </div>
-                  <p className="text-base font-medium text-foreground">
-                    We found the song, but didn't catch a clear lyric this time.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Try again during a vocal section for phrase-level meaning.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-1"
-                    onClick={() => navigate(LISTEN_MODE_PATH)}
-                  >
-                    Listen Again
-                  </Button>
                 </div>
               )}
 
               {lyrics ? (
-                <div className="border-t border-border/50 pt-2">
-                  <Button
-                    variant="default"
-                    className="mb-2 w-full"
-                    onClick={() => navigate(`/song/${track.id}/live`)}
-                    data-testid="button-follow-live-lyrics"
-                  >
-                    <Zap className="mr-2 h-4 w-4" />
-                    Follow live lyrics
-                  </Button>
+                <div className="border-t border-white/10 pt-2">
                   <Button
                     variant="ghost"
-                    className="w-full text-primary"
+                    className="mb-2 w-full justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-6 text-left text-white hover:bg-white/[0.05]"
                     onClick={() => navigate(`/song/${track.id}/lyrics`)}
                     data-testid="button-see-full-lyrics"
                   >
-                    <FileText className="mr-2 h-4 w-4" />
-                    See full lyrics
+                    <span>
+                      <span className="block text-sm uppercase tracking-[0.24em] text-white/45">Next</span>
+                      <span className="mt-1 block text-base font-semibold">Open full lyrics</span>
+                    </span>
+                    <FileText className="h-4 w-4 text-[#B5A8FF]" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-between rounded-2xl border border-white/10 bg-transparent px-4 py-5 text-left text-white/88 hover:bg-white/[0.04]"
+                    onClick={() => navigate(`/song/${track.id}/live`)}
+                    data-testid="button-follow-live-lyrics"
+                  >
+                    <span>
+                      <span className="block text-sm font-semibold">Follow live lyrics</span>
+                      <span className="mt-1 block text-xs text-white/45">Keep listening with the line in focus.</span>
+                    </span>
+                    <Zap className="h-4 w-4 text-[#B5A8FF]" />
                   </Button>
                 </div>
               ) : track.lyricsStatus === 'no_lyrics' || track.lyricsStatus === 'failed' ? (

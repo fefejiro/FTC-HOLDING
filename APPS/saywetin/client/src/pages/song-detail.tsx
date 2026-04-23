@@ -162,12 +162,12 @@ export default function SongDetail() {
       </header>
 
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 via-amber-500/5 to-background dark:from-orange-500/20 dark:via-amber-900/10 dark:to-background" />
-        <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-orange-500/5 dark:bg-orange-500/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#8E60FF]/10 via-background to-background dark:from-[#8E60FF]/16" />
+        <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-[#8E60FF]/6 dark:bg-[#8E60FF]/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
 
         <div className="relative container mx-auto px-6 pt-8 pb-6 sm:pt-12 sm:pb-8">
           <div className="flex flex-col sm:flex-row items-start gap-6">
-            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden shadow-xl shadow-orange-500/20 shrink-0">
+            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden shadow-xl shadow-[#8E60FF]/20 shrink-0">
               {song.coverArtUrl ? (
                 <img
                   src={song.coverArtUrl}
@@ -176,7 +176,7 @@ export default function SongDetail() {
                   data-testid="img-song-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-orange-500 via-amber-500 to-green-500 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-[#8E60FF] via-[#B5A8FF] to-[#6450D8] flex items-center justify-center">
                   <Music2 className="w-14 h-14 sm:w-16 sm:h-16 text-white/90" />
                 </div>
               )}
