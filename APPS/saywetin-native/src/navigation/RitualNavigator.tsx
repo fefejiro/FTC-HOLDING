@@ -1,14 +1,12 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ListenScreen } from '../screens/ListenScreen';
-import { MatchingScreen } from '../screens/MatchingScreen';
 import { ResultScreen } from '../screens/ResultScreen';
 import type { RitualController, RitualScreen } from '../state/ritual-state';
 
 export type RitualStackParamList = {
   Home: undefined;
   Listen: undefined;
-  Matching: undefined;
   Result: undefined;
 };
 
@@ -17,12 +15,20 @@ type RitualNavigatorProps = {
   onScreenChange: (screen: RitualScreen) => void;
 };
 
+type NavigatorStateEvent = {
+  data: {
+    state: {
+      index: number;
+      routes: Array<{ name: string }>;
+    };
+  };
+};
+
 const Stack = createNativeStackNavigator<RitualStackParamList>();
 
 function mapRouteToScreen(routeName: keyof RitualStackParamList): RitualScreen {
   if (routeName === 'Home') return 'home';
   if (routeName === 'Listen') return 'listen';
-  if (routeName === 'Matching') return 'matching';
   return 'result';
 }
 
@@ -37,7 +43,7 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
         animationDuration: 280,
       }}
       screenListeners={{
-        state: (event) => {
+        state: (event: NavigatorStateEvent) => {
           const routes = event.data.state.routes;
           const index = event.data.state.index;
           const currentRoute = routes[index];
@@ -70,18 +76,9 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
         )}
       />
       <Stack.Screen
-        name="Matching"
-        children={({ navigation }) => (
-          <MatchingScreen
-            onNext={() => {
-              ritual.revealResult();
-              navigation.navigate('Result');
-            }}
-          />
-        )}
-      />
-      <Stack.Screen
         name="Result"
+        // Keep this short so Result reveal feels immediate once Listen phase says data is ready.
+        options={{ animation: 'fade', animationDuration: 220 }}
         children={({ navigation }) => (
           <ResultScreen
             track={ritual.track}
