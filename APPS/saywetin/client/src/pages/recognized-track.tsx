@@ -1172,10 +1172,10 @@ export default function RecognizedTrack() {
 
           {/* Continuation Suggestion */}
           {false && continuation?.suggestion ? (
-            <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-transparent to-amber-500/5 overflow-visible">
+            <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-transparent to-[#8E60FF]/5 overflow-visible">
               <CardContent className="py-5 px-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shrink-0 shadow-md">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#8E60FF] to-[#6450D8] flex items-center justify-center shrink-0 shadow-md">
                     <Music className="h-6 w-6 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">

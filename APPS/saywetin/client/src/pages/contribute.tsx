@@ -112,7 +112,7 @@ export default function Contribute() {
             <Link href="/">
               <button className="flex items-center gap-2 hover-elevate" data-testid="button-home">
                 <img src="/app-icon.jpg" alt="Saywetin" className="h-7 w-7 rounded-md" />
-                <span className="text-xl font-bold bg-gradient-to-r from-orange-600 via-amber-500 to-green-500 bg-clip-text text-transparent">Saywetin</span>
+                <span className="text-xl font-bold bg-gradient-to-r from-[#B5A8FF] via-[#8E60FF] to-[#6450D8] bg-clip-text text-transparent">Saywetin</span>
               </button>
             </Link>
             <ThemeToggle />
@@ -158,7 +158,7 @@ export default function Contribute() {
           <Link href="/">
             <button className="flex items-center gap-2 hover-elevate" data-testid="button-home">
               <img src="/app-icon.jpg" alt="Saywetin" className="h-7 w-7 rounded-md" />
-              <span className="text-xl font-bold bg-gradient-to-r from-orange-600 via-amber-500 to-green-500 bg-clip-text text-transparent">Saywetin</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-[#B5A8FF] via-[#8E60FF] to-[#6450D8] bg-clip-text text-transparent">Saywetin</span>
             </button>
           </Link>
           <ThemeToggle />
