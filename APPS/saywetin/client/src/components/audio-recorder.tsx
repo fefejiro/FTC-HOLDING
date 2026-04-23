@@ -885,25 +885,15 @@ export function AudioRecorder({
         {recordingState === 'success' && (
           <motion.div
             key="success"
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="flex flex-col items-center gap-4"
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="flex flex-col items-center gap-3"
           >
             <RecognitionStageVisual mode="success" immersive={immersive} />
-            <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold text-[#7AD6A5]`}>Song found</p>
-              {immersive ? (
-                <p className="text-sm text-muted-foreground">Opening the meaning now.</p>
-              ) : null}
+            <div className="space-y-1 text-center">
+              <p className="text-sm uppercase tracking-[0.24em] text-[#B5A8FF]">Matched</p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setRecordingState('idle')}
-              data-testid="button-listen-again"
-            >
-              Listen again
-            </Button>
           </motion.div>
         )}
 

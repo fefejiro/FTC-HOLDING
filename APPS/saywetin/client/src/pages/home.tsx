@@ -173,24 +173,24 @@ export default function Home() {
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col">
         <div className="pt-4">
-          <p className="mb-3 text-[11px] uppercase tracking-[0.28em] text-white/45">Now listening from here</p>
+          <p className="mb-3 text-[11px] uppercase tracking-[0.28em] text-white/45">Saywetin</p>
           <h2
             className="font-serif text-4xl leading-[0.95] tracking-tight text-white sm:text-5xl"
             data-testid="heading-app-title"
           >
-            What's playing,
+            Hear the song.
             <br />
-            <span style={{ color: '#B5A8FF', fontStyle: 'italic' }}>wetin dem dey talk?</span>
+            <span style={{ color: '#B5A8FF', fontStyle: 'italic' }}>Catch the meaning.</span>
           </h2>
           <p
-            className="mt-4 max-w-sm text-base leading-7 text-white/68 sm:text-lg"
+            className="mt-4 max-w-xs text-sm leading-6 text-white/68 sm:text-base"
             data-testid="text-app-description"
           >
-            Hear the song. Follow the lyrics live. Understand the meaning without leaving the moment.
+            One tap opens the lyric and what it really means.
           </p>
         </div>
 
-        <div className="relative flex justify-center pb-4 pt-10">
+        <div className="relative flex justify-center pb-4 pt-12">
           <motion.div
             className="absolute inset-x-0 top-3 mx-auto h-64 w-64 rounded-full blur-3xl"
             animate={{ opacity: [0.18, 0.32, 0.2], scale: [0.96, 1.06, 1] }}
@@ -218,28 +218,28 @@ export default function Home() {
           </button>
         </div>
 
-        <p className="mt-2 text-center text-sm text-white/58">Tap to identify what's playing around you</p>
+        <p className="mt-3 text-center text-sm text-white/52">Tap to listen</p>
 
         <button
           type="button"
           onClick={() => navigate('/explore')}
-          className="mt-7 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-left backdrop-blur-sm transition hover:border-white/15 hover:bg-white/[0.06]"
+          className="mt-12 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-left backdrop-blur-sm transition hover:border-white/15 hover:bg-white/[0.05]"
           data-testid="button-type-lyrics-instead"
         >
           <div className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-white/70">
             <Search className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-white">Search a lyric, slang, or artist</p>
-            <p className="mt-1 text-xs text-white/45">Type instead when the song has already left the room.</p>
+            <p className="text-sm font-medium text-white">Search instead</p>
+            <p className="mt-1 text-xs text-white/45">Find a lyric, slang, or artist.</p>
           </div>
           <ChevronRight className="h-4 w-4 text-white/40" />
         </button>
 
-        <div className="mt-8 flex items-center justify-between">
+        <div className="mt-10 flex items-center justify-between">
           <div>
             <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Recent listens</p>
-            <p className="mt-2 text-sm text-white/60">Jump back into the last songs you matched.</p>
+            <p className="mt-2 text-sm text-white/52">Open your last match again.</p>
           </div>
           <Button
             variant="ghost"
@@ -287,9 +287,9 @@ export default function Home() {
             ))
           ) : (
             <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-5">
-              <p className="text-sm font-medium text-white">Nothing recent yet.</p>
+              <p className="text-sm font-medium text-white">Your last songs land here.</p>
               <p className="mt-1 text-xs leading-6 text-white/50">
-                Your last matched songs will land here so you can jump straight back into meaning and live lyrics.
+                Listen once and jump back in anytime.
               </p>
             </div>
           )}
