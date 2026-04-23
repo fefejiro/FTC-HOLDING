@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 import { getCommercialLabel } from '@/lib/service-engagement';
 
 type ProjectRecord = {
@@ -74,7 +74,7 @@ export function ContractClient({ initialProjectId }: { initialProjectId?: string
           return;
         }
 
-        const response = await fetch(`${STRIPE_API_URL}/api/contracts/ensure`, {
+        const response = await fetch(getStripeApiUrl('/api/contracts/ensure'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ export function ContractClient({ initialProjectId }: { initialProjectId?: string
         return;
       }
 
-      const response = await fetch(`${STRIPE_API_URL}/api/contracts/sign`, {
+      const response = await fetch(getStripeApiUrl('/api/contracts/sign'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

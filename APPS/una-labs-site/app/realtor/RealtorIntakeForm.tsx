@@ -212,7 +212,7 @@ export function RealtorIntakeForm() {
                     onClick={() => setForm(f => ({ ...f, plan: plan.id }))}
                     className={[
                       'relative text-left p-5 rounded-xl border-2 transition-all h-full flex flex-col',
-                      selected ? 'border-brand-teal bg-brand-teal/5 shadow-teal shadow-md' : 'border-border bg-white hover:border-brand-teal/50',
+                      selected ? 'border-brand-teal bg-brand-teal/5 shadow-teal' : 'border-border bg-white hover:border-brand-teal/50',
                     ].join(' ')}
                   >
                     {plan.recommended && (

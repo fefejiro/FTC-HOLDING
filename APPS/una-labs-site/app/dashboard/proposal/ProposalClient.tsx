@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useSearchParams } from 'next/navigation';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 import { getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
 
 type ProjectRecord = {
@@ -84,7 +85,6 @@ function MilestoneItem({ milestone }: { milestone: MilestoneRecord }) {
 }
 
 const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
-const STRIPE_API_URL = process.env.NEXT_PUBLIC_STRIPE_API_URL ?? 'https://una-stripe-api.fejiro-efiuvwere.workers.dev';
 
 export function ProposalClient({ initialProjectId }: { initialProjectId?: string }) {
   const [state, setState] = useState<ProposalState>({ phase: 'loading' });
@@ -105,7 +105,7 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
     if (!id || !accessToken || state.phase !== 'ready') return;
     setRepriceState('loading');
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/reprice/${encodeURIComponent(id)}`, {
+      const res = await fetch(getStripeApiUrl(`/api/admin/reprice/${encodeURIComponent(id)}`), {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` },
       });

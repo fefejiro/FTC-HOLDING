@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 import { getActivationBandLabel } from '@/lib/service-engagement';
 
 const PLAN_LABELS: Record<string, string> = {
@@ -86,7 +86,7 @@ function ConfirmationContent() {
       return;
     }
 
-    fetch(`${STRIPE_API_URL}/api/activate-project`, {
+    fetch(getStripeApiUrl('/api/activate-project'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, intake: parsedIntake }),

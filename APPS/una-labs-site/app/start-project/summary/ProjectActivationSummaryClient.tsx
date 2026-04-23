@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 import { ACTIVATION_BAND_BY_ID, type ActivationBandId } from '@/lib/service-engagement';
 
 type ProjectActivation = {
@@ -49,7 +49,7 @@ export function ProjectActivationSummaryClient() {
     setError('');
 
     try {
-      await fetch(`${STRIPE_API_URL}/api/intake-confirm`, {
+      await fetch(getStripeApiUrl('/api/intake-confirm'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -65,7 +65,7 @@ export function ProjectActivationSummaryClient() {
         // Best-effort only.
       });
 
-      const response = await fetch(`${STRIPE_API_URL}/api/create-checkout-session`, {
+      const response = await fetch(getStripeApiUrl('/api/create-checkout-session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

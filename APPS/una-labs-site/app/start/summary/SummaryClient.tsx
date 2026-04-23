@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 
 type Intake = {
   intakeId: string;
@@ -64,7 +64,7 @@ export function SummaryClient() {
     setError('');
 
     try {
-      fetch(`${STRIPE_API_URL}/api/intake-confirm`, {
+      fetch(getStripeApiUrl('/api/intake-confirm'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -77,7 +77,7 @@ export function SummaryClient() {
         // Do not block checkout if the confirmation email send fails.
       });
 
-      const response = await fetch(`${STRIPE_API_URL}/api/create-checkout-session`, {
+      const response = await fetch(getStripeApiUrl('/api/create-checkout-session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

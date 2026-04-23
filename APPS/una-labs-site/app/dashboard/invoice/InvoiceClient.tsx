@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 
 type InvoiceRecord = {
   id: string;
@@ -61,7 +61,7 @@ export function InvoiceClient({ initialMilestoneId }: { initialMilestoneId?: str
           return;
         }
 
-        const response = await fetch(`${STRIPE_API_URL}/api/invoices?milestone_id=${encodeURIComponent(targetMilestoneId)}`, {
+        const response = await fetch(`${getStripeApiUrl('/api/invoices')}?milestone_id=${encodeURIComponent(targetMilestoneId)}`, {
           method: 'GET',
           headers: {
             ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),

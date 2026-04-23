@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 import { ACTIVATION_BANDS, getCommercialBillingLabel, getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
 
 type Project = {
@@ -303,8 +303,8 @@ export function AdminClient() {
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       };
       const [queueRes, healthRes] = await Promise.all([
-        fetch(`${STRIPE_API_URL}/api/admin/autocollect?limit=100`, { method: 'GET', headers }),
-        fetch(`${STRIPE_API_URL}/api/admin/autocollect/health`, { method: 'GET', headers }),
+        fetch(`${getStripeApiUrl('/api/admin/autocollect')}?limit=100`, { method: 'GET', headers }),
+        fetch(getStripeApiUrl('/api/admin/autocollect/health'), { method: 'GET', headers }),
       ]);
 
       const queuePayload = await queueRes.json() as { items?: AutoCollectItem[]; error?: string };
@@ -359,7 +359,7 @@ export function AdminClient() {
         client.from('contracts').select('id,project_id,title,status,sent_at,signer_name,signer_email,signed_at,created_at').order('created_at', { ascending: false }),
         client.from('invoices').select('*').order('created_at', { ascending: false }),
         client.from('instant_bills').select('*').order('created_at', { ascending: false }),
-        fetch(`${STRIPE_API_URL}/api/admin/leads?limit=100`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch(`${getStripeApiUrl('/api/admin/leads')}?limit=100`, { headers: { Authorization: `Bearer ${accessToken}` } }),
       ]);
 
       if (projectError) throw projectError;
@@ -392,7 +392,7 @@ export function AdminClient() {
         setBillingLoading(true);
         try {
           const token = session.access_token;
-          const res = await fetch(`${STRIPE_API_URL}/api/admin/billing`, {
+          const res = await fetch(getStripeApiUrl('/api/admin/billing'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -432,7 +432,7 @@ export function AdminClient() {
     try {
       const { getSession } = await import('@ftc/auth');
       const session = await getSession();
-      const response = await fetch(`${STRIPE_API_URL}/api/admin/projects/status`, {
+      const response = await fetch(getStripeApiUrl('/api/admin/projects/status'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -468,7 +468,7 @@ export function AdminClient() {
     try {
       const { getSession } = await import('@ftc/auth');
       const session = await getSession();
-      const response = await fetch(`${STRIPE_API_URL}/api/admin/intake-draft`, {
+      const response = await fetch(getStripeApiUrl('/api/admin/intake-draft'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -527,7 +527,7 @@ export function AdminClient() {
     try {
       const { getSession } = await import('@ftc/auth');
       const session = await getSession();
-      const response = await fetch(`${STRIPE_API_URL}/api/admin/projects/publish-scope`, {
+      const response = await fetch(getStripeApiUrl('/api/admin/projects/publish-scope'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -562,7 +562,7 @@ export function AdminClient() {
       const { getSession } = await import('@ftc/auth');
       const session = await getSession();
       const token = session?.access_token;
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/subscription-action`, {
+      const res = await fetch(getStripeApiUrl('/api/admin/subscription-action'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -608,7 +608,7 @@ export function AdminClient() {
       const session = await getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${STRIPE_API_URL}/api/admin/instant-bill`, {
+      const response = await fetch(getStripeApiUrl('/api/admin/instant-bill'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -657,7 +657,7 @@ export function AdminClient() {
       const { getSession } = await import('@ftc/auth');
       const session = await getSession();
 
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/autocollect/sync`, {
+      const res = await fetch(getStripeApiUrl('/api/admin/autocollect/sync'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -683,7 +683,7 @@ export function AdminClient() {
       const { getSession } = await import('@ftc/auth');
       const session = await getSession();
 
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/autocollect/send-invite`, {
+      const res = await fetch(getStripeApiUrl('/api/admin/autocollect/send-invite'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -709,7 +709,7 @@ export function AdminClient() {
       const { getSession } = await import('@ftc/auth');
       const session = await getSession();
 
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/leads/${id}`, {
+      const res = await fetch(getStripeApiUrl(`/api/admin/leads/${id}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -733,7 +733,7 @@ export function AdminClient() {
   async function handleLoadBranding(id: string) {
     if (!id || !storedToken) return;
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/branding/${id}`, {
+      const res = await fetch(getStripeApiUrl(`/api/admin/branding/${id}`), {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
       const data = await res.json() as { branding?: { companyName?: string; primaryColor?: string; logoUrl?: string; tagline?: string; replyEmail?: string } | null };
@@ -753,7 +753,7 @@ export function AdminClient() {
     setBrandingSaving(true);
     setBrandingSaveMsg(null);
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/branding/${brandingProjectId}`, {
+      const res = await fetch(getStripeApiUrl(`/api/admin/branding/${brandingProjectId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${storedToken}` },
         body: JSON.stringify(brandingForm),
@@ -771,7 +771,7 @@ export function AdminClient() {
     if (!id || !storedToken) return;
     setWebhooks([]);
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/webhooks/${id}`, {
+      const res = await fetch(getStripeApiUrl(`/api/admin/webhooks/${id}`), {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
       const data = await res.json() as { endpoints?: WebhookEndpoint[] };
@@ -785,7 +785,7 @@ export function AdminClient() {
     setWebhookMsg(null);
     setNewWebhookSecret(null);
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/webhooks`, {
+      const res = await fetch(getStripeApiUrl('/api/admin/webhooks'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${storedToken}` },
         body: JSON.stringify({ project_id: webhookProjectId, url: webhookUrl, events: webhookEvents }),
@@ -806,7 +806,7 @@ export function AdminClient() {
   async function handleDeleteWebhook(id: string) {
     if (!storedToken) return;
     try {
-      await fetch(`${STRIPE_API_URL}/api/admin/webhooks/${id}`, {
+      await fetch(getStripeApiUrl(`/api/admin/webhooks/${id}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${storedToken}` },
       });
@@ -820,7 +820,7 @@ export function AdminClient() {
     setConnectMsg(null);
     setConnectStatus(null);
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/connect/${id}`, {
+      const res = await fetch(getStripeApiUrl(`/api/admin/connect/${id}`), {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
       const data = await res.json() as { connected?: boolean; project?: Project; error?: string };
@@ -839,7 +839,7 @@ export function AdminClient() {
     setConnectLoading(true);
     setConnectMsg(null);
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/connect/${connectProjectId}/onboard`, {
+      const res = await fetch(getStripeApiUrl(`/api/admin/connect/${connectProjectId}/onboard`), {
         method: 'POST',
         headers: { Authorization: `Bearer ${storedToken}` },
       });
@@ -861,7 +861,7 @@ export function AdminClient() {
     setConnectLoading(true);
     setConnectMsg(null);
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/admin/connect/${connectProjectId}/dashboard`, {
+      const res = await fetch(getStripeApiUrl(`/api/admin/connect/${connectProjectId}/dashboard`), {
         method: 'POST',
         headers: { Authorization: `Bearer ${storedToken}` },
       });

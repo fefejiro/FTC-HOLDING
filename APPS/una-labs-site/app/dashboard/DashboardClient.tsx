@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 import { getCommercialBillingLabel, getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
 
 type ProjectRecord = {
@@ -163,7 +163,7 @@ function MilestoneCard({ milestone, clientEmail, projectTitle, onStatusChange }:
         return;
       }
 
-      await fetch(`${STRIPE_API_URL}/api/milestone-action`, {
+      await fetch(getStripeApiUrl('/api/milestone-action'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -179,7 +179,7 @@ function MilestoneCard({ milestone, clientEmail, projectTitle, onStatusChange }:
       });
 
       if (action === 'approve') {
-        fetch(`${STRIPE_API_URL}/api/invoices/generate`, {
+        fetch(getStripeApiUrl('/api/invoices/generate'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

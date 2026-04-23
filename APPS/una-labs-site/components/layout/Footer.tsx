@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { FOOTER_LINKS } from '@/lib/constants';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 
 export function Footer() {
   const [email, setEmail] = useState('');
@@ -14,7 +14,7 @@ export function Footer() {
     if (!email.includes('@')) return;
     setSubState('loading');
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/subscribe`, {
+      const res = await fetch(getStripeApiUrl('/api/subscribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

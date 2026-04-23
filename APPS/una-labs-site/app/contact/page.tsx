@@ -2,7 +2,7 @@
 
 import { type FormEvent, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 
 type Phase = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -20,7 +20,7 @@ export default function ContactPage() {
     setErrorMsg('');
 
     try {
-      const res = await fetch(`${STRIPE_API_URL}/api/leads`, {
+      const res = await fetch(getStripeApiUrl('/api/leads'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), company: company.trim(), message: message.trim(), source: 'contact_form' }),

@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { useSearchParams } from 'next/navigation';
-import { STRIPE_API_URL } from '@/lib/stripe-config';
+import { getStripeApiUrl } from '@/lib/stripe-config';
 import { getCommercialLabel } from '@/lib/service-engagement';
 
 type MilestoneRecord = {
@@ -133,7 +133,7 @@ function MilestoneStatus({
         return;
       }
 
-      await fetch(`${STRIPE_API_URL}/api/milestone-action`, {
+      await fetch(getStripeApiUrl('/api/milestone-action'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -147,7 +147,7 @@ function MilestoneStatus({
       }).catch(() => undefined);
 
       if (action === 'approve') {
-        fetch(`${STRIPE_API_URL}/api/invoices/generate`, {
+        fetch(getStripeApiUrl('/api/invoices/generate'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -238,7 +238,7 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
           return;
         }
 
-        const response = await fetch(`${STRIPE_API_URL}/api/project-home?project_id=${encodeURIComponent(projectId)}`, {
+        const response = await fetch(`${getStripeApiUrl('/api/project-home')}?project_id=${encodeURIComponent(projectId)}`, {
           headers: {
             ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
           },
