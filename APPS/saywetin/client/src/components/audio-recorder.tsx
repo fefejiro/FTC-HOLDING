@@ -85,6 +85,10 @@ const LISTEN_REQUEST_TIMEOUT_MS = 45_000;
 const MIN_CAPTURE_DURATION_MS = 2_500;
 const MIN_AUDIO_BLOB_BYTES = 8_000;
 
+function createAttemptId(): string {
+  return `listen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function createListenError(
   kind: ListenErrorKind,
   message: string,
@@ -377,9 +381,19 @@ export function AudioRecorder({
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoStartedRef = useRef(false);
   const startAttemptInFlightRef = useRef(false);
+  const activeAttemptIdRef = useRef<string | null>(null);
   const nativeRecordingActiveRef = useRef(false);
   const webRecordingActiveRef = useRef(false);
   const captureDurationMsRef = useRef(Math.max(listenDuration, 0) * 1000);
+
+  const logListenEvent = (stage: string, payload?: Record<string, unknown>) => {
+    console.info('[SAYWETIN-LISTEN]', {
+      stage,
+      attemptId: activeAttemptIdRef.current,
+      runtime: isNativeApp() ? (nativeAndroid ? 'native-android' : 'native-other') : 'web',
+      ...payload,
+    });
+  };
 
   const clearRuntimeResources = () => {
     if (streamRef.current) {
@@ -430,26 +444,30 @@ export function AudioRecorder({
   // Native recording for Capacitor (Android/iOS)
   const startNativeListening = async () => {
     try {
-      console.log('[SAYWETIN] startNativeListening called, listenDuration:', listenDuration);
+      logListenEvent('native_start_requested', { listenDuration });
       setFailureDisplay(null);
       setRecordingState('requesting');
       audioChunksRef.current = [];
       const effectiveListenDuration = getNativeCaptureDurationSec(listenDuration, nativeAndroid);
 
       let hasPermission = await hasRecordingPermission();
-      console.log('[SAYWETIN] hasPermission:', hasPermission);
+      logListenEvent('native_permission_check', { hasPermission });
       if (!hasPermission) {
         hasPermission = await requestRecordingPermission();
-        console.log('[SAYWETIN] requestPermission result:', hasPermission);
+        logListenEvent('native_permission_requested', { granted: hasPermission });
         if (!hasPermission) {
           throw createListenError('microphone_denied', 'Permission denied');
         }
       }
 
       captureDurationMsRef.current = effectiveListenDuration * 1000;
-      console.log('[SAYWETIN] Native effective listen duration (s):', effectiveListenDuration);
+      logListenEvent('native_capture_window', {
+        effectiveListenDurationSec: effectiveListenDuration,
+        minCaptureDurationMs: MIN_CAPTURE_DURATION_MS,
+        minAudioBlobBytes: MIN_AUDIO_BLOB_BYTES,
+      });
       const started = await startNativeRecording();
-      console.log('[SAYWETIN] startNativeRecording result:', started);
+      logListenEvent('native_recording_started', { started });
       if (!started) {
         throw createListenError('capture_failed', 'Failed to start recording');
       }
@@ -459,7 +477,7 @@ export function AudioRecorder({
       setRecordingState('listening');
 
       recordingTimeoutRef.current = setTimeout(async () => {
-        console.log('[SAYWETIN] Recording timeout fired, stopping recording...');
+        logListenEvent('native_capture_timeout_fired');
         nativeRecordingActiveRef.current = false;
         const nativeRecording = await stopNativeRecording();
         clearRuntimeResources();
@@ -467,14 +485,16 @@ export function AudioRecorder({
         if (nativeRecording?.msDuration) {
           captureDurationMsRef.current = nativeRecording.msDuration;
         }
-        console.log(
-          '[SAYWETIN] audioBlob after stop:',
-          audioBlob ? `${audioBlob.size} bytes, type: ${audioBlob.type}` : 'NULL',
-          'actualDurationMs:',
-          nativeRecording?.msDuration ?? 'unknown',
-        );
+        const actualDurationMs = nativeRecording?.msDuration ?? null;
+        logListenEvent('native_capture_stopped', {
+          blobBytes: audioBlob?.size ?? 0,
+          blobType: audioBlob?.type ?? null,
+          actualDurationMs,
+          durationKnown: typeof actualDurationMs === 'number' && actualDurationMs > 0,
+        });
+
         if (audioBlob && audioBlob.size > 0) {
-          if ((nativeRecording?.msDuration ?? 0) < MIN_CAPTURE_DURATION_MS || audioBlob.size < MIN_AUDIO_BLOB_BYTES) {
+          if (audioBlob.size < MIN_AUDIO_BLOB_BYTES) {
             showInlineFailure(
               createListenError(
                 'capture_failed',
@@ -483,6 +503,14 @@ export function AudioRecorder({
             );
             return;
           }
+
+          if ((nativeRecording?.msDuration ?? 0) > 0 && (nativeRecording?.msDuration ?? 0) < MIN_CAPTURE_DURATION_MS) {
+            logListenEvent('native_short_duration_non_blocking', {
+              actualDurationMs: nativeRecording?.msDuration,
+              blobBytes: audioBlob.size,
+            });
+          }
+
           audioChunksRef.current = [audioBlob];
           handleUpload();
         } else {
@@ -611,7 +639,9 @@ export function AudioRecorder({
     }
 
     startAttemptInFlightRef.current = true;
+    activeAttemptIdRef.current = createAttemptId();
     console.info('[SAYWETIN] startListening accepted', {
+      attemptId: activeAttemptIdRef.current,
       autoStart,
       isNative: isNativeApp(),
       nativeAndroid,
@@ -635,8 +665,14 @@ export function AudioRecorder({
     }
 
     const apiUrl = getApiUrl('/api/listen');
-    console.log('[SAYWETIN-UPLOAD] Sending to:', apiUrl);
-    console.log('[SAYWETIN-UPLOAD] Duration payload (ms):', captureDurationMsRef.current);
+    logListenEvent('upload_started', {
+      apiUrl,
+      durationPayloadMs: captureDurationMsRef.current,
+      blobBytes: audioBlob.size,
+      blobType: audioBlob.type,
+      mimeType,
+      ext,
+    });
 
     const formData = new FormData();
     formData.append('audio', audioBlob, `recording.${ext}`);
@@ -667,13 +703,18 @@ export function AudioRecorder({
 
     clearTimeout(timeout);
 
-    console.log('[SAYWETIN-UPLOAD] Response status:', response.status, response.statusText);
+    logListenEvent('upload_response', {
+      status: response.status,
+      statusText: response.statusText,
+    });
 
     const contentType = response.headers.get('content-type');
-    console.log('[SAYWETIN-UPLOAD] Response content-type:', contentType);
+    logListenEvent('upload_content_type', { contentType });
     if (!contentType || !contentType.includes('application/json')) {
       const responseText = await response.text();
-      console.error('[SAYWETIN-UPLOAD] Non-JSON response body (first 500 chars):', responseText.substring(0, 500));
+      logListenEvent('upload_non_json_response', {
+        bodyPreview: responseText.substring(0, 220),
+      });
       if (responseText.startsWith('<!DOCTYPE') || responseText.startsWith('<html')) {
         throw createListenError('bad_response', 'The listen request reached a web page instead of the API.');
       }
@@ -681,7 +722,10 @@ export function AudioRecorder({
     }
 
     const result = await response.json();
-    console.log('[SAYWETIN-UPLOAD] Result:', JSON.stringify(result).substring(0, 500));
+    logListenEvent('upload_result', {
+      success: !!result?.success,
+      resultPreview: JSON.stringify(result).substring(0, 220),
+    });
 
     if (!response.ok || !result.success) {
       const apiError = createApiError(

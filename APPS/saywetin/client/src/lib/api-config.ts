@@ -67,28 +67,57 @@ function isApiPath(path: string): boolean {
   );
 }
 
+function isWebHostApiBase(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return isSaywetinHostedWebHost(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function isNativeRuntime(): boolean {
+  return typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+}
+
+function sanitizeApiBase(baseUrl: string, source: string): string {
+  const trimmed = trimTrailingSlash(baseUrl);
+  if (!trimmed) return trimmed;
+
+  if (import.meta.env.PROD && isNativeRuntime() && isWebHostApiBase(trimmed)) {
+    console.warn('[Saywetin] Invalid native API base detected, forcing Railway host', {
+      source,
+      providedBase: trimmed,
+      fallbackBase: DEFAULT_PROD_API_BASE_URL,
+    });
+    return DEFAULT_PROD_API_BASE_URL;
+  }
+
+  return trimmed;
+}
+
 export function getApiBaseUrl(): string {
   const configured = trimTrailingSlash((import.meta.env.VITE_API_BASE_URL || "").trim());
   if (configured) {
-    return configured;
+    return sanitizeApiBase(configured, 'env');
   }
 
   if (import.meta.env.DEV) {
-    return DEFAULT_DEV_API_BASE_URL;
+    return sanitizeApiBase(DEFAULT_DEV_API_BASE_URL, 'dev-default');
   }
 
   if (typeof window !== "undefined") {
     try {
       const normalizedHost = normalizeHostname(window.location.hostname || "");
       if (LOCAL_HOSTS.has(normalizedHost)) {
-        return trimTrailingSlash(window.location.origin);
+        return sanitizeApiBase(trimTrailingSlash(window.location.origin), 'window-origin');
       }
     } catch {
       return DEFAULT_PROD_API_BASE_URL;
     }
   }
 
-  return DEFAULT_PROD_API_BASE_URL;
+  return sanitizeApiBase(DEFAULT_PROD_API_BASE_URL, 'prod-default');
 }
 
 export function getProdFallbackApiBaseUrl(): string {

@@ -25,6 +25,8 @@ console.info("[Saywetin] Frontend build", {
 console.info("[Saywetin] API routing", {
   selectedBaseUrl: getApiBaseUrl(),
   source: getApiBaseUrlSource(),
+  origin: typeof window !== 'undefined' ? window.location.origin : null,
+  isNativeRuntime: typeof window !== 'undefined' ? !!window.Capacitor?.isNativePlatform?.() : false,
 });
 
 if (shouldRedirectToCanonicalHost && canonicalRedirectTarget) {
