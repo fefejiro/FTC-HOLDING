@@ -380,6 +380,7 @@ export default function RecognizedTrack() {
   const params = useParams();
   const [, navigate] = useLocation();
   const trackId = params.id;
+  const trackIdKey = String(trackId || '');
   const [isProcessing, setIsProcessing] = useState(true);
   const [prevAnalysisCount, setPrevAnalysisCount] = useState(0);
   
@@ -567,7 +568,7 @@ export default function RecognizedTrack() {
       setIsProcessing(true);
       setSseComplete(false);
       setSseData(null);
-      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackIdKey] });
     },
     onError: () => {
       console.error('[CONTRIBUTE] Failed to submit lyrics.');
@@ -620,21 +621,21 @@ export default function RecognizedTrack() {
       setSseComplete(true);
       setIsProcessing(false);
       es.close();
-      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackIdKey] });
     });
     
     es.addEventListener('timeout', () => {
       setSseComplete(true);
       setIsProcessing(false);
       es.close();
-      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackIdKey] });
     });
     
     es.addEventListener('error', () => {
       setSseComplete(true);
       setIsProcessing(false);
       es.close();
-      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recognized-tracks', trackIdKey] });
     });
     
     return () => {
@@ -647,7 +648,7 @@ export default function RecognizedTrack() {
   // Regular query as fallback (used when SSE is done or for cached data)
   // refetchInterval kicks in when SSE has ended but analysis is still running
   const { data: queryData, isLoading: queryLoading, error } = useQuery<RecognizedTrackDetail>({
-    queryKey: ['/api/recognized-tracks', trackId],
+    queryKey: ['/api/recognized-tracks', trackIdKey],
     staleTime: 0,
     queryFn: async () => {
       const res = await fetch(getApiUrl(`/api/recognized-tracks/${trackId}`), {

@@ -21,12 +21,12 @@
         "node": ">=20.0.0"
     },
     "dependencies": {
-        "@capacitor/android": "^8.0.1",
-        "@capacitor/app": "^7.1.0",
+        "@capacitor/android": "^8.3.1",
+        "@capacitor/app": "^8.1.0",
         "@capacitor/cli": "^7.4.5",
-        "@capacitor/core": "^8.0.1",
+        "@capacitor/core": "^8.3.1",
         "@capacitor/filesystem": "^8.1.2",
-        "@capawesome-team/capacitor-android-foreground-service": "^8.0.0",
+        "@capawesome-team/capacitor-android-foreground-service": "^8.0.1",
         "@hookform/resolvers": "^3.10.0",
         "@jridgewell/trace-mapping": "^0.3.25",
         "@radix-ui/react-accordion": "^1.2.4",

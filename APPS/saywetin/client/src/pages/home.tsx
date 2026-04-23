@@ -113,23 +113,32 @@ export default function Home() {
 
   const handleRecognitionSuccess = (result: any) => {
     if (result.recognizedTrack?.id) {
+      const recognizedTrackId = String(result.recognizedTrack.id);
+      const hasImmediateLyrics = Boolean(result.lyrics?.text?.trim?.());
       const mergedRecentRecognitions = saveRecentRecognition({
-        id: result.recognizedTrack.id,
+        id: recognizedTrackId,
         title: result.recognizedTrack.title,
         artist: result.recognizedTrack.artist,
         coverArtUrl: result.recognizedTrack.coverArtUrl || null,
       });
 
-      queryClient.setQueryData(['/api/recognized-tracks', result.recognizedTrack.id], {
+      queryClient.setQueryData(['/api/recognized-tracks', recognizedTrackId], {
         track: {
           ...result.recognizedTrack,
-          lyricsStatus: 'pending',
+          id: recognizedTrackId,
+          lyricsStatus: hasImmediateLyrics ? 'completed' : 'pending',
           analysisStatus: 'pending',
         },
-        lyrics: undefined,
+        lyrics: hasImmediateLyrics
+          ? {
+              text: result.lyrics.text,
+              language: result.lyrics.language || 'unknown',
+              source: 'recognition',
+            }
+          : undefined,
         culturalAnalysis: [],
         status: {
-          lyrics: 'pending',
+          lyrics: hasImmediateLyrics ? 'complete' : 'pending',
           analysis: 'pending',
           aiConfigured: true,
           aiProvider: 'openai',
@@ -143,8 +152,8 @@ export default function Home() {
       // Brief pause so the success orb state is visible before navigating
       hapticSuccess();
       setTimeout(() => {
-        navigate(`/song/${result.recognizedTrack.id}`, { replace: true });
-      }, 700);
+        navigate(`/song/${recognizedTrackId}`, { replace: true });
+      }, 220);
     }
   };
 

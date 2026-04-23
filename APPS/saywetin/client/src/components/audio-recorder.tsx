@@ -886,10 +886,6 @@ export function AudioRecorder({
             className="flex flex-col items-center gap-4"
           >
             <RecognitionStageVisual mode="requesting" immersive={immersive} />
-            <div className="space-y-2 text-center">
-              <p className="text-xl font-semibold text-foreground">Getting ready to listen</p>
-              <p className="text-sm text-muted-foreground">Checking the microphone.</p>
-            </div>
           </motion.div>
         )}
 
@@ -902,11 +898,6 @@ export function AudioRecorder({
             className="flex flex-col items-center gap-4"
           >
             <RecognitionStageVisual mode="listening" immersive={immersive} />
-
-            <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Listening</p>
-              <p className="max-w-xs text-sm text-muted-foreground">Hold near the music.</p>
-            </div>
           </motion.div>
         )}
 
@@ -919,10 +910,6 @@ export function AudioRecorder({
             className="flex flex-col items-center gap-4"
           >
             <RecognitionStageVisual mode="matching" immersive={immersive} />
-            <div className="space-y-2 text-center">
-              <p className={`${immersive ? 'text-2xl' : 'text-lg'} font-semibold`}>Matching the song</p>
-              <p className="max-w-xs text-sm text-muted-foreground">Locking in the strongest hit.</p>
-            </div>
           </motion.div>
         )}
 
