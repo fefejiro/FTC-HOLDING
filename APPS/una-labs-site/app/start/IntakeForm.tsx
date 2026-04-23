@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
+import { trackEvent } from '@/lib/analytics';
 
 type Step = 1 | 2;
 
@@ -56,11 +57,17 @@ export function IntakeForm() {
   const set = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [field]: e.target.value }));
 
-  const step1Valid = form.name.trim() && form.email.includes('@') && form.company.trim();
+  const step1Valid = form.name.trim() && form.email.includes('@');
 
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault();
-    if (step1Valid) setStep(2);
+    if (step1Valid) {
+      trackEvent('intake_step1_completed', {
+        source: source || 'start_page',
+        product: product || 'none',
+      });
+      setStep(2);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -71,6 +78,11 @@ export function IntakeForm() {
       ...(product ? { product } : {}),
       ...(source ? { campaign: source } : {}),
     };
+    trackEvent('intake_plan_selected', {
+      plan: form.plan,
+      billing: form.billing,
+      source: source || 'start_page',
+    });
     sessionStorage.setItem('una_intake', JSON.stringify({ ...form, intakeId, ...tracking }));
     router.push('/start/summary');
   };
@@ -94,8 +106,8 @@ export function IntakeForm() {
           <div className="flex justify-center mb-3">
             <Badge variant="teal">14 days free</Badge>
           </div>
-          <h1 className="text-display-sm text-tx-heading mb-1">Start your free trial</h1>
-          <p className="text-body text-tx-secondary">No credit card required. Cancel any time.</p>
+          <h1 className="text-display-sm text-tx-heading mb-1">Start your project</h1>
+          <p className="text-body text-tx-secondary">Structured intake in under two minutes.</p>
 
           {/* Step indicator */}
           <div className="flex items-center justify-center gap-3 mt-6">
@@ -132,7 +144,7 @@ export function IntakeForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <Field label="Full name" id="name" value={form.name} onChange={set('name')} placeholder="Jane Smith" required />
               <Field label="Work email" id="email" type="email" value={form.email} onChange={set('email')} placeholder="you@company.com" required />
-              <Field label="Company / firm name" id="company" value={form.company} onChange={set('company')} placeholder="Acme Consulting" required />
+              <Field label="Company / firm name" id="company" value={form.company} onChange={set('company')} placeholder="Acme Consulting" />
               <Field label="Your role" id="role" value={form.role} onChange={set('role')} placeholder="Managing Director" />
             </div>
 
@@ -242,13 +254,13 @@ export function IntakeForm() {
                   type="submit"
                   className="px-8 py-3 bg-brand-orange text-white font-semibold rounded-lg hover:bg-brand-orange-hover active:scale-[0.98] transition-all shadow-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2"
                 >
-                  Review & start trial →
+                  Review & continue →
                 </button>
               </div>
             </div>
 
             <p className="text-center text-caption text-tx-muted">
-              14-day free trial. Card required at checkout — charged only after trial ends. Cancel any time.
+              Activation opens your workspace. Card is required at checkout and billed after trial terms.
             </p>
           </form>
         )}

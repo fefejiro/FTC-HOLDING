@@ -1,1 +1,9 @@
-export type { AnionStatusSummary, BookingRecord, TutorProfile } from '@ftc/anion-types';
+export type {
+	AnionStatusSummary,
+	BookingRecord,
+	TutorProfile,
+	StudentProfile,
+	ParentProfile,
+	SessionRecord,
+	SubscriptionRecord,
+} from '@ftc/anion-types';

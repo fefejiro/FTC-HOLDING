@@ -11,8 +11,10 @@
     "status:sync": "node ../../scripts/update-anion-status.mjs"
   },
   "dependencies": {
+    "@ftc/auth": "*",
     "@ftc/anion-shared": "*",
     "@ftc/anion-types": "*",
+    "@ftc/supabase": "*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { getStripeApiUrl } from '@/lib/stripe-config';
+import { trackEvent } from '@/lib/analytics';
 
 type Intake = {
   intakeId: string;
@@ -75,6 +76,11 @@ export function SummaryClient() {
         }),
       }).catch(() => {
         // Do not block checkout if the confirmation email send fails.
+      });
+
+      trackEvent('checkout_started', {
+        plan: intake.plan,
+        billing: intake.billing,
       });
 
       const response = await fetch(getStripeApiUrl('/api/create-checkout-session'), {
@@ -234,7 +240,7 @@ export function SummaryClient() {
               disabled={loading}
               className="w-full px-8 py-4 bg-brand-orange text-white font-semibold rounded-lg hover:bg-brand-orange-hover active:scale-[0.98] transition-all shadow-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed text-body"
             >
-              {loading ? 'Redirecting to Stripe...' : 'Start free trial'}
+              {loading ? 'Redirecting to Stripe...' : 'Start Your Project'}
             </button>
 
             <p className="text-center text-[11px] text-tx-muted mt-4">

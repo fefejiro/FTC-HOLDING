@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
+import { trackEvent } from '@/lib/analytics';
 
 type Step = 1 | 2;
 
@@ -45,16 +46,25 @@ export function RealtorIntakeForm() {
   const set = (field: keyof RealtorFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [field]: e.target.value }));
 
-  const step1Valid = form.name.trim() && form.email.includes('@') && form.brokerage.trim() && form.leadVolume && form.painPoint.trim();
+  const step1Valid = form.name.trim() && form.email.includes('@') && form.painPoint.trim();
 
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault();
-    if (step1Valid) setStep(2);
+    if (step1Valid) {
+      trackEvent('realtor_intake_step1_completed', {
+        lead_volume: form.leadVolume || 'unspecified',
+      });
+      setStep(2);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const intakeId = `realtor_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    trackEvent('realtor_plan_selected', {
+      plan: form.plan,
+      billing: form.billing,
+    });
     sessionStorage.setItem('una_intake', JSON.stringify({ 
       ...form, 
       intakeId,
@@ -76,8 +86,8 @@ export function RealtorIntakeForm() {
           <div className="flex justify-center mb-3">
             <Badge variant="teal">14 days free</Badge>
           </div>
-          <h1 className="text-display-sm text-tx-heading mb-1">Build your AI lead qualification system</h1>
-          <p className="text-body text-tx-secondary">Automatically qualify, score, and hand off leads. No credit card required.</p>
+          <h1 className="text-display-sm text-tx-heading mb-1">Start your realtor project</h1>
+          <p className="text-body text-tx-secondary">Share your lead challenge, pick a plan, and move to activation.</p>
 
           {/* Step indicator */}
           <div className="flex items-center justify-center gap-3 mt-6">
@@ -107,7 +117,7 @@ export function RealtorIntakeForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <Field label="Full name" id="name" value={form.name} onChange={set('name')} placeholder="Jane Smith" required />
               <Field label="Work email" id="email" type="email" value={form.email} onChange={set('email')} placeholder="jane@realbrokerage.com" required />
-              <Field label="Brokerage" id="brokerage" value={form.brokerage} onChange={set('brokerage')} placeholder="Your Realty Group" required />
+              <Field label="Brokerage" id="brokerage" value={form.brokerage} onChange={set('brokerage')} placeholder="Your Realty Group" />
               <Field label="Your role" id="role" value={form.role} onChange={set('role')} placeholder="Team Lead / Broker" />
             </div>
 
@@ -250,13 +260,13 @@ export function RealtorIntakeForm() {
                   type="submit"
                   className="px-8 py-3 bg-brand-orange text-white font-semibold rounded-lg hover:bg-brand-orange-hover active:scale-[0.98] transition-all shadow-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2"
                 >
-                  Review & start trial →
+                  Review & continue →
                 </button>
               </div>
             </div>
 
             <p className="text-center text-caption text-tx-muted">
-              14-day free trial. Card required at checkout — charged only after trial ends. Cancel any time.
+              Activation opens your workspace. Card is required at checkout and billed after trial terms.
             </p>
           </form>
         )}

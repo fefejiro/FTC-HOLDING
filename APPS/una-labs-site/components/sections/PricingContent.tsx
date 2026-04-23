@@ -41,10 +41,10 @@ export function PricingContent() {
       <section className="bg-white pt-16 pb-12 text-center">
         <div className="max-w-content mx-auto px-6">
           <h1 className="text-display-sm text-tx-heading mb-4">
-            The perfect plan for your business
+            Choose your concierge engagement tier
           </h1>
           <p className="text-body-lg text-tx-secondary mb-8">
-            Simple, transparent pricing. No hidden fees.
+            Clear CAD pricing for structured intake, scoped delivery, and accountable execution.
           </p>
 
           {/* Toggle */}
@@ -132,7 +132,7 @@ export function PricingContent() {
           ))}
         </div>
         <p className="text-center text-caption text-tx-muted mt-8">
-          No credit card required. 14 days free on all plans.
+          Start your project with a 14-day activation window. Checkout is secured by Stripe.
         </p>
       </section>
 

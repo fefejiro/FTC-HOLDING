@@ -12,8 +12,8 @@ Exports:
 Environment variables required by all apps:
 
 ```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_SUPABASE_URL or VITE_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY or VITE_SUPABASE_ANON_KEY
 ```
 
 Package is private and built with `npm run build`.

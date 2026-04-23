@@ -9,12 +9,14 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PROBLEM_SOLUTIONS } from '@/lib/constants';
 import { DashboardMockup, ReportMockup, HandoffMockup } from '@/components/ui/ProductMockups';
+import { buildPageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: 'Una Labs - AI Launchpad for Founders',
   description:
     'Una Labs is a concierge custom-project operating system for founders. Structured intake, scoped plans, governed delivery, and measurable proof from first conversation to delivered work.',
-};
+  path: '/',
+});
 
 const IMAGE_POSITIONS = ['right', 'left', 'right'] as const;
 const BACKGROUNDS = ['white', 'subtle', 'white'] as const;
