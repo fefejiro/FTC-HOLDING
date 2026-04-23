@@ -8,7 +8,7 @@ type FadeInViewProps = {
   style?: ViewStyle;
 };
 
-export function FadeInView({ children, duration = 320, delay = 60, style }: FadeInViewProps) {
+export function FadeInView({ children, duration = 220, delay = 0, style }: FadeInViewProps) {
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {

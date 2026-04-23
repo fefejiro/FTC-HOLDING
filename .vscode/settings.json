@@ -15,5 +15,6 @@
         "vscode.videoPreview": true,
         "agentSessionsWelcomePage": true
         
-    }
+    },
+    "java.configuration.updateBuildConfiguration": "automatic"
 }

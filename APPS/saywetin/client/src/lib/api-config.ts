@@ -102,6 +102,12 @@ export function getApiBaseUrl(): string {
     return sanitizeApiBase(configured, 'env');
   }
 
+  // In Capacitor native runtime the WebView origin is always https://localhost,
+  // so window.location.origin must never be used as the API base.
+  if (isNativeRuntime()) {
+    return sanitizeApiBase(DEFAULT_PROD_API_BASE_URL, 'native-runtime');
+  }
+
   if (import.meta.env.DEV) {
     return sanitizeApiBase(DEFAULT_DEV_API_BASE_URL, 'dev-default');
   }

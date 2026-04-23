@@ -41,6 +41,16 @@
             android:foregroundServiceType="microphone"
             android:exported="false"
             tools:replace="android:foregroundServiceType" />
+
+        <!-- Avoid AppCompat locale metadata lookup warnings on some Android builds -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="false" />
+        </service>
             
     </application>
 

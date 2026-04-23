@@ -63,8 +63,8 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
         children={({ navigation }) => (
           <ListenScreen
             onNext={() => {
-              ritual.moveToMatching();
-              navigation.navigate('Matching');
+              ritual.revealResult();
+              navigation.navigate('Result');
             }}
           />
         )}

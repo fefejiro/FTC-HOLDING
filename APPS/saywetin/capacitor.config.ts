@@ -4,9 +4,9 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // Modes:
 // - local: load bundled assets only
 // - development: local Vite server
-// - production (default): hosted UI
+// - hosted: remote hosted UI (explicit opt-in)
 const getServerConfig = (): { url?: string; cleartext: boolean; allowNavigation: string[] } => {
-  const env = process.env.CAPACITOR_ENV || 'production';
+  const env = process.env.CAPACITOR_ENV || 'local';
   const productionNavigation = [
     'https://saywetin.app',
     'https://www.saywetin.app',
@@ -32,8 +32,15 @@ const getServerConfig = (): { url?: string; cleartext: boolean; allowNavigation:
     };
   }
 
+  if (env === 'hosted') {
+    return {
+      url: 'https://saywetin.app',
+      cleartext: false,
+      allowNavigation: productionNavigation,
+    };
+  }
+
   return {
-    url: 'https://saywetin.app',
     cleartext: false,
     allowNavigation: productionNavigation,
   };
