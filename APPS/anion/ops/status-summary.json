@@ -1,0 +1,69 @@
+{
+  "project": "anion",
+  "name": "Anion Class App",
+  "updatedAt": "2026-04-23T00:00:00.000Z",
+  "overall": "yellow",
+  "stage": "foundation",
+  "summary": "Foundation scaffold created with docs, schema proposal, app shells, and portfolio tracking contract.",
+  "metrics": [
+    {
+      "label": "Docs",
+      "value": "ready",
+      "detail": "Product, architecture, ADR, and status docs are in place.",
+      "status": "green"
+    },
+    {
+      "label": "Web Shell",
+      "value": "scaffolded",
+      "detail": "Vite and React structure exists with TODO-backed route stubs.",
+      "status": "green"
+    },
+    {
+      "label": "Mobile Shell",
+      "value": "scaffolded",
+      "detail": "React Native structure exists with TODO-backed screen stubs.",
+      "status": "green"
+    },
+    {
+      "label": "Live Runtime",
+      "value": "pending",
+      "detail": "No live deployment or telemetry feed yet.",
+      "status": "yellow"
+    }
+  ],
+  "checks": [
+    {
+      "name": "Governance wrapper skill",
+      "status": "green",
+      "detail": "Repo-level project governance skill exists and can be reused on future scaffolds."
+    },
+    {
+      "name": "Status sync contract",
+      "status": "green",
+      "detail": "Repo sync script and master snapshot placeholder are part of the foundation scope."
+    },
+    {
+      "name": "Implementation readiness",
+      "status": "yellow",
+      "detail": "Core product flows are still stubbed behind TODO markers."
+    }
+  ],
+  "connections": [
+    {
+      "name": "Planned web runtime",
+      "status": "yellow",
+      "url": "https://example.com/health",
+      "detail": "Replace with Cloudflare Pages health contract when the app is deployed."
+    }
+  ],
+  "logs": {
+    "weeklyStatus": "APPS/anion/ops/weekly-status.md",
+    "releaseLog": "APPS/anion/ops/release-log.md",
+    "testEvidence": "DOCS/ANION/status/TEST_EVIDENCE.md"
+  },
+  "nextActions": [
+    "Implement Supabase auth and profile setup.",
+    "Implement tutor discovery and booking flow.",
+    "Attach a live status feed and deployed health endpoint."
+  ]
+}

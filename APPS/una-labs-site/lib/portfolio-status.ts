@@ -682,6 +682,107 @@ function buildAteamSummary(): ProjectStatusSummary {
   };
 }
 
+function buildAnionSummary(): ProjectStatusSummary {
+  return {
+    key: 'anion',
+    name: 'Anion Class App',
+    tag: 'Education Product',
+    description: 'Premium classroom and tutoring platform foundation with repo-native governance, schema planning, and status-feed scaffolding.',
+    sourceLabel: 'Repo baseline + pending shared feed',
+    refreshNote: 'This project already has a status artifact and master snapshot contract. Live deployment probes remain pending until the first runtime is shipped.',
+    generatedAt: projectTimestamp(),
+    metrics: [
+      {
+        label: 'Foundation',
+        value: 'scaffolded',
+        detail: 'Docs, app shells, schema proposal, and shared packages are in place.',
+        status: 'green',
+      },
+      {
+        label: 'Dashboard Feed',
+        value: 'contract ready',
+        detail: 'Repo status artifact and master snapshot path exist; live portfolio feed remains the next step.',
+        status: 'yellow',
+      },
+      {
+        label: 'Web Runtime',
+        value: 'pending',
+        detail: 'No deployed Cloudflare runtime yet.',
+        status: 'yellow',
+      },
+      {
+        label: 'Mobile Runtime',
+        value: 'pending',
+        detail: 'React Native scaffold exists but app-store delivery is not active yet.',
+        status: 'yellow',
+      },
+    ],
+    delivery: [
+      {
+        name: 'Governance wrapper',
+        status: 'green',
+        detail: 'FTC project-governance skill now exists and can be reused on future product scaffolds.',
+      },
+      {
+        name: 'Web and mobile shell',
+        status: 'green',
+        detail: 'Initial route, screen, component, and shared package stubs are in the repo.',
+      },
+      {
+        name: 'Portfolio feed integration',
+        status: 'yellow',
+        detail: 'Status contract and master sync exist, but live deployed telemetry is not wired yet.',
+      },
+    ],
+    testing: [
+      {
+        name: 'Schema review readiness',
+        status: 'green',
+        detail: 'The initial data model is documented and mirrored in a reference SQL migration.',
+      },
+      {
+        name: 'Status sync readiness',
+        status: 'green',
+        detail: 'Repo script can synchronize the status artifact into docs and FTC master snapshot.',
+      },
+      {
+        name: 'Runtime validation',
+        status: 'yellow',
+        detail: 'No live build, smoke, or deployment validation exists yet for the new app.',
+      },
+    ],
+    connections: [
+      {
+        name: 'Portfolio status board',
+        status: 'green',
+        url: '/status?project=anion',
+        detail: 'The shared dashboard now has a first-pass Anion slot and narrative placeholder.',
+        probeMode: 'manual',
+      },
+      {
+        name: 'Canonical repo status',
+        status: 'green',
+        url: '/status?project=anion',
+        detail: 'Anion status lives in repo docs and the master snapshot until a live runtime is deployed.',
+        probeMode: 'manual',
+      },
+    ],
+    blockers: [
+      'No deployed runtime exists yet for health probes or live telemetry.',
+      'Auth, discovery, booking, subscription, and lesson flows are still TODO-backed stubs.',
+    ],
+    nextActions: [
+      'Implement Supabase auth and role-aware profile setup.',
+      'Implement tutor discovery, availability, and booking flows.',
+      'Attach deployed health endpoints and feed them into the shared portfolio board.',
+    ],
+    quickLinks: [
+      { label: 'Current Status Board', href: '/status?project=anion' },
+      { label: 'FTC Master Snapshot', href: '/status?project=anion' },
+    ],
+  };
+}
+
 function buildFallbackUnaLabsSummary(): ProjectStatusSummary {
   return {
     key: 'una-labs',
@@ -759,6 +860,7 @@ export async function loadPortfolioStatus(token?: string): Promise<ProjectStatus
 
   const projects = [
     workerSummary ? transformWorkerSummary(workerSummary) : buildFallbackUnaLabsSummary(),
+    buildAnionSummary(),
     buildSayWetinSummary(),
     buildPeacePadSummary(),
     buildDispatchSummary(),

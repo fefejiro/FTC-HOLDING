@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "Anion Class App",
+    "slug": "anion-class-app",
+    "version": "0.1.0",
+    "scheme": "anion",
+    "platforms": ["ios", "android"]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@ftc/anion-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "expo start",
+    "build:android": "echo TODO: configure Android build",
+    "build:ios": "echo TODO: configure iOS build",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ftc/anion-types": "*",
+    "react": "^19.1.0",
+    "react-native": "^0.79.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
