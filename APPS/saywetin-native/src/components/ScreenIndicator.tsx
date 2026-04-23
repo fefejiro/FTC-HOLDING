@@ -5,7 +5,7 @@ import { ritualTokens } from '../theme/tokens';
 const { colors } = ritualTokens;
 
 export function ScreenIndicator({ screen }: { screen: RitualScreen }) {
-  const steps: RitualScreen[] = ['home', 'listen', 'matching', 'result'];
+  const steps: RitualScreen[] = ['home', 'listen', 'result'];
 
   return (
     <View style={styles.stepRow}>

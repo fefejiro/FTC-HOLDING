@@ -1,14 +1,14 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ListenScreen } from '../screens/ListenScreen';
-import { MatchingScreen } from '../screens/MatchingScreen';
 import { ResultScreen } from '../screens/ResultScreen';
 import type { RitualController, RitualScreen } from '../state/ritual-state';
 
+// Matching is no longer a separate navigation route — it lives as an internal
+// sub-state inside ListenScreen. The public ritual flow is: Home → Listen → Result.
 export type RitualStackParamList = {
   Home: undefined;
   Listen: undefined;
-  Matching: undefined;
   Result: undefined;
 };
 
@@ -22,7 +22,6 @@ const Stack = createNativeStackNavigator<RitualStackParamList>();
 function mapRouteToScreen(routeName: keyof RitualStackParamList): RitualScreen {
   if (routeName === 'Home') return 'home';
   if (routeName === 'Listen') return 'listen';
-  if (routeName === 'Matching') return 'matching';
   return 'result';
 }
 
@@ -69,19 +68,11 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
           />
         )}
       />
-      <Stack.Screen
-        name="Matching"
-        children={({ navigation }) => (
-          <MatchingScreen
-            onNext={() => {
-              ritual.revealResult();
-              navigation.navigate('Result');
-            }}
-          />
-        )}
-      />
+      {/* Result uses a fade reveal instead of a slide so the match lands as one
+          confident moment rather than a panel sliding in from the side. */}
       <Stack.Screen
         name="Result"
+        options={{ animation: 'fade', animationDuration: 320 }}
         children={({ navigation }) => (
           <ResultScreen
             track={ritual.track}

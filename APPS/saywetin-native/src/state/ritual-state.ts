@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 
-export type RitualScreen = 'home' | 'listen' | 'matching' | 'result';
+// 'matching' is no longer a separate navigation step — it is an internal
+// sub-state owned by ListenScreen. The navigator only owns: home → listen → result.
+export type RitualScreen = 'home' | 'listen' | 'result';
 
 export type RitualTrack = {
   title: string;
@@ -13,7 +15,6 @@ export type RitualController = {
   screen: RitualScreen;
   track: RitualTrack;
   startListening: () => void;
-  moveToMatching: () => void;
   revealResult: () => void;
   reset: () => void;
 };
@@ -31,7 +32,6 @@ export function useRitualState() {
   const actions = useMemo(
     () => ({
       startListening: () => setScreen('listen'),
-      moveToMatching: () => setScreen('matching'),
       revealResult: () => setScreen('result'),
       reset: () => setScreen('home'),
     }),

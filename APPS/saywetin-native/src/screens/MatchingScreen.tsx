@@ -1,3 +1,12 @@
+/**
+ * DEPRECATED — no longer registered in RitualNavigator.
+ *
+ * Matching is now an internal sub-state of ListenScreen, not a separate
+ * navigation route. This file is kept for reference only and will be removed
+ * in the next cleanup pass.
+ *
+ * See: ListenScreen.tsx → ListenPhase = 'listening' | 'matching'
+ */
 import { FadeInView } from '../components/FadeInView';
 import { ShellCard } from '../components/ShellCard';
 
