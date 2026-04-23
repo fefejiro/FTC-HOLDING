@@ -5,12 +5,12 @@ Auto-generated operational snapshot for SayWetin. This file is refreshed by scri
 ## Latest Snapshot
 
 <!-- AUTO:SAYWETIN_SNAPSHOT:START -->
-- Generated at: 2026-04-22T06:48:17.439Z
+- Generated at: 2026-04-23T00:00:00.000Z
 - Web origin: https://saywetin.app
-- API origin: https://api.saywetin.app
-- Smoke status: 1/3 checks passed
+- API origin: https://ftcpeacepad-extension-production.up.railway.app
+- Smoke status: 1/3 checks passed (API health/status endpoints return 404 — Railway backend needs /health route; web PASS)
 - Test suite status: 12 tests across 3 files
-- Velocity status: 69 commits (14d), 72 commits (30d)
+- Velocity status: 86 commits (since 2026-04-01), latest: 66746ca 2026-04-23
 <!-- AUTO:SAYWETIN_SNAPSHOT:END -->
 
 ## Live Smoke Checks
@@ -34,7 +34,6 @@ Auto-generated operational snapshot for SayWetin. This file is refreshed by scri
 ## Velocity Metrics
 
 <!-- AUTO:SAYWETIN_VELOCITY:START -->
-- Commits (14d): 69
-- Commits (30d): 72
-- Last commit touching APPS/saywetin: 08e1fd7 2026-04-22 feat(saywetin): Live Lyrics Follow Mode — all 5 gaps complete
+- Commits (since 2026-04-01): 86
+- Last commit touching APPS/saywetin or APPS/saywetin-native: 66746ca 2026-04-23 fix: smooth transitions and API routing
 <!-- AUTO:SAYWETIN_VELOCITY:END -->

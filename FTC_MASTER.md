@@ -26,7 +26,7 @@ Priority is revenue-first. Do not move to a lower-priority project until the hig
 | 2 | **PeacePad** | Live (web + Android) | ~$5 USD Railway | No confirmed ARR | Conversion audit, retention fixes |
 | 3 | **OG Trades Academy** | Pre-launch | $0 | No revenue | Enrollment funnel + first revenue checkpoint |
 | 4 | **ATEAM** | Live (demo mode) | $0 | Internal tool | Phase 1 capability decoupling, hardening |
-| 5 | **SayWetin** | Live (Android) | $0 | No revenue | iOS blocked; wait for contracted client |
+| 5 | **SayWetin** | Live (Android) | $0 | No revenue | iOS blocked; API routing fixed 2026-04-23; awaiting real-device test |
 | 6 | **GuardSignal** | Pre-build | $0 | No revenue | Validate core loop before any build |
 
 **Total monthly burn:** ~$10 USD ($5 Railway Dispatch + $5 Railway PeacePad) + $10 USD GitHub Copilot Pro = **$20 USD/month**
@@ -179,9 +179,13 @@ git -C "C:\FTC HOLDING" status -sb
 ## SayWetin Ops Snapshot (Auto)
 
 <!-- AUTO:SAYWETIN_MASTER:START -->
-- Updated at: 2026-04-22T06:48:17.439Z
-- Smoke checks: 1/3 passing
+- Updated at: 2026-04-23T00:00:00.000Z
+- Smoke checks: 1/3 passing (web OK; API /health + /status return 404 — backend route gap, not outage)
 - Test suite: 12 tests across 3 files
-- Velocity: 69 commits (14d), 72 commits (30d)
+- Velocity: 86 commits since 2026-04-01; last commit 66746ca 2026-04-23
+- API routing: FIXED — Capacitor native runtime now always routes to Railway (not localhost)
+- Android build: STABLE — installDebug BUILD SUCCESSFUL
+- Animation: FIXED — saywetin-native FadeInView synced with nav animation, Listen→Result direct
+- Awaiting: real-device test feedback from user
 - Canonical status doc: DOCS/SAYWETIN_STATUS.md
 <!-- AUTO:SAYWETIN_MASTER:END -->
