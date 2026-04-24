@@ -113,6 +113,12 @@ export function middleware(req: NextRequest) {
   const host = resolveRequestHost(req);
   const hostWithoutPort = host.replace(/:\d+$/, "");
 
+  if (pathname === "/work/og-trades-academy" && hostWithoutPort !== SITE_HOST) {
+    const url = req.nextUrl.clone();
+    url.pathname = OG_TRADES_STABLE_ALIAS_PATH;
+    return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort || host, url));
+  }
+
   if (
     isOgTradesCustomHost(hostWithoutPort) &&
     (pathname === "/" || pathname === OG_TRADES_ROOT_LANDING_PATH || pathname === "/work/og-trades-academy")
