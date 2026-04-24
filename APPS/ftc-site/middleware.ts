@@ -29,6 +29,8 @@ const CLIENT_DOMAIN_ROOT_REWRITES: Record<string, string> = {
   "www.polaranchor.ca": "/polar-anchor"
 };
 
+const OG_TRADES_ROOT_LANDING_PATH = "/work/og-trades-academy";
+
 function resolveRequestHost(req: NextRequest): string {
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
   return host.toLowerCase();
@@ -109,6 +111,12 @@ export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const host = resolveRequestHost(req);
   const hostWithoutPort = host.replace(/:\d+$/, "");
+
+  if (isOgTradesCustomHost(hostWithoutPort) && pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = OG_TRADES_ROOT_LANDING_PATH;
+    return NextResponse.redirect(url, 308);
+  }
 
   const clientRootRewrite = CLIENT_DOMAIN_ROOT_REWRITES[hostWithoutPort];
   if (clientRootRewrite && pathname === "/") {
