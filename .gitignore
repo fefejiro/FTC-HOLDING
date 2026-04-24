@@ -36,6 +36,8 @@ APPS/saywetin/.git.backup-*/
 
 # local duplicate clone/tree - not source of truth for this repo
 FTC-HOLDING/
+claude-skills/
+claude-skills/**
 .tmp-main-publish/
 .tmp-main-publish/**
 .tmp-ftc-deploy/
