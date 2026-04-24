@@ -29,7 +29,7 @@ const CLIENT_DOMAIN_ROOT_REWRITES: Record<string, string> = {
   "www.polaranchor.ca": "/polar-anchor"
 };
 
-const OG_TRADES_ROOT_LANDING_PATH = "/work/og-trades-academy";
+const OG_TRADES_ROOT_LANDING_PATH = "/og-trades-academy";
 
 function resolveRequestHost(req: NextRequest): string {
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
