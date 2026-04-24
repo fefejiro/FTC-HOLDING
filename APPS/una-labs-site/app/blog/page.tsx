@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { buildPageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
-  title: 'Blog',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Blog — Una Labs',
   description:
     'The Una Labs journal for delivery systems, product operations, AI workflow, and shipped product notes.',
-};
+  path: '/blog',
+});
 
 const UPCOMING_TOPICS = [
   'What we learned shipping the Una Labs intake and Stripe flow live',

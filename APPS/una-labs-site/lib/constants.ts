@@ -108,7 +108,7 @@ export const PRICING_TIERS = [
     description: 'For freelancers and solo practitioners',
     features: ['1 user', 'Up to 3 active projects', 'Intake forms', 'Basic proposals', 'Email support'],
     recommended: false,
-    cta: 'Start Free Trial',
+    cta: 'Start Your Project',
   },
   {
     name: 'Professional',
@@ -116,7 +116,7 @@ export const PRICING_TIERS = [
     description: 'For growing teams that deliver regularly',
     features: ['5 users', 'Unlimited projects', 'Full proposal suite', 'Payment collection', 'Dashboard & reporting', 'Priority support'],
     recommended: true,
-    cta: 'Start Free Trial',
+    cta: 'Start Your Project',
   },
   {
     name: 'Agency',
@@ -124,7 +124,7 @@ export const PRICING_TIERS = [
     description: 'For agencies with multiple clients and teams',
     features: ['20 users', 'Unlimited projects', 'Client portal', 'White-label reports', 'Workflow automation', 'Dedicated support'],
     recommended: false,
-    cta: 'Start Free Trial',
+    cta: 'Start Your Project',
   },
   {
     name: 'Enterprise',

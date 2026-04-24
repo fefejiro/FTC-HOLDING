@@ -61,3 +61,7 @@ APPS/ftc-site/APPS/
 output/playwright/**
 .tmp-agent.json
 .tmp-cap.json
+play-store-key.json
+secrets/
+.agents/
+.windsurf/

@@ -14,14 +14,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "cloud.unalabs.saywetin",
+      "bundleIdentifier": "com.saywetin.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "SayWetin needs the mic to identify songs and Nigerian lingo playing around you.",
         "UIBackgroundModes": []
       }
     },
     "android": {
-      "package": "cloud.unalabs.saywetin",
+      "package": "com.saywetin.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A0A0F"
@@ -30,7 +30,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "versionCode": 4
     },
     "web": {
       "favicon": "./assets/favicon.png"

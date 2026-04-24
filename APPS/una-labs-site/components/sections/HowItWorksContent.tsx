@@ -532,7 +532,7 @@ export function HowItWorksContent() {
 
           <div className="mt-10 text-center">
             <Button href="/start" variant="primary" size="lg">
-              Start your first request - free
+              Start Your Project
             </Button>
             <p className="mt-3 text-caption text-tx-muted">No account needed. No credit card. Response within 48h.</p>
           </div>
@@ -558,7 +558,7 @@ export function HowItWorksContent() {
           </div>
           <p className="mt-8 text-center text-body-sm text-tx-muted">
             Interactive walkthroughs dropping soon.{' '}
-            <Link href="/start" className="text-brand-teal hover:underline">Start with a free request</Link> to see it live.
+            <Link href="/start" className="text-brand-teal hover:underline">Start Your Project</Link> to see it live.
           </p>
         </div>
       </section>

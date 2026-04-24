@@ -1,0 +1,39 @@
+{
+  "project": "{{PROJECT_KEY}}",
+  "name": "{{PROJECT_NAME}}",
+  "updatedAt": "{{ISO_TIMESTAMP}}",
+  "overall": "yellow",
+  "stage": "foundation",
+  "summary": "TODO: One-sentence operator summary.",
+  "metrics": [
+    {
+      "label": "TODO",
+      "value": "TODO",
+      "detail": "TODO",
+      "status": "yellow"
+    }
+  ],
+  "checks": [
+    {
+      "name": "TODO",
+      "status": "yellow",
+      "detail": "TODO"
+    }
+  ],
+  "connections": [
+    {
+      "name": "TODO",
+      "status": "yellow",
+      "url": "https://example.com/health",
+      "detail": "TODO"
+    }
+  ],
+  "logs": {
+    "weeklyStatus": "TODO",
+    "releaseLog": "TODO",
+    "testEvidence": "TODO"
+  },
+  "nextActions": [
+    "TODO"
+  ]
+}

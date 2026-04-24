@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CaseStudyPage } from '@/components/templates/CaseStudyPage';
 import { caseStudies } from '@/lib/site-content';
+import { buildPageMetadata } from '@/lib/metadata';
 
 type Params = {
   slug: string;
@@ -22,10 +23,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {};
   }
 
-  return {
+  return buildPageMetadata({
     title: study.metaTitle,
     description: study.metaDescription,
-  };
+    path: `/products/${slug}`,
+    type: 'article',
+  });
 }
 
 export default async function CaseStudyRoutePage({ params }: PageProps) {

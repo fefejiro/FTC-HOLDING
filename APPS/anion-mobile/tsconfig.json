@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@ftc/anion-types": ["../../PACKAGES/anion-types/src/index.ts"],
+      "@ftc/anion-shared": ["../../PACKAGES/anion-shared/src/index.ts"]
+    },
+    "skipLibCheck": true,
+    "types": ["react"]
+  },
+  "include": ["src"]
+}

@@ -18,6 +18,17 @@ const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
   "/c": "/connect"
 };
 
+const CLIENT_DOMAIN_ROOT_REWRITES: Record<string, string> = {
+  "ogtradesacademy.com": "/og-trades-academy",
+  "www.ogtradesacademy.com": "/og-trades-academy",
+  "ogtradesacademy.ca": "/og-trades-academy",
+  "www.ogtradesacademy.ca": "/og-trades-academy",
+  "gardencleaners.ca": "/garden-cleaners",
+  "www.gardencleaners.ca": "/garden-cleaners",
+  "polaranchor.ca": "/polar-anchor",
+  "www.polaranchor.ca": "/polar-anchor"
+};
+
 function resolveRequestHost(req: NextRequest): string {
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
   return host.toLowerCase();
@@ -99,6 +110,13 @@ export function middleware(req: NextRequest) {
   const host = resolveRequestHost(req);
   const hostWithoutPort = host.replace(/:\d+$/, "");
 
+  const clientRootRewrite = CLIENT_DOMAIN_ROOT_REWRITES[hostWithoutPort];
+  if (clientRootRewrite && pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = clientRootRewrite;
+    return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+  }
+
   if (isOgTradesRedirectHost(hostWithoutPort)) {
     const url = req.nextUrl.clone();
     url.protocol = "https";
@@ -158,5 +176,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"]
 };

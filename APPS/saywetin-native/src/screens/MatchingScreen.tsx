@@ -1,3 +1,7 @@
+/**
+ * Deprecated: no longer registered in RitualNavigator.
+ * Matching now runs as an internal phase inside ListenScreen.
+ */
 import { FadeInView } from '../components/FadeInView';
 import { ShellCard } from '../components/ShellCard';
 

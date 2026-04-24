@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { buildPageMetadata } from '@/lib/metadata';
 
 const FAQ = [
   {
@@ -20,11 +21,12 @@ const FAQ = [
   },
 ];
 
-export const metadata: Metadata = {
-  title: 'Help Center',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Help Center — Una Labs',
   description:
     'Get oriented on the Una Labs intake, pricing, demos, and support path.',
-};
+  path: '/help',
+});
 
 export default function HelpPage() {
   return (
@@ -39,7 +41,7 @@ export default function HelpPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Button href="/start" variant="primary" size="lg">
-              Start a request
+              Start Your Project
             </Button>
             <Button href="/contact" variant="secondary" size="lg">
               Contact Una Labs
