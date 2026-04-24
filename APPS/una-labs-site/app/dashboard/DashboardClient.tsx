@@ -3,15 +3,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { getAteamEndpoint, isProjectAdminEmail, normalizeProjectStatus } from '@/lib/projects';
 import { getStripeApiUrl } from '@/lib/stripe-config';
 import { getCommercialBillingLabel, getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
 
 type ProjectRecord = {
   id: string;
+  client_name?: string;
+  client_email?: string;
+  domain?: string;
+  description?: string;
   email?: string;
   tier?: string;
   billing?: string;
   status?: string;
+  live_url?: string | null;
+  handover_doc?: string | null;
+  notes?: string | null;
   intake_id?: string;
   stripe_session_id?: string;
   ai_price_min_cad?: number | null;
@@ -408,6 +416,10 @@ function ProjectCard({
 export function DashboardClient() {
   const [state, setState] = useState<DashboardState>({ phase: 'loading' });
   const [milestoneStatuses, setMilestoneStatuses] = useState<Record<string, string>>({});
+  const [adminProjects, setAdminProjects] = useState<ProjectRecord[]>([]);
+  const [adminActionId, setAdminActionId] = useState<string | null>(null);
+  const [adminError, setAdminError] = useState('');
+  const [handoverPreview, setHandoverPreview] = useState<{ projectId: string; projectName: string; doc: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -416,10 +428,11 @@ export function DashboardClient() {
     async function loadForSession(session: { user: { email?: string } }) {
       const { createBrowserClient } = await import('@ftc/supabase');
       const client = createBrowserClient();
+      const email = session.user.email ?? '';
       const projectResult = await client
         .from('projects')
         .select('*')
-        .ilike('email', session.user.email ?? '')
+        .eq('client_email', email)
         .order('created_at', { ascending: false });
 
       const projectIds = ((projectResult.data as ProjectRecord[] | null) ?? []).map((p) => p.id);
@@ -437,9 +450,20 @@ export function DashboardClient() {
       if (milestoneResult.error) throw milestoneResult.error;
 
       if (!cancelled) {
+        if (isProjectAdminEmail(email)) {
+          const adminResult = await client
+            .from('projects')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (adminResult.error) throw adminResult.error;
+          setAdminProjects((adminResult.data as ProjectRecord[] | null) ?? []);
+        } else {
+          setAdminProjects([]);
+        }
+
         setState({
           phase: 'ready',
-          email: session.user.email ?? '',
+          email,
           projects: (projects as ProjectRecord[] | null) ?? [],
           milestones: (milestones as MilestoneRecord[] | null) ?? [],
         });
@@ -498,6 +522,93 @@ export function DashboardClient() {
 
   const handleMilestoneStatusChange = (id: string, newStatus: string) => {
     setMilestoneStatuses((previous) => ({ ...previous, [id]: newStatus }));
+  };
+
+  const handleAdminProjectPatch = async (projectId: string, patch: Partial<ProjectRecord>) => {
+    try {
+      setAdminActionId(projectId);
+      setAdminError('');
+      const { createBrowserClient } = await import('@ftc/supabase');
+      const client = createBrowserClient();
+      const { data, error } = await client
+        .from('projects')
+        .update(patch)
+        .eq('id', projectId)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw error || new Error('Project update failed.');
+      }
+
+      setAdminProjects((previous) => previous.map((project) => (project.id === projectId ? { ...project, ...data } : project)));
+      setState((previous) => previous.phase !== 'ready'
+        ? previous
+        : {
+            ...previous,
+            projects: previous.projects.map((project) => (project.id === projectId ? { ...project, ...data } : project)),
+          });
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Project update failed.');
+    } finally {
+      setAdminActionId(null);
+    }
+  };
+
+  const handleMarkLive = async (projectId: string) => {
+    const current = adminProjects.find((project) => project.id === projectId);
+    const liveUrl = window.prompt('Enter the live URL for this project:', current?.live_url || '');
+    if (!liveUrl) return;
+    await handleAdminProjectPatch(projectId, {
+      status: 'live',
+      live_url: liveUrl.trim(),
+    });
+  };
+
+  const handleGenerateHandover = async (projectId: string) => {
+    try {
+      setAdminActionId(projectId);
+      setAdminError('');
+      const [{ getSession }, { createBrowserClient }] = await Promise.all([
+        import('@ftc/auth'),
+        import('@ftc/supabase'),
+      ]);
+      const session = await getSession();
+      const endpoint = getAteamEndpoint('/api/ateam/generate-handover');
+      if (!endpoint) {
+        throw new Error('ATEAM upstream is not configured.');
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_id: projectId,
+          supabase_access_token: session?.access_token || '',
+        }),
+      });
+      const body = await response.json() as { handover_doc?: string; project?: ProjectRecord; error?: string };
+      if (!response.ok || !body.handover_doc) {
+        throw new Error(body.error || 'Handover generation failed.');
+      }
+
+      const client = createBrowserClient();
+      const { data } = await client
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
+      if (data) {
+        setAdminProjects((previous) => previous.map((project) => (project.id === projectId ? { ...project, ...data } : project)));
+      }
+
+      const projectName = data?.client_name || data?.client_email || projectId;
+      setHandoverPreview({ projectId, projectName, doc: body.handover_doc });
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Handover generation failed.');
+    } finally {
+      setAdminActionId(null);
+    }
   };
 
   const handleDownloadSummary = () => {
@@ -608,6 +719,7 @@ export function DashboardClient() {
 
   const firstName = state.email.split('@')[0].split('.')[0];
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+  const isAdmin = isProjectAdminEmail(state.email);
   const hasAnyReview = state.milestones.some(
     (milestone) => (milestoneStatuses[milestone.id] ?? milestone.status)?.toLowerCase() === 'review'
   );
@@ -668,6 +780,87 @@ export function DashboardClient() {
           </div>
         )}
 
+        {isAdmin && (
+          <div className="mt-12 rounded-[28px] border border-border bg-white p-8 shadow-sm">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <Badge variant="teal">Projects</Badge>
+                <h2 className="mt-4 text-h3 text-tx-heading">Operator project control</h2>
+                <p className="mt-2 text-body text-tx-secondary">Status editing, go-live updates, and handover generation for all tracked projects.</p>
+              </div>
+            </div>
+
+            {adminError && (
+              <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-600">
+                {adminError}
+              </div>
+            )}
+
+            <div className="mt-6 overflow-x-auto">
+              <table className="w-full min-w-[980px] border-separate border-spacing-y-3">
+                <thead>
+                  <tr className="text-left text-body-sm text-tx-muted">
+                    <th className="pb-2">Client</th>
+                    <th className="pb-2">Email</th>
+                    <th className="pb-2">Domain</th>
+                    <th className="pb-2">Tier</th>
+                    <th className="pb-2">Status</th>
+                    <th className="pb-2">Created</th>
+                    <th className="pb-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminProjects.map((project) => (
+                    <tr key={project.id} className="bg-bg-offwhite">
+                      <td className="rounded-l-xl px-4 py-4 align-top">
+                        <p className="text-body font-semibold text-tx-heading">{project.client_name || project.email || 'Untitled project'}</p>
+                        {project.description && <p className="mt-1 text-body-sm text-tx-secondary max-w-xs line-clamp-2">{project.description}</p>}
+                      </td>
+                      <td className="px-4 py-4 align-top text-body-sm text-tx-secondary">{project.client_email || project.email || '-'}</td>
+                      <td className="px-4 py-4 align-top text-body-sm text-tx-secondary">{project.domain || '-'}</td>
+                      <td className="px-4 py-4 align-top text-body-sm text-tx-secondary">{project.tier || 'unknown'}</td>
+                      <td className="px-4 py-4 align-top">
+                        <select
+                          value={normalizeProjectStatus(project.status)}
+                          onChange={(event) => void handleAdminProjectPatch(project.id, { status: event.target.value })}
+                          disabled={adminActionId === project.id}
+                          className="rounded-lg border border-border bg-white px-3 py-2 text-body-sm text-tx-heading"
+                        >
+                          {['scoping', 'building', 'live', 'paused'].map((status) => (
+                            <option key={status} value={status}>{status}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-4 align-top text-body-sm text-tx-secondary">{formatDate(project.created_at)}</td>
+                      <td className="rounded-r-xl px-4 py-4 align-top">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void handleMarkLive(project.id)}
+                            disabled={adminActionId === project.id}
+                            className="rounded-lg border border-brand-teal px-3 py-2 text-body-sm font-semibold text-brand-teal hover:bg-brand-teal/10 disabled:opacity-50"
+                          >
+                            Mark live
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleGenerateHandover(project.id)}
+                            disabled={adminActionId === project.id}
+                            className="rounded-lg border border-border px-3 py-2 text-body-sm font-semibold text-tx-heading hover:bg-white disabled:opacity-50"
+                          >
+                            Generate handover
+                          </button>
+                        </div>
+                        {project.live_url && <p className="mt-2 text-[11px] text-tx-muted break-all">{project.live_url}</p>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         <div className="mt-12 rounded-2xl border border-border bg-white px-8 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <p className="text-body font-semibold text-tx-heading">Need help?</p>
@@ -686,6 +879,49 @@ export function DashboardClient() {
             </Button>
           </div>
         </div>
+
+        {handoverPreview && (
+          <div className="fixed inset-0 z-50 bg-black/50 px-6 py-10 overflow-y-auto">
+            <div className="max-w-3xl mx-auto rounded-3xl border border-border bg-white p-8 shadow-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <Badge variant="teal">Handover doc</Badge>
+                  <h2 className="mt-4 text-h3 text-tx-heading">{handoverPreview.projectName}</h2>
+                </div>
+                <button type="button" onClick={() => setHandoverPreview(null)} className="text-body-sm text-tx-muted hover:text-tx-heading">
+                  Close
+                </button>
+              </div>
+              <pre className="mt-6 whitespace-pre-wrap rounded-2xl border border-border bg-bg-offwhite p-5 text-body-sm text-tx-body overflow-x-auto">
+                {handoverPreview.doc}
+              </pre>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void navigator.clipboard.writeText(handoverPreview.doc)}
+                  className="rounded-lg bg-brand-teal px-4 py-3 text-body-sm font-semibold text-white"
+                >
+                  Copy to clipboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const blob = new Blob([handoverPreview.doc], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${handoverPreview.projectName.replace(/\s+/g, '-').toLowerCase()}-handover.txt`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="rounded-lg border border-border px-4 py-3 text-body-sm font-semibold text-tx-heading"
+                >
+                  Download
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

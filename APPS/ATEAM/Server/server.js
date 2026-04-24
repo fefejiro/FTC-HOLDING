@@ -15,6 +15,7 @@ import { createSpeechClarityRoutes } from "./lib/speechClarity/speechClarityRout
 import { sanitizeSessionId, createEvent, appendEvent, getEvents, getEventsAfterTimestamp } from "./lib/eventLog.js";
 import { planOrchestration } from "./lib/orchestrator.js";
 import { createWorkflowService } from "./lib/workflowService.js";
+import { createProjectAutomationService } from "./lib/projectAutomation.js";
 import { createDocumentRoutes } from "./lib/documentRoutes.js";
 import { createRepositories } from "./lib/storage/repositories.js";
 import { createPrincipalScopeMiddleware, normalizeScopedResourceId } from "./lib/auth/principalScope.js";
@@ -61,7 +62,9 @@ app.use((req, res, next) => {
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:3001",
-    "http://127.0.0.1:3001"
+    "http://127.0.0.1:3001",
+    "https://unalabs.cloud",
+    "https://www.unalabs.cloud"
   ];
   const allowedOrigins = new Set([...defaultOrigins, ...configuredOrigins]);
   const requestOrigin = String(req.headers.origin || "").trim();
@@ -296,6 +299,7 @@ const workflowService = createWorkflowService({
     appendEvent(sanitizeSessionId(sessionId || "global_podcast"), event);
   }
 });
+const projectAutomationService = createProjectAutomationService();
 
 const documentRoutes = createDocumentRoutes({
   documentStore,
@@ -1350,6 +1354,43 @@ app.post("/api/orchestrator/plan", async (req, res) => {
     res.json({ ok: true, output });
   } catch (err) {
     serverError(res, "failed_to_plan_orchestration", err);
+  }
+});
+
+app.post("/api/ateam/classify-project", async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const description = String(body.description || "").trim();
+    if (!description) return badRequest(res, "description required");
+
+    const result = await projectAutomationService.classifyProjectTier({
+      projectId: String(body.project_id || body.projectId || "").trim(),
+      description,
+      budgetRange: String(body.budget_range || body.budgetRange || "").trim(),
+      timeline: String(body.timeline || "").trim(),
+      accessToken: String(body.supabase_access_token || body.accessToken || "").trim()
+    });
+
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    serverError(res, "failed_to_classify_project", err);
+  }
+});
+
+app.post("/api/ateam/generate-handover", async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const projectId = String(body.project_id || body.projectId || "").trim();
+    if (!projectId) return badRequest(res, "project_id required");
+
+    const result = await projectAutomationService.generateHandoverDoc({
+      projectId,
+      accessToken: String(body.supabase_access_token || body.accessToken || "").trim()
+    });
+
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    serverError(res, "failed_to_generate_handover", err);
   }
 });
 

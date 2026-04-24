@@ -59,10 +59,32 @@ type PortalPayload = {
   milestones: MilestoneRecord[];
 };
 
+type PortalProjectRecord = {
+  id: string;
+  client_name?: string;
+  client_email?: string;
+  domain?: string;
+  description?: string;
+  tier?: string;
+  status?: string;
+  live_url?: string | null;
+  handover_doc?: string | null;
+  created_at?: string;
+};
+
+type ChangeRequestRecord = {
+  id: string;
+  project_id: string;
+  message: string;
+  created_at: string;
+  status: string;
+};
+
 type PortalState =
   | { phase: 'loading' }
   | { phase: 'unauthenticated'; redirectUrl: string }
   | { phase: 'error'; message: string }
+  | { phase: 'ready_list'; email: string; projects: PortalProjectRecord[]; changeRequests: ChangeRequestRecord[] }
   | { phase: 'ready'; email: string; payload: PortalPayload };
 
 function formatDate(value?: string | null) {
@@ -219,6 +241,8 @@ function MilestoneStatus({
 export function PortalClient({ initialProjectId }: { initialProjectId?: string }) {
   const [state, setState] = useState<PortalState>({ phase: 'loading' });
   const [milestoneOverrides, setMilestoneOverrides] = useState<Record<string, string>>({});
+  const [changeRequestDrafts, setChangeRequestDrafts] = useState<Record<string, string>>({});
+  const [changeRequestStates, setChangeRequestStates] = useState<Record<string, 'idle' | 'saving' | 'done' | 'error'>>({});
   const searchParams = useSearchParams();
   const id = initialProjectId || searchParams.get('id');
 
@@ -231,10 +255,48 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
 
     async function loadPortal() {
       try {
-        const { getSession } = await import('@ftc/auth');
+        const [{ getSession }, { createBrowserClient }] = await Promise.all([
+          import('@ftc/auth'),
+          import('@ftc/supabase'),
+        ]);
         const session = await getSession();
         if (!session?.user) {
-          setState({ phase: 'unauthenticated', redirectUrl: `/login?redirect=/portal?id=${projectId}` });
+          setState({ phase: 'unauthenticated', redirectUrl: projectId ? `/login?redirect=/portal?id=${projectId}` : '/login?redirect=/portal' });
+          return;
+        }
+
+        if (!projectId) {
+          const client = createBrowserClient();
+          const email = session.user.email ?? '';
+          const { data: projects, error: projectError } = await client
+            .from('projects')
+            .select('*')
+            .eq('client_email', email)
+            .order('created_at', { ascending: false });
+
+          if (projectError) {
+            throw projectError;
+          }
+
+          const projectIds = ((projects as PortalProjectRecord[] | null) ?? []).map((project) => project.id);
+          const changeRequestResult = projectIds.length > 0
+            ? await client
+                .from('change_requests')
+                .select('*')
+                .in('project_id', projectIds)
+                .order('created_at', { ascending: false })
+            : { data: [] as ChangeRequestRecord[] | null, error: null };
+
+          if (changeRequestResult.error) {
+            throw changeRequestResult.error;
+          }
+
+          setState({
+            phase: 'ready_list',
+            email,
+            projects: (projects as PortalProjectRecord[] | null) ?? [],
+            changeRequests: (changeRequestResult.data as ChangeRequestRecord[] | null) ?? [],
+          });
           return;
         }
 
@@ -263,6 +325,37 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
 
     void loadPortal();
   }, [id]);
+
+  const handleChangeRequestSubmit = async (projectId: string) => {
+    const message = (changeRequestDrafts[projectId] || '').trim();
+    if (!message) return;
+
+    setChangeRequestStates((previous) => ({ ...previous, [projectId]: 'saving' }));
+    try {
+      const { createBrowserClient } = await import('@ftc/supabase');
+      const client = createBrowserClient();
+      const { data, error } = await client
+        .from('change_requests')
+        .insert({ project_id: projectId, message, status: 'open' })
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw error || new Error('Could not save change request.');
+      }
+
+      setState((previous) => previous.phase !== 'ready_list'
+        ? previous
+        : {
+            ...previous,
+            changeRequests: [data as ChangeRequestRecord, ...previous.changeRequests],
+          });
+      setChangeRequestDrafts((previous) => ({ ...previous, [projectId]: '' }));
+      setChangeRequestStates((previous) => ({ ...previous, [projectId]: 'done' }));
+    } catch {
+      setChangeRequestStates((previous) => ({ ...previous, [projectId]: 'error' }));
+    }
+  };
 
   const milestones = useMemo(() => {
     if (state.phase !== 'ready') return [];
@@ -304,6 +397,141 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
           <Badge variant="muted">Error loading portal</Badge>
           <h1 className="mt-4 text-display-sm text-tx-heading">Unable to load project portal</h1>
           <p className="mt-4 text-body text-tx-secondary">{state.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.phase === 'ready_list') {
+    return (
+      <div className="min-h-screen bg-bg-offwhite">
+        <div className="max-w-5xl mx-auto px-6 py-16">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Badge variant="teal">Client Portal</Badge>
+                <Badge variant="muted">{state.email}</Badge>
+              </div>
+              <h1 className="mt-4 text-display-sm text-tx-heading">Your projects</h1>
+              <p className="mt-3 text-body text-tx-secondary">Track status, grab your handover doc, and send change requests without waiting for email back-and-forth.</p>
+            </div>
+          </div>
+
+          {state.projects.length === 0 ? (
+            <div className="mt-10 rounded-3xl border border-border bg-white p-10 text-center shadow-sm">
+              <h2 className="text-h3 text-tx-heading">No tracked projects yet</h2>
+              <p className="mt-3 text-body text-tx-secondary">Once your intake is submitted, your project will appear here automatically.</p>
+              <div className="mt-6">
+                <a href="/start" className="inline-flex items-center justify-center rounded-lg bg-brand-orange px-6 py-3 text-body font-semibold text-white">
+                  Start your project
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-10 grid gap-6">
+              {state.projects.map((project) => {
+                const requests = state.changeRequests.filter((request) => request.project_id === project.id);
+                const requestState = changeRequestStates[project.id] || 'idle';
+                return (
+                  <section key={project.id} className="rounded-3xl border border-border bg-white p-8 shadow-sm">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Badge variant={project.status === 'live' ? 'teal' : project.status === 'paused' ? 'muted' : 'orange'}>
+                            {project.status || 'scoping'}
+                          </Badge>
+                          {project.tier && <Badge variant="muted">{project.tier}</Badge>}
+                        </div>
+                        <h2 className="mt-4 text-h3 text-tx-heading">{project.client_name || project.client_email || 'Project'}</h2>
+                        {project.description && <p className="mt-3 text-body text-tx-secondary max-w-3xl">{project.description}</p>}
+                      </div>
+                      <div className="text-body-sm text-tx-muted">
+                        <p>Started {formatDate(project.created_at)}</p>
+                        {project.domain && <p className="mt-1">{project.domain}</p>}
+                      </div>
+                    </div>
+
+                    <div className="mt-6 grid md:grid-cols-3 gap-4">
+                      <div className="rounded-xl border border-border bg-bg-subtle p-4">
+                        <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Current status</p>
+                        <p className="mt-2 text-body text-tx-heading capitalize">{project.status || 'scoping'}</p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-bg-subtle p-4">
+                        <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Live URL</p>
+                        <p className="mt-2 text-body text-tx-heading break-all">{project.live_url || 'Not live yet'}</p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-bg-subtle p-4">
+                        <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Handover</p>
+                        {project.handover_doc ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const blob = new Blob([project.handover_doc || ''], { type: 'text/plain' });
+                              const url = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = `${(project.client_name || 'project').replace(/\s+/g, '-').toLowerCase()}-handover.txt`;
+                              link.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="mt-2 text-body-sm font-semibold text-brand-teal hover:underline"
+                          >
+                            Download handover doc
+                          </button>
+                        ) : (
+                          <p className="mt-2 text-body text-tx-heading">Not generated yet</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-6 grid lg:grid-cols-[1.2fr_.8fr] gap-6">
+                      <div>
+                        <p className="text-body font-semibold text-tx-heading">Request a change</p>
+                        <textarea
+                          value={changeRequestDrafts[project.id] || ''}
+                          onChange={(event) => setChangeRequestDrafts((previous) => ({ ...previous, [project.id]: event.target.value }))}
+                          rows={4}
+                          placeholder="Describe the change you need."
+                          className="mt-3 w-full rounded-xl border border-border px-4 py-3 text-body text-tx-body focus:outline-none focus:border-border-focus resize-y"
+                        />
+                        <div className="mt-3 flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => void handleChangeRequestSubmit(project.id)}
+                            disabled={requestState === 'saving'}
+                            className="rounded-lg bg-brand-teal px-5 py-3 text-body-sm font-semibold text-white disabled:opacity-50"
+                          >
+                            {requestState === 'saving' ? 'Sending…' : 'Submit request'}
+                          </button>
+                          {requestState === 'done' && <span className="text-body-sm text-brand-teal">Saved.</span>}
+                          {requestState === 'error' && <span className="text-body-sm text-red-500">Could not save request.</span>}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-body font-semibold text-tx-heading">Recent requests</p>
+                        <div className="mt-3 space-y-3">
+                          {requests.length === 0 ? (
+                            <div className="rounded-xl border border-border bg-bg-subtle p-4 text-body-sm text-tx-muted">
+                              No requests submitted yet.
+                            </div>
+                          ) : requests.map((request) => (
+                            <div key={request.id} className="rounded-xl border border-border bg-bg-subtle p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-body-sm font-semibold text-tx-heading capitalize">{request.status}</p>
+                                <span className="text-[11px] text-tx-muted">{formatDate(request.created_at)}</span>
+                              </div>
+                              <p className="mt-2 text-body-sm text-tx-secondary">{request.message}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
