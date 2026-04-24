@@ -2,10 +2,90 @@
 Last updated: 2026-04-21
 Author: Claude (Sonnet 4.6) via Mike (fejiro007)
 
+## Execution Update — 2026-04-24
+
+This section captures what was executed during the latest implementation run.
+
+### Branch and commit status
+
+- Branch used: feat/anion-foundation
+- Remote sync: pushed
+- Core implementation commit:
+  - 80d55bc feat: add project intake, ops dashboard, portal workflow, and automation endpoints
+- Follow-up hardening commits:
+  - d72b029 fix: normalize legacy project tier/status before checks
+  - 75694ac fix: support SUPABASE_SERVICE_KEY fallback in ateam automation
+  - 7016fee fix: add default ateam upstream fallback for una-labs project automation
+
+### Supabase migrations
+
+Executed from APPS/una-labs-site with Supabase CLI via npx.
+
+- Project link ref: aaaextkrfoqomzmjjkxe
+- Applied successfully:
+  - 20260423161000_create_projects.sql
+  - 20260423161100_create_change_requests.sql
+
+Notes:
+- Remote migration history required repair before push due to missing local legacy migration files.
+- Existing legacy tier and status values caused check-constraint failure initially; migration was updated to normalize existing data before constraints.
+
+### Environment verification
+
+Observed in shell at time of run:
+- NEXT_PUBLIC_ATEAM_UPSTREAM_ORIGIN: missing
+- ATEAM_UPSTREAM_ORIGIN: missing
+- OPENAI_API_KEY: missing in shell scope
+- SUPABASE_URL: missing in shell scope
+- SUPABASE_SERVICE_ROLE_KEY: missing in shell scope
+
+Observed in files:
+- APPS/una-labs-site/.env.local includes:
+  - NEXT_PUBLIC_SUPABASE_URL
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY
+- APPS/ATEAM/Server/.env includes:
+  - OPENAI_API_KEY
+  - SUPABASE_URL
+  - SUPABASE_SERVICE_KEY
+
+Compatibility fixes added:
+- ATEAM automation now accepts SUPABASE_SERVICE_KEY as service-role fallback.
+- una-labs project automation now falls back to https://ateam-api.unalabs.cloud when ATEAM upstream env vars are not set.
+
+### Build and deploy
+
+Build status:
+- APPS/una-labs-site: successful static export (48/48 routes)
+
+Deployment target:
+- Cloudflare Pages project: ftc-site-pages
+- Preview alias deployed:
+  - https://feat-anion-foundation.ftc-site-pages.pages.dev
+- Latest preview instance from this run:
+  - https://71f019cf.ftc-site-pages.pages.dev
+
+### Smoke checks (preview alias)
+
+All checks were run against:
+- https://feat-anion-foundation.ftc-site-pages.pages.dev
+
+Results:
+- /start/: 200
+- /dashboard/: 200
+- /portal/: 200
+- /sitemap.xml: 200
+- Sitemap contains /product/client-portal: yes
+
+### Operational caveat
+
+When deploying with Wrangler from a dirty working tree, use commit-dirty true for preview deploys if local doc edits exist and should remain uncommitted.
+
+---
+
 ---
 
 ## READ THIS FIRST — CRITICAL CONTEXT
-
+                     
 This document is the single source of truth for continuing Una Labs development.
 It is written for Claude Code, Codex, or any developer picking this up cold.
 
