@@ -30,6 +30,7 @@ const CLIENT_DOMAIN_ROOT_REWRITES: Record<string, string> = {
 };
 
 const OG_TRADES_ROOT_LANDING_PATH = "/og-trades-academy";
+const OG_TRADES_STABLE_ALIAS_PATH = "/og-trades-academy-home";
 
 function resolveRequestHost(req: NextRequest): string {
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
@@ -117,7 +118,7 @@ export function middleware(req: NextRequest) {
     (pathname === "/" || pathname === OG_TRADES_ROOT_LANDING_PATH || pathname === "/work/og-trades-academy")
   ) {
     const url = req.nextUrl.clone();
-    url.pathname = OG_TRADES_ROOT_LANDING_PATH;
+    url.pathname = OG_TRADES_STABLE_ALIAS_PATH;
     return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
   }
 
