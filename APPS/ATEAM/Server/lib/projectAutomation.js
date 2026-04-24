@@ -15,6 +15,7 @@ function getSupabaseConfig() {
     "";
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
     process.env.ATEAM_SUPABASE_SERVICE_ROLE_KEY ||
     "";
 
