@@ -115,7 +115,7 @@ export function middleware(req: NextRequest) {
   if (isOgTradesCustomHost(hostWithoutPort) && pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = OG_TRADES_ROOT_LANDING_PATH;
-    return NextResponse.redirect(url, 308);
+    return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
   }
 
   const clientRootRewrite = CLIENT_DOMAIN_ROOT_REWRITES[hostWithoutPort];
