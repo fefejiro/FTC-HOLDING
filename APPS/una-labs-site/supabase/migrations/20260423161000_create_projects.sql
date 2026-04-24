@@ -39,6 +39,16 @@ set client_name = coalesce(client_name, name)
 where client_name is null
   and coalesce(name, '') <> '';
 
+update public.projects
+set tier = 'unknown'
+where tier is null
+  or tier not in ('T0', 'T1', 'T2', 'unknown');
+
+update public.projects
+set status = 'scoping'
+where status is null
+  or status not in ('scoping', 'building', 'live', 'paused', 'intake', 'scoped', 'awaiting_approval', 'active', 'review', 'complete', 'support');
+
 alter table public.projects drop constraint if exists projects_tier_check;
 alter table public.projects
   add constraint projects_tier_check
