@@ -9,11 +9,15 @@ export function isProjectAdminEmail(email?: string | null) {
 }
 
 export function getAteamBaseUrl() {
-  return (
+  const configured = (
     process.env.NEXT_PUBLIC_ATEAM_UPSTREAM_ORIGIN ||
     process.env.ATEAM_UPSTREAM_ORIGIN ||
     ''
   ).replace(/\/+$/, '');
+
+  if (configured) return configured;
+
+  return 'https://ateam-api.unalabs.cloud';
 }
 
 export function getAteamEndpoint(pathname: string) {
