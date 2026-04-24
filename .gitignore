@@ -63,3 +63,5 @@ output/playwright/**
 .tmp-cap.json
 play-store-key.json
 secrets/
+.agents/
+.windsurf/
