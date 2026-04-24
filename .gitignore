@@ -38,6 +38,8 @@ APPS/saywetin/.git.backup-*/
 FTC-HOLDING/
 .tmp-main-publish/
 .tmp-main-publish/**
+.tmp-ftc-deploy/
+.tmp-ftc-deploy/**
 
 # local ATEAM temp artifacts
 APPS/ATEAM/tmpclaude-*
