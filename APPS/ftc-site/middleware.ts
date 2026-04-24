@@ -119,17 +119,18 @@ export function middleware(req: NextRequest) {
     return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort || host, url));
   }
 
-  if (
-    isOgTradesCustomHost(hostWithoutPort) &&
-    (pathname === "/" || pathname === OG_TRADES_ROOT_LANDING_PATH || pathname === "/work/og-trades-academy")
-  ) {
-    const url = req.nextUrl.clone();
-    url.pathname = OG_TRADES_STABLE_ALIAS_PATH;
-    return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+  // OG Trades custom domain handling
+  if (isOgTradesCustomHost(hostWithoutPort)) {
+    // Root or landing paths: rewrite to premium page (no redirect)
+    if (pathname === "/" || pathname === OG_TRADES_ROOT_LANDING_PATH || pathname === "/work/og-trades-academy") {
+      const url = req.nextUrl.clone();
+      url.pathname = OG_TRADES_STABLE_ALIAS_PATH;
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+    }
   }
 
   const clientRootRewrite = CLIENT_DOMAIN_ROOT_REWRITES[hostWithoutPort];
-  if (clientRootRewrite && pathname === "/") {
+  if (clientRootRewrite && pathname === "/" && !isOgTradesCustomHost(hostWithoutPort)) {
     const url = req.nextUrl.clone();
     url.pathname = clientRootRewrite;
     return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
