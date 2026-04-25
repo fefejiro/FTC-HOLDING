@@ -1,7 +1,7 @@
 # ship-slice.ps1 — Steps 4-7 of the SayWetin three-surface ship.
 # Assumes: backend already shipped + smoked, native + web client code committed locally.
-# Usage:
-#   pwsh -File .github/skills/saywetin-three-surface-ship/scripts/ship-slice.ps1 -SliceName "slice-2-explain"
+# Usage (Windows PowerShell 5.1 — pwsh is NOT installed on the dev box):
+#   powershell -ExecutionPolicy Bypass -File .github/skills/saywetin-three-surface-ship/scripts/ship-slice.ps1 -SliceName "slice-3-x"
 
 param(
     [Parameter(Mandatory=$true)] [string]$SliceName,

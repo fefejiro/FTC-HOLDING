@@ -30,7 +30,11 @@ End-to-end playbook for shipping a feature slice to backend + web + native in on
 5. Play key: `Test-Path "C:/FTC HOLDING/secrets/play-store-key.json"` returns True.
 6. wrangler authed for Cloudflare account `4c5c204659aebe5d95a99b55a5a7d0b4`.
 
-If any of these fail, run [bootstrap.ps1](./scripts/bootstrap.ps1) (see scripts/) — do NOT proceed.
+If any of these fail, run the bootstrap script — do NOT proceed:
+```pwsh
+powershell -ExecutionPolicy Bypass -File .github/skills/saywetin-three-surface-ship/scripts/bootstrap.ps1
+```
+(`powershell` is Windows PowerShell 5.1, the default on this box. `pwsh` is NOT installed.)
 
 ## The 7-step sequence
 

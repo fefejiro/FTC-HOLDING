@@ -1,6 +1,7 @@
 # bootstrap.ps1 — Preflight for SayWetin three-surface ship.
 # Verifies all preconditions before a slice. Exits non-zero on any miss.
-# Usage: pwsh -File .github/skills/saywetin-three-surface-ship/scripts/bootstrap.ps1
+# Usage (Windows PowerShell 5.1 — pwsh is NOT installed on the dev box):
+#   powershell -ExecutionPolicy Bypass -File .github/skills/saywetin-three-surface-ship/scripts/bootstrap.ps1
 
 $ErrorActionPreference = "Stop"
 $root = "C:/FTC HOLDING"
@@ -13,7 +14,7 @@ function Check($name, $cond, $hint) {
     else {
         Write-Host "  FAIL $name" -ForegroundColor Red
         Write-Host "       hint: $hint" -ForegroundColor Yellow
-        $script:failures += $name
+        $script:failures += ,$name
     }
 }
 
@@ -24,9 +25,10 @@ Check ".env has EXPO_PUBLIC_API_BASE_URL" `
     "echo 'EXPO_PUBLIC_API_BASE_URL=https://ftcpeacepad-extension-production.up.railway.app' > $native/.env"
 
 $gradle = Get-Content "$native/android/app/build.gradle" -Raw -ErrorAction SilentlyContinue
+$gradleHint = 'Add to react { ... } block: extraPackagerArgs = ["--entry-file", file("${projectRoot}/index.ts").absolutePath]'
 Check "build.gradle has extraPackagerArgs --entry-file" `
     ($gradle -match 'extraPackagerArgs\s*=\s*\["--entry-file"') `
-    "Add to react { ... } block: extraPackagerArgs = [`"--entry-file`", file(`"${projectRoot}/index.ts`").absolutePath]"
+    $gradleHint
 
 Write-Host "`n[2/7] EAS auth" -ForegroundColor Cyan
 $eas = $null
@@ -60,7 +62,7 @@ if ($failures.Count -eq 0) {
     Write-Host "ALL PRECONDITIONS MET. Proceed to ship." -ForegroundColor Green
     exit 0
 } else {
-    Write-Host "BLOCKED — $($failures.Count) precondition(s) failed:" -ForegroundColor Red
+    Write-Host ("BLOCKED - " + $failures.Count + " precondition(s) failed:") -ForegroundColor Red
     $failures | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
     exit 1
 }
