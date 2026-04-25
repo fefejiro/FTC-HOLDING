@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'APPS/og-trades-academy/**'
+      - 'APPS/ftc-site/**'
       - '.github/workflows/og-trades-deploy.yml'
 
 jobs:
@@ -24,15 +24,15 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        working-directory: APPS/og-trades-academy
+        working-directory: APPS/ftc-site
         run: npm ci
 
       - name: Run typecheck
-        working-directory: APPS/og-trades-academy
+        working-directory: APPS/ftc-site
         run: npm run typecheck
 
       - name: Build for Cloudflare Pages
-        working-directory: APPS/og-trades-academy
+        working-directory: APPS/ftc-site
         run: npm run build
 
       - name: Deploy to Cloudflare Pages
@@ -40,8 +40,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: og-trades-academy-pages
-          directory: APPS/og-trades-academy/.vercel/output/static
+          projectName: og-trades-pages
+          directory: APPS/ftc-site/.vercel/output/static
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify deployment

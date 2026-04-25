@@ -7,7 +7,6 @@ import "../styles/globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ScrollReveal from "./components/ScrollReveal";
-import StructuredData from "./components/StructuredData";
 
 const Analytics = dynamic(() => import("./components/Analytics"), { ssr: false });
 
@@ -103,7 +102,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
-        <StructuredData />
       </head>
       <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <ScrollReveal />

@@ -42,7 +42,7 @@ Official references:
 
 Recommended now:
 
-1. Ship the code changes to the existing `ftc-site-pages` project.
+1. Ship the code changes to the existing `og-trades-pages` project.
 2. Use `www.ogtradesacademy.com` as the true Cloudflare Pages custom host.
 3. Forward apex `ogtradesacademy.com` to `https://www.ogtradesacademy.com` from the current DNS/registrar side.
 
@@ -77,7 +77,7 @@ CNAME www  ext-sq.squarespace.com
 Records to add:
 
 ```text
-CNAME www  ftc-site-pages.pages.dev
+CNAME www  og-trades-pages.pages.dev
 ```
 
 Configuration to add outside DNS:
@@ -124,7 +124,7 @@ TXT   google._domainkey v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCg
 Then add website records in Cloudflare:
 
 ```text
-CNAME @    ftc-site-pages.pages.dev   proxied
+CNAME @    og-trades-pages.pages.dev   proxied
 CNAME www  ogtradesacademy.com        proxied
 ```
 
@@ -136,7 +136,7 @@ Note:
 
 If you use the recommended fallback path and need to roll back:
 
-1. Remove `CNAME www -> ftc-site-pages.pages.dev`.
+1. Remove `CNAME www -> og-trades-pages.pages.dev`.
 2. Restore:
    - `A @ -> 198.185.159.145`
    - `A @ -> 198.49.23.145`

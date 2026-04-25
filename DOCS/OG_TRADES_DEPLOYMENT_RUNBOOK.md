@@ -2,8 +2,8 @@
 
 ## Status (2026-04-24)
 
-- ✅ Domain transferred: www.ogtradesacademy.com now points to og-trades-academy-pages
-- ✅ Project created: og-trades-academy-pages on Cloudflare Pages
+- ✅ Domain transferred: www.ogtradesacademy.com now points to og-trades-pages
+- ✅ Project created: og-trades-pages on Cloudflare Pages
 - ❌ Deployment: Pending (awaiting build + deploy)
 - ✅ Code ready: All routes, API, and dependencies in place at APPS/og-trades-academy/
 
@@ -32,7 +32,7 @@ cd APPS/og-trades-academy
 npm ci
 npm run typecheck
 npm run build
-npx wrangler pages deploy .vercel/output/static --project-name og-trades-academy-pages
+npx wrangler pages deploy .vercel/output/static --project-name og-trades-pages
 ```
 
 Verify:
@@ -65,7 +65,7 @@ echo "Token: $tok"
 # From Linux or WSL only
 cd APPS/og-trades-academy
 npm run build
-npx wrangler deploy --name og-trades-academy-pages .vercel/output/static
+npx wrangler deploy --name og-trades-pages .vercel/output/static
 ```
 
 ## Rollback
@@ -76,7 +76,7 @@ If deployment causes issues:
 # Redeploy previous commit
 git checkout HEAD~1 -- APPS/og-trades-academy/
 npm run build
-npx wrangler pages deploy .vercel/output/static --project-name og-trades-academy-pages
+npx wrangler pages deploy .vercel/output/static --project-name og-trades-pages
 ```
 
 ## Next Steps
@@ -102,5 +102,5 @@ npx wrangler pages deploy .vercel/output/static --project-name og-trades-academy
 
 Once deployed, monitor:
 - Cloudflare Pages dashboard: https://dash.cloudflare.com/pages
-- Errors: Check worker logs via `npx wrangler pages deployments list --project-name og-trades-academy-pages`
+- Errors: Check worker logs via `npx wrangler pages deployment list --project-name og-trades-pages`
 - Domain status: Check DNS propagation at https://dns.google/
