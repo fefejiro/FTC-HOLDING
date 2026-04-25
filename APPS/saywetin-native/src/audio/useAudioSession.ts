@@ -27,7 +27,7 @@ export function useAudioSession() {
         playsInSilentModeIOS: true,
         // Android: duck (lower) other audio rather than stopping it
         interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
-        shouldDuckAndroid: true,
+        shouldDuckAndroid: false,
         staysActiveInBackground: false,
         playThroughEarpieceAndroid: false,
       });

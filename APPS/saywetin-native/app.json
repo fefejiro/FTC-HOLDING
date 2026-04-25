@@ -2,7 +2,7 @@
   "expo": {
     "name": "SayWetin",
     "slug": "saywetin-native",
-    "version": "1.0.0",
+    "version": "1.3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -31,7 +31,7 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "versionCode": 4
+      "versionCode": 23
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -41,6 +41,9 @@
         "projectId": "90cce2fa-dffb-4bd3-9899-ef92da34777f"
       }
     },
-    "owner": "official_fejiro"
+    "owner": "official_fejiro",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

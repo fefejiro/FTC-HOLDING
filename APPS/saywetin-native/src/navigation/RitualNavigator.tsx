@@ -2,12 +2,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ListenScreen } from '../screens/ListenScreen';
 import { ResultScreen } from '../screens/ResultScreen';
+import { LiveLyricsScreen } from '../screens/LiveLyricsScreen';
 import type { RitualController, RitualScreen } from '../state/ritual-state';
 
 export type RitualStackParamList = {
   Home: undefined;
   Listen: undefined;
   Result: undefined;
+  LiveLyrics: undefined;
 };
 
 type RitualNavigatorProps = {
@@ -68,7 +70,8 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
         name="Listen"
         children={({ navigation }) => (
           <ListenScreen
-            onNext={() => {
+            onRecognized={(track) => {
+              ritual.setRecognizedTrack(track);
               ritual.revealResult();
               navigation.navigate('Result');
             }}
@@ -82,9 +85,28 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
         children={({ navigation }) => (
           <ResultScreen
             track={ritual.track}
+            onFollowLiveLyrics={() => {
+              navigation.navigate('LiveLyrics');
+            }}
             onReset={() => {
               ritual.reset();
               navigation.navigate('Home');
+            }}
+          />
+        )}
+      />
+      <Stack.Screen
+        name="LiveLyrics"
+        options={{
+          animation: 'slide_from_bottom',
+          animationDuration: 280,
+          presentation: 'transparentModal',
+        }}
+        children={({ navigation }) => (
+          <LiveLyricsScreen
+            track={ritual.track}
+            onBack={() => {
+              navigation.goBack();
             }}
           />
         )}

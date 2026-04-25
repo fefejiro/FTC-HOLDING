@@ -39,8 +39,8 @@
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "../../secrets/play-store-key.json",
-        "track": "internal"
+        "serviceAccountKeyPath": "C:/FTC HOLDING/secrets/play-store-key.json",
+        "track": "production"
       }
     }
   }
