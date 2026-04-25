@@ -3,15 +3,35 @@ name: Cloud Offload Builds
 on:
   workflow_dispatch:
     inputs:
+      run_dispatch_typecheck:
+        description: Run Dispatch TypeScript check
+        required: true
+        default: true
+        type: boolean
       run_dispatch_e2e:
-        description: Run Dispatch road alerts Playwright smoke
+        description: Run Dispatch road alerts Playwright smoke (slower)
         required: true
         default: false
         type: boolean
-      upload_web_artifacts:
-        description: Upload web build outputs for download
+      run_saywetin_typecheck:
+        description: Run SayWetin TypeScript check
         required: true
         default: true
+        type: boolean
+      run_saywetin_tests:
+        description: Run SayWetin unit tests
+        required: true
+        default: true
+        type: boolean
+      upload_artifacts:
+        description: Upload build/test artifacts for download
+        required: true
+        default: true
+        type: boolean
+      run_ftc_site_build:
+        description: Include ftc-site build in this run
+        required: true
+        default: false
         type: boolean
   pull_request:
     branches: [main]
@@ -30,7 +50,7 @@ concurrency:
 jobs:
   build-suite:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
 
     steps:
       - name: Checkout
@@ -48,11 +68,28 @@ jobs:
       - name: Dispatch build
         run: npm --workspace=@ftc/dispatch run build
 
+      - name: Dispatch typecheck
+        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_dispatch_typecheck) }}
+        run: npm --workspace=@ftc/dispatch run check
+
+      - name: SayWetin typecheck
+        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_saywetin_typecheck) }}
+        run: npm --workspace=@ftc/saywetin run check
+
+      - name: SayWetin unit tests
+        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_saywetin_tests) }}
+        run: npm --workspace=@ftc/saywetin run test
+
       - name: SayWetin web verify
         run: npm --workspace=@ftc/saywetin run verify:frontend-build
 
       - name: FTC site build
+        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_ftc_site_build) }}
         run: npm --workspace=@ftc/ftc-site run build
+
+      - name: Install Playwright browsers
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_dispatch_e2e }}
+        run: npx playwright install --with-deps chromium
 
       - name: Dispatch road alerts smoke
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_dispatch_e2e }}
@@ -82,8 +119,17 @@ jobs:
           echo "Dispatch road alerts smoke failed. See uploaded artifacts."
           exit 1
 
+      - name: Upload Dispatch dist
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dispatch-dist
+          path: APPS/dispatch/dist
+          if-no-files-found: error
+          retention-days: 3
+
       - name: Upload SayWetin web output
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_web_artifacts }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
         uses: actions/upload-artifact@v4
         with:
           name: saywetin-web-dist
@@ -91,8 +137,17 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+      - name: Upload SayWetin server output
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: saywetin-server-dist
+          path: APPS/saywetin/dist
+          if-no-files-found: error
+          retention-days: 3
+
       - name: Upload FTC site output
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_web_artifacts }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts && inputs.run_ftc_site_build }}
         uses: actions/upload-artifact@v4
         with:
           name: ftc-site-next-build

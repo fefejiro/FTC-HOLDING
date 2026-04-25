@@ -1,5 +1,7 @@
 param(
-    [switch]$Apply
+    [switch]$Apply,
+    [switch]$IncludeNodeModules,
+    [int]$NodeModulesMaxAgeDays = 14
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,6 +19,18 @@ $targets = @(
     @{ Path = "$root\APPS\ATEAM\Server\tmpclaude-*"; Label = "ATEAM Server tmpclaude roots" }
 )
 
+if ($IncludeNodeModules) {
+    $targets += @(
+        @{ Path = "$root\node_modules"; Label = "Root node_modules" },
+        @{ Path = "$root\APPS\dispatch\node_modules"; Label = "Dispatch node_modules" },
+        @{ Path = "$root\APPS\saywetin\node_modules"; Label = "SayWetin node_modules" },
+        @{ Path = "$root\APPS\saywetin-native\node_modules"; Label = "SayWetin native node_modules" },
+        @{ Path = "$root\APPS\ftc-site\node_modules"; Label = "FTC site node_modules" }
+    )
+}
+
+$cutoff = (Get-Date).AddDays(-1 * [math]::Abs($NodeModulesMaxAgeDays))
+
 function Get-BytesForPath {
     param([string]$PathPattern)
 
@@ -33,6 +47,24 @@ function Get-BytesForPath {
     return $sum
 }
 
+function Get-MatchingItems {
+    param(
+        [string]$PathPattern,
+        [string]$Label
+    )
+
+    $items = Get-ChildItem -Path $PathPattern -Force -ErrorAction SilentlyContinue
+    if (-not $IncludeNodeModules) {
+        return $items
+    }
+
+    if ($Label -notlike "*node_modules*") {
+        return $items
+    }
+
+    return @($items | Where-Object { $_.LastWriteTime -lt $cutoff })
+}
+
 function Format-GB {
     param([long]$Bytes)
     return [math]::Round(($Bytes / 1GB), 2)
@@ -41,7 +73,22 @@ function Format-GB {
 $totalBytes = 0L
 Write-Host "Scan targets:" -ForegroundColor Cyan
 foreach ($target in $targets) {
-    $bytes = Get-BytesForPath -PathPattern $target.Path
+    $matchingItems = Get-MatchingItems -PathPattern $target.Path -Label $target.Label
+    if ($matchingItems.Count -eq 0) {
+        Write-Host (" - {0}: 0 GB" -f $target.Label)
+        continue
+    }
+
+    $bytes = 0L
+    foreach ($item in $matchingItems) {
+        if ($item.PSIsContainer) {
+            $bytes += (Get-ChildItem -Path $item.FullName -File -Recurse -Force -ErrorAction SilentlyContinue |
+                Measure-Object -Property Length -Sum).Sum
+        } else {
+            $bytes += $item.Length
+        }
+    }
+
     $totalBytes += $bytes
     Write-Host (" - {0}: {1} GB" -f $target.Label, (Format-GB -Bytes $bytes))
 }
@@ -51,14 +98,21 @@ Write-Host ("Potential reclaim: {0} GB" -f (Format-GB -Bytes $totalBytes)) -Fore
 
 if (-not $Apply) {
     Write-Host "Dry run only. Re-run with -Apply to delete these artifacts." -ForegroundColor Green
+    if ($IncludeNodeModules) {
+        Write-Host ("Node modules cleanup scope: last write time older than {0} days (before {1})." -f $NodeModulesMaxAgeDays, $cutoff.ToString("yyyy-MM-dd")) -ForegroundColor DarkYellow
+    }
     exit 0
 }
 
 Write-Host ""
 Write-Host "Applying cleanup..." -ForegroundColor Cyan
 foreach ($target in $targets) {
-    Get-ChildItem -Path $target.Path -Force -ErrorAction SilentlyContinue |
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    $matchingItems = Get-MatchingItems -PathPattern $target.Path -Label $target.Label
+    if ($matchingItems.Count -eq 0) {
+        continue
+    }
+
+    $matchingItems | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host "Cleanup complete." -ForegroundColor Green
