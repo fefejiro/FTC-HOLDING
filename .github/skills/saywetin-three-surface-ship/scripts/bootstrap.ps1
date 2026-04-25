@@ -31,9 +31,12 @@ Check "build.gradle has extraPackagerArgs --entry-file" `
     $gradleHint
 
 Write-Host "`n[2/7] EAS auth" -ForegroundColor Cyan
-$eas = $null
-try { $eas = (eas whoami 2>&1 | Out-String).Trim() } catch {}
-Check "eas whoami = official_fejiro" ($eas -match "official_fejiro") "Run: eas login"
+$easState = "$env:USERPROFILE/.expo/state.json"
+$easUser = ""
+if (Test-Path $easState) {
+    try { $easUser = (Get-Content $easState -Raw | ConvertFrom-Json).auth.username } catch {}
+}
+Check "eas auth username = official_fejiro" ($easUser -eq "official_fejiro") "Run from APPS/saywetin-native: npx --yes eas-cli@latest login"
 
 Write-Host "`n[3/7] Play service-account key" -ForegroundColor Cyan
 Check "play-store-key.json exists" (Test-Path "$root/secrets/play-store-key.json") "Restore key from password manager"

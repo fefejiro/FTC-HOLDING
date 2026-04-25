@@ -61,7 +61,7 @@ if (-not $SkipWebDeploy) {
 if (-not $SkipPlaySubmit) {
     Section "Step 7 — Submit Play production"
     Push-Location $native
-    $submitOut = (& eas submit --platform android --profile production --path $aab --non-interactive --no-wait 2>&1 | Out-String)
+    $submitOut = (& npx --yes eas-cli@latest submit --platform android --profile production --path $aab --non-interactive --no-wait 2>&1 | Out-String)
     Pop-Location
     Write-Host $submitOut
     $submissionId = ($submitOut | Select-String -Pattern "submissions/([a-f0-9-]+)").Matches[0].Groups[1].Value
