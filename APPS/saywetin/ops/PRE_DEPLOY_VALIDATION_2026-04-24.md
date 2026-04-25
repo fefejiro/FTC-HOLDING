@@ -1,7 +1,28 @@
 # SayWetin Pre-Deploy Validation — 2026-04-24
 
-**Verdict:** AMBER → GREEN-pending-user-approval-for-backend-push.
-**Native AAB:** NOT ready for Play submission (env not baked). Separate gate.
+**Verdict:** GREEN — Phase 1 (backend Slice 2) shipped to prod and validated 6/6 on 2026-04-25.
+**Native AAB:** NOT ready for Play submission (env not baked). Phase 2 still gated.
+
+---
+
+## Phase 1 Outcome — 2026-04-25
+
+- Commits shipped: `3edbe52` (Slice 2 endpoint + ops docs), `17bb1ad` (regenerate `APPS/saywetin/package-lock.json`), `15c409b` (`APPS/saywetin/Dockerfile`: switch `npm ci` → `npm install` in build + runtime stages).
+- Root cause of 7 prior failed Railway builds: package.json bumped on `6946684` (esbuild 0.28.x, postcss 8.5.10, lightningcss 1.32.0, rolldown 1.0.0-rc.17, picomatch 4.0.4, tinyglobby 0.2.16) without lockfile regen → `npm ci` rejected lockfile drift; additionally, container Node 22/npm 10 vs local Node 24/npm 11 produces a different platform-specific optional-deps tree even after regen, so `npm ci` is too strict.
+- Fix: standalone lockfile regen via isolated temp dir (workspace hoisting otherwise rewrites root lock), then Dockerfile uses `npm install` to tolerate platform optional-deps divergence while still consuming the lockfile as input.
+- Prod smoke (`https://ftcpeacepad-extension-production.up.railway.app/v1/slang/explain`):
+  | Case | Expected | Got |
+  |---|---|---|
+  | happy: `shey you dey whine me` | 200 + full schema | 200 (literal/cultural/region/examples/related/confidence:0.78) |
+  | happy: `how far na` | 200 | 200 |
+  | happy: 240-char | 200 | 200 |
+  | boundary: 1 char | 400 | 400 |
+  | boundary: 241 char | 400 | 400 |
+  | boundary: empty string | 400 | 400 |
+  | boundary: missing field | 400 | 400 |
+
+  **6/6 PASS in prod.**
+- Phase 1 complete.
 
 ---
 
