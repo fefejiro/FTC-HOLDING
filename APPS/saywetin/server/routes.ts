@@ -1249,7 +1249,10 @@ export async function registerRoutes(
           youtubeId: track.youtubeId,
           confidenceScore: track.confidenceScore,
           coverArtUrl,
+          matchSource: recognitionSource,
         },
+        matchSource: recognitionSource,
+        confidence: track.confidenceScore,
         processingTime: recognitionTime,
       });
 
@@ -1300,6 +1303,149 @@ export async function registerRoutes(
         success: false,
         error: 'Failed to process audio recognition',
         details: error.message,
+        sessionId,
+      });
+    }
+  });
+
+  // Identify-by-text endpoint - lyric/slang/title fallback when audio match fails
+  app.post("/api/identify-by-text", async (req, res) => {
+    const startTime = Date.now();
+    let sessionId: string | undefined;
+
+    try {
+      const rawQuery = typeof req.body?.query === 'string' ? req.body.query : '';
+      const query = rawQuery.trim();
+
+      if (query.length < 3) {
+        return res.status(400).json({
+          success: false,
+          errorCode: 'QUERY_TOO_SHORT',
+          error: 'Please enter at least 3 characters of a lyric, phrase, or song title.',
+        });
+      }
+
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          success: false,
+          errorCode: 'AI_NOT_CONFIGURED',
+          error: 'Lyric matching is not available right now. Try again later.',
+        });
+      }
+
+      const userId = getUserId(req);
+      const session = await withDatabaseRetry("createListeningSession", () =>
+        storage.createListeningSession({
+          userId,
+          status: 'recognizing',
+          audioDuration: 0,
+        }),
+      );
+      sessionId = session.id;
+
+      let candidate: IdentifiedSongCandidate | null = null;
+      try {
+        candidate = await identifySongFromTextQuery(query);
+      } catch (err: any) {
+        console.error('[IDENTIFY-BY-TEXT] AI lookup failed:', getErrorMessage(err) || err);
+        await storage.updateListeningSession(sessionId, {
+          status: 'failed',
+          errorMessage: getErrorMessage(err) || 'AI lookup failed',
+        }).catch(() => undefined);
+        return res.status(503).json({
+          success: false,
+          errorCode: 'AI_LOOKUP_FAILED',
+          error: 'Lyric matching service hiccuped. Please retry.',
+          sessionId,
+        });
+      }
+
+      if (!candidate) {
+        await storage.updateListeningSession(sessionId, {
+          status: 'failed',
+          errorMessage: 'No song matched the lyric or phrase.',
+        }).catch(() => undefined);
+        return res.status(404).json({
+          success: false,
+          errorCode: 'TEXT_MATCH_NOT_FOUND',
+          error: 'We could not match that lyric. Try a different line or sing it.',
+          sessionId,
+        });
+      }
+
+      const recognizedTrack = await storage.createRecognizedTrack({
+        userId,
+        title: candidate.title,
+        artist: candidate.artist,
+        album: null,
+        releaseYear: null,
+        genre: null,
+        isrc: null,
+        spotifyId: null,
+        youtubeId: null,
+        confidenceScore: candidate.confidence,
+        recognitionSource: 'lyric_text',
+        playOffsetMs: null,
+        trackDurationMs: null,
+        lyricsStatus: 'pending',
+        analysisStatus: 'pending',
+        processingStartedAt: new Date(),
+      });
+
+      await storage.updateListeningSession(sessionId, {
+        recognizedTrackId: recognizedTrack.id,
+        status: 'success',
+        recognitionTime: Date.now() - startTime,
+      });
+
+      let coverArtUrl: string | null = null;
+      try {
+        coverArtUrl = await resolveTrackArtwork({
+          title: candidate.title,
+          artist: candidate.artist,
+          album: null,
+          spotifyId: null,
+          isrc: null,
+        });
+        if (coverArtUrl) {
+          await storage.updateRecognizedTrack(recognizedTrack.id, { coverArtUrl }).catch(() => undefined);
+        }
+      } catch (artErr: any) {
+        console.warn('[IDENTIFY-BY-TEXT] Cover art lookup failed:', getErrorMessage(artErr) || artErr);
+      }
+
+      return res.json({
+        success: true,
+        sessionId,
+        recognizedTrack: {
+          id: recognizedTrack.id,
+          title: candidate.title,
+          artist: candidate.artist,
+          album: null,
+          duration: null,
+          genre: null,
+          spotifyId: null,
+          youtubeId: null,
+          confidenceScore: candidate.confidence,
+          coverArtUrl,
+          matchSource: 'lyric_text',
+        },
+        matchSource: 'lyric_text',
+        confidence: candidate.confidence,
+        processingTime: Date.now() - startTime,
+      });
+    } catch (error: any) {
+      console.error('[IDENTIFY-BY-TEXT] Pipeline error:', error);
+      if (sessionId) {
+        await storage.updateListeningSession(sessionId, {
+          status: 'failed',
+          errorMessage: error?.message || 'Unknown error',
+        }).catch(() => undefined);
+      }
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to identify song from text',
+        details: error?.message,
         sessionId,
       });
     }
@@ -2152,6 +2298,110 @@ Rules:
     } catch (error) {
       console.error("[LIVE-LYRICS] meaning explain failed", error);
       return res.status(500).json({ error: "Failed to explain lyric line" });
+    }
+  });
+
+  // Slang/phrase decoder - "wetin be this?" — works without a track.
+  app.post("/v1/slang/explain", async (req, res) => {
+    try {
+      const phrase = String(req.body?.phrase || "").trim();
+
+      if (phrase.length < 2) {
+        return res.status(400).json({
+          error: "phrase is required (min 2 characters)",
+          errorCode: "PHRASE_TOO_SHORT",
+        });
+      }
+
+      if (phrase.length > 240) {
+        return res.status(400).json({
+          error: "phrase too long (max 240 characters)",
+          errorCode: "PHRASE_TOO_LONG",
+        });
+      }
+
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          error: "Slang decoder is not available right now.",
+          errorCode: "AI_NOT_CONFIGURED",
+        });
+      }
+
+      const openai = getAiClient();
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a Nigerian Pidgin and Afrobeats slang expert. Decode any phrase, slang, lyric line, or expression a Nigerian or African user might encounter. Cover Pidgin, Yoruba, Igbo, Hausa, Warri/PH/Lagos street slang, and Afrobeats lyric culture.
+
+Respond with VALID JSON ONLY in this exact shape:
+{
+  "literal": "Plain English meaning of the phrase, one or two sentences.",
+  "cultural": "Cultural context, who says it, when, and what feeling it carries.",
+  "region": "Nigeria | Warri | Lagos | Eastern | PH | Ghana | Pan-African (pick the most accurate)",
+  "examples": ["Short example sentence 1", "Short example sentence 2"],
+  "related": ["related slang 1", "related slang 2", "related slang 3"]
+}
+
+Rules:
+- Keep literal under 160 characters.
+- Keep cultural under 280 characters.
+- examples: 1-3 short sentences showing real usage.
+- related: 0-5 related slang words.
+- If the phrase is plain English with no slang, still explain it briefly and set region to "Pan-African".
+- Never refuse. Never add commentary outside the JSON.`,
+          },
+          {
+            role: "user",
+            content: phrase,
+          },
+        ],
+        temperature: 0.4,
+        max_tokens: 320,
+        response_format: { type: "json_object" },
+      });
+
+      const raw = completion.choices[0]?.message?.content?.trim() || "";
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) {
+          try {
+            parsed = JSON.parse(match[0]);
+          } catch {
+            parsed = {};
+          }
+        }
+      }
+
+      const literal = String(parsed.literal || "").trim() || "We could not decode that phrase confidently.";
+      const cultural = String(parsed.cultural || "").trim() || "Cultural context is still loading for this phrase.";
+      const region = String(parsed.region || "Nigeria").trim() || "Nigeria";
+      const examples = Array.isArray(parsed.examples)
+        ? parsed.examples.map((item: any) => String(item || "").trim()).filter(Boolean).slice(0, 3)
+        : [];
+      const related = Array.isArray(parsed.related)
+        ? parsed.related.map((item: any) => String(item || "").trim()).filter(Boolean).slice(0, 5)
+        : [];
+
+      return res.json({
+        phrase,
+        literal,
+        cultural,
+        region,
+        examples,
+        related,
+        confidence: parsed.literal && parsed.cultural ? 0.78 : 0.5,
+      });
+    } catch (error: any) {
+      console.error("[SLANG] explain failed", error);
+      return res.status(500).json({
+        error: "Failed to decode phrase",
+        details: error?.message,
+      });
     }
   });
 
