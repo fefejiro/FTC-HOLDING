@@ -3,11 +3,11 @@ import dynamic from "next/dynamic";
 import { Inter, Space_Grotesk } from "next/font/google";
 import React from "react";
 import { SITE_URL } from "../lib/site";
-import { siteLinks } from "../lib/siteLinks";
 import "../styles/globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ScrollReveal from "./components/ScrollReveal";
+import StructuredData from "./components/StructuredData";
 
 const Analytics = dynamic(() => import("./components/Analytics"), { ssr: false });
 
@@ -31,24 +31,7 @@ const defaultDescription =
   "Una Labs designs trusted AI workflow systems, lead operations, and delivery infrastructure. ATEAM turns rough requests into scoped plans, human-approved outputs, and decision-ready next steps.";
 const defaultOgImage = `${SITE_URL}/opengraph-image`;
 
-const organizationStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "Una Labs",
-  url: "https://unalabs.cloud",
-  logo: "https://unalabs.cloud/logo.png",
-  sameAs: [siteLinks.linkedIn],
-  contactPoint: [
-    {
-      "@type": "ContactPoint",
-      contactType: "sales",
-      email: "hello@unalabs.cloud",
-      areaServed: "CA",
-      availableLanguage: ["en"]
-    }
-  ],
-  description: "Trusted AI workflow systems, lead operations, and delivery infrastructure."
-};
+
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -120,12 +103,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(organizationStructuredData)
-          }}
-        />
+        <StructuredData />
       </head>
       <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <ScrollReveal />
