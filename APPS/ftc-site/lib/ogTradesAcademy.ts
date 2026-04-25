@@ -80,6 +80,14 @@ export const OG_TRADES_WWW_HOST = OG_TRADES_SITE_HOST.startsWith("www.")
 export const OG_TRADES_ALTERNATE_HOST =
   OG_TRADES_SITE_HOST === OG_TRADES_APEX_HOST ? OG_TRADES_WWW_HOST : OG_TRADES_APEX_HOST;
 
+// Additional hosts that should render the OG Trades shell (preview + Una Labs subdomain).
+// SEO canonical still points at OG_TRADES_SITE_URL; these are recognized at runtime so the
+// Header/Footer/nav helpers render the OG-branded shell on these URLs.
+const OG_TRADES_EXTRA_HOSTS = new Set<string>([
+  "og.unalabs.cloud",
+  "og-trades-pages.pages.dev"
+]);
+
 export const ogTradesAcademyNavItems = [
   { label: "Home", path: "/" },
   { label: "About", path: "/about" },
@@ -102,7 +110,14 @@ function normalizePathname(pathname = "/") {
 
 export function isOgTradesCustomHost(host = "") {
   const normalized = normalizeHost(host);
-  return normalized === OG_TRADES_SITE_HOST || normalized === OG_TRADES_ALTERNATE_HOST;
+  if (!normalized) {
+    return false;
+  }
+  return (
+    normalized === OG_TRADES_SITE_HOST ||
+    normalized === OG_TRADES_ALTERNATE_HOST ||
+    OG_TRADES_EXTRA_HOSTS.has(normalized)
+  );
 }
 
 export function isOgTradesRedirectHost(host = "") {
