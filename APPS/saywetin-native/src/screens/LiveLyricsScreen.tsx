@@ -173,6 +173,12 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     void postSignal('resync', track.id);
   };
 
+  const inlineIndicator = fallbackReason
+    ? 'Synced lyrics are not ready yet. Showing best available line.'
+    : syncWarn
+      ? 'Timing drift detected. Tap Re-sync if lines feel off.'
+      : null;
+
   return (
     <View style={styles.screen}>
       <View style={styles.headerRow}>
@@ -182,18 +188,14 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
         </Pressable>
       </View>
 
-      {fallbackReason ? (
-        <View style={styles.syncWarnRow}>
-          <Text style={styles.syncWarn}>Synced lyrics are not ready yet. We are showing the best available line now.</Text>
-        </View>
-      ) : null}
-
-      {syncWarn ? (
-        <View style={styles.syncWarnRow}>
-          <Text style={styles.syncWarn}>Sync may be slightly off. We are following, but not fully sure.</Text>
-          <Pressable onPress={onResync} style={styles.resyncButton}>
-            <Text style={styles.resyncButtonText}>Re-sync</Text>
-          </Pressable>
+      {inlineIndicator ? (
+        <View style={styles.inlineIndicatorRow}>
+          <Text style={styles.inlineIndicatorText}>{inlineIndicator}</Text>
+          {syncWarn ? (
+            <Pressable onPress={onResync} style={styles.resyncButton}>
+              <Text style={styles.resyncButtonText}>Re-sync</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 
@@ -261,21 +263,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
   },
-  syncWarn: {
-    color: colors.amber,
-    flex: 1,
-    backgroundColor: colors.panel,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.amber,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 12,
-  },
-  syncWarnRow: {
+  inlineIndicatorRow: {
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,185,92,0.35)',
+    backgroundColor: 'rgba(255,185,92,0.09)',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  inlineIndicatorText: {
+    color: '#F0C08A',
+    flex: 1,
+    fontSize: 12,
   },
   resyncButton: {
     borderRadius: 999,

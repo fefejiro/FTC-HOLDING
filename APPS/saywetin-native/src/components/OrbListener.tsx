@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
@@ -8,13 +8,14 @@ type ListenPhase = 'listening' | 'matching';
 
 type OrbListenerProps = {
   phase: ListenPhase;
+  onPress?: () => void;
 };
 
 const RING_DELAYS_MS = [0, 600, 1200, 1800];
 const RING_OPACITY = [0.28, 0.21, 0.14, 0.07];
 const BAR_SPEED_MS = [560, 680, 520, 740, 610, 790, 650];
 
-export function OrbListener({ phase }: OrbListenerProps) {
+export function OrbListener({ phase, onPress }: OrbListenerProps) {
   const pulse = useRef(new Animated.Value(0)).current;
   const tighten = useRef(new Animated.Value(1)).current;
   const ringProgress = useRef(RING_DELAYS_MS.map(() => new Animated.Value(0))).current;
@@ -130,40 +131,42 @@ export function OrbListener({ phase }: OrbListenerProps) {
         );
       })}
 
-      <Animated.View
-        style={[
-          styles.orb,
-          {
-            transform: [{ scale: orbScale }, { scale: tighten }],
-            borderColor: phase === 'matching' ? colors.mint : colors.violetSoft,
-          },
-        ]}
-      >
-        <View style={styles.orbInner}>
-          <Text style={styles.micGlyph}>{phase === 'matching' ? 'ID' : 'MIC'}</Text>
-          <View style={styles.eqRow}>
-            {barValues.map((value, index) => {
-              const scaleY = value.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.35, 1],
-              });
+      <Pressable onPress={onPress} disabled={!onPress} hitSlop={12}>
+        <Animated.View
+          style={[
+            styles.orb,
+            {
+              transform: [{ scale: orbScale }, { scale: tighten }],
+              borderColor: phase === 'matching' ? colors.mint : colors.violetSoft,
+            },
+          ]}
+        >
+          <View style={styles.orbInner}>
+            <Text style={styles.micGlyph}>{phase === 'matching' ? 'ID' : 'MIC'}</Text>
+            <View style={styles.eqRow}>
+              {barValues.map((value, index) => {
+                const scaleY = value.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.35, 1],
+                });
 
-              return (
-                <Animated.View
-                  key={`bar-${index}`}
-                  style={[
-                    styles.eqBar,
-                    {
-                      transform: [{ scaleY }],
-                      backgroundColor: phase === 'matching' ? colors.mint : colors.text,
-                    },
-                  ]}
-                />
-              );
-            })}
+                return (
+                  <Animated.View
+                    key={`bar-${index}`}
+                    style={[
+                      styles.eqBar,
+                      {
+                        transform: [{ scaleY }],
+                        backgroundColor: phase === 'matching' ? colors.mint : colors.text,
+                      },
+                    ]}
+                  />
+                );
+              })}
+            </View>
           </View>
-        </View>
-      </Animated.View>
+        </Animated.View>
+      </Pressable>
 
       <View style={styles.waveStrip}>
         {Array.from({ length: 48 }).map((_, index) => (

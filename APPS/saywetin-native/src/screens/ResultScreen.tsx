@@ -1,4 +1,4 @@
-import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { MatchSource, RitualTrack } from '../state/ritual-state';
 import { ritualTokens } from '../theme/tokens';
 import { FadeInView } from '../components/FadeInView';
@@ -21,6 +21,23 @@ type ResultScreenProps = {
 };
 
 export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScreenProps) {
+  const extractSpotifyTrackId = (url: string) => {
+    const match = url.match(/track\/([a-zA-Z0-9]+)/);
+    return match?.[1] ?? null;
+  };
+
+  const extractYoutubeVideoId = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.includes('youtu.be')) {
+        return parsed.pathname.replace('/', '') || null;
+      }
+      return parsed.searchParams.get('v');
+    } catch {
+      return null;
+    }
+  };
+
   const openLink = async (url: string, fallbackQuery: string, platformName: 'Spotify' | 'YouTube') => {
     const trimmedUrl = url.trim();
     const fallbackUrl =
@@ -28,17 +45,29 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
         ? `https://open.spotify.com/search/${encodeURIComponent(fallbackQuery)}`
         : `https://www.youtube.com/results?search_query=${encodeURIComponent(fallbackQuery)}`;
 
-    try {
-      const canOpenPrimary = await Linking.canOpenURL(trimmedUrl);
-      if (canOpenPrimary) {
-        await Linking.openURL(trimmedUrl);
-        return;
-      }
+    const appUri =
+      platformName === 'Spotify'
+        ? (() => {
+            const trackId = extractSpotifyTrackId(trimmedUrl);
+            return trackId ? `spotify:track:${trackId}` : null;
+          })()
+        : (() => {
+            const videoId = extractYoutubeVideoId(trimmedUrl);
+            return videoId ? `vnd.youtube://${videoId}` : null;
+          })();
 
-      const canOpenFallback = await Linking.canOpenURL(fallbackUrl);
-      if (canOpenFallback) {
-        await Linking.openURL(fallbackUrl);
-        return;
+    const candidates = [appUri, trimmedUrl, fallbackUrl].filter(
+      (candidate): candidate is string => Boolean(candidate),
+    );
+
+    try {
+      for (const candidate of candidates) {
+        try {
+          await Linking.openURL(candidate);
+          return;
+        } catch {
+          // Try the next candidate URI.
+        }
       }
 
       Alert.alert('Link unavailable', `Could not open ${platformName} right now.`);
@@ -46,6 +75,13 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
       Alert.alert('Link unavailable', `Could not open ${platformName}. Please try again.`);
     }
   };
+
+  const inlineLyrics =
+    track.syncedLyrics && track.syncedLyrics.length > 0
+      ? track.syncedLyrics.map((line) => line.text).join('\n')
+      : track.lyric;
+
+  void onFollowLiveLyrics;
 
   return (
     <FadeInView>
@@ -84,7 +120,9 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
 
         <View style={styles.lyricCard}>
           <Text style={styles.playingNow}>Playing now · 1:24</Text>
-          <Text style={styles.lyricLine}>{track.lyric}</Text>
+          <ScrollView style={styles.lyricsScroll} nestedScrollEnabled>
+            <Text style={styles.lyricLine}>{inlineLyrics}</Text>
+          </ScrollView>
           <Text style={styles.meaningLine}>{track.meaning}</Text>
           <View style={styles.chipsRow}>
             {track.chips.map((chip) => (
@@ -110,9 +148,6 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
           </Pressable>
         </View>
 
-        <Pressable onPress={onFollowLiveLyrics} style={styles.primaryButtonFull}>
-          <Text style={styles.primaryButtonText}>Follow live lyrics</Text>
-        </Pressable>
       </View>
     </FadeInView>
   );
@@ -240,6 +275,9 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 8,
   },
+  lyricsScroll: {
+    maxHeight: 130,
+  },
   playingNow: {
     color: colors.textMuted,
     fontSize: 12,
@@ -264,9 +302,7 @@ const styles = StyleSheet.create({
   },
   chipItem: {
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panelSoft,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
@@ -291,19 +327,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
-  },
-  primaryButtonFull: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 999,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    marginTop: 4,
-  },
-  primaryButtonText: {
-    color: colors.bg,
-    fontSize: 16,
-    fontWeight: '700',
     textAlign: 'center',
   },
 });

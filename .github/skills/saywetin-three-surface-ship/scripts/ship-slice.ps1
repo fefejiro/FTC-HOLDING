@@ -20,7 +20,7 @@ function Section($n) { Write-Host "`n=== $n ===" -ForegroundColor Cyan }
 
 Section "Step 4 — Native build (gradle)"
 Push-Location "$native/android"
-& ./gradlew :app:bundleRelease :app:assembleRelease --rerun-tasks
+& ".\gradlew.bat" :app:bundleRelease :app:assembleRelease --rerun-tasks
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Gradle build failed" }
 Pop-Location
 
@@ -71,15 +71,15 @@ if (-not $SkipPlaySubmit) {
 
 $elapsed = [math]::Round(((Get-Date) - $started).TotalMinutes, 1)
 
-Section "SHIP REPORT — $SliceName"
+Section "SHIP REPORT - $SliceName"
 @"
 
 SLICE: $SliceName
-Backend:  (assumed shipped — smoke separately)
+Backend:  (assumed shipped - smoke separately)
 Web:      $deployUrl
-Native:   AAB ${aabSize}MB / APK ${apkSize}MB — submission $submissionId
+Native:   AAB $($aabSize)MB / APK $($apkSize)MB - submission $submissionId
 Hermes:   bundle host hits: $hits (>=1 required)
-Time:     $elapsed min (target <=60, cap 90)
+Time:     $elapsed min (target 60 min / cap 90 min)
 
 "@ | Write-Host -ForegroundColor Green
 

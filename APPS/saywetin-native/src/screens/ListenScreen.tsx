@@ -11,7 +11,14 @@ import { ritualTokens } from '../theme/tokens';
 const { colors } = ritualTokens;
 const MATCHING_AUTO_ADVANCE_MS = 600;
 type ListenPhase = 'listening' | 'matching';
-const CAPTURE_DURATION_MS = 12000;
+const CAPTURE_DURATION_MS = 8000;
+const LISTEN_MICROCOPY = [
+  'Tap once to listen. Tap again to stop early.',
+  'Catch am quick. Match am clean.',
+  'Live audio in, fingerprint out.',
+  'One tap starts. Second tap cuts early.',
+  'Play am loud. We go find am fast.',
+];
 
 export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTrack) => void }) {
   const [phase, setPhase] = useState<ListenPhase>('listening');
@@ -20,7 +27,11 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
   const [showLyricInput, setShowLyricInput] = useState(false);
   const [lyricQuery, setLyricQuery] = useState('');
   const [lyricBusy, setLyricBusy] = useState(false);
+  const [microcopy] = useState(
+    () => LISTEN_MICROCOPY[Math.floor(Math.random() * LISTEN_MICROCOPY.length)],
+  );
   const onRecognizedRef = useRef(onRecognized);
+  const stopCaptureRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     onRecognizedRef.current = onRecognized;
@@ -41,8 +52,16 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
   // Configure AVAudioSession so music apps keep playing while we record
   useAudioSession();
 
+  const stopCaptureEarly = () => {
+    if (stopCaptureRef.current) {
+      stopCaptureRef.current();
+      stopCaptureRef.current = null;
+    }
+  };
+
   const startRecognition = async () => {
     if (busy) {
+      stopCaptureEarly();
       return;
     }
 
@@ -62,7 +81,11 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       await recording.startAsync();
 
       await new Promise((resolve) => {
-        setTimeout(resolve, CAPTURE_DURATION_MS);
+        const timer = setTimeout(resolve, CAPTURE_DURATION_MS);
+        stopCaptureRef.current = () => {
+          clearTimeout(timer);
+          resolve(null);
+        };
       });
 
       await recording.stopAndUnloadAsync();
@@ -86,6 +109,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       setErrorMessage(error?.message || 'Could not identify song. Try again.');
       setShowLyricInput(true);
     } finally {
+      stopCaptureRef.current = null;
       setBusy(false);
     }
   };
@@ -121,20 +145,18 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       <View style={styles.screen}>
         <View style={styles.ambientTop} />
         <Text style={styles.eyebrow}>{inMatching ? 'Match Locking' : 'Listening Live'}</Text>
-        <Text style={styles.title}>{inMatching ? 'Signal locked.' : 'Catch the song pulse.'}</Text>
+        <Text style={styles.title}>SayWetin</Text>
         <Text style={styles.subtitle}>
           {inMatching
             ? 'Tightening rings and fingerprint lock in motion.'
-            : 'One tap captures live audio. You can sing, hum, or play from speaker.'}
+            : microcopy}
         </Text>
 
-        <OrbListener phase={phase} />
+        <OrbListener phase={phase} onPress={inMatching ? undefined : startRecognition} />
 
         {!inMatching ? (
           <>
-            <Pressable onPress={startRecognition} style={styles.listenButton} disabled={busy}>
-              <Text style={styles.listenButtonText}>{busy ? 'Listening...' : 'Start Match Ritual'}</Text>
-            </Pressable>
+            <Text style={styles.orbHint}>{busy ? 'Listening... tap orb to stop early' : 'Tap orb to start match'}</Text>
             {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
             {showLyricInput ? (
               <View style={styles.lyricBox}>
@@ -190,9 +212,10 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 30,
-    lineHeight: 34,
-    fontFamily: 'PlayfairDisplay_400Regular_Italic',
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '600',
+    letterSpacing: 0.4,
   },
   subtitle: {
     color: colors.textMuted,
@@ -200,17 +223,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 320,
   },
-  listenButton: {
-    marginTop: 8,
-    backgroundColor: colors.violet,
-    borderRadius: 999,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-  },
-  listenButtonText: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 15,
+  orbHint: {
+    marginTop: 4,
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
   },
   errorText: {
     marginTop: 8,
