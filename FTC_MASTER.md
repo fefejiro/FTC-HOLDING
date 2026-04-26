@@ -121,6 +121,9 @@ npm --prefix APPS/saywetin run verify:frontend-build
 # Anion status sync
 npm run status:anion:sync
 
+# Portfolio E2E + dashboard telemetry refresh
+npm run qa:portfolio:e2e
+
 # Secrets audit (run weekly)
 npm run audit:secrets
 
@@ -142,6 +145,8 @@ git -C "C:\FTC HOLDING" status -sb
 | Runbook (all apps) | DOCS/RUNBOOK.md |
 | PeacePad weekly metrics | DOCS/PEACEPAD_WEEKLY_METRICS.md |
 | Una Labs live status snapshot | DOCS/UNALABS_STATUS.md |
+| Una Labs E2E automation handover | DOCS/UNALABS_E2E_AUTOMATION_HANDOVER.md |
+| Una Labs repeatable E2E test plan | DOCS/UNALABS_E2E_REPEATABLE_TEST_PLAN.md |
 | Domain map | DOCS/DOMAIN_AND_OWNERSHIP_MAP.md |
 | Dispatch context | APPS/dispatch/DOCS/CONTEXT.md |
 | Dispatch decisions | APPS/dispatch/DOCS/DECISIONS.md |
@@ -176,7 +181,7 @@ git -C "C:\FTC HOLDING" status -sb
 ## Una Labs Ops Snapshot (Auto)
 
 <!-- AUTO:UNALABS_MASTER:START -->
-- Updated at: 2026-04-26T17:03:01.577Z
+- Updated at: 2026-04-26T18:21:00.164Z
 - Smoke checks: 14/14 passing
 - Admin verification: unauthenticated admin guard smoke only
 - Canonical status doc: DOCS/UNALABS_STATUS.md

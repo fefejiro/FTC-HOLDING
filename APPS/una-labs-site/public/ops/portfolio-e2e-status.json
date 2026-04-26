@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-26T18:20:59.072Z",
+  "generator": "scripts/run-portfolio-e2e.mjs",
+  "summary": {
+    "overallStatus": "green",
+    "checksTotal": 5,
+    "checksPassed": 5,
+    "checksFailed": 0,
+    "passRate": 100,
+    "activeSuites": 1,
+    "pendingSuites": 2,
+    "cycleDurationMs": 509
+  },
+  "velocity": {
+    "commits14d": 231,
+    "commits30d": 422,
+    "signal": "high"
+  },
+  "suites": [
+    {
+      "id": "una-labs",
+      "label": "Una Labs",
+      "enabled": true,
+      "status": "passing",
+      "reason": "All checks passing.",
+      "checksTotal": 5,
+      "checksPassed": 5,
+      "checksFailed": 0,
+      "passRate": 100,
+      "checks": [
+        {
+          "id": "home",
+          "label": "home",
+          "url": "https://unalabs.cloud/",
+          "startedAt": "2026-04-26T18:20:59.073Z",
+          "durationMs": 194,
+          "statusCode": 200,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "Una Labs - AI Launchpad for Founders",
+          "titleIncludes": "Una Labs",
+          "passed": true,
+          "detail": "PASS 200 | Una Labs - AI Launchpad for Founders"
+        },
+        {
+          "id": "admin",
+          "label": "admin",
+          "url": "https://unalabs.cloud/admin/",
+          "startedAt": "2026-04-26T18:20:59.267Z",
+          "durationMs": 38,
+          "statusCode": 200,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "Admin - Una Labs | Una Labs — AI Launchpad for Founders",
+          "titleIncludes": "Admin",
+          "passed": true,
+          "detail": "PASS 200 | Admin - Una Labs | Una Labs — AI Launchpad for Founders"
+        },
+        {
+          "id": "dashboard",
+          "label": "dashboard",
+          "url": "https://unalabs.cloud/dashboard/",
+          "startedAt": "2026-04-26T18:20:59.305Z",
+          "durationMs": 38,
+          "statusCode": 200,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "Dashboard | Una Labs — AI Launchpad for Founders",
+          "titleIncludes": "Dashboard",
+          "passed": true,
+          "detail": "PASS 200 | Dashboard | Una Labs — AI Launchpad for Founders"
+        },
+        {
+          "id": "portal",
+          "label": "portal",
+          "url": "https://unalabs.cloud/portal/",
+          "startedAt": "2026-04-26T18:20:59.343Z",
+          "durationMs": 34,
+          "statusCode": 200,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "Project Portal | Una Labs — AI Launchpad for Founders",
+          "titleIncludes": "Portal",
+          "passed": true,
+          "detail": "PASS 200 | Project Portal | Una Labs — AI Launchpad for Founders"
+        },
+        {
+          "id": "start",
+          "label": "start",
+          "url": "https://unalabs.cloud/start/",
+          "startedAt": "2026-04-26T18:20:59.377Z",
+          "durationMs": 35,
+          "statusCode": 200,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "Start Your Project — Una Labs | Una Labs — AI Launchpad for Founders",
+          "titleIncludes": "Start",
+          "passed": true,
+          "detail": "PASS 200 | Start Your Project — Una Labs | Una Labs — AI Launchpad for Founders"
+        }
+      ]
+    },
+    {
+      "id": "garden-cleaners",
+      "label": "Garden Cleaners",
+      "enabled": false,
+      "status": "pending",
+      "reason": "Enable when canonical production URL and launch readiness are confirmed.",
+      "checksTotal": 3,
+      "checksPassed": 0,
+      "checksFailed": 0,
+      "passRate": 0,
+      "checks": []
+    },
+    {
+      "id": "og-trades-academy",
+      "label": "OG Trades Academy",
+      "enabled": false,
+      "status": "pending",
+      "reason": "Enable when ogtradesacademy domain cutover is complete.",
+      "checksTotal": 3,
+      "checksPassed": 0,
+      "checksFailed": 0,
+      "passRate": 0,
+      "checks": []
+    }
+  ],
+  "nextActions": [
+    "Enable pending suites when canonical production URLs are confirmed.",
+    "Wire this script to CI on a schedule (recommended every 15 minutes).",
+    "Commit or publish this JSON artifact so the dashboard can display latest status."
+  ]
+}

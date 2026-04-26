@@ -47,6 +47,39 @@ type DashboardState =
   | { phase: 'error'; message: string }
   | { phase: 'ready'; email: string; projects: ProjectRecord[]; milestones: MilestoneRecord[] };
 
+type OpsSuite = {
+  id: string;
+  label: string;
+  enabled: boolean;
+  status: 'passing' | 'failing' | 'pending';
+  reason: string;
+  checksTotal: number;
+  checksPassed: number;
+  checksFailed: number;
+  passRate: number;
+};
+
+type OpsMetrics = {
+  generatedAt: string;
+  summary: {
+    overallStatus: 'green' | 'red' | 'yellow';
+    checksTotal: number;
+    checksPassed: number;
+    checksFailed: number;
+    passRate: number;
+    activeSuites: number;
+    pendingSuites: number;
+    cycleDurationMs: number;
+  };
+  velocity: {
+    commits14d: number;
+    commits30d: number;
+    signal: 'low' | 'medium' | 'high';
+  };
+  suites: OpsSuite[];
+  nextActions: string[];
+};
+
 const STATUS_CONFIG: Record<string, { label: string; description: string; next: string; badge: 'teal' | 'orange' | 'muted' }> = {
   intake: {
     label: 'Getting started',
@@ -419,6 +452,8 @@ export function DashboardClient() {
   const [adminProjects, setAdminProjects] = useState<ProjectRecord[]>([]);
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
   const [adminError, setAdminError] = useState('');
+  const [opsMetrics, setOpsMetrics] = useState<OpsMetrics | null>(null);
+  const [opsMetricsError, setOpsMetricsError] = useState('');
   const [handoverPreview, setHandoverPreview] = useState<{ projectId: string; projectName: string; doc: string } | null>(null);
 
   useEffect(() => {
@@ -523,6 +558,36 @@ export function DashboardClient() {
   const handleMilestoneStatusChange = (id: string, newStatus: string) => {
     setMilestoneStatuses((previous) => ({ ...previous, [id]: newStatus }));
   };
+
+  useEffect(() => {
+    if (state.phase !== 'ready' || !isProjectAdminEmail(state.email)) return;
+
+    let active = true;
+
+    const loadOpsMetrics = async () => {
+      try {
+        const response = await fetch(`/ops/portfolio-e2e-status.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Metrics file unavailable (${response.status})`);
+        const payload = await response.json() as OpsMetrics;
+        if (!active) return;
+        setOpsMetrics(payload);
+        setOpsMetricsError('');
+      } catch (error) {
+        if (!active) return;
+        setOpsMetricsError(error instanceof Error ? error.message : 'Unable to load operations metrics.');
+      }
+    };
+
+    void loadOpsMetrics();
+    const interval = window.setInterval(() => {
+      void loadOpsMetrics();
+    }, 30000);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [state]);
 
   const handleAdminProjectPatch = async (projectId: string, patch: Partial<ProjectRecord>) => {
     try {
@@ -782,7 +847,81 @@ export function DashboardClient() {
 
         {isAdmin && (
           <div className="mt-12 rounded-[28px] border border-border bg-white p-8 shadow-sm">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="rounded-2xl border border-border bg-bg-offwhite p-5">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <Badge variant="teal">Ops automation</Badge>
+                  <h3 className="mt-3 text-h4 text-tx-heading">Realtime E2E and velocity telemetry</h3>
+                  <p className="mt-1 text-body-sm text-tx-secondary">Auto-refreshes every 30 seconds from the portfolio metrics artifact.</p>
+                </div>
+                <a
+                  href="/ops/portfolio-e2e-status.json"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-border px-3 py-2 text-body-sm font-semibold text-tx-heading hover:bg-white"
+                >
+                  Open JSON feed
+                </a>
+              </div>
+
+              {opsMetricsError && (
+                <p className="mt-4 text-body-sm text-red-600">{opsMetricsError}</p>
+              )}
+
+              {opsMetrics && (
+                <>
+                  <div className="mt-4 grid gap-3 md:grid-cols-4">
+                    <div className="rounded-xl border border-border bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-wider text-tx-muted">Checks</p>
+                      <p className="mt-1 text-h4 text-tx-heading">{opsMetrics.summary.checksPassed}/{opsMetrics.summary.checksTotal}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-wider text-tx-muted">Pass rate</p>
+                      <p className="mt-1 text-h4 text-tx-heading">{opsMetrics.summary.passRate}%</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-wider text-tx-muted">Velocity (14d)</p>
+                      <p className="mt-1 text-h4 text-tx-heading">{opsMetrics.velocity.commits14d}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-wider text-tx-muted">Velocity (30d)</p>
+                      <p className="mt-1 text-h4 text-tx-heading">{opsMetrics.velocity.commits30d}</p>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-body-sm text-tx-muted">
+                    Updated {formatDate(opsMetrics.generatedAt)} | Cycle {Math.round((opsMetrics.summary.cycleDurationMs || 0) / 1000)}s | Active suites {opsMetrics.summary.activeSuites} | Pending suites {opsMetrics.summary.pendingSuites}
+                  </p>
+
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full min-w-[680px] border-separate border-spacing-y-2">
+                      <thead>
+                        <tr className="text-left text-body-sm text-tx-muted">
+                          <th className="pb-1">Suite</th>
+                          <th className="pb-1">Status</th>
+                          <th className="pb-1">Checks</th>
+                          <th className="pb-1">Pass rate</th>
+                          <th className="pb-1">Detail</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {opsMetrics.suites.map((suite) => (
+                          <tr key={suite.id} className="bg-white">
+                            <td className="rounded-l-xl px-3 py-3 text-body-sm font-semibold text-tx-heading">{suite.label}</td>
+                            <td className="px-3 py-3 text-body-sm text-tx-secondary">{suite.status}</td>
+                            <td className="px-3 py-3 text-body-sm text-tx-secondary">{suite.checksPassed}/{suite.checksTotal}</td>
+                            <td className="px-3 py-3 text-body-sm text-tx-secondary">{suite.passRate}%</td>
+                            <td className="rounded-r-xl px-3 py-3 text-body-sm text-tx-secondary">{suite.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="mt-6 flex items-start justify-between gap-4 flex-wrap">
               <div>
                 <Badge variant="teal">Projects</Badge>
                 <h2 className="mt-4 text-h3 text-tx-heading">Operator project control</h2>
