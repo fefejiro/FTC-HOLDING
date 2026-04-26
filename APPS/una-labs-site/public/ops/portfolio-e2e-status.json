@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-04-26T18:20:59.072Z",
+  "generatedAt": "2026-04-26T18:22:11.197Z",
   "generator": "scripts/run-portfolio-e2e.mjs",
   "summary": {
     "overallStatus": "green",
@@ -10,12 +10,12 @@
     "passRate": 100,
     "activeSuites": 1,
     "pendingSuites": 2,
-    "cycleDurationMs": 509
+    "cycleDurationMs": 839
   },
   "velocity": {
-    "commits14d": 231,
-    "commits30d": 422,
-    "signal": "high"
+    "commits14d": 1,
+    "commits30d": 1,
+    "signal": "low"
   },
   "suites": [
     {
@@ -33,8 +33,8 @@
           "id": "home",
           "label": "home",
           "url": "https://unalabs.cloud/",
-          "startedAt": "2026-04-26T18:20:59.073Z",
-          "durationMs": 194,
+          "startedAt": "2026-04-26T18:22:11.197Z",
+          "durationMs": 260,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -48,8 +48,8 @@
           "id": "admin",
           "label": "admin",
           "url": "https://unalabs.cloud/admin/",
-          "startedAt": "2026-04-26T18:20:59.267Z",
-          "durationMs": 38,
+          "startedAt": "2026-04-26T18:22:11.457Z",
+          "durationMs": 137,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -63,8 +63,8 @@
           "id": "dashboard",
           "label": "dashboard",
           "url": "https://unalabs.cloud/dashboard/",
-          "startedAt": "2026-04-26T18:20:59.305Z",
-          "durationMs": 38,
+          "startedAt": "2026-04-26T18:22:11.594Z",
+          "durationMs": 166,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -78,8 +78,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://unalabs.cloud/portal/",
-          "startedAt": "2026-04-26T18:20:59.343Z",
-          "durationMs": 34,
+          "startedAt": "2026-04-26T18:22:11.760Z",
+          "durationMs": 127,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -93,8 +93,8 @@
           "id": "start",
           "label": "start",
           "url": "https://unalabs.cloud/start/",
-          "startedAt": "2026-04-26T18:20:59.377Z",
-          "durationMs": 35,
+          "startedAt": "2026-04-26T18:22:11.887Z",
+          "durationMs": 139,
           "statusCode": 200,
           "expectedStatuses": [
             200
