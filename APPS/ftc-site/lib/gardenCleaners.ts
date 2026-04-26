@@ -143,56 +143,56 @@ export const gardenCleanersConfig = {
   },
   media: {
     hero: {
-      src: '/images/garden-cleaners/hero-office-team.png',
+      src: '/images/garden-cleaners/cleaning-collage.webp',
       alt: 'Black Nigerian Canadian cleaning professional sanitizing an office desk while the team refreshes a modern workspace.',
       badge: 'Commercial and office cleaning',
       title: 'A professional team presence clients can trust in active workspaces.',
       caption: 'Garden Cleaners supports offices, managed spaces, and commercial environments with dependable service in Oshawa.'
     },
     deepCleaning: {
-      src: '/images/garden-cleaners/gc-floor-cleaning.png',
+      src: '/images/garden-cleaners/gc-floor-cleaning.webp',
       alt: 'Office floor cleaning service in a bright commercial workspace during a deep cleaning visit.',
       badge: 'One-time deep cleaning',
       title: 'Detailed cleaning when the space needs more than a routine visit.',
       caption: 'Ideal for first-time service, seasonal resets, turnover preparation, and polished handoffs.'
     },
     commercial: {
-      src: '/images/garden-cleaners/gc-desk-cleaning.png',
+      src: '/images/garden-cleaners/gc-desk-cleaning.webp',
       alt: 'Black Nigerian Canadian cleaning professional sanitizing office desks in a modern commercial setting.',
       badge: 'Office and commercial cleaning',
       title: 'Reliable cleaning plans for offices, managed spaces, and shared environments.',
       caption: 'Low-disruption scheduling for teams that need consistency, presentation, and a polished finish.'
     },
     trust: {
-      src: '/images/garden-cleaners/commercial-cleaner.png',
+      src: '/images/garden-cleaners/commercial-cleaner.webp',
       alt: 'Professional Black Nigerian Canadian commercial cleaning team in a modern office environment.',
       badge: 'Professional team',
       title: 'Friendly, dependable people behind every cleaning visit.',
       caption: 'Garden Cleaners is positioned as a people-led service built around trust, punctuality, and clear communication.'
     },
     about: {
-      src: '/images/garden-cleaners/gc-team-supplies.png',
+      src: '/images/garden-cleaners/gc-team-supplies.webp',
       alt: 'Professional commercial cleaning team holding supplies and ready to begin service.',
       badge: 'People-led service',
       title: 'A practical, prepared team for homes, offices, and managed properties.',
       caption: 'The company is presented as organized, reliable, and ready for both one-time and recurring work.'
     },
     sanitization: {
-      src: '/images/garden-cleaners/gc-washroom-cleaning.png',
+      src: '/images/garden-cleaners/gc-washroom-cleaning.webp',
       alt: 'Janitorial cleaning in a modern restroom during a sanitization-focused service.',
       badge: 'Sanitization and janitorial support',
       title: 'Washroom and high-touch area cleaning handled with care.',
       caption: 'Well-suited for recurring janitorial plans, office upkeep, and spaces that need stronger hygiene coverage.'
     },
     contact: {
-      src: '/images/garden-cleaners/gc-office-space-clean.png',
+      src: '/images/garden-cleaners/gc-office-space-clean.webp',
       alt: 'Clean conference room prepared by Garden Cleaners team in a bright office environment.',
       badge: 'Prepared, polished workspaces',
       title: 'Professional spaces that feel ready for teams, clients, and daily operations.',
       caption: 'A good fit for contact, quote, and handoff moments where a calm, polished visual helps balance the layout.'
     },
     quote: {
-      src: '/images/garden-cleaners/gc-owner-portrait.png',
+      src: '/images/garden-cleaners/gc-owner-portrait.webp',
       alt: 'Black Nigerian Canadian cleaning professional in a bright workspace representing Garden Cleaners.',
       badge: 'Responsive service',
       title: 'Clear communication and practical next steps from the first quote request.',
