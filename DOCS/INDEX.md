@@ -46,6 +46,12 @@ This index organizes the highest-signal documentation currently in the repo with
 - [ATEAM Public-to-Operator Handover 2026-03-24](ATEAM_PUBLIC_OPERATOR_HANDOVER_2026-03-24.md)
 - [Una Labs ATEAM Fast Pass Handover 2026-03-25](UNALABS_ATEAM_FAST_PASS_HANDOVER_2026-03-25.md)
 
+## Garden Cleaners
+
+- [Garden Premium Execution Docket 2026-04-26](GARDEN_PREMIUM_EXECUTION_DOCKET_2026-04-26.md)
+- [Garden Portal Analytics Event Map](GARDEN_PORTAL_ANALYTICS_EVENT_MAP.md)
+- [Garden Portal Reporting Baseline](GARDEN_PORTAL_REPORTING_BASELINE.md)
+
 ## Working Rule
 
 Use this index as a navigation layer. Do not treat it as a signal that the repo has already been physically reorganized.

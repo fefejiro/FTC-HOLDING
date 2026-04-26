@@ -147,6 +147,9 @@ git -C "C:\FTC HOLDING" status -sb
 | Una Labs live status snapshot | DOCS/UNALABS_STATUS.md |
 | Una Labs E2E automation handover | DOCS/UNALABS_E2E_AUTOMATION_HANDOVER.md |
 | Una Labs repeatable E2E test plan | DOCS/UNALABS_E2E_REPEATABLE_TEST_PLAN.md |
+| Garden premium execution docket | DOCS/GARDEN_PREMIUM_EXECUTION_DOCKET_2026-04-26.md |
+| Garden portal analytics contract | DOCS/GARDEN_PORTAL_ANALYTICS_EVENT_MAP.md |
+| Garden portal reporting baseline | DOCS/GARDEN_PORTAL_REPORTING_BASELINE.md |
 | Domain map | DOCS/DOMAIN_AND_OWNERSHIP_MAP.md |
 | Dispatch context | APPS/dispatch/DOCS/CONTEXT.md |
 | Dispatch decisions | APPS/dispatch/DOCS/DECISIONS.md |

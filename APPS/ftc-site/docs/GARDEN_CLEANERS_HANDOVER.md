@@ -114,3 +114,29 @@
 - Replace placeholder testimonials with approved proof.
 - If the client wants real lead delivery, set `GARDEN_CLEANERS_QUOTE_WEBHOOK_URL` in the deployment environment.
 - If the client later provides brand colors or a proper wordmark, swap those in without touching the route structure or SEO setup.
+
+## 2026-04-26 Stabilization Update
+
+- Image rendering hardening shipped:
+  - `GardenImagePanel` now enforces stable object-fit behavior for fill-mode assets.
+  - Garden media source paths now use optimized WebP assets.
+- Optimization summary:
+  - Original PNG set total: 5,693,545 bytes
+  - WebP set total: 287,850 bytes
+  - Reduction: 5,405,695 bytes (94.94%)
+- Commit published:
+  - `173225bddefd998ec9251597b68b1dbfae4fbd26`
+  - message: `fix(garden): improve image rendering and ship optimized webp assets`
+
+## Premium Planning Docs (Current Canonical)
+
+- `DOCS/GARDEN_PREMIUM_EXECUTION_DOCKET_2026-04-26.md`
+- `DOCS/GARDEN_PORTAL_ANALYTICS_EVENT_MAP.md`
+- `DOCS/GARDEN_PORTAL_REPORTING_BASELINE.md`
+
+## Important Note Before Next Build Sprint
+
+- Analytics/report docs reference `/garden-cleaners/portal`, but this workspace currently does not contain `app/garden-cleaners/portal/page.tsx`.
+- Resolve this first by either:
+  - shipping the portal route, or
+  - removing portal references from analytics/report docs until route exists.
