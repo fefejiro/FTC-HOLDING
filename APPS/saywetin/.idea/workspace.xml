@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="e475ca75-9849-4f46-b536-0e782fd94f7a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../ftc-site/.vercel/output/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/.vercel/output/config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/RUNBOOK.md" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/RUNBOOK.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/components/Header.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/components/Header.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/components/garden-cleaners/GardenImagePanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/components/garden-cleaners/GardenImagePanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/components/garden-cleaners/GardenQuoteForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/components/garden-cleaners/GardenQuoteForm.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/components/og-trades/OgTradesBrandMark.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/components/og-trades/OgTradesBrandMark.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/components/og-trades/OgTradesHero.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/components/og-trades/OgTradesHero.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/about/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/about/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/contact/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/contact/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/quote/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/quote/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/services/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/garden-cleaners/services/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy-home/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy-home/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/about/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/about/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/community/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/community/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/contact/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/contact/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/course/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/course/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/resources/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/og-trades-academy/resources/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/sitemap.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/sitemap.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/app/work/og-trades-academy/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/app/work/og-trades-academy/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/lib/gardenCleaners.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/lib/gardenCleaners.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/lib/ogTradesAcademy.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/lib/ogTradesAcademy.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/next.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/next.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/scripts/fix-vercel-monorepo-output.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/scripts/fix-vercel-monorepo-output.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/styles/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/styles/globals.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ftc-site/tsconfig.tsbuildinfo" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/tsconfig.tsbuildinfo" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/admin/AdminClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/admin/AdminClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/product/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/product/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/lib/site-content.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/lib/site-content.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../DOCS/DOMAIN_AND_OWNERSHIP_MAP.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../DOCS/DOMAIN_AND_OWNERSHIP_MAP.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../DOCS/INDEX.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../DOCS/INDEX.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../DOCS/VELOCITY_LOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../DOCS/VELOCITY_LOG.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../supabase/.temp/storage-version" beforeDir="false" afterPath="$PROJECT_DIR$/../../supabase/.temp/storage-version" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="3CspvSsCFT30jtgPrPRkNqNvnoh" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Gradle.C:/FTC HOLDING/_restore_repo/APPS/saywetin/node_modules/@capacitor/app/android/build.gradle.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "com.google.services.firebase.aqiPopupShown": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/FTC HOLDING/_restore_repo/APPS/saywetin",
+    "settings.editor.selected.configurable": "project.propVCSSupport.Mappings"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration name="C:/FTC HOLDING/_restore_repo/APPS/saywetin/node_modules/@capacitor/app/android/build.gradle" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/node_modules/@capacitor/app/android/build.gradle" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list />
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Gradle.C:/FTC HOLDING/_restore_repo/APPS/saywetin/node_modules/@capacitor/app/android/build.gradle" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="e475ca75-9849-4f46-b536-0e782fd94f7a" name="Changes" comment="" />
+      <created>1777184362243</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1777184362243</updated>
+    </task>
+    <servers />
+  </component>
+</project>
