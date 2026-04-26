@@ -3,7 +3,7 @@
 ## Outcome
 This handover establishes a repeatable and automated portfolio E2E pipeline with dashboard telemetry for:
 - Una Labs (active now)
-- Garden Cleaners (ready to enable)
+- Garden Cleaners (active now)
 - OG Trades Academy (ready to enable)
 - Any future website by adding one config block
 
@@ -73,5 +73,5 @@ Then commit/publish APPS/una-labs-site/public/ops/portfolio-e2e-status.json in t
 ## Notes
 - Dashboard telemetry is near-realtime based on artifact refresh cadence.
 - Pending suites do not fail the run; only enabled suites impact pass/fail.
-- Current config keeps Garden Cleaners and OG Trades in pending state until canonical URLs are confirmed.
+- Current config keeps OG Trades in pending state until canonical URLs are confirmed.
 - Telemetry publish strategy is Git-backed: workflow commits APPS/una-labs-site/public/ops/portfolio-e2e-status.json when values change.

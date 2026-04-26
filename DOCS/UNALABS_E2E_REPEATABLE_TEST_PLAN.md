@@ -19,7 +19,7 @@ All suites live in tests/e2e/portfolio-sites.json.
 | Suite | State | Blocking Dependency |
 |---|---|---|
 | Una Labs | Active | None |
-| Garden Cleaners | Pending | Confirm canonical production URL |
+| Garden Cleaners | Active | None |
 | OG Trades Academy | Pending | Complete domain cutover |
 | Future website template | Ready | Add config block |
 

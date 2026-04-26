@@ -42,24 +42,23 @@
     {
       "id": "garden-cleaners",
       "label": "Garden Cleaners",
-      "enabled": false,
-      "reason": "Enable when canonical production URL and launch readiness are confirmed.",
+      "enabled": true,
       "baseUrl": "https://gardencleaners.ca",
       "checks": [
         {
           "id": "home",
-          "path": "/",
+          "path": "/garden-cleaners/",
           "expectedStatuses": [200],
-          "titleIncludes": "Garden"
+          "titleIncludes": "Garden Cleaners"
         },
         {
           "id": "quote",
-          "path": "/quote",
+          "path": "/garden-cleaners/quote/",
           "expectedStatuses": [200, 301, 302, 307, 308]
         },
         {
           "id": "contact",
-          "path": "/contact",
+          "path": "/garden-cleaners/contact/",
           "expectedStatuses": [200, 301, 302, 307, 308]
         }
       ]
