@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-04-26T18:22:11.197Z",
+  "generatedAt": "2026-04-26T18:43:04.945Z",
   "generator": "scripts/run-portfolio-e2e.mjs",
   "summary": {
     "overallStatus": "green",
@@ -10,7 +10,7 @@
     "passRate": 100,
     "activeSuites": 1,
     "pendingSuites": 2,
-    "cycleDurationMs": 839
+    "cycleDurationMs": 864
   },
   "velocity": {
     "commits14d": 1,
@@ -33,8 +33,8 @@
           "id": "home",
           "label": "home",
           "url": "https://unalabs.cloud/",
-          "startedAt": "2026-04-26T18:22:11.197Z",
-          "durationMs": 260,
+          "startedAt": "2026-04-26T18:43:04.945Z",
+          "durationMs": 219,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -48,8 +48,8 @@
           "id": "admin",
           "label": "admin",
           "url": "https://unalabs.cloud/admin/",
-          "startedAt": "2026-04-26T18:22:11.457Z",
-          "durationMs": 137,
+          "startedAt": "2026-04-26T18:43:05.164Z",
+          "durationMs": 160,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -63,8 +63,8 @@
           "id": "dashboard",
           "label": "dashboard",
           "url": "https://unalabs.cloud/dashboard/",
-          "startedAt": "2026-04-26T18:22:11.594Z",
-          "durationMs": 166,
+          "startedAt": "2026-04-26T18:43:05.324Z",
+          "durationMs": 160,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -78,8 +78,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://unalabs.cloud/portal/",
-          "startedAt": "2026-04-26T18:22:11.760Z",
-          "durationMs": 127,
+          "startedAt": "2026-04-26T18:43:05.484Z",
+          "durationMs": 174,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -93,8 +93,8 @@
           "id": "start",
           "label": "start",
           "url": "https://unalabs.cloud/start/",
-          "startedAt": "2026-04-26T18:22:11.887Z",
-          "durationMs": 139,
+          "startedAt": "2026-04-26T18:43:05.658Z",
+          "durationMs": 144,
           "statusCode": 200,
           "expectedStatuses": [
             200
