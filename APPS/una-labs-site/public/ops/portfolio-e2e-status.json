@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-04-26T19:02:40.747Z",
+  "generatedAt": "2026-04-26T19:02:58.422Z",
   "generator": "scripts/run-portfolio-e2e.mjs",
   "summary": {
-    "overallStatus": "green",
+    "overallStatus": "red",
     "checksTotal": 8,
-    "checksPassed": 8,
-    "checksFailed": 0,
-    "passRate": 100,
+    "checksPassed": 5,
+    "checksFailed": 3,
+    "passRate": 62.5,
     "activeSuites": 2,
     "pendingSuites": 1,
-    "cycleDurationMs": 647
+    "cycleDurationMs": 756
   },
   "velocity": {
-    "commits14d": 235,
-    "commits30d": 426,
-    "signal": "high"
+    "commits14d": 1,
+    "commits30d": 1,
+    "signal": "low"
   },
   "suites": [
     {
@@ -33,8 +33,8 @@
           "id": "home",
           "label": "home",
           "url": "https://unalabs.cloud/",
-          "startedAt": "2026-04-26T19:02:40.747Z",
-          "durationMs": 186,
+          "startedAt": "2026-04-26T19:02:58.422Z",
+          "durationMs": 263,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -48,8 +48,8 @@
           "id": "admin",
           "label": "admin",
           "url": "https://unalabs.cloud/admin/",
-          "startedAt": "2026-04-26T19:02:40.933Z",
-          "durationMs": 34,
+          "startedAt": "2026-04-26T19:02:58.685Z",
+          "durationMs": 75,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -63,8 +63,8 @@
           "id": "dashboard",
           "label": "dashboard",
           "url": "https://unalabs.cloud/dashboard/",
-          "startedAt": "2026-04-26T19:02:40.967Z",
-          "durationMs": 30,
+          "startedAt": "2026-04-26T19:02:58.760Z",
+          "durationMs": 78,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -78,8 +78,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://unalabs.cloud/portal/",
-          "startedAt": "2026-04-26T19:02:40.997Z",
-          "durationMs": 32,
+          "startedAt": "2026-04-26T19:02:58.838Z",
+          "durationMs": 74,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -93,8 +93,8 @@
           "id": "start",
           "label": "start",
           "url": "https://unalabs.cloud/start/",
-          "startedAt": "2026-04-26T19:02:41.029Z",
-          "durationMs": 26,
+          "startedAt": "2026-04-26T19:02:58.912Z",
+          "durationMs": 65,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -110,35 +110,35 @@
       "id": "garden-cleaners",
       "label": "Garden Cleaners",
       "enabled": true,
-      "status": "passing",
-      "reason": "All checks passing.",
+      "status": "failing",
+      "reason": "3 checks failing.",
       "checksTotal": 3,
-      "checksPassed": 3,
-      "checksFailed": 0,
-      "passRate": 100,
+      "checksPassed": 0,
+      "checksFailed": 3,
+      "passRate": 0,
       "checks": [
         {
           "id": "home",
           "label": "home",
           "url": "https://gardencleaners.ca/garden-cleaners/",
-          "startedAt": "2026-04-26T19:02:41.055Z",
-          "durationMs": 69,
-          "statusCode": 200,
+          "startedAt": "2026-04-26T19:02:58.977Z",
+          "durationMs": 44,
+          "statusCode": 403,
           "expectedStatuses": [
             200
           ],
-          "title": "Garden Cleaners | Professional Cleaning Services in Oshawa, Ontario",
+          "title": "Just a moment...",
           "titleIncludes": "Garden Cleaners",
-          "passed": true,
-          "detail": "PASS 200 | Garden Cleaners | Professional Cleaning Services in Oshawa, Ontario"
+          "passed": false,
+          "detail": "FAIL expected 200 got 403 | title must include 'Garden Cleaners'"
         },
         {
           "id": "quote",
           "label": "quote",
           "url": "https://gardencleaners.ca/garden-cleaners/quote/",
-          "startedAt": "2026-04-26T19:02:41.124Z",
-          "durationMs": 32,
-          "statusCode": 200,
+          "startedAt": "2026-04-26T19:02:59.021Z",
+          "durationMs": 74,
+          "statusCode": 404,
           "expectedStatuses": [
             200,
             301,
@@ -146,18 +146,18 @@
             307,
             308
           ],
-          "title": "Get a Free Quote | Garden Cleaners",
+          "title": "",
           "titleIncludes": null,
-          "passed": true,
-          "detail": "PASS 200 | Get a Free Quote | Garden Cleaners"
+          "passed": false,
+          "detail": "FAIL expected 200/301/302/307/308 got 404"
         },
         {
           "id": "contact",
           "label": "contact",
           "url": "https://gardencleaners.ca/garden-cleaners/contact/",
-          "startedAt": "2026-04-26T19:02:41.156Z",
-          "durationMs": 31,
-          "statusCode": 200,
+          "startedAt": "2026-04-26T19:02:59.095Z",
+          "durationMs": 71,
+          "statusCode": 404,
           "expectedStatuses": [
             200,
             301,
@@ -165,10 +165,10 @@
             307,
             308
           ],
-          "title": "Contact Garden Cleaners | Oshawa, Ontario",
+          "title": "",
           "titleIncludes": null,
-          "passed": true,
-          "detail": "PASS 200 | Contact Garden Cleaners | Oshawa, Ontario"
+          "passed": false,
+          "detail": "FAIL expected 200/301/302/307/308 got 404"
         }
       ]
     },
