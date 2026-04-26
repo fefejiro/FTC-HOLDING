@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-04-26T19:28:09.322Z",
+  "generatedAt": "2026-04-26T20:04:10.864Z",
   "generator": "scripts/run-portfolio-e2e.mjs",
   "summary": {
     "overallStatus": "red",
@@ -10,7 +10,7 @@
     "passRate": 62.5,
     "activeSuites": 2,
     "pendingSuites": 1,
-    "cycleDurationMs": 1047
+    "cycleDurationMs": 1257
   },
   "velocity": {
     "commits14d": 1,
@@ -33,8 +33,8 @@
           "id": "home",
           "label": "home",
           "url": "https://unalabs.cloud/",
-          "startedAt": "2026-04-26T19:28:09.322Z",
-          "durationMs": 326,
+          "startedAt": "2026-04-26T20:04:10.864Z",
+          "durationMs": 322,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -48,8 +48,8 @@
           "id": "admin",
           "label": "admin",
           "url": "https://unalabs.cloud/admin/",
-          "startedAt": "2026-04-26T19:28:09.648Z",
-          "durationMs": 71,
+          "startedAt": "2026-04-26T20:04:11.186Z",
+          "durationMs": 158,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -63,8 +63,8 @@
           "id": "dashboard",
           "label": "dashboard",
           "url": "https://unalabs.cloud/dashboard/",
-          "startedAt": "2026-04-26T19:28:09.719Z",
-          "durationMs": 168,
+          "startedAt": "2026-04-26T20:04:11.344Z",
+          "durationMs": 123,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -78,8 +78,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://unalabs.cloud/portal/",
-          "startedAt": "2026-04-26T19:28:09.887Z",
-          "durationMs": 214,
+          "startedAt": "2026-04-26T20:04:11.467Z",
+          "durationMs": 175,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -93,8 +93,8 @@
           "id": "start",
           "label": "start",
           "url": "https://unalabs.cloud/start/",
-          "startedAt": "2026-04-26T19:28:10.101Z",
-          "durationMs": 72,
+          "startedAt": "2026-04-26T20:04:11.642Z",
+          "durationMs": 126,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -121,8 +121,8 @@
           "id": "home",
           "label": "home",
           "url": "https://gardencleaners.ca/garden-cleaners/",
-          "startedAt": "2026-04-26T19:28:10.173Z",
-          "durationMs": 66,
+          "startedAt": "2026-04-26T20:04:11.768Z",
+          "durationMs": 151,
           "statusCode": 403,
           "expectedStatuses": [
             200
@@ -136,8 +136,8 @@
           "id": "quote",
           "label": "quote",
           "url": "https://gardencleaners.ca/garden-cleaners/quote/",
-          "startedAt": "2026-04-26T19:28:10.239Z",
-          "durationMs": 58,
+          "startedAt": "2026-04-26T20:04:11.919Z",
+          "durationMs": 89,
           "statusCode": 404,
           "expectedStatuses": [
             200,
@@ -155,8 +155,8 @@
           "id": "contact",
           "label": "contact",
           "url": "https://gardencleaners.ca/garden-cleaners/contact/",
-          "startedAt": "2026-04-26T19:28:10.297Z",
-          "durationMs": 63,
+          "startedAt": "2026-04-26T20:04:12.008Z",
+          "durationMs": 106,
           "statusCode": 404,
           "expectedStatuses": [
             200,
