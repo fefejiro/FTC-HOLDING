@@ -53,6 +53,11 @@ module.exports = {
   async redirects() {
     return [
       {
+        source: "/garden-cleaners/",
+        destination: "/garden-cleaners",
+        permanent: true
+      },
+      {
         source: "/garden-cleaners/portal",
         destination: "/garden-cleaners/portal/",
         permanent: true

@@ -1,9 +1,10 @@
 # Root domain lock — gardencleaners.ca/ always serves garden-cleaners home
-https://gardencleaners.ca/ /garden-cleaners/ 302
-https://www.gardencleaners.ca/ /garden-cleaners/ 302
-https://gardencleaners.ca/og-trades-academy* /garden-cleaners/ 301
-https://www.gardencleaners.ca/og-trades-academy* /garden-cleaners/ 301
-https://gardencleaners.ca/work/og-trades-academy /garden-cleaners/ 301
-https://www.gardencleaners.ca/work/og-trades-academy /garden-cleaners/ 301
-/ /garden-cleaners/ 302
+https://gardencleaners.ca/ /garden-cleaners 302
+https://www.gardencleaners.ca/ /garden-cleaners 302
+https://gardencleaners.ca/og-trades-academy* /garden-cleaners 301
+https://www.gardencleaners.ca/og-trades-academy* /garden-cleaners 301
+https://gardencleaners.ca/work/og-trades-academy /garden-cleaners 301
+https://www.gardencleaners.ca/work/og-trades-academy /garden-cleaners 301
+/ /garden-cleaners 302
+/garden-cleaners/ /garden-cleaners 301
 /garden-cleaners/portal /garden-cleaners/portal/ 301
