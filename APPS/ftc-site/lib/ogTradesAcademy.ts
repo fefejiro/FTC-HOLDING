@@ -87,6 +87,17 @@ const OG_TRADES_EXTRA_HOSTS = new Set<string>([
   "og-trades-pages.pages.dev"
 ]);
 
+// Safety blocklist: these domains should never render OG Trades shell,
+// even if environment host configuration drifts.
+const OG_TRADES_EXCLUDED_HOSTS = new Set<string>([
+  "gardencleaners.ca",
+  "www.gardencleaners.ca",
+  "gardencleaners.pages.dev",
+  "polaranchor.ca",
+  "www.polaranchor.ca",
+  "polaranchor.pages.dev"
+]);
+
 export const ogTradesAcademyNavItems = [
   { label: "Home", path: "/" },
   { label: "About", path: "/about" },
@@ -110,6 +121,9 @@ function normalizePathname(pathname = "/") {
 export function isOgTradesCustomHost(host = "") {
   const normalized = normalizeHost(host);
   if (!normalized) {
+    return false;
+  }
+  if (OG_TRADES_EXCLUDED_HOSTS.has(normalized)) {
     return false;
   }
   return (

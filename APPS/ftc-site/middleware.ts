@@ -29,15 +29,21 @@ const CLIENT_DOMAIN_ROOT_REWRITES: Record<string, string> = {
   "www.polaranchor.ca": "/polar-anchor"
 };
 
-const GARDEN_CLEANERS_HOSTS = new Set<string>(["gardencleaners.ca", "www.gardencleaners.ca"]);
-
 const OG_TRADES_ROOT_LANDING_PATH = "/og-trades-academy";
 const OG_TRADES_STABLE_ALIAS_PATH = "/og-trades-academy-home";
 
 function resolveRequestHost(req: NextRequest): string {
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
-  return host.toLowerCase();
+  return String(host || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
 }
+const GARDEN_CLEANERS_HOSTS = new Set<string>([
+  "gardencleaners.ca",
+  "www.gardencleaners.ca",
+  "gardencleaners.pages.dev"
+]);
 
 function buildRequestHeaders(req: NextRequest, host: string) {
   const requestHeaders = new Headers(req.headers);
@@ -114,17 +120,23 @@ export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const host = resolveRequestHost(req);
   const hostWithoutPort = host.replace(/:\d+$/, "");
+  const urlHost = String(req.nextUrl.hostname || "").toLowerCase().replace(/:\d+$/, "");
+  const effectiveHost = hostWithoutPort || urlHost;
 
   // Hard-lock Garden Cleaners host before any OG/domain inference logic.
   // This prevents accidental OG route rewrites when environment host config is mis-set.
-  if (GARDEN_CLEANERS_HOSTS.has(hostWithoutPort)) {
+  if (GARDEN_CLEANERS_HOSTS.has(effectiveHost)) {
     if (pathname === "/") {
       const url = req.nextUrl.clone();
       url.pathname = "/garden-cleaners";
-      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
     }
 
-    if (pathname.startsWith("/og-trades-academy") || pathname === "/work/og-trades-academy") {
+    if (
+      pathname.startsWith("/og-trades-academy") ||
+      pathname === "/work/og-trades-academy" ||
+      pathname === "/og-trades-academy-home"
+    ) {
       const url = req.nextUrl.clone();
       url.pathname = "/garden-cleaners";
       return NextResponse.redirect(url, 308);
