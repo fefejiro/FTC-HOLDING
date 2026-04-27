@@ -1,5 +1,44 @@
-import { cp, lstat, mkdir, rm, symlink } from "node:fs/promises";
+import { cp, lstat, mkdir, readdir, rm, symlink } from "node:fs/promises";
 import path from "node:path";
+
+async function copyPrerenderedHtml(serverAppDir, staticOutDir) {
+  // Walk .next/server/app and copy every prerendered .html file into the
+  // static output preserving its relative path. This is what makes Cloudflare
+  // Pages (static-only deploys) actually serve routes like /garden-cleaners.
+  const stack = [serverAppDir];
+  let copied = 0;
+  while (stack.length) {
+    const current = stack.pop();
+    let entries;
+    try {
+      entries = await readdir(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const abs = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(abs);
+        continue;
+      }
+      if (!entry.name.endsWith(".html")) continue;
+      const rel = path.relative(serverAppDir, abs);
+      // Skip dynamic route HTML stubs (they live in [param] folders) — copy them anyway, they’re harmless.
+      const dest = path.join(staticOutDir, rel);
+      await mkdir(path.dirname(dest), { recursive: true });
+      await cp(abs, dest, { force: true });
+      copied += 1;
+      // Also write an index.html alias inside a folder so /foo/ resolves.
+      const baseName = entry.name.slice(0, -".html".length);
+      if (baseName !== "index") {
+        const aliasDir = path.join(staticOutDir, path.dirname(rel), baseName);
+        await mkdir(aliasDir, { recursive: true });
+        await cp(abs, path.join(aliasDir, "index.html"), { force: true });
+      }
+    }
+  }
+  return copied;
+}
 
 async function pathExists(target) {
   try {
@@ -73,6 +112,14 @@ async function ensureCompatibilityMirror() {
       await cp(sourcePath, destinationPath, { force: true });
       console.log(`[build-fix] Copied public/${controlFile} to .vercel/output/static/${controlFile}.`);
     }
+  }
+
+  // Copy every prerendered .html from .next/server/app into the static output
+  // so static deploys serve routes like /garden-cleaners directly.
+  const serverAppDir = path.join(nextDir, "server", "app");
+  if (await pathExists(serverAppDir)) {
+    const count = await copyPrerenderedHtml(serverAppDir, vercelOutputStaticDir);
+    console.log(`[build-fix] Copied ${count} prerendered HTML files into .vercel/output/static.`);
   }
 }
 
