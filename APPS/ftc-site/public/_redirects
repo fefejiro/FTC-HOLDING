@@ -1,1 +1,3 @@
+# Root domain lock — gardencleaners.ca/ always serves garden-cleaners home
+/ /garden-cleaners/ 302
 /garden-cleaners/portal /garden-cleaners/portal/ 301
