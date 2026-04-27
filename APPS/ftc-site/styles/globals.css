@@ -10755,6 +10755,67 @@ body {
   margin-top: 14px;
 }
 
+.og-pricing-grid,
+.og-authority-grid,
+.og-testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.og-authority-grid,
+.og-testimonial-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.og-pricing-card,
+.og-authority-card,
+.og-testimonial-card {
+  gap: 10px;
+  border-color: var(--og-line);
+}
+
+.og-pricing-subtitle {
+  margin: 0;
+  color: #58708f;
+}
+
+.og-pricing-price {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f56d9;
+}
+
+.og-founder-placeholder-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.og-founder-placeholder-grid p {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(15, 86, 217, 0.34);
+  background: rgba(15, 86, 217, 0.04);
+  font-size: 0.84rem;
+}
+
+.og-risk-panel {
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 241, 241, 0.8));
+  box-shadow: 0 14px 30px rgba(173, 45, 45, 0.09);
+  gap: 10px;
+}
+
+.og-risk-panel h2 {
+  color: #8d1e1e;
+}
+
 .og-service-card {
   gap: 10px;
 }
@@ -10979,7 +11040,10 @@ body {
 @media (max-width: 1080px) {
   .og-trust-strip,
   .og-proof-grid,
-  .og-course-price-callout {
+  .og-course-price-callout,
+  .og-pricing-grid,
+  .og-authority-grid,
+  .og-testimonial-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -10994,7 +11058,11 @@ body {
   .og-course-detail-grid,
   .og-form-grid,
   .og-trust-strip,
-  .og-proof-grid {
+  .og-proof-grid,
+  .og-pricing-grid,
+  .og-authority-grid,
+  .og-testimonial-grid,
+  .og-founder-placeholder-grid {
     grid-template-columns: 1fr;
   }
 }
