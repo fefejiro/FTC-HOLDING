@@ -47,6 +47,7 @@ export const gardenCleanersConfig = {
   secondaryCta: { label: 'View Services', href: '/garden-cleaners/services' },
   nav: [
     { label: 'Home', href: '/garden-cleaners' },
+    { label: 'Regional Portal', href: '/garden-cleaners/portal' },
     { label: 'About', href: '/garden-cleaners/about' },
     { label: 'Services', href: '/garden-cleaners/services' },
     { label: 'Contact', href: '/garden-cleaners/contact' },

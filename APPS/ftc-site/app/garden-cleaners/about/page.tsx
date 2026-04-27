@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: 'About Garden Cleaners | Oshawa Cleaning Company',
   description:
     'Learn about Garden Cleaners, a locally focused cleaning company serving Oshawa, Ontario with dependable residential and commercial cleaning services.',
-  alternates: { canonical: 'https://unalabs.cloud/garden-cleaners/about' }
+  alternates: { canonical: 'https://gardencleaners.ca/garden-cleaners/about' }
 };
 
 export default function GardenAboutPage() {

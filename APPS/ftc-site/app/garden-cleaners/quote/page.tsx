@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: 'Get a Free Quote | Garden Cleaners',
   description:
     'Request a free quote from Garden Cleaners for residential, commercial, deep cleaning, move-in, move-out, or post-construction cleaning in Oshawa, Ontario.',
-  alternates: { canonical: 'https://unalabs.cloud/garden-cleaners/quote' }
+  alternates: { canonical: 'https://gardencleaners.ca/garden-cleaners/quote' }
 };
 
 export default function GardenQuotePage() {
@@ -39,7 +39,7 @@ export default function GardenQuotePage() {
 
           <section className="card garden-quote-form-shell">
             <h2>Request your quote</h2>
-            <GardenQuoteForm />
+            <GardenQuoteForm source="quote_page" />
           </section>
         </div>
       </div>

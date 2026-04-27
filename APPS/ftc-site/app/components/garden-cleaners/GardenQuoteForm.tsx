@@ -2,10 +2,16 @@
 
 import { FormEvent, useRef, useState } from "react";
 import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions } from "../../../lib/gardenCleaners";
+import { trackEvent } from "../../../lib/analytics";
+import type { GardenFormSource, GardenQuotePayload } from "../../../lib/gardenContracts";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
-export default function GardenQuoteForm() {
+type GardenQuoteFormProps = {
+  source?: GardenFormSource;
+};
+
+export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFormProps) {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
   const startedAtRef = useRef<number>(Date.now());
@@ -15,7 +21,7 @@ export default function GardenQuoteForm() {
     const form = event.currentTarget;
     const formData = new FormData(form);
 
-    const payload = {
+    const payload: GardenQuotePayload = {
       fullName: String(formData.get("fullName") || "").trim(),
       email: String(formData.get("email") || "").trim(),
       phone: String(formData.get("phone") || "").trim(),
@@ -31,6 +37,15 @@ export default function GardenQuoteForm() {
     setSubmitState("submitting");
     setMessage("");
 
+    trackEvent("garden_quote_submit_attempt", {
+      location: `${source}_form`,
+      label: "submit_attempt",
+      source,
+      propertyType: payload.propertyType,
+      serviceNeeded: payload.serviceNeeded,
+      frequency: payload.frequency
+    });
+
     try {
       const response = await fetch("/api/garden-cleaners-quote", {
         method: "POST",
@@ -45,11 +60,28 @@ export default function GardenQuoteForm() {
 
       setSubmitState("success");
       setMessage(body.message || "Thanks. Your quote request has been received.");
+      trackEvent("garden_quote_submit_success", {
+        location: `${source}_form`,
+        label: "submit_success",
+        source,
+        propertyType: payload.propertyType,
+        serviceNeeded: payload.serviceNeeded,
+        frequency: payload.frequency
+      });
       form.reset();
       startedAtRef.current = Date.now();
     } catch (error) {
       setSubmitState("error");
       setMessage(error instanceof Error ? error.message : "Submission failed. Please try again in a few minutes.");
+      trackEvent("garden_quote_submit_error", {
+        location: `${source}_form`,
+        label: "submit_error",
+        source,
+        propertyType: payload.propertyType,
+        serviceNeeded: payload.serviceNeeded,
+        frequency: payload.frequency,
+        errorCode: error instanceof Error ? error.message : "unknown"
+      });
     }
   }
 

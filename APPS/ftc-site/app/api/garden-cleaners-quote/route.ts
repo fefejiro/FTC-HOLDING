@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "../../../lib/logger";
 import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions } from "../../../lib/gardenCleaners";
+import type { GardenQuotePayload } from "../../../lib/gardenContracts";
 
 export const runtime = "edge";
 
@@ -11,18 +12,7 @@ const PROPERTY_TYPE_VALUES = new Set(gardenPropertyTypes);
 const SERVICE_VALUES = new Set(gardenServiceOptions);
 const FREQUENCY_VALUES = new Set(gardenFrequencies);
 
-type QuotePayload = {
-  fullName?: unknown;
-  email?: unknown;
-  phone?: unknown;
-  propertyType?: unknown;
-  serviceNeeded?: unknown;
-  preferredDate?: unknown;
-  frequency?: unknown;
-  message?: unknown;
-  website?: unknown;
-  startedAt?: unknown;
-};
+type QuotePayload = Partial<Record<keyof GardenQuotePayload, unknown>>;
 
 type RateLimitStore = Map<string, number[]>;
 

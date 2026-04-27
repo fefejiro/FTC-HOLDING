@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: 'Contact Garden Cleaners | Oshawa, Ontario',
   description:
     'Contact Garden Cleaners for residential or commercial cleaning service in Oshawa, Ontario and surrounding areas.',
-  alternates: { canonical: 'https://unalabs.cloud/garden-cleaners/contact' }
+  alternates: { canonical: 'https://gardencleaners.ca/garden-cleaners/contact' }
 };
 
 export default function GardenContactPage() {
@@ -42,7 +42,7 @@ export default function GardenContactPage() {
           <section className="card garden-contact-form-card">
             <h2>Request a quote</h2>
             <p className="muted">Share the basics and Garden Cleaners will follow up with the right next step.</p>
-            <GardenQuoteForm />
+            <GardenQuoteForm source="contact_page" />
           </section>
         </div>
       </div>
