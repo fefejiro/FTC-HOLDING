@@ -1,0 +1,24 @@
+import { test, expect } from "@playwright/test";
+
+test.describe("Garden portal smoke", () => {
+  test("public portal loads with key lanes and CTAs", async ({ page }) => {
+    await page.goto("/garden-cleaners/portal", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByRole("heading", { level: 1, name: /regional service coverage/i })).toBeVisible();
+    await expect(page.getByText(/client lane/i)).toBeVisible();
+    await expect(page.getByText(/operations lane/i)).toBeVisible();
+
+    await expect(page.getByRole("link", { name: /request regional quote/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /contact operations/i })).toBeVisible();
+  });
+
+  test("region card routes to quote with region query", async ({ page }) => {
+    await page.goto("/garden-cleaners/portal", { waitUntil: "domcontentloaded" });
+
+    const oshawaLink = page.getByRole("link", { name: /get same-week quote/i });
+    await expect(oshawaLink).toBeVisible();
+
+    await oshawaLink.click();
+    await expect(page).toHaveURL(/\/garden-cleaners\/quote\?region=Oshawa/);
+  });
+});
