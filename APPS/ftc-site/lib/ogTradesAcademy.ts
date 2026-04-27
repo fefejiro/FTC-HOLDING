@@ -46,7 +46,6 @@ export type OgTradesService = {
   summary: string;
   audience: string;
   price: string;
-  note: string;
 };
 
 export type OgTradesVideo = {
@@ -370,48 +369,42 @@ export const ogTradesAcademyConfig = {
       summary:
         "A structured beginner program covering forex foundations, market structure, risk management, entries, exits, and trading mindset.",
       audience: "Best for beginners who want a complete starting point and a step-by-step learning path.",
-      price: "$199",
-      note: "Current public course price"
+      price: "$199"
     },
     {
       title: "Crash Courses",
       summary:
         "Shorter focused trainings built to help traders learn a specific topic, concept, or trading skill in a faster format.",
       audience: "Best for learners who want targeted education without committing to the full 8-week program.",
-      price: "Pricing coming soon",
-      note: "Public pricing can be added once finalized"
+      price: "Pricing coming soon"
     },
     {
       title: "Signals",
       summary:
         "Market ideas and trading signals designed to help traders stay connected to setups, analysis, and decision-making support.",
       audience: "Best for traders who want added guidance while continuing to build their own chart understanding.",
-      price: "Pricing coming soon",
-      note: "Placeholder until the offer structure is finalized"
+      price: "Pricing coming soon"
     },
     {
       title: "Mentorship and Support",
       summary:
         "A higher-touch support path designed to help traders stay accountable, ask better questions, and grow with more direct guidance.",
       audience: "Best for traders who want more personal support, feedback, and mentorship as they build consistency.",
-      price: "Pricing coming soon",
-      note: "Confirm format: private mentorship, group coaching, or office-hours model"
+      price: "Pricing coming soon"
     },
     {
       title: "Telegram Community",
       summary:
         "A connected space where students and traders can ask questions, stay in the loop, learn together, and keep growing outside the lessons.",
       audience: "Best for students who want ongoing support, community, and accountability between learning sessions.",
-      price: "Pricing coming soon",
-      note: "Can also be bundled with select academy offers"
+      price: "Pricing coming soon"
     },
     {
       title: "Free Resources and Video Lessons",
       summary:
         "Open-access lessons, breakdowns, and educational content that help new traders keep learning before and after paid programs.",
       audience: "Best for anyone who wants to start learning, revisit the basics, or stay connected to the academy's teaching style.",
-      price: "Free",
-      note: "Available through the academy's public content channels"
+      price: "Free"
     }
   ] satisfies OgTradesService[],
   courseHighlights: [

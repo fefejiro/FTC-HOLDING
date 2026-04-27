@@ -10842,8 +10842,7 @@ body {
   text-align: center;
 }
 
-.og-service-audience,
-.og-service-note {
+.og-service-audience {
   margin: 0;
   color: #51627d;
 }
