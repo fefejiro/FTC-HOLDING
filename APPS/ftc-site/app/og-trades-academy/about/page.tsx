@@ -9,9 +9,9 @@ import { getRequestHost } from "../../../lib/requestHost";
 export function generateMetadata(): Metadata {
   const requestHost = getRequestHost();
   return getOgTradesMetadata({
-    title: "About OG_Trades Academy | Meet the Founder and Instructor",
+    title: "About OG Trades Academy | Meet the Founder and Instructor",
     description:
-      "Meet OG_Trades, the founder and instructor behind OG_Trades Academy, and learn about the academy's approach to forex education.",
+      "Meet OG Trades, the founder and instructor behind OG Trades Academy, and learn about the academy approach to forex education.",
     pathname: "/about",
     host: requestHost
   });
@@ -25,7 +25,7 @@ export default function OgTradesAboutPage() {
         <div className="og-founder-grid">
           <section className="card og-founder-card">
             <p className="eyebrow">About the founder</p>
-            <h1>Meet OG_Trades, founder and lead instructor of OG_Trades Academy.</h1>
+            <h1>Meet OG Trades, founder and lead instructor of OG Trades Academy.</h1>
             {ogTradesAcademyConfig.founderStory.paragraphs.map((paragraph) => (
               <p key={paragraph} className="muted">
                 {paragraph}
@@ -91,7 +91,7 @@ export default function OgTradesAboutPage() {
         </section>
 
         <CTABanner
-          title="Ready to learn inside OG_Trades Academy?"
+          title="Ready to learn inside OG Trades Academy?"
           description="Move from the founder story into the academy programs, resources, and community support."
           primaryLabel="View Programs"
           primaryHref={getOgTradesBrandedPath("/course", { host: requestHost })}

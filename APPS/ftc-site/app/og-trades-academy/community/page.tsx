@@ -9,9 +9,9 @@ import { getRequestHost } from "../../../lib/requestHost";
 export function generateMetadata(): Metadata {
   const requestHost = getRequestHost();
   return getOgTradesMetadata({
-    title: "Community | OG_Trades Academy",
+    title: "Community | OG Trades Academy",
     description:
-      "Join the OG_Trades Academy community to stay connected, learn with other traders, and keep growing between lessons.",
+      "Join the OG Trades Academy community to stay connected, learn with other traders, and keep growing between lessons.",
     pathname: "/community",
     host: requestHost
   });
@@ -24,7 +24,7 @@ export default function OgTradesCommunityPage() {
       <div className="container page-content og-page-content">
         <section>
           <p className="eyebrow">Community</p>
-          <h1>Stay connected with OG_Trades Academy between lessons, market updates, and new learning opportunities.</h1>
+          <h1>Stay connected with OG Trades Academy between lessons, market updates, and new learning opportunities.</h1>
           <p className="page-intro">
             The academy community gives students and traders a place to stay engaged, ask questions, and keep learning together as they build confidence in forex.
           </p>

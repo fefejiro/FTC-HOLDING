@@ -9,9 +9,9 @@ import { getRequestHost } from "../../../lib/requestHost";
 export function generateMetadata(): Metadata {
   const requestHost = getRequestHost();
   return getOgTradesMetadata({
-    title: "Contact and Enrollment | OG_Trades Academy",
+    title: "Contact and Enrollment | OG Trades Academy",
     description:
-      "Contact OG_Trades Academy, request enrollment details, and connect through the active social and community channels.",
+      "Contact OG Trades Academy, request enrollment details, and connect through active social and community channels.",
     pathname: "/contact",
     host: requestHost
   });
@@ -24,9 +24,9 @@ export default function OgTradesContactPage() {
         <div className="og-form-layout">
           <section className="card">
             <p className="eyebrow">Contact and enrollment</p>
-            <h1>Give interested traders a cleaner way to raise a hand.</h1>
+            <h1>Contact OG Trades Academy and get guidance on your best next step.</h1>
             <p className="page-intro">
-              This page creates a first-party inquiry path that can later feed email nurture, onboarding, waitlists, or direct course follow-up.
+              Use this form to ask questions, request enrollment details, and connect with the academy team before joining a program.
             </p>
             <OgTradesEnrollmentForm />
           </section>
@@ -35,7 +35,7 @@ export default function OgTradesContactPage() {
             <div className="og-avatar-frame">
               <img
                 src={ogTradesAcademyConfig.profileImageUrl}
-                alt="OG_Trades Academy founder profile"
+                alt="OG Trades Academy founder profile"
                 className="og-founder-avatar"
               />
             </div>

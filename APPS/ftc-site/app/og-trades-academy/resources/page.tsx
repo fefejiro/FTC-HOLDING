@@ -9,9 +9,9 @@ import { getRequestHost } from "../../../lib/requestHost";
 export function generateMetadata(): Metadata {
   const requestHost = getRequestHost();
   return getOgTradesMetadata({
-    title: "Free Forex Resources and Video Lessons | OG_Trades Academy",
+    title: "Free Forex Resources and Video Lessons | OG Trades Academy",
     description:
-      "Explore free forex resources, practical learning tools, and public video lessons from OG_Trades Academy.",
+      "Explore free forex resources, practical learning tools, and public video lessons from OG Trades Academy.",
     pathname: "/resources",
     host: requestHost
   });
@@ -27,7 +27,7 @@ export default function OgTradesResourcesPage() {
           <p className="eyebrow">Resources hub</p>
           <h1>Free resources and video lessons to help you keep learning forex with more clarity.</h1>
           <p className="page-intro">
-            This page brings together beginner-friendly tools, practical learning materials, and public lessons from OG_Trades Academy so traders can keep building knowledge at their own pace.
+            This page brings together beginner-friendly tools, practical learning materials, and public lessons from OG Trades Academy so traders can keep building knowledge at their own pace.
           </p>
         </section>
 

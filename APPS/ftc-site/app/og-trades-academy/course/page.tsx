@@ -29,9 +29,9 @@ const courseSchema = {
 export function generateMetadata(): Metadata {
   const requestHost = getRequestHost();
   return getOgTradesMetadata({
-    title: "8 Week Beginner Forex Course | OG_Trades Academy",
+    title: "8 Week Beginner Forex Course | OG Trades Academy",
     description:
-      "Explore the OG_Trades Academy 8 Week Beginner Forex Course: structured weekly curriculum, course highlights, pricing, and enrollment details.",
+      "Explore the OG Trades Academy 8 Week Beginner Forex Course: structured weekly curriculum, course highlights, pricing, and enrollment details.",
     pathname: "/course",
     host: requestHost
   });
@@ -85,7 +85,7 @@ export default function OgTradesCoursePage() {
             <div className="og-product-image-frame og-product-image-frame--large">
               <img
                 src={ogTradesAcademyConfig.courseImageUrl}
-                alt="OG_Trades Academy forex trading course artwork"
+                alt="OG Trades Academy forex trading course artwork"
                 className="og-course-image"
               />
             </div>
