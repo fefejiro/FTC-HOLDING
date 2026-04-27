@@ -214,7 +214,6 @@ export default function OgTradesAcademyHomePage() {
                 <p className="og-service-audience">
                   <strong>What it is for:</strong> {service.audience}
                 </p>
-                <p className="og-service-note">{service.note}</p>
               </article>
             ))}
           </div>

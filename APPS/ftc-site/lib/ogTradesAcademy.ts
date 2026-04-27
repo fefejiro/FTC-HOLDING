@@ -192,13 +192,13 @@ export const ogTradesAcademyConfig = {
   priceNow: "$199",
   priceWas: "$399",
   priceNote: "Current public course price",
-  primaryCta: { label: "Explore Academy Services", href: "#services" },
-  secondaryCta: { label: "Meet the Founder", href: "/about" },
+  primaryCta: { label: "Join the Academy", href: "#services" },
+  secondaryCta: { label: "Explore Courses and Signals", href: "/course" },
   hero: {
     eyebrow: "Founder-led forex academy",
     headline: "Learn forex with more structure, mentorship, and guidance through a founder-led academy.",
     subheadline:
-      "OG_Trades Academy is a premium forex learning environment built to help beginners and developing traders grow with clearer education, practical support, and a real sense of community.",
+      "OG Trades Academy helps beginners and developing traders understand forex, build confidence, and access education, signals, and mentorship through a practical learning system.",
     bullets: [
       "Learn directly from OG_Trades through structured education, practical teaching, and mentorship-style support.",
       "Access courses, crash trainings, signals, community, and guided trader support in one academy brand.",
@@ -287,14 +287,14 @@ export const ogTradesAcademyConfig = {
     },
     {
       week: "Week 7",
-      title: "Prop-firm context and performance review",
-      summary: "Understand challenge rules, drawdown pressure, and how to trade under accountability.",
-      outcomes: ["Think in rules", "Respect evaluation structure", "Avoid challenge-ending mistakes"]
+      title: "Trading performance and accountability",
+      summary: "Track your development, review your execution habits, and build the accountability structure traders need to keep improving.",
+      outcomes: ["Review your setups objectively", "Build a performance tracking habit", "Develop accountability rituals for long-term growth"]
     },
     {
       week: "Week 8",
       title: "Execution plan and next-step roadmap",
-      summary: "Pull everything together into a practical plan for demo, prop-firm, or early live-market development.",
+      summary: "Pull everything together into a practical plan for demo trading or early live-market development.",
       outcomes: ["Build a personal trading plan", "Know what to practice next", "Leave with a structured workflow"]
     }
   ] satisfies OgTradesCourseWeek[],
@@ -489,13 +489,13 @@ export const ogTradesAcademyConfig = {
   ] satisfies OgTradesVideo[],
   youtubeTopics: [
     "Risk management and beginner discipline",
-    "FundingPips account progression and prop-firm context",
+    "Live account management and real trading context",
     "LASER strategy breakdowns and setup logic",
     "Entry and exit structure on live charts",
     "Trading psychology and mindset resets"
   ],
   disclaimer:
-    "OG_Trades Academy provides trading education only. Nothing on this site should be treated as financial advice or a guarantee of trading performance."
+    "Trading involves real risk. OG Trades Academy provides education, discipline, risk management, and market understanding — not financial advice, and not a guarantee of trading profits. Only risk capital you can afford to lose."
 } as const;
 
 export function getOgTradesMetadata({
