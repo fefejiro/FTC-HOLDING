@@ -13,9 +13,11 @@ async function pathExists(target) {
 async function ensureCompatibilityMirror() {
   const projectRoot = process.cwd();
   const nextDir = path.join(projectRoot, ".next");
+  const publicDir = path.join(projectRoot, "public");
   const compatRoot = path.join(projectRoot, "APPS", "ftc-site");
   const compatNextDir = path.join(compatRoot, ".next");
   const vercelOutputStaticDir = path.join(projectRoot, ".vercel", "output", "static");
+  const vercelOutputNextStaticDir = path.join(vercelOutputStaticDir, "_next", "static");
 
   if (!(await pathExists(nextDir))) {
     return;
@@ -42,11 +44,35 @@ async function ensureCompatibilityMirror() {
   const nextStaticDir = path.join(nextDir, "static");
   if (await pathExists(nextStaticDir)) {
     await mkdir(path.join(projectRoot, ".vercel", "output"), { recursive: true });
-    if (await pathExists(vercelOutputStaticDir)) {
-      await rm(vercelOutputStaticDir, { recursive: true, force: true });
+    if (await pathExists(vercelOutputNextStaticDir)) {
+      await rm(vercelOutputNextStaticDir, { recursive: true, force: true });
     }
-    await cp(nextStaticDir, vercelOutputStaticDir, { recursive: true });
-    console.log("[build-fix] Copied .next/static to .vercel/output/static for Cloudflare Pages.");
+    await mkdir(path.dirname(vercelOutputNextStaticDir), { recursive: true });
+    await cp(nextStaticDir, vercelOutputNextStaticDir, { recursive: true });
+    console.log("[build-fix] Copied .next/static to .vercel/output/static/_next/static for Cloudflare Pages.");
+  }
+
+  // Ensure public static assets (images, brand, media, etc.) exist in output root.
+  if (await pathExists(publicDir)) {
+    await mkdir(vercelOutputStaticDir, { recursive: true });
+    for (const entry of ["images", "brand", "media", "connect", "favicon.ico", "logo.png"]) {
+      const sourcePath = path.join(publicDir, entry);
+      const destinationPath = path.join(vercelOutputStaticDir, entry);
+      if (await pathExists(sourcePath)) {
+        await cp(sourcePath, destinationPath, { recursive: true, force: true });
+      }
+    }
+    console.log("[build-fix] Synced required public assets into .vercel/output/static.");
+  }
+
+  // Copy Cloudflare Pages control files if present.
+  for (const controlFile of ["_redirects", "_headers"]) {
+    const sourcePath = path.join(publicDir, controlFile);
+    const destinationPath = path.join(vercelOutputStaticDir, controlFile);
+    if (await pathExists(sourcePath)) {
+      await cp(sourcePath, destinationPath, { force: true });
+      console.log(`[build-fix] Copied public/${controlFile} to .vercel/output/static/${controlFile}.`);
+    }
   }
 }
 

@@ -29,6 +29,8 @@ const CLIENT_DOMAIN_ROOT_REWRITES: Record<string, string> = {
   "www.polaranchor.ca": "/polar-anchor"
 };
 
+const GARDEN_CLEANERS_HOSTS = new Set<string>(["gardencleaners.ca", "www.gardencleaners.ca"]);
+
 const OG_TRADES_ROOT_LANDING_PATH = "/og-trades-academy";
 const OG_TRADES_STABLE_ALIAS_PATH = "/og-trades-academy-home";
 
@@ -113,6 +115,22 @@ export function middleware(req: NextRequest) {
   const host = resolveRequestHost(req);
   const hostWithoutPort = host.replace(/:\d+$/, "");
 
+  // Hard-lock Garden Cleaners host before any OG/domain inference logic.
+  // This prevents accidental OG route rewrites when environment host config is mis-set.
+  if (GARDEN_CLEANERS_HOSTS.has(hostWithoutPort)) {
+    if (pathname === "/") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/garden-cleaners";
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+    }
+
+    if (pathname.startsWith("/og-trades-academy") || pathname === "/work/og-trades-academy") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/garden-cleaners";
+      return NextResponse.redirect(url, 308);
+    }
+  }
+
   if (pathname === "/work/og-trades-academy") {
     const url = req.nextUrl.clone();
     url.pathname = OG_TRADES_STABLE_ALIAS_PATH;
@@ -130,7 +148,7 @@ export function middleware(req: NextRequest) {
   }
 
   const clientRootRewrite = CLIENT_DOMAIN_ROOT_REWRITES[hostWithoutPort];
-  if (clientRootRewrite && pathname === "/" && !isOgTradesCustomHost(hostWithoutPort)) {
+  if (clientRootRewrite && pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = clientRootRewrite;
     return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
