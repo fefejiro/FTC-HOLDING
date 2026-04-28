@@ -47,28 +47,33 @@
       "checks": [
         {
           "id": "home",
-          "path": "/garden-cleaners/",
+          "path": "/",
           "expectedStatuses": [200],
           "titleIncludes": "Garden Cleaners"
         },
         {
           "id": "quote",
-          "path": "/garden-cleaners/quote/",
+          "path": "/quote",
           "expectedStatuses": [200, 301, 302, 307, 308]
         },
         {
           "id": "contact",
-          "path": "/garden-cleaners/contact/",
+          "path": "/contact",
           "expectedStatuses": [200, 301, 302, 307, 308]
+        },
+        {
+          "id": "portal",
+          "path": "/portal",
+          "expectedStatuses": [200, 301, 302, 307, 308],
+          "titleIncludes": "Regional Portal"
         }
       ]
     },
     {
       "id": "og-trades-academy",
       "label": "OG Trades Academy",
-      "enabled": false,
-      "reason": "Enable when ogtradesacademy domain cutover is complete.",
-      "baseUrl": "https://ogtradesacademy.ca",
+      "enabled": true,
+      "baseUrl": "https://www.ogtradesacademy.com",
       "checks": [
         {
           "id": "home",

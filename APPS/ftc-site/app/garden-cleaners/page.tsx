@@ -1,5 +1,5 @@
 export const dynamic = 'force-static';
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import CTABanner from "../components/CTABanner";
 import GardenDeepCleaningFeature from "../components/garden-cleaners/GardenDeepCleaningFeature";
@@ -110,7 +110,7 @@ const structuredData = {
   "@type": "HouseCleaning",
   "name": "Garden Cleaners",
   "description": "Professional residential and commercial cleaning services in Oshawa, Ontario. Deep cleaning, move-in/move-out, recurring cleaning, and office cleaning across Durham Region.",
-  "url": "https://gardencleaners.ca/garden-cleaners",
+  "url": "https://gardencleaners.ca/",
   "email": "hello@gardencleaners.ca",
   "address": {
     "@type": "PostalAddress",
@@ -147,7 +147,12 @@ export const metadata: Metadata = {
   title: "Garden Cleaners | Professional Cleaning Services in Oshawa, Ontario",
   description:
     "Garden Cleaners provides reliable residential and commercial cleaning services in Oshawa, Ontario. Get a free quote for professional, spotless cleaning.",
-  alternates: { canonical: "https://gardencleaners.ca/garden-cleaners" }
+  alternates: { canonical: "https://gardencleaners.ca/" },
+  icons: {
+    icon: "/brand/garden-cleaners-mark.svg",
+    shortcut: "/brand/garden-cleaners-mark.svg",
+    apple: "/brand/garden-cleaners-mark.svg"
+  }
 };
 
 export default function GardenCleanersHomePage() {

@@ -59,12 +59,12 @@ export const metadata: Metadata = {
     shortcut: "/brand/garden-cleaners-mark.svg",
     apple: "/brand/garden-cleaners-mark.svg"
   },
-  alternates: { canonical: "https://gardencleaners.ca/garden-cleaners/portal" },
+  alternates: { canonical: "https://gardencleaners.ca/portal" },
   openGraph: {
     title: "Regional Portal | Garden Cleaners Oshawa",
     description:
       "Explore the Garden Cleaners regional portal with service coverage, client request flow, and operations routing across Oshawa and Durham Region.",
-    url: "https://gardencleaners.ca/garden-cleaners/portal",
+    url: "https://gardencleaners.ca/portal",
     siteName: "Garden Cleaners",
     type: "website",
     images: [

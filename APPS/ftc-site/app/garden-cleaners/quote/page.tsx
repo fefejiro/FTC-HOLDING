@@ -8,7 +8,12 @@ export const metadata: Metadata = {
   title: 'Get a Free Quote | Garden Cleaners',
   description:
     'Request a free quote from Garden Cleaners for residential, commercial, deep cleaning, move-in, move-out, or post-construction cleaning in Oshawa, Ontario.',
-  alternates: { canonical: 'https://gardencleaners.ca/garden-cleaners/quote' }
+  alternates: { canonical: 'https://gardencleaners.ca/quote' },
+  icons: {
+    icon: '/brand/garden-cleaners-mark.svg',
+    shortcut: '/brand/garden-cleaners-mark.svg',
+    apple: '/brand/garden-cleaners-mark.svg'
+  }
 };
 
 export default function GardenQuotePage() {

@@ -8,7 +8,12 @@ export const metadata: Metadata = {
   title: 'Contact Garden Cleaners | Oshawa, Ontario',
   description:
     'Contact Garden Cleaners for residential or commercial cleaning service in Oshawa, Ontario and surrounding areas.',
-  alternates: { canonical: 'https://gardencleaners.ca/garden-cleaners/contact' }
+  alternates: { canonical: 'https://gardencleaners.ca/contact' },
+  icons: {
+    icon: '/brand/garden-cleaners-mark.svg',
+    shortcut: '/brand/garden-cleaners-mark.svg',
+    apple: '/brand/garden-cleaners-mark.svg'
+  }
 };
 
 export default function GardenContactPage() {

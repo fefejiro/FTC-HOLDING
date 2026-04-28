@@ -30,6 +30,79 @@ export type GardenMediaAsset = {
   caption: string;
 };
 
+export const gardenCleanersBasePath = '/garden-cleaners' as const;
+
+const gardenCleanersCustomHosts = new Set<string>([
+  'gardencleaners.ca',
+  'www.gardencleaners.ca',
+  'gardencleaners.pages.dev'
+]);
+
+export const gardenCleanersNavItems = [
+  { label: 'Home', path: '/' },
+  { label: 'Regional Portal', path: '/portal' },
+  { label: 'About', path: '/about' },
+  { label: 'Services', path: '/services' },
+  { label: 'Contact', path: '/contact' },
+  { label: 'Get a Quote', path: '/quote' }
+] as const;
+
+export const gardenCleanersPublicPaths = new Set<string>(
+  gardenCleanersNavItems.map((item) => item.path)
+);
+
+function normalizeGardenHost(host = '') {
+  return String(host || '').trim().toLowerCase().replace(/:\d+$/, '');
+}
+
+function normalizeGardenPathname(pathname = '/') {
+  const normalized = `/${String(pathname || '/').trim().replace(/^\/+/, '')}`.replace(/\/+$/, '');
+  return normalized === '' ? '/' : normalized;
+}
+
+export function isGardenCleanersCustomHost(host = '') {
+  const normalized = normalizeGardenHost(host);
+  return gardenCleanersCustomHosts.has(normalized);
+}
+
+export function isGardenCleanersPublicPath(pathname = '/') {
+  return gardenCleanersPublicPaths.has(normalizeGardenPathname(pathname));
+}
+
+export function getGardenCleanersInternalPath(pathname = '/') {
+  const normalized = normalizeGardenPathname(pathname);
+  return normalized === '/' ? gardenCleanersBasePath : `${gardenCleanersBasePath}${normalized}`;
+}
+
+export function getGardenCleanersBrandedPath(
+  pathname = '/',
+  options: { host?: string; customDomain?: boolean } = {}
+) {
+  const normalized = normalizeGardenPathname(pathname);
+  const useCustomDomain = options.customDomain ?? isGardenCleanersCustomHost(options.host || '');
+  return useCustomDomain ? normalized : getGardenCleanersInternalPath(normalized);
+}
+
+export function stripGardenCleanersBasePath(pathname = '/') {
+  const normalized = normalizeGardenPathname(pathname);
+  if (normalized === gardenCleanersBasePath) {
+    return '/';
+  }
+  if (normalized.startsWith(`${gardenCleanersBasePath}/`)) {
+    return normalized.slice(gardenCleanersBasePath.length);
+  }
+  return null;
+}
+
+export function getGardenCleanersNavLinks(
+  options: { host?: string; customDomain?: boolean } = {}
+): GardenNavLink[] {
+  return gardenCleanersNavItems.map((item) => ({
+    label: item.label,
+    href: getGardenCleanersBrandedPath(item.path, options)
+  }));
+}
+
 export const gardenCleanersConfig = {
   companyName: 'Garden Cleaners',
   locationCity: 'Oshawa',
@@ -45,14 +118,7 @@ export const gardenCleanersConfig = {
     'Reliable residential and commercial cleaning with flexible scheduling, quality service, and a spotless finish every time.',
   primaryCta: { label: 'Get a Free Quote', href: '/garden-cleaners/quote' },
   secondaryCta: { label: 'View Services', href: '/garden-cleaners/services' },
-  nav: [
-    { label: 'Home', href: '/garden-cleaners' },
-    { label: 'Regional Portal', href: '/garden-cleaners/portal' },
-    { label: 'About', href: '/garden-cleaners/about' },
-    { label: 'Services', href: '/garden-cleaners/services' },
-    { label: 'Contact', href: '/garden-cleaners/contact' },
-    { label: 'Get a Quote', href: '/garden-cleaners/quote' }
-  ] satisfies GardenNavLink[],
+  nav: getGardenCleanersNavLinks() satisfies GardenNavLink[],
   trustBullets: [
     'Reliable and professional team',
     'Flexible scheduling',

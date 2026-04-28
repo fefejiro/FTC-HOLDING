@@ -63,11 +63,6 @@ module.exports = {
         permanent: true
       },
       {
-        source: "/garden-cleaners/portal",
-        destination: "/garden-cleaners/portal/",
-        permanent: true
-      },
-      {
         source: "/connect/vcard",
         destination: "/connect/fejiro-efiuvwere.vcf",
         permanent: false

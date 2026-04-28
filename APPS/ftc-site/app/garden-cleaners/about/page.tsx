@@ -8,7 +8,12 @@ export const metadata: Metadata = {
   title: 'About Garden Cleaners | Oshawa Cleaning Company',
   description:
     'Learn about Garden Cleaners, a locally focused cleaning company serving Oshawa, Ontario with dependable residential and commercial cleaning services.',
-  alternates: { canonical: 'https://gardencleaners.ca/garden-cleaners/about' }
+  alternates: { canonical: 'https://gardencleaners.ca/about' },
+  icons: {
+    icon: '/brand/garden-cleaners-mark.svg',
+    shortcut: '/brand/garden-cleaners-mark.svg',
+    apple: '/brand/garden-cleaners-mark.svg'
+  }
 };
 
 export default function GardenAboutPage() {

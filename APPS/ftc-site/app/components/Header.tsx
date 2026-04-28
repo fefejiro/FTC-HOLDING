@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { gardenCleanersConfig } from "../../lib/gardenCleaners";
+import {
+  gardenCleanersConfig,
+  getGardenCleanersBrandedPath,
+  getGardenCleanersNavLinks,
+  isGardenCleanersCustomHost
+} from "../../lib/gardenCleaners";
 import { getOgTradesBrandedPath, getOgTradesNavLinks, isOgTradesCustomHost, ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
 import { siteNav } from "../../lib/content";
@@ -54,7 +59,8 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [runtimeHost, setRuntimeHost] = useState(initialHost.toLowerCase());
-  const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
+  const isGardenHost = isGardenCleanersCustomHost(runtimeHost);
+  const isGardenSite = (pathname?.startsWith("/garden-cleaners") ?? false) || isGardenHost;
   const isOgTradesHost = isOgTradesCustomHost(runtimeHost);
   const isOgTradesSite = (pathname?.startsWith("/og-trades-academy") ?? false) || isOgTradesHost;
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
@@ -96,7 +102,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
 
   const navLinks = useMemo(() => {
     if (isGardenSite) {
-      return gardenCleanersConfig.nav;
+      return getGardenCleanersNavLinks({ host: runtimeHost });
     }
     if (isOgTradesSite) {
       return getOgTradesNavLinks({ host: runtimeHost });
@@ -107,10 +113,10 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
     return siteNav
       .filter((link) => link.label !== "Start a Project")
       .map((link) => ({ label: link.label, href: link.href }));
-  }, [isGardenSite, isOgTradesSite, isPolarSite]);
+  }, [isGardenSite, isOgTradesSite, isPolarSite, runtimeHost]);
 
   const homeHref = isGardenSite
-    ? "/garden-cleaners"
+    ? getGardenCleanersBrandedPath("/", { host: runtimeHost })
     : isOgTradesSite
       ? getOgTradesBrandedPath("/", { host: runtimeHost })
       : isPolarSite

@@ -8,6 +8,12 @@ import {
   OG_TRADES_SITE_HOST,
   stripOgTradesBasePath
 } from "./lib/ogTradesAcademy";
+import {
+  getGardenCleanersInternalPath,
+  isGardenCleanersCustomHost,
+  isGardenCleanersPublicPath,
+  stripGardenCleanersBasePath
+} from "./lib/gardenCleaners";
 import { ATEAM_SITE_HOST, ATEAM_SITE_URL, LEGACY_CANONICAL_HOSTS, OPS_SITE_HOST, SITE_HOST } from "./lib/site";
 
 const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
@@ -39,12 +45,6 @@ function resolveRequestHost(req: NextRequest): string {
     .trim()
     .toLowerCase();
 }
-const GARDEN_CLEANERS_HOSTS = new Set<string>([
-  "gardencleaners.ca",
-  "www.gardencleaners.ca",
-  "gardencleaners.pages.dev"
-]);
-
 function buildRequestHeaders(req: NextRequest, host: string) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-request-host", host);
@@ -125,11 +125,12 @@ export function middleware(req: NextRequest) {
 
   // Hard-lock Garden Cleaners host before any OG/domain inference logic.
   // This prevents accidental OG route rewrites when environment host config is mis-set.
-  if (GARDEN_CLEANERS_HOSTS.has(effectiveHost)) {
-    if (pathname === "/") {
+  if (isGardenCleanersCustomHost(effectiveHost)) {
+    const brandedPath = stripGardenCleanersBasePath(pathname);
+    if (brandedPath) {
       const url = req.nextUrl.clone();
-      url.pathname = "/garden-cleaners";
-      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
+      url.pathname = brandedPath;
+      return NextResponse.redirect(url, 308);
     }
 
     if (
@@ -138,9 +139,17 @@ export function middleware(req: NextRequest) {
       pathname === "/og-trades-academy-home"
     ) {
       const url = req.nextUrl.clone();
-      url.pathname = "/garden-cleaners";
+      url.pathname = "/";
       return NextResponse.redirect(url, 308);
     }
+
+    if (isGardenCleanersPublicPath(pathname)) {
+      const url = req.nextUrl.clone();
+      url.pathname = getGardenCleanersInternalPath(pathname);
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
+    }
+
+    return withRuntimePageHeaders(req, nextWithRequestHost(req, effectiveHost));
   }
 
   if (pathname === "/work/og-trades-academy") {
