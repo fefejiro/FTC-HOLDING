@@ -1,0 +1,47 @@
+# SayWetin Chrome Extension — Chrome Web Store Submission Checklist
+
+## 1. Manifest & Build
+- [x] manifest.json is Manifest V3, icons included
+- [x] Output in dist/ is clean and production-ready
+- [x] No dev/test code in build
+
+## 2. Features
+- [x] Popup UI: hero image, orb, branding
+- [x] Tab audio capture and recognition
+- [x] Lyric meaning (cultural-analysis)
+- [x] Deep-link to track page
+- [x] Sync recent recognitions if authenticated
+
+## 3. Permissions
+- [x] Only required permissions: tabCapture, storage, scripting, tabs
+- [x] No unnecessary host permissions
+
+## 4. Testing
+- [x] Manual QA on Chrome stable and beta
+- [x] Tested on multiple sites/tabs
+- [x] Error handling validated
+
+## 5. Assets
+- [x] 128x128, 48x48, 32x32, 16x16 icons present
+- [x] Screenshots of popup UI
+- [x] Short and long description
+- [x] Feature highlights
+
+## 6. Privacy & Compliance
+- [x] No tracking, analytics, or ads
+- [x] User audio is only sent to backend for recognition
+- [x] Privacy policy link (saywetin.app/privacy)
+
+## 7. Submission
+- [ ] Zip dist/ and upload to Chrome Web Store
+- [ ] Fill out listing details, upload screenshots
+- [ ] Add privacy policy URL
+- [ ] Submit for review
+
+---
+
+## How to Publish
+1. Run `npm run build`
+2. Zip the `dist/` folder
+3. Go to https://chrome.google.com/webstore/devconsole
+4. Upload zip, fill out listing, submit

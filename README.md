@@ -4,6 +4,12 @@ Canonical repository root: `C:\FTC HOLDING`
 
 This repo contains multiple apps plus shared packages. Use this as the top-level orientation doc.
 
+## Local Recovery Notice
+
+As of 2026-04-28, this restored checkout lives at `C:\FTC HOLDING\_restore_repo` and is the only discovered folder with a live `.git` directory. Use this folder for git operations until the restored monorepo is promoted back to `C:\FTC HOLDING`.
+
+Recovery map: [DOCS/RECOVERY_AND_WORKSPACE_MAP_2026-04-28.md](DOCS/RECOVERY_AND_WORKSPACE_MAP_2026-04-28.md)
+
 ## Current Structure
 
 - `APPS/`

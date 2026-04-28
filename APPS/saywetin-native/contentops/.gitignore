@@ -1,0 +1,12 @@
+node_modules/
+voice/_out/
+voice/_smoke/
+voice/samples/*
+!voice/samples/README.md
+pipeline/_renders/
+pipeline/_videos/
+demos/
+approval/_archive/
+approval/queue.json
+*.log
+.env*

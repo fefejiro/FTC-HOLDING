@@ -67,5 +67,9 @@ output/playwright/**
 .tmp-cap.json
 play-store-key.json
 secrets/
-.agents/
+
+# Agent workspace state is local, but recovered repo skills are onboarding assets.
+.agents/*
+!.agents/skills/
+!.agents/skills/**
 .windsurf/

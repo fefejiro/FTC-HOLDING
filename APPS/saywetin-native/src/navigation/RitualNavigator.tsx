@@ -57,14 +57,7 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
     >
       <Stack.Screen
         name="Home"
-        children={({ navigation }) => (
-          <HomeScreen
-            onNext={() => {
-              ritual.startListening();
-              navigation.navigate('Listen');
-            }}
-          />
-        )}
+        children={() => <HomeScreen ritual={ritual} />}
       />
       <Stack.Screen
         name="Listen"

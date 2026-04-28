@@ -1,187 +1,218 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
 
-type ListenPhase = 'listening' | 'matching';
+type ListenPhase = 'idle' | 'listening' | 'matching';
 
 type OrbListenerProps = {
   phase: ListenPhase;
   onPress?: () => void;
 };
 
-const RING_DELAYS_MS = [0, 600, 1200, 1800];
-const RING_OPACITY = [0.28, 0.21, 0.14, 0.07];
-const BAR_SPEED_MS = [560, 680, 520, 740, 610, 790, 650];
+const ORB_SIZE = 200;
+// Shazam-style outward pulse rings — staggered so a new ring launches every ~700ms.
+const PULSE_DELAYS_MS = [0, 700, 1400, 2100, 2800];
+const PULSE_DURATION_MS = 3500;
 
 export function OrbListener({ phase, onPress }: OrbListenerProps) {
-  const pulse = useRef(new Animated.Value(0)).current;
+  const isIdle = phase === 'idle';
+  const isListening = phase === 'listening';
+  const isMatching = phase === 'matching';
+  const isActive = !isIdle;
+
+  const breathe = useRef(new Animated.Value(0)).current;
   const tighten = useRef(new Animated.Value(1)).current;
-  const ringProgress = useRef(RING_DELAYS_MS.map(() => new Animated.Value(0))).current;
-  const barValues = useRef(BAR_SPEED_MS.map(() => new Animated.Value(0.3))).current;
+  const pulses = useRef(PULSE_DELAYS_MS.map(() => new Animated.Value(0))).current;
+  const activation = useRef(new Animated.Value(0)).current;
+  const barValues = useRef(Array.from({ length: 7 }).map(() => new Animated.Value(0.3))).current;
 
   useEffect(() => {
-    const pulseAnim = Animated.loop(
+    Animated.timing(activation, {
+      toValue: isActive ? 1 : 0.6, // keep some glow even at idle for hero presence
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [isActive, activation]);
+
+  // Gentle breathing of the orb itself.
+  useEffect(() => {
+    const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, {
+        Animated.timing(breathe, {
           toValue: 1,
-          duration: phase === 'matching' ? 900 : 1400,
+          duration: isMatching ? 800 : isListening ? 1100 : 2400,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(pulse, {
+        Animated.timing(breathe, {
           toValue: 0,
-          duration: phase === 'matching' ? 900 : 1400,
+          duration: isMatching ? 800 : isListening ? 1100 : 2400,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ]),
     );
+    anim.start();
+    return () => anim.stop();
+  }, [breathe, isMatching, isListening]);
 
-    pulseAnim.start();
-    return () => pulseAnim.stop();
-  }, [phase, pulse]);
-
+  // Slight scale-down when matching (focus moment).
   useEffect(() => {
     Animated.timing(tighten, {
-      toValue: phase === 'matching' ? 0.7 : 1,
+      toValue: isMatching ? 0.85 : 1,
       duration: 420,
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start();
-  }, [phase, tighten]);
+  }, [isMatching, tighten]);
 
+  // Shazam-style outward expanding pulse rings.
   useEffect(() => {
-    const animations = ringProgress.map((value, index) =>
+    const animations = pulses.map((value, index) =>
       Animated.loop(
         Animated.sequence([
-          Animated.delay(RING_DELAYS_MS[index]),
+          Animated.delay(PULSE_DELAYS_MS[index]),
           Animated.timing(value, {
             toValue: 1,
-            duration: 3000,
+            duration: PULSE_DURATION_MS,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
-          Animated.timing(value, {
-            toValue: 0,
-            duration: 1,
-            useNativeDriver: true,
-          }),
+          Animated.timing(value, { toValue: 0, duration: 1, useNativeDriver: true }),
         ]),
       ),
     );
+    animations.forEach((a) => a.start());
+    return () => animations.forEach((a) => a.stop());
+  }, [pulses]);
 
-    animations.forEach((animation) => animation.start());
-    return () => animations.forEach((animation) => animation.stop());
-  }, [ringProgress]);
-
+  // Bottom wave bar dance.
   useEffect(() => {
+    if (isIdle) {
+      barValues.forEach((v) => v.stopAnimation(() => v.setValue(0.3)));
+      return;
+    }
+    const speeds = [560, 680, 520, 740, 610, 790, 650];
     const animations = barValues.map((value, index) =>
       Animated.loop(
         Animated.sequence([
           Animated.timing(value, {
             toValue: 1,
-            duration: BAR_SPEED_MS[index],
+            duration: speeds[index],
             easing: Easing.inOut(Easing.sin),
             useNativeDriver: true,
           }),
           Animated.timing(value, {
             toValue: 0.25,
-            duration: BAR_SPEED_MS[index],
+            duration: speeds[index],
             easing: Easing.inOut(Easing.sin),
             useNativeDriver: true,
           }),
         ]),
       ),
     );
+    animations.forEach((a) => a.start());
+    return () => animations.forEach((a) => a.stop());
+  }, [barValues, isIdle]);
 
-    animations.forEach((animation) => animation.start());
-    return () => animations.forEach((animation) => animation.stop());
-  }, [barValues]);
-
-  const orbScale = pulse.interpolate({
+  const orbScale = breathe.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, 1.08],
+    outputRange: [1, isIdle ? 1.02 : 1.06],
   });
+
+  const statusLabel = isMatching ? 'IDENTIFYING' : isListening ? 'LISTENING' : 'TAP TO LISTEN';
+  const ringTint = isMatching ? colors.mint : isListening ? colors.amber : colors.violetSoft;
+  const barColor = isMatching ? colors.mint : isListening ? colors.amber : colors.violetSoft;
 
   return (
     <View style={styles.wrap}>
-      {ringProgress.map((value, index) => {
-        const ringScale = value.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.6, 1.85],
-        });
-        const ringOpacity = value.interpolate({
-          inputRange: [0, 1],
-          outputRange: [RING_OPACITY[index], 0],
-        });
+      <View style={styles.stage} pointerEvents="box-none">
+        {pulses.map((value, index) => {
+          const ringScale = value.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.55, 2.4],
+          });
+          const ringOpacity = Animated.multiply(
+            activation,
+            value.interpolate({
+              inputRange: [0, 0.15, 1],
+              outputRange: [0, 0.45, 0],
+            }),
+          );
 
-        return (
-          <Animated.View
-            key={`ring-${index}`}
-            style={[
-              styles.ring,
-              {
-                opacity: ringOpacity,
-                transform: [{ scale: ringScale }, { scale: tighten }],
-              },
-            ]}
-          />
-        );
-      })}
+          return (
+            <Animated.View
+              key={`pulse-${index}`}
+              pointerEvents="none"
+              style={[
+                styles.pulseRing,
+                {
+                  borderColor: ringTint,
+                  opacity: ringOpacity,
+                  transform: [{ scale: ringScale }, { scale: tighten }],
+                },
+              ]}
+            />
+          );
+        })}
 
-      <Pressable onPress={onPress} disabled={!onPress} hitSlop={12}>
         <Animated.View
+          pointerEvents="none"
           style={[
-            styles.orb,
+            styles.haloOuter,
             {
-              transform: [{ scale: orbScale }, { scale: tighten }],
-              borderColor: phase === 'matching' ? colors.mint : colors.violetSoft,
+              opacity: activation,
+              transform: [{ scale: tighten }],
+              shadowColor: ringTint,
             },
           ]}
-        >
-          <View style={styles.orbInner}>
-            <Text style={styles.micGlyph}>{phase === 'matching' ? 'ID' : 'MIC'}</Text>
-            <View style={styles.eqRow}>
-              {barValues.map((value, index) => {
-                const scaleY = value.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.35, 1],
-                });
+        />
 
-                return (
-                  <Animated.View
-                    key={`bar-${index}`}
-                    style={[
-                      styles.eqBar,
-                      {
-                        transform: [{ scaleY }],
-                        backgroundColor: phase === 'matching' ? colors.mint : colors.text,
-                      },
-                    ]}
-                  />
-                );
-              })}
-            </View>
-          </View>
-        </Animated.View>
-      </Pressable>
-
-      <View style={styles.waveStrip}>
-        {Array.from({ length: 48 }).map((_, index) => (
-          <View
-            key={`wave-${index}`}
+        <Pressable onPress={onPress} disabled={!onPress} hitSlop={20}>
+          <Animated.View
             style={[
-              styles.waveBar,
+              styles.orbHit,
               {
-                height: 6 + ((index * 7) % 20),
-                opacity: 0.2 + ((index * 3) % 10) / 20,
+                transform: [{ scale: orbScale }, { scale: tighten }],
+                shadowColor: ringTint,
+                shadowOpacity: isActive ? 0.85 : 0.55,
               },
             ]}
-          />
-        ))}
+          >
+            <Image
+              source={require('../../assets/orb.png')}
+              style={styles.orbImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
+        </Pressable>
       </View>
+
+      <Text style={[styles.statusLabel, { color: ringTint }]}>{statusLabel}</Text>
+
+      <Animated.View style={[styles.waveStrip, { opacity: activation }]} pointerEvents="none">
+        {barValues.map((value, index) => {
+          const scaleY = value.interpolate({
+            inputRange: [0, 1],
+            outputRange: [isIdle ? 0.3 : 0.4, isIdle ? 0.5 : 1],
+          });
+          return (
+            <Animated.View
+              key={`wave-${index}`}
+              style={[
+                styles.waveBar,
+                {
+                  transform: [{ scaleY }],
+                  backgroundColor: barColor,
+                },
+              ]}
+            />
+          );
+        })}
+      </Animated.View>
     </View>
   );
 }
@@ -191,62 +222,64 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 400,
+    minHeight: 420,
     marginTop: 4,
   },
-  ring: {
+  stage: {
+    width: ORB_SIZE * 2.5,
+    height: ORB_SIZE * 2.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  pulseRing: {
     position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.violetEdge,
-    backgroundColor: colors.violetWash,
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    borderRadius: ORB_SIZE / 2,
+    borderWidth: 2,
+    backgroundColor: 'transparent',
   },
-  orb: {
-    width: 160,
-    height: 160,
-    borderRadius: 999,
-    borderWidth: 1,
-    backgroundColor: colors.violet,
+  haloOuter: {
+    position: 'absolute',
+    width: ORB_SIZE * 1.35,
+    height: ORB_SIZE * 1.35,
+    borderRadius: (ORB_SIZE * 1.35) / 2,
+    backgroundColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 60,
+    elevation: 20,
+  },
+  orbHit: {
+    width: ORB_SIZE,
+    height: ORB_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 40,
+    elevation: 24,
   },
-  orbInner: {
-    width: 136,
-    height: 136,
-    borderRadius: 999,
-    backgroundColor: colors.violetDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
+  orbImage: {
+    width: ORB_SIZE,
+    height: ORB_SIZE,
   },
-  micGlyph: {
-    color: colors.text,
-    fontSize: 16,
-    letterSpacing: 1,
+  statusLabel: {
+    marginTop: 18,
+    fontSize: 12,
+    letterSpacing: 3,
     fontWeight: '700',
   },
-  eqRow: {
+  waveStrip: {
+    marginTop: 22,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 5,
-    height: 24,
-  },
-  eqBar: {
-    width: 5,
-    height: 20,
-    borderRadius: 3,
-  },
-  waveStrip: {
-    marginTop: 42,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 3,
+    height: 28,
   },
   waveBar: {
-    width: 2,
+    width: 3,
+    height: 24,
     borderRadius: 2,
-    backgroundColor: colors.violetSoft,
   },
 });

@@ -1,4 +1,5 @@
 import type { MatchSource, RitualTrack } from '../state/ritual-state';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
 
@@ -136,14 +137,15 @@ function mapRecognizedTrack(
     year: 'Live',
     albumArt: recognized.coverArtUrl ?? '',
     matchConfidence: Math.max(0, Math.min(100, Number(recognized.confidenceScore ?? 0))),
-    matchedInMs: 1400,
-    lyric: 'Tap Follow live lyrics to decode line-by-line meaning.',
-    meaning: 'This match came from live listening. Open Live Lyrics for contextual breakdown.',
+    matchedInMs: 0,
+    lyric: '',
+    meaning: '',
     spotifyUrl: links.spotifyUrl,
     youtubeUrl: links.youtubeUrl,
-    chips: [recognized.genre || 'Recognized live', 'Now playing'],
+    chips: recognized.genre ? [recognized.genre] : [],
     syncedLyrics: [],
     matchSource,
+    culturalAnalyses: [],
   };
 }
 
@@ -164,8 +166,13 @@ function mergeDetailedTrack(base: RitualTrack, detail: RecognizedTrackDetailResp
   const { track, lyrics, culturalAnalysis } = detail;
   const links = buildTrackLinks(base.title, base.artist, track.spotifyId, track.youtubeId);
 
-  const firstLine = firstNonEmptyLine(lyrics?.text);
-  const firstAnalysis = culturalAnalysis && culturalAnalysis.length > 0 ? culturalAnalysis[0] : undefined;
+  const fullLyrics = (lyrics?.text || '').trim();
+  const analyses = (culturalAnalysis ?? []).map((entry) => ({
+    translation: (entry.translation || '').trim(),
+    culturalContext: (entry.culturalContext || '').trim(),
+    deeperMeaning: (entry.deeperMeaning || '').trim(),
+  }));
+  const firstAnalysis = analyses[0];
   const meaningText =
     firstAnalysis?.deeperMeaning ||
     firstAnalysis?.culturalContext ||
@@ -177,11 +184,12 @@ function mergeDetailedTrack(base: RitualTrack, detail: RecognizedTrackDetailResp
     year: track.releaseYear ? String(track.releaseYear) : base.year,
     albumArt: track.coverArtUrl || base.albumArt,
     matchConfidence: Math.max(0, Math.min(100, Number(track.confidenceScore ?? base.matchConfidence))),
-    lyric: firstLine || base.lyric,
-    meaning: meaningText,
-    chips: [track.genre || 'Recognized live', 'Now playing'],
+    lyric: fullLyrics || base.lyric,
+    meaning: meaningText || base.meaning,
+    chips: track.genre ? [track.genre] : base.chips,
     spotifyUrl: links.spotifyUrl,
     youtubeUrl: links.youtubeUrl,
+    culturalAnalyses: analyses.length > 0 ? analyses : base.culturalAnalyses,
   };
 }
 
@@ -193,46 +201,89 @@ export async function uploadListenSample(
     throw new Error('EXPO_PUBLIC_API_BASE_URL is missing');
   }
 
-  const body = new FormData();
-  body.append('duration', String(durationMs));
-  body.append('audio', {
-    uri: recordingUri,
-    name: 'recording.m4a',
-    type: 'audio/mp4',
-  } as any);
+  const startedAt = Date.now();
 
-  const response = await fetch(`${apiBaseUrl}/api/listen`, {
-    method: 'POST',
-    body,
-  });
+  // Use expo-file-system uploadAsync instead of fetch+FormData.
+  // RN's fetch FormData with `file://` uri is unreliable on Android
+  // (intermittent "Network request failed"). uploadAsync goes through
+  // native HTTP and handles the file stream correctly.
+  const uploadUrl = `${apiBaseUrl}/api/listen`;
+  console.log('[listen] upload begin', { url: uploadUrl, uri: recordingUri, durationMs });
+  let uploadResult: FileSystem.FileSystemUploadResult;
+  try {
+    const uploadPromise = FileSystem.uploadAsync(uploadUrl, recordingUri, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'audio',
+      mimeType: 'audio/mp4',
+      parameters: { duration: String(durationMs) },
+    });
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('upload timeout after 30s')), 30000);
+    });
+    uploadResult = (await Promise.race([uploadPromise, timeoutPromise])) as FileSystem.FileSystemUploadResult;
+    console.log('[listen] upload done', {
+      status: uploadResult.status,
+      bodyLen: uploadResult.body?.length ?? 0,
+      elapsedMs: Date.now() - startedAt,
+    });
+  } catch (err: any) {
+    console.warn('[listen] upload threw:', err?.message || String(err));
+    throw new Error(`Listen upload failed: ${err?.message || String(err)}`);
+  }
 
   let payload: ListenResponse;
   try {
-    payload = (await response.json()) as ListenResponse;
+    payload = JSON.parse(uploadResult.body) as ListenResponse;
   } catch {
     throw new Error('Listen API returned non-JSON response');
   }
 
-  if (!response.ok || !payload.success || !payload.recognizedTrack) {
+  const ok = uploadResult.status >= 200 && uploadResult.status < 300;
+  if (!ok || !payload.success || !payload.recognizedTrack) {
     throw new Error(payload.error || 'Could not identify song');
   }
 
   const matchSource = normalizeMatchSource(
     payload.recognizedTrack.matchSource ?? payload.matchSource ?? 'acrcloud',
   );
-  const baseTrack = mapRecognizedTrack(payload.recognizedTrack, matchSource);
+  const baseTrack = {
+    ...mapRecognizedTrack(payload.recognizedTrack, matchSource),
+    matchedInMs: Date.now() - startedAt,
+  };
 
   try {
-    const detailResponse = await fetch(
-      `${apiBaseUrl}/api/recognized-tracks/${encodeURIComponent(payload.recognizedTrack.id)}`,
-    );
-
-    if (detailResponse.ok) {
+    const detailUrl = `${apiBaseUrl}/api/recognized-tracks/${encodeURIComponent(payload.recognizedTrack.id)}`;
+    const fetchDetail = async () => {
+      console.log('[listen] detail fetch begin', detailUrl);
+      const detailResponse = await fetch(detailUrl);
+      console.log('[listen] detail fetch status', detailResponse.status);
+      if (!detailResponse.ok) return null;
       const detail = (await detailResponse.json()) as RecognizedTrackDetailResponse;
-      return mergeDetailedTrack(baseTrack, detail);
+      console.log('[listen] detail fetch payload', {
+        hasLyrics: Boolean(detail?.lyrics?.text),
+        lyricsLen: detail?.lyrics?.text?.length ?? 0,
+        analysisCount: detail?.culturalAnalysis?.length ?? 0,
+      });
+      return detail;
+    };
+
+    let detail = await fetchDetail();
+    // Backend sometimes returns empty lyrics on first fetch (race with enrichment).
+    // Retry once after a short delay before falling back to the bare track.
+    if (detail && (!detail.lyrics?.text || (detail.culturalAnalysis?.length ?? 0) === 0)) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const retry = await fetchDetail();
+      if (retry && (retry.lyrics?.text || (retry.culturalAnalysis?.length ?? 0) > 0)) {
+        detail = retry;
+      }
     }
-  } catch {
-    // Fall back to base recognition metadata if detail endpoint fails.
+
+    if (detail) {
+      return { ...mergeDetailedTrack(baseTrack, detail), matchedInMs: Date.now() - startedAt };
+    }
+  } catch (err: any) {
+    console.warn('[listen] detail fetch threw:', err?.message || String(err));
   }
 
   return baseTrack;
@@ -252,6 +303,7 @@ export async function identifyByText(query: string): Promise<RitualTrack> {
     throw err;
   }
 
+  const startedAt = Date.now();
   const response = await fetch(`${apiBaseUrl}/api/identify-by-text`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -274,7 +326,10 @@ export async function identifyByText(query: string): Promise<RitualTrack> {
   const matchSource = normalizeMatchSource(
     payload.recognizedTrack.matchSource ?? payload.matchSource ?? 'lyric_text',
   );
-  const baseTrack = mapRecognizedTrack(payload.recognizedTrack, matchSource);
+  const baseTrack = {
+    ...mapRecognizedTrack(payload.recognizedTrack, matchSource),
+    matchedInMs: Date.now() - startedAt,
+  };
 
   try {
     const detailResponse = await fetch(
@@ -283,7 +338,7 @@ export async function identifyByText(query: string): Promise<RitualTrack> {
 
     if (detailResponse.ok) {
       const detail = (await detailResponse.json()) as RecognizedTrackDetailResponse;
-      return mergeDetailedTrack(baseTrack, detail);
+      return { ...mergeDetailedTrack(baseTrack, detail), matchedInMs: Date.now() - startedAt };
     }
   } catch {
     // ignore

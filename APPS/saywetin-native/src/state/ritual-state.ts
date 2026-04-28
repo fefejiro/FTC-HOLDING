@@ -15,6 +15,12 @@ export type SyncedLyricLine = {
 
 export type MatchSource = 'acrcloud' | 'ai_transcript' | 'lyric_text' | 'manual' | 'spotify' | 'unknown';
 
+export type CulturalAnalysisEntry = {
+  translation: string;
+  culturalContext: string;
+  deeperMeaning: string;
+};
+
 export type RitualTrack = {
   id: string;
   title: string;
@@ -30,6 +36,7 @@ export type RitualTrack = {
   chips: string[];
   syncedLyrics: SyncedLyricLine[];
   matchSource: MatchSource;
+  culturalAnalyses: CulturalAnalysisEntry[];
 };
 
 export type RitualController = {
@@ -56,6 +63,7 @@ const demoTrack: RitualTrack = {
   chips: ['Live recognition'],
   syncedLyrics: [],
   matchSource: 'unknown',
+  culturalAnalyses: [],
 };
 
 export function useRitualState() {

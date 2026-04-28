@@ -1,6 +1,8 @@
 ﻿# Docs Index
 
-Canonical repo root: `C:\FTC HOLDING\FTC-HOLDING`
+Canonical repo root: `C:\FTC HOLDING`
+
+Local recovery note: as of 2026-04-28, the git-backed restored checkout is currently at `C:\FTC HOLDING\_restore_repo`. See [FTC Holding Recovery And Workspace Map](RECOVERY_AND_WORKSPACE_MAP_2026-04-28.md) before moving, deleting, or promoting folders.
 
 This index organizes the highest-signal documentation currently in the repo without moving existing files.
 
@@ -16,6 +18,9 @@ This index organizes the highest-signal documentation currently in the repo with
 ## Operations And Runbooks
 
 - [Runbook](RUNBOOK.md)
+- [Recovery Checklist 2026-04-28](RECOVERY_CHECKLIST_2026-04-28.md)
+- [Recovery And Workspace Map 2026-04-28](RECOVERY_AND_WORKSPACE_MAP_2026-04-28.md)
+- [Secrets And Skills Inventory 2026-04-28](SECRET_AND_SKILLS_INVENTORY_2026-04-28.md)
 - [Cloudflare Pages Setup](CLOUDFLARE_PAGES_SETUP.md)
 - [Railway Setup](RAILWAY_SETUP.md)
 - [Deploy Commands](DEPLOY_COMMANDS.md)
@@ -39,6 +44,7 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Saywetin Android Release Guide](SAYWETIN_ANDROID_RELEASE.md)
 - [Saywetin Status](SAYWETIN_STATUS.md)
 - [Saywetin Test And Velocity Log](SAYWETIN_TEST_VELOCITY.md)
+- [Saywetin QA ContentOps Play Store Handover 2026-04-27 Redacted](SAYWETIN_HANDOVER_2026-04-27_REDACTED.md)
 
 ## Umbrella Site / Unalabs Site
 

@@ -1,0 +1,36 @@
+{
+  "name": "UAT — End-user music recognition journey",
+  "description": "Validates founder-level acceptance: a user opens app, identifies a song, sees lyrics.",
+  "steps": [
+    {
+      "id": "U1",
+      "title": "Backend reachable",
+      "request": { "method": "GET", "url": "/api/health" },
+      "expect": { "status": 200, "json": { "status": "ok" } }
+    },
+    {
+      "id": "U2",
+      "title": "Backend reports DB schema ready",
+      "request": { "method": "GET", "url": "/api/status" },
+      "expect": { "status": 200, "jsonPath": { "database.schemaReady": true } }
+    },
+    {
+      "id": "U3",
+      "title": "User searches song by lyric snippet (Burna Boy)",
+      "request": {
+        "method": "POST",
+        "url": "/api/identify-by-text",
+        "headers": { "Content-Type": "application/json" },
+        "body": { "query": "i go love you forever burna boy" }
+      },
+      "skipIf": { "status": 503, "errorCode": "AI_NOT_CONFIGURED", "reason": "OPENAI_API_KEY not set on backend (intentional gate)" },
+      "expect": { "status": 200, "jsonPath": { "success": true } }
+    },
+    {
+      "id": "U4",
+      "title": "Listening history is queryable",
+      "request": { "method": "GET", "url": "/api/listening-history" },
+      "expect": { "status": 200, "isArray": true }
+    }
+  ]
+}

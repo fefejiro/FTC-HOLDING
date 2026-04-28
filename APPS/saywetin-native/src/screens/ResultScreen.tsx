@@ -79,7 +79,9 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
   const inlineLyrics =
     track.syncedLyrics && track.syncedLyrics.length > 0
       ? track.syncedLyrics.map((line) => line.text).join('\n')
-      : track.lyric;
+      : (track.lyric || '').trim();
+
+  const lyricsReady = inlineLyrics.length > 0;
 
   void onFollowLiveLyrics;
 
@@ -89,7 +91,9 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
         <View style={styles.ambientGlow} />
 
         <View style={styles.headerRow}>
-          <Text style={styles.headerMeta}>Matched in {track.matchedInMs}ms</Text>
+          {track.matchedInMs > 0 ? (
+            <Text style={styles.headerMeta}>matched in {(track.matchedInMs / 1000).toFixed(1)}s</Text>
+          ) : <View />}
           <Pressable onPress={onReset} style={styles.closeButton}>
             <Text style={styles.closeText}>x</Text>
           </Pressable>
@@ -119,18 +123,23 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
         </Text>
 
         <View style={styles.lyricCard}>
-          <Text style={styles.playingNow}>Playing now · 1:24</Text>
-          <ScrollView style={styles.lyricsScroll} nestedScrollEnabled>
-            <Text style={styles.lyricLine}>{inlineLyrics}</Text>
-          </ScrollView>
-          <Text style={styles.meaningLine}>{track.meaning}</Text>
-          <View style={styles.chipsRow}>
-            {track.chips.map((chip) => (
-              <View key={chip} style={styles.chipItem}>
-                <Text style={styles.chipText}>{chip}</Text>
-              </View>
-            ))}
-          </View>
+          {lyricsReady ? (
+            <ScrollView style={styles.lyricsScroll} nestedScrollEnabled>
+              <Text style={styles.lyricLine}>{inlineLyrics}</Text>
+            </ScrollView>
+          ) : (
+            <Text style={styles.syncingHint}>lyrics auto-syncing…</Text>
+          )}
+          {track.meaning ? <Text style={styles.meaningLine}>{track.meaning}</Text> : null}
+          {track.chips.length > 0 ? (
+            <View style={styles.chipsRow}>
+              {track.chips.map((chip) => (
+                <View key={chip} style={styles.chipItem}>
+                  <Text style={styles.chipText}>{chip}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.actionRow}>
@@ -283,6 +292,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.8,
     textTransform: 'lowercase',
+  },
+  syncingHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: 'lowercase',
+    paddingVertical: 6,
   },
   lyricLine: {
     color: colors.text,

@@ -1,0 +1,14 @@
+# SayWetin: cold-launch + identify-by-text happy path
+appId: com.saywetin.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: ".*"
+- takeScreenshot: 01-home
+- tapOn:
+    text: ".*Listen.*"
+    optional: true
+- takeScreenshot: 02-listening
+- waitForAnimationToEnd:
+    timeout: 12000
+- takeScreenshot: 03-after-listen
