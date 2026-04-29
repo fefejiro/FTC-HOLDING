@@ -7,11 +7,14 @@
 
 ## Premium Image Generation
 
-- **Note:** Premium image generation and replacement is deferred. No new premium images will be generated or deployed until further notice. See the asset register for future implementation.
+- External premium image generation batch is deferred due quality issues (heavy tint/cast in candidates).
+- Garden homepage hero now uses the owner-approved team image:
+  - `/images/garden-cleaners/gc-team-hero.webp`
+- Additional premium image replacements remain deferred pending a new curated batch.
 
 ## Acceptance & Asset Register
 
-- [Acceptance Checklist](FTC_PHASE_HANDOVER_2026-04-29.md)
+- [Acceptance Checklist](PREMIUM_IMAGE_ACCEPTANCE_CHECKLIST.md)
 - [Premium Image Asset Register](PREMIUM_IMAGE_ASSET_REGISTER.md)
 
 ## Open Blockers
