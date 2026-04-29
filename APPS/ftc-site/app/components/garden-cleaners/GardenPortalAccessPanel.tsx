@@ -4,6 +4,35 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { GardenPortalUserRole } from "../../../lib/gardenContracts";
 import getSupabase from "../../../lib/supabase";
 
+// Types for new API integration
+type JobRecord = {
+  id: string;
+  quote_id?: string;
+  customer_email: string;
+  address?: string;
+  city?: string;
+  region?: string;
+  service_type?: string;
+  service_frequency?: string;
+  property_type?: string;
+  status: string;
+  status_updated_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  staff_profile_id?: string;
+};
+type QuoteRecord = {
+  id: string;
+  email: string;
+  address?: string;
+  city?: string;
+  region?: string;
+  service_type?: string;
+  service_frequency?: string;
+  property_type?: string;
+  created_at?: string;
+};
+
 type PortalProjectRecord = {
   id: string;
   name: string | null;
@@ -139,7 +168,9 @@ export default function GardenPortalAccessPanel() {
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [userEmail, setUserEmail] = useState<string>("");
   const [role, setRole] = useState<GardenPortalUserRole | null>(null);
-  const [records, setRecords] = useState<PortalProjectRecord[]>([]);
+  // Unified state for jobs/quotes
+  const [jobs, setJobs] = useState<JobRecord[]>([]);
+  const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
   const [loadError, setLoadError] = useState<string>("");
   const [signInEmail, setSignInEmail] = useState<string>("");
   const [signInPassword, setSignInPassword] = useState<string>("");
@@ -154,114 +185,94 @@ export default function GardenPortalAccessPanel() {
   const [queueSearch, setQueueSearch] = useState<string>("");
   const [queueRegion, setQueueRegion] = useState<"all" | RegionTag>("all");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const canOperateQueue = role === "staff" || role === "admin";
-  const canMarkCompleted = role === "admin";
-  const canAssignSelf = role === "staff" || role === "admin";
-  const canEditRegion = role === "admin";
+  const isAdmin = role === "admin";
+  const isStaff = role === "staff";
+  const isCustomer = role === "client";
 
-  const visibleRecords = useMemo(() => {
-    const normalizedSearch = queueSearch.trim().toLowerCase();
-    return records.filter((record) => {
-      const normalizedStatus = normalizeStatus(record.status);
-      const statusMatches = queueFilter === "all" ? true : normalizedStatus === queueFilter;
-      const regionMatches = queueRegion === "all" ? true : resolveRecordRegion(record) === queueRegion;
-      if (!statusMatches) {
-        return false;
-      }
-      if (!regionMatches) {
-        return false;
-      }
-      if (!normalizedSearch) {
-        return true;
-      }
-
-      const haystack = `${record.name || ""} ${record.description || ""}`.toLowerCase();
-      return haystack.includes(normalizedSearch);
-    });
-  }, [records, queueFilter, queueRegion, queueSearch]);
-
-  const queueCounts = useMemo(() => {
-    const counts: Record<Exclude<QueueFilter, "all">, number> = {
-      new: 0,
-      triaged: 0,
-      scheduled: 0,
-      completed: 0,
-      cancelled: 0
-    };
-
-    for (const record of records) {
-      counts[normalizeStatus(record.status)] += 1;
+  // Filtered jobs for staff/admin
+  const visibleJobs = useMemo(() => {
+    if (!isAdmin && !isStaff) return [];
+    let filtered = jobs;
+    if (queueFilter !== "all") {
+      filtered = filtered.filter((j) => (j.status || "").toLowerCase() === queueFilter);
     }
-
-    return counts;
-  }, [records]);
-
-  const regionCounts = useMemo(() => {
-    const counts: Record<RegionTag, number> = {
-      Oshawa: 0,
-      Whitby: 0,
-      Ajax: 0,
-      Pickering: 0,
-      Courtice: 0,
-      "Durham Region": 0,
-      Unspecified: 0
-    };
-
-    for (const record of records) {
-      counts[resolveRecordRegion(record)] += 1;
+    if (queueRegion !== "all") {
+      filtered = filtered.filter((j) => (j.region || "Unspecified") === queueRegion);
     }
+    if (queueSearch.trim()) {
+      const s = queueSearch.trim().toLowerCase();
+      filtered = filtered.filter((j) =>
+        [j.address, j.city, j.service_type, j.property_type].join(" ").toLowerCase().includes(s)
+      );
+    }
+    // Staff: only assigned jobs
+    if (isStaff) {
+      // TODO: filter by staff_profile_id if available
+    }
+    return filtered;
+  }, [jobs, queueFilter, queueRegion, queueSearch, isAdmin, isStaff]);
 
-    return counts;
-  }, [records]);
+  // Customer jobs
+  const customerJobs = useMemo(() => {
+    if (!isCustomer) return [];
+    return jobs;
+  }, [jobs, isCustomer]);
 
-  useEffect(() => {
-    setRegionDraftByProjectId((prev) => {
-      const next: Record<string, RegionTag> = {};
-      for (const record of records) {
-        next[record.id] = prev[record.id] || resolveRecordRegion(record);
-      }
-      return next;
-    });
-  }, [records]);
+  // (Obsolete: queueCounts/regionCounts, now handled by jobs/quotes filtering and UI)
 
-  async function loadRecords(nextRole: GardenPortalUserRole, sessionEmail: string) {
+  // (Obsolete: regionDraftByProjectId effect, removed after jobs/quotes refactor)
+
+  // API fetch helpers
+  async function fetchWithAuth(url: string, options: RequestInit = {}) {
     const supabase = getSupabase();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) throw new Error("No session token");
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      }
+    });
+  }
 
-    async function runQuery(selectColumns: string) {
-      const baseQuery = supabase
-        .from("projects")
-        .select(selectColumns)
-        .order("created_at", { ascending: false })
-        .limit(nextRole === "client" ? 6 : 12);
-
-      return nextRole === "client"
-        ? baseQuery.ilike("email", sessionEmail)
-        : baseQuery.ilike("name", "%Garden%");
-    }
-
-    const preferred = await runQuery("id,name,status,description,created_at,service_region,assigned_owner");
-    if (!preferred.error) {
-      setLoadError("");
-      setRecords((preferred.data || []) as unknown as PortalProjectRecord[]);
-      return;
-    }
-
-    const fallback = await runQuery("id,name,status,description,created_at");
-    if (fallback.error) {
-      setRecords([]);
-      setLoadError("Portal records are currently unavailable. You are authenticated, but data access is restricted for this session.");
-      return;
-    }
-
+  async function loadPortalData(nextRole: GardenPortalUserRole) {
+    setLoading(true);
     setLoadError("");
-    setRecords(
-      ((fallback.data || []) as unknown as Array<Omit<PortalProjectRecord, "service_region" | "assigned_owner">>).map((item) => ({
-        ...item,
-        service_region: null,
-        assigned_owner: null
-      }))
-    );
+    try {
+      if (nextRole === "admin") {
+        // Admin: fetch all jobs and all quotes
+        const [jobsRes, quotesRes] = await Promise.all([
+          fetchWithAuth("/api/garden-cleaners-job").then(r => r.json()),
+          fetchWithAuth("/api/garden-cleaners-quote").then(r => r.json()).catch(() => ({ ok: false, quotes: [] }))
+        ]);
+        if (!jobsRes.ok) throw new Error(jobsRes.error || "Failed to load jobs");
+        setJobs(jobsRes.jobs || []);
+        setQuotes(quotesRes.quotes || []);
+      } else if (nextRole === "staff") {
+        // Staff: fetch assigned jobs
+        const jobsRes = await fetchWithAuth("/api/garden-cleaners-my-jobs").then(r => r.json());
+        if (!jobsRes.ok) throw new Error(jobsRes.error || "Failed to load jobs");
+        setJobs(jobsRes.jobs || []);
+        setQuotes([]);
+      } else {
+        // Customer: fetch own jobs
+        const jobsRes = await fetchWithAuth("/api/garden-cleaners-my-jobs").then(r => r.json());
+        if (!jobsRes.ok) throw new Error(jobsRes.error || "Failed to load jobs");
+        setJobs(jobsRes.jobs || []);
+        setQuotes([]);
+      }
+    } catch (e: any) {
+      setLoadError(e.message || "Failed to load portal data");
+      setJobs([]);
+      setQuotes([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -274,40 +285,35 @@ export default function GardenPortalAccessPanel() {
         const { data: sessionData } = await supabase.auth.getSession();
         const sessionEmail = (emailFromSession || sessionData.session?.user?.email || "").trim().toLowerCase();
 
-        if (!mounted) {
-          return;
-        }
-
+        if (!mounted) return;
         if (!sessionEmail) {
           setAuthState("unauthenticated");
           setUserEmail("");
           setRole(null);
-          setRecords([]);
+          setJobs([]);
+          setQuotes([]);
           setLoadError("");
           setQueueMessage("");
           return;
         }
-
         const nextRole = resolveRole(sessionEmail);
         setAuthState("authenticated");
         setUserEmail(sessionEmail);
         setRole(nextRole);
-        await loadRecords(nextRole, sessionEmail);
+        await loadPortalData(nextRole);
       } catch {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         setAuthState("unavailable");
         setUserEmail("");
         setRole(null);
-        setRecords([]);
+        setJobs([]);
+        setQuotes([]);
         setLoadError("Supabase public environment is not configured for this deployment.");
       }
     }
 
     async function init() {
       await loadSessionAndData();
-
       try {
         const supabase = getSupabase();
         const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -316,18 +322,12 @@ export default function GardenPortalAccessPanel() {
         unsubscribe = () => {
           data.subscription.unsubscribe();
         };
-      } catch {
-        // no-op: init already handled unavailable state
-      }
+      } catch {}
     }
-
     void init();
-
     return () => {
       mounted = false;
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      if (unsubscribe) unsubscribe();
     };
   }, []);
 
@@ -389,128 +389,69 @@ export default function GardenPortalAccessPanel() {
     }
   }
 
-  async function updateProjectStatus(projectId: string, nextStatus: string) {
-    if (!canOperateQueue || !userEmail) {
-      return;
-    }
-
-    if (!VALID_QUEUE_STATUSES.has(nextStatus as Exclude<QueueFilter, "all">)) {
-      setQueueMessage("Invalid queue transition requested.");
-      return;
-    }
-
+  // Staff: update job status
+  async function updateJobStatus(jobId: string, nextStatus: string) {
+    if (!isStaff && !isAdmin) return;
+    setPendingStatusProjectId(jobId);
+    setQueueMessage("");
     try {
-      const supabase = getSupabase();
-      setPendingStatusProjectId(projectId);
-      setQueueMessage("");
-      const existing = records.find((item) => item.id === projectId);
-      if (existing && normalizeStatus(existing.status) === nextStatus) {
-        setQueueMessage(`Project is already marked ${nextStatus}.`);
-        return;
-      }
-
-      const previousStatus = existing?.status || null;
-      setRecords((prev) => prev.map((item) => (item.id === projectId ? { ...item, status: nextStatus } : item)));
-
-      const { error } = await supabase
-        .from("projects")
-        .update({ status: nextStatus })
-        .eq("id", projectId);
-
-      if (error) {
-        setRecords((prev) => prev.map((item) => (item.id === projectId ? { ...item, status: previousStatus } : item)));
-        setQueueMessage(error.message || "Unable to update queue status for this project.");
-        return;
-      }
-
-      setQueueMessage(`Project status updated to ${nextStatus}.`);
-    } catch {
-      setQueueMessage("Queue update is temporarily unavailable.");
+      const res = await fetchWithAuth("/api/garden-cleaners-job-status", {
+        method: "POST",
+        body: JSON.stringify({ job_id: jobId, status: nextStatus })
+      }).then(r => r.json());
+      if (!res.ok) throw new Error(res.error || "Failed to update status");
+      setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, status: nextStatus } : j)));
+      setQueueMessage(`Job status updated to ${nextStatus}`);
+    } catch (e: any) {
+      setQueueMessage(e.message || "Unable to update job status");
     } finally {
       setPendingStatusProjectId("");
     }
   }
 
-  async function assignProjectOwner(projectId: string) {
-    if (!canAssignSelf || !userEmail) {
-      return;
-    }
-
+  // Admin: convert quote to job
+  async function convertQuoteToJob(quoteId: string) {
+    if (!isAdmin) return;
+    setQueueMessage("");
     try {
-      const supabase = getSupabase();
-      setPendingAssignmentProjectId(projectId);
-      setQueueMessage("");
-      const existing = records.find((item) => item.id === projectId);
-      const previousOwner = existing?.assigned_owner || null;
-      setRecords((prev) => prev.map((item) => (item.id === projectId ? { ...item, assigned_owner: userEmail } : item)));
-      const { error } = await supabase
-        .from("projects")
-        .update({ assigned_owner: userEmail })
-        .eq("id", projectId);
-
-      if (error) {
-        setRecords((prev) => prev.map((item) => (item.id === projectId ? { ...item, assigned_owner: previousOwner } : item)));
-        if (isMissingColumnError(error.message || "", "assigned_owner")) {
-          setQueueMessage("Owner assignment requires schema rollout. Apply migration 202604260004 and refresh.");
-          return;
-        }
-        setQueueMessage(error.message || "Unable to assign owner for this project.");
-        return;
-      }
-
-      setQueueMessage(`Project assigned to ${userEmail}.`);
-    } catch {
-      setQueueMessage("Owner assignment is temporarily unavailable.");
-    } finally {
-      setPendingAssignmentProjectId("");
+      const res = await fetchWithAuth("/api/garden-cleaners-job", {
+        method: "POST",
+        body: JSON.stringify({ quote_id: quoteId })
+      }).then(r => r.json());
+      if (!res.ok) throw new Error(res.error || "Failed to convert quote");
+      setQuotes((prev) => prev.filter((q) => q.id !== quoteId));
+      setQueueMessage("Quote converted to job");
+      await loadPortalData("admin");
+    } catch (e: any) {
+      setQueueMessage(e.message || "Unable to convert quote");
     }
   }
 
-  async function updateProjectRegion(projectId: string) {
-    if (!canEditRegion || !userEmail) {
-      return;
-    }
-
-    const nextRegion = regionDraftByProjectId[projectId] || "Unspecified";
-
+  // Admin: assign staff to job
+  async function assignStaffToJob(jobId: string, staffProfileId: string) {
+    if (!isAdmin) return;
+    setQueueMessage("");
     try {
-      const supabase = getSupabase();
-      setPendingRegionProjectId(projectId);
-      setQueueMessage("");
-      const existing = records.find((item) => item.id === projectId);
-      const previousRegion = existing?.service_region || null;
-      setRecords((prev) => prev.map((item) => (item.id === projectId ? { ...item, service_region: nextRegion } : item)));
-      const { error } = await supabase
-        .from("projects")
-        .update({ service_region: nextRegion })
-        .eq("id", projectId);
-
-      if (error) {
-        setRecords((prev) => prev.map((item) => (item.id === projectId ? { ...item, service_region: previousRegion } : item)));
-        if (isMissingColumnError(error.message || "", "service_region")) {
-          setQueueMessage("Region save requires schema rollout. Apply migration 202604260004 and refresh.");
-          return;
-        }
-        setQueueMessage(error.message || "Unable to update region for this project.");
-        return;
-      }
-
-      setQueueMessage(`Project region updated to ${nextRegion}.`);
-    } catch {
-      setQueueMessage("Region update is temporarily unavailable.");
-    } finally {
-      setPendingRegionProjectId("");
+      const res = await fetchWithAuth("/api/garden-cleaners-job-assign", {
+        method: "POST",
+        body: JSON.stringify({ job_id: jobId, staff_profile_id: staffProfileId })
+      }).then(r => r.json());
+      if (!res.ok) throw new Error(res.error || "Failed to assign staff");
+      setQueueMessage("Staff assigned to job");
+      await loadPortalData("admin");
+    } catch (e: any) {
+      setQueueMessage(e.message || "Unable to assign staff");
     }
   }
+
+
 
   async function refreshQueue() {
-    if (!role || !userEmail) {
-      return;
-    }
+    if (!role) return;
     try {
       setIsRefreshing(true);
       setQueueMessage("");
-      await loadRecords(role, userEmail);
+      await loadPortalData(role);
       setQueueMessage("Queue refreshed from live records.");
     } catch {
       setQueueMessage("Unable to refresh queue right now.");
@@ -528,17 +469,18 @@ export default function GardenPortalAccessPanel() {
     }
   }
 
+  // --- UI ---
   return (
     <section className="section garden-section">
       <div className="section-heading">
         <p className="eyebrow">Portal access</p>
-        <h2>Authenticated client and staff lanes</h2>
+        <h2>Role-based Garden Cleaners portal</h2>
         <p>
-          The portal now checks your authenticated session and unlocks lane visibility based on role. Client sessions load personal delivery records;
-          staff and admin sessions load Garden operational records.
+          {isAdmin && "Admin: manage all jobs, convert quotes, assign staff."}
+          {isStaff && "Staff: view and update assigned jobs."}
+          {isCustomer && "Customer: view your job status."}
         </p>
       </div>
-
       <div className="garden-split-grid">
         <article className="card garden-split-card">
           <p className="garden-panel-kicker">Session state</p>
@@ -549,222 +491,131 @@ export default function GardenPortalAccessPanel() {
             {authState === "authenticated" && `Signed in as ${role}`}
           </h2>
           {userEmail ? <p>{userEmail}</p> : null}
-
           {authState === "unauthenticated" ? (
             <form className="intake-form" onSubmit={signInWithPassword} noValidate>
               <label>
                 <span>Email</span>
-                <input
-                  type="email"
-                  name="portalEmail"
-                  value={signInEmail}
-                  autoComplete="email"
-                  onChange={(event) => setSignInEmail(event.currentTarget.value)}
-                  placeholder="you@example.com"
-                  required
-                />
+                <input type="email" name="portalEmail" value={signInEmail} autoComplete="email" onChange={(e) => setSignInEmail(e.currentTarget.value)} placeholder="you@example.com" required />
               </label>
               <label>
                 <span>Password</span>
-                <input
-                  type="password"
-                  name="portalPassword"
-                  value={signInPassword}
-                  autoComplete="current-password"
-                  onChange={(event) => setSignInPassword(event.currentTarget.value)}
-                  placeholder="Enter your password"
-                  required
-                />
+                <input type="password" name="portalPassword" value={signInPassword} autoComplete="current-password" onChange={(e) => setSignInPassword(e.currentTarget.value)} placeholder="Enter your password" required />
               </label>
               <div className="hero-actions">
-                <button type="submit" className="btn btn-primary" disabled={signInState === "submitting"}>
-                  {signInState === "submitting" ? "Signing in..." : "Sign in to portal"}
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={sendMagicLink} disabled={signInState === "submitting"}>
-                  Send magic link
-                </button>
+                <button type="submit" className="btn btn-primary" disabled={signInState === "submitting"}>{signInState === "submitting" ? "Signing in..." : "Sign in to portal"}</button>
+                <button type="button" className="btn btn-secondary" onClick={sendMagicLink} disabled={signInState === "submitting"}>Send magic link</button>
               </div>
-              {signInMessage ? (
-                <p className={signInState === "error" ? "form-feedback error" : "form-feedback success"}>
-                  {signInMessage}
-                </p>
-              ) : null}
+              {signInMessage ? <p className={signInState === "error" ? "form-feedback error" : "form-feedback success"}>{signInMessage}</p> : null}
             </form>
           ) : null}
-
           {authState === "unavailable" ? <p>{loadError}</p> : null}
-
           {authState === "authenticated" ? (
-            <button type="button" className="btn btn-secondary" onClick={signOut}>
-              Sign out of portal session
-            </button>
+            <button type="button" className="btn btn-secondary" onClick={signOut}>Sign out of portal session</button>
           ) : null}
         </article>
-
         <article className="card garden-split-card">
           <p className="garden-panel-kicker">Lane visibility</p>
-          <h2>Role-based lane unlocks</h2>
-          <ul className="feature-list compact-feature-list">
-            <li>Client: personal request and delivery visibility</li>
-            <li>Staff: queue triage and regional routing visibility</li>
-            <li>Admin: full operations oversight</li>
-          </ul>
-          {canOperateQueue ? <p>Staff and admin accounts can update queue status directly from each record card below.</p> : null}
+          <h2>Role: {role}</h2>
           {loadError && authState === "authenticated" ? <p>{loadError}</p> : null}
           {queueMessage ? <p>{queueMessage}</p> : null}
         </article>
       </div>
-
-      {authState === "authenticated" ? (
+      {authState === "authenticated" && (
         <>
-          {canOperateQueue ? (
+          {loading && <div className="loading">Loading portal data...</div>}
+          {/* Admin: Quotes to convert */}
+          {isAdmin && quotes.length > 0 && (
             <article className="card garden-proof-card">
-              <h3>Operations queue controls</h3>
+              <h3>Quotes to Convert</h3>
+              <ul>
+                {quotes.map((q) => (
+                  <li key={q.id}>
+                    <div>Email: {q.email} | {q.address} {q.city} | {q.service_type} | {q.property_type}</div>
+                    <button className="btn btn-secondary" onClick={() => convertQuoteToJob(q.id)}>Convert to Job</button>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          )}
+          {/* Admin/Staff: Job queue */}
+          {(isAdmin || isStaff) && (
+            <article className="card garden-proof-card">
+              <h3>Job Queue</h3>
               <div className="intake-form-grid">
                 <label>
                   <span>Status filter</span>
-                  <select value={queueFilter} onChange={(event) => setQueueFilter(event.currentTarget.value as QueueFilter)}>
+                  <select value={queueFilter} onChange={(e) => setQueueFilter(e.currentTarget.value as QueueFilter)}>
                     <option value="all">All statuses</option>
-                    <option value="new">New</option>
-                    <option value="triaged">Triaged</option>
-                    <option value="scheduled">Scheduled</option>
+                    <option value="pending">Pending</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="in_progress">In Progress</option>
                     <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
                   </select>
                 </label>
                 <label>
                   <span>Region filter</span>
-                  <select value={queueRegion} onChange={(event) => setQueueRegion(event.currentTarget.value as "all" | RegionTag)}>
+                  <select value={queueRegion} onChange={(e) => setQueueRegion(e.currentTarget.value as "all" | RegionTag)}>
                     <option value="all">All regions</option>
                     {REGION_OPTIONS.map((region) => (
-                      <option key={region} value={region}>
-                        {region}
-                      </option>
+                      <option key={region} value={region}>{region}</option>
                     ))}
                   </select>
                 </label>
                 <label>
                   <span>Search queue</span>
-                  <input
-                    type="text"
-                    value={queueSearch}
-                    onChange={(event) => setQueueSearch(event.currentTarget.value)}
-                    placeholder="Search by project name or details"
-                  />
+                  <input type="text" value={queueSearch} onChange={(e) => setQueueSearch(e.currentTarget.value)} placeholder="Search jobs" />
                 </label>
               </div>
               <div className="hero-actions">
-                <button type="button" className="btn btn-secondary" onClick={refreshQueue} disabled={isRefreshing}>
-                  {isRefreshing ? "Refreshing..." : "Refresh queue"}
-                </button>
+                <button type="button" className="btn btn-secondary" onClick={refreshQueue} disabled={isRefreshing}>{isRefreshing ? "Refreshing..." : "Refresh queue"}</button>
               </div>
-              <p>
-                Queue mix: {queueCounts.new} new, {queueCounts.triaged} triaged, {queueCounts.scheduled} scheduled, {queueCounts.completed} completed, {queueCounts.cancelled} cancelled.
-              </p>
-              <p>
-                Regions: {regionCounts.Oshawa} Oshawa, {regionCounts.Whitby} Whitby, {regionCounts.Ajax} Ajax, {regionCounts.Pickering} Pickering, {regionCounts.Courtice} Courtice, {regionCounts["Durham Region"]} Durham Region, {regionCounts.Unspecified} unspecified.
-              </p>
+              <div className="cards-grid cards-grid-3">
+                {visibleJobs.length ? visibleJobs.map((job) => (
+                  <article key={job.id} className="card garden-proof-card">
+                    <h4>Job: {job.id}</h4>
+                    <p><strong>Status:</strong> {job.status}</p>
+                    <p><strong>Customer:</strong> {job.customer_email}</p>
+                    <p><strong>Address:</strong> {job.address} {job.city}</p>
+                    <p><strong>Type:</strong> {job.service_type} {job.property_type}</p>
+                    <p><strong>Created:</strong> {job.created_at ? new Date(job.created_at).toLocaleDateString("en-CA") : "unknown"}</p>
+                    {/* Admin: assign staff */}
+                    {isAdmin && (
+                      <div>
+                        <input type="text" placeholder="Staff Profile ID" onBlur={(e) => assignStaffToJob(job.id, e.target.value)} />
+                        <span className="note">(Enter staff profile ID and blur to assign)</span>
+                      </div>
+                    )}
+                    {/* Staff: update status */}
+                    {isStaff && (
+                      <div className="hero-actions">
+                        <button className="btn btn-secondary" onClick={() => updateJobStatus(job.id, "in_progress")}>Mark In Progress</button>
+                        <button className="btn btn-secondary" onClick={() => updateJobStatus(job.id, "completed")}>Mark Completed</button>
+                      </div>
+                    )}
+                  </article>
+                )) : <div>No jobs found for this view.</div>}
+              </div>
             </article>
-          ) : null}
-
-          <div className="cards-grid cards-grid-3">
-            {visibleRecords.length ? (
-              visibleRecords.map((record) => (
-              <article key={record.id} className="card garden-proof-card">
-                <h3>{record.name || "Untitled project"}</h3>
-                <p>
-                  <strong>Status:</strong> {normalizeStatus(record.status)}
-                </p>
-                <p>
-                  <strong>Region:</strong> {resolveRecordRegion(record)}
-                </p>
-                <p>
-                  <strong>Owner:</strong> {resolveRecordOwner(record)}
-                </p>
-                {canEditRegion ? (
-                  <label>
-                    <span>Set region</span>
-                    <select
-                      value={regionDraftByProjectId[record.id] || resolveRecordRegion(record)}
-                      onChange={(event) =>
-                        setRegionDraftByProjectId((prev) => ({
-                          ...prev,
-                          [record.id]: event.currentTarget.value as RegionTag
-                        }))
-                      }
-                    >
-                      {REGION_OPTIONS.map((region) => (
-                        <option key={region} value={region}>
-                          {region}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                <p>{record.description || "No project description available."}</p>
-                <p>
-                  <strong>Created:</strong>{" "}
-                  {record.created_at ? new Date(record.created_at).toLocaleDateString("en-CA") : "unknown"}
-                </p>
-                {canOperateQueue ? (
-                  <div className="hero-actions" aria-label="Queue status actions">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => void updateProjectStatus(record.id, "triaged")}
-                      disabled={pendingStatusProjectId === record.id || normalizeStatus(record.status) === "triaged"}
-                    >
-                      Mark triaged
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => void updateProjectStatus(record.id, "scheduled")}
-                      disabled={pendingStatusProjectId === record.id || normalizeStatus(record.status) === "scheduled"}
-                    >
-                      Mark scheduled
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => void updateProjectStatus(record.id, "completed")}
-                      disabled={!canMarkCompleted || pendingStatusProjectId === record.id || normalizeStatus(record.status) === "completed"}
-                    >
-                      Mark completed
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => void assignProjectOwner(record.id)}
-                      disabled={!canAssignSelf || pendingAssignmentProjectId === record.id || resolveRecordOwner(record) === userEmail}
-                    >
-                      {pendingAssignmentProjectId === record.id ? "Assigning..." : "Assign to me"}
-                    </button>
-                    {canEditRegion ? (
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => void updateProjectRegion(record.id)}
-                        disabled={pendingRegionProjectId === record.id}
-                      >
-                        {pendingRegionProjectId === record.id ? "Saving region..." : "Save region"}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </article>
-              ))
-            ) : (
-              <article className="card garden-proof-card">
-                <h3>No records available for this session</h3>
-                <p>
-                  Your session is authenticated, but there are no accessible project rows for the current role and active queue filters.
-                </p>
-              </article>
-            )}
-          </div>
+          )}
+          {/* Customer: Own jobs/status */}
+          {isCustomer && (
+            <article className="card garden-proof-card">
+              <h3>Your Jobs</h3>
+              <div className="cards-grid cards-grid-2">
+                {customerJobs.length ? customerJobs.map((job) => (
+                  <article key={job.id} className="card garden-proof-card">
+                    <h4>Job: {job.id}</h4>
+                    <p><strong>Status:</strong> {job.status}</p>
+                    <p><strong>Address:</strong> {job.address} {job.city}</p>
+                    <p><strong>Type:</strong> {job.service_type} {job.property_type}</p>
+                    <p><strong>Created:</strong> {job.created_at ? new Date(job.created_at).toLocaleDateString("en-CA") : "unknown"}</p>
+                  </article>
+                )) : <div>No jobs found for your account.</div>}
+              </div>
+            </article>
+          )}
         </>
-      ) : null}
+      )}
     </section>
   );
 }

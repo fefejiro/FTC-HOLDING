@@ -58,6 +58,33 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Garden Portal Analytics Event Map](GARDEN_PORTAL_ANALYTICS_EVENT_MAP.md)
 - [Garden Portal Reporting Baseline](GARDEN_PORTAL_REPORTING_BASELINE.md)
 
+### Production Handoff & QA Docs
+- [Garden Client Production Handoff](GARDEN_CLIENT_PRODUCTION_HANDOFF.md)
+- [Garden Client Access Pack](GARDEN_CLIENT_ACCESS_PACK.md)
+- [Garden Portal Production Build Board](GARDEN_PORTAL_PRODUCTION_BUILD_BOARD.md)
+- [Garden Production Handoff Gate](GARDEN_PRODUCTION_HANDOFF_GATE.md)
+- [Garden Auth and Portal Architecture](GARDEN_AUTH_AND_PORTAL_ARCHITECTURE.md)
+- [Garden Credentialed Portal QA Results](GARDEN_CREDENTIALED_PORTAL_QA_RESULTS.md)
+- [Garden Final Portal QA Report 2026-04-29](GARDEN_FINAL_PORTAL_QA_REPORT_2026-04-29.md)
+
+<!-- Optional: Only add if file exists -->
+<!-- - [Garden Portal Production Gap Audit](GARDEN_PORTAL_PRODUCTION_GAP_AUDIT.md) -->
+
+---
+
+## What To Read First (Garden Cleaners)
+
+For new developers or client-facing operators, start here:
+
+1. **[Garden Production Handoff Gate](GARDEN_PRODUCTION_HANDOFF_GATE.md)** — Current readiness, blockers, and GO/NO-GO status.
+2. **[Garden Portal Production Build Board](GARDEN_PORTAL_PRODUCTION_BUILD_BOARD.md)** — All build phases, acceptance criteria, and rollback notes.
+3. **[Garden Final Portal QA Report 2026-04-29](GARDEN_FINAL_PORTAL_QA_REPORT_2026-04-29.md)** — Most recent QA findings and evidence.
+4. **[Garden Credentialed Portal QA Results](GARDEN_CREDENTIALED_PORTAL_QA_RESULTS.md)** — Credentialed QA status and rerun requirements.
+5. **[Garden Auth and Portal Architecture](GARDEN_AUTH_AND_PORTAL_ARCHITECTURE.md)** — System and access model overview.
+6. **[Garden Client Production Handoff](GARDEN_CLIENT_PRODUCTION_HANDOFF.md)** and **[Garden Client Access Pack](GARDEN_CLIENT_ACCESS_PACK.md)** — For client onboarding and access.
+
+If a gap audit is required, see **Garden Portal Production Gap Audit** (add link if file exists).
+
 
 ## Archive (Historical/Legacy)
 
