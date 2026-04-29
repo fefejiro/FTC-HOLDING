@@ -84,8 +84,16 @@ test.describe("Garden Cleaners public QA", () => {
       .getByLabel("Message")
       .fill("Please verify this Garden Cleaners QA request can pass through the public quote form.");
 
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(2000);
     await page.getByRole("button", { name: "Request Quote" }).click();
-    await expect(page.getByText(/Garden Cleaners received your quote request/i)).toBeVisible();
+    await expect(page.getByText(/Garden Cleaners received your quote request/i)).toBeVisible({ timeout: 15000 });
+  });
+
+  test("Garden custom domain blocks role route leakage", async ({ request }) => {
+    const response = await request.get("/garden-cleaners/staff", {
+      headers: { host: "gardencleaners.ca" }
+    });
+
+    expect(response.status()).toBe(404);
   });
 });

@@ -105,7 +105,7 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
       </label>
       <label>
         <span>Phone</span>
-        <input type="tel" name="phone" autoComplete="tel" required placeholder="(905) 000-0000" />
+        <input type="tel" name="phone" autoComplete="tel" required placeholder="+1 289 200 0631" />
       </label>
       <label>
         <span>Service Address</span>

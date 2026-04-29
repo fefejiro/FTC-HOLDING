@@ -31,7 +31,7 @@ const OG_PUBLIC_PATHS = new Set([
   "/contact"
 ]);
 
-const ROLE_ROUTE_PATTERN = /^\/(?:garden-cleaners\/)?(?:customer|worker|cleaner|admin|operator|dashboard|jobs|bookings|status|login)(?:\/|$)/;
+const ROLE_ROUTE_PATTERN = /^\/(?:garden-cleaners\/)?(?:customer|worker|cleaner|staff|admin|operator|dashboard|jobs|bookings|status|login)(?:\/|$)/;
 
 const PROPERTY_TYPES = new Set(["House", "Condo / Apartment", "Office", "Retail / Commercial", "Vacant unit", "Other"]);
 const SERVICE_OPTIONS = new Set([
