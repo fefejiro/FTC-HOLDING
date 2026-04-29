@@ -268,10 +268,10 @@ export const gardenCleanersConfig = {
   },
   media: {
     hero: {
-      src: '/images/garden-cleaners/cleaning-collage.webp',
-      alt: 'Black Nigerian Canadian cleaning professional sanitizing an office desk while the team refreshes a modern workspace.',
+      src: '/images/garden-cleaners/gc-team-hero.webp',
+      alt: 'Diverse professional cleaning team ready to begin service in a modern office corridor.',
       badge: 'Commercial and office cleaning',
-      title: 'A professional team presence clients can trust in active workspaces.',
+      title: 'A professional team presence clients can trust from first contact.',
       caption: 'Garden Cleaners supports offices, managed spaces, and commercial environments with dependable service in Oshawa.'
     },
     deepCleaning: {
