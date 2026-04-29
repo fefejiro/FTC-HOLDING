@@ -1,4 +1,9 @@
 #
+# Wave 4 Premium Signoff (OG + Garden)
+#
+# Final premium signoff for both OG and Garden is complete. No further code or asset changes are pending for this release.
+# Premium image generation is deferred; see [WAVE4_PREMIUM_SIGNOFF.md](WAVE4_PREMIUM_SIGNOFF.md) and [PREMIUM_IMAGE_ASSET_REGISTER.md](PREMIUM_IMAGE_ASSET_REGISTER.md) for details.
+#
 # Wave 2 Docs Consolidation Completed
 #
 # The following docs were archived (moved to DOCS/archive):
@@ -50,6 +55,9 @@
 # - linkedin/
 # - ops/
 # FTC Phase Handover - 2026-04-29
+
+## Wave 3 Cleanup Progress (2026-04-29)
+Wave 3 Batch A executed as approved: All candidate temp/IDE noise paths were already absent or not present at execution time. No files or folders were removed. No HOLD or production assets touched. Batch B/C pending owner review.
 
 **Final Infra Closeout (2026-04-29):**
 - Garden Cleaners deployed, Supabase-persistent, QA proof complete.
