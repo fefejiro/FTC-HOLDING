@@ -58,6 +58,57 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Garden Portal Analytics Event Map](GARDEN_PORTAL_ANALYTICS_EVENT_MAP.md)
 - [Garden Portal Reporting Baseline](GARDEN_PORTAL_REPORTING_BASELINE.md)
 
+
+## Archive (Historical/Legacy)
+
+- [Client Onboarding Playbook](archive/history/CLIENT_ONBOARDING_PLAYBOOK.md)
+- [Client Workflow Architecture](archive/client_workflow/CLIENT_WORKFLOW_ARCHITECTURE.md)
+- [Client Workflow Delivery Summary](archive/client_workflow/CLIENT_WORKFLOW_DELIVERY_SUMMARY.md)
+- [Client Workflow Deployment Checklist](archive/client_workflow/CLIENT_WORKFLOW_DEPLOYMENT_CHECKLIST.md)
+- [Client Workflow Implementation Guide](archive/client_workflow/CLIENT_WORKFLOW_IMPLEMENTATION_GUIDE.md)
+- [Client Workflow Quick Start](archive/client_workflow/CLIENT_WORKFLOW_QUICK_START.md)
+- [Client Workflow README](archive/client_workflow/CLIENT_WORKFLOW_README.md)
+- [Onboarding Docs (Historical)](archive/onboarding/onboarding_README.md)
+
+### PeacePad
+- [PeacePad Android Release Guide](archive/peacepad/PEACEPAD_ANDROID_RELEASE.md)
+- [PeacePad Auth Setup](archive/peacepad/PEACEPAD_AUTH_SETUP.md)
+- [PeacePad Capability Audit 2026-03-10](archive/peacepad/PEACEPAD_CAPABILITY_AUDIT_2026-03-10.md)
+- [PeacePad Capability Productization](archive/peacepad/PEACEPAD_CAPABILITY_PRODUCTIZATION.md)
+- [PeacePad Deployment Architecture Audit 2026-03-06](archive/peacepad/PEACEPAD_DEPLOYMENT_ARCHITECTURE_AUDIT_2026-03-06.md)
+- [PeacePad Deployment Stabilization Report 2026-03-06](archive/peacepad/PEACEPAD_DEPLOYMENT_STABILIZATION_REPORT_2026-03-06.md)
+- [PeacePad GPT Actions Setup](archive/peacepad/PEACEPAD_GPT_ACTIONS_SETUP.md)
+- [PeacePad Pages Setup](archive/peacepad/PEACEPAD_PAGES_SETUP.md)
+- [PeacePad Phase 0 Baseline 2026-03-07](archive/peacepad/PEACEPAD_PHASE0_BASELINE_2026-03-07.md)
+- [PeacePad Phase 2 Hardening](archive/peacepad/PEACEPAD_PHASE2_HARDENING.md)
+- [PeacePad Railway API Setup](archive/peacepad/PEACEPAD_RAILWAY_API_SETUP.md)
+- [PeacePad Release Policy](archive/peacepad/PEACEPAD_RELEASE_POLICY.md)
+- [PeacePad Voice Audit 2026-03-07](archive/peacepad/PEACEPAD_VOICE_AUDIT_2026-03-07.md)
+- [PeacePad Weekly Metrics](archive/peacepad/PEACEPAD_WEEKLY_METRICS.md)
+
+### SayWetin
+- [SayWetin Android Release Guide](archive/saywetin/SAYWETIN_ANDROID_RELEASE.md)
+- [SayWetin Handover](archive/saywetin/SAYWETIN_HANDOVER.md)
+- [SayWetin QA ContentOps Play Store Handover 2026-04-27 Redacted](archive/saywetin/SAYWETIN_HANDOVER_2026-04-27_REDACTED.md)
+- [SayWetin Release Policy](archive/saywetin/SAYWETIN_RELEASE_POLICY.md)
+- [SayWetin Split Deploy Runbook](archive/saywetin/SAYWETIN_SPLIT_DEPLOY_RUNBOOK.md)
+- [SayWetin Status](archive/saywetin/SAYWETIN_STATUS.md)
+- [SayWetin Test And Velocity Log](archive/saywetin/SAYWETIN_TEST_VELOCITY.md)
+
+### Unalabs
+- [Unalabs ATEAM Build Complete](archive/unalabs/UNALABS_ATEAM_BUILD_COMPLETE.md)
+- [Una Labs ATEAM Fast Pass Handover 2026-03-25](archive/unalabs/UNALABS_ATEAM_FAST_PASS_HANDOVER_2026-03-25.md)
+- [Unalabs ATEAM Webhook Integration](archive/unalabs/UNALABS_ATEAM_WEBHOOK_INTEGRATION.md)
+- [Unalabs Build Handover](archive/unalabs/UNALABS_BUILD_HANDOVER.md)
+- [Unalabs E2E Automation Handover](archive/unalabs/UNALABS_E2E_AUTOMATION_HANDOVER.md)
+- [Unalabs E2E Repeatable Test Plan](archive/unalabs/UNALABS_E2E_REPEATABLE_TEST_PLAN.md)
+- [Unalabs Ecosystem Map](archive/unalabs/UNALABS_ECOSYSTEM_MAP.md)
+- [Unalabs Security Handover 2026-04-21](archive/unalabs/UNALABS_SECURITY_HANDOVER_2026-04-21.md)
+- [Una Labs Site Handover 2026-03-10](archive/unalabs/UNALABS_SITE_HANDOVER_2026-03-10.md)
+- [Unalabs Status](archive/unalabs/UNALABS_STATUS.md)
+- [Unalabs Test Plan](archive/unalabs/UNALABS_TEST_PLAN.md)
+- [Una Labs Site Deployment Setup](archive/unalabs/UNA_LABS_SITE_DEPLOYMENT_SETUP.md)
+
 ## Working Rule
 
 Use this index as a navigation layer. Do not treat it as a signal that the repo has already been physically reorganized.
