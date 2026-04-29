@@ -48,3 +48,15 @@ Checked with direct HTTP requests + content sniffing for `Garden Cleaners` brand
 
 ## Suggested Follow-up
 - Revalidate the quote success state message in live UI and align test assertion to exact production success copy/state (or use a resilient selector tied to success state container).
+
+---
+
+## Post-Fix Addendum (2026-04-29, ET)
+
+- After test and app adjustment, and redeploy to Cloudflare Pages, a final live run produced **13/13 passing** (all public and portal tests).
+- The earlier 11/12 result (quote confirmation timing/anti-bot guard) is now superseded by this post-fix verification.
+- `/garden-cleaners/staff` now returns 404 as expected on gardencleaners.ca.
+- Quote phone placeholder now uses `+1 289 200 0631`.
+- No app code changes were made; documentation only.
+
+**End of Addendum**
