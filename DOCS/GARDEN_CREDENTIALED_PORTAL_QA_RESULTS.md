@@ -3,41 +3,45 @@
 **Date:** 2026-04-29
 **Status:** BLOCKED
 
----
+## Blocker
 
-## Credentialed QA Blocked-State Closeout
+- No local Supabase project URL/key, service-role/admin credential, or Auth credentials are available for customer, staff, or admin roles.
+- Cloudflare Pages has encrypted public Supabase secrets, but those values cannot be read locally and are not enough to create Auth users safely.
+- `DOCS/GARDEN_PORTAL_QA_ACCOUNT_SETUP_RESULT.md` confirms account creation and seed data are blocked pending owner/Supabase admin action.
 
-### Blocker
-- No Supabase CLI access, environment variables, or Auth credentials are available for customer, staff, or admin roles.
-- DOCS/GARDEN_PORTAL_QA_ACCOUNT_SETUP_RESULT.md is missing or incomplete; no test credentials provided by owner or Dev 1.
+## Tests Not Run
 
-### Tests Not Run
-- All credentialed portal QA (customer, staff, admin login and role-based flows) could not be executed.
-- No positive or negative authenticated tests were run for:
-  - Customer login/records
-  - Staff queue/assignment
-  - Admin controls
-  - Role-based negative access
-  - Quote/job lifecycle verification in authenticated lanes
+Credentialed portal QA could not be executed for:
 
-### What Can Still Be Verified Unauthenticated
-- Public portal loads and sign-in form is visible at /garden-cleaners/portal and /portal.
-- Unauthenticated users are correctly gated and cannot access customer/staff/admin data or controls.
-- Public quote form, status, and submission flow can be tested (see previous QA docs).
+- Customer login and customer-only record visibility
+- Staff login, queue visibility, assignment, and status updates
+- Admin login, broader queue visibility, region edits, and admin-only controls
+- Negative role-permission tests
+- Full quote/job lifecycle inside authenticated lanes
 
-### Owner Action Required
-- Provide working Supabase Auth credentials (customer, staff, admin) or magic-link mailbox for QA.
-- Confirm Supabase CLI/env access or provide a QA-accessible test environment.
-- Update DOCS/GARDEN_PORTAL_QA_ACCOUNT_SETUP_RESULT.md with credential details and access instructions.
+## What Remains Verified Unauthenticated
 
-### Rerun Checklist (Once Credentials Exist)
-- [ ] Confirm receipt of test credentials for all roles
-- [ ] Validate login and role-based access for customer, staff, admin
-- [ ] Run all positive/negative/permission tests per QA plan
-- [ ] Capture evidence, screenshots, and pass/fail table
-- [ ] Document bugs, missing modules, and next fixes
-- [ ] Update this doc with full results
+- Public Garden site routes load.
+- Public quote form works and has been verified in the public QA rerun.
+- `/garden-cleaners/portal` and `/portal` load the shared regional portal shell.
+- Unauthenticated users do not see customer/staff/admin data.
 
----
+## Owner Action Required
 
-**No app code changes. Documentation only.**
+1. Provide working Supabase Auth credentials or magic-link mailbox access for customer, staff, and admin test accounts.
+2. Seed both quote persistence data (`garden_cleaners_quotes`) and current portal-visible data (`projects`) for the QA customer.
+3. Confirm admin/staff role env vars are configured.
+4. Rerun `DOCS/GARDEN_CREDENTIALED_PORTAL_QA_PLAN.md`.
+
+## Rerun Checklist
+
+- [ ] Confirm receipt of all three test accounts.
+- [ ] Confirm seeded quote record exists.
+- [ ] Confirm seeded portal-visible project record exists.
+- [ ] Validate login and role resolution for customer, staff, and admin.
+- [ ] Validate customer record scoping.
+- [ ] Validate staff queue permissions.
+- [ ] Validate admin-only controls.
+- [ ] Capture evidence and update this report with final pass/fail results.
+
+No app code changes were made.
