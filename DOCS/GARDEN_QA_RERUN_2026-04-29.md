@@ -105,3 +105,16 @@
 ## Credential / Access Limitation Statement
 - No customer/staff/admin credentials were supplied for this rerun.
 - Therefore role-level authorization, data-scoping, assignment controls, and admin-only operations are **access restricted** in this report rather than marked as functional failures.
+
+## Post-Fix Verification Addendum
+
+After the initial rerun, two follow-up fixes were shipped and verified live:
+
+- `/garden-cleaners/staff` on `https://gardencleaners.ca` now returns `404`, preventing cross-brand route leakage.
+- The Garden quote form phone placeholder now uses `+1 289 200 0631` instead of `(905) 000-0000`.
+
+Final live Playwright rerun:
+
+- Command: `PLAYWRIGHT_BASE_URL=https://gardencleaners.ca npx playwright test tests/garden-cleaners-public.spec.ts tests/garden-portal.spec.ts --reporter=list`
+- Result: **13 passed / 0 failed**
+- Deployment verified after manual Cloudflare Pages deploy to `gardencleaners`.
