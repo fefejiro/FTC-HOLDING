@@ -1,17 +1,41 @@
 # Garden Cleaners Credentialed Portal QA Results
 
 **Date:** 2026-04-29
-**Status:** BLOCKED
+**Status:** BLOCKED ON PUBLIC SUPABASE CLIENT CONFIG
+
+## 2026-04-29 Provisioning Update
+
+QA accounts and seed records were provisioned with the Garden service-role automation script. No service-role value was written to docs or repo files.
+
+Provisioned accounts:
+
+- Customer: `garden.customer.qa@unalabs.cloud`
+- Staff: `garden.staff.qa@gardencleaners.ca`
+- Admin: `hello@unalabs.cloud`
+
+Seed records:
+
+- `garden_cleaners_quotes`: seeded/updated for the QA customer.
+- `projects`: seeded/updated for the QA customer so the current portal UI has a visible record once auth is available.
+
+Credentialed UI QA was attempted against `https://gardencleaners.ca`. Result: blocked. The live portal renders `Portal auth unavailable` with the message `Supabase public environment is not configured for this deployment.`
+
+Required next deploy configuration:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+The service-role key is valid for server-side provisioning only and must not be used in the browser.
 
 ## Blocker
 
-- No local Supabase project URL/key, service-role/admin credential, or Auth credentials are available for customer, staff, or admin roles.
-- Cloudflare Pages has encrypted public Supabase secrets, but those values cannot be read locally and are not enough to create Auth users safely.
-- `DOCS/GARDEN_PORTAL_QA_ACCOUNT_SETUP_RESULT.md` confirms account creation and seed data are blocked pending owner/Supabase admin action.
+- Account creation and seed data are complete.
+- Live credentialed UI testing is blocked because the deployed Garden portal client cannot initialize Supabase Auth.
+- `DOCS/GARDEN_PORTAL_QA_ACCOUNT_SETUP_RESULT.md` has the current account setup status.
 
 ## Tests Not Run
 
-Credentialed portal QA could not be executed for:
+Credentialed portal QA could not complete for:
 
 - Customer login and customer-only record visibility
 - Staff login, queue visibility, assignment, and status updates
@@ -28,16 +52,15 @@ Credentialed portal QA could not be executed for:
 
 ## Owner Action Required
 
-1. Provide working Supabase Auth credentials or magic-link mailbox access for customer, staff, and admin test accounts.
-2. Seed both quote persistence data (`garden_cleaners_quotes`) and current portal-visible data (`projects`) for the QA customer.
-3. Confirm admin/staff role env vars are configured.
-4. Rerun `DOCS/GARDEN_CREDENTIALED_PORTAL_QA_PLAN.md`.
+1. Deploy Garden with usable public Supabase client config.
+2. Confirm admin/staff role env vars are configured.
+3. Rerun `DOCS/GARDEN_CREDENTIALED_PORTAL_QA_PLAN.md`.
 
 ## Rerun Checklist
 
-- [ ] Confirm receipt of all three test accounts.
-- [ ] Confirm seeded quote record exists.
-- [ ] Confirm seeded portal-visible project record exists.
+- [x] Confirm all three test accounts are provisioned.
+- [x] Confirm seeded quote record exists.
+- [x] Confirm seeded portal-visible project record exists.
 - [ ] Validate login and role resolution for customer, staff, and admin.
 - [ ] Validate customer record scoping.
 - [ ] Validate staff queue permissions.

@@ -180,7 +180,7 @@ async function upsertPortalProject(supabase) {
   const project = {
     email: customerEmail,
     name: "Garden Cleaners QA Portal Seed - Oshawa",
-    status: "scheduled",
+    status: "intake",
     description:
       "Garden Cleaners QA portal seed. Service: standard cleaning. Region: Oshawa. Owner: " +
       normalizeEmail(accounts.staff.email),

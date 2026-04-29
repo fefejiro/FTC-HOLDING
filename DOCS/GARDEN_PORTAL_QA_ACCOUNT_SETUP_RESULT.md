@@ -1,22 +1,42 @@
 # Garden Portal QA Account Setup Result
 
 **Date:** 2026-04-29
-**Status:** BLOCKED
+**Status:** ACCOUNT SETUP COMPLETE; UI QA BLOCKED ON PUBLIC CLIENT CONFIG
+
+## 2026-04-29 Automation Result
+
+The Garden portal provisioning workflow ran successfully with service-role access.
+
+Created or updated:
+
+- `garden.customer.qa@unalabs.cloud` as customer QA user.
+- `garden.staff.qa@gardencleaners.ca` as staff QA user.
+- `hello@unalabs.cloud` as admin QA user.
+- One `garden_cleaners_quotes` seed row for the QA customer.
+- One `projects` seed row for the QA customer.
+
+The originally requested password `Ubong` was rejected by Supabase because passwords must be at least six characters. The QA password was then updated to the owner-provided `Ubong,1234`.
+
+Remaining blocker:
+
+- Live portal UI shows `Portal auth unavailable`.
+- Root cause: deployed Garden client bundle does not currently expose usable `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- The service-role key cannot be used in the browser.
 
 ## Supabase / Auth Access
 
-- Supabase CLI/admin access: not usable for project administration from this environment.
-- Local Supabase env vars: missing (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
+- Supabase CLI/admin access: usable for project discovery; service-role key was used for provisioning.
+- Local Supabase env vars: not persisted after provisioning.
 - Cloudflare Pages secrets: present for `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` on `gardencleaners`, but encrypted and not readable locally.
-- Service-role/admin credential: missing. This is required for safe Supabase Auth user creation and privileged seed data.
+- Service-role/admin credential: used transiently for provisioning and then removed from the shell process.
 
 ## Can Create Auth Users
 
-No. The QA users cannot be created from this environment because no readable Supabase project credentials or service-role/admin key are available.
+Yes. The QA users were created/updated from this environment.
 
 ## Can Seed Data
 
-No. Seed data cannot be inserted from this environment without Supabase API credentials, service-role access, SQL editor access, or Supabase CLI access.
+Yes. Seed data was inserted/updated with service-role access.
 
 Important data-model note:
 
@@ -36,9 +56,9 @@ Important data-model note:
 
 | Role | Email | Status |
 |---|---|---|
-| Customer | `garden.customer.qa@unalabs.cloud` | Blocked |
-| Staff | `garden.staff.qa@gardencleaners.ca` | Blocked |
-| Admin | `garden.admin.qa@unalabs.cloud` | Blocked |
+| Customer | `garden.customer.qa@unalabs.cloud` | Provisioned |
+| Staff | `garden.staff.qa@gardencleaners.ca` | Provisioned |
+| Admin | `hello@unalabs.cloud` | Provisioned |
 
 ## Owner Action Needed
 
