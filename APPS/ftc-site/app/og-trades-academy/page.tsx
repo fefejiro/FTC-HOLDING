@@ -1,6 +1,3 @@
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
-
 import type { Metadata } from "next";
 import Link from "next/link";
 import CTABanner from "../components/CTABanner";
@@ -11,32 +8,29 @@ import {
   getOgTradesMetadata,
   ogTradesAcademyConfig
 } from "../../lib/ogTradesAcademy";
-import { getRequestHost } from "../../lib/requestHost";
 
 export function generateMetadata(): Metadata {
-  const requestHost = getRequestHost();
   return getOgTradesMetadata({
     title: "OG Trades Academy | Forex Education, Signals, Mentorship, and Community",
     description:
       "Join OG Trades Academy for founder-led forex education, structured beginner training, signals, mentorship-style support, and community access.",
     pathname: "/",
-    host: requestHost
+    customDomain: true
   });
 }
 
 export default function OgTradesAcademyHomePage() {
-  const requestHost = getRequestHost();
-  const canonicalUrl = getOgTradesAbsoluteUrl("/", { host: requestHost });
-  const aboutHref = getOgTradesBrandedPath("/about", { host: requestHost });
-  const courseHref = getOgTradesBrandedPath("/course", { host: requestHost });
-  const communityHref = getOgTradesBrandedPath("/community", { host: requestHost });
-  const resourcesHref = getOgTradesBrandedPath("/resources", { host: requestHost });
-  const telegramInviteHref = "https://t.me/TELEGRAM_LINK_TBD";
+  const canonicalUrl = getOgTradesAbsoluteUrl("/", { customDomain: true });
+  const aboutHref = getOgTradesBrandedPath("/about");
+  const courseHref = getOgTradesBrandedPath("/course");
+  const communityHref = getOgTradesBrandedPath("/community");
+  const resourcesHref = getOgTradesBrandedPath("/resources");
+  const communityInviteHref = ogTradesAcademyConfig.communityUrl;
   const pricingPaths = [
     {
       title: "Crash Course",
       subtitle: "Fast-track forex essentials in a shorter format.",
-      price: "[PRICE_TBD]",
+      price: "Contact for pricing",
       fit: "For beginners who want a quick and focused launch path."
     },
     {
@@ -48,26 +42,30 @@ export default function OgTradesAcademyHomePage() {
     {
       title: "Signals Access",
       subtitle: "Stay connected to setup ideas and market focus.",
-      price: "[PRICE_TBD]",
+      price: "Contact for pricing",
       fit: "For developing traders building confidence in live market context."
     },
     {
       title: "Full Academy Access",
       subtitle: "Courses, signals, community, and mentorship-style support.",
-      price: "[PRICE_TBD]",
+      price: "Contact for pricing",
       fit: "For traders who want the complete OG Trades Academy experience."
     }
   ] as const;
+
   const authorityPoints = [
     "Founder-led teaching style with practical forex walkthroughs",
     "Risk-first learning system built around discipline and consistency",
     "Structured tracks designed for beginners and developing traders",
     "Active learning ecosystem: courses, public lessons, signals, and community"
   ] as const;
-  const testimonialPlaceholders = [
-    "[TESTIMONIAL_1_TBD]",
-    "[TESTIMONIAL_2_TBD]",
-    "[TESTIMONIAL_3_TBD]"
+  const ogReferenceLinks = [
+    { label: "Official Academy Hub", href: ogTradesAcademyConfig.beaconsUrl },
+    { label: "8 Week Beginner Forex Course", href: ogTradesAcademyConfig.coursePurchaseUrl },
+    { label: "YouTube Lessons", href: ogTradesAcademyConfig.youtubeUrl },
+    { label: "Instagram", href: ogTradesAcademyConfig.instagramUrl },
+    { label: "TikTok", href: ogTradesAcademyConfig.tiktokUrl },
+    { label: "Community Access", href: ogTradesAcademyConfig.communityUrl }
   ] as const;
   const organizationSchema = {
     "@context": "https://schema.org",
@@ -184,20 +182,6 @@ export default function OgTradesAcademyHomePage() {
                 </a>
               </div>
 
-              <div className="og-founder-placeholder-grid" aria-label="Founder content placeholders">
-                <p>
-                  <strong>[FOUNDER_NAME_TBD]</strong>
-                </p>
-                <p>
-                  <strong>[FOUNDER_YEARS_EXPERIENCE_TBD]</strong>
-                </p>
-                <p>
-                  <strong>[FOUNDER_PERSONAL_STORY_TBD]</strong>
-                </p>
-                <p>
-                  <strong>[WHY_HE_STARTED_TBD]</strong>
-                </p>
-              </div>
             </article>
 
             <article className="card og-founder-visual">
@@ -277,7 +261,7 @@ export default function OgTradesAcademyHomePage() {
             <p className="eyebrow">Choose your path</p>
             <h2>Premium tracks designed for where you are now and where you want to go next.</h2>
             <p>
-              Final pricing and stack details are being finalized. The structure below reflects the four core academy tracks.
+              Choose a lane based on your current level. The 8-week course is publicly listed, and advanced lanes are offered through direct intake.
             </p>
           </div>
 
@@ -347,15 +331,20 @@ export default function OgTradesAcademyHomePage() {
 
         <section className="section og-section">
           <div className="section-heading">
-            <p className="eyebrow">Student outcomes</p>
-            <h2>Verified testimonials will be published in this section.</h2>
-            <p>Placeholder cards are intentionally shown until approved student quotes are finalized.</p>
+            <p className="eyebrow">Official references</p>
+            <h2>Use these official channels to verify offers, content, and academy activity.</h2>
+            <p>
+              All links below are primary OG Trades references for enrollment, public teaching content, and community entry.
+            </p>
           </div>
 
           <div className="og-testimonial-grid">
-            {testimonialPlaceholders.map((item) => (
-              <article key={item} className="card og-testimonial-card">
-                <p>{item}</p>
+            {ogReferenceLinks.map((item) => (
+              <article key={item.href} className="card og-testimonial-card">
+                <h3>{item.label}</h3>
+                <a href={item.href} target="_blank" rel="noreferrer" className="inline-link">
+                  Open reference
+                </a>
               </article>
             ))}
           </div>
@@ -379,8 +368,8 @@ export default function OgTradesAcademyHomePage() {
             ))}
           </div>
           <div className="hero-cta-row og-section-actions">
-            <a href={telegramInviteHref} target="_blank" rel="noreferrer" className="btn btn-primary">
-              Join Telegram [LINK_TBD]
+            <a href={communityInviteHref} target="_blank" rel="noreferrer" className="btn btn-primary">
+              Join Community
             </a>
             <Link href={communityHref} prefetch={false} className="btn btn-secondary">
               Explore community access

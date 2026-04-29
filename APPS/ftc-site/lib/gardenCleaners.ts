@@ -1,4 +1,6 @@
-﻿export type GardenNavLink = {
+import type { Metadata } from "next";
+
+export type GardenNavLink = {
   label: string;
   href: string;
 };
@@ -31,6 +33,17 @@ export type GardenMediaAsset = {
 };
 
 export const gardenCleanersBasePath = '/garden-cleaners' as const;
+export const GARDEN_CLEANERS_SITE_URL = 'https://gardencleaners.ca';
+const GARDEN_CLEANERS_OG_IMAGE = `${GARDEN_CLEANERS_SITE_URL}/images/garden-cleaners/cleaning-collage.png`;
+export const gardenCleanersKeywords = [
+  'Garden Cleaners',
+  'Oshawa cleaning services',
+  'residential cleaning Oshawa',
+  'commercial cleaning Oshawa',
+  'deep cleaning Oshawa',
+  'move out cleaning Oshawa',
+  'Durham Region cleaners'
+];
 
 const gardenCleanersCustomHosts = new Set<string>([
   'gardencleaners.ca',
@@ -39,12 +52,12 @@ const gardenCleanersCustomHosts = new Set<string>([
 ]);
 
 export const gardenCleanersNavItems = [
-  { label: 'Home', path: '/' },
-  { label: 'Regional Portal', path: '/portal' },
-  { label: 'About', path: '/about' },
-  { label: 'Services', path: '/services' },
-  { label: 'Contact', path: '/contact' },
-  { label: 'Get a Quote', path: '/quote' }
+  { label: 'Home', path: '/garden-cleaners' },
+  { label: 'Regional Portal', path: '/garden-cleaners/portal' },
+  { label: 'About', path: '/garden-cleaners/about' },
+  { label: 'Services', path: '/garden-cleaners/services' },
+  { label: 'Contact', path: '/garden-cleaners/contact' },
+  { label: 'Get a Quote', path: '/garden-cleaners/quote' }
 ] as const;
 
 export const gardenCleanersPublicPaths = new Set<string>(
@@ -103,15 +116,60 @@ export function getGardenCleanersNavLinks(
   }));
 }
 
+export function getGardenCleanersMetadata({
+  title,
+  description,
+  pathname = '/'
+}: {
+  title: string;
+  description: string;
+  pathname?: string;
+}): Metadata {
+  const canonicalUrl = new URL(pathname, `${GARDEN_CLEANERS_SITE_URL}/`).toString();
+
+  return {
+    title,
+    description,
+    keywords: gardenCleanersKeywords,
+    alternates: { canonical: canonicalUrl },
+    icons: {
+      icon: '/brand/garden-cleaners-mark.svg',
+      shortcut: '/brand/garden-cleaners-mark.svg',
+      apple: '/brand/garden-cleaners-mark.svg'
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'Garden Cleaners',
+      type: 'website',
+      images: [
+        {
+          url: GARDEN_CLEANERS_OG_IMAGE,
+          width: 1200,
+          height: 630,
+          alt: 'Garden Cleaners professional cleaning services in Oshawa'
+        }
+      ]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [GARDEN_CLEANERS_OG_IMAGE]
+    }
+  };
+}
+
 export const gardenCleanersConfig = {
   companyName: 'Garden Cleaners',
   locationCity: 'Oshawa',
   locationRegion: 'Ontario',
   locationCountry: 'Canada',
-  phoneDisplay: '(905) 000-0000',
-  phoneHref: 'tel:+19050000000',
-  email: 'hello@gardencleaners.ca',
-  emailHref: 'mailto:hello@gardencleaners.ca',
+  phoneDisplay: '+1 289 200 0631',
+  phoneHref: 'tel:+12892000631',
+  email: 'contact@gardencleaners.ca',
+  emailHref: 'mailto:uby400@gmail.com',
   addressLine: 'Oshawa, Ontario, Canada',
   heroHeadline: 'Professional Cleaning Services You Can Trust in Oshawa',
   heroSubheadline:

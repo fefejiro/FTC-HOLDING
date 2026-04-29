@@ -10,7 +10,7 @@ import GardenServiceShowcase from "../components/garden-cleaners/GardenServiceSh
 import GardenTestimonials from "../components/garden-cleaners/GardenTestimonials";
 import GardenTrustStrip from "../components/garden-cleaners/GardenTrustStrip";
 import type { GardenContentSection } from "../../lib/gardenContracts";
-import { gardenCleanersConfig, gardenServices } from "../../lib/gardenCleaners";
+import { gardenCleanersConfig, gardenServices, getGardenCleanersMetadata } from "../../lib/gardenCleaners";
 
 const workflowSection: GardenContentSection = {
   id: "garden-home-workflow",
@@ -111,7 +111,7 @@ const structuredData = {
   "name": "Garden Cleaners",
   "description": "Professional residential and commercial cleaning services in Oshawa, Ontario. Deep cleaning, move-in/move-out, recurring cleaning, and office cleaning across Durham Region.",
   "url": "https://gardencleaners.ca/",
-  "email": "hello@gardencleaners.ca",
+  "email": "contact@gardencleaners.ca",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Oshawa",
@@ -143,17 +143,12 @@ const faqStructuredData = {
   }))
 };
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getGardenCleanersMetadata({
   title: "Garden Cleaners | Professional Cleaning Services in Oshawa, Ontario",
   description:
     "Garden Cleaners provides reliable residential and commercial cleaning services in Oshawa, Ontario. Get a free quote for professional, spotless cleaning.",
-  alternates: { canonical: "https://gardencleaners.ca/" },
-  icons: {
-    icon: "/brand/garden-cleaners-mark.svg",
-    shortcut: "/brand/garden-cleaners-mark.svg",
-    apple: "/brand/garden-cleaners-mark.svg"
-  }
-};
+  pathname: "/"
+});
 
 export default function GardenCleanersHomePage() {
   return (
@@ -354,6 +349,42 @@ export default function GardenCleanersHomePage() {
             <h2>Common questions before booking.</h2>
           </div>
           <GardenFaqList />
+        </section>
+
+        <section className="section garden-section">
+          <div className="section-heading">
+            <p className="eyebrow">Official references</p>
+            <h2>Use these official Garden Cleaners references for booking and support.</h2>
+            <p>
+              These are the primary pages and contact points for quotes, service scope, portal routing, and direct contact.
+            </p>
+          </div>
+          <div className="cards-grid cards-grid-3">
+            <article className="card garden-proof-card">
+              <h3>Booking references</h3>
+              <ul className="feature-list compact-feature-list">
+                <li><Link href="/garden-cleaners/quote" prefetch={false} className="inline-link">Get a Free Quote</Link></li>
+                <li><Link href="/garden-cleaners/services" prefetch={false} className="inline-link">Services</Link></li>
+                <li><Link href="/garden-cleaners/portal" prefetch={false} className="inline-link">Regional Portal</Link></li>
+              </ul>
+            </article>
+            <article className="card garden-proof-card">
+              <h3>Direct contact</h3>
+              <ul className="feature-list compact-feature-list">
+                <li><a href={gardenCleanersConfig.phoneHref} className="inline-link">{gardenCleanersConfig.phoneDisplay}</a></li>
+                <li><a href={gardenCleanersConfig.emailHref} className="inline-link">{gardenCleanersConfig.email}</a></li>
+                <li><Link href="/garden-cleaners/contact" prefetch={false} className="inline-link">Contact page</Link></li>
+              </ul>
+            </article>
+            <article className="card garden-proof-card">
+              <h3>Service coverage</h3>
+              <ul className="feature-list compact-feature-list">
+                {gardenCleanersConfig.serviceAreas.map((area) => (
+                  <li key={area}>{area}</li>
+                ))}
+              </ul>
+            </article>
+          </div>
         </section>
 
         <CTABanner
