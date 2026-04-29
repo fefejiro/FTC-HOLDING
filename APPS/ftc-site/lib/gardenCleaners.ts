@@ -52,12 +52,12 @@ const gardenCleanersCustomHosts = new Set<string>([
 ]);
 
 export const gardenCleanersNavItems = [
-  { label: 'Home', path: '/garden-cleaners' },
-  { label: 'Regional Portal', path: '/garden-cleaners/portal' },
-  { label: 'About', path: '/garden-cleaners/about' },
-  { label: 'Services', path: '/garden-cleaners/services' },
-  { label: 'Contact', path: '/garden-cleaners/contact' },
-  { label: 'Get a Quote', path: '/garden-cleaners/quote' }
+  { label: 'Home', path: '/' },
+  { label: 'Regional Portal', path: '/portal' },
+  { label: 'About', path: '/about' },
+  { label: 'Services', path: '/services' },
+  { label: 'Contact', path: '/contact' },
+  { label: 'Get a Quote', path: '/quote' }
 ] as const;
 
 export const gardenCleanersPublicPaths = new Set<string>(
