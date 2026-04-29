@@ -49,6 +49,16 @@ async function pathExists(target) {
   }
 }
 
+function shouldCopyPagesWorker() {
+  const explicitWorkerTarget = String(process.env.FTC_SITE_EDGE_WORKER || "").trim().toLowerCase();
+  if (["garden", "garden-cleaners", "gardencleaners", "1", "true"].includes(explicitWorkerTarget)) {
+    return true;
+  }
+
+  const pagesUrl = String(process.env.CF_PAGES_URL || "").trim().toLowerCase();
+  return pagesUrl.includes("gardencleaners");
+}
+
 async function ensureCompatibilityMirror() {
   const projectRoot = process.cwd();
   const nextDir = path.join(projectRoot, ".next");
@@ -111,6 +121,18 @@ async function ensureCompatibilityMirror() {
     if (await pathExists(sourcePath)) {
       await cp(sourcePath, destinationPath, { force: true });
       console.log(`[build-fix] Copied public/${controlFile} to .vercel/output/static/${controlFile}.`);
+    }
+  }
+
+  const workerSourcePath = path.join(publicDir, "_worker.js");
+  const workerDestinationPath = path.join(vercelOutputStaticDir, "_worker.js");
+  if (await pathExists(workerSourcePath)) {
+    if (shouldCopyPagesWorker()) {
+      await cp(workerSourcePath, workerDestinationPath, { force: true });
+      console.log("[build-fix] Copied public/_worker.js to .vercel/output/static/_worker.js for Garden Pages routing.");
+    } else if (await pathExists(workerDestinationPath)) {
+      await rm(workerDestinationPath, { force: true });
+      console.log("[build-fix] Removed stale .vercel/output/static/_worker.js outside Garden Pages build.");
     }
   }
 

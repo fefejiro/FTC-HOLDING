@@ -1,5 +1,6 @@
 export const dynamic = 'force-static';
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import GardenImagePanel from "../../components/garden-cleaners/GardenImagePanel";
 import GardenQuoteForm from "../../components/garden-cleaners/GardenQuoteForm";
 import { gardenCleanersConfig } from "../../../lib/gardenCleaners";
@@ -44,7 +45,9 @@ export default function GardenQuotePage() {
 
           <section className="card garden-quote-form-shell">
             <h2>Request your quote</h2>
-            <GardenQuoteForm source="quote_page" />
+            <Suspense fallback={<div className="garden-quote-form-skeleton" aria-hidden="true" />}>
+              <GardenQuoteForm source="quote_page" />
+            </Suspense>
           </section>
         </div>
       </div>

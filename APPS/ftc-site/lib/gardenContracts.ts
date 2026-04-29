@@ -8,6 +8,7 @@ export type GardenQuotePayload = {
   serviceNeeded: string;
   preferredDate: string;
   frequency: string;
+  region?: string;
   message: string;
   website: string;
   startedAt: number;

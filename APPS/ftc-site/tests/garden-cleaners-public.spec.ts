@@ -57,6 +57,7 @@ test.describe("Garden Cleaners public QA", () => {
   test("mobile navigation routes to quote page", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/garden-cleaners");
+    await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "Menu" }).click();
     const mobileDialog = page.getByRole("dialog", { name: "Mobile navigation" });

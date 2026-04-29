@@ -20,5 +20,6 @@ test.describe("Garden portal smoke", () => {
 
     await oshawaLink.click();
     await expect(page).toHaveURL(/\/garden-cleaners\/quote\?region=Oshawa/);
+    await expect(page.getByLabel("Service Region")).toHaveValue("Oshawa");
   });
 });

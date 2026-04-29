@@ -14761,6 +14761,7 @@ footer {
 .garden-site-header {
   background: rgba(246, 249, 247, 0.92);
   border-bottom-color: rgba(18, 62, 48, 0.12);
+  z-index: 120;
 }
 
 .garden-site-header .brand,
@@ -14892,6 +14893,9 @@ footer {
 .garden-image-panel {
   overflow: hidden;
   padding: 14px;
+  position: relative;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .garden-image-shell {
@@ -14905,6 +14909,7 @@ footer {
 
 .garden-image {
   object-fit: cover;
+  pointer-events: none;
 }
 
 .garden-image-copy {
@@ -15052,6 +15057,16 @@ footer {
 
 .garden-site-shell .inline-link { color: #16715a; }
 .garden-site-shell .inline-link:hover { color: #0f5745; }
+
+.garden-contact-form-card,
+.garden-quote-form-shell {
+  position: relative;
+  z-index: 2;
+}
+
+.garden-quote-form-skeleton {
+  min-height: 520px;
+}
 
 .garden-site-footer {
   background: rgba(239, 247, 242, 0.96);

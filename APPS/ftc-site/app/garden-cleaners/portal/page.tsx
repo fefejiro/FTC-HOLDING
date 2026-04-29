@@ -1,6 +1,7 @@
 export const dynamic = "force-static";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import CTABanner from "../../components/CTABanner";
 import GardenQuoteForm from "../../components/garden-cleaners/GardenQuoteForm";
 import GardenPortalAccessPanel from "../../components/garden-cleaners/GardenPortalAccessPanel";
@@ -215,7 +216,9 @@ export default function GardenRegionalPortalPage() {
               <p>
                 This form routes the request through the portal lane so the intake can later appear in the client timeline and staff queue views.
               </p>
-              <GardenQuoteForm source="portal_page" />
+              <Suspense fallback={<div className="garden-quote-form-skeleton" aria-hidden="true" />}>
+                <GardenQuoteForm source="portal_page" />
+              </Suspense>
             </article>
             <article className="card garden-split-card">
               <p className="garden-panel-kicker">Portal rollout path</p>

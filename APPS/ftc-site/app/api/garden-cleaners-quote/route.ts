@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
   const serviceNeeded = normalizeText(payload.serviceNeeded);
   const preferredDate = normalizeText(payload.preferredDate);
   const frequency = normalizeText(payload.frequency);
+  const region = normalizeText(payload.region);
   const message = normalizeText(payload.message);
   const website = normalizeText(payload.website);
   const startedAtValue = Number(payload.startedAt || 0);
@@ -102,6 +103,9 @@ export async function POST(req: NextRequest) {
   if (!FREQUENCY_VALUES.has(frequency as (typeof gardenFrequencies)[number])) {
     return badRequest("Please select a valid frequency.");
   }
+  if (region.length > 80) {
+    return badRequest("Please select a valid service region.");
+  }
   if (!preferredDate || !/^\d{4}-\d{2}-\d{2}$/.test(preferredDate)) {
     return badRequest("Please select a valid preferred date.");
   }
@@ -123,10 +127,11 @@ export async function POST(req: NextRequest) {
     serviceNeeded,
     preferredDate,
     frequency,
+    region: region || "Unspecified",
     message
   };
 
-  logger.info('garden_cleaners_quote_received', { source: lead.source, receivedAt: lead.receivedAt, clientKey: lead.clientKey, propertyType: lead.propertyType, serviceNeeded: lead.serviceNeeded, frequency: lead.frequency });
+  logger.info('garden_cleaners_quote_received', { source: lead.source, receivedAt: lead.receivedAt, clientKey: lead.clientKey, propertyType: lead.propertyType, serviceNeeded: lead.serviceNeeded, frequency: lead.frequency, region: lead.region });
 
   const webhookUrl = process.env.GARDEN_CLEANERS_QUOTE_WEBHOOK_URL;
   if (webhookUrl) {

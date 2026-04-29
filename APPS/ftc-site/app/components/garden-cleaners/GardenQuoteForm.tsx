@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions } from "../../../lib/gardenCleaners";
 import { trackEvent } from "../../../lib/analytics";
 import type { GardenFormSource, GardenQuotePayload } from "../../../lib/gardenContracts";
@@ -12,6 +13,8 @@ type GardenQuoteFormProps = {
 };
 
 export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFormProps) {
+  const searchParams = useSearchParams();
+  const selectedRegion = String(searchParams.get("region") || "").trim();
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
   const startedAtRef = useRef<number>(Date.now());
@@ -29,6 +32,7 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
       serviceNeeded: String(formData.get("serviceNeeded") || "").trim(),
       preferredDate: String(formData.get("preferredDate") || "").trim(),
       frequency: String(formData.get("frequency") || "").trim(),
+      region: String(formData.get("region") || "").trim(),
       message: String(formData.get("message") || "").trim(),
       website: String(formData.get("website") || "").trim(),
       startedAt: startedAtRef.current
@@ -134,6 +138,14 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
         <span>Message</span>
         <textarea name="message" rows={5} required minLength={20} placeholder="Tell us about the property, timing, and anything we should know." />
       </label>
+      {selectedRegion ? (
+        <label>
+          <span>Service Region</span>
+          <input type="text" name="region" value={selectedRegion} readOnly />
+        </label>
+      ) : (
+        <input type="hidden" name="region" value="" />
+      )}
       <label className="hp-field" aria-hidden="true">
         Website
         <input type="text" name="website" tabIndex={-1} autoComplete="off" />
