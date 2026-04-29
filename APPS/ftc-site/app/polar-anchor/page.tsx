@@ -71,7 +71,7 @@ const structuredData = {
   "slogan": "Just in time connections",
   "description": "End-to-end freight forwarding, transportation, warehousing, customs clearance, and import-export logistics services across Canada.",
   "url": `${SITE_URL}/polar-anchor`,
-  "email": "hello@polaranchor.ca",
+  "email": "hello@unalabs.cloud",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Toronto",

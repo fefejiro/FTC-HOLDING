@@ -276,7 +276,7 @@ Check inbox for `test@example.com`:
 - **Content:** Shows 3 milestones + clarifying question + link to dashboard
 
 ### 5. **Email: Notification to Mike**
-Check inbox for `mike.fejiro@gmail.com`:
+Check inbox for `hello@unalabs.cloud`:
 - **Subject:** `✓ Intake processed: test@example.com — starter`
 - **Content:** Shows generated brief summary + intake_id + session_id for reference
 

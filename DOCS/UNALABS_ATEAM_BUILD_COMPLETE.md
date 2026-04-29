@@ -199,7 +199,7 @@ Expected: 3 rows with milestone data
 - Subject: `Your starter project is being scoped — Una Labs`
 - Content: 3 milestones + clarifying question + dashboard link
 
-**Check 5: Email to mike.fejiro@gmail.com**
+**Check 5: Email to hello@unalabs.cloud**
 - Subject: `✓ Intake processed: test@example.com — starter`
 - Content: Generated brief summary
 

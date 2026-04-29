@@ -29,12 +29,23 @@ This docket captures:
 ## Known Gap To Resolve Before Heavy Build
 
 - Documentation references `/garden-cleaners/portal` in analytics docs.
-- Current workspace does not contain `APPS/ftc-site/app/garden-cleaners/portal/page.tsx`.
-- Decision required before Phase 5+ portal work:
-  1. create and ship portal route in `ftc-site`, or
-  2. remove portal references from event/report docs until route exists.
+- Gap status: resolved by shipping `APPS/ftc-site/app/garden-cleaners/portal/page.tsx` and adding route checks.
 
-Recommendation: create and ship the portal route so reporting docs stay canonical.
+## Locked Decisions (Closed)
+
+1. Portal route decision: locked to ship now.
+  - Implemented route: `/garden-cleaners/portal`.
+  - Implemented analytics CTA attributes:
+    - `garden_portal_cta_click`
+    - `garden_portal_region_quote_click`
+    - `garden_portal_sticky_click`
+2. Schema lock decision: locked in code.
+  - Canonical shared contracts: `APPS/ftc-site/lib/gardenContracts.ts`.
+  - Quote payload, analytics payload fields, and portal domain enums/types are now explicit.
+3. P0 E2E ownership and pass gates: locked.
+  - Config owner: `tests/e2e/portfolio-sites.json`.
+  - Runtime owner: `scripts/run-portfolio-e2e.mjs`.
+  - Garden route gate now includes `/garden-cleaners/portal/`.
 
 ## Premium Upgrade Scope (Garden Only)
 
@@ -153,6 +164,18 @@ Rules:
 3. Sitemap includes all intended Garden public routes.
 4. Portal route behavior is consistent for trailing and non-trailing slash.
 
+## P0 E2E Ownership and Pass Criteria
+
+1. Ownership
+  - Test matrix source of truth: `tests/e2e/portfolio-sites.json`.
+  - Execution engine and report output: `scripts/run-portfolio-e2e.mjs`.
+  - Build gate operator: deploy owner on duty.
+2. Pass criteria
+  - All Garden P0 route checks return an allowed status.
+  - `home` check title includes `Garden Cleaners`.
+  - `portal` check title includes `Regional Portal`.
+  - Any route failure blocks release promotion until resolved.
+
 ## Command Baseline
 
 ```powershell
@@ -164,17 +187,28 @@ npm run qa:portfolio:e2e
 
 Proceed to heavy implementation only when all are true:
 
-1. Portal route decision is closed (route shipped or docs corrected).
+1. Portal route decision is closed (route shipped).
 2. Schema pack is accepted as canonical for content, analytics, and portal data.
 3. P0 test matrix is automated or scripted with explicit pass/fail output.
 4. Build and deploy runbook remains green after schema and route changes.
 
-## Recommended Next Move
+## Execution Status
 
-Run a short final planning pass (half day to one day) focused only on:
-
-1. portal route decision,
-2. schema field lock,
-3. E2E ownership and pass criteria.
-
-Then begin implementation immediately with lower risk and less rework.
+- Final planning pass complete.
+- Three low-risk decisions are locked and implemented.
+- Homepage premium sections now include workflow, estimate anchors, regional coverage, and service standards.
+- Services page now includes service-selection guidance and quote pricing anchors.
+- Portal route now includes authenticated session checks, role-based lane unlocks, and live project record loading for client and operations contexts.
+- Authenticated portal data wiring is active with dedicated sign-in entry (password + magic link), guarded staff/admin status transitions, queue refresh control, and status/search filtering.
+- Portal lane now includes schema-safe derived routing intelligence: inferred region tags, inferred owner labels, and region-level queue filtering without requiring new database columns.
+- Added migration `202604260004_garden_queue_routing_fields.sql` introducing `projects.service_region` and `projects.assigned_owner` for first-class queue routing and staff ownership.
+- Added migration `202604260005_backfill_garden_routing_fields.sql` to auto-backfill region and owner values from existing project name/description data.
+- Added migration `202604260006_garden_routing_constraints.sql` to enforce canonical persisted `service_region` values at schema level.
+- Portal queue loader now prefers persisted `service_region` / `assigned_owner` fields and automatically falls back to legacy inference when columns are not yet deployed.
+- Staff/admin operations now include an "Assign to me" action that writes `assigned_owner` when schema is available.
+- Staff/admin operations now include per-record region editing with "Save region" to persist `service_region` directly from queue cards.
+- Queue writes now use optimistic update + rollback behavior and return explicit rollout guidance when `service_region` / `assigned_owner` columns are missing.
+- Role guardrails are now explicit: admin can complete jobs and save region, staff can triage/schedule and self-assign ownership.
+- Added deployment runbook `DOCS/GARDEN_PORTAL_ROUTING_DEPLOYMENT_RUNBOOK.md` with ordered rollout and rollback guidance.
+- Added postdeploy SQL checks `scripts/garden-routing-postdeploy-verification.sql` for schema, constraint, and data-quality verification.
+- Remaining work is optional: replace inferred region/owner with explicit persisted fields when schema expansion is approved.

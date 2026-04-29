@@ -32,8 +32,8 @@ create policy "users_read_own_contracts"
 
 create policy "admin_read_all_contracts"
   on contracts for select
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create policy "admin_update_contracts"
   on contracts for update
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');

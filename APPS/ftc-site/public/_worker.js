@@ -114,9 +114,13 @@ function validateQuote(payload, request) {
   const fullName = normalizeText(payload.fullName);
   const email = normalizeEmail(payload.email);
   const phone = normalizeText(payload.phone);
+  const address = normalizeText(payload.address);
+  const city = normalizeText(payload.city);
+  const postalCode = normalizeText(payload.postalCode);
   const propertyType = normalizeText(payload.propertyType);
   const serviceNeeded = normalizeText(payload.serviceNeeded);
   const preferredDate = normalizeText(payload.preferredDate);
+  const preferredTime = normalizeText(payload.preferredTime);
   const frequency = normalizeText(payload.frequency);
   const message = normalizeText(payload.message);
   const website = normalizeText(payload.website);
@@ -129,30 +133,101 @@ function validateQuote(payload, request) {
   if (fullName.length < 2 || fullName.length > 100) return { error: "Please provide a valid full name.", status: 400 };
   if (!isValidEmail(email) || email.length > 120) return { error: "Please provide a valid email address.", status: 400 };
   if (phone.length < 7 || phone.length > 40) return { error: "Please provide a valid phone number.", status: 400 };
+  if (address.length < 5 || address.length > 160) return { error: "Please provide a valid service address.", status: 400 };
+  if (city.length < 2 || city.length > 80) return { error: "Please provide a valid city.", status: 400 };
+  if (postalCode.length > 20) return { error: "Please provide a valid postal code.", status: 400 };
   if (!PROPERTY_TYPES.has(propertyType)) return { error: "Please select a valid property type.", status: 400 };
   if (!SERVICE_OPTIONS.has(serviceNeeded)) return { error: "Please select a valid service.", status: 400 };
   if (!FREQUENCIES.has(frequency)) return { error: "Please select a valid frequency.", status: 400 };
   if (!preferredDate || !/^\d{4}-\d{2}-\d{2}$/.test(preferredDate)) return { error: "Please select a valid preferred date.", status: 400 };
+  if (preferredTime.length > 60) return { error: "Please select a valid preferred time.", status: 400 };
   if (message.length < 20 || message.length > 2000) return { error: "Please provide a concise message (20-2000 characters).", status: 400 };
   if (!Number.isFinite(startedAt) || Date.now() - startedAt < 800) return { error: "Submission flagged as automated. Please retry.", status: 422 };
   if (region && !REGIONS.has(region)) return { error: "Please select a valid service region.", status: 400 };
 
+  const receivedAt = new Date().toISOString();
+  const quoteRecord = {
+    name: fullName,
+    email,
+    phone,
+    address,
+    city,
+    region: region || "Unspecified",
+    postal_code: postalCode,
+    property_type: propertyType,
+    service_type: serviceNeeded,
+    service_frequency: frequency,
+    preferred_date: preferredDate,
+    preferred_time: preferredTime || null,
+    message,
+    status: "new",
+    source: "garden_cleaners_quote_form",
+    raw_payload: payload,
+    created_at: receivedAt,
+    updated_at: receivedAt
+  };
+
   return {
     lead: {
       source: "garden-cleaners-subsite",
-      receivedAt: new Date().toISOString(),
+      receivedAt,
       clientKey: clientKey(request),
       fullName,
       email,
       phone,
+      address,
+      city,
+      postalCode,
       propertyType,
       serviceNeeded,
       preferredDate,
+      preferredTime,
       frequency,
       region: region || "Unspecified",
       message
-    }
+    },
+    quoteRecord
   };
+}
+
+function getSupabaseConfig(env) {
+  const supabaseUrl = normalizeText(
+    env.NEXT_PUBLIC_SUPABASE_URL ||
+    env.VITE_SUPABASE_URL ||
+    env.SUPABASE_URL
+  ).replace(/\/+$/, "");
+  const supabaseKey = normalizeText(
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    env.VITE_SUPABASE_ANON_KEY ||
+    env.SUPABASE_ANON_KEY
+  );
+
+  if (!supabaseUrl || !supabaseKey) {
+    return null;
+  }
+  return { supabaseUrl, supabaseKey };
+}
+
+async function persistGardenQuote(quoteRecord, env) {
+  const config = getSupabaseConfig(env);
+  if (!config) {
+    throw new Error("Supabase quote persistence is not configured.");
+  }
+
+  const response = await fetch(`${config.supabaseUrl}/rest/v1/garden_cleaners_quotes`, {
+    method: "POST",
+    headers: {
+      "apikey": config.supabaseKey,
+      "authorization": `Bearer ${config.supabaseKey}`,
+      "content-type": "application/json",
+      "prefer": "return=minimal"
+    },
+    body: JSON.stringify(quoteRecord)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Supabase quote insert failed with status ${response.status}.`);
+  }
 }
 
 async function handleGardenQuote(request, env) {
@@ -185,15 +260,30 @@ async function handleGardenQuote(request, env) {
     return json({ ok: false, message: result.error }, result.status);
   }
 
+  try {
+    await persistGardenQuote(result.quoteRecord, env);
+  } catch (error) {
+    console.error("garden_cleaners_quote_supabase_error", JSON.stringify({
+      message: error instanceof Error ? error.message : "unknown"
+    }));
+    return json({ ok: false, message: "Quote intake is temporarily unavailable. Please call or email Garden Cleaners." }, 500);
+  }
+
   const webhookUrl = env.GARDEN_CLEANERS_QUOTE_WEBHOOK_URL;
   if (webhookUrl) {
-    const webhookResponse = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-ftc-source": "garden-cleaners-subsite" },
-      body: JSON.stringify({ type: "garden_cleaners_quote", lead: result.lead })
-    });
-    if (!webhookResponse.ok) {
-      return json({ ok: false, message: "Quote intake is temporarily unavailable. Please call or email Garden Cleaners." }, 502);
+    try {
+      const webhookResponse = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-ftc-source": "garden-cleaners-subsite" },
+        body: JSON.stringify({ type: "garden_cleaners_quote", quote: result.quoteRecord })
+      });
+      if (!webhookResponse.ok) {
+        console.warn("garden_cleaners_quote_webhook_failed", JSON.stringify({ status: webhookResponse.status }));
+      }
+    } catch (error) {
+      console.warn("garden_cleaners_quote_webhook_error", JSON.stringify({
+        message: error instanceof Error ? error.message : "unknown"
+      }));
     }
   } else {
     console.log("garden_cleaners_quote_received", JSON.stringify({

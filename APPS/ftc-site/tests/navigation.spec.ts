@@ -92,7 +92,7 @@ test.describe("Site routes", () => {
     await expect(footer.getByText("Polar Anchor")).toBeVisible();
     await expect(footer.getByRole("link", { name: "Request Quote" })).toBeVisible();
     await expect(footer.getByRole("link", { name: "+1 (647) 000-0000" })).toBeVisible();
-    await expect(footer.getByRole("link", { name: "hello@polaranchor.ca" })).toBeVisible();
+    await expect(footer.getByRole("link", { name: "hello@unalabs.cloud" })).toBeVisible();
     await expect(footer.getByText("Serving Canada logistics clients")).toBeVisible();
   });
 

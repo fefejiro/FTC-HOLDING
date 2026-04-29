@@ -1,19 +1,16 @@
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
+
 
 import type { Metadata } from "next";
 import OgTradesEnrollmentForm from "../../components/og-trades/OgTradesEnrollmentForm";
 import { getOgTradesMetadata, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
-import { getRequestHost } from "../../../lib/requestHost";
 
 export function generateMetadata(): Metadata {
-  const requestHost = getRequestHost();
   return getOgTradesMetadata({
     title: "Contact and Enrollment | OG Trades Academy",
     description:
       "Contact OG Trades Academy, request enrollment details, and connect through active social and community channels.",
     pathname: "/contact",
-    host: requestHost
+    host: undefined
   });
 }
 

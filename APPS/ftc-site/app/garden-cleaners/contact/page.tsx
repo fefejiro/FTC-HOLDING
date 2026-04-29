@@ -3,19 +3,14 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import GardenImagePanel from "../../components/garden-cleaners/GardenImagePanel";
 import GardenQuoteForm from "../../components/garden-cleaners/GardenQuoteForm";
-import { gardenCleanersConfig } from "../../../lib/gardenCleaners";
+import { gardenCleanersConfig, getGardenCleanersMetadata } from "../../../lib/gardenCleaners";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getGardenCleanersMetadata({
   title: 'Contact Garden Cleaners | Oshawa, Ontario',
   description:
     'Contact Garden Cleaners for residential or commercial cleaning service in Oshawa, Ontario and surrounding areas.',
-  alternates: { canonical: 'https://gardencleaners.ca/contact' },
-  icons: {
-    icon: '/brand/garden-cleaners-mark.svg',
-    shortcut: '/brand/garden-cleaners-mark.svg',
-    apple: '/brand/garden-cleaners-mark.svg'
-  }
-};
+  pathname: '/contact'
+});
 
 export default function GardenContactPage() {
   return (

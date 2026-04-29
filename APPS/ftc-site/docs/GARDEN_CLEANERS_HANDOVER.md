@@ -60,7 +60,7 @@
 
 ## Placeholder content requiring replacement later
 - Phone: `(905) 000-0000`
-- Email: `hello@gardencleaners.ca`
+- Email: `hello@unalabs.cloud`
 - Address: `Oshawa, Ontario, Canada`
 - Testimonials are polished placeholders for demo use and should be replaced with real client proof before launch.
 

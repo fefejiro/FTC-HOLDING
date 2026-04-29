@@ -5,7 +5,7 @@ import CTABanner from "../../components/CTABanner";
 import GardenServiceCard from "../../components/garden-cleaners/GardenServiceCard";
 import GardenServiceShowcase from "../../components/garden-cleaners/GardenServiceShowcase";
 import type { GardenContentSection } from "../../../lib/gardenContracts";
-import { gardenCleanersConfig, gardenServices } from "../../../lib/gardenCleaners";
+import { gardenCleanersConfig, gardenServices, getGardenCleanersMetadata } from "../../../lib/gardenCleaners";
 
 const serviceSelectionSection: GardenContentSection = {
   id: "garden-services-selection-guide",
@@ -59,17 +59,12 @@ const pricingAnchorSection: GardenContentSection = {
   ]
 };
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getGardenCleanersMetadata({
   title: "Cleaning Services | Garden Cleaners Oshawa",
   description:
     "Explore residential, commercial, deep cleaning, move-in, move-out, office, and post-construction cleaning services from Garden Cleaners in Oshawa, Ontario.",
-  alternates: { canonical: "https://gardencleaners.ca/services" },
-  icons: {
-    icon: "/brand/garden-cleaners-mark.svg",
-    shortcut: "/brand/garden-cleaners-mark.svg",
-    apple: "/brand/garden-cleaners-mark.svg"
-  }
-};
+  pathname: "/services"
+});
 
 export default function GardenServicesPage() {
   return (

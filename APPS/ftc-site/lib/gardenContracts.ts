@@ -4,9 +4,13 @@ export type GardenQuotePayload = {
   fullName: string;
   email: string;
   phone: string;
+  address: string;
+  city: string;
+  postalCode?: string;
   propertyType: string;
   serviceNeeded: string;
   preferredDate: string;
+  preferredTime?: string;
   frequency: string;
   region?: string;
   message: string;

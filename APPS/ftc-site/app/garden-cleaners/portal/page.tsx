@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import CTABanner from "../../components/CTABanner";
 import GardenQuoteForm from "../../components/garden-cleaners/GardenQuoteForm";
 import GardenPortalAccessPanel from "../../components/garden-cleaners/GardenPortalAccessPanel";
+import { gardenCleanersKeywords } from "../../../lib/gardenCleaners";
 
 const regionalServiceWindows = [
   {
@@ -55,6 +56,7 @@ export const metadata: Metadata = {
   title: "Regional Portal | Garden Cleaners Oshawa",
   description:
     "Explore the Garden Cleaners regional portal with service coverage, booking windows, client request flow, and operations routing across Oshawa and Durham Region.",
+  keywords: gardenCleanersKeywords,
   icons: {
     icon: "/brand/garden-cleaners-mark.svg",
     shortcut: "/brand/garden-cleaners-mark.svg",

@@ -57,6 +57,12 @@ claude.exe
 # Claude Code session state (keep project settings, ignore everything else)
 .claude/*
 !.claude/settings.json
+# --- Wave 1 repo cleanup: safe ignore baseline (2026-04-29) ---
+.wrangler/
+tmp/
+saywetin/.idea/caches/
+saywetin/.idea/deviceManager.xml
+saywetin/.idea/vcs.xml
 
 # ATEAM local runtime data (keep private / avoid noisy diffs)
 APPS/ATEAM/memory/**

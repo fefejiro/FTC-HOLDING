@@ -28,9 +28,13 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
       fullName: String(formData.get("fullName") || "").trim(),
       email: String(formData.get("email") || "").trim(),
       phone: String(formData.get("phone") || "").trim(),
+      address: String(formData.get("address") || "").trim(),
+      city: String(formData.get("city") || "").trim(),
+      postalCode: String(formData.get("postalCode") || "").trim(),
       propertyType: String(formData.get("propertyType") || "").trim(),
       serviceNeeded: String(formData.get("serviceNeeded") || "").trim(),
       preferredDate: String(formData.get("preferredDate") || "").trim(),
+      preferredTime: String(formData.get("preferredTime") || "").trim(),
       frequency: String(formData.get("frequency") || "").trim(),
       region: String(formData.get("region") || "").trim(),
       message: String(formData.get("message") || "").trim(),
@@ -104,6 +108,18 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
         <input type="tel" name="phone" autoComplete="tel" required placeholder="(905) 000-0000" />
       </label>
       <label>
+        <span>Service Address</span>
+        <input type="text" name="address" autoComplete="street-address" required minLength={5} placeholder="123 Main Street" />
+      </label>
+      <label>
+        <span>City</span>
+        <input type="text" name="city" autoComplete="address-level2" required placeholder="Oshawa" />
+      </label>
+      <label>
+        <span>Postal Code</span>
+        <input type="text" name="postalCode" autoComplete="postal-code" placeholder="A1A 1A1" />
+      </label>
+      <label>
         <span>Property Type</span>
         <select name="propertyType" defaultValue="" className="dark-select" required>
           <option value="">Select property type</option>
@@ -124,6 +140,15 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
       <label>
         <span>Preferred Date</span>
         <input type="date" name="preferredDate" required />
+      </label>
+      <label>
+        <span>Preferred Time</span>
+        <select name="preferredTime" defaultValue="" className="dark-select">
+          <option value="">Any time</option>
+          <option value="Morning">Morning</option>
+          <option value="Afternoon">Afternoon</option>
+          <option value="Evening">Evening</option>
+        </select>
       </label>
       <label>
         <span>Frequency</span>

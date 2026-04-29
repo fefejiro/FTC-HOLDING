@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { getOgTradesBrandedPath, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
-import { getRequestHost } from "../../../lib/requestHost";
 
 export default function OgTradesHero() {
-  const requestHost = getRequestHost();
   const primaryHref = ogTradesAcademyConfig.primaryCta.href;
   const secondaryHref = ogTradesAcademyConfig.secondaryCta.href.startsWith("/")
-    ? getOgTradesBrandedPath(ogTradesAcademyConfig.secondaryCta.href, { host: requestHost })
+    ? getOgTradesBrandedPath(ogTradesAcademyConfig.secondaryCta.href)
     : ogTradesAcademyConfig.secondaryCta.href;
-  const communityHref = getOgTradesBrandedPath("/community", { host: requestHost });
+  const communityHref = getOgTradesBrandedPath("/community");
   const primaryIsExternal = primaryHref.startsWith("http");
   const primaryIsAnchor = primaryHref.startsWith("#");
 

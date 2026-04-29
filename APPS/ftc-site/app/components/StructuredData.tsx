@@ -33,7 +33,7 @@ const ogTradesOrg = {
     {
       "@type": "ContactPoint",
       contactType: "customer support",
-      email: "info@ogtradesacademy.com",
+      email: "hello@unalabs.cloud",
       availableLanguage: ["en"]
     }
   ]

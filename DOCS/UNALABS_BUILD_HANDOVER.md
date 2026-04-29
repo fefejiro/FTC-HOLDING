@@ -201,7 +201,7 @@ The worker's `cleanSecret()` function already strips this. Never remove that fun
 | Admin reporting | ✓ Live | `/admin` — KPIs, projects, subscribers (Mike only) |
 | Intake confirm email | ✓ Live | Sends to client on checkout start (no misleading CTA button) |
 | Trial active email | ✓ Live | Sends to client after payment activation |
-| Mike notification email | ✓ Live | Sends to mike.fejiro@gmail.com on new customer |
+| Mike notification email | ✓ Live | Sends to hello@unalabs.cloud on new customer |
 | Newsletter subscribe | ✓ Live | Footer form → Mailjet + Supabase + confirmation email |
 | Branded email sender | ✓ Live | `hello@unalabs.cloud` — Mailjet domain verified, SPF+DKIM OK |
 | Supabase SMTP | ✓ Live | Magic links from `Una Labs <hello@unalabs.cloud>` |
@@ -234,7 +234,7 @@ The worker's `cleanSecret()` function already strips this. Never remove that fun
 | `UNALABS_SITE_URL` | `https://unalabs.cloud` | In wrangler.toml vars |
 
 Worker URL: `https://una-stripe-api.fejiro-efiuvwere.workers.dev`
-Stripe account: `acct_1TMK0E5M2AZUCbRe` (fejiro.efiuvwere@gmail.com)
+Stripe account: `acct_1TMK0E5M2AZUCbRe` (primary contact should be `hello@unalabs.cloud`; verify in Stripe before handoff)
 
 ---
 
@@ -573,7 +573,7 @@ Current task: [DESCRIBE WHAT YOU WANT]
 | Service | Account | Notes |
 |---|---|---|
 | Cloudflare | fejiro007 | Pages + Workers |
-| Stripe | fejiro.efiuvwere@gmail.com | acct_1TMK0E5M2AZUCbRe |
+| Stripe | hello@unalabs.cloud | acct_1TMK0E5M2AZUCbRe |
 | Railway | — | peacepad + saywetin + dispatch backends |
 | Supabase | — | Shared project, dispatch.* schema isolated |
 | Domain | unalabs.cloud | Cloudflare DNS |

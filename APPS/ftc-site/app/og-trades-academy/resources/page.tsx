@@ -1,25 +1,20 @@
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
+
 
 import type { Metadata } from "next";
 import CTABanner from "../../components/CTABanner";
 import { getOgTradesBrandedPath, getOgTradesMetadata, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
-import { getRequestHost } from "../../../lib/requestHost";
 
 export function generateMetadata(): Metadata {
-  const requestHost = getRequestHost();
   return getOgTradesMetadata({
     title: "Free Forex Resources and Video Lessons | OG Trades Academy",
     description:
       "Explore free forex resources, practical learning tools, and public video lessons from OG Trades Academy.",
     pathname: "/resources",
-    host: requestHost
+    host: undefined
   });
 }
 
 export default function OgTradesResourcesPage() {
-  const requestHost = getRequestHost();
-
   return (
     <div className="og-site-shell">
       <div className="container page-content og-page-content">
@@ -111,9 +106,9 @@ export default function OgTradesResourcesPage() {
           title="Want more support beyond the free resources?"
           description="Explore the academy programs or join the Telegram community to keep learning with more structure and connection."
           primaryLabel="View Programs"
-          primaryHref={getOgTradesBrandedPath("/course", { host: requestHost })}
+          primaryHref={getOgTradesBrandedPath("/course")}
           secondaryLabel="Join the Community"
-          secondaryHref={getOgTradesBrandedPath("/community", { host: requestHost })}
+          secondaryHref={getOgTradesBrandedPath("/community")}
         />
       </div>
     </div>

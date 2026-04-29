@@ -61,6 +61,7 @@ type OgTradesMetadataOptions = {
   description: string;
   pathname?: string;
   host?: string;
+  customDomain?: boolean;
 };
 
 export const ogTradesAcademyBasePath = "/og-trades-academy" as const;
@@ -509,9 +510,10 @@ export function getOgTradesMetadata({
   title,
   description,
   pathname = "/",
-  host
+  host,
+  customDomain = true
 }: OgTradesMetadataOptions): Metadata {
-  const canonicalUrl = getOgTradesAbsoluteUrl(pathname, { host });
+  const canonicalUrl = getOgTradesAbsoluteUrl(pathname, { host, customDomain });
 
   return {
     title,

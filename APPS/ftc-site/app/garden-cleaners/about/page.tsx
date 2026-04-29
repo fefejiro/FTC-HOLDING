@@ -2,19 +2,14 @@ export const dynamic = 'force-static';
 import type { Metadata } from "next";
 import CTABanner from "../../components/CTABanner";
 import GardenImagePanel from "../../components/garden-cleaners/GardenImagePanel";
-import { gardenCleanersConfig } from "../../../lib/gardenCleaners";
+import { gardenCleanersConfig, getGardenCleanersMetadata } from "../../../lib/gardenCleaners";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getGardenCleanersMetadata({
   title: 'About Garden Cleaners | Oshawa Cleaning Company',
   description:
     'Learn about Garden Cleaners, a locally focused cleaning company serving Oshawa, Ontario with dependable residential and commercial cleaning services.',
-  alternates: { canonical: 'https://gardencleaners.ca/about' },
-  icons: {
-    icon: '/brand/garden-cleaners-mark.svg',
-    shortcut: '/brand/garden-cleaners-mark.svg',
-    apple: '/brand/garden-cleaners-mark.svg'
-  }
-};
+  pathname: '/about'
+});
 
 export default function GardenAboutPage() {
   return (

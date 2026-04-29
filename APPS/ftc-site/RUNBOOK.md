@@ -68,7 +68,7 @@ Private operator runtime:
   - `ATEAM_TRUSTED_PROXY_KEY=<same secret used by the ops worker>`
 - required Cloudflare Access behavior:
   - protect `ops.unalabs.cloud/*`
-  - allowlist `mike.fejiro@gmail.com`
+  - allowlist `hello@unalabs.cloud`
   - copy the Access team domain into `CF_ACCESS_TEAM_DOMAIN`
   - copy the Access application AUD into `CF_ACCESS_AUD`
 - secure fallback if Access is not ready:

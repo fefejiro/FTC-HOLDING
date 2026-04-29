@@ -54,6 +54,11 @@ function shouldCopyPagesWorker() {
   if (["garden", "garden-cleaners", "gardencleaners", "1", "true"].includes(explicitWorkerTarget)) {
     return true;
   }
+  // Add OG Trades Academy static build target support
+  const explicitPagesTarget = String(process.env.FTC_SITE_PAGES_TARGET || "").trim().toLowerCase();
+  if (["og-trades", "ogtrades", "og-trades-academy", "ogtradesacademy"].includes(explicitPagesTarget)) {
+    return false; // OG does not use _worker.js for static output
+  }
 
   const pagesUrl = String(process.env.CF_PAGES_URL || "").trim().toLowerCase();
   return pagesUrl.includes("gardencleaners");
@@ -137,11 +142,43 @@ async function ensureCompatibilityMirror() {
   }
 
   // Copy every prerendered .html from .next/server/app into the static output
-  // so static deploys serve routes like /garden-cleaners directly.
+  // so static deploys serve routes like /garden-cleaners or /og-trades-academy directly.
   const serverAppDir = path.join(nextDir, "server", "app");
+  let ogIndexCopied = false;
   if (await pathExists(serverAppDir)) {
     const count = await copyPrerenderedHtml(serverAppDir, vercelOutputStaticDir);
     console.log(`[build-fix] Copied ${count} prerendered HTML files into .vercel/output/static.`);
+
+    // If OG build target, copy og-trades-academy/index.html to root index.html
+    const pagesTarget = String(process.env.FTC_SITE_PAGES_TARGET || "").trim().toLowerCase();
+    if (["og-trades", "ogtrades", "og-trades-academy", "ogtradesacademy"].includes(pagesTarget)) {
+      const ogIndexPath = path.join(vercelOutputStaticDir, "og-trades-academy", "index.html");
+      const rootIndexPath = path.join(vercelOutputStaticDir, "index.html");
+      if (await pathExists(ogIndexPath)) {
+        await cp(ogIndexPath, rootIndexPath, { force: true });
+        ogIndexCopied = true;
+        console.log("[build-fix] Copied og-trades-academy/index.html to root index.html for OG static output.");
+      } else {
+        console.error("[build-fix] ERROR: og-trades-academy/index.html does not exist. OG static output is incomplete.");
+      }
+    }
+  }
+
+  // Verify OG content at root index.html if OG build
+  const pagesTarget = String(process.env.FTC_SITE_PAGES_TARGET || "").trim().toLowerCase();
+  if (["og-trades", "ogtrades", "og-trades-academy", "ogtradesacademy"].includes(pagesTarget)) {
+    const rootIndexPath = path.join(vercelOutputStaticDir, "index.html");
+    if (await pathExists(rootIndexPath)) {
+      const indexContent = await import('node:fs/promises').then(fs => fs.readFile(rootIndexPath, 'utf8'));
+      if (!indexContent.includes("OG_Trades Academy") && !indexContent.includes("Founder-led forex")) {
+        console.error("[build-fix] ERROR: Root index.html does not contain OG Trades Academy content. Build is invalid.");
+      } else {
+        console.log("[build-fix] Verified OG Trades Academy content at root index.html.");
+      }
+      if (indexContent.includes("Una Labs")) {
+        console.error("[build-fix] ERROR: Root index.html contains Una Labs branding. Build is invalid for OG.");
+      }
+    }
   }
 }
 
