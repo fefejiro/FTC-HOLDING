@@ -25,18 +25,22 @@ function getImportMetaEnv(): Record<string, string | undefined> {
 export function getPublicSupabaseEnv(): PublicSupabaseEnv {
   const processEnv = getProcessEnv();
   const importMetaEnv = getImportMetaEnv();
+  const nextPublicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const nextPublicSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   const url =
     importMetaEnv.VITE_SUPABASE_URL ||
     processEnv.VITE_SUPABASE_URL ||
     importMetaEnv.NEXT_PUBLIC_SUPABASE_URL ||
-    processEnv.NEXT_PUBLIC_SUPABASE_URL;
+    processEnv.NEXT_PUBLIC_SUPABASE_URL ||
+    nextPublicSupabaseUrl;
 
   const key =
     importMetaEnv.VITE_SUPABASE_ANON_KEY ||
     processEnv.VITE_SUPABASE_ANON_KEY ||
     importMetaEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    processEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    processEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    nextPublicSupabaseAnonKey;
 
   if (!url) {
     throw new Error(

@@ -27,8 +27,8 @@ test.describe("Garden portal credentialed QA", () => {
         { timeout: 15000 }
       )
       .toBe("ready");
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(qaPassword || "");
+    await page.locator('input[name="portalEmail"]').fill(email);
+    await page.locator('input[name="portalPassword"]').fill(qaPassword || "");
     await page.getByRole("button", { name: /sign in to portal/i }).click();
   }
 

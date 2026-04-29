@@ -740,14 +740,16 @@ export default function GardenPortalAccessPanel() {
                     >
                       {pendingAssignmentProjectId === record.id ? "Assigning..." : "Assign to me"}
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => void updateProjectRegion(record.id)}
-                      disabled={!canEditRegion || pendingRegionProjectId === record.id}
-                    >
-                      {pendingRegionProjectId === record.id ? "Saving region..." : "Save region"}
-                    </button>
+                    {canEditRegion ? (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => void updateProjectRegion(record.id)}
+                        disabled={pendingRegionProjectId === record.id}
+                      >
+                        {pendingRegionProjectId === record.id ? "Saving region..." : "Save region"}
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </article>
