@@ -150,14 +150,20 @@ function parseEmailList(value?: string): string[] {
 
 function resolveRole(email: string): GardenPortalUserRole {
   const normalizedEmail = email.trim().toLowerCase();
-  const adminEmails = parseEmailList(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS);
-  const staffEmails = parseEmailList(process.env.NEXT_PUBLIC_GARDEN_PORTAL_STAFF_EMAILS);
+  const adminEmails = new Set([
+    "hello@unalabs.cloud",
+    ...parseEmailList(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS)
+  ]);
+  const staffEmails = new Set([
+    "garden.staff.qa@gardencleaners.ca",
+    ...parseEmailList(process.env.NEXT_PUBLIC_GARDEN_PORTAL_STAFF_EMAILS)
+  ]);
 
-  if (adminEmails.includes(normalizedEmail)) {
+  if (adminEmails.has(normalizedEmail)) {
     return "admin";
   }
 
-  if (staffEmails.includes(normalizedEmail) || normalizedEmail.endsWith("@gardencleaners.ca")) {
+  if (staffEmails.has(normalizedEmail) || normalizedEmail.endsWith("@gardencleaners.ca")) {
     return "staff";
   }
 

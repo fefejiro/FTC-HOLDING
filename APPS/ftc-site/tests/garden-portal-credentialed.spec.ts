@@ -37,7 +37,8 @@ test.describe("Garden portal credentialed QA", () => {
 
     await expect(page.getByText(/Signed in as client/i)).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(accounts.customer)).toBeVisible();
-    await expect(page.getByRole("heading", { name: /Garden Cleaners QA Portal Seed - Oshawa/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Your Jobs/i })).toBeVisible();
+    await expect(page.getByText(/Garden Cleaners QA Portal Seed - Oshawa/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /Mark triaged/i })).toHaveCount(0);
   });
 
@@ -54,8 +55,8 @@ test.describe("Garden portal credentialed QA", () => {
 
     await expect(page.getByText(/Signed in as admin/i)).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(accounts.admin)).toBeVisible();
-    await expect(page.getByText(/Operations queue controls/i)).toBeVisible();
-    await expect(page.getByRole("heading", { name: /Garden Cleaners QA Portal Seed - Oshawa/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Save region/i }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Job Queue/i })).toBeVisible();
+    await expect(page.getByText(/Garden Cleaners QA Portal Seed - Oshawa/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/Staff Profile ID/i).first()).toBeVisible();
   });
 });

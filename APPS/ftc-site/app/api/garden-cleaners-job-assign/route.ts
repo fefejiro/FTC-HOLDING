@@ -3,7 +3,7 @@ import { createServerClient } from "@ftc/supabase";
 
 // Admin: Assign staff to job
 export async function POST(req: NextRequest) {
-  const supabase = createServerClient();
+  const supabase = createServerClient(req.headers);
   const { job_id, staff_profile_id } = await req.json();
   // Insert assignment
   const assignment = {

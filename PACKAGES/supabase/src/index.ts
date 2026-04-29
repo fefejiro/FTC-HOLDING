@@ -71,11 +71,32 @@ export function createBrowserClient(): SupabaseClient {
   return createClient<Database>(url, key);
 }
 
-export function createServerClient(cookies?: string | { [k: string]: string }): SupabaseClient {
+export function createServerClient(
+  requestContext?: Headers | string | { [k: string]: string | undefined }
+): SupabaseClient {
   const { url, key } = getPublicSupabaseEnv();
   const opts: any = { auth: { persistSession: false } };
-  if (cookies) {
-    opts.headers = { cookie: typeof cookies === 'string' ? cookies : Object.entries(cookies).map(([k,v]) => `${k}=${v}`).join('; ') };
+  const headers: Record<string, string> = {};
+
+  if (typeof requestContext === 'string') {
+    headers.cookie = requestContext;
+  } else if (requestContext) {
+    const getHeader =
+      typeof (requestContext as Headers).get === 'function'
+        ? (name: string) => (requestContext as Headers).get(name) || undefined
+        : (name: string) => (requestContext as Record<string, string | undefined>)[name];
+    const authorization = getHeader('authorization') || getHeader('Authorization');
+    const cookie = getHeader('cookie') || getHeader('Cookie');
+    if (authorization) {
+      headers.Authorization = authorization;
+    }
+    if (cookie) {
+      headers.cookie = cookie;
+    }
+  }
+
+  if (Object.keys(headers).length > 0) {
+    opts.global = { headers };
   }
   return createClient<Database>(url, key, opts);
 }

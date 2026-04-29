@@ -1,7 +1,7 @@
 # Garden Cleaners 48-Hour MVP Handoff Sprint Board
 
 **Date:** 2026-04-29
-**Status:** NO-GO (pending blockers below)
+**Status:** CONTROLLED WALKTHROUGH GO / FULL CLIENT HANDOFF NO-GO
 
 
 ## Current Sprint Status
@@ -13,20 +13,20 @@
 3. Dev 2 local shell still lacks env vars, but this is not a product/code blocker.
 - [x] Backend/data foundation complete
 - [x] Migration file created: supabase/migrations/202604290001_garden_cleaners_portal_mvp.sql
-- Playwright tests need to be rerun from quoted correct path.
+- [x] Playwright tests rerun from correct path against live production domain.
 - [x] Supabase migration applied to production.
 - [x] Role profiles seeded/confirmed for admin, staff, and customer QA users.
-- Final E2E must pass.
-- Deploy must complete.
+- [x] Final automated E2E passed for public + credentialed portal smoke.
+- [x] Production deploy complete.
 - [x] API routes for quote-to-job, assignment, status update, staff/customer job visibility
 - [x] Frontend role-gated MVP UI implemented
-- NO-GO (pending blockers above)
+- Controlled walkthrough GO; full client handoff remains NO-GO until owner production account/security approval.
 - [x] Build passes with NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY in env (Dev 1 verified)
 - [x] Seed/confirm role profiles
-- [ ] Production deploy complete and accessible
-- [ ] Public (unauthenticated) QA passed
-- [ ] Credentialed (admin/staff/customer) QA passed
-- [ ] Admin, staff, and customer lifecycle flows passed
+- [x] Production deploy complete and accessible (`https://9b781a19.gardencleaners.pages.dev`, custom domain `https://gardencleaners.ca`)
+- [x] Public (unauthenticated) QA passed
+- [x] Credentialed (admin/staff/customer) QA passed
+- [x] Admin, staff, and customer seeded visibility flows passed
 
 ---
 
@@ -56,21 +56,21 @@
 ---
 
 ## Blockers
-- [ ] Playwright tests need to be rerun from quoted correct path
+- [x] Playwright tests rerun from quoted correct path
 - [x] Migration applied to production Supabase
 - [x] Seed/confirm role profiles
-- [ ] Final E2E QA must pass
-- [ ] Production deploy not complete
-- [ ] Dev 2 gap audit not complete or signed off
+- [x] Final automated E2E QA passed
+- [x] Production deploy complete
+- [x] Dev 2 gap audit complete
 - [ ] Owner has not created/approved production accounts
-- [ ] Credentialed portal QA not rerun in production
+- [x] Credentialed portal QA rerun in production
 - [ ] Security checks and key rotation not complete
 - [ ] Any failed step in release checklist or E2E QA
 
 ---
 
 ## GO/NO-GO Status
-**Current:** NO-GO (remains until Playwright/manual E2E, deploy, and final owner approval are complete)
+**Current:** Controlled walkthrough GO. Full client handoff remains NO-GO until owner production account approval and final security/key-rotation gate.
 
 ---
 

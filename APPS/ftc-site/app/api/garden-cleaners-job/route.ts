@@ -3,7 +3,7 @@ import { createServerClient } from "@ftc/supabase";
 
 // Admin: List all jobs
 export async function GET(req: NextRequest) {
-  const supabase = createServerClient();
+  const supabase = createServerClient(req.headers);
   // Only admin can see all jobs (RLS enforced)
   const { data, error } = await supabase.from("garden_cleaners_jobs").select("*");
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
 // Admin: Convert quote to job
 export async function POST(req: NextRequest) {
-  const supabase = createServerClient();
+  const supabase = createServerClient(req.headers);
   const { quote_id } = await req.json();
   // Fetch quote
   const { data: quote, error: quoteError } = await supabase.from("garden_cleaners_quotes").select("*").eq("id", quote_id).single();

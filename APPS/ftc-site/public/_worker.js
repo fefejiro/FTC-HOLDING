@@ -230,6 +230,160 @@ async function persistGardenQuote(quoteRecord, env) {
   }
 }
 
+async function supabaseRest(request, env, table, options = {}) {
+  const config = getSupabaseConfig(env);
+  if (!config) {
+    return json({ ok: false, error: "Supabase is not configured." }, 500);
+  }
+
+  const path = options.path || table;
+  const headers = {
+    "apikey": config.supabaseKey,
+    "authorization": request.headers.get("authorization") || `Bearer ${config.supabaseKey}`,
+    "content-type": "application/json"
+  };
+  if (options.prefer) {
+    headers.prefer = options.prefer;
+  }
+
+  const response = await fetch(`${config.supabaseUrl}/rest/v1/${path}`, {
+    method: options.method || "GET",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+
+  const text = await response.text();
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!response.ok) {
+    return json({ ok: false, error: typeof data === "string" ? data : data?.message || `Supabase request failed with status ${response.status}.` }, response.status);
+  }
+
+  return { ok: true, data };
+}
+
+async function handleGardenQuotesApi(request, env) {
+  if (request.method === "GET") {
+    const result = await supabaseRest(request, env, "garden_cleaners_quotes", {
+      path: "garden_cleaners_quotes?select=*&order=created_at.desc&limit=50"
+    });
+    if (result instanceof Response) return result;
+    return json({ ok: true, quotes: result.data || [] });
+  }
+
+  return handleGardenQuote(request, env);
+}
+
+async function handleGardenJobs(request, env) {
+  if (request.method === "GET") {
+    const result = await supabaseRest(request, env, "garden_cleaners_jobs", {
+      path: "garden_cleaners_jobs?select=*&order=created_at.desc"
+    });
+    if (result instanceof Response) return result;
+    return json({ ok: true, jobs: result.data || [] });
+  }
+
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed." }, 405);
+  }
+
+  const payload = await request.json().catch(() => null);
+  const quoteId = normalizeText(payload?.quote_id);
+  if (!quoteId) {
+    return json({ ok: false, error: "quote_id is required." }, 400);
+  }
+
+  const quoteResult = await supabaseRest(request, env, "garden_cleaners_quotes", {
+    path: `garden_cleaners_quotes?select=*&id=eq.${encodeURIComponent(quoteId)}&limit=1`
+  });
+  if (quoteResult instanceof Response) return quoteResult;
+  const quote = Array.isArray(quoteResult.data) ? quoteResult.data[0] : null;
+  if (!quote) {
+    return json({ ok: false, error: "Quote not found." }, 404);
+  }
+
+  const now = new Date().toISOString();
+  const jobRecord = {
+    quote_id: quote.id,
+    customer_email: quote.email,
+    address: quote.address,
+    city: quote.city,
+    region: quote.region,
+    service_type: quote.service_type,
+    service_frequency: quote.service_frequency,
+    property_type: quote.property_type,
+    status: "pending",
+    status_updated_at: now,
+    created_at: now,
+    updated_at: now
+  };
+  const insertResult = await supabaseRest(request, env, "garden_cleaners_jobs", {
+    method: "POST",
+    body: [jobRecord],
+    prefer: "return=representation"
+  });
+  if (insertResult instanceof Response) return insertResult;
+  return json({ ok: true, job: Array.isArray(insertResult.data) ? insertResult.data[0] : null });
+}
+
+async function handleGardenMyJobs(request, env) {
+  if (request.method !== "GET") {
+    return json({ ok: false, error: "Method not allowed." }, 405);
+  }
+  const result = await supabaseRest(request, env, "garden_cleaners_jobs", {
+    path: "garden_cleaners_jobs?select=*&order=created_at.desc"
+  });
+  if (result instanceof Response) return result;
+  return json({ ok: true, jobs: result.data || [] });
+}
+
+async function handleGardenJobAssign(request, env) {
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed." }, 405);
+  }
+  const payload = await request.json().catch(() => null);
+  const jobId = normalizeText(payload?.job_id);
+  const staffProfileId = normalizeText(payload?.staff_profile_id);
+  if (!jobId || !staffProfileId) {
+    return json({ ok: false, error: "job_id and staff_profile_id are required." }, 400);
+  }
+  const now = new Date().toISOString();
+  const result = await supabaseRest(request, env, "garden_cleaners_job_assignments", {
+    method: "POST",
+    body: [{ job_id: jobId, staff_profile_id: staffProfileId, assigned_at: now, status: "assigned", status_updated_at: now }],
+    prefer: "return=minimal"
+  });
+  if (result instanceof Response) return result;
+  return json({ ok: true });
+}
+
+async function handleGardenJobStatus(request, env) {
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed." }, 405);
+  }
+  const payload = await request.json().catch(() => null);
+  const jobId = normalizeText(payload?.job_id);
+  const status = normalizeText(payload?.status);
+  if (!jobId || !status) {
+    return json({ ok: false, error: "job_id and status are required." }, 400);
+  }
+  const result = await supabaseRest(request, env, "garden_cleaners_jobs", {
+    method: "PATCH",
+    path: `garden_cleaners_jobs?id=eq.${encodeURIComponent(jobId)}`,
+    body: { status, status_updated_at: new Date().toISOString() },
+    prefer: "return=minimal"
+  });
+  if (result instanceof Response) return result;
+  return json({ ok: true });
+}
+
 async function handleGardenQuote(request, env) {
   if (request.method === "OPTIONS") {
     return new Response(null, {
@@ -314,7 +468,19 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/garden-cleaners-quote") {
-      return handleGardenQuote(request, env);
+      return handleGardenQuotesApi(request, env);
+    }
+    if (url.pathname === "/api/garden-cleaners-job") {
+      return handleGardenJobs(request, env);
+    }
+    if (url.pathname === "/api/garden-cleaners-my-jobs") {
+      return handleGardenMyJobs(request, env);
+    }
+    if (url.pathname === "/api/garden-cleaners-job-assign") {
+      return handleGardenJobAssign(request, env);
+    }
+    if (url.pathname === "/api/garden-cleaners-job-status") {
+      return handleGardenJobStatus(request, env);
     }
 
     const host = hostFrom(request);
