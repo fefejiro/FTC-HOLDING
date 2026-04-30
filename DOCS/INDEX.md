@@ -54,6 +54,12 @@ This index organizes the highest-signal documentation currently in the repo with
 
 ## Garden Cleaners
 
+- [Garden Client Handoff Package](GARDEN_CLIENT_HANDOFF_PACKAGE.md)
+- [Garden Admin Quick Start Guide](GARDEN_ADMIN_QUICK_START_GUIDE.md)
+- [Garden Client Acceptance Signoff](GARDEN_CLIENT_ACCEPTANCE_SIGNOFF.md)
+- [Garden Client Screenshot Walkthrough Guide](GARDEN_CLIENT_SCREENSHOT_WALKTHROUGH_GUIDE.md)
+- [Garden Production Admin Login Verification](GARDEN_PRODUCTION_ADMIN_LOGIN_VERIFICATION.md)
+- [Garden Custom SMTP Setup Plan](GARDEN_CUSTOM_SMTP_SETUP_PLAN.md)
 - [Garden Premium Execution Docket 2026-04-26](GARDEN_PREMIUM_EXECUTION_DOCKET_2026-04-26.md)
 - [Garden Portal Analytics Event Map](GARDEN_PORTAL_ANALYTICS_EVENT_MAP.md)
 - [Garden Portal Reporting Baseline](GARDEN_PORTAL_REPORTING_BASELINE.md)
@@ -66,6 +72,7 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Garden Auth and Portal Architecture](GARDEN_AUTH_AND_PORTAL_ARCHITECTURE.md)
 - [Garden Credentialed Portal QA Results](GARDEN_CREDENTIALED_PORTAL_QA_RESULTS.md)
 - [Garden Final Portal QA Report 2026-04-29](GARDEN_FINAL_PORTAL_QA_REPORT_2026-04-29.md)
+- [Garden Cleaners Production Admin Login Verification](GARDEN_PRODUCTION_ADMIN_LOGIN_VERIFICATION.md)
 
 <!-- Optional: Only add if file exists -->
 <!-- - [Garden Portal Production Gap Audit](GARDEN_PORTAL_PRODUCTION_GAP_AUDIT.md) -->
