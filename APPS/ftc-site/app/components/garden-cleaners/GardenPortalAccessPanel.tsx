@@ -380,7 +380,13 @@ export default function GardenPortalAccessPanel() {
       const supabase = getSupabase();
       setSignInState("submitting");
       setSignInMessage("");
-      const { error } = await supabase.auth.signInWithOtp({ email });
+      const redirectTo = `${window.location.origin}/garden-cleaners/portal`;
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectTo
+        }
+      });
       if (error) {
         setSignInState("error");
         setSignInMessage(error.message || "Unable to send magic link.");
