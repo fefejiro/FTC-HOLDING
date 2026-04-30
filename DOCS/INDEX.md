@@ -92,6 +92,8 @@ For new developers or client-facing operators, start here:
 
 If a gap audit is required, see **Garden Portal Production Gap Audit** (add link if file exists).
 
+- [FTC Auth Standard](FTC_AUTH_STANDARD.md)
+- [Garden Auth Alignment with FTC Standard](GARDEN_AUTH_ALIGNMENT_WITH_FTC_STANDARD.md)
 
 ## Archive (Historical/Legacy)
 
