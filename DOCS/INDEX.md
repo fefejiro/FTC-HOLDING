@@ -156,6 +156,11 @@ If a gap audit is required, see **Garden Portal Production Gap Audit** (add link
 - [Unalabs Test Plan](archive/unalabs/UNALABS_TEST_PLAN.md)
 - [Una Labs Site Deployment Setup](archive/unalabs/UNA_LABS_SITE_DEPLOYMENT_SETUP.md)
 
+## FTC Delivery Telemetry & Project Tracking
+- [FTC Delivery Metrics Standard](FTC_DELIVERY_METRICS_STANDARD.md)
+- [FTC Project Ledger](FTC_PROJECT_LEDGER.md)
+- [FTC Delivery Telemetry Skill](../skills/ftc-delivery-telemetry/SKILL.md)
+
 ## Working Rule
 
 Use this index as a navigation layer. Do not treat it as a signal that the repo has already been physically reorganized.

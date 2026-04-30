@@ -1,0 +1,47 @@
+{
+  "Garden Cleaners": {
+    "status": "HOLD",
+        "controlled_walkthrough_status": "GO",
+        "full_handoff_status": "NO-GO (custom SMTP sender display name still shows Una Labs unless accepted)",
+        "blockers": [
+          "Custom SMTP sender display name still shows Una Labs unless accepted"
+        ],
+        "qa_status": "Credentialed QA passed, admin login/dashboard verified, sender branding not yet verified",
+        "estimated_remaining_effort": "~0.5d (SMTP + final client walkthrough)",
+        "owner_actions_needed": ["Provide/verify SMTP credentials", "Final client walkthrough if required"],
+        "next_dev_actions": ["Configure/test SMTP", "Verify sender display name in Gmail", "Update handoff docs"]
+  },
+  "SayWetin": {
+    "status": "HOLD",
+    "controlled_walkthrough_status": "GO (lyric timing patch deployed)",
+    "full_handoff_status": "HOLD (API/env blockers remain)",
+    "blockers": ["API endpoints returning 404", "Android/API env/device QA pending"],
+    "last_commit_hashes": ["45239cbc2960a6391c5871ad84e6e65503844423"],
+    "qa_status": "Lyric timing UX patch verified, full E2E pending",
+    "estimated_remaining_effort": "1-2d (API/env unblock + E2E) ",
+    "owner_actions_needed": ["Resolve API/env issues"],
+    "next_dev_actions": ["Unblock API/env", "Run full E2E QA"]
+  },
+  "Dispatch/OG": {
+    "status": "HOLD",
+    "controlled_walkthrough_status": "HOLD (403 access audit in progress)",
+    "full_handoff_status": "HOLD (access/QA blockers remain)",
+    "blockers": ["DATABASE_URL/runtime env and token-flow production verification"],
+    "last_commit_hashes": [],
+    "qa_status": "Partial QA, access issues remain",
+    "estimated_remaining_effort": "1d (access unblock + QA)",
+    "owner_actions_needed": ["Review access audit results"],
+    "next_dev_actions": ["Resolve 403 issues", "Complete QA"]
+  },
+  "FTC Auth/Skills": {
+    "status": "GO",
+    "controlled_walkthrough_status": "GO (foundation skill committed)",
+    "full_handoff_status": "GO (docs, helpers, and skill committed)",
+    "blockers": [],
+    "last_commit_hashes": ["90670cd3", "b03e69c4"],
+    "qa_status": "Skill and helpers committed, typecheck/build passed",
+    "estimated_remaining_effort": "0d",
+    "owner_actions_needed": [],
+    "next_dev_actions": []
+  }
+}
