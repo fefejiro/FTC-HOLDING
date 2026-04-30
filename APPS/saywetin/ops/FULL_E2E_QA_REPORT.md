@@ -11,6 +11,8 @@ This report provides a comprehensive overview of the SayWetin application across
 
 **Current Verdict:** The build is not ready for production release due to backend connection issues and environmental variable gaps in the native bundle.
 
+**Latest Video QA Addendum:** A screen-recording review showed that the app can recognize "Destiny" by Burna Boy, but the result UI opens lyrics from the beginning of the song before resolving the heard lyric section. The primary product issue is recognition timing handoff into the lyrics/meaning UI, not only song recognition.
+
 ---
 
 ## 2. Test Category Breakdown
@@ -56,6 +58,13 @@ This report provides a comprehensive overview of the SayWetin application across
 | QA-02 | P0 | Build Config | API Base URL not baked into native Android bundle. |
 | QA-03 | P1 | Dependency | `vitest` fails due to missing `indent-string` dependency. |
 | QA-04 | P2 | Code Quality | 15 TypeScript errors in `recognized-track.tsx` regarding stream state. |
+| QA-05 | P0 | Lyrics Sync | Result UI initially renders lyrics from index 0 instead of the heard song position. |
+| QA-06 | P1 | Result UX | UI appears to jump/scroll after initial render, suggesting target lyric resolution arrives late. |
+| QA-07 | P2 | Visual Polish | In-app logo appears square inside the circular listening orb. |
+| QA-08 | P2 | Mobile Copy | "Tap S to listen again" reads like desktop shortcut copy on mobile. |
+| QA-09 | P2 | Trust UX | Raw match percentage such as "34% match" makes the result feel uncertain. |
+| QA-10 | P2 | Meaning UX | Selected lyric loading state is not anchored clearly under the selected line. |
+| QA-11 | P2 | Layout | Spotify/YouTube buttons crowd the lyrics area near the bottom. |
 
 ---
 
@@ -65,6 +74,75 @@ This report provides a comprehensive overview of the SayWetin application across
 2.  **Environment Fix:** Populate `APPS/saywetin-native/.env` with production URLs.
 3.  **Clean Build:** Run `gradlew bundleRelease` and verify the host string exists in the JS bundle.
 4.  **Smoke Run:** Verify "Wetin be this?" flow on a physical device.
+
+---
+
+## 5. Video QA Findings - Recognition Timing Handoff
+
+### 5.1 Major Issue: Lyrics Start From The Wrong Place
+
+In the reviewed test video, the app recognizes "Destiny" by Burna Boy. Around 12 seconds into the video, the result card opens and lyrics begin from the top of the song:
+
+- Feel good
+- I ain't gonna lie to you
+- I don't know about you
+- In a prison or a hospital
+
+This creates the feeling that the app found the song but not the exact section being heard. Around 17 to 18 seconds, the UI appears to jump or scroll closer to a later lyric section:
+
+- Yeah, when I bicycle
+- And the neighbours then had no love for me
+
+This suggests the target lyric or timestamp may arrive after the UI has already rendered from lyric index 0.
+
+### 5.2 Required Product Behavior
+
+The app should not do:
+
+`Song detected -> show lyrics from start`
+
+The app should do:
+
+`Song detected -> determine captured song position -> account for recognition delay -> open result centered on the heard lyric`
+
+Core timing model:
+
+```text
+calculatedDisplayOffsetMs =
+providerSongOffsetMs + (resultShownAtMs - sampleMidpointAtMs)
+```
+
+Track these values during every listen session:
+
+- listenStartedAtMs
+- listenEndedAtMs
+- sampleMidpointAtMs
+- recognitionReceivedAtMs
+- resultShownAtMs
+- providerSongOffsetMs, when available
+- calculatedDisplayOffsetMs
+
+### 5.3 Acceptance Criteria
+
+- If audio is captured around 1:38, the first lyric shown after recognition should be close to 1:38 plus recognition delay, not 0:01.
+- The app must never flash the beginning of the lyrics before jumping to the matched section.
+- With synced lyrics, highlighted lyric should be within plus or minus 3 seconds of calculated song position.
+- Without synced timing, the UI must show a clear fallback: "Song found. Exact lyric timing is not available yet."
+- Closing the result and listening again must reset timing, selected line, scroll, and meaning state.
+- Manual lyric taps should show explanation directly under the tapped line.
+- Spotify and YouTube buttons must not cover or crowd lyrics.
+
+### 5.4 Secondary Polish Findings
+
+- Replace square-looking in-orb logo asset with a transparent circular SVG/PNG or ensure the visible mark is truly circular.
+- Replace "Tap S to listen again" with "Tap to listen again" or "Listen again".
+- Hide raw confidence percentages from users; use "Possible match" only below a confidence threshold.
+- Anchor selected-line loading state directly under the selected lyric.
+- Add bottom padding to the lyrics list so sticky music buttons never cover content.
+
+### 5.5 Developer Fix Prompt
+
+Use the detailed recognition timing handoff prompt from the video QA review as the source for the SayWetin next implementation phase. The first build target should be the lyric-positioning pipeline and result-sheet sequencing, before visual polish.
 
 ---
 *Report generated by FTC Holding QA Automation.*
