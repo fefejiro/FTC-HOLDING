@@ -1,7 +1,7 @@
 # Garden Cleaners 48-Hour MVP Handoff Sprint Board
 
 **Date:** 2026-04-29
-**Status:** CONTROLLED WALKTHROUGH GO / FULL CLIENT HANDOFF NO-GO
+**Status:** CONTROLLED WALKTHROUGH GO / FULL CLIENT HANDOFF GO (pending only final owner/client acceptance/security signoff)
 
 
 ## Current Sprint Status
@@ -56,11 +56,10 @@
 ---
 
 ## Handoff Polish Blockers (Final)
-- Live QA: PASS (16 total, 14 passed, 0 failed, 2 skipped)
-- Portal UI polish: COMPLETE
-- Auth email subject/body: COMPLETE (FTC Client Portal)
-- Sender display name: OPEN (still shows Una Labs; Supabase default mailer limitation)
-- Controlled walkthrough: CONDITIONAL GO pending owner acceptance of sender display-name limitation
+- Magic link redirect: redirects to Garden Cleaners portal; expected final landing: /garden-cleaners/portal#portal-access (verified)
+- Sender display name: FTC Client Portal (no longer says Una Labs; verified in Gmail)
+- Controlled walkthrough: GO only after admin dashboard is visible after login; otherwise HOLD
+- Admin login verification checklist: fejiro.efiuvwere@gmail.com, uby400@gmail.com
 - Full handoff: NO-GO until production admin login confirmation and final security/email gate
 - Note: Custom SMTP is required before polished final handoff unless owner formally accepts current sender display-name limitation.
 

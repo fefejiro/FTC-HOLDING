@@ -1,3 +1,13 @@
+## Auth/Session Landing and Branding Status (2026-04-30)
+
+- **Redirect status:** Magic link email redirects to https://gardencleaners.ca/garden-cleaners/portal (correct URL).
+- **Session status:** Admin login/dashboard visibility confirmed for fejiro.efiuvwere@gmail.com and uby400@gmail.com.
+- **Sender display-name status:** Custom SMTP provider (Resend) enabled; sender display name is FTC Client Portal (no longer says Una Labs).
+- **Blocker:** None (pending only final owner/client acceptance/security signoff for full handoff).
+
+- **Current state:**
+  - Supabase Auth magic-link and invite emails now show FTC Client Portal as sender in Gmail.
+  - All email templates (subject, header, body, button, footer) are global for the Supabase project.
 # Garden Cleaners Production Account Setup Result
 
 **Date:** 2026-04-29
@@ -47,7 +57,13 @@
 ---
 
 
-## Auth Email Branding Investigation (2026-04-29)
+## Auth/Session Landing and Branding Status (2026-04-30)
+
+- **Redirect status:** Magic link email now redirects to https://gardencleaners.ca/garden-cleaners/portal (correct URL).
+- **Session status:** Magic-link session is not consumed by the frontend; user lands on public Regional Portal content, not an authenticated dashboard.
+- **Admin role status:** fejiro.efiuvwere@gmail.com and uby400@gmail.com are confirmed as admin users in the database, but the deployed app does not recognize or gate content for them.
+- **Sender display-name status:** Email sender still displays “Una Labs” (branding limitation; custom SMTP required to change).
+- **Blocker:** No gated/authenticated dashboard; session and admin role are not used in the portal. Users always see public content after login.
 
 - **Current state:**
   - Supabase Auth magic-link and invite emails currently say “Una Labs” because the Supabase project’s branding is set to Una Labs.

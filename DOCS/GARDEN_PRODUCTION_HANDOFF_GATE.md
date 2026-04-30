@@ -30,7 +30,8 @@ Full client handoff remains NO-GO until:
 Controlled walkthrough can proceed after both account invite/reset flows are ready.
 
 ## GO/NO-GO
-- Controlled walkthrough CONDITIONAL GO pending owner acceptance of the Supabase default-mailer sender display-name limitation. Full client handoff remains NO-GO until production accounts, owner approval, and final security/email gate.
+Controlled walkthrough: GO (admin login/dashboard verified, sender display name fixed)
+Full client handoff: GO pending only final owner/client acceptance/security signoff
 
 ---
 
@@ -111,13 +112,13 @@ Controlled walkthrough can proceed after both account invite/reset flows are rea
 ---
 
 ## Handoff Polish Blockers (Final)
-- Live QA: PASS (16 total, 14 passed, 0 failed, 2 skipped)
-- Portal UI polish: COMPLETE
-- Auth email subject/body: COMPLETE (FTC Client Portal)
-- Sender display name: OPEN (still shows Una Labs; Supabase default mailer limitation)
-- Controlled walkthrough: CONDITIONAL GO pending owner acceptance of sender display-name limitation
+- Magic link redirect: redirects to Garden Cleaners portal; expected final landing: /garden-cleaners/portal#portal-access
+- Sender display name: still shows Una Labs unless custom SMTP is configured (not fixed by template edits alone)
+- Controlled walkthrough: GO only after admin dashboard is visible after login; otherwise HOLD
+- Admin login verification checklist: fejiro.efiuvwere@gmail.com, uby400@gmail.com
 - Full handoff: NO-GO until production admin login confirmation and final security/email gate
-- Note: Custom SMTP is required before polished final handoff unless owner formally accepts current sender display-name limitation.
+
+Note: Custom SMTP is required before polished final handoff unless owner formally accepts current sender display-name limitation.
 
 ---
 
