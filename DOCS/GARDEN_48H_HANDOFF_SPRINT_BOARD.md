@@ -55,6 +55,19 @@
 
 ---
 
+## Handoff Polish Blockers (Final)
+- Live QA: PASS (16 total, 14 passed, 0 failed, 2 skipped)
+- Portal UI polish: COMPLETE
+- Auth email subject/body: COMPLETE (FTC Client Portal)
+- Sender display name: OPEN (still shows Una Labs; Supabase default mailer limitation)
+- Controlled walkthrough: CONDITIONAL GO pending owner acceptance of sender display-name limitation
+- Full handoff: NO-GO until production admin login confirmation and final security/email gate
+- Note: Custom SMTP is required before polished final handoff unless owner formally accepts current sender display-name limitation.
+
+Controlled internal testing may continue.
+
+---
+
 ## Blockers
 - [x] Playwright tests rerun from quoted correct path
 - [x] Migration applied to production Supabase
@@ -69,8 +82,27 @@
 
 ---
 
+## Production Admin Accounts
+
+- Client owner/admin: `uby400@gmail.com`
+- Founder/internal admin: `fejiro.efiuvwere@gmail.com`
+- Status: invite/password reset prepared; both users must set their own passwords.
+   - Note: fefiuvwere@gmail.com retired/replaced due to email delivery issue. fejiro.efiuvwere@gmail.com is now the founder/internal admin account.
+- QA/test accounts must not be used for client handoff.
+
+
+Full client handoff remains NO-GO until:
+- uby400@gmail.com invite/reset accepted
+- fejiro.efiuvwere@gmail.com invite/reset accepted
+- both admin logins verified
+- final security gate complete
+
+Controlled walkthrough can proceed after both account invite/reset flows are ready.
+
+---
+
 ## GO/NO-GO Status
-**Current:** Controlled walkthrough GO. Full client handoff remains NO-GO until owner production account approval and final security/key-rotation gate.
+**Current:** Controlled walkthrough CONDITIONAL GO pending owner acceptance of the Supabase default-mailer sender display-name limitation. Full client handoff remains NO-GO until both production admins confirm access and final security/email gate is done.
 
 ---
 
