@@ -10,6 +10,14 @@ type SyncedLyricsResponse = {
   }>;
   confidence: number;
   source: string;
+  // Timing model fields (scaffold)
+  listenStartedAtMs?: number;
+  listenEndedAtMs?: number;
+  sampleMidpointAtMs?: number;
+  recognitionReceivedAtMs?: number;
+  resultShownAtMs?: number;
+  providerSongOffsetMs?: number;
+  calculatedDisplayOffsetMs?: number;
 };
 
 type ExplainResponse = {

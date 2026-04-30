@@ -76,12 +76,28 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     }
   };
 
-  const inlineLyrics =
-    track.syncedLyrics && track.syncedLyrics.length > 0
-      ? track.syncedLyrics.map((line) => line.text).join('\n')
-      : (track.lyric || '').trim();
+  // Timing model scaffold
+  const listenStartedAtMs = track.listenStartedAtMs ?? null;
+  const listenEndedAtMs = track.listenEndedAtMs ?? null;
+  const sampleMidpointAtMs = track.sampleMidpointAtMs ?? null;
+  const recognitionReceivedAtMs = track.recognitionReceivedAtMs ?? null;
+  const resultShownAtMs = Date.now();
+  const providerSongOffsetMs = track.providerSongOffsetMs ?? null;
+  const calculatedDisplayOffsetMs =
+    providerSongOffsetMs && sampleMidpointAtMs && resultShownAtMs
+      ? providerSongOffsetMs + (resultShownAtMs - sampleMidpointAtMs)
+      : null;
 
-  const lyricsReady = inlineLyrics.length > 0;
+  // Only show lyrics if timing/target is resolved
+  let inlineLyrics = '';
+  let lyricsReady = false;
+  if (track.targetLineIndex != null && track.syncedLyrics && track.syncedLyrics.length > 0) {
+    inlineLyrics = track.syncedLyrics.map((line) => line.text).join('\n');
+    lyricsReady = true;
+  } else if (track.lyric) {
+    inlineLyrics = (track.lyric || '').trim();
+    lyricsReady = inlineLyrics.length > 0;
+  }
 
   void onFollowLiveLyrics;
 
@@ -93,43 +109,50 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
         <View style={styles.headerRow}>
           {track.matchedInMs > 0 ? (
             <Text style={styles.headerMeta}>matched in {(track.matchedInMs / 1000).toFixed(1)}s</Text>
-          ) : <View />}
-          <Pressable onPress={onReset} style={styles.closeButton}>
-            <Text style={styles.closeText}>x</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.matchSourceBadge}>
-          <Text style={styles.matchSourceText}>{MATCH_SOURCE_LABELS[track.matchSource]}</Text>
-        </View>
-
-        <View style={styles.coverWrap}>
-          <View style={styles.coverGlow} />
-          {track.albumArt ? (
-            <Image source={{ uri: track.albumArt }} style={styles.cover} resizeMode="cover" />
-          ) : (
-            <View style={styles.cover}>
-              <Text style={styles.coverText}>Album Art</Text>
-            </View>
-          )}
-          <View style={styles.chipMatch}>
-            <Text style={styles.chipMatchText}>{track.matchConfidence}% match</Text>
-          </View>
-        </View>
-
-        <Text style={styles.title}>{track.title}</Text>
-        <Text style={styles.subTitle}>
-          {track.artist} · {track.year}
-        </Text>
-
-        <View style={styles.lyricCard}>
-          {lyricsReady ? (
-            <ScrollView style={styles.lyricsScroll} nestedScrollEnabled>
-              <Text style={styles.lyricLine}>{inlineLyrics}</Text>
-            </ScrollView>
-          ) : (
-            <Text style={styles.syncingHint}>lyrics auto-syncing…</Text>
-          )}
+          return (
+            <FadeInView>
+              <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 64 }] /* extra bottom padding for buttons */}>
+                <Text style={styles.title}>{track.title}</Text>
+                <Text style={styles.artist}>{track.artist}</Text>
+                <Text style={styles.chipSource}>{MATCH_SOURCE_LABELS[track.matchSource]}</Text>
+                {/* Hide raw confidence percentage from UI, show warning if confidence is low */}
+                {typeof track.matchConfidence === 'number' && track.matchConfidence < 60 ? (
+                  <Text style={styles.chipMatchText}>Possible match</Text>
+                ) : null}
+                <Pressable onPress={onReset} style={styles.resetButton}>
+                  <Text style={styles.resetButtonText}>Listen again</Text>
+                </Pressable>
+                <View style={styles.lyricCard}>
+                  {lyricsReady ? (
+                    <ScrollView style={styles.lyricsScroll} nestedScrollEnabled contentContainerStyle={{ paddingBottom: 32 }}>
+                      <Text style={styles.lyricLine}>{inlineLyrics}</Text>
+                    </ScrollView>
+                  ) : (
+                    <Text style={styles.syncingHint}>
+                      {calculatedDisplayOffsetMs == null ?
+                        'Finding the exact line…' :
+                        'Song found. Exact lyric timing is not available yet.'}
+                    </Text>
+                  )}
+                  {track.meaning ? <Text style={styles.meaningLine}>{track.meaning}</Text> : null}
+                </View>
+                <View style={styles.linksRow}>
+                  <Pressable
+                    onPress={() => openLink(track.spotifyUrl, `${track.artist} ${track.title}`, 'Spotify')}
+                    style={styles.linkButton}
+                  >
+                    <Text style={styles.linkButtonText}>Spotify</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => openLink(track.youtubeUrl, `${track.artist} ${track.title}`, 'YouTube')}
+                    style={styles.linkButton}
+                  >
+                    <Text style={styles.linkButtonText}>YouTube</Text>
+                  </Pressable>
+                </View>
+              </ScrollView>
+            </FadeInView>
+          );
           {track.meaning ? <Text style={styles.meaningLine}>{track.meaning}</Text> : null}
           {track.chips.length > 0 ? (
             <View style={styles.chipsRow}>

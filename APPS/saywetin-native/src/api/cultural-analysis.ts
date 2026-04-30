@@ -17,6 +17,14 @@ type WorkerResponse = {
   deeperMeaning?: string;
   languageNotes?: string;
   error?: string;
+  // Timing model fields (scaffold)
+  listenStartedAtMs?: number;
+  listenEndedAtMs?: number;
+  sampleMidpointAtMs?: number;
+  recognitionReceivedAtMs?: number;
+  resultShownAtMs?: number;
+  providerSongOffsetMs?: number;
+  calculatedDisplayOffsetMs?: number;
 };
 
 export async function analyzeLyricLine(args: {

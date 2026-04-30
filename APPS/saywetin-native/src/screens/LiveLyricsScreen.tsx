@@ -30,35 +30,21 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
         return;
       }
 
-      if (loaded && loaded.length > 0) {
+      if (loaded && loaded.length > 0 && track.targetLineIndex != null) {
         setLyrics(loaded);
         setFallbackReason(null);
         return;
       }
 
-      const fallbackLineText = (track.lyric || '').trim() || 'No synced lyric line available yet.';
-      setLyrics([
-        {
-          id: `${track.id}-fallback-line`,
-          text: fallbackLineText,
-          startMs: 0,
-          endMs: 12000,
-          tappable: true,
-          meaning:
-            (track.meaning || '').trim() ||
-            'Meaning will improve as more lyric data is processed for this track.',
-          alternates: [],
-          related: [],
-        },
-      ]);
-      setFallbackReason('nolyrics');
-      void postSignal('fallback', track.id, undefined, 'nolyrics');
+      // Prevent flash from index 0 if timing/target is unresolved
+      setLyrics([]);
+      setFallbackReason('notiming');
     })();
 
     return () => {
       mounted = false;
     };
-  }, [track.id]);
+  }, [track.id, track.targetLineIndex]);
 
   useEffect(() => {
     let frame = 0;
@@ -90,40 +76,44 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     );
 
     if (matchIndex >= 0) {
-      return matchIndex;
-    }
-
-    return 0;
-  }, [lyrics, positionMs]);
-
-  useEffect(() => {
-    if (lyrics.length === 0) {
-      return;
-    }
-
-    const hasMatch = lyrics.some((line) => line.startMs <= positionMs && positionMs < line.endMs);
-
-    if (hasMatch) {
-      driftSinceMs.current = null;
-      setSyncWarn(false);
-      return;
-    }
-
-    if (driftSinceMs.current === null) {
-      driftSinceMs.current = Date.now();
-      return;
-    }
-
-    if (Date.now() - driftSinceMs.current > 1500) {
-      setSyncWarn(true);
-    }
-  }, [lyrics, positionMs]);
-
-  const activeLine = useMemo(() => lyrics[currentLineIndex], [lyrics, currentLineIndex]);
-
-  const hydrateLineMeaning = async (line: SyncedLyricLine) => {
-    const cached = lineMeaningCache[line.id];
-    if (cached?.meaning) {
+      return (
+        <View style={{ flex: 1, backgroundColor: colors.bg }}>
+          <View style={styles.header}>
+            <Pressable onPress={onBack} style={styles.backButton}>
+              <Text style={styles.backButtonText}>{'< Back'}</Text>
+            </Pressable>
+            <Text style={styles.headerTitle}>Live Lyrics</Text>
+          </View>
+          <ScrollView contentContainerStyle={[styles.lyricsWrap, { paddingBottom: 64 }] /* extra bottom padding for buttons */}>
+            {lyrics.length === 0 && fallbackReason === 'notiming' && (
+              <Text style={styles.fallbackText}>Finding the exact line…</Text>
+            )}
+            {lyrics.map((line, index) => {
+              const isSelected = selectedLine?.id === line.id;
+              return (
+                <Pressable
+                  key={line.id}
+                  onPress={() => setSelectedLine(line)}
+                  style={[styles.lyricLine, isSelected && styles.selectedLyricLine]}
+                >
+                  <Text style={styles.lyricText}>{line.text}</Text>
+                  {/* Anchor meaning/loading directly under selected lyric */}
+                  {isSelected && (
+                    <TapExplainSheet
+                      line={line}
+                      meaning={line.meaning}
+                      loading={!line.meaning}
+                    />
+                  )}
+                </Pressable>
+              );
+            })}
+            {fallbackReason === 'nolyrics' && (
+              <Text style={styles.fallbackText}>No synced lyric line available yet.</Text>
+            )}
+          </ScrollView>
+        </View>
+      );
       return cached;
     }
 

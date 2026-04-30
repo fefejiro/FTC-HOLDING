@@ -13,7 +13,8 @@ const MATCHING_AUTO_ADVANCE_MS = 250;
 type ListenPhase = 'idle' | 'listening' | 'matching';
 const CAPTURE_DURATION_MS = 5000;
 const LISTEN_MICROCOPY = [
-  'Tap once to listen. Tap again to stop early.',
+  'Tap to listen again.',
+  'Listen again.',
   'Catch am quick. Match am clean.',
   'Live audio in, fingerprint out.',
   'One tap starts. Second tap cuts early.',

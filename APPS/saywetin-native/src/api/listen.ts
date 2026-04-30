@@ -18,6 +18,14 @@ type ListenResponse = {
     confidenceScore?: number | null;
     coverArtUrl?: string | null;
     matchSource?: string | null;
+    // Timing model fields (scaffold)
+    listenStartedAtMs?: number;
+    listenEndedAtMs?: number;
+    sampleMidpointAtMs?: number;
+    recognitionReceivedAtMs?: number;
+    resultShownAtMs?: number;
+    providerSongOffsetMs?: number;
+    calculatedDisplayOffsetMs?: number;
   };
   matchSource?: string | null;
   confidence?: number | null;
