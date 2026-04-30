@@ -497,21 +497,150 @@ export default function GardenPortalAccessPanel() {
             {authState === "authenticated" && `Signed in as ${role}`}
           </h2>
           {userEmail ? <p>{userEmail}</p> : null}
+
           {authState === "unauthenticated" ? (
-            <form className="intake-form" onSubmit={signInWithPassword} noValidate>
-              <label>
-                <span>Email</span>
-                <input type="email" name="portalEmail" value={signInEmail} autoComplete="email" onChange={(e) => setSignInEmail(e.currentTarget.value)} placeholder="you@example.com" required />
-              </label>
-              <label>
-                <span>Password</span>
-                <input type="password" name="portalPassword" value={signInPassword} autoComplete="current-password" onChange={(e) => setSignInPassword(e.currentTarget.value)} placeholder="Enter your password" required />
-              </label>
-              <div className="hero-actions">
-                <button type="submit" className="btn btn-primary" disabled={signInState === "submitting"}>{signInState === "submitting" ? "Signing in..." : "Sign in to portal"}</button>
-                <button type="button" className="btn btn-secondary" onClick={sendMagicLink} disabled={signInState === "submitting"}>Send magic link</button>
+            <form
+              className="intake-form garden-login-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                // Only submit password login if password is filled
+                if (signInPassword) {
+                  await signInWithPassword(e);
+                }
+              }}
+              noValidate
+              style={{
+                background: '#fff',
+                borderRadius: 16,
+                boxShadow: '0 2px 16px rgba(60,80,60,0.07)',
+                padding: 24,
+                maxWidth: 400,
+                margin: '0 auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 18,
+                border: '1px solid #e6ece6',
+              }}
+            >
+              <div style={{ marginBottom: 4 }}>
+                <h3 style={{ margin: 0, fontWeight: 600, color: '#2d4a2d', fontSize: 22 }}>Sign in to Garden Cleaners</h3>
+                <p style={{ color: '#3a5c3a', fontSize: 15, margin: '8px 0 0 0' }}>
+                  No password yet? Enter your email and we’ll send a secure sign-in link.
+                </p>
               </div>
-              {signInMessage ? <p className={signInState === "error" ? "form-feedback error" : "form-feedback success"}>{signInMessage}</p> : null}
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ color: '#2d4a2d', fontWeight: 500 }}>Email</span>
+                <input
+                  type="email"
+                  name="portalEmail"
+                  value={signInEmail}
+                  autoComplete="email"
+                  onChange={(e) => setSignInEmail(e.currentTarget.value)}
+                  placeholder="you@example.com"
+                  required
+                  style={{
+                    background: '#f8faf8',
+                    border: '1px solid #cfe3cf',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    fontSize: 16,
+                    color: '#2d4a2d',
+                    outline: 'none',
+                    boxShadow: 'none',
+                  }}
+                  onFocus={e => (e.currentTarget.style.border = '1.5px solid #7fc97f')}
+                  onBlur={e => (e.currentTarget.style.border = '1px solid #cfe3cf')}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{
+                  background: '#7fc97f',
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: 16,
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '12px 0',
+                  marginTop: 6,
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 4px rgba(60,80,60,0.04)',
+                }}
+                onClick={sendMagicLink}
+                disabled={signInState === "submitting"}
+              >
+                {signInState === "submitting" ? "Sending..." : "Email me a secure login link"}
+              </button>
+              <div style={{ color: '#4a6a4a', fontSize: 13, marginTop: 2, marginBottom: 8 }}>
+                Use this if this is your first time signing in.
+              </div>
+              <div style={{ borderTop: '1px solid #e6ece6', margin: '12px 0' }} />
+              <div style={{ color: '#2d4a2d', fontWeight: 500, fontSize: 14, marginBottom: 2 }}>Already have a password?</div>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ color: '#2d4a2d' }}>Password</span>
+                <input
+                  type="password"
+                  name="portalPassword"
+                  value={signInPassword}
+                  autoComplete="current-password"
+                  onChange={(e) => setSignInPassword(e.currentTarget.value)}
+                  placeholder="Enter your password"
+                  style={{
+                    background: '#f8faf8',
+                    border: '1px solid #cfe3cf',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    fontSize: 16,
+                    color: '#2d4a2d',
+                    outline: 'none',
+                    boxShadow: 'none',
+                  }}
+                  onFocus={e => (e.currentTarget.style.border = '1.5px solid #7fc97f')}
+                  onBlur={e => (e.currentTarget.style.border = '1px solid #cfe3cf')}
+                />
+              </label>
+              <button
+                type="submit"
+                className="btn btn-secondary"
+                style={{
+                  background: '#e6ece6',
+                  color: '#2d4a2d',
+                  fontWeight: 500,
+                  fontSize: 15,
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 0',
+                  marginTop: 6,
+                  cursor: 'pointer',
+                }}
+                disabled={signInState === "submitting" || !signInPassword}
+              >
+                {signInState === "submitting" ? "Signing in..." : "Sign in with password"}
+              </button>
+              {signInMessage && (
+                <p
+                  style={{
+                    color:
+                      signInState === "error"
+                        ? "#b94a48"
+                        : signInState === "success"
+                        ? "#2d4a2d"
+                        : "#4a6a4a",
+                    background: signInState === "error" ? "#fff0f0" : signInState === "success" ? "#f0fff0" : "#f8faf8",
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    margin: '10px 0 0 0',
+                    fontSize: 15,
+                  }}
+                >
+                  {signInState === "success" && signInMessage.includes("Magic link sent")
+                    ? "Check your inbox for your Garden Cleaners login link. It may take a minute."
+                    : signInState === "error" && signInMessage.includes("Unable to send magic link")
+                    ? "We could not send the link. Please check the email address or contact support."
+                    : signInMessage}
+                </p>
+              )}
             </form>
           ) : null}
           {authState === "unavailable" ? <p>{loadError}</p> : null}

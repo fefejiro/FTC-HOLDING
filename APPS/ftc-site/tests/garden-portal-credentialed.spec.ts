@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
+const url = (path) => new URL(path, baseUrl).toString();
+
 const qaPassword = process.env.GARDEN_QA_PASSWORD;
 
 const accounts = {
@@ -11,8 +14,8 @@ const accounts = {
 test.describe("Garden portal credentialed QA", () => {
   test.skip(!qaPassword, "GARDEN_QA_PASSWORD is required for credentialed portal QA.");
 
-  async function signIn(page: import("@playwright/test").Page, email: string) {
-    await page.goto("/garden-cleaners/portal", { waitUntil: "domcontentloaded" });
+  async function signIn(page, email) {
+    await page.goto(url("/garden-cleaners/portal"), { waitUntil: "domcontentloaded" });
     await expect
       .poll(
         async () => {

@@ -1,4 +1,8 @@
+
 import { expect, test } from "@playwright/test";
+
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
+const url = (path) => new URL(path, baseUrl).toString();
 
 const gardenRoutes = [
   { path: "/garden-cleaners", heading: /Professional Cleaning Services You Can Trust in Oshawa/i, hasMedia: true },
@@ -12,7 +16,7 @@ const gardenRoutes = [
 test.describe("Garden Cleaners public QA", () => {
   for (const route of gardenRoutes) {
     test(`${route.path} renders Garden branding and primary content`, async ({ page }) => {
-      await page.goto(route.path, { waitUntil: "domcontentloaded" });
+      await page.goto(url(route.path), { waitUntil: "domcontentloaded" });
 
       await expect(page.locator("header .brand")).toContainText("Garden Cleaners");
       await expect(page.getByRole("heading", { level: 1, name: route.heading })).toBeVisible();
@@ -24,7 +28,7 @@ test.describe("Garden Cleaners public QA", () => {
   }
 
   test("desktop navigation exposes the Garden IA", async ({ page }) => {
-    await page.goto("/garden-cleaners");
+    await page.goto(url("/garden-cleaners"));
     const nav = page.getByLabel("Main navigation");
 
     await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("href", "/");
@@ -38,15 +42,15 @@ test.describe("Garden Cleaners public QA", () => {
   test("custom domain uses clean public Garden paths", async ({ request }) => {
     const hostHeaders = { host: "gardencleaners.ca" };
 
-    const root = await request.get("/", { headers: hostHeaders });
+    const root = await request.get(url("/"), { headers: hostHeaders });
     expect(root.status()).toBe(200);
     expect(await root.text()).toContain("Garden Cleaners");
 
-    const cleanServices = await request.get("/services", { headers: hostHeaders });
+    const cleanServices = await request.get(url("/services"), { headers: hostHeaders });
     expect(cleanServices.status()).toBe(200);
     expect(await cleanServices.text()).toContain("Cleaning Services");
 
-    const prefixedServices = await request.get("/garden-cleaners/services", {
+    const prefixedServices = await request.get(url("/garden-cleaners/services"), {
       headers: hostHeaders
     });
     expect(prefixedServices.status()).toBe(200);
@@ -55,19 +59,19 @@ test.describe("Garden Cleaners public QA", () => {
 
   test("mobile navigation routes to quote page", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/garden-cleaners", { waitUntil: "domcontentloaded" });
+    await page.goto(url("/garden-cleaners"), { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("button", { name: "Menu" })).toBeVisible();
     await page.getByRole("button", { name: "Menu" }).click();
     const mobileDialog = page.getByRole("dialog", { name: "Mobile navigation" });
     await expect(mobileDialog).toBeVisible();
 
     await mobileDialog.getByRole("link", { name: "Get a Quote" }).click();
-    await expect(page).toHaveURL("/quote");
+    await expect(page).toHaveURL(url("/quote"));
     await expect(page.getByRole("heading", { level: 1, name: /Tell us what needs cleaning/i })).toBeVisible();
   });
 
   test("quote form accepts a valid lead", async ({ page }) => {
-    await page.goto("/garden-cleaners/quote");
+    await page.goto(url("/garden-cleaners/quote"));
 
     await page.getByLabel("Full Name").fill("Garden QA Tester");
     await page.getByLabel("Email").fill("garden-qa@example.com");
@@ -90,7 +94,7 @@ test.describe("Garden Cleaners public QA", () => {
   });
 
   test("Garden custom domain blocks role route leakage", async ({ request }) => {
-    const response = await request.get("/garden-cleaners/staff", {
+    const response = await request.get(url("/garden-cleaners/staff"), {
       headers: { host: "gardencleaners.ca" }
     });
 
