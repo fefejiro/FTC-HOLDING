@@ -21,11 +21,22 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Recovery Checklist 2026-04-28](RECOVERY_CHECKLIST_2026-04-28.md)
 - [Recovery And Workspace Map 2026-04-28](RECOVERY_AND_WORKSPACE_MAP_2026-04-28.md)
 - [Secrets And Skills Inventory 2026-04-28](SECRET_AND_SKILLS_INVENTORY_2026-04-28.md)
+- [FTC Central Skill System Plan](FTC_CENTRAL_SKILL_SYSTEM_PLAN.md)
 - [Cloudflare Pages Setup](CLOUDFLARE_PAGES_SETUP.md)
 - [Railway Setup](RAILWAY_SETUP.md)
 - [Deploy Commands](DEPLOY_COMMANDS.md)
 - [Security Rotation Checklist](SECURITY_ROTATION_CHECKLIST.md)
 - [OpenClaw Removal Handover 2026-03-24](OPENCLAW_REMOVAL_HANDOVER_2026-03-24.md)
+
+## FTC Skills
+
+Canonical skill folder: `skills/`
+
+- `skills/ftc-auth-foundation/` - reusable Supabase Auth, RBAC, RLS, SMTP, and handoff security gate standard.
+- `skills/ftc-client-handoff/` - client walkthrough, acceptance, signoff, screenshots, and support package workflow.
+- `skills/ftc-live-qa/` - live QA, E2E, manual verification, evidence, and GO/HOLD/NO-GO reporting.
+- `skills/ftc-deployment-recovery/` - Cloudflare/Railway/Supabase/Expo deployment and runtime recovery.
+- `skills/ftc-multi-agent-orchestration/` - Dev 1/2/3 coordination, project lane management, and CTO validation.
 
 ## PeacePad
 

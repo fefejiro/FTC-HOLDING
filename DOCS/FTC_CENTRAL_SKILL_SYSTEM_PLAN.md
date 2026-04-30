@@ -1,13 +1,16 @@
 # FTC Central Skill System Plan
 
 ## 1. Current Skill Locations Found
-- No `.codex/skills`, `skills/`, or `SKILLS/` folders found in the current repo.
-- `.agents/` is referenced in REPO_CLEANUP_MATRIX.md as a local skills folder ("keep, doc").
-- `skills-lock.json` is referenced as a skills config ("keep, doc").
-- Docs mentioning skills:
-  - FTC_PHASE_HANDOVER_2026-04-29.md: QA skill/report format is preferred pattern.
-  - REPO_CLEANUP_MATRIX.md: lists `.agents/` and skills-lock.json.
-  - INDEX.md: links to "Secrets And Skills Inventory 2026-04-28".
+- Canonical FTC skills now live in repo root `skills/`.
+- Recovered local/agent skills also exist under `.agents/skills/`.
+- GitHub/Copilot-style skills exist under `.github/skills/`.
+- `skills-lock.json` remains the current skills config/lock reference.
+- Current canonical FTC skills:
+  - `skills/ftc-auth-foundation/`
+  - `skills/ftc-client-handoff/`
+  - `skills/ftc-live-qa/`
+  - `skills/ftc-deployment-recovery/`
+  - `skills/ftc-multi-agent-orchestration/`
 
 ## 2. Recommended Canonical Location for FTC Skills
 - Use a top-level folder: `skills/` at the repo root for all shared, reusable skills.
@@ -26,30 +29,31 @@
 4. Publish/share in `skills/` and announce in team channel
 5. Update after lessons learned or new requirements
 
-## 5. Garden/Una Labs Lessons to Become Skills
-- Client QA/handoff skill
-- Portal QA skill
-- Supabase Auth/email template skill
-- Cloudflare Pages deployment skill
-- Repo recovery/cleanup skill
-- Multi-dev orchestration skill
+## 5. Garden/Una Labs Lessons Promoted To Skills
+- Client handoff and acceptance: `skills/ftc-client-handoff/`
+- Live QA and evidence capture: `skills/ftc-live-qa/`
+- Auth foundation and SMTP/security gates: `skills/ftc-auth-foundation/`
+- Deployment/runtime recovery: `skills/ftc-deployment-recovery/`
+- Multi-dev orchestration and CTO validation: `skills/ftc-multi-agent-orchestration/`
 
-## 6. Recommended First Skill to Create
-- `ftc-client-delivery-handoff`
+## 6. Skill Structure
 
-### Proposed Structure:
 ```
-skills/ftc-client-delivery-handoff/
+skills/<skill-name>/
   SKILL.md
-  references/checklists.md
-  references/qa-report-template.md
-  references/client-email-template.md
+  references/ optional
+  scripts/ optional
+  assets/ optional
 ```
 
 ## 7. Next Steps
-- Create `skills/` at repo root
-- Add `ftc-client-delivery-handoff/` as first canonical skill
-- Migrate proven checklists/templates from Garden/Una Labs handoff docs
-- Announce skill system and encourage contributions
+- Use root `skills/` as the cross-agent canonical source.
+- Promote only stable, repeated workflows into `skills/`.
+- Keep skill bodies lean; move bulky examples into `references/` only when needed.
+- Next likely skill candidates:
+  - `ftc-client-intake-scope`
+  - `ftc-repo-cleanup`
+  - `ftc-smtp-auth-email`
+  - `ftc-mobile-e2e-release`
 
 // No code changes made, doc only. No secrets.
