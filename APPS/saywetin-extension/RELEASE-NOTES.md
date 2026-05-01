@@ -1,5 +1,18 @@
 # SayWetin Chrome Extension — Release Notes
 
+## v1.0.1 (2026-04-30)
+
+### Highlights
+- API custom domain cutover completed: `https://api.saywetin.app`
+- Railway custom domain verified and certificate status valid
+- Extension docs refreshed across README, testing, and store checklist
+- Added automatic docs guard workflow for pull requests
+
+### Infra Notes
+- Primary API endpoint: `https://api.saywetin.app`
+- Railway fallback endpoint: `https://saywetin-api.splendid-spirit.up.railway.app`
+- Health check: `GET /health` returns `{"status":"ok"}`
+
 ## v1.0.0 (2026-04-28)
 
 ### Highlights

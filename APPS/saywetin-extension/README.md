@@ -1,63 +1,61 @@
-# React + TypeScript + Vite
+# SayWetin — Chrome Extension
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Recognize any song playing in your browser tab and instantly see lyrics, cultural meaning, and artist context — powered by the SayWetin API.
 
-Currently, two official plugins are available:
+## Status
 
+- Extension build: verified
+- API custom domain: `https://api.saywetin.app` (live)
+- API health: `/health` returns `{"status":"ok"}`
 
-## React Compiler
+## What it does
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Glass orb tap-to-listen UI (Shazam-style)
+- Captures audio from the active browser tab via `chrome.tabCapture`
+- Sends a 5–10s fingerprint to the SayWetin backend (ACRCloud recognition)
+- Displays: track title, artist, album art, lyrics, and cultural analysis
+- Tap any lyric line for deeper meaning
+- Links to open the track on Spotify or YouTube
 
-## Expanding the ESLint configuration
+## Tech stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-## SayWetin Chrome Extension
-
-Recognize any African song playing in your browser tab and instantly see the lyrics, translation, and cultural meaning.
-
-## Features
-- Popup with big tap orb (Shazam-style)
-- Recognize audio from current tab (tabCapture, fallback to mic)
-- 5–10s snippet sent to /api/recognize endpoint
-- Show result: track, lyrics, meaning
-- Tap any lyric line for cultural meaning (calls /v1/cultural-analysis)
-- Sync recent recognitions to user account
-- Deep-link to saywetin.app/track/:id
+- Vite + React 19 + TypeScript
+- Tailwind CSS v4 (via `@tailwindcss/vite`)
+- Chrome Manifest v3
+- Build output: `dist/`
 
 ## Development
-- Built with Vite + React + TypeScript
-- Manifest v3, minimal permissions
-- Output to `dist-ext/` for Chrome Web Store upload
+
+```bash
+npm install
+npm run build
+```
+
+Load `dist/` as an unpacked extension in Chrome (`chrome://extensions` → Developer mode → Load unpacked).
+
+### Mock mode
+
+Append `?mock=1` to the extension popup URL to test UI without a real API call.
+
+## Backend
+
+- Primary API: `https://api.saywetin.app`
+- Railway service URL (fallback): `https://saywetin-api.splendid-spirit.up.railway.app`
+
+Extension ID (current): `fpephcboldiembegdnncdbfjedognhpl`
+
+## Release
+
+See [RELEASE-NOTES.md](./RELEASE-NOTES.md) and [WEBSTORE.md](./WEBSTORE.md) for store submission details.
+
+## Documentation Policy
+
+Documentation updates are now enforced in CI on pull requests.
+
+- If shipping behavior changes in app code (`src/`, `public/`, build config), you must also update at least one documentation file.
+- Guard workflow: `.github/workflows/docs-guard.yml`
+- Guard script: `scripts/docs-guard.mjs`
+
 
 ## Build
 ```
@@ -68,32 +66,4 @@ npm run build
 1. Run `npm run build`
 2. Go to chrome://extensions
 3. Enable Developer Mode
-4. Click "Load unpacked" and select the `dist-ext/` folder
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+4. Click "Load unpacked" and select the `dist/` folder

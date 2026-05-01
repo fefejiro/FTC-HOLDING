@@ -32,11 +32,21 @@
 - [x] User audio is only sent to backend for recognition
 - [x] Privacy policy link (saywetin.app/privacy)
 
+## 6.1 Backend Endpoint
+- [x] Primary endpoint is `https://api.saywetin.app`
+- [x] Health check passes: `https://api.saywetin.app/health`
+- [x] Railway fallback endpoint documented for ops only
+
 ## 7. Submission
 - [ ] Zip dist/ and upload to Chrome Web Store
 - [ ] Fill out listing details, upload screenshots
 - [ ] Add privacy policy URL
 - [ ] Submit for review
+
+## 8. Documentation Consistency
+- [x] README reflects current API endpoint and extension ID
+- [x] RELEASE-NOTES includes latest infra and release changes
+- [x] TESTING includes domain and health verification steps
 
 ---
 

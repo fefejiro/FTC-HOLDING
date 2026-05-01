@@ -38,6 +38,16 @@
 - [ ] Test error handling (network, backend down)
 - [ ] Test on Chrome stable and beta
 
+## 9. Infrastructure Verification
+- [x] `api.saywetin.app` resolves to Railway CNAME target
+- [x] `https://api.saywetin.app/health` returns HTTP 200
+- [x] Railway domain status is verified with valid certificate
+
+## 10. Documentation Guard
+- [x] Pull request docs guard workflow is enabled
+- [x] `node scripts/docs-guard.mjs` passes for docs-only updates
+- [ ] Validate docs guard blocks a code-only PR with no docs changes
+
 ---
 
 ## How to Test
