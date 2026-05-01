@@ -109,7 +109,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
         <View style={styles.headerRow}>
           {track.matchedInMs > 0 ? (
             <Text style={styles.headerMeta}>matched in {(track.matchedInMs / 1000).toFixed(1)}s</Text>
-          return (
+          ) : null}
             <FadeInView>
               <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 64 }] /* extra bottom padding for buttons */}>
                 <Text style={styles.title}>{track.title}</Text>
