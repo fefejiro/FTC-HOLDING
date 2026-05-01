@@ -15646,3 +15646,172 @@ footer {
   margin: 0;
   line-height: 1.6;
 }
+
+/* ── PRICING PAGE — TIER CARDS, COMPARE TABLE, TRUST/FAQ GRID ── */
+
+.pricing-page { }
+
+.pricing-tiers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .pricing-tiers-grid { grid-template-columns: 1fr; }
+}
+
+.pricing-tier-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: clamp(22px, 2.8vw, 32px);
+}
+
+.pricing-tier-card--featured {
+  border-color: var(--accent);
+  background: linear-gradient(160deg, rgba(108,92,231,0.1), rgba(108,92,231,0.03));
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-glow);
+}
+
+.pricing-tier-head { display: flex; flex-direction: column; gap: 10px; }
+
+.pricing-tier-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-2);
+}
+
+.pricing-tier-card--featured .pricing-tier-label { color: var(--accent); }
+
+.pricing-tier-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.pricing-tier-outcome {
+  font-size: 0.9rem;
+  color: var(--copy);
+  font-weight: 600;
+  margin: 0;
+}
+
+.pricing-tier-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.pricing-tier-price {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.pricing-tier-timeline {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.pricing-tier-summary {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.pricing-tier-ideal {
+  font-size: 0.85rem;
+  color: var(--copy);
+  margin: 0;
+}
+
+.pricing-tier-ideal-label {
+  font-weight: 700;
+  color: var(--text);
+  margin-right: 4px;
+}
+
+.pricing-tier-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pricing-tier-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--copy);
+  line-height: 1.5;
+}
+
+.pricing-tier-note {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0;
+  margin-top: auto;
+}
+
+/* Comparison table */
+.pricing-compare-wrap { overflow-x: auto; }
+
+.pricing-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.pricing-compare-table th,
+.pricing-compare-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  text-align: center;
+}
+
+.pricing-compare-feature-col,
+.pricing-compare-feature-label {
+  text-align: left;
+  color: var(--copy);
+}
+
+.pricing-compare-featured-col {
+  background: rgba(108,92,231,0.05);
+  border-left: 1px solid rgba(108,92,231,0.2);
+  border-right: 1px solid rgba(108,92,231,0.2);
+}
+
+.pricing-compare-yes {
+  color: var(--accent-2);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.pricing-compare-no {
+  color: var(--glass-border);
+  font-size: 1.1rem;
+}
+
+.pricing-compare-cell { }
+
+/* Trust + FAQ grid */
+.pricing-trust-faq-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 0.6fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .pricing-trust-faq-grid { grid-template-columns: 1fr; }
+}
