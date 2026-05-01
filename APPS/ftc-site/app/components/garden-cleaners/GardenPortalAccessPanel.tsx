@@ -150,8 +150,14 @@ function parseEmailList(value?: string): string[] {
 
 function resolveRole(email: string): GardenPortalUserRole {
   const normalizedEmail = email.trim().toLowerCase();
-  const adminEmails = new Set([
+  // Always treat these as admin, even if env is missing
+  const defaultAdmins = [
     "hello@unalabs.cloud",
+    "fejiro.efiuvwere@gmail.com",
+    "uby400@gmail.com"
+  ];
+  const adminEmails = new Set([
+    ...defaultAdmins,
     ...parseEmailList(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS)
   ]);
   const staffEmails = new Set([
@@ -380,7 +386,8 @@ export default function GardenPortalAccessPanel() {
       const supabase = getSupabase();
       setSignInState("submitting");
       setSignInMessage("");
-      const redirectTo = `${window.location.origin}/garden-cleaners/portal`;
+      // Add #portal-access to redirect
+      const redirectTo = `${window.location.origin}/garden-cleaners/portal#portal-access`;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -399,6 +406,19 @@ export default function GardenPortalAccessPanel() {
       setSignInState("error");
       setSignInMessage("Magic link delivery is unavailable in this deployment.");
     }
+    // Scroll/focus to #portal-access after auth if hash present
+    useEffect(() => {
+      if (typeof window === "undefined") return;
+      if (window.location.hash === "#portal-access") {
+        const el = document.getElementById("portal-access");
+        if (el) {
+          setTimeout(() => {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+            el.focus && el.focus();
+          }, 300);
+        }
+      }
+    }, [authState]);
   }
 
   // Staff: update job status
@@ -483,7 +503,7 @@ export default function GardenPortalAccessPanel() {
 
   // --- UI ---
   return (
-    <section className="section garden-section">
+    <section className="section garden-section" id="portal-access" tabIndex={-1}>
       <div className="section-heading">
         <p className="eyebrow">Portal access</p>
         <h2>Role-based Garden Cleaners portal</h2>
@@ -656,7 +676,12 @@ export default function GardenPortalAccessPanel() {
         </article>
         <article className="card garden-split-card">
           <p className="garden-panel-kicker">Lane visibility</p>
-          <h2>Role: {role}</h2>
+          <h2>
+            {authState === "loading" && "Checking access..."}
+            {authState === "unauthenticated" && "Sign in to view your dashboard."}
+            {authState === "authenticated" && role && `Role: ${role.charAt(0).toUpperCase() + role.slice(1)}`}
+            {authState === "unavailable" && "Portal unavailable"}
+          </h2>
           {loadError && authState === "authenticated" ? <p>{loadError}</p> : null}
           {queueMessage ? <p>{queueMessage}</p> : null}
         </article>

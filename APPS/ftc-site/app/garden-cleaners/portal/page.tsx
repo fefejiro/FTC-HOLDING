@@ -92,6 +92,9 @@ export default function GardenRegionalPortalPage() {
   return (
     <div className="garden-site-shell">
       <div className="container page-content garden-page-content">
+        {/* Move Portal Access Panel to the top for first viewport visibility */}
+        <GardenPortalAccessPanel />
+
         <section className="section garden-section">
           <p className="eyebrow">Regional Portal</p>
           <h1>Regional service coverage, client intake, and operations routing</h1>
@@ -189,7 +192,7 @@ export default function GardenRegionalPortalPage() {
           </div>
         </section>
 
-        <GardenPortalAccessPanel />
+        {/* <GardenPortalAccessPanel /> moved to top */}
 
         <section className="section garden-section">
           <div className="garden-split-grid">

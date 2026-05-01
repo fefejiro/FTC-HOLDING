@@ -186,6 +186,31 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
               );
             }
 
+            // --- GARDEN CLEANERS: Insert Portal Login CTA ---
+            if (isGardenSite && link.label === "Get a Quote") {
+              // Insert Portal Login before Get a Quote
+              return [
+                <Link
+                  key="portal-login"
+                  href="/garden-cleaners/portal#portal-access"
+                  prefetch={false}
+                  className="nav-link garden-portal-login-cta"
+                  aria-label="Portal Login"
+                >
+                  Portal Login
+                </Link>,
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  prefetch={false}
+                  className={`nav-link${isPathActive(pathname, link.href) ? " active" : ""}`}
+                  aria-current={isPathActive(pathname, link.href) ? "page" : undefined}
+                >
+                  {link.label}
+                </Link>
+              ];
+            }
+
             const isActive = isPathActive(pathname, link.href);
             return (
               <Link
@@ -248,6 +273,31 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
 
             <nav className="mobile-panel-nav" aria-label="Mobile navigation links">
               {navLinks.map((link) => {
+                // Insert Portal Login before Get a Quote in mobile nav
+                if (isGardenSite && link.label === "Get a Quote") {
+                  return [
+                    <Link
+                      key="portal-login-mobile"
+                      href="/garden-cleaners/portal#portal-access"
+                      prefetch={false}
+                      className="mobile-panel-link garden-portal-login-cta"
+                      aria-label="Portal Login"
+                      onClick={closeMenu}
+                    >
+                      Portal Login
+                    </Link>,
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      prefetch={false}
+                      className={`mobile-panel-link${isPathActive(pathname, link.href) ? " active" : ""}`}
+                      aria-current={isPathActive(pathname, link.href) ? "page" : undefined}
+                      onClick={closeMenu}
+                    >
+                      {link.label}
+                    </Link>
+                  ];
+                }
                 const isActive = link.label === "Products" && isDefaultUnaSite
                   ? isProductsPath(pathname)
                   : isPathActive(pathname, link.href);
