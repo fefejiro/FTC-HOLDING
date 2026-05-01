@@ -39,12 +39,14 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: Materialize Play service account key
+      - name: Materialize secrets
         run: |
           mkdir -p secrets
           printf '%s' "${PLAY_STORE_SERVICE_ACCOUNT_JSON}" > secrets/play-store-key.json
+          echo "${KEYSTORE_BASE64}" | base64 -d > secrets/saywetin-release.keystore
         env:
           PLAY_STORE_SERVICE_ACCOUNT_JSON: ${{ secrets.SAYWETIN_PLAY_SERVICE_ACCOUNT_JSON }}
+          KEYSTORE_BASE64: ${{ secrets.SAYWETIN_KEYSTORE_BASE64 }}
 
       - name: Build Android AAB (EAS production profile)
         run: eas build --platform android --profile production --non-interactive --wait

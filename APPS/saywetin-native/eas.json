@@ -28,6 +28,7 @@
     "production": {
       "node": "20.19.4",
       "autoIncrement": true,
+      "credentialsSource": "local",
       "ios": {
         "simulator": false
       },
