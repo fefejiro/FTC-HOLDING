@@ -75,46 +75,20 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
       (line) => line.startMs <= positionMs && positionMs < line.endMs,
     );
 
-    if (matchIndex >= 0) {
-      return (
-        <View style={{ flex: 1, backgroundColor: colors.bg }}>
-          <View style={styles.header}>
-            <Pressable onPress={onBack} style={styles.backButton}>
-              <Text style={styles.backButtonText}>{'< Back'}</Text>
-            </Pressable>
-            <Text style={styles.headerTitle}>Live Lyrics</Text>
-          </View>
-          <ScrollView contentContainerStyle={[styles.lyricsWrap, { paddingBottom: 64 }] /* extra bottom padding for buttons */}>
-            {lyrics.length === 0 && fallbackReason === 'notiming' && (
-              <Text style={styles.fallbackText}>Finding the exact line…</Text>
-            )}
-            {lyrics.map((line, index) => {
-              const isSelected = selectedLine?.id === line.id;
-              return (
-                <Pressable
-                  key={line.id}
-                  onPress={() => setSelectedLine(line)}
-                  style={[styles.lyricLine, isSelected && styles.selectedLyricLine]}
-                >
-                  <Text style={styles.lyricText}>{line.text}</Text>
-                  {/* Anchor meaning/loading directly under selected lyric */}
-                  {isSelected && (
-                    <TapExplainSheet
-                      line={line}
-                      meaning={line.meaning}
-                      loading={!line.meaning}
-                    />
-                  )}
-                </Pressable>
-              );
-            })}
-            {fallbackReason === 'nolyrics' && (
-              <Text style={styles.fallbackText}>No synced lyric line available yet.</Text>
-            )}
-          </ScrollView>
-        </View>
-      );
-      return cached;
+    return matchIndex >= 0 ? matchIndex : 0;
+  }, [lyrics, positionMs]);
+
+  const prefetchNearby = async (centerIndex: number) => {
+    const candidates = [centerIndex - 2, centerIndex - 1, centerIndex, centerIndex + 1, centerIndex + 2]
+      .filter((position) => position >= 0 && position < lyrics.length)
+      .map((position) => lyrics[position]);
+
+    await Promise.all(candidates.map((candidate) => hydrateLineMeaning(candidate)));
+  };
+
+  const hydrateLineMeaning = async (line: SyncedLyricLine): Promise<SyncedLyricLine> => {
+    if (lineMeaningCache[line.id]) {
+      return lineMeaningCache[line.id];
     }
 
     const explain = await fetchLineExplain(track.id, line, positionMs);
@@ -135,14 +109,6 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     }));
 
     return merged;
-  };
-
-  const prefetchNearby = async (centerIndex: number) => {
-    const candidates = [centerIndex - 2, centerIndex - 1, centerIndex, centerIndex + 1, centerIndex + 2]
-      .filter((position) => position >= 0 && position < lyrics.length)
-      .map((position) => lyrics[position]);
-
-    await Promise.all(candidates.map((candidate) => hydrateLineMeaning(candidate)));
   };
 
   const openExplain = (line: SyncedLyricLine, index: number) => {
