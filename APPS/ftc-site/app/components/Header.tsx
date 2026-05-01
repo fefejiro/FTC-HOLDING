@@ -194,10 +194,10 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                   key="portal-login"
                   href="/garden-cleaners/portal#portal-access"
                   prefetch={false}
-                  className="nav-link garden-portal-login-cta"
-                  aria-label="Portal Login"
+                  className="garden-portal-login-cta"
+                  aria-label="Sign In to client portal"
                 >
-                  Portal Login
+                  Sign In
                 </Link>,
                 <Link
                   key={link.href}

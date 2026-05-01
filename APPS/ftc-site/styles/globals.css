@@ -14758,6 +14758,27 @@ footer {
 
 
 /* Garden Cleaners subsite */
+.garden-portal-login-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1.5px solid #1a7b62;
+  background: transparent;
+  color: #1a7b62 !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.garden-portal-login-cta:hover {
+  background: #1a7b62;
+  color: #fff !important;
+}
+
 .garden-site-header {
   background: rgba(246, 249, 247, 0.92);
   border-bottom-color: rgba(18, 62, 48, 0.12);
