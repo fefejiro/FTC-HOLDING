@@ -3,9 +3,12 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AudioModule, RecordingPresets, useAudioRecorder } from 'expo-audio';
 import { FadeInView } from '../components/FadeInView';
 import { OrbListener } from '../components/OrbListener';
+import { HeadphonesDetectedBanner } from '../components/HeadphonesDetectedBanner';
 import { useAudioSession } from '../audio/useAudioSession';
+import { useAudioRoute } from '../audio/useAudioRoute';
 import { identifyByText, uploadListenSample } from '../api/listen';
-import type { RitualTrack } from '../state/ritual-state';
+import { logRecognitionAttempt } from '../api/recognition-logger';
+import type { FailureReason, RitualTrack } from '../state/ritual-state';
 import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
@@ -21,12 +24,19 @@ const LISTEN_MICROCOPY = [
   'Play am loud. We go find am fast.',
 ];
 
-export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTrack) => void }) {
+type ListenScreenProps = {
+  onRecognized: (track: RitualTrack) => void;
+  onOpenShareMode: () => void;
+  onOpenVibeSearch: () => void;
+};
+
+export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }: ListenScreenProps) {
   const [phase, setPhase] = useState<ListenPhase>('idle');
   const [busy, setBusy] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showLyricInput, setShowLyricInput] = useState(false);
+  const [quietMode, setQuietMode] = useState(false);
   const [lyricQuery, setLyricQuery] = useState('');
   const [lyricBusy, setLyricBusy] = useState(false);
   const [microcopy] = useState(
@@ -35,6 +45,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
   const onRecognizedRef = useRef(onRecognized);
   const stopCaptureRef = useRef<(() => void) | null>(null);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const audioRoute = useAudioRoute();
 
   useEffect(() => {
     onRecognizedRef.current = onRecognized;
@@ -55,6 +66,28 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
   // Configure AVAudioSession so music apps keep playing while we record
   useAudioSession();
 
+  const headphonesConnected =
+    audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones';
+
+  function mapFailureReason(message: string): FailureReason {
+    const lowered = message.toLowerCase();
+
+    if (lowered.includes('microphone permission denied')) {
+      return 'MICROPHONE_PERMISSION_MISSING';
+    }
+    if (lowered.includes('network request failed') || lowered.includes('failed to fetch')) {
+      return 'NO_NETWORK';
+    }
+    if (lowered.includes('timeout')) {
+      return 'RECOGNITION_TIMEOUT';
+    }
+    if (lowered.includes('no recording captured') || lowered.includes('no audio')) {
+      return headphonesConnected ? 'HEADPHONES_PRIVATE_AUDIO' : 'NO_AUDIO_DETECTED';
+    }
+
+    return 'UNKNOWN_ERROR';
+  }
+
   const stopCaptureEarly = () => {
     if (stopCaptureRef.current) {
       stopCaptureRef.current();
@@ -70,11 +103,22 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
 
     setBusy(true);
     setErrorMessage(null);
+    setQuietMode(false);
     console.log('[listen] starting recognition');
+
+    const listenStartedAtMs = Date.now();
+    let listenEndedAtMs = listenStartedAtMs;
+    let recognitionStartedAtMs = 0;
+    let recognitionEndedAtMs = 0;
+    let failureReason: FailureReason | null = null;
+    let confidence: number | null = null;
+    let matchedSongId: string | null = null;
+    let matchedOffsetMs: number | null = null;
 
     try {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
       if (!permission.granted) {
+        failureReason = 'MICROPHONE_PERMISSION_MISSING';
         throw new Error('Microphone permission denied');
       }
 
@@ -98,6 +142,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       });
       clearInterval(tickId);
       setSecondsLeft(0);
+      listenEndedAtMs = Date.now();
 
       await audioRecorder.stop();
       const recordingUri = audioRecorder.uri;
@@ -110,19 +155,56 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       const durationMs = CAPTURE_DURATION_MS;
 
       setPhase('matching');
+  recognitionStartedAtMs = Date.now();
       const recognizedTrack = await uploadListenSample(recordingUri, durationMs);
+  recognitionEndedAtMs = Date.now();
+  confidence = recognizedTrack.matchConfidence;
+  matchedSongId = recognizedTrack.id;
+  matchedOffsetMs = recognizedTrack.matchedInMs;
       console.log('[listen] recognized:', recognizedTrack.title, 'by', recognizedTrack.artist);
 
       setTimeout(() => {
         onRecognizedRef.current(recognizedTrack);
       }, MATCHING_AUTO_ADVANCE_MS);
     } catch (error: any) {
+      if (!recognitionEndedAtMs && recognitionStartedAtMs) {
+        recognitionEndedAtMs = Date.now();
+      }
+      if (!listenEndedAtMs || listenEndedAtMs < listenStartedAtMs) {
+        listenEndedAtMs = Date.now();
+      }
+      failureReason = failureReason || mapFailureReason(error?.message || 'unknown');
       console.warn('[listen] recognition failed:', error?.message, error?.stack);
       setPhase('idle');
       setSecondsLeft(0);
       setErrorMessage(error?.message || 'Could not identify song. Try again.');
       setShowLyricInput(true);
+      if (failureReason === 'HEADPHONES_PRIVATE_AUDIO' || failureReason === 'NO_AUDIO_DETECTED') {
+        setQuietMode(true);
+      }
     } finally {
+      const endedNow = Date.now();
+      if (!listenEndedAtMs || listenEndedAtMs < listenStartedAtMs) {
+        listenEndedAtMs = endedNow;
+      }
+      if (recognitionStartedAtMs && !recognitionEndedAtMs) {
+        recognitionEndedAtMs = endedNow;
+      }
+
+      logRecognitionAttempt({
+        recognitionSource: 'microphone',
+        outputRoute: audioRoute.outputRoute,
+        inputRoute: audioRoute.inputRoute,
+        listenStartedAtMs,
+        listenEndedAtMs,
+        recognitionStartedAtMs,
+        recognitionEndedAtMs,
+        failureReason,
+        confidence,
+        matchedSongId,
+        matchedOffsetMs,
+      });
+
       stopCaptureRef.current = null;
       setBusy(false);
     }
@@ -139,18 +221,48 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
     }
     setLyricBusy(true);
     setErrorMessage(null);
+    setQuietMode(false);
     console.log('[listen] identifying by text:', trimmed);
+
+    const listenStartedAtMs = Date.now();
+    const listenEndedAtMs = listenStartedAtMs;
+    const recognitionStartedAtMs = Date.now();
+    let recognitionEndedAtMs = 0;
+    let failureReason: FailureReason | null = null;
+    let confidence: number | null = null;
+    let matchedSongId: string | null = null;
+    let matchedOffsetMs: number | null = null;
+
     try {
       const recognizedTrack = await identifyByText(trimmed);
+      recognitionEndedAtMs = Date.now();
+      confidence = recognizedTrack.matchConfidence;
+      matchedSongId = recognizedTrack.id;
+      matchedOffsetMs = recognizedTrack.matchedInMs;
       console.log('[listen] text-match recognized:', recognizedTrack.title);
       setPhase('matching');
       setTimeout(() => {
         onRecognizedRef.current(recognizedTrack);
       }, MATCHING_AUTO_ADVANCE_MS);
     } catch (error: any) {
+      recognitionEndedAtMs = Date.now();
+      failureReason = mapFailureReason(error?.message || 'unknown');
       console.warn('[listen] text-match failed:', error?.message);
       setErrorMessage(error?.message || 'Could not match that lyric. Try a different line.');
     } finally {
+      logRecognitionAttempt({
+        recognitionSource: 'manual_lyrics',
+        outputRoute: audioRoute.outputRoute,
+        inputRoute: audioRoute.inputRoute,
+        listenStartedAtMs,
+        listenEndedAtMs,
+        recognitionStartedAtMs,
+        recognitionEndedAtMs,
+        failureReason,
+        confidence,
+        matchedSongId,
+        matchedOffsetMs,
+      });
       setLyricBusy(false);
     }
   };
@@ -175,6 +287,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
           SayWetin
         </Text>
         <Text style={styles.subtitle}>{subtitleText}</Text>
+        <HeadphonesDetectedBanner visible={headphonesConnected || quietMode} />
 
         <OrbListener phase={phase} onPress={inMatching ? undefined : startRecognition} />
 
@@ -186,6 +299,33 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
                 : 'Tap orb to start match'}
             </Text>
             {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+            {quietMode ? (
+              <View style={styles.quietCard}>
+                <Text style={styles.quietTitle}>Could not hear the headphone audio</Text>
+                <Text style={styles.quietBody}>
+                  Your music may be playing privately through headphones. Try Headphone Mode, share a song link, search lyrics, or play it out loud.
+                </Text>
+                <View style={styles.quietActionsRow}>
+                  <Pressable style={styles.quietAction} onPress={() => setQuietMode(false)}>
+                    <Text style={styles.quietActionText}>Try Headphone Mode</Text>
+                  </Pressable>
+                  <Pressable style={styles.quietAction} onPress={onOpenShareMode}>
+                    <Text style={styles.quietActionText}>Share song link</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.quietActionsRow}>
+                  <Pressable style={styles.quietAction} onPress={onOpenVibeSearch}>
+                    <Text style={styles.quietActionText}>Search lyrics</Text>
+                  </Pressable>
+                  <Pressable style={styles.quietAction} onPress={() => setShowLyricInput(true)}>
+                    <Text style={styles.quietActionText}>Paste a line</Text>
+                  </Pressable>
+                  <Pressable style={styles.quietAction} onPress={startRecognition}>
+                    <Text style={styles.quietActionText}>Try microphone again</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
             {showLyricInput ? (
               <View style={styles.lyricBox}>
                 <Text style={styles.lyricHint}>Paste a lyric, phrase, or song title</Text>
@@ -269,6 +409,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     maxWidth: 320,
+  },
+  quietCard: {
+    marginTop: 10,
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    padding: 12,
+    gap: 10,
+  },
+  quietTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  quietBody: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  quietActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quietAction: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+    backgroundColor: colors.violetWash,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  quietActionText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '600',
   },
   lyricBox: {
     marginTop: 14,
