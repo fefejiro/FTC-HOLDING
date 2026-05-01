@@ -51,7 +51,7 @@ npm run qa:e2e
 
 | Var                | Default                                                    |
 |--------------------|------------------------------------------------------------|
-| `API_BASE_URL`     | `https://saywetin-api-production.up.railway.app`           |
+| `API_BASE_URL`     | `https://api.saywetin.app`                                 |
 | `AUDIO_FIXTURE`    | _empty_ — set to an .m4a/.mp3 to enable `/api/listen` smoke |
 | `PERF_DURATION`    | 15 (seconds per perf scenario)                             |
 | `PERF_CONNECTIONS` | 25                                                         |
@@ -70,7 +70,10 @@ Everything lands in `qa/_report/`:
 - `perf.json`, `security.json`, `uat.json`, `bat.json`, `e2e.json` — per-layer
 - `vitest.json` — unit/api/contract details
 
-## CI hookup (later)
+For CI runs, the workflow also uploads Android test video artifacts from
+`qa/_report/videos/`.
+
+## CI hookup
 
 The orchestrator exits non-zero on any layer failure. Drop `npm run qa:all`
 into a GitHub Action / Railway pre-deploy / Vercel deploy hook to gate

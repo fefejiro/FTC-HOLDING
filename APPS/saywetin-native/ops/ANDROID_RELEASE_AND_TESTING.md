@@ -56,6 +56,25 @@ Each release shortcut does two things:
    - `android.package` (`com.saywetin.app`)
 4. Build and submit to Play.
 
+## GitHub Automation (QA Video + Auto Publish)
+
+Workflow: `.github/workflows/saywetin-native-qa-playstore-prod.yml`
+
+What it does on `main` pushes that touch `APPS/saywetin-native/**`:
+1. Builds Android debug APK.
+2. Boots emulator and runs Maestro e2e flow (`qa/e2e`).
+3. Records test video (`screenrecord`) and uploads QA artifacts.
+4. If QA passes, builds Android production AAB with EAS.
+5. Submits latest build automatically to Play Store production.
+
+Required GitHub repository secrets:
+- `EXPO_TOKEN`
+- `SAYWETIN_PLAY_SERVICE_ACCOUNT_JSON` (full JSON content, not base64)
+
+Notes:
+- QA hits `https://api.saywetin.app` by default.
+- `eas.json` submit profile now uses `secrets/play-store-key.json`; CI materializes this file at runtime.
+
 ## Device UI Testing Flow
 1. Connect device with USB debugging enabled (or start emulator).
 2. Run `npm run android:test:preflight`.
@@ -89,3 +108,7 @@ Each release shortcut does two things:
   - If `java https probe` fails: allow Java outbound HTTPS (443) for `java.exe` and `javaw.exe` in firewall/security tooling.
   - Install missing Android SDK components shown in readiness report (Emulator, Command-line Tools).
   - Use `npm run android:test:expo-go` as UI testing fallback while native dependency networking is being fixed.
+
+- If the production Railway service URL is unstable (`*.splendid-spirit.up.railway.app`):
+  - Use `https://api.saywetin.app/health` as the release gate endpoint.
+  - Keep DNS/custom-domain ownership valid before release runs.

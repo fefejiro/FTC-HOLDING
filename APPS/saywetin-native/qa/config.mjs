@@ -10,7 +10,7 @@
 export const config = {
   apiBase:
     (process.env.API_BASE_URL || '').replace(/\/$/, '') ||
-    'https://saywetin-api-production.up.railway.app',
+    'https://api.saywetin.app',
   audioFixture: process.env.AUDIO_FIXTURE || '',
   perf: {
     durationSec: Number(process.env.PERF_DURATION || 15),

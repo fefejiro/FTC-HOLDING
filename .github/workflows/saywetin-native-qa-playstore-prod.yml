@@ -1,0 +1,149 @@
+name: SayWetin Native QA + PlayStore Prod
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'APPS/saywetin-native/**'
+      - '.github/workflows/saywetin-native-qa-playstore-prod.yml'
+  workflow_dispatch:
+    inputs:
+      publish_to_production:
+        description: 'Publish to Play Store production after QA succeeds'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  qa-android-video:
+    name: Android QA with video evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: APPS/saywetin-native
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: APPS/saywetin-native/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Run Maestro e2e with Android recording
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            set -euo pipefail
+
+            adb wait-for-device
+            adb install -r APPS/saywetin-native/android/app/build/outputs/apk/debug/app-debug.apk
+
+            curl -Ls "https://get.maestro.mobile.dev" | bash
+            export PATH="$HOME/.maestro/bin:$PATH"
+
+            cd APPS/saywetin-native/qa
+            mkdir -p _report/videos
+
+            # Record the full e2e run on-device for evidence.
+            adb -s emulator-5554 shell screenrecord --time-limit 180 /sdcard/saywetin-qa-run.mp4 &
+            REC_PID=$!
+
+            set +e
+            E2E_DEVICE=emulator-5554 API_BASE_URL=https://api.saywetin.app npm run qa:e2e
+            TEST_EXIT=$?
+            set -e
+
+            adb -s emulator-5554 shell pkill -INT screenrecord || true
+            wait "$REC_PID" || true
+
+            adb -s emulator-5554 pull /sdcard/saywetin-qa-run.mp4 ./_report/videos/saywetin-qa-run.mp4 || true
+            exit "$TEST_EXIT"
+
+      - name: Upload QA report and video artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: saywetin-native-qa-artifacts
+          path: |
+            APPS/saywetin-native/qa/_report/**
+          if-no-files-found: warn
+
+  publish-playstore-production:
+    name: Publish Android to Play Store production
+    runs-on: ubuntu-latest
+    needs: qa-android-video
+    timeout-minutes: 90
+    if: >-
+      needs.qa-android-video.result == 'success' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || inputs.publish_to_production == true)
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: APPS/saywetin-native
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: APPS/saywetin-native/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Materialize Play service account key
+        run: |
+          mkdir -p secrets
+          printf '%s' "${PLAY_STORE_SERVICE_ACCOUNT_JSON}" > secrets/play-store-key.json
+        env:
+          PLAY_STORE_SERVICE_ACCOUNT_JSON: ${{ secrets.SAYWETIN_PLAY_SERVICE_ACCOUNT_JSON }}
+
+      - name: Build Android AAB (EAS production profile)
+        run: eas build --platform android --profile production --non-interactive --wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_NO_VCS: '1'
+
+      - name: Submit latest Android build to Play production
+        run: eas submit --platform android --profile production --latest --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_NO_VCS: '1'

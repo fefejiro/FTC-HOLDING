@@ -33,6 +33,7 @@ yarn-error.*
 # local env files and secrets
 .env
 .env*.local
+secrets/
 android/local.properties
 android/keystore-base64.txt
 android/app/debug.keystore
