@@ -30,7 +30,7 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
         return;
       }
 
-      if (loaded && loaded.length > 0 && track.targetLineIndex != null) {
+      if (loaded && loaded.length > 0) {
         setLyrics(loaded);
         setFallbackReason(null);
         return;
@@ -44,7 +44,7 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     return () => {
       mounted = false;
     };
-  }, [track.id, track.targetLineIndex]);
+  }, [track.id]);
 
   useEffect(() => {
     let frame = 0;
@@ -77,6 +77,8 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
 
     return matchIndex >= 0 ? matchIndex : 0;
   }, [lyrics, positionMs]);
+
+  const activeLine = lyrics[currentLineIndex] ?? null;
 
   const prefetchNearby = async (centerIndex: number) => {
     const candidates = [centerIndex - 2, centerIndex - 1, centerIndex, centerIndex + 1, centerIndex + 2]

@@ -39,6 +39,7 @@
 - [ ] Test on Chrome stable and beta
 
 ## 9. Infrastructure Verification
+- [ ] Set `VITE_SAYWETIN_API_BASE_URL` explicitly when targeting non-default QA backend
 - [x] `api.saywetin.app` resolves to Railway CNAME target
 - [x] `https://api.saywetin.app/health` returns HTTP 200
 - [x] Railway domain status is verified with valid certificate

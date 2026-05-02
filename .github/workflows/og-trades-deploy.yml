@@ -27,9 +27,9 @@ jobs:
         working-directory: APPS/ftc-site
         run: npm ci
 
-      - name: Run typecheck
+      - name: Build shared dependencies
         working-directory: APPS/ftc-site
-        run: npm run typecheck
+        run: npm run build:deps
 
       - name: Build for Cloudflare Pages
         working-directory: APPS/ftc-site

@@ -1,52 +1,122 @@
-        "controlled_walkthrough_status": "GO",
-        "full_handoff_status": "NO-GO (custom SMTP sender display name still shows Una Labs; DNS verification for Resend SMTP pending)",
-        "blockers": [
-          "Custom SMTP sender display name still shows Una Labs; DNS verification for Resend SMTP pending"
-        ],
-        "qa_status": "Credentialed QA passed, admin login/dashboard verified, sender branding not yet verified",
-        "estimated_remaining_effort": "~0.5d (SMTP + final client walkthrough)",
 {
   "Garden Cleaners": {
-    "status": "HOLD",
-        "controlled_walkthrough_status": "GO",
-        "full_handoff_status": "NO-GO (custom SMTP sender display name still shows Una Labs unless accepted)",
-        "blockers": [
-          "Custom SMTP sender display name still shows Una Labs unless accepted"
-        ],
-        "qa_status": "Credentialed QA passed, admin login/dashboard verified, sender branding not yet verified",
-        "estimated_remaining_effort": "~0.5d (SMTP + final client walkthrough)",
-        "owner_actions_needed": ["Provide/verify SMTP credentials", "Final client walkthrough if required"],
-        "next_dev_actions": ["Configure/test SMTP", "Verify sender display name in Gmail", "Update handoff docs"]
+    "status": "GO",
+    "controlled_walkthrough_status": "GO",
+    "full_handoff_status": "GO (pending final owner/client acceptance and security signoff)",
+    "blockers": [
+      "Final owner/client acceptance pending",
+      "Security signoff pending (if required by handoff policy)"
+    ],
+    "last_commit_hashes": [
+      "2f0c8e42",
+      "316731c7",
+      "114dce1a",
+      "a5956d09",
+      "00bb262e",
+      "e05855d1"
+    ],
+    "qa_status": "Portfolio E2E passing (4/4), credentialed QA passed, admin login/dashboard verified, sender branding verified (FTC Client Portal)",
+    "estimated_remaining_effort": "~0.25d (final acceptance + security signoff)",
+    "owner_actions_needed": [
+      "Record final owner/client acceptance",
+      "Complete security signoff (if required)"
+    ],
+    "next_dev_actions": [
+      "Capture acceptance evidence in handoff docs",
+      "Close remaining security gate and mark handoff complete"
+    ]
+  },
+  "Una Labs": {
+    "status": "GO",
+    "controlled_walkthrough_status": "GO",
+    "full_handoff_status": "GO",
+    "blockers": [],
+    "last_commit_hashes": [],
+    "qa_status": "Portfolio E2E passing (5/5) with 200 responses on home/admin/dashboard/portal/start",
+    "estimated_remaining_effort": "0d (monitoring only)",
+    "owner_actions_needed": [],
+    "next_dev_actions": [
+      "Keep automated portfolio checks on schedule",
+      "Keep dashboard status artifacts fresh"
+    ]
   },
   "SayWetin": {
     "status": "HOLD",
     "controlled_walkthrough_status": "GO (lyric timing patch deployed)",
     "full_handoff_status": "HOLD (API/env blockers remain)",
-    "blockers": ["API endpoints returning 404", "Android/API env/device QA pending"],
-    "last_commit_hashes": ["45239cbc2960a6391c5871ad84e6e65503844423"],
+    "blockers": [
+      "API endpoints returning 404",
+      "Android/API env/device QA pending"
+    ],
+    "last_commit_hashes": [
+      "45239cbc2960a6391c5871ad84e6e65503844423"
+    ],
     "qa_status": "Lyric timing UX patch verified, full E2E pending",
-    "estimated_remaining_effort": "1-2d (API/env unblock + E2E) ",
-    "owner_actions_needed": ["Resolve API/env issues"],
-    "next_dev_actions": ["Unblock API/env", "Run full E2E QA"]
+    "estimated_remaining_effort": "1-2d (API/env unblock + E2E)",
+    "owner_actions_needed": [
+      "Resolve API/env issues"
+    ],
+    "next_dev_actions": [
+      "Unblock API/env",
+      "Run full E2E QA"
+    ]
   },
-  "Dispatch/OG": {
+  "Dispatch": {
     "status": "HOLD",
     "controlled_walkthrough_status": "HOLD (403 access audit in progress)",
     "full_handoff_status": "HOLD (access/QA blockers remain)",
-    "blockers": ["DATABASE_URL/runtime env and token-flow production verification"],
+    "blockers": [
+      "DATABASE_URL/runtime env and token-flow production verification"
+    ],
     "last_commit_hashes": [],
     "qa_status": "Partial QA, access issues remain",
     "estimated_remaining_effort": "1d (access unblock + QA)",
-    "owner_actions_needed": ["Review access audit results"],
-    "next_dev_actions": ["Resolve 403 issues", "Complete QA"]
+    "owner_actions_needed": [
+      "Review access audit results"
+    ],
+    "next_dev_actions": [
+      "Resolve 403 issues",
+      "Complete QA"
+    ]
+  },
+  "OG Trades Academy": {
+    "status": "HOLD",
+    "controlled_walkthrough_status": "HOLD (canonical URL and webhook delivery unconfirmed)",
+    "full_handoff_status": "HOLD (domain live status and webhook config required)",
+    "blockers": [
+      "ogtradesacademy.com live status unconfirmed",
+      "OG_TRADES_LEADS_WEBHOOK_URL not set - leads not delivered",
+      "OG_TRADES_CONFIRMATION_WEBHOOK_URL not set",
+      "Community URL destination unverified"
+    ],
+    "last_commit_hashes": [],
+    "qa_status": "E2E spec created (tests/og-trades-public.spec.ts); not run against live URL yet",
+    "estimated_remaining_effort": "~0.5d after CTO unblocks domain + webhooks",
+    "owner_actions_needed": [
+      "Confirm ogtradesacademy.com is live (HTTP 200)",
+      "Provide OG_TRADES_LEADS_WEBHOOK_URL",
+      "Provide OG_TRADES_CONFIRMATION_WEBHOOK_URL",
+      "Verify community URL redirect target"
+    ],
+    "next_dev_actions": [
+      "Run smoke:prod against live URL",
+      "Enable OG Trades in portfolio E2E config",
+      "Update telemetry after GO confirmed"
+    ]
   },
   "FTC Auth/Skills": {
     "status": "GO",
-        "controlled_walkthrough_status": "GO",
-        "full_handoff_status": "GO (pending only final owner/client acceptance/security signoff)",
-        "blockers": [],
-        "qa_status": "Credentialed QA passed, admin login/dashboard verified, sender branding verified (FTC Client Portal)",
-        "estimated_remaining_effort": "~0.25d (final owner/client acceptance/security signoff)",
-        "owner_actions_needed": ["Final owner/client acceptance", "Security signoff if required"],
-        "next_dev_actions": ["Update handoff docs if needed"]
+    "controlled_walkthrough_status": "GO",
+    "full_handoff_status": "GO (pending only final owner/client acceptance/security signoff)",
+    "blockers": [],
+    "qa_status": "Credentialed QA passed, admin login/dashboard verified, sender branding verified (FTC Client Portal)",
+    "estimated_remaining_effort": "~0.25d (final owner/client acceptance/security signoff)",
+    "owner_actions_needed": [
+      "Final owner/client acceptance",
+      "Security signoff if required"
+    ],
+    "next_dev_actions": [
+      "Update handoff docs if needed"
+    ]
+  }
 }

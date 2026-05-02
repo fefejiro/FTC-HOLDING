@@ -1,7 +1,10 @@
 import type { MatchSource, RecognitionSource, RitualTrack } from '../state/ritual-state';
 import * as FileSystem from 'expo-file-system/legacy';
+import Constants from 'expo-constants';
 
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+const apiBaseUrl =
+  process.env.EXPO_PUBLIC_API_BASE_URL?.trim() ||
+  String(Constants.expoConfig?.extra?.EXPO_PUBLIC_API_BASE_URL || '').trim();
 
 type ListenResponse = {
   success: boolean;

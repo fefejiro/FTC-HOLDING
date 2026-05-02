@@ -1,7 +1,7 @@
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { MatchSource, RitualTrack } from '../state/ritual-state';
-import { ritualTokens } from '../theme/tokens';
 import { FadeInView } from '../components/FadeInView';
+import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
 
@@ -66,7 +66,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
           await Linking.openURL(candidate);
           return;
         } catch {
-          // Try the next candidate URI.
+          // Try next candidate.
         }
       }
 
@@ -76,84 +76,35 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     }
   };
 
-  // Timing model scaffold
-  const listenStartedAtMs = track.listenStartedAtMs ?? null;
-  const listenEndedAtMs = track.listenEndedAtMs ?? null;
-  const sampleMidpointAtMs = track.sampleMidpointAtMs ?? null;
-  const recognitionReceivedAtMs = track.recognitionReceivedAtMs ?? null;
-  const resultShownAtMs = Date.now();
-  const providerSongOffsetMs = track.providerSongOffsetMs ?? null;
-  const calculatedDisplayOffsetMs =
-    providerSongOffsetMs && sampleMidpointAtMs && resultShownAtMs
-      ? providerSongOffsetMs + (resultShownAtMs - sampleMidpointAtMs)
-      : null;
-
-  // Only show lyrics if timing/target is resolved
-  let inlineLyrics = '';
-  let lyricsReady = false;
-  if (track.targetLineIndex != null && track.syncedLyrics && track.syncedLyrics.length > 0) {
-    inlineLyrics = track.syncedLyrics.map((line) => line.text).join('\n');
-    lyricsReady = true;
-  } else if (track.lyric) {
-    inlineLyrics = (track.lyric || '').trim();
-    lyricsReady = inlineLyrics.length > 0;
-  }
-
-  void onFollowLiveLyrics;
+  const inlineLyrics = (track.lyric || '').trim();
 
   return (
     <FadeInView>
       <View style={styles.screen}>
         <View style={styles.ambientGlow} />
 
-        <View style={styles.headerRow}>
-          {track.matchedInMs > 0 ? (
-            <Text style={styles.headerMeta}>matched in {(track.matchedInMs / 1000).toFixed(1)}s</Text>
-          ) : null}
-            <FadeInView>
-              <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 64 }] /* extra bottom padding for buttons */}>
-                <Text style={styles.title}>{track.title}</Text>
-                <Text style={styles.artist}>{track.artist}</Text>
-                <Text style={styles.chipSource}>{MATCH_SOURCE_LABELS[track.matchSource]}</Text>
-                {/* Hide raw confidence percentage from UI, show warning if confidence is low */}
-                {typeof track.matchConfidence === 'number' && track.matchConfidence < 60 ? (
-                  <Text style={styles.chipMatchText}>Possible match</Text>
-                ) : null}
-                <Pressable onPress={onReset} style={styles.resetButton}>
-                  <Text style={styles.resetButtonText}>Listen again</Text>
-                </Pressable>
-                <View style={styles.lyricCard}>
-                  {lyricsReady ? (
-                    <ScrollView style={styles.lyricsScroll} nestedScrollEnabled contentContainerStyle={{ paddingBottom: 32 }}>
-                      <Text style={styles.lyricLine}>{inlineLyrics}</Text>
-                    </ScrollView>
-                  ) : (
-                    <Text style={styles.syncingHint}>
-                      {calculatedDisplayOffsetMs == null ?
-                        'Finding the exact line…' :
-                        'Song found. Exact lyric timing is not available yet.'}
-                    </Text>
-                  )}
-                  {track.meaning ? <Text style={styles.meaningLine}>{track.meaning}</Text> : null}
-                </View>
-                <View style={styles.linksRow}>
-                  <Pressable
-                    onPress={() => openLink(track.spotifyUrl, `${track.artist} ${track.title}`, 'Spotify')}
-                    style={styles.linkButton}
-                  >
-                    <Text style={styles.linkButtonText}>Spotify</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => openLink(track.youtubeUrl, `${track.artist} ${track.title}`, 'YouTube')}
-                    style={styles.linkButton}
-                  >
-                    <Text style={styles.linkButtonText}>YouTube</Text>
-                  </Pressable>
-                </View>
-              </ScrollView>
-            </FadeInView>
-          );
-          {track.meaning ? <Text style={styles.meaningLine}>{track.meaning}</Text> : null}
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.title}>{track.title}</Text>
+          <Text style={styles.artist}>{track.artist}</Text>
+
+          <View style={styles.badgesRow}>
+            <Text style={styles.badge}>{MATCH_SOURCE_LABELS[track.matchSource]}</Text>
+            {track.matchedInMs > 0 ? (
+              <Text style={styles.badge}>matched in {(track.matchedInMs / 1000).toFixed(1)}s</Text>
+            ) : null}
+          </View>
+
+          {track.albumArt ? <Image source={{ uri: track.albumArt }} style={styles.cover} /> : null}
+
+          <View style={styles.lyricCard}>
+            {inlineLyrics ? (
+              <Text style={styles.lyricText}>{inlineLyrics}</Text>
+            ) : (
+              <Text style={styles.lyricHint}>Lyrics are not available for this track yet.</Text>
+            )}
+            {track.meaning ? <Text style={styles.meaningText}>{track.meaning}</Text> : null}
+          </View>
+
           {track.chips.length > 0 ? (
             <View style={styles.chipsRow}>
               {track.chips.map((chip) => (
@@ -163,23 +114,31 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
               ))}
             </View>
           ) : null}
-        </View>
 
-        <View style={styles.actionRow}>
-          <Pressable
-            onPress={() => openLink(track.spotifyUrl, `${track.artist} ${track.title}`, 'Spotify')}
-            style={styles.linkButton}
-          >
-            <Text style={styles.linkButtonText}>Spotify</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => openLink(track.youtubeUrl, `${track.artist} ${track.title}`, 'YouTube')}
-            style={styles.linkButton}
-          >
-            <Text style={styles.linkButtonText}>YouTube</Text>
-          </Pressable>
-        </View>
+          <View style={styles.linksRow}>
+            <Pressable
+              onPress={() => openLink(track.spotifyUrl, `${track.artist} ${track.title}`, 'Spotify')}
+              style={styles.linkButton}
+            >
+              <Text style={styles.linkButtonText}>Spotify</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => openLink(track.youtubeUrl, `${track.artist} ${track.title}`, 'YouTube')}
+              style={styles.linkButton}
+            >
+              <Text style={styles.linkButtonText}>YouTube</Text>
+            </Pressable>
+          </View>
 
+          <View style={styles.actionsRow}>
+            <Pressable onPress={onFollowLiveLyrics} style={styles.primaryButton}>
+              <Text style={styles.primaryButtonText}>Follow Live Lyrics</Text>
+            </Pressable>
+            <Pressable onPress={onReset} style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>Listen again</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
       </View>
     </FadeInView>
   );
@@ -199,138 +158,62 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.violetWash,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerMeta: {
-    color: colors.textMuted,
-    fontSize: 12,
-    textTransform: 'lowercase',
-    letterSpacing: 0.6,
-  },
-  matchSourceBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.violetWash,
-    borderRadius: 999,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(207,198,255,0.35)',
-  },
-  matchSourceText: {
-    color: colors.violetSoft,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.panelSoft,
-  },
-  closeText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  coverWrap: {
-    alignSelf: 'center',
-    width: 188,
-    height: 188,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  coverGlow: {
-    position: 'absolute',
-    width: 188,
-    height: 188,
-    borderRadius: 32,
-    backgroundColor: colors.violetWash,
-  },
-  cover: {
-    width: 168,
-    height: 168,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.violetEdge,
-    backgroundColor: colors.panelSoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  coverText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1.1,
-  },
-  chipMatch: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    borderRadius: 999,
-    backgroundColor: colors.panel,
-    borderWidth: 1,
-    borderColor: colors.mint,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  chipMatchText: {
-    color: colors.mint,
-    fontWeight: '700',
-    fontSize: 12,
+  container: {
+    gap: 14,
+    paddingBottom: 24,
   },
   title: {
     color: colors.text,
-    fontSize: 34,
+    fontSize: 32,
     lineHeight: 38,
     fontFamily: 'PlayfairDisplay_400Regular_Italic',
-    textAlign: 'center',
   },
-  subTitle: {
+  artist: {
     color: colors.textMuted,
-    fontSize: 16,
-    textAlign: 'center',
+    fontSize: 18,
+    marginTop: -6,
   },
-  lyricCard: {
-    backgroundColor: colors.panel,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.violetEdge,
-    padding: 14,
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
-  lyricsScroll: {
-    maxHeight: 130,
-  },
-  playingNow: {
-    color: colors.textMuted,
-    fontSize: 12,
-    letterSpacing: 0.8,
-    textTransform: 'lowercase',
-  },
-  syncingHint: {
-    color: colors.textMuted,
-    fontSize: 12,
-    letterSpacing: 0.8,
-    textTransform: 'lowercase',
+  badge: {
+    color: colors.violetSoft,
+    backgroundColor: colors.violetWash,
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+    borderRadius: 999,
+    paddingHorizontal: 10,
     paddingVertical: 6,
+    fontSize: 12,
   },
-  lyricLine: {
+  cover: {
+    width: 180,
+    height: 180,
+    borderRadius: 18,
+    alignSelf: 'center',
+  },
+  lyricCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel,
+    padding: 14,
+    gap: 10,
+  },
+  lyricText: {
     color: colors.text,
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 20,
+    lineHeight: 28,
     fontFamily: 'PlayfairDisplay_400Regular_Italic',
   },
-  meaningLine: {
+  lyricHint: {
     color: colors.textMuted,
+    fontSize: 15,
+  },
+  meaningText: {
+    color: colors.amber,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -341,7 +224,9 @@ const styles = StyleSheet.create({
   },
   chipItem: {
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panelSoft,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
@@ -349,23 +234,49 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
   },
-  actionRow: {
+  linksRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   linkButton: {
     flex: 1,
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: colors.panelSoft,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.panelSoft,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   linkButtonText: {
     color: colors.text,
     fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: '700',
+  },
+  actionsRow: {
+    gap: 10,
+  },
+  primaryButton: {
+    borderRadius: 12,
+    backgroundColor: colors.violet,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panelSoft,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

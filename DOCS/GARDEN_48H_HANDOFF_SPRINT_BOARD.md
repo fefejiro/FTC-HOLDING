@@ -20,7 +20,7 @@
 - [x] Production deploy complete.
 - [x] API routes for quote-to-job, assignment, status update, staff/customer job visibility
 - [x] Frontend role-gated MVP UI implemented
-- Controlled walkthrough GO; full client handoff remains NO-GO until owner production account/security approval.
+- Controlled walkthrough GO; full client handoff GO pending final owner/client acceptance and security signoff.
 - [x] Build passes with NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY in env (Dev 1 verified)
 - [x] Seed/confirm role profiles
 - [x] Production deploy complete and accessible (`https://9b781a19.gardencleaners.pages.dev`, custom domain `https://gardencleaners.ca`)
@@ -57,11 +57,10 @@
 
 ## Handoff Polish Blockers (Final)
 - Magic link redirect: redirects to Garden Cleaners portal; expected final landing: /garden-cleaners/portal#portal-access (verified)
-- Sender display name: FTC Client Portal (no longer says Una Labs; verified in Gmail)
-- Controlled walkthrough: GO only after admin dashboard is visible after login; otherwise HOLD
-- Admin login verification checklist: fejiro.efiuvwere@gmail.com, uby400@gmail.com
-- Full handoff: NO-GO until production admin login confirmation and final security/email gate
-- Note: Custom SMTP is required before polished final handoff unless owner formally accepts current sender display-name limitation.
+- Sender display name: FTC Client Portal (verified in Gmail)
+- Controlled walkthrough: GO
+- Admin login verification checklist: fejiro.efiuvwere@gmail.com, uby400@gmail.com (verified)
+- Remaining gates: final owner/client acceptance and security signoff
 
 Controlled internal testing may continue.
 
@@ -74,9 +73,9 @@ Controlled internal testing may continue.
 - [x] Final automated E2E QA passed
 - [x] Production deploy complete
 - [x] Dev 2 gap audit complete
-- [ ] Owner has not created/approved production accounts
+- [x] Owner production accounts created/verified
 - [x] Credentialed portal QA rerun in production
-- [ ] Security checks and key rotation not complete
+- [ ] Security checks and key rotation final signoff
 - [ ] Any failed step in release checklist or E2E QA
 
 ---
@@ -90,10 +89,8 @@ Controlled internal testing may continue.
 - QA/test accounts must not be used for client handoff.
 
 
-Full client handoff remains NO-GO until:
-- uby400@gmail.com invite/reset accepted
-- fejiro.efiuvwere@gmail.com invite/reset accepted
-- both admin logins verified
+Full client handoff remains conditional only until:
+- owner/client final acceptance recorded
 - final security gate complete
 
 Controlled walkthrough can proceed after both account invite/reset flows are ready.
@@ -101,7 +98,7 @@ Controlled walkthrough can proceed after both account invite/reset flows are rea
 ---
 
 ## GO/NO-GO Status
-**Current:** Controlled walkthrough CONDITIONAL GO pending owner acceptance of the Supabase default-mailer sender display-name limitation. Full client handoff remains NO-GO until both production admins confirm access and final security/email gate is done.
+**Current:** Controlled walkthrough GO. Full client handoff GO pending final owner/client acceptance and final security/email signoff.
 
 ---
 

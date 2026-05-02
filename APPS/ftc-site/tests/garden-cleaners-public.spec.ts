@@ -2,7 +2,7 @@
 import { expect, test } from "@playwright/test";
 
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
-const url = (path) => new URL(path, baseUrl).toString();
+const url = (path: string) => new URL(path, baseUrl).toString();
 
 const gardenRoutes = [
   { path: "/garden-cleaners", heading: /Professional Cleaning Services You Can Trust in Oshawa/i, hasMedia: true },

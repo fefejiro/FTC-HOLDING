@@ -2,7 +2,7 @@
 import { test, expect } from "@playwright/test";
 
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
-const url = (path) => new URL(path, baseUrl).toString();
+const url = (path: string) => new URL(path, baseUrl).toString();
 const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === "1";
 
 test.describe("Garden portal smoke", () => {

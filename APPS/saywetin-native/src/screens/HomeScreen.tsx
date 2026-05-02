@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { AudioModule, RecordingPresets, useAudioRecorder } from 'expo-audio';
 import { FadeInView } from '../components/FadeInView';
+import { BrandOrb } from '../components/BrandOrb';
 import { ritualTokens } from '../theme/tokens';
 import { explainSlang, type SlangExplanation } from '../api/slang';
 import { identifyByText, uploadListenSample } from '../api/listen';
@@ -49,29 +50,9 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   const lineYRef = useRef<Record<number, number>>({});
 
   const pulse = useRef(new Animated.Value(1)).current;
-  const breathe = useRef(new Animated.Value(0)).current;
-  const rotate = useRef(new Animated.Value(0)).current;
   // Shazam-style outward pulse rings — staggered launch for continuous wave feel.
   const PULSE_DELAYS = [0, 700, 1400, 2100, 2800];
   const pulses = useRef(PULSE_DELAYS.map(() => new Animated.Value(0))).current;
-
-  useEffect(() => {
-    const breatheLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(breathe, { toValue: 1, duration: 2600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(breathe, { toValue: 0, duration: 2600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      ]),
-    );
-    const rotateLoop = Animated.loop(
-      Animated.timing(rotate, { toValue: 1, duration: 14000, easing: Easing.linear, useNativeDriver: true }),
-    );
-    breatheLoop.start();
-    rotateLoop.start();
-    return () => {
-      breatheLoop.stop();
-      rotateLoop.stop();
-    };
-  }, [breathe, rotate]);
 
   useEffect(() => {
     if (phase === 'listening' || phase === 'matching') {
@@ -110,10 +91,6 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
     loops.forEach((l) => l.start());
     return () => loops.forEach((l) => l.stop());
   }, [pulses]);
-
-  const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
-  const rotation = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const counterRotation = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] });
 
   const decode = async () => {
     const trimmed = phrase.trim();
@@ -366,8 +343,12 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   return (
     <FadeInView>
       <View style={styles.screen}>
+        <View style={styles.bgVignetteTop} pointerEvents="none" />
+        <View style={styles.bgVignetteBottom} pointerEvents="none" />
+
         <View style={styles.centerStack}>
-          <Text style={styles.tapTitle}>{orbLabel}</Text>
+          <Text style={styles.tapTitle}>SayWetin</Text>
+          <Text style={styles.tapSubtitle}>{orbLabel}</Text>
 
           <Pressable style={styles.orbTap} onPress={startListening} disabled={phase === 'matching'}>
             {pulses.map((v, i) => (
@@ -384,25 +365,18 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
               />
             ))}
             <Animated.View
-              style={[styles.orbAura, { transform: [{ scale: Animated.multiply(pulse, breatheScale) }] }]}
-            />
-            <Animated.View
-              style={[styles.orbHaloMid, { transform: [{ scale: Animated.multiply(pulse, breatheScale) }] }]}
-            />
-            <Animated.View
               style={[
-                styles.orbCircle,
-                { transform: [{ scale: Animated.multiply(pulse, breatheScale) }] },
+                styles.orbHeroWrap,
+                { transform: [{ scale: pulse }] },
               ]}
             >
-              <View pointerEvents="none" style={styles.orbGloss} />
-              <Animated.View style={[styles.sWrap, { transform: [{ rotate: rotation }] }]}>
-                <Image
-                  source={require('../../assets/icon.png')}
-                  style={styles.orbIcon}
-                  resizeMode="cover"
-                />
-              </Animated.View>
+              <BrandOrb
+                size={186}
+                variant="hero"
+                animated
+                showGlow
+                phase={phase === 'matching' ? 'matching' : phase === 'listening' ? 'listening' : 'idle'}
+              />
             </Animated.View>
           </Pressable>
 
@@ -590,109 +564,38 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
 }
 
 const ORB_SIZE = 220;
-const GLASS_SIZE = 180;
-const INNER_SIZE = 168;
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, paddingTop: 8 },
-  centerStack: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24 },
-  tapTitle: { color: colors.text, fontSize: 18, fontWeight: '600', letterSpacing: 0.3 },
+  screen: { flex: 1, paddingTop: 8, backgroundColor: '#0A0812' },
+  bgVignetteTop: {
+    position: 'absolute',
+    top: -120,
+    left: -60,
+    right: -60,
+    height: 320,
+    borderRadius: 280,
+    backgroundColor: 'rgba(130,82,210,0.16)',
+  },
+  bgVignetteBottom: {
+    position: 'absolute',
+    bottom: -180,
+    left: -80,
+    right: -80,
+    height: 360,
+    borderRadius: 300,
+    backgroundColor: 'rgba(78,44,150,0.12)',
+  },
+  centerStack: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  tapTitle: { color: colors.text, fontSize: 34, fontWeight: '700', letterSpacing: 0.4 },
+  tapSubtitle: { color: colors.textMuted, fontSize: 14, fontWeight: '500', letterSpacing: 0.25, marginBottom: 8 },
   errorText: { marginTop: 10, color: colors.amber, fontSize: 13, textAlign: 'center', maxWidth: 320 },
 
   orbTap: { width: ORB_SIZE + 60, height: ORB_SIZE + 60, justifyContent: 'center', alignItems: 'center' },
 
-  orbAura: {
-    position: 'absolute', width: ORB_SIZE + 60, height: ORB_SIZE + 60, borderRadius: 999,
-    backgroundColor: 'rgba(160,140,255,0.08)',
-  },
-  orbHaloMid: {
-    position: 'absolute', width: ORB_SIZE, height: ORB_SIZE, borderRadius: 999,
-    backgroundColor: 'rgba(160,140,255,0.14)',
-  },
+  orbHeroWrap: { justifyContent: 'center', alignItems: 'center' },
   pulseRing: {
     position: 'absolute', width: ORB_SIZE, height: ORB_SIZE, borderRadius: 999,
-    borderWidth: 2, borderColor: 'rgba(207,198,255,0.55)',
-  },
-  orbImage: {
-    width: GLASS_SIZE, height: GLASS_SIZE,
-    shadowColor: '#9b8aff', shadowOpacity: 0.7, shadowRadius: 36, shadowOffset: { width: 0, height: 0 },
-    elevation: 24,
-  },
-  orbCircle: {
-    width: GLASS_SIZE, height: GLASS_SIZE, borderRadius: GLASS_SIZE / 2,
-    backgroundColor: '#1a0f2e',
-    borderWidth: 2, borderColor: 'rgba(207,198,255,0.55)',
-    justifyContent: 'center', alignItems: 'center',
-    overflow: 'hidden',
-    shadowColor: '#9b8aff', shadowOpacity: 0.85, shadowRadius: 40, shadowOffset: { width: 0, height: 0 },
-    elevation: 28,
-  },
-  orbGloss: {
-    position: 'absolute', top: 10, left: 22, width: 110, height: 50, borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    transform: [{ rotate: '-22deg' }],
-  },
-
-  glassOuter: {
-    width: GLASS_SIZE, height: GLASS_SIZE, borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#9b8aff', shadowOpacity: 0.45, shadowRadius: 30, shadowOffset: { width: 0, height: 0 },
-    elevation: 14,
-  },
-  glassInner: {
-    width: INNER_SIZE, height: INNER_SIZE, borderRadius: 999,
-    backgroundColor: 'rgba(120,100,220,0.18)',
-    overflow: 'hidden',
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)',
-  },
-  glassHighlight: {
-    position: 'absolute', top: 8, left: 16, width: 130, height: 60, borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    transform: [{ rotate: '-22deg' }],
-  },
-  glassRing: {
-    position: 'absolute', width: INNER_SIZE - 14, height: INNER_SIZE - 14, borderRadius: 999,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-  },
-  glassCrescent: {
-    position: 'absolute', bottom: 18, right: 22, width: 60, height: 18, borderRadius: 999,
-    backgroundColor: 'rgba(255,230,180,0.14)',
-    transform: [{ rotate: '15deg' }],
-  },
-
-  waveLayer: {
-    position: 'absolute', width: INNER_SIZE, height: INNER_SIZE,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  waveStreak: { position: 'absolute', borderRadius: 999 },
-  waveStreakA: {
-    width: INNER_SIZE - 8, height: INNER_SIZE - 8, borderWidth: 2,
-    borderColor: 'transparent',
-    borderTopColor: 'rgba(255,180,90,0.35)',
-    borderRightColor: 'rgba(255,180,90,0.18)',
-  },
-  waveStreakB: {
-    width: INNER_SIZE - 36, height: INNER_SIZE - 36, borderWidth: 2,
-    borderColor: 'transparent',
-    borderTopColor: 'rgba(255,210,140,0.45)',
-    borderLeftColor: 'rgba(255,210,140,0.20)',
-    transform: [{ rotate: '120deg' }],
-  },
-  waveStreakC: {
-    width: INNER_SIZE - 70, height: INNER_SIZE - 70, borderWidth: 2,
-    borderColor: 'transparent',
-    borderBottomColor: 'rgba(255,160,80,0.55)',
-    transform: [{ rotate: '220deg' }],
-  },
-
-  sWrap: { width: INNER_SIZE, height: INNER_SIZE, justifyContent: 'center', alignItems: 'center' },
-  orbIcon: {
-    width: INNER_SIZE,
-    height: INNER_SIZE,
-    borderRadius: INNER_SIZE / 2,
+    borderWidth: 1.5, borderColor: 'rgba(207,198,255,0.38)',
   },
 
   searchPill: {

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BrandOrb } from './BrandOrb';
 import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
@@ -182,10 +183,12 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
               },
             ]}
           >
-            <Image
-              source={require('../../assets/orb.png')}
-              style={styles.orbImage}
-              resizeMode="contain"
+            <BrandOrb
+              size={ORB_SIZE}
+              variant="listen"
+              animated
+              showGlow
+              phase={isMatching ? 'matching' : isListening ? 'listening' : 'idle'}
             />
           </Animated.View>
         </Pressable>
@@ -259,10 +262,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 40,
     elevation: 24,
-  },
-  orbImage: {
-    width: ORB_SIZE,
-    height: ORB_SIZE,
   },
   statusLabel: {
     marginTop: 18,

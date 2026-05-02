@@ -2,6 +2,13 @@ import heroImg from "./assets/hero.png";
 
 import React, { useState } from "react";
 
+const DEFAULT_API_BASE_URL = "https://api.saywetin.app";
+
+const getApiBaseUrl = () =>
+  (import.meta.env.VITE_SAYWETIN_API_BASE_URL?.trim() || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+
+const getApiUrl = (path: string) => `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+
 type Result = {
   track: string;
   lyric: string;
@@ -65,8 +72,7 @@ const App: React.FC = () => {
             try {
               const formData = new FormData();
               formData.append('audio', blob, 'audio.webm');
-              // Replace with your deployed backend endpoint
-              const res = await fetch('https://saywetin.app/api/recognize', {
+              const res = await fetch(getApiUrl('/api/recognize'), {
                 method: 'POST',
                 body: formData,
               });
@@ -83,7 +89,7 @@ const App: React.FC = () => {
               try {
                 const session = localStorage.getItem('saywetin_session');
                 if (session && data.trackId) {
-                  await fetch('https://saywetin.app/api/recent-recognition', {
+                  await fetch(getApiUrl('/api/recent-recognition'), {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -127,7 +133,7 @@ const App: React.FC = () => {
                 onClick={async () => {
                   setResult((r) => isTrackResult(r) ? { ...r, meaning: 'Loading meaning...' } : r);
                   try {
-                    const res = await fetch('https://saywetin.app/v1/cultural-analysis', {
+                    const res = await fetch(getApiUrl('/v1/cultural-analysis'), {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ text: result.lyric }),

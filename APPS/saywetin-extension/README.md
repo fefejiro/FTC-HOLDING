@@ -31,6 +31,12 @@ npm install
 npm run build
 ```
 
+Optional environment override for QA and staging:
+
+```bash
+VITE_SAYWETIN_API_BASE_URL=https://api.saywetin.app
+```
+
 Load `dist/` as an unpacked extension in Chrome (`chrome://extensions` → Developer mode → Load unpacked).
 
 ### Mock mode
@@ -41,6 +47,7 @@ Append `?mock=1` to the extension popup URL to test UI without a real API call.
 
 - Primary API: `https://api.saywetin.app`
 - Railway service URL (fallback): `https://saywetin-api.splendid-spirit.up.railway.app`
+- QA override env var: `VITE_SAYWETIN_API_BASE_URL`
 
 Extension ID (current): `fpephcboldiembegdnncdbfjedognhpl`
 
