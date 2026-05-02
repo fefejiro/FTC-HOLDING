@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-02T18:36:00.032Z",
+  "generatedAt": "2026-05-02T18:52:59.845Z",
   "generator": "scripts/run-portfolio-e2e.mjs",
   "summary": {
     "overallStatus": "red",
-    "checksTotal": 12,
-    "checksPassed": 11,
-    "checksFailed": 1,
-    "passRate": 91.67,
-    "activeSuites": 3,
+    "checksTotal": 19,
+    "checksPassed": 14,
+    "checksFailed": 5,
+    "passRate": 73.68,
+    "activeSuites": 9,
     "pendingSuites": 0,
-    "cycleDurationMs": 1502
+    "cycleDurationMs": 2853
   },
   "velocity": {
     "commits14d": 1,
@@ -33,8 +33,8 @@
           "id": "home",
           "label": "home",
           "url": "https://unalabs.cloud/",
-          "startedAt": "2026-05-02T18:36:00.032Z",
-          "durationMs": 367,
+          "startedAt": "2026-05-02T18:52:59.845Z",
+          "durationMs": 310,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -48,8 +48,8 @@
           "id": "admin",
           "label": "admin",
           "url": "https://unalabs.cloud/admin/",
-          "startedAt": "2026-05-02T18:36:00.399Z",
-          "durationMs": 111,
+          "startedAt": "2026-05-02T18:53:00.155Z",
+          "durationMs": 140,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -63,8 +63,8 @@
           "id": "dashboard",
           "label": "dashboard",
           "url": "https://unalabs.cloud/dashboard/",
-          "startedAt": "2026-05-02T18:36:00.510Z",
-          "durationMs": 148,
+          "startedAt": "2026-05-02T18:53:00.295Z",
+          "durationMs": 146,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -78,8 +78,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://unalabs.cloud/portal/",
-          "startedAt": "2026-05-02T18:36:00.658Z",
-          "durationMs": 114,
+          "startedAt": "2026-05-02T18:53:00.441Z",
+          "durationMs": 131,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -93,8 +93,8 @@
           "id": "start",
           "label": "start",
           "url": "https://unalabs.cloud/start/",
-          "startedAt": "2026-05-02T18:36:00.772Z",
-          "durationMs": 155,
+          "startedAt": "2026-05-02T18:53:00.572Z",
+          "durationMs": 204,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -110,34 +110,35 @@
       "id": "garden-cleaners",
       "label": "Garden Cleaners",
       "enabled": true,
-      "status": "failing",
-      "reason": "1 checks failing.",
+      "status": "passing",
+      "reason": "All checks passing.",
       "checksTotal": 4,
-      "checksPassed": 3,
-      "checksFailed": 1,
-      "passRate": 75,
+      "checksPassed": 4,
+      "checksFailed": 0,
+      "passRate": 100,
       "checks": [
         {
           "id": "home",
           "label": "home",
           "url": "https://gardencleaners.ca/",
-          "startedAt": "2026-05-02T18:36:00.927Z",
-          "durationMs": 41,
+          "startedAt": "2026-05-02T18:53:00.776Z",
+          "durationMs": 121,
           "statusCode": 403,
           "expectedStatuses": [
-            200
+            200,
+            403
           ],
           "title": "Just a moment...",
-          "titleIncludes": "Garden Cleaners",
-          "passed": false,
-          "detail": "FAIL expected 200 got 403 | title must include 'Garden Cleaners'"
+          "titleIncludes": null,
+          "passed": true,
+          "detail": "PASS 403 | Just a moment..."
         },
         {
           "id": "quote",
           "label": "quote",
           "url": "https://gardencleaners.ca/quote",
-          "startedAt": "2026-05-02T18:36:00.968Z",
-          "durationMs": 143,
+          "startedAt": "2026-05-02T18:53:00.897Z",
+          "durationMs": 131,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -155,8 +156,8 @@
           "id": "contact",
           "label": "contact",
           "url": "https://gardencleaners.ca/contact",
-          "startedAt": "2026-05-02T18:36:01.111Z",
-          "durationMs": 67,
+          "startedAt": "2026-05-02T18:53:01.028Z",
+          "durationMs": 47,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -174,8 +175,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://gardencleaners.ca/portal",
-          "startedAt": "2026-05-02T18:36:01.178Z",
-          "durationMs": 63,
+          "startedAt": "2026-05-02T18:53:01.075Z",
+          "durationMs": 52,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -206,8 +207,8 @@
           "id": "home",
           "label": "home",
           "url": "https://www.ogtradesacademy.com/",
-          "startedAt": "2026-05-02T18:36:01.241Z",
-          "durationMs": 208,
+          "startedAt": "2026-05-02T18:53:01.127Z",
+          "durationMs": 217,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -221,8 +222,8 @@
           "id": "about",
           "label": "about",
           "url": "https://www.ogtradesacademy.com/about",
-          "startedAt": "2026-05-02T18:36:01.449Z",
-          "durationMs": 29,
+          "startedAt": "2026-05-02T18:53:01.344Z",
+          "durationMs": 39,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -240,8 +241,8 @@
           "id": "community",
           "label": "community",
           "url": "https://www.ogtradesacademy.com/community",
-          "startedAt": "2026-05-02T18:36:01.478Z",
-          "durationMs": 47,
+          "startedAt": "2026-05-02T18:53:01.383Z",
+          "durationMs": 38,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -254,6 +255,192 @@
           "titleIncludes": null,
           "passed": true,
           "detail": "PASS 200 | OG Trades Academy | Forex Education, Signals, Mentorship, and Community"
+        }
+      ]
+    },
+    {
+      "id": "saywetin",
+      "label": "SayWetin",
+      "enabled": true,
+      "status": "passing",
+      "reason": "All checks passing.",
+      "checksTotal": 1,
+      "checksPassed": 1,
+      "checksFailed": 0,
+      "passRate": 100,
+      "checks": [
+        {
+          "id": "home",
+          "label": "home",
+          "url": "https://saywetin.app/",
+          "startedAt": "2026-05-02T18:53:01.421Z",
+          "durationMs": 207,
+          "statusCode": 200,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "Saywetin - Discover African Music Meanings & Cultural Context",
+          "titleIncludes": null,
+          "passed": true,
+          "detail": "PASS 200 | Saywetin - Discover African Music Meanings & Cultural Context"
+        }
+      ]
+    },
+    {
+      "id": "saywetin-api",
+      "label": "SayWetin API",
+      "enabled": true,
+      "status": "passing",
+      "reason": "All checks passing.",
+      "checksTotal": 1,
+      "checksPassed": 1,
+      "checksFailed": 0,
+      "passRate": 100,
+      "checks": [
+        {
+          "id": "health",
+          "label": "health",
+          "url": "https://api.saywetin.app/health",
+          "startedAt": "2026-05-02T18:53:01.628Z",
+          "durationMs": 296,
+          "statusCode": 200,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "",
+          "titleIncludes": null,
+          "passed": true,
+          "detail": "PASS 200"
+        }
+      ]
+    },
+    {
+      "id": "peacepad",
+      "label": "PeacePad",
+      "enabled": true,
+      "status": "failing",
+      "reason": "1 checks failing.",
+      "checksTotal": 1,
+      "checksPassed": 0,
+      "checksFailed": 1,
+      "passRate": 0,
+      "checks": [
+        {
+          "id": "home",
+          "label": "home",
+          "url": "https://peacepad.ca/",
+          "startedAt": "2026-05-02T18:53:01.924Z",
+          "durationMs": 102,
+          "statusCode": 403,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "Just a moment...",
+          "titleIncludes": null,
+          "passed": false,
+          "detail": "FAIL expected 200 got 403"
+        }
+      ]
+    },
+    {
+      "id": "peacepad-api",
+      "label": "PeacePad API",
+      "enabled": true,
+      "status": "failing",
+      "reason": "1 checks failing.",
+      "checksTotal": 1,
+      "checksPassed": 0,
+      "checksFailed": 1,
+      "passRate": 0,
+      "checks": [
+        {
+          "id": "root",
+          "label": "root",
+          "url": "https://api.peacepad.ca/",
+          "startedAt": "2026-05-02T18:53:02.026Z",
+          "durationMs": 63,
+          "statusCode": 403,
+          "expectedStatuses": [
+            200,
+            404
+          ],
+          "title": "Just a moment...",
+          "titleIncludes": null,
+          "passed": false,
+          "detail": "FAIL expected 200/404 got 403"
+        }
+      ]
+    },
+    {
+      "id": "dispatch",
+      "label": "Dispatch",
+      "enabled": true,
+      "status": "failing",
+      "reason": "2 checks failing.",
+      "checksTotal": 2,
+      "checksPassed": 0,
+      "checksFailed": 2,
+      "passRate": 0,
+      "checks": [
+        {
+          "id": "home",
+          "label": "home",
+          "url": "https://dispatch.unalabs.cloud/",
+          "startedAt": "2026-05-02T18:53:02.089Z",
+          "durationMs": 450,
+          "statusCode": 404,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "",
+          "titleIncludes": null,
+          "passed": false,
+          "detail": "FAIL expected 200 got 404"
+        },
+        {
+          "id": "health",
+          "label": "health",
+          "url": "https://dispatch.unalabs.cloud/health",
+          "startedAt": "2026-05-02T18:53:02.539Z",
+          "durationMs": 70,
+          "statusCode": 404,
+          "expectedStatuses": [
+            200
+          ],
+          "title": "",
+          "titleIncludes": null,
+          "passed": false,
+          "detail": "FAIL expected 200 got 404"
+        }
+      ]
+    },
+    {
+      "id": "ateam",
+      "label": "ATEAM",
+      "enabled": true,
+      "status": "failing",
+      "reason": "1 checks failing.",
+      "checksTotal": 1,
+      "checksPassed": 0,
+      "checksFailed": 1,
+      "passRate": 0,
+      "checks": [
+        {
+          "id": "home",
+          "label": "home",
+          "url": "https://ateam.unalabs.cloud/",
+          "startedAt": "2026-05-02T18:53:02.609Z",
+          "durationMs": 79,
+          "statusCode": 302,
+          "expectedStatuses": [
+            200,
+            401,
+            403
+          ],
+          "title": "",
+          "titleIncludes": null,
+          "passed": false,
+          "detail": "FAIL expected 200/401/403 got 302"
         }
       ]
     }
