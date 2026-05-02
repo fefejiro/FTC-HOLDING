@@ -14883,6 +14883,116 @@ footer {
   justify-content: center;
 }
 
+/* Contact bar below hero CTAs */
+.garden-hero-contact-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.garden-contact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(26, 123, 98, 0.07);
+  border: 1px solid rgba(26, 123, 98, 0.15);
+  color: #195745;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.garden-contact-chip:hover {
+  background: rgba(26, 123, 98, 0.13);
+}
+
+.garden-contact-chip--portal {
+  background: rgba(26, 123, 98, 0.14);
+  border-color: rgba(26, 123, 98, 0.25);
+}
+
+.garden-contact-chip-icon {
+  font-size: 1em;
+  line-height: 1;
+}
+
+/* Add-ons fieldset */
+.garden-addons-fieldset {
+  border: 1px solid rgba(26, 123, 98, 0.15);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin: 0;
+}
+
+.garden-addons-fieldset legend {
+  font-weight: 600;
+  color: #173d31;
+  font-size: 0.95rem;
+  padding: 0 6px;
+}
+
+.garden-addons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px 16px;
+  margin-top: 10px;
+}
+
+.garden-addon-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #2d4a3e;
+  cursor: pointer;
+}
+
+.garden-addon-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #1a7b62;
+  cursor: pointer;
+}
+
+/* Quote success banner */
+.garden-quote-success-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 22px;
+  border-radius: 14px;
+  background: #f0faf6;
+  border: 1px solid rgba(26, 123, 98, 0.25);
+  color: #173d31;
+}
+
+.garden-quote-success-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.garden-quote-success-banner strong {
+  font-size: 1.05rem;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.garden-quote-success-banner p {
+  margin: 0;
+  font-size: 0.93rem;
+  color: #2d6a52;
+}
+
+/* Compact service card */
+.garden-service-card--compact {
+  gap: 10px;
+}
+
 .garden-hero-panel-stack {
   display: grid;
   gap: 18px;

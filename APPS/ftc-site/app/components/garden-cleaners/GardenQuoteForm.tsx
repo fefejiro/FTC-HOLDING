@@ -2,7 +2,7 @@
 
 import { FormEvent, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions } from "../../../lib/gardenCleaners";
+import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions, gardenAddOns } from "../../../lib/gardenCleaners";
 import { trackEvent } from "../../../lib/analytics";
 import type { GardenFormSource, GardenQuotePayload } from "../../../lib/gardenContracts";
 
@@ -17,7 +17,17 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
   const selectedRegion = String(searchParams.get("region") || "").trim();
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
+  const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
   const startedAtRef = useRef<number>(Date.now());
+
+  function toggleAddOn(addon: string) {
+    setSelectedAddOns((prev) => {
+      const next = new Set(prev);
+      if (next.has(addon)) next.delete(addon);
+      else next.add(addon);
+      return next;
+    });
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,7 +49,8 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
       region: String(formData.get("region") || "").trim(),
       message: String(formData.get("message") || "").trim(),
       website: String(formData.get("website") || "").trim(),
-      startedAt: startedAtRef.current
+      startedAt: startedAtRef.current,
+      addOns: selectedAddOns.size > 0 ? Array.from(selectedAddOns) : undefined,
     };
 
     setSubmitState("submitting");
@@ -77,6 +88,7 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
         frequency: payload.frequency
       });
       form.reset();
+      setSelectedAddOns(new Set());
       startedAtRef.current = Date.now();
     } catch (error) {
       setSubmitState("error");
@@ -175,14 +187,40 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
         Website
         <input type="text" name="website" tabIndex={-1} autoComplete="off" />
       </label>
-      <button type="submit" className="btn btn-primary" disabled={submitState === "submitting"}>
-        {submitState === "submitting" ? "Submitting..." : "Request Quote"}
-      </button>
-      {message ? (
-        <p className={submitState === "error" ? "form-feedback error" : "form-feedback success"} role={submitState === "error" ? "alert" : "status"}>
-          {message}
-        </p>
-      ) : null}
+      {/* Add-ons */}
+      <fieldset className="garden-addons-fieldset">
+        <legend>Add-ons (optional)</legend>
+        <div className="garden-addons-grid">
+          {gardenAddOns.map((addon) => (
+            <label key={addon} className="garden-addon-check">
+              <input
+                type="checkbox"
+                checked={selectedAddOns.has(addon)}
+                onChange={() => toggleAddOn(addon)}
+              />
+              {addon}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {submitState === "success" ? (
+        <div className="garden-quote-success-banner" role="status">
+          <span className="garden-quote-success-icon" aria-hidden="true">✅</span>
+          <div>
+            <strong>Quote request sent!</strong>
+            <p>{message}</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <button type="submit" className="btn btn-primary" disabled={submitState === "submitting"}>
+            {submitState === "submitting" ? "Submitting..." : "Request Quote"}
+          </button>
+          {message && submitState === "error" ? (
+            <p className="form-feedback error" role="alert">{message}</p>
+          ) : null}
+        </>
+      )}
     </form>
   );
 }

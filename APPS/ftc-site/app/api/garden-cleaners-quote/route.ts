@@ -133,6 +133,9 @@ export async function POST(req: NextRequest) {
     return badRequest("Submission flagged as automated. Please retry.", 422);
   }
 
+  const addOnsRaw = payload.addOns;
+  const addOns = Array.isArray(addOnsRaw) ? (addOnsRaw as unknown[]).filter((v): v is string => typeof v === 'string').slice(0, 10) : [];
+
   // Prepare fields for garden_cleaners_quotes
   const quoteRecord = {
     name: fullName,
@@ -148,6 +151,7 @@ export async function POST(req: NextRequest) {
     preferred_date: preferredDate,
     preferred_time: preferredTime || null,
     message,
+    add_ons: addOns.length > 0 ? addOns : null,
     status: "new",
     source: "garden_cleaners_quote_form",
     raw_payload: payload,
@@ -173,6 +177,48 @@ export async function POST(req: NextRequest) {
   }
 
   logger.info('garden_cleaners_quote_received', { source: quoteRecord.source, name: quoteRecord.name, email: quoteRecord.email, region: quoteRecord.region, property_type: quoteRecord.property_type, service_type: quoteRecord.service_type, service_frequency: quoteRecord.service_frequency });
+
+  // Admin email notification via Resend (optional — configure RESEND_API_KEY + GARDEN_CLEANERS_ADMIN_EMAIL)
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const adminEmail = process.env.GARDEN_CLEANERS_ADMIN_EMAIL || 'uby400@gmail.com';
+  if (resendApiKey) {
+    try {
+      const addOnsList = Array.isArray(payload.addOns) && (payload.addOns as string[]).length > 0
+        ? (payload.addOns as string[]).join(', ')
+        : 'None';
+      const emailBody = [
+        `New quote request from ${fullName}`,
+        ``,
+        `Email: ${email}`,
+        `Phone: ${phone}`,
+        `Address: ${address}, ${city} ${postalCode}`,
+        `Property: ${propertyType}`,
+        `Service: ${serviceNeeded}`,
+        `Frequency: ${frequency}`,
+        `Date: ${preferredDate}${preferredTime ? ` (${preferredTime})` : ''}`,
+        `Add-ons: ${addOnsList}`,
+        `Region: ${region || 'Unspecified'}`,
+        ``,
+        `Message:`,
+        message,
+      ].join('\n');
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'Garden Cleaners <noreply@gardencleaners.ca>',
+          to: [adminEmail],
+          subject: `New quote request — ${fullName} (${serviceNeeded})`,
+          text: emailBody,
+        }),
+      });
+    } catch (emailErr) {
+      logger.warn('garden_cleaners_quote_admin_email_failed', { message: emailErr instanceof Error ? emailErr.message : 'unknown' });
+    }
+  }
 
   // Optional webhook forwarding (secondary notification)
   const webhookUrl = process.env.GARDEN_CLEANERS_QUOTE_WEBHOOK_URL;

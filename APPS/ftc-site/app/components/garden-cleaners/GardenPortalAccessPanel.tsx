@@ -4,6 +4,22 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { GardenPortalUserRole } from "../../../lib/gardenContracts";
 import getSupabase from "../../../lib/supabase";
 
+// Types for admin user management
+type AdminUserRecord = {
+  id: string;
+  auth_user_id: string | null;
+  email: string;
+  display_name: string | null;
+  role: "admin" | "staff" | "client";
+  is_active: boolean;
+  service_region: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type UsersMgmtState = "idle" | "loading" | "error";
+type InviteFormState = "idle" | "submitting" | "success" | "error";
+
 // Types for new API integration
 type JobRecord = {
   id: string;
@@ -198,6 +214,29 @@ export default function GardenPortalAccessPanel() {
   const [queueRegion, setQueueRegion] = useState<"all" | RegionTag>("all");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Admin: user management tab
+  const [adminTab, setAdminTab] = useState<"jobs" | "users">("jobs");
+  const [adminUsers, setAdminUsers] = useState<AdminUserRecord[]>([]);
+  const [adminUsersTotal, setAdminUsersTotal] = useState<number>(0);
+  const [adminUsersPage, setAdminUsersPage] = useState<number>(1);
+  const [adminUsersSearch, setAdminUsersSearch] = useState<string>("");
+  const [adminUsersRoleFilter, setAdminUsersRoleFilter] = useState<"all" | "admin" | "staff" | "client">("all");
+  const [adminUsersStatusFilter, setAdminUsersStatusFilter] = useState<"all" | "active" | "disabled">("all");
+  const [usersMgmtState, setUsersMgmtState] = useState<UsersMgmtState>("idle");
+  const [usersMgmtError, setUsersMgmtError] = useState<string>("");
+  const [usersMgmtMessage, setUsersMgmtMessage] = useState<string>("");
+  // Invite form
+  const [showInviteForm, setShowInviteForm] = useState<boolean>(false);
+  const [inviteEmail, setInviteEmail] = useState<string>("");
+  const [inviteName, setInviteName] = useState<string>("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "staff" | "client">("client");
+  const [inviteRegion, setInviteRegion] = useState<string>("");
+  const [inviteFormState, setInviteFormState] = useState<InviteFormState>("idle");
+  const [inviteFormMessage, setInviteFormMessage] = useState<string>("");
+  // Confirm disable/delete dialog
+  const [confirmDisableUserId, setConfirmDisableUserId] = useState<string>("");
+  const [pendingUserAction, setPendingUserAction] = useState<string>("");
 
   const isAdmin = role === "admin";
   const isStaff = role === "staff";
@@ -501,6 +540,124 @@ export default function GardenPortalAccessPanel() {
     }
   }
 
+  // --- Admin: User Management ---
+  async function loadAdminUsers(page = adminUsersPage, search = adminUsersSearch, roleF = adminUsersRoleFilter, statusF = adminUsersStatusFilter) {
+    if (!isAdmin) return;
+    setUsersMgmtState("loading");
+    setUsersMgmtError("");
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: "25",
+        search,
+        role: roleF,
+        status: statusF,
+      });
+      const res = await fetchWithAuth(`/api/garden-cleaners-admin-users?${params}`).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error || "Failed to load users");
+      setAdminUsers(res.users || []);
+      setAdminUsersTotal(res.total || 0);
+      setAdminUsersPage(page);
+      setUsersMgmtState("idle");
+    } catch (e: any) {
+      setUsersMgmtError(e.message || "Unable to load users");
+      setUsersMgmtState("error");
+    }
+  }
+
+  async function submitInviteUser(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!isAdmin) return;
+    const email = inviteEmail.trim().toLowerCase();
+    const name = inviteName.trim();
+    if (!email) {
+      setInviteFormState("error");
+      setInviteFormMessage("Email is required.");
+      return;
+    }
+    setInviteFormState("submitting");
+    setInviteFormMessage("");
+    try {
+      const res = await fetchWithAuth("/api/garden-cleaners-admin-users", {
+        method: "POST",
+        body: JSON.stringify({ email, display_name: name, role: inviteRole, service_region: inviteRegion || undefined }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error || "Failed to invite user");
+      setInviteFormState("success");
+      setInviteFormMessage(`Invite sent to ${email}.`);
+      setInviteEmail("");
+      setInviteName("");
+      setInviteRole("client");
+      setInviteRegion("");
+      setShowInviteForm(false);
+      await loadAdminUsers(1);
+    } catch (e: any) {
+      setInviteFormState("error");
+      setInviteFormMessage(e.message || "Unable to invite user.");
+    }
+  }
+
+  async function updateUserRole(profileId: string, newRole: "admin" | "staff" | "client") {
+    if (!isAdmin) return;
+    setPendingUserAction(profileId);
+    setUsersMgmtMessage("");
+    try {
+      const res = await fetchWithAuth("/api/garden-cleaners-admin-users", {
+        method: "PATCH",
+        body: JSON.stringify({ profile_id: profileId, role: newRole }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error || "Failed to update role");
+      setAdminUsers((prev) => prev.map((u) => (u.id === profileId ? { ...u, role: newRole } : u)));
+      setUsersMgmtMessage("Role updated.");
+    } catch (e: any) {
+      setUsersMgmtMessage(e.message || "Unable to update role.");
+    } finally {
+      setPendingUserAction("");
+    }
+  }
+
+  async function toggleUserActive(profileId: string, isActive: boolean) {
+    if (!isAdmin) return;
+    if (!isActive && confirmDisableUserId !== profileId) {
+      setConfirmDisableUserId(profileId);
+      return;
+    }
+    setPendingUserAction(profileId);
+    setUsersMgmtMessage("");
+    setConfirmDisableUserId("");
+    try {
+      const res = await fetchWithAuth("/api/garden-cleaners-admin-users", {
+        method: "PATCH",
+        body: JSON.stringify({ profile_id: profileId, is_active: isActive }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error || "Failed to update status");
+      setAdminUsers((prev) => prev.map((u) => (u.id === profileId ? { ...u, is_active: isActive } : u)));
+      setUsersMgmtMessage(isActive ? "User reactivated." : "User disabled.");
+    } catch (e: any) {
+      setUsersMgmtMessage(e.message || "Unable to update user status.");
+    } finally {
+      setPendingUserAction("");
+    }
+  }
+
+  async function resetUserInvite(email: string) {
+    if (!isAdmin) return;
+    setPendingUserAction(email);
+    setUsersMgmtMessage("");
+    try {
+      const res = await fetchWithAuth("/api/garden-cleaners-admin-users", {
+        method: "PUT",
+        body: JSON.stringify({ email }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error || "Failed to send reset");
+      setUsersMgmtMessage(`Reset/invite sent to ${email}.`);
+    } catch (e: any) {
+      setUsersMgmtMessage(e.message || "Unable to send reset.");
+    } finally {
+      setPendingUserAction("");
+    }
+  }
+
   // --- UI ---
   return (
     <section className="section garden-section" id="portal-access" tabIndex={-1}>
@@ -689,8 +846,30 @@ export default function GardenPortalAccessPanel() {
       {authState === "authenticated" && (
         <>
           {loading && <div className="loading">Loading portal data...</div>}
+          {/* Admin/Staff: Tab switcher */}
+          {isAdmin && (
+            <div style={{ display: "flex", gap: 12, margin: "16px 0 8px" }}>
+              <button
+                type="button"
+                className={adminTab === "jobs" ? "btn btn-primary" : "btn btn-secondary"}
+                onClick={() => setAdminTab("jobs")}
+              >
+                Jobs &amp; Quotes
+              </button>
+              <button
+                type="button"
+                className={adminTab === "users" ? "btn btn-primary" : "btn btn-secondary"}
+                onClick={() => {
+                  setAdminTab("users");
+                  if (adminUsers.length === 0) void loadAdminUsers(1);
+                }}
+              >
+                Users
+              </button>
+            </div>
+          )}
           {/* Admin: Quotes to convert */}
-          {isAdmin && quotes.length > 0 && (
+          {isAdmin && adminTab === "jobs" && quotes.length > 0 && (
             <article className="card garden-proof-card">
               <h3>Quotes to Convert</h3>
               <ul>
@@ -704,7 +883,7 @@ export default function GardenPortalAccessPanel() {
             </article>
           )}
           {/* Admin/Staff: Job queue */}
-          {(isAdmin || isStaff) && (
+          {(isAdmin || isStaff) && (!isAdmin || adminTab === "jobs") && (
             <article className="card garden-proof-card">
               <h3>Job Queue</h3>
               <div className="intake-form-grid">
@@ -763,6 +942,227 @@ export default function GardenPortalAccessPanel() {
               </div>
             </article>
           )}
+          {/* Admin: User Management tab */}
+          {isAdmin && adminTab === "users" && (
+            <article className="card garden-proof-card">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+                <h3 style={{ margin: 0 }}>User Management</h3>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ fontSize: 14 }}
+                  onClick={() => { setShowInviteForm((v) => !v); setInviteFormState("idle"); setInviteFormMessage(""); }}
+                >
+                  {showInviteForm ? "Cancel" : "+ Invite User"}
+                </button>
+              </div>
+              {/* Invite form */}
+              {showInviteForm && (
+                <form
+                  onSubmit={submitInviteUser}
+                  style={{
+                    background: "#f0f7f0",
+                    border: "1px solid #cfe3cf",
+                    borderRadius: 12,
+                    padding: 20,
+                    marginBottom: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                    maxWidth: 480,
+                  }}
+                >
+                  <h4 style={{ margin: 0, color: "#2d4a2d" }}>Invite new user</h4>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 13, color: "#2d4a2d", fontWeight: 500 }}>Email *</span>
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      required
+                      onChange={(e) => setInviteEmail(e.currentTarget.value)}
+                      placeholder="user@example.com"
+                      style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #cfe3cf", fontSize: 15 }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 13, color: "#2d4a2d", fontWeight: 500 }}>Display name</span>
+                    <input
+                      type="text"
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.currentTarget.value)}
+                      placeholder="Full name (optional)"
+                      style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #cfe3cf", fontSize: 15 }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 13, color: "#2d4a2d", fontWeight: 500 }}>Role</span>
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.currentTarget.value as typeof inviteRole)}
+                      style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #cfe3cf", fontSize: 15 }}
+                    >
+                      <option value="client">Client</option>
+                      <option value="staff">Staff</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 13, color: "#2d4a2d", fontWeight: 500 }}>Service region</span>
+                    <select
+                      value={inviteRegion}
+                      onChange={(e) => setInviteRegion(e.currentTarget.value)}
+                      style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #cfe3cf", fontSize: 15 }}
+                    >
+                      <option value="">— Any —</option>
+                      {REGION_OPTIONS.filter((r) => r !== "Unspecified").map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {inviteFormMessage && (
+                    <p style={{ margin: 0, fontSize: 14, color: inviteFormState === "error" ? "#b94a48" : "#2d4a2d", background: inviteFormState === "error" ? "#fff0f0" : "#f0fff0", borderRadius: 6, padding: "8px 10px" }}>
+                      {inviteFormMessage}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={inviteFormState === "submitting"}
+                    style={{ alignSelf: "flex-start", fontSize: 14 }}
+                  >
+                    {inviteFormState === "submitting" ? "Sending invite..." : "Send invite"}
+                  </button>
+                </form>
+              )}
+              {/* Search/filter row */}
+              <div className="intake-form-grid" style={{ marginBottom: 12 }}>
+                <label>
+                  <span>Search</span>
+                  <input
+                    type="text"
+                    value={adminUsersSearch}
+                    onChange={(e) => setAdminUsersSearch(e.currentTarget.value)}
+                    placeholder="Name or email"
+                    onKeyDown={(e) => { if (e.key === "Enter") void loadAdminUsers(1, adminUsersSearch); }}
+                  />
+                </label>
+                <label>
+                  <span>Role</span>
+                  <select value={adminUsersRoleFilter} onChange={(e) => { setAdminUsersRoleFilter(e.currentTarget.value as typeof adminUsersRoleFilter); void loadAdminUsers(1, adminUsersSearch, e.currentTarget.value as typeof adminUsersRoleFilter); }}>
+                    <option value="all">All roles</option>
+                    <option value="admin">Admin</option>
+                    <option value="staff">Staff</option>
+                    <option value="client">Client</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Status</span>
+                  <select value={adminUsersStatusFilter} onChange={(e) => { setAdminUsersStatusFilter(e.currentTarget.value as typeof adminUsersStatusFilter); void loadAdminUsers(1, adminUsersSearch, adminUsersRoleFilter, e.currentTarget.value as typeof adminUsersStatusFilter); }}>
+                    <option value="all">All</option>
+                    <option value="active">Active</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                </label>
+              </div>
+              <div className="hero-actions" style={{ marginBottom: 12 }}>
+                <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => void loadAdminUsers(1)}>
+                  {usersMgmtState === "loading" ? "Loading..." : "Search"}
+                </button>
+              </div>
+              {usersMgmtError && <p style={{ color: "#b94a48", background: "#fff0f0", borderRadius: 6, padding: "8px 10px", fontSize: 14 }}>{usersMgmtError}</p>}
+              {usersMgmtMessage && <p style={{ color: "#2d4a2d", background: "#f0fff0", borderRadius: 6, padding: "8px 10px", fontSize: 14 }}>{usersMgmtMessage}</p>}
+              {/* User table */}
+              {adminUsers.length > 0 ? (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #e6ece6", textAlign: "left" }}>
+                        <th style={{ padding: "8px 12px" }}>Email</th>
+                        <th style={{ padding: "8px 12px" }}>Name</th>
+                        <th style={{ padding: "8px 12px" }}>Role</th>
+                        <th style={{ padding: "8px 12px" }}>Region</th>
+                        <th style={{ padding: "8px 12px" }}>Status</th>
+                        <th style={{ padding: "8px 12px" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminUsers.map((u) => {
+                        const isPending = pendingUserAction === u.id || pendingUserAction === u.email;
+                        const isConfirmingDisable = confirmDisableUserId === u.id;
+                        return (
+                          <tr key={u.id} style={{ borderBottom: "1px solid #e6ece6", opacity: isPending ? 0.6 : 1 }}>
+                            <td style={{ padding: "8px 12px", wordBreak: "break-all" }}>{u.email}</td>
+                            <td style={{ padding: "8px 12px" }}>{u.display_name || <span style={{ color: "#aaa" }}>—</span>}</td>
+                            <td style={{ padding: "8px 12px" }}>
+                              <select
+                                value={u.role}
+                                disabled={isPending}
+                                onChange={(e) => void updateUserRole(u.id, e.currentTarget.value as AdminUserRecord["role"])}
+                                style={{ padding: "4px 6px", borderRadius: 4, border: "1px solid #cfe3cf", fontSize: 13 }}
+                              >
+                                <option value="client">Client</option>
+                                <option value="staff">Staff</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            </td>
+                            <td style={{ padding: "8px 12px" }}>{u.service_region || <span style={{ color: "#aaa" }}>—</span>}</td>
+                            <td style={{ padding: "8px 12px" }}>
+                              <span style={{
+                                display: "inline-block",
+                                padding: "2px 10px",
+                                borderRadius: 20,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                background: u.is_active ? "#e6f7e6" : "#f7e6e6",
+                                color: u.is_active ? "#2d6a2d" : "#8b2a2a",
+                              }}>
+                                {u.is_active ? "Active" : "Disabled"}
+                              </span>
+                            </td>
+                            <td style={{ padding: "8px 12px" }}>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                {u.is_active ? (
+                                  isConfirmingDisable ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        style={{ fontSize: 12, background: "#f7e6e6", color: "#8b2a2a", border: "1px solid #e8b4b4" }}
+                                        disabled={isPending}
+                                        onClick={() => void toggleUserActive(u.id, false)}
+                                      >
+                                        Confirm disable
+                                      </button>
+                                      <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setConfirmDisableUserId("")}>Cancel</button>
+                                    </>
+                                  ) : (
+                                    <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} disabled={isPending} onClick={() => toggleUserActive(u.id, false)}>Disable</button>
+                                  )
+                                ) : (
+                                  <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} disabled={isPending} onClick={() => void toggleUserActive(u.id, true)}>Reactivate</button>
+                                )}
+                                <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} disabled={isPending} onClick={() => void resetUserInvite(u.email)}>
+                                  Reset / Resend invite
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {/* Pagination */}
+                  <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
+                    <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} disabled={adminUsersPage <= 1} onClick={() => void loadAdminUsers(adminUsersPage - 1)}>Prev</button>
+                    <span style={{ fontSize: 13 }}>Page {adminUsersPage} · {adminUsersTotal} total</span>
+                    <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} disabled={adminUsersPage * 25 >= adminUsersTotal} onClick={() => void loadAdminUsers(adminUsersPage + 1)}>Next</button>
+                  </div>
+                </div>
+              ) : usersMgmtState === "idle" ? (
+                <div style={{ color: "#4a6a4a", fontSize: 14 }}>No users found. Search above or invite a new user.</div>
+              ) : null}
+            </article>
+          )}
           {/* Customer: Own jobs/status */}
           {isCustomer && (
             <article className="card garden-proof-card">
@@ -785,3 +1185,4 @@ export default function GardenPortalAccessPanel() {
     </section>
   );
 }
+

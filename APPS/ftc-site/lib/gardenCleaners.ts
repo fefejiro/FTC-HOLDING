@@ -168,8 +168,8 @@ export const gardenCleanersConfig = {
   locationCountry: 'Canada',
   phoneDisplay: '+1 289 200 0631',
   phoneHref: 'tel:+12892000631',
-  email: 'contact@gardencleaners.ca',
-  emailHref: 'mailto:uby400@gmail.com',
+  email: 'gardencleaners@gmail.com',
+  emailHref: 'mailto:gardencleaners@gmail.com',
   addressLine: 'Oshawa, Ontario, Canada',
   heroHeadline: 'Professional Cleaning Services You Can Trust in Oshawa',
   heroSubheadline:
@@ -378,6 +378,16 @@ export const gardenServices: GardenService[] = [
   }
 ];
 
-export const gardenPropertyTypes = ['House', 'Condo / Apartment', 'Office', 'Retail / Commercial', 'Vacant unit', 'Other'] as const;
+export const gardenPropertyTypes = ['House', 'Townhouse', 'Condo / Apartment', 'Office', 'Retail / Commercial', 'Vacant unit', 'Other'] as const;
 export const gardenServiceOptions = gardenServices.map((service) => service.title);
 export const gardenFrequencies = ['One-time', 'Weekly', 'Bi-weekly', 'Monthly', 'Custom schedule'] as const;
+
+/** Add-on options shown as checkboxes on the quote form. */
+export const gardenAddOns = [
+  'Oven cleaning',
+  'Window cleaning (interior)',
+  'Window + roof exterior',
+  'Fridge cleaning',
+  'Cabinet interiors',
+] as const;
+export type GardenAddOn = typeof gardenAddOns[number];

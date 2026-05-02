@@ -16,6 +16,7 @@ export type GardenQuotePayload = {
   message: string;
   website: string;
   startedAt: number;
+  addOns?: string[];
 };
 
 export type GardenPortalClickEventName =

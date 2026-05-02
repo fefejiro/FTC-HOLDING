@@ -17,6 +17,19 @@ export default function GardenHero() {
             {gardenCleanersConfig.secondaryCta.label}
           </Link>
         </div>
+        <div className="garden-hero-contact-bar">
+          <a href={gardenCleanersConfig.phoneHref} className="garden-contact-chip">
+            <span className="garden-contact-chip-icon" aria-hidden="true">📞</span>
+            {gardenCleanersConfig.phoneDisplay}
+          </a>
+          <a href={gardenCleanersConfig.emailHref} className="garden-contact-chip">
+            <span className="garden-contact-chip-icon" aria-hidden="true">✉️</span>
+            {gardenCleanersConfig.email}
+          </a>
+          <Link href="/garden-cleaners/portal" prefetch={false} className="garden-contact-chip garden-contact-chip--portal">
+            Sign In / Portal
+          </Link>
+        </div>
         <div className="garden-mini-proof-row">
           {gardenCleanersConfig.heroHighlights.map((item) => (
             <span key={item} className="garden-mini-proof-pill">{item}</span>
