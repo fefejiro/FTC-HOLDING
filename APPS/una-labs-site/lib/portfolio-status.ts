@@ -116,6 +116,49 @@ async function fetchWorkerSummary(token?: string): Promise<WorkerSummary | null>
   }
 }
 
+type E2ESuite = {
+  id: string;
+  status: string;
+  checksPassed: number;
+  checksTotal: number;
+  reason?: string;
+};
+
+type E2EArtifact = {
+  generatedAt?: string;
+  suites?: E2ESuite[];
+};
+
+async function fetchE2EArtifact(): Promise<E2EArtifact | null> {
+  try {
+    const res = await fetch('/ops/portfolio-e2e-status.json', { cache: 'no-store' });
+    if (!res.ok) return null;
+    return (await res.json()) as E2EArtifact;
+  } catch {
+    return null;
+  }
+}
+
+function applyE2ESuiteToConnections(
+  connections: StatusConnection[],
+  suites: E2ESuite[],
+  suiteIds: string[],
+): StatusConnection[] {
+  const relevantSuites = suites.filter((s) => suiteIds.includes(s.id));
+  if (relevantSuites.length === 0) return connections;
+  const anyFailing = relevantSuites.some((s) => s.status === 'failing');
+  const allPassing = relevantSuites.every((s) => s.status === 'passing');
+  const passRate = relevantSuites.reduce((sum, s) => sum + s.checksPassed, 0) /
+    Math.max(1, relevantSuites.reduce((sum, s) => sum + s.checksTotal, 0));
+
+  return connections.map((conn) => {
+    if (conn.probeMode !== 'manual') return conn;
+    const rag: Rag = allPassing ? 'green' : anyFailing ? (passRate < 0.5 ? 'red' : 'yellow') : 'yellow';
+    const detail = relevantSuites.map((s) => `${s.id}: ${s.reason ?? s.status}`).join(' | ');
+    return { ...conn, status: rag, detail: `[CI] ${detail}` };
+  });
+}
+
 async function probeConnection(connection: StatusConnection): Promise<StatusConnection> {
   if (connection.probeMode !== 'live') return connection;
 
@@ -246,15 +289,15 @@ function buildSayWetinSummary(): ProjectStatusSummary {
       },
       {
         label: 'Mobile Strategy',
-        value: 'RN premium rebuild',
-        detail: 'Capacitor is now a containment lane, not the long-term mobile path.',
+        value: 'RN active build',
+        detail: 'React Native workspace bootstrapped, feature branch merged, EAS CI wired to Play Store.',
         status: 'yellow',
       },
       {
         label: 'Android Release',
-        value: '1.0.7 / 16',
-        detail: 'Current Capacitor Android version baseline before native rebuild.',
-        status: 'yellow',
+        value: '1.3.4 / 37',
+        detail: 'Latest EAS-built production release shipped via CI on 2026-05-01.',
+        status: 'green',
       },
       {
         label: 'Feed Mode',
@@ -267,49 +310,49 @@ function buildSayWetinSummary(): ProjectStatusSummary {
       {
         name: 'Pure React Native migration',
         status: 'yellow',
-        detail: 'Full premium-native mobile track approved; bootstrap starts with audio, navigation, and telemetry foundations.',
+        detail: 'RN workspace active; headphone/vibe-search feature branch merged; audio, navigation, and state foundations in place.',
       },
       {
         name: 'Current Capacitor containment',
         status: 'yellow',
-        detail: 'Capacitor remains active only to preserve service while native replacement is underway.',
+        detail: 'Capacitor remains active only to preserve service continuity while native replacement is underway.',
       },
       {
         name: 'Backend contract reuse',
         status: 'green',
-        detail: 'Current recognition, lyrics, and analysis APIs are reusable for the RN client.',
+        detail: 'Recognition, lyrics, and analysis APIs confirmed reusable by the RN client.',
       },
       {
-        name: 'Release automation',
+        name: 'EAS CI release automation',
         status: 'yellow',
-        detail: 'Play Store release flow exists but is still manual and needs CI-fed artifacts.',
+        detail: 'EAS build + submit pipeline wired to Play Store production track; credentials fixed, lock file stabilised.',
       },
       {
         name: 'Portfolio feed integration',
         status: 'yellow',
-        detail: 'This dashboard now tracks the project, but repo-emitted status summaries are still pending.',
+        detail: 'Dashboard tracks the project; repo-emitted build and test telemetry still pending.',
       },
     ],
     testing: [
       {
         name: 'Android listen regression',
         status: 'red',
-        detail: 'Remote-device and screen-recording analysis still point to a broken premium listen experience on Android.',
+        detail: 'Broken premium listen-mode experience on Android is still the top unresolved user-facing defect.',
       },
       {
         name: 'API recognition smoke',
         status: 'yellow',
-        detail: 'Recognition pipeline is reusable, but live confidence, timeout, and no-result behavior still need tracked metrics.',
+        detail: 'Recognition pipeline reused successfully; confidence, timeout, and no-result behaviour still need tracked metrics.',
       },
       {
-        name: 'RN migration readiness',
+        name: 'RN feature parity',
         status: 'yellow',
-        detail: 'Architecture and scope are defined; implementation lane is now active.',
+        detail: 'Headphones detection, vibe search, and ritual navigator screens merged; full feature parity still in progress.',
       },
       {
-        name: 'Play Store release readiness',
+        name: 'EAS Play Store pipeline',
         status: 'yellow',
-        detail: 'AAB workflow exists through Capacitor, but native pipeline automation is not wired yet.',
+        detail: 'EAS build + submit CI workflow is wired; last deployment was v1.3.4 (code 37) on 2026-05-01.',
       },
     ],
     connections: [
@@ -330,22 +373,22 @@ function buildSayWetinSummary(): ProjectStatusSummary {
         liveOkDetail: 'API health endpoint responded to the live browser probe.',
       },
       {
-        name: 'Play Store runbook',
+        name: 'EAS CI workflow',
         status: 'yellow',
-        url: 'https://github.com/',
-        detail: 'Current Android release steps exist locally, but the repo-fed live release view is not wired yet.',
+        url: 'https://github.com/fefejiro/FTC-HOLDING/actions/workflows/saywetin-native-qa-playstore-prod.yml',
+        detail: 'EAS build and Play Store submit workflow is active; last run triggered on push to main.',
         probeMode: 'manual',
       },
     ],
     blockers: [
-      'Android listen-mode UI is still the unacceptable user-facing defect.',
-      'No CI-fed mobile telemetry yet for build velocity, device pass rate, or release confidence.',
-      'Current mobile wrapper makes root-cause isolation harder than it should be.',
+      'Android listen-mode UI defect is still unresolved for existing Capacitor users.',
+      'EAS CI stabilisation in progress — lock file and credentials fixes just pushed.',
+      'No CI-fed mobile telemetry yet for build velocity or device pass rate.',
     ],
     nextActions: [
-      'Bootstrap the pure React Native workspace and native audio service.',
-      'Publish a status-summary contract from the SayWetin repo for build and test telemetry.',
-      'Add Samsung-focused device regression lanes and feed their results into this dashboard.',
+      'Confirm clean EAS CI run after lock file fix (run #25258457394).',
+      'Complete RN feature parity for listen-mode and publish a CI status-summary artifact.',
+      'Add Samsung device regression lanes and wire results into this dashboard.',
     ],
     quickLinks: [
       { label: 'Open SayWetin', href: 'https://saywetin.app', external: true },
@@ -856,15 +899,25 @@ function buildFallbackUnaLabsSummary(): ProjectStatusSummary {
 }
 
 export async function loadPortfolioStatus(token?: string): Promise<ProjectStatusSummary[]> {
-  const workerSummary = await fetchWorkerSummary(token);
+  const [workerSummary, e2eArtifact] = await Promise.all([
+    fetchWorkerSummary(token),
+    fetchE2EArtifact(),
+  ]);
+
+  const suites = e2eArtifact?.suites ?? [];
+
+  function withE2E(project: ProjectStatusSummary, ids: string[]): ProjectStatusSummary {
+    if (suites.length === 0 || ids.length === 0) return project;
+    return { ...project, connections: applyE2ESuiteToConnections(project.connections, suites, ids) };
+  }
 
   const projects = [
     workerSummary ? transformWorkerSummary(workerSummary) : buildFallbackUnaLabsSummary(),
     buildAnionSummary(),
-    buildSayWetinSummary(),
-    buildPeacePadSummary(),
-    buildDispatchSummary(),
-    buildAteamSummary(),
+    withE2E(buildSayWetinSummary(), ['saywetin', 'saywetin-api']),
+    withE2E(buildPeacePadSummary(), ['peacepad', 'peacepad-api']),
+    withE2E(buildDispatchSummary(), ['dispatch']),
+    withE2E(buildAteamSummary(), ['ateam']),
   ];
 
   return Promise.all(projects.map(applyConnectionProbes));
