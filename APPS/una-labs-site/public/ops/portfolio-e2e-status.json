@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-02T07:59:38.119Z",
+  "generatedAt": "2026-05-02T09:16:16.894Z",
   "generator": "scripts/run-portfolio-e2e.mjs",
   "summary": {
     "overallStatus": "red",
@@ -10,7 +10,7 @@
     "passRate": 91.67,
     "activeSuites": 3,
     "pendingSuites": 0,
-    "cycleDurationMs": 1191
+    "cycleDurationMs": 1423
   },
   "velocity": {
     "commits14d": 1,
@@ -33,8 +33,8 @@
           "id": "home",
           "label": "home",
           "url": "https://unalabs.cloud/",
-          "startedAt": "2026-05-02T07:59:38.119Z",
-          "durationMs": 181,
+          "startedAt": "2026-05-02T09:16:16.894Z",
+          "durationMs": 275,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -48,7 +48,7 @@
           "id": "admin",
           "label": "admin",
           "url": "https://unalabs.cloud/admin/",
-          "startedAt": "2026-05-02T07:59:38.300Z",
+          "startedAt": "2026-05-02T09:16:17.169Z",
           "durationMs": 142,
           "statusCode": 200,
           "expectedStatuses": [
@@ -63,8 +63,8 @@
           "id": "dashboard",
           "label": "dashboard",
           "url": "https://unalabs.cloud/dashboard/",
-          "startedAt": "2026-05-02T07:59:38.442Z",
-          "durationMs": 145,
+          "startedAt": "2026-05-02T09:16:17.311Z",
+          "durationMs": 119,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -78,8 +78,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://unalabs.cloud/portal/",
-          "startedAt": "2026-05-02T07:59:38.587Z",
-          "durationMs": 133,
+          "startedAt": "2026-05-02T09:16:17.430Z",
+          "durationMs": 108,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -93,8 +93,8 @@
           "id": "start",
           "label": "start",
           "url": "https://unalabs.cloud/start/",
-          "startedAt": "2026-05-02T07:59:38.720Z",
-          "durationMs": 152,
+          "startedAt": "2026-05-02T09:16:17.538Z",
+          "durationMs": 105,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -121,8 +121,8 @@
           "id": "home",
           "label": "home",
           "url": "https://gardencleaners.ca/",
-          "startedAt": "2026-05-02T07:59:38.873Z",
-          "durationMs": 36,
+          "startedAt": "2026-05-02T09:16:17.643Z",
+          "durationMs": 141,
           "statusCode": 403,
           "expectedStatuses": [
             200
@@ -136,8 +136,8 @@
           "id": "quote",
           "label": "quote",
           "url": "https://gardencleaners.ca/quote",
-          "startedAt": "2026-05-02T07:59:38.909Z",
-          "durationMs": 130,
+          "startedAt": "2026-05-02T09:16:17.784Z",
+          "durationMs": 132,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -155,8 +155,8 @@
           "id": "contact",
           "label": "contact",
           "url": "https://gardencleaners.ca/contact",
-          "startedAt": "2026-05-02T07:59:39.039Z",
-          "durationMs": 29,
+          "startedAt": "2026-05-02T09:16:17.916Z",
+          "durationMs": 46,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -174,8 +174,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://gardencleaners.ca/portal",
-          "startedAt": "2026-05-02T07:59:39.068Z",
-          "durationMs": 34,
+          "startedAt": "2026-05-02T09:16:17.962Z",
+          "durationMs": 48,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -206,8 +206,8 @@
           "id": "home",
           "label": "home",
           "url": "https://www.ogtradesacademy.com/",
-          "startedAt": "2026-05-02T07:59:39.102Z",
-          "durationMs": 163,
+          "startedAt": "2026-05-02T09:16:18.010Z",
+          "durationMs": 216,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -221,8 +221,8 @@
           "id": "about",
           "label": "about",
           "url": "https://www.ogtradesacademy.com/about",
-          "startedAt": "2026-05-02T07:59:39.265Z",
-          "durationMs": 16,
+          "startedAt": "2026-05-02T09:16:18.226Z",
+          "durationMs": 37,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -240,8 +240,8 @@
           "id": "community",
           "label": "community",
           "url": "https://www.ogtradesacademy.com/community",
-          "startedAt": "2026-05-02T07:59:39.281Z",
-          "durationMs": 21,
+          "startedAt": "2026-05-02T09:16:18.263Z",
+          "durationMs": 44,
           "statusCode": 200,
           "expectedStatuses": [
             200,
