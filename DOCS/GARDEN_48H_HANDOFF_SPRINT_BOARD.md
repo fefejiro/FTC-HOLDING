@@ -80,6 +80,27 @@ Controlled internal testing may continue.
 
 ---
 
+## Client Feedback Sprint (2026-05-02) — COMPLETE
+
+**Commit:** `bef285b1` · Deployed to production via Cloudflare Pages
+
+- [x] Phone + email chips in hero section (above fold)
+- [x] Sign In / Portal chip in hero
+- [x] Townhouse added to property type dropdown
+- [x] Oven cleaning + 4 additional add-on checkboxes in quote form
+- [x] Full-width green success banner on quote submit (replaces small `<p>` tag)
+- [x] Admin email notification on new quote via Resend REST API
+- [x] `add_ons` column stored in Supabase `garden_cleaners_quotes`
+- [x] Services section condensed (detail paragraph removed, max 2 bullets)
+- [x] Admin user management panel (Users tab with invite, roles, pagination)
+- [x] Admin users API route (GET/POST/PATCH/PUT)
+- [x] Supabase migration: `202605020001_garden_cleaners_admin_users.sql` (apply when ready)
+- [x] TS clean + build passing before deploy
+
+**Pending operator action:** Apply migration (`npx supabase db push --linked`) and set `RESEND_API_KEY` on Cloudflare Pages.
+
+---
+
 ## Production Admin Accounts
 
 - Client owner/admin: `uby400@gmail.com`

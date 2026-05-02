@@ -46,9 +46,29 @@ Garden Cleaners current MVP status:
 
 - Controlled walkthrough: GO
 - Full handoff: GO pending final owner/client acceptance and security signoff
-- Technical blocker: none known for current MVP handoff
+- Technical blocker: none
 - SMTP/email sender issue: resolved
-- Latest remaining work: uncommitted Garden UI/header/portal polish needs visual QA and commit approval
+- Client feedback round (2026-05-02): all items implemented, built, and deployed to production
+
+### Client Feedback Implemented (2026-05-02)
+
+| Item | Status |
+|------|--------|
+| Phone + email chips in hero (above fold) | ✅ Shipped |
+| Sign In / Portal chip in hero | ✅ Shipped |
+| Townhouse added to property types | ✅ Shipped |
+| Oven cleaning + 4 add-on checkboxes in quote form | ✅ Shipped |
+| Full-width success banner on quote submit | ✅ Shipped |
+| Admin email notification on every new quote (Resend) | ✅ Shipped |
+| Services section condensed — no detail paragraph, max 2 bullets | ✅ Shipped |
+| Business hours — already correct, no change needed | ✅ Confirmed |
+| Admin user management panel (Users tab) | ✅ Shipped |
+| Admin users API (GET/POST/PATCH/PUT) | ✅ Shipped |
+| Supabase migration for admin users / audit log | ✅ Created (apply: `npx supabase db push --linked`) |
+
+**Env vars required on Cloudflare Pages for admin email:**
+- `RESEND_API_KEY` — Resend API key
+- `GARDEN_CLEANERS_ADMIN_EMAIL` — defaults to `uby400@gmail.com` if not set
 
 ## Live URLs
 
@@ -92,6 +112,7 @@ Do not re-open "Una Labs sender display" unless a fresh email proves regression.
 ## Key Garden Commits
 
 ```text
+bef285b1 feat(garden-cleaners): client feedback — hero contact bar, add-ons, success toast, condensed services, admin email, users panel
 2f0c8e42 fix(garden): redirect auth links to portal
 316731c7 fix(garden): polish portal login and stabilize live QA tests
 114dce1a docs(garden): add client handoff and Una Labs closeout package
