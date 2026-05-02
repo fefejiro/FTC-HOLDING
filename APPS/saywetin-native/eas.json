@@ -28,7 +28,7 @@
     "production": {
       "node": "20.19.4",
       "autoIncrement": true,
-      "credentialsSource": "local",
+      "credentialsSource": "remote",
       "ios": {
         "simulator": false
       },

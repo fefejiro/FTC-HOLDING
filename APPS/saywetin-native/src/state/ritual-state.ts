@@ -15,6 +15,29 @@ export type SyncedLyricLine = {
 
 export type MatchSource = 'acrcloud' | 'ai_transcript' | 'lyric_text' | 'manual' | 'spotify' | 'unknown';
 
+export type RecognitionSource =
+  | 'microphone'
+  | 'android_internal_audio'
+  | 'ios_supported_internal_audio'
+  | 'audio_file_import'
+  | 'manual_lyrics'
+  | 'streaming_metadata'
+  | 'share_link'
+  | 'vibesearch';
+
+export type FailureReason =
+  | 'NO_AUDIO_DETECTED'
+  | 'HEADPHONES_PRIVATE_AUDIO'
+  | 'INTERNAL_CAPTURE_NOT_SUPPORTED'
+  | 'INTERNAL_CAPTURE_PERMISSION_DENIED'
+  | 'INTERNAL_CAPTURE_BLOCKED_BY_SOURCE_APP'
+  | 'INTERNAL_CAPTURE_NO_AUDIO'
+  | 'LOW_CONFIDENCE'
+  | 'NO_NETWORK'
+  | 'RECOGNITION_TIMEOUT'
+  | 'MICROPHONE_PERMISSION_MISSING'
+  | 'UNKNOWN_ERROR';
+
 export type CulturalAnalysisEntry = {
   translation: string;
   culturalContext: string;
@@ -36,6 +59,7 @@ export type RitualTrack = {
   chips: string[];
   syncedLyrics: SyncedLyricLine[];
   matchSource: MatchSource;
+  recognitionSource: RecognitionSource;
   culturalAnalyses: CulturalAnalysisEntry[];
 };
 
@@ -63,6 +87,7 @@ const demoTrack: RitualTrack = {
   chips: ['Live recognition'],
   syncedLyrics: [],
   matchSource: 'unknown',
+  recognitionSource: 'microphone',
   culturalAnalyses: [],
 };
 

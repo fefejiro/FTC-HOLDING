@@ -1,4 +1,4 @@
-import type { MatchSource, RitualTrack } from '../state/ritual-state';
+import type { MatchSource, RecognitionSource, RitualTrack } from '../state/ritual-state';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
@@ -127,9 +127,23 @@ function normalizeMatchSource(value?: string | null): MatchSource {
   return 'unknown';
 }
 
+function recognitionSourceFromMatchSource(
+  matchSource: MatchSource,
+  fallback: RecognitionSource,
+): RecognitionSource {
+  if (matchSource === 'spotify') {
+    return 'streaming_metadata';
+  }
+  if (matchSource === 'lyric_text' || matchSource === 'manual') {
+    return 'manual_lyrics';
+  }
+  return fallback;
+}
+
 function mapRecognizedTrack(
   recognized: NonNullable<ListenResponse['recognizedTrack']>,
   matchSource: MatchSource,
+  recognitionSource: RecognitionSource,
 ): RitualTrack {
   const links = buildTrackLinks(
     recognized.title,
@@ -153,6 +167,7 @@ function mapRecognizedTrack(
     chips: recognized.genre ? [recognized.genre] : [],
     syncedLyrics: [],
     matchSource,
+    recognitionSource,
     culturalAnalyses: [],
   };
 }
@@ -255,8 +270,9 @@ export async function uploadListenSample(
   const matchSource = normalizeMatchSource(
     payload.recognizedTrack.matchSource ?? payload.matchSource ?? 'acrcloud',
   );
+  const recognitionSource = recognitionSourceFromMatchSource(matchSource, 'microphone');
   const baseTrack = {
-    ...mapRecognizedTrack(payload.recognizedTrack, matchSource),
+    ...mapRecognizedTrack(payload.recognizedTrack, matchSource, recognitionSource),
     matchedInMs: Date.now() - startedAt,
   };
 
@@ -334,8 +350,9 @@ export async function identifyByText(query: string): Promise<RitualTrack> {
   const matchSource = normalizeMatchSource(
     payload.recognizedTrack.matchSource ?? payload.matchSource ?? 'lyric_text',
   );
+  const recognitionSource = recognitionSourceFromMatchSource(matchSource, 'manual_lyrics');
   const baseTrack = {
-    ...mapRecognizedTrack(payload.recognizedTrack, matchSource),
+    ...mapRecognizedTrack(payload.recognizedTrack, matchSource, recognitionSource),
     matchedInMs: Date.now() - startedAt,
   };
 

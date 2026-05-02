@@ -3,6 +3,8 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { ListenScreen } from '../screens/ListenScreen';
 import { ResultScreen } from '../screens/ResultScreen';
 import { LiveLyricsScreen } from '../screens/LiveLyricsScreen';
+import { ShareModeScreen } from '../screens/ShareModeScreen';
+import { VibeSearchScreen } from '../screens/VibeSearchScreen';
 import type { RitualController, RitualScreen } from '../state/ritual-state';
 
 export type RitualStackParamList = {
@@ -10,6 +12,8 @@ export type RitualStackParamList = {
   Listen: undefined;
   Result: undefined;
   LiveLyrics: undefined;
+  ShareMode: undefined;
+  VibeSearch: undefined;
 };
 
 type RitualNavigatorProps = {
@@ -68,6 +72,12 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
               ritual.revealResult();
               navigation.navigate('Result');
             }}
+            onOpenShareMode={() => {
+              navigation.navigate('ShareMode');
+            }}
+            onOpenVibeSearch={() => {
+              navigation.navigate('VibeSearch');
+            }}
           />
         )}
       />
@@ -99,6 +109,36 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
           <LiveLyricsScreen
             track={ritual.track}
             onBack={() => {
+              navigation.goBack();
+            }}
+          />
+        )}
+      />
+      <Stack.Screen
+        name="ShareMode"
+        options={{
+          animation: 'slide_from_bottom',
+          animationDuration: 260,
+          presentation: 'modal',
+        }}
+        children={({ navigation }) => (
+          <ShareModeScreen
+            onClose={() => {
+              navigation.goBack();
+            }}
+          />
+        )}
+      />
+      <Stack.Screen
+        name="VibeSearch"
+        options={{
+          animation: 'slide_from_bottom',
+          animationDuration: 260,
+          presentation: 'modal',
+        }}
+        children={({ navigation }) => (
+          <VibeSearchScreen
+            onClose={() => {
               navigation.goBack();
             }}
           />
