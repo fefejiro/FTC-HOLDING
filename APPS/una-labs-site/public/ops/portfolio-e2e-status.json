@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-03T21:10:29.794Z",
+  "generatedAt": "2026-05-03T22:01:15.211Z",
   "generator": "scripts/run-portfolio-e2e.mjs",
   "summary": {
     "overallStatus": "red",
     "checksTotal": 19,
-    "checksPassed": 14,
-    "checksFailed": 5,
-    "passRate": 73.68,
+    "checksPassed": 10,
+    "checksFailed": 9,
+    "passRate": 52.63,
     "activeSuites": 9,
     "pendingSuites": 0,
-    "cycleDurationMs": 2889
+    "cycleDurationMs": 1853
   },
   "velocity": {
     "commits14d": 1,
@@ -22,19 +22,19 @@
       "id": "una-labs",
       "label": "Una Labs",
       "enabled": true,
-      "status": "passing",
-      "reason": "All checks passing.",
+      "status": "failing",
+      "reason": "4 checks failing.",
       "checksTotal": 5,
-      "checksPassed": 5,
-      "checksFailed": 0,
-      "passRate": 100,
+      "checksPassed": 1,
+      "checksFailed": 4,
+      "passRate": 20,
       "checks": [
         {
           "id": "home",
           "label": "home",
           "url": "https://unalabs.cloud/",
-          "startedAt": "2026-05-03T21:10:29.794Z",
-          "durationMs": 310,
+          "startedAt": "2026-05-03T22:01:15.212Z",
+          "durationMs": 260,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -48,61 +48,61 @@
           "id": "admin",
           "label": "admin",
           "url": "https://unalabs.cloud/admin/",
-          "startedAt": "2026-05-03T21:10:30.104Z",
-          "durationMs": 105,
-          "statusCode": 200,
+          "startedAt": "2026-05-03T22:01:15.472Z",
+          "durationMs": 141,
+          "statusCode": 500,
           "expectedStatuses": [
             200
           ],
-          "title": "Admin - Una Labs | Una Labs — AI Launchpad for Founders",
+          "title": "",
           "titleIncludes": "Admin",
-          "passed": true,
-          "detail": "PASS 200 | Admin - Una Labs | Una Labs — AI Launchpad for Founders"
+          "passed": false,
+          "detail": "FAIL expected 200 got 500 | title must include 'Admin'"
         },
         {
           "id": "dashboard",
           "label": "dashboard",
           "url": "https://unalabs.cloud/dashboard/",
-          "startedAt": "2026-05-03T21:10:30.209Z",
-          "durationMs": 179,
-          "statusCode": 200,
+          "startedAt": "2026-05-03T22:01:15.613Z",
+          "durationMs": 145,
+          "statusCode": 500,
           "expectedStatuses": [
             200
           ],
-          "title": "Dashboard | Una Labs — AI Launchpad for Founders",
+          "title": "",
           "titleIncludes": "Dashboard",
-          "passed": true,
-          "detail": "PASS 200 | Dashboard | Una Labs — AI Launchpad for Founders"
+          "passed": false,
+          "detail": "FAIL expected 200 got 500 | title must include 'Dashboard'"
         },
         {
           "id": "portal",
           "label": "portal",
           "url": "https://unalabs.cloud/portal/",
-          "startedAt": "2026-05-03T21:10:30.388Z",
-          "durationMs": 192,
-          "statusCode": 200,
+          "startedAt": "2026-05-03T22:01:15.758Z",
+          "durationMs": 129,
+          "statusCode": 500,
           "expectedStatuses": [
             200
           ],
-          "title": "Project Portal | Una Labs — AI Launchpad for Founders",
+          "title": "",
           "titleIncludes": "Portal",
-          "passed": true,
-          "detail": "PASS 200 | Project Portal | Una Labs — AI Launchpad for Founders"
+          "passed": false,
+          "detail": "FAIL expected 200 got 500 | title must include 'Portal'"
         },
         {
           "id": "start",
           "label": "start",
           "url": "https://unalabs.cloud/start/",
-          "startedAt": "2026-05-03T21:10:30.580Z",
-          "durationMs": 86,
-          "statusCode": 200,
+          "startedAt": "2026-05-03T22:01:15.887Z",
+          "durationMs": 115,
+          "statusCode": 500,
           "expectedStatuses": [
             200
           ],
-          "title": "Start Your Project — Una Labs | Una Labs — AI Launchpad for Founders",
+          "title": "",
           "titleIncludes": "Start",
-          "passed": true,
-          "detail": "PASS 200 | Start Your Project — Una Labs | Una Labs — AI Launchpad for Founders"
+          "passed": false,
+          "detail": "FAIL expected 200 got 500 | title must include 'Start'"
         }
       ]
     },
@@ -121,8 +121,8 @@
           "id": "home",
           "label": "home",
           "url": "https://gardencleaners.ca/",
-          "startedAt": "2026-05-03T21:10:30.666Z",
-          "durationMs": 124,
+          "startedAt": "2026-05-03T22:01:16.002Z",
+          "durationMs": 49,
           "statusCode": 403,
           "expectedStatuses": [
             200,
@@ -137,8 +137,8 @@
           "id": "quote",
           "label": "quote",
           "url": "https://gardencleaners.ca/quote",
-          "startedAt": "2026-05-03T21:10:30.790Z",
-          "durationMs": 136,
+          "startedAt": "2026-05-03T22:01:16.051Z",
+          "durationMs": 87,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -156,8 +156,8 @@
           "id": "contact",
           "label": "contact",
           "url": "https://gardencleaners.ca/contact",
-          "startedAt": "2026-05-03T21:10:30.926Z",
-          "durationMs": 53,
+          "startedAt": "2026-05-03T22:01:16.138Z",
+          "durationMs": 34,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -175,8 +175,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://gardencleaners.ca/portal",
-          "startedAt": "2026-05-03T21:10:30.979Z",
-          "durationMs": 54,
+          "startedAt": "2026-05-03T22:01:16.172Z",
+          "durationMs": 35,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -207,8 +207,8 @@
           "id": "home",
           "label": "home",
           "url": "https://www.ogtradesacademy.com/",
-          "startedAt": "2026-05-03T21:10:31.033Z",
-          "durationMs": 295,
+          "startedAt": "2026-05-03T22:01:16.207Z",
+          "durationMs": 200,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -222,8 +222,8 @@
           "id": "about",
           "label": "about",
           "url": "https://www.ogtradesacademy.com/about",
-          "startedAt": "2026-05-03T21:10:31.328Z",
-          "durationMs": 45,
+          "startedAt": "2026-05-03T22:01:16.407Z",
+          "durationMs": 23,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -241,8 +241,8 @@
           "id": "community",
           "label": "community",
           "url": "https://www.ogtradesacademy.com/community",
-          "startedAt": "2026-05-03T21:10:31.373Z",
-          "durationMs": 44,
+          "startedAt": "2026-05-03T22:01:16.430Z",
+          "durationMs": 28,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -273,8 +273,8 @@
           "id": "home",
           "label": "home",
           "url": "https://saywetin.app/",
-          "startedAt": "2026-05-03T21:10:31.417Z",
-          "durationMs": 225,
+          "startedAt": "2026-05-03T22:01:16.458Z",
+          "durationMs": 164,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -301,8 +301,8 @@
           "id": "health",
           "label": "health",
           "url": "https://api.saywetin.app/health",
-          "startedAt": "2026-05-03T21:10:31.642Z",
-          "durationMs": 373,
+          "startedAt": "2026-05-03T22:01:16.622Z",
+          "durationMs": 170,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -329,8 +329,8 @@
           "id": "home",
           "label": "home",
           "url": "https://peacepad.ca/",
-          "startedAt": "2026-05-03T21:10:32.015Z",
-          "durationMs": 88,
+          "startedAt": "2026-05-03T22:01:16.792Z",
+          "durationMs": 36,
           "statusCode": 403,
           "expectedStatuses": [
             200
@@ -357,8 +357,8 @@
           "id": "root",
           "label": "root",
           "url": "https://api.peacepad.ca/",
-          "startedAt": "2026-05-03T21:10:32.104Z",
-          "durationMs": 116,
+          "startedAt": "2026-05-03T22:01:16.828Z",
+          "durationMs": 38,
           "statusCode": 403,
           "expectedStatuses": [
             200,
@@ -386,8 +386,8 @@
           "id": "home",
           "label": "home",
           "url": "https://dispatch.unalabs.cloud/",
-          "startedAt": "2026-05-03T21:10:32.220Z",
-          "durationMs": 287,
+          "startedAt": "2026-05-03T22:01:16.866Z",
+          "durationMs": 121,
           "statusCode": 404,
           "expectedStatuses": [
             200
@@ -401,8 +401,8 @@
           "id": "health",
           "label": "health",
           "url": "https://dispatch.unalabs.cloud/health",
-          "startedAt": "2026-05-03T21:10:32.507Z",
-          "durationMs": 80,
+          "startedAt": "2026-05-03T22:01:16.987Z",
+          "durationMs": 25,
           "statusCode": 404,
           "expectedStatuses": [
             200
@@ -429,8 +429,8 @@
           "id": "home",
           "label": "home",
           "url": "https://ateam.unalabs.cloud/",
-          "startedAt": "2026-05-03T21:10:32.587Z",
-          "durationMs": 86,
+          "startedAt": "2026-05-03T22:01:17.012Z",
+          "durationMs": 43,
           "statusCode": 302,
           "expectedStatuses": [
             200,
