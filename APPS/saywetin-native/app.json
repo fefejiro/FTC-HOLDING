@@ -23,7 +23,7 @@
     "android": {
       "package": "com.saywetin.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/orb.png",
         "backgroundColor": "#0A0A0F"
       },
       "edgeToEdgeEnabled": true,
