@@ -184,7 +184,7 @@ git -C "C:\FTC HOLDING" status -sb
 ## Una Labs Ops Snapshot (Auto)
 
 <!-- AUTO:UNALABS_MASTER:START -->
-- Updated at: 2026-05-03T13:49:16.311Z
+- Updated at: 2026-05-03T15:06:10.618Z
 - Smoke checks: 14/14 passing
 - Admin verification: unauthenticated admin guard smoke only
 - Canonical status doc: DOCS/UNALABS_STATUS.md
