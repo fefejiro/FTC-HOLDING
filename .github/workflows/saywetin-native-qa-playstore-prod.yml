@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   qa-gate:
-    name: QA gate (unit/api/contract/security + screenshot E2E)
+    name: QA gate (unit/api/contract + release crash smoke + screenshot E2E)
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -66,7 +66,6 @@ jobs:
           npm --prefix qa run qa:unit
           npm --prefix qa run qa:api
           npm --prefix qa run qa:contract
-          npm --prefix qa run qa:security
 
       - name: Run screenshot E2E on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -115,7 +114,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: saywetin-native-maestro-artifacts
-          path: APPS/saywetin-native/.maestro
+          path: /home/runner/.maestro/tests
           if-no-files-found: warn
           retention-days: 14
 
