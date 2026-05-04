@@ -3471,7 +3471,8 @@ async function handleStripeWebhook(req: Request, env: Env, origin: string | null
         customerEmail: stripeInvoice.customer_email ?? '',
         amountPaid: stripeInvoice.amount_paid,
       });
-      // Trigger autocollect reconciliation to mark any matching items paid.
+      // Reconciliation failures are caught here so Stripe does not receive a non-200 and retry
+      // the webhook. The error is logged for observability.
       await reconcileAutoCollectPaidByStripeInvoice(env, stripeInvoice).catch((err) => {
         logEvent('stripe_webhook_invoice_reconcile_error', {
           stripeInvoiceId: stripeInvoice.id,
@@ -3515,7 +3516,7 @@ async function reconcileAutoCollectPaidByStripeInvoice(env: Env, stripeInvoice: 
   if (!res.ok) return;
 
   const rows = await res.json() as Array<{ id: string; status?: string }>;
-  const unpaid = rows.filter((r) => (r.status ?? '').toLowerCase() !== 'paid');
+  const unpaid = rows.filter((r) => !['paid', 'void'].includes((r.status ?? '').toLowerCase()));
   if (!unpaid.length) return;
 
   const ids = unpaid.map((r) => r.id);
