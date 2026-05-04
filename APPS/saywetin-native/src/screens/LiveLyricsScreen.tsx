@@ -34,8 +34,8 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
         return;
       }
 
-      if (loaded && loaded.length > 0) {
-        setLyrics(loaded);
+      if (loaded && loaded.lines.length > 0) {
+        setLyrics(loaded.lines);
         setFallbackReason(null);
         return;
       }

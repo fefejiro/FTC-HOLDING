@@ -1,4 +1,5 @@
 import type { SyncedLyricLine } from '../state/ritual-state';
+import Constants from 'expo-constants';
 
 type SyncedLyricsResponse = {
   lines: Array<{
@@ -27,7 +28,9 @@ type ExplainResponse = {
   alternates?: Array<{ title: string; body: string; confidence: number }>;
 };
 
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+const apiBaseUrl =
+  process.env.EXPO_PUBLIC_API_BASE_URL?.trim() ||
+  String(Constants.expoConfig?.extra?.EXPO_PUBLIC_API_BASE_URL || '').trim();
 
 function hasApiBaseUrl() {
   return Boolean(apiBaseUrl);
@@ -41,16 +44,24 @@ async function readJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function fetchSyncedLyrics(trackId: string): Promise<SyncedLyricLine[] | null> {
+export type FetchedLyrics = {
+  lines: SyncedLyricLine[];
+  songOffsetMs: number;
+};
+
+export async function fetchSyncedLyrics(trackId: string): Promise<FetchedLyrics | null> {
   if (!hasApiBaseUrl()) {
     return null;
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}/v1/tracks/${trackId}/synced-lyrics`);
+    const url = `${apiBaseUrl}/v1/tracks/${trackId}/synced-lyrics`;
+    const response = await fetch(url);
     const json = await readJson<SyncedLyricsResponse>(response);
 
-    return json.lines.map((line) => ({
+    const songOffsetMs = json.calculatedDisplayOffsetMs ?? json.providerSongOffsetMs ?? 0;
+
+    const lines = json.lines.map((line) => ({
       id: line.id,
       text: line.t,
       startMs: line.startMs,
@@ -60,6 +71,8 @@ export async function fetchSyncedLyrics(trackId: string): Promise<SyncedLyricLin
       alternates: [],
       related: [],
     }));
+
+    return { lines, songOffsetMs };
   } catch {
     return null;
   }

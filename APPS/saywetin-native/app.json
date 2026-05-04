@@ -4,7 +4,7 @@
     "slug": "saywetin-native",
     "version": "1.3.4",
     "orientation": "portrait",
-    "icon": "./assets/orb.png",
+    "icon": "./assets/icon-concepts/v2/orb-keyed.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -23,7 +23,7 @@
     "android": {
       "package": "com.saywetin.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/orb.png",
+        "foregroundImage": "./assets/icon-concepts/v2/orb-keyed.png",
         "backgroundColor": "#0A0A0F"
       },
       "edgeToEdgeEnabled": true,

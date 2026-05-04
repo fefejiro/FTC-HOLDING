@@ -22,6 +22,7 @@ import { ritualTokens } from '../theme/tokens';
 import { explainSlang, type SlangExplanation } from '../api/slang';
 import { identifyByText, uploadListenSample } from '../api/listen';
 import { analyzeLyricLine } from '../api/cultural-analysis';
+import { fetchSyncedLyrics } from '../api/live-lyrics';
 import { useAudioSession } from '../audio/useAudioSession';
 import { useAudioRoute, type InputRoute } from '../audio/useAudioRoute';
 import type { RitualStackParamList } from '../navigation/RitualNavigator';
@@ -62,6 +63,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [track, setTrack] = useState<RitualTrack | null>(null);
+  const [recentlyMatched, setRecentlyMatched] = useState(false);
   const [bypassPrivateGuard, setBypassPrivateGuard] = useState(false);
   const stopCaptureRef = useRef<(() => void) | null>(null);
   const selectedInputRouteRef = useRef<InputRoute>('unknown');
@@ -73,6 +75,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   const [lineCache, setLineCache] = useState<Record<string, CulturalAnalysisEntry>>({});
   const [activeLineIndex, setActiveLineIndex] = useState(0);
   const playbackStartRef = useRef<number | null>(null);
+  const phaseResultAtRef = useRef<number | null>(null);
   const lyricsScrollRef = useRef<ScrollView | null>(null);
   const lineYRef = useRef<Record<number, number>>({});
 
@@ -321,11 +324,49 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   // Start playback clock when a result lands.
   useEffect(() => {
     if (phase === 'result' && track) {
-      playbackStartRef.current = Date.now();
+      phaseResultAtRef.current = Date.now();
+      playbackStartRef.current = Date.now() - Math.max(0, track.matchedInMs || 0);
       setActiveLineIndex(0);
     } else {
+      phaseResultAtRef.current = null;
       playbackStartRef.current = null;
     }
+  }, [phase, track?.id, track?.matchedInMs]);
+
+  // Briefly tint orb green after a successful match.
+  useEffect(() => {
+    if (phase !== 'result' || !track?.id) {
+      setRecentlyMatched(false);
+      return;
+    }
+    setRecentlyMatched(true);
+    const timer = setTimeout(() => setRecentlyMatched(false), 1600);
+    return () => clearTimeout(timer);
+  }, [phase, track?.id]);
+
+  // Fetch synced lyrics after recognition so the Live lyrics button appears.
+  useEffect(() => {
+    if (phase !== 'result' || !track?.id || (track.syncedLyrics?.length ?? 0) > 0) return;
+    let cancelled = false;
+    const attemptFetch = async (attemptsLeft: number) => {
+      if (cancelled) return;
+      const result = await fetchSyncedLyrics(track.id);
+      if (cancelled) return;
+      if (result && result.lines.length > 0) {
+        const updated = { ...track, syncedLyrics: result.lines };
+        setTrack(updated);
+        ritual.setRecognizedTrack(updated);
+        // Re-anchor the playback clock using the server's song offset.
+        // Account for time elapsed since the result screen was first shown.
+        const elapsedSinceResult = phaseResultAtRef.current ? Date.now() - phaseResultAtRef.current : 0;
+        playbackStartRef.current = Date.now() - result.songOffsetMs - elapsedSinceResult;
+      } else if (attemptsLeft > 1) {
+        setTimeout(() => attemptFetch(attemptsLeft - 1), 2000);
+      }
+    };
+    void attemptFetch(5);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, track?.id]);
 
   // Drive active line based on elapsed time when we have synced lyrics.
@@ -434,7 +475,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
                 variant="hero"
                 animated
                 showGlow
-                phase={phase === 'matching' ? 'matching' : phase === 'listening' ? 'listening' : 'idle'}
+                phase={phase === 'matching' || recentlyMatched ? 'matching' : phase === 'listening' ? 'listening' : 'idle'}
               />
             </Animated.View>
           </Pressable>
@@ -716,6 +757,7 @@ const styles = StyleSheet.create({
     width: 56, height: 56, borderRadius: 999,
     backgroundColor: colors.panelSoft, borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center',
+    marginTop: 48,
   },
   searchGlyph: { fontSize: 22, color: colors.text },
 

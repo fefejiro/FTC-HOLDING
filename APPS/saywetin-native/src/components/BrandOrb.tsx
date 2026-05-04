@@ -65,7 +65,7 @@ export function BrandOrb({
     const loop = Animated.loop(
       Animated.timing(spin, {
         toValue: 1,
-        duration: phase === 'matching' ? 2200 : phase === 'listening' ? 3200 : 6800,
+        duration: phase === 'matching' ? 2200 : phase === 'listening' ? 3200 : 12000,
         easing: Easing.linear,
         useNativeDriver: true,
       }),
@@ -109,6 +109,36 @@ export function BrandOrb({
             },
           ]}
         />
+      ) : null}
+
+      {/* Orbiting accent dot — spins around the orb to show animation */}
+      {animated ? (
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            width: outer,
+            height: outer,
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            transform: [{ rotate: spinRotate }],
+          }}
+        >
+          <View
+            style={{
+              width: Math.round(outer * 0.065),
+              height: Math.round(outer * 0.065),
+              borderRadius: Math.round(outer * 0.065) / 2,
+              backgroundColor: phaseAccent[phase],
+              marginTop: -Math.round(outer * 0.032),
+              shadowColor: phaseAccent[phase],
+              shadowOpacity: 0.95,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 0 },
+              elevation: 8,
+            }}
+          />
+        </Animated.View>
       ) : null}
 
       <View style={[styles.shell, { borderRadius: outer / 2 }]}> 
