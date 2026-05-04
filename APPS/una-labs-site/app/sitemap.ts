@@ -46,7 +46,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: 'monthly' as const,
   }));
 
-  return [...publicRoutes, ...productRoutes, ...caseStudyRoutes, ...solutionRoutes].map((route) => ({
+  const demoRoutes: { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'] }[] = [
+    'intake', 'dispatch', 'peacepad', 'saywetin',
+  ].map((slug) => ({
+    path: `/demo/${slug}`,
+    priority: 0.6,
+    changeFrequency: 'monthly' as const,
+  }));
+
+  return [...publicRoutes, ...productRoutes, ...caseStudyRoutes, ...solutionRoutes, ...demoRoutes].map((route) => ({
     url: `${SITE_URL}${route.path}`,
     lastModified: now,
     changeFrequency: route.changeFrequency,

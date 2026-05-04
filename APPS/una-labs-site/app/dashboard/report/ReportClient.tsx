@@ -24,13 +24,26 @@ type MilestoneRecord = {
   due_date?: string;
   status?: string;
   created_at?: string;
+  completed_at?: string | null;
+  proof_url?: string;
+  proof_note?: string;
+};
+
+type ArtifactRecord = {
+  id: string;
+  project_id: string;
+  title?: string;
+  type?: string;
+  url?: string;
+  note?: string;
+  created_at?: string;
 };
 
 type ReportState =
   | { phase: 'loading' }
   | { phase: 'unauthenticated' }
   | { phase: 'error'; message: string }
-  | { phase: 'ready'; email: string; projects: ProjectRecord[]; milestones: MilestoneRecord[] };
+  | { phase: 'ready'; email: string; projects: ProjectRecord[]; milestones: MilestoneRecord[]; artifacts: ArtifactRecord[] };
 
 const STATUS_BADGES: Record<string, 'teal' | 'orange' | 'muted'> = {
   intake: 'teal',
@@ -50,13 +63,22 @@ function formatDate(value?: string) {
   }
 }
 
-function ProjectSection({ project, milestones }: { project: ProjectRecord; milestones: MilestoneRecord[] }) {
+function ProjectSection({
+  project,
+  milestones,
+  artifacts,
+}: {
+  project: ProjectRecord;
+  milestones: MilestoneRecord[];
+  artifacts: ArtifactRecord[];
+}) {
   const tierLabel = getCommercialLabel(project.tier ?? project.plan);
   const statusBadge = STATUS_BADGES[project.status?.toLowerCase() ?? 'intake'] ?? 'muted';
-  const completedCount = milestones.filter((milestone) => milestone.status === 'complete').length;
+  const completedCount = milestones.filter((milestone) => ['complete', 'completed', 'approved', 'done'].includes((milestone.status ?? '').toLowerCase())).length;
   const completionRate = milestones.length > 0
     ? Math.round((completedCount / milestones.length) * 100)
     : 0;
+  const proofCount = milestones.filter((milestone) => Boolean(milestone.proof_note || milestone.proof_url)).length;
 
   return (
     <div className="mb-12 break-inside-avoid">
@@ -74,40 +96,88 @@ function ProjectSection({ project, milestones }: { project: ProjectRecord; miles
         )}
       </div>
 
+      <div className="mb-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-lg border border-border bg-bg-subtle p-4">
+          <p className="text-body-sm text-tx-muted">Milestone completion</p>
+          <p className="text-body font-semibold text-tx-heading mt-1">{completedCount}/{milestones.length || 0} complete ({completionRate}%)</p>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-subtle p-4">
+          <p className="text-body-sm text-tx-muted">Milestone proof entries</p>
+          <p className="text-body font-semibold text-tx-heading mt-1">{proofCount}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-subtle p-4">
+          <p className="text-body-sm text-tx-muted">Artifacts in bundle</p>
+          <p className="text-body font-semibold text-tx-heading mt-1">{artifacts.length}</p>
+        </div>
+      </div>
+
       {milestones.length > 0 ? (
         <div className="space-y-3">
-          <div className="mb-4 rounded-lg border border-border bg-bg-subtle p-4">
-            <p className="text-body-sm text-tx-muted">Milestone completion</p>
-            <p className="text-body font-semibold text-tx-heading mt-1">
-              {completedCount}/{milestones.length} complete ({completionRate}%)
-            </p>
-            <div className="mt-2 h-2 w-full rounded-full bg-white overflow-hidden">
-              <div className="h-full bg-brand-teal" style={{ width: `${completionRate}%` }} />
-            </div>
+          <div className="mt-2 h-2 w-full rounded-full bg-bg-subtle overflow-hidden">
+            <div className="h-full bg-brand-teal" style={{ width: `${completionRate}%` }} />
           </div>
-          <h3 className="text-h4 text-tx-heading font-semibold mb-4">Milestones</h3>
+          <h3 className="text-h4 text-tx-heading font-semibold mb-4 mt-6">Milestones</h3>
           {milestones.map((milestone) => (
-            <div key={milestone.id} className="flex items-start gap-4 p-4 bg-bg-subtle rounded-lg">
-              <div className="flex-shrink-0 mt-0.5">
-                <Badge variant={milestone.status === 'complete' ? 'teal' : milestone.status === 'in_progress' ? 'orange' : 'muted'}>
+            <div key={milestone.id} className="p-4 bg-bg-subtle rounded-lg border border-border">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h4 className="text-body font-semibold text-tx-heading mb-1">{milestone.title || 'Milestone'}</h4>
+                  {milestone.description && (
+                    <p className="text-body-sm text-tx-secondary mb-2">{milestone.description}</p>
+                  )}
+                </div>
+                <Badge variant={['complete', 'completed', 'approved', 'done'].includes((milestone.status ?? '').toLowerCase()) ? 'teal' : (milestone.status ?? '').toLowerCase() === 'in_progress' ? 'orange' : 'muted'}>
                   {milestone.status || 'pending'}
                 </Badge>
               </div>
-              <div className="flex-1">
-                <h4 className="text-body font-semibold text-tx-heading mb-1">{milestone.title || 'Milestone'}</h4>
-                {milestone.description && (
-                  <p className="text-body-sm text-tx-secondary mb-2">{milestone.description}</p>
-                )}
-                {milestone.due_date && (
-                  <p className="text-body-sm text-tx-muted">Due {formatDate(milestone.due_date)}</p>
-                )}
+              <div className="mt-2 flex items-center gap-3 text-body-sm text-tx-muted flex-wrap">
+                <span>Due {formatDate(milestone.due_date)}</span>
+                {milestone.completed_at && <span>Completed {formatDate(milestone.completed_at)}</span>}
               </div>
+              {(milestone.proof_note || milestone.proof_url) && (
+                <div className="mt-3 rounded-lg border border-brand-teal/30 bg-white px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-brand-teal">Milestone proof</p>
+                  {milestone.proof_note && <p className="mt-1 text-body-sm text-tx-body">{milestone.proof_note}</p>}
+                  {milestone.proof_url && (
+                    <a href={milestone.proof_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-body-sm font-semibold text-brand-teal hover:underline">
+                      Open proof link
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
       ) : (
         <p className="text-body-sm text-tx-muted">No milestones yet.</p>
       )}
+
+      <div className="mt-6">
+        <h3 className="text-h4 text-tx-heading font-semibold mb-3">Artifacts and evidence</h3>
+        {artifacts.length === 0 ? (
+          <p className="text-body-sm text-tx-muted">No artifacts captured yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {artifacts.map((artifact) => (
+              <div key={artifact.id} className="rounded-lg border border-border bg-bg-subtle p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-body-sm font-semibold text-tx-heading">{artifact.title || 'Artifact'}</p>
+                    <p className="mt-1 text-body-sm text-tx-secondary capitalize">{(artifact.type || 'artifact').replace(/_/g, ' ')}</p>
+                    {artifact.note && <p className="mt-1 text-body-sm text-tx-secondary">{artifact.note}</p>}
+                    <p className="mt-1 text-[11px] text-tx-muted">Added {formatDate(artifact.created_at)}</p>
+                  </div>
+                  {artifact.url && (
+                    <a href={artifact.url} target="_blank" rel="noreferrer" className="text-body-sm font-semibold text-brand-teal hover:underline whitespace-nowrap">
+                      Open
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -146,11 +216,20 @@ export function ReportClient() {
               .in('project_id', projectIds)
               .order('due_date', { ascending: true })
           : { data: [] as MilestoneRecord[] | null, error: null };
+        const artifactResult = projectIds.length > 0
+          ? await client
+              .from('project_artifacts')
+              .select('*')
+              .in('project_id', projectIds)
+              .order('created_at', { ascending: false })
+          : { data: [] as ArtifactRecord[] | null, error: null };
 
         const projects = projectResult.data;
         const milestones = milestoneResult.data;
+        const artifacts = artifactResult.data;
         if (projectResult.error) throw projectResult.error;
         if (milestoneResult.error) throw milestoneResult.error;
+        if (artifactResult.error) throw artifactResult.error;
 
         if (!cancelled) {
           setState({
@@ -158,6 +237,7 @@ export function ReportClient() {
             email: session.user.email ?? '',
             projects: (projects as ProjectRecord[] | null) ?? [],
             milestones: (milestones as MilestoneRecord[] | null) ?? [],
+            artifacts: (artifacts as ArtifactRecord[] | null) ?? [],
           });
         }
       } catch (error) {
@@ -186,6 +266,17 @@ export function ReportClient() {
       map.set(milestone.project_id, bucket);
       return map;
     }, new Map<string, MilestoneRecord[]>());
+  }, [state]);
+
+  const artifactsByProject = useMemo(() => {
+    if (state.phase !== 'ready') return new Map<string, ArtifactRecord[]>();
+
+    return state.artifacts.reduce((map, artifact) => {
+      const bucket = map.get(artifact.project_id) ?? [];
+      bucket.push(artifact);
+      map.set(artifact.project_id, bucket);
+      return map;
+    }, new Map<string, ArtifactRecord[]>());
   }, [state]);
 
   if (state.phase === 'loading') {
@@ -238,6 +329,11 @@ export function ReportClient() {
     day: 'numeric',
   });
 
+  const totalMilestones = state.milestones.length;
+  const completedMilestones = state.milestones.filter((milestone) => ['complete', 'completed', 'approved', 'done'].includes((milestone.status ?? '').toLowerCase())).length;
+  const approvalQueue = state.milestones.filter((milestone) => (milestone.status ?? '').toLowerCase() === 'review').length;
+  const proofEntries = state.milestones.filter((milestone) => Boolean(milestone.proof_note || milestone.proof_url)).length + state.artifacts.length;
+
   return (
     <div className="min-h-screen bg-white">
       <style jsx global>{`
@@ -258,6 +354,29 @@ export function ReportClient() {
           </Button>
         </div>
 
+        <div className="mb-8 rounded-2xl border border-border bg-bg-subtle p-6">
+          <h2 className="text-h3 text-tx-heading font-semibold">Executive proof bundle</h2>
+          <p className="mt-2 text-body text-tx-secondary">A client-ready summary of status, proofs, and delivery artifacts across active projects.</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <div className="rounded-xl border border-border bg-white px-4 py-3">
+              <p className="text-body-sm text-tx-muted">Projects</p>
+              <p className="mt-1 text-h4 text-tx-heading font-semibold">{state.projects.length}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-white px-4 py-3">
+              <p className="text-body-sm text-tx-muted">Milestones complete</p>
+              <p className="mt-1 text-h4 text-tx-heading font-semibold">{completedMilestones}/{totalMilestones}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-white px-4 py-3">
+              <p className="text-body-sm text-tx-muted">Approval queue</p>
+              <p className="mt-1 text-h4 text-tx-heading font-semibold">{approvalQueue}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-white px-4 py-3">
+              <p className="text-body-sm text-tx-muted">Proof entries</p>
+              <p className="mt-1 text-h4 text-tx-heading font-semibold">{proofEntries}</p>
+            </div>
+          </div>
+        </div>
+
         <div className="print:block">
           <div className="mb-12 pb-8 border-b border-border">
             <h1 className="text-display text-tx-heading font-semibold">Project Report</h1>
@@ -274,6 +393,7 @@ export function ReportClient() {
                 key={project.id}
                 project={project}
                 milestones={milestonesByProject.get(project.id) ?? []}
+                artifacts={artifactsByProject.get(project.id) ?? []}
               />
             ))
           )}

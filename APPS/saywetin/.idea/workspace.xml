@@ -5,27 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e475ca75-9849-4f46-b536-0e782fd94f7a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../ftc-site/tests/garden-cleaners-public.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/tests/garden-cleaners-public.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../ftc-site/tests/garden-portal-credentialed.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/tests/garden-portal-credentialed.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../ftc-site/tests/garden-portal.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/tests/garden-portal.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../ftc-site/tests/unalabs-ateam-dispatch-ux-audit.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/tests/unalabs-ateam-dispatch-ux-audit.spec.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../ftc-site/tsconfig.tsbuildinfo" beforeDir="false" afterPath="$PROJECT_DIR$/../ftc-site/tsconfig.tsbuildinfo" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../saywetin-extension/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../saywetin-extension/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../saywetin-extension/TESTING.md" beforeDir="false" afterPath="$PROJECT_DIR$/../saywetin-extension/TESTING.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../saywetin-extension/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../saywetin-extension/src/App.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../saywetin-native/android/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/../saywetin-native/android/app/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../saywetin-native/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/../saywetin-native/app.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../saywetin-native/metro.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/../saywetin-native/metro.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../saywetin-native/src/screens/LiveLyricsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../saywetin-native/src/screens/LiveLyricsScreen.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../saywetin-native/src/screens/ResultScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../saywetin-native/src/screens/ResultScreen.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/lib/api-config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/lib/api-config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/pages/recognized-track.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/pages/recognized-track.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/admin-auth.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/admin-auth.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../una-labs-site/public/ops/portfolio-e2e-status.json" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/public/ops/portfolio-e2e-status.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../DOCS/FTC_PROJECT_LEDGER.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../DOCS/FTC_PROJECT_LEDGER.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../ops/project-status.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../ops/project-status.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/dashboard/DashboardClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/dashboard/DashboardClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/dashboard/contract/ContractClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/dashboard/contract/ContractClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/dashboard/contract/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/dashboard/contract/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/dashboard/invoice/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/dashboard/invoice/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/dashboard/proposal/ProposalClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/dashboard/proposal/ProposalClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/dashboard/report/ReportClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/dashboard/report/ReportClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/portal/PortalClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/portal/PortalClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/portal/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/portal/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/app/sitemap.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/app/sitemap.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../una-labs-site/lib/site-content.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../una-labs-site/lib/site-content.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../supabase/.temp/cli-latest" beforeDir="false" afterPath="$PROJECT_DIR$/../../supabase/.temp/cli-latest" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,21 +28,31 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <task path="$PROJECT_DIR$/node_modules/@capacitor/app/android/build.gradle">
+          <activation />
+        </task>
+        <projects_view />
+      </state>
+    </system>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "fefejiro"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;fefejiro&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/fefejiro/FTC-HOLDING.git",
-    "accountId": "2dc9273e-e600-40e1-96ae-209f01e78851"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/fefejiro/FTC-HOLDING.git&quot;,
+    &quot;accountId&quot;: &quot;2dc9273e-e600-40e1-96ae-209f01e78851&quot;
   }
-}]]></component>
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 4
 }</component>
@@ -58,23 +61,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Gradle.C:/FTC HOLDING/_restore_repo/APPS/saywetin/node_modules/@capacitor/app/android/build.gradle.executor": "Debug",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "cf.first.check.clang-format": "false",
-    "cidr.known.project.marker": "true",
-    "com.google.services.firebase.aqiPopupShown": "true",
-    "git-widget-placeholder": "feature/headphone-quiet-vibesearch",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/FTC HOLDING/_restore_repo/APPS/saywetin",
-    "settings.editor.selected.configurable": "project.propVCSSupport.Mappings"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Gradle.C:/FTC HOLDING/_restore_repo/APPS/saywetin/node_modules/@capacitor/app/android/build.gradle.executor&quot;: &quot;Debug&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;com.google.services.firebase.aqiPopupShown&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/FTC HOLDING/_restore_repo/APPS/saywetin&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;project.propVCSSupport.Mappings&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="C:/FTC HOLDING/_restore_repo/APPS/saywetin/node_modules/@capacitor/app/android/build.gradle" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>

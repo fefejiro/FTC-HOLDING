@@ -221,6 +221,9 @@ export function ContractClient({ initialProjectId }: { initialProjectId?: string
             <Button variant="secondary" size="sm" href={`/dashboard/proposal?id=${state.project.id}`}>
               Back to proposal
             </Button>
+            <Button variant="secondary" size="sm" href={`/dashboard/handover?id=${state.project.id}`}>
+              Handover summary
+            </Button>
             <Button variant="primary" size="sm" onClick={() => window.print()}>
               Print / Save PDF
             </Button>

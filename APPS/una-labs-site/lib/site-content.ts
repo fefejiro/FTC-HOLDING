@@ -113,6 +113,7 @@ export interface DemoModule {
   title: string;
   description: string;
   loomUrl?: string;
+  arcadeUrl?: string;
   placeholder: string;
   bullets: string[];
   cta: ActionLink;

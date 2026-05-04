@@ -13,6 +13,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AudioModule, RecordingPresets, useAudioRecorder } from 'expo-audio';
 import { FadeInView } from '../components/FadeInView';
 import { BrandOrb } from '../components/BrandOrb';
@@ -22,6 +24,7 @@ import { identifyByText, uploadListenSample } from '../api/listen';
 import { analyzeLyricLine } from '../api/cultural-analysis';
 import { useAudioSession } from '../audio/useAudioSession';
 import { useAudioRoute, type InputRoute } from '../audio/useAudioRoute';
+import type { RitualStackParamList } from '../navigation/RitualNavigator';
 import type { CulturalAnalysisEntry, RitualController, RitualTrack, SyncedLyricLine } from '../state/ritual-state';
 
 const { colors } = ritualTokens;
@@ -48,7 +51,9 @@ function scoreRecorderInput(name: string, type: string) {
 }
 
 export function HomeScreen({ ritual }: { ritual: RitualController }) {
+  const navigation = useNavigation<NativeStackNavigationProp<RitualStackParamList>>();
   const [phrase, setPhrase] = useState('');
+  const [searchMode, setSearchMode] = useState<'lyrics' | 'song' | 'artist' | 'slang' | 'vibe'>('lyrics');
   const [slangBusy, setSlangBusy] = useState(false);
   const [slangError, setSlangError] = useState<string | null>(null);
   const [slangResult, setSlangResult] = useState<SlangExplanation | null>(null);
@@ -522,6 +527,11 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
             </ScrollView>
 
             <View style={styles.actionRow}>
+              {track.syncedLyrics.length > 0 ? (
+                <Pressable onPress={() => navigation.navigate('LiveLyrics')} style={styles.liveLyricsButton}>
+                  <Text style={styles.liveLyricsButtonText}>Live lyrics</Text>
+                </Pressable>
+              ) : null}
               {isUsableLink(track.spotifyUrl) ? (
                 <Pressable onPress={() => openLink(track.spotifyUrl, 'Spotify')} style={styles.linkButton}>
                   <Text style={styles.linkButtonText}>Spotify</Text>
@@ -585,10 +595,34 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
               <Text style={styles.sheetTitle}>Wetin be this?</Text>
               <Text style={styles.sheetHint}>Decode pidgin/slang, or match a song from a lyric line.</Text>
 
+              <View style={styles.chipRow}>
+                {(['lyrics', 'song', 'artist', 'slang', 'vibe'] as const).map((mode) => (
+                  <Pressable
+                    key={mode}
+                    style={[styles.chip, searchMode === mode && styles.chipActive]}
+                    onPress={() => setSearchMode(mode)}
+                  >
+                    <Text style={[styles.chipText, searchMode === mode && styles.chipTextActive]}>
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
               <TextInput
                 value={phrase}
                 onChangeText={setPhrase}
-                placeholder="e.g. shey you dey whine me?"
+                placeholder={
+                  searchMode === 'lyrics'
+                    ? 'that Burna Boy destiny line…'
+                    : searchMode === 'song'
+                      ? 'Asake lonely at the top'
+                      : searchMode === 'artist'
+                        ? 'Afrobeats churchy street anthem'
+                        : searchMode === 'slang'
+                          ? "what does 'omo ope' mean?"
+                          : 'confident confrontational street energy'
+                }
                 placeholderTextColor={colors.textMuted}
                 style={styles.slangInput}
                 multiline
@@ -605,6 +639,9 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
                 </Pressable>
                 <Pressable onPress={decode} style={[styles.slangButton, slangBusy && styles.disabled]} disabled={slangBusy}>
                   <Text style={styles.slangButtonText}>{slangBusy ? '...' : 'Decode'}</Text>
+                </Pressable>
+                <Pressable onPress={lyricFallback} style={[styles.linkButton, slangBusy && styles.disabled]} disabled={slangBusy}>
+                  <Text style={styles.linkButtonText}>Search lyrics</Text>
                 </Pressable>
               </View>
 
@@ -759,6 +796,32 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
   sheetHint: { color: colors.textMuted, fontSize: 13 },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
+  },
+  chip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+  chipActive: {
+    borderColor: colors.violet,
+    backgroundColor: 'rgba(139,124,246,0.24)',
+  },
+  chipText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: colors.text,
+  },
   slangInput: {
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12,
     paddingVertical: 10, paddingHorizontal: 12, color: colors.text, fontSize: 14,
@@ -773,6 +836,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10, paddingHorizontal: 18,
   },
   slangButtonText: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  liveLyricsButton: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+  },
+  liveLyricsButtonText: { color: colors.text, fontWeight: '700', fontSize: 14 },
   sheetScroll: { maxHeight: 220, marginTop: 6 },
   slangResultLabel: {
     color: colors.violetSoft, fontSize: 11, fontWeight: '700',

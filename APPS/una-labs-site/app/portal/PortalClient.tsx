@@ -101,6 +101,29 @@ function formatMoney(value?: number | null) {
   return `CA$${Number(value).toLocaleString('en-CA')}`;
 }
 
+const STAGE_RAIL: Array<{ id: string; label: string }> = [
+  { id: 'intake', label: 'Intake' },
+  { id: 'scoped', label: 'Scoping' },
+  { id: 'awaiting_approval', label: 'Approval' },
+  { id: 'active', label: 'Delivery' },
+  { id: 'review', label: 'Client review' },
+  { id: 'complete', label: 'Complete' },
+  { id: 'support', label: 'Support' },
+];
+
+function normalizeStage(status?: string): string {
+  const current = (status ?? '').toLowerCase();
+  if (!current) return 'intake';
+  if (current.includes('awaiting')) return 'awaiting_approval';
+  if (current.includes('review')) return 'review';
+  if (current.includes('complete') || current.includes('done') || current.includes('delivered')) return 'complete';
+  if (current.includes('active') || current.includes('progress') || current.includes('build')) return 'active';
+  if (current.includes('scope')) return 'scoped';
+  if (current.includes('support')) return 'support';
+  if (current.includes('pause')) return 'awaiting_approval';
+  return 'intake';
+}
+
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
@@ -541,6 +564,25 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
   const project = payload.project;
   const projectTitle = project.name || project.intake_id || project.id;
   const tierLabel = getCommercialLabel(project.tier ?? project.plan);
+  const stageId = normalizeStage(project.status);
+  const stageIndex = STAGE_RAIL.findIndex((stage) => stage.id === stageId);
+  const completedMilestones = milestones.filter((milestone) => {
+    const status = (milestone.status ?? '').toLowerCase();
+    return ['complete', 'completed', 'approved', 'done'].includes(status);
+  }).length;
+  const progressPct = milestones.length > 0 ? Math.round((completedMilestones / milestones.length) * 100) : 0;
+  const blockers = payload.awaiting_on_client;
+  const pendingApprovals = payload.approvals.filter((approval) => approval.status === 'pending');
+  const confidenceLabel = blockers.length === 0 && pendingApprovals.length === 0
+    ? 'High confidence'
+    : blockers.length <= 1
+      ? 'Medium confidence'
+      : 'Needs attention';
+  const nextAction = blockers[0]?.detail
+    || payload.next_milestone?.title
+    || pendingApprovals[0]?.title
+    || payload.awaiting_on_us[0]?.detail
+    || 'No immediate action required. We will notify you on the next update.';
 
   return (
     <div className="min-h-screen bg-bg-offwhite">
@@ -553,6 +595,68 @@ export function PortalClient({ initialProjectId }: { initialProjectId?: string }
           <h1 className="mt-4 text-display-sm text-tx-heading">{projectTitle}</h1>
           <p className="mt-3 text-body text-tx-secondary max-w-3xl">{payload.client_status.description}</p>
         </div>
+
+        <section className="mb-6 rounded-3xl border border-border bg-white p-6 shadow-sm">
+          <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Stage rail</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-7">
+            {STAGE_RAIL.map((stage, index) => {
+              const active = index === stageIndex;
+              const done = index < stageIndex;
+              return (
+                <div key={stage.id} className="rounded-xl border border-border px-3 py-3 bg-bg-subtle">
+                  <p className={`text-[11px] font-bold uppercase tracking-wider ${active ? 'text-brand-teal' : done ? 'text-tx-heading' : 'text-tx-muted'}`}>
+                    {done ? 'Done' : active ? 'Current' : 'Upcoming'}
+                  </p>
+                  <p className={`mt-1 text-body-sm font-semibold ${active ? 'text-brand-teal' : 'text-tx-heading'}`}>
+                    {stage.label}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-4">
+            <div className="rounded-xl border border-border bg-bg-subtle p-4">
+              <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Where are we</p>
+              <p className="mt-1 text-body font-semibold text-tx-heading">{payload.current_phase.title}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-bg-subtle p-4">
+              <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">What is next</p>
+              <p className="mt-1 text-body font-semibold text-tx-heading">{payload.next_milestone?.title || 'Awaiting next milestone'}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-bg-subtle p-4">
+              <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">What is blocked</p>
+              <p className="mt-1 text-body font-semibold text-tx-heading">{blockers.length} client action{blockers.length === 1 ? '' : 's'}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-bg-subtle p-4">
+              <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Confidence</p>
+              <p className="mt-1 text-body font-semibold text-tx-heading">{confidenceLabel}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-6 rounded-3xl border border-border bg-white p-6 shadow-sm">
+          <h2 className="text-h4 text-tx-heading font-semibold">Next action center</h2>
+          <p className="mt-2 text-body text-tx-secondary">{nextAction}</p>
+          <div className="mt-4 rounded-xl border border-border bg-bg-subtle p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Progress</p>
+              <p className="text-body-sm font-semibold text-tx-heading">{completedMilestones}/{milestones.length} milestones ({progressPct}%)</p>
+            </div>
+            <div className="mt-3 h-2 rounded-full bg-white overflow-hidden">
+              <div className="h-full rounded-full bg-brand-teal" style={{ width: `${progressPct}%` }} />
+            </div>
+            {blockers.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {blockers.slice(0, 2).map((item, index) => (
+                  <div key={`${item.title}-${index}`} className="rounded-lg border border-brand-orange/30 bg-orange-50/50 px-3 py-2">
+                    <p className="text-body-sm font-semibold text-tx-heading">{item.title}</p>
+                    <p className="text-body-sm text-tx-secondary">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
         <div className="grid xl:grid-cols-[1.25fr_.85fr] gap-6">
           <div className="space-y-6">
