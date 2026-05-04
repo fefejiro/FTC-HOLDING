@@ -4902,7 +4902,7 @@ async function handleAdminGitHubIssues(req: Request, env: Env, origin: string | 
 
   try {
     const res = await fetch(
-      'https://api.github.com/repos/fefejiro/FTC-HOLDING/issues?state=open&per_page=100',
+      'https://api.github.com/repos/fefejiro/FTC-HOLDING/issues?state=open&type=issue&per_page=100',
       { headers }
     );
     if (!res.ok) {

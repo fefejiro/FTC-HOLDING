@@ -2014,30 +2014,33 @@ export function AdminClient() {
 
             return (
               <div className="divide-y divide-border">
-                {orderedKeys.map((statusKey) => (
-                  <div key={statusKey}>
-                    <div className="px-8 py-3 bg-bg-offwhite/60 flex items-center gap-2">
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS_GH[statusKey] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {STATUS_LABELS[statusKey] ?? statusKey.replace('status:', '')}
-                      </span>
-                      <span className="text-body-sm text-tx-muted">{grouped.get(statusKey)!.length} issue{grouped.get(statusKey)!.length !== 1 ? 's' : ''}</span>
+                {orderedKeys.map((statusKey) => {
+                  const groupIssues = grouped.get(statusKey) ?? [];
+                  return (
+                    <div key={statusKey}>
+                      <div className="px-8 py-3 bg-bg-offwhite/60 flex items-center gap-2">
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS_GH[statusKey] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {STATUS_LABELS[statusKey] ?? statusKey.replace('status:', '')}
+                        </span>
+                        <span className="text-body-sm text-tx-muted">{groupIssues.length} issue{groupIssues.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-body-sm">
+                          <thead>
+                            <tr className="border-b border-border">
+                              {['#', 'Title', 'Area', 'Assignee', 'Updated'].map((h) => (
+                                <th key={h} className="px-6 py-2 text-left text-[11px] font-semibold text-tx-muted uppercase tracking-wide">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {groupIssues.map(renderIssueRow)}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-body-sm">
-                        <thead>
-                          <tr className="border-b border-border">
-                            {['#', 'Title', 'Area', 'Assignee', 'Updated'].map((h) => (
-                              <th key={h} className="px-6 py-2 text-left text-[11px] font-semibold text-tx-muted uppercase tracking-wide">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {grouped.get(statusKey)!.map(renderIssueRow)}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {noStatusIssues.length > 0 && (
                   <div>
