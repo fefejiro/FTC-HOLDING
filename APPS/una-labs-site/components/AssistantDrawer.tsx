@@ -1,88 +1,83 @@
 ﻿'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-type Intent = {
+type GuideOption = {
   id: string;
-  question: string;
-  answer: string;
+  label: string;
+  nextId?: string;
+  answer?: string;
+  ctaHref?: string;
+  ctaLabel?: string;
 };
 
-const GLOBAL_INTENTS: Intent[] = [
-  {
-    id: 'which-plan',
-    question: 'Which plan should I choose?',
-    answer:
-      'If you have a clear goal and need a website or digital product built, start with the Standard plan. If you need AI features or ongoing platform management, go with Pro. Premium is for complex multi-product builds or when you need a dedicated delivery team. When in doubt, start Standard - you can upgrade at any milestone.',
+type GuideNode = {
+  id: string;
+  title: string;
+  intro: string;
+  options: GuideOption[];
+};
+
+const GUIDE_NODES: Record<string, GuideNode> = {
+  root: {
+    id: 'root',
+    title: 'How can I help?',
+    intro: 'Choose a path and I will guide you to the right page.',
+    options: [
+      { id: 'tour', label: 'Show me around the platform', nextId: 'tour' },
+      { id: 'features', label: 'What does Una Labs do?', nextId: 'features' },
+      { id: 'pricing', label: 'Pricing and plans', nextId: 'pricing' },
+      { id: 'start', label: 'I am ready to start', answer: 'Great. Start with a rough request. No account or credit card is required to submit intake.', ctaHref: '/start', ctaLabel: 'Start your project' },
+      { id: 'help', label: 'I need help or support', nextId: 'help' },
+    ],
   },
-  {
-    id: 'proposal-meaning',
-    question: 'What does this proposal mean?',
-    answer:
-      'A proposal is the scoped plan for your project - it lists what will be built, in what order, and at what price. Once you approve it (by signing the contract), it becomes the delivery roadmap your milestone tracker is built from. Nothing starts until the proposal is signed.',
+  tour: {
+    id: 'tour',
+    title: 'Platform Tour',
+    intro: 'Pick where you want to go next.',
+    options: [
+      { id: 'tour-hiw', label: 'See how delivery works end-to-end', ctaHref: '/how-it-works', ctaLabel: 'Open How It Works' },
+      { id: 'tour-pricing', label: 'Compare plans and pricing', ctaHref: '/pricing', ctaLabel: 'Open Pricing' },
+      { id: 'tour-product', label: 'Explore product modules', ctaHref: '/product', ctaLabel: 'Open Product Overview' },
+      { id: 'tour-contact', label: 'Talk to us directly', ctaHref: '/contact', ctaLabel: 'Contact Una Labs' },
+    ],
   },
-  {
-    id: 'what-next',
-    question: 'What do I need to do next?',
-    answer:
-      'Check your portal for any items marked "Awaiting on you." These could be approvals, information we need, or milestone sign-offs. If nothing is listed, we are actively working on the current milestone and you will hear from us on the next update.',
+  features: {
+    id: 'features',
+    title: 'Feature Guide',
+    intro: 'Each module links to a live workflow page.',
+    options: [
+      { id: 'feat-intake', label: 'Intake and scoping', answer: 'We turn rough client requests into structured scoped briefs in under 48 hours.', ctaHref: '/how-it-works?module=intake-scoping', ctaLabel: 'View intake flow' },
+      { id: 'feat-dashboard', label: 'Real-time dashboard', answer: 'Track milestones, blockers, approvals, and progress in one governed workspace.', ctaHref: '/how-it-works?module=real-time-dashboard', ctaLabel: 'View dashboard flow' },
+      { id: 'feat-portal', label: 'Client portal and approvals', answer: 'Clients see exactly what they need, with clear approval gates before work advances.', ctaHref: '/how-it-works?module=client-portal', ctaLabel: 'View portal flow' },
+      { id: 'feat-payments', label: 'Payments and contracts', answer: 'Contracts, deposits, invoices, and collection are built into the delivery lifecycle.', ctaHref: '/how-it-works?module=live-payments', ctaLabel: 'View billing flow' },
+      { id: 'feat-reporting', label: 'Reporting and handoff proof', answer: 'Delivery closes with documented outputs, sign-off records, and reusable reporting artifacts.', ctaHref: '/how-it-works?module=reporting', ctaLabel: 'View reporting flow' },
+    ],
   },
-  {
-    id: 'billing-how',
-    question: 'How does billing work?',
-    answer:
-      'You pay at key milestones, not upfront in full. An activation fee is charged on sign-up. Milestone invoices are sent when each deliverable is ready for your review and approval. You can see all invoices and outstanding balances in your portal under Payment status.',
+  pricing: {
+    id: 'pricing',
+    title: 'Pricing Guide',
+    intro: 'Tell me your team shape and I will direct you.',
+    options: [
+      { id: 'plan-freelancer', label: 'I am solo / freelancer', answer: 'Start with Solo. It is priced for independent operators and includes contracts + payments.', ctaHref: '/pricing', ctaLabel: 'See Solo plan' },
+      { id: 'plan-team', label: 'I run a small team', answer: 'Studio is built for small teams and is the recommended plan for most agencies.', ctaHref: '/pricing', ctaLabel: 'See Studio plan' },
+      { id: 'plan-large', label: 'I run a larger agency', answer: 'Agency or Enterprise fits best depending on required integrations and SLA needs.', ctaHref: '/pricing', ctaLabel: 'See Agency and Enterprise' },
+      { id: 'plan-service', label: 'I want Una Labs to execute for me', answer: 'Use our service model. We scope, price, and deliver under governed milestones.', ctaHref: '/start', ctaLabel: 'Start managed delivery' },
+    ],
   },
-  {
-    id: 'invoice-pay',
-    question: 'How do I pay an invoice?',
-    answer:
-      'Every invoice includes a secure payment link. Click "Pay now" on any unpaid invoice in your portal or on the invoice page itself. Payments are processed via Stripe - we accept all major cards. Once paid, the invoice status updates automatically within a few minutes.',
+  help: {
+    id: 'help',
+    title: 'Support',
+    intro: 'Choose the fastest support path.',
+    options: [
+      { id: 'help-tech', label: 'Technical issue', answer: 'Use the contact page and include your page URL and a short description of what happened.', ctaHref: '/contact', ctaLabel: 'Open support form' },
+      { id: 'help-billing', label: 'Billing question', answer: 'For billing updates, payment issues, or invoice questions, contact billing@unalabs.cloud.', ctaHref: '/contact', ctaLabel: 'Contact billing' },
+      { id: 'help-sales', label: 'Sales or partnership inquiry', answer: 'We can walk you through platform fit, onboarding, and service options.', ctaHref: '/contact', ctaLabel: 'Talk to sales' },
+    ],
   },
-  {
-    id: 'handover-what',
-    question: 'What happens at handover?',
-    answer:
-      'Handover is the final step where we package everything we built - deliverables, documentation, and credentials - and formally transfer them to you. We send a handover summary with all archived assets. Once you acknowledge it, the project is marked complete and you retain full ownership of everything delivered.',
-  },
-  {
-    id: 'actions-what',
-    question: 'What is the Action Center?',
-    answer:
-      'The Action Center collects every milestone across all projects that is in the review state - milestones waiting on operator sign-off. You can search, filter by due date, bulk-approve multiple milestones at once, and spot overdue items at a glance. It is the fastest way to unblock delivery across your entire portfolio.',
-  },
-  {
-    id: 'launch-gate-what',
-    question: 'What is the Launch Gate?',
-    answer:
-      'The Launch Gate scores each project against readiness checks - milestone completion, no blocked milestones, proof on every completed milestone, a live URL recorded, and a handover document present. Projects that pass all checks show as Ready. Those with failing checks are flagged Blocked. Use it before marking any project live.',
-  },
-  {
-    id: 'scheduling-what',
-    question: 'What is Scheduling?',
-    answer:
-      'Scheduling shows upcoming milestone due dates and review checkpoints in one calendar-style queue. You can filter by this week, this month, or overdue items, then open briefing details or create a review call directly from each item.',
-  },
-  {
-    id: 'analytics-what',
-    question: 'What is the Analytics dashboard?',
-    answer:
-      'The Analytics dashboard displays real-time financial insights across your entire project portfolio. Track total revenue collected, monthly recurring revenue projections, active and completed project counts, cashflow forecast (collected vs. pending), collection health (on-time vs. overdue), pipeline conversion metrics, and revenue breakdown by service tier.',
-  },
-  {
-    id: 'deals-what',
-    question: 'What is the Deals Pipeline?',
-    answer:
-      'The Deals Pipeline tracks every inbound lead from first contact to closed-won engagement. Contact form submissions land here automatically. You can advance each lead through stages (New, Contacted, Qualified, Proposal Sent, Won), add internal notes, and open the linked project once a lead converts.',
-  },
-  {
-    id: 'contact',
-    question: 'Who do I contact?',
-    answer:
-      'For project questions, use the "Request a change" form in your client portal - we read every message within one business day. For billing issues, email billing@unalabs.cloud. For urgent matters, reply directly to any email you have received from us.',
-  },
-];
+};
 
 const PAGE_CONTEXT: Record<string, string> = {
   '/portal': 'You are viewing your client portal.',
@@ -102,21 +97,76 @@ const PAGE_CONTEXT: Record<string, string> = {
   '/dashboard/deals': 'You are viewing the deals pipeline — inbound leads and prospects tracked from first contact to closed engagement.',
 };
 
+const PAGE_HINTS: Record<string, string> = {
+  '/pricing': 'Need help choosing a plan? Open Pricing and plans.',
+  '/how-it-works': 'Need a walkthrough? Open What does Una Labs do?.',
+  '/start': 'Need help with intake? Open I am ready to start.',
+  '/contact': 'Need direct support? Open I need help or support.',
+};
+
 export function AssistantDrawer() {
   const [open, setOpen] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeNodeId, setActiveNodeId] = useState<string>('root');
+  const [activeAnswer, setActiveAnswer] = useState<GuideOption | null>(null);
+  const [history, setHistory] = useState<string[]>(['root']);
   const drawerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
   const pageContext = Object.entries(PAGE_CONTEXT).find(([path]) => pathname.startsWith(path))?.[1];
-  const activeIntent = GLOBAL_INTENTS.find((intent) => intent.id === activeId);
+  const pageHint = Object.entries(PAGE_HINTS).find(([path]) => pathname.startsWith(path))?.[1];
+  const activeNode = GUIDE_NODES[activeNodeId] ?? GUIDE_NODES.root;
+
+  function openNode(nextId: string) {
+    setActiveAnswer(null);
+    setActiveNodeId(nextId);
+    setHistory((prev) => [...prev, nextId]);
+  }
+
+  function goBack() {
+    if (activeAnswer) {
+      setActiveAnswer(null);
+      return;
+    }
+
+    if (history.length <= 1) {
+      setActiveNodeId('root');
+      return;
+    }
+
+    const nextHistory = [...history];
+    nextHistory.pop();
+    const previousNode = nextHistory[nextHistory.length - 1] || 'root';
+    setHistory(nextHistory);
+    setActiveNodeId(previousNode);
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const seen = window.localStorage.getItem('una_guide_seen');
+      if (seen === '1') return;
+
+      const timer = window.setTimeout(() => {
+        setOpen(true);
+      }, 8000);
+
+      window.localStorage.setItem('una_guide_seen', '1');
+
+      return () => window.clearTimeout(timer);
+    } catch {
+      return undefined;
+    }
+  }, []);
 
   // Close on outside click
   useEffect(() => {
     function handleClick(event: MouseEvent) {
       if (drawerRef.current && !drawerRef.current.contains(event.target as Node)) {
         setOpen(false);
-        setActiveId(null);
+        setActiveNodeId('root');
+        setActiveAnswer(null);
+        setHistory(['root']);
       }
     }
     if (open) document.addEventListener('mousedown', handleClick);
@@ -128,7 +178,9 @@ export function AssistantDrawer() {
     function handleKey(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setOpen(false);
-        setActiveId(null);
+        setActiveNodeId('root');
+        setActiveAnswer(null);
+        setHistory(['root']);
       }
     }
     document.addEventListener('keydown', handleKey);
@@ -138,47 +190,95 @@ export function AssistantDrawer() {
   return (
     <div ref={drawerRef} className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 print:hidden">
       {open && (
-        <div className="w-80 rounded-2xl border border-border bg-white shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="w-96 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-white shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
           <div className="px-5 py-4 border-b border-border bg-bg-subtle">
-            <p className="text-body-sm font-semibold text-tx-heading">Quick answers</p>
+            <p className="text-body-sm font-semibold text-tx-heading">Una Labs site guide</p>
             {pageContext && <p className="mt-0.5 text-[11px] text-tx-muted">{pageContext}</p>}
+            {pageHint && <p className="mt-1 text-[11px] text-brand-teal">{pageHint}</p>}
           </div>
 
-          {activeIntent ? (
+          {activeAnswer ? (
             <div className="px-5 py-4">
               <button
                 type="button"
-                onClick={() => setActiveId(null)}
+                onClick={() => setActiveAnswer(null)}
                 className="mb-3 text-[11px] font-semibold text-brand-teal hover:underline"
               >
-                Back to questions
+                Back
               </button>
-              <p className="text-body-sm font-semibold text-tx-heading mb-2">{activeIntent.question}</p>
-              <p className="text-body-sm text-tx-secondary leading-relaxed">{activeIntent.answer}</p>
+              <p className="text-body-sm font-semibold text-tx-heading mb-2">{activeAnswer.label}</p>
+              <p className="text-body-sm text-tx-secondary leading-relaxed">{activeAnswer.answer}</p>
+              {activeAnswer.ctaHref && activeAnswer.ctaLabel && (
+                <div className="mt-4">
+                  <Link
+                    href={activeAnswer.ctaHref}
+                    className="inline-flex items-center rounded-lg bg-brand-teal text-white px-3.5 py-2 text-xs font-semibold hover:opacity-95"
+                  >
+                    {activeAnswer.ctaLabel}
+                  </Link>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {GLOBAL_INTENTS.map((intent) => (
-                <button
-                  key={intent.id}
-                  type="button"
-                  onClick={() => setActiveId(intent.id)}
-                  className="w-full px-5 py-3.5 text-left text-body-sm text-tx-heading hover:bg-bg-subtle transition-colors"
-                >
-                  {intent.question}
-                </button>
-              ))}
+            <div className="px-5 py-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-body-sm font-semibold text-tx-heading">{activeNode.title}</p>
+                  <p className="mt-1 text-[12px] text-tx-secondary leading-relaxed">{activeNode.intro}</p>
+                </div>
+                {history.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className="shrink-0 text-[11px] font-semibold text-brand-teal hover:underline"
+                  >
+                    Back
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2">
+                {activeNode.options.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => {
+                      if (option.nextId) {
+                        openNode(option.nextId);
+                        return;
+                      }
+                      if (option.answer) {
+                        setActiveAnswer(option);
+                        return;
+                      }
+                      if (option.ctaHref) {
+                        setActiveAnswer(option);
+                      }
+                    }}
+                    className="w-full rounded-lg border border-border px-3.5 py-3 text-left text-body-sm text-tx-heading hover:border-brand-teal/40 hover:bg-bg-subtle transition-colors"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
+
+          <div className="border-t border-border px-5 py-3 bg-bg-offwhite">
+            <Link href="/contact" className="text-[11px] font-semibold text-brand-teal hover:underline">
+              Need human help? Contact us →
+            </Link>
+          </div>
         </div>
       )}
 
       <button
         type="button"
-        aria-label={open ? 'Close quick help' : 'Open quick help'}
+        aria-label={open ? 'Close site guide' : 'Open site guide'}
         onClick={() => {
           setOpen((prev) => !prev);
-          setActiveId(null);
+          setActiveNodeId('root');
+          setActiveAnswer(null);
+          setHistory(['root']);
         }}
         className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-teal text-white shadow-lg hover:opacity-90 transition-opacity"
       >
