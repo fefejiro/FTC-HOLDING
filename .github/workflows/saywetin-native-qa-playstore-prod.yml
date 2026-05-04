@@ -87,7 +87,7 @@ jobs:
             echo "Starting ADB server before emulator boot"
             $ANDROID_HOME/platform-tools/adb start-server
           script: |
-            APP_DIR="$GITHUB_WORKSPACE/APPS/saywetin-native"
+            APP_DIR="${{ github.workspace }}/APPS/saywetin-native"
             chmod +x "$APP_DIR/android/gradlew"
             "$APP_DIR/android/gradlew" :app:assembleRelease :app:installRelease --no-daemon --project-dir "$APP_DIR/android"
             adb logcat -c
