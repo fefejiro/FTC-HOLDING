@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { AssistantDrawer } from '@/components/AssistantDrawer';
 import './globals.css';
 
 const inter = Inter({
@@ -102,6 +103,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main>{children}</main>
         <Footer />
+        <AssistantDrawer />
       </body>
     </html>
   );
