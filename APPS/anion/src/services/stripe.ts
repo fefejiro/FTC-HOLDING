@@ -61,11 +61,12 @@ export async function startCheckout(priceId: string, customerEmail?: string): Pr
   window.location.href = url;
 }
 
-export async function openBillingPortal(customerId: string): Promise<void> {
+export async function openBillingPortal(customerId?: string): Promise<void> {
   const res = await fetch('/api/stripe/portal', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ customerId }),
+    // When customerId is omitted the server resolves the customer from the authenticated session.
+    body: JSON.stringify({ customerId: customerId ?? null }),
   });
   if (!res.ok) throw new Error(`Billing portal session creation failed (${res.status})`);
   const { url } = (await res.json()) as { url: string };

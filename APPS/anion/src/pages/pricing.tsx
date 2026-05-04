@@ -58,9 +58,7 @@ export function PricingPage() {
     setCheckoutError(null);
     setIsRedirecting(true);
     try {
-      // customerId should come from the authenticated user's subscription record.
-      // Passing an empty string here triggers the server to look up the customer from the session.
-      await openBillingPortal('');
+      await openBillingPortal();
     } catch (err) {
       setCheckoutError(err instanceof Error ? err.message : 'Could not open billing portal. Please try again.');
       setIsRedirecting(false);

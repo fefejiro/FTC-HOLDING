@@ -21,15 +21,25 @@ export type CurrentUser = {
 };
 
 function getSupabaseUrl(): string {
-  return process.env['EXPO_PUBLIC_SUPABASE_URL'] ?? '';
+  const url = process.env['EXPO_PUBLIC_SUPABASE_URL'];
+  if (!url) throw new Error('EXPO_PUBLIC_SUPABASE_URL is not configured.');
+  return url;
 }
 
 function getSupabaseAnonKey(): string {
-  return process.env['EXPO_PUBLIC_SUPABASE_ANON_KEY'] ?? '';
+  const key = process.env['EXPO_PUBLIC_SUPABASE_ANON_KEY'];
+  if (!key) throw new Error('EXPO_PUBLIC_SUPABASE_ANON_KEY is not configured.');
+  return key;
 }
 
 function isSupabaseConfigured(): boolean {
-  return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
+  try {
+    getSupabaseUrl();
+    getSupabaseAnonKey();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 let _client: SupabaseClient | null = null;
@@ -64,6 +74,7 @@ async function hydrateProfile(session: Session): Promise<CurrentUser> {
     : null;
 
   return {
+    // Use the Anion profile ID when available; fall back to the Supabase auth user ID.
     id: profile?.id ?? authUser.id,
     authUserId: authUser.id,
     profileId: profile?.id ?? null,

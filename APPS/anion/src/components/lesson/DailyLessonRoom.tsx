@@ -55,6 +55,15 @@ export function DailyLessonRoom({ roomName, token }: Props) {
     });
   }, []);
 
+  // Destroy the call object when the component unmounts to prevent media leaks.
+  useEffect(() => {
+    return () => {
+      if (callObject) {
+        callObject.leave().finally(() => callObject.destroy());
+      }
+    };
+  }, [callObject]);
+
   const joinRoom = useCallback(async () => {
     if (!roomName) {
       setError('No lesson room has been assigned to this session yet.');
@@ -64,18 +73,21 @@ export function DailyLessonRoom({ roomName, token }: Props) {
       setError('Microphone access is required to join the lesson.');
       return;
     }
+    let call: DailyCall | null = null;
     try {
       setStatus('joining');
-      const call = DailyIframe.createCallObject();
-      await call.join({ url: buildRoomUrl(roomName), token });
+      call = DailyIframe.createCallObject();
       setCallObject(call);
+      await call.join({ url: buildRoomUrl(roomName), token });
       setStatus('joined');
       call.on('left-meeting', () => {
         setStatus('left');
         setCallObject(null);
-        call.destroy();
+        call?.destroy();
       });
     } catch (err) {
+      call?.destroy();
+      setCallObject(null);
       setError(err instanceof Error ? err.message : 'Failed to join the lesson room.');
       setStatus('error');
     }
