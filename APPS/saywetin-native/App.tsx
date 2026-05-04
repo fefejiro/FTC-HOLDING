@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
-import { useFonts, PlayfairDisplay_400Regular_Italic } from '@expo-google-fonts/playfair-display';
+import { useFonts } from 'expo-font';
+import { PlayfairDisplay_400Regular_Italic } from '@expo-google-fonts/playfair-display';
 import { NavigationContainer } from '@react-navigation/native';
 import { useRitualState, type RitualScreen } from './src/state/ritual-state';
 import { ritualTokens } from './src/theme/tokens';
