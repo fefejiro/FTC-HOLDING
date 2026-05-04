@@ -1,4 +1,4 @@
-import { productPages, proofHighlights, solutionPages } from '@/lib/site-content';
+﻿import { productPages, proofHighlights, solutionPages } from '@/lib/site-content';
 
 const productLinks = Object.values(productPages);
 const solutionLinks = Object.values(solutionPages);
@@ -40,12 +40,12 @@ export const NAV = {
 
 export const FEATURES = [
   { id: 1, icon: '📋', label: 'Intake & Scoping', slug: 'intake-scoping', benefit: 'Turn rough requests into structured briefs without a sales maze.' },
-  { id: 2, icon: '📊', label: 'Real-Time Dashboard', slug: 'real-time-dashboard', benefit: 'Keep delivery state visible instead of buried in chat and memory.' },
-  { id: 3, icon: '🪟', label: 'Client Portal', slug: 'client-portal', benefit: 'Give clients confidence without exposing every internal moving part.' },
-  { id: 4, icon: '✅', label: 'Approval Gates', slug: 'approval-gates', benefit: 'Treat sign-off as a governed stage, not a fuzzy final email.' },
+  { id: 2, icon: '📊', label: 'Real-Time Dashboard', slug: 'reporting', benefit: 'Keep delivery state visible instead of buried in chat and memory.' },
+  { id: 3, icon: '🪟', label: 'Client Portal', slug: 'deals-pipeline', benefit: 'Give clients confidence without exposing every internal moving part.' },
+  { id: 4, icon: '✅', label: 'Approval Gates', slug: 'contracts-e-sign', benefit: 'Treat sign-off as a governed stage, not a fuzzy final email.' },
   { id: 5, icon: '💳', label: 'Live Payments', slug: 'live-payments', benefit: 'Move from scoped summary into real Stripe checkout on the public site.' },
-  { id: 6, icon: '📦', label: 'Delivery Proof', slug: 'delivery-proof', benefit: 'Close projects with documentation, handoff context, and durable records.' },
-  { id: 7, icon: '🤖', label: 'Automated Handoff', slug: 'automated-handoff', benefit: 'Carry approved customer context into the internal delivery workflow behind the scenes.' },
+  { id: 6, icon: '📦', label: 'Delivery Proof', slug: 'contracts-e-sign', benefit: 'Close projects with documentation, handoff context, and durable records.' },
+  { id: 7, icon: '🤖', label: 'Automated Handoff', slug: 'integrations', benefit: 'Carry approved customer context into the internal delivery workflow behind the scenes.' },
   { id: 8, icon: '📈', label: 'Reporting', slug: 'reporting', benefit: 'Turn project truth into client-ready proof instead of rebuilding it later.' },
 ];
 

@@ -50,8 +50,8 @@ const GUIDE_NODES: Record<string, GuideNode> = {
     intro: 'Each module links to a live workflow page.',
     options: [
       { id: 'feat-intake', label: 'Intake and scoping', answer: 'We turn rough client requests into structured scoped briefs in under 48 hours.', ctaHref: '/how-it-works?module=intake-scoping', ctaLabel: 'View intake flow' },
-      { id: 'feat-dashboard', label: 'Real-time dashboard', answer: 'Track milestones, blockers, approvals, and progress in one governed workspace.', ctaHref: '/how-it-works?module=real-time-dashboard', ctaLabel: 'View dashboard flow' },
-      { id: 'feat-portal', label: 'Client portal and approvals', answer: 'Clients see exactly what they need, with clear approval gates before work advances.', ctaHref: '/how-it-works?module=client-portal', ctaLabel: 'View portal flow' },
+      { id: 'feat-dashboard', label: 'Real-time dashboard', answer: 'Track milestones, blockers, approvals, and progress in one governed workspace.', ctaHref: '/how-it-works?module=reporting', ctaLabel: 'View dashboard flow' },
+      { id: 'feat-portal', label: 'Client portal and approvals', answer: 'Clients see exactly what they need, with clear approval gates before work advances.', ctaHref: '/how-it-works?module=deals-pipeline', ctaLabel: 'View portal flow' },
       { id: 'feat-payments', label: 'Payments and contracts', answer: 'Contracts, deposits, invoices, and collection are built into the delivery lifecycle.', ctaHref: '/how-it-works?module=live-payments', ctaLabel: 'View billing flow' },
       { id: 'feat-reporting', label: 'Reporting and handoff proof', answer: 'Delivery closes with documented outputs, sign-off records, and reusable reporting artifacts.', ctaHref: '/how-it-works?module=reporting', ctaLabel: 'View reporting flow' },
     ],
