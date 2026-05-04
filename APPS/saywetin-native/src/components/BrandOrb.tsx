@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Image, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
-const orbImage = require('../../assets/icon-concepts/v2/orb-keyed.png') as number;
+const orbImage = require('../../assets/orb.png') as number;
 
 type BrandOrbVariant = 'hero' | 'listen' | 'compact' | 'appIcon';
 type BrandOrbPhase = 'idle' | 'listening' | 'matching';
@@ -136,14 +136,12 @@ export function BrandOrb({
         </Animated.View>
       ) : null}
 
-      {/* Orb image — matches app icon exactly */}
-      <View style={{ width: outer, height: outer, borderRadius: outer / 2, overflow: 'hidden' }}>
-        <Image
-          source={orbImage}
-          style={{ width: outer, height: outer }}
-          resizeMode="cover"
-        />
-      </View>
+      {/* Orb image — circular PNG with transparent background */}
+      <Image
+        source={orbImage}
+        style={{ width: outer, height: outer }}
+        resizeMode="contain"
+      />
 
       {/* Phase colour overlay — tints the orb amber (listening) or green (matching) */}
       {phase !== 'idle' ? (
