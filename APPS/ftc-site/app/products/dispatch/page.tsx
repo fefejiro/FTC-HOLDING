@@ -7,26 +7,26 @@ import { getProjectCaseStudy } from "../../../lib/content";
 const dispatchProduct = getProjectCaseStudy("dispatch");
 
 export const metadata = {
-  title: "Dispatch | Products | Una Labs",
+  title: "Tow Signal | Products | Una Labs",
   description:
-    "Dispatch is Una Labs' live Ottawa roadside assistance product with customer intake, operator routing, and official incident watch."
+    "Tow Signal is Una Labs' live Ottawa roadside assistance product with customer intake, operator routing, and official incident watch."
 };
 
 const dispatchHighlights = [
   "Roadside requests for fuel delivery, lockouts, jump starts, and tire changes",
-  "Invite-only operator demo with live request movement and incident drill-down",
-  "Client-safe demo loop without exposing admin controls",
-  "Official Ottawa-area incident watch using no-key public sources"
+  "Invite-only operator workflow with live request movement and incident drill-down",
+  "Private admin host separated from the public product flow",
+  "Official Ottawa-area incident watch using lean-source coverage"
 ] as const;
 
 const dispatchFlow = [
   {
     title: "Customer request",
-    body: "A stranded driver opens Dispatch, shares the issue and location, and gets the request into the live system quickly."
+    body: "A stranded driver opens Tow Signal, shares the issue and location, and gets the request into the live system quickly."
   },
   {
     title: "System routing",
-    body: "Dispatch classifies the job, keeps the active state visible, and layers in live incident watch where it helps."
+    body: "Tow Signal classifies the job, keeps the active state visible, and layers in live incident watch where it helps."
   },
   {
     title: "Operator movement",
@@ -44,28 +44,28 @@ export default function DispatchProductPage() {
           <p className="eyebrow">Product</p>
           <ProductStatusBadge status={dispatchStatus} />
         </div>
-        <h1>Dispatch</h1>
+        <h1>Tow Signal</h1>
         <p className="page-intro">
-          Dispatch is the live Ottawa roadside assistance product inside Una Labs. The client path is
-          simple: submit a sample roadside request, sign in as the invited operator, work the request,
-          and send feedback from inside the system.
+          Tow Signal is the live Ottawa roadside assistance product inside Una Labs. The internal runtime still
+          lives in the Dispatch repo path, but the public product now leads with a clearer premium brand for
+          roadside intake, operator routing, and incident awareness.
         </p>
         <div className="product-actions">
           <a
-            href="https://dispatch.unalabs.cloud/request?mode=demo"
+            href="https://dispatch.unalabs.cloud/request"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
           >
-            Try Dispatch Demo
+            Open Tow Signal
           </a>
           <a
-            href="https://dispatch.unalabs.cloud"
+            href="https://dispatch.unalabs.cloud/operator"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-secondary"
           >
-            View Live Dispatch
+            View Operator Surface
           </a>
         </div>
       </section>
@@ -75,7 +75,7 @@ export default function DispatchProductPage() {
           <p className="eyebrow">Overview</p>
           <h2>What it does</h2>
           <p>
-            Dispatch starts with direct roadside requests first, then adds live incident visibility
+            Tow Signal starts with direct roadside requests first, then adds live incident visibility
             so an operator team can react faster without rebuilding the workflow later.
           </p>
           <ul className="feature-list compact-feature-list">
@@ -86,18 +86,18 @@ export default function DispatchProductPage() {
         </article>
 
         <article className="card product-spotlight-card">
-          <p className="eyebrow">Demo flow</p>
-          <h2>How to test it</h2>
+          <p className="eyebrow">Positioning</p>
+          <h2>Why the new name matters</h2>
           <p>
-            The first client round should stay on the operator sandbox only. Admin remains private so
-            the demo feels clean and safe.
+            Tow Signal is easier to remember than a generic Dispatch label and better captures the blend
+            of roadside service movement plus incident intelligence.
           </p>
           <ol className="feature-list compact-feature-list">
-            <li>Submit a sample roadside request</li>
-            <li>Sign in as operator with the credentials you were given</li>
-            <li>Complete the flow and send feedback</li>
+            <li>Stronger app-store naming potential</li>
+            <li>Better client recall and referral value</li>
+            <li>Cleaner path to premium visual redesign</li>
           </ol>
-          <p className="muted">Operator testing is available by invite. Admin remains private and is not part of the client flow.</p>
+          <p className="muted">Internal service IDs can remain Dispatch while the public product carries the Tow Signal brand.</p>
         </article>
       </section>
 
@@ -114,7 +114,7 @@ export default function DispatchProductPage() {
       <article className="card final-cta-card">
         <div>
           <p className="eyebrow">Next step</p>
-          <h2>Want a dispatch-style system for your own operation?</h2>
+          <h2>Need a Tow Signal-style system for your operation?</h2>
           <p className="muted">
             Una Labs can scope a similar live intake, routing, and operator workflow for a local
             service business that needs faster response and clearer movement.
@@ -122,23 +122,23 @@ export default function DispatchProductPage() {
         </div>
         <div className="product-actions">
           <a
-            href="https://dispatch.unalabs.cloud/request?mode=demo"
+            href="https://dispatch.unalabs.cloud/request"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
           >
-            Try Dispatch Demo
+            Open Tow Signal
           </a>
           <Link href="/work-with-ftc" prefetch={false} className="btn btn-secondary">
             Start a Project
           </Link>
           <a
-            href="https://dispatch.unalabs.cloud"
+            href="https://dispatch.unalabs.cloud/operator"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-secondary"
           >
-            View Live Dispatch
+            Operator Surface
           </a>
         </div>
       </article>
