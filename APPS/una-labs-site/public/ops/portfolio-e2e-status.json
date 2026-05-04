@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-04T00:03:32.919Z",
+  "generatedAt": "2026-05-04T04:05:42.736Z",
   "generator": "scripts/run-portfolio-e2e.mjs",
   "summary": {
     "overallStatus": "red",
@@ -10,7 +10,7 @@
     "passRate": 73.68,
     "activeSuites": 9,
     "pendingSuites": 0,
-    "cycleDurationMs": 2696
+    "cycleDurationMs": 2291
   },
   "velocity": {
     "commits14d": 1,
@@ -33,8 +33,8 @@
           "id": "home",
           "label": "home",
           "url": "https://unalabs.cloud/",
-          "startedAt": "2026-05-04T00:03:32.920Z",
-          "durationMs": 372,
+          "startedAt": "2026-05-04T04:05:42.736Z",
+          "durationMs": 179,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -48,8 +48,8 @@
           "id": "admin",
           "label": "admin",
           "url": "https://unalabs.cloud/admin/",
-          "startedAt": "2026-05-04T00:03:33.292Z",
-          "durationMs": 153,
+          "startedAt": "2026-05-04T04:05:42.915Z",
+          "durationMs": 102,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -63,8 +63,8 @@
           "id": "dashboard",
           "label": "dashboard",
           "url": "https://unalabs.cloud/dashboard/",
-          "startedAt": "2026-05-04T00:03:33.445Z",
-          "durationMs": 151,
+          "startedAt": "2026-05-04T04:05:43.018Z",
+          "durationMs": 146,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -78,8 +78,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://unalabs.cloud/portal/",
-          "startedAt": "2026-05-04T00:03:33.596Z",
-          "durationMs": 134,
+          "startedAt": "2026-05-04T04:05:43.164Z",
+          "durationMs": 113,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -93,8 +93,8 @@
           "id": "start",
           "label": "start",
           "url": "https://unalabs.cloud/start/",
-          "startedAt": "2026-05-04T00:03:33.730Z",
-          "durationMs": 131,
+          "startedAt": "2026-05-04T04:05:43.277Z",
+          "durationMs": 101,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -121,8 +121,8 @@
           "id": "home",
           "label": "home",
           "url": "https://gardencleaners.ca/",
-          "startedAt": "2026-05-04T00:03:33.861Z",
-          "durationMs": 79,
+          "startedAt": "2026-05-04T04:05:43.378Z",
+          "durationMs": 53,
           "statusCode": 403,
           "expectedStatuses": [
             200,
@@ -137,8 +137,8 @@
           "id": "quote",
           "label": "quote",
           "url": "https://gardencleaners.ca/quote",
-          "startedAt": "2026-05-04T00:03:33.940Z",
-          "durationMs": 182,
+          "startedAt": "2026-05-04T04:05:43.431Z",
+          "durationMs": 139,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -156,8 +156,8 @@
           "id": "contact",
           "label": "contact",
           "url": "https://gardencleaners.ca/contact",
-          "startedAt": "2026-05-04T00:03:34.122Z",
-          "durationMs": 57,
+          "startedAt": "2026-05-04T04:05:43.570Z",
+          "durationMs": 33,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -175,8 +175,8 @@
           "id": "portal",
           "label": "portal",
           "url": "https://gardencleaners.ca/portal",
-          "startedAt": "2026-05-04T00:03:34.179Z",
-          "durationMs": 69,
+          "startedAt": "2026-05-04T04:05:43.603Z",
+          "durationMs": 37,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -207,8 +207,8 @@
           "id": "home",
           "label": "home",
           "url": "https://www.ogtradesacademy.com/",
-          "startedAt": "2026-05-04T00:03:34.249Z",
-          "durationMs": 233,
+          "startedAt": "2026-05-04T04:05:43.640Z",
+          "durationMs": 207,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -222,8 +222,8 @@
           "id": "about",
           "label": "about",
           "url": "https://www.ogtradesacademy.com/about",
-          "startedAt": "2026-05-04T00:03:34.482Z",
-          "durationMs": 50,
+          "startedAt": "2026-05-04T04:05:43.847Z",
+          "durationMs": 26,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -241,8 +241,8 @@
           "id": "community",
           "label": "community",
           "url": "https://www.ogtradesacademy.com/community",
-          "startedAt": "2026-05-04T00:03:34.532Z",
-          "durationMs": 43,
+          "startedAt": "2026-05-04T04:05:43.873Z",
+          "durationMs": 32,
           "statusCode": 200,
           "expectedStatuses": [
             200,
@@ -273,8 +273,8 @@
           "id": "home",
           "label": "home",
           "url": "https://saywetin.app/",
-          "startedAt": "2026-05-04T00:03:34.575Z",
-          "durationMs": 213,
+          "startedAt": "2026-05-04T04:05:43.905Z",
+          "durationMs": 185,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -301,8 +301,8 @@
           "id": "health",
           "label": "health",
           "url": "https://api.saywetin.app/health",
-          "startedAt": "2026-05-04T00:03:34.788Z",
-          "durationMs": 292,
+          "startedAt": "2026-05-04T04:05:44.090Z",
+          "durationMs": 335,
           "statusCode": 200,
           "expectedStatuses": [
             200
@@ -329,8 +329,8 @@
           "id": "home",
           "label": "home",
           "url": "https://peacepad.ca/",
-          "startedAt": "2026-05-04T00:03:35.080Z",
-          "durationMs": 78,
+          "startedAt": "2026-05-04T04:05:44.425Z",
+          "durationMs": 61,
           "statusCode": 403,
           "expectedStatuses": [
             200
@@ -357,8 +357,8 @@
           "id": "root",
           "label": "root",
           "url": "https://api.peacepad.ca/",
-          "startedAt": "2026-05-04T00:03:35.158Z",
-          "durationMs": 72,
+          "startedAt": "2026-05-04T04:05:44.486Z",
+          "durationMs": 89,
           "statusCode": 403,
           "expectedStatuses": [
             200,
@@ -386,8 +386,8 @@
           "id": "home",
           "label": "home",
           "url": "https://dispatch.unalabs.cloud/",
-          "startedAt": "2026-05-04T00:03:35.230Z",
-          "durationMs": 188,
+          "startedAt": "2026-05-04T04:05:44.575Z",
+          "durationMs": 301,
           "statusCode": 404,
           "expectedStatuses": [
             200
@@ -401,8 +401,8 @@
           "id": "health",
           "label": "health",
           "url": "https://dispatch.unalabs.cloud/health",
-          "startedAt": "2026-05-04T00:03:35.418Z",
-          "durationMs": 73,
+          "startedAt": "2026-05-04T04:05:44.876Z",
+          "durationMs": 70,
           "statusCode": 404,
           "expectedStatuses": [
             200
@@ -429,8 +429,8 @@
           "id": "home",
           "label": "home",
           "url": "https://ateam.unalabs.cloud/",
-          "startedAt": "2026-05-04T00:03:35.491Z",
-          "durationMs": 114,
+          "startedAt": "2026-05-04T04:05:44.946Z",
+          "durationMs": 73,
           "statusCode": 302,
           "expectedStatuses": [
             200,
