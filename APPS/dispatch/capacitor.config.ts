@@ -18,7 +18,6 @@ const getServerConfig = (): { url?: string; cleartext: boolean; allowNavigation:
     };
   }
 
-  // production (default) - load live app from server
   return {
     url: 'https://dispatch.unalabs.cloud',
     cleartext: false,
@@ -30,7 +29,7 @@ const serverConfig = getServerConfig();
 
 const config: CapacitorConfig = {
   appId: 'ca.emergencyprompt.roadside',
-  appName: 'Dispatch',
+  appName: 'Tow Signal',
   webDir: 'dist/public',
   server: {
     ...serverConfig,
