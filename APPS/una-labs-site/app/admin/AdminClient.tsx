@@ -112,6 +112,16 @@ type AutoCollectItem = {
   created_at?: string;
 };
 
+type GitHubIssue = {
+  number: number;
+  title: string;
+  url: string;
+  status_label: string | null;
+  area_labels: string[];
+  assignee: string | null;
+  updated_at: string;
+};
+
 type AutoCollectHealth = {
   generated_at: string;
   queue_total: number;
@@ -243,6 +253,9 @@ export function AdminClient() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [storedToken, setStoredToken] = useState<string | null>(null);
+  const [githubIssues, setGithubIssues] = useState<GitHubIssue[]>([]);
+  const [githubIssuesLoading, setGithubIssuesLoading] = useState(false);
+  const [githubIssuesError, setGithubIssuesError] = useState<string | null>(null);
   const [brandingProjectId, setBrandingProjectId] = useState('');
   const [brandingForm, setBrandingForm] = useState({ companyName: '', primaryColor: '#4DB8A8', logoUrl: '', tagline: '', replyEmail: '' });
   const [brandingSaving, setBrandingSaving] = useState(false);
@@ -411,6 +424,27 @@ export function AdminClient() {
       }
 
       await refreshAutoCollect(session.access_token, { silent });
+
+      // Fetch engineering queue (non-fatal)
+      void (async () => {
+        setGithubIssuesLoading(true);
+        setGithubIssuesError(null);
+        try {
+          const ghRes = await fetch(getStripeApiUrl('/api/admin/github-issues'), {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          const ghPayload = await ghRes.json() as { issues?: GitHubIssue[]; error?: string };
+          if (ghRes.ok) {
+            setGithubIssues(ghPayload.issues ?? []);
+          } else {
+            setGithubIssuesError(ghPayload.error ?? 'Failed to load engineering queue.');
+          }
+        } catch {
+          setGithubIssuesError('Network error while loading engineering queue.');
+        }
+        setGithubIssuesLoading(false);
+      })();
+
       setLastRefreshedAt(new Date().toISOString());
     } catch (error) {
       setState({ phase: 'error', message: error instanceof Error ? error.message : 'Unknown error' });
@@ -1886,6 +1920,150 @@ export function AdminClient() {
               <p className="text-body-sm text-tx-muted">Select a project above to manage its Connect onboarding.</p>
             )}
           </div>
+        </div>
+
+        <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-8">
+          <div className="px-8 py-5 border-b border-border flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <Badge variant="muted">Internal</Badge>
+              <h2 className="mt-1 text-h3 text-tx-heading">Engineering Queue</h2>
+              <p className="mt-1 text-body-sm text-tx-secondary">Open GitHub issues for fefejiro/FTC-HOLDING, grouped by status label.</p>
+            </div>
+            <a
+              href="https://github.com/fefejiro/FTC-HOLDING/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-body-sm font-semibold text-brand-teal hover:underline"
+            >
+              View on GitHub →
+            </a>
+          </div>
+
+          {githubIssuesLoading && (
+            <div className="px-8 py-10 text-center text-body text-tx-muted animate-pulse">Loading engineering queue...</div>
+          )}
+
+          {!githubIssuesLoading && githubIssuesError && (
+            <div className="px-8 py-6">
+              <p className="text-body-sm text-red-500">{githubIssuesError}</p>
+            </div>
+          )}
+
+          {!githubIssuesLoading && !githubIssuesError && githubIssues.length === 0 && (
+            <div className="px-8 py-10 text-center text-body text-tx-muted">No open issues found.</div>
+          )}
+
+          {!githubIssuesLoading && !githubIssuesError && githubIssues.length > 0 && (() => {
+            const STATUS_ORDER = ['status:in-progress', 'status:review', 'status:blocked', 'status:pending'];
+            const STATUS_LABELS: Record<string, string> = {
+              'status:in-progress': 'In Progress',
+              'status:review': 'Review',
+              'status:blocked': 'Blocked',
+              'status:pending': 'Pending',
+            };
+            const STATUS_COLORS_GH: Record<string, string> = {
+              'status:in-progress': 'bg-blue-100 text-blue-700',
+              'status:review': 'bg-yellow-100 text-yellow-700',
+              'status:blocked': 'bg-red-100 text-red-700',
+              'status:pending': 'bg-gray-100 text-gray-600',
+            };
+
+            const grouped = new Map<string, GitHubIssue[]>();
+            const noStatusIssues: GitHubIssue[] = [];
+
+            for (const issue of githubIssues) {
+              if (!issue.status_label) {
+                noStatusIssues.push(issue);
+              } else {
+                if (!grouped.has(issue.status_label)) grouped.set(issue.status_label, []);
+                grouped.get(issue.status_label)!.push(issue);
+              }
+            }
+
+            const orderedKeys = [
+              ...STATUS_ORDER.filter((k) => grouped.has(k)),
+              ...[...grouped.keys()].filter((k) => !STATUS_ORDER.includes(k)),
+            ];
+
+            const renderIssueRow = (issue: GitHubIssue) => (
+              <tr key={issue.number} className="border-b border-border hover:bg-bg-offwhite transition-colors">
+                <td className="px-6 py-3 text-tx-muted font-mono text-[11px]">#{issue.number}</td>
+                <td className="px-6 py-3">
+                  <a
+                    href={issue.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-body-sm font-medium text-tx-heading hover:text-brand-teal transition-colors"
+                  >
+                    {issue.title}
+                  </a>
+                </td>
+                <td className="px-6 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {issue.area_labels.map((label) => (
+                      <span key={label} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        {label.replace('area:', '')}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-6 py-3 text-body-sm text-tx-secondary">{issue.assignee ?? '—'}</td>
+                <td className="px-6 py-3 text-body-sm text-tx-muted">{formatDate(issue.updated_at)}</td>
+              </tr>
+            );
+
+            return (
+              <div className="divide-y divide-border">
+                {orderedKeys.map((statusKey) => (
+                  <div key={statusKey}>
+                    <div className="px-8 py-3 bg-bg-offwhite/60 flex items-center gap-2">
+                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS_GH[statusKey] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {STATUS_LABELS[statusKey] ?? statusKey.replace('status:', '')}
+                      </span>
+                      <span className="text-body-sm text-tx-muted">{grouped.get(statusKey)!.length} issue{grouped.get(statusKey)!.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-body-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            {['#', 'Title', 'Area', 'Assignee', 'Updated'].map((h) => (
+                              <th key={h} className="px-6 py-2 text-left text-[11px] font-semibold text-tx-muted uppercase tracking-wide">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {grouped.get(statusKey)!.map(renderIssueRow)}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+
+                {noStatusIssues.length > 0 && (
+                  <div>
+                    <div className="px-8 py-3 bg-bg-offwhite/60 flex items-center gap-2">
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Unlabelled</span>
+                      <span className="text-body-sm text-tx-muted">{noStatusIssues.length} issue{noStatusIssues.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-body-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            {['#', 'Title', 'Area', 'Assignee', 'Updated'].map((h) => (
+                              <th key={h} className="px-6 py-2 text-left text-[11px] font-semibold text-tx-muted uppercase tracking-wide">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {noStatusIssues.map(renderIssueRow)}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden">

@@ -25,6 +25,7 @@ export interface Env {
   AUTOCOLLECT_MAX_ATTEMPTS?: string;
   AUTOCOLLECT_DAILY_EMAIL_CAP?: string;
   AUTOCOLLECT_MAX_SEND_PER_RUN?: string;
+  GITHUB_TOKEN?: string;
 }
 
 function shouldDeliverBridgeWebhook(env: Env): boolean {
@@ -4852,6 +4853,91 @@ async function handleAdminAutoCollectSendInvite(req: Request, env: Env, origin: 
   return json({ ok: true, item: result.item }, 200, origin);
 }
 
+type GitHubLabel = {
+  name: string;
+  color: string;
+};
+
+type GitHubUser = {
+  login: string;
+  avatar_url: string;
+  html_url: string;
+};
+
+type GitHubIssueRaw = {
+  number: number;
+  title: string;
+  html_url: string;
+  state: string;
+  labels: GitHubLabel[];
+  assignee: GitHubUser | null;
+  assignees: GitHubUser[];
+  updated_at: string;
+  created_at: string;
+  body: string | null;
+};
+
+type GitHubIssueSummary = {
+  number: number;
+  title: string;
+  url: string;
+  status_label: string | null;
+  area_labels: string[];
+  assignee: string | null;
+  updated_at: string;
+};
+
+async function handleAdminGitHubIssues(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  const token = env.GITHUB_TOKEN;
+  const headers: Record<string, string> = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'una-labs-admin/1.0',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch(
+      'https://api.github.com/repos/fefejiro/FTC-HOLDING/issues?state=open&per_page=100',
+      { headers }
+    );
+    if (!res.ok) {
+      const rateLimitRemaining = res.headers.get('x-ratelimit-remaining');
+      if (res.status === 403 && rateLimitRemaining === '0') {
+        return json({ error: 'GitHub API rate limit exceeded. Set GITHUB_TOKEN to increase limits.' }, 429, origin);
+      }
+      return json({ error: `GitHub API error: ${res.status}` }, 502, origin);
+    }
+
+    const rawIssues = await res.json() as GitHubIssueRaw[];
+
+    const issues: GitHubIssueSummary[] = rawIssues
+      .filter((issue) => !('pull_request' in issue))
+      .map((issue) => {
+        const labelNames = (issue.labels ?? []).map((l) => l.name);
+        const statusLabel = labelNames.find((n) => n.startsWith('status:')) ?? null;
+        const areaLabels = labelNames.filter((n) => n.startsWith('area:'));
+        return {
+          number: issue.number,
+          title: issue.title,
+          url: issue.html_url,
+          status_label: statusLabel,
+          area_labels: areaLabels,
+          assignee: issue.assignee?.login ?? (issue.assignees?.[0]?.login ?? null),
+          updated_at: issue.updated_at,
+        };
+      });
+
+    return json({ issues }, 200, origin);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Failed to fetch GitHub issues.' }, 502, origin);
+  }
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -4888,6 +4974,10 @@ export default {
 
     if (req.method === 'GET' && url.pathname === '/api/admin/leads') {
       return handleAdminLeadsList(req, env, origin);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/admin/github-issues') {
+      return handleAdminGitHubIssues(req, env, origin);
     }
 
     if (req.method === 'PATCH' && /^\/api\/admin\/leads\/[^/]+$/.test(url.pathname)) {
