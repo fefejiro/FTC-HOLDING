@@ -12,8 +12,116 @@ permissions:
   contents: read
 
 jobs:
+  qa-gate:
+    name: QA gate (unit/api/contract/security + screenshot E2E)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: APPS/saywetin-native
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            APPS/saywetin-native/package-lock.json
+            APPS/saywetin-native/qa/package-lock.json
+
+      - name: Install app dependencies
+        run: npm ci --workspaces=false
+
+      - name: Install QA dependencies
+        run: npm --prefix qa ci --no-audit --no-fund
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.SAYWETIN_KEYSTORE_BASE64 }}" | base64 --decode > android/app/saywetin-release.keystore
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Maestro install
+        run: maestro --version
+
+      - name: Run fast QA layers
+        env:
+          API_BASE_URL: https://api.saywetin.app
+        run: |
+          npm --prefix qa run qa:unit
+          npm --prefix qa run qa:api
+          npm --prefix qa run qa:contract
+          npm --prefix qa run qa:security
+
+      - name: Run screenshot E2E on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          API_BASE_URL: https://api.saywetin.app
+          SAYWETIN_KEYSTORE_PATH: ${{ github.workspace }}/APPS/saywetin-native/android/app/saywetin-release.keystore
+          SAYWETIN_KEYSTORE_PASSWORD: ${{ secrets.SAYWETIN_KEYSTORE_PASSWORD }}
+          SAYWETIN_KEY_ALIAS: ${{ secrets.SAYWETIN_KEY_ALIAS }}
+          SAYWETIN_KEY_PASSWORD: ${{ secrets.SAYWETIN_KEY_PASSWORD }}
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          emulator-boot-timeout: 900
+          script: |
+            ./android/gradlew :app:assembleRelease :app:installRelease --no-daemon -p android
+            adb logcat -c
+            adb shell am start -n com.saywetin.app/.MainActivity
+            for i in $(seq 1 20); do
+              if ! adb shell pidof com.saywetin.app >/dev/null 2>&1; then
+                echo "App process died during launch smoke check"
+                adb logcat -d | tail -n 200
+                exit 1
+              fi
+              sleep 1
+            done
+            if adb logcat -d | grep -Eq "FATAL EXCEPTION|Process: com.saywetin.app"; then
+              echo "Detected fatal crash signatures in logcat"
+              adb logcat -d | tail -n 300
+              exit 1
+            fi
+            npm --prefix qa run qa:e2e
+
+      - name: Upload QA report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: saywetin-native-qa-report
+          path: APPS/saywetin-native/qa/_report
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Maestro screenshots artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: saywetin-native-maestro-artifacts
+          path: APPS/saywetin-native/.maestro
+          if-no-files-found: warn
+          retention-days: 14
+
   publish-playstore-production:
     name: Gradle build + submit to Play Store production
+    needs: qa-gate
     runs-on: ubuntu-latest
     timeout-minutes: 60
 

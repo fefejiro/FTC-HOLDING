@@ -3,12 +3,16 @@ appId: com.saywetin.app
 ---
 - launchApp:
     clearState: true
-- assertVisible: ".*"
-- takeScreenshot: 01-home
+- assertVisible: "SayWetin"
+- assertVisible: "Tap to SayWetin"
+- takeScreenshot: 01-home-loaded
+- tapOn: "Tap to SayWetin"
+- assertVisible: "Listening"
+- takeScreenshot: 02-listening-state
 - tapOn:
-    text: ".*Listen.*"
-    optional: true
-- takeScreenshot: 02-listening
-- waitForAnimationToEnd:
-    timeout: 12000
-- takeScreenshot: 03-after-listen
+    text: "Decode lyric or slang"
+- assertVisible: "Wetin be this?"
+- takeScreenshot: 03-decode-open
+- tapOn: "Close"
+- assertVisible: "SayWetin"
+- takeScreenshot: 04-back-home
