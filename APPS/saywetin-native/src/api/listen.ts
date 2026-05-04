@@ -174,6 +174,41 @@ function mapRecognizedTrack(
   };
 }
 
+function normalizeOffsetMs(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return null;
+  }
+  if (n < 0) {
+    return null;
+  }
+  return Math.round(n);
+}
+
+function resolveMatchedInMs(
+  recognized: NonNullable<ListenResponse['recognizedTrack']>,
+  durationMs: number,
+): number {
+  // Prefer server-calculated display timing, then provider offset, then sample midpoint.
+  const calculated = normalizeOffsetMs(recognized.calculatedDisplayOffsetMs);
+  if (calculated !== null) {
+    return calculated;
+  }
+
+  const provider = normalizeOffsetMs(recognized.providerSongOffsetMs);
+  if (provider !== null) {
+    return provider;
+  }
+
+  const sampleMidpoint = normalizeOffsetMs(recognized.sampleMidpointAtMs);
+  if (sampleMidpoint !== null) {
+    return sampleMidpoint;
+  }
+
+  // For microphone captures, start near the middle of the sample window.
+  return Math.round(Math.max(0, durationMs) * 0.5);
+}
+
 function firstNonEmptyLine(text?: string) {
   if (!text) {
     return '';
@@ -280,9 +315,10 @@ export async function uploadListenSample(
     payload.recognizedTrack.matchSource ?? payload.matchSource ?? 'acrcloud',
   );
   const recognitionSource = recognitionSourceFromMatchSource(matchSource, 'microphone');
+  const matchedInMs = resolveMatchedInMs(payload.recognizedTrack, durationMs);
   const baseTrack = {
     ...mapRecognizedTrack(payload.recognizedTrack, matchSource, recognitionSource),
-    matchedInMs: Date.now() - startedAt,
+    matchedInMs,
   };
 
   try {
@@ -313,7 +349,7 @@ export async function uploadListenSample(
     }
 
     if (detail) {
-      return { ...mergeDetailedTrack(baseTrack, detail), matchedInMs: Date.now() - startedAt };
+      return mergeDetailedTrack(baseTrack, detail);
     }
   } catch (err: any) {
     console.warn('[listen] detail fetch threw:', err?.message || String(err));
@@ -360,9 +396,10 @@ export async function identifyByText(query: string): Promise<RitualTrack> {
     payload.recognizedTrack.matchSource ?? payload.matchSource ?? 'lyric_text',
   );
   const recognitionSource = recognitionSourceFromMatchSource(matchSource, 'manual_lyrics');
+  const matchedInMs = resolveMatchedInMs(payload.recognizedTrack, 0);
   const baseTrack = {
     ...mapRecognizedTrack(payload.recognizedTrack, matchSource, recognitionSource),
-    matchedInMs: Date.now() - startedAt,
+    matchedInMs,
   };
 
   try {
@@ -372,7 +409,7 @@ export async function identifyByText(query: string): Promise<RitualTrack> {
 
     if (detailResponse.ok) {
       const detail = (await detailResponse.json()) as RecognizedTrackDetailResponse;
-      return { ...mergeDetailedTrack(baseTrack, detail), matchedInMs: Date.now() - startedAt };
+      return mergeDetailedTrack(baseTrack, detail);
     }
   } catch {
     // ignore
