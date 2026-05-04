@@ -71,6 +71,12 @@ const GLOBAL_INTENTS: Intent[] = [
       'The Analytics dashboard displays real-time financial insights across your entire project portfolio. Track total revenue collected, monthly recurring revenue projections, active and completed project counts, cashflow forecast (collected vs. pending), collection health (on-time vs. overdue), pipeline conversion metrics, and revenue breakdown by service tier.',
   },
   {
+    id: 'deals-what',
+    question: 'What is the Deals Pipeline?',
+    answer:
+      'The Deals Pipeline tracks every inbound lead from first contact to closed-won engagement. Contact form submissions land here automatically. You can advance each lead through stages (New, Contacted, Qualified, Proposal Sent, Won), add internal notes, and open the linked project once a lead converts.',
+  },
+  {
     id: 'contact',
     question: 'Who do I contact?',
     answer:
@@ -93,6 +99,7 @@ const PAGE_CONTEXT: Record<string, string> = {
   '/dashboard/launch-gate': 'You are viewing the operator launch gate - per-project readiness scoring.',
   '/dashboard/scheduling': 'You are viewing scheduling for milestone reviews and upcoming checkpoints.',
   '/dashboard/analytics': 'You are viewing the business intelligence dashboard with real-time financial metrics and revenue analytics.',
+  '/dashboard/deals': 'You are viewing the deals pipeline — inbound leads and prospects tracked from first contact to closed engagement.',
 };
 
 export function AssistantDrawer() {

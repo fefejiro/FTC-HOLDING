@@ -1286,6 +1286,9 @@ export function DashboardClient() {
                 <Button href="/dashboard/analytics" variant="secondary" size="sm">
                   Open analytics
                 </Button>
+                <Button href="/dashboard/deals" variant="secondary" size="sm">
+                  Open deals
+                </Button>
               </div>
             </div>
 
@@ -1397,6 +1400,7 @@ export function DashboardClient() {
                             { label: 'Contract', href: `/dashboard/contract?id=${project.id}` },
                             { label: 'Handover', href: `/dashboard/handover?id=${project.id}` },
                             { label: 'Analytics', href: `/dashboard/analytics` },
+                            { label: 'Deals', href: `/dashboard/deals` },
                           ].map((link) => (
                             <a
                               key={link.label}
