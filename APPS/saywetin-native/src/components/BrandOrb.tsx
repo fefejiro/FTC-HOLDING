@@ -137,11 +137,13 @@ export function BrandOrb({
       ) : null}
 
       {/* Orb image — matches app icon exactly */}
-      <Image
-        source={orbImage}
-        style={{ width: outer, height: outer, borderRadius: outer / 2 }}
-        resizeMode="contain"
-      />
+      <View style={{ width: outer, height: outer, borderRadius: outer / 2, overflow: 'hidden' }}>
+        <Image
+          source={orbImage}
+          style={{ width: outer, height: outer }}
+          resizeMode="cover"
+        />
+      </View>
 
       {/* Phase colour overlay — tints the orb amber (listening) or green (matching) */}
       {phase !== 'idle' ? (
