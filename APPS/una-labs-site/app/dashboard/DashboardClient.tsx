@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { getAteamEndpoint, isProjectAdminEmail, normalizeProjectStatus } from '@/lib/projects';
@@ -145,6 +145,37 @@ function formatPriceRange(min?: number | null, max?: number | null) {
   return `CA$${Number(min).toLocaleString('en-CA')} - CA$${Number(max).toLocaleString('en-CA')}`;
 }
 
+function confidenceToScore(confidence?: string | null) {
+  const normalized = (confidence ?? '').toLowerCase();
+  if (normalized === 'high') return 0.9;
+  if (normalized === 'medium') return 0.6;
+  if (normalized === 'low') return 0.3;
+  return 0.5;
+}
+
+function AIConfidenceChart({ confidence }: { confidence?: string | null }) {
+  const score = confidenceToScore(confidence);
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-bg-subtle px-3 py-2">
+      <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-tx-muted">
+        <span>AI confidence</span>
+        <span>{Math.round(score * 100)}%</span>
+      </div>
+      <div className="mt-2 h-2 w-full rounded-full bg-white border border-border overflow-hidden">
+        <div
+          className="h-full bg-brand-teal transition-all duration-700"
+          style={{ width: `${Math.round(score * 100)}%` }}
+        />
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-tx-muted">
+        <span>Low</span>
+        <span>Medium</span>
+        <span>High</span>
+      </div>
+    </div>
+  );
+}
+
 function PlanLabel({ tier, billing }: { tier?: string; billing?: string }) {
   const tierLabel = getCommercialLabel(tier);
   const billingLabel = getCommercialBillingLabel(billing);
@@ -153,6 +184,197 @@ function PlanLabel({ tier, billing }: { tier?: string; billing?: string }) {
     <span className="text-body text-tx-secondary">
       {tierLabel}{billingLabel && !isActivation ? ` | ${billingLabel}` : ''}
     </span>
+  );
+}
+
+function AdminMilestonePanel({
+  projectId,
+  milestones,
+  loading,
+  onUpdate,
+  onAdd,
+}: {
+  projectId: string;
+  milestones: MilestoneRecord[];
+  loading: boolean;
+  onUpdate: (milestoneId: string, patch: Partial<MilestoneRecord>) => void;
+  onAdd: (title: string, dueDate: string) => void;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<Partial<MilestoneRecord>>({});
+  const [newTitle, setNewTitle] = useState('');
+  const [newDue, setNewDue] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const STATUSES = ['pending', 'in_progress', 'review', 'approved', 'changes_requested', 'blocked'];
+
+  const handleSave = (id: string) => {
+    onUpdate(id, editFields);
+    setEditingId(null);
+    setEditFields({});
+  };
+
+  const handleAdd = () => {
+    if (!newTitle.trim()) return;
+    onAdd(newTitle.trim(), newDue);
+    setNewTitle('');
+    setNewDue('');
+    setAdding(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-border bg-white px-6 py-5">
+        <p className="text-body-sm text-tx-muted animate-pulse">Loading milestones...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-brand-teal/20 bg-white px-6 py-5">
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <p className="text-body-sm font-semibold text-tx-heading">
+          Milestones
+          <span className="ml-2 text-tx-muted font-normal">({milestones.length})</span>
+        </p>
+        <button
+          type="button"
+          onClick={() => setAdding((v) => !v)}
+          className="rounded-lg border border-brand-teal px-3 py-1.5 text-[11px] font-bold text-brand-teal hover:bg-brand-teal/10 transition-colors"
+        >
+          + Add milestone
+        </button>
+      </div>
+
+      {adding && (
+        <div className="mb-4 flex flex-wrap gap-2 items-end rounded-xl border border-border bg-bg-subtle px-4 py-3">
+          <input
+            type="text"
+            placeholder="Milestone title"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            className="flex-1 min-w-[180px] rounded-lg border border-border bg-white px-3 py-2 text-body-sm text-tx-heading placeholder:text-tx-muted focus:outline-none focus:border-brand-teal"
+          />
+          <input
+            type="date"
+            value={newDue}
+            onChange={(e) => setNewDue(e.target.value)}
+            className="rounded-lg border border-border bg-white px-3 py-2 text-body-sm text-tx-heading focus:outline-none focus:border-brand-teal"
+          />
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={!newTitle.trim()}
+            className="rounded-lg bg-brand-teal px-4 py-2 text-body-sm font-semibold text-white disabled:opacity-40"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => setAdding(false)}
+            className="rounded-lg border border-border px-4 py-2 text-body-sm text-tx-muted hover:text-tx-heading"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {milestones.length === 0 && !adding && (
+        <p className="text-body-sm text-tx-muted">No milestones yet. Add one above.</p>
+      )}
+
+      <div className="grid gap-2">
+        {milestones.map((m) => {
+          const isEditing = editingId === m.id;
+          return (
+            <div
+              key={m.id}
+              className="flex flex-wrap items-start gap-3 rounded-xl border border-border bg-bg-offwhite px-4 py-3"
+            >
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    value={editFields.title ?? m.title ?? ''}
+                    onChange={(e) => setEditFields((f) => ({ ...f, title: e.target.value }))}
+                    className="flex-1 min-w-[160px] rounded-lg border border-border bg-white px-3 py-1.5 text-body-sm text-tx-heading focus:outline-none focus:border-brand-teal"
+                  />
+                  <select
+                    value={editFields.status ?? m.status ?? 'pending'}
+                    onChange={(e) => setEditFields((f) => ({ ...f, status: e.target.value }))}
+                    className="rounded-lg border border-border bg-white px-2 py-1.5 text-body-sm text-tx-heading"
+                  >
+                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <input
+                    type="date"
+                    value={editFields.due_date ?? m.due_date ?? ''}
+                    onChange={(e) => setEditFields((f) => ({ ...f, due_date: e.target.value }))}
+                    className="rounded-lg border border-border bg-white px-2 py-1.5 text-body-sm text-tx-heading"
+                  />
+                  <input
+                    type="url"
+                    placeholder="Proof URL"
+                    value={editFields.proof_url ?? m.proof_url ?? ''}
+                    onChange={(e) => setEditFields((f) => ({ ...f, proof_url: e.target.value }))}
+                    className="flex-1 min-w-[160px] rounded-lg border border-border bg-white px-3 py-1.5 text-body-sm text-tx-heading focus:outline-none focus:border-brand-teal"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Proof note"
+                    value={editFields.proof_note ?? m.proof_note ?? ''}
+                    onChange={(e) => setEditFields((f) => ({ ...f, proof_note: e.target.value }))}
+                    className="flex-1 min-w-[160px] rounded-lg border border-border bg-white px-3 py-1.5 text-body-sm text-tx-heading focus:outline-none focus:border-brand-teal"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSave(m.id)}
+                    className="rounded-lg bg-brand-teal px-3 py-1.5 text-body-sm font-semibold text-white"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingId(null); setEditFields({}); }}
+                    className="rounded-lg border border-border px-3 py-1.5 text-body-sm text-tx-muted"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body-sm font-semibold text-tx-heading truncate">{m.title || 'Untitled'}</p>
+                    <div className="mt-0.5 flex flex-wrap gap-2 items-center">
+                      <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                        m.status === 'approved' ? 'bg-brand-teal/10 text-brand-teal' :
+                        m.status === 'review' ? 'bg-orange-100 text-brand-orange' :
+                        m.status === 'in_progress' ? 'bg-blue-50 text-blue-600' :
+                        m.status === 'blocked' ? 'bg-red-100 text-red-600' :
+                        'bg-bg-subtle text-tx-muted'
+                      }`}>
+                        {m.status ?? 'pending'}
+                      </span>
+                      {m.due_date && <span className="text-[11px] text-tx-muted">Due {formatDate(m.due_date)}</span>}
+                      {m.proof_url && (
+                        <a href={m.proof_url} target="_blank" rel="noreferrer" className="text-[11px] text-brand-teal hover:underline">Proof →</a>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingId(m.id); setEditFields({}); }}
+                    className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-semibold text-tx-secondary hover:bg-white transition-colors"
+                  >
+                    Edit
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -383,6 +605,7 @@ function ProjectCard({
             <div className="mt-3 rounded-xl bg-white border border-border px-4 py-3">
               <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold mb-1">AI price insight</p>
               <p className="text-body font-semibold text-tx-heading">{priceRange}</p>
+              <AIConfidenceChart confidence={project.ai_price_confidence} />
               {project.ai_price_confidence && (
                 <p className="text-body-sm text-tx-muted capitalize mt-1">{project.ai_price_confidence} confidence</p>
               )}
@@ -432,11 +655,20 @@ function ProjectCard({
         <Button href={`/dashboard/report`} variant="secondary" size="sm">
           View Report
         </Button>
+        <Button href={`/dashboard/briefing?id=${project.id}`} variant="secondary" size="sm">
+          Client Briefing
+        </Button>
         <Button href={`/dashboard/proposal?id=${project.id}`} variant="secondary" size="sm" external>
           View Proposal
         </Button>
         <Button href={`/dashboard/contract?id=${project.id}`} variant="secondary" size="sm">
           View Contract
+        </Button>
+        <Button href={`/dashboard/handover?id=${project.id}`} variant="secondary" size="sm">
+          Handover
+        </Button>
+        <Button href={`/dashboard/scheduling?id=${project.id}`} variant="secondary" size="sm">
+          Scheduling
         </Button>
         <Button href={`/portal?id=${project.id}`} variant="secondary" size="sm" external>
           Client View
@@ -455,6 +687,13 @@ export function DashboardClient() {
   const [opsMetrics, setOpsMetrics] = useState<OpsMetrics | null>(null);
   const [opsMetricsError, setOpsMetricsError] = useState('');
   const [handoverPreview, setHandoverPreview] = useState<{ projectId: string; projectName: string; doc: string } | null>(null);
+  const [adminSearch, setAdminSearch] = useState('');
+  const [adminStatusFilter, setAdminStatusFilter] = useState<string>('all');
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
+  const [adminMilestones, setAdminMilestones] = useState<Record<string, MilestoneRecord[]>>({});
+  const [adminMilestonesLoading, setAdminMilestonesLoading] = useState<string | null>(null);
+  const [expandedNotesId, setExpandedNotesId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -738,6 +977,113 @@ export function DashboardClient() {
     }, new Map<string, MilestoneRecord[]>());
   }, [state, milestoneStatuses]);
 
+  const toggleProjectExpand = async (projectId: string) => {
+    if (expandedProjectId === projectId) {
+      setExpandedProjectId(null);
+      return;
+    }
+    setExpandedProjectId(projectId);
+    if (adminMilestones[projectId]) return; // already loaded
+    setAdminMilestonesLoading(projectId);
+    try {
+      const { createBrowserClient } = await import('@ftc/supabase');
+      const client = createBrowserClient();
+      const { data } = await client
+        .from('milestones')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('due_date', { ascending: true });
+      setAdminMilestones((prev) => ({ ...prev, [projectId]: (data as MilestoneRecord[] | null) ?? [] }));
+    } finally {
+      setAdminMilestonesLoading(null);
+    }
+  };
+
+  const handleAdminMilestoneUpdate = async (
+    projectId: string,
+    milestoneId: string,
+    patch: Partial<MilestoneRecord>,
+  ) => {
+    const { createBrowserClient } = await import('@ftc/supabase');
+    const client = createBrowserClient();
+    const { data, error } = await client
+      .from('milestones')
+      .update(patch)
+      .eq('id', milestoneId)
+      .select('*')
+      .single();
+    if (error || !data) return;
+    setAdminMilestones((prev) => ({
+      ...prev,
+      [projectId]: (prev[projectId] ?? []).map((m) =>
+        m.id === milestoneId ? { ...m, ...(data as MilestoneRecord) } : m,
+      ),
+    }));
+  };
+
+  const handleAdminMilestoneAdd = async (
+    projectId: string,
+    title: string,
+    dueDate: string,
+  ) => {
+    const { createBrowserClient } = await import('@ftc/supabase');
+    const client = createBrowserClient();
+    const { data, error } = await client
+      .from('milestones')
+      .insert({ project_id: projectId, title, due_date: dueDate || null, status: 'pending' })
+      .select('*')
+      .single();
+    if (error || !data) return;
+    setAdminMilestones((prev) => ({
+      ...prev,
+      [projectId]: [...(prev[projectId] ?? []), data as MilestoneRecord],
+    }));
+  };
+
+  const handleSaveNote = async (projectId: string) => {
+    const note = noteDraft[projectId] ?? '';
+    await handleAdminProjectPatch(projectId, { notes: note });
+  };
+
+  const toggleNotes = (project: ProjectRecord) => {
+    if (expandedNotesId === project.id) {
+      setExpandedNotesId(null);
+      return;
+    }
+    setExpandedNotesId(project.id);
+    setNoteDraft((prev) => ({ ...prev, [project.id]: project.notes ?? '' }));
+  };
+
+  const filteredAdminProjects = useMemo(() => {
+    let result = adminProjects;
+    if (adminSearch.trim()) {
+      const q = adminSearch.toLowerCase();
+      result = result.filter(
+        (p) =>
+          (p.client_name ?? '').toLowerCase().includes(q) ||
+          (p.client_email ?? '').toLowerCase().includes(q) ||
+          (p.email ?? '').toLowerCase().includes(q) ||
+          (p.domain ?? '').toLowerCase().includes(q) ||
+          (p.description ?? '').toLowerCase().includes(q),
+      );
+    }
+    if (adminStatusFilter !== 'all') {
+      if (adminStatusFilter === 'action') {
+        result = result.filter((p) => ['awaiting_approval', 'review'].includes(p.status?.toLowerCase() ?? ''));
+      } else {
+        result = result.filter((p) => normalizeProjectStatus(p.status) === adminStatusFilter);
+      }
+    }
+    return result;
+  }, [adminProjects, adminSearch, adminStatusFilter]);
+
+  const adminSummary = useMemo(() => {
+    const active = adminProjects.filter((p) => ['active', 'building', 'scoping'].includes(normalizeProjectStatus(p.status))).length;
+    const action = adminProjects.filter((p) => ['awaiting_approval', 'review'].includes(p.status?.toLowerCase() ?? '')).length;
+    const complete = adminProjects.filter((p) => ['complete', 'live'].includes(normalizeProjectStatus(p.status))).length;
+    return { total: adminProjects.length, active, action, complete };
+  }, [adminProjects]);
+
   if (state.phase === 'loading') {
     return (
       <div className="min-h-[70vh] bg-bg-offwhite flex items-center justify-center">
@@ -927,6 +1273,68 @@ export function DashboardClient() {
                 <h2 className="mt-4 text-h3 text-tx-heading">Operator project control</h2>
                 <p className="mt-2 text-body text-tx-secondary">Status editing, go-live updates, and handover generation for all tracked projects.</p>
               </div>
+              <div className="flex flex-wrap gap-2">
+                <Button href="/dashboard/actions" variant="secondary" size="sm">
+                  Open action center
+                </Button>
+                <Button href="/dashboard/launch-gate" variant="secondary" size="sm">
+                  Open launch gate
+                </Button>
+                <Button href="/dashboard/scheduling" variant="secondary" size="sm">
+                  Open scheduling
+                </Button>
+                <Button href="/dashboard/analytics" variant="secondary" size="sm">
+                  Open analytics
+                </Button>
+              </div>
+            </div>
+
+            {/* Summary strip */}
+            <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: 'Total', value: adminSummary.total, color: 'text-tx-heading' },
+                { label: 'Active', value: adminSummary.active, color: 'text-brand-teal' },
+                { label: 'Needs action', value: adminSummary.action, color: adminSummary.action > 0 ? 'text-brand-orange' : 'text-tx-heading' },
+                { label: 'Complete', value: adminSummary.complete, color: 'text-tx-muted' },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-xl border border-border bg-bg-offwhite px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-wider text-tx-muted">{stat.label}</p>
+                  <p className={`mt-1 text-h4 font-bold ${stat.color}`}>{stat.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Search + filter */}
+            <div className="mt-5 flex flex-col sm:flex-row gap-3">
+              <input
+                type="search"
+                placeholder="Search by name, email, or domain..."
+                value={adminSearch}
+                onChange={(e) => setAdminSearch(e.target.value)}
+                className="flex-1 rounded-lg border border-border bg-white px-4 py-2.5 text-body-sm text-tx-heading placeholder:text-tx-muted focus:outline-none focus:border-brand-teal"
+              />
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { key: 'all', label: 'All' },
+                  { key: 'action', label: 'Needs action' },
+                  { key: 'building', label: 'Active' },
+                  { key: 'live', label: 'Live' },
+                  { key: 'paused', label: 'Paused' },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setAdminStatusFilter(f.key)}
+                    className={`rounded-full px-3 py-1.5 text-body-sm font-semibold transition-colors ${
+                      adminStatusFilter === f.key
+                        ? 'bg-brand-teal text-white'
+                        : 'border border-border bg-white text-tx-secondary hover:bg-bg-subtle'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {adminError && (
@@ -936,7 +1344,7 @@ export function DashboardClient() {
             )}
 
             <div className="mt-6 overflow-x-auto">
-              <table className="w-full min-w-[980px] border-separate border-spacing-y-3">
+              <table className="w-full min-w-[1100px] border-separate border-spacing-y-3">
                 <thead>
                   <tr className="text-left text-body-sm text-tx-muted">
                     <th className="pb-2">Client</th>
@@ -945,12 +1353,21 @@ export function DashboardClient() {
                     <th className="pb-2">Tier</th>
                     <th className="pb-2">Status</th>
                     <th className="pb-2">Created</th>
+                    <th className="pb-2">Quick open</th>
                     <th className="pb-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {adminProjects.map((project) => (
-                    <tr key={project.id} className="bg-bg-offwhite">
+                  {filteredAdminProjects.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-body-sm text-tx-muted">
+                        No projects match your search or filter.
+                      </td>
+                    </tr>
+                  )}
+                  {filteredAdminProjects.map((project) => (
+                    <Fragment key={project.id}>
+                    <tr className="bg-bg-offwhite">
                       <td className="rounded-l-xl px-4 py-4 align-top">
                         <p className="text-body font-semibold text-tx-heading">{project.client_name || project.email || 'Untitled project'}</p>
                         {project.description && <p className="mt-1 text-body-sm text-tx-secondary max-w-xs line-clamp-2">{project.description}</p>}
@@ -971,8 +1388,52 @@ export function DashboardClient() {
                         </select>
                       </td>
                       <td className="px-4 py-4 align-top text-body-sm text-tx-secondary">{formatDate(project.created_at)}</td>
+                      <td className="px-4 py-4 align-top">
+                        <div className="flex flex-col gap-1.5">
+                          {[
+                            { label: 'Portal', href: `/portal?id=${project.id}` },
+                            { label: 'Briefing', href: `/dashboard/briefing?id=${project.id}` },
+                            { label: 'Report', href: `/dashboard/report?id=${project.id}` },
+                            { label: 'Contract', href: `/dashboard/contract?id=${project.id}` },
+                            { label: 'Handover', href: `/dashboard/handover?id=${project.id}` },
+                            { label: 'Analytics', href: `/dashboard/analytics` },
+                          ].map((link) => (
+                            <a
+                              key={link.label}
+                              href={link.href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11px] font-semibold text-brand-teal hover:underline underline-offset-2 leading-tight"
+                            >
+                              {link.label} →
+                            </a>
+                          ))}
+                        </div>
+                      </td>
                       <td className="rounded-r-xl px-4 py-4 align-top">
                         <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void toggleProjectExpand(project.id)}
+                            className={`rounded-lg border px-3 py-2 text-body-sm font-semibold transition-colors ${
+                              expandedProjectId === project.id
+                                ? 'border-brand-teal bg-brand-teal text-white'
+                                : 'border-border text-tx-secondary hover:bg-white'
+                            }`}
+                          >
+                            {expandedProjectId === project.id ? 'Hide milestones' : 'Milestones'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleNotes(project)}
+                            className={`rounded-lg border px-3 py-2 text-body-sm font-semibold transition-colors ${
+                              expandedNotesId === project.id
+                                ? 'border-brand-orange bg-brand-orange text-white'
+                                : 'border-border text-tx-secondary hover:bg-white'
+                            }`}
+                          >
+                            {expandedNotesId === project.id ? 'Hide notes' : 'Notes'}
+                          </button>
                           <button
                             type="button"
                             onClick={() => void handleMarkLive(project.id)}
@@ -993,6 +1454,53 @@ export function DashboardClient() {
                         {project.live_url && <p className="mt-2 text-[11px] text-tx-muted break-all">{project.live_url}</p>}
                       </td>
                     </tr>
+                    {expandedProjectId === project.id && (
+                      <tr key={`${project.id}-milestones`}>
+                        <td colSpan={8} className="px-2 pb-4">
+                          <AdminMilestonePanel
+                            projectId={project.id}
+                            milestones={adminMilestones[project.id] ?? []}
+                            loading={adminMilestonesLoading === project.id}
+                            onUpdate={(milestoneId, patch) => void handleAdminMilestoneUpdate(project.id, milestoneId, patch)}
+                            onAdd={(title, dueDate) => void handleAdminMilestoneAdd(project.id, title, dueDate)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                    {expandedNotesId === project.id && (
+                      <tr key={`${project.id}-notes`}>
+                        <td colSpan={8} className="px-2 pb-4">
+                          <div className="rounded-2xl border border-brand-orange/20 bg-white px-6 py-5">
+                            <p className="text-body-sm font-semibold text-tx-heading mb-3">Internal notes</p>
+                            <textarea
+                              rows={5}
+                              value={noteDraft[project.id] ?? ''}
+                              onChange={(e) => setNoteDraft((prev) => ({ ...prev, [project.id]: e.target.value }))}
+                              placeholder="Operator-only notes. Never shown to clients."
+                              className="w-full rounded-xl border border-border bg-bg-subtle px-4 py-3 text-body-sm text-tx-heading placeholder:text-tx-muted focus:outline-none focus:border-brand-orange resize-y"
+                            />
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => void handleSaveNote(project.id)}
+                                disabled={adminActionId === project.id}
+                                className="rounded-lg bg-brand-orange px-4 py-2 text-body-sm font-semibold text-white disabled:opacity-40"
+                              >
+                                Save notes
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setExpandedNotesId(null)}
+                                className="rounded-lg border border-border px-4 py-2 text-body-sm text-tx-muted hover:text-tx-heading"
+                              >
+                                Close
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

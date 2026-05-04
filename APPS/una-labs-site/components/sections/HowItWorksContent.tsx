@@ -163,9 +163,9 @@ type ModuleDemoItem = {
 
 // Paste Arcade share or embed links here. Share links are auto-normalized to /embed.
 const ARCADE_DEMO_URLS: Partial<Record<string, string>> = {
-  'Forms & Intake': '',
-  'Proposals': '',
-  'Billing & Payments': '',
+  'Forms & Intake': '/demo/intake',
+  'Proposals': '/demo/dispatch',
+  'Billing & Payments': '/demo/peacepad',
 };
 
 function toArcadeEmbedUrl(url?: string): string | undefined {
@@ -231,7 +231,7 @@ const FAQ = [  {
 ];
 
 function ModuleCard({ mod }: { mod: ModuleDemoItem }) {
-  const statusLabel = mod.arcadeUrl ? 'Video live' : mod.live ? 'Product live' : 'Coming soon';
+  const statusLabel = mod.arcadeUrl ? 'Walkthrough live' : mod.live ? 'Product live' : 'Coming soon';
   const statusClasses = mod.arcadeUrl
     ? 'bg-teal-100 text-teal-700'
     : mod.live
@@ -557,7 +557,7 @@ export function HowItWorksContent() {
             ))}
           </div>
           <p className="mt-8 text-center text-body-sm text-tx-muted">
-            Interactive walkthroughs dropping soon.{' '}
+            Live walkthroughs are embedded above.{' '}
             <Link href="/start" className="text-brand-teal hover:underline">Start Your Project</Link> to see it live.
           </p>
         </div>

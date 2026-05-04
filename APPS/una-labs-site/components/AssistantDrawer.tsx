@@ -59,6 +59,18 @@ const GLOBAL_INTENTS: Intent[] = [
       'The Launch Gate scores each project against readiness checks - milestone completion, no blocked milestones, proof on every completed milestone, a live URL recorded, and a handover document present. Projects that pass all checks show as Ready. Those with failing checks are flagged Blocked. Use it before marking any project live.',
   },
   {
+    id: 'scheduling-what',
+    question: 'What is Scheduling?',
+    answer:
+      'Scheduling shows upcoming milestone due dates and review checkpoints in one calendar-style queue. You can filter by this week, this month, or overdue items, then open briefing details or create a review call directly from each item.',
+  },
+  {
+    id: 'analytics-what',
+    question: 'What is the Analytics dashboard?',
+    answer:
+      'The Analytics dashboard displays real-time financial insights across your entire project portfolio. Track total revenue collected, monthly recurring revenue projections, active and completed project counts, cashflow forecast (collected vs. pending), collection health (on-time vs. overdue), pipeline conversion metrics, and revenue breakdown by service tier.',
+  },
+  {
     id: 'contact',
     question: 'Who do I contact?',
     answer:
@@ -79,6 +91,8 @@ const PAGE_CONTEXT: Record<string, string> = {
   '/start/summary': 'You are reviewing your intake summary.',
   '/dashboard/actions': 'You are viewing the operator action center - milestone reviews awaiting approval.',
   '/dashboard/launch-gate': 'You are viewing the operator launch gate - per-project readiness scoring.',
+  '/dashboard/scheduling': 'You are viewing scheduling for milestone reviews and upcoming checkpoints.',
+  '/dashboard/analytics': 'You are viewing the business intelligence dashboard with real-time financial metrics and revenue analytics.',
 };
 
 export function AssistantDrawer() {
