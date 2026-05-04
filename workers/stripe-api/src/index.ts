@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 
 export interface Env {
   STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
   STRIPE_PRICE_STARTER_MONTHLY: string;
   STRIPE_PRICE_STARTER_ANNUAL: string;
   STRIPE_PRICE_PROFESSIONAL_MONTHLY: string;
@@ -3436,6 +3437,91 @@ async function runActivation(
   };
 }
 
+async function handleStripeWebhook(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const sig = req.headers.get('stripe-signature');
+  if (!sig) {
+    return json({ error: 'Missing stripe-signature header.' }, 400, origin);
+  }
+
+  const rawBody = await req.text();
+  const stripe = getStripe(env);
+
+  let event: Stripe.Event;
+  try {
+    event = await stripe.webhooks.constructEventAsync(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    logEvent('stripe_webhook_signature_failed', {
+      error: err instanceof Error ? err.message : 'Signature verification failed.',
+    });
+    return json({ error: 'Webhook signature verification failed.' }, 400, origin);
+  }
+
+  logEvent('stripe_webhook_received', { type: event.type, id: event.id });
+
+  try {
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.payment_status === 'paid' || session.status === 'complete') {
+        await runActivation(env, stripe, session.id, {});
+      }
+    } else if (event.type === 'invoice.payment_succeeded') {
+      const stripeInvoice = event.data.object as Stripe.Invoice;
+      logEvent('stripe_invoice_payment_succeeded', {
+        stripeInvoiceId: stripeInvoice.id,
+        customerEmail: stripeInvoice.customer_email ?? '',
+        amountPaid: stripeInvoice.amount_paid,
+      });
+      // Trigger autocollect reconciliation to mark any matching items paid.
+      await reconcileAutoCollectPaidByStripeInvoice(env, stripeInvoice).catch((err) => {
+        logEvent('stripe_webhook_invoice_reconcile_error', {
+          stripeInvoiceId: stripeInvoice.id,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      });
+    }
+  } catch (err) {
+    logEvent('stripe_webhook_handler_error', {
+      type: event.type,
+      id: event.id,
+      error: err instanceof Error ? err.message : 'Unknown handler error.',
+    });
+    return json({ error: 'Webhook handler error.' }, 500, origin);
+  }
+
+  return json({ received: true }, 200, origin);
+}
+
+async function reconcileAutoCollectPaidByStripeInvoice(env: Env, stripeInvoice: Stripe.Invoice): Promise<void> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  // Stripe subscription invoices carry a subscription ID in metadata or on the invoice itself.
+  // Look up autocollect items that reference the same invoice number or metadata.
+  const stripeInvoiceNumber = stripeInvoice.number ?? '';
+  if (!stripeInvoiceNumber) return;
+
+  // Find the matching Supabase invoice by invoice_number derived from Stripe invoice number.
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/invoices?invoice_number=eq.${encodeURIComponent(stripeInvoiceNumber)}&select=id,status`,
+    {
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+    },
+  );
+  if (!res.ok) return;
+
+  const rows = await res.json() as Array<{ id: string; status?: string }>;
+  const unpaid = rows.filter((r) => (r.status ?? '').toLowerCase() !== 'paid');
+  if (!unpaid.length) return;
+
+  const ids = unpaid.map((r) => r.id);
+  await markAutoCollectItemsPaidByIds(env, ids, 'stripe_invoice_payment_succeeded');
+}
+
 async function handleActivateProject(req: Request, env: Env, origin: string | null): Promise<Response> {
   let body: Record<string, unknown>;
   try {
@@ -4948,6 +5034,8 @@ export default {
     }
 
     switch (url.pathname) {
+      case '/api/stripe-webhook':
+        return handleStripeWebhook(req, env, origin);
       case '/api/create-checkout-session':
         return handleCreateCheckoutSession(req, env, origin);
       case '/api/activate-project':
