@@ -170,11 +170,16 @@ export default function ProjectScopeReview() {
     }
   };
 
+  useEffect(() => {
+    if (isChangesModalOpen) {
+      changeRequestRef.current?.focus();
+    }
+  }, [isChangesModalOpen]);
+
   const openChangesModal = () => {
     setChangeRequest('');
     setChangesSubmitted(false);
     setIsChangesModalOpen(true);
-    setTimeout(() => changeRequestRef.current?.focus(), 50);
   };
 
   const closeChangesModal = () => {
@@ -185,6 +190,8 @@ export default function ProjectScopeReview() {
     if (!changeRequest.trim()) return;
     setIsSubmittingChanges(true);
     try {
+      // TODO: wire up to a real backend endpoint (e.g. ATEAM webhook or Supabase function)
+      // when the change-request API is ready. For now this is a graceful stub.
       await new Promise((resolve) => setTimeout(resolve, 600));
       setChangesSubmitted(true);
     } finally {
