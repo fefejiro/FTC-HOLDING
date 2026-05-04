@@ -21,12 +21,29 @@ import { explainSlang, type SlangExplanation } from '../api/slang';
 import { identifyByText, uploadListenSample } from '../api/listen';
 import { analyzeLyricLine } from '../api/cultural-analysis';
 import { useAudioSession } from '../audio/useAudioSession';
+import { useAudioRoute, type InputRoute } from '../audio/useAudioRoute';
 import type { CulturalAnalysisEntry, RitualController, RitualTrack, SyncedLyricLine } from '../state/ritual-state';
 
 const { colors } = ritualTokens;
 
 const CAPTURE_DURATION_MS = 5000;
 type Phase = 'idle' | 'listening' | 'matching' | 'result';
+
+function inferInputRoute(nameOrType: string): InputRoute {
+  const sample = nameOrType.toLowerCase();
+  if (sample.includes('bluetooth') || sample.includes('bt') || sample.includes('sco') || sample.includes('ble') || sample.includes('airpods')) return 'bluetooth_mic';
+  if (sample.includes('wired') || sample.includes('headset') || sample.includes('headphone') || sample.includes('usb')) return 'wired_mic';
+  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) return 'built_in_mic';
+  return 'unknown';
+}
+
+function scoreRecorderInput(name: string, type: string) {
+  const sample = `${name} ${type}`.toLowerCase();
+  if (sample.includes('bluetooth') || sample.includes('bt') || sample.includes('sco') || sample.includes('ble') || sample.includes('airpods')) return 3;
+  if (sample.includes('wired') || sample.includes('headset') || sample.includes('headphone') || sample.includes('usb')) return 2;
+  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) return 1;
+  return 0;
+}
 
 export function HomeScreen({ ritual }: { ritual: RitualController }) {
   const [phrase, setPhrase] = useState('');
@@ -39,7 +56,9 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [track, setTrack] = useState<RitualTrack | null>(null);
   const stopCaptureRef = useRef<(() => void) | null>(null);
+  const selectedInputRouteRef = useRef<InputRoute>('unknown');
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const audioRoute = useAudioRoute();
   useAudioSession();
 
   const [lineMeaning, setLineMeaning] = useState<{ line: string; entry: CulturalAnalysisEntry | null; loading: boolean; error: string | null } | null>(null);
@@ -131,8 +150,16 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
 
     setErrorMessage(null);
     setTrack(null);
+    if (audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones') {
+      console.warn('[home-listen] blocked: private listening route detected', audioRoute);
+      setErrorMessage('Private Bluetooth or wired playback cannot be matched reliably. Switch output to phone speaker or use lyric search.');
+      setPhase('idle');
+      return;
+    }
     setPhase('listening');
     ritual.startListening();
+    selectedInputRouteRef.current = 'unknown';
+    console.log('[home-listen] audio route snapshot', audioRoute);
 
     try {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
@@ -141,6 +168,24 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
       }
 
       await audioRecorder.prepareToRecordAsync();
+
+      try {
+        const inputs = audioRecorder.getAvailableInputs();
+        if (Array.isArray(inputs) && inputs.length > 0) {
+          console.log('[home-listen] available inputs:', inputs.map((i) => ({ name: i.name, type: i.type, uid: i.uid })));
+          const ranked = [...inputs].sort((a, b) => scoreRecorderInput(b.name, b.type) - scoreRecorderInput(a.name, a.type));
+          const preferred = ranked[0];
+          if (preferred?.uid && scoreRecorderInput(preferred.name, preferred.type) > 0) audioRecorder.setInput(preferred.uid);
+          const sel = await audioRecorder.getCurrentInput();
+          if (sel) {
+            selectedInputRouteRef.current = inferInputRoute(`${sel.name} ${sel.type}`);
+            console.log('[home-listen] selected input route:', sel.name, sel.type, selectedInputRouteRef.current);
+          }
+        }
+      } catch (inputErr: any) {
+        console.warn('[home-listen] input route selection failed:', inputErr?.message || String(inputErr));
+      }
+
       await audioRecorder.record();
 
       await new Promise((resolve) => {

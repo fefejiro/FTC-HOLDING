@@ -9,6 +9,7 @@ import { useAudioRoute } from '../audio/useAudioRoute';
 import { identifyByText, uploadListenSample } from '../api/listen';
 import { logRecognitionAttempt } from '../api/recognition-logger';
 import type { FailureReason, RitualTrack } from '../state/ritual-state';
+import type { InputRoute } from '../audio/useAudioRoute';
 import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
@@ -23,6 +24,56 @@ const LISTEN_MICROCOPY = [
   'One tap starts. Second tap cuts early.',
   'Play am loud. We go find am fast.',
 ];
+
+function inferInputRoute(nameOrType: string): InputRoute {
+  const sample = nameOrType.toLowerCase();
+  if (
+    sample.includes('bluetooth') ||
+    sample.includes('bt') ||
+    sample.includes('sco') ||
+    sample.includes('ble') ||
+    sample.includes('airpods')
+  ) {
+    return 'bluetooth_mic';
+  }
+  if (
+    sample.includes('wired') ||
+    sample.includes('headset') ||
+    sample.includes('headphone') ||
+    sample.includes('usb')
+  ) {
+    return 'wired_mic';
+  }
+  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) {
+    return 'built_in_mic';
+  }
+  return 'unknown';
+}
+
+function scoreRecorderInput(name: string, type: string) {
+  const sample = `${name} ${type}`.toLowerCase();
+  if (
+    sample.includes('bluetooth') ||
+    sample.includes('bt') ||
+    sample.includes('sco') ||
+    sample.includes('ble') ||
+    sample.includes('airpods')
+  ) {
+    return 3;
+  }
+  if (
+    sample.includes('wired') ||
+    sample.includes('headset') ||
+    sample.includes('headphone') ||
+    sample.includes('usb')
+  ) {
+    return 2;
+  }
+  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) {
+    return 1;
+  }
+  return 0;
+}
 
 type ListenScreenProps = {
   onRecognized: (track: RitualTrack) => void;
@@ -81,6 +132,9 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
     if (lowered.includes('timeout')) {
       return 'RECOGNITION_TIMEOUT';
     }
+    if (lowered.includes('no music found in audio') || lowered.includes('could not identify song')) {
+      return headphonesConnected ? 'HEADPHONES_PRIVATE_AUDIO' : 'NO_AUDIO_DETECTED';
+    }
     if (lowered.includes('no recording captured') || lowered.includes('no audio')) {
       return headphonesConnected ? 'HEADPHONES_PRIVATE_AUDIO' : 'NO_AUDIO_DETECTED';
     }
@@ -101,6 +155,13 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
       return;
     }
 
+    if (audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones') {
+      console.warn('[listen] blocked: private listening route detected', audioRoute);
+      setErrorMessage('Private Bluetooth or wired playback cannot be matched reliably. Switch output to phone speaker or use lyric search.');
+      setShowLyricInput(true);
+      return;
+    }
+
     setBusy(true);
     setErrorMessage(null);
     setQuietMode(false);
@@ -114,6 +175,7 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
     let confidence: number | null = null;
     let matchedSongId: string | null = null;
     let matchedOffsetMs: number | null = null;
+    let effectiveInputRoute: InputRoute = audioRoute.inputRoute;
 
     try {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
@@ -126,6 +188,35 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
       setSecondsLeft(Math.ceil(CAPTURE_DURATION_MS / 1000));
 
       await audioRecorder.prepareToRecordAsync();
+
+      // Prefer external microphone routes when available (Bluetooth/wired).
+      try {
+        const inputs = audioRecorder.getAvailableInputs();
+        if (Array.isArray(inputs) && inputs.length > 0) {
+          console.log(
+            '[listen] available inputs:',
+            inputs.map((input) => ({ name: input.name, type: input.type, uid: input.uid })),
+          );
+
+          const rankedInputs = [...inputs].sort(
+            (left, right) => scoreRecorderInput(right.name, right.type) - scoreRecorderInput(left.name, left.type),
+          );
+          const preferred = rankedInputs[0];
+
+          if (preferred?.uid && scoreRecorderInput(preferred.name, preferred.type) > 0) {
+            audioRecorder.setInput(preferred.uid);
+          }
+
+          const selectedInput = await audioRecorder.getCurrentInput();
+          if (selectedInput) {
+            effectiveInputRoute = inferInputRoute(`${selectedInput.name} ${selectedInput.type}`);
+            console.log('[listen] selected input route:', selectedInput.name, selectedInput.type, effectiveInputRoute);
+          }
+        }
+      } catch (inputErr: any) {
+        console.warn('[listen] input route selection failed:', inputErr?.message || String(inputErr));
+      }
+
       await audioRecorder.record();
       console.log('[listen] recorder started');
 
@@ -194,7 +285,7 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
       logRecognitionAttempt({
         recognitionSource: 'microphone',
         outputRoute: audioRoute.outputRoute,
-        inputRoute: audioRoute.inputRoute,
+        inputRoute: effectiveInputRoute,
         listenStartedAtMs,
         listenEndedAtMs,
         recognitionStartedAtMs,

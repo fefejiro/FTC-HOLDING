@@ -1,5 +1,4 @@
 import type { MatchSource, RecognitionSource, RitualTrack } from '../state/ritual-state';
-import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 
 const apiBaseUrl =
@@ -229,44 +228,51 @@ export async function uploadListenSample(
 
   const startedAt = Date.now();
 
-  // Use expo-file-system uploadAsync instead of fetch+FormData.
-  // RN's fetch FormData with `file://` uri is unreliable on Android
-  // (intermittent "Network request failed"). uploadAsync goes through
-  // native HTTP and handles the file stream correctly.
   const uploadUrl = `${apiBaseUrl}/api/listen`;
   console.log('[listen] upload begin', { url: uploadUrl, uri: recordingUri, durationMs });
-  let uploadResult: FileSystem.FileSystemUploadResult;
+
+  // Use fetch+FormData instead of expo-file-system/legacy uploadAsync.
+  // FileSystemLegacyModule creates its own OkHttp instance whose SSL trust
+  // manager does not honour the system certificate chain, causing
+  // CertPathValidatorException on Android even for valid Let's Encrypt certs.
+  // RN's built-in fetch goes through NetworkingModule / OkHttpClientProvider
+  // which correctly validates the full certificate chain.
+  const form = new FormData();
+  form.append('audio', {
+    uri: recordingUri,
+    type: 'audio/mp4',
+    name: 'recording.m4a',
+  } as unknown as Blob);
+  form.append('duration', String(durationMs));
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  let uploadResponse: Response;
   try {
-    const uploadPromise = FileSystem.uploadAsync(uploadUrl, recordingUri, {
-      httpMethod: 'POST',
-      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-      fieldName: 'audio',
-      mimeType: 'audio/mp4',
-      parameters: { duration: String(durationMs) },
+    uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      body: form,
+      signal: controller.signal,
     });
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('upload timeout after 30s')), 30000);
-    });
-    uploadResult = (await Promise.race([uploadPromise, timeoutPromise])) as FileSystem.FileSystemUploadResult;
+    clearTimeout(timeoutId);
     console.log('[listen] upload done', {
-      status: uploadResult.status,
-      bodyLen: uploadResult.body?.length ?? 0,
+      status: uploadResponse.status,
       elapsedMs: Date.now() - startedAt,
     });
   } catch (err: any) {
+    clearTimeout(timeoutId);
     console.warn('[listen] upload threw:', err?.message || String(err));
     throw new Error(`Listen upload failed: ${err?.message || String(err)}`);
   }
 
   let payload: ListenResponse;
   try {
-    payload = JSON.parse(uploadResult.body) as ListenResponse;
+    payload = (await uploadResponse.json()) as ListenResponse;
   } catch {
     throw new Error('Listen API returned non-JSON response');
   }
 
-  const ok = uploadResult.status >= 200 && uploadResult.status < 300;
-  if (!ok || !payload.success || !payload.recognizedTrack) {
+  if (!uploadResponse.ok || !payload.success || !payload.recognizedTrack) {
     throw new Error(payload.error || 'Could not identify song');
   }
 

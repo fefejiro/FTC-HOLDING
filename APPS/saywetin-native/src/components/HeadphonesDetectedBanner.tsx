@@ -15,7 +15,7 @@ export function HeadphonesDetectedBanner({ visible }: HeadphonesDetectedBannerPr
   return (
     <View style={styles.banner}>
       <Text style={styles.title}>Headphones detected</Text>
-      <Text style={styles.copy}>We will try to identify what is playing privately.</Text>
+      <Text style={styles.copy}>Microphone matching usually cannot hear private Bluetooth or wired playback from the same phone. Use lyrics or share the song link instead.</Text>
     </View>
   );
 }
