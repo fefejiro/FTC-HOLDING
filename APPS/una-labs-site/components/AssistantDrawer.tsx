@@ -109,6 +109,9 @@ export function AssistantDrawer() {
   const [activeNodeId, setActiveNodeId] = useState<string>('root');
   const [activeAnswer, setActiveAnswer] = useState<GuideOption | null>(null);
   const [history, setHistory] = useState<string[]>(['root']);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [preferredVoiceURI, setPreferredVoiceURI] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
@@ -140,6 +143,34 @@ export function AssistantDrawer() {
     setActiveNodeId(previousNode);
   }
 
+  function stopSpeech() {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+  }
+
+  function speak(text: string) {
+    if (!voiceEnabled || typeof window === 'undefined') return;
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+
+    const synth = window.speechSynthesis;
+    synth.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    const voices = synth.getVoices();
+    const selected = voices.find((v) => v.voiceURI === preferredVoiceURI)
+      ?? voices.find((v) => /^en(-|_)/i.test(v.lang))
+      ?? voices[0];
+
+    if (selected) {
+      utterance.voice = selected;
+    }
+
+    synth.speak(utterance);
+  }
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -159,10 +190,56 @@ export function AssistantDrawer() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      setVoiceSupported(false);
+      return;
+    }
+
+    const synth = window.speechSynthesis;
+    setVoiceSupported(true);
+
+    const setBestVoice = () => {
+      const voices = synth.getVoices();
+      if (!voices.length) return;
+      const best = voices.find((v) => /^en(-|_)/i.test(v.lang)) ?? voices[0];
+      setPreferredVoiceURI(best.voiceURI);
+    };
+
+    setBestVoice();
+    synth.onvoiceschanged = setBestVoice;
+
+    return () => {
+      synth.onvoiceschanged = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open || !voiceEnabled) {
+      stopSpeech();
+      return;
+    }
+
+    if (activeAnswer) {
+      const cta = activeAnswer.ctaLabel ? ` You can continue with ${activeAnswer.ctaLabel}.` : '';
+      speak(`${activeAnswer.label}. ${activeAnswer.answer ?? ''}${cta}`.trim());
+      return;
+    }
+
+    const options = activeNode.options
+      .slice(0, 5)
+      .map((option, idx) => `Option ${idx + 1}: ${option.label}.`)
+      .join(' ');
+
+    speak(`${activeNode.title}. ${activeNode.intro}. ${options}`.trim());
+  }, [open, activeNodeId, activeAnswer, activeNode, voiceEnabled, preferredVoiceURI]);
+
   // Close on outside click
   useEffect(() => {
     function handleClick(event: MouseEvent) {
       if (drawerRef.current && !drawerRef.current.contains(event.target as Node)) {
+        stopSpeech();
         setOpen(false);
         setActiveNodeId('root');
         setActiveAnswer(null);
@@ -177,6 +254,7 @@ export function AssistantDrawer() {
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        stopSpeech();
         setOpen(false);
         setActiveNodeId('root');
         setActiveAnswer(null);
@@ -192,7 +270,23 @@ export function AssistantDrawer() {
       {open && (
         <div className="w-96 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-white shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
           <div className="px-5 py-4 border-b border-border bg-bg-subtle">
-            <p className="text-body-sm font-semibold text-tx-heading">Una Labs site guide</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-body-sm font-semibold text-tx-heading">Una Labs site guide</p>
+              {voiceSupported && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (voiceEnabled) {
+                      stopSpeech();
+                    }
+                    setVoiceEnabled((prev) => !prev);
+                  }}
+                  className="rounded-md border border-border bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-tx-secondary hover:text-brand-teal"
+                >
+                  Voice {voiceEnabled ? 'On' : 'Off'}
+                </button>
+              )}
+            </div>
             {pageContext && <p className="mt-0.5 text-[11px] text-tx-muted">{pageContext}</p>}
             {pageHint && <p className="mt-1 text-[11px] text-brand-teal">{pageHint}</p>}
           </div>
@@ -275,7 +369,11 @@ export function AssistantDrawer() {
         type="button"
         aria-label={open ? 'Close site guide' : 'Open site guide'}
         onClick={() => {
-          setOpen((prev) => !prev);
+          const nextOpen = !open;
+          if (!nextOpen) {
+            stopSpeech();
+          }
+          setOpen(nextOpen);
           setActiveNodeId('root');
           setActiveAnswer(null);
           setHistory(['root']);

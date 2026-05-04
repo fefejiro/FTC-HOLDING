@@ -162,6 +162,14 @@ type ModuleDemoItem = {
   walkthroughHref?: string;
 };
 
+type WalkthroughPlayerItem = {
+  id: string;
+  label: string;
+  url: string;
+  external: boolean;
+  note: string;
+};
+
 function toModuleSlug(value: string): string {
   return value
     .toLowerCase()
@@ -189,6 +197,30 @@ const MODULE_DEMOS: ModuleDemoItem[] = MODULE_DEMOS_BASE.map((mod) => ({
   ...mod,
   slug: mod.slug || toModuleSlug(mod.label),
 }));
+
+const WALKTHROUGH_PLAYER_ITEMS: WalkthroughPlayerItem[] = [
+  {
+    id: 'intake',
+    label: 'Intake walkthrough',
+    url: '/start',
+    external: false,
+    note: 'Live intake flow in production',
+  },
+  {
+    id: 'dispatch',
+    label: 'Dispatch walkthrough',
+    url: 'https://dispatch.unalabs.cloud',
+    external: true,
+    note: 'Live Dispatch workflow in production',
+  },
+  {
+    id: 'peacepad',
+    label: 'Peacepad walkthrough',
+    url: 'https://peacepad.ca',
+    external: true,
+    note: 'Live Peacepad workflow in production',
+  },
+];
 
 const FAQ = [  {
     q: 'Do I need to know exactly what I want before submitting?',
@@ -256,7 +288,7 @@ function ModuleCard({ mod, highlighted }: { mod: ModuleDemoItem; highlighted: bo
               rel="noreferrer"
               className="text-[11px] font-semibold uppercase tracking-wider text-tx-secondary hover:text-brand-teal"
             >
-              Watch walkthrough ↗
+              Open walkthrough ↗
             </Link>
           )}
           {!mod.live && (
@@ -278,11 +310,13 @@ export function HowItWorksContent() {
   const [activeStep, setActiveStep] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [highlightedModuleSlug, setHighlightedModuleSlug] = useState<string | null>(null);
+  const [activeWalkthroughId, setActiveWalkthroughId] = useState<string>(WALKTHROUGH_PLAYER_ITEMS[0].id);
   const proofStudies = Object.values(caseStudies);
   const walkthroughCount = MODULE_DEMOS.filter((mod) => Boolean(mod.walkthroughHref)).length;
   const moduleMap = useMemo(() => {
     return new Map(MODULE_DEMOS.map((mod) => [mod.slug, mod]));
   }, []);
+  const activeWalkthrough = WALKTHROUGH_PLAYER_ITEMS.find((item) => item.id === activeWalkthroughId) ?? WALKTHROUGH_PLAYER_ITEMS[0];
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -481,6 +515,69 @@ export function HowItWorksContent() {
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="bg-white border-y border-border py-16">
+        <div className="max-w-content mx-auto px-6">
+          <div className="text-center mb-8">
+            <Badge variant="teal">Walkthrough video</Badge>
+            <h2 className="mt-4 text-h2 text-tx-heading">Watch a real product walkthrough</h2>
+            <p className="mt-3 text-body text-tx-secondary max-w-2xl mx-auto">
+              Play a live walkthrough below. This is a production workflow, not a static image.
+            </p>
+          </div>
+
+          <div className="mb-5 flex flex-wrap justify-center gap-2">
+            {WALKTHROUGH_PLAYER_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveWalkthroughId(item.id)}
+                className={[
+                  'rounded-full border px-4 py-2 text-body-sm font-semibold transition-colors',
+                  item.id === activeWalkthroughId
+                    ? 'border-brand-teal bg-brand-teal text-white'
+                    : 'border-border bg-bg-offwhite text-tx-heading hover:border-brand-teal/40',
+                ].join(' ')}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-3xl border border-border bg-white shadow-sm overflow-hidden">
+            <div className="bg-bg-subtle border-b border-border px-5 py-3 flex items-center gap-3">
+              <div className="flex gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-red-300" />
+                <span className="w-3 h-3 rounded-full bg-yellow-300" />
+                <span className="w-3 h-3 rounded-full bg-green-300" />
+              </div>
+              <span className="text-body-sm text-tx-muted font-mono truncate">
+                {activeWalkthrough.external ? activeWalkthrough.url : `unalabs.cloud${activeWalkthrough.url}`}
+              </span>
+              {activeWalkthrough.external && (
+                <a
+                  href={activeWalkthrough.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto text-[11px] font-semibold text-brand-teal hover:underline"
+                >
+                  Open full screen ↗
+                </a>
+              )}
+            </div>
+            <div className="relative w-full" style={{ height: '560px' }}>
+              <iframe
+                src={activeWalkthrough.url}
+                title={activeWalkthrough.label}
+                className="w-full h-full border-0"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+              />
+            </div>
+          </div>
+
+          <p className="mt-4 text-center text-body-sm text-tx-muted">{activeWalkthrough.note}</p>
         </div>
       </section>
 
