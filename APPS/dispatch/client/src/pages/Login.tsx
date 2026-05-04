@@ -42,12 +42,12 @@ export default function LoginPage() {
       activeRole={mode}
       icon={<Siren className="w-7 h-7" />}
       eyebrow="Ottawa roadside operations"
-      title="Dispatch sign in"
-      subtitle="One sign-in for the Dispatch product. Field operators handle live jobs and oversight reviews the live operation after access is confirmed."
+      title="Tow Signal sign in"
+      subtitle="One sign-in for Tow Signal. Field operators handle live jobs and oversight reviews the live operation after access is confirmed."
       showRoleSwitch={false}
       footer={
         <div className="text-xs leading-relaxed text-slate-500">
-          Customer help requests stay at the Dispatch request form. Team access opens the right workspace after sign-in.
+          Customer help requests stay at the Tow Signal request form. Team access opens the right workspace after sign-in.
         </div>
       }
     >
