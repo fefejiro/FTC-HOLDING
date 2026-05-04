@@ -1,7 +1,7 @@
 {
-  "name": "Dispatch — Ottawa Roadside",
-  "short_name": "Dispatch",
-  "description": "Dispatch for Ottawa roadside assistance — gas delivery, lockouts, jump starts, tire changes, and fast operator routing.",
+  "name": "Tow Signal — Ottawa Roadside",
+  "short_name": "Tow Signal",
+  "description": "Tow Signal for Ottawa roadside assistance — gas delivery, lockouts, jump starts, tire changes, and fast operator routing.",
   "display": "standalone",
   "background_color": "#0a0f1a",
   "theme_color": "#f97316",
