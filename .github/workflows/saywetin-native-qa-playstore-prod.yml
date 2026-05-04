@@ -82,6 +82,7 @@ jobs:
           profile: pixel_7
           emulator-boot-timeout: 900
           script: |
+            cd APPS/saywetin-native
             ./android/gradlew :app:assembleRelease :app:installRelease --no-daemon -p android
             adb logcat -c
             adb shell am start -n com.saywetin.app/.MainActivity
