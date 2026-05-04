@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Animated, Easing, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 type BrandOrbVariant = 'hero' | 'listen' | 'compact' | 'appIcon';
 type BrandOrbPhase = 'idle' | 'listening' | 'matching';
@@ -148,19 +148,32 @@ export function BrandOrb({
           <View style={[styles.highlight, { width: Math.round(inner * 0.58), left: Math.round(inner * 0.08) }]} />
           <View style={[styles.edgeBloom, { width: Math.round(inner * 0.5), right: Math.round(inner * 0.1) }]} />
 
+          {/* SW monogram — S in front, W anchoring, legible at all sizes */}
           <View style={styles.glyphWrap}>
-            <Animated.Image
-              source={require('../../assets/icon.png')}
-              resizeMode="contain"
-              style={[
-                styles.icon,
-                {
-                  width: iconSize,
-                  height: iconSize,
-                  transform: [{ rotate: spinRotate }],
-                },
-              ]}
-            />
+            <View style={[styles.swMark, { width: iconSize, height: iconSize }]}>
+              {/* W — wide base anchor, rendered first (behind) */}
+              <Text
+                style={[
+                  styles.swLetter,
+                  styles.swW,
+                  { fontSize: Math.round(iconSize * 0.52), lineHeight: Math.round(iconSize * 0.58) },
+                ]}
+                allowFontScaling={false}
+              >
+                W
+              </Text>
+              {/* S — sits centered, slightly elevated, rendered on top */}
+              <Text
+                style={[
+                  styles.swLetter,
+                  styles.swS,
+                  { fontSize: Math.round(iconSize * 0.62), lineHeight: Math.round(iconSize * 0.68) },
+                ]}
+                allowFontScaling={false}
+              >
+                S
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -226,7 +239,28 @@ const styles = StyleSheet.create({
     width: '72%',
     height: '72%',
   },
-  icon: {
-    opacity: 0.96,
+  swMark: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  swLetter: {
+    position: 'absolute',
+    fontWeight: '800',
+    letterSpacing: -1,
+    textAlign: 'center',
+  },
+  // W rendered behind: slightly lower, wider visual weight, dimmer
+  swW: {
+    color: 'rgba(207,186,255,0.55)',
+    top: '38%',
+  },
+  // S rendered in front: centered, bright, dominant
+  swS: {
+    color: '#F0E8FF',
+    top: '10%',
+    textShadowColor: 'rgba(180,140,255,0.9)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
 });

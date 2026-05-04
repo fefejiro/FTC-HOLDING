@@ -23,7 +23,8 @@ class AudioRouteModule(reactContext: ReactApplicationContext) : ReactContextBase
         putString("outputRoute", outputRoute)
         putString("inputRoute", inputRoute)
         putBoolean("isPrivateListening", outputRoute == "bluetooth" || outputRoute == "wired_headphones")
-        putBoolean("canAttemptInternalCapture", false)
+        // Built-in mic is always physically present — ambient capture is always possible
+        putBoolean("canAttemptInternalCapture", true)
         putString("platform", "android")
       }
       promise.resolve(result)

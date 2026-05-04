@@ -39,9 +39,11 @@ function inferInputRoute(nameOrType: string): InputRoute {
 
 function scoreRecorderInput(name: string, type: string) {
   const sample = `${name} ${type}`.toLowerCase();
-  if (sample.includes('bluetooth') || sample.includes('bt') || sample.includes('sco') || sample.includes('ble') || sample.includes('airpods')) return 3;
+  // Built-in mic is best for ambient music capture — positioned to hear room audio.
+  // BT mic is a headset mic near the mouth — worst for recognizing playback.
+  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) return 3;
   if (sample.includes('wired') || sample.includes('headset') || sample.includes('headphone') || sample.includes('usb')) return 2;
-  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) return 1;
+  if (sample.includes('bluetooth') || sample.includes('bt') || sample.includes('sco') || sample.includes('ble') || sample.includes('airpods')) return 1;
   return 0;
 }
 
@@ -55,6 +57,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [track, setTrack] = useState<RitualTrack | null>(null);
+  const [bypassPrivateGuard, setBypassPrivateGuard] = useState(false);
   const stopCaptureRef = useRef<(() => void) | null>(null);
   const selectedInputRouteRef = useRef<InputRoute>('unknown');
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -141,7 +144,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
     }
   };
 
-  const startListening = async () => {
+  const startListening = async (forceBypass = false) => {
     if (phase === 'listening') {
       stopCaptureEarly();
       return;
@@ -150,11 +153,16 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
 
     setErrorMessage(null);
     setTrack(null);
-    if (audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones') {
-      console.warn('[home-listen] blocked: private listening route detected', audioRoute);
-      setErrorMessage('Private Bluetooth or wired playback cannot be matched reliably. Switch output to phone speaker or use lyric search.');
+    const isPrivateRoute = audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones';
+    if (isPrivateRoute && !forceBypass && !bypassPrivateGuard) {
+      console.warn('[home-listen] advisory: private listening route detected', audioRoute);
+      setErrorMessage('Headphones detected. The phone mic may not hear private playback. Switch to phone speaker for best results, or tap below to try anyway.');
       setPhase('idle');
       return;
+    }
+    if (isPrivateRoute) {
+      setBypassPrivateGuard(true);
+      console.log('[home-listen] proceeding with built-in mic bypass', audioRoute);
     }
     setPhase('listening');
     ritual.startListening();
@@ -271,6 +279,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
     setTrack(null);
     setPhase('idle');
     setErrorMessage(null);
+    setBypassPrivateGuard(false);
     ritual.reset();
   };
 
@@ -395,7 +404,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
           <Text style={styles.tapTitle}>SayWetin</Text>
           <Text style={styles.tapSubtitle}>{orbLabel}</Text>
 
-          <Pressable style={styles.orbTap} onPress={startListening} disabled={phase === 'matching'}>
+          <Pressable style={styles.orbTap} onPress={() => startListening()} disabled={phase === 'matching'}>
             {pulses.map((v, i) => (
               <Animated.View
                 key={`pulse-${i}`}
@@ -435,7 +444,16 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
             </Pressable>
           ) : null}
 
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+          {errorMessage ? (
+            <View style={styles.errorBlock}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+              {(audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones') && !bypassPrivateGuard ? (
+                <Pressable style={styles.tryAnywayBtn} onPress={() => startListening(true)}>
+                  <Text style={styles.tryAnywayText}>Try with phone mic</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         {phase === 'result' && track ? (
@@ -634,6 +652,20 @@ const styles = StyleSheet.create({
   tapTitle: { color: colors.text, fontSize: 34, fontWeight: '700', letterSpacing: 0.4 },
   tapSubtitle: { color: colors.textMuted, fontSize: 14, fontWeight: '500', letterSpacing: 0.25, marginBottom: 8 },
   errorText: { marginTop: 10, color: colors.amber, fontSize: 13, textAlign: 'center', maxWidth: 320 },
+  errorBlock: { marginTop: 10, alignItems: 'center', gap: 8, maxWidth: 320 },
+  tryAnywayBtn: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+    backgroundColor: colors.violetWash,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+  },
+  tryAnywayText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
 
   orbTap: { width: ORB_SIZE + 60, height: ORB_SIZE + 60, justifyContent: 'center', alignItems: 'center' },
 

@@ -52,13 +52,9 @@ function inferInputRoute(nameOrType: string): InputRoute {
 
 function scoreRecorderInput(name: string, type: string) {
   const sample = `${name} ${type}`.toLowerCase();
-  if (
-    sample.includes('bluetooth') ||
-    sample.includes('bt') ||
-    sample.includes('sco') ||
-    sample.includes('ble') ||
-    sample.includes('airpods')
-  ) {
+  // Built-in mic scores highest for ambient capture — it hears room audio.
+  // BT headset mic is near the mouth, worst for recognizing music playing around you.
+  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) {
     return 3;
   }
   if (
@@ -69,7 +65,13 @@ function scoreRecorderInput(name: string, type: string) {
   ) {
     return 2;
   }
-  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) {
+  if (
+    sample.includes('bluetooth') ||
+    sample.includes('bt') ||
+    sample.includes('sco') ||
+    sample.includes('ble') ||
+    sample.includes('airpods')
+  ) {
     return 1;
   }
   return 0;
@@ -86,10 +88,13 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
   const [busy, setBusy] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lastFailureReason, setLastFailureReason] = useState<FailureReason | null>(null);
   const [showLyricInput, setShowLyricInput] = useState(false);
   const [quietMode, setQuietMode] = useState(false);
   const [lyricQuery, setLyricQuery] = useState('');
   const [lyricBusy, setLyricBusy] = useState(false);
+  const [searchMode, setSearchMode] = useState<'lyrics' | 'song' | 'artist' | 'slang' | 'vibe'>('lyrics');
+  const [bypassPrivateGuard, setBypassPrivateGuard] = useState(false);
   const [microcopy] = useState(
     () => LISTEN_MICROCOPY[Math.floor(Math.random() * LISTEN_MICROCOPY.length)],
   );
@@ -149,17 +154,22 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
     }
   };
 
-  const startRecognition = async () => {
+  const startRecognition = async (forceBypass = false) => {
     if (busy) {
       stopCaptureEarly();
       return;
     }
 
-    if (audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones') {
-      console.warn('[listen] blocked: private listening route detected', audioRoute);
-      setErrorMessage('Private Bluetooth or wired playback cannot be matched reliably. Switch output to phone speaker or use lyric search.');
-      setShowLyricInput(true);
+    const isPrivateRoute = audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones';
+    if (isPrivateRoute && !forceBypass && !bypassPrivateGuard) {
+      console.warn('[listen] advisory: private listening route detected', audioRoute);
+      setErrorMessage('Headphone audio may be private. Your music may be playing through headphones where the microphone cannot hear it. Try the phone mic anyway, use Headphone Mode, or search lyrics.');
+      setPhase('idle');
       return;
+    }
+    if (isPrivateRoute) {
+      setBypassPrivateGuard(true);
+      console.log('[listen] proceeding with built-in mic bypass', audioRoute);
     }
 
     setBusy(true);
@@ -268,6 +278,7 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
       console.warn('[listen] recognition failed:', error?.message, error?.stack);
       setPhase('idle');
       setSecondsLeft(0);
+      setLastFailureReason(failureReason);
       setErrorMessage(error?.message || 'Could not identify song. Try again.');
       setShowLyricInput(true);
       if (failureReason === 'HEADPHONES_PRIVATE_AUDIO' || failureReason === 'NO_AUDIO_DETECTED') {
@@ -365,7 +376,36 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
     ? 'Tightening rings and fingerprint lock in motion.'
     : inListening
       ? `Capturing audio — ${secondsLeft}s left. Tap orb to stop early.`
-      : microcopy;
+      : 'Tap to listen';
+
+  // Derive smart failure copy from last failure reason
+  const diagnosticTitle =
+    lastFailureReason === 'HEADPHONES_PRIVATE_AUDIO'
+      ? 'Headphone audio may be private.'
+      : lastFailureReason === 'NO_AUDIO_DETECTED'
+        ? 'I could not hear enough music.'
+        : lastFailureReason === 'LOW_CONFIDENCE'
+          ? 'Possible match was too weak.'
+          : lastFailureReason === 'MICROPHONE_PERMISSION_MISSING'
+            ? 'Microphone permission needed.'
+            : lastFailureReason === 'NO_NETWORK'
+              ? 'No network connection.'
+              : errorMessage
+                ? 'Could not identify the song.'
+                : null;
+
+  const diagnosticBody =
+    lastFailureReason === 'HEADPHONES_PRIVATE_AUDIO'
+      ? 'Your music may be playing through headphones where the microphone cannot hear it. Try Headphone Mode, share a song link, or search lyrics.'
+      : lastFailureReason === 'NO_AUDIO_DETECTED'
+        ? 'Move closer to the speaker, raise the volume, or try lyric search.'
+        : lastFailureReason === 'LOW_CONFIDENCE'
+          ? 'Try again closer to the sound, or search by lyric, artist, or vibe.'
+          : lastFailureReason === 'MICROPHONE_PERMISSION_MISSING'
+            ? 'Allow microphone access so SayWetin can listen.'
+            : lastFailureReason === 'NO_NETWORK'
+              ? 'Check your connection and try again.'
+              : errorMessage ?? null;
 
   return (
     <FadeInView duration={inMatching ? 220 : 180}>
@@ -378,7 +418,10 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
           SayWetin
         </Text>
         <Text style={styles.subtitle}>{subtitleText}</Text>
-        <HeadphonesDetectedBanner visible={headphonesConnected || quietMode} />
+        <HeadphonesDetectedBanner
+          visible={headphonesConnected || quietMode}
+          onTryAnyway={headphonesConnected ? () => startRecognition(true) : undefined}
+        />
 
         <OrbListener phase={phase} onPress={inMatching ? undefined : startRecognition} />
 
@@ -389,7 +432,17 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
                 ? `Listening… ${secondsLeft}s — tap orb to stop early`
                 : 'Tap orb to start match'}
             </Text>
-            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+            {diagnosticTitle && !quietMode ? (
+              <View style={styles.diagCard}>
+                <Text style={styles.diagTitle}>{diagnosticTitle}</Text>
+                {diagnosticBody ? <Text style={styles.diagBody}>{diagnosticBody}</Text> : null}
+                {lastFailureReason === 'HEADPHONES_PRIVATE_AUDIO' && !bypassPrivateGuard ? (
+                  <Pressable style={styles.diagAction} onPress={() => startRecognition(true)}>
+                    <Text style={styles.diagActionText}>Try with phone mic</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
             {quietMode ? (
               <View style={styles.quietCard}>
                 <Text style={styles.quietTitle}>Could not hear the headphone audio</Text>
@@ -411,33 +464,75 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
                   <Pressable style={styles.quietAction} onPress={() => setShowLyricInput(true)}>
                     <Text style={styles.quietActionText}>Paste a line</Text>
                   </Pressable>
-                  <Pressable style={styles.quietAction} onPress={startRecognition}>
+                  <Pressable style={styles.quietAction} onPress={() => { setBypassPrivateGuard(false); void startRecognition(true); }}>
                     <Text style={styles.quietActionText}>Try microphone again</Text>
                   </Pressable>
                 </View>
               </View>
             ) : null}
             {showLyricInput ? (
-              <View style={styles.lyricBox}>
-                <Text style={styles.lyricHint}>Paste a lyric, phrase, or song title</Text>
+              <View style={styles.wetinSheet}>
+                <Text style={styles.wetinTitle}>Wetin be this?</Text>
+                <Text style={styles.wetinSub}>
+                  Paste a lyric, type a song, describe a vibe, or ask what a phrase means.
+                </Text>
+                {/* Mode chips */}
+                <View style={styles.chipRow}>
+                  {(['lyrics', 'song', 'artist', 'slang', 'vibe'] as const).map((m) => (
+                    <Pressable
+                      key={m}
+                      style={[styles.chip, searchMode === m && styles.chipActive]}
+                      onPress={() => setSearchMode(m)}
+                    >
+                      <Text style={[styles.chipText, searchMode === m && styles.chipTextActive]}>
+                        {m.charAt(0).toUpperCase() + m.slice(1)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
                 <TextInput
                   value={lyricQuery}
                   onChangeText={setLyricQuery}
-                  placeholder="e.g. dem dey vibe for ginger street"
+                  placeholder={
+                    searchMode === 'lyrics'
+                      ? 'that Burna Boy destiny line…'
+                      : searchMode === 'song'
+                        ? 'Asake lonely at the top'
+                        : searchMode === 'artist'
+                          ? 'Afrobeats churchy street anthem'
+                          : searchMode === 'slang'
+                            ? "what does 'omo ope' mean?"
+                            : 'confident confrontational street energy'
+                  }
                   placeholderTextColor={colors.textMuted}
                   style={styles.lyricInput}
                   multiline
                   editable={!lyricBusy}
                 />
-                <Pressable
-                  onPress={submitLyric}
-                  style={[styles.lyricButton, lyricBusy && styles.lyricButtonDisabled]}
-                  disabled={lyricBusy}
-                >
-                  <Text style={styles.lyricButtonText}>
-                    {lyricBusy ? 'Matching lyric...' : 'Match by lyric'}
-                  </Text>
-                </Pressable>
+                <View style={styles.wetinActions}>
+                  <Pressable
+                    onPress={submitLyric}
+                    style={[styles.wetinBtn, styles.wetinBtnPrimary, lyricBusy && styles.lyricButtonDisabled]}
+                    disabled={lyricBusy}
+                  >
+                    <Text style={styles.wetinBtnPrimaryText}>
+                      {lyricBusy ? 'Decoding…' : 'Decode'}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={submitLyric}
+                    style={[styles.wetinBtn, lyricBusy && styles.lyricButtonDisabled]}
+                    disabled={lyricBusy}
+                  >
+                    <Text style={styles.wetinBtnText}>Match song</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={onOpenVibeSearch}
+                    style={styles.wetinBtn}
+                  >
+                    <Text style={styles.wetinBtnText}>Search lyrics</Text>
+                  </Pressable>
+                </View>
               </View>
             ) : null}
           </>
@@ -545,6 +640,116 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     gap: 8,
+  },
+  diagCard: {
+    marginTop: 8,
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,76,0.28)',
+    backgroundColor: 'rgba(232,184,76,0.07)',
+    padding: 14,
+    gap: 6,
+  },
+  diagTitle: {
+    color: colors.amber,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  diagBody: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  diagAction: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+    backgroundColor: colors.violetWash,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  diagActionText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  wetinSheet: {
+    marginTop: 14,
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    padding: 16,
+    gap: 10,
+  },
+  wetinTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  wetinSub: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  chip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  chipActive: {
+    backgroundColor: colors.violet,
+    borderColor: colors.violet,
+  },
+  chipText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: '#fff',
+  },
+  wetinActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
+  },
+  wetinBtn: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+    backgroundColor: colors.violetWash,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  wetinBtnPrimary: {
+    backgroundColor: colors.violet,
+    borderColor: colors.violet,
+  },
+  wetinBtnPrimaryText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  wetinBtnText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
   },
   lyricHint: {
     color: colors.textMuted,

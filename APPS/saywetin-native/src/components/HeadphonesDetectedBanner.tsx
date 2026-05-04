@@ -1,13 +1,14 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
 
 type HeadphonesDetectedBannerProps = {
   visible: boolean;
+  onTryAnyway?: () => void;
 };
 
-export function HeadphonesDetectedBanner({ visible }: HeadphonesDetectedBannerProps) {
+export function HeadphonesDetectedBanner({ visible, onTryAnyway }: HeadphonesDetectedBannerProps) {
   if (!visible) {
     return null;
   }
@@ -15,7 +16,12 @@ export function HeadphonesDetectedBanner({ visible }: HeadphonesDetectedBannerPr
   return (
     <View style={styles.banner}>
       <Text style={styles.title}>Headphones detected</Text>
-      <Text style={styles.copy}>Microphone matching usually cannot hear private Bluetooth or wired playback from the same phone. Use lyrics or share the song link instead.</Text>
+      <Text style={styles.copy}>Audio is routing to your headphones — the phone mic may not hear it. Try switching to phone speaker, or tap below to attempt with phone mic.</Text>
+      {onTryAnyway ? (
+        <Pressable style={styles.tryBtn} onPress={onTryAnyway}>
+          <Text style={styles.tryBtnText}>Try with phone mic</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -30,7 +36,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.violetWash,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    gap: 2,
+    gap: 6,
   },
   title: {
     color: colors.violetSoft,
@@ -42,5 +48,19 @@ const styles = StyleSheet.create({
   copy: {
     color: colors.text,
     fontSize: 13,
+  },
+  tryBtn: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  tryBtnText: {
+    color: colors.violetSoft,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
