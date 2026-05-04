@@ -1,4 +1,4 @@
-name: SayWetin Native — PlayStore Prod
+﻿name: SayWetin Native â€” PlayStore Prod
 
 on:
   push:
@@ -76,13 +76,13 @@ jobs:
           SAYWETIN_KEY_ALIAS: ${{ secrets.SAYWETIN_KEY_ALIAS }}
           SAYWETIN_KEY_PASSWORD: ${{ secrets.SAYWETIN_KEY_PASSWORD }}
         with:
-            api-level: 33
-            target: default
+          api-level: 33
+          target: default
           arch: x86_64
           profile: pixel_7
-            disable-animations: true
+          disable-animations: true
           emulator-boot-timeout: 900
-            emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
           script: |
             APP_DIR="$GITHUB_WORKSPACE/APPS/saywetin-native"
             chmod +x "$APP_DIR/android/gradlew"
