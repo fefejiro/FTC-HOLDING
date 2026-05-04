@@ -7,6 +7,7 @@ import "../styles/globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ScrollReveal from "./components/ScrollReveal";
+import ChatWidget from "./components/ChatWidget";
 
 const Analytics = dynamic(() => import("./components/Analytics"), { ssr: false });
 
@@ -109,6 +110,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="main-shell">{children}</main>
         <Footer />
         {GOOGLE_ANALYTICS_ID ? <Analytics /> : null}
+        <ChatWidget />
       </body>
     </html>
   );
