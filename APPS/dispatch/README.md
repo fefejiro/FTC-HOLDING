@@ -1,6 +1,14 @@
-# Dispatch
+# Tow Signal
 
-Dispatch is the roadside assistance app and API in this repo, with Ottawa live today and GTA region support built into the incident pipeline.
+Tow Signal is the public brand for the roadside assistance app and API in this repo. The internal app/runtime path remains `APPS/dispatch`, with Ottawa live today and GTA region support built into the incident pipeline.
+
+## Brand rule
+
+- Public-facing name: **Tow Signal**
+- Internal service/repo/runtime name: **Dispatch**
+- Current live domains remain:
+  - `https://dispatch.unalabs.cloud`
+  - `https://dispatch-admin.unalabs.cloud/admin`
 
 ## Live
 
@@ -12,7 +20,7 @@ Dispatch is the roadside assistance app and API in this repo, with Ottawa live t
 
 ## Product flow
 
-- `/` is the public Dispatch front door
+- `/` is the public Tow Signal front door
 - `/request` is the stranded-driver intake form
 - `/operator` is the operator console
 - `/admin` is the admin dashboard
@@ -24,11 +32,11 @@ Dispatch is the roadside assistance app and API in this repo, with Ottawa live t
 - Operator workspace: `https://dispatch.unalabs.cloud/operator`
 - Admin remains private on `https://dispatch-admin.unalabs.cloud/admin`
 
-Dispatch is live-only. The product does not support alternate request/session modes.
+Tow Signal is live-only. The product does not support alternate request/session modes.
 
 ## Production data hygiene
 
-- Dispatch production should contain only real roadside operations data for supported regions.
+- Tow Signal production should contain only real roadside operations data for supported regions.
 - QA, seeded, or sample jobs must be removed from production storage after verification.
 - As of 2026-04-02, the older demo-tagged request and known QA/sample jobs used during rollout verification were removed from production.
 
@@ -42,7 +50,7 @@ Dispatch is live-only. The product does not support alternate request/session mo
 
 ## Incident sources
 
-Dispatch currently runs a mixed source stack and treats each source differently:
+Tow Signal currently runs a mixed source stack and treats each source differently:
 
 - Ontario 511 events feed: official province-wide backbone for Ottawa and GTA
 - City of Ottawa traffic events feed: official Ottawa-only source
@@ -94,7 +102,7 @@ Then open `http://localhost:8080` in desktop browser and troubleshoot there firs
 
 ## Capacitor update workflow (next releases)
 
-Dispatch is configured so Capacitor production builds point to:
+Tow Signal is configured so Capacitor production builds point to:
 
 - `https://dispatch.unalabs.cloud`
 
@@ -149,7 +157,7 @@ Why this matters:
 - the linked Railway service already knows its root directory and config file
 - manual `railway up . --path-as-root --detach` duplicates that root and can fail with `Could not find root directory: APPS/dispatch`
 - the correct deploy path uses the `Dockerfile` and `railway.json` in this folder
-- the app-root `Dockerfile` is the only valid Railway Docker path for Dispatch
+- the app-root `Dockerfile` is the only valid Railway Docker path for the internal Dispatch runtime
 
 ## Production notes
 
@@ -169,4 +177,4 @@ Why this matters:
 - Public `/health` returned `200` with `{"status":"ok"}`
 - Live request creation worked on the live host
 - Operator sign-in worked on the live host
-- Una Labs product page at `/products/dispatch` linked into the live Dispatch path
+- Una Labs product page at `/products/dispatch` linked into the live Tow Signal path
