@@ -35,6 +35,7 @@ export const NAV = {
     { label: 'Realtor AI', href: '/realtor' },
     { label: 'Pricing', href: '/pricing' },
     { label: 'How It Works', href: '/how-it-works' },
+    { label: 'Blueprint $500', href: '/blueprint' },
   ],
 };
 
