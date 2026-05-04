@@ -1,0 +1,87 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0a;
+  color: #f5f5f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: #ffd23f; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+.hero {
+  text-align: center;
+  padding: 80px 20px 40px;
+}
+.hero h1 {
+  font-size: clamp(48px, 9vw, 96px);
+  margin: 0;
+  letter-spacing: -2px;
+  line-height: 0.95;
+}
+.hero .y { color: #ffd23f; }
+.hero p { color: #9ca3af; font-size: 18px; margin: 16px 0 32px; }
+
+.cta {
+  display: inline-block;
+  background: #ffd23f;
+  color: #0a0a0a;
+  padding: 14px 32px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 16px;
+}
+.cta.ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #374151;
+}
+
+.section { padding: 40px 0; border-top: 1px solid #1f2937; }
+.section h2 { font-size: 28px; margin: 0 0 24px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.card {
+  background: #11151c;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 20px;
+}
+.card h3 { margin: 0 0 8px; color: #ffd23f; font-size: 16px; }
+.card p { margin: 0; color: #9ca3af; font-size: 14px; line-height: 1.5; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #11151c;
+  border-radius: 12px;
+  overflow: hidden;
+}
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #1f2937;
+  font-size: 14px;
+}
+th { background: #0f1319; color: #9ca3af; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+tr:last-child td { border-bottom: none; }
+.rank { color: #ffd23f; font-weight: 700; }
+.score { font-weight: 700; color: #fff; }
+.naira { color: #10b981; }
+
+.empty { text-align: center; padding: 40px; color: #6b7280; }
+
+footer { text-align: center; padding: 40px 20px; color: #6b7280; font-size: 12px; border-top: 1px solid #1f2937; }

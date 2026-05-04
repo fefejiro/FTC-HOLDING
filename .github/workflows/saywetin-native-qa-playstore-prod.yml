@@ -82,8 +82,9 @@ jobs:
           profile: pixel_7
           emulator-boot-timeout: 900
           script: |
-            cd APPS/saywetin-native
-            ./android/gradlew :app:assembleRelease :app:installRelease --no-daemon -p android
+            APP_DIR="$GITHUB_WORKSPACE/APPS/saywetin-native"
+            chmod +x "$APP_DIR/android/gradlew"
+            "$APP_DIR/android/gradlew" :app:assembleRelease :app:installRelease --no-daemon --project-dir "$APP_DIR/android"
             adb logcat -c
             adb shell am start -n com.saywetin.app/.MainActivity
             for i in $(seq 1 20); do
@@ -99,7 +100,7 @@ jobs:
               adb logcat -d | tail -n 300
               exit 1
             fi
-            npm --prefix qa run qa:e2e
+            npm --prefix "$APP_DIR/qa" run qa:e2e
 
       - name: Upload QA report artifact
         if: always()
