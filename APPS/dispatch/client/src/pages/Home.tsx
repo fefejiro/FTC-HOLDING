@@ -37,8 +37,8 @@ const publicFlow = [
     body: 'The stranded driver shares the need and location in one quick intake.',
   },
   {
-    title: 'System routes it',
-    body: 'Dispatch classifies the job, checks incident signals, and pushes the next action.',
+    title: 'Tow Signal routes it',
+    body: 'Tow Signal classifies the job, checks incident signals, and pushes the next action.',
   },
   {
     title: 'Field team moves',
@@ -61,7 +61,7 @@ export default function HomePage() {
     queryKey: ['dispatch-status'],
     queryFn: async () => {
       const response = await fetch('/api/status');
-      if (!response.ok) throw new Error('Unable to load Dispatch status');
+      if (!response.ok) throw new Error('Unable to load Tow Signal status');
       return response.json();
     },
     staleTime: 30_000,
@@ -82,7 +82,7 @@ export default function HomePage() {
               <div className="text-xs font-semibold uppercase tracking-[0.3em] text-orange-400">
                 Ottawa roadside operations
               </div>
-              <div className="text-lg font-semibold text-white">Dispatch</div>
+              <div className="text-lg font-semibold text-white">Tow Signal</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -109,11 +109,11 @@ export default function HomePage() {
             </div>
             <div className="space-y-4">
               <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-                Ottawa roadside assistance — fast, direct, and on the way.
+                Tow Signal gets Ottawa roadside help moving faster.
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-slate-300">
-                Dispatch handles gas delivery, lockouts, jump starts, and tire changes across Ottawa.
-                Submit a request in seconds — a real operator gets it immediately.
+                Gas delivery, lockouts, jump starts, and tire changes across Ottawa with a cleaner
+                live dispatch flow, direct intake, and incident-aware operator movement.
               </p>
             </div>
 
@@ -138,7 +138,7 @@ export default function HomePage() {
                 <div className="text-sm font-semibold uppercase tracking-[0.25em] text-orange-400">
                   Live system
                 </div>
-                <h2 className="mt-2 text-2xl font-semibold">Dispatch status</h2>
+                <h2 className="mt-2 text-2xl font-semibold">Tow Signal status</h2>
               </div>
               <div className="rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300">
                 {data?.incidentMonitor?.running ? 'Running' : 'Starting'}
@@ -194,7 +194,7 @@ export default function HomePage() {
               <h3 className="text-xl font-semibold">Serving Ottawa and surrounding areas</h3>
             </div>
             <p className="leading-7 text-slate-300">
-              Dispatch covers gas delivery, lockout service, jump starts, and tire changes
+              Tow Signal covers gas delivery, lockout service, jump starts, and tire changes
               across Ottawa. Live incident monitoring keeps the operator ahead of the road.
             </p>
           </div>
@@ -202,11 +202,11 @@ export default function HomePage() {
           <div className="rounded-3xl border border-dispatch-border bg-dispatch-surface p-6">
             <div className="mb-3 flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-orange-400" />
-              <h3 className="text-xl font-semibold">Fast response, no hold music</h3>
+              <h3 className="text-xl font-semibold">Fast response, clearer movement</h3>
             </div>
             <p className="leading-7 text-slate-300">
-              Skip the call centre. Submit your request, share your location, and Dispatch
-              dispatches a real operator directly to you — tracked live the whole way.
+              Skip the call centre. Submit your request, share your location, and Tow Signal
+              routes a real operator directly to you while keeping movement visible.
             </p>
           </div>
         </section>
@@ -216,12 +216,12 @@ export default function HomePage() {
             <div>
               <div className="flex items-center gap-2 text-orange-300">
                 <PhoneCall className="h-4 w-4" />
-                Dispatch — Ottawa
+                Tow Signal — Ottawa
               </div>
               <h3 className="mt-2 text-2xl font-semibold">Stranded in Ottawa right now?</h3>
               <p className="mt-2 max-w-2xl leading-7 text-slate-300">
                 Open the request form, tell us what you need and where you are.
-                Dispatch routes immediately — no hold music, no middleman.
+                Tow Signal routes immediately with a direct roadside workflow.
               </p>
             </div>
             <a
