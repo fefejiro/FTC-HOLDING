@@ -4,6 +4,7 @@ import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { AssistantDrawer } from '@/components/AssistantDrawer';
+import { SparkWidget } from '@/components/SparkWidget';
 import './globals.css';
 
 const inter = Inter({
@@ -104,6 +105,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main>{children}</main>
         <Footer />
         <AssistantDrawer />
+        <SparkWidget />
       </body>
     </html>
   );

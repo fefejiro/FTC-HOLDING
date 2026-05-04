@@ -11,6 +11,14 @@ AUTOCOLLECT_REMINDER_INTERVAL_DAYS = "3"
 AUTOCOLLECT_MAX_ATTEMPTS = "3"
 AUTOCOLLECT_DAILY_EMAIL_CAP = "80"
 AUTOCOLLECT_MAX_SEND_PER_RUN = "25"
+# Spark AI chat guardrails (set SPARK_ENABLED = "1" to enable)
+SPARK_ENABLED = ""
+SPARK_PREVIEW_TURNS = "3"
+SPARK_MAX_TURNS = "20"
+SPARK_MAX_TOKENS_PER_TURN = "300"
+SPARK_RATE_LIMIT_WINDOW_MS = "60000"
+SPARK_RATE_LIMIT_MAX = "20"
+SPARK_PASS_PRICE_CAD = "5"
 
 [triggers]
 crons = ["0 13 * * *"]
@@ -18,3 +26,4 @@ crons = ["0 13 * * *"]
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
 # SUPABASE_SERVICE_ROLE_KEY — set via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 # OPENAI_API_KEY — set via: npx wrangler secret put OPENAI_API_KEY
+# STRIPE_PRICE_SPARK_PASS — optional Stripe Price ID for the Spark pass (if using an existing price)
