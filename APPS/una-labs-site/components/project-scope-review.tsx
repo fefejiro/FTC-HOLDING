@@ -6,7 +6,7 @@
  * Purpose: Client reviews generated scope, provides feedback, and approves to move to Active
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { createBrowserClient } from '@ftc/supabase';
 
@@ -76,6 +76,11 @@ export default function ProjectScopeReview() {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'phases' | 'timeline' | 'risks' | 'mockups'
   >('overview');
+  const [isChangesModalOpen, setIsChangesModalOpen] = useState(false);
+  const [changeRequest, setChangeRequest] = useState('');
+  const [isSubmittingChanges, setIsSubmittingChanges] = useState(false);
+  const [changesSubmitted, setChangesSubmitted] = useState(false);
+  const changeRequestRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!projectId) return;
@@ -157,12 +162,33 @@ export default function ProjectScopeReview() {
         .single();
 
       setProject(updatedProject);
-      alert('Scope approved! Building is now starting.');
     } catch (err) {
       console.error('Error approving scope:', err);
       setError('Failed to approve scope. Please try again.');
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  const openChangesModal = () => {
+    setChangeRequest('');
+    setChangesSubmitted(false);
+    setIsChangesModalOpen(true);
+    setTimeout(() => changeRequestRef.current?.focus(), 50);
+  };
+
+  const closeChangesModal = () => {
+    setIsChangesModalOpen(false);
+  };
+
+  const handleSubmitChanges = async () => {
+    if (!changeRequest.trim()) return;
+    setIsSubmittingChanges(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setChangesSubmitted(true);
+    } finally {
+      setIsSubmittingChanges(false);
     }
   };
 
@@ -433,9 +459,7 @@ export default function ProjectScopeReview() {
               </button>
               <button
                 className="flex-1 border border-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-100 transition"
-                onClick={() =>
-                  alert('Request changes feature coming soon!')
-                }
+                onClick={openChangesModal}
               >
                 Request Changes
               </button>
@@ -455,6 +479,71 @@ export default function ProjectScopeReview() {
           </div>
         )}
       </div>
+
+      {/* Request Changes Modal */}
+      {isChangesModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="changes-modal-title"
+        >
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+            {changesSubmitted ? (
+              <div className="text-center py-4">
+                <p className="text-2xl mb-2">✓</p>
+                <p className="text-lg font-semibold text-gray-900 mb-2">
+                  Your request has been submitted
+                </p>
+                <p className="text-gray-600 mb-6">
+                  The team will review your feedback and follow up shortly.
+                </p>
+                <button
+                  onClick={closeChangesModal}
+                  className="bg-purple-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-purple-700 transition"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2
+                  id="changes-modal-title"
+                  className="text-lg font-semibold text-gray-900 mb-1"
+                >
+                  Request Changes
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  Describe what you would like to adjust — scope, timeline, budget, or anything else.
+                </p>
+                <textarea
+                  ref={changeRequestRef}
+                  value={changeRequest}
+                  onChange={(e) => setChangeRequest(e.target.value)}
+                  placeholder="E.g. Can we reduce the timeline to 6 weeks and remove the reporting phase?"
+                  className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 resize-none"
+                />
+                <div className="mt-4 flex gap-3 justify-end">
+                  <button
+                    onClick={closeChangesModal}
+                    disabled={isSubmittingChanges}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitChanges}
+                    disabled={isSubmittingChanges || !changeRequest.trim()}
+                    className="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingChanges ? 'Submitting…' : 'Submit Request'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
