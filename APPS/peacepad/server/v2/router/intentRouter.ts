@@ -3,6 +3,10 @@ import { isOffTopicRequest } from "../../services/aiBoundaries.js";
 import { MODULE_IDS, type ModuleId } from "../registry/moduleRegistry";
 import { detectSafetyFlagsFromText, hasCrisisSafetyFlag } from "../services/safetySignals";
 import type { IntentRouteRequest, IntentRouteResponse } from "../schemas/intent";
+import {
+  fallbackScoreToLegacyConflictLevel,
+  scoreConflictFallback,
+} from "../services/deterministicFallback";
 
 type AnalyzeConflictFn = (
   message: string,
@@ -153,9 +157,32 @@ export async function routeIntent(
   const analyzeConflictFn = deps.analyzeConflictFn ?? analyzeConflict;
   const conversationHistory = input.context?.conversation_history;
   const offTopic = isOffTopicRequest(input.text);
+  let conflictAnalysis: ConflictAnalysis;
+  let conflictLevel = 0;
 
-  const conflictAnalysis = await analyzeConflictFn(input.text, conversationHistory);
-  let conflictLevel = mapSeverityToConflictLevel(conflictAnalysis);
+  try {
+    conflictAnalysis = await analyzeConflictFn(input.text, conversationHistory);
+    conflictLevel = mapSeverityToConflictLevel(conflictAnalysis);
+  } catch (error) {
+    const fallback = scoreConflictFallback(input.text);
+    conflictLevel = fallbackScoreToLegacyConflictLevel(fallback.score);
+    conflictAnalysis = {
+      hasConflict: conflictLevel > 0,
+      conflictType: conflictLevel > 0 ? "communication" : "none",
+      severity: fallback.level === "high" ? "high" : fallback.level === "medium" ? "medium" : "low",
+      triggerPhrases: fallback.signals,
+      rootCause: "Deterministic fallback activated because AI analysis was unavailable.",
+      resolution: {
+        immediate: "Use a brief pause and focus on one factual request.",
+        shortTerm: "Choose neutral phrasing and avoid legal or threatening language.",
+        longTerm: "Document recurring triggers and use support resources when risk rises.",
+      },
+      communicationTip: "Keep your message specific, calm, and centered on child needs.",
+      language: "en",
+    };
+    console.warn("[v2][intent] Falling back to deterministic routing signals.", error);
+  }
+
   const safetyFlags = detectSafetyFlagsFromText(input.text, {
     conflictLevel,
     isOffTopic: offTopic.isOffTopic,

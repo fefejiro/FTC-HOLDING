@@ -21,4 +21,4 @@ export const v2HealthResponseSchema = z
   })
   .strict();
 
-export type V2HealthResponse = z.infer<typeof v2HealthResponseSchema>;
+export type V2HealthData = z.infer<typeof v2HealthResponseSchema>;

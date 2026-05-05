@@ -1,114 +1,181 @@
 # PeacePad v2 Module Contracts
 
-All contracts are validated with strict Zod schemas under `server/v2/schemas/*`.
+All v2 responses are wrapped in the canonical envelope schema (`server/v2/schemas/envelope.ts`).
 
-## `GET /v2/health`
-Response:
-- `status`: `"ok"`
-- `version`: `"v2"`
-- `time`: ISO datetime string
-- `commit`: optional string (from commit env vars)
-- `dependencies.database.reachable`: boolean
-- `dependencies.database.checked_at`: ISO datetime string
+## Canonical Envelope
 
-Example response:
 ```json
 {
-  "status": "ok",
-  "version": "v2",
-  "time": "2026-03-04T09:00:00.000Z",
-  "commit": "abc1234",
-  "dependencies": {
-    "database": {
-      "reachable": true,
-      "checked_at": "2026-03-04T09:00:00.000Z"
+  "ok": true,
+  "session": {
+    "sessionId": "uuid-or-null",
+    "isNew": false,
+    "userId": "user-or-null"
+  },
+  "intent": {
+    "id": "module-or-null",
+    "confidence": 0.72,
+    "source": "router"
+  },
+  "analysis": {
+    "conflict": {
+      "score": 0.5,
+      "level": "medium",
+      "source": "message_only",
+      "signals": []
     }
+  },
+  "safety": {
+    "safeToProceed": true,
+    "flags": [],
+    "handoff": { "type": "none", "reason": null }
+  },
+  "explain": {
+    "summary": "One-line explanation",
+    "reasons": ["reason-1", "reason-2"]
+  },
+  "actions": [],
+  "ui": {
+    "version": 1,
+    "chips": [],
+    "cards": []
+  },
+  "data": {},
+  "errors": []
+}
+```
+
+Notes:
+- `ui.version` is always `1`.
+- Endpoint-specific legacy payloads live under `data`.
+- Invalid requests and internal failures still return this envelope with `ok=false`.
+
+## `POST /v2/conversation/orchestrate`
+
+Request schema:
+- `sessionId: string | null` (UUID string when provided)
+- `user: { userId, locale, tz } | null`
+- `mode: "narration" | "task"`
+- `message: { text, source: "voice" | "typed" }`
+- `userChoice: { moduleId } | null`
+- `contextHints: { coparentTone, userTone } | null`
+- `debug: boolean | null`
+
+Behavior:
+1. Create or resume a conversation session.
+2. Persist user message.
+3. Resolve intent (`userChoice` first, router fallback).
+4. Run conflict check with deterministic fallback when provider fails.
+5. Set conflict source:
+   - `message_only` (no prior session/module history)
+   - `history_assisted` (prior history used)
+6. Safety gate on crisis flags (`self_harm_risk`, `immediate_danger`, `domestic_violence_risk`):
+   - `safeToProceed=false`
+   - `handoff.type="support"`
+   - skip rewrite module
+7. Return envelope with chips/actions/explain/data.
+
+Example request:
+
+```json
+{
+  "sessionId": null,
+  "user": { "userId": "user-123", "locale": "en-CA", "tz": "America/Toronto" },
+  "mode": "task",
+  "message": { "text": "Help me respond without escalating this.", "source": "typed" },
+  "userChoice": null,
+  "contextHints": { "coparentTone": "direct", "userTone": "gentle" },
+  "debug": false
+}
+```
+
+Example response excerpt:
+
+```json
+{
+  "ok": true,
+  "session": { "sessionId": "54c5f14c-89fa-4762-9767-10cb9b178ad5", "isNew": true, "userId": "user-123" },
+  "intent": { "id": "PP_MOD_REWRITE_MESSAGE", "confidence": 0.72, "source": "router" },
+  "analysis": {
+    "conflict": {
+      "score": 0.5,
+      "level": "medium",
+      "source": "message_only",
+      "signals": ["Pressure language detected."]
+    }
+  },
+  "ui": {
+    "version": 1,
+    "chips": [{ "id": "conflict_meter", "label": "Conflict: Medium", "variant": "warning", "expandable": true }],
+    "cards": []
+  },
+  "data": {
+    "intentRoute": { "module_id": "PP_MOD_REWRITE_MESSAGE" },
+    "conflictCheck": { "conflict_level": 2 }
   }
 }
 ```
 
+## `GET /v2/health`
+
+- Returns canonical envelope.
+- Health payload is in `data`:
+  - `status`
+  - `version`
+  - `time`
+  - `commit`
+  - `dependencies.database`
+
 ## `POST /v2/router/intent`
+
 Request:
 - `text` (required)
 - `user_style` (optional)
 - `coparent_style` (optional)
 - `context` (optional):
-  - `conversation_history` string[]
+  - `conversation_history`
   - `session_id`
   - `user_id`
 
 Response:
-- `module_id`
-- `conflict_level` (0-4)
-- `safety_flags` string[]
-- `recommended_action`
-- `followup_questions` string[]
-- `suggested_cards` array
-
-Example response:
-```json
-{
-  "module_id": "PP_MOD_REWRITE_MESSAGE",
-  "conflict_level": 2,
-  "safety_flags": ["high_conflict"],
-  "recommended_action": "Generate calm, neutral, and boundary-safe drafts before sending.",
-  "followup_questions": [
-    "Do you want this to sound more calm, neutral, or firm?"
-  ],
-  "suggested_cards": [
-    {
-      "module_id": "PP_MOD_REWRITE_MESSAGE",
-      "title": "Rewrite Message",
-      "reason": "Prepare safer language before sending."
-    }
-  ]
-}
-```
+- Canonical envelope.
+- Routed intent payload preserved under `data`.
 
 ## `POST /v2/modules/conflict-check`
+
 Request:
 - `text` (required)
-- `conversation_history` string[] (optional)
-- `user_style` / `coparent_style` (optional)
-- `context.user_id` / `context.session_id` (optional)
+- optional history/style/context fields
 
 Response:
-- `conflict_level` (0-4)
-- `signals` array: `{ type, key, description, weight }`
-- `safety_flags` string[]
-- `recommended_next_actions` string[]
-- `do_not_say` string[]
+- Canonical envelope.
+- Existing module payload preserved under `data`.
+
+Fallback:
+- If AI/provider fails, deterministic scoring is used:
+  - denied-access language -> base `0.7`
+  - insults/profanity -> `+0.1`
+  - legal threats -> `+0.2`
+  - clamped to `0..1`
 
 ## `POST /v2/modules/rewrite-message`
+
 Request:
 - `text` (required)
-- `user_style` / `coparent_style` (optional)
-- `conflict_level` (optional)
-- `context.user_id` / `context.session_id` (optional)
+- optional style/context/conflict hints
 
 Response:
-- `rewritten_calm`
-- `rewritten_neutral`
-- `rewritten_boundary`
-- `conflict_level` (0-4)
-- `safety_flags` string[]
-- `notes` string[]
+- Canonical envelope.
+- Rewrite variants preserved under `data`:
+  - `rewritten_calm`
+  - `rewritten_neutral`
+  - `rewritten_boundary`
 
 ## `POST /v2/modules/support-discovery`
+
 Request:
-- `query` (optional)
-- `category` (optional)
-- `conflict_level` (optional)
-- `safety_flags` (optional)
-- `limit` (optional)
-- `context.user_id` / `context.session_id` (optional)
-- `location` (optional): `latitude`, `longitude`, `city`, `country_code`
+- optional `query`, `category`, `conflict_level`, `safety_flags`, `location`, `limit`, `context`
 
 Response:
-- `ranked_resources` array with:
-  - `title`
-  - `type`
-  - `location`
-  - `url`
-  - `phone` (optional)
-  - `disclaimer`
+- Canonical envelope.
+- Ranked support resources preserved under `data.ranked_resources`.
