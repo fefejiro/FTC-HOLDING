@@ -32,10 +32,8 @@ export const NAV = {
         { label: 'Live Status', href: '/status', description: 'Ignition parity and SDLC signal in one live board' },
       ],
     },
-    { label: 'Realtor AI', href: '/realtor' },
     { label: 'Pricing', href: '/pricing' },
     { label: 'How It Works', href: '/how-it-works' },
-    { label: 'Blueprint $500', href: '/blueprint' },
   ],
 };
 

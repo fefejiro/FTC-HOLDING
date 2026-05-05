@@ -87,25 +87,12 @@ jobs:
             echo "Starting ADB server before emulator boot"
             $ANDROID_HOME/platform-tools/adb start-server
           script: |
-            APP_DIR="${{ github.workspace }}/APPS/saywetin-native"
-            chmod +x "$APP_DIR/android/gradlew"
-            "$APP_DIR/android/gradlew" :app:assembleRelease :app:installRelease --no-daemon --project-dir "$APP_DIR/android"
+            chmod +x "${{ github.workspace }}/APPS/saywetin-native/android/gradlew"
+            "${{ github.workspace }}/APPS/saywetin-native/android/gradlew" :app:assembleRelease :app:installRelease --no-daemon --project-dir "${{ github.workspace }}/APPS/saywetin-native/android"
             adb logcat -c
             adb shell am start -n com.saywetin.app/.MainActivity
-            for i in $(seq 1 20); do
-              if ! adb shell pidof com.saywetin.app >/dev/null 2>&1; then
-                echo "App process died during launch smoke check"
-                adb logcat -d | tail -n 200
-                exit 1
-              fi
-              sleep 1
-            done
-            if adb logcat -d | grep -Eq "FATAL EXCEPTION|Process: com.saywetin.app"; then
-              echo "Detected fatal crash signatures in logcat"
-              adb logcat -d | tail -n 300
-              exit 1
-            fi
-            npm --prefix "$APP_DIR/qa" run qa:e2e
+            bash "${{ github.workspace }}/APPS/saywetin-native/scripts/emulator-smoke.sh"
+            npm --prefix "${{ github.workspace }}/APPS/saywetin-native/qa" run qa:e2e
 
       - name: Upload QA report artifact
         if: always()
