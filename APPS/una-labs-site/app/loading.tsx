@@ -1,6 +1,7 @@
 export default function Loading() {
   return (
     <section className="bg-white min-h-[60vh] flex items-center" aria-label="Loading" aria-busy="true">
+      <span className="sr-only">Loading content, please wait...</span>
       <div className="max-w-content mx-auto px-6 py-24 w-full">
         {/* Skeleton hero */}
         <div className="flex flex-col gap-4 max-w-narrow mx-auto text-center">

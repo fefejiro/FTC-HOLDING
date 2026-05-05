@@ -59,7 +59,7 @@ npm run build
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
 | `NEXT_PUBLIC_SITE_URL` | No | Site base URL (defaults to `https://unalabs.cloud`) |
-| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No | Google Analytics 4 — only loads in production |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No | Google Analytics 4, only loads in production |
 | `SPARK_ENABLED` | No | Set to `1` to enable the Spark AI chat widget |
 
 ---

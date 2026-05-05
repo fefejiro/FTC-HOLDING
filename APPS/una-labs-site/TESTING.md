@@ -99,6 +99,8 @@ All of these must pass before merging to `main`:
 
 | Check | Date | Result |
 |-------|------|--------|
-| `npm run build` passes | — | Not yet run in this session |
-| Homepage loads on unalabs.cloud | — | Not yet verified |
-| Auth redirect works | — | Not yet verified |
+| `npm run lint` passes | Not yet run | Not yet verified |
+| `npx tsc --noEmit` passes | Not yet run | Not yet verified |
+| `npm run build` succeeds, `out/` generated | Not yet run | Not yet verified |
+| Homepage loads on unalabs.cloud | Not yet run | Not yet verified |
+| Auth redirect works | Not yet run | Not yet verified |
