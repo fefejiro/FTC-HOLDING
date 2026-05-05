@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { SyncedLyricLine } from '../state/ritual-state';
 import { ritualTokens } from '../theme/tokens';
 import { MeaningDetailBody } from '../screens/MeaningDetailScreen';
@@ -11,11 +11,16 @@ type TabKey = 'meaning' | 'alternates' | 'related';
 type TapExplainSheetProps = {
   visible: boolean;
   line: SyncedLyricLine | null;
+  loading?: boolean;
   onClose: () => void;
 };
 
-export function TapExplainSheet({ visible, line, onClose }: TapExplainSheetProps) {
+export function TapExplainSheet({ visible, line, loading = false, onClose }: TapExplainSheetProps) {
   const [tab, setTab] = useState<TabKey>('meaning');
+
+  useEffect(() => {
+    setTab('meaning');
+  }, [line?.id]);
 
   const tabLines = useMemo(() => {
     if (!line) {
@@ -56,7 +61,12 @@ export function TapExplainSheet({ visible, line, onClose }: TapExplainSheetProps
               <MeaningDetailBody line={line} />
             ) : (
               <View style={styles.listWrap}>
-                {tabLines.length === 0 ? (
+                {loading ? (
+                  <View style={styles.loadingState}>
+                    <ActivityIndicator color={colors.violetSoft} size="small" />
+                    <Text style={styles.emptyText}>Loading context…</Text>
+                  </View>
+                ) : tabLines.length === 0 ? (
                   <Text style={styles.emptyText}>No entries yet for this section.</Text>
                 ) : (
                   tabLines.map((item) => (
@@ -154,6 +164,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 12,
     gap: 10,
+  },
+  loadingState: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   listItem: {
     flexDirection: 'row',

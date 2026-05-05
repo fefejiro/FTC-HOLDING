@@ -1,4 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { fetchSyncedLyrics } from '../api/live-lyrics';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ListenScreen } from '../screens/ListenScreen';
 import { ResultScreen } from '../screens/ResultScreen';
@@ -85,7 +86,16 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
         children={({ navigation }) => (
           <ResultScreen
             track={ritual.track}
-            onFollowLiveLyrics={() => {
+            onFollowLiveLyrics={async () => {
+              if ((ritual.track.syncedLyrics?.length ?? 0) === 0) {
+                const fetched = await fetchSyncedLyrics(ritual.track.id);
+                if (fetched && fetched.lines.length > 0) {
+                  ritual.setRecognizedTrack({
+                    ...ritual.track,
+                    syncedLyrics: fetched.lines,
+                  });
+                }
+              }
               navigation.navigate('LiveLyrics');
             }}
             onReset={() => {
@@ -98,9 +108,9 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
       <Stack.Screen
         name="LiveLyrics"
         options={{
-          animation: 'slide_from_bottom',
-          animationDuration: 280,
-          presentation: 'transparentModal',
+          animation: 'fade_from_bottom',
+          animationDuration: 340,
+          presentation: 'fullScreenModal',
         }}
         children={({ navigation }) => (
           <LiveLyricsScreen

@@ -124,13 +124,6 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
     setBusy(true);
     setErrorMessage(null);
     setShowLyricInput(false);
-    if (audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones') {
-      console.warn('[listen] blocked: private listening route detected', audioRoute);
-      setErrorMessage('Private Bluetooth or wired playback cannot be matched reliably. Switch output to phone speaker or use lyric search.');
-      setShowLyricInput(true);
-      setBusy(false);
-      return;
-    }
     selectedInputRouteRef.current = 'unknown';
     listenSessionStartedAtRef.current = Date.now();
     console.log('[listen] starting recognition');
@@ -230,21 +223,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       setPhase('idle');
       setSecondsLeft(0);
       const message = String(error?.message || 'Could not identify song. Try again.');
-      const selectedInputRoute = selectedInputRouteRef.current;
-      if (
-        (
-          audioRoute.isPrivateListening ||
-          audioRoute.outputRoute === 'bluetooth' ||
-          audioRoute.outputRoute === 'wired_headphones' ||
-          selectedInputRoute === 'bluetooth_mic' ||
-          selectedInputRoute === 'wired_mic'
-        ) &&
-        message.toLowerCase().includes('no music found in audio')
-      ) {
-        setErrorMessage('Bluetooth or wired private playback cannot be heard reliably through the microphone. Play the song out loud or use lyric search.');
-      } else {
-        setErrorMessage(message);
-      }
+      setErrorMessage(message);
       setShowLyricInput(true);
     } finally {
       stopCaptureRef.current = null;

@@ -26,11 +26,13 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
   const [selectedLine, setSelectedLine] = useState<SyncedLyricLine | null>(null);
   const [contextTab, setContextTab] = useState<'meaning' | 'alternates' | 'related'>('meaning');
   const [lineMeaningCache, setLineMeaningCache] = useState<Record<string, SyncedLyricLine>>({});
+  const [lineLoadingById, setLineLoadingById] = useState<Record<string, boolean>>({});
   const startedAtRef = useRef(Date.now());
   const startOffsetMs = useRef(initialSongOffsetMs);
   const driftSinceMs = useRef<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const lineHeights = useRef<Record<number, number>>({});
+  const inFlightExplainRef = useRef<Record<string, Promise<SyncedLyricLine>>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -114,24 +116,47 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
       return lineMeaningCache[line.id];
     }
 
-    const explain = await fetchLineExplain(track.id, line, positionMs);
-    if (!explain) {
-      return line;
+    if (inFlightExplainRef.current[line.id]) {
+      return inFlightExplainRef.current[line.id];
     }
 
-    const merged = {
-      ...line,
-      meaning: explain.meaning || line.meaning,
-      alternates: explain.alternates.length > 0 ? explain.alternates : line.alternates,
-      related: explain.related.length > 0 ? explain.related : line.related,
-    };
-
-    setLineMeaningCache((current) => ({
+    setLineLoadingById((current) => ({
       ...current,
-      [line.id]: merged,
+      [line.id]: true,
     }));
 
-    return merged;
+    const hydrationPromise = (async () => {
+      const explain = await fetchLineExplain(track.id, line, positionMs);
+      if (!explain) {
+        return line;
+      }
+
+      const merged = {
+        ...line,
+        meaning: explain.meaning || line.meaning,
+        alternates: explain.alternates.length > 0 ? explain.alternates : line.alternates,
+        related: explain.related.length > 0 ? explain.related : line.related,
+      };
+
+      setLineMeaningCache((current) => ({
+        ...current,
+        [line.id]: merged,
+      }));
+
+      return merged;
+    })();
+
+    inFlightExplainRef.current[line.id] = hydrationPromise;
+
+    try {
+      return await hydrationPromise;
+    } finally {
+      setLineLoadingById((current) => ({
+        ...current,
+        [line.id]: false,
+      }));
+      delete inFlightExplainRef.current[line.id];
+    }
   };
 
   const openExplain = (line: SyncedLyricLine, index: number) => {
@@ -143,6 +168,14 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
       setSelectedLine(hydrated);
     })();
   };
+
+  useEffect(() => {
+    if (lyrics.length === 0) {
+      return;
+    }
+
+    void prefetchNearby(currentLineIndex);
+  }, [currentLineIndex, lyrics]);
 
   const onResync = () => {
     startedAtRef.current = Date.now();
@@ -251,6 +284,7 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
       <TapExplainSheet
         visible={Boolean(selectedLine)}
         line={selectedLine}
+        loading={Boolean(selectedLine && lineLoadingById[selectedLine.id])}
         onClose={() => setSelectedLine(null)}
       />
     </View>

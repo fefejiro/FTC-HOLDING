@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { MatchSource, RitualTrack } from '../state/ritual-state';
 import { FadeInView } from '../components/FadeInView';
@@ -17,10 +18,12 @@ const MATCH_SOURCE_LABELS: Record<MatchSource, string> = {
 type ResultScreenProps = {
   track: RitualTrack;
   onReset: () => void;
-  onFollowLiveLyrics: () => void;
+  onFollowLiveLyrics: () => void | Promise<void>;
 };
 
 export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScreenProps) {
+  const [openingLiveLyrics, setOpeningLiveLyrics] = useState(false);
+
   const extractSpotifyTrackId = (url: string) => {
     const match = url.match(/track\/([a-zA-Z0-9]+)/);
     return match?.[1] ?? null;
@@ -78,6 +81,19 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
 
   const inlineLyrics = (track.lyric || '').trim();
 
+  const openLiveLyrics = async () => {
+    if (openingLiveLyrics) {
+      return;
+    }
+
+    setOpeningLiveLyrics(true);
+    try {
+      await onFollowLiveLyrics();
+    } finally {
+      setOpeningLiveLyrics(false);
+    }
+  };
+
   return (
     <FadeInView>
       <View style={styles.screen}>
@@ -131,8 +147,13 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
           </View>
 
           <View style={styles.actionsRow}>
-            <Pressable onPress={onFollowLiveLyrics} style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>Follow Live Lyrics</Text>
+            <Pressable
+              onPress={openLiveLyrics}
+              style={[styles.primaryButton, openingLiveLyrics && styles.primaryButtonBusy]}
+            >
+              <Text style={styles.primaryButtonText}>
+                {openingLiveLyrics ? 'Opening live lyrics…' : 'Follow Live Lyrics'}
+              </Text>
             </Pressable>
             <Pressable onPress={onReset} style={styles.secondaryButton}>
               <Text style={styles.secondaryButtonText}>Listen again</Text>
@@ -260,6 +281,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.violet,
     paddingVertical: 14,
     alignItems: 'center',
+  },
+  primaryButtonBusy: {
+    opacity: 0.8,
   },
   primaryButtonText: {
     color: '#FFF',

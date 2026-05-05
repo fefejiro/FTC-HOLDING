@@ -24,7 +24,7 @@ import { identifyByText, uploadListenSample } from '../api/listen';
 import { analyzeLyricLine } from '../api/cultural-analysis';
 import { fetchSyncedLyrics } from '../api/live-lyrics';
 import { useAudioSession } from '../audio/useAudioSession';
-import { useAudioRoute, type InputRoute } from '../audio/useAudioRoute';
+import { type InputRoute } from '../audio/useAudioRoute';
 import type { RitualStackParamList } from '../navigation/RitualNavigator';
 import type { CulturalAnalysisEntry, RitualController, RitualTrack, SyncedLyricLine } from '../state/ritual-state';
 
@@ -64,11 +64,9 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [track, setTrack] = useState<RitualTrack | null>(null);
   const [recentlyMatched, setRecentlyMatched] = useState(false);
-  const [bypassPrivateGuard, setBypassPrivateGuard] = useState(false);
   const stopCaptureRef = useRef<(() => void) | null>(null);
   const selectedInputRouteRef = useRef<InputRoute>('unknown');
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const audioRoute = useAudioRoute();
   useAudioSession();
 
   const [lineMeaning, setLineMeaning] = useState<{ line: string; entry: CulturalAnalysisEntry | null; loading: boolean; error: string | null } | null>(null);
@@ -152,7 +150,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
     }
   };
 
-  const startListening = async (forceBypass = false) => {
+  const startListening = async () => {
     if (phase === 'listening') {
       stopCaptureEarly();
       return;
@@ -161,21 +159,9 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
 
     setErrorMessage(null);
     setTrack(null);
-    const isPrivateRoute = audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones';
-    if (isPrivateRoute && !forceBypass && !bypassPrivateGuard) {
-      console.warn('[home-listen] advisory: private listening route detected', audioRoute);
-      setErrorMessage('Headphones detected. The phone mic may not hear private playback. Switch to phone speaker for best results, or tap below to try anyway.');
-      setPhase('idle');
-      return;
-    }
-    if (isPrivateRoute) {
-      setBypassPrivateGuard(true);
-      console.log('[home-listen] proceeding with built-in mic bypass', audioRoute);
-    }
     setPhase('listening');
     ritual.startListening();
     selectedInputRouteRef.current = 'unknown';
-    console.log('[home-listen] audio route snapshot', audioRoute);
 
     try {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
@@ -287,7 +273,6 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
     setTrack(null);
     setPhase('idle');
     setErrorMessage(null);
-    setBypassPrivateGuard(false);
     ritual.reset();
   };
 
@@ -500,11 +485,6 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
           {errorMessage ? (
             <View style={styles.errorBlock}>
               <Text style={styles.errorText}>{errorMessage}</Text>
-              {(audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones') && !bypassPrivateGuard ? (
-                <Pressable style={styles.tryAnywayBtn} onPress={() => startListening(true)}>
-                  <Text style={styles.tryAnywayText}>Try with phone mic</Text>
-                </Pressable>
-              ) : null}
             </View>
           ) : null}
         </View>
@@ -738,19 +718,6 @@ const styles = StyleSheet.create({
   tapSubtitle: { color: colors.textMuted, fontSize: 14, fontWeight: '500', letterSpacing: 0.25, marginBottom: 8 },
   errorText: { marginTop: 10, color: colors.amber, fontSize: 13, textAlign: 'center', maxWidth: 320 },
   errorBlock: { marginTop: 10, alignItems: 'center', gap: 8, maxWidth: 320 },
-  tryAnywayBtn: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.violetEdge,
-    backgroundColor: colors.violetWash,
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-  },
-  tryAnywayText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
 
   orbTap: { width: ORB_SIZE + 60, height: ORB_SIZE + 60, justifyContent: 'center', alignItems: 'center' },
 
