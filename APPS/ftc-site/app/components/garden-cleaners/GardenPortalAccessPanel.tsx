@@ -196,6 +196,7 @@ export default function GardenPortalAccessPanel() {
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [userEmail, setUserEmail] = useState<string>("");
   const [role, setRole] = useState<GardenPortalUserRole | null>(null);
+  const [staffProfileId, setStaffProfileId] = useState<string | null>(null);
   // Unified state for jobs/quotes
   const [jobs, setJobs] = useState<JobRecord[]>([]);
   const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
@@ -260,10 +261,13 @@ export default function GardenPortalAccessPanel() {
     }
     // Staff: only assigned jobs
     if (isStaff) {
-      // TODO: filter by staff_profile_id if available
+      // Filter by staff_profile_id when the current user's profile ID is available
+      if (staffProfileId) {
+        filtered = filtered.filter((j) => j.staff_profile_id === staffProfileId);
+      }
     }
     return filtered;
-  }, [jobs, queueFilter, queueRegion, queueSearch, isAdmin, isStaff]);
+  }, [jobs, queueFilter, queueRegion, queueSearch, isAdmin, isStaff, staffProfileId]);
 
   // Customer jobs
   const customerJobs = useMemo(() => {
@@ -341,6 +345,7 @@ export default function GardenPortalAccessPanel() {
           setAuthState("unauthenticated");
           setUserEmail("");
           setRole(null);
+          setStaffProfileId(null);
           setJobs([]);
           setQuotes([]);
           setLoadError("");
@@ -351,12 +356,33 @@ export default function GardenPortalAccessPanel() {
         setAuthState("authenticated");
         setUserEmail(sessionEmail);
         setRole(nextRole);
+
+        // Fetch and store the staff profile ID so that visibleJobs can filter by it
+        if (nextRole === "staff") {
+          try {
+            const supabase = getSupabase();
+            const { data: profileRow } = await supabase
+              .from("garden_cleaners_profiles")
+              .select("id")
+              .eq("auth_user_id", sessionData.session?.user?.id ?? "")
+              .maybeSingle();
+            if (mounted) {
+              setStaffProfileId(profileRow?.id ?? null);
+            }
+          } catch {
+            if (mounted) setStaffProfileId(null);
+          }
+        } else {
+          if (mounted) setStaffProfileId(null);
+        }
+
         await loadPortalData(nextRole);
       } catch {
         if (!mounted) return;
         setAuthState("unavailable");
         setUserEmail("");
         setRole(null);
+        setStaffProfileId(null);
         setJobs([]);
         setQuotes([]);
         setLoadError("Supabase public environment is not configured for this deployment.");
