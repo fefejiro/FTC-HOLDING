@@ -79,8 +79,8 @@ export function TermsAcceptanceDialog({ open, userId }: TermsAcceptanceDialogPro
             <div>
               <p className="font-medium text-sm">Secure Sign-In</p>
               <p className="text-xs text-muted-foreground mt-1">
-                PeacePad uses secure authentication to protect your credentials. 
-                You can sign in with Google, GitHub, or email.
+                PeacePad uses secure account protection.
+                Account access is managed securely while rollout continues.
               </p>
             </div>
           </div>

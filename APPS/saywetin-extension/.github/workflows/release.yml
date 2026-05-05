@@ -1,0 +1,34 @@
+name: Chrome Extension Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      - name: Build extension
+        run: npm run build
+      - name: Zip dist for Web Store
+        run: |
+          cd dist
+          zip -r ../saywetin-extension.zip .
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saywetin-extension
+          path: saywetin-extension.zip
+
+# To automate Chrome Web Store upload, add a publish step with secrets for API credentials.
+# See: https://github.com/marketplace/actions/chrome-extension-upload

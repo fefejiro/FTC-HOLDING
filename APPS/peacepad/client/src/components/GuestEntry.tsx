@@ -62,7 +62,7 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
             const data = await response.json();
             toast({
               title: "Welcome back!",
-              description: `Hello again, ${data.displayName || 'Guest'}!`,
+              description: `Hello again, ${data.displayName || "there"}!`,
               duration: 3000,
             });
             onAuthenticated();
@@ -285,7 +285,7 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
             Welcome to PeacePad
           </h1>
           <p className="text-slate-300 text-base sm:text-lg max-w-sm mx-auto">
-            Try safely in Guest Mode - no account needed
+            Private beta access is being opened in stages
           </p>
         </div>
       </div>
@@ -298,7 +298,7 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
           <div className="flex items-center gap-3 px-4 py-3 bg-muted/30 rounded-xl border border-border/50">
             <Shield className="h-4 w-4 text-primary flex-shrink-0" />
             <p className="text-xs text-muted-foreground">
-              Your data stays private. No account needed. 14-day guest session.
+              Your data stays private. Access sessions are managed internally during private beta.
             </p>
           </div>
 
@@ -392,7 +392,7 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
                 "Getting things ready..."
               ) : (
                 <>
-                  Start Exploring PeacePad
+                  Enter PeacePad Beta
                   <ChevronRight className="h-5 w-5 ml-2" />
                 </>
               )}

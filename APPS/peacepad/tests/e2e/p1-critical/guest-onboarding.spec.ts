@@ -21,8 +21,8 @@ async function completeIntroAndConsent(page: import("@playwright/test").Page): P
   await page.getByTestId("button-accept-terms").click();
 }
 
-test.describe("P1 Critical: Guest-First Onboarding", () => {
-  test("guest flow works from first visit", async ({ page }) => {
+test.describe("P1 Critical: Public Onboarding Flow", () => {
+  test("public onboarding goes directly from terms acceptance to prep chat", async ({ page }) => {
     await page.context().clearCookies();
     await page.addInitScript(() => {
       localStorage.clear();
@@ -33,55 +33,16 @@ test.describe("P1 Critical: Guest-First Onboarding", () => {
     await page.waitForLoadState("domcontentloaded");
 
     await completeIntroAndConsent(page);
-
-    await expect(page.getByTestId("onboarding-auth-choice")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId("button-onboarding-continue-guest")).toBeVisible();
-
-    await page.getByTestId("button-onboarding-continue-guest").click();
-    await expect(page.getByTestId("button-enter-peacepad")).toBeVisible({ timeout: 10000 });
-
-    const guestResponsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes("/api/auth/guest") &&
-        response.request().method() === "POST",
-    );
-
-    await page.getByTestId("input-display-name").fill("Playwright Guest");
-    await page.getByTestId("button-enter-peacepad").click();
-
-    const guestResponse = await guestResponsePromise;
-    expect(guestResponse.ok()).toBeTruthy();
-
     await page.waitForURL(/\/prep-chat|\/chat|\/dashboard/, { timeout: 30000 });
 
-    const sessionId = await page.evaluate(() => localStorage.getItem("peacepad_session_id"));
-    expect(sessionId).toBeTruthy();
+    await expect(page.getByText(/private beta/i)).toHaveCount(0);
+    await expect(page.getByText(/continue as guest/i)).toHaveCount(0);
   });
 
-  test("shows sign-in prompt when guest session is near expiry", async ({ page }) => {
-    const userResponse = await page.request.get("/api/auth/user");
-    const user = userResponse.ok() ? await userResponse.json() : null;
-    test.skip(!user?.isGuest, "Expected guest storage state for this test.");
-
-    const nearExpiryIso = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-
-    await page.route("**/api/auth/guest-session-info*", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          expiresAt: nearExpiryIso,
-          daysRemaining: 1,
-        }),
-      });
-    });
-
+  test("public flow does not render guest expiry banner", async ({ page }) => {
     await page.goto("/chat");
     await page.waitForLoadState("domcontentloaded");
-
-    const banner = page.getByTestId("banner-guest-expiry");
-    await expect(banner).toBeVisible({ timeout: 15000 });
-    await expect(banner).toContainText(/Guest data expires/i);
-    await expect(page.getByTestId("button-upgrade-account")).toBeVisible();
+    await expect(page.getByTestId("banner-guest-expiry")).toHaveCount(0);
   });
 });
+

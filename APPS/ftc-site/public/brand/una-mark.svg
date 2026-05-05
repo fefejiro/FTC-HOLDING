@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Una Labs mark">
+  <defs>
+    <linearGradient id="petal-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34dbc9" />
+      <stop offset="100%" stop-color="#0ea8a0" />
+    </linearGradient>
+    <linearGradient id="petal-yellow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd55f" />
+      <stop offset="100%" stop-color="#f3ac12" />
+    </linearGradient>
+    <linearGradient id="petal-red" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff6e67" />
+      <stop offset="100%" stop-color="#ea3f37" />
+    </linearGradient>
+    <linearGradient id="petal-charcoal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#566077" />
+      <stop offset="100%" stop-color="#1e2635" />
+    </linearGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="2.5" stdDeviation="2" flood-color="#1f2940" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <rect width="96" height="96" rx="18" fill="#f7f9fc" />
+
+  <g transform="translate(48 48)" filter="url(#shadow)">
+    <ellipse cx="0" cy="-25" rx="12.5" ry="22" fill="url(#petal-yellow)" />
+    <ellipse cx="23.7" cy="-7.6" rx="12.5" ry="22" transform="rotate(72)" fill="url(#petal-red)" />
+    <ellipse cx="14.7" cy="20.2" rx="12.5" ry="22" transform="rotate(144)" fill="url(#petal-charcoal)" />
+    <ellipse cx="-14.7" cy="20.2" rx="12.5" ry="22" transform="rotate(216)" fill="url(#petal-teal)" />
+    <ellipse cx="-23.7" cy="-7.6" rx="12.5" ry="22" transform="rotate(288)" fill="url(#petal-teal)" />
+
+    <g fill="none" stroke-linecap="round">
+      <path d="M-2 -31 l4 0 M-8 -25 l4 0 M4 -24 l5 0" stroke="#fdf6cf" stroke-width="1.7" />
+      <path d="M22 -4 l5 0 M17 2 l6 0 M27 3 l5 0" stroke="#ffd6cc" stroke-width="1.7" />
+      <path d="M14 27 l5 0 M8 24 l6 0 M20 21 l5 0" stroke="#cfd6e5" stroke-width="1.7" />
+      <path d="M-21 4 l6 0 M-27 3 l5 0 M-17 1 l5 0" stroke="#b8f6eb" stroke-width="1.7" />
+      <path d="M-12 24 l5 0 M-6 27 l5 0 M-18 21 l5 0" stroke="#bff8ee" stroke-width="1.7" />
+    </g>
+
+    <circle cx="0" cy="0" r="4.8" fill="#ffffff" />
+  </g>
+</svg>

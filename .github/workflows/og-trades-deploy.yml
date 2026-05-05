@@ -1,0 +1,51 @@
+name: OG Trades Academy Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'APPS/ftc-site/**'
+      - '.github/workflows/og-trades-deploy.yml'
+
+jobs:
+  deploy:
+    name: Build and Deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: APPS/ftc-site
+        run: npm ci
+
+      - name: Build shared dependencies
+        working-directory: APPS/ftc-site
+        run: npm run build:deps
+
+      - name: Build for Cloudflare Pages
+        working-directory: APPS/ftc-site
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: og-trades-pages
+          directory: APPS/ftc-site/.vercel/output/static
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify deployment
+        run: |
+          echo "Deployment complete. Verifying domain..."
+          sleep 5
+          curl -I https://www.ogtradesacademy.com/ || echo "Domain still initializing"

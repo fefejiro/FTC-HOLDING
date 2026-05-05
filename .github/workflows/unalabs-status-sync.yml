@@ -1,0 +1,47 @@
+name: Una Labs Status Sync
+
+on:
+  schedule:
+    - cron: '15 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-status:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run Una Labs status sync
+        env:
+          UNALABS_SMOKE_BASE_URL: https://unalabs.cloud
+          UNALABS_SMOKE_WORKER_URL: https://una-stripe-api.fejiro-efiuvwere.workers.dev
+          UNALABS_SMOKE_BEARER_TOKEN: ${{ secrets.UNALABS_SMOKE_BEARER_TOKEN }}
+        run: |
+          npm run status:unalabs:sync
+
+      - name: Commit and push docs updates
+        shell: bash
+        run: |
+          if git diff --quiet -- FTC_MASTER.md DOCS/UNALABS_STATUS.md DOCS/ROLLOUT_PLAN_UNALABS.md; then
+            echo "No Una Labs status changes detected. Skipping commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add FTC_MASTER.md DOCS/UNALABS_STATUS.md DOCS/ROLLOUT_PLAN_UNALABS.md
+          git commit -m "chore(unalabs): sync status/master/rollout snapshot"
+          git push origin HEAD:main

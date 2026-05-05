@@ -1,11 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import {
   isSoftAuthenticated,
   getUserId,
   isAuthenticatedEither,
+  requireSession,
+  requireAuthOnly,
   createDemoPartnership,
   clearGuestCookie,
   resolveGuestIdentity,
@@ -41,8 +43,17 @@ import {
 } from "./summaryValidator";
 import {
   generatePrepChatCoaching,
+  generatePrepChatDraft,
   analyzeDraftTone,
 } from "./services/prepChatService";
+import {
+  mapPreviewToLegacyResponse,
+  mapPreviewToPreflight,
+  parsePreflightRequest,
+  resolveConversationIdFromMetadata,
+  type PreviewAnalysisResponse,
+} from "./services/preflightContract";
+import { analyzeTone as analyzeRuleBasedTone } from "./toneClassifier";
 
 // Build ID - generated once at module load
 const BUILD_ID = Date.now().toString();
@@ -115,8 +126,8 @@ import { rateLimiters } from "./rateLimiter";
 import { sanitizeInput, sanitizeObject } from "./sanitizer";
 import { generateICalFromEvents } from "./utils/icalGenerator";
 import { seedScheduleTemplates } from "./seedTemplates";
-import { seedWeatherActivities } from "./seedWeatherActivities";
-import { seedParentingTips } from "./seedParentingTips";
+import { seedWeatherActivities, weatherActivitiesSeed } from "./seedWeatherActivities";
+import { seedParentingTips, parentingTipsSeed } from "./seedParentingTips";
 import { seedMessages } from "./seedMessages";
 import { seedAchievements } from "./seedAchievements";
 import { testMonitor } from "./testMonitor";
@@ -134,6 +145,20 @@ import { createV2Router } from "./v2/routes/index";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import {
+  buildParentingTipFallbackCatalog,
+  buildWeatherActivityFallbackCatalog,
+  getFallbackParentingTips,
+  getFallbackWeatherActivities,
+  normalizeParentingCategory,
+  normalizeWeatherCondition,
+} from "./lib/contentFallbacks";
+import { findScheduleConflicts, getDisplayEventTitle, normalizeSchedulableEvent } from "@shared/peacepad/scheduling";
+import {
+  getWebUpdateMetrics,
+  parseWebUpdateTelemetryPayload,
+  recordWebUpdateTelemetry,
+} from "./lib/webUpdateTelemetry";
 
 // Initialize OpenAI with proper error checking
 // Prioritize OPENAI_API_KEY (user's own key) over AI_INTEGRATIONS key which may have incorrect values
@@ -162,6 +187,37 @@ const openai = new OpenAI({
   apiKey: apiKey || "sk-placeholder-key-for-init-only",
   baseURL: baseURL,
 });
+
+function getActionsApiKey(): string {
+  const value =
+    process.env.PEACEPAD_ACTIONS_API_KEY ||
+    process.env.ACTIONS_API_KEY ||
+    "";
+  return normalizeActionsApiKey(value);
+}
+
+function normalizeActionsApiKey(value: string | null | undefined): string {
+  const trimmed = (value || "").trim();
+  // Accept mistakenly quoted env values (e.g. "abc123" or 'abc123')
+  return trimmed.replace(/^['"]+|['"]+$/g, "").trim();
+}
+
+function extractActionsApiKey(req: any): string | null {
+  const apiKeyHeader = req.get("x-api-key");
+  if (typeof apiKeyHeader === "string" && apiKeyHeader.trim()) {
+    return normalizeActionsApiKey(apiKeyHeader);
+  }
+
+  const authHeader = req.get("authorization");
+  if (typeof authHeader === "string") {
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (bearerMatch?.[1]) {
+      return normalizeActionsApiKey(bearerMatch[1]);
+    }
+  }
+
+  return null;
+}
 
 // Configure multer for call recordings
 const uploadDir = path.join(process.cwd(), "uploads", "recordings");
@@ -318,6 +374,9 @@ interface UserPreferences {
   conflictResolutionStyle?: string;
 }
 
+const parentingTipFallbackCatalog = buildParentingTipFallbackCatalog(parentingTipsSeed);
+const weatherActivityFallbackCatalog = buildWeatherActivityFallbackCatalog(weatherActivitiesSeed);
+
 // Helper function to fetch user preferences including co-parent personality
 async function getUserPreferencesWithCoParent(userId: string): Promise<UserPreferences | undefined> {
   const user = await storage.getUser(userId);
@@ -365,6 +424,8 @@ async function analyzeTone(
   summary: string;
   emoji: string;
   rewordingSuggestion: string | null;
+  manipulationFlags?: string[];
+  translationToPlainEnglish?: string;
 }> {
   try {
     console.log(`[Tone Analysis] ========== START ==========`);
@@ -475,7 +536,10 @@ Respond ONLY with a JSON object.
     const tone = parsed.tone?.toLowerCase() || "neutral";
     const summary = parsed.summary || "Message sent";
     const emoji = parsed.emoji || "😐";
-    const rewordingSuggestion = parsed.rewordingSuggestion || undefined;
+    const rewordingSuggestion =
+      typeof parsed.rewordingSuggestion === "string" && parsed.rewordingSuggestion.trim()
+        ? parsed.rewordingSuggestion
+        : null;
     const manipulationFlags = Array.isArray(parsed.manipulationFlags)
       ? parsed.manipulationFlags
       : [];
@@ -490,7 +554,7 @@ Respond ONLY with a JSON object.
       tone,
       summary,
       emoji,
-      rewordingSuggestion: (rewordingSuggestion || undefined) as string | undefined,
+      rewordingSuggestion,
       manipulationFlags,
       translationToPlainEnglish: (translationToPlainEnglish || undefined) as string | undefined,
     };
@@ -520,6 +584,110 @@ Respond ONLY with a JSON object.
     console.error("[Tone Analysis] Returned mock result:", JSON.stringify(mockResult));
     return mockResult;
   }
+}
+
+function isExternalPreflightApiEnabled(): boolean {
+  const explicitFlag =
+    process.env.FEATURE_EXTERNAL_PREFLIGHT_API ??
+    process.env.PEACEPAD_EXTERNAL_PREFLIGHT_API ??
+    process.env.PEACEPAD_ENABLE_EXTERNAL_PREFLIGHT_API;
+
+  if (typeof explicitFlag === "string" && explicitFlag.trim()) {
+    const normalized = explicitFlag.trim().toLowerCase();
+    return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  }
+
+  return process.env.NODE_ENV !== "production";
+}
+
+async function buildMessagePreviewPayload(
+  userId: string | undefined,
+  content: string,
+  conversationId?: string,
+): Promise<PreviewAnalysisResponse> {
+  // Fetch user preferences including co-parent personality for personalized AI analysis
+  const userPrefs = userId ? await getUserPreferencesWithCoParent(userId) : undefined;
+
+  // Get recent conversation history for context (for both tone and CES analysis)
+  let conversationHistory: string[] | undefined;
+  let conversationHistoryFull: Array<{
+    content: string;
+    senderId: string;
+    createdAt: string | Date;
+    tone?: string | null;
+  }> = [];
+
+  if (conversationId && userId) {
+    const messages = await storage.getMessagesByUser(userId);
+    const convMessages = messages.filter((m) => m.conversationId === conversationId).slice(-10); // CES trajectory
+
+    conversationHistory = convMessages.map((m) => m.content);
+    conversationHistoryFull = convMessages.map((m) => ({
+      content: m.content,
+      senderId: m.senderId,
+      createdAt: m.createdAt,
+      tone: m.tone,
+    }));
+  }
+
+  // Run tone analysis
+  const {
+    tone,
+    summary,
+    emoji,
+    rewordingSuggestion,
+    manipulationFlags,
+    translationToPlainEnglish,
+  } = await analyzeTone(content, userPrefs, conversationHistory);
+
+  // Calculate Conflict Escalation Score (CES)
+  let cesResult: CESResult | null = null;
+  let deescalationSuggestion: string | null = null;
+
+  const cesActorId = userId || "external-api";
+  if (cesActorId) {
+    cesResult = calculateConflictEscalationScore(content, conversationHistoryFull, cesActorId);
+
+    // Generate de-escalation rewrite if intervention needed
+    if (cesResult.interventionLevel !== "none") {
+      deescalationSuggestion = generateDeescalationRewrite(
+        content,
+        cesResult.score,
+        cesResult.signals,
+        userPrefs
+          ? {
+              personalityType: userPrefs.personalityType,
+              coParentPersonalityType: userPrefs.coParentPersonalityType,
+            }
+          : undefined,
+      );
+    }
+  }
+
+  return {
+    tone,
+    summary,
+    emoji,
+    rewordingSuggestion,
+    manipulationFlags,
+    translationToPlainEnglish,
+    originalMessage: content,
+    ces: cesResult
+      ? {
+          score: cesResult.score,
+          state: cesResult.state,
+          phase: cesResult.phase,
+          interventionLevel: cesResult.interventionLevel,
+          trajectory: cesResult.trajectory,
+          signals: cesResult.signals,
+          suggestedActions: cesResult.suggestedActions,
+          pauseRecommended: cesResult.pauseRecommended,
+          pauseDuration: cesResult.pauseDuration,
+          childImpactReminder: cesResult.childImpactReminder,
+          deescalationSuggestion,
+        }
+      : null,
+  };
 }
 
 async function getTranscribedText(filePath: string): Promise<string> {
@@ -1038,6 +1206,24 @@ Crawl-delay: 1
     res.json({ logged: true });
   });
 
+  app.post("/api/telemetry/web-update", (req, res) => {
+    const parsed = parseWebUpdateTelemetryPayload(req.body);
+    if (!parsed.ok) {
+      return res.status(400).json({
+        message: "Invalid web update telemetry payload",
+        errors: parsed.errors,
+      });
+    }
+
+    try {
+      recordWebUpdateTelemetry(parsed.payload);
+      return res.status(202).json({ accepted: true });
+    } catch (error) {
+      console.error("[WebUpdateTelemetry] Failed to record event:", error);
+      return res.status(500).json({ message: "Failed to record telemetry event" });
+    }
+  });
+
   app.get("/api/test-monitor/analysis", (req, res) => {
     const analysis = testMonitor.analyzeIssues();
     const userFlow = testMonitor.getUserFlow();
@@ -1324,14 +1510,21 @@ Crawl-delay: 1
         }
       }
 
-      // Track last login time and device info
+      // Track last login time, device info, and session count (debounced to once/hour)
       if (user) {
         try {
           const userAgent = req.headers['user-agent'] || null;
+          const now = new Date();
+          const lastLogin = user.lastLoginAt ? new Date(user.lastLoginAt) : null;
+          const hoursSinceLastLogin = lastLogin
+            ? (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60)
+            : Infinity;
+          const isNewSession = hoursSinceLastLogin >= 1;
           await storage.upsertUser({
             ...user,
-            lastLoginAt: new Date(),
+            lastLoginAt: now,
             lastUserAgent: userAgent,
+            sessionCount: isNewSession ? (user.sessionCount ?? 0) + 1 : (user.sessionCount ?? 0),
           });
         } catch (error) {
           console.warn("[Auth] Failed to update last login metadata:", error);
@@ -1605,9 +1798,12 @@ Crawl-delay: 1
   });
 
   // Update user consent preferences
-  app.patch("/api/user/consent", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/user/consent", isAuthenticatedEither, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const { privacyAccepted, aiMessageConsent, aiCallConsent, ndaAccepted } = req.body;
 
       const updateData: any = {};
@@ -1640,7 +1836,7 @@ Crawl-delay: 1
   });
 
   // Export user data (GDPR compliance)
-  app.get("/api/user/export", isAuthenticatedEither, async (req: any, res) => {
+  app.get("/api/user/export", requireAuthOnly, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -1774,97 +1970,116 @@ Crawl-delay: 1
     }
   });
 
+  // GPT Actions endpoint (stateless auth via API key header).
+  // Uses same tone analysis engine as in-app preview but does not require a session cookie.
+  app.post("/api/actions/preview-tone", async (req: any, res) => {
+    try {
+      const configuredApiKey = getActionsApiKey();
+      if (!configuredApiKey) {
+        return res.status(503).json({
+          message: "Actions API key is not configured on the server.",
+        });
+      }
+
+      const providedApiKey = extractActionsApiKey(req);
+      if (!providedApiKey || providedApiKey !== configuredApiKey) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const content =
+        typeof req.body?.content === "string"
+          ? sanitizeInput(req.body.content).trim()
+          : "";
+
+      if (!content) {
+        return res.status(400).json({ message: "content is required" });
+      }
+
+      const toneResult = analyzeRuleBasedTone(content);
+
+      return res.json({
+        tone: toneResult.category,
+        summary: toneResult.summary,
+        emoji: toneResult.emoji,
+        confidence: toneResult.confidence,
+        flags: toneResult.flags,
+        rewordingSuggestion: toneResult.rewordingSuggestion ?? null,
+        originalMessage: content,
+      });
+    } catch (error) {
+      console.error("Error in actions preview-tone:", error);
+      return res.status(500).json({ message: "Failed to analyze message tone" });
+    }
+  });
+
   // Preview tone analysis without sending (AI-first feature)
   // Enhanced with Conflict Escalation Score (CES) for predictive harm prevention
-  app.post("/api/messages/preview", isAuthenticatedEither, async (req: any, res) => {
+  app.post("/api/messages/preview", requireSession, async (req: any, res) => {
     try {
-      const userId = getUserId(req);
-      const { content, conversationId } = req.body;
+      const { content } = req.body;
 
       if (!content || typeof content !== "string") {
         return res.status(400).json({ message: "Message content is required" });
       }
 
-      // Fetch user preferences including co-parent personality for personalized AI analysis
-      const userPrefs = userId ? await getUserPreferencesWithCoParent(userId) : undefined;
-
-      // Get recent conversation history for context (for both tone and CES analysis)
-      let conversationHistory: string[] | undefined;
-      let conversationHistoryFull: Array<{
-        content: string;
-        senderId: string;
-        createdAt: string | Date;
-        tone?: string | null;
-      }> = [];
-      
-      if (conversationId && userId) {
-        const messages = await storage.getMessagesByUser(userId);
-        const convMessages = messages
-          .filter(m => m.conversationId === conversationId)
-          .slice(-10); // Get last 10 for CES trajectory analysis
-        
-        conversationHistory = convMessages.map(m => m.content);
-        conversationHistoryFull = convMessages.map(m => ({
-          content: m.content,
-          senderId: m.senderId,
-          createdAt: m.createdAt,
-          tone: m.tone,
-        }));
-      }
-
-      // Run tone analysis
-      const { tone, summary, emoji, rewordingSuggestion } = await analyzeTone(content, userPrefs, conversationHistory);
-
-      // Calculate Conflict Escalation Score (CES)
-      let cesResult: CESResult | null = null;
-      let deescalationSuggestion: string | null = null;
-      
-      if (userId) {
-        cesResult = calculateConflictEscalationScore(
-          content,
-          conversationHistoryFull,
-          userId
-        );
-        
-        // Generate de-escalation rewrite if intervention needed
-        if (cesResult.interventionLevel !== "none") {
-          deescalationSuggestion = generateDeescalationRewrite(
-            content,
-            cesResult.score,
-            cesResult.signals,
-            userPrefs ? {
-              personalityType: userPrefs.personalityType,
-              coParentPersonalityType: userPrefs.coParentPersonalityType,
-            } : undefined
-          );
-        }
-      }
+      const sanitizedContent = sanitizeInput(content);
+      const toneResult = analyzeRuleBasedTone(sanitizedContent);
 
       res.json({
-        tone,
-        summary,
-        emoji,
-        rewordingSuggestion,
-        originalMessage: content,
-        // CES data for predictive intervention
-        ces: cesResult ? {
-          score: cesResult.score,
-          state: cesResult.state,
-          interventionLevel: cesResult.interventionLevel,
-          trajectory: cesResult.trajectory,
-          signals: cesResult.signals,
-          suggestedActions: cesResult.suggestedActions,
-          pauseRecommended: cesResult.pauseRecommended,
-          pauseDuration: cesResult.pauseDuration,
-          childImpactReminder: cesResult.childImpactReminder,
-          deescalationSuggestion,
-        } : null,
+        tone: toneResult.category,
+        summary: toneResult.summary,
+        emoji: toneResult.emoji,
+        toneSummary: toneResult.summary,
+        toneEmoji: toneResult.emoji,
+        confidence: toneResult.confidence,
+        flags: toneResult.flags,
+        rewordingSuggestion: toneResult.rewordingSuggestion ?? null,
+        originalMessage: sanitizedContent,
+        ces: null,
       });
     } catch (error) {
       console.error("Error previewing tone:", error);
       res.status(500).json({ message: "Failed to analyze message tone" });
     }
   });
+
+  // Canonical API wrapper for external integrations (cookie-auth in v1).
+  if (isExternalPreflightApiEnabled()) {
+    app.post("/api/v1/message/preflight", async (req: any, res) => {
+      try {
+        const configuredApiKey = getActionsApiKey();
+        const providedApiKey = extractActionsApiKey(req);
+        const hasValidApiKey =
+          Boolean(configuredApiKey) &&
+          Boolean(providedApiKey) &&
+          providedApiKey === configuredApiKey;
+
+        const userId = getUserId(req);
+        if (!userId && !hasValidApiKey) {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const parsed = parsePreflightRequest(req.body);
+        if (!parsed) {
+          return res.status(400).json({ message: "text is required" });
+        }
+
+        const conversationId = resolveConversationIdFromMetadata(parsed.metadata);
+
+        const previewPayload = await buildMessagePreviewPayload(
+          userId || undefined,
+          sanitizeInput(parsed.text),
+          conversationId,
+        );
+        const preflight = mapPreviewToPreflight(previewPayload);
+
+        res.json(preflight);
+      } catch (error) {
+        console.error("Error in preflight API:", error);
+        res.status(500).json({ message: "Failed to run message preflight analysis" });
+      }
+    });
+  }
 
   app.post("/api/messages", isAuthenticatedEither, rateLimiters.messages, async (req: any, res) => {
     try {
@@ -1943,8 +2158,15 @@ Crawl-delay: 1
       // Track usage
       await storage.incrementUserUsage(userId, { messages: 1 });
 
-      // Get sender info for notification
+      // Get sender info for notification + set firstMessageSentAt on first send
       const sender = await storage.getUser(userId);
+      if (sender && !sender.firstMessageSentAt) {
+        try {
+          await storage.upsertUser({ ...sender, firstMessageSentAt: new Date() });
+        } catch (err) {
+          console.warn("[Messages] Failed to set firstMessageSentAt:", err);
+        }
+      }
 
       // Broadcast immediately - no waiting for AI analysis
       await broadcastNewMessage(
@@ -2061,13 +2283,13 @@ Crawl-delay: 1
           await storage.updateMessageTone(message.id, {
             tone: "neutral",
             toneSummary: "Message sent",
-            toneEmoji: null,
+            toneEmoji: "😐",
             rewordingSuggestion: null,
           });
           await broadcastMessageToneUpdate(message.id, conversationId, {
             tone: "neutral",
             toneSummary: "Message sent",
-            toneEmoji: null,
+            toneEmoji: "😐",
             rewordingSuggestion: null,
           });
         }
@@ -2528,7 +2750,8 @@ Crawl-delay: 1
           return res.status(400).json({ message: "Only image files are allowed" });
         }
 
-        const profileImageUrl = `/uploads/profiles/${file.filename}`;
+        const baseUrl = (process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+        const profileImageUrl = `${baseUrl}/uploads/profiles/${file.filename}`;
 
         console.log("[Profile Upload] Success! File saved at:", profileImageUrl);
         res.json({
@@ -3955,14 +4178,14 @@ Crawl-delay: 1
         const partnershipId = expense.partnershipId;
 
         // Increment expenses logged
-        await storage.incrementUserStat(userId, "expensesLogged", 1, (partnershipId || undefined) as number | undefined);
+        await storage.incrementUserStat(userId, "expensesLogged", 1, partnershipId || undefined);
 
         // Check and award achievements
-        const stats = await storage.getUserStats(userId, (partnershipId || undefined) as number | undefined);
+        const stats = await storage.getUserStats(userId, partnershipId || undefined);
         if (stats) {
           // Expense Tracker achievement (30 expenses)
           if (stats.expensesLogged === 30) {
-            await storage.awardAchievement(userId, "expense_tracker", (partnershipId || undefined) as number | undefined);
+            await storage.awardAchievement(userId, "expense_tracker", partnershipId || undefined);
           }
         }
       } catch (gamificationError) {
@@ -4459,21 +4682,25 @@ Crawl-delay: 1
       const user = await storage.getUser(userId);
       if (user?.activePartnershipId) {
         const allEvents = await storage.getEvents(userId);
-        const newStart = parsed.startDate.getTime();
-        const newEnd = parsed.endDate ? parsed.endDate.getTime() : newStart + 3600000; // Default 1 hour
+        const normalizedNewEvent = normalizeSchedulableEvent(parsed);
+        const newStart = normalizedNewEvent?.start.getTime() ?? parsed.startDate.getTime();
+        const newEnd = normalizedNewEvent?.end.getTime() ?? (parsed.endDate ? parsed.endDate.getTime() : newStart + 3600000);
 
         for (const existingEvent of allEvents) {
           if (existingEvent.id === event.id) continue;
-          const existingStart = new Date(existingEvent.startDate).getTime();
-          const existingEnd = existingEvent.endDate
-            ? new Date(existingEvent.endDate).getTime()
-            : existingStart + 3600000;
+          const normalizedExistingEvent = normalizeSchedulableEvent(existingEvent);
+          if (!normalizedExistingEvent) {
+            continue;
+          }
+
+          const existingStart = normalizedExistingEvent.start.getTime();
+          const existingEnd = normalizedExistingEvent.end.getTime();
 
           // Check for overlap
           if (newStart < existingEnd && newEnd > existingStart) {
             broadcastCalendarConflict(user.activePartnershipId, userId, {
-              eventTitle: parsed.title || "New event",
-              conflictsWith: existingEvent.title || "Existing event",
+              eventTitle: getDisplayEventTitle(parsed.title) || "New event",
+              conflictsWith: normalizedExistingEvent.title,
             });
             break; // Only notify once per creation
           }
@@ -4557,20 +4784,24 @@ Crawl-delay: 1
       const user = await storage.getUser(userId);
       if (user?.activePartnershipId) {
         const allEvents = await storage.getEvents(userId);
-        const newStart = parsed.startDate.getTime();
-        const newEnd = parsed.endDate ? parsed.endDate.getTime() : newStart + 3600000;
+        const normalizedNewEvent = normalizeSchedulableEvent(parsed);
+        const newStart = normalizedNewEvent?.start.getTime() ?? parsed.startDate.getTime();
+        const newEnd = normalizedNewEvent?.end.getTime() ?? (parsed.endDate ? parsed.endDate.getTime() : newStart + 3600000);
 
         for (const existingEvent of allEvents) {
           if (existingEvent.id === event.id) continue;
-          const existingStart = new Date(existingEvent.startDate).getTime();
-          const existingEnd = existingEvent.endDate
-            ? new Date(existingEvent.endDate).getTime()
-            : existingStart + 3600000;
+          const normalizedExistingEvent = normalizeSchedulableEvent(existingEvent);
+          if (!normalizedExistingEvent) {
+            continue;
+          }
+
+          const existingStart = normalizedExistingEvent.start.getTime();
+          const existingEnd = normalizedExistingEvent.end.getTime();
 
           if (newStart < existingEnd && newEnd > existingStart) {
             broadcastCalendarConflict(user.activePartnershipId, userId, {
-              eventTitle: parsed.title || "Updated event",
-              conflictsWith: existingEvent.title || "Existing event",
+              eventTitle: getDisplayEventTitle(parsed.title) || "Updated event",
+              conflictsWith: normalizedExistingEvent.title,
             });
             break;
           }
@@ -4781,30 +5012,8 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
       const events = await storage.getEvents(userId);
-      const conflicts: string[] = [];
+      const conflicts = findScheduleConflicts(events);
       const suggestions: string[] = [];
-
-      // Check for overlapping events
-      for (let i = 0; i < events.length; i++) {
-        for (let j = i + 1; j < events.length; j++) {
-          const event1 = events[i];
-          const event2 = events[j];
-          const start1 = new Date(event1.startDate);
-          const end1 = event1.endDate
-            ? new Date(event1.endDate)
-            : new Date(start1.getTime() + 60 * 60 * 1000);
-          const start2 = new Date(event2.startDate);
-          const end2 = event2.endDate
-            ? new Date(event2.endDate)
-            : new Date(start2.getTime() + 60 * 60 * 1000);
-
-          if (start1 < end2 && start2 < end1) {
-            conflicts.push(
-              `"${event1.title}" overlaps with "${event2.title}" on ${start1.toLocaleDateString()}`
-            );
-          }
-        }
-      }
 
       // Dev mode protection - use mock suggestions to avoid token usage
       if (isDevMode()) {
@@ -7957,14 +8166,14 @@ Crawl-delay: 1
 
   // Parenting tips API with smart fallback
   app.get("/api/parenting-tips", isAuthenticatedEither, async (req: any, res) => {
-    try {
-      const { childAgeMonths, category } = req.query;
-      
-      // Normalize inputs: treat "all", empty strings, or non-numeric values as undefined
-      const parsedAge = childAgeMonths && childAgeMonths !== "all" ? parseInt(childAgeMonths as string) : NaN;
-      const ageMonths = isNaN(parsedAge) ? undefined : parsedAge;
-      const categoryFilter = category && category !== "all" ? category as string : undefined;
+    const parsedAge =
+      req.query.childAgeMonths && req.query.childAgeMonths !== "all"
+        ? parseInt(req.query.childAgeMonths as string, 10)
+        : NaN;
+    const ageMonths = isNaN(parsedAge) ? undefined : parsedAge;
+    const categoryFilter = normalizeParentingCategory(req.query.category as string | undefined);
 
+    try {
       // First, try exact match
       let tips = await storage.getParentingTips(ageMonths, categoryFilter);
 
@@ -8014,10 +8223,14 @@ Crawl-delay: 1
         }
       }
 
+      if (tips.length === 0) {
+        tips = getFallbackParentingTips(parentingTipFallbackCatalog, ageMonths, categoryFilter);
+      }
+
       res.json(tips);
     } catch (error) {
       console.error("Error fetching parenting tips:", error);
-      res.status(500).json({ message: "Failed to fetch parenting tips" });
+      res.json(getFallbackParentingTips(parentingTipFallbackCatalog, ageMonths, categoryFilter));
     }
   });
 
@@ -8038,11 +8251,14 @@ Crawl-delay: 1
 
   // Weather activities API
   app.get("/api/weather-activities", isAuthenticatedEither, async (req: any, res) => {
-    try {
-      const { childAgeMonths, weatherCondition } = req.query;
-      const ageMonths = childAgeMonths && childAgeMonths !== "all" ? parseInt(childAgeMonths as string) : undefined;
-      const weather = weatherCondition && weatherCondition !== "all" ? weatherCondition as string : undefined;
+    const parsedAge =
+      req.query.childAgeMonths && req.query.childAgeMonths !== "all"
+        ? parseInt(req.query.childAgeMonths as string, 10)
+        : NaN;
+    const ageMonths = Number.isFinite(parsedAge) ? parsedAge : undefined;
+    const weather = normalizeWeatherCondition(req.query.weatherCondition as string | undefined);
 
+    try {
       console.log(`[API] Fetching activities - Age: ${ageMonths}, Weather: ${weather}`);
 
       let activities = await storage.getWeatherActivities(ageMonths, weather);
@@ -8065,10 +8281,14 @@ Crawl-delay: 1
         }
       }
 
+      if (activities.length === 0) {
+        activities = getFallbackWeatherActivities(weatherActivityFallbackCatalog, ageMonths, weather);
+      }
+
       res.json(activities);
     } catch (error) {
       console.error("Error fetching weather activities:", error);
-      res.status(500).json({ message: "Failed to fetch weather activities" });
+      res.json(getFallbackWeatherActivities(weatherActivityFallbackCatalog, ageMonths, weather));
     }
   });
 
@@ -8250,7 +8470,7 @@ Crawl-delay: 1
   });
 
   // Admin: Get all users
-  app.get("/api/admin/users", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/users", isAdmin, async (req: any, res) => {
     try {
       const allUsers = await storage.getAllUsers();
 
@@ -8268,7 +8488,7 @@ Crawl-delay: 1
     }
   });
 
-  app.get("/api/admin/feedback", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/feedback", isAdmin, async (req: any, res) => {
     try {
       const { status } = req.query;
       const feedbackList = status
@@ -8282,7 +8502,7 @@ Crawl-delay: 1
     }
   });
 
-  app.patch("/api/admin/feedback/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/admin/feedback/:id", isAdmin, async (req: any, res) => {
     try {
       const { status, adminNotes } = req.body;
       const updated = await storage.updateFeedbackStatus(req.params.id, status, adminNotes);
@@ -8293,10 +8513,8 @@ Crawl-delay: 1
     }
   });
 
-  // Admin dashboard statistics API
-  // NOTE: During beta, any authenticated user can access admin stats since all users are beta testers
-  // TODO: Before production launch, implement proper role-based authorization (admin flag or allowlist)
-  app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
+  // Admin dashboard statistics API — requires admin flag or allowlist
+  app.get("/api/admin/stats", isAdmin, async (req: any, res) => {
     try {
       const stats = await storage.getAdminStats();
       res.json(stats);
@@ -8307,7 +8525,7 @@ Crawl-delay: 1
   });
 
   // Admin partnerships list
-  app.get("/api/admin/partnerships", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/partnerships", isAdmin, async (req: any, res) => {
     try {
       const allPartnerships = await storage.getAllPartnerships();
       
@@ -8334,7 +8552,7 @@ Crawl-delay: 1
   });
 
   // Admin messages list with stats
-  app.get("/api/admin/messages", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/messages", isAdmin, async (req: any, res) => {
     try {
       const messages = await storage.getMessages();
       
@@ -8371,6 +8589,17 @@ Crawl-delay: 1
     } catch (error) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.get("/api/admin/web-update-metrics", isAdmin, (req: any, res) => {
+    try {
+      const windowInput = typeof req.query?.window === "string" ? req.query.window : 24;
+      const metrics = getWebUpdateMetrics(windowInput);
+      return res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching web update metrics:", error);
+      return res.status(500).json({ message: "Failed to fetch web update metrics" });
     }
   });
 
@@ -9180,6 +9409,19 @@ Crawl-delay: 1
         messages: [],
       });
 
+      // Increment prep chat counters
+      if (user) {
+        try {
+          await storage.upsertUser({
+            ...user,
+            prepChatSessionCount: (user.prepChatSessionCount ?? 0) + 1,
+            firstPrepChatAt: user.firstPrepChatAt ?? new Date(),
+          });
+        } catch (err) {
+          console.warn("[PrepChat] Failed to update prep chat counters:", err);
+        }
+      }
+
       res.json(session);
     } catch (error) {
       console.error("Error creating prep chat session:", error);
@@ -9238,6 +9480,22 @@ Crawl-delay: 1
       }
 
       const updated = await storage.updatePrepChatSession(req.params.id, req.body);
+
+      // Track draft-to-send conversions
+      if (req.body.sentToChat === true) {
+        try {
+          const user = await storage.getUser(userId);
+          if (user) {
+            await storage.upsertUser({
+              ...user,
+              draftToSendCount: (user.draftToSendCount ?? 0) + 1,
+            });
+          }
+        } catch (err) {
+          console.warn("[PrepChat] Failed to update draftToSendCount:", err);
+        }
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating prep chat session:", error);
@@ -9270,7 +9528,7 @@ Crawl-delay: 1
         : partnership?.user1Id;
       const coParent = coParentId ? await storage.getUser(coParentId) : null;
 
-      const messages = (session.messages as Array<{role: string, content: string, timestamp: string}>) || [];
+      const messages = (session.messages as Array<{role: "user" | "coach"; content: string; timestamp: string}>) || [];
       
       // Add user message
       messages.push({
@@ -9308,6 +9566,53 @@ Crawl-delay: 1
     }
   });
 
+  app.post("/api/prep-chat/sessions/:id/draft", isAuthenticatedEither, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const session = await storage.getPrepChatSession(req.params.id);
+      if (!session || session.userId !== userId) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      const partnership = user?.activePartnershipId
+        ? await storage.getPartnership(user.activePartnershipId)
+        : null;
+      const coParentId = partnership?.user1Id === userId
+        ? partnership?.user2Id
+        : partnership?.user1Id;
+      const coParent = coParentId ? await storage.getUser(coParentId) : null;
+
+      const messages = (session.messages as Array<{role: "user" | "coach"; content: string; timestamp: string}>) || [];
+      const userPersonality = session.userPersonalityType || user?.personalityType || undefined;
+      const coParentPersonality = session.coParentPersonalityType || coParent?.personalityType || undefined;
+
+      const result = await generatePrepChatDraft(
+        session.customTopic || session.topic,
+        messages,
+        userPersonality,
+        coParentPersonality,
+      );
+
+      const updated = await storage.updatePrepChatSession(req.params.id, {
+        draftedMessage: result.draft,
+      });
+
+      res.json({
+        session: updated,
+        draft: result.draft,
+        note: result.note,
+      });
+    } catch (error) {
+      console.error("Error generating prep chat draft:", error);
+      res.status(500).json({ message: "Failed to generate draft" });
+    }
+  });
+
   // Analyze draft message tone
   app.post("/api/prep-chat/analyze-draft", isAuthenticatedEither, async (req: any, res) => {
     try {
@@ -9317,11 +9622,26 @@ Crawl-delay: 1
       }
 
       const { draft, coParentPersonality, userPersonality } = req.body;
+      const normalizePersonalityPayload = (value: unknown): string | undefined => {
+        if (typeof value !== "string") return undefined;
+        const normalized = value.trim().toUpperCase();
+        return /^[EI][NS][TF][JP]$/.test(normalized) ? normalized : undefined;
+      };
+
+      const normalizedCoParentPersonality = normalizePersonalityPayload(coParentPersonality);
+      const normalizedUserPersonality = normalizePersonalityPayload(userPersonality);
+
+      if (typeof coParentPersonality === "string" && coParentPersonality.trim() && !normalizedCoParentPersonality) {
+        console.warn("[PrepChat] Ignoring invalid coParentPersonality payload", { userId, coParentPersonality });
+      }
+      if (typeof userPersonality === "string" && userPersonality.trim() && !normalizedUserPersonality) {
+        console.warn("[PrepChat] Ignoring invalid userPersonality payload", { userId, userPersonality });
+      }
 
       const analysis = await analyzeDraftTone(
         sanitizeInput(draft),
-        coParentPersonality,
-        userPersonality
+        normalizedCoParentPersonality,
+        normalizedUserPersonality
       );
 
       res.json(analysis);

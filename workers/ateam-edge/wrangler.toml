@@ -1,0 +1,22 @@
+name = "ateam-edge"
+account_id = "4c5c204659aebe5d95a99b55a5a7d0b4"
+main = "src/index.ts"
+compatibility_date = "2026-03-27"
+workers_dev = true
+preview_urls = true
+
+routes = [
+  { pattern = "ateam.unalabs.cloud", custom_domain = true },
+  { pattern = "unalabs.cloud/ateam*", zone_name = "unalabs.cloud" },
+  { pattern = "www.unalabs.cloud/ateam*", zone_name = "unalabs.cloud" },
+  { pattern = "unalabs.cloud/mission-control*", zone_name = "unalabs.cloud" },
+  { pattern = "www.unalabs.cloud/mission-control*", zone_name = "unalabs.cloud" },
+  { pattern = "unalabs.cloud/api/ateam/*", zone_name = "unalabs.cloud" },
+  { pattern = "www.unalabs.cloud/api/ateam/*", zone_name = "unalabs.cloud" },
+]
+
+[vars]
+ATEAM_UPSTREAM_ORIGIN = "https://ateam-platform-production.up.railway.app"
+CANONICAL_ATEAM_ORIGIN = "https://ateam.unalabs.cloud"
+CANONICAL_SITE_ORIGIN = "https://unalabs.cloud"
+CANONICAL_OPS_ORIGIN = "https://ops.unalabs.cloud"

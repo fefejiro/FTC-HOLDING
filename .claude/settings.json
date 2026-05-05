@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(git:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(jq:*)",
+      "Bash(curl:*)",
+      "WebSearch",
+      "Read(//c//**)",
+      "Bash(echo $ANDROID_HOME)",
+      "Read(//c/Users/mikef/AppData/Local/Android/Sdk/build-tools/**)",
+      "Read(//c/Android/Sdk/**)",
+      "Bash(./gradlew bundleRelease)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('scripts', {}\\), indent=2\\)\\)\")",
+      "Bash(railway environment:*)",
+      "Bash(railway project:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in d.get\\('scripts',{}\\).items\\(\\)]\")",
+      "Bash(python3 -c ':*)",
+      "Bash(kill %1)",
+      "Read(//c/Users/mikef/AppData/Roaming/xdg.config/.wrangler//**)",
+      "Bash(VITE_API_BASE_URL=https://ftcpeacepad-extension-production.up.railway.app npm run build:frontend)",
+      "Bash(grep -v \"^[<>] *$\")",
+      "Bash(grep -v \"^$\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(t.get\\('id',''\\), t.get\\('title',''\\), t.get\\('analysisStatus',''\\), t.get\\('lyricsStatus',''\\)\\) for t in \\(d.get\\('tracks'\\) or d.get\\('data'\\) or []\\)]\")",
+      "Read(//c/Users/mikef/**)",
+      "Bash(VITE_API_BASE_URL=https://ftcpeacepad-extension-production.up.railway.app VITE_POSTHOG_KEY=phc_t8n2N8TWVFkPfZVc9bNduYDStuzSuRFWaWBR7qpMnz3x npm run build:frontend)",
+      "Bash(grep -l \"don catch am\\\\|Stories unlocked\\\\|Unlocking the story\\\\|analyzing more lyrics\\\\|deeper context\" *.js)",
+      "Bash(grep -o \"don catch am\\\\|Stories unlocked\\\\|Unlocking the story\\\\|analyzing more lyrics\\\\|deeper context\" *.js)",
+      "Bash(sort -k5 -rn)"
+    ],
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "c:\\Users\\mikef\\.claude\\projects\\c--FTC-HOLDING\\memory"
+    ]
+  }
+}

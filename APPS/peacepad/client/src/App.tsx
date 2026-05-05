@@ -1,7 +1,7 @@
-import { useState, useCallback, lazy, Suspense, useEffect, useRef } from "react";
+import { useCallback, lazy, Suspense, useEffect, useMemo, useRef } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,22 +18,19 @@ import { CallProvider, useCallContext } from "@/contexts/CallContext";
 import { WebRTCProvider } from "@/contexts/WebRTCContext";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useToast } from "@/hooks/use-toast";
 import { MessageCircle } from "lucide-react";
 import { unlockAudio } from "@/utils/ringManager";
 import { initializeRemoteAudioManager } from "./call/remoteAudioManager";
 import { PageSkeleton, AuthLoadingSkeleton } from "@/components/PageSkeleton";
-import { GuestExpiryBanner } from "@/components/GuestExpiryBanner";
 import { VersionGuard } from "@/components/VersionGuard";
+import { identifyAnalyticsUser, trackSessionStarted } from "@/lib/analytics";
 
 // Lazy load non-critical UI components for better initial load performance
 const WhatsNewModal = lazy(() => import("@/components/WhatsNewModal").then(m => ({ default: m.WhatsNewModal })));
-import { FeedbackWidget } from "@/components/FeedbackWidget";
 const MoodCheckIn = lazy(() => import("@/components/MoodCheckIn"));
 const TransitionPrompt = lazy(() => import("@/components/TransitionPrompt"));
 const UpdateNotification = lazy(() => import("@/components/UpdateNotification").then(m => ({ default: m.UpdateNotification })));
 const InstallPWA = lazy(() => import("@/components/InstallPWA").then(m => ({ default: m.InstallPWA })));
-const ForceRefreshButton = lazy(() => import("@/components/ForceRefreshButton").then(m => ({ default: m.ForceRefreshButton })));
 const TermsAcceptanceDialog = lazy(() => import("@/components/TermsAcceptanceDialog").then(m => ({ default: m.TermsAcceptanceDialog })));
 const NotificationPermission = lazy(() => import("@/components/NotificationPermission").then(m => ({ default: m.NotificationPermission })));
 const VideoCallDialog = lazy(() => import("@/components/VideoCallDialog"));
@@ -42,7 +39,6 @@ const AppRatingPrompt = lazy(() => import("@/components/AppRatingPrompt").then(m
 const RateLimitNotifier = lazy(() => import("@/components/RateLimitNotifier").then(m => ({ default: m.RateLimitNotifier })));
 
 // Import frequently used pages immediately (critical path)
-import LandingPage from "@/pages/landing";
 import OnboardingPage from "@/pages/onboarding";
 import AuthCallbackPage, { MobileAuthCallbackPage } from "@/pages/auth-callback";
 import ChatPage from "@/pages/chat";
@@ -50,31 +46,12 @@ import SettingsPage from "@/pages/settings";
 import HealthPanelPage from "@/pages/health-panel";
 import NotFound from "@/pages/not-found";
 import PrepChatPage from "@/pages/prep-chat";
-import DashboardPage from "@/pages/dashboard";
+import ComposePage from "@/pages/compose";
 
 // Lazy load heavy/infrequently used pages for better performance
 const SchedulingPage = lazy(() => import("@/pages/scheduling"));
-const TasksPage = lazy(() => import("@/pages/tasks"));
-const ExpensesPage = lazy(() => import("@/pages/expenses"));
-const ExpenseDetailPage = lazy(() => import("@/pages/expense-detail"));
-const NotesPage = lazy(() => import("@/pages/notes"));
-const ChildUpdatesPage = lazy(() => import("@/pages/child-updates"));
-const PetsPage = lazy(() => import("@/pages/pets"));
-const ProgressPage = lazy(() => import("@/pages/progress"));
-const AgentSettingsPage = lazy(() => import("@/pages/agent-settings"));
-const ParentingTipsPage = lazy(() => import("@/pages/parenting-tips"));
-const WeatherActivitiesPage = lazy(() => import("@/pages/weather-activities"));
-const StorybookCreatorPage = lazy(() => import("@/pages/storybook-creator"));
-const ShoppingListPage = lazy(() => import("@/pages/shopping-list"));
-const TherapistLocatorPage = lazy(() => import("@/pages/therapist-locator"));
-const TherapistDirectoryPage = lazy(() => import("@/pages/therapist-directory"));
-const SafetyPlanPage = lazy(() => import("@/pages/support/safety-plan"));
-const AuditTrailPage = lazy(() => import("@/pages/audit-trail"));
-const JoinCallPage = lazy(() => import("@/pages/join-call"));
-const CallsPage = lazy(() => import("@/pages/calls"));
-const CallPreferencesPage = lazy(() => import("@/pages/call-preferences"));
-const ConchModePage = lazy(() => import("@/pages/conch-mode"));
 const TermsPage = lazy(() => import("@/pages/terms"));
+const SupportPage = lazy(() => import("@/pages/support"));
 const PrivacyPage = lazy(() => import("@/pages/privacy"));
 const DeleteAccountPage = lazy(() => import("@/pages/delete-account"));
 const ResourcesPage = lazy(() => import("@/pages/resources"));
@@ -85,15 +62,6 @@ const AdminUsersPage = lazy(() => import("@/pages/admin-users"));
 const AdminPartnershipsPage = lazy(() => import("@/pages/admin-partnerships"));
 const AdminMessagesPage = lazy(() => import("@/pages/admin-messages"));
 const HelpPage = lazy(() => import("@/pages/help"));
-const MessagingFeaturePage = lazy(() => import("@/pages/features/messaging"));
-const CalendarFeaturePage = lazy(() => import("@/pages/features/calendar"));
-const ExpensesFeaturePage = lazy(() => import("@/pages/features/expenses"));
-const SupportFeaturePage = lazy(() => import("@/pages/features/support"));
-const BetaWelcome = lazy(() => import("@/pages/beta/Welcome"));
-const BetaGettingStarted = lazy(() => import("@/pages/beta/GettingStarted"));
-const BetaFeatures = lazy(() => import("@/pages/beta/Features"));
-const BetaFeedbackGuide = lazy(() => import("@/pages/beta/FeedbackGuide"));
-const BetaFAQ = lazy(() => import("@/pages/beta/FAQ"));
 const JoinPartnershipPage = lazy(() => import("@/pages/join-partnership"));
 
 // Loading fallback component - uses skeleton for native feel
@@ -101,8 +69,45 @@ function PageLoader() {
   return <PageSkeleton variant="default" />;
 }
 
+function hasMeaningfulDisplayName(value?: string | null): boolean {
+  const name = (value || "").trim();
+  if (!name || name === "PeacePad User") {
+    return false;
+  }
+  return !/^guest[a-z0-9]+$/i.test(name);
+}
+
+function HomeResolverPage() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { data: partnerships = [] } = useQuery<any[]>({
+    queryKey: ["/api/partnerships"],
+    enabled: Boolean(user),
+  });
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    if (user.isGuest) {
+      setLocation("/compose");
+      return;
+    }
+
+    if (user.activePartnershipId || partnerships.length > 0) {
+      setLocation("/chat");
+      return;
+    }
+
+    setLocation("/compose");
+  }, [partnerships.length, setLocation, user]);
+
+  return <PageLoader />;
+}
+
 function Router() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, authBootstrapIssue, retryAuth } = useAuth();
   const [location, setLocation] = useLocation();
   const consentSyncedRef = useRef(false);
 
@@ -149,12 +154,15 @@ function Router() {
       return null;
     }
 
-    const needsOnboarding = !user.displayName;
-    const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
+    const hasCompletedOnboarding = Boolean(localStorage.getItem(`onboarding_completed_${user.id}`));
+    const needsOnboarding =
+      !hasCompletedOnboarding &&
+      !Boolean(user.isGuest) &&
+      !hasMeaningfulDisplayName(user.displayName);
     const isOnOnboardingPage = location === "/onboarding";
     const isOnJoinPage = location.startsWith("/join/");
 
-    if (needsOnboarding && !hasCompletedOnboarding && !isOnOnboardingPage && !isOnJoinPage) {
+    if (needsOnboarding && !isOnOnboardingPage && !isOnJoinPage) {
       setLocation("/onboarding");
       return null;
     }
@@ -165,33 +173,15 @@ function Router() {
       <>
         <Suspense fallback={<PageLoader />}>
           <Switch>
-            <Route path="/" component={PrepChatPage} />
+            <Route path="/" component={HomeResolverPage} />
+            <Route path="/compose" component={ComposePage} />
             <Route path="/chat" component={ChatPage} />
-            <Route path="/calls" component={CallsPage} />
-            <Route path="/call-preferences" component={CallPreferencesPage} />
-            <Route path="/conch-mode" component={ConchModePage} />
             <Route path="/onboarding" component={OnboardingPage} />
             <Route path="/auth/callback" component={AuthCallbackPage} />
             <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
             <Route path="/health-panel" component={HealthPanelPage} />
             <Route path="/scheduling" component={SchedulingPage} />
-            <Route path="/tasks" component={TasksPage} />
-            <Route path="/expenses" component={ExpensesPage} />
-            <Route path="/expense/:id" component={ExpenseDetailPage} />
-            <Route path="/notes" component={NotesPage} />
-            <Route path="/child-updates" component={ChildUpdatesPage} />
-            <Route path="/pets" component={PetsPage} />
-            <Route path="/progress" component={ProgressPage} />
             <Route path="/prep-chat" component={PrepChatPage} />
-            <Route path="/agent-settings" component={AgentSettingsPage} />
-            <Route path="/parenting-tips" component={ParentingTipsPage} />
-            <Route path="/weather-activities" component={WeatherActivitiesPage} />
-            <Route path="/storybook-creator" component={StorybookCreatorPage} />
-            <Route path="/shopping-list" component={ShoppingListPage} />
-            <Route path="/therapist-locator" component={TherapistLocatorPage} />
-            <Route path="/therapist-directory" component={TherapistDirectoryPage} />
-            <Route path="/support/safety-plan" component={SafetyPlanPage} />
-            <Route path="/audit-trail" component={AuditTrailPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route path="/admin" component={AdminDashboard} />
             <Route path="/admin/users" component={AdminUsersPage} />
@@ -200,22 +190,12 @@ function Router() {
             <Route path="/admin/errors" component={AdminErrorsPage} />
             <Route path="/admin/feedback" component={AdminFeedbackPage} />
             <Route path="/help" component={HelpPage} />
+            <Route path="/support" component={SupportPage} />
             <Route path="/terms" component={TermsPage} />
             <Route path="/privacy" component={PrivacyPage} />
             <Route path="/delete-account" component={DeleteAccountPage} />
             <Route path="/resources" component={ResourcesPage} />
-            <Route path="/features/messaging" component={MessagingFeaturePage} />
-            <Route path="/features/calendar" component={CalendarFeaturePage} />
-            <Route path="/features/expenses" component={ExpensesFeaturePage} />
-            <Route path="/features/support" component={SupportFeaturePage} />
-            <Route path="/beta/welcome" component={BetaWelcome} />
-            <Route path="/beta/getting-started" component={BetaGettingStarted} />
-            <Route path="/beta/features" component={BetaFeatures} />
-            <Route path="/beta/feedback-guide" component={BetaFeedbackGuide} />
-            <Route path="/beta/faq" component={BetaFAQ} />
             <Route path="/join/:code" component={JoinPartnershipPage} />
-            <Route path="/call/:code" component={JoinCallPage} />
-            <Route path="/call" component={JoinCallPage} />
             <Route component={NotFound} />
           </Switch>
         </Suspense>
@@ -223,7 +203,7 @@ function Router() {
           {needsTermsAcceptance && (
             <TermsAcceptanceDialog open={true} userId={user.id} />
           )}
-          <NotificationPermission />
+          <NotificationPermission user={user} />
         </Suspense>
       </>
     );
@@ -231,31 +211,50 @@ function Router() {
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <Switch>
-        <Route path="/" component={LandingPage} />
-        <Route path="/onboarding" component={OnboardingPage} />
-        <Route path="/auth/callback" component={AuthCallbackPage} />
-        <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
-        <Route path="/health-panel" component={HealthPanelPage} />
-        <Route path="/join/:code" component={JoinPartnershipPage} />
-        <Route path="/call/:code" component={JoinCallPage} />
-        <Route path="/call" component={JoinCallPage} />
-        <Route path="/resources" component={ResourcesPage} />
-        <Route path="/features/messaging" component={MessagingFeaturePage} />
-        <Route path="/features/calendar" component={CalendarFeaturePage} />
-        <Route path="/features/expenses" component={ExpensesFeaturePage} />
-        <Route path="/features/support" component={SupportFeaturePage} />
-        <Route path="/privacy" component={PrivacyPage} />
-        <Route path="/terms" component={TermsPage} />
-        <Route path="/delete-account" component={DeleteAccountPage} />
-        <Route component={NotFound} />
-      </Switch>
+      <>
+        {authBootstrapIssue && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+            <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Session restore needs attention</p>
+                <p className="text-sm text-amber-900/90">{authBootstrapIssue.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  retryAuth().catch((error) => {
+                    console.error("[AuthBootstrap] manual-retry-failed", error);
+                  });
+                }}
+                className="inline-flex shrink-0 items-center justify-center rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-950 transition hover:bg-amber-100"
+              >
+                Retry session check
+              </button>
+            </div>
+          </div>
+        )}
+        <Switch>
+          <Route path="/" component={ComposePage} />
+          <Route path="/compose" component={ComposePage} />
+          <Route path="/prep-chat" component={PrepChatPage} />
+          <Route path="/onboarding" component={OnboardingPage} />
+          <Route path="/auth/callback" component={AuthCallbackPage} />
+          <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
+          <Route path="/health-panel" component={HealthPanelPage} />
+          <Route path="/join/:code" component={JoinPartnershipPage} />
+          <Route path="/resources" component={ResourcesPage} />
+          <Route path="/privacy" component={PrivacyPage} />
+          <Route path="/support" component={SupportPage} />
+          <Route path="/terms" component={TermsPage} />
+          <Route path="/delete-account" component={DeleteAccountPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </>
     </Suspense>
   );
 }
 
 export default function App() {
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -329,19 +328,63 @@ export default function App() {
 
   // Background/foreground resilience: refetch data when app returns to foreground
   useEffect(() => {
+    let isMounted = true;
+    let appStateListener: { remove: () => Promise<void> } | null = null;
+
+    const handleAppResume = () => {
+      console.log('[App] App returned to foreground - refetching data');
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+      window.dispatchEvent(new Event('peacepad:app-resume'));
+    };
+
+    const handleAppBackground = () => {
+      console.log('[App] App going to background');
+      window.dispatchEvent(new Event('peacepad:app-background'));
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[App] App returned to foreground - refetching data');
-        // Refetch critical data to catch up on any changes made while backgrounded
-        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+        handleAppResume();
       } else {
-        console.log('[App] App going to background');
+        handleAppBackground();
       }
     };
 
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (!isMounted || !Capacitor.isNativePlatform()) {
+          return;
+        }
+
+        const { App: CapacitorApp } = await import('@capacitor/app');
+        if (!isMounted) {
+          return;
+        }
+
+        appStateListener = await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) {
+            handleAppResume();
+          } else {
+            handleAppBackground();
+          }
+        });
+      } catch (error) {
+        console.warn('[App] Failed to register native appStateChange listener:', error);
+      }
+    })();
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      isMounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (appStateListener) {
+        appStateListener.remove().catch(() => {
+          // no-op cleanup fallback
+        });
+      }
+    };
   }, []);
 
   return (
@@ -356,6 +399,7 @@ export default function App() {
                 <CallProvider>
                   <WebRTCContextWrapper>
                     <AuthWrapper>
+                      <SessionTracker />
                       <SidebarProvider style={style as React.CSSProperties}>
                         <div 
                           className="flex w-full"
@@ -375,7 +419,6 @@ export default function App() {
                             }}
                           >
                             <ConditionalHeader />
-                            <GuestExpiryBanner />
                             <main 
                               id="main-content" 
                               className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden pb-24 lg:pb-0 min-h-0"
@@ -400,16 +443,7 @@ export default function App() {
                 </Suspense>
                 <Toaster />
                 <OfflineIndicator />
-                <FeedbackWidget open={feedbackOpen} onOpenChange={setFeedbackOpen} />
-                <Suspense fallback={null}>
-                  <AuthenticatedWhatsNew />
-                  <UpdateNotification />
-                  <InstallPWA />
-                  <ForceRefreshButton />
-                  <AppRatingPrompt trigger="general-usage" />
-                  <RateLimitNotifier />
-                  <AccessibilityAnnouncer />
-                </Suspense>
+                <PromptSurfaceLayer />
                 </ErrorBoundary>
               </ActivityProvider>
             </LocationProvider>
@@ -424,37 +458,40 @@ export default function App() {
 function WebRTCContextWrapper({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const needsRealtime = !!user;
-  const sessionId = typeof window !== 'undefined' ? (localStorage.getItem("peacepad_session_id") || user?.id || '') : '';
-  const wsUrl = user && typeof window !== 'undefined'
-    ? (() => {
-        const createdUrl = createWebSocketUrl({
-          path: '/ws/signaling',
-          params: {
-            sessionId: sessionId || '',
-            userId: user.id
-          }
-        });
 
-        // Last-resort guard: never let production web connect signaling via the Pages host.
-        if (
-          createdUrl.includes("://peacepad.ca/") ||
-          createdUrl.includes("://www.peacepad.ca/") ||
-          createdUrl.includes("://ftc-holding.pages.dev/")
-        ) {
-          const forcedUrl = createdUrl.replace(
-            /^wss?:\/\/(peacepad\.ca|www\.peacepad\.ca|ftc-holding\.pages\.dev)/i,
-            "wss://api.peacepad.ca",
-          );
-          console.warn("[WebSocket] Forced signaling host rewrite at App layer", {
-            createdUrl,
-            forcedUrl,
-          });
-          return forcedUrl;
-        }
+  // Stabilise the WS URL so it only changes when the user ID changes.
+  // Without useMemo the IIFE runs on every render (auth bootstrap fires
+  // several times), causing multiple simultaneous connections that Railway
+  // rejects with code 1008 "Too many connections", which then triggers an
+  // infinite reconnect loop that freezes the renderer.
+  const wsUrl = useMemo(() => {
+    if (!user || typeof window === 'undefined') return '';
+    const sessionId = localStorage.getItem("peacepad_session_id") || user.id;
+    const createdUrl = createWebSocketUrl({
+      path: '/ws/signaling',
+      params: { sessionId, userId: user.id },
+    });
 
-        return createdUrl;
-      })()
-    : '';
+    // Last-resort guard: never let production web connect signaling via the Pages host.
+    if (
+      createdUrl.includes("://peacepad.ca/") ||
+      createdUrl.includes("://www.peacepad.ca/") ||
+      createdUrl.includes("://ftc-holding.pages.dev/")
+    ) {
+      const forcedUrl = createdUrl.replace(
+        /^wss?:\/\/(peacepad\.ca|www\.peacepad\.ca|ftc-holding\.pages\.dev)/i,
+        "wss://api.peacepad.ca",
+      );
+      console.warn("[WebSocket] Forced signaling host rewrite at App layer", {
+        createdUrl,
+        forcedUrl,
+      });
+      return forcedUrl;
+    }
+
+    return createdUrl;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Only re-derive when the authenticated user changes
 
   const handleWebSocketMessage = useCallback(async (event: MessageEvent) => {
       try {
@@ -521,9 +558,7 @@ function WebRTCContextWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
-  const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const { toast } = useToast();
   const callContext = useCallContext();
 
   const activeCallPhases = ['ringing', 'dialing', 'connecting', 'active'];
@@ -630,8 +665,74 @@ function ConditionalLogo() {
   );
 }
 
+function SessionTracker() {
+  const { user, isAuthenticated } = useAuth();
+  const trackedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      trackedRef.current = null;
+      return;
+    }
+
+    identifyAnalyticsUser(user);
+    if (trackedRef.current === user.id) {
+      return;
+    }
+
+    trackedRef.current = user.id;
+    trackSessionStarted({
+      is_guest: Boolean(user.isGuest),
+    });
+  }, [isAuthenticated, user]);
+
+  return null;
+}
+
 function AuthenticatedWhatsNew() {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return null;
   return <WhatsNewModal />;
+}
+
+function PromptSurfaceLayer() {
+  const [location] = useLocation();
+
+  const path = useMemo(() => {
+    if (typeof window === "undefined") {
+      return location;
+    }
+
+    return window.location.pathname || location;
+  }, [location]);
+
+  const blocksPromptSurfaces =
+    path.startsWith("/onboarding") ||
+    path.startsWith("/auth/") ||
+    path.startsWith("/join/");
+
+  const shouldLoadBrowserPromptSurfaces = useMemo(() => {
+    if (typeof window === "undefined" || blocksPromptSurfaces) {
+      return false;
+    }
+
+    const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+    const narrowViewport = window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
+    const isMobileUserAgent =
+      /android|iphone|ipad|ipod|mobile/i.test(window.navigator.userAgent);
+
+    return isStandalone || isMobileUserAgent || (coarsePointer && narrowViewport);
+  }, [blocksPromptSurfaces]);
+
+  return (
+    <Suspense fallback={null}>
+      {!blocksPromptSurfaces && <AuthenticatedWhatsNew />}
+      {shouldLoadBrowserPromptSurfaces && <UpdateNotification />}
+      {shouldLoadBrowserPromptSurfaces && <InstallPWA />}
+      {!blocksPromptSurfaces && <AppRatingPrompt trigger="general-usage" />}
+      <RateLimitNotifier />
+      <AccessibilityAnnouncer />
+    </Suspense>
+  );
 }

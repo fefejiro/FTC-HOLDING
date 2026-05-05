@@ -1,0 +1,879 @@
+import { useEffect, useState } from "react";
+import { Loader2, Mic, Music2 } from "lucide-react";
+import { motion } from "framer-motion";
+
+export type ListeningOrbMode = "requesting" | "listening" | "matching" | "success" | "error";
+type ListeningOrbSize = "compact" | "immersive" | "hero";
+type OrbRuntimeProfile = "full" | "mobile" | "nativeAndroid";
+type OrbMotionConfig = {
+  rippleCount: number;
+  rippleScale: number;
+  rippleDuration: number;
+  glowDuration: number;
+  hazeScale: number[];
+  hazeOpacity: number[];
+  shellScale: number[];
+  shellDuration: number;
+  particleDrift: number;
+  particleOpacity: number[];
+  particleScale: number[];
+  particleCount: number;
+};
+
+const SIZE_CLASSES: Record<ListeningOrbSize, { wrapper: string; core: string; icon: string }> = {
+  compact: {
+    wrapper: "h-40 w-40",
+    core: "h-20 w-20",
+    icon: "h-9 w-9",
+  },
+  immersive: {
+    wrapper: "h-[24rem] w-[24rem] sm:h-[28rem] sm:w-[28rem] lg:h-[34rem] lg:w-[34rem]",
+    core: "h-28 w-28 sm:h-32 sm:w-32",
+    icon: "h-14 w-14 sm:h-16 sm:w-16",
+  },
+  hero: {
+    wrapper: "h-[26rem] w-[26rem] sm:h-[30rem] sm:w-[30rem]",
+    core: "h-32 w-32 sm:h-36 sm:w-36",
+    icon: "h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem]",
+  },
+};
+
+const MODE_CONFIG: Record<ListeningOrbMode, OrbMotionConfig> = {
+  requesting: {
+    rippleCount: 4,
+    rippleScale: 1.22,
+    rippleDuration: 2.5,
+    glowDuration: 2.8,
+    hazeScale: [0.94, 1.06, 0.96],
+    hazeOpacity: [0.2, 0.34, 0.22],
+    shellScale: [0.98, 1.03, 1],
+    shellDuration: 2.6,
+    particleDrift: 14,
+    particleOpacity: [0.1, 0.24, 0.12],
+    particleScale: [0.88, 1, 0.9],
+    particleCount: 4,
+  },
+  listening: {
+    rippleCount: 4,
+    rippleScale: 1.5,
+    rippleDuration: 2.8,
+    glowDuration: 3,
+    hazeScale: [0.92, 1.18, 0.96],
+    hazeOpacity: [0.28, 0.54, 0.34],
+    shellScale: [0.97, 1.1, 0.99],
+    shellDuration: 2.25,
+    particleDrift: 0,
+    particleOpacity: [0, 0, 0],
+    particleScale: [1, 1, 1],
+    particleCount: 0,
+  },
+  matching: {
+    rippleCount: 3,
+    rippleScale: 1.38,
+    rippleDuration: 1.8,
+    glowDuration: 2.05,
+    hazeScale: [0.96, 1.12, 0.98],
+    hazeOpacity: [0.24, 0.42, 0.28],
+    shellScale: [0.985, 1.06, 0.995],
+    shellDuration: 1.35,
+    particleDrift: 0,
+    particleOpacity: [0, 0, 0],
+    particleScale: [1, 1, 1],
+    particleCount: 0,
+  },
+  success: {
+    rippleCount: 3,
+    rippleScale: 1.12,
+    rippleDuration: 2,
+    glowDuration: 2.2,
+    hazeScale: [0.96, 1.04, 1],
+    hazeOpacity: [0.24, 0.4, 0.28],
+    shellScale: [0.99, 1.02, 1],
+    shellDuration: 1.7,
+    particleDrift: 8,
+    particleOpacity: [0.12, 0.24, 0.14],
+    particleScale: [0.92, 1, 0.94],
+    particleCount: 3,
+  },
+  error: {
+    rippleCount: 4,
+    rippleScale: 1.16,
+    rippleDuration: 2.3,
+    glowDuration: 2.5,
+    hazeScale: [0.96, 1.05, 0.98],
+    hazeOpacity: [0.18, 0.3, 0.2],
+    shellScale: [0.99, 1.015, 1],
+    shellDuration: 2.3,
+    particleDrift: 10,
+    particleOpacity: [0.1, 0.18, 0.12],
+    particleScale: [0.9, 1, 0.92],
+    particleCount: 4,
+  },
+};
+
+function detectOrbRuntimeProfile(): OrbRuntimeProfile {
+  if (typeof window === "undefined") return "full";
+
+  // Primary: use Capacitor runtime API — reliable on all Capacitor versions.
+  // document.body class-based detection is unreliable because Capacitor does
+  // not set "capacitor-android" automatically; it requires manual app init code.
+  const capacitor = (window as any).Capacitor;
+  const isCapacitorNative = typeof capacitor?.isNativePlatform === 'function'
+    ? capacitor.isNativePlatform()
+    : false;
+  const capacitorPlatform: string = typeof capacitor?.getPlatform === 'function'
+    ? capacitor.getPlatform()
+    : '';
+
+  if (isCapacitorNative && capacitorPlatform === 'android') {
+    return "nativeAndroid";
+  }
+
+  // Fallback: legacy body-class detection (manual init path).
+  const nativeAndroidClass =
+    typeof document !== "undefined" &&
+    document.body.classList.contains("capacitor-android");
+
+  if (nativeAndroidClass) {
+    return "nativeAndroid";
+  }
+
+  const native =
+    typeof document !== "undefined" &&
+    document.body.classList.contains("capacitor-native");
+
+  const narrowViewport = window.innerWidth < 768;
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+
+  if (isCapacitorNative || native || narrowViewport || coarsePointer) {
+    return "mobile";
+  }
+
+  return "full";
+}
+
+function useOrbRuntimeProfile(): OrbRuntimeProfile {
+  const [profile, setProfile] = useState<OrbRuntimeProfile>(() =>
+    detectOrbRuntimeProfile(),
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const updateProfile = () => {
+      setProfile(detectOrbRuntimeProfile());
+    };
+
+    updateProfile();
+    window.addEventListener("resize", updateProfile);
+    mediaQuery.addEventListener?.("change", updateProfile);
+
+    return () => {
+      window.removeEventListener("resize", updateProfile);
+      mediaQuery.removeEventListener?.("change", updateProfile);
+    };
+  }, []);
+
+  return profile;
+}
+
+function getRuntimeConfig(mode: ListeningOrbMode, profile: OrbRuntimeProfile): OrbMotionConfig {
+  const base = MODE_CONFIG[mode];
+
+  if (profile === "full") {
+    return base;
+  }
+
+  if (profile === "nativeAndroid") {
+    switch (mode) {
+      case "listening":
+        return {
+          ...base,
+          rippleCount: 6,
+          rippleScale: 1.7,
+          rippleDuration: 2.45,
+          glowDuration: 3.05,
+          hazeScale: [0.96, 1.06, 0.98],
+          hazeOpacity: [0.26, 0.36, 0.28],
+          shellScale: [0.993, 1.022, 0.997],
+          shellDuration: 2.5,
+          particleDrift: 0,
+          particleOpacity: [0, 0, 0],
+          particleScale: [1, 1, 1],
+          particleCount: 0,
+        };
+      case "matching":
+        return {
+          ...base,
+          rippleCount: 5,
+          rippleScale: 1.48,
+          rippleDuration: 1.82,
+          glowDuration: 2.12,
+          hazeScale: [0.96, 1.06, 0.98],
+          hazeOpacity: [0.24, 0.38, 0.27],
+          shellScale: [0.993, 1.025, 0.997],
+          shellDuration: 1.8,
+          particleDrift: 0,
+          particleOpacity: [0, 0, 0],
+          particleScale: [1, 1, 1],
+          particleCount: 0,
+        };
+      case "requesting":
+        return {
+          ...base,
+          rippleCount: 2,
+          rippleScale: 1.14,
+          hazeOpacity: [0.1, 0.16, 0.12],
+          shellScale: [0.995, 1.02, 1],
+          particleCount: 0,
+          particleDrift: 0,
+        };
+      case "error":
+        return {
+          ...base,
+          rippleCount: 2,
+          rippleScale: 1.08,
+          hazeOpacity: [0.08, 0.12, 0.09],
+          shellScale: [0.998, 1.01, 1],
+          particleCount: 0,
+          particleDrift: 0,
+        };
+      case "success":
+        return {
+          ...base,
+          rippleCount: 2,
+          rippleScale: 1.05,
+          hazeOpacity: [0.1, 0.15, 0.12],
+          shellScale: [0.998, 1.01, 1],
+          particleCount: 0,
+          particleDrift: 0,
+        };
+      default:
+        return base;
+    }
+  }
+
+  switch (mode) {
+    case "listening":
+      return {
+        ...base,
+        rippleCount: 5,
+        rippleScale: 1.62,
+        rippleDuration: 2.45,
+        hazeScale: [0.92, 1.18, 0.95],
+        hazeOpacity: [0.34, 0.68, 0.4],
+        shellScale: [0.97, 1.12, 0.995],
+        shellDuration: 2.2,
+        particleDrift: 0,
+        particleOpacity: [0, 0, 0],
+        particleScale: [1, 1, 1],
+        particleCount: 0,
+      };
+    case "matching":
+      return {
+        ...base,
+        rippleCount: 4,
+        rippleScale: 1.44,
+        rippleDuration: 1.55,
+        hazeScale: [0.96, 1.12, 0.98],
+        hazeOpacity: [0.3, 0.52, 0.34],
+        shellScale: [0.98, 1.08, 1],
+        shellDuration: 1.18,
+        particleDrift: 0,
+        particleOpacity: [0, 0, 0],
+        particleScale: [1, 1, 1],
+        particleCount: 0,
+      };
+    case "requesting":
+      return {
+        ...base,
+        particleCount: 0,
+        particleDrift: 0,
+      };
+    case "error":
+      return {
+        ...base,
+        rippleCount: 3,
+        particleCount: 0,
+        particleDrift: 0,
+        hazeOpacity: [0.16, 0.24, 0.18],
+      };
+    case "success":
+      return {
+        ...base,
+        particleCount: 0,
+        particleDrift: 0,
+      };
+    default:
+      return base;
+  }
+}
+
+function getFieldWaveCount(mode: ListeningOrbMode, profile: OrbRuntimeProfile): number {
+  if (mode !== "listening" && mode !== "matching") {
+    return 0;
+  }
+
+  if (profile === "nativeAndroid") {
+    return mode === "listening" ? 2 : 1;
+  }
+
+  if (profile === "mobile") {
+    return mode === "listening" ? 2 : 1;
+  }
+
+  return mode === "listening" ? 2 : 1;
+}
+
+function getAccent(mode: ListeningOrbMode): string {
+  if (mode === "success") {
+    return "from-[#86EFAC] via-[#22C55E] to-[#16A34A]";
+  }
+
+  if (mode === "error") {
+    return "from-[#4ADE80] via-[#16A34A] to-[#166534]";
+  }
+
+  return "from-[#86EFAC] via-[#22C55E] to-[#15803D]";
+}
+
+function getFieldTint(mode: ListeningOrbMode): string {
+  if (mode === "success") {
+    return "from-[#22C55E]/18 via-[#4ADE80]/14 to-[#16A34A]/12";
+  }
+
+  if (mode === "error") {
+    return "from-[#15803D]/16 via-[#22C55E]/12 to-[#14532D]/8";
+  }
+
+  if (mode === "matching") {
+    return "from-[#22C55E]/24 via-[#4ADE80]/18 to-[#16A34A]/12";
+  }
+
+  return "from-[#22C55E]/26 via-[#4ADE80]/20 to-[#16A34A]/12";
+}
+
+function getShellTint(mode: ListeningOrbMode): string {
+  if (mode === "success") {
+    return "border-white/20 bg-white/8";
+  }
+
+  if (mode === "error") {
+    return "border-white/14 bg-white/7";
+  }
+
+  if (mode === "matching") {
+    return "border-white/18 bg-white/10";
+  }
+
+  return "border-white/14 bg-white/8";
+}
+
+function MobileListeningOrb({
+  mode,
+  classes,
+  accent,
+  fieldTint,
+  shellTint,
+  config,
+  fieldWaveCount,
+  profile,
+}: {
+  mode: ListeningOrbMode;
+  classes: { wrapper: string; core: string; icon: string };
+  accent: string;
+  fieldTint: string;
+  shellTint: string;
+  config: OrbMotionConfig;
+  fieldWaveCount: number;
+  profile: OrbRuntimeProfile;
+}) {
+  const isNativeAndroid = profile === "nativeAndroid";
+  const coreAnimate =
+    mode === "success"
+      ? { scale: [0.995, isNativeAndroid ? 1.015 : 1.025, 1] }
+      : mode === "matching"
+        ? { scale: [0.992, isNativeAndroid ? 1.02 : 1.045, 1] }
+        : mode === "error"
+          ? { scale: [0.998, isNativeAndroid ? 1.008 : 1.012, 1] }
+          : { scale: [0.982, isNativeAndroid ? 1.035 : 1.07, 0.992] };
+
+  const iconAnimate =
+    mode === "matching"
+      ? { scale: [1, 1.02, 1] }
+      : mode === "requesting"
+        ? { opacity: [0.88, 1, 0.9] }
+        : mode === "error"
+          ? { opacity: [0.9, 0.98, 0.92] }
+          : { scale: [1, 1.015, 1] };
+
+  const ripplePeakOpacity =
+    mode === "listening" ? 0.42 : mode === "matching" ? 0.34 : 0.18;
+  const effectiveRippleCount = isNativeAndroid
+    ? Math.max(1, config.rippleCount)
+    : Math.max(4, config.rippleCount);
+  const effectiveFieldWaveCount = isNativeAndroid
+    ? fieldWaveCount
+    : Math.max(3, fieldWaveCount);
+
+  const outerGlowClass = isNativeAndroid ? "blur-[30px]" : "blur-[42px]";
+  const outerGlowInset = isNativeAndroid ? "inset-[-14%]" : "inset-[-14%]";
+  const staticRingInset = isNativeAndroid ? "inset-[-6%]" : "inset-[-6%]";
+  const waveInset = isNativeAndroid ? "inset-[-12%]" : "inset-[-12%]";
+
+  return (
+    <div className={`relative isolate ${classes.wrapper}`}>
+      <motion.div
+        className={`absolute ${outerGlowInset} rounded-full bg-gradient-to-br ${fieldTint} ${outerGlowClass}`}
+        animate={{
+          scale: mode === "matching" ? [0.97, isNativeAndroid ? 1.04 : 1.04, 0.985] : [0.97, isNativeAndroid ? 1.06 : 1.1, 0.982],
+          opacity: mode === "error" ? [0.08, 0.14, 0.1] : isNativeAndroid ? [0.26, 0.36, 0.28] : [0.22, 0.42, 0.26],
+        }}
+        transition={{
+          duration: isNativeAndroid ? (mode === "matching" ? 1.82 : 2.36) : mode === "matching" ? 1.9 : 2.5,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      <motion.div
+        className={`absolute ${staticRingInset} rounded-full border border-white/8 bg-[radial-gradient(circle,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_38%,transparent_72%)]`}
+        animate={{
+          scale: mode === "matching" ? [0.985, isNativeAndroid ? 1.02 : 1.02, 0.998] : [0.982, isNativeAndroid ? 1.025 : 1.05, 0.992],
+          opacity: mode === "error" ? [0.08, 0.12, 0.09] : isNativeAndroid ? [0.18, 0.26, 0.2] : [0.14, 0.24, 0.16],
+        }}
+        transition={{
+          duration: isNativeAndroid ? (mode === "matching" ? 1.68 : 2.08) : mode === "matching" ? 1.7 : 2.2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      {Array.from({ length: effectiveRippleCount }).map((_, index) => (
+        <motion.div
+          key={`${mode}-mobile-ripple-${index}`}
+          className={`absolute inset-0 rounded-full border ${isNativeAndroid ? "border-white/16 bg-white/[0.025]" : "border-white/16 bg-white/[0.03]"}`}
+          animate={{
+            scale: [
+              0.56 + index * 0.018,
+              config.rippleScale - index * 0.04 + (index % 2 === 0 ? 0.02 : -0.01),
+              config.rippleScale + (isNativeAndroid ? 0.14 : 0.1) - index * 0.046 + (index % 3) * 0.012,
+            ],
+            opacity: [
+              0,
+              Math.max(isNativeAndroid ? 0.16 : 0.1, ripplePeakOpacity - index * 0.03 + (index % 2 === 0 ? 0.025 : -0.01)),
+              0,
+            ],
+          }}
+          transition={{
+            duration: isNativeAndroid
+              ? config.rippleDuration + (index % 2 === 0 ? 0.12 : -0.05) + index * 0.03
+              : config.rippleDuration + (index % 2 === 0 ? 0.18 : -0.08) + index * 0.04,
+            repeat: Infinity,
+            ease: "easeOut",
+            delay:
+              index * (isNativeAndroid ? (mode === "matching" ? 0.14 : 0.18) : mode === "matching" ? 0.16 : 0.22) +
+              (index % 2 === 0 ? 0 : 0.06) +
+              (index % 3) * 0.03,
+          }}
+        />
+      ))}
+
+      {Array.from({ length: effectiveFieldWaveCount }).map((_, index) => (
+        <motion.div
+          key={`${mode}-mobile-wave-${index}`}
+          className={`absolute ${waveInset} rounded-full border ${isNativeAndroid ? "border-[#86EFAC]/12 bg-[radial-gradient(circle,transparent_55%,rgba(134,239,172,0.12)_60%,rgba(122,214,165,0.1)_64%,transparent_72%)]" : "border-[#86EFAC]/12 bg-[radial-gradient(circle,transparent_54%,rgba(134,239,172,0.14)_59%,rgba(122,214,165,0.1)_63%,transparent_70%)]"}`}
+          animate={{
+            scale:
+              mode === "matching"
+                ? [0.8, isNativeAndroid ? 1.06 : 1.02, isNativeAndroid ? 1.24 : 1.18]
+                : [0.7, isNativeAndroid ? 1.16 : 1.14, isNativeAndroid ? 1.36 : 1.3],
+            opacity:
+              mode === "matching"
+                ? [0, isNativeAndroid ? 0.2 : 0.16, 0]
+                : [0, isNativeAndroid ? 0.28 : 0.22, 0],
+          }}
+          transition={{
+            duration: isNativeAndroid ? (mode === "matching" ? 1.72 : 2.04) : mode === "matching" ? 1.8 : 2.2,
+            repeat: Infinity,
+            ease: "easeOut",
+            delay:
+              index * (isNativeAndroid ? (mode === "matching" ? 0.16 : 0.22) : mode === "matching" ? 0.2 : 0.26) +
+              (index % 2 === 0 ? 0 : 0.06),
+          }}
+        />
+      ))}
+
+      <div className="absolute inset-0 flex items-center justify-center">
+        <motion.div
+          className={`absolute rounded-full border ${shellTint} ${classes.core}`}
+          animate={{
+            scale: config.shellScale,
+            opacity:
+              mode === "matching"
+                ? [0.88, 1, 0.9]
+                : mode === "error"
+                  ? [0.7, 0.8, 0.72]
+                  : [0.82, 0.98, 0.86],
+          }}
+          transition={{
+            duration: config.shellDuration,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        <motion.div
+          className={`${classes.core} relative overflow-hidden rounded-full bg-gradient-to-br ${accent} flex items-center justify-center ${isNativeAndroid ? "shadow-[0_22px_58px_rgba(34,197,94,0.34)]" : "shadow-[0_20px_48px_rgba(34,197,94,0.24)]"}`}
+          animate={coreAnimate}
+          transition={{
+            duration: mode === "matching" ? 1.28 : mode === "error" ? 2 : 1.95,
+            repeat: mode === "success" ? 0 : Infinity,
+            ease: "easeInOut",
+          }}
+        >
+          <motion.div
+            className="absolute inset-[11%] rounded-full border border-white/18 bg-white/10"
+            animate={{
+              scale:
+                mode === "matching"
+                  ? [0.97, 1.025, 0.985]
+                  : mode === "error"
+                    ? [0.985, 1.01, 0.99]
+                    : [0.94, 1.05, 0.96],
+              opacity:
+                mode === "matching"
+                  ? [0.28, 0.42, 0.3]
+                  : mode === "error"
+                    ? [0.14, 0.22, 0.16]
+                    : [0.24, 0.4, 0.28],
+            }}
+            transition={{
+              duration: mode === "matching" ? 1.16 : mode === "error" ? 1.8 : 1.82,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+
+          <div className={`absolute inset-0 ${isNativeAndroid ? "bg-[radial-gradient(circle_at_34%_28%,rgba(255,255,255,0.4),transparent_38%),radial-gradient(circle_at_66%_72%,rgba(255,255,255,0.18),transparent_46%)]" : "bg-[radial-gradient(circle_at_32%_26%,rgba(255,255,255,0.36),transparent_36%),radial-gradient(circle_at_66%_72%,rgba(255,255,255,0.14),transparent_44%)]"}`} />
+
+          <motion.div
+            className="relative z-10"
+            animate={iconAnimate}
+            transition={{
+              duration: mode === "matching" ? 1.05 : mode === "error" ? 1.7 : 1.55,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            {mode === "requesting" ? (
+              <Loader2 className={`${classes.icon} text-white animate-spin`} />
+            ) : mode === "success" ? (
+              <Music2 className={`${classes.icon} text-white`} />
+            ) : (
+              <Mic className={`${classes.icon} ${mode === "error" ? "text-white/75" : "text-white"}`} />
+            )}
+          </motion.div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+export function ListeningOrb({
+  mode,
+  size = "compact",
+}: {
+  mode: ListeningOrbMode;
+  size?: ListeningOrbSize;
+}) {
+  const runtimeProfile = useOrbRuntimeProfile();
+  const classes = SIZE_CLASSES[size];
+  const accent = getAccent(mode);
+  const fieldTint = getFieldTint(mode);
+  const shellTint = getShellTint(mode);
+  const config = getRuntimeConfig(mode, runtimeProfile);
+  const isMobileProfile = runtimeProfile === "mobile";
+  const isNativeAndroidProfile = runtimeProfile === "nativeAndroid";
+  const fieldWaveCount = getFieldWaveCount(mode, runtimeProfile);
+
+  if (isMobileProfile || isNativeAndroidProfile) {
+    return (
+      <MobileListeningOrb
+        mode={mode}
+        classes={classes}
+        accent={accent}
+        fieldTint={fieldTint}
+        shellTint={shellTint}
+        config={config}
+        fieldWaveCount={fieldWaveCount}
+        profile={runtimeProfile}
+      />
+    );
+  }
+
+  const rippleClass =
+    mode === "listening"
+      ? "border-white/18 bg-white/[0.04] shadow-[0_0_44px_rgba(34,197,94,0.16)]"
+      : mode === "matching"
+        ? "border-white/16 bg-white/[0.035] shadow-[0_0_34px_rgba(34,197,94,0.14)]"
+        : "border-white/12 bg-white/[0.02]";
+  const coreAnimate =
+    mode === "success"
+      ? { scale: [0.98, 1.03, 1] }
+      : mode === "error"
+        ? isMobileProfile
+          ? { scale: [0.995, 1.01, 1] }
+          : { scale: [0.99, 1.015, 1], rotate: [0, 0.5, 0] }
+        : mode === "matching"
+          ? isMobileProfile
+            ? { scale: [0.99, 1.045, 1] }
+            : { scale: [0.98, 1.07, 1], rotate: [0, 1.5, 0] }
+          : isMobileProfile
+            ? { scale: [0.97, 1.08, 0.99] }
+            : { scale: [0.95, 1.12, 0.97], rotate: [0, -2.6, 0] };
+  const iconAnimate =
+    mode === "matching"
+      ? isMobileProfile
+        ? { y: [0, -1.1, 0], scale: [1, 1.03, 1] }
+        : { y: [0, -2, 0], scale: [1, 1.045, 1] }
+      : mode === "requesting"
+        ? { y: [0, -0.5, 0] }
+        : mode === "error"
+          ? isMobileProfile
+            ? { y: [0, -0.4, 0], scale: [1, 1.005, 1] }
+            : { y: [0, -0.6, 0], scale: [1, 1.01, 1] }
+          : isMobileProfile
+            ? { y: [0, -0.9, 0], scale: [1, 1.025, 1] }
+            : { y: [0, -1.6, 0], scale: [1, 1.05, 1] };
+
+  return (
+    <div className={`relative isolate transform-gpu ${classes.wrapper}`}>
+      <motion.div
+        className={`absolute rounded-full bg-gradient-to-br ${fieldTint} transform-gpu ${
+          isMobileProfile ? "inset-[-18%] blur-2xl" : "inset-[-24%] blur-3xl"
+        }`}
+        animate={{
+          scale: config.hazeScale,
+          opacity: config.hazeOpacity,
+          rotate: isMobileProfile ? 0 : mode === "matching" ? [0, 8, 0] : [-4, 6, -2],
+        }}
+        transition={{
+          duration: config.glowDuration,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      <motion.div
+        className={`absolute rounded-full bg-[radial-gradient(circle,rgba(34,197,94,0.16)_0%,rgba(134,239,172,0.08)_22%,rgba(122,214,165,0.05)_38%,transparent_68%)] transform-gpu ${
+          isMobileProfile ? "inset-[-8%] blur-xl" : "inset-[-12%] blur-2xl"
+        }`}
+        animate={{
+          scale: mode === "matching" ? [0.92, 1.04, 0.96] : [0.88, 1.12, 0.92],
+          opacity: mode === "matching" ? [0.32, 0.5, 0.36] : [0.28, 0.62, 0.34],
+        }}
+        transition={{
+          duration: mode === "matching" ? 1.8 : 2.4,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      <motion.div
+        className={`absolute inset-[8%] rounded-full border border-white/8 bg-white/[0.03] transform-gpu ${
+          isMobileProfile ? "blur-xl" : "blur-2xl"
+        }`}
+        animate={{
+          scale: mode === "matching" ? [0.98, 1.03, 1] : [0.96, 1.07, 0.99],
+          opacity: mode === "matching" ? [0.2, 0.3, 0.22] : [0.16, 0.28, 0.18],
+        }}
+        transition={{
+          duration: config.glowDuration - 0.4,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      {Array.from({ length: config.rippleCount }).map((_, index) => (
+        <motion.div
+          key={`${mode}-ripple-${index}`}
+          className={`absolute inset-0 rounded-full transform-gpu ${rippleClass}`}
+          animate={{
+            scale: [
+              0.52 + index * 0.02,
+              config.rippleScale - index * 0.04 + (index % 2 === 0 ? 0.025 : -0.012),
+              config.rippleScale + 0.12 - index * 0.04 + (index % 3) * 0.014,
+            ],
+            opacity: [0, Math.max(0.12, 0.4 - index * 0.04 + (index % 2 === 0 ? 0.03 : -0.015)), 0],
+          }}
+          transition={{
+            duration: config.rippleDuration + (index % 2 === 0 ? 0.16 : -0.08) + index * 0.04,
+            repeat: Infinity,
+            ease: "easeOut",
+            delay: index * (mode === "matching" ? 0.14 : 0.2) + (index % 3) * 0.025,
+          }}
+        />
+      ))}
+
+      {fieldWaveCount > 0 ? (
+        Array.from({ length: fieldWaveCount }).map((_, index) => (
+          <motion.div
+            key={`${mode}-field-wave-${index}`}
+            className={`absolute rounded-full transform-gpu ${
+              isMobileProfile
+                ? "inset-[-18%] border border-white/12 bg-[radial-gradient(circle,transparent_55%,rgba(134,239,172,0.18)_60%,rgba(22,163,74,0.14)_63%,transparent_69%)]"
+                : "inset-[-28%] bg-[radial-gradient(circle,transparent_53%,rgba(255,255,255,0.06)_56%,rgba(134,239,172,0.22)_58%,rgba(22,163,74,0.16)_60%,transparent_64%)] mix-blend-screen"
+            }`}
+            animate={{
+              scale: isMobileProfile
+                ? mode === "matching"
+                  ? [0.76, 1.04, 1.22]
+                  : [0.68, 1.18, 1.38]
+                : mode === "matching"
+                  ? [0.7, 1.1, 1.36]
+                  : [0.62, 1.24, 1.56],
+              opacity: isMobileProfile
+                ? mode === "matching"
+                  ? [0, 0.18, 0]
+                  : [0, 0.24, 0]
+                : mode === "matching"
+                  ? [0, 0.18, 0]
+                  : [0, 0.24, 0],
+            }}
+            transition={{
+              duration: isMobileProfile ? (mode === "matching" ? 1.85 : 2.2) : mode === "matching" ? 2.1 : 2.5,
+              repeat: Infinity,
+              ease: "easeOut",
+              delay: index * (isMobileProfile ? (mode === "matching" ? 0.22 : 0.28) : mode === "matching" ? 0.26 : 0.34),
+            }}
+          />
+        ))
+      ) : null}
+
+      {Array.from({ length: config.particleCount }).map((_, index) => {
+        const direction = index % 2 === 0 ? 1 : -1;
+        const baseX = -20 + index * 10;
+        const baseY = -32 + index * 11;
+
+        return (
+          <motion.div
+            key={`${mode}-particle-${index}`}
+            className={`absolute left-1/2 top-1/2 rounded-full bg-white/55 shadow-[0_0_16px_rgba(255,255,255,0.2)] transform-gpu ${
+              isMobileProfile ? "h-2 w-2" : "h-2.5 w-2.5"
+            }`}
+            animate={{
+              x: [
+                baseX,
+                baseX + config.particleDrift * direction,
+                baseX + config.particleDrift * 0.45 * direction,
+              ],
+              y: [
+                baseY,
+                baseY - config.particleDrift * 0.55,
+                baseY + config.particleDrift * 0.35,
+              ],
+              opacity: config.particleOpacity,
+              scale: config.particleScale,
+            }}
+            transition={{
+              duration: 3 + index * 0.24,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: index * 0.18,
+            }}
+          />
+        );
+      })}
+
+      <div className="absolute inset-0 flex items-center justify-center">
+        <motion.div
+          className={`absolute rounded-full border ${shellTint} shadow-[0_18px_60px_rgba(34,197,94,0.22)] transform-gpu ${classes.core}`}
+          animate={{
+            scale: config.shellScale,
+            opacity:
+              mode === "matching"
+                ? [0.9, 1, 0.92]
+                : mode === "error"
+                  ? [0.74, 0.84, 0.76]
+                  : [0.82, 0.98, 0.86],
+          }}
+          transition={{
+            duration: config.shellDuration,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        <motion.div
+          className={`${classes.core} relative overflow-hidden rounded-full bg-gradient-to-br ${accent} flex items-center justify-center shadow-[0_24px_80px_rgba(34,197,94,0.3)] transform-gpu`}
+          animate={coreAnimate}
+          transition={{
+            duration: mode === "matching" ? 1.45 : mode === "error" ? 2.2 : 2.35,
+            repeat: mode === "success" ? 0 : Infinity,
+            ease: "easeInOut",
+          }}
+        >
+          <motion.div
+            className="absolute inset-[10%] rounded-full border border-white/18 bg-white/10"
+            animate={{
+              scale:
+                mode === "matching"
+                  ? [0.95, 1.035, 0.97]
+                  : mode === "error"
+                    ? [0.96, 1.01, 0.98]
+                    : [0.92, 1.07, 0.95],
+              opacity:
+                mode === "matching"
+                  ? [0.28, 0.44, 0.32]
+                  : mode === "error"
+                    ? [0.18, 0.28, 0.2]
+                    : [0.22, 0.42, 0.26],
+            }}
+            transition={{
+              duration: mode === "matching" ? 1.3 : mode === "error" ? 1.9 : 2.1,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+
+          <motion.div
+            className="absolute inset-0 bg-[radial-gradient(circle_at_30%_28%,rgba(255,255,255,0.42),transparent_34%),radial-gradient(circle_at_68%_72%,rgba(255,255,255,0.16),transparent_40%)]"
+            animate={{
+              opacity:
+                mode === "matching"
+                  ? [0.46, 0.64, 0.5]
+                  : mode === "error"
+                    ? [0.3, 0.42, 0.32]
+                    : [0.4, 0.64, 0.44],
+            }}
+            transition={{
+              duration: mode === "matching" ? 1.15 : mode === "error" ? 1.9 : 1.95,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+
+          <motion.div
+            className="relative z-10"
+            animate={iconAnimate}
+            transition={{
+              duration: mode === "matching" ? 1.05 : mode === "error" ? 1.8 : 1.7,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            {mode === "requesting" ? (
+              <Loader2 className={`${classes.icon} text-white animate-spin`} />
+            ) : mode === "success" ? (
+              <Music2 className={`${classes.icon} text-white`} />
+            ) : (
+              <Mic className={`${classes.icon} ${mode === "error" ? "text-white/75" : "text-white"}`} />
+            )}
+          </motion.div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}

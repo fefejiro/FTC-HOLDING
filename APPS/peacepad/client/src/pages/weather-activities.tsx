@@ -102,7 +102,11 @@ export default function WeatherActivitiesPage() {
     }
   };
 
-  const { data: activities = [], isLoading } = useQuery<WeatherActivity[]>({
+  const {
+    data: activities = [],
+    isLoading,
+    isError,
+  } = useQuery<WeatherActivity[]>({
     queryKey: ["/api/weather-activities", selectedAge, weatherCondition],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -212,6 +216,15 @@ export default function WeatherActivitiesPage() {
             <div className="flex items-center justify-center h-64">
               <p className="text-muted-foreground">Loading activities...</p>
             </div>
+          ) : isError ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Activities are temporarily unavailable. Please try again shortly.
+                </p>
+              </CardContent>
+            </Card>
           ) : activities.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">

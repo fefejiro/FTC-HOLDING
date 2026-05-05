@@ -1,0 +1,20 @@
+name = "ateam-ops"
+account_id = "4c5c204659aebe5d95a99b55a5a7d0b4"
+main = "src/index.ts"
+compatibility_date = "2026-03-27"
+workers_dev = true
+preview_urls = true
+
+[[routes]]
+pattern = "ops.unalabs.cloud"
+custom_domain = true
+
+[vars]
+ATEAM_UPSTREAM_ORIGIN = "https://ateam-api-production.up.railway.app"
+OPS_ALLOWED_EMAILS = "mike.fejiro@gmail.com"
+OPS_BASIC_AUTH_USERNAME = "mike.fejiro@gmail.com"
+ATEAM_PROXY_TENANT_ID = "owner_tenant"
+ATEAM_PROXY_WORKSPACE_ID = "main_workspace"
+ATEAM_PROXY_USER_ID = "mike_owner"
+ATEAM_PROXY_ROLE = "owner"
+CANONICAL_OPS_ORIGIN = "https://ops.unalabs.cloud"

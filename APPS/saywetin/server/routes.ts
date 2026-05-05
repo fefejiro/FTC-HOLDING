@@ -1,0 +1,4146 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
+import { storage } from "./storage";
+import { pool } from "./db";
+import {
+  insertSongSchema,
+  insertLyricLineSchema,
+  insertUserLyricTranslationSchema,
+  generateMeaningRequestSchema,
+  generateUserLyricMeaningRequestSchema,
+  voteRequestSchema,
+} from "@shared/schema";
+import {
+  buildUnavailableArtistInfo,
+  buildUnavailableFragmentInterpretation,
+  extractSongDNA,
+  generateArtistSongInfo,
+  generateBatchCulturalAnalysis,
+  generateFragmentInterpretation,
+  generateLyricTranslation,
+  generateSectionCulturalAnalysis,
+  generateSingleLineAnalysis,
+  generateLineAlternates,
+  streamSingleLineAnalysis,
+} from "./openai-service";
+import { ExportService } from "./export-service";
+import multer from "multer";
+import crypto from "crypto";
+import { recognizeSong, isACRCloudConfigured } from "./acrcloud-service";
+import {
+  fetchLyricsFast,
+  getLyricsServiceStatus,
+  isLyricsServiceAvailable,
+} from "./musixmatch-service";
+import { resolveTrackArtwork } from "./artwork-service";
+import {
+  getAiProviderConfig,
+  getAiClient,
+  getAiUnavailableMessage,
+  isAiConfigured,
+} from "./lib/ai-config";
+import { getBackendBuildInfo } from "./lib/build-info";
+import {
+  authenticateAdminCredentials,
+  getAdminSessionSummary,
+  isAdminAuthenticated,
+  setAdminAuthenticated,
+  clearAdminAuthenticated,
+} from "./admin-auth";
+import {
+  buildGlossaryAnalysesFromLyrics,
+  buildBestEffortLineAnalysis,
+  buildGlossaryLineAnalysis,
+  buildStreamingGlossaryPayload,
+} from "./glossary-analysis";
+import { toFile } from "openai/uploads";
+
+interface InfrastructureIssue {
+  statusCode: number;
+  errorCode: string;
+  error: string;
+  troubleshooting: string;
+  details?: string;
+  retryable?: boolean;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (typeof error === "string") return error;
+  if (error && typeof (error as any).message === "string") return (error as any).message;
+  return "";
+}
+
+function parseStreamingAnalysisPayload(payload: unknown): Record<string, unknown> | null {
+  if (payload && typeof payload === "object") {
+    return payload as Record<string, unknown>;
+  }
+
+  if (typeof payload !== "string") {
+    return null;
+  }
+
+  const trimmed = payload.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(trimmed) as Record<string, unknown>;
+  } catch {
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function classifyDatabaseIssue(error: unknown): InfrastructureIssue | null {
+  const message = getErrorMessage(error);
+  if (!message) return null;
+
+  const normalized = message.toLowerCase();
+
+  if (
+    (normalized.includes('relation "') && normalized.includes('" does not exist')) ||
+    (normalized.includes('column "') && normalized.includes('" does not exist'))
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_SCHEMA_MISSING",
+      error: "Database schema is missing required tables/columns.",
+      troubleshooting:
+        "Run schema migration against production DATABASE_URL (for example: npm --prefix APPS/saywetin run db:push).",
+      details: message,
+    };
+  }
+
+  if (
+    normalized.includes("tenant or user not found") ||
+    normalized.includes("password authentication failed") ||
+    (normalized.includes("role") && normalized.includes("does not exist"))
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_CREDENTIAL_INVALID",
+      error: "Database credentials are invalid.",
+      troubleshooting:
+        "Check DATABASE_URL in Railway. For Supabase pooler URIs, use the full user (for example postgres.<project-ref>) and the latest DB password.",
+      details: message,
+    };
+  }
+
+  if (
+    normalized.includes("circuit breaker open") ||
+    normalized.includes("failed to retrieve database credentials")
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_UNAVAILABLE",
+      error: "Database pooler is temporarily unavailable.",
+      troubleshooting:
+        "This is usually transient on Supabase pooler. Retry in a few seconds, then verify the Supabase project is active and DATABASE_URL points to the current pooler URI with sslmode=require.",
+      details: message,
+      retryable: true,
+    };
+  }
+
+  if (
+    normalized.includes("self-signed certificate in certificate chain") ||
+    normalized.includes("unable to verify the first certificate") ||
+    normalized.includes("certificate has expired")
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_TLS_ERROR",
+      error: "Database TLS handshake failed.",
+      troubleshooting:
+        "Verify DATABASE_URL points to the Supabase pooler endpoint and uses sslmode=no-verify for this runtime. If needed, set DATABASE_SSL_NO_VERIFY=true and redeploy.",
+      details: message,
+    };
+  }
+
+  if (
+    normalized.includes("connect econnrefused") ||
+    normalized.includes("could not connect to server") ||
+    normalized.includes("connection terminated unexpectedly") ||
+    normalized.includes("connection to database not available") ||
+    normalized.includes("authentication query failed") ||
+    normalized.includes("context: handshake") ||
+    normalized.includes("timeout expired") ||
+    normalized.includes("getaddrinfo enotfound") ||
+    normalized.includes("etimedout")
+  ) {
+    return {
+      statusCode: 503,
+      errorCode: "DATABASE_UNAVAILABLE",
+      error: "Database is currently unavailable.",
+      troubleshooting:
+        "Check DATABASE_URL host/port/ssl settings and confirm the database service is reachable from Railway.",
+      details: message,
+      retryable: true,
+    };
+  }
+
+  return null;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function makeAnonymousSessionId(req: any): string {
+  const existing = String(req.headers["x-session-id"] || "").trim();
+  if (existing) {
+    return existing.slice(0, 64);
+  }
+
+  const ip = String(req.ip || req.socket?.remoteAddress || "unknown");
+  const userAgent = String(req.headers["user-agent"] || "unknown");
+  const seed = `${ip}|${userAgent}|saywetin-live`;
+  return `anon_${crypto.createHash("sha1").update(seed).digest("hex").slice(0, 16)}`;
+}
+
+async function withDatabaseRetry<T>(
+  operationName: string,
+  operation: () => Promise<T>,
+  maxAttempts = 3,
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      const issue = classifyDatabaseIssue(error);
+      const shouldRetry =
+        !!issue &&
+        issue.errorCode === "DATABASE_UNAVAILABLE" &&
+        issue.retryable === true &&
+        attempt < maxAttempts;
+
+      if (!shouldRetry) {
+        throw error;
+      }
+
+      const delayMs = attempt * 400;
+      console.warn(
+        `[DB-RETRY] ${operationName} failed with transient database issue (attempt ${attempt}/${maxAttempts}). Retrying in ${delayMs}ms.`,
+      );
+      await wait(delayMs);
+    }
+  }
+
+  throw lastError;
+}
+
+interface IdentifiedSongCandidate {
+  title: string;
+  artist: string;
+  confidence: number;
+}
+
+function normalizeAudioMimeTypeForTranscription(mimeType?: string): { filename: string; contentType: string } {
+  const normalized = (mimeType || "").toLowerCase().trim();
+
+  if (normalized.includes("aac") || normalized.includes("m4a") || normalized.includes("mp4")) {
+    return { filename: "listen-snippet.m4a", contentType: "audio/mp4" };
+  }
+
+  if (normalized.includes("webm")) {
+    return { filename: "listen-snippet.webm", contentType: "audio/webm" };
+  }
+
+  if (normalized.includes("wav")) {
+    return { filename: "listen-snippet.wav", contentType: "audio/wav" };
+  }
+
+  if (normalized.includes("mpeg") || normalized.includes("mp3")) {
+    return { filename: "listen-snippet.mp3", contentType: "audio/mpeg" };
+  }
+
+  return { filename: "listen-snippet.m4a", contentType: "audio/mp4" };
+}
+
+async function identifySongFromTextQuery(query: string): Promise<IdentifiedSongCandidate | null> {
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 3) {
+    return null;
+  }
+
+  if (!isAiConfigured()) {
+    throw new Error(getAiUnavailableMessage("Text identification"));
+  }
+
+  const openai = getAiClient();
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a music identification expert specializing in African music (Nigerian, South African, Ghanaian, Kenyan, etc.) and global hits popular in Africa. Given a user's text input (which could be partial lyrics, a song description, humming description, or song/artist name), identify the most likely song.
+
+You MUST respond with valid JSON in this exact format:
+{"title": "Song Title", "artist": "Artist Name", "confidence": 85}
+
+Rules:
+- confidence should be 0-100 based on how certain you are
+- If the text clearly contains lyrics from a known song, confidence should be 70-95
+- If it's a vague description, confidence should be 30-60
+- If you cannot identify any song at all, respond with: {"title": "", "artist": "", "confidence": 0}
+- Always prioritize African/Nigerian music if the text contains Pidgin, Yoruba, Igbo, Hausa, or other African languages
+- For well-known songs, use the most common title and primary artist name`,
+      },
+      {
+        role: "user",
+        content: trimmedQuery,
+      },
+    ],
+    temperature: 0.3,
+    max_tokens: 200,
+  });
+
+  const responseText = completion.choices[0]?.message?.content?.trim() || "";
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : responseText) as Partial<IdentifiedSongCandidate>;
+
+  if (!parsed.title || !parsed.artist || !Number.isFinite(parsed.confidence) || Number(parsed.confidence) <= 0) {
+    return null;
+  }
+
+  return {
+    title: parsed.title,
+    artist: parsed.artist,
+    confidence: Math.max(0, Math.min(100, Math.round(Number(parsed.confidence)))),
+  };
+}
+
+async function transcribeAudioForSongIdentification(
+  audioBuffer: Buffer,
+  mimeType?: string,
+): Promise<string | null> {
+  if (!isAiConfigured()) {
+    return null;
+  }
+
+  const openai = getAiClient();
+  const fileInfo = normalizeAudioMimeTypeForTranscription(mimeType);
+  const audioFile = await toFile(audioBuffer, fileInfo.filename, {
+    type: fileInfo.contentType,
+  });
+
+  const transcriptionModels = ["gpt-4o-mini-transcribe", "whisper-1"] as const;
+
+  for (const model of transcriptionModels) {
+    try {
+      const transcription = await openai.audio.transcriptions.create({
+        model,
+        file: audioFile,
+        prompt:
+          "Transcribe the recognizable sung words or hook from this music clip. Return only the words you can confidently hear.",
+      });
+
+      const text =
+        typeof (transcription as unknown) === "string"
+          ? (transcription as unknown as string).trim()
+          : typeof transcription.text === "string"
+            ? transcription.text.trim()
+            : "";
+
+      if (text.length > 0) {
+        console.log(`[AI LISTEN] Transcribed audio with ${model}: "${text.substring(0, 120)}"`);
+        return text;
+      }
+    } catch (error: any) {
+      console.warn(`[AI LISTEN] Transcription model ${model} failed: ${getErrorMessage(error) || "Unknown error"}`);
+    }
+  }
+
+  return null;
+}
+
+type PublicAsyncStatus = "pending" | "complete" | "unavailable" | "failed";
+
+type SyncedLyricLine = {
+  id: string;
+  t: string;
+  startMs: number;
+  endMs: number;
+  tappable: boolean;
+};
+
+function toPublicLyricsStatus(status?: string): PublicAsyncStatus {
+  if (status === "completed") {
+    return "complete";
+  }
+
+  if (status === "no_lyrics") {
+    return "unavailable";
+  }
+
+  if (status === "failed") {
+    return "failed";
+  }
+
+  return "pending";
+}
+
+function toPublicAnalysisStatus(
+  analysisStatus: string | undefined,
+  lyricsStatus: string | undefined,
+  analysisCount: number,
+  aiConfigured: boolean,
+): PublicAsyncStatus {
+  if (analysisCount > 0) {
+    return "complete";
+  }
+
+  if (lyricsStatus === "no_lyrics") {
+    return "unavailable";
+  }
+
+  if (!aiConfigured) {
+    return "unavailable";
+  }
+
+  if (analysisStatus === "completed") {
+    return "complete";
+  }
+
+  if (analysisStatus === "failed") {
+    return "failed";
+  }
+
+  return "pending";
+}
+
+async function buildRecognizedTrackResponse(trackId: string) {
+  const track = await storage.getRecognizedTrackById(trackId);
+  if (!track) {
+    return null;
+  }
+
+  const coverArtUrl = await resolveTrackArtwork({
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    spotifyId: track.spotifyId,
+    isrc: track.isrc,
+  });
+
+  let lyrics: { text: string; language: string; source: string } | null = null;
+  const transientLyrics = await storage.getTransientLyricsByTrackId(trackId);
+  if (transientLyrics && transientLyrics.length > 0) {
+    const lyric = transientLyrics[0];
+    lyrics = {
+      text: lyric.fullLyrics,
+      language: lyric.language,
+      source: lyric.source,
+    };
+  }
+
+  const storedCulturalAnalysis = await storage.getAiTranslationsByRecognizedTrackId(trackId);
+  const fallbackCulturalAnalysis =
+    storedCulturalAnalysis.length === 0 && lyrics?.text
+      ? buildGlossaryAnalysesFromLyrics(lyrics.text)
+      : [];
+  const culturalAnalysis =
+    storedCulturalAnalysis.length > 0 ? storedCulturalAnalysis : fallbackCulturalAnalysis;
+  const aiConfig = getAiProviderConfig();
+  const lyricsServiceStatus = getLyricsServiceStatus();
+
+  const lyricsStatus = toPublicLyricsStatus(track.lyricsStatus || undefined);
+  const analysisStatus = toPublicAnalysisStatus(
+    track.analysisStatus || undefined,
+    track.lyricsStatus || undefined,
+    culturalAnalysis?.length || 0,
+    aiConfig.configured,
+  );
+
+  return {
+    track: {
+      ...track,
+      coverArtUrl,
+    },
+    lyrics,
+    culturalAnalysis,
+    status: {
+      lyrics: lyricsStatus,
+      analysis: analysisStatus,
+      aiConfigured: aiConfig.configured,
+      aiProvider: aiConfig.provider,
+      lyricsProvider: lyricsServiceStatus.service,
+      analysisMessage:
+        analysisStatus === "unavailable"
+          ? "We found the song already. More meaning is still coming together."
+          : analysisStatus === "failed"
+            ? "We found the song already. More meaning hit a small delay, but you can retry it."
+            : undefined,
+    },
+  };
+}
+
+type LyricsResolutionSource = "cache" | "lrclib" | "lyrics_ovh" | "fallback" | "none";
+
+function getPersistentLyricsExpiry(): Date {
+  return new Date("2099-12-31T00:00:00.000Z");
+}
+
+function mapLyricsResolutionSource(source?: string | null): LyricsResolutionSource {
+  const normalized = (source || "").toLowerCase();
+  if (normalized.includes("cache")) return "cache";
+  if (normalized.includes("lrclib")) return "lrclib";
+  if (normalized.includes("lyrics.ovh")) return "lyrics_ovh";
+  if (normalized) return "fallback";
+  return "none";
+}
+
+function parseLyricsTextToSyncedLines(lyricsText: string, trackDurationMs?: number | null): SyncedLyricLine[] {
+  const rows = lyricsText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const safeDurationMs =
+    typeof trackDurationMs === "number" && trackDurationMs > 0
+      ? trackDurationMs
+      : Math.max(rows.length * 3200, 18_000);
+  const perLineMs = Math.max(1600, Math.floor(safeDurationMs / rows.length));
+
+  return rows.map((text, index) => {
+    const startMs = index * perLineMs;
+    const endMs = index === rows.length - 1 ? safeDurationMs : (index + 1) * perLineMs;
+    const id = crypto.createHash("sha1").update(`${index}:${text}`).digest("hex").slice(0, 12);
+
+    return {
+      id,
+      t: text,
+      startMs,
+      endMs,
+      tappable: true,
+    };
+  });
+}
+
+function parseSlangTermsFromUnknown(value: unknown): Array<{ word: string; meaning: string; region: string }> {
+  if (!value) return [];
+
+  const normalize = (items: any[]) =>
+    items
+      .map((item) => ({
+        word: String(item?.term || item?.word || "").trim(),
+        meaning: String(item?.meaning || "").trim(),
+        region: String(item?.language || item?.region || "Nigeria").trim() || "Nigeria",
+      }))
+      .filter((item) => item.word.length > 0 && item.meaning.length > 0);
+
+  if (Array.isArray(value)) {
+    return normalize(value);
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? normalize(parsed) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+async function persistLyricsForTrack(
+  trackId: string,
+  lyricsText: string,
+  lyricsLanguage: string,
+  source: string,
+): Promise<void> {
+  const contentHash = crypto.createHash("sha256").update(lyricsText).digest("hex");
+
+  await storage.createTransientLyrics({
+    recognizedTrackId: trackId,
+    fullLyrics: lyricsText,
+    language: lyricsLanguage,
+    contentHash,
+    source,
+    expiresAt: getPersistentLyricsExpiry(),
+  });
+}
+
+async function resolveLyricsForTrack(
+  trackId: string,
+  title: string,
+  artist: string,
+): Promise<{ text: string | null; language: string; source: LyricsResolutionSource }> {
+  const lyricsStartTime = Date.now();
+  const cachedLyrics = await storage.findCachedLyricsBySong(title, artist);
+
+  if (cachedLyrics) {
+    await persistLyricsForTrack(trackId, cachedLyrics.text, cachedLyrics.language, "cache");
+    const elapsed = Date.now() - lyricsStartTime;
+    console.log(`[lyrics] resolved in ${elapsed}ms via cache`);
+    return {
+      text: cachedLyrics.text,
+      language: cachedLyrics.language,
+      source: "cache",
+    };
+  }
+
+  if (!isLyricsServiceAvailable()) {
+    const elapsed = Date.now() - lyricsStartTime;
+    console.log(`[lyrics] resolved in ${elapsed}ms via none`);
+    return { text: null, language: "en", source: "none" };
+  }
+
+  try {
+    const lyricsResult = await fetchLyricsFast(title, artist);
+    if (lyricsResult.success && lyricsResult.lyrics) {
+      const lyricsText = lyricsResult.lyrics.fullText;
+      const lyricsLanguage = lyricsResult.lyrics.language;
+      const sourceLabel = lyricsResult.lyrics.source || lyricsResult.lyrics.copyright || "fallback";
+      const source = mapLyricsResolutionSource(sourceLabel);
+
+      await persistLyricsForTrack(trackId, lyricsText, lyricsLanguage, sourceLabel);
+      const elapsed = Date.now() - lyricsStartTime;
+      console.log(`[lyrics] resolved in ${elapsed}ms via ${source}`);
+
+      return {
+        text: lyricsText,
+        language: lyricsLanguage,
+        source,
+      };
+    }
+  } catch (error: any) {
+    console.error("❌ [LYRICS] Fetch error:", error.message);
+  }
+
+  const elapsed = Date.now() - lyricsStartTime;
+  console.log(`[lyrics] resolved in ${elapsed}ms via none`);
+  return { text: null, language: "en", source: "none" };
+}
+
+export async function registerRoutes(
+  httpServer: Server,
+  app: Express
+): Promise<Server> {
+  // Setup optional OIDC + session auth (guest usage works without OIDC env vars).
+  await setupAuth(app);
+  registerAuthRoutes(app);
+
+  // Helper to get user ID from authenticated session
+  const getUserId = (req: any): string | null => {
+    if (!req.isAuthenticated() || !req.user?.claims?.sub) return null;
+    return req.user.claims.sub;
+  };
+
+  const requireAdminAuth = (req: any, res: any, next: any) => {
+    if (!isAdminAuthenticated(req)) {
+      return res.status(401).json({
+        error: "Admin authentication required",
+        code: "ADMIN_AUTH_REQUIRED",
+      });
+    }
+
+    return next();
+  };
+
+  app.get("/api/admin/session", (req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.json(getAdminSessionSummary(req));
+  });
+
+  app.post("/api/admin/login", (req, res) => {
+    const username = typeof req.body?.username === "string" ? req.body.username : "";
+    const password = typeof req.body?.password === "string" ? req.body.password : "";
+
+    const result = authenticateAdminCredentials(username, password);
+    if (!result.ok) {
+      return res.status(401).json({
+        error: "Invalid admin username or password",
+        code: "ADMIN_AUTH_INVALID",
+      });
+    }
+
+    setAdminAuthenticated(req, result.username);
+    return res.json(getAdminSessionSummary(req));
+  });
+
+  app.post("/api/admin/logout", (req, res) => {
+    clearAdminAuthenticated(req);
+    return res.status(204).send();
+  });
+
+  // Configure multer for audio file uploads
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB max file size
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept audio files
+      const allowedMimes = [
+        'audio/mpeg', // MP3
+        'audio/mp3',
+        'audio/wav',
+        'audio/wave',
+        'audio/x-wav',
+        'audio/webm',
+        'audio/ogg',
+        'audio/mp4',
+        'audio/m4a',
+        'audio/aac',
+        'audio/x-m4a',
+      ];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only audio files are allowed.'));
+      }
+    },
+  });
+
+  // Service status endpoint - Check if external services are configured
+  app.get("/api/status", async (_req, res) => {
+    const databaseUrl = (process.env.DATABASE_URL || "").trim();
+    let database: {
+      configured: boolean;
+      connected: boolean;
+      schemaReady?: boolean;
+      errorCode?: string;
+      error?: string;
+      troubleshooting?: string;
+      details?: string;
+    } = {
+      configured: databaseUrl.length > 0,
+      connected: false,
+    };
+
+    if (!database.configured) {
+      database = {
+        ...database,
+        errorCode: "DATABASE_URL_MISSING",
+        error: "DATABASE_URL is not configured.",
+        troubleshooting: "Set DATABASE_URL in Railway service variables.",
+      };
+    } else {
+      try {
+        await pool.query("select 1");
+        const schemaCheck = await pool.query(
+          "select to_regclass('listening_sessions') as listening_sessions",
+        );
+        const schemaReady = !!schemaCheck.rows?.[0]?.listening_sessions;
+        database = {
+          ...database,
+          connected: true,
+          schemaReady,
+          ...(schemaReady
+            ? {}
+            : {
+                errorCode: "DATABASE_SCHEMA_MISSING",
+                error: "Database schema is missing required tables.",
+                troubleshooting:
+                  "Run schema migration against production DATABASE_URL (for example: npm --prefix APPS/saywetin run db:push).",
+              }),
+        };
+      } catch (error) {
+        const classified = classifyDatabaseIssue(error);
+        const details = getErrorMessage(error);
+        database = {
+          ...database,
+          errorCode: classified?.errorCode || "DATABASE_UNAVAILABLE",
+          error: classified?.error || "Database connectivity check failed.",
+          troubleshooting:
+            classified?.troubleshooting ||
+            "Verify DATABASE_URL and database reachability from Railway.",
+          ...(process.env.NODE_ENV === "production" ? {} : { details }),
+        };
+      }
+    }
+
+    const aiConfig = getAiProviderConfig();
+
+    res.json({
+      acrcloud: {
+        configured: isACRCloudConfigured(),
+        service: 'Audio Recognition',
+      },
+      lyrics: {
+        ...getLyricsServiceStatus(),
+      },
+      openai: {
+        configured: aiConfig.configured,
+        provider: aiConfig.provider,
+        model: aiConfig.model,
+        apiKeySource: aiConfig.apiKeySource,
+        baseURLSource: aiConfig.baseURLSource,
+        service: 'AI Cultural Context',
+      },
+      database,
+    });
+  });
+
+  app.get("/api/version", (_req, res) => {
+    res.json(getBackendBuildInfo());
+  });
+
+  app.get("/api/diag/acrcloud", (_req, res) => {
+    if (process.env.NODE_ENV === "production") {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    return res.json({
+      configured: isACRCloudConfigured(),
+    });
+  });
+
+  // Listen endpoint - Main audio recognition and cultural analysis pipeline
+  app.post("/api/listen", upload.single('audio'), async (req, res) => {
+    const startTime = Date.now();
+    let sessionId: string | undefined;
+
+    try {
+      console.log('🎵 [LISTEN] Starting audio recognition pipeline...');
+      console.log('🎵 [LISTEN] Request details:', {
+        hasFile: !!req.file,
+        fileSize: req.file?.size,
+        fileMimeType: req.file?.mimetype,
+        fileOriginalName: req.file?.originalname,
+        origin: req.headers.origin,
+        userAgent: req.headers['user-agent']?.substring(0, 100),
+        isAuthenticated: req.isAuthenticated(),
+        contentType: req.headers['content-type']?.substring(0, 100),
+      });
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'No audio file provided' });
+      }
+
+      if (!isACRCloudConfigured()) {
+        return res.status(500).json({
+          success: false,
+          errorCode: 'ACRCLOUD_NOT_CONFIGURED',
+          error: 'Audio recognition service is not configured.',
+        });
+      }
+
+      const audioBuffer = req.file.buffer;
+      const userId = getUserId(req);
+      const rawAudioDuration = parseInt(req.body.duration || '0', 10);
+      const audioDuration =
+        Number.isFinite(rawAudioDuration) && rawAudioDuration > 0
+          ? rawAudioDuration < 1000
+            ? rawAudioDuration * 1000
+            : rawAudioDuration
+          : 0;
+      const audioDurationSeconds = audioDuration > 0 ? audioDuration / 1000 : undefined;
+      console.log('🎵 [LISTEN] Audio buffer details:', {
+        bytes: audioBuffer.length,
+        rawDurationParam: req.body.duration,
+        normalizedAudioDurationMs: audioDuration,
+        audioDurationSeconds,
+        durationSource: rawAudioDuration > 0 && rawAudioDuration < 1000 ? 'legacy_seconds_payload' : 'milliseconds_payload',
+      });
+
+      // Step 1: Create listening session
+      console.log('📝 [LISTEN] Creating listening session...');
+      const session = await withDatabaseRetry("createListeningSession", () =>
+        storage.createListeningSession({
+          userId,
+          status: 'recording',
+          audioDuration,
+        }),
+      );
+      sessionId = session.id;
+
+      // Step 2: Recognize song with ACRCloud
+      console.log('🎧 [LISTEN] Recognizing song with ACRCloud...');
+      await storage.updateListeningSession(sessionId, { status: 'recognizing' });
+
+      const recognitionResult = await recognizeSong(audioBuffer, audioDurationSeconds, req.file.mimetype);
+      let track = recognitionResult.track;
+      let recognitionSource: "acrcloud" | "ai_transcript" = "acrcloud";
+      
+      if (!recognitionResult.success || !recognitionResult.track) {
+        const canAttemptAiFallback =
+          isAiConfigured() &&
+          (recognitionResult.errorCode === 'ACRCLOUD_RECOGNITION_FAILED' ||
+            recognitionResult.errorCode === 'ACRCLOUD_UPSTREAM_UNAVAILABLE' ||
+            recognitionResult.errorCode === 'ACRCLOUD_NOT_CONFIGURED');
+
+        if (canAttemptAiFallback) {
+          console.log('[LISTEN] ACRCloud failed, attempting AI transcript fallback...');
+          const transcript = await transcribeAudioForSongIdentification(audioBuffer, req.file.mimetype);
+
+          if (transcript) {
+            try {
+              const identifiedFromTranscript = await identifySongFromTextQuery(transcript);
+              if (identifiedFromTranscript) {
+                track = {
+                  title: identifiedFromTranscript.title,
+                  artist: identifiedFromTranscript.artist,
+                  confidenceScore: identifiedFromTranscript.confidence,
+                };
+                recognitionSource = 'ai_transcript';
+                console.log(`🎵 [LISTEN] AI transcript fallback identified: "${track.title}" by ${track.artist} (${track.confidenceScore}% confidence)`);
+              } else {
+                console.warn('[LISTEN] AI transcript fallback could not identify a song.');
+              }
+            } catch (fallbackError: any) {
+              console.error('[LISTEN] AI transcript fallback failed:', getErrorMessage(fallbackError) || fallbackError);
+            }
+          } else {
+            console.warn('[LISTEN] AI transcript fallback produced no transcript.');
+          }
+        }
+      }
+
+      if (!track) {
+        await storage.updateListeningSession(sessionId, { 
+          status: 'failed',
+          errorMessage: recognitionResult.errorMessage || 'Song not recognized'
+        });
+
+        const errorCode = recognitionResult.errorCode || 'ACRCLOUD_RECOGNITION_FAILED';
+        const statusCode =
+          errorCode === 'ACRCLOUD_NOT_CONFIGURED'
+            ? 500
+            : errorCode === 'ACRCLOUD_UPSTREAM_UNAVAILABLE'
+              ? 503
+              : 404;
+
+        return res.status(statusCode).json({
+          success: false,
+          errorCode,
+          error: recognitionResult.errorMessage || 'Song not recognized',
+          sessionId,
+        });
+      }
+
+      console.log(`✅ [LISTEN] Recognized: "${track.title}" by ${track.artist}`);
+      if (track.playOffsetMs) {
+        console.log(`📍 [LISTEN] Play offset: ${Math.round(track.playOffsetMs / 1000)}s into the song`);
+      }
+
+      const coverArtLookup = resolveTrackArtwork({
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        spotifyId: track.spotifyId,
+        isrc: track.isrc,
+        existingCoverArtUrl: track.coverArtUrl,
+      });
+      // Step 3: Create recognized track record
+      const recognizedTrack = await storage.createRecognizedTrack({
+        userId,
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        releaseYear: track.releaseYear,
+        genre: track.genre,
+        isrc: track.isrc,
+        spotifyId: track.spotifyId,
+        youtubeId: track.youtubeId,
+        confidenceScore: track.confidenceScore,
+        recognitionSource,
+        playOffsetMs: track.playOffsetMs,
+        trackDurationMs: track.durationMs,
+        lyricsStatus: 'pending',
+        analysisStatus: 'pending',
+        processingStartedAt: new Date(),
+      });
+
+      // Update session with recognized track
+      await storage.updateListeningSession(sessionId, {
+        recognizedTrackId: recognizedTrack.id,
+      });
+
+      // Define background processing helper function
+      const processLyricsAndAnalysis = async () => {
+        const bgStartTime = Date.now();
+        await storage.updateListeningSession(sessionId!, {
+          status: 'processing',
+        });
+
+        await storage.updateRecognizedTrack(recognizedTrack.id, {
+          lyricsStatus: 'fetching_lyrics',
+        });
+
+        let lyricsText: string | null = null;
+        let lyricsLanguage = 'en';
+
+        // SPEED: Pre-warm artist info cache in parallel with lyrics fetch
+        // This way if lyrics fail, the fallback artist info is already ready
+        const artistInfoWarmup = generateArtistSongInfo(
+          track.artist,
+          track.title,
+          track.album || undefined,
+          track.genre || undefined,
+          track.releaseYear,
+          {
+            spotifyId: track.spotifyId || null,
+            isrc: track.isrc || null,
+            confidenceScore: track.confidenceScore ?? null,
+          }
+        ).catch(err => {
+          console.log(`[WARMUP] Artist info pre-fetch failed (non-critical): ${err.message}`);
+          return null;
+        });
+
+        // Fetch lyrics
+        const resolvedLyrics = await resolveLyricsForTrack(recognizedTrack.id, track.title, track.artist);
+        lyricsText = resolvedLyrics.text;
+        lyricsLanguage = resolvedLyrics.language;
+
+        /*
+        if (false && cachedLyrics) {
+          console.log(`⚡ [LYRICS] Using cached lyrics for "${track.title}" (skipped API call)`);
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            lyricsStatus: 'completed',
+          });
+          
+          const contentHash = crypto
+            .createHash('sha256')
+            .update(cachedLyrics.text)
+            .digest('hex');
+          await storage.createTransientLyrics({
+            recognizedTrackId: recognizedTrack.id,
+            fullLyrics: cachedLyrics.text,
+            language: cachedLyrics.language,
+            contentHash,
+            source: 'cache',
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          });
+          
+          lyricsText = cachedLyrics.text;
+          lyricsLanguage = cachedLyrics.language;
+        } else if (false && isLyricsServiceAvailable()) {
+          try {
+            const lyricsResult = await fetchLyricsFast(track.title, track.artist);
+            
+            if (lyricsResult.success && lyricsResult.lyrics) {
+              lyricsText = lyricsResult.lyrics.fullText;
+              lyricsLanguage = lyricsResult.lyrics.language;
+              
+              const contentHash = crypto
+                .createHash('sha256')
+                .update(lyricsText)
+                .digest('hex');
+
+              await storage.createTransientLyrics({
+                recognizedTrackId: recognizedTrack.id,
+                fullLyrics: lyricsText,
+                language: lyricsLanguage,
+                contentHash,
+                source: lyricsResult.lyrics.copyright || 'multi-source',
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+              });
+
+              await storage.updateRecognizedTrack(recognizedTrack.id, {
+                lyricsStatus: 'completed',
+              });
+            } else {
+              await storage.updateRecognizedTrack(recognizedTrack.id, {
+                lyricsStatus: 'no_lyrics',
+                analysisStatus: 'no_lyrics',
+                processingCompletedAt: new Date(),
+              });
+            }
+          } catch (error: any) {
+            console.error('❌ [LYRICS] Fetch error:', error.message);
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              lyricsStatus: 'failed',
+              analysisStatus: 'failed',
+              processingCompletedAt: new Date(),
+            });
+          }
+        }
+
+        */
+        if (lyricsText) {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            lyricsStatus: 'completed',
+          });
+        } else {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            lyricsStatus: 'no_lyrics',
+            analysisStatus: 'no_lyrics',
+            processingCompletedAt: new Date(),
+          });
+        }
+
+        const lyricsElapsed = Date.now() - bgStartTime;
+        console.log(`⏱️ [PIPELINE] Lyrics phase completed in ${lyricsElapsed}ms (${lyricsText ? 'found' : 'not found'})`);
+
+        if (lyricsText) {
+          if (!isAiConfigured()) {
+            console.log(`[AI] Skipping deeper analysis for "${track.title}" - no AI provider configured`);
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              analysisStatus: 'failed',
+              processingCompletedAt: new Date(),
+            });
+
+            await artistInfoWarmup;
+            await storage.updateListeningSession(sessionId!, {
+              status: 'success',
+              recognitionTime: Date.now() - startTime,
+            });
+
+            return;
+          }
+
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            analysisStatus: 'generating_analysis',
+          });
+
+          const lines = lyricsText.split('\n').filter((line: string) => line.trim());
+          const lyricsData = lines.map((text: string, idx: number) => ({
+            text,
+            lineNumber: idx + 1,
+          }));
+
+          let startLineIndex = 0;
+          if (track.playOffsetMs && track.durationMs && track.durationMs > 0) {
+            const progressRatio = track.playOffsetMs / track.durationMs;
+            startLineIndex = Math.floor(progressRatio * lyricsData.length);
+            startLineIndex = Math.max(0, startLineIndex - 2);
+            console.log(`📍 [AI] Starting analysis at line ${startLineIndex + 1} (${Math.round(progressRatio * 100)}% through song)`);
+          }
+
+          const onBatchComplete = async (batchResults: any[], analysisStartIndex: number, originalLines: string[]) => {
+            await Promise.all(batchResults.map(async (analysis, i) => {
+              const lineText = originalLines[i];
+              if (!lineText) return;
+
+              const textHash = crypto
+                .createHash('sha256')
+                .update(lineText)
+                .digest('hex');
+
+              return storage.createAiTranslation({
+                recognizedTrackId: recognizedTrack.id,
+                lyricLineId: null,
+                originalText: lineText,
+                translation: analysis.translation,
+                culturalContext: analysis.culturalContext,
+                artistIntent: analysis.artistIntent,
+                deeperMeaning: analysis.deeperMeaning,
+                languageNotes: analysis.languageNotes || null,
+                detectedLanguage: analysis.detectedLanguage,
+                slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+                textHash,
+              });
+            }));
+            console.log(`📝 Saved ${batchResults.length} lines for "${track.title}"`);
+          };
+
+          const sectionResults = await generateSectionCulturalAnalysis(
+            lyricsData,
+            track.title,
+            track.artist,
+            track.genre,
+            lyricsLanguage,
+            startLineIndex,
+            2,
+            onBatchComplete
+          );
+          const glossaryFallbackResults = buildGlossaryAnalysesFromLyrics(lyricsText);
+
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            analysisStatus: sectionResults.length > 0 || glossaryFallbackResults.length > 0 ? 'completed' : 'failed',
+            processingCompletedAt: new Date(),
+          });
+          
+          const analysisElapsed = Date.now() - bgStartTime;
+          if (sectionResults.length > 0) {
+            console.log(`✅ [PIPELINE] Analysis complete in ${analysisElapsed}ms. Remaining ${Math.max(0, lyricsData.length - 4)} lines on-demand.`);
+          } else {
+            console.warn(`⚠️ [PIPELINE] Analysis returned no results for "${track.title}" after ${analysisElapsed}ms.`);
+          }
+
+          // Song DNA extraction runs fire-and-forget (non-blocking)
+          if (sectionResults.length > 0) {
+            extractSongDNA(
+              track.title,
+              track.artist,
+              lyricsText!,
+              track.genre,
+              track.releaseYear
+            ).then(async (songDNA) => {
+              if (songDNA) {
+                await storage.updateRecognizedTrack(recognizedTrack.id, {
+                  emotionalTone: songDNA.emotionalTone,
+                  emotionalToneConfidence: String(songDNA.emotionalToneConfidence),
+                  culturalThemes: JSON.stringify(songDNA.culturalThemes),
+                  culturalThemeConfidence: String(songDNA.culturalThemeConfidence),
+                  region: songDNA.region,
+                  era: songDNA.era,
+                  songDnaGeneratedAt: new Date(),
+                });
+                console.log(`🧬 [DNA] Saved song DNA for "${track.title}"`);
+              }
+            }).catch(err => console.error('❌ [DNA] Failed:', err.message));
+          }
+        }
+
+        // Wait for artist info warmup to finish (should already be done)
+        await artistInfoWarmup;
+
+        await storage.updateListeningSession(sessionId!, {
+          status: 'success',
+          recognitionTime: Date.now() - startTime,
+        });
+        
+        const totalElapsed = Date.now() - bgStartTime;
+        console.log(`✅ [PIPELINE] Total background processing: ${totalElapsed}ms`);
+      };
+
+      // Step 4: Return early with recognition results for progressive UX
+      const recognitionTime = Date.now() - startTime;
+      let coverArtUrl: string | null = null;
+      try {
+        coverArtUrl = await coverArtLookup;
+      } catch (artworkError: any) {
+        console.warn(
+          `[LISTEN] Cover art lookup failed for "${track.title}" by ${track.artist}: ${
+            getErrorMessage(artworkError) || "Unknown error"
+          }`,
+        );
+      }
+
+      if (coverArtUrl) {
+        try {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            coverArtUrl,
+          });
+        } catch (artworkPersistenceError: any) {
+          console.warn(
+            `[LISTEN] Cover art persistence failed for track ${recognizedTrack.id}: ${
+              getErrorMessage(artworkPersistenceError) || "Unknown error"
+            }`,
+          );
+        }
+      }
+      
+      // Immediately return the recognized track so user can see metadata
+      res.json({
+        success: true,
+        sessionId,
+        recognizedTrack: {
+          id: recognizedTrack.id,
+          title: track.title,
+          artist: track.artist,
+          album: track.album,
+          duration: track.duration,
+          genre: track.genre,
+          spotifyId: track.spotifyId,
+          youtubeId: track.youtubeId,
+          confidenceScore: track.confidenceScore,
+          coverArtUrl,
+          matchSource: recognitionSource,
+        },
+        matchSource: recognitionSource,
+        confidence: track.confidenceScore,
+        processingTime: recognitionTime,
+      });
+
+      // Continue processing lyrics and AI translations in the background
+      // (Response already sent, so this happens asynchronously)
+      process.nextTick(async () => {
+        try {
+          console.log(`🔄 [LISTEN] Background processing lyrics and AI for track ${recognizedTrack.id}`);
+          await processLyricsAndAnalysis();
+          console.log(`✅ [LISTEN] Background processing complete for session ${sessionId}`);
+        } catch (bgError: any) {
+          console.error('❌ [LISTEN] Background processing error:', bgError.message);
+          // Mark session as failed
+          await storage.updateListeningSession(sessionId!, {
+            status: 'failed',
+            errorMessage: `Background processing failed: ${bgError.message}`,
+          }).catch(err => console.error('Failed to update session:', err));
+        }
+      });
+
+    } catch (error: any) {
+      console.error('❌ [LISTEN] Pipeline error:', error);
+
+      const databaseIssue = classifyDatabaseIssue(error);
+
+      // Update session with error status if session was created
+      if (sessionId) {
+        await storage.updateListeningSession(sessionId, {
+          status: 'failed',
+          errorMessage: error.message,
+        }).catch(err => console.error('Failed to update session:', err));
+      }
+
+      if (databaseIssue) {
+        return res.status(databaseIssue.statusCode).json({
+          success: false,
+          errorCode: databaseIssue.errorCode,
+          error: databaseIssue.error,
+          troubleshooting: databaseIssue.troubleshooting,
+          ...(process.env.NODE_ENV === "production"
+            ? {}
+            : { details: databaseIssue.details || getErrorMessage(error) }),
+          sessionId,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process audio recognition',
+        details: error.message,
+        sessionId,
+      });
+    }
+  });
+
+  // Identify-by-text endpoint - lyric/slang/title fallback when audio match fails
+  app.post("/api/identify-by-text", async (req, res) => {
+    const startTime = Date.now();
+    let sessionId: string | undefined;
+
+    try {
+      const rawQuery = typeof req.body?.query === 'string' ? req.body.query : '';
+      const query = rawQuery.trim();
+
+      if (query.length < 3) {
+        return res.status(400).json({
+          success: false,
+          errorCode: 'QUERY_TOO_SHORT',
+          error: 'Please enter at least 3 characters of a lyric, phrase, or song title.',
+        });
+      }
+
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          success: false,
+          errorCode: 'AI_NOT_CONFIGURED',
+          error: 'Lyric matching is not available right now. Try again later.',
+        });
+      }
+
+      const userId = getUserId(req);
+      const session = await withDatabaseRetry("createListeningSession", () =>
+        storage.createListeningSession({
+          userId,
+          status: 'recognizing',
+          audioDuration: 0,
+        }),
+      );
+      sessionId = session.id;
+
+      let candidate: IdentifiedSongCandidate | null = null;
+      try {
+        candidate = await identifySongFromTextQuery(query);
+      } catch (err: any) {
+        console.error('[IDENTIFY-BY-TEXT] AI lookup failed:', getErrorMessage(err) || err);
+        await storage.updateListeningSession(sessionId, {
+          status: 'failed',
+          errorMessage: getErrorMessage(err) || 'AI lookup failed',
+        }).catch(() => undefined);
+        return res.status(503).json({
+          success: false,
+          errorCode: 'AI_LOOKUP_FAILED',
+          error: 'Lyric matching service hiccuped. Please retry.',
+          sessionId,
+        });
+      }
+
+      if (!candidate) {
+        await storage.updateListeningSession(sessionId, {
+          status: 'failed',
+          errorMessage: 'No song matched the lyric or phrase.',
+        }).catch(() => undefined);
+        return res.status(404).json({
+          success: false,
+          errorCode: 'TEXT_MATCH_NOT_FOUND',
+          error: 'We could not match that lyric. Try a different line or sing it.',
+          sessionId,
+        });
+      }
+
+      const recognizedTrack = await storage.createRecognizedTrack({
+        userId,
+        title: candidate.title,
+        artist: candidate.artist,
+        album: null,
+        releaseYear: null,
+        genre: null,
+        isrc: null,
+        spotifyId: null,
+        youtubeId: null,
+        confidenceScore: candidate.confidence,
+        recognitionSource: 'lyric_text',
+        playOffsetMs: null,
+        trackDurationMs: null,
+        lyricsStatus: 'pending',
+        analysisStatus: 'pending',
+        processingStartedAt: new Date(),
+      });
+
+      await storage.updateListeningSession(sessionId, {
+        recognizedTrackId: recognizedTrack.id,
+        status: 'success',
+        recognitionTime: Date.now() - startTime,
+      });
+
+      let coverArtUrl: string | null = null;
+      try {
+        coverArtUrl = await resolveTrackArtwork({
+          title: candidate.title,
+          artist: candidate.artist,
+          album: null,
+          spotifyId: null,
+          isrc: null,
+        });
+        if (coverArtUrl) {
+          await storage.updateRecognizedTrack(recognizedTrack.id, { coverArtUrl }).catch(() => undefined);
+        }
+      } catch (artErr: any) {
+        console.warn('[IDENTIFY-BY-TEXT] Cover art lookup failed:', getErrorMessage(artErr) || artErr);
+      }
+
+      return res.json({
+        success: true,
+        sessionId,
+        recognizedTrack: {
+          id: recognizedTrack.id,
+          title: candidate.title,
+          artist: candidate.artist,
+          album: null,
+          duration: null,
+          genre: null,
+          spotifyId: null,
+          youtubeId: null,
+          confidenceScore: candidate.confidence,
+          coverArtUrl,
+          matchSource: 'lyric_text',
+        },
+        matchSource: 'lyric_text',
+        confidence: candidate.confidence,
+        processingTime: Date.now() - startTime,
+      });
+    } catch (error: any) {
+      console.error('[IDENTIFY-BY-TEXT] Pipeline error:', error);
+      if (sessionId) {
+        await storage.updateListeningSession(sessionId, {
+          status: 'failed',
+          errorMessage: error?.message || 'Unknown error',
+        }).catch(() => undefined);
+      }
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to identify song from text',
+        details: error?.message,
+        sessionId,
+      });
+    }
+  });
+
+  // Get user listening history
+  app.get("/api/listening-history", async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      if (!userId) {
+        return res.json([]);
+      }
+
+      const sessions = await storage.getListeningSessionsByUserId(userId);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching listening history:", error);
+      res.status(500).json({ error: "Failed to fetch listening history" });
+    }
+  });
+
+  // Manual song identification - identify by title/artist without audio recording
+  app.post("/api/identify-manual", async (req, res) => {
+    const startTime = Date.now();
+    
+    try {
+      const { title, artist } = req.body;
+      
+      if (!title || !artist) {
+        return res.status(400).json({ error: 'Title and artist are required' });
+      }
+
+      console.log(`🎵 [MANUAL] Identifying: "${title}" by ${artist}`);
+      
+      const userId = getUserId(req);
+
+      // Create listening session
+      const session = await storage.createListeningSession({
+        userId,
+        status: 'recognizing',
+        audioDuration: 0,
+      });
+
+      // Create recognized track record
+      const recognizedTrack = await storage.createRecognizedTrack({
+        userId,
+        title,
+        artist,
+        recognitionSource: 'manual',
+        confidenceScore: 100, // Manual entry is 100% confident
+      });
+
+      // Update session with recognized track
+      await storage.updateListeningSession(session.id, {
+        recognizedTrackId: recognizedTrack.id,
+      });
+
+      // Background processing for lyrics and AI
+      const processLyricsAndAnalysis = async () => {
+        await storage.updateListeningSession(session.id, { status: 'processing' });
+
+        // Fetch lyrics
+        console.log('📜 [MANUAL] Fetching lyrics...');
+        let lyricsText: string | null = null;
+        let lyricsLanguage = 'en';
+
+        const resolvedLyrics = await resolveLyricsForTrack(recognizedTrack.id, title, artist);
+        lyricsText = resolvedLyrics.text;
+        lyricsLanguage = resolvedLyrics.language;
+
+        if (lyricsText) {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            lyricsStatus: 'completed',
+          });
+          console.log(`âœ… [MANUAL] Lyrics fetched (${lyricsText.split('\n').length} lines)`);
+        } else {
+          await storage.updateRecognizedTrack(recognizedTrack.id, {
+            lyricsStatus: 'no_lyrics',
+            analysisStatus: 'no_lyrics',
+            processingCompletedAt: new Date(),
+          });
+        }
+
+        /*
+        if (false && isLyricsServiceAvailable()) {
+          try {
+            const lyricsResult = await fetchLyricsFast(title, artist);
+            
+            if (lyricsResult.success && lyricsResult.lyrics) {
+              lyricsText = lyricsResult.lyrics.fullText;
+              lyricsLanguage = lyricsResult.lyrics.language;
+              
+              const contentHash = crypto
+                .createHash('sha256')
+                .update(lyricsText)
+                .digest('hex');
+
+              await storage.createTransientLyrics({
+                recognizedTrackId: recognizedTrack.id,
+                fullLyrics: lyricsText,
+                language: lyricsLanguage,
+                contentHash,
+                source: 'musixmatch',
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+              });
+
+              console.log(`✅ [MANUAL] Lyrics fetched (${lyricsText.split('\n').length} lines)`);
+            }
+          } catch (error: any) {
+            console.error('❌ [MANUAL] Lyrics fetch failed:', error.message);
+          }
+        }
+
+        */
+
+        // Generate AI cultural analysis with progressive saving
+        if (lyricsText) {
+          console.log('🤖 [MANUAL] Generating AI cultural analysis...');
+          
+          try {
+            const lines = lyricsText.split('\n').filter(line => line.trim());
+            const lyricsData = lines.map((text, idx) => ({
+              text,
+              lineNumber: idx + 1,
+            }));
+
+            const onBatchComplete = async (batchResults: any[], startIndex: number, originalLines: string[]) => {
+              await Promise.all(batchResults.map(async (analysis, i) => {
+                const lineText = originalLines[i];
+                if (!lineText) return;
+
+                const textHash = crypto
+                  .createHash('sha256')
+                  .update(lineText)
+                  .digest('hex');
+
+                return storage.createAiTranslation({
+                  recognizedTrackId: recognizedTrack.id,
+                  lyricLineId: null,
+                  originalText: lineText,
+                  translation: analysis.translation,
+                  culturalContext: analysis.culturalContext,
+                  artistIntent: analysis.artistIntent,
+                  deeperMeaning: analysis.deeperMeaning,
+                  languageNotes: analysis.languageNotes || null,
+                  detectedLanguage: analysis.detectedLanguage,
+                  slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+                  textHash,
+                });
+              }));
+              console.log(`📝 [MANUAL] Saved batch (${batchResults.length} lines)`);
+            };
+
+            await generateBatchCulturalAnalysis(
+              lyricsData,
+              title,
+              artist,
+              undefined,
+              lyricsLanguage,
+              onBatchComplete
+            );
+
+            console.log(`✅ [MANUAL] AI analysis complete`);
+          } catch (error: any) {
+            console.error('❌ [MANUAL] AI analysis failed:', error.message);
+          }
+        }
+
+        await storage.updateListeningSession(session.id, {
+          status: 'success',
+          recognitionTime: Date.now() - startTime,
+        });
+      };
+
+      // Return immediately with track info
+      res.json({
+        success: true,
+        sessionId: session.id,
+        recognizedTrack: {
+          id: recognizedTrack.id,
+          title,
+          artist,
+          confidenceScore: 100,
+        },
+        processingTime: Date.now() - startTime,
+      });
+
+      // Process lyrics and AI in background
+      (async () => {
+        try {
+          await processLyricsAndAnalysis();
+          console.log(`✅ [MANUAL] Background processing complete for session ${session.id}`);
+        } catch (bgError: any) {
+          console.error('❌ [MANUAL] Background processing error:', bgError.message);
+          await storage.updateListeningSession(session.id, {
+            status: 'failed',
+            errorMessage: `Background processing failed: ${bgError.message}`,
+          }).catch(err => console.error('Failed to update session:', err));
+        }
+      })();
+
+    } catch (error: any) {
+      console.error('❌ [MANUAL] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to identify song',
+        details: error.message,
+      });
+    }
+  });
+
+  // Text-based song identification - identify by partial lyrics, humming description, or song name
+  app.post("/api/identify-by-text", async (req, res) => {
+    const startTime = Date.now();
+    
+    try {
+      const { query } = req.body;
+      
+      if (!query || typeof query !== 'string' || query.trim().length < 3) {
+        return res.status(400).json({ error: 'Please type at least 3 characters' });
+      }
+
+      console.log(`🔍 [TEXT] Identifying song from text: "${query.trim().substring(0, 80)}..."`);
+      
+      const userId = getUserId(req);
+
+      // Use the configured OpenAI-compatible provider to identify the song from text
+      const aiConfig = getAiProviderConfig();
+      if (!aiConfig.configured) {
+        return res.status(503).json({
+          success: false,
+          error: getAiUnavailableMessage("Text identification"),
+        });
+      }
+
+      const { default: OpenAI } = await import("openai");
+      const openai = new OpenAI({
+        apiKey: aiConfig.apiKey!,
+        baseURL: aiConfig.baseURL,
+        defaultHeaders: aiConfig.defaultHeaders,
+      });
+      
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a music identification expert specializing in African music (Nigerian, South African, Ghanaian, Kenyan, etc.) and global hits popular in Africa. Given a user's text input (which could be partial lyrics, a song description, humming description, or song/artist name), identify the most likely song.
+
+You MUST respond with valid JSON in this exact format:
+{"title": "Song Title", "artist": "Artist Name", "confidence": 85}
+
+Rules:
+- confidence should be 0-100 based on how certain you are
+- If the text clearly contains lyrics from a known song, confidence should be 70-95
+- If it's a vague description, confidence should be 30-60
+- If you cannot identify any song at all, respond with: {"title": "", "artist": "", "confidence": 0}
+- Always prioritize African/Nigerian music if the text contains Pidgin, Yoruba, Igbo, Hausa, or other African languages
+- For well-known songs, use the most common title and primary artist name`
+          },
+          {
+            role: "user",
+            content: query.trim()
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 200,
+      });
+
+      const responseText = completion.choices[0]?.message?.content?.trim() || '';
+      
+      let identified: { title: string; artist: string; confidence: number };
+      try {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        identified = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
+      } catch {
+        console.error('❌ [TEXT] Failed to parse AI response:', responseText);
+        return res.status(400).json({ 
+          success: false, 
+          error: 'We no fit understand the response. Try again abeg.' 
+        });
+      }
+
+      if (!identified.title || !identified.artist || identified.confidence === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'We no fit find any song from wetin you type. Try add more lyrics or details.',
+        });
+      }
+
+      console.log(`🎵 [TEXT] AI identified: "${identified.title}" by ${identified.artist} (${identified.confidence}% confidence)`);
+
+      // Create listening session
+      const session = await storage.createListeningSession({
+        userId,
+        status: 'recognizing',
+        audioDuration: 0,
+      });
+
+      // Create recognized track record
+      const recognizedTrack = await storage.createRecognizedTrack({
+        userId,
+        title: identified.title,
+        artist: identified.artist,
+        recognitionSource: 'manual',
+        confidenceScore: identified.confidence,
+      });
+
+      // Update session with recognized track
+      await storage.updateListeningSession(session.id, {
+        recognizedTrackId: recognizedTrack.id,
+      });
+
+      // Return immediately with track info
+      res.json({
+        success: true,
+        sessionId: session.id,
+        recognizedTrack: {
+          id: recognizedTrack.id,
+          title: identified.title,
+          artist: identified.artist,
+          confidenceScore: identified.confidence,
+        },
+        processingTime: Date.now() - startTime,
+      });
+
+      // Background processing for lyrics and AI analysis (same as manual identify)
+      (async () => {
+        try {
+          await storage.updateListeningSession(session.id, { status: 'processing' });
+
+          let lyricsText: string | null = null;
+          let lyricsLanguage = 'en';
+
+          const resolvedLyrics = await resolveLyricsForTrack(
+            recognizedTrack.id,
+            identified.title,
+            identified.artist,
+          );
+          lyricsText = resolvedLyrics.text;
+          lyricsLanguage = resolvedLyrics.language;
+
+          if (lyricsText) {
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              lyricsStatus: 'completed',
+            });
+          } else {
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              lyricsStatus: 'no_lyrics',
+              analysisStatus: 'no_lyrics',
+              processingCompletedAt: new Date(),
+            });
+          }
+
+          /*
+          if (false && isLyricsServiceAvailable()) {
+            try {
+              const lyricsResult = await fetchLyricsFast(identified.title, identified.artist);
+              if (lyricsResult.success && lyricsResult.lyrics) {
+                lyricsText = lyricsResult.lyrics.fullText;
+                lyricsLanguage = lyricsResult.lyrics.language;
+                
+                const contentHash = crypto
+                  .createHash('sha256')
+                  .update(lyricsText)
+                  .digest('hex');
+
+                await storage.createTransientLyrics({
+                  recognizedTrackId: recognizedTrack.id,
+                  fullLyrics: lyricsText,
+                  language: lyricsLanguage,
+                  contentHash,
+                  source: 'musixmatch',
+                  expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                });
+              }
+            } catch (error: any) {
+              console.error('❌ [TEXT] Lyrics fetch failed:', error.message);
+            }
+          }
+
+          */
+
+          if (lyricsText) {
+            try {
+              const lines = lyricsText.split('\n').filter(line => line.trim());
+              const lyricsData = lines.map((text, idx) => ({
+                text,
+                lineNumber: idx + 1,
+              }));
+
+              const onBatchComplete = async (batchResults: any[], startIndex: number, originalLines: string[]) => {
+                await Promise.all(batchResults.map(async (analysis, i) => {
+                  const lineText = originalLines[i];
+                  if (!lineText) return;
+
+                  const textHash = crypto
+                    .createHash('sha256')
+                    .update(lineText)
+                    .digest('hex');
+
+                  return storage.createAiTranslation({
+                    recognizedTrackId: recognizedTrack.id,
+                    lyricLineId: null,
+                    originalText: lineText,
+                    translation: analysis.translation,
+                    culturalContext: analysis.culturalContext,
+                    artistIntent: analysis.artistIntent,
+                    deeperMeaning: analysis.deeperMeaning,
+                    languageNotes: analysis.languageNotes || null,
+                    detectedLanguage: analysis.detectedLanguage,
+                    slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+                    textHash,
+                  });
+                }));
+              };
+
+              await generateBatchCulturalAnalysis(
+                lyricsData,
+                identified.title,
+                identified.artist,
+                undefined,
+                lyricsLanguage,
+                onBatchComplete
+              );
+            } catch (error: any) {
+              console.error('❌ [TEXT] AI analysis failed:', error.message);
+            }
+          }
+
+          await storage.updateListeningSession(session.id, {
+            status: 'success',
+            recognitionTime: Date.now() - startTime,
+          });
+          console.log(`✅ [TEXT] Background processing complete for "${identified.title}"`);
+        } catch (bgError: any) {
+          console.error('❌ [TEXT] Background processing error:', bgError.message);
+          await storage.updateListeningSession(session.id, {
+            status: 'failed',
+            errorMessage: `Background processing failed: ${bgError.message}`,
+          }).catch(err => console.error('Failed to update session:', err));
+        }
+      })();
+
+    } catch (error: any) {
+      console.error('❌ [TEXT] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to identify song',
+        details: error.message,
+      });
+    }
+  });
+
+  // Spotify Now Playing - Get current track from Spotify
+  app.get("/api/spotify/now-playing", async (req, res) => {
+    try {
+      const accessToken = req.query.access_token as string;
+      
+      if (!accessToken) {
+        return res.status(400).json({ error: 'Spotify access token required' });
+      }
+
+      // Fetch currently playing track from Spotify
+      const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.status === 204) {
+        return res.json({ isPlaying: false, message: 'No track currently playing' });
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return res.status(response.status).json({ error: 'Failed to get Spotify playback', details: errorText });
+      }
+
+      const data = await response.json();
+      
+      if (!data.item) {
+        return res.json({ isPlaying: false, message: 'No track currently playing' });
+      }
+
+      const track = data.item;
+      
+      res.json({
+        isPlaying: data.is_playing,
+        track: {
+          title: track.name,
+          artist: track.artists.map((a: any) => a.name).join(', '),
+          album: track.album?.name,
+          spotifyId: track.id,
+          coverArtUrl: track.album?.images?.[0]?.url,
+          duration: track.duration_ms,
+        },
+      });
+    } catch (error: any) {
+      console.error('Spotify Now Playing error:', error);
+      res.status(500).json({ error: 'Failed to get current track' });
+    }
+  });
+
+  // Identify Spotify track - same as manual but with Spotify metadata
+  app.post("/api/identify-spotify", async (req, res) => {
+    const startTime = Date.now();
+    
+    try {
+      const { title, artist, spotifyId, album, coverArtUrl } = req.body;
+      
+      if (!title || !artist) {
+        return res.status(400).json({ error: 'Title and artist are required' });
+      }
+
+      console.log(`🎵 [SPOTIFY] Identifying: "${title}" by ${artist}`);
+      
+      const userId = getUserId(req);
+      const resolvedCoverArtUrl = await resolveTrackArtwork({
+        title,
+        artist,
+        album,
+        spotifyId,
+        existingCoverArtUrl: coverArtUrl,
+      });
+
+      // Create listening session
+      const session = await storage.createListeningSession({
+        userId,
+        status: 'recognizing',
+        audioDuration: 0,
+      });
+
+      // Create recognized track record with Spotify metadata
+      const recognizedTrack = await storage.createRecognizedTrack({
+        userId,
+        title,
+        artist,
+        album,
+        spotifyId,
+        coverArtUrl: resolvedCoverArtUrl,
+        recognitionSource: 'spotify',
+        confidenceScore: 100,
+      });
+
+      // Update session
+      await storage.updateListeningSession(session.id, {
+        recognizedTrackId: recognizedTrack.id,
+      });
+
+      // Return immediately
+      res.json({
+        success: true,
+        sessionId: session.id,
+        recognizedTrack: {
+          id: recognizedTrack.id,
+          title,
+          artist,
+          album,
+          spotifyId,
+          coverArtUrl: resolvedCoverArtUrl,
+          confidenceScore: 100,
+        },
+        processingTime: Date.now() - startTime,
+      });
+
+      // Background processing (same as manual)
+      (async () => {
+        try {
+          await storage.updateListeningSession(session.id, { status: 'processing' });
+
+          let lyricsText: string | null = null;
+          let lyricsLanguage = 'en';
+
+          const resolvedLyrics = await resolveLyricsForTrack(recognizedTrack.id, title, artist);
+          lyricsText = resolvedLyrics.text;
+          lyricsLanguage = resolvedLyrics.language;
+
+          if (lyricsText) {
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              lyricsStatus: 'completed',
+            });
+          } else {
+            await storage.updateRecognizedTrack(recognizedTrack.id, {
+              lyricsStatus: 'no_lyrics',
+              analysisStatus: 'no_lyrics',
+              processingCompletedAt: new Date(),
+            });
+          }
+
+          /*
+          if (false && isLyricsServiceAvailable()) {
+            try {
+              const lyricsResult = await fetchLyricsFast(title, artist);
+              
+              if (lyricsResult.success && lyricsResult.lyrics) {
+                lyricsText = lyricsResult.lyrics.fullText;
+                lyricsLanguage = lyricsResult.lyrics.language;
+                
+                const contentHash = crypto
+                  .createHash('sha256')
+                  .update(lyricsText)
+                  .digest('hex');
+
+                await storage.createTransientLyrics({
+                  recognizedTrackId: recognizedTrack.id,
+                  fullLyrics: lyricsText,
+                  language: lyricsLanguage,
+                  contentHash,
+                  source: 'musixmatch',
+                  expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                });
+              }
+            } catch (error: any) {
+              console.error('❌ [SPOTIFY] Lyrics fetch failed:', error.message);
+            }
+          }
+
+          */
+
+          if (lyricsText) {
+            try {
+              const lines = lyricsText.split('\n').filter(line => line.trim());
+              const lyricsData = lines.map((text, idx) => ({
+                text,
+                lineNumber: idx + 1,
+              }));
+
+              const analysisResults = await generateBatchCulturalAnalysis(
+                lyricsData,
+                title,
+                artist,
+                undefined,
+                lyricsLanguage
+              );
+
+              for (let i = 0; i < analysisResults.length; i++) {
+                const analysis = analysisResults[i];
+                const lineText = lines[i];
+
+                const textHash = crypto
+                  .createHash('sha256')
+                  .update(lineText)
+                  .digest('hex');
+
+                await storage.createAiTranslation({
+                  recognizedTrackId: recognizedTrack.id,
+                  lyricLineId: null,
+                  originalText: lineText,
+                  translation: analysis.translation,
+                  culturalContext: analysis.culturalContext,
+                  artistIntent: analysis.artistIntent,
+                  deeperMeaning: analysis.deeperMeaning,
+                  languageNotes: analysis.languageNotes || null,
+                  detectedLanguage: analysis.detectedLanguage,
+                  slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+                  textHash,
+                });
+              }
+            } catch (error: any) {
+              console.error('❌ [SPOTIFY] AI analysis failed:', error.message);
+            }
+          }
+
+          await storage.updateListeningSession(session.id, {
+            status: 'success',
+            recognitionTime: Date.now() - startTime,
+          });
+
+          console.log(`✅ [SPOTIFY] Background processing complete for session ${session.id}`);
+        } catch (bgError: any) {
+          console.error('❌ [SPOTIFY] Background processing error:', bgError.message);
+          await storage.updateListeningSession(session.id, {
+            status: 'failed',
+            errorMessage: `Background processing failed: ${bgError.message}`,
+          }).catch(err => console.error('Failed to update session:', err));
+        }
+      })();
+
+    } catch (error: any) {
+      console.error('❌ [SPOTIFY] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to identify song',
+        details: error.message,
+      });
+    }
+  });
+
+  // Search recognized tracks with filters
+  app.get("/api/search", async (req, res) => {
+    try {
+      const { q, languages, genres, culturalCategories, limit } = req.query;
+      
+      // Parse array parameters
+      const languageArray = languages 
+        ? (Array.isArray(languages) ? languages as string[] : (languages as string).split(','))
+        : undefined;
+      const genreArray = genres
+        ? (Array.isArray(genres) ? genres as string[] : (genres as string).split(','))
+        : undefined;
+      const categoryArray = culturalCategories
+        ? (Array.isArray(culturalCategories) ? culturalCategories as string[] : (culturalCategories as string).split(','))
+        : undefined;
+      const limitNum = limit ? parseInt(limit as string) : undefined;
+
+      const results = await storage.searchRecognizedTracks({
+        query: q as string | undefined,
+        languages: languageArray,
+        genres: genreArray,
+        culturalCategories: categoryArray,
+        limit: limitNum,
+      });
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching tracks:", error);
+      res.status(500).json({ error: "Failed to search tracks" });
+    }
+  });
+
+  const sendRecognizedTrack = async (req: any, res: any) => {
+    try {
+      const responsePayload = await buildRecognizedTrackResponse(req.params.id);
+
+      if (!responsePayload) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      res.json(responsePayload);
+    } catch (error) {
+      console.error("Error fetching recognized track:", error);
+      res.status(500).json({ error: "Failed to fetch track details" });
+    }
+  };
+
+  // Get recognized track by ID with lyrics and translations
+  app.get("/api/recognized-tracks/:id", sendRecognizedTrack);
+
+  // Backward compatibility alias for older frontend bundles.
+  app.get("/api/recognized-track/:id", sendRecognizedTrack);
+
+  app.get("/v1/tracks/:trackId/synced-lyrics", async (req, res) => {
+    try {
+      const payload = await buildRecognizedTrackResponse(req.params.trackId);
+
+      if (!payload) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      const lyricsText = payload.lyrics?.text || "";
+      const lines = lyricsText ? parseLyricsTextToSyncedLines(lyricsText, payload.track.trackDurationMs) : [];
+      const source = payload.lyrics?.source || "none";
+      const confidence = lines.length > 0 ? (source === "cache" ? 0.78 : 0.7) : 0;
+
+      return res.json({
+        lines,
+        confidence,
+        source,
+      });
+    } catch (error) {
+      console.error("[LIVE-LYRICS] synced-lyrics failed", error);
+      return res.status(500).json({ error: "Failed to fetch synced lyrics" });
+    }
+  });
+
+  app.post("/v1/meaning/explain", async (req, res) => {
+    try {
+      const trackId = String(req.body?.trackId || "").trim();
+      const lyric = String(req.body?.lyric || "").trim();
+      const lineId = String(req.body?.lineId || "").trim();
+      const positionMs = Number(req.body?.positionMs || 0);
+
+      if (!trackId || !lyric) {
+        return res.status(400).json({ error: "trackId and lyric are required" });
+      }
+
+      const payload = await buildRecognizedTrackResponse(trackId);
+      if (!payload) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      const fallback = buildBestEffortLineAnalysis(lyric, {
+        songTitle: payload.track.title,
+        artistName: payload.track.artist,
+        genre: payload.track.genre || undefined,
+        language: payload.lyrics?.language || undefined,
+      });
+
+      const existing = (payload.culturalAnalysis || []).find(
+        (analysis: any) => String(analysis?.originalText || "").trim().toLowerCase() === lyric.toLowerCase(),
+      );
+
+      const aiResult =
+        existing ||
+        (isAiConfigured()
+          ? await generateSingleLineAnalysis(
+              lyric,
+              payload.track.title,
+              payload.track.artist,
+              payload.track.genre || undefined,
+              payload.lyrics?.language || undefined,
+            )
+          : null);
+
+      const literal =
+        String(aiResult?.translation || fallback?.translation || "").trim() ||
+        "This line reflects the direct meaning in context.";
+      const cultural =
+        String(aiResult?.culturalContext || aiResult?.deeperMeaning || fallback?.culturalContext || "").trim() ||
+        "Cultural context is still loading for this line.";
+
+      const slangMap = parseSlangTermsFromUnknown(aiResult?.slangTerms || fallback?.slangTerms);
+      const relatedPhrases = slangMap.map((item) => item.word).slice(0, 5);
+
+      const confidence = aiResult ? 0.78 : fallback ? 0.62 : 0.5;
+
+      // Generate alternates when ambiguity is possible (confidence < 0.8 or AI result exists)
+      // Fire concurrently with the response build — only when AI is configured
+      let alternates: { title: string; body: string; confidence: number }[] | undefined;
+      if (isAiConfigured() && lyric.trim().length > 4) {
+        try {
+          const alts = await generateLineAlternates(
+            lyric,
+            payload.track.title,
+            payload.track.artist,
+            payload.track.genre || undefined,
+            payload.lyrics?.language || undefined,
+          );
+          if (alts.length >= 2) alternates = alts;
+        } catch {
+          // non-critical — omit alternates silently
+        }
+      }
+
+      return res.json({
+        lineId,
+        trackId,
+        positionMs: Number.isFinite(positionMs) ? positionMs : 0,
+        literal,
+        cultural,
+        slangMap,
+        region: Array.from(new Set(slangMap.map((item) => item.region))).slice(0, 3),
+        confidence,
+        ...(alternates ? { alternates } : {}),
+        relatedPhrases,
+        artistNote: String(aiResult?.artistIntent || fallback?.artistIntent || "").trim() || undefined,
+      });
+    } catch (error) {
+      console.error("[LIVE-LYRICS] meaning explain failed", error);
+      return res.status(500).json({ error: "Failed to explain lyric line" });
+    }
+  });
+
+  // Slang/phrase decoder - "wetin be this?" — works without a track.
+  app.post("/v1/slang/explain", async (req, res) => {
+    try {
+      const phrase = String(req.body?.phrase || "").trim();
+
+      if (phrase.length < 2) {
+        return res.status(400).json({
+          error: "phrase is required (min 2 characters)",
+          errorCode: "PHRASE_TOO_SHORT",
+        });
+      }
+
+      if (phrase.length > 240) {
+        return res.status(400).json({
+          error: "phrase too long (max 240 characters)",
+          errorCode: "PHRASE_TOO_LONG",
+        });
+      }
+
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          error: "Slang decoder is not available right now.",
+          errorCode: "AI_NOT_CONFIGURED",
+        });
+      }
+
+      const openai = getAiClient();
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a Nigerian Pidgin and Afrobeats slang expert. Decode any phrase, slang, lyric line, or expression a Nigerian or African user might encounter. Cover Pidgin, Yoruba, Igbo, Hausa, Warri/PH/Lagos street slang, and Afrobeats lyric culture.
+
+Respond with VALID JSON ONLY in this exact shape:
+{
+  "literal": "Plain English meaning of the phrase, one or two sentences.",
+  "cultural": "Cultural context, who says it, when, and what feeling it carries.",
+  "region": "Nigeria | Warri | Lagos | Eastern | PH | Ghana | Pan-African (pick the most accurate)",
+  "examples": ["Short example sentence 1", "Short example sentence 2"],
+  "related": ["related slang 1", "related slang 2", "related slang 3"]
+}
+
+Rules:
+- Keep literal under 160 characters.
+- Keep cultural under 280 characters.
+- examples: 1-3 short sentences showing real usage.
+- related: 0-5 related slang words.
+- If the phrase is plain English with no slang, still explain it briefly and set region to "Pan-African".
+- Never refuse. Never add commentary outside the JSON.`,
+          },
+          {
+            role: "user",
+            content: phrase,
+          },
+        ],
+        temperature: 0.4,
+        max_tokens: 320,
+        response_format: { type: "json_object" },
+      });
+
+      const raw = completion.choices[0]?.message?.content?.trim() || "";
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) {
+          try {
+            parsed = JSON.parse(match[0]);
+          } catch {
+            parsed = {};
+          }
+        }
+      }
+
+      const literal = String(parsed.literal || "").trim() || "We could not decode that phrase confidently.";
+      const cultural = String(parsed.cultural || "").trim() || "Cultural context is still loading for this phrase.";
+      const region = String(parsed.region || "Nigeria").trim() || "Nigeria";
+      const examples = Array.isArray(parsed.examples)
+        ? parsed.examples.map((item: any) => String(item || "").trim()).filter(Boolean).slice(0, 3)
+        : [];
+      const related = Array.isArray(parsed.related)
+        ? parsed.related.map((item: any) => String(item || "").trim()).filter(Boolean).slice(0, 5)
+        : [];
+
+      return res.json({
+        phrase,
+        literal,
+        cultural,
+        region,
+        examples,
+        related,
+        confidence: parsed.literal && parsed.cultural ? 0.78 : 0.5,
+      });
+    } catch (error: any) {
+      console.error("[SLANG] explain failed", error);
+      return res.status(500).json({
+        error: "Failed to decode phrase",
+        details: error?.message,
+      });
+    }
+  });
+
+  app.post("/v1/signals", async (req, res) => {
+    try {
+      const type = String(req.body?.type || "").trim();
+      const allowedTypes = new Set(["tap", "flag", "resync", "dwell", "exit", "fallback"]);
+
+      if (!allowedTypes.has(type)) {
+        return res.status(400).json({ error: "Invalid signal type" });
+      }
+
+      const signalPayload = {
+        type,
+        lineId: req.body?.lineId ? String(req.body.lineId) : null,
+        trackId: req.body?.trackId ? String(req.body.trackId) : null,
+        dwellMs: Number.isFinite(Number(req.body?.dwellMs)) ? Number(req.body?.dwellMs) : null,
+        reason: req.body?.reason ? String(req.body.reason) : null,
+        createdAt: new Date().toISOString(),
+      };
+
+      const interactionType =
+        type === "fallback" && signalPayload.reason
+          ? `live_fallback_${signalPayload.reason}`
+          : `live_${type}`;
+
+      await storage.logInteraction({
+        sessionId: makeAnonymousSessionId(req),
+        trackId: signalPayload.trackId || undefined,
+        interactionType,
+        // For tap signals, store lineId in confidenceBucket so we can aggregate by line in ops.
+        // For fallback signals, store the reason string as before.
+        confidenceBucket:
+          type === "tap" && signalPayload.lineId
+            ? signalPayload.lineId
+            : signalPayload.reason || undefined,
+        isAuto: type === "fallback",
+        dwellTime: signalPayload.dwellMs ? Math.max(0, Math.round(signalPayload.dwellMs / 1000)) : undefined,
+      });
+
+      console.info("[LIVE-LYRICS] signal", signalPayload);
+      return res.status(202).json({ accepted: true });
+    } catch (error) {
+      console.error("[LIVE-LYRICS] signals ingestion failed", error);
+      return res.status(500).json({ error: "Failed to record signal" });
+    }
+  });
+
+  app.get("/ops/api/live-lyrics/stats", isAuthenticated, async (_req, res) => {
+    try {
+      const [coverageResult, confidenceResult, weeklyTapResult, fallbackResult, byCatalogResult, topTappedResult, driftResult, ambiguousResult] =
+        await Promise.all([
+          pool.query(
+            `
+            SELECT
+              COUNT(*) FILTER (WHERE rt.lyrics_status = 'completed')::float AS with_synced,
+              COUNT(*)::float AS total
+            FROM recognized_tracks rt
+          `,
+          ),
+          pool.query(
+            `
+            SELECT AVG(CASE
+              WHEN interaction_type LIKE 'live_fallback%' THEN 0.45
+              WHEN interaction_type = 'live_resync' THEN 0.6
+              ELSE 0.82
+            END) AS confidence
+            FROM interaction_logs
+            WHERE interaction_type LIKE 'live_%'
+              AND created_at >= NOW() - INTERVAL '7 days'
+          `,
+          ),
+          pool.query(
+            `
+            SELECT COUNT(*)::int AS taps
+            FROM interaction_logs
+            WHERE interaction_type = 'live_tap'
+              AND created_at >= NOW() - INTERVAL '7 days'
+          `,
+          ),
+          pool.query(
+            `
+            WITH per_session AS (
+              SELECT
+                session_id,
+                BOOL_OR(interaction_type LIKE 'live_fallback%') AS had_fallback
+              FROM interaction_logs
+              WHERE interaction_type LIKE 'live_%'
+                AND created_at >= NOW() - INTERVAL '7 days'
+              GROUP BY session_id
+            )
+            SELECT
+              COALESCE(SUM(CASE WHEN had_fallback THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0), 0) AS fallback_rate
+            FROM per_session
+          `,
+          ),
+          pool.query(
+            `
+            SELECT
+              CASE
+                WHEN COALESCE(LOWER(rt.genre), '') LIKE '%gospel%' THEN 'Gospel'
+                WHEN COALESCE(LOWER(rt.genre), '') LIKE '%alte%' THEN 'Alté'
+                WHEN COALESCE(LOWER(rt.genre), '') LIKE '%afro%' THEN 'Afrobeats'
+                WHEN COALESCE(LOWER(rt.language), '') IN ('ha', 'hau', 'hausa') THEN 'Hausa'
+                ELSE 'Afrobeats'
+              END AS group_name,
+              COUNT(*)::int AS total,
+              COUNT(*) FILTER (WHERE rt.lyrics_status = 'completed')::int AS synced
+            FROM recognized_tracks rt
+            GROUP BY 1
+          `,
+          ),
+          pool.query(
+            `
+            SELECT
+              il.track_id,
+              COALESCE(rt.title, 'Unknown song') AS title,
+              COALESCE(rt.artist, 'Unknown artist') AS artist,
+              il.confidence_bucket AS line_id,
+              COUNT(*)::int AS taps
+            FROM interaction_logs il
+            LEFT JOIN recognized_tracks rt ON rt.id = il.track_id
+            WHERE il.interaction_type = 'live_tap'
+              AND il.created_at >= NOW() - INTERVAL '24 hours'
+            GROUP BY il.track_id, rt.title, rt.artist, il.confidence_bucket
+            ORDER BY taps DESC
+            LIMIT 8
+          `,
+          ),
+          pool.query(
+            `
+            SELECT
+              interaction_type,
+              COUNT(*)::int AS occurrences
+            FROM interaction_logs
+            WHERE interaction_type IN ('live_resync', 'live_fallback_syncwarn')
+              AND created_at >= NOW() - INTERVAL '7 days'
+            GROUP BY interaction_type
+            ORDER BY occurrences DESC
+          `,
+          ),
+          pool.query(
+            `
+            SELECT
+              il.track_id,
+              COALESCE(rt.title, 'Unknown song') AS title,
+              COALESCE(rt.artist, 'Unknown artist') AS artist,
+              COUNT(*)::int AS flags
+            FROM interaction_logs il
+            LEFT JOIN recognized_tracks rt ON rt.id = il.track_id
+            WHERE il.interaction_type = 'live_flag'
+              AND il.created_at >= NOW() - INTERVAL '7 days'
+            GROUP BY il.track_id, rt.title, rt.artist
+            ORDER BY flags DESC
+            LIMIT 10
+          `,
+          ),
+        ]);
+
+      const withSynced = Number(coverageResult.rows[0]?.with_synced || 0);
+      const total = Number(coverageResult.rows[0]?.total || 0);
+      const syncCoverage = total > 0 ? withSynced / total : 0;
+      const syncConfidence = Number(confidenceResult.rows[0]?.confidence || 0);
+      const tapToExplainVolume = Number(weeklyTapResult.rows[0]?.taps || 0);
+      const fallbackRate = Number(fallbackResult.rows[0]?.fallback_rate || 0);
+
+      const defaultGroups = ["Afrobeats", "Alté", "Hausa", "Gospel"];
+      const coverageByCatalog = defaultGroups.map((name) => {
+        const row = byCatalogResult.rows.find((item: any) => item.group_name === name);
+        const groupTotal = Number(row?.total || 0);
+        const groupSynced = Number(row?.synced || 0);
+        return {
+          group: name,
+          synced: groupSynced,
+          total: groupTotal,
+          coverage: groupTotal > 0 ? groupSynced / groupTotal : 0,
+        };
+      });
+
+      const syncHealth = driftResult.rows.map((row: any) => ({
+        issue: row.interaction_type === 'live_resync' ? 'Re-sync requested' : 'Sync drift fallback',
+        count: Number(row.occurrences || 0),
+      }));
+
+      const ambiguousQueue = ambiguousResult.rows.map((row: any, index: number) => ({
+        trackId: row.track_id,
+        title: row.title,
+        artist: row.artist,
+        flags: Number(row.flags || 0),
+        reviewer: 'Ops queue',
+        priority: index < 3 ? 'high' : 'normal',
+      }));
+
+      const mostTappedLines = topTappedResult.rows.map((row: any) => ({
+        trackId: row.track_id,
+        title: row.title,
+        artist: row.artist,
+        lineId: row.line_id || null,
+        taps: Number(row.taps || 0),
+      }));
+
+      return res.json({
+        kpis: {
+          syncCoverage,
+          syncConfidence,
+          tapToExplainVolume,
+          fallbackRate,
+        },
+        panels: {
+          coverageByCatalog,
+          syncHealth,
+          ambiguousQueue,
+          mostTappedLines,
+        },
+      });
+    } catch (error) {
+      console.error("[LIVE-LYRICS] ops stats failed", error);
+      return res.status(500).json({ error: "Failed to load live lyrics stats" });
+    }
+  });
+
+  // SSE endpoint for real-time track processing updates
+  // Eliminates polling - client gets instant updates as processing progresses
+  const streamRecognizedTrack = async (req: any, res: any) => {
+    const trackId = req.params.id;
+    
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    
+    const sendEvent = (eventType: string, data: any) => {
+      res.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    
+    let closed = false;
+    req.on('close', () => { closed = true; });
+    
+    const fetchAndSend = async () => {
+      try {
+        const payload = await buildRecognizedTrackResponse(trackId);
+        if (!payload) {
+          sendEvent('error', { message: 'Track not found' });
+          res.end();
+          return;
+        }
+
+        sendEvent('update', payload);
+        
+        const lyricsComplete = ['complete', 'failed', 'unavailable'].includes(payload.status.lyrics);
+        const analysisComplete = ['complete', 'failed', 'unavailable'].includes(payload.status.analysis);
+        
+        if (lyricsComplete && analysisComplete) {
+          sendEvent('complete', { message: 'Processing complete' });
+          res.end();
+          return;
+        }
+      } catch (err: any) {
+        sendEvent('error', { message: err.message });
+      }
+    };
+    
+    await fetchAndSend();
+    
+    let fetching = false;
+    const interval = setInterval(async () => {
+      if (closed || fetching) {
+        if (closed) clearInterval(interval);
+        return;
+      }
+      fetching = true;
+      try {
+        await fetchAndSend();
+      } finally {
+        fetching = false;
+      }
+    }, 1500);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      if (!closed) {
+        sendEvent('timeout', { message: 'Processing timeout' });
+        res.end();
+      }
+    }, 120000);
+  };
+
+  app.get("/api/recognized-tracks/:id/stream", streamRecognizedTrack);
+
+  // Backward compatibility alias for older frontend bundles.
+  app.get("/api/recognized-track/:id/stream", streamRecognizedTrack);
+
+  app.post("/api/recognized-tracks/:id/retry-analysis", async (req, res) => {
+    try {
+      const trackId = req.params.id;
+      const track = await storage.getRecognizedTrackById(trackId);
+
+      if (!track) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      const transientLyricsRecords = await storage.getTransientLyricsByTrackId(trackId);
+      const primaryLyrics = transientLyricsRecords[0];
+
+      if (!primaryLyrics?.fullLyrics) {
+        return res.status(409).json({
+          error: "Lyrics never land for this track yet, so deeper gist cannot run.",
+        });
+      }
+
+      const existingAnalyses = await storage.getAiTranslationsByRecognizedTrackId(trackId);
+      if (existingAnalyses.length > 0) {
+        await storage.updateRecognizedTrack(trackId, {
+          analysisStatus: "completed",
+          processingCompletedAt: new Date(),
+        });
+
+        return res.json({
+          success: true,
+          message: "Meaning don already dey here. We refreshed the track state.",
+        });
+      }
+
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          error: "Deeper gist no ready right now because the AI layer is offline.",
+        });
+      }
+
+      await storage.updateRecognizedTrack(trackId, {
+        analysisStatus: "generating_analysis",
+      });
+
+      res.json({
+        success: true,
+        message: "We don restart the deeper gist from the song we already matched.",
+      });
+
+      process.nextTick(async () => {
+        try {
+          const lyricsText = primaryLyrics.fullLyrics;
+          const lyricsLanguage = primaryLyrics.language || "en";
+          const lyricsData = lyricsText
+            .split("\n")
+            .filter((line: string) => line.trim().length > 0)
+            .map((text: string, idx: number) => ({
+              text,
+              lineNumber: idx + 1,
+            }));
+
+          const onBatchComplete = async (
+            batchResults: any[],
+            _startIndex: number,
+            originalLines: string[],
+          ) => {
+            await Promise.all(
+              batchResults.map(async (analysis, i) => {
+                const lineText = originalLines[i];
+                if (!lineText) return;
+
+                const textHash = crypto.createHash("sha256").update(lineText).digest("hex");
+
+                return storage.createAiTranslation({
+                  recognizedTrackId: trackId,
+                  lyricLineId: null,
+                  originalText: lineText,
+                  translation: analysis.translation,
+                  culturalContext: analysis.culturalContext,
+                  artistIntent: analysis.artistIntent,
+                  deeperMeaning: analysis.deeperMeaning,
+                  languageNotes: analysis.languageNotes || null,
+                  detectedLanguage: analysis.detectedLanguage,
+                  slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+                  textHash,
+                });
+              }),
+            );
+          };
+
+          const batchResults = await generateBatchCulturalAnalysis(
+            lyricsData,
+            track.title,
+            track.artist,
+            track.genre || undefined,
+            lyricsLanguage,
+            onBatchComplete,
+          );
+          const glossaryFallbackResults = buildGlossaryAnalysesFromLyrics(lyricsText);
+
+          await storage.updateRecognizedTrack(trackId, {
+            analysisStatus:
+              batchResults.length > 0 || glossaryFallbackResults.length > 0
+                ? "completed"
+                : "failed",
+            processingCompletedAt: new Date(),
+          });
+        } catch (error: any) {
+          console.error("[RETRY-ANALYSIS] Failed:", error?.message || error);
+          await storage.updateRecognizedTrack(trackId, {
+            analysisStatus: "failed",
+            processingCompletedAt: new Date(),
+          });
+        }
+      });
+    } catch (error) {
+      console.error("Error retrying deeper analysis:", error);
+      res.status(500).json({
+        error: "We no fit restart the deeper gist right now.",
+      });
+    }
+  });
+
+  // X-Ray style artist and song info
+  app.get("/api/artist-info/:trackId", async (req, res) => {
+    try {
+      const track = await storage.getRecognizedTrackById(req.params.trackId);
+      if (!track) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      if (!isAiConfigured()) {
+        return res.json({
+          ...buildUnavailableArtistInfo(
+            track.artist,
+            track.title,
+            track.album || undefined,
+            track.genre || undefined,
+            track.releaseYear || undefined,
+          ),
+          status: "complete",
+        });
+      }
+
+      const info = await generateArtistSongInfo(
+        track.artist,
+        track.title,
+        track.album || undefined,
+        track.genre || undefined,
+        track.releaseYear || undefined,
+        {
+          spotifyId: track.spotifyId || null,
+          isrc: track.isrc || null,
+          confidenceScore: track.confidenceScore ?? null,
+        }
+      );
+
+      if (!info) {
+        return res.json({
+          ...buildUnavailableArtistInfo(
+            track.artist,
+            track.title,
+            track.album || undefined,
+            track.genre || undefined,
+            track.releaseYear || undefined,
+          ),
+          status: "complete",
+        });
+      }
+
+      res.json({
+        ...info,
+        status: "complete",
+      });
+    } catch (error) {
+      console.error("Error generating artist info:", error);
+      res.json({
+        artistBio: "The artist keeps the energy direct and song-first on this record.",
+        artistOrigin: "",
+        musicStyle: "The sound stays rooted in the mood of the detected track.",
+        songBackground: "This song holds its own personality even while richer artist context is still catching up.",
+        verification: "unverified",
+        status: "complete",
+      });
+    }
+  });
+
+  // Fragment interpretation - for when lyrics aren't available
+  app.get("/api/fragment-interpretation/:trackId", async (req, res) => {
+    try {
+      const track = await storage.getRecognizedTrackById(req.params.trackId);
+      if (!track) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      if (!isAiConfigured()) {
+        return res.json({
+          ...buildUnavailableFragmentInterpretation(
+            track.title,
+            track.artist,
+            track.genre || undefined,
+            track.region || undefined,
+          ),
+          status: "complete",
+        });
+      }
+
+      const interpretation = await generateFragmentInterpretation(
+        track.title,
+        track.artist,
+        track.genre || undefined,
+        track.region || undefined
+      );
+
+      if (!interpretation) {
+        return res.json({
+          ...buildUnavailableFragmentInterpretation(
+            track.title,
+            track.artist,
+            track.genre || undefined,
+            track.region || undefined,
+          ),
+          status: "complete",
+        });
+      }
+
+      res.json({
+        ...interpretation,
+        status: "complete",
+      });
+    } catch (error) {
+      console.error("Error generating fragment interpretation:", error);
+      res.json({
+        detectedPhrases: [],
+        likelyThemes: [],
+        titleMeaning: undefined,
+        culturalNote: "The title lands as a bold part of the song's identity and overall mood.",
+        status: "complete",
+      });
+    }
+  });
+
+  // Lazy-load analysis for a single lyric line (on-demand when user taps)
+  app.post("/api/analyze-line", async (req, res) => {
+    try {
+      const { lyricText, trackId, songTitle, artistName, genre, language } = req.body;
+      
+      if (!lyricText || lyricText.trim().length < 3) {
+        return res.status(400).json({ error: 'Lyric text is required' });
+      }
+
+      const trimmedLyricText = lyricText.trim();
+      const aiConfig = getAiProviderConfig();
+
+      console.log(`🔍 [LAZY] On-demand analysis requested for: "${lyricText.substring(0, 40)}..."`);
+
+      // Check if analysis already exists for this line
+      const textHash = crypto
+        .createHash('sha256')
+        .update(trimmedLyricText)
+        .digest('hex');
+
+      console.log('[LAZY] On-demand analysis requested', {
+        endpoint: '/api/analyze-line',
+        trackId: trackId || null,
+        songTitle: songTitle || null,
+        artistName: artistName || null,
+        genre: genre || null,
+        language: language || null,
+        lyricPreview: trimmedLyricText.substring(0, 80),
+        textHash,
+        aiConfigured: aiConfig.configured,
+        aiProvider: aiConfig.provider,
+        apiKeySource: aiConfig.apiKeySource,
+      });
+
+      const existingAnalysis = await storage.getAiTranslationByTextHash(textHash);
+      if (existingAnalysis) {
+        console.log(`✅ [LAZY] Found cached analysis`);
+        return res.json({
+          success: true,
+          cached: true,
+          analysis: existingAnalysis,
+        });
+      }
+
+      const fallbackAnalysis = buildBestEffortLineAnalysis(trimmedLyricText, {
+        songTitle,
+        artistName,
+        genre,
+        language,
+      });
+
+      if (!isAiConfigured()) {
+        if (!fallbackAnalysis) {
+          return res.status(503).json({
+            success: false,
+            status: 'unavailable',
+            message: 'No local glossary match yet for this line. Try another lyric or add a community meaning.',
+          });
+        }
+
+        return res.json({
+          success: true,
+          cached: false,
+          fallback: true,
+          analysis: {
+            originalText: trimmedLyricText,
+            translation: fallbackAnalysis.translation,
+            culturalContext: fallbackAnalysis.culturalContext,
+            artistIntent: fallbackAnalysis.artistIntent,
+            deeperMeaning: fallbackAnalysis.deeperMeaning,
+            languageNotes: fallbackAnalysis.languageNotes,
+            detectedLanguage: fallbackAnalysis.detectedLanguage,
+            slangTerms: fallbackAnalysis.slangTerms ? JSON.stringify(fallbackAnalysis.slangTerms) : null,
+          },
+        });
+      }
+
+      // Generate new analysis for this line
+      console.log('[LAZY] Calling generateSingleLineAnalysis', {
+        lyricPreview: trimmedLyricText.slice(0, 60),
+        aiConfigured: aiConfig.configured,
+        aiProvider: aiConfig.provider,
+        apiKeySource: aiConfig.apiKeySource,
+      });
+
+      const analysis = await generateSingleLineAnalysis(
+        trimmedLyricText,
+        songTitle,
+        artistName,
+        genre,
+        language
+      );
+
+      if (!analysis) {
+        console.warn('[LAZY] generateSingleLineAnalysis returned null', {
+          lyricPreview: trimmedLyricText.slice(0, 60),
+          hasFallback: !!fallbackAnalysis,
+        });
+
+        if (fallbackAnalysis) {
+          return res.json({
+            success: true,
+            cached: false,
+            fallback: true,
+            analysis: {
+              originalText: trimmedLyricText,
+              translation: fallbackAnalysis.translation,
+              culturalContext: fallbackAnalysis.culturalContext,
+              artistIntent: fallbackAnalysis.artistIntent,
+              deeperMeaning: fallbackAnalysis.deeperMeaning,
+              languageNotes: fallbackAnalysis.languageNotes,
+              detectedLanguage: fallbackAnalysis.detectedLanguage,
+              slangTerms: fallbackAnalysis.slangTerms ? JSON.stringify(fallbackAnalysis.slangTerms) : null,
+            },
+          });
+        }
+
+        return res.status(503).json({
+          success: false,
+          status: 'unavailable',
+          message: 'We found the song already. More meaning is still loading.',
+        });
+      }
+
+      // Save the analysis if trackId provided
+      if (trackId) {
+        await storage.createAiTranslation({
+          recognizedTrackId: trackId,
+          lyricLineId: null,
+          originalText: trimmedLyricText,
+          translation: analysis.translation,
+          culturalContext: analysis.culturalContext,
+          artistIntent: analysis.artistIntent,
+          deeperMeaning: analysis.deeperMeaning,
+          languageNotes: analysis.languageNotes || null,
+          detectedLanguage: analysis.detectedLanguage,
+          slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+          textHash,
+        });
+      }
+
+      res.json({
+        success: true,
+        cached: false,
+        analysis: {
+          originalText: trimmedLyricText,
+          translation: analysis.translation,
+          culturalContext: analysis.culturalContext,
+          artistIntent: analysis.artistIntent,
+          deeperMeaning: analysis.deeperMeaning,
+          languageNotes: analysis.languageNotes,
+          detectedLanguage: analysis.detectedLanguage,
+          slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+        },
+      });
+    } catch (error: any) {
+      console.error('❌ [LAZY] Error:', error);
+      console.error('[LAZY] analyze-line failure context', {
+        endpoint: '/api/analyze-line',
+        trackId: req.body?.trackId || null,
+        songTitle: req.body?.songTitle || null,
+        artistName: req.body?.artistName || null,
+        lyricPreview: typeof req.body?.lyricText === 'string' ? req.body.lyricText.trim().slice(0, 80) : null,
+      });
+      res.status(500).json({
+        success: false,
+        status: 'failed',
+        message: 'We hit a problem while analyzing this line. Please try again.',
+      });
+    }
+  });
+
+  // Streaming analysis for a single lyric line (SSE for real-time typing effect)
+  app.get("/api/analyze-line/stream", async (req, res) => {
+    const { lyricText, trackId, songTitle, artistName, genre, language } = req.query;
+    
+    // Set up SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      if (!lyricText || String(lyricText).trim().length < 3) {
+        res.write(`data: ${JSON.stringify({ type: 'error', data: 'Lyric text is required' })}\n\n`);
+        res.end();
+        return;
+      }
+
+      const text = String(lyricText).trim();
+      console.log(`🔄 [STREAM] Streaming analysis for: "${text.substring(0, 40)}..."`);
+
+      // Check cache first
+      const textHash = crypto.createHash('sha256').update(text).digest('hex');
+      const existingAnalysis = await storage.getAiTranslationByTextHash(textHash);
+      
+      if (existingAnalysis) {
+        console.log(`✅ [STREAM] Found cached analysis, sending immediately`);
+        res.write(`data: ${JSON.stringify({ type: 'cached', data: JSON.stringify(existingAnalysis) })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'complete', data: JSON.stringify(existingAnalysis) })}\n\n`);
+        res.end();
+        return;
+      }
+
+      const fallbackAnalysis = buildBestEffortLineAnalysis(text, {
+        songTitle: String(songTitle || ''),
+        artistName: String(artistName || ''),
+        genre: String(genre || ''),
+        language: String(language || ''),
+      });
+      const fallbackPayload = fallbackAnalysis ? JSON.stringify(fallbackAnalysis) : buildStreamingGlossaryPayload(text);
+
+      if (!isAiConfigured()) {
+        if (fallbackPayload) {
+          res.write(`data: ${JSON.stringify({ type: 'complete', data: fallbackPayload })}\n\n`);
+        } else {
+          res.write(`data: ${JSON.stringify({ type: 'error', data: 'No local glossary match yet for this line. Try another lyric or add a community meaning.' })}\n\n`);
+        }
+        res.end();
+        return;
+      }
+
+      // Stream the analysis
+      const generator = streamSingleLineAnalysis(
+        text,
+        String(songTitle || ''),
+        String(artistName || ''),
+        String(genre || ''),
+        String(language || '')
+      );
+
+      let fullContent = '';
+      for await (const event of generator) {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+        if (event.type === 'chunk') {
+          fullContent += event.data;
+        }
+        if (event.type === 'complete' && trackId) {
+          // Save to database
+          try {
+            const analysis = parseStreamingAnalysisPayload(event.data);
+            if (!analysis || typeof analysis.translation !== 'string' || analysis.translation.trim().length === 0) {
+              console.warn('[STREAM] Completed analysis payload could not be parsed for persistence', {
+                trackId: String(trackId),
+                lyricPreview: text.slice(0, 80),
+                payloadPreview: typeof event.data === 'string' ? event.data.slice(0, 160) : null,
+              });
+              continue;
+            }
+
+            const serializedSlangTerms = Array.isArray(analysis.slangTerms)
+              ? JSON.stringify(analysis.slangTerms)
+              : typeof analysis.slangTerms === 'string'
+                ? analysis.slangTerms
+                : null;
+
+            await storage.createAiTranslation({
+              recognizedTrackId: String(trackId),
+              lyricLineId: null,
+              originalText: text,
+              translation: analysis.translation,
+              culturalContext: typeof analysis.culturalContext === 'string' ? analysis.culturalContext : null,
+              artistIntent: typeof analysis.artistIntent === 'string' ? analysis.artistIntent : null,
+              deeperMeaning: typeof analysis.deeperMeaning === 'string' ? analysis.deeperMeaning : null,
+              languageNotes: typeof analysis.languageNotes === 'string' ? analysis.languageNotes : null,
+              detectedLanguage: typeof analysis.detectedLanguage === 'string' ? analysis.detectedLanguage : null,
+              slangTerms: serializedSlangTerms,
+              textHash,
+            });
+            console.log(`💾 [STREAM] Saved streaming analysis to database`);
+          } catch (saveError) {
+            console.error(`⚠️ [STREAM] Could not save analysis:`, saveError);
+          }
+        }
+      }
+      
+      res.end();
+    } catch (error) {
+      console.error('❌ [STREAM] Error:', error);
+      res.write(`data: ${JSON.stringify({ type: 'error', data: 'Failed to stream analysis' })}\n\n`);
+      res.end();
+    }
+  });
+
+  // Contribute lyrics for a recognized track and generate AI analysis
+  app.post("/api/recognized-tracks/:id/contribute-lyrics", async (req, res) => {
+    try {
+      const trackId = req.params.id;
+      const { lyrics, language } = req.body;
+
+      if (!lyrics || lyrics.trim().length < 20) {
+        return res.status(400).json({ error: 'Please provide at least 20 characters of lyrics' });
+      }
+
+      const track = await storage.getRecognizedTrackById(trackId);
+      if (!track) {
+        return res.status(404).json({ error: 'Track not found' });
+      }
+
+      console.log(`📝 [CONTRIBUTE] User contributing lyrics for "${track.title}" by ${track.artist}`);
+
+      // Store the contributed lyrics
+      const lyricsText = lyrics.trim();
+      const lyricsLanguage = language || 'en';
+      
+      const contentHash = crypto
+        .createHash('sha256')
+        .update(lyricsText)
+        .digest('hex');
+
+      await storage.createTransientLyrics({
+        recognizedTrackId: trackId,
+        fullLyrics: lyricsText,
+        language: lyricsLanguage,
+        contentHash,
+        source: 'user_contributed',
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+
+      // Update track status
+      await storage.updateRecognizedTrack(trackId, {
+        lyricsStatus: 'completed',
+        analysisStatus: 'generating_analysis',
+      });
+
+      // Return immediately - analysis will happen in background
+      res.json({
+        success: true,
+        message: 'Lyrics received. Generating cultural analysis...',
+      });
+
+      // Generate AI analysis in background with progressive saving
+      (async () => {
+        try {
+          if (!isAiConfigured()) {
+            await storage.updateRecognizedTrack(trackId, {
+              analysisStatus: 'failed',
+              processingCompletedAt: new Date(),
+            });
+            console.log(`⚠️ [CONTRIBUTE] Skipped deeper analysis for "${track.title}" - no AI provider configured`);
+            return;
+          }
+
+          const lines = lyricsText.split('\n').filter((line: string) => line.trim());
+          const lyricsData = lines.map((text: string, idx: number) => ({
+            text,
+            lineNumber: idx + 1,
+          }));
+
+          const onBatchComplete = async (batchResults: any[], startIndex: number, originalLines: string[]) => {
+            await Promise.all(batchResults.map(async (analysis, i) => {
+              const lineText = originalLines[i];
+              if (!lineText) return;
+
+              const textHash = crypto
+                .createHash('sha256')
+                .update(lineText)
+                .digest('hex');
+
+              return storage.createAiTranslation({
+                recognizedTrackId: trackId,
+                lyricLineId: null,
+                originalText: lineText,
+                translation: analysis.translation,
+                culturalContext: analysis.culturalContext,
+                artistIntent: analysis.artistIntent,
+                deeperMeaning: analysis.deeperMeaning,
+                languageNotes: analysis.languageNotes || null,
+                detectedLanguage: analysis.detectedLanguage,
+                slangTerms: analysis.slangTerms ? JSON.stringify(analysis.slangTerms) : null,
+                textHash,
+              });
+            }));
+            console.log(`📝 [CONTRIBUTE] Saved batch (${batchResults.length} lines)`);
+          };
+
+          const batchResults = await generateBatchCulturalAnalysis(
+            lyricsData,
+            track.title,
+            track.artist,
+            track.genre || undefined,
+            lyricsLanguage,
+            onBatchComplete
+          );
+
+          await storage.updateRecognizedTrack(trackId, {
+            analysisStatus: batchResults.length > 0 ? 'completed' : 'failed',
+            processingCompletedAt: new Date(),
+          });
+
+          if (batchResults.length > 0) {
+            console.log(`✅ [CONTRIBUTE] Analysis complete for "${track.title}"`);
+          } else {
+            console.warn(`⚠️ [CONTRIBUTE] Analysis returned no results for "${track.title}"`);
+          }
+        } catch (error: any) {
+          console.error('❌ [CONTRIBUTE] Analysis failed:', error.message);
+          await storage.updateRecognizedTrack(trackId, {
+            analysisStatus: 'failed',
+          });
+        }
+      })();
+
+    } catch (error: any) {
+      console.error('Error contributing lyrics:', error);
+      res.status(500).json({ error: 'Failed to process lyrics' });
+    }
+  });
+
+  // Community Lyrics routes
+  // Submit community lyrics
+  app.post("/api/community-lyrics", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required to contribute lyrics" });
+    }
+
+    try {
+      const userId = getUserId(req)!;
+      const { songTitle, songArtist, fullLyrics, language, languageName, recognizedTrackId } = req.body;
+
+      if (!songTitle || !songArtist || !fullLyrics || !language || !languageName) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Create community lyrics submission
+      const submission = await storage.createCommunityLyrics({
+        userId,
+        songTitle,
+        songArtist,
+        fullLyrics,
+        language,
+        languageName,
+        recognizedTrackId: recognizedTrackId || null,
+      });
+
+      // Award initial points for submission
+      await storage.updateUserRewards(userId, { 
+        pointsToAdd: 10,
+        lyricsContributed: 1,
+      });
+
+      res.status(201).json({
+        success: true,
+        submission,
+        pointsEarned: 10,
+        message: "Lyrics submitted successfully. Pending community review.",
+      });
+    } catch (error: any) {
+      console.error("Error submitting community lyrics:", error);
+      res.status(500).json({ error: "Failed to submit lyrics" });
+    }
+  });
+
+  // Get user's contribution history
+  app.get("/api/user/contributions", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const userId = getUserId(req)!;
+      const contributions = await storage.getCommunityLyricsByUserId(userId);
+      res.json(contributions);
+    } catch (error) {
+      console.error("Error fetching contributions:", error);
+      res.status(500).json({ error: "Failed to fetch contributions" });
+    }
+  });
+
+  // Get user rewards/points
+  app.get("/api/user/rewards", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const userId = getUserId(req)!;
+      const rewards = await storage.getUserRewards(userId);
+      res.json(rewards || {
+        totalPoints: 0,
+        lyricsContributed: 0,
+        lyricsApproved: 0,
+        votesReceived: 0,
+        level: 1,
+      });
+    } catch (error) {
+      console.error("Error fetching rewards:", error);
+      res.status(500).json({ error: "Failed to fetch rewards" });
+    }
+  });
+
+  // Vote on community lyrics
+  app.post("/api/community-lyrics/:id/vote", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required to vote" });
+    }
+
+    try {
+      const userId = getUserId(req)!;
+      const { voteType } = req.body;
+
+      if (!voteType || !['upvote', 'downvote'].includes(voteType)) {
+        return res.status(400).json({ error: "Invalid vote type" });
+      }
+
+      const result = await storage.voteOnCommunityLyrics(userId, req.params.id, voteType);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error voting on lyrics:", error);
+      if (error.code === "23505") {
+        return res.status(400).json({ error: "You've already voted on this submission" });
+      }
+      res.status(500).json({ error: "Failed to submit vote" });
+    }
+  });
+
+  // Favorites routes
+  // Get user favorites
+  app.get("/api/favorites", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const userId = getUserId(req)!;
+      const favoriteSongs = await storage.getFavoritesBySongId(userId);
+      res.json(favoriteSongs);
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+      res.status(500).json({ error: "Failed to fetch favorites" });
+    }
+  });
+
+  // Check if song is favorited
+  app.get("/api/favorites/:songId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ isFavorited: false });
+    }
+
+    try {
+      const userId = getUserId(req)!;
+      const isFavorited = await storage.isSongFavorited(userId, req.params.songId);
+      res.json({ isFavorited });
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+      res.status(500).json({ error: "Failed to check favorite status" });
+    }
+  });
+
+  // Add favorite
+  app.post("/api/favorites/:songId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const userId = getUserId(req)!;
+      const favorite = await storage.addFavorite(userId, req.params.songId);
+      res.status(201).json(favorite);
+    } catch (error: any) {
+      console.error("Error adding favorite:", error);
+      if (error.code === "23505") { // Unique violation
+        return res.status(400).json({ error: "Song already favorited" });
+      }
+      res.status(500).json({ error: "Failed to add favorite" });
+    }
+  });
+
+  // Remove favorite
+  app.delete("/api/favorites/:songId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const userId = getUserId(req)!;
+      const success = await storage.removeFavorite(userId, req.params.songId);
+      if (!success) {
+        return res.status(404).json({ error: "Favorite not found" });
+      }
+      res.json({ message: "Favorite removed" });
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+      res.status(500).json({ error: "Failed to remove favorite" });
+    }
+  });
+
+  // Get user translation history
+  app.get("/api/user/translations", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const userId = getUserId(req)!;
+      const translations = await storage.getUserLyricTranslationsByUserId(userId);
+      res.json(translations);
+    } catch (error) {
+      console.error("Error fetching translation history:", error);
+      res.status(500).json({ error: "Failed to fetch translation history" });
+    }
+  });
+
+  // Get all songs
+  app.get("/api/songs", async (req, res) => {
+    try {
+      const songs = await storage.getAllSongs();
+      res.json(songs);
+    } catch (error) {
+      console.error("Error fetching songs:", error);
+      res.status(500).json({ error: "Failed to fetch songs" });
+    }
+  });
+
+  // Get song by ID
+  app.get("/api/songs/:id", async (req, res) => {
+    try {
+      const song = await storage.getSongById(req.params.id);
+      if (!song) {
+        return res.status(404).json({ error: "Song not found" });
+      }
+      res.json(song);
+    } catch (error) {
+      console.error("Error fetching song:", error);
+      res.status(500).json({ error: "Failed to fetch song" });
+    }
+  });
+
+  // Export song with lyrics and translations
+  app.get("/api/songs/:id/export/:format", async (req, res) => {
+    try {
+      const { id, format } = req.params;
+      
+      // Validate format
+      if (!["json", "text", "markdown"].includes(format)) {
+        return res.status(400).json({ error: "Invalid export format. Use: json, text, or markdown" });
+      }
+
+      // Get song and lyrics
+      const song = await storage.getSongById(id);
+      if (!song) {
+        return res.status(404).json({ error: "Song not found" });
+      }
+
+      // Copyright safety: Only allow export for songs where lyrics storage is allowed
+      // This prevents exporting copyrighted content that should only be translated on-demand
+      if (!song.lyricsStorageAllowed || song.userGeneratedMode) {
+        return res.status(403).json({ 
+          error: "Export not allowed for this song. Lyrics can only be viewed on-demand for copyright compliance." 
+        });
+      }
+
+      const lyrics = await storage.getLyricLinesBySongId(id);
+
+      // Generate export
+      const exportData = { song, lyrics };
+      let content: string;
+      let contentType: string;
+      let filename: string;
+
+      switch (format) {
+        case "json":
+          content = ExportService.exportAsJSON(exportData);
+          contentType = "application/json";
+          filename = `${song.title.replace(/[^a-z0-9]/gi, "_")}_lyrics.json`;
+          break;
+        case "text":
+          content = ExportService.exportAsText(exportData);
+          contentType = "text/plain";
+          filename = `${song.title.replace(/[^a-z0-9]/gi, "_")}_lyrics.txt`;
+          break;
+        case "markdown":
+          content = ExportService.exportAsMarkdown(exportData);
+          contentType = "text/markdown";
+          filename = `${song.title.replace(/[^a-z0-9]/gi, "_")}_lyrics.md`;
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid format" });
+      }
+
+      // Set headers for download
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(content);
+    } catch (error) {
+      console.error("Error exporting song:", error);
+      res.status(500).json({ error: "Failed to export song" });
+    }
+  });
+
+  // Create a new song
+  app.post("/api/songs", async (req, res) => {
+    try {
+      const validatedData = insertSongSchema.parse(req.body);
+      const song = await storage.createSong(validatedData);
+      res.status(201).json(song);
+    } catch (error: any) {
+      console.error("Error creating song:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid song data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create song" });
+    }
+  });
+
+  // Update a song
+  app.patch("/api/songs/:id", async (req, res) => {
+    try {
+      const song = await storage.updateSong(req.params.id, req.body);
+      if (!song) {
+        return res.status(404).json({ error: "Song not found" });
+      }
+      res.json(song);
+    } catch (error) {
+      console.error("Error updating song:", error);
+      res.status(500).json({ error: "Failed to update song" });
+    }
+  });
+
+  // Delete a song
+  app.delete("/api/songs/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteSong(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Song not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting song:", error);
+      res.status(500).json({ error: "Failed to delete song" });
+    }
+  });
+
+  // Get lyric lines for a song
+  app.get("/api/lyrics/:songId", async (req, res) => {
+    try {
+      const lyricLines = await storage.getLyricLinesBySongId(req.params.songId);
+      res.json(lyricLines);
+    } catch (error) {
+      console.error("Error fetching lyric lines:", error);
+      res.status(500).json({ error: "Failed to fetch lyric lines" });
+    }
+  });
+
+  // Create a lyric line
+  app.post("/api/lyrics", async (req, res) => {
+    try {
+      const validatedData = insertLyricLineSchema.parse(req.body);
+      const lyricLine = await storage.createLyricLine(validatedData);
+      res.status(201).json(lyricLine);
+    } catch (error: any) {
+      console.error("Error creating lyric line:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid lyric line data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create lyric line" });
+    }
+  });
+
+  // Generate meaning for a lyric line
+  app.post("/api/lyrics/generate-meaning", async (req, res) => {
+    try {
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          error: getAiUnavailableMessage("Lyric meaning"),
+          status: "unavailable",
+        });
+      }
+
+      const validatedData = generateMeaningRequestSchema.parse(req.body);
+      const { lyricLineId, language } = validatedData;
+
+      const lyricLine = await storage.getLyricLineById(lyricLineId);
+      if (!lyricLine) {
+        return res.status(404).json({ error: "Lyric line not found" });
+      }
+
+      const song = await storage.getSongById(lyricLine.songId);
+      if (!song) {
+        return res.status(404).json({ error: "Song not found" });
+      }
+
+      // Generate translation and cultural meaning using OpenAI
+      const result = await generateLyricTranslation(
+        lyricLine.text,
+        language,
+        song.languageName
+      );
+
+      // Update the lyric line with the generated content
+      const updatedLine = await storage.updateLyricLine(lyricLineId, {
+        translation: result.translation,
+        culturalMeaning: result.culturalMeaning,
+      });
+
+      res.json(updatedLine);
+    } catch (error: any) {
+      console.error("Error generating meaning:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to generate meaning" });
+    }
+  });
+
+  // Generate meaning for user-submitted lyric
+  app.post("/api/lyrics/generate-user-meaning", async (req, res) => {
+    // Require authentication to track translation history
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      if (!isAiConfigured()) {
+        return res.status(503).json({
+          error: getAiUnavailableMessage("Lyric meaning"),
+          status: "unavailable",
+        });
+      }
+
+      const validatedData = generateUserLyricMeaningRequestSchema.parse(req.body);
+      const { lyricText, language, languageName, songId } = validatedData;
+      const userId = getUserId(req)!;
+
+      // Generate translation and cultural meaning using OpenAI
+      const result = await generateLyricTranslation(
+        lyricText,
+        language,
+        languageName
+      );
+
+      // Store the user lyric translation with userId for history tracking
+      await storage.createUserLyricTranslation({
+        userId,
+        songId: songId || null,
+        lyricText,
+        translation: result.translation,
+        culturalMeaning: result.culturalMeaning,
+        language,
+      });
+
+      // Return only the translation and cultural meaning to the frontend
+      res.json({
+        translation: result.translation,
+        culturalMeaning: result.culturalMeaning,
+      });
+    } catch (error: any) {
+      console.error("Error generating user lyric meaning:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to generate meaning" });
+    }
+  });
+
+  // Continuation Engine - Get suggested next song
+  // Uses confidence-weighted threshold logic:
+  // IF emotional confidence >= 0.75 → match by emotion
+  // ELSE IF cultural confidence >= 0.6 → match by themes
+  // ELSE → match by region
+  app.get("/api/continuation/:trackId", async (req, res) => {
+    try {
+      const { trackId } = req.params;
+      const { excludeId } = req.query; // For session-aware deduplication
+      
+      // Get current track to extract its DNA
+      const currentTrack = await storage.getRecognizedTrackById(trackId);
+      if (!currentTrack) {
+        return res.status(404).json({ error: 'Track not found' });
+      }
+
+      // If current track doesn't have DNA yet, return null (no suggestion)
+      if (!currentTrack.emotionalTone) {
+        return res.json({ suggestion: null, reason: 'Song DNA not yet extracted' });
+      }
+
+      // Parse confidence scores (default to 0.5 if not set)
+      const emotionalConfidence = parseFloat(currentTrack.emotionalToneConfidence || '0.5');
+      const culturalConfidence = parseFloat(currentTrack.culturalThemeConfidence || '0.5');
+
+      // Parse cultural themes from JSON string
+      let culturalThemes: string[] = [];
+      if (currentTrack.culturalThemes) {
+        try {
+          culturalThemes = JSON.parse(currentTrack.culturalThemes);
+        } catch {
+          culturalThemes = [];
+        }
+      }
+
+      // Minimum threshold check - if DNA extraction failed, show nothing
+      // Both confidences below 0.3 means we don't have strong enough signal
+      const MINIMUM_THRESHOLD = 0.3;
+      if (emotionalConfidence < MINIMUM_THRESHOLD && culturalConfidence < MINIMUM_THRESHOLD) {
+        console.log(`🔮 [CONTINUATION] Track ${trackId}: confidence too low (emotional=${emotionalConfidence}, cultural=${culturalConfidence}), no suggestion`);
+        return res.json({ suggestion: null, reason: 'Song DNA confidence too low for reliable recommendation' });
+      }
+
+      // Determine matching strategy based on confidence thresholds
+      let matchStrategy: 'emotional' | 'cultural' | 'regional';
+      if (emotionalConfidence >= 0.75) {
+        matchStrategy = 'emotional';
+      } else if (culturalConfidence >= 0.6) {
+        matchStrategy = 'cultural';
+      } else {
+        matchStrategy = 'regional';
+      }
+
+      console.log(`🔮 [CONTINUATION] Track ${trackId}: emotional=${emotionalConfidence}, cultural=${culturalConfidence} → ${matchStrategy}`);
+
+      // Find a continuation track using the confidence-weighted priority logic
+      const suggestion = await storage.findContinuationTrack({
+        currentTrackId: trackId,
+        emotionalTone: matchStrategy === 'emotional' ? currentTrack.emotionalTone || undefined : undefined,
+        culturalThemes: matchStrategy === 'cultural' ? culturalThemes : [],
+        region: matchStrategy === 'regional' ? currentTrack.region || undefined : undefined,
+        excludeId: typeof excludeId === 'string' ? excludeId : undefined,
+      });
+
+      if (!suggestion) {
+        return res.json({ suggestion: null, reason: 'No similar tracks found' });
+      }
+
+      res.json({
+        suggestion: {
+          id: suggestion.id,
+          title: suggestion.title,
+          artist: suggestion.artist,
+          emotionalTone: suggestion.emotionalTone,
+          genre: suggestion.genre,
+        },
+        matchReason: matchStrategy,
+        confidence: matchStrategy === 'emotional' ? emotionalConfidence : culturalConfidence,
+      });
+    } catch (error: any) {
+      console.error('❌ [CONTINUATION] Error:', error.message);
+      res.status(500).json({ error: 'Failed to find continuation' });
+    }
+  });
+
+  // Vote on a lyric line translation
+  app.post("/api/lyrics/vote", async (req, res) => {
+    try {
+      const validatedData = voteRequestSchema.parse(req.body);
+      const { lyricLineId, voteType } = validatedData;
+
+      const updatedLine = await storage.voteLyricLine(lyricLineId, voteType);
+      if (!updatedLine) {
+        return res.status(404).json({ error: "Lyric line not found" });
+      }
+
+      res.json(updatedLine);
+    } catch (error: any) {
+      console.error("Error voting:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid vote data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to record vote" });
+    }
+  });
+
+  // Get user lyric translations for a song
+  app.get("/api/user-lyrics/:songId", async (req, res) => {
+    try {
+      const translations = await storage.getUserLyricTranslationsBySongId(
+        req.params.songId
+      );
+      res.json(translations);
+    } catch (error) {
+      console.error("Error fetching user lyric translations:", error);
+      res.status(500).json({ error: "Failed to fetch user lyric translations" });
+    }
+  });
+
+  // Admin: Batch import songs
+  app.post("/api/admin/import-songs", requireAdminAuth, async (req, res) => {
+    try {
+      const { format, data } = req.body;
+      
+      if (!format || !data) {
+        return res.status(400).json({ error: "Format and data are required" });
+      }
+
+      const validLicenses = ["public_domain", "cc0", "cc_by", "cc_by_sa"];
+      let songsToImport: any[] = [];
+      const errors: string[] = [];
+
+      // Parse data based on format
+      if (format === "json") {
+        try {
+          songsToImport = JSON.parse(data);
+          if (!Array.isArray(songsToImport)) {
+            songsToImport = [songsToImport];
+          }
+        } catch (e) {
+          return res.status(400).json({ error: "Invalid JSON format" });
+        }
+      } else if (format === "csv") {
+        // Strip UTF-8 BOM if present (common from Excel/Sheets exports)
+        // MUST happen before trimming
+        let csvText = data;
+        if (csvText.charCodeAt(0) === 0xFEFF) {
+          csvText = csvText.slice(1);
+        }
+        csvText = csvText.trim();
+        
+        // Full CSV parser that handles quotes, commas, and newlines within fields
+        const parseCSV = (csvText: string): string[][] => {
+          const rows: string[][] = [];
+          const row: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          
+          for (let i = 0; i < csvText.length; i++) {
+            const char = csvText[i];
+            const nextChar = csvText[i + 1];
+            
+            if (char === '"') {
+              if (inQuotes && nextChar === '"') {
+                // Escaped quote within quoted field
+                current += '"';
+                i++; // Skip next quote
+              } else {
+                // Toggle quote state
+                inQuotes = !inQuotes;
+              }
+            } else if (char === ',' && !inQuotes) {
+              // Field separator outside quotes
+              row.push(current);
+              current = '';
+            } else if ((char === '\n' || char === '\r') && !inQuotes) {
+              // Row separator outside quotes
+              if (char === '\r' && nextChar === '\n') {
+                i++; // Skip \r in \r\n
+              }
+              if (current || row.length > 0) {
+                row.push(current);
+                rows.push([...row]);
+                row.length = 0;
+                current = '';
+              }
+            } else {
+              current += char;
+            }
+          }
+          
+          // Add last field and row
+          if (current || row.length > 0) {
+            row.push(current);
+            rows.push(row);
+          }
+          
+          return rows;
+        };
+
+        const rows = parseCSV(csvText);
+        if (rows.length < 2) {
+          return res.status(400).json({ error: "CSV must have header row and at least one data row" });
+        }
+
+        const headers = rows[0].map((h: string) => h.trim());
+        
+        const songMap = new Map();
+        for (let i = 1; i < rows.length; i++) {
+          const values = rows[i];
+          const row: any = {};
+          headers.forEach((h: string, idx: number) => {
+            row[h] = (values[idx] || '').trim();
+          });
+
+          const songKey = `${row.title}-${row.artist}`;
+          if (!songMap.has(songKey)) {
+            songMap.set(songKey, {
+              title: row.title,
+              artist: row.artist,
+              language: row.language,
+              languageName: row.languageName,
+              licenseType: row.licenseType,
+              coverImageUrl: row.coverImageUrl || null,
+              licenseUrl: row.licenseUrl || null,
+              lyricsStorageAllowed: row.licenseType !== 'user_generated',
+              userGeneratedMode: false,
+              lyrics: []
+            });
+          }
+
+          if (row.lyricText) {
+            songMap.get(songKey).lyrics.push({
+              text: row.lyricText,
+              startTime: row.startTime || null,
+              endTime: row.endTime || null
+            });
+          }
+        }
+
+        songsToImport = Array.from(songMap.values());
+      } else {
+        return res.status(400).json({ error: "Invalid format. Use 'json' or 'csv'" });
+      }
+
+      // Validate and import songs
+      let songsImported = 0;
+      let lyricsImported = 0;
+
+      for (const songData of songsToImport) {
+        try {
+          // Validate license type
+          if (!validLicenses.includes(songData.licenseType)) {
+            errors.push(`Invalid license type for song "${songData.title}": ${songData.licenseType}`);
+            continue;
+          }
+
+          // Validate required fields
+          if (!songData.title || !songData.artist || !songData.language || !songData.languageName) {
+            errors.push(`Missing required fields for song "${songData.title || 'unknown'}"`);
+            continue;
+          }
+
+          // Create song
+          const song = await storage.createSong({
+            id: songData.id,
+            title: songData.title,
+            artist: songData.artist,
+            language: songData.language,
+            languageName: songData.languageName,
+            licenseType: songData.licenseType,
+            licenseUrl: songData.licenseUrl || null,
+            coverArtUrl: songData.coverArtUrl || null,
+            lyricsStorageAllowed: songData.lyricsStorageAllowed !== false,
+            userGeneratedMode: songData.userGeneratedMode || false,
+          });
+
+          songsImported++;
+
+          // Import lyrics if present
+          if (songData.lyrics && Array.isArray(songData.lyrics)) {
+            for (const lyricData of songData.lyrics) {
+              try {
+                await storage.createLyricLine({
+                  id: lyricData.id,
+                  songId: song.id,
+                  text: lyricData.text,
+                  startTime: lyricData.startTime || null,
+                  endTime: lyricData.endTime || null,
+                  translation: lyricData.translation || null,
+                  culturalMeaning: lyricData.culturalMeaning || null,
+                });
+                lyricsImported++;
+              } catch (e: any) {
+                errors.push(`Failed to import lyric for song "${song.title}": ${e.message}`);
+              }
+            }
+          }
+        } catch (e: any) {
+          errors.push(`Failed to import song "${songData.title || 'unknown'}": ${e.message}`);
+        }
+      }
+
+      res.json({
+        success: errors.length === 0,
+        songsImported,
+        lyricsImported,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error: any) {
+      console.error("Error importing songs:", error);
+      res.status(500).json({ error: "Failed to import songs" });
+    }
+  });
+
+  // ========================================
+  // Analytics Logging (Anonymous, Fire-and-Forget)
+  // ========================================
+  app.post("/api/analytics/log", async (req, res) => {
+    // Always return success immediately - analytics should never block UI
+    res.status(202).json({ ok: true });
+
+    try {
+      const { events } = req.body;
+      if (!Array.isArray(events) || events.length === 0) return;
+
+      // Batch insert all events
+      for (const event of events) {
+        if (!event.interactionType || !event.sessionId) continue;
+
+        await storage.logInteraction({
+          sessionId: event.sessionId,
+          trackId: event.trackId || null,
+          confidenceBucket: event.confidenceBucket || null,
+          interactionType: event.interactionType,
+          isAuto: event.isAuto || false,
+          timeSinceRecognition: event.timeSinceRecognition || null,
+          dwellTime: event.dwellTime || null,
+        });
+      }
+    } catch (error) {
+      // Silent fail - analytics should never cause errors
+      console.error("[Analytics] Error logging interaction:", error);
+    }
+  });
+
+  return httpServer;
+}

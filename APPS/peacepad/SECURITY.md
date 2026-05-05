@@ -19,3 +19,10 @@ Use this section to tell people how to report a vulnerability.
 Tell them where to go, how often they can expect to get an update on a
 reported vulnerability, what to expect if the vulnerability is accepted or
 declined, etc.
+
+## Secret Handling Rules
+
+- Never place secrets in `client/public` or any committed file.
+- Keep API keys and credentials only in Cloudflare Pages environment variables or local `.env.local`.
+- Run `npm run guard:openai-secrets` before commit to block accidental OpenAI key-like strings.
+- OpenAI domain verification files are public by design and should contain only the verification token.

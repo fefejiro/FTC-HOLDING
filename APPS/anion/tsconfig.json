@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ftc/auth": ["../../PACKAGES/auth/src/index.ts"],
+      "@ftc/anion-types": ["../../PACKAGES/anion-types/src/index.ts"],
+      "@ftc/anion-shared": ["../../PACKAGES/anion-shared/src/index.ts"],
+      "@ftc/supabase": ["../../PACKAGES/supabase/src/index.ts"]
+    },
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "vite.config.ts"]
+}

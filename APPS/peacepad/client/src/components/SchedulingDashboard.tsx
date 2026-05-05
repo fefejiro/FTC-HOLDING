@@ -41,6 +41,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  getDisplayEventTitle,
+  normalizeSchedulableEvent,
+} from "@shared/peacepad/scheduling";
 
 interface LocationData {
   displayName: string;
@@ -114,8 +118,8 @@ export default function SchedulingDashboard() {
     enabled: !!user,
   });
 
-  const allEvents = useMemo(() => {
-    const callEvents = scheduledCalls
+  const allEvents = useMemo<Event[]>(() => {
+    const callEvents: Event[] = scheduledCalls
       .filter((call: any) => call.status === 'pending')
       .map((call: any) => ({
         id: `scheduled-call-${call.id}`,
@@ -367,7 +371,11 @@ export default function SchedulingDashboard() {
             </Card>
           )}
 
-          <CustodyCalendarView events={allEvents} onEditEvent={handleEditEvent} onDeleteEvent={handleDeleteEvent} custodyConfig={activePartnership?.custodyConfig ? (typeof activePartnership.custodyConfig === 'string' ? JSON.parse(activePartnership.custodyConfig) : activePartnership.custodyConfig) : undefined} />
+          <CustodyCalendarView
+            partnership={activePartnership}
+            events={allEvents}
+            currentUserId={user?.id || ""}
+          />
 
           <div className="space-y-3 pt-3 border-t">
             <h3 className="font-semibold text-sm px-1">Upcoming Events</h3>
@@ -384,14 +392,25 @@ export default function SchedulingDashboard() {
                   <SwipeableCard key={event.id} onDelete={() => handleDeleteEvent(event.id)} onEdit={() => handleEditEvent(event)}>
                     <Card className={`overflow-hidden border-l-4 ${getEventColor(event.type)}`}>
                       <CardContent className="p-3">
+                        {(() => {
+                          const normalizedEvent = normalizeSchedulableEvent(event);
+                          const timeLabel = normalizedEvent?.isAllDay
+                            ? "All day"
+                            : new Date(event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                          return (
+                            <>
                         <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-medium text-sm line-clamp-1">{event.title}</h4>
+                          <h4 className="font-medium text-sm line-clamp-1">{getDisplayEventTitle(event.title)}</h4>
                           <Badge variant="outline" className="text-[10px] h-4 px-1 capitalize">{event.type}</Badge>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                          <div className="flex items-center gap-1"><Clock className="h-3 w-3" />{timeLabel}</div>
                           {event.location && <div className="flex items-center gap-1 line-clamp-1"><span className="opacity-50">@</span>{typeof event.location === 'string' ? (JSON.parse(event.location) as { displayName?: string })?.displayName || 'Location' : (event.location as { displayName?: string })?.displayName || 'Location'}</div>}
                         </div>
+                            </>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                   </SwipeableCard>

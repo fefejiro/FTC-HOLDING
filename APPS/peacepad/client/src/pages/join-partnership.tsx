@@ -8,6 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserPlus, CheckCircle } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
+import { trackEvent } from "@/lib/analytics";
 
 export default function JoinPartnershipPage() {
   const { code } = useParams<{ code: string }>();
@@ -43,6 +44,9 @@ export default function JoinPartnershipPage() {
       console.log("[JoinPartnership] Partnership ID:", data.id);
       console.log("[JoinPartnership] Co-parent:", data.coParent?.displayName);
       
+      trackEvent("invite_accepted", {
+        time_to_accept: null,
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/partnerships"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

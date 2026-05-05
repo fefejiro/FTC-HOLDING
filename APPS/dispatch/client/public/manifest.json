@@ -1,0 +1,45 @@
+{
+  "name": "Dispatch — Ottawa Roadside",
+  "short_name": "Dispatch",
+  "description": "Dispatch for Ottawa roadside assistance — gas delivery, lockouts, jump starts, tire changes, and fast operator routing.",
+  "display": "standalone",
+  "background_color": "#0a0f1a",
+  "theme_color": "#f97316",
+  "start_url": "/operator",
+  "scope": "/",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Request",
+      "url": "/request",
+      "description": "Submit a roadside assistance request"
+    }
+  ],
+  "categories": ["utilities", "navigation", "productivity"]
+}

@@ -28,6 +28,14 @@ export default defineConfig({
 
   projects: [
     {
+      name: 'guest-first-smoke',
+      testDir: './tests/e2e/p1-critical',
+      testMatch: /guest-first\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+    {
       name: 'setup',
       testDir: './tests/e2e/setup',
       testMatch: /.*\.setup\.ts/,

@@ -1,19 +1,28 @@
 {
     "name":  "@ftc/peacepad",
-    "version":  "1.0.8",
+    "version":  "1.0.9",
     "type":  "module",
     "license":  "MIT",
     "scripts":  {
                     "dev":  "cross-env NODE_ENV=development tsx server/index.ts",
-                    "clean":  "rm -rf dist node_modules/typescript/tsbuildinfo",
+                    "clean":  "node scripts/clean-build-artifacts.mjs",
                     "prebuild":  "npm run clean",
-                    "build":  "vite build \u0026\u0026 esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist \u0026\u0026 npm run verify:no-replit-domains",
+                    "build:frontend":  "node scripts/write-web-build-meta.mjs \u0026\u0026 vite build \u0026\u0026 node scripts/report-bundle-size.mjs \u0026\u0026 npm run verify:no-replit-domains",
+                    "build:api":  "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+                    "build":  "npm run build:frontend \u0026\u0026 npm run build:api",
                     "start":  "cross-env NODE_ENV=production node dist/index.js",
-                    "verify:no-replit-domains":  "if grep -R \"REPLIT_DOMAINS not provided\" dist; then echo \"[build] ERROR: stale REPLIT_DOMAINS hard-fail found in dist output\"; exit 1; fi",
+                    "verify:no-replit-domains":  "node scripts/verify-no-replit-domains.mjs",
                     "check":  "tsc",
+                    "test":  "vitest run",
                     "db:push":  "drizzle-kit push",
                     "test:report":  "node scripts/generateTestSummary.cjs",
-                    "smoke:guest-auth":  "node scripts/smoke-guest-auth.mjs"
+                    "smoke:guest-auth":  "node scripts/smoke-guest-auth.mjs",
+                    "smoke:e2e:update-lifecycle":  "playwright test tests/e2e/p1-critical/update-lifecycle.spec.ts --project=p1-critical-chromium --project=mobile-pixel-7",
+                    "smoke:e2e:production-readiness":  "playwright test tests/e2e/p1-critical/auth.spec.ts tests/e2e/p1-critical/guest-onboarding.spec.ts tests/e2e/p1-critical/update-lifecycle.spec.ts --project=p1-critical-chromium --project=mobile-pixel-7 \u0026\u0026 playwright test tests/e2e/p2-important/expense-tracking.spec.ts tests/e2e/p2-important/calendar.spec.ts tests/e2e/p2-important/personality.spec.ts --project=p2-important-chromium \u0026\u0026 playwright test tests/e2e/p3-nice-to-have/therapist-directory.spec.ts --project=p3-nice-to-have-chromium",
+                    "verify:deployment-ownership":  "node scripts/verify-deployment-ownership.mjs",
+                    "guard:openai-secrets":  "node scripts/guard-openai-secrets.mjs",
+                    "guard:openai-secrets:all":  "node scripts/guard-openai-secrets.mjs --all",
+                    "guard:openai-secrets:test":  "node scripts/guard-openai-secrets.mjs --self-test"
                 },
     "dependencies":  {
                          "@capacitor/android":  "^7.4.5",

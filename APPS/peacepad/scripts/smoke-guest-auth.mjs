@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
-const inputBaseUrl = process.env.SMOKE_BASE_URL || process.argv[2] || "https://peacepad.ca";
-const baseUrl = inputBaseUrl.replace(/\/+$/, "");
+const inputWebBaseUrl = process.env.SMOKE_BASE_URL || process.argv[2] || "https://peacepad.ca";
+const inputApiBaseUrl =
+  process.env.SMOKE_API_BASE_URL || process.env.VITE_API_BASE_URL || "https://api.peacepad.ca";
+const webBaseUrl = inputWebBaseUrl.replace(/\/+$/, "");
+const apiBaseUrl = inputApiBaseUrl.replace(/\/+$/, "");
 
 function assert(condition, message) {
   if (!condition) {
@@ -28,7 +31,7 @@ function getSetCookieHeaders(headers) {
   return splitSetCookieHeader(headers.get("set-cookie"));
 }
 
-async function requestJson(path, init = {}) {
+async function requestJson(baseUrl, path, init = {}) {
   const url = `${baseUrl}${path}`;
   const response = await fetch(url, {
     redirect: "manual",
@@ -56,9 +59,18 @@ async function requestJson(path, init = {}) {
 }
 
 async function runSmokeTest() {
-  console.log(`[Smoke] Base URL: ${baseUrl}`);
+  console.log(`[Smoke] Web Base URL: ${webBaseUrl}`);
+  console.log(`[Smoke] API Base URL: ${apiBaseUrl}`);
 
-  const health = await requestJson("/api/health", {
+  const webOnboarding = await fetch(`${webBaseUrl}/onboarding`, {
+    method: "GET",
+    redirect: "manual",
+    headers: { Accept: "text/html" },
+  });
+  assert(webOnboarding.status === 200, `[Smoke] GET /onboarding failed with status ${webOnboarding.status}`);
+  console.log("[Smoke] GET /onboarding OK");
+
+  const health = await requestJson(apiBaseUrl, "/api/health", {
     method: "GET",
     headers: { Accept: "application/json" },
   });
@@ -66,7 +78,7 @@ async function runSmokeTest() {
   assert(health.json && typeof health.json === "object", "[Smoke] GET /api/health did not return JSON object");
   console.log("[Smoke] GET /api/health OK");
 
-  const guest = await requestJson("/api/auth/guest", {
+  const guest = await requestJson(apiBaseUrl, "/api/auth/guest", {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -86,7 +98,7 @@ async function runSmokeTest() {
   assert(/httponly/i.test(guestCookie), "[Smoke] peacepad_guest cookie is missing HttpOnly");
 
   const sessionCookieHeader = guestCookie.split(";")[0];
-  const session = await requestJson("/api/session", {
+  const session = await requestJson(apiBaseUrl, "/api/session", {
     method: "GET",
     headers: {
       Accept: "application/json",

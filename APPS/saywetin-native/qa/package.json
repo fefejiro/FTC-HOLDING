@@ -1,0 +1,26 @@
+{
+  "name": "saywetin-qa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Full SDLC quality bench for SayWetin (unit, api, contract, perf, security, e2e, uat, bat).",
+  "scripts": {
+    "qa:install": "npm install --no-audit --no-fund",
+    "qa:unit": "vitest run unit",
+    "qa:api": "vitest run api",
+    "qa:contract": "vitest run contract",
+    "qa:perf": "node perf/run.mjs",
+    "qa:security": "node security/run.mjs",
+    "qa:e2e": "node e2e/run.mjs",
+    "qa:uat": "node scenarios/run.mjs uat",
+    "qa:bat": "node scenarios/run.mjs bat",
+    "qa:smoke": "node ../tools/agent-test/smoke-api.mjs",
+    "qa:all": "node run-all.mjs",
+    "qa:report": "node report.mjs"
+  },
+  "devDependencies": {
+    "autocannon": "^7.15.0",
+    "vitest": "^2.1.8",
+    "zod": "^3.23.8"
+  }
+}

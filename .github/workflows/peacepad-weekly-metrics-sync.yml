@@ -1,0 +1,112 @@
+name: PeacePad Weekly Metrics Sync
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      weekStart:
+        description: 'Week start date (YYYY-MM-DD)'
+        required: true
+        type: string
+      weekEnd:
+        description: 'Week end date (YYYY-MM-DD)'
+        required: true
+        type: string
+      totalUsers:
+        description: 'Total users'
+        required: true
+        type: string
+      newUsers:
+        description: 'New users this week'
+        required: true
+        type: string
+      activeUsers:
+        description: 'Active users this week'
+        required: true
+        type: string
+      partnerships:
+        description: 'Partnerships count'
+        required: true
+        type: string
+      messagesSent:
+        description: 'Messages sent'
+        required: true
+        type: string
+      feedbackSubmitted:
+        description: 'Feedback submitted'
+        required: true
+        type: string
+      p1Errors:
+        description: 'P1 errors'
+        required: true
+        type: string
+      p2Errors:
+        description: 'P2 errors'
+        required: true
+        type: string
+      source:
+        description: 'Source note for this report'
+        required: false
+        default: 'PeacePad Weekly Report email'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  sync-metrics:
+    name: Run metrics updater and commit docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run PeacePad weekly metrics updater
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ ! -f "DOCS/peacepad-weekly-input.json" ]; then
+              echo "Scheduled run skipped: DOCS/peacepad-weekly-input.json not found."
+              echo "Create DOCS/peacepad-weekly-input.json from DOCS/peacepad-weekly-input.example.json before scheduled automation."
+              exit 0
+            fi
+
+            npm run metrics:peacepad:weekly -- --fromFile DOCS/peacepad-weekly-input.json
+          else
+            npm run metrics:peacepad:weekly -- \
+              --weekStart "${{ github.event.inputs.weekStart }}" \
+              --weekEnd "${{ github.event.inputs.weekEnd }}" \
+              --totalUsers "${{ github.event.inputs.totalUsers }}" \
+              --newUsers "${{ github.event.inputs.newUsers }}" \
+              --activeUsers "${{ github.event.inputs.activeUsers }}" \
+              --partnerships "${{ github.event.inputs.partnerships }}" \
+              --messagesSent "${{ github.event.inputs.messagesSent }}" \
+              --feedbackSubmitted "${{ github.event.inputs.feedbackSubmitted }}" \
+              --p1Errors "${{ github.event.inputs.p1Errors }}" \
+              --p2Errors "${{ github.event.inputs.p2Errors }}" \
+              --source "${{ github.event.inputs.source }}"
+          fi
+
+      - name: Commit and push docs updates
+        shell: bash
+        run: |
+          if git diff --quiet -- FTC_MASTER.md DOCS/VELOCITY_LOG.md DOCS/PEACEPAD_WEEKLY_METRICS.md; then
+            echo "No documentation changes detected. Skipping commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add FTC_MASTER.md DOCS/VELOCITY_LOG.md DOCS/PEACEPAD_WEEKLY_METRICS.md
+          git commit -m "chore(metrics): sync PeacePad weekly report"
+          git push origin HEAD:main

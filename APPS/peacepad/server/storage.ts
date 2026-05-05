@@ -882,13 +882,12 @@ export class DatabaseStorage implements IStorage {
     // Only exclude internal session/auth tokens if any
     const completeUserData = {
       id: userData.id,
-      replitUserId: userData.replitUserId,
       email: userData.email,
       displayName: userData.displayName,
       firstName: userData.firstName,
       lastName: userData.lastName,
       phoneNumber: userData.phoneNumber,
-      profilePhotoUrl: userData.profilePhotoUrl,
+      profileImageUrl: userData.profileImageUrl,
       personalityType: userData.personalityType,
       communicationStyle: userData.communicationStyle,
       conflictResolutionStyle: userData.conflictResolutionStyle,
@@ -898,12 +897,12 @@ export class DatabaseStorage implements IStorage {
       aiMessageConsent: userData.aiMessageConsent,
       aiCallConsent: userData.aiCallConsent,
       termsAcceptedAt: userData.termsAcceptedAt,
-      locale: userData.locale,
-      timezone: userData.timezone,
-      betaAccess: userData.betaAccess,
       createdAt: userData.createdAt,
       updatedAt: userData.updatedAt,
-      lastLogin: userData.lastLogin,
+      lastLoginAt: userData.lastLoginAt,
+      subscriptionTier: userData.subscriptionTier,
+      onboardingCompletedAt: userData.onboardingCompletedAt,
+      isGuest: userData.isGuest,
     };
 
     // Combine and deduplicate received messages (from conversations and direct)

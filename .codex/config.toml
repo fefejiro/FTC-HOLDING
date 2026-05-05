@@ -1,0 +1,8 @@
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[apps.playwright1]
+default_tools_approval_mode = "approve"
+
+[apps.playwright1.tools.browser_run_code]
+approval_mode = "approve"

@@ -1,0 +1,5 @@
+🟡 SayWetin QA 2026-04-27: 7 green / 2 red.
+
+Why we test every 5 minutes: shipping bad code to Nigerian users on flaky data is not the move.
+
+Built in Lagos. Tested in production-shape.

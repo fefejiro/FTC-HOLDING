@@ -33,8 +33,9 @@ describe("apiBaseUrl resolution", () => {
       webOrigin: "https://peacepad.ca",
     });
 
-    expect(resolution.baseUrl).toBe("https://peacepad.ca");
-    expect(resolution.source).toBe("same-origin");
+    // peacepad.ca is a known CF Pages host — API calls route to api.peacepad.ca
+    expect(resolution.baseUrl).toBe("https://api.peacepad.ca");
+    expect(resolution.source).toBe("web-fallback");
   });
 
   it("uses empty base when web origin is unavailable", () => {

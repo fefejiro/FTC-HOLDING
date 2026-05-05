@@ -1,0 +1,2 @@
+-- ATEAM local Supabase seed
+-- Keep this intentionally lightweight so local db reset stays safe.

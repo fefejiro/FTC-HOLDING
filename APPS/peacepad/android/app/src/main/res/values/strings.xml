@@ -6,6 +6,6 @@
     <string name="custom_url_scheme">ca.peacepad.family</string>
     
     <!-- Play Store Metadata -->
-    <string name="app_description">Communication tools for co-parents. Fair turn-based conversations (Conch Mode), real-time messaging with AI tone analysis, shared calendars, expense tracking, and domestic violence resources.</string>
-    <string name="app_tagline">Peaceful co-parenting communication</string>
+    <string name="app_description">Find a softer tone before you send something hard. PeacePad helps co-parents draft calmer messages, prepare difficult conversations, and keep the custody schedule in view.</string>
+    <string name="app_tagline">Find a softer tone for hard conversations.</string>
 </resources>

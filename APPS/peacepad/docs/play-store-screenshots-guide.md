@@ -1,137 +1,95 @@
 # PeacePad Play Store Screenshots Guide
 
-## Required Screenshots for Google Play
+## Goal
 
-Google Play requires:
-- **Minimum**: 2 screenshots
-- **Recommended**: 8 screenshots (to fill all slots)
-- **Size**: 16:9 aspect ratio for phones (1080x1920 recommended)
-- **Format**: PNG or JPEG
+Show the focused MVP clearly:
 
-## Screenshot List (Recommended Order)
+**PeacePad helps co-parents say what they mean without starting a fight.**
 
-### 1. Welcome/Onboarding (Hero Shot)
-**Page**: `/` (root - onboarding slideshow)
-**What to capture**: First slide showing "Communicate Clearly" with family illustration
-**Caption**: "Communicate clearly, reduce conflict"
-**Notes**: This is shown to new users automatically
+The screenshots should feel warm, calm, and practical. They should sell communication support, not logistics sprawl.
 
-### 2. Conch Mode - Start Screen
-**Page**: `/conch-mode`
-**What to capture**: The Conch Mode start screen showing "Have a peaceful conversation"
-**Caption**: "Conch Mode - Take turns speaking for structured discussions"
-**Notes**: Logged in, before starting a session
+## Upload Set
 
-### 3. Conch Mode - Active Session
-**Page**: `/conch-mode` (during active session)
-**What to capture**: Active turn-taking interface with the conch shell indicator
-**Caption**: "Pass the talking stick - one voice at a time"
-**Notes**: Requires two users in a session
+Google Play requires at least 2 phone screenshots. For this MVP, prepare 6.
 
-### 4. Messaging Interface
-**Page**: `/chat`
-**What to capture**: Chat interface with clear communication examples.
-**Caption**: "Keep family communication clear and focused"
-**Notes**: Show simple, constructive coordination.
+Use:
+- Format: PNG
+- Size: 1080 x 1920 or equivalent 9:16 phone ratio
+- Style: real product UI, minimal overlays, no debug chrome
 
-### 5. Shared Calendar
-**Page**: `/scheduling`
-**What to capture**: Calendar view with events.
-**Caption**: "Coordinate family schedules in one shared view"
-**Notes**: Add sample events like soccer or appointments.
+## Recommended Order
 
-### 6. Expense Tracking
-**Page**: `/expenses`
-**What to capture**: Expense list with some sample expenses and balance summary
-**Caption**: "Track shared expenses and settle balances fairly"
-**Notes**: Add sample expenses with receipts
+### 1. Welcome
+- Screen: onboarding welcome
+- Headline in shot: "Say what you mean. Without the fight."
+- Purpose: immediately position the app as a communication coach
 
-### 7. Child Updates
-**Page**: `/child-updates`
-**What to capture**: Child updates feed with sample notes
-**Caption**: "Share important updates about your children"
-**Notes**: Add sample updates about school, health, activities
+### 2. Messages
+- Screen: `/chat`
+- Show: message composer with inline tone guidance visible
+- Caption: "Check how your message might land before you send it."
 
-### 8. Find Support
-**Page**: `/therapist-directory`
-**What to capture**: Support resources directory.
-**Caption**: "Access verified community and counseling resources"
-**Notes**: Shows local help options.
+### 3. Rewording Suggestion
+- Screen: `/chat`
+- Show: concerning tone state with suggestion card and the three actions
+- Caption: "Get a calmer rewrite without losing your meaning."
 
----
+### 4. Prep Chat
+- Screen: `/prep-chat`
+- Show: AI coach helping frame a difficult conversation
+- Caption: "Talk through a hard conversation before it turns into a fight."
 
-## How to Capture Clean Screenshots
+### 5. Calendar
+- Screen: `/scheduling`
+- Show: display-only custody schedule context
+- Caption: "Keep the schedule visible while you communicate."
 
-### Option A: Production App (Recommended)
-1. Deploy to production at peacepad.ca
-2. Use a logged-in account with sample data
-3. Take screenshots using browser dev tools mobile emulation
-4. All dev elements (Reload, version stamp) are automatically hidden
+### 6. Invite / You
+- Screen: `/settings`
+- Show: invite link area plus support resources entry
+- Caption: "Invite your co-parent and keep help close by."
 
-### Option B: Android Emulator/Device
-1. Install the APK from Google Play internal testing
-2. Log in and add sample data
-3. Use device screenshot function (Power + Volume Down)
-4. Crop to remove status bar if needed
+## Screenshots To Retire
 
-### Option C: Manual Screenshot Cleanup
-1. Take raw screenshots from dev environment
-2. Crop out the dev toolbar at top (Reload, version stamp)
-3. Ensure mobile-first aspect ratio (9:16)
+Do not upload old captures that highlight:
+- Conch Mode
+- expenses
+- tasks
+- child updates
+- therapist directory search
+- achievements or streaks
 
----
+The current files in `play-store-assets/screenshots/02-conch-mode.png` and `04-organize.png` are stale for the MVP and should be replaced before upload.
 
-## Sample Data for Screenshots
+## Capture Notes
 
-### Expenses (add via app)
-- "School supplies" - $45.00
-- "Soccer registration" - $150.00
-- "Doctor copay" - $25.00
-- "Backpack" - $35.00
+Use sample content that feels realistic and child-centered:
+- "Can we switch pickup to 5:30 today?"
+- "I want to make sure Maya has what she needs for school tomorrow."
+- "Would you be open to trading Saturday for Sunday this week?"
 
-### Calendar Events (add via app)
-- "Parent-Teacher Conference" - Next Monday 4pm
-- "Soccer Practice" - Wednesdays 5pm
-- "Dental Checkup" - Next Friday 10am
-- "Birthday Party" - Saturday 2pm
+Avoid:
+- legal framing
+- angry or insulting text
+- lorem ipsum
+- empty states for every screenshot
 
-### Child Updates (add via app)
-- "Emma got an A on her math test!"
-- "Jake's soccer team won their game 3-1"
-- "Reminded about peanut allergy for school"
+## Feature Graphic Direction
 
----
+Size: 1024 x 500
 
-## Feature Graphic Requirements
-
-**Size**: 1024 x 500 pixels
-**Content**: 
+Use:
 - PeacePad logo
-- Tagline: "Communicate Clearly. Reduce Conflict."
-- Purple gradient background matching app theme
+- tagline: "Say what you mean. Without the fight."
+- simple warm background
+- no feature collage
+- no Conch references
 
----
+## Final Checklist
 
-## Promo Video (Optional)
-
-**Duration**: 15-30 seconds
-**Resolution**: 1080p minimum
-**Content**:
-1. App logo intro (2s)
-2. Conch Mode demo (8s)
-3. Messaging with AI suggestions (8s)
-4. Calendar view (5s)
-5. Tagline + download CTA (5s)
-
----
-
-## Checklist Before Submission
-
-- [ ] All 8 screenshots captured in 9:16 ratio
-- [ ] Screenshots show realistic (not lorem ipsum) data
-- [ ] No dev elements visible (Reload button, version stamp)
-- [ ] Feature graphic created (1024x500)
-- [ ] Short description (80 chars max)
-- [ ] Full description (4000 chars max)
-- [ ] Privacy policy URL active
-- [ ] Contact email verified
+- [ ] 6 new screenshots captured in 9:16 ratio
+- [ ] first screenshot is the welcome hero
+- [ ] one screenshot clearly shows inline tone guidance
+- [ ] one screenshot clearly shows Prep Chat
+- [ ] no deferred features appear anywhere
+- [ ] feature graphic matches the new tagline

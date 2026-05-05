@@ -18,28 +18,28 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
-    version: "1.0.3",
-    date: "January 31, 2026",
+    version: "1.0.9",
+    date: "April 14, 2026",
     changes: [
       {
         type: "improvement",
-        title: "UX Overhaul",
-        description: "Radical simplification of the 'pressure release valve' experience. Practice Chat is now always the homepage with a single input box for instant results.",
+        title: "Guest-First Start",
+        description: "First-time users can now open PeacePad and start drafting right away, without needing to sign in before they see the core product.",
       },
       {
         type: "improvement",
-        title: "Uniform Aesthetic",
-        description: "Unified minimal design across all features. Clean, focused connection and empty states without promotional clutter.",
+        title: "Copy to Send",
+        description: "After refining a message, you can now copy it straight into text, email, or WhatsApp so PeacePad fits the tools co-parents already use.",
       },
       {
         type: "improvement",
-        title: "Optimized Navigation",
-        description: "Reordered navigation based on access: Practice, Calendar, Expenses, Chat, and Conch Mode.",
+        title: "Faster Tone Feedback",
+        description: "Tone analysis and calmer rewrite suggestions now appear quickly while you draft, helping you soften the message before you send it.",
       },
       {
         type: "improvement",
-        title: "Android Performance",
-        description: "Improved compatibility and performance for the latest Android devices with version 1.0.3.",
+        title: "Smoother Upgrade Path",
+        description: "Saving history and account features stay protected, but signing in now happens later in the flow when it adds real value.",
       },
     ],
   },

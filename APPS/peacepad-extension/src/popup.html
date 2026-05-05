@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PeacePad Pre-Send</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main>
+      <h1>PeacePad Pre-Send</h1>
+      <p class="muted note" id="build-stamp"></p>
+
+      <section class="card">
+        <h2>Current Site</h2>
+        <p class="site-name" id="site-name">Detecting...</p>
+        <p class="muted" id="site-status"></p>
+        <label class="row">
+          <input id="auto-toggle" type="checkbox" />
+          <span>Enable automatic monitoring</span>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>API</h2>
+        <label for="api-base">Base URL</label>
+        <input id="api-base" type="text" placeholder="https://api.peacepad.ca" />
+        <label for="api-key">API Key (optional)</label>
+        <input id="api-key" type="password" placeholder="PEACEPAD_ACTIONS_API_KEY" />
+        <button id="save-config" type="button">Save</button>
+        <p id="save-status" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2>Debug</h2>
+        <div class="row stack-row">
+          <button id="copy-trace" type="button">Copy Debug Trace</button>
+          <button id="clear-trace" type="button" class="secondary">Clear Debug Trace</button>
+        </div>
+        <p id="trace-status" class="muted"></p>
+      </section>
+
+      <p class="muted note">WhatsApp uses Use Suggestion for safe draft review before sending.</p>
+    </main>
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>

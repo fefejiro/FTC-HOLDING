@@ -1,8 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { MessageCircle, Brain, Calendar, Shield, TrendingUp, Users, Lock, Sparkles } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { MessageCircle, Brain, Calendar, Shield, TrendingUp, Users } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
 import familyImage from "@assets/generated_images/Co-parents_and_child_holding_hands_e55c74b4.png";
@@ -10,7 +8,6 @@ import peacepadIcon from "/peacepad-icon.png";
 
 export default function LandingPage() {
   const hasScrolledToTop = useRef(false);
-  const { login } = useAuth();
   const [, setLocation] = useLocation();
 
   // Always redirect unauthenticated users to onboarding flow
@@ -68,9 +65,9 @@ export default function LandingPage() {
   return (
     <>
       <SEOHead
-        title="PeacePad - Co-Parenting App to Communicate Clearly & Reduce Conflict"
-        description="PeacePad is a co-parenting app that helps parents communicate clearly and reduce conflict. AI-powered message clarity, shared custody calendar, and expense tracking — free for separated and divorced parents."
-        keywords="co-parenting app, co-parenting communication app, reduce conflict co-parenting, talk to ex about kids, co-parent messaging app, shared custody calendar, divorce communication app, separated parents app, parallel parenting app"
+        title="PeacePad | Find a softer tone for hard conversations."
+        description="PeacePad helps co-parents communicate clearly with before-you-send tone guidance, Prep Chat, and custody schedule context."
+        keywords="co-parenting app, co-parent communication app, calm messaging, prep chat, custody calendar, divorce communication app, separated parents app"
         ogImage="https://peacepad.ca/og-image.png"
         canonical="https://peacepad.ca/"
       />
@@ -131,7 +128,7 @@ export default function LandingPage() {
                   Get Started
                 </h2>
                 <p className="text-lg md:text-xl text-white/90">
-                  Sign in to start communicating with confidence
+                  Start your PeacePad onboarding experience
                 </p>
               </div>
               
@@ -140,35 +137,11 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   className="bg-white hover:bg-purple-50 text-purple-700 shadow-2xl hover:shadow-3xl text-lg md:text-xl px-12 py-8 w-full sm:max-w-md font-bold transition-all duration-200 transform hover:scale-105 border-0"
-                  onClick={login}
-                  data-testid="button-sign-in-google"
-                >
-                  <Lock className="mr-3 h-6 w-6 text-purple-600" />
-                  Sign In Securely
-                </Button>
-                
-              </div>
-              
-              {/* Divider */}
-              <div className="flex items-center gap-4 w-full max-w-md mx-auto">
-                <div className="flex-1 h-px bg-white/20"></div>
-                <span className="text-sm text-white/50 font-medium">OR</span>
-                <div className="flex-1 h-px bg-white/20"></div>
-              </div>
-              
-              {/* Guest Option */}
-              <div className="space-y-2">
-                <button
                   onClick={() => setLocation("/onboarding")}
-                  className="text-white hover:text-white underline underline-offset-4 text-base md:text-lg font-medium transition-colors"
-                  data-testid="button-continue-guest"
-                  aria-label="Continue as guest for 14 days"
+                  data-testid="button-private-beta-entry"
                 >
-                  Try as Guest (14 days)
-                </button>
-                <p className="text-xs md:text-sm text-white/70">
-                  Limited features. Sign in for full access.
-                </p>
+                  Continue to PeacePad
+                </Button>
               </div>
             </div>
           </div>
@@ -189,12 +162,28 @@ export default function LandingPage() {
             Help
           </a>
           <span className="text-white/40">|</span>
+          <a
+            href="/support"
+            className="hover:text-white transition-colors"
+            data-testid="link-support"
+          >
+            Support
+          </a>
+          <span className="text-white/40">|</span>
           <a 
             href="/privacy"
             className="hover:text-white transition-colors"
             data-testid="link-privacy-policy"
           >
             Privacy Policy
+          </a>
+          <span className="text-white/40">|</span>
+          <a
+            href="/terms"
+            className="hover:text-white transition-colors"
+            data-testid="link-terms"
+          >
+            Terms
           </a>
           <span className="text-white/40">|</span>
           <a 

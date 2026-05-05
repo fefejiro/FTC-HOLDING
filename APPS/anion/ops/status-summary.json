@@ -1,0 +1,98 @@
+{
+  "project": "anion",
+  "name": "Anion Class App",
+  "updatedAt": "2026-04-23T23:59:30.000Z",
+  "overall": "yellow",
+  "stage": "foundation",
+  "summary": "Foundation slice now includes Supabase-backed profile/tutor/booking adapters plus baseline owner-scoped RLS migration, with demo fallback still available.",
+  "metrics": [
+    {
+      "label": "Docs",
+      "value": "ready",
+      "detail": "Product, architecture, ADR, and status docs are in place.",
+      "status": "green"
+    },
+    {
+      "label": "Web Shell",
+      "value": "functional foundation",
+      "detail": "Web shell now renders concrete Phase 1 surfaces for auth roles, discovery, bookings, and profile setup.",
+      "status": "green"
+    },
+    {
+      "label": "Mobile Shell",
+      "value": "scaffolded",
+      "detail": "React Native structure exists with TODO-backed screen stubs.",
+      "status": "green"
+    },
+    {
+      "label": "Phase 1 foundation flows",
+      "value": "implemented",
+      "detail": "Role switching, tutor discovery, booking request state, and parent/student setup are wired with shared seed contracts.",
+      "status": "green"
+    },
+    {
+      "label": "Auth scaffolding",
+      "value": "supabase-ready",
+      "detail": "Shared auth and Supabase clients now support Vite envs, magic-link session scaffolding, and demo-mode fallback.",
+      "status": "green"
+    },
+    {
+      "label": "Data persistence",
+      "value": "supabase-backed with fallback",
+      "detail": "Current user profile bundle, tutor discovery, and booking read/write now query Supabase first and fall back to seed data.",
+      "status": "green"
+    },
+    {
+      "label": "RLS baseline",
+      "value": "defined in migration",
+      "detail": "Anion profile, role, student, parent, tutor, link, and booking tables now have owner-scoped policy definitions in SQL migration 202604230003.",
+      "status": "yellow"
+    },
+    {
+      "label": "Live Runtime",
+      "value": "pending",
+      "detail": "No live deployment or telemetry feed yet.",
+      "status": "yellow"
+    }
+  ],
+  "checks": [
+    {
+      "name": "Governance wrapper skill",
+      "status": "green",
+      "detail": "Repo-level project governance skill exists and can be reused on future scaffolds."
+    },
+    {
+      "name": "Status sync contract",
+      "status": "green",
+      "detail": "Repo sync script and master snapshot placeholder are part of the foundation scope."
+    },
+    {
+      "name": "Implementation readiness",
+      "status": "green",
+      "detail": "Phase 1 foundation flows compile and render, and Supabase-backed reads/writes are now wired with fallback behavior."
+    },
+    {
+      "name": "Build validation",
+      "status": "green",
+      "detail": "`npm run build` passes for APPS/anion after the shared auth integration update."
+    }
+  ],
+  "connections": [
+    {
+      "name": "Planned web runtime",
+      "status": "yellow",
+      "url": "https://example.com/health",
+      "detail": "Replace with Cloudflare Pages health contract when the app is deployed."
+    }
+  ],
+  "logs": {
+    "weeklyStatus": "APPS/anion/ops/weekly-status.md",
+    "releaseLog": "APPS/anion/ops/release-log.md",
+    "testEvidence": "DOCS/ANION/status/TEST_EVIDENCE.md"
+  },
+  "nextActions": [
+    "Apply migration 202604230003 to your Supabase environment and validate RLS behavior with parent/student/tutor test users.",
+    "Remove or reduce demo fallback paths once Supabase test data and auth role onboarding are stable.",
+    "Attach a live status feed and deployed health endpoint."
+  ]
+}

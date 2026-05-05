@@ -178,8 +178,31 @@ async function throwIfResNotOk(res: Response) {
       }
     }
     
-    const text = (await res.text()) || res.statusText;
-    const error = new Error(`${res.status}: ${text}`);
+    const rawText = (await res.text()) || res.statusText;
+    let userMessage = rawText;
+    let parsedBody: unknown;
+
+    if (rawText) {
+      try {
+        parsedBody = JSON.parse(rawText);
+        if (
+          parsedBody &&
+          typeof parsedBody === "object" &&
+          "message" in parsedBody &&
+          typeof (parsedBody as { message?: unknown }).message === "string"
+        ) {
+          userMessage = ((parsedBody as { message: string }).message || rawText).trim();
+        }
+      } catch {
+        userMessage = rawText;
+      }
+    }
+
+    const error = new Error(`${res.status}: ${userMessage || res.statusText}`);
+    (error as any).status = res.status;
+    if (parsedBody !== undefined) {
+      (error as any).responseBody = parsedBody;
+    }
     
     // Log API errors (except 401/403 which are expected for unauthenticated users)
     if (res.status !== 401 && res.status !== 403) {

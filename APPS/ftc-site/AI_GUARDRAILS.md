@@ -1,4 +1,4 @@
-# AI Guardrails - FTC Site
+# AI Guardrails - Una Labs Site
 
 ## What AI may change
 - Content copy and headings

@@ -1,8 +1,26 @@
-/**
- * FTC Site Logger Instance
- * Centralized logging for the Next.js application
- */
+type LogMeta = Record<string, unknown> | undefined;
 
-import { createLogger } from '@ftc/logger';
+function write(level: "info" | "warn" | "error", event: string, meta?: LogMeta) {
+  const payload = {
+    source: "ftc-site",
+    event,
+    ...(meta ?? {})
+  };
 
-export const logger = createLogger('ftc-site');
+  const loggerFn =
+    level === "error" ? console.error : level === "warn" ? console.warn : console.info;
+
+  loggerFn(`[ftc-site] ${event}`, payload);
+}
+
+export const logger = {
+  info(event: string, meta?: LogMeta) {
+    write("info", event, meta);
+  },
+  warn(event: string, meta?: LogMeta) {
+    write("warn", event, meta);
+  },
+  error(event: string, meta?: LogMeta) {
+    write("error", event, meta);
+  }
+};

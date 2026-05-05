@@ -1,0 +1,32 @@
+name = "una-stripe-api"
+account_id = "4c5c204659aebe5d95a99b55a5a7d0b4"
+main = "src/index.ts"
+compatibility_date = "2026-04-17"
+workers_dev = true
+
+[vars]
+UNALABS_SITE_URL = "https://unalabs.cloud"
+UNALABS_PROJECT_PIPELINE_MODE = "worker_only"
+AUTOCOLLECT_REMINDER_INTERVAL_DAYS = "3"
+AUTOCOLLECT_MAX_ATTEMPTS = "3"
+AUTOCOLLECT_DAILY_EMAIL_CAP = "80"
+AUTOCOLLECT_MAX_SEND_PER_RUN = "25"
+# Spark AI chat guardrails (set SPARK_ENABLED = "1" to enable)
+SPARK_ENABLED = ""
+SPARK_PREVIEW_TURNS = "3"
+SPARK_MAX_TURNS = "20"
+SPARK_MAX_TOKENS_PER_TURN = "300"
+SPARK_RATE_LIMIT_WINDOW_MS = "60000"
+SPARK_RATE_LIMIT_MAX = "20"
+SPARK_PASS_PRICE_CAD = "5"
+
+[triggers]
+crons = ["0 13 * * *"]
+
+# Secrets (set via: npx wrangler secret put SECRET_NAME)
+# SUPABASE_SERVICE_ROLE_KEY — set via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# OPENAI_API_KEY — set via: npx wrangler secret put OPENAI_API_KEY
+# GITHUB_TOKEN — set via: npx wrangler secret put GITHUB_TOKEN
+#   A GitHub personal access token (classic) with `repo` or `public_repo` scope.
+#   Required for the /api/admin/github-issues engineering queue panel.
+#   Without this token the endpoint falls back to unauthenticated GitHub API (60 req/hr limit).

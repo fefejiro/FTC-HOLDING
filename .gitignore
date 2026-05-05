@@ -3,6 +3,7 @@ node_modules/
 dist/
 build/
 .playwright-report/
+.playwright-cli/
 test-results/
 .env
 .env.local
@@ -25,9 +26,56 @@ test-results/
 **/.env
 **/.env.*
 !**/.env.example
+APPS/una-labs-site/out/
 **/android/.gradle/
 **/android/app/build/
 **/ios/Pods/
 
-# ignore nested repositories
-APPS/saywetin/
+# keep SayWetin trackable in monorepo, but ignore local nested git backup artifacts
+APPS/saywetin/.git.backup-*/
+
+# local duplicate clone/tree - not source of truth for this repo
+FTC-HOLDING/
+claude-skills/
+claude-skills/**
+.tmp-main-publish/
+.tmp-main-publish/**
+.tmp-ftc-deploy/
+.tmp-ftc-deploy/**
+
+# local ATEAM temp artifacts
+APPS/ATEAM/tmpclaude-*
+APPS/ATEAM/Server/tmpclaude-*
+
+# bundled Git for Windows installer (not source code)
+Git/
+
+# local binaries
+tmp-bin/
+claude.exe
+
+# Claude Code session state (keep project settings, ignore everything else)
+.claude/*
+!.claude/settings.json
+# --- Wave 1 repo cleanup: safe ignore baseline (2026-04-29) ---
+.wrangler/
+tmp/
+saywetin/.idea/caches/
+saywetin/.idea/deviceManager.xml
+saywetin/.idea/vcs.xml
+
+# ATEAM local runtime data (keep private / avoid noisy diffs)
+APPS/ATEAM/memory/**
+!APPS/ATEAM/memory/.gitkeep
+APPS/ftc-site/APPS/
+output/playwright/**
+.tmp-agent.json
+.tmp-cap.json
+play-store-key.json
+secrets/
+
+# Agent workspace state is local, but recovered repo skills are onboarding assets.
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+.windsurf/

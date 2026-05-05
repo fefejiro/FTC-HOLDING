@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Download, X } from "lucide-react";
 
@@ -8,11 +9,38 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function InstallPWA() {
+  const [location] = useLocation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
+  const shouldSuppressPrompt = useMemo(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    const path = window.location.pathname || location;
+    const isOnboardingFlow =
+      path.startsWith("/onboarding") ||
+      path.startsWith("/auth/") ||
+      path.startsWith("/join/");
+
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+    const narrowViewport = window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
+    const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
+    const isMobileUserAgent =
+      /android|iphone|ipad|ipod|mobile/i.test(window.navigator.userAgent);
+
+    const isMobileBrowser = !isStandalone && (isMobileUserAgent || (coarsePointer && narrowViewport));
+    return isOnboardingFlow || !isMobileBrowser;
+  }, [location]);
 
   useEffect(() => {
+    if (shouldSuppressPrompt) {
+      setShowPrompt(false);
+      setDeferredPrompt(null);
+      return;
+    }
+
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
@@ -41,7 +69,7 @@ export function InstallPWA() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [shouldSuppressPrompt]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
@@ -74,7 +102,7 @@ export function InstallPWA() {
   };
 
   // Don't show if already installed or dismissed
-  if (isInstalled || !showPrompt) {
+  if (shouldSuppressPrompt || isInstalled || !showPrompt) {
     return null;
   }
 

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Dispatch icon">
+  <defs>
+    <linearGradient id="dispatchBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="dispatchTile" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+    <filter id="tileGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#f97316" flood-opacity="0.34" />
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#dispatchBg)" />
+  <circle cx="256" cy="256" r="182" fill="rgba(249,115,22,0.1)" />
+  <g filter="url(#tileGlow)">
+    <rect x="116" y="116" width="280" height="280" rx="92" fill="url(#dispatchTile)" />
+  </g>
+  <path
+    d="M286 106c18 0 34 15 34 34v232c0 19-16 34-34 34H226c-18 0-34-15-34-34V252c0-7 2-15 7-22l71-115c4-6 10-9 16-9Z"
+    fill="#ffffff"
+    opacity="0.14"
+  />
+  <path
+    d="M286 106c18 0 34 15 34 34v232c0 19-16 34-34 34H226c-18 0-34-15-34-34V252c0-7 2-15 7-22l71-115c4-6 10-9 16-9Z"
+    fill="none"
+    stroke="rgba(255,255,255,0.18)"
+    stroke-width="8"
+  />
+  <path
+    d="M287 120 205 260h60l-39 132 80-139h-61l42-133Z"
+    fill="#ffffff"
+  />
+</svg>

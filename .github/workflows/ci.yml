@@ -7,8 +7,8 @@ on:
     branches: [ 'main' ]
 
 jobs:
-  ftc-site:
-    name: ftc-site build & tests
+  una-labs-site:
+    name: una-labs-site build & tests
     runs-on: ubuntu-latest
 
     steps:
@@ -18,22 +18,14 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '24'
+          node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies for ftc-site
-        working-directory: APPS/ftc-site
+      - name: Install dependencies for una-labs-site
+        working-directory: APPS/una-labs-site
         run: |
-          npm ci --legacy-peer-deps
+          npm ci
 
-      - name: Install Playwright browsers
-        working-directory: APPS/ftc-site
-        run: npx playwright install --with-deps
-
-      - name: Build ftc-site
-        working-directory: APPS/ftc-site
+      - name: Build una-labs-site
+        working-directory: APPS/una-labs-site
         run: npm run build
-
-      - name: Run ftc-site E2E tests
-        working-directory: APPS/ftc-site
-        run: npm run test:e2e

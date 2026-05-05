@@ -1,0 +1,11 @@
+# Generated for Cloudflare Pages deployment
+# Build command: npm run build
+# Build output directory: out
+
+name = "una-labs-site"
+pages_build_output_dir = "out"
+compatibility_date = "2026-03-08"
+compatibility_flags = [ "nodejs_compat" ]
+
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://unalabs.cloud"

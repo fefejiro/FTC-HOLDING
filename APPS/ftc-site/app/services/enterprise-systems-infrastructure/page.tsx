@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 ﻿import Link from 'next/link';
 
 export const metadata = {
@@ -10,7 +12,7 @@ export default function EnterpriseSystemsInfrastructurePage() {
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '56px 20px' }}>
       <h1 style={{ marginBottom: 12 }}>Enterprise Systems & Infrastructure Consulting</h1>
       <p style={{ maxWidth: 820, opacity: 0.9 }}>
-        FTC helps organisations modernise enterprise systems and infrastructure by aligning technology, process, and governance.
+        Una Labs helps organisations modernise enterprise systems and infrastructure by aligning technology, process, and governance.
         The focus is practical integration, operational resilience, and clean execution across complex environments.
       </p>
 
@@ -46,8 +48,8 @@ export default function EnterpriseSystemsInfrastructurePage() {
       </section>
 
       <section style={{ marginTop: 36 }}>
-        <Link href="/contact" style={{ textDecoration: 'underline' }}>
-          Schedule a strategic consultation
+        <Link href="/work-with-ftc" style={{ textDecoration: 'underline' }}>
+          Start a Project
         </Link>
       </section>
     </main>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dispatch</string>
+    <string name="title_activity_main">Dispatch</string>
+    <string name="package_name">ca.emergencyprompt.roadside</string>
+    <string name="custom_url_scheme">ca.emergencyprompt.roadside</string>
+</resources>

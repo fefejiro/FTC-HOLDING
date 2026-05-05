@@ -83,9 +83,10 @@ export function serveStatic(app: Express) {
       const normalizedPath = filePath.replace(/\\/g, "/");
       const isServiceWorkerScript = normalizedPath.endsWith("/sw.js");
       const isManifest = normalizedPath.endsWith("/manifest.json");
+      const isWebBuildMeta = normalizedPath.endsWith("/_peacepad/build-meta.json");
 
       // Never aggressively cache HTML/SW/manifest so production updates can land quickly.
-      if (filePath.endsWith('.html') || isServiceWorkerScript || isManifest) {
+      if (filePath.endsWith('.html') || isServiceWorkerScript || isManifest || isWebBuildMeta) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');

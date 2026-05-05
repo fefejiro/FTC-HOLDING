@@ -10,6 +10,13 @@ const openai = apiKey ? new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 }) : null;
 
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    throw new Error('OpenAI client is not configured');
+  }
+  return openai;
+}
+
 export interface DailySummary {
   date: string;
   partnershipId: string;
@@ -164,14 +171,14 @@ export async function generateCourtReadyLog(
   }
 
   for (const pattern of patterns) {
-    if (pattern.severity === 'high' || pattern.occurrenceCount >= 5) {
+    if ((pattern.averageSeverity ?? 0) >= 70 || (pattern.occurrenceCount ?? 0) >= 5) {
       const lastOccurred = new Date(pattern.lastOccurredAt || pattern.createdAt);
       if (lastOccurred >= startDate && lastOccurred <= endDate) {
         incidents.push({
           date: lastOccurred.toISOString().split('T')[0],
           time: lastOccurred.toTimeString().split(' ')[0],
           type: 'pattern_violation',
-          description: `Recurring pattern: ${pattern.patternName} (${pattern.occurrenceCount} occurrences)`,
+          description: `Recurring pattern: ${pattern.patternName} (${pattern.occurrenceCount ?? 0} occurrences)`,
         });
       }
     }
@@ -181,7 +188,7 @@ export async function generateCourtReadyLog(
 
   let summaryText = '';
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
@@ -270,7 +277,7 @@ export async function generateNegotiationProposal(
   const baseTemplate = templates[proposalType] || templates.schedule_change;
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {

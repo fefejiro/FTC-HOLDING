@@ -14,6 +14,7 @@ type CallbackMode = "web" | "mobile";
 function AuthCallbackView({ mode }: { mode: CallbackMode }) {
   const [, setLocation] = useLocation();
   const [error, setError] = useState<string | null>(null);
+  const [details, setDetails] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +47,10 @@ function AuthCallbackView({ mode }: { mode: CallbackMode }) {
         const message = err instanceof Error ? err.message : "Authentication failed.";
         console.error(`[Auth] ${mode} callback failed:`, message);
         if (!cancelled) {
-          setError("Sign-in could not be completed. Please try again.");
+          setError(message);
+          setDetails(
+            "You can keep using PeacePad without signing in. Try account sign-in again later after the auth setup has been repaired.",
+          );
         }
       }
     };
@@ -74,9 +78,19 @@ function AuthCallbackView({ mode }: { mode: CallbackMode }) {
       <div className="text-center space-y-4 max-w-md">
         <p className="text-base font-medium">Authentication issue</p>
         <p className="text-sm text-muted-foreground">{error}</p>
-        <Button onClick={() => setLocation("/")} data-testid={`button-auth-retry-${mode}`}>
-          Return Home
-        </Button>
+        {details ? <p className="text-xs text-muted-foreground">{details}</p> : null}
+        <div className="flex flex-col gap-2">
+          <Button onClick={() => setLocation("/prep-chat")} data-testid={`button-auth-continue-guest-${mode}`}>
+            Continue without signing in
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setLocation("/onboarding")}
+            data-testid={`button-auth-retry-${mode}`}
+          >
+            Back to onboarding
+          </Button>
+        </div>
       </div>
     </div>
   );

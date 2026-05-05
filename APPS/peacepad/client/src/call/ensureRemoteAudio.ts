@@ -11,8 +11,9 @@ export function ensureRemoteAudio(pc: RTCPeerConnection) {
   let audioContext: AudioContext | null = null;
   
   if (AudioCtx) {
-    audioContext = new AudioCtx();
-    console.log('[ensureRemoteAudio] AudioContext created, state:', audioContext.state);
+    const createdAudioContext = new AudioCtx();
+    audioContext = createdAudioContext;
+    console.log('[ensureRemoteAudio] AudioContext created, state:', createdAudioContext.state);
   }
 
   pc.addEventListener("track", (ev) => {
@@ -46,7 +47,7 @@ export function ensureRemoteAudio(pc: RTCPeerConnection) {
       const tryPlay = async () => {
         try {
           // Resume AudioContext if suspended
-          if (audioContext && audioContext.state === 'suspended') {
+          if (audioContext?.state === 'suspended') {
             await audioContext.resume();
             console.log('[ensureRemoteAudio] AudioContext resumed, state:', audioContext.state);
           }
@@ -59,7 +60,7 @@ export function ensureRemoteAudio(pc: RTCPeerConnection) {
           // Retry on next user gesture
           const playOnGesture = async () => {
             try {
-              if (audioContext && audioContext.state === 'suspended') {
+              if (audioContext?.state === 'suspended') {
                 await audioContext.resume();
               }
               await remote!.play();

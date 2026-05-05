@@ -43,7 +43,11 @@ export default function ParentingTipsPage() {
   const [selectedAge, setSelectedAge] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
-  const { data: tips = [], isLoading } = useQuery<ParentingTip[]>({
+  const {
+    data: tips = [],
+    isLoading,
+    isError,
+  } = useQuery<ParentingTip[]>({
     queryKey: ["/api/parenting-tips", selectedAge, selectedCategory],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -135,6 +139,15 @@ export default function ParentingTipsPage() {
             <div className="flex items-center justify-center h-64">
               <p className="text-muted-foreground">Loading tips...</p>
             </div>
+          ) : isError ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Tips are temporarily unavailable. Please try again shortly.
+                </p>
+              </CardContent>
+            </Card>
           ) : tips.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">

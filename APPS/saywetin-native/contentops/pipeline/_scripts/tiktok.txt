@@ -1,0 +1,5 @@
+SayWetin partial pass today. 7 green, 2 red - here's what we caught before users did.
+Layers passing: smoke, unit, api, contract, security, uat, e2e
+Layers we fixed today: perf, bat
+Built in Lagos. Tested every 5 minutes. Shipped when green.
+Follow for more behind-the-scenes engineering.

@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 ﻿import Link from 'next/link';
 
 export const metadata = {
@@ -10,7 +12,7 @@ export default function ProductTechnicalArchitecturePage() {
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '56px 20px' }}>
       <h1 style={{ marginBottom: 12 }}>Product & Technical Architecture Advisory</h1>
       <p style={{ maxWidth: 820, opacity: 0.9 }}>
-        FTC advises founders and product leaders on architecture that supports scale, clarity, and maintainability.
+        Una Labs advises founders and product leaders on architecture that supports scale, clarity, and maintainability.
         The focus is practical system design, API strategy, and roadmap discipline that reduces technical debt.
       </p>
 
@@ -46,8 +48,8 @@ export default function ProductTechnicalArchitecturePage() {
       </section>
 
       <section style={{ marginTop: 36 }}>
-        <Link href="/contact" style={{ textDecoration: 'underline' }}>
-          Schedule a strategic consultation
+        <Link href="/work-with-ftc" style={{ textDecoration: 'underline' }}>
+          Start a Project
         </Link>
       </section>
     </main>

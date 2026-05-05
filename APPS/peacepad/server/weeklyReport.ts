@@ -126,7 +126,7 @@ export async function generateAndSendWeeklyReport() {
         type: bug.type,
         description: bug.description,
         severity: bug.severity || undefined,
-        createdAt: bug.createdAt
+        createdAt: bug.createdAt ?? weekStart
       }))
     };
 

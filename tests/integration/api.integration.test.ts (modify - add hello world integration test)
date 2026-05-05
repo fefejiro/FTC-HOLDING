@@ -1,0 +1,5 @@
+test('hello world integration test', async () => {
+    const response = await fetch('http://localhost:3000/api/endpoint'); // Replace with your actual API endpoint
+    const data = await response.json();
+    expect(data.message).toBe('Hello World'); // Adjust based on your API response structure
+});

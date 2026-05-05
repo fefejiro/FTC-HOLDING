@@ -10,6 +10,13 @@ const openai = apiKey ? new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 }) : null;
 
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    throw new Error('OpenAI client is not configured');
+  }
+  return openai;
+}
+
 const EMBEDDING_MODEL = 'text-embedding-ada-002';
 const EMBEDDING_DIMENSIONS = 1536;
 
@@ -30,7 +37,7 @@ export interface MemoryContext {
 
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const response = await openai.embeddings.create({
+    const response = await getOpenAIClient().embeddings.create({
       model: EMBEDDING_MODEL,
       input: text.trim(),
     });

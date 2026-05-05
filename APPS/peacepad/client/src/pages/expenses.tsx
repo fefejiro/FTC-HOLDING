@@ -25,6 +25,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TutorialModal } from "@/components/TutorialModal";
 import { useFirstTimeTutorial } from "@/hooks/useFirstTimeTutorial";
 import { ConnectWithPartner } from "@/components/ConnectWithPartner";
+import {
+  getExpenseErrorMessage,
+  getExpenseSettlementSummary,
+  validateSettlementAmount,
+} from "@shared/peacepad/expenseSettlement";
 
 interface EnrichedExpense extends Expense {
   userPercentage?: string;
@@ -68,7 +73,7 @@ export default function ExpensesPage() {
   const [, setLocation] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
-  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [selectedExpense, setSelectedExpense] = useState<EnrichedExpense | null>(null);
   const [editingExpense, setEditingExpense] = useState<EnrichedExpense | null>(null);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -235,13 +240,21 @@ export default function ExpensesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/balances"] });
       queryClient.invalidateQueries({ queryKey: ["/api/settlements/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/expense-settlements"] });
       setSettleDialogOpen(false);
       setSelectedExpense(null);
       setSettlementAmount("");
+      setPaymentLink("");
+      setPaymentMethod("mark_paid");
       toast({ title: "Settlement initiated", duration: 3000 });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to initiate settlement", variant: "destructive", duration: 5000 });
+      toast({
+        title: "Unable to create settlement",
+        description: getExpenseErrorMessage(error, "Failed to initiate settlement"),
+        variant: "destructive",
+        duration: 5000,
+      });
     },
   });
 
@@ -304,32 +317,50 @@ export default function ExpensesPage() {
     deleteExpense.mutate(id);
   };
 
-  const handleSettleUp = (expense: Expense) => {
-    setSelectedExpense(expense);
-    
-    // Automatically calculate the amount user owes based on split percentage
-    let calculatedAmount = expense.amount;
-    
-    // Find the participant entry for the current user to get their percentage
-    // In a real app, this would be fetched from the expenseParticipants table
-    // For now, we'll try to derive it from the enriched expense or default to 50%
-    if (user && (expense as EnrichedExpense).userOwedAmount) {
-      calculatedAmount = (expense as EnrichedExpense).userOwedAmount || expense.amount;
-    } else if (user && activePartnership) {
-      // Fallback: if we don't have userOwedAmount pre-calculated, we'd ideally calculate it here
-      // But we'll trust the amount passed if it's already filtered/enriched
+  const handleSettleUp = (expense: EnrichedExpense) => {
+    const summary = getExpenseSettlementSummary(expense);
+    if (!summary.canSettle) {
+      toast({
+        title: "Payment already settled",
+        description: summary.reason || "You have already paid your share of this expense.",
+        duration: 4000,
+      });
+      return;
     }
-    
-    setSettlementAmount(calculatedAmount);
+
+    setSelectedExpense(expense);
+    setSettlementAmount(summary.suggestedAmount);
+    setPaymentMethod("mark_paid");
+    setPaymentLink("");
     setSettleDialogOpen(true);
   };
 
   const handleInitiateSettlement = () => {
-    if (!selectedExpense || !settlementAmount) {
+    if (!selectedExpense) {
       toast({ title: "Error", description: "Please enter a settlement amount", variant: "destructive", duration: 5000 });
       return;
     }
-    initiateSettlement.mutate({ expenseId: selectedExpense.id, partnershipId: selectedExpense.partnershipId, amount: settlementAmount, method: paymentMethod, paymentLink: paymentLink || undefined });
+
+    const settlementSummary = getExpenseSettlementSummary(selectedExpense);
+    const settlementValidation = validateSettlementAmount(settlementAmount, settlementSummary);
+
+    if (!settlementValidation.isValid) {
+      toast({
+        title: "Unable to create settlement",
+        description: settlementValidation.reason || "Please enter a valid settlement amount.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+
+    initiateSettlement.mutate({
+      expenseId: selectedExpense.id,
+      partnershipId: selectedExpense.partnershipId,
+      amount: settlementValidation.normalizedAmount,
+      method: paymentMethod,
+      paymentLink: paymentLink || undefined,
+    });
   };
 
   const getStatusColor = () => {
@@ -510,7 +541,18 @@ export default function ExpensesPage() {
               </DialogContent>
             </Dialog>
 
-            <Dialog open={settleDialogOpen} onOpenChange={setSettleDialogOpen}>
+            <Dialog
+              open={settleDialogOpen}
+              onOpenChange={(open) => {
+                setSettleDialogOpen(open);
+                if (!open) {
+                  setSelectedExpense(null);
+                  setSettlementAmount("");
+                  setPaymentMethod("mark_paid");
+                  setPaymentLink("");
+                }
+              }}
+            >
               <DialogContent className="max-h-[80dvh] flex flex-col">
                 <DialogHeader className="flex-shrink-0">
                   <DialogTitle>Settle Expense</DialogTitle>
@@ -533,10 +575,29 @@ export default function ExpensesPage() {
                       <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     </div>
                     {selectedExpense && (
-                      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                        <Sparkles className="h-3 w-3 text-primary" />
-                        Suggested based on split: ${ (selectedExpense as EnrichedExpense).userOwedAmount || (parseFloat(selectedExpense.amount) / 2).toFixed(2) }
-                      </p>
+                      <>
+                        <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                          <Sparkles className="h-3 w-3 text-primary" />
+                          Suggested based on split: ${getExpenseSettlementSummary(selectedExpense).suggestedAmount}
+                        </p>
+                        {(() => {
+                          const settlementSummary = getExpenseSettlementSummary(selectedExpense);
+                          const settlementValidation = validateSettlementAmount(settlementAmount, settlementSummary);
+
+                          if (settlementValidation.isValid) {
+                            return (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Remaining balance after this payment: $
+                                {(settlementSummary.remaining - parseFloat(settlementValidation.normalizedAmount)).toFixed(2)}
+                              </p>
+                            );
+                          }
+
+                          return (
+                            <p className="text-xs text-destructive mt-1">{settlementValidation.reason}</p>
+                          );
+                        })()}
+                      </>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -563,7 +624,19 @@ export default function ExpensesPage() {
                   )}
                 </div>
                 <div className="flex-shrink-0 pt-4 border-t mt-4">
-                  <Button onClick={handleInitiateSettlement} disabled={initiateSettlement.isPending} className="w-full" data-testid="button-create-settlement">
+                  <Button
+                    onClick={handleInitiateSettlement}
+                    disabled={
+                      initiateSettlement.isPending ||
+                      !selectedExpense ||
+                      !validateSettlementAmount(
+                        settlementAmount,
+                        getExpenseSettlementSummary(selectedExpense),
+                      ).isValid
+                    }
+                    className="w-full"
+                    data-testid="button-create-settlement"
+                  >
                     {initiateSettlement.isPending ? "Creating..." : "Create Settlement"}
                   </Button>
                 </div>
@@ -582,9 +655,10 @@ export default function ExpensesPage() {
               ) : (
                 <div className="space-y-3">
                   {filteredExpenses.map((expense) => {
-                    const userOwed = expense.userOwedAmount ? parseFloat(expense.userOwedAmount) : 0;
-                    const userPaid = expense.userPaidAmount ? parseFloat(expense.userPaidAmount) : 0;
-                    const remaining = Math.max(0, userOwed - userPaid);
+                    const settlementSummary = getExpenseSettlementSummary(expense);
+                    const userOwed = settlementSummary.userOwed;
+                    const userPaid = settlementSummary.userPaid;
+                    const remaining = settlementSummary.remaining;
                     return (
                       <SwipeableCard key={expense.id} onEdit={() => handleEditExpense(expense)} onDelete={() => handleDeleteExpense(expense.id)}>
                         <Card className={`${getStatusColor()} hover-elevate mx-4 rounded-xl shadow-sm`} data-testid={`expense-card-${expense.id}`}>
@@ -650,11 +724,17 @@ export default function ExpensesPage() {
                                 </div>
                               )}
 
-                              {expense.status === "pending" && !expense.isSoloExpense && (
+                              {expense.status === "pending" && !expense.isSoloExpense && settlementSummary.canSettle && (
                                 <Button onClick={() => handleSettleUp(expense)} className="w-full mt-2 h-10" data-testid={`button-settle-${expense.id}`}>
                                   Mark Payment
                                   <ArrowRight className="h-4 w-4 ml-2" />
                                 </Button>
+                              )}
+
+                              {expense.status === "pending" && !expense.isSoloExpense && !settlementSummary.canSettle && (
+                                <div className="w-full mt-2 rounded-lg border border-green-500/20 bg-green-500/5 px-3 py-2 text-xs text-green-700 dark:text-green-300">
+                                  Your share is already settled.
+                                </div>
                               )}
                               
                               {expense.isSoloExpense && expense.status === "pending" && (

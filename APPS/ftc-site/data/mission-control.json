@@ -1,0 +1,182 @@
+{
+  "today": [
+    {
+      "title": "Money move",
+      "items": [
+        "Keep Una Labs credible without overbuilding it",
+        "Use the company page and site as support, not as the main task",
+        "Do not let presentation work replace revenue or job movement"
+      ]
+    },
+    {
+      "title": "Job move",
+      "items": [
+        "Cluster A search remains the primary lane",
+        "Cluster A Resume v2 is ready",
+        "Tailor only for true-fit roles with strong interview potential"
+      ]
+    },
+    {
+      "title": "Follow-ups",
+      "items": [
+        "Keep shortlist quality high",
+        "Tighten Open to Work later when LinkedIn cooperates",
+        "Use Telegram as the visible control surface for updates"
+      ]
+    }
+  ],
+  "weekPriorities": [
+    "Apply to strong-fit Cluster A roles only",
+    "Tailor resume versions only after fit is confirmed",
+    "Keep Mission Control visible through chat and this page"
+  ],
+  "jobLane": {
+    "primary": [
+      "IT Business Systems Manager",
+      "Business Systems Manager",
+      "Manager, Business Systems",
+      "Enterprise Applications Manager",
+      "Technology Operations Manager"
+    ],
+    "stretch": [
+      "Director of Business Systems",
+      "IT Manager, Enterprise Applications"
+    ]
+  },
+  "clientLane": [
+    "48-Hour Lead Response System remains the active service offer",
+    "Client lane stays alive but should not become the main distraction",
+    "Use it when it supports cash, not when it becomes another side quest"
+  ],
+  "blockers": [
+    "No visual dashboard existed until now, so the system lived mostly in docs and chat",
+    "Open to Work remains flaky to edit in LinkedIn",
+    "Next job shortlist after FLINT still needs to be scored cleanly"
+  ],
+  "deadlines": [
+    {
+      "label": "Improve stability and income position",
+      "date": "2026-04-02"
+    }
+  ],
+  "routines": {
+    "daily": [
+      "Dashboard review",
+      "Job search and application block",
+      "Follow-up review",
+      "Short end-of-day reset"
+    ],
+    "weekly": [
+      "Monday planning",
+      "Friday review",
+      "Shortlist refresh",
+      "Resume and LinkedIn refinement pass"
+    ]
+  },
+  "calendar": {
+    "dailyBlocks": [
+      {
+        "title": "Job search + applications",
+        "time": "45-90 min",
+        "description": "Search, shortlist, tailor, apply",
+        "tone": "job"
+      },
+      {
+        "title": "High-value execution",
+        "time": "45-90 min",
+        "description": "Resume, profile, outreach, follow-up, credibility work",
+        "tone": "execution"
+      },
+      {
+        "title": "Review + reset",
+        "time": "10-20 min",
+        "description": "Dashboard update, follow-up capture, tomorrow setup",
+        "tone": "reset"
+      }
+    ],
+    "weeklyCadence": [
+      {
+        "day": "Mon",
+        "focus": "Planning and priority selection",
+        "tag": "Plan"
+      },
+      {
+        "day": "Tue",
+        "focus": "Execution + applications",
+        "tag": "Execute"
+      },
+      {
+        "day": "Wed",
+        "focus": "Execution + applications",
+        "tag": "Execute"
+      },
+      {
+        "day": "Thu",
+        "focus": "Execution + applications",
+        "tag": "Execute"
+      },
+      {
+        "day": "Fri",
+        "focus": "Review, follow-ups, shortlist refresh",
+        "tag": "Review"
+      },
+      {
+        "day": "Sat",
+        "focus": "Admin clean-up, recovery, light catch-up",
+        "tag": "Reset"
+      },
+      {
+        "day": "Sun",
+        "focus": "Light planning, prep the week",
+        "tag": "Prep"
+      }
+    ]
+  },
+  "followUps": [
+    {
+      "title": "Recruiter ping on Cluster A target",
+      "due": "2026-03-20",
+      "context": "Primary lane follow-up"
+    },
+    {
+      "title": "FLINT hiring contact check-in",
+      "due": "2026-03-21",
+      "context": "Enterprise applications manager track"
+    },
+    {
+      "title": "Una Labs credibility upkeep",
+      "due": "2026-03-22",
+      "context": "Light update only"
+    }
+  ],
+  "metrics": [
+    {
+      "label": "Applications sent",
+      "value": "0",
+      "note": "Update daily"
+    },
+    {
+      "label": "Follow-ups due",
+      "value": "3",
+      "note": "Rolling week"
+    },
+    {
+      "label": "Active role targets",
+      "value": "5",
+      "note": "Cluster A titles"
+    },
+    {
+      "label": "Credibility tasks",
+      "value": "1",
+      "note": "Una Labs maintenance"
+    }
+  ],
+  "commandPills": [
+    "dashboard",
+    "status",
+    "job move",
+    "money move",
+    "tailor this",
+    "park this"
+  ]
+}

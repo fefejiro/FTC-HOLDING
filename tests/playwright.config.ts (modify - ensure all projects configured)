@@ -1,0 +1,36 @@
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  projects: [
+    {
+      name: 'smoke',
+      testDir: './smoke',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'integration',
+      testDir: './integration',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'security',
+      testDir: './security',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'performance',
+      testDir: './performance',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'UAT',
+      testDir: './uat',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'e2e',
+      testDir: './e2e',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+});

@@ -1,114 +1,71 @@
-# PeacePad - Family Connect: Google Play Store Listing (Closed Testing)
+# PeacePad: Google Play Store Listing
 
 ## App Name
-**PeacePad - Family Connect**
+**PeacePad**
 
-## Short Description (80 characters max)
-Calm family communication, organization, and co-parenting tools.
+## Short Description
+Say what you mean. Without the fight.
 
-## Full Description (4000 characters max)
+## Full Description
 
-**PeacePad helps families communicate and stay organized.**
+**PeacePad helps co-parents communicate clearly.**
 
-PeacePad provides a structured environment for parents, caregivers, and households to manage daily coordination with less stress.
+Before you send a message that might make things worse, PeacePad shows you how it might land and helps you say it better. Plan hard conversations with an AI coach, then send messages you won't regret.
 
-### Key Features
+### What you can do in PeacePad
 
-**Structured Conversations**
-Our turn-based conversation system helps ensure clear communication. By focusing on one topic at a time, families can reach decisions more effectively.
+**Messages with before-you-send coaching**
+Write to your co-parent, check the tone, and decide what to do next. PeacePad highlights when a message may come across as defensive, frustrated, or hostile, then offers a calmer rewording. You are always in control of what gets sent.
 
-**Communication Support**
-The app includes tools to help keep messages clear and focused on the needs of the family.
+**Prep Chat**
+Use PeacePad's AI coach before a hard conversation. Talk through what happened, get help reframing the message, and move a draft directly into Messages when you are ready.
 
-**Shared Calendar**
-Coordinate schedules, school events, and activities in one shared view. 
+**Calendar context**
+See the custody schedule and family calendar context in one place so your conversations stay grounded in what's actually happening.
 
-**Shared Expense Tracking**
-Keep a record of shared family expenses and manage balances transparently.
+**Partner invites**
+Generate a simple invite link and connect with your co-parent when they join.
 
-**Child Updates**
-A dedicated space for sharing important notes about school, health, and activities to keep everyone informed.
+**Support resources**
+Quick access to trusted crisis, legal, counseling, and co-parenting resources through external links.
 
-**Find Support**
-A directory of verified support resources, including counseling and community services.
+### PeacePad is built for communication first
 
-### Important Note for Testers
-PeacePad is currently in active development. We are in the **Closed Testing** phase and value your feedback to help us improve. You may encounter bugs or experimental features. Please use the in-app feedback tool or email us at peacepad@peacepad.ca with any issues or suggestions.
+PeacePad is not trying to be everything. This version is focused on one job:
 
-### Why Choose PeacePad?
-- Designed for all family structures
-- Focus on privacy and security
-- Clear, simple organization tools
-- Community support resources
+**Helping co-parents say what they mean without starting a fight.**
 
----
+### Closed testing note
+
+PeacePad is still in active testing. We are paying close attention to how co-parents use messaging, Prep Chat, and invite flows, and we welcome feedback at `peacepad@peacepad.ca`.
 
 ## Category
-**Parenting** (Primary)
-**Lifestyle** (Secondary)
+**Parenting**
 
-## Tags/Keywords
-- family organizer
+## Keywords
 - co-parenting
-- shared calendar
-- parenting communication
-- custody schedule
-- expense tracker
-- family coordination
-
-## Content Rating
-**Everyone** (No objectionable content)
-
-## Contact Information
-- **Email**: peacepad@peacepad.ca
-- **Website**: https://peacepad.ca
-- **Privacy Policy**: https://peacepad.ca/privacy
-
----
+- messaging coach
+- custody communication
+- calm communication
+- co-parent chat
+- parenting calendar
 
 ## Screenshot Captions
 
-### Screenshot 1: Welcome/Onboarding
-"Calm communication for modern families"
+### Screenshot 1: Welcome
+"Say what you mean. Without the fight."
 
-### Screenshot 2: Conch Mode
-"Take turns speaking with Conch Mode - structured conversations that ensure everyone is heard"
+### Screenshot 2: Messages
+"Check how your message might land before you send it."
 
-### Screenshot 3: Messaging
-"AI-powered messaging suggests calmer alternatives when emotions run high"
+### Screenshot 3: Prep Chat
+"Talk through a hard conversation with an AI coach."
 
-### Screenshot 4: Shared Calendar
-"Coordinate schedules, appointments, and events in one shared view"
+### Screenshot 4: Calendar
+"Keep the schedule visible while you communicate."
 
-### Screenshot 5: Expense Tracking
-"Track shared expenses, attach receipts, and settle balances fairly"
+### Screenshot 5: Invite
+"Share a link and connect with your co-parent."
 
-### Screenshot 6: Find Support
-"Access verified support resources - crisis lines, counseling, legal aid, and more"
-
----
-
-## Feature Graphic Text
-**PeacePad - Family Connect**
-"Communicate Clearly. Reduce Conflict."
-
-## Promo Video Script (Optional - 30 seconds)
-1. "Family communication doesn't have to be stressful"
-2. Show Conch Mode: "Take turns speaking with our structured conversation tool"
-3. Show messaging: "AI gently suggests calmer alternatives"
-4. Show calendar: "Coordinate schedules effortlessly"
-5. "Download PeacePad - peaceful co-parenting starts here"
-
----
-
-## What's New (Release Notes)
-**Version 1.0.0**
-- Introducing PeacePad - Family Connect
-- Conch Mode for structured turn-based conversations
-- AI-powered message analysis with calm suggestions
-- Shared family calendar with conflict detection
-- Expense tracking with receipt attachments
-- Child update notes
-- Find Support directory with 40+ verified resources
-- Push notifications
-- Offline support
+### Screenshot 6: Resources
+"Open trusted outside support when you need it."

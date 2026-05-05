@@ -1,7 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Capacitor } from "@capacitor/core";
 import { getApiUrl, queryClient } from "@/lib/queryClient";
+import {
+  AUTH_BOOTSTRAP_LOADER_GRACE_MS,
+  clearLastAuthBootstrapIssue,
+  fetchCurrentUserSnapshot,
+  getLastAuthBootstrapIssue,
+  type AuthBootstrapIssue,
+} from "@/lib/authBootstrap";
 import {
   clearSupabaseSession,
   hasSupabaseAuthConfig,
@@ -15,42 +22,11 @@ let inFlightSessionFetch: Promise<User | null> | null = null;
 let lastSessionFetchAt = 0;
 let lastSessionSnapshot: User | null = null;
 
-async function fetchSessionSnapshot(): Promise<User | null> {
-  console.log('[Auth] Fetching user session...');
-  const res = await fetch(getApiUrl("/api/auth/user"), {
-    credentials: "include",
-  });
-  
-  if (res.status === 401) {
-    console.log('[Auth] No active session (401)');
-    return null;
-  }
-  
-  if (!res.ok) {
-    console.log('[Auth] Session fetch failed:', res.status);
-    return null;
-  }
-
-  const contentType = (res.headers.get("content-type") || "").toLowerCase();
-  if (!contentType.includes("application/json")) {
-    // Prevent hard failures/loops when a misrouted API call returns HTML.
-    console.error("[Auth] Unexpected non-JSON session response", {
-      status: res.status,
-      contentType,
-      url: res.url,
-    });
-    return null;
-  }
-  
-  const userData = await res.json();
-  console.log('[Auth] Session restored for user:', userData.id);
-  return userData;
-}
-
 export function useAuth() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [allowGuestFallback, setAllowGuestFallback] = useState(false);
   
-  const { data: user, isLoading, isFetching, status } = useQuery<User | null>({
+  const { data: user, status } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
       const now = Date.now();
@@ -65,7 +41,7 @@ export function useAuth() {
         return lastSessionSnapshot;
       }
 
-      inFlightSessionFetch = fetchSessionSnapshot()
+      inFlightSessionFetch = fetchCurrentUserSnapshot("app-bootstrap")
         .then((snapshot) => {
           lastSessionSnapshot = snapshot;
           lastSessionFetchAt = Date.now();
@@ -84,6 +60,23 @@ export function useAuth() {
     refetchOnReconnect: false,
     enabled: !isLoggingOut, // Don't refetch during logout
   });
+
+  useEffect(() => {
+    if (status === "success" || status === "error" || isLoggingOut) {
+      setAllowGuestFallback(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      console.warn("[AuthBootstrap] loader-grace-exceeded", {
+        issue: getLastAuthBootstrapIssue(),
+        maxLoaderMs: AUTH_BOOTSTRAP_LOADER_GRACE_MS,
+      });
+      setAllowGuestFallback(true);
+    }, AUTH_BOOTSTRAP_LOADER_GRACE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isLoggingOut, status]);
 
   const login = () => {
     const isNative = Capacitor.isNativePlatform();
@@ -156,13 +149,32 @@ export function useAuth() {
   // This prevents the flash by ensuring we don't render unauthenticated routes
   // during the brief moment between isLoading=false and isAuthenticated being set
   const isAuthSettled = status === 'success' || status === 'error';
+  const authBootstrapIssue: AuthBootstrapIssue | null =
+    !isAuthSettled && allowGuestFallback
+      ? {
+          kind: "slow",
+          message: "PeacePad is taking longer than expected to restore your session. You can keep going and retry below.",
+        }
+      : getLastAuthBootstrapIssue();
+
+  const retryAuth = async () => {
+    clearLastAuthBootstrapIssue();
+    setAllowGuestFallback(false);
+    lastSessionFetchAt = 0;
+    lastSessionSnapshot = null;
+    inFlightSessionFetch = null;
+    await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/auth/user"], type: "active" });
+  };
 
   return {
     user: user ?? undefined,
-    isLoading: !isAuthSettled || isLoggingOut,
+    isLoading: (!isAuthSettled && !allowGuestFallback) || isLoggingOut,
     isAuthenticated: !!user && !isLoggingOut,
     isLoggingOut,
+    authBootstrapIssue,
     login,
     logout,
+    retryAuth,
   };
 }

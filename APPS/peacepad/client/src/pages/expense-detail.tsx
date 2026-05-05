@@ -15,8 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { validateAmount } from "@/lib/fieldValidation";
 import { Progress } from "@/components/ui/progress";
+import {
+  getExpenseErrorMessage,
+  getExpenseSettlementSummary,
+  validateSettlementAmount,
+} from "@shared/peacepad/expenseSettlement";
 
 interface EnrichedExpense extends Expense {
   userPercentage?: string;
@@ -119,15 +123,20 @@ export default function ExpenseDetailPage() {
   const initiateSettlement = useMutation({
     mutationFn: async () => {
       if (!settleAmount || !expense) throw new Error("Amount required");
+      const settlementSummary = getExpenseSettlementSummary(expense);
+      const settlementValidation = validateSettlementAmount(settleAmount, settlementSummary);
+      if (!settlementValidation.isValid) {
+        throw new Error(settlementValidation.reason || "Enter a valid payment amount.");
+      }
       await apiRequest("POST", `/api/settlements/initiate`, {
         expenseId: expense.id,
-        amount: parseFloat(settleAmount),
+        amount: settlementValidation.normalizedAmount,
         method: paymentMethod,
         paymentLink,
         note: paymentNote,
         receiptUrl: uploadedReceiptUrl,
         partnershipId: expense.partnershipId,
-        receiverId: expense.createdBy === (user as any)?.id ? null : expense.createdBy,
+        receiverId: expense.paidBy === (user as any)?.id ? null : expense.paidBy,
       });
     },
     onSuccess: () => {
@@ -142,6 +151,13 @@ export default function ExpenseDetailPage() {
       setUploadedReceiptUrl(null);
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/expenses", expenseId, "settlements"] });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Unable to log payment",
+        description: getExpenseErrorMessage(error, "Failed to log payment."),
+        variant: "destructive",
+      });
     },
   });
 
@@ -168,9 +184,10 @@ export default function ExpenseDetailPage() {
     );
   }
 
-  const userOwed = expense.userOwedAmount ? parseFloat(expense.userOwedAmount) : 0;
-  const userPaid = expense.userPaidAmount ? parseFloat(expense.userPaidAmount) : 0;
-  const remaining = Math.max(0, userOwed - userPaid);
+  const settlementSummary = getExpenseSettlementSummary(expense);
+  const userOwed = settlementSummary.userOwed;
+  const userPaid = settlementSummary.userPaid;
+  const remaining = settlementSummary.remaining;
   const userPercentage = expense.userPercentage ? parseInt(expense.userPercentage) : 50;
   const totalAmount = parseFloat(expense.amount);
   const isOwedByUser = userOwed > userPaid;
@@ -343,7 +360,7 @@ export default function ExpenseDetailPage() {
         {remaining > 0 && isOwedByUser && !expense.isSoloExpense && (
           <Button
             onClick={() => {
-              setSettleAmount(remaining.toString());
+              setSettleAmount(settlementSummary.suggestedAmount);
               setSettleDialogOpen(true);
             }}
             className="w-full h-12 text-base"
@@ -526,7 +543,11 @@ export default function ExpenseDetailPage() {
           <div className="flex-shrink-0 pt-4 border-t mt-4">
             <Button
               onClick={() => initiateSettlement.mutate()}
-              disabled={initiateSettlement.isPending || uploadingReceipt || !settleAmount}
+              disabled={
+                initiateSettlement.isPending ||
+                uploadingReceipt ||
+                !validateSettlementAmount(settleAmount, settlementSummary).isValid
+              }
               className="w-full"
               data-testid="button-confirm-settlement"
             >

@@ -1,0 +1,1646 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATEAM Ops</title>
+  <script>
+    (function () {
+      const path = window.location.pathname || "/";
+      const isOperatorIntegrated = path === "/ateam/operator" || path.indexOf("/ateam/operator/") === 0;
+      const isIntegrated = isOperatorIntegrated || path === "/ateam" || path.indexOf("/ateam/") === 0;
+      const basePath = isOperatorIntegrated ? "/ateam/operator" : (isIntegrated ? "/ateam" : "");
+      const baseHref = basePath ? basePath + "/" : "/";
+      window.ATEAM_BASE_PATH = basePath;
+      if (basePath && !window.ATEAM_API_BASE) {
+        window.ATEAM_API_BASE = basePath;
+      }
+      document.write('<base href="' + baseHref + '">');
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="mc-body">
+  <header class="top-bar legacy-top-bar" aria-hidden="true">
+    <div class="brand">ATEAM Ops</div>
+    <div class="top-actions">
+      <button id="go-dashboard" class="top-btn active">Dashboard</button>
+      <button id="go-office" class="top-btn">Office</button>
+      <button id="go-content" class="top-btn">Content</button>
+      <button id="go-talk" class="top-btn">Intake</button>
+      <button id="go-speech" class="top-btn">Speech</button>
+    </div>
+  </header>
+
+  <div id="mc-nav-backdrop" class="mc-nav-backdrop" aria-hidden="true"></div>
+  <div class="mc-shell">
+    <aside class="mc-nav" id="mc-nav-sidebar" aria-label="Mission Control navigation">
+      <div class="mc-nav-head">
+        <div class="mc-nav-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2.5L20 6.5V17.5L12 21.5L4 17.5V6.5L12 2.5Z" stroke="rgba(226,241,255,0.7)" stroke-width="1.4"/>
+            <path d="M12 7.5V16.5" stroke="rgba(226,241,255,0.35)" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M8 9.5H16" stroke="rgba(226,241,255,0.35)" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="mc-nav-title">ATEAM</div>
+        <button id="mc-nav-close" class="mc-nav-close mc-icon-btn" type="button" aria-label="Close menu">✕</button>
+      </div>
+      <a id="mc-unalabs-link" class="mc-unalabs-link hidden" href="/">Back to Una Labs</a>
+
+      <nav class="mc-nav-list" id="mc-nav-list">
+        <button class="mc-nav-item active" type="button" data-route="/tasks" data-view="tasks">
+          <span class="mc-nav-ico" aria-hidden="true">⌁</span><span class="mc-nav-label">Tasks</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/agents" data-view="agents" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">⎔</span><span class="mc-nav-label">Agents</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/content" data-view="content" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">▦</span><span class="mc-nav-label">Content</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/approvals" data-view="approvals" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">✓</span><span class="mc-nav-label">Approvals</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/council" data-view="council" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">⌂</span><span class="mc-nav-label">Council</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/calendar" data-view="calendar" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">▣</span><span class="mc-nav-label">Calendar</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/projects" data-view="projects">
+          <span class="mc-nav-ico" aria-hidden="true">▤</span><span class="mc-nav-label">Projects</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/memory" data-view="memory" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">◎</span><span class="mc-nav-label">Memory</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/docs" data-view="docs">
+          <span class="mc-nav-ico" aria-hidden="true">⌗</span><span class="mc-nav-label">Docs</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/people" data-view="people" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">⎇</span><span class="mc-nav-label">People</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/office" data-view="office">
+          <span class="mc-nav-ico" aria-hidden="true">⌬</span><span class="mc-nav-label">Office</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/team" data-view="team">
+          <span class="mc-nav-ico" aria-hidden="true">⟟</span><span class="mc-nav-label">Team</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/system" data-view="system" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">⟐</span><span class="mc-nav-label">System</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/radar" data-view="radar" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">◌</span><span class="mc-nav-label">Radar</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/factory" data-view="factory">
+          <span class="mc-nav-ico" aria-hidden="true">▥</span><span class="mc-nav-label">Factory</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/pipeline" data-view="pipeline" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">⇢</span><span class="mc-nav-label">Pipeline</span>
+        </button>
+        <button class="mc-nav-item" type="button" data-route="/ai-lab" data-view="ai_lab" data-admin-only="true">
+          <span class="mc-nav-ico" aria-hidden="true">◍</span><span class="mc-nav-label">AI Lab</span>
+        </button>
+      </nav>
+
+      <button id="mc-feedback" class="mc-feedback" type="button">Feedback</button>
+    </aside>
+
+    <div class="mc-main">
+      <header class="mc-topbar" aria-label="Top bar">
+        <button id="mc-menu-btn" class="mc-icon-btn mc-menu-btn" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
+        <div class="mc-search" role="search">
+          <span class="mc-search-ico" aria-hidden="true">⌕</span>
+          <input id="mc-search-input" class="mc-search-input" type="text" placeholder="Search" />
+          <span class="mc-search-hint mc-search-hint-desktop" aria-hidden="true">⌘ K</span>
+        </div>
+        <div class="mc-top-actions">
+          <button id="mc-pause" class="mc-top-btn mc-top-btn-desktop" type="button"><span aria-hidden="true">⏸</span> Pause</button>
+          <button id="mc-ping" class="mc-icon-btn mc-ping-btn" type="button" aria-label="Quick actions" title="Quick actions">⚡</button>
+          <button id="mc-status" class="mc-icon-btn" type="button" aria-label="Status">
+            <span class="mc-status-dot" aria-hidden="true"></span>
+          </button>
+          <button id="mc-refresh" class="mc-icon-btn" type="button" aria-label="Refresh">↻</button>
+        </div>
+      </header>
+      <div id="mc-ping-sheet" class="mc-ping-sheet hidden" role="dialog" aria-label="Quick actions">
+        <div class="mc-ping-sheet-head">
+          <span class="mc-ping-sheet-title">Quick Actions</span>
+          <button id="mc-ping-sheet-close" class="mc-icon-btn" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="mc-ping-sheet-actions">
+          <button class="mc-ping-action" type="button" data-ping-action="explain-page">Explain this page</button>
+          <button class="mc-ping-action" type="button" data-ping-action="summarize-run">Summarize current run</button>
+          <button class="mc-ping-action" type="button" data-ping-action="what-moves-next">What should move next?</button>
+          <button class="mc-ping-action" type="button" data-ping-action="create-task">Create follow-up task</button>
+          <button class="mc-ping-action" type="button" data-ping-action="report-issue">Report issue</button>
+          <button class="mc-ping-action" type="button" data-ping-action="route-module">Route to right module</button>
+        </div>
+      </div>
+
+      <div class="mc-frame">
+        <div class="mc-frame-inner">
+
+  <!-- Intent Entry View -->
+  <main id="ateam-entry-view" class="view ateam-entry-view hidden" data-mc-page="entry">
+    <div class="entry-container">
+      <!-- Entry Input Phase -->
+      <div id="entry-input-phase" class="entry-phase">
+        <div class="entry-header">
+          <h1>What would you like ATEAM to do?</h1>
+        </div>
+        <form id="entry-form" class="entry-form">
+          <textarea
+            id="entry-intent"
+            class="entry-intent-input"
+            placeholder="Describe your task or objective..."
+            rows="5"
+            required
+          ></textarea>
+          <button type="submit" class="entry-submit-btn">Start</button>
+        </form>
+      </div>
+
+      <!-- Workflow Cards (hidden until submitted) -->
+      <div id="entry-workflow-phase" class="entry-phase hidden">
+        <div class="workflow-card" id="card-understanding">
+          <div class="card-status">Understanding</div>
+          <div class="card-content">
+            <p id="understanding-text">Analyzing your intent...</p>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-assumptions">
+          <div class="card-status">Assumptions</div>
+          <div class="card-content">
+            <p id="assumptions-text">Identifying assumptions...</p>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-plan">
+          <div class="card-status">Plan</div>
+          <div class="card-content">
+            <p id="plan-text">Building execution plan...</p>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-approval">
+          <div class="card-status">Approval</div>
+          <div class="card-content">
+            <p id="approval-text">Awaiting your approval...</p>
+            <div class="approval-buttons">
+              <button class="approval-btn approve" id="btn-approve">Approve</button>
+              <button class="approval-btn revise" id="btn-revise">Revise</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-execution">
+          <div class="card-status">Execution</div>
+          <div class="card-content">
+            <p id="execution-text">Executing workflow...</p>
+          </div>
+        </div>
+
+        <div class="workflow-card" id="card-output">
+          <div class="card-status">Output</div>
+          <div class="card-content">
+            <p id="output-text">Ready for results...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <main id="dashboard-view" class="view dashboard-view hidden" data-mc-page="tasks">
+    <div class="mc-runs-header">
+      <h2>Workflow Runs</h2>
+    </div>
+    <div id="mc-runs-list" class="mc-runs-list"></div>
+  </main>
+
+  <section class="console-wrap view" id="dashboard-console" data-mc-page="tasks">
+    <div class="console-header">
+      <div class="chip" id="chip-task">Task: no run selected</div>
+      <div class="chip" id="chip-agent">Agent: no agent selected</div>
+      <div class="chip" id="chip-api">API: disconnected</div>
+    </div>
+    <div class="console-row">
+      <input id="dashboard-input" type="text" placeholder="Select a workflow run to send a command" disabled />
+      <button id="dashboard-send" disabled aria-disabled="true">Send</button>
+    </div>
+    <div id="dashboard-thread" class="thread-log">
+      <div class="mc-placeholder dashboard-empty-note">No workflow run selected. Start from the entry view or choose a run from the list first.</div>
+    </div>
+    <div class="decision-row">
+      <button class="decision-btn" data-action="approve" disabled aria-disabled="true">Approve</button>
+      <button class="decision-btn" data-action="revise" disabled aria-disabled="true">Revise</button>
+      <button class="decision-btn" data-action="kill" disabled aria-disabled="true">Kill</button>
+    </div>
+  </section>
+
+  <main id="content-view" class="view content-view hidden" data-mc-page="content">
+    <div class="content-header">
+      <div>
+        <div class="content-title">Content Pipeline</div>
+        <div class="content-subtitle">Una Labs Output (LinkedIn) — internal workflow</div>
+      </div>
+      <div class="content-stats">
+        <div class="chip">Signals <span id="content-signal-count">0</span></div>
+        <div class="chip">Topics <span id="content-topic-count">0</span></div>
+        <div class="chip">Drafts <span id="content-draft-count">0</span></div>
+        <div class="chip">Pending <span id="content-pending-count">0</span></div>
+      </div>
+    </div>
+
+    <section class="content-grid">
+      <div class="content-panel">
+        <div class="content-panel-head">
+          <h2>Radar</h2>
+        </div>
+        <div class="content-form">
+          <input id="content-signal-title" type="text" placeholder="Signal title" />
+          <input id="content-signal-source" type="text" placeholder="Source (optional)" />
+          <input id="content-signal-url" type="text" placeholder="URL (optional)" />
+          <textarea id="content-signal-summary" rows="3" placeholder="Summary / raw signal notes"></textarea>
+          <div class="content-form-actions">
+            <button id="content-signal-save" class="top-btn">Save Signal</button>
+            <button id="content-signal-clear" class="top-btn">Clear</button>
+          </div>
+        </div>
+        <div id="content-radar-list" class="content-list"></div>
+      </div>
+
+      <div class="content-panel">
+        <div class="content-panel-head">
+          <h2>Scout</h2>
+        </div>
+        <div class="content-form">
+          <input id="content-topic-title" type="text" placeholder="Topic title" />
+          <textarea id="content-topic-rationale" rows="3" placeholder="Why this matters"></textarea>
+          <div class="content-form-actions">
+            <button id="content-topic-save" class="top-btn">Save Topic</button>
+            <button id="content-topic-clear" class="top-btn">Clear</button>
+          </div>
+        </div>
+        <div id="content-scout-list" class="content-list"></div>
+      </div>
+
+      <div class="content-panel">
+        <div class="content-panel-head">
+          <h2>Quill Drafts</h2>
+        </div>
+        <div id="content-draft-list" class="content-list"></div>
+      </div>
+    </section>
+
+    <section class="content-panel content-editor-panel">
+      <div class="content-panel-head">
+        <h2>Draft Editor</h2>
+        <div id="content-draft-active" class="content-editor-meta">No draft selected</div>
+      </div>
+      <div class="content-form content-form-grid">
+        <label for="content-draft-topic">Topic Title</label>
+        <input id="content-draft-topic" type="text" placeholder="Topic title" />
+        <label for="content-draft-hook">Hook</label>
+        <textarea id="content-draft-hook" rows="2" placeholder="Lead hook for LinkedIn"></textarea>
+        <label for="content-draft-explanation">Explanation</label>
+        <textarea id="content-draft-explanation" rows="3" placeholder="What happened?"></textarea>
+        <label for="content-draft-insight">Insight</label>
+        <textarea id="content-draft-insight" rows="3" placeholder="Why it matters"></textarea>
+        <label for="content-draft-cta">CTA</label>
+        <textarea id="content-draft-cta" rows="2" placeholder="Call to action"></textarea>
+        <div class="content-form-row">
+          <label for="content-draft-status">Status</label>
+          <select id="content-draft-status">
+            <option value="draft">Draft</option>
+            <option value="pending_approval">Pending Approval</option>
+            <option value="approved">Approved</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="content-form-row">
+          <label for="content-draft-schedule">Schedule</label>
+          <input id="content-draft-schedule" type="datetime-local" />
+        </div>
+        <div class="content-form-actions">
+          <button id="content-draft-save" class="top-btn">Save Draft</button>
+          <button id="content-draft-request" class="top-btn">Request Approval</button>
+          <button id="content-draft-approve" class="top-btn">Approve</button>
+          <button id="content-draft-reject" class="top-btn">Reject</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-panel">
+      <div class="content-panel-head">
+        <h2>Pipeline Queue</h2>
+      </div>
+      <div id="content-pipeline-list" class="content-list"></div>
+    </section>
+  </main>
+
+  <main id="office-view" class="view office-view hidden" data-mc-page="agents">
+    <div class="office-header office-header-command">
+      <div class="office-brand">ATEAM</div>
+      <div class="office-header-meta">
+        <div id="office-mode-chip" class="office-mode-chip">Mode: Flow</div>
+        <div id="office-attention-chip" class="office-attention-chip hidden">Attention: -</div>
+      </div>
+      <div class="office-header-actions">
+        <button id="office-studio-toggle" class="top-btn office-studio-toggle" type="button">Studio Mode: Off</button>
+      </div>
+    </div>
+
+    <div class="office-purpose-bar">
+      <span class="office-purpose-text">Agents is a status and observation surface. Use <button class="office-purpose-link" type="button" data-action="go-tasks">Tasks</button> to issue commands or approve runs.</span>
+    </div>
+    <div class="office-layout">
+      <section class="office-panel office-panel-agents">
+        <div class="panel-title">Agent Pool</div>
+        <div id="office-agent-pool" class="office-agent-pool"></div>
+        <div id="office-pool-status" class="panel-footer">Status: Idle</div>
+      </section>
+
+      <section class="office-panel office-panel-command">
+        <div class="panel-title">Command Station</div>
+        <div id="office-command-empty" class="office-command-empty">
+          <div class="empty-title">No active agent</div>
+          <div class="empty-subtitle">Select an agent to assign a task.</div>
+        </div>
+        <div id="office-command-active" class="office-command-active hidden">
+          <div class="command-active-header">
+            <div>
+              <div id="office-command-name" class="command-active-name">-</div>
+              <div id="office-command-role" class="command-active-role">-</div>
+            </div>
+            <div id="office-command-status" class="command-active-status">Idle</div>
+          </div>
+          <div class="command-section">
+            <div class="command-section-title">Task</div>
+            <div id="office-command-task" class="command-task">-</div>
+          </div>
+          <div class="command-section">
+            <div class="command-section-title">Logs</div>
+            <ul id="office-command-logs" class="command-logs"></ul>
+          </div>
+          <div class="command-actions">
+            <button id="office-action-approve" class="top-btn" type="button">Approve</button>
+            <button id="office-action-edit" class="top-btn" type="button">Edit</button>
+            <button id="office-action-retry" class="top-btn" type="button">Retry</button>
+            <button id="office-action-cancel" class="top-btn" type="button">Cancel</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="office-panel office-panel-control">
+        <div class="panel-title">Commander</div>
+        <div class="commander-status">Status: Online</div>
+        <div class="control-section">
+          <div class="control-title">Active Decisions</div>
+          <div id="office-control-decisions" class="control-list"></div>
+        </div>
+        <div class="control-section">
+          <div class="control-title">Quick Actions</div>
+          <div class="control-actions">
+            <button id="office-action-pause" class="top-btn" type="button">Pause All</button>
+            <button id="office-action-override" class="top-btn" type="button">Override Agent</button>
+            <button id="office-action-viewlogs" class="top-btn" type="button">View Logs</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <main id="approvals-view" class="view mc-page hidden" data-mc-page="approvals">
+    <div class="approvals-layout" aria-label="Approvals layout">
+      <section class="approvals-panel approvals-panel-list" aria-label="Approvals list">
+        <div class="approvals-head">
+          <div>
+            <div class="approvals-title">Approvals</div>
+            <div class="approvals-subtitle">Review and approve queued items</div>
+          </div>
+          <div id="approvals-count" class="approvals-count">0</div>
+        </div>
+        <div id="approvals-list" class="approvals-list"></div>
+      </section>
+
+      <section class="approvals-panel approvals-panel-detail" aria-label="Approval detail">
+        <div class="approvals-detail-head">
+          <div class="approvals-detail-title">Approval</div>
+          <div id="approvals-detail-status" class="approvals-detail-status">—</div>
+        </div>
+        <div id="approvals-detail" class="approvals-detail"></div>
+      </section>
+    </div>
+  </main>
+
+  <main id="council-view" class="view mc-page hidden" data-mc-page="council">
+    <div class="ops-page council-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Council</div>
+          <h1 class="ops-title">Strategy and governance</h1>
+          <p id="council-summary" class="ops-subtitle">Pulling together decisions, pressure, and recent notes.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="council-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="council-open-approvals-btn" class="mc-top-btn" type="button">Open Approvals</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Pending Decisions</div>
+          <div id="council-metric-pending" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Blocked Items</div>
+          <div id="council-metric-blocked" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Active Work</div>
+          <div id="council-metric-active" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Signals Waiting</div>
+          <div id="council-metric-signals" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Council Seats</div>
+              <div class="ops-panel-copy">Who is carrying which concern right now.</div>
+            </div>
+          </div>
+          <div id="council-seats" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Decision Queue</div>
+              <div class="ops-panel-copy">Approval requests that still need a call.</div>
+            </div>
+          </div>
+          <div id="council-decision-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Lane Pressure</div>
+              <div class="ops-panel-copy">Where attention is building across the system.</div>
+            </div>
+          </div>
+          <div id="council-lane-pressure" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Recent Journal</div>
+              <div class="ops-panel-copy">Context pulled from the memory journal.</div>
+            </div>
+          </div>
+          <div id="council-journal-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <main id="calendar-view" class="view mc-page hidden" data-mc-page="calendar">
+    <div class="cal-header">
+      <div>
+        <div class="cal-title">Scheduled Tasks</div>
+        <div class="cal-subtitle">Operator weekly cadence <span class="cal-mode-badge">Starter Schedule</span></div>
+      </div>
+      <div class="cal-controls">
+        <button id="cal-week-btn" class="cal-pill cal-pill-active" type="button">Week</button>
+        <button id="cal-today-btn" class="cal-pill" type="button">Today</button>
+        <button id="cal-refresh-btn" class="cal-icon-btn" type="button" aria-label="Refresh calendar">↻</button>
+      </div>
+    </div>
+
+    <section class="cal-banner" aria-label="Always running routines">
+      <div class="cal-banner-head">
+        <span class="cal-banner-ico" aria-hidden="true">⚡</span>
+        <div class="cal-banner-title">Always Running</div>
+      </div>
+      <div class="cal-banner-pills">
+        <div class="cal-banner-pill">Playbook Scanner • 4x daily</div>
+        <div class="cal-banner-pill">Opportunity Scanner • 2x daily</div>
+        <div class="cal-banner-pill">Competitor Scanner • 2x daily</div>
+      </div>
+    </section>
+
+    <section class="cal-week" aria-label="Scheduled tasks week grid">
+      <div id="cal-week-grid" class="cal-week-grid"></div>
+    </section>
+  </main>
+
+  <main id="projects-view" class="view mc-page hidden" data-mc-page="projects">
+    <div class="ops-page projects-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Projects</div>
+          <h1 class="ops-title">Workspaces and initiatives</h1>
+          <p id="projects-summary" class="ops-subtitle">Loading active initiatives and linked jobs.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="projects-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="projects-open-factory-btn" class="mc-top-btn" type="button">Open Factory</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Initiatives</div>
+          <div id="projects-metric-count" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Linked Work</div>
+          <div id="projects-metric-work" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Blocked</div>
+          <div id="projects-metric-blocked" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Pending Ship</div>
+          <div id="projects-metric-ship" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Portfolio</div>
+              <div class="ops-panel-copy">Initiatives mapped onto live delivery items.</div>
+            </div>
+          </div>
+          <div id="projects-portfolio-list" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Create Job</div>
+              <div class="ops-panel-copy">Drop a new job into the delivery system and link it to a project.</div>
+            </div>
+          </div>
+          <div class="ops-form-grid">
+            <label class="ops-field">
+              <span>Title</span>
+              <input id="projects-work-title" type="text" placeholder="Ship mission control docs browser" />
+            </label>
+            <label class="ops-field">
+              <span>Objective</span>
+              <textarea id="projects-work-objective" rows="4" placeholder="Short outcome and why it matters"></textarea>
+            </label>
+            <div class="ops-form-row">
+              <label class="ops-field">
+                <span>Project</span>
+                <select id="projects-work-project"></select>
+              </label>
+              <label class="ops-field">
+                <span>Stage</span>
+                <select id="projects-work-stage">
+                  <option value="BACKLOG">Backlog</option>
+                  <option value="BUILD">Build</option>
+                  <option value="QA">QA</option>
+                  <option value="REVIEW">Review</option>
+                  <option value="SHIP">Ship</option>
+                </select>
+              </label>
+              <label class="ops-field">
+                <span>Owner</span>
+                <select id="projects-work-owner"></select>
+              </label>
+            </div>
+            <div class="ops-form-actions">
+              <button id="projects-work-create-btn" class="mc-top-btn" type="button">Create Item</button>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Selected Initiative</div>
+              <div class="ops-panel-copy">Summary, linked docs, and current posture.</div>
+            </div>
+          </div>
+          <div id="projects-detail" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Delivery Ledger</div>
+              <div class="ops-panel-copy">Live items tied to the selected initiative.</div>
+            </div>
+          </div>
+          <div id="projects-ledger" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-panel project-docs-panel" id="project-docs-panel">
+        <div class="ops-panel-head">
+          <div>
+            <div class="ops-panel-title">Project Documents</div>
+            <div class="ops-panel-copy" id="project-docs-summary">Live documents linked to this initiative.</div>
+          </div>
+          <div class="ops-hero-actions">
+            <select id="project-docs-generate-type" class="ops-select-inline">
+              <option value="">Generate document…</option>
+              <option value="inquiry_form">Inquiry Form</option>
+              <option value="proposal">Proposal</option>
+              <option value="kickoff">Kickoff Document</option>
+            </select>
+            <button id="project-docs-generate-btn" class="mc-top-btn" type="button">Generate</button>
+          </div>
+        </div>
+        <div id="project-docs-stage-hint" class="project-docs-stage-hint hidden"></div>
+        <div id="project-docs-list" class="project-docs-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="doc-editor-overlay" class="doc-editor-overlay hidden" aria-modal="true" role="dialog" aria-label="Document editor">
+    <div class="doc-editor-shell">
+      <div class="doc-editor-head">
+        <div>
+          <div id="doc-editor-title" class="doc-editor-title">Document</div>
+          <div id="doc-editor-meta" class="doc-editor-meta"></div>
+        </div>
+        <div class="doc-editor-head-actions">
+          <span id="doc-editor-status-badge" class="doc-status-badge"></span>
+          <button id="doc-editor-close" class="mc-icon-btn" type="button" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <div class="doc-editor-body">
+        <div class="doc-editor-fields-col">
+          <div class="doc-editor-section-label">Fields</div>
+          <div id="doc-editor-fields" class="doc-editor-fields"></div>
+          <div class="doc-editor-field-actions">
+            <button id="doc-editor-save-btn" class="mc-top-btn" type="button">Save &amp; Re-render</button>
+          </div>
+        </div>
+        <div class="doc-editor-preview-col">
+          <div class="doc-editor-section-label">Preview</div>
+          <div id="doc-editor-preview" class="doc-editor-preview"></div>
+        </div>
+      </div>
+      <div class="doc-editor-footer">
+        <div class="doc-editor-status-actions">
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-doc-status-action="generated">Mark Generated</button>
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-doc-status-action="sent">Mark Sent</button>
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-doc-status-action="approved">Mark Approved</button>
+          <button class="ops-action-btn ops-action-btn-secondary" type="button" data-doc-status-action="archived">Archive</button>
+        </div>
+        <div class="doc-editor-export-actions">
+          <button id="doc-editor-export-md" class="ops-action-btn" type="button">Export Markdown</button>
+          <button id="doc-editor-export-html" class="ops-action-btn" type="button">Export HTML</button>
+          <button id="doc-editor-copy-btn" class="ops-action-btn" type="button">Copy Text</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main id="memory-view" class="view mc-page hidden" data-mc-page="memory">
+    <div class="memory-layout" aria-label="Memory journal layout">
+      <aside class="memory-sidebar" aria-label="Memory sidebar">
+        <div class="memory-search">
+          <span class="memory-search-ico" aria-hidden="true">⌕</span>
+          <input id="memory-search-input" class="memory-search-input" type="text" placeholder="Search memory…" />
+        </div>
+
+        <div class="memory-ltm-card" role="button" tabindex="0" aria-label="Long-term memory summary">
+          <div class="memory-ltm-head">
+            <div class="memory-ltm-title">Long-Term Memory ✨</div>
+            <div id="memory-ltm-meta" class="memory-ltm-meta">0 words • updated —</div>
+          </div>
+          <div class="memory-ltm-desc">Pinned context and durable notes.</div>
+        </div>
+
+        <div class="memory-section-head">
+          <div class="memory-section-label">DAILY JOURNAL</div>
+          <div id="memory-journal-count" class="memory-count-badge">0 entries</div>
+        </div>
+
+        <div id="memory-journal-groups" class="memory-groups" aria-label="Journal groups"></div>
+      </aside>
+
+      <section class="memory-viewer" aria-label="Journal viewer">
+        <div class="journal-head">
+          <div>
+            <div id="journal-title" class="journal-title">Journal: —</div>
+            <div id="journal-subhead" class="journal-subhead">—</div>
+          </div>
+          <div id="journal-modified" class="journal-modified">Modified —</div>
+        </div>
+        <div id="journal-body" class="journal-body"></div>
+      </section>
+    </div>
+  </main>
+
+  <main id="docs-view" class="view mc-page hidden" data-mc-page="docs">
+    <div class="ops-page docs-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Docs</div>
+          <h1 class="ops-title">Operating Reference</h1>
+          <p id="docs-summary" class="ops-subtitle">Architecture, runbooks, workflows, and module references for ATEAM.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="docs-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+        </div>
+      </section>
+
+      <section class="docs-dashboard-strip">
+        <div class="docs-dash-card">
+          <div class="docs-dash-label">Total Docs</div>
+          <div id="docs-metric-count" class="docs-dash-value">0</div>
+        </div>
+        <div class="docs-dash-card">
+          <div class="docs-dash-label">Architecture</div>
+          <div id="docs-metric-architecture" class="docs-dash-value">0</div>
+        </div>
+        <div class="docs-dash-card">
+          <div class="docs-dash-label">Platform</div>
+          <div id="docs-metric-platform" class="docs-dash-value">0</div>
+        </div>
+        <div class="docs-dash-card">
+          <div class="docs-dash-label">Operations</div>
+          <div id="docs-metric-operations" class="docs-dash-value">0</div>
+        </div>
+        <div class="docs-dash-card docs-dash-card-bar" id="docs-coverage-card">
+          <div class="docs-dash-label">Category Coverage</div>
+          <div id="docs-coverage-bar" class="docs-coverage-bar"></div>
+        </div>
+      </section>
+
+      <section class="ops-docs-layout">
+        <aside class="ops-panel ops-docs-list-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Library</div>
+            </div>
+          </div>
+          <label class="ops-field">
+            <span>Search</span>
+            <input id="docs-search-input" type="text" placeholder="architecture, runbook, handover…" />
+          </label>
+          <div id="docs-category-filter" class="docs-category-filter">
+            <button class="docs-cat-btn active" data-cat="all">All</button>
+            <button class="docs-cat-btn" data-cat="overview">Overview</button>
+            <button class="docs-cat-btn" data-cat="architecture">Architecture</button>
+            <button class="docs-cat-btn" data-cat="platform">Platform</button>
+            <button class="docs-cat-btn" data-cat="operations">Operations</button>
+            <button class="docs-cat-btn" data-cat="handover">Handover</button>
+            <button class="docs-cat-btn" data-cat="integrations">Integrations</button>
+          </div>
+          <div id="docs-list" class="ops-card-stack docs-list-stack"></div>
+        </aside>
+
+        <section class="ops-panel ops-docs-preview-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div id="docs-detail-title" class="ops-panel-title">Select a document</div>
+              <div id="docs-detail-meta" class="ops-panel-copy">Preview will appear here.</div>
+            </div>
+            <div id="docs-detail-actions" class="docs-detail-actions"></div>
+          </div>
+          <div id="docs-detail-body" class="docs-preview-body"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <main id="people-view" class="view mc-page hidden" data-mc-page="people">
+    <div class="ops-page people-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">People</div>
+          <h1 class="ops-title">Contacts and network</h1>
+          <p id="people-summary" class="ops-subtitle">Conversation speakers, internal operators, and likely handoffs.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="people-open-talk-btn" class="mc-top-btn" type="button">Open Intake</button>
+          <button id="people-open-team-btn" class="mc-top-btn" type="button">Open Team</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Contacts</div>
+          <div id="people-metric-contacts" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Operators</div>
+          <div id="people-metric-operators" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Active Speakers</div>
+          <div id="people-metric-active" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Suggested Handoffs</div>
+          <div id="people-metric-handoffs" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Conversation Contacts</div>
+              <div class="ops-panel-copy">Speakers detected from the talk timeline.</div>
+            </div>
+          </div>
+          <div id="people-contacts-list" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Operators</div>
+              <div class="ops-panel-copy">Internal agents and their current lanes.</div>
+            </div>
+          </div>
+          <div id="people-operators-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-panel">
+        <div class="ops-panel-head">
+          <div>
+            <div class="ops-panel-title">Recommended Handoffs</div>
+            <div class="ops-panel-copy">Who should pick up the next move for each active contact.</div>
+          </div>
+        </div>
+        <div id="people-handoff-list" class="ops-card-stack"></div>
+      </section>
+    </div>
+  </main>
+
+  <main id="office-room-view" class="view mc-page hidden" data-mc-page="office">
+    <div class="office2-layout" aria-label="Office room layout">
+      <section class="office2-room-panel" aria-label="Office room">
+        <div class="office2-room-topbar">
+          <button id="office2-start-chat" class="office2-start-chat" type="button">+ Start Chat</button>
+          <div class="office2-slots" aria-label="Chat slots">
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <div class="office2-slot"></div>
+            <button id="office2-toggle-labels" class="office2-slot office2-slot-btn" type="button" title="Toggle labels">Aa</button>
+          </div>
+        </div>
+
+        <div id="office2-room" class="office2-room" aria-label="ATEAM office room">
+          <div class="office2-floor" aria-hidden="true"></div>
+          <div class="office2-props" aria-hidden="true">
+            <div class="px-desk px-desk-a"><div class="px-monitor"></div></div>
+            <div class="px-desk px-desk-b"><div class="px-monitor"></div></div>
+            <div class="px-desk px-desk-c"><div class="px-monitor"></div></div>
+            <div class="px-desk px-desk-d"><div class="px-monitor"></div></div>
+            <div class="px-water px-water-left"></div>
+            <div class="px-water px-water-right"></div>
+            <div class="px-plant px-plant-left"></div>
+            <div class="px-plant px-plant-right"></div>
+            <div class="px-table"></div>
+          </div>
+          <div id="office2-entities" class="office2-entities" aria-label="Agents"></div>
+          <div id="office2-tooltip" class="office2-tooltip hidden" role="tooltip"></div>
+        </div>
+      </section>
+
+      <aside class="office2-activity-panel" aria-label="Live Activity panel">
+        <div class="office2-activity-head">
+          <div class="office2-activity-title">Live Activity</div>
+          <div class="office2-activity-range">Last hour</div>
+        </div>
+        <div id="office2-activity-empty" class="office2-activity-empty">
+          <div class="office2-activity-empty-graph" aria-hidden="true"></div>
+          <div class="office2-activity-empty-title">No recent activity</div>
+          <div class="office2-activity-empty-sub">No active runs are affecting the crew right now.</div>
+        </div>
+        <div id="office2-activity-list" class="office2-activity-list hidden"></div>
+      </aside>
+    </div>
+
+    <section class="office2-agentbar" aria-label="Agent cards">
+      <div id="office2-agent-cards" class="office2-agent-cards"></div>
+    </section>
+  </main>
+
+  <main id="team-view" class="view mc-page hidden" data-mc-page="team">
+    <div id="team-canvas" class="team-canvas" aria-label="Team map"></div>
+  </main>
+
+  <main id="system-view" class="view mc-page hidden" data-mc-page="system">
+    <div class="ops-page system-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">System</div>
+          <h1 class="ops-title">Runtime controls</h1>
+          <p id="system-summary" class="ops-subtitle">Reading health, providers, tools, and live state counts.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="system-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">LLM Mode</div>
+          <div id="system-metric-mode" class="ops-metric-value">-</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Storage</div>
+          <div id="system-metric-storage" class="ops-metric-value">-</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Voice</div>
+          <div id="system-metric-voice" class="ops-metric-value">-</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Tools</div>
+          <div id="system-metric-tools" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Runtime</div>
+              <div class="ops-panel-copy">Primary/fallback models and service posture.</div>
+            </div>
+          </div>
+          <div id="system-runtime-cards" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">State Counts</div>
+              <div class="ops-panel-copy">What the system is currently carrying.</div>
+            </div>
+          </div>
+          <div id="system-counts-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Tools</div>
+              <div class="ops-panel-copy">Capabilities registered on the active runtime.</div>
+            </div>
+          </div>
+          <div id="system-tools-list" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Alerts</div>
+              <div class="ops-panel-copy">Derived warnings from the current operating state.</div>
+            </div>
+          </div>
+          <div id="system-alerts-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <main id="radar-view" class="view mc-page hidden" data-mc-page="radar">
+    <div class="ops-page radar-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Radar</div>
+          <h1 class="ops-title">Signals and scans</h1>
+          <p id="radar-summary" class="ops-subtitle">Signals, promoted topics, and what looks worth moving on next.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="radar-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="radar-open-content-btn" class="mc-top-btn" type="button">Open Content</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Signals</div>
+          <div id="radar-metric-signals" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Topics</div>
+          <div id="radar-metric-topics" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Drafts</div>
+          <div id="radar-metric-drafts" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Pending Approval</div>
+          <div id="radar-metric-pending" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Live Signals</div>
+              <div class="ops-panel-copy">Fresh intake waiting for Scout.</div>
+            </div>
+          </div>
+          <div id="radar-signals-list" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Scout Topics</div>
+              <div class="ops-panel-copy">Ideas already promoted out of raw signal.</div>
+            </div>
+          </div>
+          <div id="radar-topics-list" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-panel">
+        <div class="ops-panel-head">
+          <div>
+            <div class="ops-panel-title">Opportunity Clusters</div>
+            <div class="ops-panel-copy">A quick grouping of where the energy currently is.</div>
+          </div>
+        </div>
+        <div id="radar-clusters" class="ops-card-stack"></div>
+      </section>
+    </div>
+  </main>
+
+  <main id="factory-view" class="view mc-page hidden" data-mc-page="factory">
+    <div class="factory-wrap" aria-label="ATEAM factory layout">
+      <section class="factory-floor-panel" aria-label="ATEAM factory floor">
+        <div id="factory-floor" class="factory-floor">
+          <div class="factory-stations" aria-label="Factory stations">
+            <div class="factory-station" data-stage="break">
+              <div class="factory-station-label">BREAK ROOM</div>
+              <div class="factory-station-box">
+                <div class="fx-breakroom" aria-hidden="true">
+                  <div class="fx-bottle"></div>
+                  <div class="fx-cooler"></div>
+                </div>
+              </div>
+            </div>
+            <div class="factory-station" data-stage="build">
+              <div class="factory-station-label">BUILD</div>
+              <div class="factory-station-box">
+                <div id="factory-build-agents" class="fx-agent-cluster"></div>
+              </div>
+            </div>
+            <div class="factory-station" data-stage="qa">
+              <div class="factory-station-label">QA Lead</div>
+              <div class="factory-station-box">
+                <div class="fx-qa" aria-hidden="true">
+                  <div class="fx-qa-agent"></div>
+                  <div class="fx-qa-squares">
+                    <span></span><span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="factory-station" data-stage="review">
+              <div class="factory-station-label">REVIEW</div>
+              <div class="factory-station-box">
+                <div class="fx-review" aria-hidden="true">
+                  <div class="fx-doc fx-doc-a"></div>
+                  <div class="fx-doc fx-doc-b"></div>
+                  <div class="fx-doc fx-doc-c"></div>
+                </div>
+              </div>
+            </div>
+            <div class="factory-station" data-stage="ship">
+              <div class="factory-station-label">SHIP</div>
+              <div class="factory-station-box">
+                <div class="fx-ship" aria-hidden="true">
+                  <div class="fx-ship-sign"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="factory-belt" aria-label="Conveyor belt">
+            <div class="factory-belt-track"></div>
+            <div id="factory-belt-items" class="factory-belt-items"></div>
+          </div>
+
+          <div class="factory-backlog-area" aria-label="Backlog">
+            <div class="factory-backlog-label">BACKLOG</div>
+            <div class="factory-backlog-card">
+              <div class="factory-backlog-title">ATEAM FACTORY FLOOR</div>
+              <div class="factory-backlog-meta">
+                <span class="factory-backlog-folder" aria-hidden="true"></span>
+                <span class="factory-backlog-note" aria-hidden="true"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="factory-hud" aria-label="Factory stats">
+        <div class="factory-metrics">
+          <div class="factory-metric" data-metric="shipped">
+            <div class="factory-metric-label">SHIPPED TODAY</div>
+            <div id="factory-metric-shipped" class="factory-metric-value">0</div>
+          </div>
+          <div class="factory-metric" data-metric="inprogress">
+            <div class="factory-metric-label">IN PROGRESS</div>
+            <div id="factory-metric-inprogress" class="factory-metric-value">0</div>
+          </div>
+          <div class="factory-metric" data-metric="backlog">
+            <div class="factory-metric-label">BACKLOG</div>
+            <div id="factory-metric-backlog" class="factory-metric-value">0</div>
+          </div>
+          <div class="factory-metric" data-metric="blocked">
+            <div class="factory-metric-label">BLOCKED</div>
+            <div id="factory-metric-blocked" class="factory-metric-value">0</div>
+          </div>
+          <div class="factory-metric" data-metric="avgtime">
+            <div class="factory-metric-label">AVG. PIPELINE TIME</div>
+            <div id="factory-metric-avgtime" class="factory-metric-value">—</div>
+          </div>
+          <div class="factory-metric" data-metric="completed">
+            <div class="factory-metric-label">COMPLETED PACKS</div>
+            <div id="factory-metric-completed" class="factory-metric-value">0</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="factory-completed-runs" class="factory-completed-section" aria-label="Completed decision packs">
+        <div class="factory-completed-header">
+          <div class="factory-completed-header-copy">
+            <div class="factory-completed-title">Completed Packs</div>
+            <div class="factory-completed-hint">Decision packs ready to hand off, export, or archive.</div>
+          </div>
+          <div class="factory-completed-controls">
+            <select id="factory-pack-filter-lane" class="factory-pack-filter" aria-label="Filter completed packs by lane">
+              <option value="">All lanes</option>
+            </select>
+            <select id="factory-pack-filter-owner" class="factory-pack-filter" aria-label="Filter completed packs by owner">
+              <option value="">All owners</option>
+            </select>
+            <select id="factory-pack-filter-readiness" class="factory-pack-filter" aria-label="Filter completed packs by handoff readiness">
+              <option value="">All readiness</option>
+              <option value="ready">Handoff ready</option>
+              <option value="needs_attention">Needs attention</option>
+            </select>
+          </div>
+        </div>
+        <div id="factory-completed-list" class="factory-completed-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <main id="pipeline-view" class="view mc-page hidden" data-mc-page="pipeline">
+    <div class="ops-page pipeline-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">Pipeline</div>
+          <h1 class="ops-title">Queued outputs</h1>
+          <p id="pipeline-summary" class="ops-subtitle">From raw signal to approval to shipped work.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button id="pipeline-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="pipeline-open-factory-btn" class="mc-top-btn" type="button">Open Factory</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Signals</div>
+          <div id="pipeline-metric-signals" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Drafts in Motion</div>
+          <div id="pipeline-metric-drafts" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Pending Decisions</div>
+          <div id="pipeline-metric-approvals" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Delivery Items</div>
+          <div id="pipeline-metric-delivery" class="ops-metric-value">0</div>
+        </article>
+      </section>
+
+      <section id="pipeline-board" class="pipeline-board" aria-label="Unified pipeline board"></section>
+
+      <section class="ops-panel">
+        <div class="ops-panel-head">
+          <div>
+            <div class="ops-panel-title">Stalled Items</div>
+            <div class="ops-panel-copy">Anything blocked, aging, or waiting on a call.</div>
+          </div>
+        </div>
+        <div id="pipeline-stalled-list" class="ops-card-stack"></div>
+      </section>
+    </div>
+  </main>
+
+  <main id="ai-lab-view" class="view mc-page hidden" data-mc-page="ai_lab">
+    <div class="ops-page ai-lab-page">
+      <section class="ops-hero">
+        <div>
+          <div class="ops-kicker">AI Lab</div>
+          <h1 class="ops-title">Intake capture and context</h1>
+          <p id="ai-lab-summary" class="ops-subtitle">Capture and review intake signal before routing it into a real ATEAM workflow run.</p>
+        </div>
+        <div class="ops-hero-actions">
+          <button class="mc-top-btn view-back-btn" type="button" data-action="go-tasks">← Tasks</button>
+          <button id="ai-lab-refresh-btn" class="mc-top-btn" type="button">Refresh</button>
+          <button id="ai-lab-open-speech-btn" class="mc-top-btn" type="button">Use Speech →</button>
+        </div>
+      </section>
+
+      <section class="ops-metric-grid">
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Intake Turns</div>
+          <div id="ai-lab-metric-turns" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Speech Sessions</div>
+          <div id="ai-lab-metric-sessions" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Voice Profiles</div>
+          <div id="ai-lab-metric-voices" class="ops-metric-value">0</div>
+        </article>
+        <article class="ops-metric-card">
+          <div class="ops-metric-label">Recognition</div>
+          <div id="ai-lab-metric-recognition" class="ops-metric-value">-</div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Quick Capture</div>
+              <div class="ops-panel-copy">Type a request and submit it directly as a workflow run. That's the primary path. Talk and Speech are secondary options for longer context.</div>
+            </div>
+          </div>
+          <div class="ai-lab-capture-block">
+            <textarea id="ai-lab-capture-input" class="ai-lab-capture-input" rows="4" placeholder="Describe the request or paste a transcript excerpt…"></textarea>
+            <div class="ai-lab-capture-actions">
+              <button class="ops-action-btn" type="button" data-action="lab-create-run">Create workflow run</button>
+              <button class="ops-action-btn ops-action-btn-secondary" type="button" data-action="open-talk-focus">Use Talk →</button>
+            </div>
+            <div id="ai-lab-run-result" class="ai-lab-run-result hidden"></div>
+          </div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Capture Channels</div>
+              <div class="ops-panel-copy">Available methods for capturing intake signal into ATEAM.</div>
+            </div>
+          </div>
+          <div id="ai-lab-modules" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Recent Intake Turns</div>
+              <div class="ops-panel-copy">Latest captured turns from the live talk timeline.</div>
+            </div>
+          </div>
+          <div id="ai-lab-turns" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Speech Sessions</div>
+              <div class="ops-panel-copy">Recorded clarity sessions. Each session can be reviewed and sent to a workflow run.</div>
+            </div>
+          </div>
+          <div id="ai-lab-sessions" class="ops-card-stack"></div>
+        </article>
+      </section>
+
+      <section class="ops-grid ops-grid-two">
+        <article class="ops-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">Stack Status</div>
+              <div class="ops-panel-copy">Current browser and server capability state. Read-only.</div>
+            </div>
+          </div>
+          <div id="ai-lab-capabilities" class="ops-card-stack"></div>
+        </article>
+
+        <article class="ops-panel ai-lab-context-note-panel">
+          <div class="ops-panel-head">
+            <div>
+              <div class="ops-panel-title">How AI Lab connects to ATEAM</div>
+            </div>
+          </div>
+          <div class="ai-lab-context-note">
+            <p>AI Lab is the intake and context-capture layer. It does not run workflows on its own.</p>
+            <p>Signal captured here — typed, spoken, or from a speech session — moves into the main ATEAM workflow path when you create a run or use Intake.</p>
+            <p>Routing, approvals, execution, and the Decision Pack all happen in Mission Control after a run is created.</p>
+          </div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <main id="talk-view" class="view mc-page talk-view hidden" data-mc-page="talk">
+    <div class="talk-top">
+      <div class="talk-meta">
+        <div class="talk-mode-label">ATEAM Intake</div>
+        <h1 class="talk-title">Tell ATEAM what needs to move.</h1>
+        <div class="talk-session">Use text or voice. Session controls stay available when you need them, but they no longer lead the page.</div>
+      </div>
+      <div class="talk-head-controls">
+        <button id="talk-back-btn" class="top-btn view-back-btn" type="button">← Tasks</button>
+        <button id="talk-voice-toggle-btn" class="top-btn talk-voice-toggle-btn" type="button" aria-label="Start voice intake">
+          Voice
+        </button>
+        <button
+          id="talk-advanced-toggle-btn"
+          class="top-btn talk-advanced-toggle-btn"
+          type="button"
+          aria-expanded="false"
+          aria-controls="talk-settings-panel talk-advanced-sections">
+          Details
+        </button>
+      </div>
+    </div>
+
+    <section id="talk-settings-panel" class="talk-settings-panel hidden" aria-label="Talk session settings">
+      <div class="talk-task" id="talk-task-label">Session Thread: global_podcast</div>
+      <label class="talk-voice-control" for="talk-speaker-select">
+        <span>Speaker</span>
+        <select id="talk-speaker-select" class="talk-voice-select" aria-label="Select current speaker">
+          <option value="unknown">Unknown</option>
+          <option value="michael">Michael</option>
+          <option value="mark">Mark</option>
+          <option value="guest">Guest</option>
+          <option value="ai_podcast">Manchi AI</option>
+        </select>
+      </label>
+      <button
+        id="talk-speaker-edit-label-btn"
+        class="top-btn talk-speaker-edit-btn"
+        type="button"
+        aria-label="Edit selected speaker label">
+        Edit Name
+      </button>
+      <label class="talk-voice-control" for="talk-voice-style">
+        <span>Voice</span>
+        <select id="talk-voice-style" class="talk-voice-select" aria-label="Select voice style">
+          <option value="male_assistant">Male Assistant</option>
+          <option value="female_assistant">Female Assistant</option>
+          <option value="nigerian_professor_ss">Nigerian Professor (South South vibe)</option>
+        </select>
+      </label>
+      <button id="talk-ui-mode-btn" class="top-btn talk-ui-mode-btn" type="button" aria-label="Toggle Talk focus mode">Focus</button>
+    </section>
+
+    <section id="talk-composer" class="talk-composer" aria-label="Talk composer">
+      <div class="talk-composer-head">
+        <div>
+          <div class="talk-composer-title">Simple intake</div>
+          <div class="talk-composer-copy">Type the rough idea or start voice intake and speak naturally.</div>
+        </div>
+        <span class="talk-composer-mode">Text + Voice</span>
+      </div>
+      <div class="talk-composer-row">
+        <textarea
+          id="talk-chat-input"
+          class="talk-chat-input"
+          rows="1"
+          placeholder="Tell ATEAM what you want to build, fix, check, or move forward…"
+          aria-label="Message ATEAM"></textarea>
+        <button id="talk-chat-send" class="top-btn talk-chat-send" type="button">Send</button>
+      </div>
+      <div class="talk-composer-sub">
+        <div id="talk-state" class="talk-state-pill" data-state="idle" aria-label="Talk state">
+          <span id="talk-state-label">Idle</span>
+        </div>
+        <div id="talk-hint" class="talk-hint-compact">Ready.</div>
+      </div>
+    </section>
+
+    <div id="talk-advanced-sections" class="talk-advanced-sections hidden">
+      <section id="talk-transcript-wrap" class="talk-transcript-wrap">
+        <div class="talk-transcript-head">
+          <span>Transcript</span>
+          <button id="talk-transcript-toggle" class="top-btn transcript-toggle">Expand</button>
+        </div>
+        <div class="talk-transcript" id="talk-transcript">
+          <div class="talk-empty">No transcript yet.</div>
+        </div>
+      </section>
+
+      <section id="talk-timeline-wrap" class="talk-timeline-wrap">
+        <div class="talk-timeline-head">
+          <span>Session Timeline</span>
+          <button id="timeline-refresh-btn" class="top-btn timeline-refresh-btn">Refresh</button>
+        </div>
+        <div class="timeline-controls">
+          <button id="timeline-pause-btn" class="top-btn timeline-control-btn">Pause</button>
+          <button id="timeline-resume-btn" class="top-btn timeline-control-btn">Resume</button>
+          <button id="timeline-clear-btn" class="top-btn timeline-control-btn">Clear View</button>
+          <button id="timeline-export-btn" class="top-btn timeline-control-btn">Export JSON</button>
+          <button id="timeline-export-pack-btn" class="top-btn timeline-control-btn">Export Pack</button>
+          <button id="review-mode-btn" class="top-btn timeline-control-btn">Review: Off</button>
+          <button id="timeline-highlight-btn" class="top-btn timeline-control-btn">Mark Highlight</button>
+          <button id="tts-toggle-btn" class="top-btn timeline-control-btn">TTS: On</button>
+          <button id="tts-stop-btn" class="top-btn timeline-control-btn stop-voice-btn disabled hidden" disabled>Interrupt</button>
+        </div>
+        <div id="timeline-review-controls" class="timeline-review-controls">
+          <button id="timeline-review-prev-btn" class="top-btn timeline-control-btn">Prev</button>
+          <button id="timeline-review-next-btn" class="top-btn timeline-control-btn">Next</button>
+          <button id="timeline-review-latest-btn" class="top-btn timeline-control-btn">Latest</button>
+          <button id="timeline-review-autoplay-btn" class="top-btn timeline-control-btn">Auto: Off</button>
+          <span id="timeline-review-status" class="timeline-review-status">Review cursor: none</span>
+        </div>
+        <div id="timeline-filters" class="timeline-filters" role="tablist" aria-label="Timeline filters">
+          <button class="timeline-filter-btn active" data-filter="all">All</button>
+          <button class="timeline-filter-btn" data-filter="talk">Talk</button>
+          <button class="timeline-filter-btn" data-filter="highlights">Highlights</button>
+          <button class="timeline-filter-btn" data-filter="status">Status</button>
+          <button class="timeline-filter-btn" data-filter="errors">Errors</button>
+          <label class="timeline-speaker-filter-label" for="timeline-speaker-filter">
+            <span>Speaker</span>
+            <select id="timeline-speaker-filter" class="timeline-speaker-filter" aria-label="Filter timeline by speaker">
+              <option value="all">All</option>
+              <option value="michael">Michael</option>
+              <option value="mark">Mark</option>
+              <option value="guest">Guest</option>
+              <option value="ai_podcast">Manchi AI</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </label>
+        </div>
+        <div id="talk-timeline" class="talk-timeline">
+          <div class="timeline-empty">No events yet.</div>
+        </div>
+      </section>
+
+      <section id="talk-chapters-wrap" class="talk-chapters-wrap">
+        <div class="talk-chapters-head">
+          <span>Chapters</span>
+          <button id="chapter-clear-focus-btn" class="top-btn timeline-refresh-btn">Full Timeline</button>
+        </div>
+        <div id="talk-chapters" class="talk-chapters">
+          <div class="timeline-empty">No chapters yet.</div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <main id="speech-view" class="view speech-view hidden" data-mc-page="speech">
+    <div class="speech-header">
+      <h1>Speech Clarity Trainer</h1>
+      <p class="speech-subtitle">Personal oral communication clarity trainer</p>
+    </div>
+
+    <section class="speech-container">
+      <!-- Session List/Detail View -->
+      <div id="speech-list-panel" class="speech-panel">
+        <h2>My Sessions</h2>
+        <div class="speech-mode-select">
+          <label>Mode: 
+            <select id="speech-mode-select">
+              <option value="learning">Learning</option>
+              <option value="podcast">Podcast</option>
+              <option value="interview">Interview</option>
+            </select>
+          </label>
+          <input id="speech-title-input" type="text" placeholder="Session title (optional)" />
+          <button id="speech-create-btn" class="btn-primary">New Session</button>
+        </div>
+        <div id="speech-sessions-list" class="sessions-list"></div>
+      </div>
+
+      <!-- Recording View -->
+      <div id="speech-record-panel" class="speech-panel hidden">
+        <h2 id="speech-session-title">Recording Session</h2>
+        <div class="record-controls">
+          <button id="speech-start-btn" class="btn-primary">Start Recording</button>
+          <button id="speech-stop-btn" class="btn-danger hidden">Stop Recording</button>
+          <div class="record-status" id="speech-record-status"></div>
+        </div>
+        <div class="transcript-display">
+          <h3>Live Transcript</h3>
+          <div id="speech-live-transcript" class="speech-transcript-box"></div>
+        </div>
+        <div class="record-actions">
+          <button id="speech-save-btn" class="btn-primary hidden">Save Session</button>
+          <button id="speech-cancel-btn" class="btn-secondary">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Analysis View -->
+      <div id="speech-analysis-panel" class="speech-panel hidden">
+        <h2>Session Analysis</h2>
+        <div class="analysis-metrics">
+          <div class="metric-card">
+            <h4>Words Per Minute</h4>
+            <div id="speech-wpm" class="metric-value">--</div>
+          </div>
+          <div class="metric-card">
+            <h4>Filler Density</h4>
+            <div id="speech-filler-density" class="metric-value">--</div>
+          </div>
+          <div class="metric-card">
+            <h4>Flagged Endings</h4>
+            <div id="speech-flagged-count" class="metric-value">--</div>
+          </div>
+        </div>
+
+        <div class="drills-section">
+          <h3>Recommended Drills</h3>
+          <div id="speech-drills-list" class="drills-list"></div>
+        </div>
+
+        <div class="analysis-actions">
+          <button id="speech-reflection-btn" class="btn-primary">Add Reflection Notes</button>
+          <button id="speech-back-btn" class="btn-secondary">Back to Sessions</button>
+        </div>
+      </div>
+
+      <!-- Reflection View -->
+      <div id="speech-reflection-panel" class="speech-panel hidden">
+        <h2>Reflection Review</h2>
+        <div class="reflection-mode-select">
+          <label>Review Mode:
+            <select id="speech-reflection-mode">
+              <option value="audioOnly">Audio Only</option>
+              <option value="videoMuted">Video Muted</option>
+              <option value="full">Full Review</option>
+            </select>
+          </label>
+        </div>
+        <div class="reflection-prompts">
+          <div id="speech-reflection-prompt">What did you notice about your clarity?</div>
+          <textarea id="speech-reflection-notes" placeholder="Enter your observations..." rows="4"></textarea>
+        </div>
+        <div class="reflection-actions">
+          <button id="speech-save-reflection-btn" class="btn-primary">Save Notes</button>
+          <button id="speech-reflection-back-btn" class="btn-secondary">Back</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="mc-command-drawer-backdrop" class="mc-drawer-backdrop hidden" aria-hidden="true"></div>
+  <aside id="mc-command-drawer" class="mc-drawer hidden" aria-label="Command Station Drawer">
+    <div class="mc-drawer-head">
+      <div class="mc-drawer-title">Command Station</div>
+      <button id="mc-command-drawer-close" class="mc-icon-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="mc-command-drawer-body" class="mc-drawer-body"></div>
+  </aside>
+
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="modules/config.js?v=phase13_modular_split_1"></script>
+  <script src="modules/browser-utils.js?v=phase13_modular_split_1"></script>
+  <script src="app.js?v=phase13_modular_split_1"></script>
+</body>
+</html>

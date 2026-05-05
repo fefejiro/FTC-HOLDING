@@ -1,90 +1,55 @@
-# ACTUAL Root Cause Found & Fixed! 🎉
+# PeacePad Release Status
 
-## The Real Problem
+## Current State
 
-Your test logs revealed the **ACTUAL bug**: The "dual message listener" in the WebSocket hook was causing **EVERY message to be processed TWICE**!
+- Web production is live at `https://peacepad.ca`
+- API production is live at `https://api.peacepad.ca`
+- Production ownership verification passed on March 30, 2026
+- Google Play production release `40 (1.0.8)` was the last uploaded bundle before the guest-first rollout
 
-### What Was Happening
+## What Shipped
 
-```typescript
-// OLD CODE (BROKEN):
-ws.onmessage = handleMessage;         // Handler fires once
-addEventListener('message', handleMessage); // Handler fires AGAIN! ❌
-```
+- PeacePad MVP refocus is live:
+  - Messages
+  - Prep Chat
+  - Calendar
+  - You / Settings
+- Messaging now uses inline tone guidance and rewording suggestions
+- Prep Chat is simplified around difficult-conversation coaching
+- Calendar is display-only
+- Support resources are curated external links
+- Deferred surfaces were hidden or disabled for the MVP refocus
 
-This meant:
-- Every `peer-joined` event → fires TWICE
-- First call: `createPeerConnection(peer)` starts
-- Second call: `createPeerConnection(peer)` starts again **before first finishes**
-- Both calls bypass the guard because they check it simultaneously
-- Result: **TWO peer connections** → **TWO offers** sent!
+## Release Artifact
 
-### Proof from Your Test Logs
+- Latest Android bundle:
+  - `C:\FTC HOLDING\APPS\peacepad\android\app\build\outputs\bundle\release\app-release.aab`
+- Android version prepared for next release:
+  - `versionCode 41`
+  - `versionName 1.0.9`
+- Package:
+  - `ca.peacepad.family`
 
-**Server showed duplicate offers:**
-```
-[Signal][offer] caller -> receiver (session 196823), delivered=1
-[Signal][offer] caller -> receiver (session 196823), delivered=1  <-- DUPLICATE!
-```
+## Deploy Notes
 
-**Client showed duplicate message handling:**
-```
-[WS_HOOK] Message received: {"type":"peer-joined"...
-[WS_HOOK] Message received: {"type":"peer-joined"...  <-- DUPLICATE!
-```
+- Cloudflare Pages project: `ftc-holding`
+- PeacePad needed a local Pages config to avoid inheriting the unrelated repo-root Wrangler config
+- Fix added at:
+  - `APPS/peacepad/wrangler.toml`
+- Live web build metadata now points to commit:
+  - `7096170e14b6c0b4bd1932f731aadcbb3b6a3645`
 
-**Debug logs showed both calls bypassed guard:**
-```
-[DEBUG-CREATE] createPeerConnection CALLED {alreadyCreating: false}
-[DEBUG-CREATE] createPeerConnection CALLED {alreadyCreating: false}  <-- Should be TRUE!
-```
+## Play Release Notes Used
 
-## The Fix
+- Refocused PeacePad around calmer co-parent communication.
+- Improved before-send tone feedback and clearer rewording suggestions.
+- Updated Prep Chat to better coach difficult conversations before sending.
+- Simplified navigation and onboarding for a faster, more focused experience.
+- Improved stability, performance, and overall polish.
 
-**Removed the duplicate listener entirely:**
+## Immediate Follow-Up
 
-```typescript
-// NEW CODE (FIXED):
-addEventListener('message', handleMessage);  // Fires ONCE ✅
-```
-
-Why `addEventListener` alone is sufficient:
-- ✅ Standards-compliant modern approach
-- ✅ Works reliably in ALL browsers (including Safari/iOS)
-- ✅ Each message processes exactly ONCE
-- ✅ Proper cleanup with `removeEventListener`
-
-## Previous Fixes Still Valid
-
-The earlier `setTimeout` (macrotask deferral) fix we implemented IS still correct and necessary - it prevents a different race condition within the offer creation itself. Both fixes work together:
-
-1. **This fix**: Ensures `createPeerConnection` is called only ONCE per peer
-2. **Previous fix**: Ensures queued `onnegotiationneeded` events don't bypass the flag guard
-
-## What Changed
-
-**File**: `client/src/hooks/useReconnectingWebSocket.ts`
-- Removed: `ws.onmessage = handleMessage` 
-- Kept: `addEventListener('message', handleMessage)` (single listener)
-- Updated: Log message confirms fix is active
-
-## Testing Now
-
-The app is restarting with the fix. When ready, test a call and you should see:
-
-**Success indicators:**
-- ✅ Only ONE `[WS_HOOK] Message received` per actual WebSocket message
-- ✅ Only ONE `[Signal][offer]` in server logs per session  
-- ✅ Only ONE `[DEBUG-CREATE] createPeerConnection CALLED` per peer
-- ✅ No `InvalidStateError` errors
-- ✅ Bidirectional audio works
-- ✅ Call ends cleanly on both devices
-
-**The log message confirming fix is active:**
-```
-[WS_FIX] Single message listener attached (duplicate listener bug fixed) ✅
-```
-
----
-
-**Ready to test when the app restarts!** This should definitively solve the duplicate offer bug. 🚀
+- Wait for Google Play review outcome
+- If approved, confirm production rollout completion in Play Console
+- Smoke test installed Android app after approval
+- Update screenshots/store creatives later if needed to better match the MVP refocus

@@ -1,10 +1,7 @@
-export default function ContactPage() {
-  return (
-    <>
-      <h1>Contact</h1>
-      <p>
-        <a href="mailto:info@ftc.com">info@ftc.com</a>
-      </p>
-    </>
-  );
+export const dynamic = "force-static";
+
+import { permanentRedirect } from "next/navigation";
+
+export default function ContactRedirectPage() {
+  permanentRedirect("/work-with-ftc");
 }
