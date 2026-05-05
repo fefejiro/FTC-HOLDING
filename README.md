@@ -58,11 +58,17 @@ career/        — job-hunt automation scripts (personal tooling)
 ```
 
 Root files that matter:
+- `PROJECT_BRIEF.md` — business context, product portfolio, and priorities
+- `ARCHITECTURE.md` — technical architecture, package map, and infra stack
+- `ROADMAP.md` — prioritized roadmap by project
+- `TASKS.md` — issue-ready task list across all projects
+- `TESTING.md` — test strategy, commands, and coverage map
+- `DEPLOYMENT.md` — deploy commands and verification steps per app
 - `AI_GUARDRAILS.md` — rules for AI agent/Copilot work in this repo
 - `CLAUDE.md` — AI context for Claude-based agents
 - `company-context.md` — company overview and product positioning
 - `FTC_MASTER.md` — canonical FTC strategy and tech decisions
-- `START_HERE.md` — quick-start per app
+- `START_HERE.md` — quick-start per app (PeacePad focus)
 - `wrangler.toml` — root Cloudflare config
 - `package.json` — root workspace scripts and shared tooling
 
