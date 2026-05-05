@@ -120,6 +120,27 @@ export function SparkWidget() {
     }
   }, [messages, open]);
 
+  const speakReply = useCallback((text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    // Prefer a natural-sounding voice: Google voices on Chrome, Microsoft on Edge, native on Safari
+    const pickVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      return (
+        voices.find((v) => v.lang.startsWith('en') && v.name.includes('Google')) ??
+        voices.find((v) => v.lang.startsWith('en') && v.name.includes('Microsoft') && v.name.includes('Neural')) ??
+        voices.find((v) => v.lang.startsWith('en') && (v.name === 'Samantha' || v.name === 'Karen' || v.name === 'Daniel')) ??
+        voices.find((v) => v.lang.startsWith('en'))
+      );
+    };
+    const voice = pickVoice();
+    if (voice) utter.voice = voice;
+    utter.rate = 1.05;
+    utter.pitch = 1.0;
+    window.speechSynthesis.speak(utter);
+  }, []);
+
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || status === 'loading') return;
@@ -196,6 +217,7 @@ export function SparkWidget() {
 
       setMessages((prev) => [...prev, { role: 'assistant', content: data.reply! }]);
       setStatus('idle');
+      speakReply(data.reply!);
     } catch {
       setErrorMsg('Network error. Please check your connection and try again.');
       setStatus('idle');

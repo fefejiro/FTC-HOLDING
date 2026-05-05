@@ -3,34 +3,35 @@ import { ScreenBar, ScreenBadge, ScreenPulse, ScreenRow, ScreenSub, ScreenTitle 
 export const demoSteps: Record<string, { label: string; screen: React.ReactNode }[]> = {
   intake: [
     {
-      label: 'Step 1 — Client submits request',
+      label: 'You describe what you need',
       screen: (
         <div className="space-y-3">
-          <ScreenTitle>New project request</ScreenTitle>
-          <ScreenRow label="Your name" value="Alex Chen" />
-          <ScreenRow label="Work email" value="alex@meridian.co" />
-          <ScreenRow label="Project description" value="Redesign enterprise client onboarding flow" />
+          <ScreenTitle>Tell us about your project</ScreenTitle>
+          <ScreenRow label="Name" value="Alex Chen" />
+          <ScreenRow label="Company" value="Meridian Co." />
+          <ScreenRow label="What are you building?" value="Redesign our client onboarding experience" />
+          <ScreenRow label="Timeline in mind?" value="About 3 weeks" />
           <div className="mt-4">
-            <ScreenPulse label="Submitting request…" />
+            <ScreenPulse label="Reviewing your request…" />
           </div>
         </div>
       ),
     },
     {
-      label: 'Step 2 — Scoped proposal ready',
+      label: 'We scope it before any commitment',
       screen: (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <ScreenTitle>Scoped Proposal</ScreenTitle>
-            <ScreenBadge variant="teal">Ready</ScreenBadge>
+            <ScreenTitle>Your scoped plan</ScreenTitle>
+            <ScreenBadge variant="teal">Ready to review</ScreenBadge>
           </div>
-          <ScreenSub>Client Intake Refresh · Client workspace</ScreenSub>
+          <ScreenSub>Client onboarding refresh · 3 week delivery</ScreenSub>
           <div className="grid grid-cols-2 gap-2 mt-3">
             {[
-              { label: 'Scope', value: '4 deliverables' },
+              { label: 'What we deliver', value: '4 milestones' },
               { label: 'Timeline', value: '3 weeks' },
-              { label: 'Format', value: 'Fixed fee' },
-              { label: 'Investment', value: '$12,500', accent: true },
+              { label: 'How it works', value: 'Fixed scope' },
+              { label: 'Pricing', value: 'Sent on approval', accent: true },
             ].map((f) => (
               <div key={f.label} className="rounded-xl bg-white/5 px-3 py-2">
                 <p className="text-[10px] text-white/40">{f.label}</p>
@@ -39,21 +40,21 @@ export const demoSteps: Record<string, { label: string; screen: React.ReactNode 
             ))}
           </div>
           <div className="mt-2 flex justify-end">
-            <ScreenBadge variant="teal">Accept →</ScreenBadge>
+            <ScreenBadge variant="teal">Approve and start</ScreenBadge>
           </div>
         </div>
       ),
     },
     {
-      label: 'Step 3 — Workspace active',
+      label: 'Your workspace opens immediately',
       screen: (
         <div className="space-y-2">
-          <ScreenTitle>Delivery Milestones</ScreenTitle>
+          <ScreenTitle>Delivery milestones</ScreenTitle>
           {[
-            { name: 'Intake audit complete', status: 'Done', color: 'green' as const },
-            { name: 'Prototype reviewed', status: 'In progress', color: 'yellow' as const },
-            { name: 'Staging handoff', status: 'Pending', color: 'default' as const },
-            { name: 'Final delivery', status: 'Pending', color: 'default' as const },
+            { name: 'Discovery and audit complete', status: 'Done', color: 'green' as const },
+            { name: 'Prototype under review', status: 'In progress', color: 'yellow' as const },
+            { name: 'Staging handoff', status: 'Up next', color: 'default' as const },
+            { name: 'Final delivery', status: 'Scheduled', color: 'default' as const },
           ].map((m) => (
             <div key={m.name} className="flex items-center justify-between py-1.5 border-b border-white/8 last:border-0">
               <span className="text-[12px] text-white/70">{m.name}</span>
@@ -67,18 +68,18 @@ export const demoSteps: Record<string, { label: string; screen: React.ReactNode 
       ),
     },
     {
-      label: 'Step 4 — Delivery report',
+      label: 'You get a clean handoff report',
       screen: (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <ScreenTitle>Delivery Report</ScreenTitle>
-            <ScreenBadge variant="green">Complete</ScreenBadge>
+            <ScreenTitle>Handoff report</ScreenTitle>
+            <ScreenBadge variant="green">Delivered</ScreenBadge>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { value: '4', label: 'Deliverables' },
-              { value: '21d', label: 'On schedule' },
-              { value: '100%', label: 'Documented' },
+              { value: '4', label: 'Milestones' },
+              { value: 'On time', label: 'Delivery' },
+              { value: 'Full docs', label: 'Handoff' },
             ].map((s) => (
               <div key={s.label} className="rounded-xl bg-white/5 px-2 py-2 text-center">
                 <p className="text-[14px] font-bold text-[#4DB8A8]">{s.value}</p>
@@ -88,7 +89,7 @@ export const demoSteps: Record<string, { label: string; screen: React.ReactNode 
           </div>
           <ScreenBar pct={100} />
           <div className="mt-1">
-            <ScreenBadge variant="teal">Download handoff package</ScreenBadge>
+            <ScreenBadge variant="teal">Download your handoff package</ScreenBadge>
           </div>
         </div>
       ),
