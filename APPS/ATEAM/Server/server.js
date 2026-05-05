@@ -13,7 +13,7 @@ import { routeAgentCommand } from "./lib/agentRouter.js";
 import { createSpeechClarityAnalyze } from "./lib/speechClarity/speechClarityAnalyze.js";
 import { createSpeechClarityRoutes } from "./lib/speechClarity/speechClarityRoutes.js";
 import { sanitizeSessionId, createEvent, appendEvent, getEvents, getEventsAfterTimestamp } from "./lib/eventLog.js";
-import { planOrchestration } from "./lib/orchestrator.js";
+import { planOrchestration, planOrchestrationAsync } from "./lib/orchestrator.js";
 import { createWorkflowService } from "./lib/workflowService.js";
 import { createProjectAutomationService } from "./lib/projectAutomation.js";
 import { createDocumentRoutes } from "./lib/documentRoutes.js";
@@ -1350,7 +1350,7 @@ app.post("/api/workflow/runs/:runId/generate-pack", async (req, res) => {
 app.post("/api/orchestrator/plan", async (req, res) => {
   try {
     const input = req.body && typeof req.body === "object" ? req.body : {};
-    const output = planOrchestration(input);
+    const output = await planOrchestrationAsync(input);
     res.json({ ok: true, output });
   } catch (err) {
     serverError(res, "failed_to_plan_orchestration", err);
