@@ -18,3 +18,5 @@ crons = ["0 13 * * *"]
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
 # SUPABASE_SERVICE_ROLE_KEY — set via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 # OPENAI_API_KEY — set via: npx wrangler secret put OPENAI_API_KEY
+# STRIPE_WEBHOOK_SECRET — set via: npx wrangler secret put STRIPE_WEBHOOK_SECRET
+#   Retrieve from Stripe Dashboard → Developers → Webhooks → Signing secret
