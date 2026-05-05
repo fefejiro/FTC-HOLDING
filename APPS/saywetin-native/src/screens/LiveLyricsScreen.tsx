@@ -13,7 +13,12 @@ type LiveLyricsScreenProps = {
 };
 
 export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
-  const initialSongOffsetMs = Math.max(0, track.lyricsAnchorOffsetMs ?? track.matchedInMs ?? 0);
+  // Compute song position now, accounting for time elapsed since the sample was captured
+  // (upload latency + time browsing result screen before opening lyrics).
+  const sampleAge = track.sampleCapturedAtMs
+    ? Math.max(0, Date.now() - track.sampleCapturedAtMs)
+    : 0;
+  const initialSongOffsetMs = Math.max(0, (track.lyricsAnchorOffsetMs ?? track.matchedInMs ?? 0) + sampleAge);
   const [lyrics, setLyrics] = useState<SyncedLyricLine[]>(track.syncedLyrics);
   const [positionMs, setPositionMs] = useState(initialSongOffsetMs);
   const [syncWarn, setSyncWarn] = useState(false);

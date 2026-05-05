@@ -209,14 +209,20 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       setPhase('matching');
       const recognizedTrack = await uploadListenSample(recordingUri, durationMs);
       console.log('[listen] recognized:', recognizedTrack.title, 'by', recognizedTrack.artist);
-      const lyricsAnchorOffsetMs = listenSessionStartedAtRef.current
-        ? Math.max(0, Date.now() - listenSessionStartedAtRef.current)
-        : 0;
+      // lyricsAnchorOffsetMs from the API is the song position at the START of the audio sample.
+      // Add the capture window so we anchor to where the sample ENDED (current song position).
+      const songPositionAtResponseMs = Math.max(
+        0,
+        (recognizedTrack.lyricsAnchorOffsetMs ?? 0) + CAPTURE_DURATION_MS,
+      );
+      const capturedAtMs = Date.now();
 
       setTimeout(() => {
         onRecognizedRef.current({
           ...recognizedTrack,
-          lyricsAnchorOffsetMs,
+          // Advance by the auto-advance delay so sampleCapturedAtMs stays accurate
+          lyricsAnchorOffsetMs: songPositionAtResponseMs + MATCHING_AUTO_ADVANCE_MS,
+          sampleCapturedAtMs: capturedAtMs + MATCHING_AUTO_ADVANCE_MS,
         });
       }, MATCHING_AUTO_ADVANCE_MS);
     } catch (error: any) {

@@ -333,12 +333,11 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
                 pointerEvents="none"
               />
               <Animated.Image
-                source={require('../../assets/icon.png')}
+                source={require('../../assets/orb.png')}
                 resizeMode="contain"
                 style={[
                   styles.orbIcon,
                   {
-                    tintColor: undefined,
                     transform: [{ translateY: letterFloatY }, { scale: letterScale }, { rotate: iconRotate }],
                   },
                 ]}

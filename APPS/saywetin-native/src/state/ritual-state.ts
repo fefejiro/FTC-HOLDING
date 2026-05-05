@@ -19,6 +19,7 @@ export type RitualTrack = {
   chips: string[];
   syncedLyrics: SyncedLyricLine[];
   lyricsAnchorOffsetMs?: number;
+  sampleCapturedAtMs?: number;
   matchSource: MatchSource;
   recognitionSource: RecognitionSource;
   culturalAnalyses: CulturalAnalysisEntry[];

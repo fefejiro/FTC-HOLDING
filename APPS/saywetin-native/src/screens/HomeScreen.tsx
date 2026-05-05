@@ -325,7 +325,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   useEffect(() => {
     if (phase === 'result' && track) {
       phaseResultAtRef.current = Date.now();
-      playbackStartRef.current = Date.now() - Math.max(0, track.lyricsAnchorOffsetMs ?? track.matchedInMs || 0);
+      playbackStartRef.current = Date.now() - Math.max(0, (track.lyricsAnchorOffsetMs ?? track.matchedInMs) || 0);
       setActiveLineIndex(0);
     } else {
       phaseResultAtRef.current = null;
