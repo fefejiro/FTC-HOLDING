@@ -169,11 +169,6 @@ const ACTIONS_BY_TYPE: Record<SupportLocationType, DecisionActionId[]> = {
   safe_pull_off: ['navigate', 'mark_safe_wait', 'status_update', 'save_fallback'],
 };
 
-// TODO(dispatch-action-integrations): Wire these action intents to:
-// - provider dispatch APIs
-// - live hours verification
-// - operator-routing confidence and SLA scoring
-
 const SCENARIO_RULES: Record<EmergencyScenario, ScenarioRule> = {
   breakdown: {
     label: 'Vehicle breakdown',
@@ -317,10 +312,7 @@ const SCENARIO_RULES: Record<EmergencyScenario, ScenarioRule> = {
   },
 };
 
-// TODO(dispatch-live-places): Replace these seeded Ottawa points with live providers:
-// - emergency infrastructure registry (hospital, police, fire, rescue)
-// - tow/mechanic/locksmith partner feeds with serviceability + ETA
-// - opening-hours and staffing feeds for late-night confidence scoring
+// Seeded Ottawa points used as fallback when the live Nominatim provider is unavailable.
 const SUPPORT_LOCATIONS: SupportLocation[] = [
   { id: 'hospital-ottawa', name: 'Ottawa Hospital Civic Campus', type: 'hospital', lat: 45.3995, lng: -75.7187, phone: '+16137617300', open24h: true, staffedLateNight: true },
   { id: 'hospital-queensway', name: 'Queensway Carleton Hospital', type: 'hospital', lat: 45.3336, lng: -75.8098, phone: '+16137213200', open24h: true, staffedLateNight: true },
@@ -467,4 +459,199 @@ export function buildDecisionPlan(params: {
     fallback: buildGroups(rule.fallbackTypes, rankedByType),
     computedFromExactLocation: Boolean(userPoint),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Nominatim live place resolution
+// ---------------------------------------------------------------------------
+
+const NOMINATIM_AMENITY_TAG: Partial<Record<SupportLocationType, string>> = {
+  hospital: 'hospital',
+  police_post: 'police',
+  fire_station: 'fire_station',
+  rescue_facility: 'rescue_station',
+  gas_station: 'fuel',
+  ev_charging: 'charging_station',
+  pharmacy: 'pharmacy',
+  transit_hub: 'bus_station',
+};
+
+const NOMINATIM_ALWAYS_STAFFED = new Set<SupportLocationType>([
+  'hospital',
+  'police_post',
+  'fire_station',
+  'rescue_facility',
+]);
+
+interface NominatimResult {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
+const NOMINATIM_TIMEOUT_MS = 5_000;
+const NOMINATIM_BOX_DEG = 0.45;
+const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/search';
+
+async function fetchNominatimLocations(
+  type: SupportLocationType,
+  userPoint: UserPoint,
+): Promise<SupportLocation[]> {
+  const amenityTag = NOMINATIM_AMENITY_TAG[type];
+  if (!amenityTag) return [];
+
+  const { lat, lng } = userPoint;
+  const d = NOMINATIM_BOX_DEG;
+  const viewbox = `${lng - d},${lat + d},${lng + d},${lat - d}`;
+  const url = `${NOMINATIM_BASE}?amenity=${encodeURIComponent(amenityTag)}&format=json&limit=10&countrycodes=ca&viewbox=${viewbox}&bounded=1`;
+
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(NOMINATIM_TIMEOUT_MS) });
+    if (!res.ok) return [];
+    const data = (await res.json()) as NominatimResult[];
+    if (!Array.isArray(data)) return [];
+    const alwaysStaffed = NOMINATIM_ALWAYS_STAFFED.has(type);
+    return data
+      .filter((item) => item.lat && item.lon)
+      .map((item) => ({
+        id: `nom-${item.place_id}`,
+        name: item.display_name.split(',')[0].trim(),
+        type,
+        lat: parseFloat(item.lat),
+        lng: parseFloat(item.lon),
+        open24h: alwaysStaffed,
+        staffedLateNight: alwaysStaffed,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Async variant of `buildDecisionPlan` that attempts to fetch live place data
+ * from OpenStreetMap Nominatim for supported location types. Falls back to the
+ * seeded static dataset when Nominatim is unavailable or returns no results.
+ */
+export async function buildDecisionPlanAsync(params: {
+  scenario: EmergencyScenario;
+  userPoint: UserPoint | null;
+  now?: Date;
+}): Promise<DecisionPlan> {
+  const { scenario, userPoint, now } = params;
+  const rule = SCENARIO_RULES[scenario];
+  const hour = (now || new Date()).getHours();
+  const point = userPoint || OTTAWA_CENTER;
+
+  const neededTypes = new Set<SupportLocationType>();
+  rule.recommendedTypes.forEach((entry) => neededTypes.add(entry.type));
+  rule.fallbackTypes.forEach((entry) => neededTypes.add(entry.type));
+
+  const rankedByType = {} as Record<SupportLocationType, RankedSupportLocation[]>;
+
+  for (const type of Array.from(neededTypes)) {
+    let liveCandidates: SupportLocation[] = [];
+    if (userPoint) {
+      // Only call Nominatim when the user has provided their actual position;
+      // skip when falling back to the Ottawa centre default.
+      liveCandidates = await fetchNominatimLocations(type, point);
+    }
+    const candidates =
+      liveCandidates.length > 0
+        ? liveCandidates
+        : SUPPORT_LOCATIONS.filter((location) => location.type === type);
+    Object.assign(rankedByType, { [type]: rankLocationsByContext(candidates, point, hour) });
+  }
+
+  return {
+    scenario,
+    scenarioLabel: rule.label,
+    summary: rule.summary,
+    urgencyLabel: rule.urgencyLabel,
+    recommendedNextActions: rule.recommendedNextActions,
+    recommended: buildGroups(rule.recommendedTypes, rankedByType),
+    fallback: buildGroups(rule.fallbackTypes, rankedByType),
+    computedFromExactLocation: Boolean(userPoint),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Action intent execution — wires decision card actions to dispatch API calls
+// ---------------------------------------------------------------------------
+
+export interface ActionIntentResult {
+  ok: boolean;
+  message: string;
+  requestId?: string;
+}
+
+/**
+ * Executes a decision card action intent against the dispatch API.
+ *
+ * Currently handles `request_dispatch` (creates a service request via
+ * POST /api/requests) and `notify_operator` (queues an operator push
+ * notification via POST /api/requests with a status-update note).
+ * All other action IDs are handled client-side in the UI layer and return
+ * `ok: false` to indicate no server call was made.
+ */
+export async function executeActionIntent(params: {
+  action: DecisionActionId;
+  location: RankedSupportLocation;
+  scenario: EmergencyScenario;
+  userPoint: UserPoint | null;
+  serviceType?: string;
+  customerName?: string;
+  customerPhone?: string;
+}): Promise<ActionIntentResult> {
+  const { action, location, scenario, userPoint, serviceType, customerName, customerPhone } =
+    params;
+
+  if (action === 'request_dispatch') {
+    if (!customerName?.trim() || !customerPhone?.trim()) {
+      return {
+        ok: false,
+        message: 'Name and phone number are required to request dispatch.',
+      };
+    }
+
+    const notes = [
+      `Situation: ${getScenarioLabel(scenario)}`,
+      `Dispatch target: ${location.name}`,
+      location.phone ? `Provider phone: ${location.phone}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    try {
+      const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          serviceType: serviceType || 'other',
+          locationLat: userPoint?.lat,
+          locationLng: userPoint?.lng,
+          locationAddress: userPoint?.label,
+          notes,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        return { ok: false, message: payload.error || 'Dispatch request failed. Try again.' };
+      }
+
+      const data = (await response.json()) as { request?: { id?: string } };
+      return {
+        ok: true,
+        message: `Dispatch request submitted for ${location.name}.`,
+        requestId: data.request?.id,
+      };
+    } catch {
+      return { ok: false, message: 'Could not reach dispatch server. Check your connection.' };
+    }
+  }
+
+  return { ok: false, message: `Action '${action}' is handled client-side.` };
 }

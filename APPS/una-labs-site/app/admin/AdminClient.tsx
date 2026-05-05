@@ -225,7 +225,6 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
 const DASHBOARD_REFRESH_INTERVAL_MS = 60_000;
 
 const OPS_QUICK_LINKS = [
-  { label: 'Realtor entry point', href: '/realtor', description: 'Open the vertical intake flow now live on the site.' },
   { label: 'Client portal', href: '/portal', description: 'View the client-facing progress surface.' },
   { label: 'Proposal view', href: '/dashboard/proposal', description: 'Open the shareable scope and pricing surface.' },
   { label: 'Reporting view', href: '/dashboard/report', description: 'Open the client-ready reporting surface.' },

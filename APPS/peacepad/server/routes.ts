@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import {
   isSoftAuthenticated,
   getUserId,
@@ -8524,7 +8524,7 @@ Crawl-delay: 1
   });
 
   // Admin: Get all users
-  app.get("/api/admin/users", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/users", isAdmin, async (req: any, res) => {
     try {
       const allUsers = await storage.getAllUsers();
 
@@ -8542,7 +8542,7 @@ Crawl-delay: 1
     }
   });
 
-  app.get("/api/admin/feedback", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/feedback", isAdmin, async (req: any, res) => {
     try {
       const { status } = req.query;
       const feedbackList = status
@@ -8556,7 +8556,7 @@ Crawl-delay: 1
     }
   });
 
-  app.patch("/api/admin/feedback/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/admin/feedback/:id", isAdmin, async (req: any, res) => {
     try {
       const { status, adminNotes } = req.body;
       const updated = await storage.updateFeedbackStatus(req.params.id, status, adminNotes);
@@ -8567,10 +8567,8 @@ Crawl-delay: 1
     }
   });
 
-  // Admin dashboard statistics API
-  // NOTE: During beta, any authenticated user can access admin stats since all users are beta testers
-  // TODO: Before production launch, implement proper role-based authorization (admin flag or allowlist)
-  app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
+  // Admin dashboard statistics API — requires admin flag or allowlist
+  app.get("/api/admin/stats", isAdmin, async (req: any, res) => {
     try {
       const stats = await storage.getAdminStats();
       res.json(stats);
@@ -8581,7 +8579,7 @@ Crawl-delay: 1
   });
 
   // Admin partnerships list
-  app.get("/api/admin/partnerships", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/partnerships", isAdmin, async (req: any, res) => {
     try {
       const allPartnerships = await storage.getAllPartnerships();
       
@@ -8608,7 +8606,7 @@ Crawl-delay: 1
   });
 
   // Admin messages list with stats
-  app.get("/api/admin/messages", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/messages", isAdmin, async (req: any, res) => {
     try {
       const messages = await storage.getMessages();
       
@@ -8648,7 +8646,7 @@ Crawl-delay: 1
     }
   });
 
-  app.get("/api/admin/web-update-metrics", isAuthenticated, (req: any, res) => {
+  app.get("/api/admin/web-update-metrics", isAdmin, (req: any, res) => {
     try {
       const windowInput = typeof req.query?.window === "string" ? req.query.window : 24;
       const metrics = getWebUpdateMetrics(windowInput);

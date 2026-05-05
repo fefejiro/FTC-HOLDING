@@ -33,10 +33,8 @@ export const NAV = {
         { label: 'Spark AI', href: '/spark', description: 'Ask Spark anything about Una Labs' },
       ],
     },
-    { label: 'Realtor AI', href: '/realtor' },
     { label: 'Pricing', href: '/pricing' },
     { label: 'How It Works', href: '/how-it-works' },
-    { label: 'Blueprint $500', href: '/blueprint' },
   ],
 };
 
