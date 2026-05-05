@@ -1,6 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { AudioModule, RecordingPresets, useAudioRecorder } from 'expo-audio';
+import { useEffect, useState } from 'react';
 import { FadeInView } from '../components/FadeInView';
 import { OrbListener } from '../components/OrbListener';
 import { HeadphonesDetectedBanner } from '../components/HeadphonesDetectedBanner';
@@ -119,425 +117,49 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
     return () => clearTimeout(timer);
   }, [phase]);
 
+// How long the matching phase is visible before auto-advancing to Result.
+// Gives the API time to respond while maintaining a sense of deliberate ritual.
+const MATCHING_AUTO_ADVANCE_MS = 1800;
+
+type ListenPhase = 'listening' | 'matching';
+
+export function ListenScreen({ onNext }: { onNext: () => void }) {
+  const [phase, setPhase] = useState<ListenPhase>('listening');
+
   // Configure AVAudioSession so music apps keep playing while we record
   useAudioSession();
 
-  const headphonesConnected =
-    audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones';
+  // Once matching starts, auto-advance to Result after the timeout so the
+  // result arrives as one confident reveal — no extra tap required.
+  useEffect(() => {
+    if (phase !== 'matching') return;
+    const timer = setTimeout(onNext, MATCHING_AUTO_ADVANCE_MS);
+    return () => clearTimeout(timer);
+  }, [phase, onNext]);
 
-  function mapFailureReason(message: string): FailureReason {
-    const lowered = message.toLowerCase();
-
-    if (lowered.includes('microphone permission denied')) {
-      return 'MICROPHONE_PERMISSION_MISSING';
-    }
-    if (lowered.includes('network request failed') || lowered.includes('failed to fetch')) {
-      return 'NO_NETWORK';
-    }
-    if (lowered.includes('timeout')) {
-      return 'RECOGNITION_TIMEOUT';
-    }
-    if (lowered.includes('no music found in audio') || lowered.includes('could not identify song')) {
-      return headphonesConnected ? 'HEADPHONES_PRIVATE_AUDIO' : 'NO_AUDIO_DETECTED';
-    }
-    if (lowered.includes('no recording captured') || lowered.includes('no audio')) {
-      return headphonesConnected ? 'HEADPHONES_PRIVATE_AUDIO' : 'NO_AUDIO_DETECTED';
-    }
-
-    return 'UNKNOWN_ERROR';
+  if (phase === 'matching') {
+    return (
+      <FadeInView duration={180}>
+        <ShellCard
+          eyebrow="Matching"
+          title="Tightening the field."
+          body="Hold still — locking the match."
+          ctaLabel="Reveal result"
+          onPress={onNext}
+        />
+      </FadeInView>
+    );
   }
 
-  const stopCaptureEarly = () => {
-    if (stopCaptureRef.current) {
-      stopCaptureRef.current();
-      stopCaptureRef.current = null;
-    }
-  };
-
-  const startRecognition = async (forceBypass = false) => {
-    if (busy) {
-      stopCaptureEarly();
-      return;
-    }
-
-    const isPrivateRoute = audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones';
-    if (isPrivateRoute && !forceBypass && !bypassPrivateGuard) {
-      console.warn('[listen] advisory: private listening route detected', audioRoute);
-      setErrorMessage('Headphone audio may be private. Your music may be playing through headphones where the microphone cannot hear it. Try the phone mic anyway, use Headphone Mode, or search lyrics.');
-      setPhase('idle');
-      return;
-    }
-    if (isPrivateRoute) {
-      setBypassPrivateGuard(true);
-      console.log('[listen] proceeding with built-in mic bypass', audioRoute);
-    }
-
-    setBusy(true);
-    setErrorMessage(null);
-    setQuietMode(false);
-    console.log('[listen] starting recognition');
-
-    const listenStartedAtMs = Date.now();
-    let listenEndedAtMs = listenStartedAtMs;
-    let recognitionStartedAtMs = 0;
-    let recognitionEndedAtMs = 0;
-    let failureReason: FailureReason | null = null;
-    let confidence: number | null = null;
-    let matchedSongId: string | null = null;
-    let matchedOffsetMs: number | null = null;
-    let effectiveInputRoute: InputRoute = audioRoute.inputRoute;
-
-    try {
-      const permission = await AudioModule.requestRecordingPermissionsAsync();
-      if (!permission.granted) {
-        failureReason = 'MICROPHONE_PERMISSION_MISSING';
-        throw new Error('Microphone permission denied');
-      }
-
-      setPhase('listening');
-      setSecondsLeft(Math.ceil(CAPTURE_DURATION_MS / 1000));
-
-      await audioRecorder.prepareToRecordAsync();
-
-      // Prefer external microphone routes when available (Bluetooth/wired).
-      try {
-        const inputs = audioRecorder.getAvailableInputs();
-        if (Array.isArray(inputs) && inputs.length > 0) {
-          console.log(
-            '[listen] available inputs:',
-            inputs.map((input) => ({ name: input.name, type: input.type, uid: input.uid })),
-          );
-
-          const rankedInputs = [...inputs].sort(
-            (left, right) => scoreRecorderInput(right.name, right.type) - scoreRecorderInput(left.name, left.type),
-          );
-          const preferred = rankedInputs[0];
-
-          if (preferred?.uid && scoreRecorderInput(preferred.name, preferred.type) > 0) {
-            audioRecorder.setInput(preferred.uid);
-          }
-
-          const selectedInput = await audioRecorder.getCurrentInput();
-          if (selectedInput) {
-            effectiveInputRoute = inferInputRoute(`${selectedInput.name} ${selectedInput.type}`);
-            console.log('[listen] selected input route:', selectedInput.name, selectedInput.type, effectiveInputRoute);
-          }
-        }
-      } catch (inputErr: any) {
-        console.warn('[listen] input route selection failed:', inputErr?.message || String(inputErr));
-      }
-
-      await audioRecorder.record();
-      console.log('[listen] recorder started');
-
-      const tickId = setInterval(() => {
-        setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
-      }, 1000);
-
-      await new Promise((resolve) => {
-        const timer = setTimeout(resolve, CAPTURE_DURATION_MS);
-        stopCaptureRef.current = () => {
-          clearTimeout(timer);
-          resolve(null);
-        };
-      });
-      clearInterval(tickId);
-      setSecondsLeft(0);
-      listenEndedAtMs = Date.now();
-
-      await audioRecorder.stop();
-      const recordingUri = audioRecorder.uri;
-      console.log('[listen] recorder stopped, uri=', recordingUri);
-
-      if (!recordingUri) {
-        throw new Error('No recording captured');
-      }
-
-      const durationMs = CAPTURE_DURATION_MS;
-
-      setPhase('matching');
-  recognitionStartedAtMs = Date.now();
-      const recognizedTrack = await uploadListenSample(recordingUri, durationMs);
-  recognitionEndedAtMs = Date.now();
-  confidence = recognizedTrack.matchConfidence;
-  matchedSongId = recognizedTrack.id;
-  matchedOffsetMs = recognizedTrack.matchedInMs;
-      console.log('[listen] recognized:', recognizedTrack.title, 'by', recognizedTrack.artist);
-
-      setTimeout(() => {
-        onRecognizedRef.current(recognizedTrack);
-      }, MATCHING_AUTO_ADVANCE_MS);
-    } catch (error: any) {
-      if (!recognitionEndedAtMs && recognitionStartedAtMs) {
-        recognitionEndedAtMs = Date.now();
-      }
-      if (!listenEndedAtMs || listenEndedAtMs < listenStartedAtMs) {
-        listenEndedAtMs = Date.now();
-      }
-      failureReason = failureReason || mapFailureReason(error?.message || 'unknown');
-      console.warn('[listen] recognition failed:', error?.message, error?.stack);
-      setPhase('idle');
-      setSecondsLeft(0);
-      setLastFailureReason(failureReason);
-      setErrorMessage(error?.message || 'Could not identify song. Try again.');
-      setShowLyricInput(true);
-      if (failureReason === 'HEADPHONES_PRIVATE_AUDIO' || failureReason === 'NO_AUDIO_DETECTED') {
-        setQuietMode(true);
-      }
-    } finally {
-      const endedNow = Date.now();
-      if (!listenEndedAtMs || listenEndedAtMs < listenStartedAtMs) {
-        listenEndedAtMs = endedNow;
-      }
-      if (recognitionStartedAtMs && !recognitionEndedAtMs) {
-        recognitionEndedAtMs = endedNow;
-      }
-
-      logRecognitionAttempt({
-        recognitionSource: 'microphone',
-        outputRoute: audioRoute.outputRoute,
-        inputRoute: effectiveInputRoute,
-        listenStartedAtMs,
-        listenEndedAtMs,
-        recognitionStartedAtMs,
-        recognitionEndedAtMs,
-        failureReason,
-        confidence,
-        matchedSongId,
-        matchedOffsetMs,
-      });
-
-      stopCaptureRef.current = null;
-      setBusy(false);
-    }
-  };
-
-  const submitLyric = async () => {
-    if (lyricBusy) {
-      return;
-    }
-    const trimmed = lyricQuery.trim();
-    if (trimmed.length < 3) {
-      setErrorMessage('Type at least 3 characters of a lyric, phrase, or song title.');
-      return;
-    }
-    setLyricBusy(true);
-    setErrorMessage(null);
-    setQuietMode(false);
-    console.log('[listen] identifying by text:', trimmed);
-
-    const listenStartedAtMs = Date.now();
-    const listenEndedAtMs = listenStartedAtMs;
-    const recognitionStartedAtMs = Date.now();
-    let recognitionEndedAtMs = 0;
-    let failureReason: FailureReason | null = null;
-    let confidence: number | null = null;
-    let matchedSongId: string | null = null;
-    let matchedOffsetMs: number | null = null;
-
-    try {
-      const recognizedTrack = await identifyByText(trimmed);
-      recognitionEndedAtMs = Date.now();
-      confidence = recognizedTrack.matchConfidence;
-      matchedSongId = recognizedTrack.id;
-      matchedOffsetMs = recognizedTrack.matchedInMs;
-      console.log('[listen] text-match recognized:', recognizedTrack.title);
-      setPhase('matching');
-      setTimeout(() => {
-        onRecognizedRef.current(recognizedTrack);
-      }, MATCHING_AUTO_ADVANCE_MS);
-    } catch (error: any) {
-      recognitionEndedAtMs = Date.now();
-      failureReason = mapFailureReason(error?.message || 'unknown');
-      console.warn('[listen] text-match failed:', error?.message);
-      setErrorMessage(error?.message || 'Could not match that lyric. Try a different line.');
-    } finally {
-      logRecognitionAttempt({
-        recognitionSource: 'manual_lyrics',
-        outputRoute: audioRoute.outputRoute,
-        inputRoute: audioRoute.inputRoute,
-        listenStartedAtMs,
-        listenEndedAtMs,
-        recognitionStartedAtMs,
-        recognitionEndedAtMs,
-        failureReason,
-        confidence,
-        matchedSongId,
-        matchedOffsetMs,
-      });
-      setLyricBusy(false);
-    }
-  };
-
-  const inMatching = phase === 'matching';
-  const inListening = phase === 'listening';
-  const eyebrowText = inMatching ? 'Match Locking' : inListening ? 'Listening Live' : 'Ready';
-  const subtitleText = inMatching
-    ? 'Tightening rings and fingerprint lock in motion.'
-    : inListening
-      ? `Capturing audio — ${secondsLeft}s left. Tap orb to stop early.`
-      : 'Tap to listen';
-
-  // Derive smart failure copy from last failure reason
-  const diagnosticTitle =
-    lastFailureReason === 'HEADPHONES_PRIVATE_AUDIO'
-      ? 'Headphone audio may be private.'
-      : lastFailureReason === 'NO_AUDIO_DETECTED'
-        ? 'I could not hear enough music.'
-        : lastFailureReason === 'LOW_CONFIDENCE'
-          ? 'Possible match was too weak.'
-          : lastFailureReason === 'MICROPHONE_PERMISSION_MISSING'
-            ? 'Microphone permission needed.'
-            : lastFailureReason === 'NO_NETWORK'
-              ? 'No network connection.'
-              : errorMessage
-                ? 'Could not identify the song.'
-                : null;
-
-  const diagnosticBody =
-    lastFailureReason === 'HEADPHONES_PRIVATE_AUDIO'
-      ? 'Your music may be playing through headphones where the microphone cannot hear it. Try Headphone Mode, share a song link, or search lyrics.'
-      : lastFailureReason === 'NO_AUDIO_DETECTED'
-        ? 'Move closer to the speaker, raise the volume, or try lyric search.'
-        : lastFailureReason === 'LOW_CONFIDENCE'
-          ? 'Try again closer to the sound, or search by lyric, artist, or vibe.'
-          : lastFailureReason === 'MICROPHONE_PERMISSION_MISSING'
-            ? 'Allow microphone access so SayWetin can listen.'
-            : lastFailureReason === 'NO_NETWORK'
-              ? 'Check your connection and try again.'
-              : errorMessage ?? null;
-
   return (
-    <FadeInView duration={inMatching ? 220 : 180}>
-      <View style={styles.screen}>
-        <View style={styles.ambientTop} />
-        <Text style={[styles.eyebrow, inListening && styles.eyebrowLive, inMatching && styles.eyebrowMatch]}>
-          {eyebrowText}
-        </Text>
-        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
-          SayWetin
-        </Text>
-        <Text style={styles.subtitle}>{subtitleText}</Text>
-        <HeadphonesDetectedBanner
-          visible={headphonesConnected || quietMode}
-          onTryAnyway={headphonesConnected ? () => startRecognition(true) : undefined}
-        />
-
-        <OrbListener phase={phase} onPress={inMatching ? undefined : startRecognition} />
-
-        {!inMatching ? (
-          <>
-            <Text style={styles.orbHint}>
-              {inListening
-                ? `Listening… ${secondsLeft}s — tap orb to stop early`
-                : 'Tap orb to start match'}
-            </Text>
-            {diagnosticTitle && !quietMode ? (
-              <View style={styles.diagCard}>
-                <Text style={styles.diagTitle}>{diagnosticTitle}</Text>
-                {diagnosticBody ? <Text style={styles.diagBody}>{diagnosticBody}</Text> : null}
-                {lastFailureReason === 'HEADPHONES_PRIVATE_AUDIO' && !bypassPrivateGuard ? (
-                  <Pressable style={styles.diagAction} onPress={() => startRecognition(true)}>
-                    <Text style={styles.diagActionText}>Try with phone mic</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
-            {quietMode ? (
-              <View style={styles.quietCard}>
-                <Text style={styles.quietTitle}>Could not hear the headphone audio</Text>
-                <Text style={styles.quietBody}>
-                  Your music may be playing privately through headphones. Try Headphone Mode, share a song link, search lyrics, or play it out loud.
-                </Text>
-                <View style={styles.quietActionsRow}>
-                  <Pressable style={styles.quietAction} onPress={() => setQuietMode(false)}>
-                    <Text style={styles.quietActionText}>Try Headphone Mode</Text>
-                  </Pressable>
-                  <Pressable style={styles.quietAction} onPress={onOpenShareMode}>
-                    <Text style={styles.quietActionText}>Share song link</Text>
-                  </Pressable>
-                </View>
-                <View style={styles.quietActionsRow}>
-                  <Pressable style={styles.quietAction} onPress={onOpenVibeSearch}>
-                    <Text style={styles.quietActionText}>Search lyrics</Text>
-                  </Pressable>
-                  <Pressable style={styles.quietAction} onPress={() => setShowLyricInput(true)}>
-                    <Text style={styles.quietActionText}>Paste a line</Text>
-                  </Pressable>
-                  <Pressable style={styles.quietAction} onPress={() => { setBypassPrivateGuard(false); void startRecognition(true); }}>
-                    <Text style={styles.quietActionText}>Try microphone again</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : null}
-            {showLyricInput ? (
-              <View style={styles.wetinSheet}>
-                <Text style={styles.wetinTitle}>Wetin be this?</Text>
-                <Text style={styles.wetinSub}>
-                  Paste a lyric, type a song, describe a vibe, or ask what a phrase means.
-                </Text>
-                {/* Mode chips */}
-                <View style={styles.chipRow}>
-                  {(['lyrics', 'song', 'artist', 'slang', 'vibe'] as const).map((m) => (
-                    <Pressable
-                      key={m}
-                      style={[styles.chip, searchMode === m && styles.chipActive]}
-                      onPress={() => setSearchMode(m)}
-                    >
-                      <Text style={[styles.chipText, searchMode === m && styles.chipTextActive]}>
-                        {m.charAt(0).toUpperCase() + m.slice(1)}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <TextInput
-                  value={lyricQuery}
-                  onChangeText={setLyricQuery}
-                  placeholder={
-                    searchMode === 'lyrics'
-                      ? 'that Burna Boy destiny line…'
-                      : searchMode === 'song'
-                        ? 'Asake lonely at the top'
-                        : searchMode === 'artist'
-                          ? 'Afrobeats churchy street anthem'
-                          : searchMode === 'slang'
-                            ? "what does 'omo ope' mean?"
-                            : 'confident confrontational street energy'
-                  }
-                  placeholderTextColor={colors.textMuted}
-                  style={styles.lyricInput}
-                  multiline
-                  editable={!lyricBusy}
-                />
-                <View style={styles.wetinActions}>
-                  <Pressable
-                    onPress={submitLyric}
-                    style={[styles.wetinBtn, styles.wetinBtnPrimary, lyricBusy && styles.lyricButtonDisabled]}
-                    disabled={lyricBusy}
-                  >
-                    <Text style={styles.wetinBtnPrimaryText}>
-                      {lyricBusy ? 'Decoding…' : 'Decode'}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={submitLyric}
-                    style={[styles.wetinBtn, lyricBusy && styles.lyricButtonDisabled]}
-                    disabled={lyricBusy}
-                  >
-                    <Text style={styles.wetinBtnText}>Match song</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={onOpenVibeSearch}
-                    style={styles.wetinBtn}
-                  >
-                    <Text style={styles.wetinBtnText}>Search lyrics</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : null}
-          </>
-        ) : null}
-      </View>
+    <FadeInView>
+      <ShellCard
+        eyebrow="Listen"
+        title="Listening is alive, not decorative."
+        body="This placeholder will become the native capture ritual with one motion system and one state owner."
+        ctaLabel="Lock the match"
+        onPress={() => setPhase('matching')}
+      />
     </FadeInView>
   );
 }

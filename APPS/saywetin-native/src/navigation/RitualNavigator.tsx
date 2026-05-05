@@ -7,6 +7,8 @@ import { ShareModeScreen } from '../screens/ShareModeScreen';
 import { VibeSearchScreen } from '../screens/VibeSearchScreen';
 import type { RitualController, RitualScreen } from '../state/ritual-state';
 
+// Matching is no longer a separate navigation route — it lives as an internal
+// sub-state inside ListenScreen. The public ritual flow is: Home → Listen → Result.
 export type RitualStackParamList = {
   Home: undefined;
   Listen: undefined;
@@ -72,19 +74,14 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
               ritual.revealResult();
               navigation.navigate('Result');
             }}
-            onOpenShareMode={() => {
-              navigation.navigate('ShareMode');
-            }}
-            onOpenVibeSearch={() => {
-              navigation.navigate('VibeSearch');
-            }}
           />
         )}
       />
+      {/* Result uses a fade reveal instead of a slide so the match lands as one
+          confident moment rather than a panel sliding in from the side. */}
       <Stack.Screen
         name="Result"
-        // Keep this short so Result reveal feels immediate once Listen phase says data is ready.
-        options={{ animation: 'fade', animationDuration: 220 }}
+        options={{ animation: 'fade', animationDuration: 320 }}
         children={({ navigation }) => (
           <ResultScreen
             track={ritual.track}
