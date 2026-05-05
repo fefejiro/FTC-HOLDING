@@ -1,9 +1,7 @@
-import type { MatchSource, RecognitionSource, RitualTrack } from '../state/ritual-state';
-import Constants from 'expo-constants';
+import type { MatchSource, RitualTrack } from '../state/ritual-state';
 
-const apiBaseUrl =
-  process.env.EXPO_PUBLIC_API_BASE_URL?.trim() ||
-  String(Constants.expoConfig?.extra?.EXPO_PUBLIC_API_BASE_URL || '').trim();
+const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+const railWayFallbackBaseUrl = 'https://saywetin-api-production.up.railway.app';
 
 type ListenResponse = {
   success: boolean;
@@ -20,14 +18,7 @@ type ListenResponse = {
     confidenceScore?: number | null;
     coverArtUrl?: string | null;
     matchSource?: string | null;
-    // Timing model fields (scaffold)
-    listenStartedAtMs?: number;
-    listenEndedAtMs?: number;
-    sampleMidpointAtMs?: number;
-    recognitionReceivedAtMs?: number;
-    resultShownAtMs?: number;
-    providerSongOffsetMs?: number;
-    calculatedDisplayOffsetMs?: number;
+    matchedOffsetMs?: number | null;
   };
   matchSource?: string | null;
   confidence?: number | null;
@@ -47,6 +38,8 @@ type RecognizedTrackDetailResponse = {
     coverArtUrl?: string | null;
     spotifyId?: string | null;
     youtubeId?: string | null;
+    matchedOffsetMs?: number | null;
+    playOffsetMs?: number | null;
   };
   lyrics?: {
     text?: string;
@@ -129,23 +122,9 @@ function normalizeMatchSource(value?: string | null): MatchSource {
   return 'unknown';
 }
 
-function recognitionSourceFromMatchSource(
-  matchSource: MatchSource,
-  fallback: RecognitionSource,
-): RecognitionSource {
-  if (matchSource === 'spotify') {
-    return 'streaming_metadata';
-  }
-  if (matchSource === 'lyric_text' || matchSource === 'manual') {
-    return 'manual_lyrics';
-  }
-  return fallback;
-}
-
 function mapRecognizedTrack(
   recognized: NonNullable<ListenResponse['recognizedTrack']>,
   matchSource: MatchSource,
-  recognitionSource: RecognitionSource,
 ): RitualTrack {
   const links = buildTrackLinks(
     recognized.title,
@@ -168,45 +147,13 @@ function mapRecognizedTrack(
     youtubeUrl: links.youtubeUrl,
     chips: recognized.genre ? [recognized.genre] : [],
     syncedLyrics: [],
+    lyricsAnchorOffsetMs:
+      typeof recognized.matchedOffsetMs === 'number' && Number.isFinite(recognized.matchedOffsetMs)
+        ? Math.max(0, recognized.matchedOffsetMs)
+        : 0,
     matchSource,
-    recognitionSource,
     culturalAnalyses: [],
   };
-}
-
-function normalizeOffsetMs(value: unknown): number | null {
-  const n = Number(value);
-  if (!Number.isFinite(n)) {
-    return null;
-  }
-  if (n < 0) {
-    return null;
-  }
-  return Math.round(n);
-}
-
-function resolveMatchedInMs(
-  recognized: NonNullable<ListenResponse['recognizedTrack']>,
-  durationMs: number,
-): number {
-  // Prefer server-calculated display timing, then provider offset, then sample midpoint.
-  const calculated = normalizeOffsetMs(recognized.calculatedDisplayOffsetMs);
-  if (calculated !== null) {
-    return calculated;
-  }
-
-  const provider = normalizeOffsetMs(recognized.providerSongOffsetMs);
-  if (provider !== null) {
-    return provider;
-  }
-
-  const sampleMidpoint = normalizeOffsetMs(recognized.sampleMidpointAtMs);
-  if (sampleMidpoint !== null) {
-    return sampleMidpoint;
-  }
-
-  // For microphone captures, start near the middle of the sample window.
-  return Math.round(Math.max(0, durationMs) * 0.5);
 }
 
 function firstNonEmptyLine(text?: string) {
@@ -239,6 +186,13 @@ function mergeDetailedTrack(base: RitualTrack, detail: RecognizedTrackDetailResp
     firstAnalysis?.translation ||
     base.meaning;
 
+  const matchedOffsetMs =
+    typeof track.matchedOffsetMs === 'number' && Number.isFinite(track.matchedOffsetMs)
+      ? track.matchedOffsetMs
+      : typeof track.playOffsetMs === 'number' && Number.isFinite(track.playOffsetMs)
+        ? track.playOffsetMs
+        : base.lyricsAnchorOffsetMs;
+
   return {
     ...base,
     year: track.releaseYear ? String(track.releaseYear) : base.year,
@@ -249,6 +203,7 @@ function mergeDetailedTrack(base: RitualTrack, detail: RecognizedTrackDetailResp
     chips: track.genre ? [track.genre] : base.chips,
     spotifyUrl: links.spotifyUrl,
     youtubeUrl: links.youtubeUrl,
+    lyricsAnchorOffsetMs: Math.max(0, matchedOffsetMs || 0),
     culturalAnalyses: analyses.length > 0 ? analyses : base.culturalAnalyses,
   };
 }
@@ -263,15 +218,11 @@ export async function uploadListenSample(
 
   const startedAt = Date.now();
 
-  const uploadUrl = `${apiBaseUrl}/api/listen`;
-  console.log('[listen] upload begin', { url: uploadUrl, uri: recordingUri, durationMs });
+  const baseCandidates = [apiBaseUrl];
+  if (apiBaseUrl !== railWayFallbackBaseUrl) {
+    baseCandidates.push(railWayFallbackBaseUrl);
+  }
 
-  // Use fetch+FormData instead of expo-file-system/legacy uploadAsync.
-  // FileSystemLegacyModule creates its own OkHttp instance whose SSL trust
-  // manager does not honour the system certificate chain, causing
-  // CertPathValidatorException on Android even for valid Let's Encrypt certs.
-  // RN's built-in fetch goes through NetworkingModule / OkHttpClientProvider
-  // which correctly validates the full certificate chain.
   const form = new FormData();
   form.append('audio', {
     uri: recordingUri,
@@ -280,24 +231,39 @@ export async function uploadListenSample(
   } as unknown as Blob);
   form.append('duration', String(durationMs));
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-  let uploadResponse: Response;
-  try {
-    uploadResponse = await fetch(uploadUrl, {
-      method: 'POST',
-      body: form,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    console.log('[listen] upload done', {
-      status: uploadResponse.status,
-      elapsedMs: Date.now() - startedAt,
-    });
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    console.warn('[listen] upload threw:', err?.message || String(err));
-    throw new Error(`Listen upload failed: ${err?.message || String(err)}`);
+  let uploadResponse: Response | null = null;
+  let lastNetworkError: unknown = null;
+
+  for (const baseUrl of baseCandidates) {
+    const uploadUrl = `${baseUrl}/api/listen`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    console.log('[listen] upload begin', { url: uploadUrl, uri: recordingUri, durationMs });
+    try {
+      uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        body: form,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      console.log('[listen] upload done', {
+        url: uploadUrl,
+        status: uploadResponse.status,
+        elapsedMs: Date.now() - startedAt,
+      });
+      break;
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      lastNetworkError = err;
+      console.warn('[listen] upload threw:', {
+        url: uploadUrl,
+        message: err?.message || String(err),
+      });
+    }
+  }
+
+  if (!uploadResponse) {
+    throw new Error(`Listen upload failed: ${(lastNetworkError as any)?.message || String(lastNetworkError)}`);
   }
 
   let payload: ListenResponse;
@@ -314,11 +280,9 @@ export async function uploadListenSample(
   const matchSource = normalizeMatchSource(
     payload.recognizedTrack.matchSource ?? payload.matchSource ?? 'acrcloud',
   );
-  const recognitionSource = recognitionSourceFromMatchSource(matchSource, 'microphone');
-  const matchedInMs = resolveMatchedInMs(payload.recognizedTrack, durationMs);
   const baseTrack = {
-    ...mapRecognizedTrack(payload.recognizedTrack, matchSource, recognitionSource),
-    matchedInMs,
+    ...mapRecognizedTrack(payload.recognizedTrack, matchSource),
+    matchedInMs: Date.now() - startedAt,
   };
 
   try {
@@ -349,7 +313,7 @@ export async function uploadListenSample(
     }
 
     if (detail) {
-      return mergeDetailedTrack(baseTrack, detail);
+      return { ...mergeDetailedTrack(baseTrack, detail), matchedInMs: Date.now() - startedAt };
     }
   } catch (err: any) {
     console.warn('[listen] detail fetch threw:', err?.message || String(err));
@@ -395,11 +359,9 @@ export async function identifyByText(query: string): Promise<RitualTrack> {
   const matchSource = normalizeMatchSource(
     payload.recognizedTrack.matchSource ?? payload.matchSource ?? 'lyric_text',
   );
-  const recognitionSource = recognitionSourceFromMatchSource(matchSource, 'manual_lyrics');
-  const matchedInMs = resolveMatchedInMs(payload.recognizedTrack, 0);
   const baseTrack = {
-    ...mapRecognizedTrack(payload.recognizedTrack, matchSource, recognitionSource),
-    matchedInMs,
+    ...mapRecognizedTrack(payload.recognizedTrack, matchSource),
+    matchedInMs: Date.now() - startedAt,
   };
 
   try {
@@ -409,7 +371,7 @@ export async function identifyByText(query: string): Promise<RitualTrack> {
 
     if (detailResponse.ok) {
       const detail = (await detailResponse.json()) as RecognizedTrackDetailResponse;
-      return mergeDetailedTrack(baseTrack, detail);
+      return { ...mergeDetailedTrack(baseTrack, detail), matchedInMs: Date.now() - startedAt };
     }
   } catch {
     // ignore

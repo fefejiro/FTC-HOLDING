@@ -149,9 +149,9 @@ export function ClientSiteShell({
         <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-2 text-body-sm text-tx-muted">
           <span>
             {clientName} - managed by{' '}
-            <a href="/" className="hover:text-tx-secondary transition-colors font-medium">
+            <Link href="/" className="hover:text-tx-secondary transition-colors font-medium">
               Una Labs
-            </a>
+            </Link>
           </span>
           <span>(c) {new Date().getFullYear()} Una Labs. All rights reserved.</span>
         </div>

@@ -6,16 +6,16 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 
 export async function generateStaticParams() {
-  return demoModules.map((module) => ({ slug: module.slug }));
+  return demoModules.map((m) => ({ slug: m.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const module = demoModules.find((m) => m.slug === slug);
-  if (!module) return { title: 'Demo Not Found | Una Labs' };
+  const demoModule = demoModules.find((m) => m.slug === slug);
+  if (!demoModule) return { title: 'Demo Not Found | Una Labs' };
   return {
-    title: `${module.title} | Una Labs Demo`,
-    description: module.description,
+    title: `${demoModule.title} | Una Labs Demo`,
+    description: demoModule.description,
   };
 }
 
@@ -27,8 +27,8 @@ const LIVE_URLS: Record<string, string> = {
 
 export default async function DemoSlugPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const module = demoModules.find((m) => m.slug === slug);
-  if (!module) notFound();
+  const demoModule = demoModules.find((m) => m.slug === slug);
+  if (!demoModule) notFound();
 
   const liveUrl = LIVE_URLS[slug];
   const isExternal = liveUrl && liveUrl.startsWith('http');
@@ -41,20 +41,20 @@ export default async function DemoSlugPage({ params }: { params: Promise<{ slug:
         <div className="mb-8 flex items-center gap-2 text-body-sm text-tx-muted">
           <Link href="/demo" className="hover:text-brand-teal transition-colors">All walkthroughs</Link>
           <span>/</span>
-          <span className="text-tx-secondary">{module.label}</span>
+          <span className="text-tx-secondary">{demoModule.label}</span>
         </div>
 
         {/* Header */}
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-4">
             <Badge variant="teal">Demo</Badge>
-            <Badge variant="muted">{module.product}</Badge>
+            <Badge variant="muted">{demoModule.product}</Badge>
           </div>
-          <h1 className="text-display text-tx-heading max-w-3xl">{module.title}</h1>
-          <p className="mt-4 text-body-lg text-tx-secondary leading-relaxed max-w-2xl">{module.description}</p>
+          <h1 className="text-display text-tx-heading max-w-3xl">{demoModule.title}</h1>
+          <p className="mt-4 text-body-lg text-tx-secondary leading-relaxed max-w-2xl">{demoModule.description}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             {liveUrl && (
-              <Button href={liveUrl} variant="primary" external={isExternal || undefined}>{module.cta.label}</Button>
+              <Button href={liveUrl} variant="primary" external={isExternal || undefined}>{demoModule.cta.label}</Button>
             )}
             <Button href="/demo" variant="secondary">All walkthroughs</Button>
           </div>
@@ -72,14 +72,14 @@ export default async function DemoSlugPage({ params }: { params: Promise<{ slug:
               <span className="text-body-sm text-tx-muted font-mono">{isExternal ? liveUrl : `unalabs.cloud${liveUrl}`}</span>
               {isExternal && (
                 <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="ml-auto text-[11px] font-semibold text-brand-teal hover:underline">
-                  Open full screen ↗
+                  Open full screen ?
                 </a>
               )}
             </div>
             <div className="relative w-full" style={{ height: '560px' }}>
               <iframe
                 src={liveUrl}
-                title={module.title}
+                title={demoModule.title}
                 className="w-full h-full border-0"
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
               />
@@ -93,16 +93,16 @@ export default async function DemoSlugPage({ params }: { params: Promise<{ slug:
               </svg>
             </div>
             <p className="text-h4 text-tx-heading font-semibold">Live walkthrough in production</p>
-            <p className="mt-2 text-body text-tx-secondary max-w-md mx-auto">{module.placeholder}</p>
+            <p className="mt-2 text-body text-tx-secondary max-w-md mx-auto">{demoModule.placeholder}</p>
             <div className="mt-6">
-              <Button href={module.cta.href} variant="primary">{module.cta.label}</Button>
+              <Button href={demoModule.cta.href} variant="primary">{demoModule.cta.label}</Button>
             </div>
           </div>
         )}
 
         {/* Feature bullets */}
         <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {module.bullets.map((bullet, idx) => (
+          {demoModule.bullets.map((bullet, idx) => (
             <div key={idx} className="rounded-2xl border border-border bg-white p-6 shadow-sm">
               <span className="block text-brand-teal font-bold text-lg mb-3">+</span>
               <p className="text-body text-tx-body leading-relaxed">{bullet}</p>
@@ -114,7 +114,7 @@ export default async function DemoSlugPage({ params }: { params: Promise<{ slug:
         <div className="rounded-3xl border border-border bg-white p-10 text-center shadow-sm">
           <h2 className="text-h2 text-tx-heading">Ready to see it live?</h2>
           <p className="mt-3 text-body text-tx-secondary max-w-xl mx-auto">
-            This is a real system — not a prototype. Start your project and we will build it the same way.
+            This is a real system � not a prototype. Start your project and we will build it the same way.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Button href="/start" variant="primary" size="lg">Start your project</Button>

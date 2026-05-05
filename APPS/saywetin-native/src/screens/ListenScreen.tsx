@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AudioModule, RecordingPresets, useAudioRecorder } from 'expo-audio';
 import { FadeInView } from '../components/FadeInView';
 import { OrbListener } from '../components/OrbListener';
-import { HeadphonesDetectedBanner } from '../components/HeadphonesDetectedBanner';
+import { useAudioRoute, type InputRoute } from '../audio/useAudioRoute';
 import { useAudioSession } from '../audio/useAudioSession';
-import { useAudioRoute } from '../audio/useAudioRoute';
 import { identifyByText, uploadListenSample } from '../api/listen';
-import { logRecognitionAttempt } from '../api/recognition-logger';
-import type { FailureReason, RitualTrack } from '../state/ritual-state';
-import type { InputRoute } from '../audio/useAudioRoute';
+import type { RitualTrack } from '../state/ritual-state';
 import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
@@ -15,8 +14,7 @@ const MATCHING_AUTO_ADVANCE_MS = 250;
 type ListenPhase = 'idle' | 'listening' | 'matching';
 const CAPTURE_DURATION_MS = 5000;
 const LISTEN_MICROCOPY = [
-  'Tap to listen again.',
-  'Listen again.',
+  'Tap once to listen. Tap again to stop early.',
   'Catch am quick. Match am clean.',
   'Live audio in, fingerprint out.',
   'One tap starts. Second tap cuts early.',
@@ -50,9 +48,13 @@ function inferInputRoute(nameOrType: string): InputRoute {
 
 function scoreRecorderInput(name: string, type: string) {
   const sample = `${name} ${type}`.toLowerCase();
-  // Built-in mic scores highest for ambient capture — it hears room audio.
-  // BT headset mic is near the mouth, worst for recognizing music playing around you.
-  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) {
+  if (
+    sample.includes('bluetooth') ||
+    sample.includes('bt') ||
+    sample.includes('sco') ||
+    sample.includes('ble') ||
+    sample.includes('airpods')
+  ) {
     return 3;
   }
   if (
@@ -63,41 +65,27 @@ function scoreRecorderInput(name: string, type: string) {
   ) {
     return 2;
   }
-  if (
-    sample.includes('bluetooth') ||
-    sample.includes('bt') ||
-    sample.includes('sco') ||
-    sample.includes('ble') ||
-    sample.includes('airpods')
-  ) {
+  if (sample.includes('built-in') || sample.includes('builtin') || sample.includes('internal') || sample.includes('mic')) {
     return 1;
   }
   return 0;
 }
 
-type ListenScreenProps = {
-  onRecognized: (track: RitualTrack) => void;
-  onOpenShareMode: () => void;
-  onOpenVibeSearch: () => void;
-};
-
-export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }: ListenScreenProps) {
+export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTrack) => void }) {
   const [phase, setPhase] = useState<ListenPhase>('idle');
   const [busy, setBusy] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [lastFailureReason, setLastFailureReason] = useState<FailureReason | null>(null);
   const [showLyricInput, setShowLyricInput] = useState(false);
-  const [quietMode, setQuietMode] = useState(false);
   const [lyricQuery, setLyricQuery] = useState('');
   const [lyricBusy, setLyricBusy] = useState(false);
-  const [searchMode, setSearchMode] = useState<'lyrics' | 'song' | 'artist' | 'slang' | 'vibe'>('lyrics');
-  const [bypassPrivateGuard, setBypassPrivateGuard] = useState(false);
   const [microcopy] = useState(
     () => LISTEN_MICROCOPY[Math.floor(Math.random() * LISTEN_MICROCOPY.length)],
   );
   const onRecognizedRef = useRef(onRecognized);
   const stopCaptureRef = useRef<(() => void) | null>(null);
+  const listenSessionStartedAtRef = useRef<number | null>(null);
+  const selectedInputRouteRef = useRef<InputRoute>('unknown');
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const audioRoute = useAudioRoute();
 
@@ -117,49 +105,234 @@ export function ListenScreen({ onRecognized, onOpenShareMode, onOpenVibeSearch }
     return () => clearTimeout(timer);
   }, [phase]);
 
-// How long the matching phase is visible before auto-advancing to Result.
-// Gives the API time to respond while maintaining a sense of deliberate ritual.
-const MATCHING_AUTO_ADVANCE_MS = 1800;
-
-type ListenPhase = 'listening' | 'matching';
-
-export function ListenScreen({ onNext }: { onNext: () => void }) {
-  const [phase, setPhase] = useState<ListenPhase>('listening');
-
   // Configure AVAudioSession so music apps keep playing while we record
   useAudioSession();
 
-  // Once matching starts, auto-advance to Result after the timeout so the
-  // result arrives as one confident reveal — no extra tap required.
-  useEffect(() => {
-    if (phase !== 'matching') return;
-    const timer = setTimeout(onNext, MATCHING_AUTO_ADVANCE_MS);
-    return () => clearTimeout(timer);
-  }, [phase, onNext]);
+  const stopCaptureEarly = () => {
+    if (stopCaptureRef.current) {
+      stopCaptureRef.current();
+      stopCaptureRef.current = null;
+    }
+  };
 
-  if (phase === 'matching') {
-    return (
-      <FadeInView duration={180}>
-        <ShellCard
-          eyebrow="Matching"
-          title="Tightening the field."
-          body="Hold still — locking the match."
-          ctaLabel="Reveal result"
-          onPress={onNext}
-        />
-      </FadeInView>
-    );
-  }
+  const startRecognition = async () => {
+    if (busy) {
+      stopCaptureEarly();
+      return;
+    }
+
+    setBusy(true);
+    setErrorMessage(null);
+    setShowLyricInput(false);
+    if (audioRoute.isPrivateListening || audioRoute.outputRoute === 'bluetooth' || audioRoute.outputRoute === 'wired_headphones') {
+      console.warn('[listen] blocked: private listening route detected', audioRoute);
+      setErrorMessage('Private Bluetooth or wired playback cannot be matched reliably. Switch output to phone speaker or use lyric search.');
+      setShowLyricInput(true);
+      setBusy(false);
+      return;
+    }
+    selectedInputRouteRef.current = 'unknown';
+    listenSessionStartedAtRef.current = Date.now();
+    console.log('[listen] starting recognition');
+    console.log('[listen] audio route snapshot', audioRoute);
+
+    try {
+      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        throw new Error('Microphone permission denied');
+      }
+
+      setPhase('listening');
+      setSecondsLeft(Math.ceil(CAPTURE_DURATION_MS / 1000));
+
+      await audioRecorder.prepareToRecordAsync();
+
+      try {
+        const inputs = audioRecorder.getAvailableInputs();
+        if (Array.isArray(inputs) && inputs.length > 0) {
+          console.log(
+            '[listen] available inputs:',
+            inputs.map((input) => ({ name: input.name, type: input.type, uid: input.uid })),
+          );
+
+          const rankedInputs = [...inputs].sort(
+            (left, right) => scoreRecorderInput(right.name, right.type) - scoreRecorderInput(left.name, left.type),
+          );
+          const preferred = rankedInputs[0];
+          if (preferred?.uid && scoreRecorderInput(preferred.name, preferred.type) > 0) {
+            audioRecorder.setInput(preferred.uid);
+          }
+
+          const selectedInput = await audioRecorder.getCurrentInput();
+          if (selectedInput) {
+            const selectedInputRoute = inferInputRoute(`${selectedInput.name} ${selectedInput.type}`);
+            selectedInputRouteRef.current = selectedInputRoute;
+            console.log(
+              '[listen] selected input route:',
+              selectedInput.name,
+              selectedInput.type,
+              selectedInputRoute,
+            );
+          }
+        }
+      } catch (inputErr: any) {
+        console.warn('[listen] input route selection failed:', inputErr?.message || String(inputErr));
+      }
+
+      await audioRecorder.record();
+      console.log('[listen] recorder started');
+
+      const tickId = setInterval(() => {
+        setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+      }, 1000);
+
+      await new Promise((resolve) => {
+        const timer = setTimeout(resolve, CAPTURE_DURATION_MS);
+        stopCaptureRef.current = () => {
+          clearTimeout(timer);
+          resolve(null);
+        };
+      });
+      clearInterval(tickId);
+      setSecondsLeft(0);
+
+      await audioRecorder.stop();
+      const recordingUri = audioRecorder.uri;
+      console.log('[listen] recorder stopped, uri=', recordingUri);
+
+      if (!recordingUri) {
+        throw new Error('No recording captured');
+      }
+
+      const durationMs = CAPTURE_DURATION_MS;
+
+      setPhase('matching');
+      const recognizedTrack = await uploadListenSample(recordingUri, durationMs);
+      console.log('[listen] recognized:', recognizedTrack.title, 'by', recognizedTrack.artist);
+      const lyricsAnchorOffsetMs = listenSessionStartedAtRef.current
+        ? Math.max(0, Date.now() - listenSessionStartedAtRef.current)
+        : 0;
+
+      setTimeout(() => {
+        onRecognizedRef.current({
+          ...recognizedTrack,
+          lyricsAnchorOffsetMs,
+        });
+      }, MATCHING_AUTO_ADVANCE_MS);
+    } catch (error: any) {
+      console.warn('[listen] recognition failed:', error?.message, error?.stack);
+      setPhase('idle');
+      setSecondsLeft(0);
+      const message = String(error?.message || 'Could not identify song. Try again.');
+      const selectedInputRoute = selectedInputRouteRef.current;
+      if (
+        (
+          audioRoute.isPrivateListening ||
+          audioRoute.outputRoute === 'bluetooth' ||
+          audioRoute.outputRoute === 'wired_headphones' ||
+          selectedInputRoute === 'bluetooth_mic' ||
+          selectedInputRoute === 'wired_mic'
+        ) &&
+        message.toLowerCase().includes('no music found in audio')
+      ) {
+        setErrorMessage('Bluetooth or wired private playback cannot be heard reliably through the microphone. Play the song out loud or use lyric search.');
+      } else {
+        setErrorMessage(message);
+      }
+      setShowLyricInput(true);
+    } finally {
+      stopCaptureRef.current = null;
+      setBusy(false);
+    }
+  };
+
+  const submitLyric = async () => {
+    if (lyricBusy) {
+      return;
+    }
+    const trimmed = lyricQuery.trim();
+    if (trimmed.length < 3) {
+      setErrorMessage('Type at least 3 characters of a lyric, phrase, or song title.');
+      return;
+    }
+    setLyricBusy(true);
+    setErrorMessage(null);
+    console.log('[listen] identifying by text:', trimmed);
+    try {
+      const recognizedTrack = await identifyByText(trimmed);
+      console.log('[listen] text-match recognized:', recognizedTrack.title);
+      setPhase('matching');
+      setTimeout(() => {
+        onRecognizedRef.current({
+          ...recognizedTrack,
+          lyricsAnchorOffsetMs: 0,
+        });
+      }, MATCHING_AUTO_ADVANCE_MS);
+    } catch (error: any) {
+      console.warn('[listen] text-match failed:', error?.message);
+      setErrorMessage(error?.message || 'Could not match that lyric. Try a different line.');
+    } finally {
+      setLyricBusy(false);
+    }
+  };
+
+  const inMatching = phase === 'matching';
+  const inListening = phase === 'listening';
+  const eyebrowText = inMatching ? 'Match Locking' : inListening ? 'Listening Live' : 'Ready';
+  const subtitleText = inMatching
+    ? 'Tightening rings and fingerprint lock in motion.'
+    : inListening
+      ? `Capturing audio — ${secondsLeft}s left. Tap orb to stop early.`
+      : microcopy;
 
   return (
-    <FadeInView>
-      <ShellCard
-        eyebrow="Listen"
-        title="Listening is alive, not decorative."
-        body="This placeholder will become the native capture ritual with one motion system and one state owner."
-        ctaLabel="Lock the match"
-        onPress={() => setPhase('matching')}
-      />
+    <FadeInView duration={inMatching ? 220 : 180}>
+      <View style={styles.screen}>
+        <View style={styles.ambientTop} />
+        <Text style={[styles.eyebrow, inListening && styles.eyebrowLive, inMatching && styles.eyebrowMatch]}>
+          {eyebrowText}
+        </Text>
+        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+          SayWetin
+        </Text>
+        <Text style={styles.subtitle}>{subtitleText}</Text>
+
+        <OrbListener phase={phase} onPress={inMatching ? undefined : startRecognition} />
+
+        {!inMatching ? (
+          <>
+            <Text style={styles.orbHint}>
+              {inListening
+                ? `Listening… ${secondsLeft}s — tap orb to stop early`
+                : 'Tap orb to start match'}
+            </Text>
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+            {showLyricInput ? (
+              <View style={styles.lyricBox}>
+                <Text style={styles.lyricHint}>Paste a lyric, phrase, or song title</Text>
+                <TextInput
+                  value={lyricQuery}
+                  onChangeText={setLyricQuery}
+                  placeholder="e.g. dem dey vibe for ginger street"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.lyricInput}
+                  multiline
+                  editable={!lyricBusy}
+                />
+                <Pressable
+                  onPress={submitLyric}
+                  style={[styles.lyricButton, lyricBusy && styles.lyricButtonDisabled]}
+                  disabled={lyricBusy}
+                >
+                  <Text style={styles.lyricButtonText}>
+                    {lyricBusy ? 'Matching lyric...' : 'Match by lyric'}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </>
+        ) : null}
+      </View>
     </FadeInView>
   );
 }
@@ -218,160 +391,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 320,
   },
-  quietCard: {
-    marginTop: 10,
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    padding: 12,
-    gap: 10,
-  },
-  quietTitle: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  quietBody: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  quietActionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  quietAction: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.violetEdge,
-    backgroundColor: colors.violetWash,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  quietActionText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
   lyricBox: {
     marginTop: 14,
     width: '100%',
     maxWidth: 340,
     gap: 8,
-  },
-  diagCard: {
-    marginTop: 8,
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(232,184,76,0.28)',
-    backgroundColor: 'rgba(232,184,76,0.07)',
-    padding: 14,
-    gap: 6,
-  },
-  diagTitle: {
-    color: colors.amber,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  diagBody: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  diagAction: {
-    alignSelf: 'flex-start',
-    marginTop: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.violetEdge,
-    backgroundColor: colors.violetWash,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  diagActionText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  wetinSheet: {
-    marginTop: 14,
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    padding: 16,
-    gap: 10,
-  },
-  wetinTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  wetinSub: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  chip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.violetEdge,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  chipActive: {
-    backgroundColor: colors.violet,
-    borderColor: colors.violet,
-  },
-  chipText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  chipTextActive: {
-    color: '#fff',
-  },
-  wetinActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 2,
-  },
-  wetinBtn: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.violetEdge,
-    backgroundColor: colors.violetWash,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  wetinBtnPrimary: {
-    backgroundColor: colors.violet,
-    borderColor: colors.violet,
-  },
-  wetinBtnPrimaryText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  wetinBtnText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '600',
   },
   lyricHint: {
     color: colors.textMuted,

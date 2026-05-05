@@ -3,6 +3,42 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getStripeApiUrl } from '@/lib/stripe-config';
 
+// Web Speech API types (not in lib.dom.d.ts by default)
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+  interface SpeechRecognition extends EventTarget {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    start(): void;
+    stop(): void;
+    onresult: ((event: SpeechRecognitionEvent) => void) | null;
+    onerror: ((event: Event) => void) | null;
+    onend: (() => void) | null;
+  }
+  interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList;
+  }
+  interface SpeechRecognitionResultList {
+    readonly length: number;
+    item(index: number): SpeechRecognitionResult;
+    [index: number]: SpeechRecognitionResult;
+  }
+  interface SpeechRecognitionResult {
+    readonly isFinal: boolean;
+    readonly length: number;
+    item(index: number): SpeechRecognitionAlternative;
+    [index: number]: SpeechRecognitionAlternative;
+  }
+  interface SpeechRecognitionAlternative {
+    readonly transcript: string;
+    readonly confidence: number;
+  }
+}
+
 const SPARK_STORAGE_KEY = 'una_spark_pass_session_id';
 const SPARK_TURN_KEY = 'una_spark_turn_number';
 
@@ -64,6 +100,8 @@ export function SparkWidget() {
   const [email, setEmail] = useState('');
   const [payingError, setPayingError] = useState('');
   const [payingLoading, setPayingLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -171,6 +209,36 @@ export function SparkWidget() {
       sendMessage();
     }
   };
+
+  const startVoice = useCallback(() => {
+    const SpeechRecognitionCtor =
+      (typeof window !== 'undefined' && (window.SpeechRecognition ?? window.webkitSpeechRecognition)) || null;
+    if (!SpeechRecognitionCtor) return;
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const rec = new SpeechRecognitionCtor();
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = 'en-US';
+
+    rec.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? '';
+      if (transcript) {
+        setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      }
+    };
+    rec.onerror = () => setIsListening(false);
+    rec.onend = () => setIsListening(false);
+
+    recognitionRef.current = rec;
+    rec.start();
+    setIsListening(true);
+  }, [isListening]);
 
   const handleGetPass = async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -349,6 +417,24 @@ export function SparkWidget() {
                   className="flex-1 resize-none rounded-lg border border-border px-3 py-2 text-[13px] text-tx-heading placeholder-tx-muted focus:outline-none focus:border-brand-teal disabled:opacity-60 leading-relaxed"
                   style={{ maxHeight: '80px' }}
                 />
+                {typeof window !== 'undefined' && (window.SpeechRecognition ?? window.webkitSpeechRecognition) && (
+                  <button
+                    type="button"
+                    onClick={startVoice}
+                    aria-label={isListening ? 'Stop listening' : 'Use voice input'}
+                    className={[
+                      'shrink-0 flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
+                      isListening
+                        ? 'bg-red-500 text-white animate-pulse'
+                        : 'bg-bg-offwhite text-tx-secondary hover:bg-brand-teal/10 hover:text-brand-teal border border-border',
+                    ].join(' ')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                      <path d="M8.25 4.5a3.75 3.75 0 1 1 7.5 0v8.25a3.75 3.75 0 1 1-7.5 0V4.5Z" />
+                      <path d="M6 10.5a.75.75 0 0 1 .75.75v1.5a5.25 5.25 0 1 0 10.5 0v-1.5a.75.75 0 0 1 1.5 0v1.5a6.751 6.751 0 0 1-6 6.709v2.291h3a.75.75 0 0 1 0 1.5h-7.5a.75.75 0 0 1 0-1.5h3v-2.291a6.751 6.751 0 0 1-6-6.709v-1.5A.75.75 0 0 1 6 10.5Z" />
+                    </svg>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={sendMessage}

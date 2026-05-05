@@ -4,15 +4,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e475ca75-9849-4f46-b536-0e782fd94f7a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../../../APPS/gidi-dashers/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/gidi-dashers/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/main.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/scenes/GameOverScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/scenes/GameOverScene.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/scenes/GameScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/scenes/GameScene.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/scenes/MenuScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/scenes/MenuScene.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/scenes/PreloadScene.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/gidi-dashers/src/scenes/PreloadScene.ts" afterDir="false" />
-    </list>
+    <list default="true" id="e475ca75-9849-4f46-b536-0e782fd94f7a" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

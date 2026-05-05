@@ -1,0 +1,61 @@
+# Unity .gitignore — based on github/gitignore Unity.gitignore
+
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+
+# Asset meta / temp
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity3D generated build files
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Crashlytics generated
+crashlytics-build.properties
+
+# Visual Studio
+.vs/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+
+# Rider
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Asset Store packs (re-import via documented manifest)
+Assets/AssetStore/
+
+# FTC secrets (must NEVER be committed)
+*.jks
+*.keystore
+.secrets/

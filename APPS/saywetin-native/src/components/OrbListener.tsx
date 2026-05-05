@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import { BrandOrb } from './BrandOrb';
 import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
@@ -28,6 +27,10 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
   const pulses = useRef(PULSE_DELAYS_MS.map(() => new Animated.Value(0))).current;
   const activation = useRef(new Animated.Value(0)).current;
   const barValues = useRef(Array.from({ length: 7 }).map(() => new Animated.Value(0.3))).current;
+  const refractionSpin = useRef(new Animated.Value(0)).current;
+  const iconSpin = useRef(new Animated.Value(0)).current;
+  // 0 = idle (violet), 1 = listening (amber), 2 = matching (mint)
+  const colorPhase = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(activation, {
@@ -37,6 +40,45 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
       useNativeDriver: true,
     }).start();
   }, [isActive, activation]);
+
+  // Animate phase color transitions smoothly
+  useEffect(() => {
+    const target = isMatching ? 2 : isListening ? 1 : 0;
+    Animated.timing(colorPhase, {
+      toValue: target,
+      duration: 480,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false, // color interpolation requires JS driver
+    }).start();
+  }, [isMatching, isListening, colorPhase]);
+
+  useEffect(() => {
+    refractionSpin.setValue(0);
+    const anim = Animated.loop(
+      Animated.timing(refractionSpin, {
+        toValue: 1,
+        duration: isMatching ? 2400 : isListening ? 3200 : 5600,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [isListening, isMatching, refractionSpin]);
+
+  useEffect(() => {
+    iconSpin.setValue(0);
+    const anim = Animated.loop(
+      Animated.timing(iconSpin, {
+        toValue: 1,
+        duration: isMatching ? 2200 : isListening ? 3200 : 6400,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [iconSpin, isListening, isMatching]);
 
   // Gentle breathing of the orb itself.
   useEffect(() => {
@@ -125,8 +167,62 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
   });
 
   const statusLabel = isMatching ? 'IDENTIFYING' : isListening ? 'LISTENING' : 'TAP TO LISTEN';
-  const ringTint = isMatching ? colors.mint : isListening ? colors.amber : colors.violetSoft;
-  const barColor = isMatching ? colors.mint : isListening ? colors.amber : colors.violetSoft;
+
+  // Interpolated colors — violet(0) → amber(1) → mint(2)
+  const ringTint = colorPhase.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [colors.violetSoft, colors.amber, colors.mint],
+  });
+  const barColor = ringTint; // same tint for wave bars
+  const orbBodyColor = colorPhase.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: ['rgba(24,18,54,0.86)', 'rgba(39,21,88,0.9)', 'rgba(16,68,49,0.86)'],
+  });
+  const refractionColor = colorPhase.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: ['rgba(255,255,255,0.14)', 'rgba(255,210,100,0.14)', 'rgba(122,214,165,0.14)'],
+  });
+  const lowerGlowColor = colorPhase.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: ['rgba(201,112,255,0.26)', 'rgba(255,180,60,0.22)', 'rgba(122,214,165,0.22)'],
+  });
+  const letterGlowColor = colorPhase.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: ['rgba(180,160,255,0.5)', 'rgba(255,225,170,0.52)', 'rgba(122,214,165,0.5)'],
+  });
+
+  const refractionRotate = refractionSpin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+  const iconRotate = iconSpin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+  const orbFloatY = breathe.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.5, -3.5],
+  });
+  const glossDriftX = breathe.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-2, 3],
+  });
+  const glossDriftY = breathe.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, -2],
+  });
+  const lensScale = breathe.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.985, 1.018],
+  });
+  const letterFloatY = breathe.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, -2.5],
+  });
+  const letterScale = breathe.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.992, 1.016],
+  });
 
   return (
     <View style={styles.wrap}>
@@ -151,7 +247,7 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
               style={[
                 styles.pulseRing,
                 {
-                  borderColor: ringTint,
+                  borderColor: ringTint as unknown as string,
                   opacity: ringOpacity,
                   transform: [{ scale: ringScale }, { scale: tighten }],
                 },
@@ -167,7 +263,7 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
             {
               opacity: activation,
               transform: [{ scale: tighten }],
-              shadowColor: ringTint,
+              shadowColor: ringTint as unknown as string,
             },
           ]}
         />
@@ -178,23 +274,81 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
               styles.orbHit,
               {
                 transform: [{ scale: orbScale }, { scale: tighten }],
-                shadowColor: ringTint,
+                shadowColor: ringTint as unknown as string,
                 shadowOpacity: isActive ? 0.85 : 0.55,
               },
             ]}
           >
-            <BrandOrb
-              size={ORB_SIZE}
-              variant="listen"
-              animated
-              showGlow
-              phase={isMatching ? 'matching' : isListening ? 'listening' : 'idle'}
-            />
+            <Animated.View
+              style={[
+                styles.glassOrb,
+                {
+                  backgroundColor: orbBodyColor,
+                  transform: [{ translateY: orbFloatY }],
+                },
+              ]}
+            >
+              <View style={styles.edgeRing} />
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.refractionSweep,
+                  {
+                    opacity: isActive ? 0.9 : 0.62,
+                    backgroundColor: refractionColor,
+                    transform: [{ rotate: refractionRotate }],
+                  },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.glossArc,
+                  { transform: [{ translateX: glossDriftX }, { translateY: glossDriftY }, { rotate: '-24deg' }] },
+                ]}
+                pointerEvents="none"
+              />
+              <Animated.View
+                style={[
+                  styles.glossDot,
+                  { transform: [{ translateX: glossDriftX }, { translateY: glossDriftY }] },
+                ]}
+                pointerEvents="none"
+              />
+              <Animated.View
+                style={[
+                  styles.lowerGlow,
+                  { backgroundColor: lowerGlowColor },
+                ]}
+                pointerEvents="none"
+              />
+              <Animated.View
+                style={[
+                  styles.innerLens,
+                  {
+                    backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.05)',
+                    borderColor: isActive ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.12)',
+                    transform: [{ scale: lensScale }, { translateY: orbFloatY }],
+                  },
+                ]}
+                pointerEvents="none"
+              />
+              <Animated.Image
+                source={require('../../assets/icon.png')}
+                resizeMode="contain"
+                style={[
+                  styles.orbIcon,
+                  {
+                    tintColor: undefined,
+                    transform: [{ translateY: letterFloatY }, { scale: letterScale }, { rotate: iconRotate }],
+                  },
+                ]}
+              />
+            </Animated.View>
           </Animated.View>
         </Pressable>
       </View>
 
-      <Text style={[styles.statusLabel, { color: ringTint }]}>{statusLabel}</Text>
+      <Animated.Text style={[styles.statusLabel, { color: ringTint as unknown as string }]}>{statusLabel}</Animated.Text>
 
       <Animated.View style={[styles.waveStrip, { opacity: activation }]} pointerEvents="none">
         {barValues.map((value, index) => {
@@ -209,7 +363,7 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
                 styles.waveBar,
                 {
                   transform: [{ scaleY }],
-                  backgroundColor: barColor,
+                  backgroundColor: barColor as unknown as string,
                 },
               ]}
             />
@@ -257,11 +411,73 @@ const styles = StyleSheet.create({
   orbHit: {
     width: ORB_SIZE,
     height: ORB_SIZE,
+    borderRadius: ORB_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 40,
     elevation: 24,
+  },
+  glassOrb: {
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    borderRadius: ORB_SIZE / 2,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  edgeRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: ORB_SIZE / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  refractionSweep: {
+    position: 'absolute',
+    width: ORB_SIZE * 0.7,
+    height: ORB_SIZE * 1.32,
+    borderRadius: 999,
+    top: -24,
+    left: ORB_SIZE * 0.12,
+  },
+  glossArc: {
+    position: 'absolute',
+    width: ORB_SIZE * 0.62,
+    height: ORB_SIZE * 0.42,
+    top: 18,
+    left: 18,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  glossDot: {
+    position: 'absolute',
+    width: 38,
+    height: 38,
+    top: 26,
+    left: 36,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,250,242,0.72)',
+  },
+  lowerGlow: {
+    position: 'absolute',
+    width: ORB_SIZE * 0.72,
+    height: ORB_SIZE * 0.26,
+    bottom: 10,
+    borderRadius: 999,
+  },
+  innerLens: {
+    position: 'absolute',
+    width: ORB_SIZE * 0.78,
+    height: ORB_SIZE * 0.78,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  orbIcon: {
+    width: ORB_SIZE * 0.56,
+    height: ORB_SIZE * 0.56,
+    opacity: 0.98,
   },
   statusLabel: {
     marginTop: 18,

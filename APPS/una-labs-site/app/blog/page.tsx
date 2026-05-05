@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { buildPageMetadata } from '@/lib/metadata';
 import { blogPosts } from '@/lib/blog-posts';
 

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
@@ -9,7 +9,7 @@ import { demoSteps } from '@/components/demoSteps';
 
 export function DemoContent() {
   const [active, setActive] = useState(demoModules[0].slug);
-  const module = demoModules.find((item) => item.slug === active) ?? demoModules[0];
+  const demoModule = demoModules.find((item) => item.slug === active) ?? demoModules[0];
   const studies = Object.values(caseStudies);
 
   return (
@@ -45,18 +45,18 @@ export function DemoContent() {
           <div className="mt-12 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="rounded-[28px] border border-border bg-bg-offwhite p-6 shadow-sm">
               <div className="flex flex-wrap items-center gap-3">
-                <Badge variant="muted">{module.product}</Badge>
+                <Badge variant="muted">{demoModule.product}</Badge>
               </div>
-              <h2 className="mt-4 text-h2 text-tx-heading">{module.title}</h2>
+              <h2 className="mt-4 text-h2 text-tx-heading">{demoModule.title}</h2>
               <p className="mt-4 text-body-lg leading-relaxed text-tx-secondary">
-                {module.description}
+                {demoModule.description}
               </p>
 
-              {module.loomUrl ? (
+              {demoModule.loomUrl ? (
                 <div className="mt-6 w-full overflow-hidden rounded-2xl border border-border bg-black" style={{ aspectRatio: '16/9' }}>
                   <iframe
-                    src={module.loomUrl}
-                    title={module.title}
+                    src={demoModule.loomUrl}
+                    title={demoModule.title}
                     loading="lazy"
                     className="h-full w-full border-0"
                     allowFullScreen
@@ -64,11 +64,11 @@ export function DemoContent() {
                   />
                 </div>
               ) : (
-                <WorkflowAnimation steps={demoSteps[module.slug] ?? demoSteps.intake} />
+                <WorkflowAnimation steps={demoSteps[demoModule.slug] ?? demoSteps.intake} />
               )}
 
               <ul className="mt-6 space-y-3">
-                {module.bullets.map((bullet) => (
+                {demoModule.bullets.map((bullet) => (
                   <li key={bullet} className="flex items-start gap-3">
                     <span className="mt-0.5 text-brand-teal">+</span>
                     <span className="text-body-sm text-tx-body">{bullet}</span>
@@ -87,8 +87,8 @@ export function DemoContent() {
                 and ready to be inspected, not just watched.
               </p>
               <div className="mt-6">
-                <Button href={module.cta.href} variant="primary" size="lg" external={module.cta.external}>
-                  {module.cta.label}
+                <Button href={demoModule.cta.href} variant="primary" size="lg" external={demoModule.cta.external}>
+                  {demoModule.cta.label}
                 </Button>
               </div>
               <div className="mt-6 rounded-2xl bg-bg-offwhite p-5">

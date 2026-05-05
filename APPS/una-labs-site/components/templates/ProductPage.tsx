@@ -125,7 +125,7 @@ export function ProductPage({
         <div className="max-w-narrow mx-auto px-6">
           <blockquote className="bg-white border-l-4 border-brand-teal rounded-xl p-8 shadow-md">
             <p className="text-body-lg text-tx-body italic leading-relaxed">
-              "{testimonialQuote}"
+              &ldquo;{testimonialQuote}&rdquo;
             </p>
             <footer className="mt-6 flex items-center gap-4">
               <div

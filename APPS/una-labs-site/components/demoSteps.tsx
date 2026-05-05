@@ -6,64 +6,90 @@ export const demoSteps: Record<string, { label: string; screen: React.ReactNode 
       label: 'Step 1 — Client submits request',
       screen: (
         <div className="space-y-3">
-          <ScreenTitle>New inquiry</ScreenTitle>
-          <ScreenRow label="Name" value="Jordan Mensah" />
-          <ScreenRow label="Company" value="Meridian Group" />
-          <ScreenRow label="Need" value="Client portal + workflow automation" />
-          <ScreenRow label="Team size" value="12–50" />
+          <ScreenTitle>New project request</ScreenTitle>
+          <ScreenRow label="Your name" value="Alex Chen" />
+          <ScreenRow label="Work email" value="alex@meridian.co" />
+          <ScreenRow label="Project description" value="Redesign enterprise client onboarding flow" />
           <div className="mt-4">
-            <ScreenPulse label="Submitting intake…" />
+            <ScreenPulse label="Submitting request…" />
           </div>
         </div>
       ),
     },
     {
-      label: 'Step 2 — Scope generated instantly',
-      screen: (
-        <div className="space-y-3">
-          <ScreenTitle>AI scope summary</ScreenTitle>
-          {['Client portal with role-based access', 'Automated onboarding workflow', 'Stripe billing integration', 'Admin reporting dashboard'].map((item) => (
-            <div key={item} className="flex items-start gap-2">
-              <span className="text-[#4DB8A8] mt-0.5 text-[11px]">✦</span>
-              <span className="text-[12px] text-white/70">{item}</span>
-            </div>
-          ))}
-          <div className="mt-3">
-            <ScreenBadge variant="teal">Scope confirmed — no back-and-forth</ScreenBadge>
-          </div>
-        </div>
-      ),
-    },
-    {
-      label: 'Step 3 — Plan selected',
+      label: 'Step 2 — Scoped proposal ready',
       screen: (
         <div className="space-y-2">
-          <ScreenTitle>Choose a plan</ScreenTitle>
-          {[
-            { name: 'Starter', price: '$67/mo', active: false },
-            { name: 'Professional', price: '$135/mo', active: true },
-            { name: 'Agency', price: '$339/mo', active: false },
-          ].map((plan) => (
-            <div key={plan.name} className={['flex items-center justify-between rounded-xl px-3 py-2.5 border', plan.active ? 'border-[#4DB8A8] bg-[#4DB8A8]/10' : 'border-white/10'].join(' ')}>
-              <span className={['text-[12px] font-medium', plan.active ? 'text-[#4DB8A8]' : 'text-white/50'].join(' ')}>{plan.name}</span>
-              <span className={['text-[12px]', plan.active ? 'text-white' : 'text-white/30'].join(' ')}>{plan.price}</span>
-            </div>
-          ))}
+          <div className="flex items-center justify-between">
+            <ScreenTitle>Scoped Proposal</ScreenTitle>
+            <ScreenBadge variant="teal">Ready</ScreenBadge>
+          </div>
+          <ScreenSub>Client Intake Refresh · Client workspace</ScreenSub>
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            {[
+              { label: 'Scope', value: '4 deliverables' },
+              { label: 'Timeline', value: '3 weeks' },
+              { label: 'Format', value: 'Fixed fee' },
+              { label: 'Investment', value: '$12,500', accent: true },
+            ].map((f) => (
+              <div key={f.label} className="rounded-xl bg-white/5 px-3 py-2">
+                <p className="text-[10px] text-white/40">{f.label}</p>
+                <p className={['text-[12px] font-semibold mt-0.5', f.accent ? 'text-[#4DB8A8]' : 'text-white'].join(' ')}>{f.value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex justify-end">
+            <ScreenBadge variant="teal">Accept →</ScreenBadge>
+          </div>
         </div>
       ),
     },
     {
-      label: 'Step 4 — Trial activated',
+      label: 'Step 3 — Workspace active',
       screen: (
-        <div className="flex flex-col items-center justify-center py-4 space-y-3 text-center">
-          <div className="w-12 h-12 rounded-full bg-[#4DB8A8]/20 flex items-center justify-center">
-            <span className="text-[#4DB8A8] text-xl">✓</span>
+        <div className="space-y-2">
+          <ScreenTitle>Delivery Milestones</ScreenTitle>
+          {[
+            { name: 'Intake audit complete', status: 'Done', color: 'green' as const },
+            { name: 'Prototype reviewed', status: 'In progress', color: 'yellow' as const },
+            { name: 'Staging handoff', status: 'Pending', color: 'default' as const },
+            { name: 'Final delivery', status: 'Pending', color: 'default' as const },
+          ].map((m) => (
+            <div key={m.name} className="flex items-center justify-between py-1.5 border-b border-white/8 last:border-0">
+              <span className="text-[12px] text-white/70">{m.name}</span>
+              <ScreenBadge variant={m.color}>{m.status}</ScreenBadge>
+            </div>
+          ))}
+          <div className="mt-2">
+            <ScreenBar pct={50} />
           </div>
-          <ScreenTitle>14-day trial active</ScreenTitle>
-          <ScreenRow label="Client" value="jordan@meridiangroup.co" />
-          <ScreenRow label="Plan" value="Professional" accent />
-          <ScreenRow label="Next step" value="Onboarding call booked" accent />
-          <ScreenPulse label="No invoice chasing. Just delivery." />
+        </div>
+      ),
+    },
+    {
+      label: 'Step 4 — Delivery report',
+      screen: (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <ScreenTitle>Delivery Report</ScreenTitle>
+            <ScreenBadge variant="green">Complete</ScreenBadge>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: '4', label: 'Deliverables' },
+              { value: '21d', label: 'On schedule' },
+              { value: '100%', label: 'Documented' },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl bg-white/5 px-2 py-2 text-center">
+                <p className="text-[14px] font-bold text-[#4DB8A8]">{s.value}</p>
+                <p className="text-[10px] text-white/40 mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <ScreenBar pct={100} />
+          <div className="mt-1">
+            <ScreenBadge variant="teal">Download handoff package</ScreenBadge>
+          </div>
         </div>
       ),
     },
