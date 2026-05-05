@@ -1,31 +1,27 @@
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
+
 
 import type { Metadata } from "next";
 import CTABanner from "../../components/CTABanner";
 import { getOgTradesBrandedPath, getOgTradesMetadata, ogTradesAcademyConfig } from "../../../lib/ogTradesAcademy";
-import { getRequestHost } from "../../../lib/requestHost";
 
 export function generateMetadata(): Metadata {
-  const requestHost = getRequestHost();
   return getOgTradesMetadata({
-    title: "About OG_Trades Academy | Meet the Founder and Instructor",
+    title: "About OG Trades Academy | Meet the Founder and Instructor",
     description:
-      "Meet OG_Trades, the founder and instructor behind OG_Trades Academy, and learn about the academy's approach to forex education.",
+      "Meet OG Trades, the founder and instructor behind OG Trades Academy, and learn about the academy approach to forex education.",
     pathname: "/about",
-    host: requestHost
+    host: undefined
   });
 }
 
 export default function OgTradesAboutPage() {
-  const requestHost = getRequestHost();
   return (
     <div className="og-site-shell">
       <div className="container page-content og-page-content">
         <div className="og-founder-grid">
           <section className="card og-founder-card">
             <p className="eyebrow">About the founder</p>
-            <h1>Meet OG_Trades, founder and lead instructor of OG_Trades Academy.</h1>
+            <h1>Meet OG Trades, founder and lead instructor of OG Trades Academy.</h1>
             {ogTradesAcademyConfig.founderStory.paragraphs.map((paragraph) => (
               <p key={paragraph} className="muted">
                 {paragraph}
@@ -91,12 +87,12 @@ export default function OgTradesAboutPage() {
         </section>
 
         <CTABanner
-          title="Ready to learn inside OG_Trades Academy?"
+          title="Ready to learn inside OG Trades Academy?"
           description="Move from the founder story into the academy programs, resources, and community support."
           primaryLabel="View Programs"
-          primaryHref={getOgTradesBrandedPath("/course", { host: requestHost })}
+          primaryHref={getOgTradesBrandedPath("/course")}
           secondaryLabel="Browse Resources"
-          secondaryHref={getOgTradesBrandedPath("/resources", { host: requestHost })}
+          secondaryHref={getOgTradesBrandedPath("/resources")}
         />
       </div>
     </div>

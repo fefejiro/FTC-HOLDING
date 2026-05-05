@@ -1,0 +1,29 @@
+{
+  "$schema": "./profiles.schema.json",
+  "_note": "Persona to voice_id mapping. Tier-1: premade voices (placeholder). Tier-2: cloned Nigerian voices (set cloned=true after Voice Lab upload).",
+  "model_id": "eleven_multilingual_v2",
+  "output_format": "mp3_44100_128",
+  "personas": {
+    "prof": {
+      "label": "Nigerian Professor",
+      "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+      "premade_name": "George - Warm, Captivating Storyteller",
+      "cloned": false,
+      "settings": { "stability": 0.55, "similarity_boost": 0.75, "style": 0.30, "use_speaker_boost": true }
+    },
+    "male": {
+      "label": "Nigerian middle-aged male",
+      "voice_id": "CwhRBWXzGAHq8TQ4Fs17",
+      "premade_name": "Roger - Laid-Back, Casual, Resonant",
+      "cloned": false,
+      "settings": { "stability": 0.50, "similarity_boost": 0.75, "style": 0.40, "use_speaker_boost": true }
+    },
+    "female": {
+      "label": "Nigerian middle-aged female",
+      "voice_id": "EXAVITQu4vr4xnSDxMaL",
+      "premade_name": "Sarah - Mature, Reassuring, Confident",
+      "cloned": false,
+      "settings": { "stability": 0.55, "similarity_boost": 0.75, "style": 0.35, "use_speaker_boost": true }
+    }
+  }
+}

@@ -52,7 +52,20 @@ export function DemoContent() {
                 {module.description}
               </p>
 
-              <WorkflowAnimation steps={demoSteps[module.slug] ?? demoSteps.intake} />
+              {module.loomUrl ? (
+                <div className="mt-6 w-full overflow-hidden rounded-2xl border border-border bg-black" style={{ aspectRatio: '16/9' }}>
+                  <iframe
+                    src={module.loomUrl}
+                    title={module.title}
+                    loading="lazy"
+                    className="h-full w-full border-0"
+                    allowFullScreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  />
+                </div>
+              ) : (
+                <WorkflowAnimation steps={demoSteps[module.slug] ?? demoSteps.intake} />
+              )}
 
               <ul className="mt-6 space-y-3">
                 {module.bullets.map((bullet) => (

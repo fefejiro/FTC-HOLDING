@@ -1,0 +1,3 @@
+• Tighter, more natural cultural translations — like a friend explaining, not a textbook.
+• Faster tap-to-translate (next lines pre-loaded in the background).
+• Cleaner meaning sheet: translation + one focused "What it means" block.

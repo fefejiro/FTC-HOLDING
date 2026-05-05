@@ -28,6 +28,7 @@
     "production": {
       "node": "20.19.4",
       "autoIncrement": true,
+      "credentialsSource": "remote",
       "ios": {
         "simulator": false
       },
@@ -39,8 +40,8 @@
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "../../secrets/play-store-key.json",
-        "track": "internal"
+        "serviceAccountKeyPath": "secrets/play-store-key.json",
+        "track": "production"
       }
     }
   }

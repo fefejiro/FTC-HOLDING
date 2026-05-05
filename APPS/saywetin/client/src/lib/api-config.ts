@@ -8,7 +8,8 @@ declare global {
 
 const DEFAULT_DEV_API_BASE_URL = "http://127.0.0.1:8001";
 const CANONICAL_WEB_ORIGIN = "https://saywetin.app";
-const DEFAULT_PROD_API_BASE_URL = "https://ftcpeacepad-extension-production.up.railway.app";
+const DEFAULT_PROD_API_BASE_URL = "https://api.saywetin.app";
+const DEFAULT_PROD_RAILWAY_FALLBACK_API_BASE_URL = "https://saywetin-api.splendid-spirit.up.railway.app";
 const API_PREFIXES = ["/api", "/health", "/__health"] as const;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
 const RAILWAY_APP_NOT_FOUND = "application not found";
@@ -85,7 +86,7 @@ function sanitizeApiBase(baseUrl: string, source: string): string {
   if (!trimmed) return trimmed;
 
   if (import.meta.env.PROD && isNativeRuntime() && isWebHostApiBase(trimmed)) {
-    console.warn('[Saywetin] Invalid native API base detected, forcing Railway host', {
+    console.warn('[Saywetin] Invalid native API base detected, forcing API host', {
       source,
       providedBase: trimmed,
       fallbackBase: DEFAULT_PROD_API_BASE_URL,
@@ -127,7 +128,7 @@ export function getApiBaseUrl(): string {
 }
 
 export function getProdFallbackApiBaseUrl(): string {
-  return DEFAULT_PROD_API_BASE_URL;
+  return DEFAULT_PROD_RAILWAY_FALLBACK_API_BASE_URL;
 }
 
 async function shouldFallbackToProdRailway(res: Response): Promise<boolean> {

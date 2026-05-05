@@ -1,0 +1,189 @@
+{
+  "generatedBy": "scripts/run-portfolio-e2e.mjs",
+  "sites": [
+    {
+      "id": "una-labs",
+      "label": "Una Labs",
+      "enabled": true,
+      "baseUrl": "https://unalabs.cloud",
+      "checks": [
+        {
+          "id": "home",
+          "path": "/",
+          "expectedStatuses": [200],
+          "titleIncludes": "Una Labs"
+        },
+        {
+          "id": "admin",
+          "path": "/admin/",
+          "expectedStatuses": [200],
+          "titleIncludes": "Admin"
+        },
+        {
+          "id": "dashboard",
+          "path": "/dashboard/",
+          "expectedStatuses": [200],
+          "titleIncludes": "Dashboard"
+        },
+        {
+          "id": "portal",
+          "path": "/portal/",
+          "expectedStatuses": [200],
+          "titleIncludes": "Portal"
+        },
+        {
+          "id": "start",
+          "path": "/start/",
+          "expectedStatuses": [200],
+          "titleIncludes": "Start"
+        }
+      ]
+    },
+    {
+      "id": "garden-cleaners",
+      "label": "Garden Cleaners",
+      "enabled": true,
+      "baseUrl": "https://gardencleaners.ca",
+      "checks": [
+        {
+          "id": "home",
+          "path": "/",
+          "expectedStatuses": [200, 403],
+          "titleIncludes": null,
+          "_note": "403 is Cloudflare bot protection on CI IPs; treat as alive"
+        },
+        {
+          "id": "quote",
+          "path": "/quote",
+          "expectedStatuses": [200, 301, 302, 307, 308]
+        },
+        {
+          "id": "contact",
+          "path": "/contact",
+          "expectedStatuses": [200, 301, 302, 307, 308]
+        },
+        {
+          "id": "portal",
+          "path": "/portal",
+          "expectedStatuses": [200, 301, 302, 307, 308],
+          "titleIncludes": "Regional Portal"
+        }
+      ]
+    },
+    {
+      "id": "og-trades-academy",
+      "label": "OG Trades Academy",
+      "enabled": true,
+      "baseUrl": "https://www.ogtradesacademy.com",
+      "checks": [
+        {
+          "id": "home",
+          "path": "/",
+          "expectedStatuses": [200],
+          "titleIncludes": "OG Trades"
+        },
+        {
+          "id": "about",
+          "path": "/about",
+          "expectedStatuses": [200, 301, 302, 307, 308]
+        },
+        {
+          "id": "community",
+          "path": "/community",
+          "expectedStatuses": [200, 301, 302, 307, 308]
+        }
+      ]
+    }
+  ,
+    {
+      "id": "saywetin",
+      "label": "SayWetin",
+      "enabled": true,
+      "baseUrl": "https://saywetin.app",
+      "checks": [
+        {
+          "id": "home",
+          "path": "/",
+          "expectedStatuses": [200],
+          "titleIncludes": null
+        }
+      ]
+    },
+    {
+      "id": "saywetin-api",
+      "label": "SayWetin API",
+      "enabled": true,
+      "baseUrl": "https://api.saywetin.app",
+      "checks": [
+        {
+          "id": "health",
+          "path": "/health",
+          "expectedStatuses": [200],
+          "titleIncludes": null
+        }
+      ]
+    },
+    {
+      "id": "peacepad",
+      "label": "PeacePad",
+      "enabled": true,
+      "baseUrl": "https://peacepad.ca",
+      "checks": [
+        {
+          "id": "home",
+          "path": "/",
+          "expectedStatuses": [200],
+          "titleIncludes": null
+        }
+      ]
+    },
+    {
+      "id": "peacepad-api",
+      "label": "PeacePad API",
+      "enabled": true,
+      "baseUrl": "https://api.peacepad.ca",
+      "checks": [
+        {
+          "id": "root",
+          "path": "/",
+          "expectedStatuses": [200, 404],
+          "titleIncludes": null
+        }
+      ]
+    },
+    {
+      "id": "dispatch",
+      "label": "Dispatch",
+      "enabled": true,
+      "baseUrl": "https://dispatch.unalabs.cloud",
+      "checks": [
+        {
+          "id": "home",
+          "path": "/",
+          "expectedStatuses": [200],
+          "titleIncludes": null
+        },
+        {
+          "id": "health",
+          "path": "/health",
+          "expectedStatuses": [200],
+          "titleIncludes": null
+        }
+      ]
+    },
+    {
+      "id": "ateam",
+      "label": "ATEAM",
+      "enabled": true,
+      "baseUrl": "https://ateam.unalabs.cloud",
+      "checks": [
+        {
+          "id": "home",
+          "path": "/",
+          "expectedStatuses": [200, 401, 403],
+          "titleIncludes": null
+        }
+      ]
+    }
+  ]
+}

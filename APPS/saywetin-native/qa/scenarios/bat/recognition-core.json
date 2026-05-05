@@ -1,0 +1,36 @@
+{
+  "name": "BAT — Business acceptance: recognition core works for paying-tier flow",
+  "description": "Validates the contractual product promise: search by lyric returns a recognized track.",
+  "steps": [
+    {
+      "id": "B1",
+      "title": "Recognition by text returns artist + title",
+      "request": {
+        "method": "POST",
+        "url": "/api/identify-by-text",
+        "headers": { "Content-Type": "application/json" },
+        "body": { "query": "i go love you forever burna boy" }
+      },
+      "skipIf": { "status": 503, "errorCode": "AI_NOT_CONFIGURED", "reason": "OPENAI_API_KEY not set on backend (intentional gate)" },
+      "expect": {
+        "status": 200,
+        "jsonPath": {
+          "success": true,
+          "recognizedTrack.title": "string",
+          "recognizedTrack.artist": "string"
+        }
+      }
+    },
+    {
+      "id": "B2",
+      "title": "Garbage input is rejected, not 500",
+      "request": {
+        "method": "POST",
+        "url": "/api/identify-by-text",
+        "headers": { "Content-Type": "application/json" },
+        "body": { "query": "" }
+      },
+      "expect": { "statusIn": [400, 422] }
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { gardenCleanersConfig } from "../../lib/gardenCleaners";
+import { gardenCleanersConfig, getGardenCleanersNavLinks, isGardenCleanersCustomHost } from "../../lib/gardenCleaners";
 import { getOgTradesNavLinks, isOgTradesCustomHost, ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
 import SocialIcons from "./SocialIcons";
@@ -10,7 +10,7 @@ import SocialIcons from "./SocialIcons";
 export default function Footer({ initialHost = "" }: { initialHost?: string }) {
   const pathname = usePathname();
   const [runtimeHost, setRuntimeHost] = useState(initialHost.toLowerCase());
-  const isGardenSite = pathname?.startsWith("/garden-cleaners") ?? false;
+  const isGardenSite = (pathname?.startsWith("/garden-cleaners") ?? false) || isGardenCleanersCustomHost(runtimeHost);
   const isOgTradesSite =
     (pathname?.startsWith("/og-trades-academy") ?? false) || isOgTradesCustomHost(runtimeHost);
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
@@ -35,7 +35,7 @@ export default function Footer({ initialHost = "" }: { initialHost?: string }) {
               </p>
             </div>
             <div className="footer-links">
-              {gardenCleanersConfig.nav.map((item) => (
+              {getGardenCleanersNavLinks({ host: runtimeHost }).map((item) => (
                 <a key={item.href} href={item.href}>{item.label}</a>
               ))}
             </div>

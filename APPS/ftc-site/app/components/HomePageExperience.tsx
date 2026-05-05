@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import ClientLogoStrip from "./ClientLogoStrip";
+import FeatureCarousel from "./FeatureCarousel";
+import HeroMockupStack from "./HeroMockupStack";
 import ProductBrandBadge from "./ProductBrandBadge";
 import ProductStatusBadge from "./ProductStatusBadge";
 import { clientLaunches } from "../../lib/recentWork";
@@ -51,13 +53,23 @@ export default function HomePageExperience() {
             <div className="premium-hero-grid">
 
               <div className="premium-hero-copy">
-             Una Labs · Digital and AI workflow systems
+                <p className="eyebrow">Una Labs · Digital and AI workflow systems</p>
                 <h1 className="hero-primary-title">
- Rough need in. Scoped digital and AI solutions out.
+                  Rough request in.<br />
+                  <span className="hero-accent-word">Scoped delivery</span> out.
                 </h1>
                 <p className="lead">
-                  structured intake, clear scope, a real proposal, and governed delivery across digital, SEO, AI, and automation.
+                  <span>Structured intake, clear scope, a real proposal,</span>
+                  <span>and governed delivery across digital, SEO, AI, and automation.</span>
+                  <span>No fluff. No retainers. Outcomes with proof.</span>
                 </p>
+                <div className="hero-trust-inline">
+                  <span>⭐ 4.8 on Google</span>
+                  <span aria-hidden="true">·</span>
+                  <span>48h first response</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Stripe-secured payments</span>
+                </div>
                 <div className="hero-cta-row">
                   <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
                     Start with your request
@@ -66,27 +78,13 @@ export default function HomePageExperience() {
                     See delivery proof
                   </Link>
                 </div>
-                <p className="hero-sub-note">
-                  No account needed. Describe what you need and we scope the fastest credible next move.
+                <p className="hero-friction-note">
+                  No account needed. No upfront commitment. We scope the next move.
                 </p>
               </div>
 
-              <div className="home-flow-visual">
-                <p className="card-kicker home-flow-kicker">How a request becomes delivery</p>
-                <ol className="home-flow-steps" aria-label="Request to delivery flow">
-                  {FLOW_STEPS.map((step) => (
-                    <li key={step.num} className="home-flow-step">
-                      <span className="home-flow-step-num" aria-hidden="true">{step.num}</span>
-                      <div className="home-flow-step-body">
-                        <strong>{step.label}</strong>
-                        <span>{step.detail}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-                <p className="home-flow-engine-note">
-                  Powered by ATEAM — the workflow engine behind intake, approvals, documents, and delivery.
-                </p>
+              <div className="premium-hero-right">
+                <HeroMockupStack />
               </div>
 
             </div>
@@ -97,7 +95,10 @@ export default function HomePageExperience() {
       {/* ── 2. CLIENT LOGOS ──────────────────────────────────────── */}
       <ClientLogoStrip />
 
-      {/* ── 3. ENGAGEMENT PATHS ──────────────────────────────────── */}
+      {/* ── 3. FEATURE CAROUSEL ──────────────────────────────────── */}
+      <FeatureCarousel />
+
+      {/* ── 4. ENGAGEMENT PATHS ──────────────────────────────────── */}
       <section className="section">
         <div className="container">
           <div className="section-heading home-section-heading">

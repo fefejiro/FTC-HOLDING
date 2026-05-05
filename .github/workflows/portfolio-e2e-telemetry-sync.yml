@@ -1,0 +1,47 @@
+name: Portfolio E2E Telemetry Sync
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  push:
+    branches: [ 'main' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-telemetry:
+    name: Run portfolio E2E and publish telemetry
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run portfolio E2E telemetry
+        shell: bash
+        run: |
+          npm run qa:portfolio:e2e || true
+
+      - name: Commit and push telemetry updates
+        shell: bash
+        run: |
+          if git diff --quiet -- APPS/una-labs-site/public/ops/portfolio-e2e-status.json; then
+            echo "No telemetry changes detected. Skipping commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add APPS/una-labs-site/public/ops/portfolio-e2e-status.json
+          git commit -m "chore(ops): sync portfolio e2e telemetry"
+          git push origin HEAD:main

@@ -185,14 +185,14 @@ test.describe("Unalabs + ATEAM + Dispatch UX audit", () => {
     const findings: Finding[] = [];
 
     await page.addInitScript(() => {
-      (window as Window & { __uxAuditConsoleErrors: string[] }).__uxAuditConsoleErrors = [];
+      (window as unknown as Window & { __uxAuditConsoleErrors: string[] }).__uxAuditConsoleErrors = [];
       window.addEventListener("error", (event) => {
-        const bucket = (window as Window & { __uxAuditConsoleErrors: string[] }).__uxAuditConsoleErrors;
+        const bucket = (window as unknown as Window & { __uxAuditConsoleErrors: string[] }).__uxAuditConsoleErrors;
         bucket.push(event.message || "Unknown window error");
       });
       const originalError = console.error.bind(console);
       console.error = (...args: unknown[]) => {
-        const bucket = (window as Window & { __uxAuditConsoleErrors: string[] }).__uxAuditConsoleErrors;
+        const bucket = (window as unknown as Window & { __uxAuditConsoleErrors: string[] }).__uxAuditConsoleErrors;
         bucket.push(args.map((v) => String(v)).join(" "));
         originalError(...args);
       };

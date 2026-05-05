@@ -1,4 +1,6 @@
-﻿export type GardenNavLink = {
+import type { Metadata } from "next";
+
+export type GardenNavLink = {
   label: string;
   href: string;
 };
@@ -30,28 +32,151 @@ export type GardenMediaAsset = {
   caption: string;
 };
 
+export const gardenCleanersBasePath = '/garden-cleaners' as const;
+export const GARDEN_CLEANERS_SITE_URL = 'https://gardencleaners.ca';
+const GARDEN_CLEANERS_OG_IMAGE = '/garden-cleaners/opengraph-image';
+export const gardenCleanersKeywords = [
+  'Garden Cleaners',
+  'Oshawa cleaning services',
+  'residential cleaning Oshawa',
+  'commercial cleaning Oshawa',
+  'deep cleaning Oshawa',
+  'move out cleaning Oshawa',
+  'Durham Region cleaners'
+];
+
+const gardenCleanersCustomHosts = new Set<string>([
+  'gardencleaners.ca',
+  'www.gardencleaners.ca',
+  'gardencleaners.pages.dev'
+]);
+
+export const gardenCleanersNavItems = [
+  { label: 'Home', path: '/' },
+  { label: 'Regional Portal', path: '/portal' },
+  { label: 'About', path: '/about' },
+  { label: 'Services', path: '/services' },
+  { label: 'Contact', path: '/contact' },
+  { label: 'Get a Quote', path: '/quote' }
+] as const;
+
+export const gardenCleanersPublicPaths = new Set<string>(
+  gardenCleanersNavItems.map((item) => item.path)
+);
+
+function normalizeGardenHost(host = '') {
+  return String(host || '').trim().toLowerCase().replace(/:\d+$/, '');
+}
+
+function normalizeGardenPathname(pathname = '/') {
+  const normalized = `/${String(pathname || '/').trim().replace(/^\/+/, '')}`.replace(/\/+$/, '');
+  return normalized === '' ? '/' : normalized;
+}
+
+export function isGardenCleanersCustomHost(host = '') {
+  const normalized = normalizeGardenHost(host);
+  return gardenCleanersCustomHosts.has(normalized);
+}
+
+export function isGardenCleanersPublicPath(pathname = '/') {
+  return gardenCleanersPublicPaths.has(normalizeGardenPathname(pathname));
+}
+
+export function getGardenCleanersInternalPath(pathname = '/') {
+  const normalized = normalizeGardenPathname(pathname);
+  return normalized === '/' ? gardenCleanersBasePath : `${gardenCleanersBasePath}${normalized}`;
+}
+
+export function getGardenCleanersBrandedPath(
+  pathname = '/',
+  options: { host?: string; customDomain?: boolean } = {}
+) {
+  const normalized = normalizeGardenPathname(pathname);
+  const useCustomDomain = options.customDomain ?? isGardenCleanersCustomHost(options.host || '');
+  return useCustomDomain ? normalized : getGardenCleanersInternalPath(normalized);
+}
+
+export function stripGardenCleanersBasePath(pathname = '/') {
+  const normalized = normalizeGardenPathname(pathname);
+  if (normalized === gardenCleanersBasePath) {
+    return '/';
+  }
+  if (normalized.startsWith(`${gardenCleanersBasePath}/`)) {
+    return normalized.slice(gardenCleanersBasePath.length);
+  }
+  return null;
+}
+
+export function getGardenCleanersNavLinks(
+  options: { host?: string; customDomain?: boolean } = {}
+): GardenNavLink[] {
+  return gardenCleanersNavItems.map((item) => ({
+    label: item.label,
+    href: getGardenCleanersBrandedPath(item.path, options)
+  }));
+}
+
+export function getGardenCleanersMetadata({
+  title,
+  description,
+  pathname = '/'
+}: {
+  title: string;
+  description: string;
+  pathname?: string;
+}): Metadata {
+  const canonicalUrl = new URL(pathname, `${GARDEN_CLEANERS_SITE_URL}/`).toString();
+
+  return {
+    title,
+    description,
+    keywords: gardenCleanersKeywords,
+    alternates: { canonical: canonicalUrl },
+    icons: {
+      icon: '/brand/garden-cleaners-mark.svg',
+      shortcut: '/brand/garden-cleaners-mark.svg',
+      apple: '/brand/garden-cleaners-mark.svg'
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'Garden Cleaners',
+      type: 'website',
+      images: [
+        {
+          url: GARDEN_CLEANERS_OG_IMAGE,
+          width: 1200,
+          height: 630,
+          alt: 'Garden Cleaners professional cleaning services in Oshawa'
+        }
+      ]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [GARDEN_CLEANERS_OG_IMAGE]
+    }
+  };
+}
+
 export const gardenCleanersConfig = {
   companyName: 'Garden Cleaners',
   locationCity: 'Oshawa',
   locationRegion: 'Ontario',
   locationCountry: 'Canada',
-  phoneDisplay: '(905) 000-0000',
-  phoneHref: 'tel:+19050000000',
-  email: 'hello@gardencleaners.ca',
-  emailHref: 'mailto:hello@gardencleaners.ca',
+  phoneDisplay: '+1 289 200 0631',
+  phoneHref: 'tel:+12892000631',
+  email: 'gardencleaners@gmail.com',
+  emailHref: 'mailto:gardencleaners@gmail.com',
   addressLine: 'Oshawa, Ontario, Canada',
   heroHeadline: 'Professional Cleaning Services You Can Trust in Oshawa',
   heroSubheadline:
     'Reliable residential and commercial cleaning with flexible scheduling, quality service, and a spotless finish every time.',
   primaryCta: { label: 'Get a Free Quote', href: '/garden-cleaners/quote' },
   secondaryCta: { label: 'View Services', href: '/garden-cleaners/services' },
-  nav: [
-    { label: 'Home', href: '/garden-cleaners' },
-    { label: 'About', href: '/garden-cleaners/about' },
-    { label: 'Services', href: '/garden-cleaners/services' },
-    { label: 'Contact', href: '/garden-cleaners/contact' },
-    { label: 'Get a Quote', href: '/garden-cleaners/quote' }
-  ] satisfies GardenNavLink[],
+  nav: getGardenCleanersNavLinks() satisfies GardenNavLink[],
   trustBullets: [
     'Reliable and professional team',
     'Flexible scheduling',
@@ -143,56 +268,56 @@ export const gardenCleanersConfig = {
   },
   media: {
     hero: {
-      src: '/images/garden-cleaners/hero-office-team.png',
-      alt: 'Black Nigerian Canadian cleaning professional sanitizing an office desk while the team refreshes a modern workspace.',
+      src: '/images/garden-cleaners/gc-team-hero.webp',
+      alt: 'Diverse professional cleaning team ready to begin service in a modern office corridor.',
       badge: 'Commercial and office cleaning',
-      title: 'A professional team presence clients can trust in active workspaces.',
+      title: 'A professional team presence clients can trust from first contact.',
       caption: 'Garden Cleaners supports offices, managed spaces, and commercial environments with dependable service in Oshawa.'
     },
     deepCleaning: {
-      src: '/images/garden-cleaners/gc-floor-cleaning.png',
+      src: '/images/garden-cleaners/gc-floor-cleaning.webp',
       alt: 'Office floor cleaning service in a bright commercial workspace during a deep cleaning visit.',
       badge: 'One-time deep cleaning',
       title: 'Detailed cleaning when the space needs more than a routine visit.',
       caption: 'Ideal for first-time service, seasonal resets, turnover preparation, and polished handoffs.'
     },
     commercial: {
-      src: '/images/garden-cleaners/gc-desk-cleaning.png',
+      src: '/images/garden-cleaners/gc-desk-cleaning.webp',
       alt: 'Black Nigerian Canadian cleaning professional sanitizing office desks in a modern commercial setting.',
       badge: 'Office and commercial cleaning',
       title: 'Reliable cleaning plans for offices, managed spaces, and shared environments.',
       caption: 'Low-disruption scheduling for teams that need consistency, presentation, and a polished finish.'
     },
     trust: {
-      src: '/images/garden-cleaners/commercial-cleaner.png',
+      src: '/images/garden-cleaners/commercial-cleaner.webp',
       alt: 'Professional Black Nigerian Canadian commercial cleaning team in a modern office environment.',
       badge: 'Professional team',
       title: 'Friendly, dependable people behind every cleaning visit.',
       caption: 'Garden Cleaners is positioned as a people-led service built around trust, punctuality, and clear communication.'
     },
     about: {
-      src: '/images/garden-cleaners/gc-team-supplies.png',
+      src: '/images/garden-cleaners/gc-team-supplies.webp',
       alt: 'Professional commercial cleaning team holding supplies and ready to begin service.',
       badge: 'People-led service',
       title: 'A practical, prepared team for homes, offices, and managed properties.',
       caption: 'The company is presented as organized, reliable, and ready for both one-time and recurring work.'
     },
     sanitization: {
-      src: '/images/garden-cleaners/gc-washroom-cleaning.png',
+      src: '/images/garden-cleaners/gc-washroom-cleaning.webp',
       alt: 'Janitorial cleaning in a modern restroom during a sanitization-focused service.',
       badge: 'Sanitization and janitorial support',
       title: 'Washroom and high-touch area cleaning handled with care.',
       caption: 'Well-suited for recurring janitorial plans, office upkeep, and spaces that need stronger hygiene coverage.'
     },
     contact: {
-      src: '/images/garden-cleaners/gc-office-space-clean.png',
+      src: '/images/garden-cleaners/gc-office-space-clean.webp',
       alt: 'Clean conference room prepared by Garden Cleaners team in a bright office environment.',
       badge: 'Prepared, polished workspaces',
       title: 'Professional spaces that feel ready for teams, clients, and daily operations.',
       caption: 'A good fit for contact, quote, and handoff moments where a calm, polished visual helps balance the layout.'
     },
     quote: {
-      src: '/images/garden-cleaners/gc-owner-portrait.png',
+      src: '/images/garden-cleaners/gc-owner-portrait.webp',
       alt: 'Black Nigerian Canadian cleaning professional in a bright workspace representing Garden Cleaners.',
       badge: 'Responsive service',
       title: 'Clear communication and practical next steps from the first quote request.',
@@ -253,6 +378,16 @@ export const gardenServices: GardenService[] = [
   }
 ];
 
-export const gardenPropertyTypes = ['House', 'Condo / Apartment', 'Office', 'Retail / Commercial', 'Vacant unit', 'Other'] as const;
+export const gardenPropertyTypes = ['House', 'Townhouse', 'Condo / Apartment', 'Office', 'Retail / Commercial', 'Vacant unit', 'Other'] as const;
 export const gardenServiceOptions = gardenServices.map((service) => service.title);
 export const gardenFrequencies = ['One-time', 'Weekly', 'Bi-weekly', 'Monthly', 'Custom schedule'] as const;
+
+/** Add-on options shown as checkboxes on the quote form. */
+export const gardenAddOns = [
+  'Oven cleaning',
+  'Window cleaning (interior)',
+  'Window + roof exterior',
+  'Fridge cleaning',
+  'Cabinet interiors',
+] as const;
+export type GardenAddOn = typeof gardenAddOns[number];

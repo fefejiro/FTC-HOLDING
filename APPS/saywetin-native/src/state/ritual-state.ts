@@ -5,10 +5,22 @@ import { useMemo, useState } from 'react';
 export type RitualScreen = 'home' | 'listen' | 'result';
 
 export type RitualTrack = {
+  id: string;
   title: string;
   artist: string;
+  year: string;
+  albumArt: string;
+  matchConfidence: number;
+  matchedInMs: number;
   lyric: string;
   meaning: string;
+  spotifyUrl: string;
+  youtubeUrl: string;
+  chips: string[];
+  syncedLyrics: SyncedLyricLine[];
+  matchSource: MatchSource;
+  recognitionSource: RecognitionSource;
+  culturalAnalyses: CulturalAnalysisEntry[];
 };
 
 export type RitualController = {
@@ -20,27 +32,43 @@ export type RitualController = {
 };
 
 const demoTrack: RitualTrack = {
-  title: 'City Boy',
-  artist: 'Burna Boy',
-  lyric: 'Baby, I no dey for too much whining',
-  meaning: 'Confidence first. The line says he is not built for hesitation or timid energy.',
+  id: 'pending-track',
+  title: 'No song matched yet',
+  artist: 'SayWetin',
+  year: 'Live',
+  albumArt: '',
+  matchConfidence: 0,
+  matchedInMs: 0,
+  lyric: 'Tap Start Match Ritual to listen to the environment and identify the current song.',
+  meaning: 'This screen updates after a real recognition response from the backend.',
+  spotifyUrl: 'https://open.spotify.com',
+  youtubeUrl: 'https://www.youtube.com',
+  chips: ['Live recognition'],
+  syncedLyrics: [],
+  matchSource: 'unknown',
+  recognitionSource: 'microphone',
+  culturalAnalyses: [],
 };
 
 export function useRitualState() {
   const [screen, setScreen] = useState<RitualScreen>('home');
+  const [track, setTrack] = useState<RitualTrack>(demoTrack);
 
   const actions = useMemo(
     () => ({
       startListening: () => setScreen('listen'),
       revealResult: () => setScreen('result'),
-      reset: () => setScreen('home'),
+      reset: () => {
+        setTrack(demoTrack);
+        setScreen('home');
+      },
     }),
     [],
   );
 
   return {
     screen,
-    track: demoTrack,
+    track,
     ...actions,
   } as RitualController;
 }

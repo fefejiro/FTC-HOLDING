@@ -1,0 +1,22 @@
+node_modules
+dist
+dist-ssr
+.env
+.env.local
+.env.*.local
+*.local
+.vite
+.DS_Store
+*.log
+
+# Android signing - never commit
+android.keystore
+*.jks
+*.keystore
+android/
+twa-manifest.json.bak
+
+# Release binaries
+*.apk
+*.aab
+*.idsig

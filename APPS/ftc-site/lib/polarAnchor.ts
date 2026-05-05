@@ -40,8 +40,8 @@ export const polarAnchorConfig = {
   locationCountry: "Canada",
   phoneDisplay: "+1 (647) 000-0000",
   phoneHref: "tel:+16470000000",
-  email: "hello@polaranchor.ca",
-  emailHref: "mailto:hello@polaranchor.ca",
+  email: "hello@unalabs.cloud",
+  emailHref: "mailto:hello@unalabs.cloud",
   addressLine: "Canada",
   heroHeadline: "End-to-End Freight and Logistics Solutions You Can Rely On",
   heroSubheadline:

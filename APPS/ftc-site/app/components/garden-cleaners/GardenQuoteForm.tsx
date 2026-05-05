@@ -1,35 +1,69 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
-import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions } from "../../../lib/gardenCleaners";
+import { useSearchParams } from "next/navigation";
+import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions, gardenAddOns } from "../../../lib/gardenCleaners";
+import { trackEvent } from "../../../lib/analytics";
+import type { GardenFormSource, GardenQuotePayload } from "../../../lib/gardenContracts";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
-export default function GardenQuoteForm() {
+type GardenQuoteFormProps = {
+  source?: GardenFormSource;
+};
+
+export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFormProps) {
+  const searchParams = useSearchParams();
+  const selectedRegion = String(searchParams.get("region") || "").trim();
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
+  const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
   const startedAtRef = useRef<number>(Date.now());
+
+  function toggleAddOn(addon: string) {
+    setSelectedAddOns((prev) => {
+      const next = new Set(prev);
+      if (next.has(addon)) next.delete(addon);
+      else next.add(addon);
+      return next;
+    });
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
 
-    const payload = {
+    const payload: GardenQuotePayload = {
       fullName: String(formData.get("fullName") || "").trim(),
       email: String(formData.get("email") || "").trim(),
       phone: String(formData.get("phone") || "").trim(),
+      address: String(formData.get("address") || "").trim(),
+      city: String(formData.get("city") || "").trim(),
+      postalCode: String(formData.get("postalCode") || "").trim(),
       propertyType: String(formData.get("propertyType") || "").trim(),
       serviceNeeded: String(formData.get("serviceNeeded") || "").trim(),
       preferredDate: String(formData.get("preferredDate") || "").trim(),
+      preferredTime: String(formData.get("preferredTime") || "").trim(),
       frequency: String(formData.get("frequency") || "").trim(),
+      region: String(formData.get("region") || "").trim(),
       message: String(formData.get("message") || "").trim(),
       website: String(formData.get("website") || "").trim(),
-      startedAt: startedAtRef.current
+      startedAt: startedAtRef.current,
+      addOns: selectedAddOns.size > 0 ? Array.from(selectedAddOns) : undefined,
     };
 
     setSubmitState("submitting");
     setMessage("");
+
+    trackEvent("garden_quote_submit_attempt", {
+      location: `${source}_form`,
+      label: "submit_attempt",
+      source,
+      propertyType: payload.propertyType,
+      serviceNeeded: payload.serviceNeeded,
+      frequency: payload.frequency
+    });
 
     try {
       const response = await fetch("/api/garden-cleaners-quote", {
@@ -45,11 +79,29 @@ export default function GardenQuoteForm() {
 
       setSubmitState("success");
       setMessage(body.message || "Thanks. Your quote request has been received.");
+      trackEvent("garden_quote_submit_success", {
+        location: `${source}_form`,
+        label: "submit_success",
+        source,
+        propertyType: payload.propertyType,
+        serviceNeeded: payload.serviceNeeded,
+        frequency: payload.frequency
+      });
       form.reset();
+      setSelectedAddOns(new Set());
       startedAtRef.current = Date.now();
     } catch (error) {
       setSubmitState("error");
       setMessage(error instanceof Error ? error.message : "Submission failed. Please try again in a few minutes.");
+      trackEvent("garden_quote_submit_error", {
+        location: `${source}_form`,
+        label: "submit_error",
+        source,
+        propertyType: payload.propertyType,
+        serviceNeeded: payload.serviceNeeded,
+        frequency: payload.frequency,
+        errorCode: error instanceof Error ? error.message : "unknown"
+      });
     }
   }
 
@@ -65,7 +117,19 @@ export default function GardenQuoteForm() {
       </label>
       <label>
         <span>Phone</span>
-        <input type="tel" name="phone" autoComplete="tel" required placeholder="(905) 000-0000" />
+        <input type="tel" name="phone" autoComplete="tel" required placeholder="+1 289 200 0631" />
+      </label>
+      <label>
+        <span>Service Address</span>
+        <input type="text" name="address" autoComplete="street-address" required minLength={5} placeholder="123 Main Street" />
+      </label>
+      <label>
+        <span>City</span>
+        <input type="text" name="city" autoComplete="address-level2" required placeholder="Oshawa" />
+      </label>
+      <label>
+        <span>Postal Code</span>
+        <input type="text" name="postalCode" autoComplete="postal-code" placeholder="A1A 1A1" />
       </label>
       <label>
         <span>Property Type</span>
@@ -90,6 +154,15 @@ export default function GardenQuoteForm() {
         <input type="date" name="preferredDate" required />
       </label>
       <label>
+        <span>Preferred Time</span>
+        <select name="preferredTime" defaultValue="" className="dark-select">
+          <option value="">Any time</option>
+          <option value="Morning">Morning</option>
+          <option value="Afternoon">Afternoon</option>
+          <option value="Evening">Evening</option>
+        </select>
+      </label>
+      <label>
         <span>Frequency</span>
         <select name="frequency" defaultValue="" className="dark-select" required>
           <option value="">Select frequency</option>
@@ -102,18 +175,52 @@ export default function GardenQuoteForm() {
         <span>Message</span>
         <textarea name="message" rows={5} required minLength={20} placeholder="Tell us about the property, timing, and anything we should know." />
       </label>
+      {selectedRegion ? (
+        <label>
+          <span>Service Region</span>
+          <input type="text" name="region" value={selectedRegion} readOnly />
+        </label>
+      ) : (
+        <input type="hidden" name="region" value="" />
+      )}
       <label className="hp-field" aria-hidden="true">
         Website
         <input type="text" name="website" tabIndex={-1} autoComplete="off" />
       </label>
-      <button type="submit" className="btn btn-primary" disabled={submitState === "submitting"}>
-        {submitState === "submitting" ? "Submitting..." : "Request Quote"}
-      </button>
-      {message ? (
-        <p className={submitState === "error" ? "form-feedback error" : "form-feedback success"} role={submitState === "error" ? "alert" : "status"}>
-          {message}
-        </p>
-      ) : null}
+      {/* Add-ons */}
+      <fieldset className="garden-addons-fieldset">
+        <legend>Add-ons (optional)</legend>
+        <div className="garden-addons-grid">
+          {gardenAddOns.map((addon) => (
+            <label key={addon} className="garden-addon-check">
+              <input
+                type="checkbox"
+                checked={selectedAddOns.has(addon)}
+                onChange={() => toggleAddOn(addon)}
+              />
+              {addon}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {submitState === "success" ? (
+        <div className="garden-quote-success-banner" role="status">
+          <span className="garden-quote-success-icon" aria-hidden="true">✅</span>
+          <div>
+            <strong>Quote request sent!</strong>
+            <p>{message}</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <button type="submit" className="btn btn-primary" disabled={submitState === "submitting"}>
+            {submitState === "submitting" ? "Submitting..." : "Request Quote"}
+          </button>
+          {message && submitState === "error" ? (
+            <p className="form-feedback error" role="alert">{message}</p>
+          ) : null}
+        </>
+      )}
     </form>
   );
 }

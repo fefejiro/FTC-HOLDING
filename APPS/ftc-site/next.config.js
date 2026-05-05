@@ -18,6 +18,11 @@ module.exports = {
   env: {
     ATEAM_UPSTREAM_ORIGIN: process.env.ATEAM_UPSTREAM_ORIGIN || "",
   },
+  // Cloudflare Pages static deploy has no /_next/image optimizer.
+  // Serve images directly from /public so next/image renders correctly.
+  images: {
+    unoptimized: true,
+  },
   transpilePackages: ["@ftc/supabase", "@ftc/config", "@ftc/types", "@ftc/auth"],
   async headers() {
     const noStoreHeaders = [
@@ -52,6 +57,11 @@ module.exports = {
   },
   async redirects() {
     return [
+      {
+        source: "/garden-cleaners/",
+        destination: "/garden-cleaners",
+        permanent: true
+      },
       {
         source: "/connect/vcard",
         destination: "/connect/fejiro-efiuvwere.vcf",

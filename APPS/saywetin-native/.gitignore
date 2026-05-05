@@ -30,12 +30,27 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files and secrets
+.env
 .env*.local
+secrets/
+android/local.properties
+android/keystore-base64.txt
+android/app/debug.keystore
+*.keystore
+*.jks
 
 # typescript
 *.tsbuildinfo
 
-# generated native folders
+# generated native folders and build output
 /ios
-/android
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/app/.cxx/
+
+# Test recordings
+Test Video/
+

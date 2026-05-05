@@ -7,12 +7,11 @@ interface GardenServiceCardProps {
 
 export default function GardenServiceCard({ service }: GardenServiceCardProps) {
   return (
-    <article className="card garden-service-card">
+    <article className="card garden-service-card garden-service-card--compact">
       <h3>{service.title}</h3>
       <p className="muted">{service.summary}</p>
-      <p>{service.detail}</p>
       <ul className="feature-list compact-feature-list">
-        {service.bullets.map((bullet) => (
+        {service.bullets.slice(0, 2).map((bullet) => (
           <li key={bullet}>{bullet}</li>
         ))}
       </ul>

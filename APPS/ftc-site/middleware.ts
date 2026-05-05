@@ -8,6 +8,12 @@ import {
   OG_TRADES_SITE_HOST,
   stripOgTradesBasePath
 } from "./lib/ogTradesAcademy";
+import {
+  getGardenCleanersInternalPath,
+  isGardenCleanersCustomHost,
+  isGardenCleanersPublicPath,
+  stripGardenCleanersBasePath
+} from "./lib/gardenCleaners";
 import { ATEAM_SITE_HOST, ATEAM_SITE_URL, LEGACY_CANONICAL_HOSTS, OPS_SITE_HOST, SITE_HOST } from "./lib/site";
 
 const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
@@ -18,11 +24,27 @@ const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
   "/c": "/connect"
 };
 
+const CLIENT_DOMAIN_ROOT_REWRITES: Record<string, string> = {
+  "ogtradesacademy.com": "/og-trades-academy",
+  "www.ogtradesacademy.com": "/og-trades-academy",
+  "ogtradesacademy.ca": "/og-trades-academy",
+  "www.ogtradesacademy.ca": "/og-trades-academy",
+  "gardencleaners.ca": "/garden-cleaners",
+  "www.gardencleaners.ca": "/garden-cleaners",
+  "polaranchor.ca": "/polar-anchor",
+  "www.polaranchor.ca": "/polar-anchor"
+};
+
+const OG_TRADES_ROOT_LANDING_PATH = "/og-trades-academy";
+const OG_TRADES_STABLE_ALIAS_PATH = "/og-trades-academy-home";
+
 function resolveRequestHost(req: NextRequest): string {
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
-  return host.toLowerCase();
+  return String(host || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
 }
-
 function buildRequestHeaders(req: NextRequest, host: string) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-request-host", host);
@@ -98,6 +120,60 @@ export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const host = resolveRequestHost(req);
   const hostWithoutPort = host.replace(/:\d+$/, "");
+  const urlHost = String(req.nextUrl.hostname || "").toLowerCase().replace(/:\d+$/, "");
+  const effectiveHost = hostWithoutPort || urlHost;
+
+  // Hard-lock Garden Cleaners host before any OG/domain inference logic.
+  // This prevents accidental OG route rewrites when environment host config is mis-set.
+  if (isGardenCleanersCustomHost(effectiveHost)) {
+    const brandedPath = stripGardenCleanersBasePath(pathname);
+    if (brandedPath) {
+      const url = req.nextUrl.clone();
+      url.pathname = brandedPath;
+      return NextResponse.redirect(url, 308);
+    }
+
+    if (
+      pathname.startsWith("/og-trades-academy") ||
+      pathname === "/work/og-trades-academy" ||
+      pathname === "/og-trades-academy-home"
+    ) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url, 308);
+    }
+
+    if (isGardenCleanersPublicPath(pathname)) {
+      const url = req.nextUrl.clone();
+      url.pathname = getGardenCleanersInternalPath(pathname);
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
+    }
+
+    return withRuntimePageHeaders(req, nextWithRequestHost(req, effectiveHost));
+  }
+
+  if (pathname === "/work/og-trades-academy") {
+    const url = req.nextUrl.clone();
+    url.pathname = OG_TRADES_STABLE_ALIAS_PATH;
+    return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort || host, url));
+  }
+
+  // OG Trades custom domain handling
+  if (isOgTradesCustomHost(hostWithoutPort)) {
+    // Root or landing paths: rewrite to premium page (no redirect)
+    if (pathname === "/" || pathname === OG_TRADES_ROOT_LANDING_PATH || pathname === "/work/og-trades-academy") {
+      const url = req.nextUrl.clone();
+      url.pathname = OG_TRADES_STABLE_ALIAS_PATH;
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+    }
+  }
+
+  const clientRootRewrite = CLIENT_DOMAIN_ROOT_REWRITES[hostWithoutPort];
+  if (clientRootRewrite && pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = clientRootRewrite;
+    return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+  }
 
   if (isOgTradesRedirectHost(hostWithoutPort)) {
     const url = req.nextUrl.clone();
@@ -158,5 +234,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"]
 };

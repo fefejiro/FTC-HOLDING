@@ -106,29 +106,29 @@ create policy "users_read_own_contracts"
 -- Admin can see all projects (pipeline view)
 create policy "admin_read_all_projects"
   on projects for select
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 -- Admin can update any project (pipeline status changes)
 create policy "admin_update_projects"
   on projects for update
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 -- Admin can see all milestones (pipeline milestone counts)
 create policy "admin_read_all_milestones"
   on milestones for select
   using (
-    (select auth.jwt() ->> 'email') = 'mike.fejiro@gmail.com'
+    (select auth.jwt() ->> 'email') = 'hello@unalabs.cloud'
   );
 
 -- Admin can see all contracts
 create policy "admin_read_all_contracts"
   on contracts for select
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 -- Admin can update any contract
 create policy "admin_update_contracts"
   on contracts for update
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create table if not exists invoices (
   id             uuid primary key default gen_random_uuid(),
@@ -158,11 +158,11 @@ create policy "client_read_own_invoices"
 
 create policy "admin_read_all_invoices"
   on invoices for select
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create policy "admin_update_invoices"
   on invoices for update
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create policy "service_insert_invoices"
   on invoices for insert
@@ -195,11 +195,11 @@ create policy "client_read_own_instant_bills"
 
 create policy "admin_read_all_instant_bills"
   on instant_bills for select
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create policy "admin_update_instant_bills"
   on instant_bills for update
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create policy "service_insert_instant_bills"
   on instant_bills for insert

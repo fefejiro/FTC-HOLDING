@@ -28,11 +28,11 @@ create policy "client_read_own_instant_bills"
 
 create policy "admin_read_all_instant_bills"
   on instant_bills for select
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create policy "admin_update_instant_bills"
   on instant_bills for update
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create policy "service_insert_instant_bills"
   on instant_bills for insert

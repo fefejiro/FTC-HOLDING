@@ -1,15 +1,16 @@
 export const dynamic = 'force-static';
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import GardenImagePanel from "../../components/garden-cleaners/GardenImagePanel";
 import GardenQuoteForm from "../../components/garden-cleaners/GardenQuoteForm";
-import { gardenCleanersConfig } from "../../../lib/gardenCleaners";
+import { gardenCleanersConfig, getGardenCleanersMetadata } from "../../../lib/gardenCleaners";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getGardenCleanersMetadata({
   title: 'Get a Free Quote | Garden Cleaners',
   description:
     'Request a free quote from Garden Cleaners for residential, commercial, deep cleaning, move-in, move-out, or post-construction cleaning in Oshawa, Ontario.',
-  alternates: { canonical: 'https://unalabs.cloud/garden-cleaners/quote' }
-};
+  pathname: '/quote'
+});
 
 export default function GardenQuotePage() {
   return (
@@ -39,7 +40,9 @@ export default function GardenQuotePage() {
 
           <section className="card garden-quote-form-shell">
             <h2>Request your quote</h2>
-            <GardenQuoteForm />
+            <Suspense fallback={<div className="garden-quote-form-skeleton" aria-hidden="true" />}>
+              <GardenQuoteForm source="quote_page" />
+            </Suspense>
           </section>
         </div>
       </div>

@@ -1,0 +1,159 @@
+{
+  "project": "saywetin",
+  "name": "SayWetin",
+  "updatedAt": "2026-04-24T19:55:00.000Z",
+  "overall": "red",
+  "stage": "pivot-build",
+  "summary": "v1.3.0 (versionCode 24) AAB built with Slice 1 (lyric-paste fallback + match-source badge) and Slice 2 (slang decoder UI). BLOCKED for ship: Railway API service 'sunny-acceptance' is intentionally paused, so api.saywetin.app returns 404. Native AAB has no EXPO_PUBLIC_API_BASE_URL baked in. Backend pre-existing TS errors are not regressions.",
+  "metrics": [
+    {
+      "label": "Native build (Android AAB)",
+      "value": "1.3.0 / vc24",
+      "detail": "bundleRelease succeeded in 5m05s. Output 47.9 MB at android/app/build/outputs/bundle/release/app-release.aab.",
+      "status": "green"
+    },
+    {
+      "label": "Native TypeScript",
+      "value": "clean",
+      "detail": "tsc --noEmit on saywetin-native passes with zero errors.",
+      "status": "green"
+    },
+    {
+      "label": "Backend TypeScript",
+      "value": "16 errors (pre-existing)",
+      "detail": "client/src/pages/recognized-track.tsx (15) + server/routes.ts:677 admin auth string|undefined. Not introduced by Slice 1/2.",
+      "status": "yellow"
+    },
+    {
+      "label": "Backend tests (vitest)",
+      "value": "0 ran",
+      "detail": "3 suites failed to load due to monorepo hoist issue: Cannot find module 'indent-string' from node_modules/redent. Tests cannot execute until dep is installed at workspace root.",
+      "status": "red"
+    },
+    {
+      "label": "Production API (api.saywetin.app)",
+      "value": "down (paused)",
+      "detail": "Railway service 'sunny-acceptance' returns 404 Application not found on /, /api/health, /healthz, /v1/slang/explain. README confirms this is intentional cost-savings posture for the lean Hobby plan.",
+      "status": "red"
+    },
+    {
+      "label": "Production web (saywetin.app)",
+      "value": "200 OK",
+      "detail": "Cloudflare Pages frontend is up. Web client falls back to ftcpeacepad-extension-production.up.railway.app for some routes.",
+      "status": "green"
+    },
+    {
+      "label": "Slang endpoint (/v1/slang/explain)",
+      "value": "code added",
+      "detail": "POST /v1/slang/explain implemented in server/routes.ts. Cannot live-verify until Railway service is unpaused or alternate host is wired.",
+      "status": "yellow"
+    },
+    {
+      "label": "Lyric-text fallback (/api/identify-by-text)",
+      "value": "code added",
+      "detail": "POST /api/identify-by-text + native UI on ListenScreen. Same deployment dependency as slang endpoint.",
+      "status": "yellow"
+    },
+    {
+      "label": "Match-source badge",
+      "value": "shipped (UI)",
+      "detail": "ResultScreen renders MATCH_SOURCE_LABELS chip; backend forwards recognitionSource through /api/listen.",
+      "status": "green"
+    },
+    {
+      "label": "API URL baked in AAB",
+      "value": "missing",
+      "detail": "Bundle scan for index.android.bundle found no api.saywetin.app or railway URL. EXPO_PUBLIC_API_BASE_URL was not set during bundleRelease, so runtime calls will throw 'EXPO_PUBLIC_API_BASE_URL is missing'.",
+      "status": "red"
+    },
+    {
+      "label": "Velocity (last 14d)",
+      "value": "92 commits",
+      "detail": "Heavy activity: native scaffold, brand-green pivot, Live Lyrics Follow Mode, admin login gate, listen-flow stabilization, Slice 1 + 2.",
+      "status": "green"
+    }
+  ],
+  "checks": [
+    {
+      "name": "Slice 1 backend (match-source on /api/listen)",
+      "status": "green",
+      "detail": "matchSource and confidence forwarded; recognitionSource enum extended to lyric_text."
+    },
+    {
+      "name": "Slice 1 backend (/api/identify-by-text)",
+      "status": "green",
+      "detail": "Endpoint added. Deployment-blocked from live verification."
+    },
+    {
+      "name": "Slice 1 native (lyric-paste fallback)",
+      "status": "green",
+      "detail": "ListenScreen shows lyric box on recognition error; identifyByText API client wired."
+    },
+    {
+      "name": "Slice 1 native (match-source badge)",
+      "status": "green",
+      "detail": "ResultScreen badge using MATCH_SOURCE_LABELS map."
+    },
+    {
+      "name": "Slice 2 backend (/v1/slang/explain)",
+      "status": "green",
+      "detail": "Endpoint added with gpt-4o-mini, JSON response_format, validation. Deployment-blocked from live verification."
+    },
+    {
+      "name": "Slice 2 native (Wetin-be-this card)",
+      "status": "green",
+      "detail": "HomeScreen has slang decoder card; explainSlang API client wired."
+    },
+    {
+      "name": "Native version bump",
+      "status": "green",
+      "detail": "app.json 1.2.2 -> 1.3.0; build.gradle versionCode 23 -> 24, versionName 1.2.2 -> 1.3.0."
+    },
+    {
+      "name": "AAB signing",
+      "status": "green",
+      "detail": "signReleaseBundle task succeeded. Path: APPS/saywetin-native/android/app/build/outputs/bundle/release/app-release.aab."
+    },
+    {
+      "name": "Runtime API base configured",
+      "status": "red",
+      "detail": "BLOCKER: EXPO_PUBLIC_API_BASE_URL not set during build. Add APPS/saywetin-native/.env (or eas.json env block) before next bundleRelease."
+    },
+    {
+      "name": "Backend reachability for new endpoints",
+      "status": "red",
+      "detail": "BLOCKER: Railway 'sunny-acceptance' is paused. Slang and lyric-text fallback cannot run until unpaused or moved to peacepad-extension worker."
+    }
+  ],
+  "connections": [
+    {
+      "name": "Production web",
+      "status": "green",
+      "url": "https://saywetin.app",
+      "detail": "Cloudflare Pages, HTTP 200 at root."
+    },
+    {
+      "name": "Production API",
+      "status": "red",
+      "url": "https://api.saywetin.app",
+      "detail": "Railway service paused (intentional). Returns 404 Application not found."
+    },
+    {
+      "name": "Peacepad worker fallback",
+      "status": "yellow",
+      "url": "https://ftcpeacepad-extension-production.up.railway.app",
+      "detail": "Web client uses this for /api/analyze-line/stream. Native AAB does not point here."
+    }
+  ],
+  "logs": {
+    "qaReport": "APPS/saywetin/ops/QA_REPORT_2026-04-24.md",
+    "buildArtifact": "APPS/saywetin-native/android/app/build/outputs/bundle/release/app-release.aab"
+  },
+  "nextActions": [
+    "BLOCKER 1: Decide whether to unpause Railway 'sunny-acceptance' or migrate /v1/slang/explain and /api/identify-by-text to the peacepad-extension worker. Without a live API host, AAB v1.3.0 cannot ship.",
+    "BLOCKER 2: Add EXPO_PUBLIC_API_BASE_URL=https://api.saywetin.app (or chosen host) to APPS/saywetin-native/.env, then rebuild bundleRelease so the URL is baked into the AAB.",
+    "Fix vitest setup: install indent-string at the FTC HOLDING root or pin redent to a compatible version so the 3 suites can run.",
+    "Address pre-existing TS errors in client/src/pages/recognized-track.tsx (15) and server/routes.ts:677 in a separate cleanup pass.",
+    "After both blockers cleared: rebuild AAB, smoke test on device (slang decode, lyric-paste fallback, match badge), then submit to Play Console internal track."
+  ]
+}

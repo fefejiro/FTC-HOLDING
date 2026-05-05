@@ -90,7 +90,7 @@ cmd /c "echo $ea" | npx wrangler secret put STRIPE_PRICE_ENTERPRISE_ANNUAL
 3. Enter RBC routing number + account number
 4. Stripe sends 2 micro-deposits (1–2 business days) to verify
 
-Stripe account: `acct_1TMK0E5M2AZUCbRe` (fejiro.efiuvwere@gmail.com)
+Stripe account: `acct_1TMK0E5M2AZUCbRe` (primary contact should be `hello@unalabs.cloud`; verify in Stripe before handoff)
 
 ---
 

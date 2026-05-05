@@ -1,0 +1,4 @@
+interface:
+  display_name: "FTC Portal QA Audit"
+  short_description: "Run founder-facing public site and portal QA audits."
+  default_prompt: "Run a live public website and portal QA audit, discover what exists first, separate bugs from missing modules, and return a founder-facing report with risks, charts, and roadmap."

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { getStripeApiUrl } from '@/lib/stripe-config';
+import { trackEvent } from '@/lib/analytics';
 
 type Intake = {
   intakeId: string;
@@ -12,6 +13,16 @@ type Intake = {
   company: string;
   role: string;
   teamSize: string;
+  domain?: string;
+  description?: string;
+  budgetRange?: string;
+  timeline?: string;
+  projectId?: string;
+  classification?: {
+    tier?: string;
+    reason?: string;
+    suggested_price?: string;
+  } | null;
   plan: string;
   billing: string;
 };
@@ -77,6 +88,11 @@ export function SummaryClient() {
         // Do not block checkout if the confirmation email send fails.
       });
 
+      trackEvent('checkout_started', {
+        plan: intake.plan,
+        billing: intake.billing,
+      });
+
       const response = await fetch(getStripeApiUrl('/api/create-checkout-session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,7 +156,16 @@ export function SummaryClient() {
               <DetailRow label="Company" value={intake.company} />
               {intake.role && <DetailRow label="Role" value={intake.role} />}
               {intake.teamSize && <DetailRow label="Team size" value={intake.teamSize} />}
+              {intake.domain && <DetailRow label="Domain" value={intake.domain} />}
+              {intake.timeline && <DetailRow label="Timeline" value={intake.timeline} />}
+              {intake.budgetRange && <DetailRow label="Budget" value={intake.budgetRange} />}
             </dl>
+            {intake.description && (
+              <div className="mt-4 rounded-xl border border-border bg-bg-offwhite p-4">
+                <p className="text-body-sm text-tx-muted uppercase tracking-wider font-semibold">Project brief</p>
+                <p className="mt-2 text-body-sm text-tx-body leading-relaxed">{intake.description}</p>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
@@ -161,6 +186,13 @@ export function SummaryClient() {
             <p className="text-body-sm text-tx-muted mb-4">
               {PLAN_LABELS[intake.plan]} | billed {intake.billing}
             </p>
+            {intake.classification?.tier && (
+              <div className="mb-4 rounded-xl border border-brand-teal/30 bg-brand-teal/10 p-4">
+                <p className="text-body-sm font-semibold text-tx-heading">ATEAM tier recommendation: {intake.classification.tier}</p>
+                {intake.classification.reason && <p className="mt-1 text-body-sm text-tx-secondary">{intake.classification.reason}</p>}
+                {intake.classification.suggested_price && <p className="mt-1 text-body-sm text-tx-secondary">Suggested price: {intake.classification.suggested_price}</p>}
+              </div>
+            )}
             <ul className="flex flex-col gap-2">
               {features.map((feature) => (
                 <li key={feature} className="flex items-center gap-2 text-body-sm text-tx-body">
@@ -234,7 +266,7 @@ export function SummaryClient() {
               disabled={loading}
               className="w-full px-8 py-4 bg-brand-orange text-white font-semibold rounded-lg hover:bg-brand-orange-hover active:scale-[0.98] transition-all shadow-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed text-body"
             >
-              {loading ? 'Redirecting to Stripe...' : 'Start free trial'}
+              {loading ? 'Redirecting to Stripe...' : 'Start Your Project'}
             </button>
 
             <p className="text-center text-[11px] text-tx-muted mt-4">

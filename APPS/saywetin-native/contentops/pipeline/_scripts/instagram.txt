@@ -1,0 +1,13 @@
+SayWetin partial pass today. 7 green, 2 red - here's what we caught before users did.
+
+Stack we test:
+- Unit + API + Contract layers
+- UAT (real user journeys)
+- BAT (paying-tier flows)
+- Performance (p99 latency)
+- Security (audit + headers)
+- E2E (cold launch on device)
+
+Today's score: 7/9 green.
+
+#SayWetin #BuildInPublic #NaijaTech

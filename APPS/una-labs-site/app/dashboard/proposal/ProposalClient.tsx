@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useSearchParams } from 'next/navigation';
 import { getStripeApiUrl } from '@/lib/stripe-config';
 import { getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
+import { createProposalShareToken } from '@/lib/proposal-share';
 
 type ProjectRecord = {
   id: string;
@@ -89,6 +90,7 @@ const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
 export function ProposalClient({ initialProjectId }: { initialProjectId?: string }) {
   const [state, setState] = useState<ProposalState>({ phase: 'loading' });
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [secureShareState, setSecureShareState] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isAdmin, setIsAdmin] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [repriceState, setRepriceState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -152,6 +154,55 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
       window.setTimeout(() => setCopyState('idle'), 1500);
     } catch {
       setCopyState('error');
+    }
+  };
+
+  const handleCreateSecureShare = async () => {
+    if (state.phase !== 'ready' || typeof window === 'undefined') {
+      setSecureShareState('error');
+      return;
+    }
+
+    const passcode = window.prompt('Create a passcode for this secure share link (minimum 6 characters).');
+    if (!passcode || passcode.trim().length < 6) {
+      setSecureShareState('error');
+      window.setTimeout(() => setSecureShareState('idle'), 2000);
+      return;
+    }
+
+    const expiryInput = window.prompt('How many hours should this share link stay valid?', '72');
+    const expiryHours = Number(expiryInput || '72');
+    if (!Number.isFinite(expiryHours) || expiryHours < 1 || expiryHours > 168) {
+      setSecureShareState('error');
+      window.setTimeout(() => setSecureShareState('idle'), 2000);
+      return;
+    }
+
+    try {
+      const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
+      const token = await createProposalShareToken(
+        {
+          scope: 'proposal_read',
+          generated_at: new Date().toISOString(),
+          expires_at: expiresAt,
+          project: state.project,
+          milestones: state.milestones,
+        },
+        passcode.trim(),
+      );
+
+      const secureUrl = `${window.location.origin}/proposal/share?token=${encodeURIComponent(token)}`;
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard unavailable.');
+      }
+
+      await navigator.clipboard.writeText(secureUrl);
+      setSecureShareState('copied');
+      window.alert('Secure link copied. Share the passcode separately from the URL.');
+      window.setTimeout(() => setSecureShareState('idle'), 2000);
+    } catch {
+      setSecureShareState('error');
+      window.setTimeout(() => setSecureShareState('idle'), 2000);
     }
   };
 
@@ -278,7 +329,10 @@ export function ProposalClient({ initialProjectId }: { initialProjectId?: string
           <p className="text-body-lg text-tx-secondary">Proposed by Una Labs</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3 no-print">
             <Button variant="secondary" size="sm" onClick={handleCopyLink}>
-              {copyState === 'copied' ? 'Link copied' : copyState === 'error' ? 'Copy failed' : 'Copy share link'}
+              {copyState === 'copied' ? 'Link copied' : copyState === 'error' ? 'Copy failed' : 'Copy owner link'}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleCreateSecureShare}>
+              {secureShareState === 'copied' ? 'Secure link copied' : secureShareState === 'error' ? 'Secure share failed' : 'Create secure share link'}
             </Button>
             <Button variant="secondary" size="sm" href={`/dashboard/contract?id=${state.project.id}`}>
               Review Contract

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { FEATURES } from '@/lib/constants';
 
@@ -52,9 +53,11 @@ export function FeatureCarousel() {
           onMouseLeave={() => { pausedRef.current = false; }}
         >
           {FEATURES.map((feature, i) => (
-            <button
+            <Link
               key={feature.id}
-              onClick={() => goTo(i)}
+              href={`/how-it-works?module=${feature.slug}`}
+              onMouseEnter={() => setActive(i)}
+              onFocus={() => setActive(i)}
               aria-pressed={i === active}
               className={[
                 'text-left p-6 rounded-xl border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2',
@@ -72,7 +75,7 @@ export function FeatureCarousel() {
               <p className="text-body-sm text-tx-secondary leading-snug">
                 {feature.benefit}
               </p>
-            </button>
+            </Link>
           ))}
         </div>
 
