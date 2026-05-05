@@ -1,0 +1,84 @@
+name: Failure Recovery
+description: Recover a failed Copilot session, broken PR, or failing CI run.
+title: "[Recovery] "
+labels: ["failure-recovery"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when a Copilot session has failed, a PR is broken, or CI cannot be fixed without investigation.
+        Provide as much context as you can. The recovery agent needs to understand what broke before it can fix anything.
+
+  - type: dropdown
+    id: failure_type
+    attributes:
+      label: Failure Type
+      description: What kind of failure are you recovering from?
+      options:
+        - Copilot session failed mid-task
+        - PR is stuck in draft
+        - CI checks are failing
+        - Agent went out of scope and made breaking changes
+        - Branch has uncommitted or incomplete changes
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: project
+    attributes:
+      label: Project
+      description: Which project is affected?
+      options:
+        - APPS/una-labs-site
+        - APPS/ftc-site
+        - APPS/peacepad
+        - APPS/saywetin
+        - APPS/ATEAM
+        - workers/stripe-api
+        - workers/peacepadai
+        - PACKAGES/
+        - docs/
+        - .github/
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: branch_or_pr
+    attributes:
+      label: Branch or PR
+      description: The branch name or PR number that needs recovery.
+      placeholder: "copilot/fix-intake-form or PR #42"
+    validations:
+      required: true
+
+  - type: textarea
+    id: original_task
+    attributes:
+      label: Original Task
+      description: What was the agent supposed to do before it failed?
+      placeholder: "Add email validation to the intake form in APPS/una-labs-site"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_broke
+    attributes:
+      label: What Broke
+      description: Describe exactly what failed. Include error messages, CI check names, or symptoms.
+      placeholder: |
+        - TypeScript build error in IntakeForm.tsx line 42
+        - CI check "build" is failing with exit code 1
+        - Agent stopped responding after modifying 3 unrelated files
+    validations:
+      required: true
+
+  - type: textarea
+    id: recovery_goal
+    attributes:
+      label: Recovery Goal
+      description: What does a successful recovery look like?
+      placeholder: |
+        - Branch is clean, CI is passing, PR is ready for review
+        - Or: PR is closed and a new issue is created with a cleaner scope

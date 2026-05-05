@@ -1,0 +1,80 @@
+name: Copilot Task
+description: Request a Copilot implementation task for a specific project.
+title: "[Copilot] "
+labels: ["copilot-task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to give Copilot a focused implementation task.
+        Be specific. Narrow scope always produces better results.
+
+  - type: dropdown
+    id: project
+    attributes:
+      label: Project
+      description: Which project folder does this task belong to?
+      options:
+        - APPS/una-labs-site
+        - APPS/ftc-site
+        - APPS/peacepad
+        - APPS/saywetin
+        - APPS/ATEAM
+        - workers/stripe-api
+        - workers/peacepadai
+        - PACKAGES/
+        - docs/
+        - .github/
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: task
+    attributes:
+      label: Task Description
+      description: What should Copilot build, fix, or change? Be specific.
+      placeholder: "Fix the intake form validation so that empty email fields return an error instead of submitting."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: How will you know the task is done? List the conditions that must be true.
+      placeholder: |
+        - The form displays an error message when email is empty
+        - The form does not submit when email is empty
+        - Existing tests still pass
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files Likely Involved
+      description: List any known files. Leave blank if unknown.
+      placeholder: "APPS/una-labs-site/components/IntakeForm.tsx"
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: Anything Copilot must NOT do during this task.
+      placeholder: |
+        - Do not modify the API route
+        - Do not change the form layout
+
+  - type: dropdown
+    id: desktop_testing
+    attributes:
+      label: Desktop Testing Required
+      description: Will this change need to be verified with a local Playwright run or Railway deployment?
+      options:
+        - "No — CI and cloud verification is sufficient"
+        - "Yes — local Playwright test required"
+        - "Yes — Railway deployment verification required"
+        - "Unknown"
+    validations:
+      required: true

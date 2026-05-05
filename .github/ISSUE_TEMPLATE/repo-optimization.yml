@@ -1,0 +1,75 @@
+name: Repo Optimization
+description: Request a documentation, hygiene, or production-readiness pass on a project or the full repo.
+title: "[Optimization] "
+labels: ["repo-optimization"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to ask the FTC Repo Optimization Finisher to improve documentation, test coverage notes, repo hygiene, or production readiness.
+        This agent does NOT touch app source code. Scope it accordingly.
+
+  - type: dropdown
+    id: project
+    attributes:
+      label: Project or Scope
+      description: Which area should be optimized?
+      options:
+        - Full repo
+        - APPS/una-labs-site
+        - APPS/ftc-site
+        - APPS/peacepad
+        - APPS/saywetin
+        - APPS/ATEAM
+        - workers/
+        - PACKAGES/
+        - docs/
+        - .github/
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: optimization_type
+    attributes:
+      label: Optimization Type
+      description: Select all that apply.
+      options:
+        - label: Documentation (README files, docs/, DOCS/)
+        - label: Repo hygiene (stale files, dead references, placeholder text)
+        - label: Testing notes (PR descriptions, test coverage docs, Playwright notes)
+        - label: Production readiness (deployment docs, health checks, environment notes)
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What Needs to Be Fixed
+      description: Describe the specific issues you want addressed. Be as specific as possible.
+      placeholder: |
+        - APPS/una-labs-site/README.md is outdated — it still references old route structure
+        - Recent PRs have no testing notes in their descriptions
+        - docs/ops/ has broken links to files that were moved
+    validations:
+      required: true
+
+  - type: textarea
+    id: do_not_touch
+    attributes:
+      label: Do Not Touch
+      description: List any files or folders the agent must not modify.
+      placeholder: |
+        - Do not touch APPS/una-labs-site/app/ (source code, not docs)
+        - Do not modify wrangler.toml
+        - Do not touch .env files
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      description: How urgent is this optimization?
+      options:
+        - Low — background task, no deadline
+        - Medium — before next launch or release
+        - High — blocking a PR or deployment review
+    validations:
+      required: true
