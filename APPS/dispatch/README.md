@@ -60,7 +60,7 @@ npm run build:prod
 npm run dev
 ```
 
-Required environment variables are shown in [`.env.example`](/c:/FTC%20HOLDING/APPS/dispatch/.env.example).
+Required environment variables are shown in [`.env.example`](.env.example).
 
 For production hardening, set `DISPATCH_OPERATOR_SESSION_SECRET` so operator sessions can authenticate request access, SSE, push subscription, and field updates without exposing admin credentials.
 
@@ -153,11 +153,11 @@ Why this matters:
 
 ## Production notes
 
-- Docker build uses [Dockerfile](/c:/FTC%20HOLDING/APPS/dispatch/Dockerfile)
-- Railway config lives in [railway.json](/c:/FTC%20HOLDING/APPS/dispatch/railway.json)
-- build context is trimmed by [`.dockerignore`](/c:/FTC%20HOLDING/APPS/dispatch/.dockerignore)
+- Docker build uses [Dockerfile](Dockerfile)
+- Railway config lives in [railway.json](railway.json)
+- build context is trimmed by [`.dockerignore`](.dockerignore)
 - the app expects `PORT=8080` in production
-- the branded public hostname is fronted by the Cloudflare Worker in [workers/dispatch-edge/src/index.ts](/c:/FTC%20HOLDING/workers/dispatch-edge/src/index.ts)
+- the branded public hostname is fronted by the Cloudflare Worker in [workers/dispatch-edge/src/index.ts](../../workers/dispatch-edge/src/index.ts)
 - Railway should keep only the fallback origin (`dispatch-api-production.up.railway.app`); public branded hosts stay at Cloudflare
 - if Railway build health regresses, verify app-root installs with `npm ci --workspaces=false`
 
