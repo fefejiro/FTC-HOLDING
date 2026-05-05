@@ -301,16 +301,11 @@ export async function uploadListenSample(
       return detail;
     };
 
-    let detail = await fetchDetail();
-    // Backend sometimes returns empty lyrics on first fetch (race with enrichment).
-    // Retry once after a short delay before falling back to the bare track.
-    if (detail && (!detail.lyrics?.text || (detail.culturalAnalysis?.length ?? 0) === 0)) {
-      await new Promise((r) => setTimeout(r, 1500));
-      const retry = await fetchDetail();
-      if (retry && (retry.lyrics?.text || (retry.culturalAnalysis?.length ?? 0) > 0)) {
-        detail = retry;
-      }
-    }
+    // Do not block the first result screen too long; enrich only if quick.
+    const detail = await Promise.race<RecognizedTrackDetailResponse | null>([
+      fetchDetail(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 900)),
+    ]);
 
     if (detail) {
       return { ...mergeDetailedTrack(baseTrack, detail), matchedInMs: Date.now() - startedAt };

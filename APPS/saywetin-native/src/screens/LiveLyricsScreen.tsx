@@ -13,15 +13,16 @@ type LiveLyricsScreenProps = {
 };
 
 export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
+  const initialSongOffsetMs = Math.max(0, track.lyricsAnchorOffsetMs ?? track.matchedInMs ?? 0);
   const [lyrics, setLyrics] = useState<SyncedLyricLine[]>(track.syncedLyrics);
-  const [positionMs, setPositionMs] = useState(track.matchedInMs ?? 0);
+  const [positionMs, setPositionMs] = useState(initialSongOffsetMs);
   const [syncWarn, setSyncWarn] = useState(false);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [selectedLine, setSelectedLine] = useState<SyncedLyricLine | null>(null);
   const [contextTab, setContextTab] = useState<'meaning' | 'alternates' | 'related'>('meaning');
   const [lineMeaningCache, setLineMeaningCache] = useState<Record<string, SyncedLyricLine>>({});
   const startedAtRef = useRef(Date.now());
-  const startOffsetMs = useRef(track.matchedInMs ?? 0);
+  const startOffsetMs = useRef(initialSongOffsetMs);
   const driftSinceMs = useRef<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const lineHeights = useRef<Record<number, number>>({});

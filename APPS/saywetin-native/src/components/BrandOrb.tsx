@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Animated, Easing, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 const orbImage = require('../../assets/orb.png') as number;
 
@@ -67,7 +67,7 @@ export function BrandOrb({
     const loop = Animated.loop(
       Animated.timing(spin, {
         toValue: 1,
-        duration: phase === 'matching' ? 2200 : phase === 'listening' ? 3200 : 12000,
+        duration: phase === 'matching' ? 1600 : phase === 'listening' ? 2600 : 4800,
         easing: Easing.linear,
         useNativeDriver: true,
       }),
@@ -137,9 +137,9 @@ export function BrandOrb({
       ) : null}
 
       {/* Orb image — circular PNG with transparent background */}
-      <Image
+      <Animated.Image
         source={orbImage}
-        style={{ width: outer, height: outer }}
+        style={{ width: outer, height: outer, transform: [{ rotate: spinRotate }] }}
         resizeMode="contain"
       />
 

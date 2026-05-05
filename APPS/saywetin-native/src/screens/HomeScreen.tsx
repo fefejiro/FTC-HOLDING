@@ -30,7 +30,7 @@ import type { CulturalAnalysisEntry, RitualController, RitualTrack, SyncedLyricL
 
 const { colors } = ritualTokens;
 
-const CAPTURE_DURATION_MS = 5000;
+const CAPTURE_DURATION_MS = 3500;
 type Phase = 'idle' | 'listening' | 'matching' | 'result';
 
 function inferInputRoute(nameOrType: string): InputRoute {
@@ -325,7 +325,7 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
   useEffect(() => {
     if (phase === 'result' && track) {
       phaseResultAtRef.current = Date.now();
-      playbackStartRef.current = Date.now() - Math.max(0, track.matchedInMs || 0);
+      playbackStartRef.current = Date.now() - Math.max(0, track.lyricsAnchorOffsetMs ?? track.matchedInMs || 0);
       setActiveLineIndex(0);
     } else {
       phaseResultAtRef.current = null;
@@ -356,10 +356,8 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
         const updated = { ...track, syncedLyrics: result.lines };
         setTrack(updated);
         ritual.setRecognizedTrack(updated);
-        // Re-anchor the playback clock using the server's song offset.
-        // Account for time elapsed since the result screen was first shown.
-        const elapsedSinceResult = phaseResultAtRef.current ? Date.now() - phaseResultAtRef.current : 0;
-        playbackStartRef.current = Date.now() - result.songOffsetMs - elapsedSinceResult;
+        // Re-anchor playback directly from the server-reported song offset.
+        playbackStartRef.current = Date.now() - Math.max(0, result.songOffsetMs || 0);
       } else if (attemptsLeft > 1) {
         setTimeout(() => attemptFetch(attemptsLeft - 1), 2000);
       }
@@ -377,9 +375,18 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
       if (!start) return;
       const elapsed = Date.now() - start;
       const idx = synced.findIndex((l) => elapsed >= l.startMs && elapsed < l.endMs);
-      if (idx >= 0) setActiveLineIndex(idx);
+      if (idx >= 0) {
+        setActiveLineIndex(idx);
+        return;
+      }
+      // Keep progression stable when lyric windows have tiny gaps.
+      const fallback = Math.max(
+        0,
+        synced.reduce((best, line, i) => (line.startMs <= elapsed ? i : best), 0),
+      );
+      setActiveLineIndex(fallback);
     };
-    const interval = setInterval(tick, 250);
+    const interval = setInterval(tick, 100);
     return () => clearInterval(interval);
   }, [hasSynced, phase, synced]);
 

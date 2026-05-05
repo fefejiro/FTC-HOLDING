@@ -18,6 +18,7 @@ export type RitualTrack = {
   youtubeUrl: string;
   chips: string[];
   syncedLyrics: SyncedLyricLine[];
+  lyricsAnchorOffsetMs?: number;
   matchSource: MatchSource;
   recognitionSource: RecognitionSource;
   culturalAnalyses: CulturalAnalysisEntry[];
@@ -26,6 +27,7 @@ export type RitualTrack = {
 export type RitualController = {
   screen: RitualScreen;
   track: RitualTrack;
+  setRecognizedTrack: (track: RitualTrack) => void;
   startListening: () => void;
   revealResult: () => void;
   reset: () => void;
@@ -45,6 +47,7 @@ const demoTrack: RitualTrack = {
   youtubeUrl: 'https://www.youtube.com',
   chips: ['Live recognition'],
   syncedLyrics: [],
+  lyricsAnchorOffsetMs: 0,
   matchSource: 'unknown',
   recognitionSource: 'microphone',
   culturalAnalyses: [],
@@ -56,6 +59,7 @@ export function useRitualState() {
 
   const actions = useMemo(
     () => ({
+      setRecognizedTrack: (nextTrack: RitualTrack) => setTrack(nextTrack),
       startListening: () => setScreen('listen'),
       revealResult: () => setScreen('result'),
       reset: () => {
