@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { caseStudies, demoModules } from '@/lib/site-content';
 import { WorkflowAnimation } from '@/components/WorkflowAnimation';
 import { demoSteps } from '@/components/demoSteps';
+import { SparkWidget } from '@/components/SparkWidget';
 
 export function DemoContent() {
   const [active, setActive] = useState(demoModules[0].slug);
@@ -144,6 +145,7 @@ export function DemoContent() {
           </div>
         </div>
       </section>
+      <SparkWidget />
     </>
   );
 }
