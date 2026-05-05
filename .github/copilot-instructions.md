@@ -1,89 +1,68 @@
-# Copilot Instructions — FTC Holding / Una Labs
+# FTC HOLDING Copilot Instructions
 
-You are working with Manchi, solo founder of Fejiro Technology Consultancy Inc. (FTC Holding / Una Labs).
+This repository contains multiple FTC projects and product experiments. Treat it as a portfolio workspace, not a single app.
 
-## Identity and Context
+## General rules
 
-- Solo founder, IT Manager, building AI-powered products
-- Company: FTC Holding (legal) / Una Labs (public brand)
-- Repo root: `C:\FTC HOLDING`
-- OS: Windows (local dev), Linux (Railway / cloud)
-- IDE: VS Code
+- Keep changes scoped to the requested app, folder, or issue.
+- Do not make unrelated edits.
+- Do not change secrets, environment variables, production credentials, billing settings, or deployment configuration unless explicitly instructed.
+- Do not introduce new dependencies unless required and clearly justified.
+- Preserve existing naming, routing, design patterns, and brand positioning.
+- Prefer small pull requests over broad refactors.
+- Always include testing notes in the pull request summary.
+- Do not claim tests passed unless they were actually run.
+- If tests cannot be run, explain why.
 
-## Active Projects (Priority Order)
+## Expected project documentation
 
-1. **Dispatch** — Ottawa roadside assistance. Live. Paying clients: Kevin, Cheta. Backend on Railway.
-2. **PeacePad** — AI co-parenting mediation. Live (web + Android). Backend on Railway.
-3. **OG Trades Academy** — Trade school platform. Pre-launch. Domain held.
-4. **ATEAM** — Internal AI agent OS. Live in demo mode. Railway backend paused ($0 burn).
-5. **SayWetin** — Shazam for Nigerian lingo/music. Live (Android). iOS blocked.
-6. **GuardSignal** — Context-aware anti-theft for motorcycles. Pre-build validation phase.
+Where relevant, each app should eventually include:
 
-## Tech Stack
+- README.md
+- PROJECT_BRIEF.md
+- ARCHITECTURE.md
+- ROADMAP.md
+- TASKS.md
+- TESTING.md
+- DEPLOYMENT.md
 
-React, React Native, Node.js, Next.js, Supabase, Cloudflare Pages, Railway, Drizzle ORM, Playwright (E2E tests), Capacitor (Android).
+Documentation should be practical, current, and specific to the app.
 
-## Core Principles (Always Apply)
+## Next.js production readiness
 
-- Optimize what exists before adding new layers
-- Prefer $0 solutions; defer paid services until revenue-positive
-- Minimize monthly burn (current total: ~$20 USD/month)
-- 70% planning and orchestration, 30% implementation
-- Lean, battle-tested, revenue-first version of every solution
-- No feature bloat
+For Next.js apps, check whether the following exist where applicable:
 
-## Model Routing (Use This Every Session)
+- app/error.tsx
+- app/global-error.tsx
+- app/loading.tsx
+- app/not-found.tsx
+- app/manifest.ts
+- sitemap
+- robots
+- metadata defaults
+- OpenGraph metadata
+- Twitter card metadata
 
-| Task Type | Model to Use |
-|-----------|-------------|
-| Architecture, planning, long-form docs, refactoring | Claude Opus 4.6 |
-| Bug fixing, QA, rapid iteration, stack traces | GPT-5.4 |
-| Edge case testing, final polish, small edits | Gemini 2.0 |
-| Inline autocomplete | Auto |
+Use existing UI patterns. Do not redesign the app unless asked.
 
-Switch models using the dropdown in Copilot Chat. Conversation history carries over.
+## Pull request standard
 
-## Response Style
+Every pull request should include:
 
-- No contractions
-- No em dashes
-- Direct, concise, actionable
-- Always provide next steps, not just explanations
-- Teach better prompting when the question is unclear or verbose
-- Nigerian/Warri humor welcome — no corporate fluff
+- Summary
+- Files changed
+- Testing performed
+- Risks
+- Follow-up recommendations
 
-## Deployment Map
+## FTC project context
 
-| Project | Frontend | Backend | Domain |
-|---------|----------|---------|--------|
-| Dispatch | Cloudflare Pages | Railway (live) | dispatch.unalabs.cloud |
-| PeacePad | Cloudflare Pages | Railway (live) | peacepad.ca |
-| Una Labs site | Cloudflare Pages | — | unalabs.cloud |
-| SayWetin | Cloudflare Pages | Railway | TBD |
-| ATEAM | Cloudflare Pages | Railway (paused) | unalabs.cloud/ateam |
-
-## Active Sprint (Week of 2026-04-20)
-
-**Project:** Una Labs site (`APPS/una-labs-site`) stabilization sprint.
-**Goal:** Keep intake-to-delivery flow reliable and finalize webhook architecture decisions.
-**Blocked item:** Stripe worker webhook architecture is inconsistent across docs and must be resolved before further changes.
-
-## Quick Commands
-
-```powershell
-# Dispatch smoke test
-cd "C:\FTC HOLDING\APPS\dispatch"; npm run test:e2e:road-alerts
-
-# PeacePad health
-npm --prefix APPS/peacepad run verify:deployment-ownership
-
-# Secrets audit
-npm run audit:secrets
-
-# Git status
-git -C "C:\FTC HOLDING" status -sb
-```
-
-## Master Reference
-
-See `FTC_MASTER.md` in the repo root for the full orchestration map, decision log, and velocity tracker.
+Una Labs is the professional AI product studio.
+ATEAM is the internal AI operating system and workflow layer.
+PeacePad is a mediation-first co-parenting and family justice platform.
+SayWetin is a global cultural companion for music, speech, slang, and context.
+Garden Cleaners is a client service website and portal.
+OG Trades Academy is a standalone forex education brand.
+TradeUp is a Nigerian social trading and gamified challenge platform.
+TrueGinja is a mobile-first hustle Work OS.
+TowSignal is a dispatch and roadside signal workflow app.

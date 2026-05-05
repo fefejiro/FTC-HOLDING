@@ -1,4 +1,8 @@
-﻿export const clientLogos = [
+﻿// Authoritative metrics source: public/content/metrics.json
+// Edit that file to update metrics without touching code; a site redeploy is still required.
+import rawMetrics from "../public/content/metrics.json";
+
+export const clientLogos = [
   {
     name: "LCBO",
     alt: "LCBO client logo",
@@ -36,25 +40,5 @@ export type ClientMetric = {
   suffix?: string;
 };
 
-export const clientMetrics: ClientMetric[] = [
-  // TODO(content): replace these constants with verified live/business-approved metrics source.
-  {
-    label: "Active Projects",
-    value: 12,
-    suffix: "+"
-  },
-  {
-    label: "Average First Delivery",
-    value: 48,
-    suffix: "hr"
-  },
-  {
-    label: "Build Transparency",
-    value: 100,
-    suffix: "%"
-  },
-  {
-    label: "Live Products",
-    value: 3
-  }
-];
+// Authoritative source: public/content/metrics.json (see import above)
+export const clientMetrics: ClientMetric[] = rawMetrics as ClientMetric[];
