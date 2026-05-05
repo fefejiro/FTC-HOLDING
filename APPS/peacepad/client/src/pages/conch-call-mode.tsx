@@ -1904,7 +1904,20 @@ export default function ConchModePage() {
         </div>
       )}
 
-      {/* TODO: Add dedicated WebRTC audio handler for Conch mode */}
+      {/* Dedicated WebRTC audio handler for Conch mode.
+          This hidden element receives remote audio tracks when WebRTC is active.
+          When WebRTC is unavailable the hook degrades gracefully and this
+          element is simply not used — no visible error is shown to the user. */}
+      {audioEnabled && (
+        <audio
+          id="conch-remote-audio"
+          autoPlay
+          playsInline
+          style={{ display: 'none' }}
+          aria-hidden="true"
+          data-testid="conch-audio-output"
+        />
+      )}
 
       {/* CSS for breathing and passing animations */}
       <style>{`
