@@ -10,18 +10,6 @@ This documentation tree mirrors a Confluence-style project space inside the repo
 - `adr/` for decisions that shape the long-term product
 - `status/` for weekly summaries, release notes, and test evidence
 
-## Governance Coverage
-- Product brief: `product/PRODUCT_BRIEF.md`
-- Roadmap: `product/ROADMAP.md`
-- Risk log: `product/RISK_LOG.md`
-- Architecture overview: `architecture/OVERVIEW.md`
-- Schema proposal: `architecture/DATABASE_SCHEMA_PROPOSAL.md`
-- ADR index and first ADR: `adr/README.md`, `adr/ADR-001-foundation.md`
-- Weekly summary: `status/WEEKLY_STATUS.md`
-- Release log: `status/RELEASE_LOG.md`
-- Test evidence: `status/TEST_EVIDENCE.md`
-- Machine-readable status: `../../APPS/anion/ops/status-summary.json`
-
 ## Operating Rule
 - Long-form docs reduce into the weekly summary.
 - Weekly summary reduces into the machine-readable status artifact at `APPS/anion/ops/status-summary.json`.

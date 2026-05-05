@@ -9,10 +9,8 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@ftc/auth": ["../../PACKAGES/auth/src/index.ts"],
       "@ftc/anion-types": ["../../PACKAGES/anion-types/src/index.ts"],
-      "@ftc/anion-shared": ["../../PACKAGES/anion-shared/src/index.ts"],
-      "@ftc/supabase": ["../../PACKAGES/supabase/src/index.ts"]
+      "@ftc/anion-shared": ["../../PACKAGES/anion-shared/src/index.ts"]
     },
     "resolveJsonModule": true,
     "esModuleInterop": true,

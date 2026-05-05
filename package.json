@@ -34,7 +34,6 @@
     "postinstall": "node scripts/cf-pages-postinstall.mjs",
     "audit:secrets": "node scripts/audit-secrets.cjs",
     "status:anion:sync": "node scripts/update-anion-status.mjs",
-    "test:anion:rls:smoke": "node scripts/run-anion-rls-smoke.mjs",
     "metrics:peacepad:weekly": "node scripts/update-peacepad-weekly-metrics.mjs",
     "status:unalabs:sync": "node scripts/update-unalabs-status.mjs",
     "qa:portfolio:e2e": "node scripts/run-portfolio-e2e.mjs",

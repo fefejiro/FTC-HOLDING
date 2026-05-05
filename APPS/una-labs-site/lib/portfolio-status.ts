@@ -914,10 +914,10 @@ export async function loadPortfolioStatus(token?: string): Promise<ProjectStatus
   const projects = [
     workerSummary ? transformWorkerSummary(workerSummary) : buildFallbackUnaLabsSummary(),
     buildAnionSummary(),
-    withE2E(buildSayWetinSummary(), ['saywetin', 'saywetin-api']),
-    withE2E(buildPeacePadSummary(), ['peacepad', 'peacepad-api']),
-    withE2E(buildDispatchSummary(), ['dispatch']),
-    withE2E(buildAteamSummary(), ['ateam']),
+    buildSayWetinSummary(),
+    buildPeacePadSummary(),
+    buildDispatchSummary(),
+    buildAteamSummary(),
   ];
 
   return Promise.all(projects.map(applyConnectionProbes));

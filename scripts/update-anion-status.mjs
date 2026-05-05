@@ -1,30 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-function findRepoRoot(startDir) {
-  let current = startDir;
-
-  while (true) {
-    const hasRepoSignals = [
-      path.join(current, 'FTC_MASTER.md'),
-      path.join(current, 'APPS', 'anion', 'ops', 'status-summary.json'),
-      path.join(current, 'DOCS', 'ANION', 'status', 'STATUS.md'),
-    ].every((candidate) => fs.existsSync(candidate));
-
-    if (hasRepoSignals) {
-      return current;
-    }
-
-    const parent = path.dirname(current);
-    if (parent === current) {
-      throw new Error('Unable to resolve FTC HOLDING repository root for Anion status sync.');
-    }
-
-    current = parent;
-  }
-}
-
-const root = findRepoRoot(process.cwd());
+const root = process.cwd();
 const artifactPath = path.join(root, 'APPS', 'anion', 'ops', 'status-summary.json');
 const statusDocPath = path.join(root, 'DOCS', 'ANION', 'status', 'STATUS.md');
 const masterDocPath = path.join(root, 'FTC_MASTER.md');

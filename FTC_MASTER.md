@@ -121,9 +121,6 @@ npm --prefix APPS/saywetin run verify:frontend-build
 # Anion status sync
 npm run status:anion:sync
 
-# Portfolio E2E + dashboard telemetry refresh
-npm run qa:portfolio:e2e
-
 # Secrets audit (run weekly)
 npm run audit:secrets
 
@@ -209,10 +206,10 @@ git -C "C:\FTC HOLDING" status -sb
 ## Anion Ops Snapshot (Auto)
 
 <!-- AUTO:ANION_MASTER:START -->
-- Updated at: 2026-04-23T23:59:30.000Z
+- Updated at: 2026-04-23T00:00:00.000Z
 - Overall: yellow
 - Stage: foundation
-- Metrics tracked: 8
-- Checks tracked: 4
+- Metrics tracked: 4
+- Checks tracked: 3
 - Canonical status doc: DOCS/ANION/status/STATUS.md
 <!-- AUTO:ANION_MASTER:END -->

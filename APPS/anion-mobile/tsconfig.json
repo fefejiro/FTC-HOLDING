@@ -12,7 +12,7 @@
       "@ftc/anion-shared": ["../../PACKAGES/anion-shared/src/index.ts"]
     },
     "skipLibCheck": true,
-    "types": ["react", "node"]
+    "types": ["react"]
   },
   "include": ["src"]
 }
