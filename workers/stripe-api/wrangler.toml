@@ -26,4 +26,7 @@ crons = ["0 13 * * *"]
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
 # SUPABASE_SERVICE_ROLE_KEY — set via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 # OPENAI_API_KEY — set via: npx wrangler secret put OPENAI_API_KEY
-# STRIPE_PRICE_SPARK_PASS — optional Stripe Price ID for the Spark pass (if using an existing price)
+# GITHUB_TOKEN — set via: npx wrangler secret put GITHUB_TOKEN
+#   A GitHub personal access token (classic) with `repo` or `public_repo` scope.
+#   Required for the /api/admin/github-issues engineering queue panel.
+#   Without this token the endpoint falls back to unauthenticated GitHub API (60 req/hr limit).
