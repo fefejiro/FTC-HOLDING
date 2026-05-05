@@ -19,6 +19,7 @@ export default function GardenImagePanel({ asset, priority = false, className }:
           sizes="(max-width: 767px) 100vw, (max-width: 1100px) 50vw, 560px"
           priority={priority}
           className="garden-image"
+          style={{ objectFit: "cover", objectPosition: "center" }}
         />
       </div>
       <figcaption className="garden-image-copy">

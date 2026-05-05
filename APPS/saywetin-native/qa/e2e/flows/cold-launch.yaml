@@ -1,0 +1,18 @@
+# SayWetin: cold-launch + identify-by-text happy path
+appId: com.saywetin.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "SayWetin"
+- assertVisible: "Tap to SayWetin"
+- takeScreenshot: 01-home-loaded
+- tapOn: "Tap to SayWetin"
+- assertVisible: "Listening"
+- takeScreenshot: 02-listening-state
+- tapOn:
+    text: "Decode lyric or slang"
+- assertVisible: "Wetin be this?"
+- takeScreenshot: 03-decode-open
+- tapOn: "Close"
+- assertVisible: "SayWetin"
+- takeScreenshot: 04-back-home

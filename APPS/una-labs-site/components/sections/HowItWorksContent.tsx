@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -152,57 +152,75 @@ const FEATURES = [
 
 type ModuleDemoItem = {
   label: string;
+  slug: string;
   icon: string;
   bg: string;
   duration: string;
   live: boolean;
   description: string;
   href: string;
-  arcadeUrl?: string;
+  walkthroughHref?: string;
 };
 
-// Paste Arcade share or embed links here. Share links are auto-normalized to /embed.
-const ARCADE_DEMO_URLS: Partial<Record<string, string>> = {
-  'Forms & Intake': '',
-  'Proposals': '',
-  'Billing & Payments': '',
+type WalkthroughPlayerItem = {
+  id: string;
+  label: string;
+  url: string;
+  external: boolean;
+  note: string;
 };
 
-function toArcadeEmbedUrl(url?: string): string | undefined {
-  if (!url) return undefined;
-  const trimmed = url.trim();
-  if (!trimmed) return undefined;
-  if (trimmed.includes('/share/') && !trimmed.includes('/embed')) {
-    try {
-      const parsed = new URL(trimmed);
-      parsed.pathname = parsed.pathname.replace(/\/$/, '') + '/embed';
-      return parsed.toString();
-    } catch {
-      return trimmed.replace(/\/$/, '') + '/embed';
-    }
-  }
-  return trimmed;
+function toModuleSlug(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 const MODULE_DEMOS_BASE: ModuleDemoItem[] = [
-  { label: 'Forms & Intake', icon: '📋', bg: 'bg-blue-50', duration: '2 min', live: true, description: 'Submit your project request. We structure it into a scoped brief in under 48 hours.', href: '/start' },
-  { label: 'Proposals', icon: '📄', bg: 'bg-orange-50', duration: '3 min', live: true, description: 'Start a request to receive a fixed-fee CAD proposal. One clear offer per engagement.', href: '/start' },
-  { label: 'Billing & Payments', icon: '💳', bg: 'bg-green-50', duration: '3 min', live: true, description: 'Stripe-powered checkout. 50% deposit on project acceptance, balance on delivery.', href: '/start' },
-  { label: 'Contracts & E-sign', icon: '✍️', bg: 'bg-purple-50', duration: '2 min', live: false, description: 'Engagement letter generated per project. Client e-signature workflow coming soon.', href: '/contact' },
-  { label: 'Instant Bill', icon: '⚡', bg: 'bg-yellow-50', duration: '2 min', live: false, description: 'One-off payment links for ad hoc or out-of-scope work. Coming soon.', href: '/contact' },
-  { label: 'AutoCollect', icon: '🔄', bg: 'bg-teal-50', duration: '3 min', live: false, description: 'Automated invoice reminders and payment collection. Zero manual follow-up. Coming soon.', href: '/contact' },
-  { label: 'AI Price Insights', icon: '🤖', bg: 'bg-indigo-50', duration: '3 min', live: false, description: 'AI-recommended price bands with rationale and confidence score per project. Coming soon.', href: '/contact' },
-  { label: 'Insights & Reporting', icon: '📊', bg: 'bg-rose-50', duration: '3 min', live: false, description: 'MRR, pipeline, contracts, and collection health in one real-time board. Coming soon.', href: '/contact' },
-  { label: 'Deals Pipeline', icon: '🎯', bg: 'bg-amber-50', duration: '2 min', live: false, description: 'Track prospects from lead to signed engagement. Contact form leads flow in automatically. Coming soon.', href: '/contact' },
-  { label: 'AutoPricing', icon: '🏷️', bg: 'bg-cyan-50', duration: '2 min', live: false, description: 'Re-trigger AI pricing from the proposal view. Update rates without re-intake. Coming soon.', href: '/contact' },
-  { label: 'Custom Branding', icon: '🎨', bg: 'bg-fuchsia-50', duration: '2 min', live: false, description: 'Your logo and colors on every proposal, contract, and email your clients receive. Coming soon.', href: '/contact' },
-  { label: 'Integrations', icon: '🔌', bg: 'bg-gray-50', duration: '3 min', live: false, description: 'Connect Xero, QuickBooks, Slack, and Zapier to your Una Labs workspace. Coming soon.', href: '/contact' },
+  { label: 'Forms & Intake', slug: 'intake-scoping', icon: '📋', bg: 'bg-blue-50', duration: '2 min', live: true, description: 'Submit your project request. We structure it into a scoped brief in under 48 hours.', href: '/start', walkthroughHref: '/demo/intake' },
+  { label: 'Proposals', slug: 'proposals', icon: '📄', bg: 'bg-orange-50', duration: '3 min', live: true, description: 'Start a request to receive a fixed-fee CAD proposal. One clear offer per engagement.', href: '/start', walkthroughHref: '/demo/dispatch' },
+  { label: 'Billing & Payments', slug: 'live-payments', icon: '💳', bg: 'bg-green-50', duration: '3 min', live: true, description: 'Stripe-powered checkout. 50% deposit on project acceptance, balance on delivery.', href: '/start', walkthroughHref: '/demo/peacepad' },
+  { label: 'Contracts & E-sign', slug: 'contracts-e-sign', icon: '✏️', bg: 'bg-purple-50', duration: '2 min', live: true, description: 'Engagement letter generated per project. Client reviews scope, types their name, and signs directly in the portal - no third-party tool required.', href: '/dashboard/contract' },
+  { label: 'Instant Bill', slug: 'instant-bill', icon: '⚡', bg: 'bg-yellow-50', duration: '2 min', live: false, description: 'One-off payment links for ad hoc or out-of-scope work. Coming soon.', href: '/contact' },
+  { label: 'AutoCollect', slug: 'autocollect', icon: '🔄', bg: 'bg-teal-50', duration: '3 min', live: false, description: 'Automated invoice reminders and payment collection. Zero manual follow-up. Coming soon.', href: '/contact' },
+  { label: 'AI Price Insights', slug: 'ai-price-insights', icon: '🤖', bg: 'bg-indigo-50', duration: '3 min', live: true, description: 'AI-recommended price confidence per project - High, Medium, or Low - surfaced directly on each project card.', href: '/dashboard' },
+  { label: 'Scheduling', slug: 'scheduling', icon: '📅', bg: 'bg-violet-50', duration: '2 min', live: true, description: 'Milestone calendar with filters by this week, this month, or overdue. Quick-action buttons per milestone - book a review call, open briefing, or share client view.', href: '/dashboard/scheduling' },
+  { label: 'Insights & Reporting', slug: 'reporting', icon: '📊', bg: 'bg-rose-50', duration: '3 min', live: true, description: 'Real-time BI dashboard - total revenue, MRR projection, cashflow forecast, collection health, pipeline conversion, and revenue by service tier.', href: '/dashboard/analytics' },
+  { label: 'Deals Pipeline', slug: 'deals-pipeline', icon: '🎯', bg: 'bg-amber-50', duration: '2 min', live: true, description: 'Track contact form submissions from lead to signed engagement. Pipeline stages, status updates, internal notes, and conversion tracking in one view.', href: '/dashboard/deals' },
+  { label: 'AutoPricing', slug: 'autopricing', icon: '🏷️', bg: 'bg-cyan-50', duration: '2 min', live: false, description: 'Re-trigger AI pricing from the proposal view. Update rates without re-intake. Coming soon.', href: '/contact' },
+  { label: 'Custom Branding', slug: 'custom-branding', icon: '🎨', bg: 'bg-fuchsia-50', duration: '2 min', live: false, description: 'Your logo and colors on every proposal, contract, and email your clients receive. Coming soon.', href: '/contact' },
+  { label: 'Integrations', slug: 'integrations', icon: '🔌', bg: 'bg-gray-50', duration: '3 min', live: false, description: 'Connect Xero, QuickBooks, Slack, and Zapier to your Una Labs workspace. Coming soon.', href: '/contact' },
 ];
-
 const MODULE_DEMOS: ModuleDemoItem[] = MODULE_DEMOS_BASE.map((mod) => ({
   ...mod,
-  arcadeUrl: toArcadeEmbedUrl(ARCADE_DEMO_URLS[mod.label]),
+  slug: mod.slug || toModuleSlug(mod.label),
 }));
+
+const WALKTHROUGH_PLAYER_ITEMS: WalkthroughPlayerItem[] = [
+  {
+    id: 'intake',
+    label: 'Intake walkthrough',
+    url: '/start',
+    external: false,
+    note: 'Live intake flow in production',
+  },
+  {
+    id: 'dispatch',
+    label: 'Dispatch walkthrough',
+    url: 'https://dispatch.unalabs.cloud',
+    external: true,
+    note: 'Live Dispatch workflow in production',
+  },
+  {
+    id: 'peacepad',
+    label: 'Peacepad walkthrough',
+    url: 'https://peacepad.ca',
+    external: true,
+    note: 'Live Peacepad workflow in production',
+  },
+];
 
 const FAQ = [  {
     q: 'Do I need to know exactly what I want before submitting?',
@@ -230,44 +248,22 @@ const FAQ = [  {
   },
 ];
 
-function ModuleCard({ mod }: { mod: ModuleDemoItem }) {
-  const statusLabel = mod.arcadeUrl ? 'Video live' : mod.live ? 'Product live' : 'Coming soon';
-  const statusClasses = mod.arcadeUrl
+function ModuleCard({ mod, highlighted }: { mod: ModuleDemoItem; highlighted: boolean }) {
+  const statusLabel = mod.walkthroughHref ? 'Walkthrough live' : mod.live ? 'Product live' : 'Coming soon';
+  const statusClasses = mod.walkthroughHref
     ? 'bg-teal-100 text-teal-700'
     : mod.live
       ? 'bg-green-100 text-green-700'
       : 'bg-amber-100 text-amber-700';
 
-  if (mod.arcadeUrl) {
-    return (
-      <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="relative w-full aspect-video">
-          <iframe
-            src={mod.arcadeUrl}
-            title={mod.label}
-            loading="lazy"
-            allowFullScreen
-            allow="clipboard-write"
-            className="absolute inset-0 w-full h-full border-0"
-          />
-        </div>
-        <div className="p-5 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-body font-semibold text-tx-heading">{mod.label}</p>
-            <p className="mt-1 text-body-sm text-tx-secondary leading-snug">{mod.description}</p>
-          </div>
-          <Link
-            href={mod.href}
-            className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-brand-teal hover:underline whitespace-nowrap mt-0.5"
-          >
-            Try live →
-          </Link>
-        </div>
-      </div>
-    );
-  }
   return (
-    <Link href={mod.href} className="group bg-white rounded-2xl border border-border shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div
+      id={`module-${mod.slug}`}
+      className={[
+        'group bg-white rounded-2xl border shadow-sm overflow-hidden hover:shadow-md transition-all duration-200',
+        highlighted ? 'border-brand-teal ring-2 ring-brand-teal/30' : 'border-border',
+      ].join(' ')}
+    >
       <div className={`h-36 flex items-center justify-center ${mod.bg} relative`}>
         <span className="text-4xl">{mod.icon}</span>
         <span className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wider text-tx-muted bg-white/80 rounded-full px-2 py-0.5">{mod.duration}</span>
@@ -276,8 +272,36 @@ function ModuleCard({ mod }: { mod: ModuleDemoItem }) {
       <div className="p-5">
         <p className="text-body font-semibold text-tx-heading group-hover:text-brand-teal transition-colors">{mod.label}</p>
         <p className="mt-1 text-body-sm text-tx-secondary leading-snug">{mod.description}</p>
+        <div className="mt-4 flex items-center gap-3">
+          {mod.live && (
+            <Link
+              href={mod.href}
+              className="text-[11px] font-semibold uppercase tracking-wider text-brand-teal hover:underline"
+            >
+              Try live →
+            </Link>
+          )}
+          {mod.walkthroughHref && (
+            <Link
+              href={mod.walkthroughHref}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] font-semibold uppercase tracking-wider text-tx-secondary hover:text-brand-teal"
+            >
+              Open walkthrough ↗
+            </Link>
+          )}
+          {!mod.live && (
+            <Link
+              href="/contact"
+              className="text-[11px] font-semibold uppercase tracking-wider text-tx-secondary hover:text-brand-teal"
+            >
+              Contact us →
+            </Link>
+          )}
+        </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -285,8 +309,41 @@ export function HowItWorksContent() {
   const [activeTab, setActiveTab] = useState('All');
   const [activeStep, setActiveStep] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [highlightedModuleSlug, setHighlightedModuleSlug] = useState<string | null>(null);
+  const [activeWalkthroughId, setActiveWalkthroughId] = useState<string>(WALKTHROUGH_PLAYER_ITEMS[0].id);
   const proofStudies = Object.values(caseStudies);
-  const videoCount = MODULE_DEMOS.filter((mod) => Boolean(mod.arcadeUrl)).length;
+  const walkthroughCount = MODULE_DEMOS.filter((mod) => Boolean(mod.walkthroughHref)).length;
+  const moduleMap = useMemo(() => {
+    return new Map(MODULE_DEMOS.map((mod) => [mod.slug, mod]));
+  }, []);
+  const activeWalkthrough = WALKTHROUGH_PLAYER_ITEMS.find((item) => item.id === activeWalkthroughId) ?? WALKTHROUGH_PLAYER_ITEMS[0];
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const moduleSlug = searchParams.get('module');
+    if (!moduleSlug) return;
+
+    const matched = moduleMap.get(moduleSlug);
+    if (!matched) return;
+
+    setHighlightedModuleSlug(matched.slug);
+
+    const run = window.setTimeout(() => {
+      const el = document.getElementById(`module-${matched.slug}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+
+    const clear = window.setTimeout(() => {
+      setHighlightedModuleSlug(null);
+    }, 2600);
+
+    return () => {
+      window.clearTimeout(run);
+      window.clearTimeout(clear);
+    };
+  }, [moduleMap]);
 
   const ActiveMockup = STEPS[activeStep].Mockup;
 
@@ -461,6 +518,69 @@ export function HowItWorksContent() {
         </div>
       </section>
 
+      <section className="bg-white border-y border-border py-16">
+        <div className="max-w-content mx-auto px-6">
+          <div className="text-center mb-8">
+            <Badge variant="teal">Walkthrough video</Badge>
+            <h2 className="mt-4 text-h2 text-tx-heading">Watch a real product walkthrough</h2>
+            <p className="mt-3 text-body text-tx-secondary max-w-2xl mx-auto">
+              Play a live walkthrough below. This is a production workflow, not a static image.
+            </p>
+          </div>
+
+          <div className="mb-5 flex flex-wrap justify-center gap-2">
+            {WALKTHROUGH_PLAYER_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveWalkthroughId(item.id)}
+                className={[
+                  'rounded-full border px-4 py-2 text-body-sm font-semibold transition-colors',
+                  item.id === activeWalkthroughId
+                    ? 'border-brand-teal bg-brand-teal text-white'
+                    : 'border-border bg-bg-offwhite text-tx-heading hover:border-brand-teal/40',
+                ].join(' ')}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-3xl border border-border bg-white shadow-sm overflow-hidden">
+            <div className="bg-bg-subtle border-b border-border px-5 py-3 flex items-center gap-3">
+              <div className="flex gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-red-300" />
+                <span className="w-3 h-3 rounded-full bg-yellow-300" />
+                <span className="w-3 h-3 rounded-full bg-green-300" />
+              </div>
+              <span className="text-body-sm text-tx-muted font-mono truncate">
+                {activeWalkthrough.external ? activeWalkthrough.url : `unalabs.cloud${activeWalkthrough.url}`}
+              </span>
+              {activeWalkthrough.external && (
+                <a
+                  href={activeWalkthrough.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto text-[11px] font-semibold text-brand-teal hover:underline"
+                >
+                  Open full screen ↗
+                </a>
+              )}
+            </div>
+            <div className="relative w-full" style={{ height: '560px' }}>
+              <iframe
+                src={activeWalkthrough.url}
+                title={activeWalkthrough.label}
+                className="w-full h-full border-0"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+              />
+            </div>
+          </div>
+
+          <p className="mt-4 text-center text-body-sm text-tx-muted">{activeWalkthrough.note}</p>
+        </div>
+      </section>
+
       <section className="bg-white py-20">
         <div className="max-w-content mx-auto px-6">
           <div className="text-center mb-12">
@@ -532,7 +652,7 @@ export function HowItWorksContent() {
 
           <div className="mt-10 text-center">
             <Button href="/start" variant="primary" size="lg">
-              Start your first request - free
+              Start Your Project
             </Button>
             <p className="mt-3 text-caption text-tx-muted">No account needed. No credit card. Response within 48h.</p>
           </div>
@@ -546,19 +666,19 @@ export function HowItWorksContent() {
             <Badge variant="teal">Platform modules</Badge>
             <h2 className="mt-4 text-h2 text-tx-heading">See every feature in action</h2>
             <p className="mt-3 text-body-lg text-tx-secondary max-w-xl mx-auto">
-              {videoCount > 0
-                ? `${videoCount} interactive walkthrough${videoCount > 1 ? 's' : ''} live now. Everything from lead capture to automated payment collection.`
+              {walkthroughCount > 0
+                ? `${walkthroughCount} walkthrough${walkthroughCount > 1 ? 's are' : ' is'} live now. Everything from lead capture to payment and handoff in one governed flow.`
                 : 'Eight live modules. One platform. Everything from lead capture to automated payment collection.'}
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {MODULE_DEMOS.map((mod) => (
-              <ModuleCard key={mod.label} mod={mod} />
+              <ModuleCard key={mod.label} mod={mod} highlighted={highlightedModuleSlug === mod.slug} />
             ))}
           </div>
           <p className="mt-8 text-center text-body-sm text-tx-muted">
-            Interactive walkthroughs dropping soon.{' '}
-            <Link href="/start" className="text-brand-teal hover:underline">Start with a free request</Link> to see it live.
+            Live walkthrough links are shown above.{' '}
+            <Link href="/start" className="text-brand-teal hover:underline">Start Your Project</Link> to see it live.
           </p>
         </div>
       </section>

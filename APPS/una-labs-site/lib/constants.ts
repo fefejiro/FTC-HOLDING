@@ -1,4 +1,4 @@
-import { productPages, proofHighlights, solutionPages } from '@/lib/site-content';
+﻿import { productPages, proofHighlights, solutionPages } from '@/lib/site-content';
 
 const productLinks = Object.values(productPages);
 const solutionLinks = Object.values(solutionPages);
@@ -30,23 +30,23 @@ export const NAV = {
         { label: 'Blog', href: '/blog', description: 'Field notes from shipped products and live delivery systems' },
         { label: 'Help Center', href: '/help', description: 'Orientation for the intake, pricing, and support path' },
         { label: 'Live Status', href: '/status', description: 'Ignition parity and SDLC signal in one live board' },
+        { label: 'Spark AI', href: '/spark', description: 'Ask Spark anything about Una Labs' },
       ],
     },
-    { label: 'Realtor AI', href: '/realtor' },
     { label: 'Pricing', href: '/pricing' },
     { label: 'How It Works', href: '/how-it-works' },
   ],
 };
 
 export const FEATURES = [
-  { id: 1, icon: '📋', label: 'Intake & Scoping', benefit: 'Turn rough requests into structured briefs without a sales maze.' },
-  { id: 2, icon: '📊', label: 'Real-Time Dashboard', benefit: 'Keep delivery state visible instead of buried in chat and memory.' },
-  { id: 3, icon: '🪟', label: 'Client Portal', benefit: 'Give clients confidence without exposing every internal moving part.' },
-  { id: 4, icon: '✅', label: 'Approval Gates', benefit: 'Treat sign-off as a governed stage, not a fuzzy final email.' },
-  { id: 5, icon: '💳', label: 'Live Payments', benefit: 'Move from scoped summary into real Stripe checkout on the public site.' },
-  { id: 6, icon: '📦', label: 'Delivery Proof', benefit: 'Close projects with documentation, handoff context, and durable records.' },
-  { id: 7, icon: '🤖', label: 'Automated Handoff', benefit: 'Carry approved customer context into the internal delivery workflow behind the scenes.' },
-  { id: 8, icon: '📈', label: 'Reporting', benefit: 'Turn project truth into client-ready proof instead of rebuilding it later.' },
+  { id: 1, icon: '📋', label: 'Intake & Scoping', slug: 'intake-scoping', benefit: 'Turn rough requests into structured briefs without a sales maze.' },
+  { id: 2, icon: '📊', label: 'Real-Time Dashboard', slug: 'reporting', benefit: 'Keep delivery state visible instead of buried in chat and memory.' },
+  { id: 3, icon: '🪟', label: 'Client Portal', slug: 'deals-pipeline', benefit: 'Give clients confidence without exposing every internal moving part.' },
+  { id: 4, icon: '✅', label: 'Approval Gates', slug: 'contracts-e-sign', benefit: 'Treat sign-off as a governed stage, not a fuzzy final email.' },
+  { id: 5, icon: '💳', label: 'Live Payments', slug: 'live-payments', benefit: 'Move from scoped summary into real Stripe checkout on the public site.' },
+  { id: 6, icon: '📦', label: 'Delivery Proof', slug: 'contracts-e-sign', benefit: 'Close projects with documentation, handoff context, and durable records.' },
+  { id: 7, icon: '🤖', label: 'Automated Handoff', slug: 'integrations', benefit: 'Carry approved customer context into the internal delivery workflow behind the scenes.' },
+  { id: 8, icon: '📈', label: 'Reporting', slug: 'reporting', benefit: 'Turn project truth into client-ready proof instead of rebuilding it later.' },
 ];
 
 export const PROOF_METRICS = proofHighlights;
@@ -103,35 +103,44 @@ export const PROBLEM_SOLUTIONS = [
 
 export const PRICING_TIERS = [
   {
-    name: 'Starter',
-    monthlyPrice: 67,
-    description: 'For freelancers and solo practitioners',
-    features: ['1 user', 'Up to 3 active projects', 'Intake forms', 'Basic proposals', 'Email support'],
+    name: 'Free',
+    monthlyPrice: 0,
+    description: 'For solo operators testing the full request-to-proposal flow',
+    features: ['1 user', '1 active project', 'Intake forms', 'Proposal draft export', 'Email support'],
     recommended: false,
-    cta: 'Start Free Trial',
+    cta: 'Get Started Free',
   },
   {
-    name: 'Professional',
-    monthlyPrice: 135,
-    description: 'For growing teams that deliver regularly',
-    features: ['5 users', 'Unlimited projects', 'Full proposal suite', 'Payment collection', 'Dashboard & reporting', 'Priority support'],
+    name: 'Solo',
+    monthlyPrice: 39,
+    description: 'For freelancers and independent consultants running paid delivery',
+    features: ['1 user', '10 active projects', 'Contracts and e-sign', 'Payments and invoicing', 'Basic reporting'],
+    recommended: false,
+    cta: 'Start Solo Plan',
+  },
+  {
+    name: 'Studio',
+    monthlyPrice: 99,
+    description: 'For small teams replacing disconnected ops tools',
+    features: ['5 users', 'Unlimited projects', 'Deals pipeline', 'Scheduling and approval gates', 'Analytics dashboard', 'Priority support'],
     recommended: true,
-    cta: 'Start Free Trial',
+    cta: 'Start Studio Plan',
   },
   {
     name: 'Agency',
-    monthlyPrice: 339,
-    description: 'For agencies with multiple clients and teams',
-    features: ['20 users', 'Unlimited projects', 'Client portal', 'White-label reports', 'Workflow automation', 'Dedicated support'],
+    monthlyPrice: 229,
+    description: 'For delivery teams that need scale, white-labeling, and automation',
+    features: ['15 users', 'Unlimited projects', 'Client portal', 'White-label reporting', 'Workflow automation', 'Dedicated support'],
     recommended: false,
-    cta: 'Start Free Trial',
+    cta: 'Start Agency Plan',
   },
   {
     name: 'Enterprise',
-    monthlyPrice: 679,
+    monthlyPrice: 0,
     description: 'For large organizations with complex needs',
-    features: ['Unlimited users', 'Custom integrations', 'SLA guarantee', 'Custom contracts', 'Onboarding support', 'Account manager'],
+    features: ['Unlimited users', 'Custom integrations', 'SLA guarantee', 'Security review support', 'Onboarding program', 'Account manager'],
     recommended: false,
+    customPricing: true,
     cta: 'Contact Sales',
   },
 ];

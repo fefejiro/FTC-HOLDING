@@ -1,0 +1,10 @@
+SayWetin engineering update - 2026-04-27
+
+SayWetin partial pass today. 7 green, 2 red - here's what we caught before users did.
+
+Our automated QA bench runs nine independent layers on a fixed schedule:
+unit, API integration, contract validation, UAT scenarios, BAT acceptance, performance benchmarking, security scanning, end-to-end device flows, and an always-on smoke loop.
+
+Today we identified 2 layer(s) needing attention: perf, bat. These were caught before any user impact - the value of investing in test infrastructure compounds quickly.
+
+#EngineeringExcellence #QualityAssurance #BuildInPublic

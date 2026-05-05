@@ -3,12 +3,14 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { FinalCTASection } from '@/components/sections/FinalCTASection';
 import { caseStudies, productPages } from '@/lib/site-content';
+import { buildPageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
-  title: 'Platform Overview',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Platform Overview — Una Labs',
   description:
     'Explore the full Una Labs system across intake, dashboard, client portal, reporting, and approval surfaces.',
-};
+  path: '/product',
+});
 
 export default function ProductOverviewPage() {
   const products = Object.values(productPages);
@@ -29,7 +31,7 @@ export default function ProductOverviewPage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Button href="/start" variant="primary" size="lg">
-                Start a request
+                Start Your Project
               </Button>
               <Button href="/how-it-works" variant="secondary" size="lg">
                 See the workflow

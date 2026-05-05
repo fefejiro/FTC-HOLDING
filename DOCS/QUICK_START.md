@@ -97,7 +97,7 @@ SELECT * FROM milestones WHERE project_id = (SELECT id FROM projects WHERE email
 
 **Email:**
 - To: test@example.com — Subject: "Your starter project is being scoped"
-- To: mike.fejiro@gmail.com — Subject: "✓ Intake processed: test@example.com"
+- To: hello@unalabs.cloud — Subject: "✓ Intake processed: test@example.com"
 
 ---
 

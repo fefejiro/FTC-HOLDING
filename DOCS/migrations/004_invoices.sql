@@ -29,11 +29,11 @@ create policy "client_read_own_invoices"
 
 create policy "admin_read_all_invoices"
   on invoices for select
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create policy "admin_update_invoices"
   on invoices for update
-  using (auth.jwt() ->> 'email' = 'mike.fejiro@gmail.com');
+  using (auth.jwt() ->> 'email' = 'hello@unalabs.cloud');
 
 create policy "service_insert_invoices"
   on invoices for insert

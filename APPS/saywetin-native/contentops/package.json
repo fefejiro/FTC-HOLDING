@@ -1,0 +1,20 @@
+{
+  "name": "saywetin-contentops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Phase 2 ContentOps: QA artifact -> narrative -> ElevenLabs voice -> 9:16 render -> approval queue",
+  "scripts": {
+    "voices:list": "node voice/list-voices.mjs",
+    "voices:render": "node voice/render.mjs",
+    "voices:clone-upload": "node voice/clone-upload.mjs",
+    "pipeline:qa-to-script": "node pipeline/qa-to-script.mjs",
+    "pipeline:render-9x16": "node pipeline/render-9x16.mjs",
+    "pipeline:full": "node pipeline/full-run.mjs",
+    "approval:list": "node approval/list-pending.mjs"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "engines": { "node": ">=20" }
+}

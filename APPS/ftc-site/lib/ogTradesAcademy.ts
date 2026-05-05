@@ -46,7 +46,6 @@ export type OgTradesService = {
   summary: string;
   audience: string;
   price: string;
-  note: string;
 };
 
 export type OgTradesVideo = {
@@ -62,6 +61,7 @@ type OgTradesMetadataOptions = {
   description: string;
   pathname?: string;
   host?: string;
+  customDomain?: boolean;
 };
 
 export const ogTradesAcademyBasePath = "/og-trades-academy" as const;
@@ -79,6 +79,25 @@ export const OG_TRADES_WWW_HOST = OG_TRADES_SITE_HOST.startsWith("www.")
   : `www.${OG_TRADES_SITE_HOST}`;
 export const OG_TRADES_ALTERNATE_HOST =
   OG_TRADES_SITE_HOST === OG_TRADES_APEX_HOST ? OG_TRADES_WWW_HOST : OG_TRADES_APEX_HOST;
+
+// Additional hosts that should render the OG Trades shell (preview + Una Labs subdomain).
+// SEO canonical still points at OG_TRADES_SITE_URL; these are recognized at runtime so the
+// Header/Footer/nav helpers render the OG-branded shell on these URLs.
+const OG_TRADES_EXTRA_HOSTS = new Set<string>([
+  "og.unalabs.cloud",
+  "og-trades-pages.pages.dev"
+]);
+
+// Safety blocklist: these domains should never render OG Trades shell,
+// even if environment host configuration drifts.
+const OG_TRADES_EXCLUDED_HOSTS = new Set<string>([
+  "gardencleaners.ca",
+  "www.gardencleaners.ca",
+  "gardencleaners.pages.dev",
+  "polaranchor.ca",
+  "www.polaranchor.ca",
+  "polaranchor.pages.dev"
+]);
 
 export const ogTradesAcademyNavItems = [
   { label: "Home", path: "/" },
@@ -102,7 +121,17 @@ function normalizePathname(pathname = "/") {
 
 export function isOgTradesCustomHost(host = "") {
   const normalized = normalizeHost(host);
-  return normalized === OG_TRADES_SITE_HOST || normalized === OG_TRADES_ALTERNATE_HOST;
+  if (!normalized) {
+    return false;
+  }
+  if (OG_TRADES_EXCLUDED_HOSTS.has(normalized)) {
+    return false;
+  }
+  return (
+    normalized === OG_TRADES_SITE_HOST ||
+    normalized === OG_TRADES_ALTERNATE_HOST ||
+    OG_TRADES_EXTRA_HOSTS.has(normalized)
+  );
 }
 
 export function isOgTradesRedirectHost(host = "") {
@@ -177,13 +206,13 @@ export const ogTradesAcademyConfig = {
   priceNow: "$199",
   priceWas: "$399",
   priceNote: "Current public course price",
-  primaryCta: { label: "Explore Academy Services", href: "#services" },
-  secondaryCta: { label: "Meet the Founder", href: "/about" },
+  primaryCta: { label: "Join the Academy", href: "#services" },
+  secondaryCta: { label: "Explore Courses and Signals", href: "/course" },
   hero: {
     eyebrow: "Founder-led forex academy",
     headline: "Learn forex with more structure, mentorship, and guidance through a founder-led academy.",
     subheadline:
-      "OG_Trades Academy is a premium forex learning environment built to help beginners and developing traders grow with clearer education, practical support, and a real sense of community.",
+      "OG Trades Academy helps beginners and developing traders understand forex, build confidence, and access education, signals, and mentorship through a practical learning system.",
     bullets: [
       "Learn directly from OG_Trades through structured education, practical teaching, and mentorship-style support.",
       "Access courses, crash trainings, signals, community, and guided trader support in one academy brand.",
@@ -272,14 +301,14 @@ export const ogTradesAcademyConfig = {
     },
     {
       week: "Week 7",
-      title: "Prop-firm context and performance review",
-      summary: "Understand challenge rules, drawdown pressure, and how to trade under accountability.",
-      outcomes: ["Think in rules", "Respect evaluation structure", "Avoid challenge-ending mistakes"]
+      title: "Trading performance and accountability",
+      summary: "Track your development, review your execution habits, and build the accountability structure traders need to keep improving.",
+      outcomes: ["Review your setups objectively", "Build a performance tracking habit", "Develop accountability rituals for long-term growth"]
     },
     {
       week: "Week 8",
       title: "Execution plan and next-step roadmap",
-      summary: "Pull everything together into a practical plan for demo, prop-firm, or early live-market development.",
+      summary: "Pull everything together into a practical plan for demo trading or early live-market development.",
       outcomes: ["Build a personal trading plan", "Know what to practice next", "Leave with a structured workflow"]
     }
   ] satisfies OgTradesCourseWeek[],
@@ -355,48 +384,42 @@ export const ogTradesAcademyConfig = {
       summary:
         "A structured beginner program covering forex foundations, market structure, risk management, entries, exits, and trading mindset.",
       audience: "Best for beginners who want a complete starting point and a step-by-step learning path.",
-      price: "$199",
-      note: "Current public course price"
+      price: "$199"
     },
     {
       title: "Crash Courses",
       summary:
         "Shorter focused trainings built to help traders learn a specific topic, concept, or trading skill in a faster format.",
       audience: "Best for learners who want targeted education without committing to the full 8-week program.",
-      price: "Pricing coming soon",
-      note: "Public pricing can be added once finalized"
+      price: "Pricing coming soon"
     },
     {
       title: "Signals",
       summary:
         "Market ideas and trading signals designed to help traders stay connected to setups, analysis, and decision-making support.",
       audience: "Best for traders who want added guidance while continuing to build their own chart understanding.",
-      price: "Pricing coming soon",
-      note: "Placeholder until the offer structure is finalized"
+      price: "Pricing coming soon"
     },
     {
       title: "Mentorship and Support",
       summary:
         "A higher-touch support path designed to help traders stay accountable, ask better questions, and grow with more direct guidance.",
       audience: "Best for traders who want more personal support, feedback, and mentorship as they build consistency.",
-      price: "Pricing coming soon",
-      note: "Confirm format: private mentorship, group coaching, or office-hours model"
+      price: "Pricing coming soon"
     },
     {
       title: "Telegram Community",
       summary:
         "A connected space where students and traders can ask questions, stay in the loop, learn together, and keep growing outside the lessons.",
       audience: "Best for students who want ongoing support, community, and accountability between learning sessions.",
-      price: "Pricing coming soon",
-      note: "Can also be bundled with select academy offers"
+      price: "Pricing coming soon"
     },
     {
       title: "Free Resources and Video Lessons",
       summary:
         "Open-access lessons, breakdowns, and educational content that help new traders keep learning before and after paid programs.",
       audience: "Best for anyone who wants to start learning, revisit the basics, or stay connected to the academy's teaching style.",
-      price: "Free",
-      note: "Available through the academy's public content channels"
+      price: "Free"
     }
   ] satisfies OgTradesService[],
   courseHighlights: [
@@ -474,22 +497,23 @@ export const ogTradesAcademyConfig = {
   ] satisfies OgTradesVideo[],
   youtubeTopics: [
     "Risk management and beginner discipline",
-    "FundingPips account progression and prop-firm context",
+    "Live account management and real trading context",
     "LASER strategy breakdowns and setup logic",
     "Entry and exit structure on live charts",
     "Trading psychology and mindset resets"
   ],
   disclaimer:
-    "OG_Trades Academy provides trading education only. Nothing on this site should be treated as financial advice or a guarantee of trading performance."
+    "Trading involves real risk. OG Trades Academy provides education, discipline, risk management, and market understanding — not financial advice, and not a guarantee of trading profits. Only risk capital you can afford to lose."
 } as const;
 
 export function getOgTradesMetadata({
   title,
   description,
   pathname = "/",
-  host
+  host,
+  customDomain = true
 }: OgTradesMetadataOptions): Metadata {
-  const canonicalUrl = getOgTradesAbsoluteUrl(pathname, { host });
+  const canonicalUrl = getOgTradesAbsoluteUrl(pathname, { host, customDomain });
 
   return {
     title,

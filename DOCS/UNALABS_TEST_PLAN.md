@@ -176,7 +176,7 @@ Use stable test fixtures for repeatability.
 
 ### Required accounts
 
-- Admin account: `mike.fejiro@gmail.com`
+- Admin account: `hello@unalabs.cloud`
 - Client test account with at least one active project
 - Client test account with no projects
 - Prospect email for intake and lead tests

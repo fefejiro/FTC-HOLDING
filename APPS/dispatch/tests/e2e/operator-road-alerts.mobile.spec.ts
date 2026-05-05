@@ -3,9 +3,9 @@ import { expect, test } from '@playwright/test';
 const OPERATOR_NAME = process.env.DISPATCH_TEST_OPERATOR_NAME || 'Ottawa Operator';
 const OPERATOR_PIN = process.env.DISPATCH_TEST_OPERATOR_PIN || '9090';
 const VALID_ROAD_ALERT_STATE_PATTERNS = [
-  /Loading Ottawa road alerts/i,
-  /Road alerts are temporarily unavailable/i,
-  /No Ottawa road alerts right now/i,
+  /Loading Ottawa roadside alerts/i,
+  /Roadside alerts are temporarily unavailable/i,
+  /No roadside alerts right now/i,
   /Still monitoring Ottawa incident sources/i,
   /Qualified Ottawa signal/i,
   /Official Ottawa traffic feed/i,
@@ -30,8 +30,27 @@ test.describe('operator mobile road alerts', () => {
       browserErrors.push(`console: ${text}`);
     });
 
-    await page.goto('/login?mode=operator', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByPlaceholder('Access PIN')).toBeVisible();
+    // Railway/Cloudflare occasionally returns a transient 502 for a few seconds.
+    // Retry the initial login navigation before treating it as a product regression.
+    let loginReady = false;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      await page.goto('/login?mode=operator', { waitUntil: 'domcontentloaded' });
+
+      const badGatewayHeading = page.getByRole('heading', { name: /Bad gateway/i });
+      if (await badGatewayHeading.count()) {
+        if (attempt === 3) {
+          throw new Error('Dispatch operator login is unavailable after 3 attempts (Cloudflare 502).');
+        }
+        continue;
+      }
+
+      await expect(page.getByLabel('PIN')).toBeVisible();
+      loginReady = true;
+      break;
+    }
+
+    expect(loginReady).toBe(true);
+
 
     const operatorSelect = page.locator('select').first();
     await expect(operatorSelect).toBeVisible();
@@ -44,14 +63,14 @@ test.describe('operator mobile road alerts', () => {
       await operatorSelect.selectOption({ label: fallback });
     });
 
-    await page.getByPlaceholder('Access PIN').fill(OPERATOR_PIN);
+    await page.getByLabel('PIN').fill(OPERATOR_PIN);
     await page.getByRole('button', { name: /Open field workspace/i }).click();
 
     await expect(page.getByText(/Live feed connected|Reconnecting live feed/i)).toBeVisible();
-    await page.getByRole('button', { name: 'Road alerts' }).click();
+    await page.getByRole('button', { name: /Roadside alerts/i }).click();
 
     const roadAlertsRegion = page.locator('div').filter({
-      has: page.getByText('Ottawa-only live scope. Out-of-area incidents are hidden from this workflow.'),
+      has: page.getByText(/Ottawa-only live scope\. Out-of-area roadside signals are hidden from this workflow\./i),
     }).first();
 
     await expect(roadAlertsRegion).toBeVisible();
@@ -61,7 +80,7 @@ test.describe('operator mobile road alerts', () => {
 
     expect(
       browserErrors.filter((entry) => /ReferenceError|TypeError|fmtOptional|Cannot read|is not defined/i.test(entry)),
-      `Unexpected runtime errors after opening Road alerts:\n${browserErrors.join('\n')}`,
+      `Unexpected runtime errors after opening Roadside alerts:\n${browserErrors.join('\n')}`,
     ).toEqual([]);
   });
 });

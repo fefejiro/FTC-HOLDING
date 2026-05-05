@@ -61,7 +61,30 @@ export const metadata: Metadata = {
   title: "Polar Anchor | Freight Forwarding and Logistics Services in Canada",
   description:
     "Polar Anchor provides professional freight forwarding, transportation, warehousing, customs clearance, and import-export logistics support across Canada. Request a quote today.",
-  alternates: { canonical: `${SITE_URL}/polar-anchor` }
+  alternates: { canonical: `${SITE_URL}/polar-anchor` },
+  openGraph: {
+    type: "website",
+    siteName: "Polar Anchor",
+    title: "Polar Anchor | Freight Forwarding and Logistics Services in Canada",
+    description:
+      "Polar Anchor provides professional freight forwarding, transportation, warehousing, customs clearance, and import-export logistics support across Canada. Request a quote today.",
+    url: `${SITE_URL}/polar-anchor`,
+    images: [
+      {
+        url: "/polar-anchor/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Polar Anchor — Freight Forwarding and Logistics Services in Canada"
+      }
+    ]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Polar Anchor | Freight Forwarding and Logistics Services in Canada",
+    description:
+      "Polar Anchor provides professional freight forwarding, transportation, warehousing, customs clearance, and import-export logistics support across Canada. Request a quote today.",
+    images: ["/polar-anchor/opengraph-image"]
+  }
 };
 
 const structuredData = {
@@ -71,7 +94,7 @@ const structuredData = {
   "slogan": "Just in time connections",
   "description": "End-to-end freight forwarding, transportation, warehousing, customs clearance, and import-export logistics services across Canada.",
   "url": `${SITE_URL}/polar-anchor`,
-  "email": "hello@polaranchor.ca",
+  "email": "hello@unalabs.cloud",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Toronto",

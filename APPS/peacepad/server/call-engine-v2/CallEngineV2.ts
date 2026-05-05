@@ -1223,25 +1223,293 @@ export class CallEngineV2 {
     // Skipping for now to focus on core functionality
   }
 
-  // Additional stub methods for remaining handlers
+  // Additional handler implementations
+
   private async handleDeclineCall(payload: any, userId: string) {
-    // TODO: Implement
+    const { callId } = payload;
+
+    const session = this.activeSessions.get(callId);
+    if (!session) {
+      console.warn(`[CallEngineV2] handleDeclineCall: session ${callId} not found`);
+      return;
+    }
+
+    // Update call status in database
+    await this.storage.updateCallSessionV2(callId, {
+      status: 'declined',
+      endedAt: new Date(),
+      endReason: 'declined'
+    });
+
+    // Notify all participants (host/other callers) that the call was declined
+    this.emitV2('session', session.sessionCode, 'call:declined', {
+      callId,
+      byUserId: userId
+    });
+
+    // Clean up in-memory session
+    this.activeSessions.delete(callId);
+    this.sessionsByCode.delete(session.sessionCode);
+
+    console.log(`[CallEngineV2] Call ${callId} declined by ${userId}`);
   }
 
   private async handleEndCall(payload: any, userId: string) {
-    // TODO: Implement
+    const { callId } = payload;
+
+    const session = this.activeSessions.get(callId);
+    if (!session) {
+      console.warn(`[CallEngineV2] handleEndCall: session ${callId} not found`);
+      return;
+    }
+
+    // Cancel any active conch timers before ending
+    if (session.conchState) {
+      if (session.conchState.timer) clearTimeout(session.conchState.timer);
+      if (session.conchState.graceTimer) clearTimeout(session.conchState.graceTimer);
+    }
+
+    // Update call status in database
+    await this.storage.updateCallSessionV2(callId, {
+      status: 'ended',
+      endedAt: new Date(),
+      endReason: 'user_ended'
+    });
+
+    // Notify all participants the call has ended
+    this.emitV2('session', session.sessionCode, 'call:ended', {
+      callId,
+      endedBy: userId,
+      reason: 'user_ended'
+    });
+
+    // Clean up in-memory session
+    this.activeSessions.delete(callId);
+    this.sessionsByCode.delete(session.sessionCode);
+
+    console.log(`[CallEngineV2] Call ${callId} ended by ${userId}`);
   }
 
   private async handleUpdateMedia(payload: any, userId: string) {
-    // TODO: Implement
+    const { callId, isMuted, hasVideo } = payload;
+
+    const session = this.activeSessions.get(callId);
+    if (!session) {
+      console.warn(`[CallEngineV2] handleUpdateMedia: session ${callId} not found`);
+      return;
+    }
+
+    const participant = session.participants.get(userId);
+    if (!participant) {
+      console.warn(`[CallEngineV2] handleUpdateMedia: user ${userId} not in session ${callId}`);
+      return;
+    }
+
+    // Apply updates only for fields present in the payload
+    if (typeof isMuted === 'boolean') {
+      participant.isMuted = isMuted;
+    }
+    if (typeof hasVideo === 'boolean') {
+      participant.hasVideo = hasVideo;
+    }
+
+    // Broadcast updated media state to all other participants
+    this.emitV2('session', session.sessionCode, 'call:updated', {
+      callId,
+      userId,
+      isMuted: participant.isMuted,
+      hasVideo: participant.hasVideo
+    }, userId);
+
+    console.log(`[CallEngineV2] Media updated for ${userId} in call ${callId}: muted=${participant.isMuted}, video=${participant.hasVideo}`);
   }
 
   private async handleSyncCall(payload: any, userId: string, connectionId: string) {
-    // TODO: Implement reconnection sync
+    const { callId, reconnectToken } = payload;
+
+    // If a reconnect token is provided, attempt a managed reconnection
+    if (reconnectToken) {
+      const reconnectState = this.reconnectionManager.getReconnectionState(userId);
+
+      if (reconnectState && this.reconnectionManager.canReconnect(userId)) {
+        const ws = this.connections.get(connectionId)?.ws;
+        if (!ws) {
+          console.warn(`[CallEngineV2] handleSyncCall: no WebSocket for connection ${connectionId}`);
+          return;
+        }
+
+        const result = await this.reconnectionManager.attemptReconnection(
+          userId,
+          reconnectToken,
+          ws,
+          connectionId
+        );
+
+        if (result.success && result.callId) {
+          const session = this.activeSessions.get(result.callId);
+          if (session) {
+            // Restore participant record in the in-memory session
+            const participant: CallParticipantConnection = {
+              userId,
+              role: session.hostId === userId ? 'host' : 'participant',
+              connectionId,
+              isMuted: !(result.mediaState?.hasAudio ?? true),
+              hasVideo: result.mediaState?.hasVideo ?? false,
+              joinedAt: new Date()
+            };
+            session.participants.set(userId, participant);
+
+            // Track session membership for the connection
+            const connection = this.connections.get(connectionId);
+            if (connection) {
+              connection.joinedSessions.add(result.sessionCode!);
+            }
+
+            // Notify all session participants of the reconnection
+            this.emitV2('session', result.sessionCode!, 'peer:reconnected', {
+              userId,
+              needsIceRestart: result.needsIceRestart
+            });
+
+            // Send full session state to the reconnected user
+            this.emitV2('user', userId, 'call:reconnected', {
+              callId: result.callId,
+              sessionCode: result.sessionCode,
+              participants: Array.from(session.participants.values()).map(p => ({
+                userId: p.userId,
+                role: p.role,
+                isMuted: p.isMuted,
+                hasVideo: p.hasVideo,
+                negotiationRole: p.negotiationRole
+              })),
+              conchState: session.conchState
+            });
+
+            // Trigger ICE restart so WebRTC can re-establish after reconnection
+            if (result.needsIceRestart) {
+              this.reconnectionManager.scheduleIceRestart(userId, result.callId);
+              this.emitV2('user', userId, 'negotiation:required', {
+                reason: 'ice-restart',
+                role: participant.negotiationRole || 'answerer'
+              });
+            }
+
+            console.log(`[CallEngineV2] User ${userId} successfully reconnected via sync`);
+            return;
+          }
+        }
+      }
+
+      // Reconnection failed or window expired
+      this.sendToUser(userId, {
+        type: 'v2:sync_failed',
+        payload: { callId, reason: 'reconnection_window_expired' }
+      });
+      console.warn(`[CallEngineV2] Reconnection sync failed for ${userId}`);
+      return;
+    }
+
+    // No reconnect token: send current session state as a lightweight sync
+    const session = callId ? this.activeSessions.get(callId) : null;
+    if (!session || !session.participants.has(userId)) {
+      this.sendToUser(userId, {
+        type: 'v2:sync_failed',
+        payload: { callId, reason: 'session_not_found' }
+      });
+      return;
+    }
+
+    this.emitV2('user', userId, 'session:users', {
+      sessionCode: session.sessionCode,
+      users: Array.from(session.participants.values()).map(p => ({
+        userId: p.userId,
+        role: p.role,
+        isMuted: p.isMuted,
+        hasVideo: p.hasVideo,
+        negotiationRole: p.negotiationRole
+      })),
+      conchState: session.conchState
+    });
+
+    console.log(`[CallEngineV2] Sync state sent to ${userId} for call ${callId}`);
   }
 
   private async handleLeaveSession(userId: string, sessionCode: string) {
-    // TODO: Implement
+    const callId = this.sessionsByCode.get(sessionCode);
+    if (!callId) {
+      console.warn(`[CallEngineV2] handleLeaveSession: unknown session code ${sessionCode}`);
+      return;
+    }
+
+    const session = this.activeSessions.get(callId);
+    if (!session) {
+      console.warn(`[CallEngineV2] handleLeaveSession: session ${callId} not active`);
+      return;
+    }
+
+    const participant = session.participants.get(userId);
+    if (!participant) {
+      console.warn(`[CallEngineV2] handleLeaveSession: user ${userId} not in session ${callId}`);
+      return;
+    }
+
+    // Remove user from in-memory session
+    session.participants.delete(userId);
+
+    // Update participant record in database
+    try {
+      await this.storage.updateCallParticipantV2ByUserAndCall(callId, userId, {
+        leftAt: new Date(),
+        connectionState: 'left'
+      });
+    } catch (err) {
+      console.error(`[CallEngineV2] Failed to update participant on leave:`, err);
+    }
+
+    // Remove session membership from connection tracking
+    const connection = this.connections.get(participant.connectionId);
+    if (connection) {
+      connection.joinedSessions.delete(sessionCode);
+    }
+
+    // Notify remaining participants that this user left
+    this.emitV2('session', sessionCode, 'peer:left', {
+      callId,
+      userId,
+      role: participant.role
+    });
+
+    const remaining = session.participants.size;
+
+    if (remaining === 0) {
+      // No participants left — end the call
+      await this.storage.updateCallSessionV2(callId, {
+        status: 'ended',
+        endedAt: new Date(),
+        endReason: 'all_left'
+      });
+      this.activeSessions.delete(callId);
+      this.sessionsByCode.delete(sessionCode);
+      console.log(`[CallEngineV2] Call ${callId} ended — all participants left`);
+    } else if (remaining === 1) {
+      // Only one participant left — end the call automatically
+      const lastParticipant = Array.from(session.participants.values())[0];
+      this.emitV2('user', lastParticipant.userId, 'call:ended', {
+        callId,
+        reason: 'partner_left',
+        endedBy: 'system'
+      });
+      await this.storage.updateCallSessionV2(callId, {
+        status: 'ended',
+        endedAt: new Date(),
+        endReason: 'partner_left'
+      });
+      this.activeSessions.delete(callId);
+      this.sessionsByCode.delete(sessionCode);
+      console.log(`[CallEngineV2] Call ${callId} ended — only one participant remaining after leave`);
+    }
+
+    console.log(`[CallEngineV2] User ${userId} left session ${sessionCode} (${remaining} remaining)`);
   }
 
   private async handleConchRelease(payload: any, userId: string) {

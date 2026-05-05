@@ -16,7 +16,7 @@ const experienceOptions = [
   { value: "brand-new", label: "Brand new to forex" },
   { value: "learning-basics", label: "Learning the basics" },
   { value: "demo-trading", label: "Practicing on demo" },
-  { value: "prop-firm-focused", label: "Focused on prop-firm goals" }
+  { value: "live-trading", label: "Starting to trade live" }
 ] as const;
 
 const goalOptions = [

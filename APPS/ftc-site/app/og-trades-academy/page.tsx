@@ -1,6 +1,3 @@
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
-
 import type { Metadata } from "next";
 import Link from "next/link";
 import CTABanner from "../components/CTABanner";
@@ -11,26 +8,65 @@ import {
   getOgTradesMetadata,
   ogTradesAcademyConfig
 } from "../../lib/ogTradesAcademy";
-import { getRequestHost } from "../../lib/requestHost";
 
 export function generateMetadata(): Metadata {
-  const requestHost = getRequestHost();
   return getOgTradesMetadata({
-    title: "OG_Trades Academy | Founder-Led Forex Education, Mentorship, and Community",
+    title: "OG Trades Academy | Forex Education, Signals, Mentorship, and Community",
     description:
-      "Discover OG_Trades Academy, a founder-led forex education and trader support platform offering beginner training, crash courses, signals, mentorship, and Telegram community access.",
+      "Join OG Trades Academy for founder-led forex education, structured beginner training, signals, mentorship-style support, and community access.",
     pathname: "/",
-    host: requestHost
+    customDomain: true
   });
 }
 
 export default function OgTradesAcademyHomePage() {
-  const requestHost = getRequestHost();
-  const canonicalUrl = getOgTradesAbsoluteUrl("/", { host: requestHost });
-  const aboutHref = getOgTradesBrandedPath("/about", { host: requestHost });
-  const courseHref = getOgTradesBrandedPath("/course", { host: requestHost });
-  const communityHref = getOgTradesBrandedPath("/community", { host: requestHost });
-  const resourcesHref = getOgTradesBrandedPath("/resources", { host: requestHost });
+  const canonicalUrl = getOgTradesAbsoluteUrl("/", { customDomain: true });
+  const aboutHref = getOgTradesBrandedPath("/about");
+  const courseHref = getOgTradesBrandedPath("/course");
+  const communityHref = getOgTradesBrandedPath("/community");
+  const resourcesHref = getOgTradesBrandedPath("/resources");
+  const communityInviteHref = ogTradesAcademyConfig.communityUrl;
+  const pricingPaths = [
+    {
+      title: "Crash Course",
+      subtitle: "Fast-track forex essentials in a shorter format.",
+      price: "Contact for pricing",
+      fit: "For beginners who want a quick and focused launch path."
+    },
+    {
+      title: "8-Week Course",
+      subtitle: "The full step-by-step beginner curriculum.",
+      price: "$199",
+      fit: "For serious learners who want structure, progression, and accountability."
+    },
+    {
+      title: "Signals Access",
+      subtitle: "Stay connected to setup ideas and market focus.",
+      price: "Contact for pricing",
+      fit: "For developing traders building confidence in live market context."
+    },
+    {
+      title: "Full Academy Access",
+      subtitle: "Courses, signals, community, and mentorship-style support.",
+      price: "Contact for pricing",
+      fit: "For traders who want the complete OG Trades Academy experience."
+    }
+  ] as const;
+
+  const authorityPoints = [
+    "Founder-led teaching style with practical forex walkthroughs",
+    "Risk-first learning system built around discipline and consistency",
+    "Structured tracks designed for beginners and developing traders",
+    "Active learning ecosystem: courses, public lessons, signals, and community"
+  ] as const;
+  const ogReferenceLinks = [
+    { label: "Official Academy Hub", href: ogTradesAcademyConfig.beaconsUrl },
+    { label: "8 Week Beginner Forex Course", href: ogTradesAcademyConfig.coursePurchaseUrl },
+    { label: "YouTube Lessons", href: ogTradesAcademyConfig.youtubeUrl },
+    { label: "Instagram", href: ogTradesAcademyConfig.instagramUrl },
+    { label: "TikTok", href: ogTradesAcademyConfig.tiktokUrl },
+    { label: "Community Access", href: ogTradesAcademyConfig.communityUrl }
+  ] as const;
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -125,7 +161,7 @@ export default function OgTradesAcademyHomePage() {
         <section className="section og-section">
           <div className="og-founder-grid">
             <article className="card og-founder-card">
-              <p className="eyebrow">Founder and instructor</p>
+              <p className="eyebrow">Meet the founder</p>
               <h2>{ogTradesAcademyConfig.founderStory.headline}</h2>
               {ogTradesAcademyConfig.founderStory.paragraphs.map((paragraph) => (
                 <p key={paragraph} className="muted">
@@ -139,12 +175,13 @@ export default function OgTradesAcademyHomePage() {
               </ul>
               <div className="hero-cta-row">
                 <Link href={aboutHref} prefetch={false} className="btn btn-secondary">
-                  Read the founder story
+                  Read founder story
                 </Link>
                 <a href={ogTradesAcademyConfig.youtubeUrl} target="_blank" rel="noreferrer" className="inline-link">
                   Watch public lessons on YouTube
                 </a>
               </div>
+
             </article>
 
             <article className="card og-founder-visual">
@@ -173,9 +210,9 @@ export default function OgTradesAcademyHomePage() {
         <section className="section og-section">
           <div className="section-heading">
             <p className="eyebrow">Academy overview</p>
-            <h2>More than a single course, the academy is built as a full forex learning and trader support ecosystem.</h2>
+            <h2>More than one course. A complete forex learning ecosystem.</h2>
             <p>
-              OG_Trades Academy brings together education, mentorship-style guidance, community support, and practical market learning so traders can keep growing with more structure at every stage.
+              OG Trades Academy combines structured education, mentorship-style support, community, and practical market learning so traders can progress with clarity at every stage.
             </p>
           </div>
 
@@ -197,9 +234,9 @@ export default function OgTradesAcademyHomePage() {
         <section id="services" className="section og-section anchor-offset">
           <div className="section-heading">
             <p className="eyebrow">Services</p>
-            <h2>Choose the training, support, and learning path that fits where you are right now.</h2>
+            <h2>Choose the training path that matches where you are right now.</h2>
             <p>
-              The academy is designed to serve new and developing traders through structured offers, shorter learning experiences, mentorship-style support, and ongoing community connection.
+              From beginner foundations to higher-touch support, each offer is designed to move traders forward with structure and consistency.
             </p>
           </div>
 
@@ -214,7 +251,44 @@ export default function OgTradesAcademyHomePage() {
                 <p className="og-service-audience">
                   <strong>What it is for:</strong> {service.audience}
                 </p>
-                <p className="og-service-note">{service.note}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="section og-section">
+          <div className="section-heading">
+            <p className="eyebrow">Choose your path</p>
+            <h2>Premium tracks designed for where you are now and where you want to go next.</h2>
+            <p>
+              Choose a lane based on your current level. The 8-week course is publicly listed, and advanced lanes are offered through direct intake.
+            </p>
+          </div>
+
+          <div className="og-pricing-grid">
+            {pricingPaths.map((path) => (
+              <article key={path.title} className="card og-pricing-card">
+                <p className="card-kicker">OG Trades Academy</p>
+                <h3>{path.title}</h3>
+                <p className="og-pricing-subtitle">{path.subtitle}</p>
+                <p className="og-pricing-price">{path.price}</p>
+                <p className="muted">{path.fit}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="section og-section">
+          <div className="section-heading">
+            <p className="eyebrow">Why OG Trades Academy</p>
+            <h2>Built for trust, clarity, and repeatable trader development.</h2>
+            <p>Everything is designed to help traders understand the market, execute with discipline, and improve over time.</p>
+          </div>
+
+          <div className="og-authority-grid">
+            {authorityPoints.map((point) => (
+              <article key={point} className="card og-authority-card">
+                <p>{point}</p>
               </article>
             ))}
           </div>
@@ -257,6 +331,27 @@ export default function OgTradesAcademyHomePage() {
 
         <section className="section og-section">
           <div className="section-heading">
+            <p className="eyebrow">Official references</p>
+            <h2>Use these official channels to verify offers, content, and academy activity.</h2>
+            <p>
+              All links below are primary OG Trades references for enrollment, public teaching content, and community entry.
+            </p>
+          </div>
+
+          <div className="og-testimonial-grid">
+            {ogReferenceLinks.map((item) => (
+              <article key={item.href} className="card og-testimonial-card">
+                <h3>{item.label}</h3>
+                <a href={item.href} target="_blank" rel="noreferrer" className="inline-link">
+                  Open reference
+                </a>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="section og-section">
+          <div className="section-heading">
             <p className="eyebrow">Community and support</p>
             <h2>Keep learning with other students and traders inside the academy community.</h2>
             <p>
@@ -273,7 +368,10 @@ export default function OgTradesAcademyHomePage() {
             ))}
           </div>
           <div className="hero-cta-row og-section-actions">
-            <Link href={communityHref} prefetch={false} className="btn btn-primary">
+            <a href={communityInviteHref} target="_blank" rel="noreferrer" className="btn btn-primary">
+              Join Community
+            </a>
+            <Link href={communityHref} prefetch={false} className="btn btn-secondary">
               Explore community access
             </Link>
             <Link href={resourcesHref} prefetch={false} className="btn btn-secondary">
@@ -285,7 +383,7 @@ export default function OgTradesAcademyHomePage() {
         <section className="section og-section">
           <div className="section-heading">
             <p className="eyebrow">FAQ</p>
-            <h2>Common questions about learning with OG_Trades Academy.</h2>
+            <h2>Common questions about learning with OG Trades Academy.</h2>
           </div>
           <div className="og-faq-list">
             {ogTradesAcademyConfig.faqs.map((faq) => (
@@ -298,12 +396,22 @@ export default function OgTradesAcademyHomePage() {
           <p className="og-disclaimer">{ogTradesAcademyConfig.disclaimer}</p>
         </section>
 
+        <section className="section og-section">
+          <article className="card og-risk-panel">
+            <p className="eyebrow">Risk disclosure</p>
+            <h2>Forex trading involves risk.</h2>
+            <p>
+              OG Trades Academy focuses on education, discipline, risk management, and market understanding. We do not offer financial advice, and we do not guarantee profits.
+            </p>
+          </article>
+        </section>
+
         <CTABanner
-          title="Choose the OG_Trades Academy path that fits your next step."
-          description="Explore the academy programs, mentorship-style support, and community access built to help traders keep growing."
-          primaryLabel="View Programs"
+          title="Choose the OG Trades Academy path that matches your next move."
+          description="Explore academy programs, mentorship-style support, and community access designed for steady trader growth."
+          primaryLabel="Explore Programs"
           primaryHref={courseHref}
-          secondaryLabel="Join the Community"
+          secondaryLabel="Enter Community Hub"
           secondaryHref={communityHref}
         />
       </div>

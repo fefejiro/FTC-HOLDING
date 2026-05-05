@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { AssistantDrawer } from '@/components/AssistantDrawer';
+import { ChatWidget } from '@/components/ChatWidget';
 import './globals.css';
 
 const inter = Inter({
@@ -17,6 +20,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://unalabs.cloud';
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const defaultTitle = 'Una Labs — AI Launchpad for Founders';
 const defaultDescription =
@@ -29,18 +33,6 @@ export const metadata: Metadata = {
   },
   description: defaultDescription,
   metadataBase: new URL(SITE_URL),
-  keywords: [
-    'Una Labs',
-    'AI Launchpad for Founders',
-    'professional service platform',
-    'AI project delivery',
-    'client intake automation',
-    'milestone tracking',
-    'proposal generator',
-    'AI scoping',
-    'founder tools',
-    'service business software',
-  ],
   robots: {
     index: true,
     follow: true,
@@ -60,14 +52,13 @@ export const metadata: Metadata = {
     siteName: 'Una Labs',
     title: defaultTitle,
     description: defaultDescription,
-    url: SITE_URL,
-    images: [{ url: '/images/og/default.png', width: 1200, height: 630, alt: 'Una Labs — AI Launchpad for Founders' }],
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Una Labs — AI Launchpad for Founders' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: defaultTitle,
     description: defaultDescription,
-    images: ['/images/og/default.png'],
+    images: ['/opengraph-image'],
   },
 };
 
@@ -82,7 +73,7 @@ const jsonLd = {
     {
       '@type': 'ContactPoint',
       contactType: 'sales',
-      email: 'mike.fejiro@gmail.com',
+      email: 'support@unalabs.cloud',
       areaServed: 'CA',
       availableLanguage: ['en'],
     },
@@ -93,6 +84,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${plusJakarta.variable}`}>
       <head>
+        {process.env.NODE_ENV === 'production' && GA_MEASUREMENT_ID ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} window.gtag = gtag; gtag('js', new Date()); gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: true });`}
+            </Script>
+          </>
+        ) : null}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -102,6 +104,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main>{children}</main>
         <Footer />
+        <AssistantDrawer />
+        <ChatWidget />
       </body>
     </html>
   );

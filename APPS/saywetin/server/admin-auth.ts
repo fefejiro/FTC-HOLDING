@@ -24,7 +24,10 @@ function timingSafeEqualText(a: string, b: string): boolean {
   return crypto.timingSafeEqual(left, right);
 }
 
-export function authenticateAdminCredentials(usernameRaw: string, passwordRaw: string): { ok: boolean; username?: string } {
+export function authenticateAdminCredentials(
+  usernameRaw: string,
+  passwordRaw: string,
+): { ok: true; username: string } | { ok: false } {
   const normalizedUsername = (usernameRaw || "").trim().toLowerCase();
   const suppliedPassword = passwordRaw || "";
   const expectedUsername = resolveAdminUsername();

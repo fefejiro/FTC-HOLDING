@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import {
   isSoftAuthenticated,
   getUserId,
@@ -141,6 +141,7 @@ import {
 } from "./email";
 import { sendPushNotification, getVapidPublicKey } from "./push-notifications";
 import { buildBoundaryPrompt } from "./services/aiBoundaries.js";
+import { createV2Router } from "./v2/routes/index";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -715,62 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enforce guest trial expiry on write operations without affecting authenticated users.
   app.use("/api", trialEnforcer);
-
-  // PHASE 2: Disabled for MVP refocus. Re-enable these route families when ready to reintroduce them.
-  const phase2DisabledPrefixes = [
-    "/api/expenses",
-    "/api/settlements",
-    "/api/tasks",
-    "/api/child-updates",
-    "/api/children",
-    "/api/conch-sessions",
-    "/api/calls",
-    "/api/scheduled-calls",
-    "/api/summaries",
-    "/api/achievements",
-    "/api/user-stats",
-    "/api/parenting-tips",
-    "/api/therapists",
-    "/api/support-resources",
-  ];
-
-  // Removed from the MVP surface entirely.
-  const removedPrefixes = [
-    "/api/shopping-lists",
-    "/api/shopping-items",
-    "/api/pets",
-    "/api/weather-activities",
-  ];
-
-  app.use((req, res, next) => {
-    const requestPath = String(req.originalUrl || req.path || "").split("?")[0];
-
-    if (removedPrefixes.some((prefix) => requestPath.startsWith(prefix))) {
-      return res.status(410).json({
-        message: "This endpoint has been removed from the current PeacePad MVP.",
-      });
-    }
-
-    if (phase2DisabledPrefixes.some((prefix) => requestPath.startsWith(prefix))) {
-      return res.status(404).json({
-        message: "This feature is disabled in the PeacePad MVP refocus.",
-      });
-    }
-
-    if (requestPath.startsWith("/api/events")) {
-      const isReadOnlyEventsRoute =
-        req.method === "GET" &&
-        (requestPath === "/api/events" || /^\/api\/events\/?$/.test(requestPath));
-
-      if (!isReadOnlyEventsRoute) {
-        return res.status(404).json({
-          message: "Calendar editing is disabled in the PeacePad MVP.",
-        });
-      }
-    }
-
-    next();
-  });
+  app.use("/v2", createV2Router());
 
   // Geocoding routes moved to comprehensive route below (line ~6740)
 
@@ -8524,7 +8470,7 @@ Crawl-delay: 1
   });
 
   // Admin: Get all users
-  app.get("/api/admin/users", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/users", isAdmin, async (req: any, res) => {
     try {
       const allUsers = await storage.getAllUsers();
 
@@ -8542,7 +8488,7 @@ Crawl-delay: 1
     }
   });
 
-  app.get("/api/admin/feedback", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/feedback", isAdmin, async (req: any, res) => {
     try {
       const { status } = req.query;
       const feedbackList = status
@@ -8556,7 +8502,7 @@ Crawl-delay: 1
     }
   });
 
-  app.patch("/api/admin/feedback/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/admin/feedback/:id", isAdmin, async (req: any, res) => {
     try {
       const { status, adminNotes } = req.body;
       const updated = await storage.updateFeedbackStatus(req.params.id, status, adminNotes);
@@ -8567,10 +8513,8 @@ Crawl-delay: 1
     }
   });
 
-  // Admin dashboard statistics API
-  // NOTE: During beta, any authenticated user can access admin stats since all users are beta testers
-  // TODO: Before production launch, implement proper role-based authorization (admin flag or allowlist)
-  app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
+  // Admin dashboard statistics API — requires admin flag or allowlist
+  app.get("/api/admin/stats", isAdmin, async (req: any, res) => {
     try {
       const stats = await storage.getAdminStats();
       res.json(stats);
@@ -8581,7 +8525,7 @@ Crawl-delay: 1
   });
 
   // Admin partnerships list
-  app.get("/api/admin/partnerships", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/partnerships", isAdmin, async (req: any, res) => {
     try {
       const allPartnerships = await storage.getAllPartnerships();
       
@@ -8608,7 +8552,7 @@ Crawl-delay: 1
   });
 
   // Admin messages list with stats
-  app.get("/api/admin/messages", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/messages", isAdmin, async (req: any, res) => {
     try {
       const messages = await storage.getMessages();
       
@@ -8648,7 +8592,7 @@ Crawl-delay: 1
     }
   });
 
-  app.get("/api/admin/web-update-metrics", isAuthenticated, (req: any, res) => {
+  app.get("/api/admin/web-update-metrics", isAdmin, (req: any, res) => {
     try {
       const windowInput = typeof req.query?.window === "string" ? req.query.window : 24;
       const metrics = getWebUpdateMetrics(windowInput);

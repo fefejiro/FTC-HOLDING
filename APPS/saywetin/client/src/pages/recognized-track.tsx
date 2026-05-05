@@ -741,9 +741,9 @@ export default function RecognizedTrack() {
     }
   }, [showXRay, logInteraction]);
 
-  const artistInfo: ArtistSongInfo | undefined = undefined;
-  const fragmentInterpretation: FragmentInterpretation | undefined = undefined;
-  const continuation: ResultContinuationSuggestion | undefined = undefined;
+  let artistInfo: ArtistSongInfo | undefined;
+  let fragmentInterpretation: FragmentInterpretation | undefined;
+  let continuation: ResultContinuationSuggestion | undefined;
   const handleContinuationClick = (_suggestionId: string) => {};
 
   const orderedLyricLines = useMemo(() => {
@@ -1182,18 +1182,28 @@ export default function RecognizedTrack() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground mb-0.5">If this resonates, try:</p>
                     <button
-                      onClick={() => handleContinuationClick(continuation.suggestion!.id)}
+                      onClick={() => {
+                        const suggestionId = continuation?.suggestion?.id;
+                        if (suggestionId) {
+                          handleContinuationClick(suggestionId);
+                        }
+                      }}
                       className="text-left hover-elevate active-elevate-2 rounded-md px-1 -mx-1"
                       data-testid="button-continuation-suggestion"
                     >
-                      <span className="font-semibold text-foreground">{continuation.suggestion.title}</span>
-                      <span className="text-muted-foreground"> by {continuation.suggestion.artist}</span>
+                      <span className="font-semibold text-foreground">{continuation?.suggestion?.title || ''}</span>
+                      <span className="text-muted-foreground"> by {continuation?.suggestion?.artist || ''}</span>
                     </button>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleContinuationClick(continuation.suggestion!.id)}
+                    onClick={() => {
+                      const suggestionId = continuation?.suggestion?.id;
+                      if (suggestionId) {
+                        handleContinuationClick(suggestionId);
+                      }
+                    }}
                     className="shrink-0"
                     data-testid="button-continuation-go"
                   >

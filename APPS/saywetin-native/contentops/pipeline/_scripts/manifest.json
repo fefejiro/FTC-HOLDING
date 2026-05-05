@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-04-27T03:29:33.691Z",
+  "overall": "YELLOW",
+  "passed": [
+    "smoke",
+    "unit",
+    "api",
+    "contract",
+    "security",
+    "uat",
+    "e2e"
+  ],
+  "failed": [
+    "perf",
+    "bat"
+  ],
+  "scripts": {
+    "tiktok": {
+      "path": "tiktok.txt",
+      "persona": "male",
+      "est_seconds": 21
+    },
+    "instagram": {
+      "path": "instagram.txt",
+      "persona": "female",
+      "est_seconds": 24
+    },
+    "x": {
+      "path": "x.txt",
+      "persona": null,
+      "est_seconds": 0
+    },
+    "linkedin": {
+      "path": "linkedin.txt",
+      "persona": "prof",
+      "est_seconds": 43
+    }
+  },
+  "approval_tier": "B"
+}

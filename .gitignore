@@ -36,8 +36,12 @@ APPS/saywetin/.git.backup-*/
 
 # local duplicate clone/tree - not source of truth for this repo
 FTC-HOLDING/
+claude-skills/
+claude-skills/**
 .tmp-main-publish/
 .tmp-main-publish/**
+.tmp-ftc-deploy/
+.tmp-ftc-deploy/**
 
 # local ATEAM temp artifacts
 APPS/ATEAM/tmpclaude-*
@@ -53,6 +57,12 @@ claude.exe
 # Claude Code session state (keep project settings, ignore everything else)
 .claude/*
 !.claude/settings.json
+# --- Wave 1 repo cleanup: safe ignore baseline (2026-04-29) ---
+.wrangler/
+tmp/
+saywetin/.idea/caches/
+saywetin/.idea/deviceManager.xml
+saywetin/.idea/vcs.xml
 
 # ATEAM local runtime data (keep private / avoid noisy diffs)
 APPS/ATEAM/memory/**
@@ -61,3 +71,11 @@ APPS/ftc-site/APPS/
 output/playwright/**
 .tmp-agent.json
 .tmp-cap.json
+play-store-key.json
+secrets/
+
+# Agent workspace state is local, but recovered repo skills are onboarding assets.
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+.windsurf/

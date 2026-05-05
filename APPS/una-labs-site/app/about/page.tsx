@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { buildPageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: 'About - Una Labs',
   description: 'Una Labs is a professional service delivery platform built for teams who deliver with confidence.',
-};
+  path: '/about',
+});
 
 export default function AboutPage() {
   return (
@@ -37,7 +39,7 @@ export default function AboutPage() {
           </p>
         </div>
         <div className="mt-12 flex flex-wrap justify-center gap-4">
-          <Button href="/start" variant="primary" size="lg">Start a request</Button>
+          <Button href="/start" variant="primary" size="lg">Start Your Project</Button>
           <Button href="/how-it-works" variant="secondary" size="lg">See how it works</Button>
         </div>
       </div>
