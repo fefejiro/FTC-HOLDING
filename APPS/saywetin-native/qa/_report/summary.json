@@ -1,0 +1,262 @@
+{
+  "startedAt": "2026-04-27T01:30:52.243Z",
+  "ok": false,
+  "layers": [
+    {
+      "name": "smoke",
+      "ok": true,
+      "code": 0,
+      "durationMs": 1294,
+      "tail": "SayWetin backend smoke @ https://saywetin-api-production.up.railway.app\n  ... health PASS (status ok)\n  ... identify-by-text (well-known lyric) PASS (SKIPPED (AI_NOT_CONFIGURED — OPENAI_API_KEY not set))\n\n2/2 passed\n"
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "code": 0,
+      "durationMs": 2008,
+      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m unit/confidence.test.ts \u001b[2m(\u001b[22m\u001b[2m2 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 3\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m2 passed\u001b[39m\u001b[22m\u001b[90m (2)\u001b[39m\n\u001b[2m   Start at \u001b[22m 21:29:45\n\u001b[2m   Duration \u001b[22m 766ms\u001b[2m (transform 42ms, setup 0ms, collect 36ms, tests 3ms, environment 0ms, prepare 207ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
+    },
+    {
+      "name": "api",
+      "ok": true,
+      "code": 0,
+      "durationMs": 3723,
+      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m api/endpoints.test.ts \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 1711\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://saywetin-api-production.up.railway.app\u001b[2m > \u001b[22mGET /api/health -> 200 ok \u001b[33m416\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://saywetin-api-production.up.railway.app\u001b[2m > \u001b[22mGET /api/status -> reports configured services \u001b[33m630\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m5 passed\u001b[39m\u001b[22m\u001b[90m (5)\u001b[39m\n\u001b[2m   Start at \u001b[22m 21:29:47\n\u001b[2m   Duration \u001b[22m 2.47s\u001b[2m (transform 49ms, setup 0ms, collect 59ms, tests 1.71s, environment 0ms, prepare 223ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
+    },
+    {
+      "name": "contract",
+      "ok": true,
+      "code": 0,
+      "durationMs": 3078,
+      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m contract/shapes.test.ts \u001b[2m(\u001b[22m\u001b[2m3 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 1010\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/health matches schema \u001b[33m396\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/status matches schema \u001b[33m401\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[90m (3)\u001b[39m\n\u001b[2m   Start at \u001b[22m 21:29:51\n\u001b[2m   Duration \u001b[22m 1.81s\u001b[2m (transform 56ms, setup 0ms, collect 76ms, tests 1.01s, environment 0ms, prepare 269ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
+    },
+    {
+      "name": "security",
+      "ok": true,
+      "code": 0,
+      "durationMs": 3408,
+      "tail": "  PASS npm-audit (saywetin-native) (critical=0 high=0)\n  PASS secret-scan (clean)\n  PASS https-headers (gated: missing x-content-type-options, strict-transport-security (awaiting Railway redeploy))\n  PASS admin-protected (status=404)\n"
+    },
+    {
+      "name": "perf",
+      "ok": false,
+      "code": 1,
+      "durationMs": 31149,
+      "tail": "[perf] health -> GET https://saywetin-api-production.up.railway.app/api/health\n[perf] status -> GET https://saywetin-api-production.up.railway.app/api/status\n  FAIL health: p99=829ms rps=101.0 err=2\n  PASS status: p99=1028ms rps=67.8 err=0\n"
+    },
+    {
+      "name": "uat",
+      "ok": true,
+      "code": 0,
+      "durationMs": 2090,
+      "tail": "  PASS uat UAT — End-user music recognition journey :: U1 Backend reachable\n  PASS uat UAT — End-user music recognition journey :: U2 Backend reports DB schema ready\n  SKIP uat UAT — End-user music recognition journey :: U3 User searches song by lyric snippet (Burna Boy) — OPENAI_API_KEY not set on backend (intentional gate)\n  PASS uat UAT — End-user music recognition journey :: U4 Listening history is queryable\n"
+    },
+    {
+      "name": "bat",
+      "ok": false,
+      "code": 1,
+      "durationMs": 21870,
+      "tail": "  FAIL bat BAT — Business acceptance: recognition core works for paying-tier flow :: B1 ERROR fetch failed\n  FAIL bat BAT — Business acceptance: recognition core works for paying-tier flow :: B2 ERROR fetch failed\n"
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "code": 0,
+      "durationMs": 818,
+      "tail": ""
+    }
+  ],
+  "detail": {
+    "perf": null,
+    "security": null,
+    "uat": {
+      "layer": "uat",
+      "startedAt": "2026-04-27T01:30:27.995Z",
+      "scenarios": [
+        {
+          "file": "identify-journey.json",
+          "name": "UAT — End-user music recognition journey",
+          "ok": true,
+          "steps": [
+            {
+              "id": "U1",
+              "title": "Backend reachable",
+              "ok": true,
+              "status": 200,
+              "failures": [],
+              "body": {
+                "status": "ok"
+              }
+            },
+            {
+              "id": "U2",
+              "title": "Backend reports DB schema ready",
+              "ok": true,
+              "status": 200,
+              "failures": [],
+              "body": {
+                "acrcloud": {
+                  "configured": true,
+                  "service": "Audio Recognition"
+                },
+                "lyrics": {
+                  "configured": true,
+                  "service": "LRCLIB + Lyrics.ovh + optional fallbacks",
+                  "providers": [
+                    "LRCLIB",
+                    "Lyrics.ovh",
+                    "AZLyrics"
+                  ],
+                  "geniusApiKey": "Not set",
+                  "aiFallback": "Disabled"
+                },
+                "openai": {
+                  "configured": false,
+                  "provider": "none",
+                  "model": "gpt-4o-mini",
+                  "apiKeySource": null,
+                  "service": "AI Cultural Context"
+                },
+                "database": {
+                  "configured": true,
+                  "connected": true,
+                  "schemaReady": true
+                }
+              }
+            },
+            {
+              "id": "U3",
+              "title": "User searches song by lyric snippet (Burna Boy)",
+              "ok": true,
+              "skipped": true,
+              "status": 503,
+              "failures": [],
+              "body": {
+                "success": false,
+                "errorCode": "AI_NOT_CONFIGURED",
+                "error": "Lyric matching is not available right now. Try again later."
+              },
+              "skipReason": "OPENAI_API_KEY not set on backend (intentional gate)"
+            },
+            {
+              "id": "U4",
+              "title": "Listening history is queryable",
+              "ok": true,
+              "status": 200,
+              "failures": [],
+              "body": []
+            }
+          ]
+        }
+      ],
+      "ok": true
+    },
+    "bat": {
+      "layer": "bat",
+      "startedAt": "2026-04-27T01:30:30.096Z",
+      "scenarios": [
+        {
+          "file": "recognition-core.json",
+          "name": "BAT — Business acceptance: recognition core works for paying-tier flow",
+          "ok": false,
+          "steps": [
+            {
+              "id": "B1",
+              "title": "Recognition by text returns artist + title",
+              "ok": false,
+              "error": "fetch failed"
+            },
+            {
+              "id": "B2",
+              "title": "Garbage input is rejected, not 500",
+              "ok": false,
+              "error": "fetch failed"
+            }
+          ]
+        }
+      ],
+      "ok": false
+    },
+    "e2e": {
+      "layer": "e2e",
+      "startedAt": "2026-04-27T01:30:52.212Z",
+      "runs": [],
+      "ok": false,
+      "skipped": true,
+      "reason": "maestro CLI not installed (see qa/e2e/run.mjs header)"
+    },
+    "vitest": {
+      "numTotalTestSuites": 2,
+      "numPassedTestSuites": 2,
+      "numFailedTestSuites": 0,
+      "numPendingTestSuites": 0,
+      "numTotalTests": 3,
+      "numPassedTests": 3,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "numTodoTests": 0,
+      "snapshot": {
+        "added": 0,
+        "failure": false,
+        "filesAdded": 0,
+        "filesRemoved": 0,
+        "filesRemovedList": [],
+        "filesUnmatched": 0,
+        "filesUpdated": 0,
+        "matched": 0,
+        "total": 0,
+        "unchecked": 0,
+        "uncheckedKeysByFile": [],
+        "unmatched": 0,
+        "updated": 0,
+        "didUpdate": false
+      },
+      "startTime": 1777253391023,
+      "success": true,
+      "testResults": [
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "Contract: response shapes"
+              ],
+              "fullName": "Contract: response shapes /api/health matches schema",
+              "status": "passed",
+              "title": "/api/health matches schema",
+              "duration": 396.2816999999999,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Contract: response shapes"
+              ],
+              "fullName": "Contract: response shapes /api/status matches schema",
+              "status": "passed",
+              "title": "/api/status matches schema",
+              "duration": 400.8203000000001,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Contract: response shapes"
+              ],
+              "fullName": "Contract: response shapes /api/identify-by-text matches success-or-error union",
+              "status": "passed",
+              "title": "/api/identify-by-text matches success-or-error union",
+              "duration": 211.58259999999996,
+              "failureMessages": [],
+              "meta": {}
+            }
+          ],
+          "startTime": 1777253391792,
+          "endTime": 1777253392800.5825,
+          "status": "passed",
+          "message": "",
+          "name": "C:/FTC HOLDING/APPS/saywetin-native/qa/contract/shapes.test.ts"
+        }
+      ]
+    }
+  }
+}

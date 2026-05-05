@@ -2,6 +2,29 @@
 
 This repository contains multiple FTC projects and product experiments. Treat it as a portfolio workspace, not a single app.
 
+## Skills (load on demand)
+
+Two skill libraries live in this monorepo. Load the matching `SKILL.md` before acting whenever a request matches its description; never duplicate skill content into prompts.
+
+- `.github/skills/` — governance and product-shape skills:
+  - `ftc-client-workflow` — client intake, scoping, handoff
+  - `ftc-portal-qa-audit` — portal QA passes
+  - `ftc-project-governance` — new project scaffolding, Jira/Confluence mirroring, portfolio status
+  - `ftc-startup-strategy-skill` — venture/strategy framing
+  - `saywetin-three-surface-ship` — SayWetin three-surface release coordination
+- `skills/` (repo root) — operational/runtime skills:
+  - `ftc-auth-foundation` — auth wiring across apps
+  - `ftc-cli` — repo inspection, diagnostics, testing, deploy checks, docs hygiene, failure recovery (load this first when repo structure is unclear or a prior agent session failed)
+  - `ftc-client-handoff` — client delivery handoff
+  - `ftc-delivery-telemetry` — telemetry and portfolio status feeds
+  - `ftc-deployment-recovery` — disciplined production-deploy recovery
+  - `ftc-live-qa` — live QA passes
+  - `ftc-multi-agent-orchestration` — multi-agent task routing
+  - `ftc-saywetin-android-qa` — SayWetin Android device matrix QA
+- `.agents/skills/` and `.windsurf/skills/` — Stripe-specific skills (`stripe-best-practices`, `stripe-projects`, `upgrade-stripe`); load when working in `workers/stripe-api/` or any Stripe integration.
+
+When work touches a repo and the structure is unclear, load `skills/ftc-cli/SKILL.md` before guessing.
+
 ## General rules
 
 - Keep changes scoped to the requested app, folder, or issue.

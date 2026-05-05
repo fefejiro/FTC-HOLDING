@@ -1,0 +1,182 @@
+[
+  {
+    "title": "Supply Chain Systems Analyst",
+    "company": "Example Logistics",
+    "location": "Remote, Canada",
+    "employmentType": "Contract",
+    "salary": "$75-$95/hr",
+    "source": "Company Careers",
+    "link": "https://example.com/job-2",
+    "description": "Support WMS and ERP integration, gather requirements, manage UAT, coordinate issue triage, and support go-live and hypercare.",
+    "score": 75,
+    "matchedKeywords": [
+      "Systems Analyst",
+      "UAT",
+      "WMS",
+      "ERP integration",
+      "supply chain"
+    ],
+    "bestRoleFamily": "erp_implementation",
+    "roleFamilyScores": [
+      {
+        "name": "erp_implementation",
+        "score": 57,
+        "hits": [
+          "ERP",
+          "integration",
+          "requirements",
+          "UAT"
+        ]
+      },
+      {
+        "name": "wms_supply_chain_systems",
+        "score": 50,
+        "hits": [
+          "WMS",
+          "ERP",
+          "go-live",
+          "hypercare"
+        ]
+      },
+      {
+        "name": "agile_project_delivery",
+        "score": 0,
+        "hits": []
+      }
+    ],
+    "outreach": "Hello Example Logistics,\n\nI am interested in the Supply Chain Systems Analyst role. My background aligns well with this scope, especially in Systems Analyst, UAT, WMS, ERP integration, supply chain.\n\nI have delivered across Ontario public sector, retail, and supply chain technology environments, including requirements, testing, cross-team coordination, and go-live support.\n\nAvailability to interview: Immediate.\nAvailability to start: Immediate.\nRate expectation: $75-$85/hr contract, depending on scope.\n\nRegards,\nFejiro Efiuvwere\n416 473 2732\nfejiro.efiuvwere@gmail.com\nhttps://unalabs.cloud/",
+    "bullets": {
+      "summary": [
+        "I am targeting Supply Chain Systems Analyst opportunities and bring direct experience in Systems Analyst, UAT, WMS, ERP integration, supply chain.",
+        "I coordinate requirements, testing, risk management, and stakeholder communication to keep delivery outcomes stable and measurable.",
+        "My background combines Ontario public sector execution with enterprise retail and supply chain systems delivery in fast-paced environments."
+      ],
+      "skills": [
+        "Systems Analyst, UAT, WMS, ERP integration, supply chain"
+      ],
+      "exp": [
+        "Facilitated execution across business and technical teams, tracked risks and dependencies, and maintained clear delivery reporting.",
+        "Supported implementation lifecycle activities including requirements, documentation, testing coordination, and go-live readiness.",
+        "Experience alignment: Ontario Ministry of Finance, RIDE-TI and EPIC onboarding, cross-program coordination.",
+        "Experience alignment: Talize, IT project coordination and business systems leadership.",
+        "Experience alignment: Canadian Tire, enterprise testing and delivery coordination across large retail footprint.",
+        "Experience alignment: Home Depot Canada, omnichannel systems and integration support."
+      ]
+    }
+  },
+  {
+    "title": "ERP Implementation Business Analyst",
+    "company": "Example Enterprise",
+    "location": "Remote, US/Canada",
+    "employmentType": "Contract to hire",
+    "salary": "$80-$100/hr",
+    "source": "Dice",
+    "link": "https://example.com/job-3",
+    "description": "Lead requirements definition, documentation, data migration coordination, testing strategy, stakeholder workshops, and release readiness for ERP implementation.",
+    "score": 50,
+    "matchedKeywords": [],
+    "bestRoleFamily": "erp_implementation",
+    "roleFamilyScores": [
+      {
+        "name": "erp_implementation",
+        "score": 71,
+        "hits": [
+          "ERP",
+          "requirements",
+          "data migration",
+          "stakeholder",
+          "documentation"
+        ]
+      },
+      {
+        "name": "wms_supply_chain_systems",
+        "score": 25,
+        "hits": [
+          "ERP",
+          "testing"
+        ]
+      },
+      {
+        "name": "agile_project_delivery",
+        "score": 0,
+        "hits": []
+      }
+    ],
+    "outreach": "Hello Example Enterprise,\n\nI am interested in the ERP Implementation Business Analyst role. My background aligns well with this scope, especially in enterprise systems delivery, coordination, and implementation support.\n\nI have delivered across Ontario public sector, retail, and supply chain technology environments, including requirements, testing, cross-team coordination, and go-live support.\n\nAvailability to interview: Immediate.\nAvailability to start: Immediate.\nRate expectation: $75-$85/hr contract, depending on scope.\n\nRegards,\nFejiro Efiuvwere\n416 473 2732\nfejiro.efiuvwere@gmail.com\nhttps://unalabs.cloud/",
+    "bullets": {
+      "summary": [
+        "I am targeting ERP Implementation Business Analyst opportunities and bring direct experience in systems delivery and implementation support.",
+        "I coordinate requirements, testing, risk management, and stakeholder communication to keep delivery outcomes stable and measurable.",
+        "My background combines Ontario public sector execution with enterprise retail and supply chain systems delivery in fast-paced environments."
+      ],
+      "skills": [
+        "Agile delivery, SDLC, requirements management, UAT, integration support, stakeholder communication"
+      ],
+      "exp": [
+        "Facilitated execution across business and technical teams, tracked risks and dependencies, and maintained clear delivery reporting.",
+        "Supported implementation lifecycle activities including requirements, documentation, testing coordination, and go-live readiness.",
+        "Experience alignment: Ontario Ministry of Finance, RIDE-TI and EPIC onboarding, cross-program coordination.",
+        "Experience alignment: Talize, IT project coordination and business systems leadership.",
+        "Experience alignment: Canadian Tire, enterprise testing and delivery coordination across large retail footprint.",
+        "Experience alignment: Home Depot Canada, omnichannel systems and integration support."
+      ]
+    }
+  },
+  {
+    "title": "Senior Agile Project Coordinator",
+    "company": "Example Consulting",
+    "location": "Markham, ON (Hybrid)",
+    "employmentType": "Contract",
+    "salary": "$70-$85/hr",
+    "source": "LinkedIn",
+    "link": "https://example.com/job-1",
+    "description": "Lead Agile ceremonies, manage Azure DevOps backlog, coordinate deliverables across two teams, escalate risks and dependencies, and provide PMO status reporting.",
+    "score": 30,
+    "matchedKeywords": [
+      "Project Coordinator",
+      "Azure DevOps",
+      "status reporting"
+    ],
+    "bestRoleFamily": "agile_project_delivery",
+    "roleFamilyScores": [
+      {
+        "name": "agile_project_delivery",
+        "score": 38,
+        "hits": [
+          "Azure DevOps",
+          "backlog",
+          "risk"
+        ]
+      },
+      {
+        "name": "wms_supply_chain_systems",
+        "score": 0,
+        "hits": []
+      },
+      {
+        "name": "erp_implementation",
+        "score": 0,
+        "hits": []
+      }
+    ],
+    "outreach": "Hello Example Consulting,\n\nI am interested in the Senior Agile Project Coordinator role. My background aligns well with this scope, especially in Project Coordinator, Azure DevOps, status reporting.\n\nI have delivered across Ontario public sector, retail, and supply chain technology environments, including requirements, testing, cross-team coordination, and go-live support.\n\nAvailability to interview: Immediate.\nAvailability to start: Immediate.\nRate expectation: $75-$85/hr contract, depending on scope.\n\nRegards,\nFejiro Efiuvwere\n416 473 2732\nfejiro.efiuvwere@gmail.com\nhttps://unalabs.cloud/",
+    "bullets": {
+      "summary": [
+        "I am targeting Senior Agile Project Coordinator opportunities and bring direct experience in Project Coordinator, Azure DevOps, status reporting.",
+        "I coordinate requirements, testing, risk management, and stakeholder communication to keep delivery outcomes stable and measurable.",
+        "My background combines Ontario public sector execution with enterprise retail and supply chain systems delivery in fast-paced environments."
+      ],
+      "skills": [
+        "Project Coordinator, Azure DevOps, status reporting"
+      ],
+      "exp": [
+        "Facilitated execution across business and technical teams, tracked risks and dependencies, and maintained clear delivery reporting.",
+        "Supported implementation lifecycle activities including requirements, documentation, testing coordination, and go-live readiness.",
+        "Experience alignment: Ontario Ministry of Finance, RIDE-TI and EPIC onboarding, cross-program coordination.",
+        "Experience alignment: Talize, IT project coordination and business systems leadership.",
+        "Experience alignment: Canadian Tire, enterprise testing and delivery coordination across large retail footprint.",
+        "Experience alignment: Home Depot Canada, omnichannel systems and integration support."
+      ]
+    }
+  }
+]

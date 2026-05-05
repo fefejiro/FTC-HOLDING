@@ -1,0 +1,32 @@
+[
+  {
+    "title": "Senior Agile Project Coordinator",
+    "company": "Example Consulting",
+    "location": "Markham, ON (Hybrid)",
+    "employmentType": "Contract",
+    "salary": "$70-$85/hr",
+    "source": "LinkedIn",
+    "link": "https://example.com/job-1",
+    "description": "Lead Agile ceremonies, manage Azure DevOps backlog, coordinate deliverables across two teams, escalate risks and dependencies, and provide PMO status reporting."
+  },
+  {
+    "title": "Supply Chain Systems Analyst",
+    "company": "Example Logistics",
+    "location": "Remote, Canada",
+    "employmentType": "Contract",
+    "salary": "$75-$95/hr",
+    "source": "Company Careers",
+    "link": "https://example.com/job-2",
+    "description": "Support WMS and ERP integration, gather requirements, manage UAT, coordinate issue triage, and support go-live and hypercare."
+  },
+  {
+    "title": "ERP Implementation Business Analyst",
+    "company": "Example Enterprise",
+    "location": "Remote, US/Canada",
+    "employmentType": "Contract to hire",
+    "salary": "$80-$100/hr",
+    "source": "Dice",
+    "link": "https://example.com/job-3",
+    "description": "Lead requirements definition, documentation, data migration coordination, testing strategy, stakeholder workshops, and release readiness for ERP implementation."
+  }
+]

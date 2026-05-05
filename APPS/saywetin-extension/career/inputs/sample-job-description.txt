@@ -1,0 +1,17 @@
+Title: Senior Agile Project Coordinator
+Location: Markham, hybrid 2 days onsite
+Duration: 12 months
+
+Responsibilities:
+- Facilitate Agile ceremonies including stand-ups, sprint planning, and backlog grooming.
+- Manage backlog and sprint boards in Azure DevOps.
+- Track schedules, milestones, and deliverables.
+- Remove impediments and escalate project risks.
+- Provide regular status reporting to PMO and leadership.
+
+Mandatory Skills:
+- 5-8 years of experience in Scrum Master, project coordination, or project management.
+- Strong hands-on experience with Azure DevOps.
+- Strong understanding of Agile, SDLC, and DevOps practices.
+- Experience supporting multiple concurrent projects.
+- Strong communication and facilitation skills.

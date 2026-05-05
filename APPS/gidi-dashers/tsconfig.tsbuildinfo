@@ -1,0 +1,1 @@
+{"root":["./src/config.ts","./src/leaderboard.ts","./src/main.ts","./src/save.ts","./src/sfx.ts","./src/vite-env.d.ts","./src/scenes/bootscene.ts","./src/scenes/gameoverscene.ts","./src/scenes/gamescene.ts","./src/scenes/menuscene.ts","./src/scenes/preloadscene.ts"],"errors":true,"version":"5.6.3"}

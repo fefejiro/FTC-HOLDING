@@ -1,0 +1,120 @@
+{
+  "candidate": {
+    "name": "Fejiro Efiuvwere",
+    "phone": "416 473 2732",
+    "email": "fejiro.efiuvwere@gmail.com",
+    "website": "https://unalabs.cloud/",
+    "linkedin": "https://www.linkedin.com/in/fejiro-efiuvwere/",
+    "location": "Whitby, Ontario, Canada"
+  },
+  "targetPreferences": {
+    "priority": [
+      "remote",
+      "us-or-canada-contract",
+      "ontario-hybrid"
+    ],
+    "rateExpectationPerHourCad": "85+"
+  },
+  "voiceRules": {
+    "style": [
+      "first-person practitioner voice",
+      "direct and specific",
+      "human, no hype language"
+    ],
+    "avoid": [
+      "em dashes",
+      "en dashes",
+      "unicode dash variants",
+      "generic AI phrases"
+    ]
+  },
+  "coreKeywords": [
+    "Business Systems Analyst",
+    "Systems Analyst",
+    "Project Coordinator",
+    "Agile delivery",
+    "Scrum",
+    "Kanban",
+    "Azure DevOps",
+    "JIRA",
+    "SDLC",
+    "UAT",
+    "requirements gathering",
+    "stakeholder management",
+    "risk and dependency management",
+    "status reporting",
+    "WMS",
+    "Manhattan WMOS",
+    "ERP integration",
+    "EDI",
+    "supply chain",
+    "retail technology",
+    "Ontario Ministry of Finance",
+    "RIDE-TI",
+    "EPIC"
+  ],
+  "experienceHighlights": [
+    "Ontario Ministry of Finance, RIDE-TI and EPIC onboarding, cross-program coordination",
+    "Talize, IT project coordination and business systems leadership",
+    "Canadian Tire, enterprise testing and delivery coordination across large retail footprint",
+    "Home Depot Canada, omnichannel systems and integration support",
+    "LCBO, Manhattan WMOS testing, triage, and warehouse systems readiness",
+    "SCI Logistics, supply chain systems analysis and delivery support"
+  ],
+  "roleFamilies": {
+    "agile_project_delivery": {
+      "titles": [
+        "Senior Agile Project Coordinator",
+        "Scrum Master",
+        "Delivery Lead",
+        "IT Project Coordinator",
+        "Program Coordinator"
+      ],
+      "mustHaveKeywords": [
+        "Azure DevOps",
+        "Scrum",
+        "Kanban",
+        "backlog",
+        "stand-ups",
+        "sprint planning",
+        "risk",
+        "dependency"
+      ]
+    },
+    "wms_supply_chain_systems": {
+      "titles": [
+        "WMS Consultant",
+        "Business Systems Analyst",
+        "Supply Chain Systems Analyst",
+        "Warehouse Systems Lead"
+      ],
+      "mustHaveKeywords": [
+        "WMS",
+        "Manhattan",
+        "warehouse",
+        "EDI",
+        "ERP",
+        "testing",
+        "go-live",
+        "hypercare"
+      ]
+    },
+    "erp_implementation": {
+      "titles": [
+        "ERP Implementation Consultant",
+        "Systems Implementation Analyst",
+        "Business Analyst ERP",
+        "Integration Analyst"
+      ],
+      "mustHaveKeywords": [
+        "ERP",
+        "integration",
+        "requirements",
+        "UAT",
+        "data migration",
+        "stakeholder",
+        "documentation"
+      ]
+    }
+  }
+}

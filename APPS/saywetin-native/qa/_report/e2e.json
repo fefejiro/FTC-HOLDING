@@ -1,0 +1,8 @@
+{
+  "layer": "e2e",
+  "startedAt": "2026-04-27T01:30:52.212Z",
+  "runs": [],
+  "ok": false,
+  "skipped": true,
+  "reason": "maestro CLI not installed (see qa/e2e/run.mjs header)"
+}

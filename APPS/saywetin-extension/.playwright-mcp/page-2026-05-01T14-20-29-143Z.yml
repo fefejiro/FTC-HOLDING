@@ -1,0 +1,281 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - link "Garden Cleaners homepage" [ref=e5] [cursor=pointer]:
+          - /url: /garden-cleaners
+        - generic [ref=e10]:
+          - paragraph [ref=e11]: Garden Cleaners
+          - paragraph [ref=e12]: Professional cleaning services
+      - navigation "Main navigation" [ref=e13]:
+        - link "Home" [ref=e14] [cursor=pointer]:
+          - /url: /garden-cleaners
+        - link "Regional Portal" [ref=e15] [cursor=pointer]:
+          - /url: /garden-cleaners/portal
+        - link "About" [ref=e16] [cursor=pointer]:
+          - /url: /garden-cleaners/about
+        - link "Services" [ref=e17] [cursor=pointer]:
+          - /url: /garden-cleaners/services
+        - link "Contact" [ref=e18] [cursor=pointer]:
+          - /url: /garden-cleaners/contact
+        - link "Sign In to client portal" [ref=e19] [cursor=pointer]:
+          - /url: /garden-cleaners/portal#portal-access
+          - text: Sign In
+        - link "Get a Quote" [ref=e20] [cursor=pointer]:
+          - /url: /garden-cleaners/quote
+  - main [ref=e21]:
+    - generic [ref=e23]:
+      - generic [active] [ref=e24]:
+        - generic [ref=e25]:
+          - paragraph [ref=e26]: Portal access
+          - heading "Role-based Garden Cleaners portal" [level=2] [ref=e27]
+          - paragraph
+        - generic [ref=e28]:
+          - article [ref=e29]:
+            - paragraph [ref=e30]: Session state
+            - heading "Portal auth unavailable" [level=2] [ref=e219]
+            - paragraph [ref=e220]: Supabase public environment is not configured for this deployment.
+          - article [ref=e32]:
+            - paragraph [ref=e33]: Lane visibility
+            - heading "Portal unavailable" [level=2] [ref=e221]
+      - generic [ref=e35]:
+        - paragraph [ref=e36]: Regional Portal
+        - heading "Regional service coverage, client intake, and operations routing" [level=1] [ref=e37]
+        - paragraph [ref=e38]: Use this portal to see where Garden Cleaners is operating, how client requests move through review, and what the current regional routing model looks like. The client and staff lanes below are the live portal build direction for future gated access.
+        - generic [ref=e39]:
+          - link "Request Regional Quote" [ref=e40] [cursor=pointer]:
+            - /url: /garden-cleaners/quote
+          - link "Contact Operations" [ref=e41] [cursor=pointer]:
+            - /url: /garden-cleaners/contact
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - paragraph [ref=e44]: Portal lanes
+          - heading "Client visibility on one side, operations control on the other." [level=2] [ref=e45]
+          - paragraph [ref=e46]: "This portal is being shaped around two lanes: a client-facing request timeline and an internal routing view for staff managing region, urgency, and assignment."
+        - generic [ref=e47]:
+          - article [ref=e48]:
+            - paragraph [ref=e49]: Client lane
+            - heading "Track request status without extra back-and-forth." [level=2] [ref=e50]
+            - list [ref=e51]:
+              - listitem [ref=e52]: View current quote stage and service requested
+              - listitem [ref=e53]: Confirm region and latest routing status
+              - listitem [ref=e54]: Understand the next expected operations step
+          - article [ref=e55]:
+            - paragraph [ref=e56]: Operations lane
+            - heading "Triage new requests and keep routing realistic." [level=2] [ref=e57]
+            - list [ref=e58]:
+              - listitem [ref=e59]: Review incoming requests by region and urgency
+              - listitem [ref=e60]: Assign staff coverage for scoped jobs
+              - listitem [ref=e61]: Keep same-week and regional commitments clear
+      - generic [ref=e62]:
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: Coverage map by region
+          - heading "Current regional lanes and scheduling windows" [level=2] [ref=e65]
+          - paragraph [ref=e66]: Booking windows are operational targets, not hard guarantees. Time-sensitive requests can be flagged in the quote form for priority triage.
+        - generic [ref=e67]:
+          - article [ref=e68]:
+            - heading "Oshawa" [level=3] [ref=e69]
+            - paragraph [ref=e70]: Core daily service zone
+            - paragraph [ref=e71]:
+              - strong [ref=e72]: "Typical window:"
+              - text: Same-week availability
+            - list [ref=e73]:
+              - listitem [ref=e74]: Residential recurring
+              - listitem [ref=e75]: Office cleaning
+              - listitem [ref=e76]: Move in and move out cleaning
+            - link "Get same-week quote" [ref=e77] [cursor=pointer]:
+              - /url: /garden-cleaners/quote?region=Oshawa
+          - article [ref=e78]:
+            - heading "Whitby" [level=3] [ref=e79]
+            - paragraph [ref=e80]: Priority regional coverage
+            - paragraph [ref=e81]:
+              - strong [ref=e82]: "Typical window:"
+              - text: 48 to 72 hour booking window
+            - list [ref=e83]:
+              - listitem [ref=e84]: Deep cleaning
+              - listitem [ref=e85]: Commercial support
+              - listitem [ref=e86]: Post construction cleanup
+            - link "Book 48-72h window" [ref=e87] [cursor=pointer]:
+              - /url: /garden-cleaners/quote?region=Whitby
+          - article [ref=e88]:
+            - heading "Ajax" [level=3] [ref=e89]
+            - paragraph [ref=e90]: Durham east route support
+            - paragraph [ref=e91]:
+              - strong [ref=e92]: "Typical window:"
+              - text: 2 to 4 day booking window
+            - list [ref=e93]:
+              - listitem [ref=e94]: Recurring home cleaning
+              - listitem [ref=e95]: Office sanitization
+              - listitem [ref=e96]: Turnover reset
+            - link "Start Ajax quote" [ref=e97] [cursor=pointer]:
+              - /url: /garden-cleaners/quote?region=Ajax
+          - article [ref=e98]:
+            - heading "Pickering" [level=3] [ref=e99]
+            - paragraph [ref=e100]: Extended route coverage
+            - paragraph [ref=e101]:
+              - strong [ref=e102]: "Typical window:"
+              - text: 2 to 5 day booking window
+            - list [ref=e103]:
+              - listitem [ref=e104]: Commercial maintenance
+              - listitem [ref=e105]: Deep cleaning
+              - listitem [ref=e106]: Move related service
+            - link "Request Pickering slot" [ref=e107] [cursor=pointer]:
+              - /url: /garden-cleaners/quote?region=Pickering
+          - article [ref=e108]:
+            - heading "Courtice" [level=3] [ref=e109]
+            - paragraph [ref=e110]: Flexible regional scheduling
+            - paragraph [ref=e111]:
+              - strong [ref=e112]: "Typical window:"
+              - text: 2 to 5 day booking window
+            - list [ref=e113]:
+              - listitem [ref=e114]: Residential cleaning
+              - listitem [ref=e115]: Listing preparation
+              - listitem [ref=e116]: Post construction support
+            - link "Request Courtice quote" [ref=e117] [cursor=pointer]:
+              - /url: /garden-cleaners/quote?region=Courtice
+          - article [ref=e118]:
+            - heading "Durham Region" [level=3] [ref=e119]
+            - paragraph [ref=e120]: Custom route by request
+            - paragraph [ref=e121]:
+              - strong [ref=e122]: "Typical window:"
+              - text: Scoped after intake
+            - list [ref=e123]:
+              - listitem [ref=e124]: Multi-site projects
+              - listitem [ref=e125]: Property manager coverage
+              - listitem [ref=e126]: Regional commercial plans
+            - link "Request custom regional plan" [ref=e127] [cursor=pointer]:
+              - /url: /garden-cleaners/quote?region=Durham%20Region
+      - generic [ref=e129]:
+        - article [ref=e130]:
+          - paragraph [ref=e131]: Commercial routing
+          - heading "Office and commercial requests are grouped by route efficiency." [level=2] [ref=e132]
+          - paragraph [ref=e133]: Multi-unit and office requests are batched by geography and service complexity so quality stays high and arrival windows remain predictable.
+        - article [ref=e134]:
+          - paragraph [ref=e135]: Time-sensitive requests
+          - heading "Need fast turnaround for a move, listing, or handoff?" [level=2] [ref=e136]
+          - paragraph [ref=e137]: Include your date constraint in the quote form and select your region. The operations team will confirm whether expedited routing is available.
+      - generic [ref=e139]:
+        - article [ref=e140]:
+          - paragraph [ref=e141]: Start a regional request
+          - heading "Submit directly from the portal." [level=2] [ref=e142]
+          - paragraph [ref=e143]: This form routes the request through the portal lane so the intake can later appear in the client timeline and staff queue views.
+          - generic [ref=e144]:
+            - generic [ref=e145]:
+              - generic [ref=e146]: Full Name
+              - textbox "Full Name" [ref=e147]:
+                - /placeholder: Jane Doe
+            - generic [ref=e148]:
+              - generic [ref=e149]: Email
+              - textbox "Email" [ref=e150]:
+                - /placeholder: you@example.com
+            - generic [ref=e151]:
+              - generic [ref=e152]: Phone
+              - textbox "Phone" [ref=e153]:
+                - /placeholder: +1 289 200 0631
+            - generic [ref=e154]:
+              - generic [ref=e155]: Service Address
+              - textbox "Service Address" [ref=e156]:
+                - /placeholder: 123 Main Street
+            - generic [ref=e157]:
+              - generic [ref=e158]: City
+              - textbox "City" [ref=e159]:
+                - /placeholder: Oshawa
+            - generic [ref=e160]:
+              - generic [ref=e161]: Postal Code
+              - textbox "Postal Code" [ref=e162]:
+                - /placeholder: A1A 1A1
+            - generic [ref=e163]:
+              - generic [ref=e164]: Property Type
+              - combobox "Property Type" [ref=e165]:
+                - option "Select property type" [selected]
+                - option "House"
+                - option "Condo / Apartment"
+                - option "Office"
+                - option "Retail / Commercial"
+                - option "Vacant unit"
+                - option "Other"
+            - generic [ref=e166]:
+              - generic [ref=e167]: Service Needed
+              - combobox "Service Needed" [ref=e168]:
+                - option "Select a service" [selected]
+                - option "Residential Cleaning"
+                - option "Commercial Cleaning"
+                - option "Deep Cleaning"
+                - option "Move In / Move Out Cleaning"
+                - option "Post Construction Cleaning"
+                - option "Recurring Cleaning"
+                - option "Office Cleaning"
+            - generic [ref=e169]:
+              - generic [ref=e170]: Preferred Date
+              - textbox "Preferred Date" [ref=e171]
+            - generic [ref=e172]:
+              - generic [ref=e173]: Preferred Time
+              - combobox "Preferred Time" [ref=e174]:
+                - option "Any time" [selected]
+                - option "Morning"
+                - option "Afternoon"
+                - option "Evening"
+            - generic [ref=e175]:
+              - generic [ref=e176]: Frequency
+              - combobox "Frequency" [ref=e177]:
+                - option "Select frequency" [selected]
+                - option "One-time"
+                - option "Weekly"
+                - option "Bi-weekly"
+                - option "Monthly"
+                - option "Custom schedule"
+            - generic [ref=e178]:
+              - generic [ref=e179]: Message
+              - textbox "Message" [ref=e180]:
+                - /placeholder: Tell us about the property, timing, and anything we should know.
+            - generic [ref=e181]:
+              - text: Website
+              - textbox [ref=e182]
+            - button "Request Quote" [ref=e183]
+        - article [ref=e184]:
+          - paragraph [ref=e185]: Portal rollout path
+          - heading "What comes next in the authenticated build." [level=2] [ref=e186]
+          - list [ref=e187]:
+            - listitem [ref=e188]: Client sign-in for request history and status visibility
+            - listitem [ref=e189]: Staff sign-in for routing, assignment, and queue updates
+            - listitem [ref=e190]: Linked quote records instead of preview data
+          - paragraph [ref=e191]: Until gated access is live, use the quote form here and the contact route for special scheduling or commercial routing questions.
+      - generic [ref=e192]:
+        - heading "Need confirmation for your exact address?" [level=2] [ref=e193]
+        - paragraph [ref=e194]: Share your location, service type, and preferred timing. Garden Cleaners will confirm the right service lane and next available window.
+        - generic [ref=e195]:
+          - link "Get a Regional Quote" [ref=e196] [cursor=pointer]:
+            - /url: /garden-cleaners/quote
+          - link "View Services" [ref=e197] [cursor=pointer]:
+            - /url: /garden-cleaners/services
+      - generic "Regional portal quick actions" [ref=e198]:
+        - link "Get Regional Quote" [ref=e199] [cursor=pointer]:
+          - /url: /garden-cleaners/quote
+        - link "Contact Ops" [ref=e200] [cursor=pointer]:
+          - /url: /garden-cleaners/contact
+  - contentinfo [ref=e201]:
+    - generic [ref=e203]:
+      - generic [ref=e204]:
+        - paragraph [ref=e205]: Garden Cleaners
+        - paragraph [ref=e206]: Professional cleaning services
+        - paragraph [ref=e207]: Reliable residential and commercial cleaning for Oshawa, Durham Region, and surrounding areas.
+      - generic [ref=e208]:
+        - link "Home" [ref=e209] [cursor=pointer]:
+          - /url: /garden-cleaners
+        - link "Regional Portal" [ref=e210] [cursor=pointer]:
+          - /url: /garden-cleaners/portal
+        - link "About" [ref=e211] [cursor=pointer]:
+          - /url: /garden-cleaners/about
+        - link "Services" [ref=e212] [cursor=pointer]:
+          - /url: /garden-cleaners/services
+        - link "Contact" [ref=e213] [cursor=pointer]:
+          - /url: /garden-cleaners/contact
+        - link "Get a Quote" [ref=e214] [cursor=pointer]:
+          - /url: /garden-cleaners/quote
+      - generic [ref=e215]:
+        - link "+1 289 200 0631" [ref=e216] [cursor=pointer]:
+          - /url: tel:+12892000631
+        - link "contact@gardencleaners.ca" [ref=e217] [cursor=pointer]:
+          - /url: mailto:uby400@gmail.com
+        - generic [ref=e218]: Oshawa, Ontario, Canada
+  - alert [ref=e222]

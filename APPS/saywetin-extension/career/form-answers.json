@@ -1,0 +1,63 @@
+{
+  "commonAnswers": {
+    "availabilityToStart": "Immediate",
+    "availabilityToInterview": "Immediate",
+    "rateExpectation": "Starting at $85/hr contract, can be higher depending on scope, complexity, and delivery ownership",
+    "workPreference": "Remote priority, open to US and Canada contract roles, open to Ontario hybrid",
+    "authorizedToWork": "Yes",
+    "requiresSponsorship": "No",
+    "openToTravel": "Yes",
+    "openToRelocation": "No",
+    "highestEducation": "Bachelor of Applied Science (Electrical and Electronics Engineering)",
+    "certifications": "ITIL V3",
+    "noticePeriod": "Immediate",
+    "linkedin": "https://www.linkedin.com/in/fejiro-efiuvwere/",
+    "website": "https://unalabs.cloud/"
+  },
+  "questionMappings": [
+    {
+      "question": "When can you start?",
+      "answerKey": "availabilityToStart"
+    },
+    {
+      "question": "What is your availability for interview?",
+      "answerKey": "availabilityToInterview"
+    },
+    {
+      "question": "What is your rate expectation?",
+      "answerKey": "rateExpectation"
+    },
+    {
+      "question": "Are you authorized to work in Canada or the US?",
+      "answerKey": "authorizedToWork"
+    },
+    {
+      "question": "Do you require sponsorship now or in the future?",
+      "answerKey": "requiresSponsorship"
+    },
+    {
+      "question": "Are you open to travel?",
+      "answerKey": "openToTravel"
+    },
+    {
+      "question": "Are you open to relocation?",
+      "answerKey": "openToRelocation"
+    },
+    {
+      "question": "What is your highest education?",
+      "answerKey": "highestEducation"
+    },
+    {
+      "question": "List your relevant certifications",
+      "answerKey": "certifications"
+    },
+    {
+      "question": "What is your notice period?",
+      "answerKey": "noticePeriod"
+    },
+    {
+      "question": "What is your preferred work model?",
+      "answerKey": "workPreference"
+    }
+  ]
+}

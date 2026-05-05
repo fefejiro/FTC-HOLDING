@@ -1,0 +1,82 @@
+{
+  "layer": "uat",
+  "startedAt": "2026-04-27T16:23:33.756Z",
+  "scenarios": [
+    {
+      "file": "identify-journey.json",
+      "name": "UAT — End-user music recognition journey",
+      "ok": true,
+      "steps": [
+        {
+          "id": "U1",
+          "title": "Backend reachable",
+          "ok": true,
+          "status": 200,
+          "failures": [],
+          "body": {
+            "status": "ok"
+          }
+        },
+        {
+          "id": "U2",
+          "title": "Backend reports DB schema ready",
+          "ok": true,
+          "status": 200,
+          "failures": [],
+          "body": {
+            "acrcloud": {
+              "configured": true,
+              "service": "Audio Recognition"
+            },
+            "lyrics": {
+              "configured": true,
+              "service": "LRCLIB + Lyrics.ovh + optional fallbacks",
+              "providers": [
+                "LRCLIB",
+                "Lyrics.ovh",
+                "AZLyrics"
+              ],
+              "geniusApiKey": "Not set",
+              "aiFallback": "Disabled"
+            },
+            "openai": {
+              "configured": false,
+              "provider": "none",
+              "model": "gpt-4o-mini",
+              "apiKeySource": null,
+              "service": "AI Cultural Context"
+            },
+            "database": {
+              "configured": true,
+              "connected": true,
+              "schemaReady": true
+            }
+          }
+        },
+        {
+          "id": "U3",
+          "title": "User searches song by lyric snippet (Burna Boy)",
+          "ok": true,
+          "skipped": true,
+          "status": 503,
+          "failures": [],
+          "body": {
+            "success": false,
+            "errorCode": "AI_NOT_CONFIGURED",
+            "error": "Lyric matching is not available right now. Try again later."
+          },
+          "skipReason": "OPENAI_API_KEY not set on backend (intentional gate)"
+        },
+        {
+          "id": "U4",
+          "title": "Listening history is queryable",
+          "ok": true,
+          "status": 200,
+          "failures": [],
+          "body": []
+        }
+      ]
+    }
+  ],
+  "ok": true
+}

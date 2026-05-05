@@ -1,0 +1,24 @@
+{
+  "searchQueries": {
+    "agile_project_delivery": [
+      "(\"Senior Agile Project Coordinator\" OR \"Scrum Master\" OR \"Delivery Lead\" OR \"Project Coordinator\") AND (\"Azure DevOps\" OR \"JIRA\") AND (Remote OR Contract)",
+      "(\"Program Coordinator\" OR \"IT Project Coordinator\") AND (Agile OR Scrum OR Kanban) AND (Remote OR Hybrid)"
+    ],
+    "wms_supply_chain_systems": [
+      "(\"WMS Consultant\" OR \"Supply Chain Systems Analyst\" OR \"Business Systems Analyst\") AND (WMS OR Manhattan OR Blue Yonder OR Tecsys) AND (Remote OR Contract)",
+      "(\"Warehouse Systems\" OR \"WMS\") AND (EDI OR ERP) AND (Implementation OR Testing OR Hypercare)"
+    ],
+    "erp_implementation": [
+      "(\"ERP Implementation Consultant\" OR \"Business Analyst ERP\" OR \"Systems Analyst\") AND (ERP OR SAP OR Oracle) AND (Remote OR Contract)",
+      "(\"Integration Analyst\" OR \"Systems Implementation Analyst\") AND (requirements OR UAT OR data migration) AND (Remote)"
+    ]
+  },
+  "jobBoards": [
+    "LinkedIn",
+    "Indeed",
+    "Dice",
+    "ZipRecruiter",
+    "Wellfound",
+    "Company Careers"
+  ]
+}

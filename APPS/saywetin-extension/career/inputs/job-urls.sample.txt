@@ -1,0 +1,5 @@
+# Paste one job URL per line.
+# Real company careers or job board links work best.
+
+https://example.com/job-1
+https://example.com/job-2
