@@ -18,10 +18,14 @@ import {
 import { cn } from '../lib/cn';
 import {
   ACTION_LABELS,
+  type ActionIntentResult,
   buildDecisionPlan,
+  buildDecisionPlanAsync,
   type DecisionActionId,
   type DecisionCardGroup,
+  type DecisionPlan,
   type EmergencyScenario,
+  executeActionIntent,
   getScenarioLabel,
   getTierBadgeLabel,
   inferScenarioFromServiceType,
@@ -194,14 +198,19 @@ export default function RequestPage() {
     [address, locationLat, locationLng],
   );
 
-  const decisionPlan = useMemo(
-    () =>
-      buildDecisionPlan({
-        scenario,
-        userPoint,
-      }),
-    [scenario, userPoint],
+  const [decisionPlan, setDecisionPlan] = useState<DecisionPlan>(() =>
+    buildDecisionPlan({ scenario, userPoint: null }),
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    buildDecisionPlanAsync({ scenario, userPoint }).then((plan) => {
+      if (!cancelled) setDecisionPlan(plan);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [scenario, userPoint]);
 
   const allDecisionGroups = useMemo(
     () => uniqueById([...decisionPlan.recommended, ...decisionPlan.fallback]),
@@ -327,8 +336,27 @@ export default function RequestPage() {
     }
 
     if (action === 'request_dispatch') {
-      submitButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      pushDecisionNotice('Dispatch request ready below. Complete your intake and submit.');
+      if (name.trim() && phone.trim()) {
+        void executeActionIntent({
+          action,
+          location,
+          scenario,
+          userPoint,
+          serviceType: serviceType || undefined,
+          customerName: name,
+          customerPhone: phone,
+        }).then((result: ActionIntentResult) => {
+          if (result.ok) {
+            pushDecisionNotice(result.message);
+          } else {
+            submitButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            pushDecisionNotice(result.message || 'Complete your intake and submit to request dispatch.');
+          }
+        });
+      } else {
+        submitButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        pushDecisionNotice('Dispatch request ready below. Complete your intake and submit.');
+      }
       return;
     }
 

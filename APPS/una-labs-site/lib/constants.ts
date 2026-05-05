@@ -30,12 +30,11 @@ export const NAV = {
         { label: 'Blog', href: '/blog', description: 'Field notes from shipped products and live delivery systems' },
         { label: 'Help Center', href: '/help', description: 'Orientation for the intake, pricing, and support path' },
         { label: 'Live Status', href: '/status', description: 'Ignition parity and SDLC signal in one live board' },
+        { label: 'Spark AI', href: '/spark', description: 'Ask Spark anything about Una Labs' },
       ],
     },
-    { label: 'Realtor AI', href: '/realtor' },
     { label: 'Pricing', href: '/pricing' },
     { label: 'How It Works', href: '/how-it-works' },
-    { label: 'Blueprint $500', href: '/blueprint' },
   ],
 };
 
