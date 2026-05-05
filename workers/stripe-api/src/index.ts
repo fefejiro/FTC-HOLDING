@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 
 export interface Env {
   STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
   STRIPE_PRICE_STARTER_MONTHLY: string;
   STRIPE_PRICE_STARTER_ANNUAL: string;
   STRIPE_PRICE_PROFESSIONAL_MONTHLY: string;
@@ -25,7 +26,11 @@ export interface Env {
   AUTOCOLLECT_MAX_ATTEMPTS?: string;
   AUTOCOLLECT_DAILY_EMAIL_CAP?: string;
   AUTOCOLLECT_MAX_SEND_PER_RUN?: string;
+  GITHUB_TOKEN?: string;
 }
+
+// ── Spark in-memory rate limit store (per worker instance) ─────────────
+const sparkIpRateLimitStore = new Map<string, number[]>();
 
 function shouldDeliverBridgeWebhook(env: Env): boolean {
   const mode = (env.UNALABS_PROJECT_PIPELINE_MODE ?? 'worker_only').trim().toLowerCase();
@@ -3436,6 +3441,92 @@ async function runActivation(
   };
 }
 
+async function handleStripeWebhook(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const sig = req.headers.get('stripe-signature');
+  if (!sig) {
+    return json({ error: 'Missing stripe-signature header.' }, 400, origin);
+  }
+
+  const rawBody = await req.text();
+  const stripe = getStripe(env);
+
+  let event: Stripe.Event;
+  try {
+    event = await stripe.webhooks.constructEventAsync(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    logEvent('stripe_webhook_signature_failed', {
+      error: err instanceof Error ? err.message : 'Signature verification failed.',
+    });
+    return json({ error: 'Webhook signature verification failed.' }, 400, origin);
+  }
+
+  logEvent('stripe_webhook_received', { type: event.type, id: event.id });
+
+  try {
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.payment_status === 'paid' || session.status === 'complete') {
+        await runActivation(env, stripe, session.id, {});
+      }
+    } else if (event.type === 'invoice.payment_succeeded') {
+      const stripeInvoice = event.data.object as Stripe.Invoice;
+      logEvent('stripe_invoice_payment_succeeded', {
+        stripeInvoiceId: stripeInvoice.id,
+        customerEmail: stripeInvoice.customer_email ?? '',
+        amountPaid: stripeInvoice.amount_paid,
+      });
+      // Reconciliation failures are caught here so Stripe does not receive a non-200 and retry
+      // the webhook. The error is logged for observability.
+      await reconcileAutoCollectPaidByStripeInvoice(env, stripeInvoice).catch((err) => {
+        logEvent('stripe_webhook_invoice_reconcile_error', {
+          stripeInvoiceId: stripeInvoice.id,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      });
+    }
+  } catch (err) {
+    logEvent('stripe_webhook_handler_error', {
+      type: event.type,
+      id: event.id,
+      error: err instanceof Error ? err.message : 'Unknown handler error.',
+    });
+    return json({ error: 'Webhook handler error.' }, 500, origin);
+  }
+
+  return json({ received: true }, 200, origin);
+}
+
+async function reconcileAutoCollectPaidByStripeInvoice(env: Env, stripeInvoice: Stripe.Invoice): Promise<void> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+
+  const supabaseUrl = cleanSecret(env.SUPABASE_URL);
+  const serviceKey = getSupabaseServiceKey(env);
+
+  // Stripe subscription invoices carry a subscription ID in metadata or on the invoice itself.
+  // Look up autocollect items that reference the same invoice number or metadata.
+  const stripeInvoiceNumber = stripeInvoice.number ?? '';
+  if (!stripeInvoiceNumber) return;
+
+  // Find the matching Supabase invoice by invoice_number derived from Stripe invoice number.
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/invoices?invoice_number=eq.${encodeURIComponent(stripeInvoiceNumber)}&select=id,status`,
+    {
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+    },
+  );
+  if (!res.ok) return;
+
+  const rows = await res.json() as Array<{ id: string; status?: string }>;
+  const unpaid = rows.filter((r) => !['paid', 'void'].includes((r.status ?? '').toLowerCase()));
+  if (!unpaid.length) return;
+
+  const ids = unpaid.map((r) => r.id);
+  await markAutoCollectItemsPaidByIds(env, ids, 'stripe_invoice_payment_succeeded');
+}
+
 async function handleActivateProject(req: Request, env: Env, origin: string | null): Promise<Response> {
   let body: Record<string, unknown>;
   try {
@@ -4812,6 +4903,326 @@ async function handleAdminAutoCollectSync(req: Request, env: Env, origin: string
   }
 }
 
+// ── Spark helpers ─────────────────────────────────────────────────────
+
+function getSparkEnabled(env: Env): boolean {
+  return (env.SPARK_ENABLED ?? '').trim() === '1';
+}
+
+function getSparkPreviewTurns(env: Env): number {
+  const n = parseInt(env.SPARK_PREVIEW_TURNS ?? '3', 10);
+  return Number.isFinite(n) && n >= 0 ? n : 3;
+}
+
+function getSparkMaxTurns(env: Env): number {
+  const n = parseInt(env.SPARK_MAX_TURNS ?? '20', 10);
+  return Number.isFinite(n) && n >= 1 ? n : 20;
+}
+
+function getSparkMaxTokensPerTurn(env: Env): number {
+  const n = parseInt(env.SPARK_MAX_TOKENS_PER_TURN ?? '300', 10);
+  return Number.isFinite(n) && n >= 1 ? Math.min(n, 2000) : 300;
+}
+
+function getSparkRateLimitWindowMs(env: Env): number {
+  const n = parseInt(env.SPARK_RATE_LIMIT_WINDOW_MS ?? '60000', 10);
+  return Number.isFinite(n) && n >= 1000 ? n : 60000;
+}
+
+function getSparkRateLimitMax(env: Env): number {
+  const n = parseInt(env.SPARK_RATE_LIMIT_MAX ?? '20', 10);
+  return Number.isFinite(n) && n >= 1 ? n : 20;
+}
+
+function getSparkPassPriceCad(env: Env): number {
+  const n = parseFloat(env.SPARK_PASS_PRICE_CAD ?? '5');
+  return Number.isFinite(n) && n > 0 ? n : 5;
+}
+
+function getSparkClientIp(req: Request): string {
+  const header =
+    req.headers.get('cf-connecting-ip') ||
+    req.headers.get('x-real-ip') ||
+    req.headers.get('x-forwarded-for') ||
+    'anonymous';
+  return (header.split(',')[0] || '').trim().toLowerCase() || 'anonymous';
+}
+
+const SPARK_PASS_EXPIRY_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+
+function checkSparkIpRateLimit(ip: string, windowMs: number, maxRequests: number): boolean {
+  const now = Date.now();
+  const existing = sparkIpRateLimitStore.get(ip) ?? [];
+  const kept = existing.filter((ts) => now - ts < windowMs);
+  kept.push(now);
+  sparkIpRateLimitStore.set(ip, kept);
+  return kept.length > maxRequests;
+}
+
+async function verifySparkPass(stripe: Stripe, passSessionId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const session = await stripe.checkout.sessions.retrieve(passSessionId);
+    if (session.metadata?.checkout_type !== 'spark_pass') {
+      return { ok: false, error: 'Invalid pass type.' };
+    }
+    if (session.payment_status !== 'paid') {
+      return { ok: false, error: 'Pass payment is not complete.' };
+    }
+    const createdAt = session.created * 1000;
+    if (Date.now() - createdAt > SPARK_PASS_EXPIRY_MS) {
+      return { ok: false, error: 'Spark pass has expired.' };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Could not verify pass.' };
+  }
+}
+
+// POST /api/spark/chat
+async function handleSparkChat(req: Request, env: Env, origin: string | null): Promise<Response> {
+  if (!getSparkEnabled(env)) {
+    return json({ error: 'Spark is currently unavailable.' }, 503, origin);
+  }
+
+  const ip = getSparkClientIp(req);
+  const windowMs = getSparkRateLimitWindowMs(env);
+  const maxRequests = getSparkRateLimitMax(env);
+  if (checkSparkIpRateLimit(ip, windowMs, maxRequests)) {
+    return json({ error: 'Too many requests. Please wait before sending another message.' }, 429, origin);
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid request body.' }, 400, origin);
+  }
+
+  const message = sanitize(body.message, 2000).trim();
+  if (!message) {
+    return json({ error: 'message is required.' }, 400, origin);
+  }
+
+  const turnNumber = Math.max(1, parseInt(String(body.turn_number ?? '1'), 10) || 1);
+  const passSessionId = sanitize(body.pass_session_id, 200).trim();
+  const previewTurns = getSparkPreviewTurns(env);
+  const maxTurns = getSparkMaxTurns(env);
+  const maxTokens = getSparkMaxTokensPerTurn(env);
+
+  // Determine if this is a preview turn
+  const isPreviewTurn = turnNumber <= previewTurns;
+
+  if (!isPreviewTurn) {
+    // Past the preview — require a valid Spark pass
+    if (!passSessionId) {
+      return json({
+        error: 'Preview turns exhausted. A Spark pass is required to continue.',
+        requires_pass: true,
+        preview_turns: previewTurns,
+      }, 402, origin);
+    }
+
+    let stripe: Stripe;
+    try {
+      stripe = getStripe(env);
+    } catch {
+      return json({ error: 'Payment service is not configured.' }, 500, origin);
+    }
+
+    const passCheck = await verifySparkPass(stripe, passSessionId);
+    if (!passCheck.ok) {
+      return json({
+        error: passCheck.error,
+        requires_pass: true,
+        preview_turns: previewTurns,
+      }, 402, origin);
+    }
+  }
+
+  if (turnNumber > maxTurns) {
+    return json({
+      error: `Session limit of ${maxTurns} turns reached. Please start a new session.`,
+      session_limit_reached: true,
+      max_turns: maxTurns,
+    }, 429, origin);
+  }
+
+  if (!env.OPENAI_API_KEY) {
+    return json({ error: 'AI service is not configured.' }, 500, origin);
+  }
+
+  const systemPrompt = `You are Spark, the Una Labs AI assistant. You help founders and operators understand the Una Labs platform, services, and delivery model. Be concise, direct, and helpful. Do not make up pricing or dates. Direct users to /start to begin a project or /pricing for plan details.`;
+
+  try {
+    const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cleanSecret(env.OPENAI_API_KEY)}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: maxTokens,
+        temperature: 0.5,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message },
+        ],
+      }),
+    });
+
+    if (!aiRes.ok) {
+      const err = await aiRes.text();
+      logEvent('spark_chat_openai_error', { status: aiRes.status, error: err.slice(0, 200) });
+      return json({ error: 'AI request failed. Please try again.' }, 502, origin);
+    }
+
+    const aiData = await aiRes.json() as {
+      choices?: Array<{ message?: { content?: string } }>;
+      usage?: { total_tokens?: number };
+    };
+
+    const reply = aiData.choices?.[0]?.message?.content?.trim() ?? '';
+    if (!reply) {
+      return json({ error: 'No response from AI.' }, 502, origin);
+    }
+
+    logEvent('spark_chat_success', {
+      ip,
+      turn_number: turnNumber,
+      is_preview: isPreviewTurn,
+      has_pass: Boolean(passSessionId),
+      tokens_used: aiData.usage?.total_tokens ?? 0,
+    });
+
+    return json({
+      ok: true,
+      reply,
+      turn_number: turnNumber,
+      preview_turns: previewTurns,
+      max_turns: maxTurns,
+      is_preview: isPreviewTurn,
+      turns_remaining: Math.max(0, maxTurns - turnNumber),
+    }, 200, origin);
+  } catch (err) {
+    logEvent('spark_chat_exception', { error: err instanceof Error ? err.message : 'unknown' });
+    return json({ error: 'An error occurred. Please try again.' }, 500, origin);
+  }
+}
+
+// POST /api/spark/create-pass
+async function handleSparkCreatePass(req: Request, env: Env, origin: string | null): Promise<Response> {
+  if (!getSparkEnabled(env)) {
+    return json({ error: 'Spark is currently unavailable.' }, 503, origin);
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid request body.' }, 400, origin);
+  }
+
+  const email = sanitize(body.email, 200).trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    return json({ error: 'A valid email is required.' }, 400, origin);
+  }
+
+  let stripe: Stripe;
+  try {
+    stripe = getStripe(env);
+  } catch {
+    return json({ error: 'Payment service is not configured.' }, 500, origin);
+  }
+
+  const siteUrl = getSiteUrl(env);
+  const priceCad = getSparkPassPriceCad(env);
+  const sparkPriceId = env.STRIPE_PRICE_SPARK_PASS ? cleanSecret(env.STRIPE_PRICE_SPARK_PASS) : null;
+
+  try {
+    let session: Stripe.Checkout.Session;
+    const metadata = {
+      checkout_type: 'spark_pass',
+      email,
+      service_type: 'spark_ai_pass',
+    };
+
+    if (sparkPriceId) {
+      session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        customer_email: email,
+        line_items: [{ price: sparkPriceId, quantity: 1 }],
+        success_url: `${siteUrl}/spark/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteUrl}/spark`,
+        metadata,
+        payment_intent_data: { metadata },
+        locale: 'en',
+      });
+    } else {
+      session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        customer_email: email,
+        line_items: [
+          {
+            price_data: {
+              currency: 'cad',
+              unit_amount: Math.round(priceCad * 100),
+              product_data: {
+                name: 'Spark AI Pass',
+                description: 'Unlimited Spark AI chat session on Una Labs (90-day pass).',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${siteUrl}/spark/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteUrl}/spark`,
+        metadata,
+        payment_intent_data: { metadata },
+        locale: 'en',
+      });
+    }
+
+    logEvent('spark_create_pass_success', { email, livemode: session.livemode, sessionId: session.id });
+    return json({ url: session.url }, 200, origin);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Stripe error.';
+    logEvent('spark_create_pass_error', { email, message });
+    return json({ error: message }, 500, origin);
+  }
+}
+
+// GET /api/spark/verify-pass
+async function handleSparkVerifyPass(req: Request, env: Env, origin: string | null): Promise<Response> {
+  if (!getSparkEnabled(env)) {
+    return json({ error: 'Spark is currently unavailable.' }, 503, origin);
+  }
+
+  const url = new URL(req.url);
+  const passSessionId = sanitize(url.searchParams.get('session_id') ?? '', 200).trim();
+  if (!passSessionId) {
+    return json({ error: 'session_id is required.' }, 400, origin);
+  }
+
+  let stripe: Stripe;
+  try {
+    stripe = getStripe(env);
+  } catch {
+    return json({ error: 'Payment service is not configured.' }, 500, origin);
+  }
+
+  const result = await verifySparkPass(stripe, passSessionId);
+  if (!result.ok) {
+    return json({ ok: false, error: result.error }, 402, origin);
+  }
+
+  return json({
+    ok: true,
+    preview_turns: getSparkPreviewTurns(env),
+    max_turns: getSparkMaxTurns(env),
+  }, 200, origin);
+}
+
 async function handleAdminAutoCollectSendInvite(req: Request, env: Env, origin: string | null): Promise<Response> {
   const auth = await verifyAdmin(req, env);
   if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
@@ -4852,6 +5263,91 @@ async function handleAdminAutoCollectSendInvite(req: Request, env: Env, origin: 
   return json({ ok: true, item: result.item }, 200, origin);
 }
 
+type GitHubLabel = {
+  name: string;
+  color: string;
+};
+
+type GitHubUser = {
+  login: string;
+  avatar_url: string;
+  html_url: string;
+};
+
+type GitHubIssueRaw = {
+  number: number;
+  title: string;
+  html_url: string;
+  state: string;
+  labels: GitHubLabel[];
+  assignee: GitHubUser | null;
+  assignees: GitHubUser[];
+  updated_at: string;
+  created_at: string;
+  body: string | null;
+};
+
+type GitHubIssueSummary = {
+  number: number;
+  title: string;
+  url: string;
+  status_label: string | null;
+  area_labels: string[];
+  assignee: string | null;
+  updated_at: string;
+};
+
+async function handleAdminGitHubIssues(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const auth = await verifyAdmin(req, env);
+  if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
+
+  const token = env.GITHUB_TOKEN;
+  const headers: Record<string, string> = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'una-labs-admin/1.0',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch(
+      'https://api.github.com/repos/fefejiro/FTC-HOLDING/issues?state=open&type=issue&per_page=100',
+      { headers }
+    );
+    if (!res.ok) {
+      const rateLimitRemaining = res.headers.get('x-ratelimit-remaining');
+      if (res.status === 403 && rateLimitRemaining === '0') {
+        return json({ error: 'GitHub API rate limit exceeded. Set GITHUB_TOKEN to increase limits.' }, 429, origin);
+      }
+      return json({ error: `GitHub API error: ${res.status}` }, 502, origin);
+    }
+
+    const rawIssues = await res.json() as GitHubIssueRaw[];
+
+    const issues: GitHubIssueSummary[] = rawIssues
+      .filter((issue) => !('pull_request' in issue))
+      .map((issue) => {
+        const labelNames = (issue.labels ?? []).map((l) => l.name);
+        const statusLabel = labelNames.find((n) => n.startsWith('status:')) ?? null;
+        const areaLabels = labelNames.filter((n) => n.startsWith('area:'));
+        return {
+          number: issue.number,
+          title: issue.title,
+          url: issue.html_url,
+          status_label: statusLabel,
+          area_labels: areaLabels,
+          assignee: issue.assignee?.login ?? (issue.assignees?.[0]?.login ?? null),
+          updated_at: issue.updated_at,
+        };
+      });
+
+    return json({ issues }, 200, origin);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Failed to fetch GitHub issues.' }, 502, origin);
+  }
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -4864,6 +5360,17 @@ export default {
 
     if (req.method === 'GET' && url.pathname === '/api/checkout-success') {
       return handleCheckoutSuccess(req, env);
+    }
+
+    // ── Spark AI chat routes ──────────────────────────────────────────────
+    if (req.method === 'POST' && url.pathname === '/api/spark/chat') {
+      return handleSparkChat(req, env, origin);
+    }
+    if (req.method === 'POST' && url.pathname === '/api/spark/create-pass') {
+      return handleSparkCreatePass(req, env, origin);
+    }
+    if (req.method === 'GET' && url.pathname === '/api/spark/verify-pass') {
+      return handleSparkVerifyPass(req, env, origin);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/invoices') {
@@ -4888,6 +5395,10 @@ export default {
 
     if (req.method === 'GET' && url.pathname === '/api/admin/leads') {
       return handleAdminLeadsList(req, env, origin);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/admin/github-issues') {
+      return handleAdminGitHubIssues(req, env, origin);
     }
 
     if (req.method === 'PATCH' && /^\/api\/admin\/leads\/[^/]+$/.test(url.pathname)) {
@@ -4948,6 +5459,8 @@ export default {
     }
 
     switch (url.pathname) {
+      case '/api/stripe-webhook':
+        return handleStripeWebhook(req, env, origin);
       case '/api/create-checkout-session':
         return handleCreateCheckoutSession(req, env, origin);
       case '/api/activate-project':
