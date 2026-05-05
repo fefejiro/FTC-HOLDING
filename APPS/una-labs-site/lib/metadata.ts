@@ -26,7 +26,7 @@ export function buildPageMetadata({
   title,
   description,
   path,
-  image = '/images/og/default.png',
+  image = '/opengraph-image',
   type = 'website',
 }: MetadataInput): Metadata {
   const canonicalPath = normalizePath(path);

@@ -34,7 +34,7 @@ export type GardenMediaAsset = {
 
 export const gardenCleanersBasePath = '/garden-cleaners' as const;
 export const GARDEN_CLEANERS_SITE_URL = 'https://gardencleaners.ca';
-const GARDEN_CLEANERS_OG_IMAGE = `${GARDEN_CLEANERS_SITE_URL}/images/garden-cleaners/cleaning-collage.png`;
+const GARDEN_CLEANERS_OG_IMAGE = '/garden-cleaners/opengraph-image';
 export const gardenCleanersKeywords = [
   'Garden Cleaners',
   'Oshawa cleaning services',
