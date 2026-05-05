@@ -1000,6 +1000,47 @@ export const callEventsV2 = pgTable("call_events_v2", {
   timestampIdx: index("call_events_v2_timestamp_idx").on(table.timestamp),
 }));
 
+// V2 Module Runs - execution audit trail for v2 module engine
+export const ppV2ModuleRuns = pgTable(
+  "pp_v2_module_runs",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").references(() => users.id),
+    sessionId: varchar("session_id"),
+    moduleId: varchar("module_id").notNull(),
+    startedAt: timestamp("started_at").notNull().defaultNow(),
+    finishedAt: timestamp("finished_at"),
+    conflictLevel: integer("conflict_level"),
+    safetyFlags: jsonb("safety_flags").notNull().default(sql`'[]'::jsonb`),
+    inputHash: varchar("input_hash", { length: 64 }),
+    outputHash: varchar("output_hash", { length: 64 }),
+    status: varchar("status").notNull().default("started"),
+    errorCode: varchar("error_code"),
+  },
+  (table) => ({
+    moduleIdIdx: index("pp_v2_module_runs_module_id_idx").on(table.moduleId),
+    startedAtIdx: index("pp_v2_module_runs_started_at_idx").on(table.startedAt),
+  }),
+);
+
+// V2 Launcher State - sticky launcher preferences per user/session
+export const ppV2LauncherState = pgTable(
+  "pp_v2_launcher_state",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").references(() => users.id),
+    sessionId: varchar("session_id"),
+    pinnedModules: jsonb("pinned_modules").notNull().default(sql`'[]'::jsonb`),
+    recentModules: jsonb("recent_modules").notNull().default(sql`'[]'::jsonb`),
+    usageCounts: jsonb("usage_counts").notNull().default(sql`'{}'::jsonb`),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("pp_v2_launcher_state_user_id_idx").on(table.userId),
+    sessionIdIdx: index("pp_v2_launcher_state_session_id_idx").on(table.sessionId),
+  }),
+);
+
 // Type exports for V2 tables
 export const insertCallSessionV2Schema = createInsertSchema(callSessionsV2).omit({ 
   id: true, 
@@ -1034,6 +1075,20 @@ export const insertCallEventV2Schema = createInsertSchema(callEventsV2).omit({
 });
 export type InsertCallEventV2 = z.infer<typeof insertCallEventV2Schema>;
 export type CallEventV2 = typeof callEventsV2.$inferSelect;
+
+export const insertPpV2ModuleRunSchema = createInsertSchema(ppV2ModuleRuns).omit({
+  id: true,
+  startedAt: true,
+});
+export type InsertPpV2ModuleRun = z.infer<typeof insertPpV2ModuleRunSchema>;
+export type PpV2ModuleRun = typeof ppV2ModuleRuns.$inferSelect;
+
+export const insertPpV2LauncherStateSchema = createInsertSchema(ppV2LauncherState).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertPpV2LauncherState = z.infer<typeof insertPpV2LauncherStateSchema>;
+export type PpV2LauncherState = typeof ppV2LauncherState.$inferSelect;
 
 // Gamification type exports
 export const insertUserStatsSchema = createInsertSchema(userStats).omit({ id: true, updatedAt: true });

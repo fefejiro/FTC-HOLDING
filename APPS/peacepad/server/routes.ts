@@ -141,6 +141,7 @@ import {
 } from "./email";
 import { sendPushNotification, getVapidPublicKey } from "./push-notifications";
 import { buildBoundaryPrompt } from "./services/aiBoundaries.js";
+import { createV2Router } from "./v2/routes/index";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -715,6 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enforce guest trial expiry on write operations without affecting authenticated users.
   app.use("/api", trialEnforcer);
+  app.use("/v2", createV2Router());
 
   // PHASE 2: Disabled for MVP refocus. Re-enable these route families when ready to reintroduce them.
   const phase2DisabledPrefixes = [
