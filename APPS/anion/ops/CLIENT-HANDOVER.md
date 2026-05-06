@@ -6,6 +6,12 @@
 
 ---
 
+## Start Here (Linear Handoff Order)
+
+Follow `HANDOFF-INDEX.md` for the required execution order and signoff gates.
+
+---
+
 ## What Was Built
 
 | Milestone | Feature | Status |
@@ -157,6 +163,8 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 - [ ] Set all env vars in Cloudflare Workers
 - [ ] Run `npm run build:worker && npm run deploy:worker`
 - [ ] Test: sign up, book, subscribe, join lesson, admin view
+- [ ] Confirm privacy/terms placeholders with client + counsel (`PRIVACY-TERMS-PLACEHOLDERS.md`)
+- [ ] Complete `OWNER-SIGNOFF-TEMPLATE.md` (technical, legal, billing/provider, go-live)
 
 ---
 
