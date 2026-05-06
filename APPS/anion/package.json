@@ -9,14 +9,15 @@
     "start": "next start -p 4178",
     "check": "tsc --noEmit",
     "test": "tsx --test app/lib/security/__tests__/*.test.ts",
+    "test:e2e": "playwright test",
+    "ci:check": "npm run check && npm run build",
+    "preflight:prod": "node ./scripts/preflight-prod.mjs",
+    "verify:prod": "node ./scripts/verify-prod.mjs",
+    "perf:baseline": "k6 run ./scripts/perf-baseline.k6.js",
     "build:worker": "opennextjs-cloudflare build",
     "preview:worker": "opennextjs-cloudflare preview",
     "deploy:worker": "opennextjs-cloudflare deploy",
-    "preflight:prod": "node ./scripts/preflight-prod.mjs",
-    "verify:prod": "node ./scripts/verify-prod.mjs",
-    "status:sync": "node ../../scripts/update-anion-status.mjs",
-    "test:e2e": "playwright test",
-    "ci:check": "npm run check && npm run build"
+    "status:sync": "node ../../scripts/update-anion-status.mjs"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.89.1",

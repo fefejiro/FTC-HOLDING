@@ -22,6 +22,11 @@ Primary production delivery lane for Anion.
 - npm run start
 - npm run check
 - npm test
+- npm run test:e2e
+- npm run ci:check
+- npm run preflight:prod
+- npm run verify:prod
+- npm run perf:baseline
 - npm run build:worker
 - npm run preview:worker
 - npm run deploy:worker
@@ -32,13 +37,13 @@ Primary production delivery lane for Anion.
 ### E2E smoke tests (Playwright)
 
 Smoke tests live in `tests/smoke.spec.ts` and cover:
-- `GET /api/health` — service liveness
-- `/login` — sign-in form renders correctly
-- `/pricing` — all three plan cards visible
-- `/parent`, `/dashboard`, `/lesson/:id` — redirect to `/login` when unauthenticated
-- `POST /api/billing/checkout` — returns `401 UNAUTHENTICATED` when no session
+- `GET /api/health` - service liveness
+- `/login` - sign-in form renders correctly
+- `/pricing` - all three plan cards visible
+- `/parent`, `/dashboard`, `/lesson/:id` - redirect to `/login` when unauthenticated
+- `POST /api/billing/checkout` - returns `401 UNAUTHENTICATED` when no session
 
-The tests are designed to run **without real credentials**. Unauthenticated routes
+The tests are designed to run without real credentials. Unauthenticated routes
 never reach Supabase or Stripe, so placeholder env vars are sufficient locally and
 in CI.
 
@@ -74,5 +79,5 @@ starts the Next.js dev server with placeholder Supabase env vars, and runs
 npm run ci:check --workspace APPS/anion
 ```
 
-Runs `tsc --noEmit` and `next build` in sequence — the same checks as the
+Runs `tsc --noEmit` and `next build` in sequence - the same checks as the
 `validate` CI job.
