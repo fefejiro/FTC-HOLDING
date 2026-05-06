@@ -65,6 +65,7 @@ type QueueFilter = "all" | "new" | "triaged" | "scheduled" | "completed" | "canc
 type RegionTag = "Oshawa" | "Whitby" | "Ajax" | "Pickering" | "Courtice" | "Durham Region" | "Unspecified";
 
 const REGION_OPTIONS: RegionTag[] = ["Oshawa", "Whitby", "Ajax", "Pickering", "Courtice", "Durham Region", "Unspecified"];
+const PORTAL_REGION_CTA_OPTIONS: Exclude<RegionTag, "Unspecified">[] = ["Oshawa", "Whitby", "Ajax", "Pickering", "Courtice", "Durham Region"];
 
 const VALID_QUEUE_STATUSES = new Set<Exclude<QueueFilter, "all">>([
   "new",
@@ -696,6 +697,53 @@ export default function GardenPortalAccessPanel() {
           {isCustomer && "Customer: view your job status."}
         </p>
       </div>
+
+      <article className="card garden-proof-card" style={{ marginBottom: 16 }}>
+        <p className="garden-panel-kicker">Regional portal</p>
+        <h3 style={{ marginTop: 0 }}>Need quote help before sign-in?</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Start a regional quote path or contact operations directly.
+        </p>
+        <div className="hero-actions" style={{ marginBottom: 12 }}>
+          <a
+            className="btn btn-primary"
+            href="/garden-cleaners/quote"
+            data-analytics-event="garden_portal_cta_click"
+            data-analytics-location="portal_hero"
+            data-analytics-label="request_regional_quote"
+          >
+            Request regional quote
+          </a>
+          <a
+            className="btn btn-secondary"
+            href="/garden-cleaners/contact"
+            data-analytics-event="garden_portal_cta_click"
+            data-analytics-location="portal_hero"
+            data-analytics-label="contact_operations"
+          >
+            Contact operations
+          </a>
+        </div>
+
+        <div className="cards-grid cards-grid-3" style={{ marginTop: 8 }}>
+          {PORTAL_REGION_CTA_OPTIONS.map((regionName) => (
+            <article key={regionName} className="card garden-proof-card">
+              <h4 style={{ marginTop: 0 }}>{regionName}</h4>
+              <p className="muted">Start a quote path for {regionName}.</p>
+              <a
+                className="inline-link"
+                href={`/garden-cleaners/quote?region=${encodeURIComponent(regionName)}`}
+                data-analytics-event="garden_portal_region_quote_click"
+                data-analytics-location="portal_region_card"
+                data-analytics-label={regionName}
+              >
+                Open {regionName} quote
+              </a>
+            </article>
+          ))}
+        </div>
+      </article>
+
       <div className="garden-split-grid">
         <article className="card garden-split-card">
           <p className="garden-panel-kicker">Session state</p>
@@ -869,6 +917,28 @@ export default function GardenPortalAccessPanel() {
           {queueMessage ? <p>{queueMessage}</p> : null}
         </article>
       </div>
+
+      <div className="hero-actions" style={{ position: "sticky", bottom: 8, zIndex: 5, marginTop: 16 }}>
+        <a
+          className="btn btn-primary"
+          href="/garden-cleaners/quote"
+          data-analytics-event="garden_portal_sticky_click"
+          data-analytics-location="portal_sticky"
+          data-analytics-label="get_regional_quote"
+        >
+          Get regional quote
+        </a>
+        <a
+          className="btn btn-secondary"
+          href="/garden-cleaners/contact"
+          data-analytics-event="garden_portal_sticky_click"
+          data-analytics-location="portal_sticky"
+          data-analytics-label="contact_ops"
+        >
+          Contact ops
+        </a>
+      </div>
+
       {authState === "authenticated" && (
         <>
           {loading && <div className="loading">Loading portal data...</div>}
