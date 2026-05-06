@@ -21,6 +21,12 @@
       ],
       "@ftc/anion-shared": [
         "../../PACKAGES/anion-shared/src/index.ts"
+      ],
+      "@ftc/auth": [
+        "../../PACKAGES/auth/src/index.ts"
+      ],
+      "@ftc/supabase": [
+        "../../PACKAGES/supabase/src/index.ts"
       ]
     },
     "resolveJsonModule": true,
