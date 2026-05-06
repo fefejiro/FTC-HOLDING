@@ -7,6 +7,11 @@ function parseArgs(argv) {
     baseUrl: process.env.ANION_BASE_URL ?? process.env.ANION_PROD_BASE_URL ?? '',
     checkStripeWebhook: process.env.CHECK_STRIPE_WEBHOOK === '1',
     checkDailyRoom: process.env.CHECK_DAILY_ROOM_SMOKE === '1',
+    expectedDailyErrorCode: process.env.EXPECTED_DAILY_ERROR_CODE ?? 'INVALID_DAILY_ROOM_REQUEST',
+    expectedAuthRedirectPaths: (process.env.VERIFY_AUTH_REDIRECT_PATHS ?? '/login,/dashboard')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean),
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -62,6 +67,15 @@ function parseJsonSafe(raw) {
   }
 }
 
+function extractPathname(location, baseUrl) {
+  if (!location) return '';
+  try {
+    return new URL(location, baseUrl).pathname;
+  } catch {
+    return '';
+  }
+}
+
 async function checkHealth(baseUrl) {
   const url = `${baseUrl}/api/health`;
   try {
@@ -102,8 +116,12 @@ async function checkAuthCallback(baseUrl) {
       redirect: 'manual',
     });
     const location = response.headers.get('location') ?? '';
+    const pathname = extractPathname(location, baseUrl);
     const isRedirect = response.status >= 300 && response.status < 400;
-    const locationLooksValid = location.includes('/login') || location.includes('/dashboard');
+    // Allow exact redirect paths and nested paths (for apps that mount dashboard/login deeper).
+    const locationLooksValid = config.expectedAuthRedirectPaths.some(
+      (expectedPath) => pathname === expectedPath || pathname.startsWith(`${expectedPath}/`),
+    );
     const ok = isRedirect && locationLooksValid;
     record('Auth callback URL sanity (/auth/callback)', ok, `HTTP ${response.status}${location ? ` -> ${location}` : ''}`);
   } catch (error) {
@@ -153,8 +171,9 @@ async function checkDailyRoomContract(baseUrl) {
     });
 
     const body = parseJsonSafe(bodyText);
-    const ok = response.status === 400 && body?.code === 'INVALID_DAILY_ROOM_REQUEST';
-    record('Daily room contract smoke (optional, non-destructive)', ok, `HTTP ${response.status}`);
+    const returnedCode = typeof body?.code === 'string' ? body.code : '(missing)';
+    const ok = response.status === 400 && returnedCode === config.expectedDailyErrorCode;
+    record('Daily room contract smoke (optional, non-destructive)', ok, `HTTP ${response.status}, code=${returnedCode}`);
   } catch (error) {
     record(
       'Daily room contract smoke (optional, non-destructive)',

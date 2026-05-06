@@ -55,9 +55,10 @@ function checkMigrationSanity() {
     return;
   }
 
-  const invalidName = sqlFiles.filter((name) => !/^\d{8}_\d{6}_.+\.sql$/.test(name));
-  if (invalidName.length > 0) {
-    record('Migration file sanity', false, `Invalid filename format: ${invalidName.join(', ')}`);
+  // Expected format: YYYYMMDD_HHMMSS_description.sql
+  const invalidNames = sqlFiles.filter((name) => !/^\d{8}_\d{6}_.+\.sql$/.test(name));
+  if (invalidNames.length > 0) {
+    record('Migration file sanity', false, `Invalid filename format: ${invalidNames.join(', ')}`);
     return;
   }
 
@@ -76,13 +77,19 @@ function checkMigrationSanity() {
     return;
   }
 
-  const emptyFiles = sqlFiles.filter((file) => {
-    const content = fs.readFileSync(path.join(migrationsDir, file), 'utf8').trim();
-    return content.length === 0;
+  const zeroByteFiles = sqlFiles.filter((file) => fs.statSync(path.join(migrationsDir, file)).size === 0);
+  if (zeroByteFiles.length > 0) {
+    record('Migration file sanity', false, `Empty migration files: ${zeroByteFiles.join(', ')}`);
+    return;
+  }
+
+  const whitespaceOnlyFiles = sqlFiles.filter((file) => {
+    const content = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+    return content.trim().length === 0;
   });
 
-  if (emptyFiles.length > 0) {
-    record('Migration file sanity', false, `Empty migration files: ${emptyFiles.join(', ')}`);
+  if (whitespaceOnlyFiles.length > 0) {
+    record('Migration file sanity', false, `Whitespace-only migration files: ${whitespaceOnlyFiles.join(', ')}`);
     return;
   }
 
