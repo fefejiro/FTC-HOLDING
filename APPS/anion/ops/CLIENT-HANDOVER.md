@@ -91,9 +91,9 @@ DAILY_DOMAIN=yourcompany.daily.co
 
 ## Deploying to Cloudflare Workers
 
-```powershell
-cd "C:\FTC HOLDING\APPS\anion"
+From the `APPS/anion/` directory:
 
+```bash
 # Build for Cloudflare (OpenNext adapter)
 npm run build:worker
 
@@ -101,7 +101,7 @@ npm run build:worker
 npm run deploy:worker
 ```
 
-Set each env var in the Cloudflare dashboard under **Workers & Pages → anion → Settings → Variables** (or via `wrangler secret put VARIABLE_NAME`).
+Set each env var in the Cloudflare dashboard under **Workers & Pages → anion-web → Settings → Variables** (or via `wrangler secret put VARIABLE_NAME`).
 
 ---
 
@@ -145,6 +145,41 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 3. **Parent books a session** → `/parent` → tutor accepts → booking status = `accepted`
 4. **Both join the lesson** → `/lesson/[bookingId]` → Daily.co video call
 5. **Admin monitors** → `/admin` → live user/booking/subscription metrics
+
+---
+
+## Operator Runbook
+
+Quick-reference commands for verifying, building, and deploying the app.
+
+### Local Verification
+
+```bash
+# From APPS/anion/
+npm run check          # TypeScript type-check (tsc --noEmit) — should exit 0
+npm run build          # Next.js production build — should show 19/19 pages compiled
+```
+
+### Cloudflare Worker Build & Deploy
+
+```bash
+# From APPS/anion/
+npm run build:worker   # OpenNext Cloudflare adapter build → .open-next/
+npm run deploy:worker  # wrangler deploy → pushes to Cloudflare Workers (anion-web)
+```
+
+> **Pre-requisite:** All env vars must be set in Cloudflare Workers dashboard before deploying.
+> Set secrets with: `wrangler secret put VARIABLE_NAME`
+
+### Webhook & Env Validation Sequence
+
+Run this sequence to confirm the deployment is healthy after going live:
+
+1. **Health check** — `GET https://your-production-domain.com/api/health` → expect `{"status":"ok"}`
+2. **Status check** — `GET https://your-production-domain.com/api/status` → confirm `overall: green`
+3. **Stripe webhook** — trigger a test event from [Stripe Dashboard → Webhooks → Send test webhook](https://dashboard.stripe.com/webhooks) using event `checkout.session.completed`; confirm subscription row appears in Supabase `anion_subscriptions`
+4. **Auth flow** — sign up via `/login`, confirm magic-link email arrives, complete `/auth/callback`, confirm redirect to `/dashboard`
+5. **Daily room** — as a tutor, accept a booking and navigate to `/lesson/[bookingId]`; confirm the room creation call to `POST /api/daily/room` returns a join URL
 
 ---
 

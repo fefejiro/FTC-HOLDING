@@ -1,7 +1,7 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-05-07T00:00:00.000Z",
+  "updatedAt": "2026-05-06T17:49:39.000Z",
   "overall": "green",
   "stage": "m1-m5-complete-client-handover",
   "summary": "M1–M5 fully implemented and build-verified. Auth, bookings, Stripe billing, Daily.co live classroom, and admin dashboard are all production-ready. Awaiting client env var configuration before Cloudflare deployment.",
@@ -9,7 +9,7 @@
     {
       "label": "Docs",
       "value": "ready",
-      "detail": "Product, architecture, ADR, status docs, and CLIENT-HANDOVER.md are in place.",
+      "detail": "Product, architecture, ADR, status docs, CLIENT-HANDOVER.md, and operator runbook are in place.",
       "status": "green"
     },
     {
@@ -35,22 +35,22 @@
     {
       "name": "TypeScript",
       "status": "green",
-      "detail": "npx tsc --noEmit passes with zero errors."
+      "detail": "npm run check (tsc --noEmit) passes with zero errors — verified 2026-05-06."
     },
     {
       "name": "Next.js build",
       "status": "green",
-      "detail": "npm run build passes cleanly — 19/19 pages compiled."
+      "detail": "npm run build passes cleanly — 19/19 pages compiled — verified 2026-05-06."
     },
     {
-      "name": "Git commits",
+      "name": "Environment variables",
       "status": "green",
-      "detail": "Two commits: 21e45561 (M1-M2) and 39e6dc32 (M3-M5). Ready to push."
+      "detail": ".env.example lists all required vars: Supabase, Stripe (incl. 3 price IDs), Daily, STATUS_ARTIFACT_PATH."
     },
     {
       "name": "Client handover",
       "status": "green",
-      "detail": "ops/CLIENT-HANDOVER.md created with full setup instructions."
+      "detail": "ops/CLIENT-HANDOVER.md covers setup checklist, env vars, migrations, roles, and operator runbook."
     }
   ],
   "connections": [
@@ -59,6 +59,24 @@
       "status": "green",
       "url": "https://aaaextkrfoqomzmjjkxe.supabase.co",
       "detail": "Live project, all migrations applied."
+    },
+    {
+      "name": "Stripe",
+      "status": "yellow",
+      "url": "https://dashboard.stripe.com",
+      "detail": "Client must create 3 price IDs and register webhook before going live."
+    },
+    {
+      "name": "Daily.co",
+      "status": "yellow",
+      "url": "https://dashboard.daily.co",
+      "detail": "Client must obtain API key and domain from Daily dashboard."
+    },
+    {
+      "name": "Cloudflare Workers",
+      "status": "yellow",
+      "url": "https://dash.cloudflare.com",
+      "detail": "Client must set env vars in Workers dashboard and run deploy:worker."
     }
   ],
   "logs": {
@@ -67,8 +85,11 @@
     "testEvidence": "DOCS/ANION/status/TEST_EVIDENCE.md"
   },
   "nextActions": [
-    "Close M1 hardening by applying RLS in the target Supabase environment and removing temporary service-role fallback.",
-    "Implement M2 vertical slice: tutor discovery, booking create flow, and parent/tutor lifecycle updates.",
-    "Add minimal automated smoke coverage for auth callback, dashboard role redirect, and booking lifecycle baseline."
+    "Client: add production domain to Supabase Auth allow-list and set redirect URL.",
+    "Client: create 3 Stripe recurring prices (Starter/Growth/Unlimited) and copy price IDs into env vars.",
+    "Client: register Stripe webhook at /api/webhooks/stripe and copy signing secret into STRIPE_WEBHOOK_SECRET.",
+    "Client: obtain Daily.co API key and domain, set DAILY_API_KEY and DAILY_DOMAIN.",
+    "Client: set all env vars in Cloudflare Workers dashboard, then run npm run build:worker && npm run deploy:worker.",
+    "Client: smoke test end-to-end: sign up → book → subscribe → join lesson → check /admin."
   ]
 }
