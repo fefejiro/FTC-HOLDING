@@ -57,9 +57,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       displayName: profile.display_name,
       role,
     };
-  } catch {
+  } catch (error) {
     // Network errors or Supabase unavailability should not 500 the page —
     // treat as unauthenticated so callers can redirect to /login.
+    console.error('[getCurrentUser] Failed to resolve session:', error);
     return null;
   }
 }
