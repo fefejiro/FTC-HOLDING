@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef2ff;
+  --text: #0f172a;
+  --muted: #475569;
+  --brand: #0f766e;
+  --brand-strong: #115e59;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle at top right, #dbeafe 0%, #f5f7fb 45%, #edf2ff 100%);
+  color: var(--text);
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+main {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.surface {
+  background: var(--surface);
+  border: 1px solid #dbe3f0;
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.05);
+}
+
+.kicker {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  margin: 0;
+}
+
+.h1 {
+  font-size: 36px;
+  line-height: 1.1;
+  margin: 8px 0 10px;
+}
+
+.h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 0 0 8px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.nav a {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid #dbe3f0;
+  background: #ffffffcc;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.card {
+  padding: 18px;
+}
+
+@media (max-width: 900px) {
+  .h1 {
+    font-size: 28px;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

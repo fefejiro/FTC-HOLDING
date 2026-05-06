@@ -1,25 +1,35 @@
 {
   "name": "@ftc/anion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "dev": "next dev -p 4178",
+    "build": "next build",
+    "start": "next start -p 4178",
     "check": "tsc --noEmit",
+    "build:worker": "opennextjs-cloudflare build",
+    "preview:worker": "opennextjs-cloudflare preview",
+    "deploy:worker": "opennextjs-cloudflare deploy",
     "status:sync": "node ../../scripts/update-anion-status.mjs"
   },
   "dependencies": {
     "@ftc/anion-shared": "*",
     "@ftc/anion-types": "*",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.3",
+    "next": "^15.1.8",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.0.0-beta.3",
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/node": "^22.15.29",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "tailwindcss": "^4.1.11",
     "typescript": "^5.9.3",
-    "vite": "^7.1.7"
+    "wrangler": "^4.16.0"
   }
 }

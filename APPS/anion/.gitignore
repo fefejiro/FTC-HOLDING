@@ -1,3 +1,7 @@
 node_modules/
-dist/
+.next/
+.open-next/
+out/
 .env.local
+.wrangler/
+tsconfig.tsbuildinfo

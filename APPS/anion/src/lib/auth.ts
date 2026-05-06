@@ -33,7 +33,10 @@ export async function sendMagicLink(email: string) {
     throw new Error('Supabase auth is not configured for this environment.');
   }
 
-  const redirectTo = typeof window !== 'undefined' ? window.location.href : undefined;
+  const redirectTo =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : undefined;
   return signInWithOtpEmail(email, redirectTo);
 }
 

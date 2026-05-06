@@ -1,10 +1,10 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-04-23T00:00:00.000Z",
+  "updatedAt": "2026-05-06T00:00:00.000Z",
   "overall": "yellow",
-  "stage": "foundation",
-  "summary": "Foundation scaffold created with docs, schema proposal, app shells, and portfolio tracking contract.",
+  "stage": "m1-foundation-wiring-hardening",
+  "summary": "M0 complete and M1 auth flow is implemented; final hardening remains for RLS policy application and callback redirect environment alignment.",
   "metrics": [
     {
       "label": "Docs",
@@ -13,10 +13,10 @@
       "status": "green"
     },
     {
-      "label": "Web Shell",
-      "value": "scaffolded",
-      "detail": "Vite and React structure exists with TODO-backed route stubs.",
-      "status": "green"
+      "label": "Web Lane",
+      "value": "m1-hardening",
+      "detail": "Auth route guards, callback flow, and role redirects are implemented; policy and environment hardening is pending.",
+      "status": "yellow"
     },
     {
       "label": "Mobile Shell",
@@ -26,8 +26,8 @@
     },
     {
       "label": "Live Runtime",
-      "value": "pending",
-      "detail": "No live deployment or telemetry feed yet.",
+      "value": "smoke-verified-local",
+      "detail": "Local unattended auth smoke is verified; production deployment and telemetry contracts are still pending.",
       "status": "yellow"
     }
   ],
@@ -45,7 +45,7 @@
     {
       "name": "Implementation readiness",
       "status": "yellow",
-      "detail": "Core product flows are still stubbed behind TODO markers."
+      "detail": "M1 foundation is mostly complete; M2-M5 product flows remain pending implementation."
     }
   ],
   "connections": [
@@ -62,8 +62,8 @@
     "testEvidence": "DOCS/ANION/status/TEST_EVIDENCE.md"
   },
   "nextActions": [
-    "Implement Supabase auth and profile setup.",
-    "Implement tutor discovery and booking flow.",
-    "Attach a live status feed and deployed health endpoint."
+    "Close M1 hardening by applying RLS in the target Supabase environment and removing temporary service-role fallback.",
+    "Implement M2 vertical slice: tutor discovery, booking create flow, and parent/tutor lifecycle updates.",
+    "Add minimal automated smoke coverage for auth callback, dashboard role redirect, and booking lifecycle baseline."
   ]
 }
