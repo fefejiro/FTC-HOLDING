@@ -4,11 +4,11 @@ Use after completing `HANDOFF-INDEX.md` in order.
 
 ## Signoff Record
 
-| Signoff Area | Required Role | Name | Date (YYYY-MM-DD) | Status (Approved / Blocked) | Notes |
+| Signoff Area | Required Role | Name | Date (YYYY-MM-DD) | Status (Approved / Not Approved) | Notes |
 |---|---|---|---|---|---|
 | Technical signoff | Engineering Lead |  |  |  |  |
 | Technical signoff | Product Owner |  |  |  |  |
-| Legal signoff | Client Legal/Counsel |  |  |  | Confirm Privacy + Terms placeholders are finalized |
+| Legal signoff | Client Legal/Counsel |  |  |  | Confirm PRIVACY-TERMS placeholders are finalized |
 | Billing/provider signoff | Billing Owner (Stripe) |  |  |  | Confirm live billing config |
 | Billing/provider signoff | Provider Ops Owner (Daily/Supabase) |  |  |  | Confirm provider account controls |
 | Go-live approval | Client Owner (final approver) |  |  |  | Final launch authorization |
@@ -23,6 +23,8 @@ Use after completing `HANDOFF-INDEX.md` in order.
 - [ ] `OPERATIONS-CHECKLIST-D0-D1-W1.md` owner assigned
 
 ## Go/No-Go Decision
+
+Use `Approved / Not Approved` above for each signoff row, then record one final launch decision below.
 
 - Decision: `GO` / `NO-GO`
 - Effective date/time (UTC):

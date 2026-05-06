@@ -36,4 +36,6 @@ Use these markers consistently across all docs:
 - `[COUNSEL REVIEW]` — requires legal counsel review
 - `[PROVIDER CONFIRM]` — requires provider/billing account owner confirmation
 
+Markers may be combined when a single item requires multiple approvals (example: `[CLIENT CONFIRM] [COUNSEL REVIEW]`).
+
 Do not treat marked placeholders as final policy text.

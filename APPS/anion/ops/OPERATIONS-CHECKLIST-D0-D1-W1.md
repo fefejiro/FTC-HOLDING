@@ -22,6 +22,6 @@ Use this after go-live approval in `OWNER-SIGNOFF-TEMPLATE.md`.
 
 - [ ] Review incident trends and top root causes
 - [ ] Confirm alert thresholds and escalation contacts are still valid
-- [ ] Confirm legal copy in production matches approved text `[CLIENT CONFIRM] [COUNSEL REVIEW]`
-- [ ] Confirm billing/provider ownership still accurate `[PROVIDER CONFIRM]`
+- [ ] Confirm legal copy in production matches the already approved launch text (no drift)
+- [ ] Confirm billing/provider ownership is still accurate and contacts are current
 - [ ] Hold week-1 stabilization review and approve steady-state operations
