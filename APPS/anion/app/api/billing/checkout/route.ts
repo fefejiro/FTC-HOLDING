@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { stripe, getPlan } from '@/app/lib/stripe';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
+import { validateCsrfRequest } from '@/app/lib/security/csrf';
+import { enforceRateLimit } from '@/app/lib/security/rate-limit';
 import type { BillingCheckoutRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -28,6 +30,31 @@ function validatePayload(body: unknown): string[] {
 }
 
 export async function POST(req: Request) {
+  const csrfResult = validateCsrfRequest(req);
+  if (!csrfResult.ok) {
+    return NextResponse.json(
+      { ok: false, code: csrfResult.code, message: csrfResult.message },
+      { status: 403 },
+    );
+  }
+
+  const rateLimit = await enforceRateLimit(req, {
+    scope: 'billing-checkout',
+    maxRequests: 20,
+    windowMs: 60_000,
+  });
+  if (rateLimit.limited) {
+    const response = NextResponse.json(
+      { ok: false, code: 'RATE_LIMITED', message: 'Too many checkout requests.' },
+      { status: 429 },
+    );
+    response.headers.set('Retry-After', String(rateLimit.retryAfterSeconds));
+    response.headers.set('X-RateLimit-Limit', '20');
+    response.headers.set('X-RateLimit-Remaining', '0');
+    response.headers.set('X-RateLimit-Driver', rateLimit.driver);
+    return response;
+  }
+
   const body = (await req.json().catch(() => null)) as unknown;
   const validationErrors = validatePayload(body);
 
@@ -104,5 +131,9 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({ ok: true, url: session.url });
+  const response = NextResponse.json({ ok: true, url: session.url });
+  response.headers.set('X-RateLimit-Limit', '20');
+  response.headers.set('X-RateLimit-Remaining', String(rateLimit.remaining));
+  response.headers.set('X-RateLimit-Driver', rateLimit.driver);
+  return response;
 }

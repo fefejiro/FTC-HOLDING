@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
+import { validateCsrfRequest } from '@/app/lib/security/csrf';
+import { enforceRateLimit } from '@/app/lib/security/rate-limit';
 import type { DailyRoomTokenRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -49,6 +51,31 @@ async function dailyFetch(path: string, method: string, body?: unknown) {
 }
 
 export async function POST(req: Request) {
+  const csrfResult = validateCsrfRequest(req);
+  if (!csrfResult.ok) {
+    return NextResponse.json(
+      { ok: false, code: csrfResult.code, message: csrfResult.message },
+      { status: 403 },
+    );
+  }
+
+  const rateLimit = await enforceRateLimit(req, {
+    scope: 'daily-room-token',
+    maxRequests: 30,
+    windowMs: 60_000,
+  });
+  if (rateLimit.limited) {
+    const response = NextResponse.json(
+      { ok: false, code: 'RATE_LIMITED', message: 'Too many room token requests.' },
+      { status: 429 },
+    );
+    response.headers.set('Retry-After', String(rateLimit.retryAfterSeconds));
+    response.headers.set('X-RateLimit-Limit', '30');
+    response.headers.set('X-RateLimit-Remaining', '0');
+    response.headers.set('X-RateLimit-Driver', rateLimit.driver);
+    return response;
+  }
+
   const body = (await req.json().catch(() => null)) as unknown;
   const validationErrors = validatePayload(body);
 
@@ -125,13 +152,15 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     ok: true,
     roomUrl,
     token: String(tokenRes.token),
     roomName,
     expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
   });
+  response.headers.set('X-RateLimit-Limit', '30');
+  response.headers.set('X-RateLimit-Remaining', String(rateLimit.remaining));
+  response.headers.set('X-RateLimit-Driver', rateLimit.driver);
+  return response;
 }
-
-
