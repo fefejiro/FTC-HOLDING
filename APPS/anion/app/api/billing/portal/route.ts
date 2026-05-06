@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { stripe } from '@/app/lib/stripe';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
+import { logger } from '@/app/lib/logger';
+import { getOrCreateRequestId } from '@/app/lib/request-id';
 import type { BillingPortalRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -22,22 +24,29 @@ function validatePayload(body: unknown): string[] {
 }
 
 export async function POST(req: Request) {
+  const requestId = getOrCreateRequestId(req);
+  const route = '/api/billing/portal';
+  const start = Date.now();
+
   const body = (await req.json().catch(() => null)) as unknown;
   const validationErrors = validatePayload(body);
 
   if (validationErrors.length > 0) {
+    logger.warn({ route, requestId, code: 'INVALID_BILLING_PORTAL_REQUEST', latencyMs: Date.now() - start });
     return NextResponse.json(
-      { ok: false, code: 'INVALID_BILLING_PORTAL_REQUEST', message: 'Malformed billing portal payload.', validationErrors },
+      { ok: false, code: 'INVALID_BILLING_PORTAL_REQUEST', message: 'Malformed billing portal payload.', validationErrors, requestId },
       { status: 400 },
     );
   }
 
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ ok: false, code: 'UNAUTHENTICATED' }, { status: 401 });
+    logger.warn({ route, requestId, code: 'UNAUTHENTICATED', latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'UNAUTHENTICATED', requestId }, { status: 401 });
   }
   if (user.role !== 'parent') {
-    return NextResponse.json({ ok: false, code: 'FORBIDDEN' }, { status: 403 });
+    logger.warn({ route, requestId, userId: user.profileId, code: 'FORBIDDEN', latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'FORBIDDEN', requestId }, { status: 403 });
   }
 
   const payload = body as BillingPortalRequest;
@@ -49,7 +58,8 @@ export async function POST(req: Request) {
     .eq('profile_id', user.profileId)
     .single();
   if (!parentRow) {
-    return NextResponse.json({ ok: false, code: 'PARENT_NOT_FOUND' }, { status: 404 });
+    logger.error({ route, requestId, userId: user.profileId, code: 'PARENT_NOT_FOUND', latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'PARENT_NOT_FOUND', requestId }, { status: 404 });
   }
 
   const { data: sub } = await supabase
@@ -59,13 +69,21 @@ export async function POST(req: Request) {
     .single();
 
   if (!sub?.stripe_customer_id) {
-    return NextResponse.json({ ok: false, code: 'NO_STRIPE_CUSTOMER', message: 'No billing account found. Subscribe first.' }, { status: 404 });
+    logger.warn({ route, requestId, userId: user.profileId, code: 'NO_STRIPE_CUSTOMER', latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'NO_STRIPE_CUSTOMER', message: 'No billing account found. Subscribe first.', requestId }, { status: 404 });
   }
 
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: sub.stripe_customer_id,
-    return_url: payload.returnUrl,
-  });
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: sub.stripe_customer_id,
+      return_url: payload.returnUrl,
+    });
 
-  return NextResponse.json({ ok: true, url: portalSession.url });
+    logger.info({ route, requestId, userId: user.profileId, latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: true, url: portalSession.url });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown';
+    logger.error({ route, requestId, userId: user.profileId, code: 'STRIPE_ERROR', message: msg, latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'STRIPE_ERROR', requestId }, { status: 502 });
+  }
 }

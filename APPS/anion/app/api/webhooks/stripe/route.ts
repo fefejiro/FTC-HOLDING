@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { stripe } from '@/app/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/app/lib/logger';
+import { getOrCreateRequestId } from '@/app/lib/request-id';
 
 // Webhook handler must read the raw request body for signature verification.
 export const runtime = 'nodejs';
@@ -59,14 +61,19 @@ async function syncSubscription(
 }
 
 export async function POST(req: Request) {
+  const requestId = getOrCreateRequestId(req);
+  const route = '/api/webhooks/stripe';
+  const start = Date.now();
+
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET not configured');
+    logger.error({ route, requestId, code: 'WEBHOOK_NOT_CONFIGURED' });
     return NextResponse.json({ ok: false, code: 'WEBHOOK_NOT_CONFIGURED' }, { status: 503 });
   }
 
   const signature = req.headers.get('stripe-signature');
   if (!signature) {
+    logger.warn({ route, requestId, code: 'MISSING_SIGNATURE', latencyMs: Date.now() - start });
     return NextResponse.json({ ok: false, code: 'MISSING_SIGNATURE' }, { status: 400 });
   }
 
@@ -77,7 +84,7 @@ export async function POST(req: Request) {
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
-    console.error('[stripe-webhook] Signature verification failed:', msg);
+    logger.warn({ route, requestId, code: 'INVALID_SIGNATURE', latencyMs: Date.now() - start });
     return NextResponse.json({ ok: false, code: 'INVALID_SIGNATURE', message: msg }, { status: 400 });
   }
 
@@ -86,7 +93,7 @@ export async function POST(req: Request) {
     supabase = getServiceClient();
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
-    console.error('[stripe-webhook] Supabase service client init failed:', msg);
+    logger.error({ route, requestId, code: 'DB_INIT_FAILED', message: msg, latencyMs: Date.now() - start });
     return NextResponse.json({ ok: false, code: 'DB_INIT_FAILED' }, { status: 500 });
   }
 
@@ -112,9 +119,10 @@ export async function POST(req: Request) {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
-    console.error(`[stripe-webhook] Handler error for ${event.type}:`, msg);
+    logger.error({ route, requestId, code: 'HANDLER_ERROR', eventType: event.type, message: msg, latencyMs: Date.now() - start });
     return NextResponse.json({ ok: false, code: 'HANDLER_ERROR', message: msg }, { status: 500 });
   }
 
+  logger.info({ route, requestId, eventType: event.type, latencyMs: Date.now() - start });
   return NextResponse.json({ ok: true, received: true, type: event.type });
 }
