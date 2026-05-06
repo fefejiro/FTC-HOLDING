@@ -913,11 +913,32 @@ export default function GardenPortalAccessPanel() {
             {authState === "authenticated" && role && `Role: ${role.charAt(0).toUpperCase() + role.slice(1)}`}
             {authState === "unavailable" && "Portal unavailable"}
           </h2>
+          {authState === "authenticated" && isAdmin ? (
+            <p className="muted">
+              You can manage Jobs &amp; Quotes, assign staff, and maintain portal users from the tabs below.
+            </p>
+          ) : null}
+          {authState === "authenticated" && isStaff ? (
+            <p className="muted">
+              You can view assigned jobs and update progress status from the queue below.
+            </p>
+          ) : null}
+          {authState === "authenticated" && isCustomer ? (
+            <p className="muted">
+              You can track your service status and recent job records in your customer lane.
+            </p>
+          ) : null}
+          {authState === "authenticated" ? (
+            <p className="muted" style={{ marginTop: 8 }}>
+              Visible records: {isAdmin ? `${jobs.length} jobs, ${quotes.length} quotes` : `${visibleJobs.length} jobs`}
+            </p>
+          ) : null}
           {loadError && authState === "authenticated" ? <p>{loadError}</p> : null}
           {queueMessage ? <p>{queueMessage}</p> : null}
         </article>
       </div>
 
+      {authState !== "authenticated" ? (
       <div className="hero-actions" style={{ position: "sticky", bottom: 8, zIndex: 5, marginTop: 16 }}>
         <a
           className="btn btn-primary"
@@ -938,6 +959,7 @@ export default function GardenPortalAccessPanel() {
           Contact ops
         </a>
       </div>
+      ) : null}
 
       {authState === "authenticated" && (
         <>
