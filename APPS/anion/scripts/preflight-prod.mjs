@@ -10,6 +10,7 @@ const appRoot = path.resolve(scriptDir, '..');
 const migrationsDir = path.join(appRoot, 'supabase', 'migrations');
 const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
+// Keep this list aligned with APPS/anion/.env.example and runtime usage in app/api/* routes.
 const requiredEnvVars = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',

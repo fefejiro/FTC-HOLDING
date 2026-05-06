@@ -17,7 +17,9 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
     if (token === '--base-url') {
-      parsed.baseUrl = argv[i + 1] ?? '';
+      if (i + 1 < argv.length) {
+        parsed.baseUrl = argv[i + 1] ?? '';
+      }
       i += 1;
       continue;
     }
@@ -119,10 +121,10 @@ async function checkAuthCallback(baseUrl) {
     const pathname = extractPathname(location, baseUrl);
     const isRedirect = response.status >= 300 && response.status < 400;
     // Allow exact redirect paths and nested paths (for apps that mount dashboard/login deeper).
-    const locationLooksValid = config.expectedAuthRedirectPaths.some(
+    const matchesExpectedRedirectPath = config.expectedAuthRedirectPaths.some(
       (expectedPath) => pathname === expectedPath || pathname.startsWith(`${expectedPath}/`),
     );
-    const ok = isRedirect && locationLooksValid;
+    const ok = isRedirect && matchesExpectedRedirectPath;
     record('Auth callback URL sanity (/auth/callback)', ok, `HTTP ${response.status}${location ? ` -> ${location}` : ''}`);
   } catch (error) {
     record(
