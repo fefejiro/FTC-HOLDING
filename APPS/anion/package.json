@@ -11,6 +11,8 @@
     "build:worker": "opennextjs-cloudflare build",
     "preview:worker": "opennextjs-cloudflare preview",
     "deploy:worker": "opennextjs-cloudflare deploy",
+    "preflight:prod": "node ./scripts/preflight-prod.mjs",
+    "verify:prod": "node ./scripts/verify-prod.mjs",
     "status:sync": "node ../../scripts/update-anion-status.mjs",
     "test:e2e": "playwright test",
     "ci:check": "npm run check && npm run build"

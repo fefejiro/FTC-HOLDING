@@ -94,14 +94,23 @@ DAILY_DOMAIN=yourcompany.daily.co
 ```powershell
 cd "C:\FTC HOLDING\APPS\anion"
 
-# Build for Cloudflare (OpenNext adapter)
-npm run build:worker
+# Go-live preflight (env + typecheck + Next build + worker build + migration sanity)
+npm run preflight:prod
 
 # Deploy
 npm run deploy:worker
+
+# Post-deploy verification (set production URL)
+$env:ANION_BASE_URL="https://your-production-domain.com"
+npm run verify:prod
 ```
 
 Set each env var in the Cloudflare dashboard under **Workers & Pages → anion → Settings → Variables** (or via `wrangler secret put VARIABLE_NAME`).
+
+Optional post-deploy probes:
+
+- Stripe webhook endpoint reachability: set `CHECK_STRIPE_WEBHOOK=1`
+- Daily room contract smoke (non-destructive): set `CHECK_DAILY_ROOM_SMOKE=1`
 
 ---
 
@@ -155,7 +164,9 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 - [ ] Register Stripe webhook endpoint and copy signing secret
 - [ ] Get Daily.co API key and domain
 - [ ] Set all env vars in Cloudflare Workers
-- [ ] Run `npm run build:worker && npm run deploy:worker`
+- [ ] Run `npm run preflight:prod`
+- [ ] Run `npm run deploy:worker`
+- [ ] Run `npm run verify:prod` (with `ANION_BASE_URL` set)
 - [ ] Test: sign up, book, subscribe, join lesson, admin view
 
 > **Full production-readiness gate:** See [PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md) for the complete pass/fail checklist before going live.
