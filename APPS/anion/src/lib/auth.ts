@@ -1,9 +1,11 @@
-import { getSession, onAuthStateChange, signInWithOtpEmail, signOut } from '@ftc/auth';
-import { hasPublicSupabaseEnv } from '@ftc/supabase';
+// Auth helpers for client components.
+// Uses the Anion-local Supabase browser client so this file has no dependency
+// on the cross-workspace @ftc/auth or @ftc/supabase packages.
+import { createBrowserClient } from '@/app/lib/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 
 export function authEnabled() {
-  return hasPublicSupabaseEnv();
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
 export async function loadSession(): Promise<Session | null> {
@@ -11,7 +13,8 @@ export async function loadSession(): Promise<Session | null> {
     return null;
   }
 
-  return getSession();
+  const { data } = await createBrowserClient().auth.getSession();
+  return data.session;
 }
 
 export function subscribeToAuth(handler: (session: Session | null) => void) {
@@ -25,7 +28,7 @@ export function subscribeToAuth(handler: (session: Session | null) => void) {
     };
   }
 
-  return onAuthStateChange((_event, session) => handler(session));
+  return createBrowserClient().auth.onAuthStateChange((_event, session) => handler(session));
 }
 
 export async function sendMagicLink(email: string) {
@@ -37,7 +40,11 @@ export async function sendMagicLink(email: string) {
     typeof window !== 'undefined'
       ? `${window.location.origin}/auth/callback`
       : undefined;
-  return signInWithOtpEmail(email, redirectTo);
+
+  return createBrowserClient().auth.signInWithOtp({
+    email,
+    options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+  });
 }
 
 export async function logout() {
@@ -45,5 +52,6 @@ export async function logout() {
     return;
   }
 
-  await signOut();
+  await createBrowserClient().auth.signOut();
 }
+
