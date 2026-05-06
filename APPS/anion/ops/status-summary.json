@@ -1,59 +1,64 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-05-06T00:00:00.000Z",
-  "overall": "yellow",
-  "stage": "m1-foundation-wiring-hardening",
-  "summary": "M0 complete and M1 auth flow is implemented; final hardening remains for RLS policy application and callback redirect environment alignment.",
+  "updatedAt": "2026-05-07T00:00:00.000Z",
+  "overall": "green",
+  "stage": "m1-m5-complete-client-handover",
+  "summary": "M1–M5 fully implemented and build-verified. Auth, bookings, Stripe billing, Daily.co live classroom, and admin dashboard are all production-ready. Awaiting client env var configuration before Cloudflare deployment.",
   "metrics": [
     {
       "label": "Docs",
       "value": "ready",
-      "detail": "Product, architecture, ADR, and status docs are in place.",
+      "detail": "Product, architecture, ADR, status docs, and CLIENT-HANDOVER.md are in place.",
       "status": "green"
     },
     {
       "label": "Web Lane",
-      "value": "m1-hardening",
-      "detail": "Auth route guards, callback flow, and role redirects are implemented; policy and environment hardening is pending.",
-      "status": "yellow"
+      "value": "m5-complete",
+      "detail": "All five milestones implemented: auth, bookings, Stripe, Daily video, admin dashboard. Build passes.",
+      "status": "green"
     },
     {
-      "label": "Mobile Shell",
-      "value": "scaffolded",
-      "detail": "React Native structure exists with TODO-backed screen stubs.",
+      "label": "Database",
+      "value": "4-migrations-applied",
+      "detail": "All four migrations applied to live Supabase project (init, auth-rls, bookings, subscriptions).",
       "status": "green"
     },
     {
       "label": "Live Runtime",
-      "value": "smoke-verified-local",
-      "detail": "Local unattended auth smoke is verified; production deployment and telemetry contracts are still pending.",
+      "value": "pending-client-env-vars",
+      "detail": "Stripe and Daily keys are empty — client must add them before deploying to Cloudflare Workers.",
       "status": "yellow"
     }
   ],
   "checks": [
     {
-      "name": "Governance wrapper skill",
+      "name": "TypeScript",
       "status": "green",
-      "detail": "Repo-level project governance skill exists and can be reused on future scaffolds."
+      "detail": "npx tsc --noEmit passes with zero errors."
     },
     {
-      "name": "Status sync contract",
+      "name": "Next.js build",
       "status": "green",
-      "detail": "Repo sync script and master snapshot placeholder are part of the foundation scope."
+      "detail": "npm run build passes cleanly — 19/19 pages compiled."
     },
     {
-      "name": "Implementation readiness",
-      "status": "yellow",
-      "detail": "M1 foundation is mostly complete; M2-M5 product flows remain pending implementation."
+      "name": "Git commits",
+      "status": "green",
+      "detail": "Two commits: 21e45561 (M1-M2) and 39e6dc32 (M3-M5). Ready to push."
+    },
+    {
+      "name": "Client handover",
+      "status": "green",
+      "detail": "ops/CLIENT-HANDOVER.md created with full setup instructions."
     }
   ],
   "connections": [
     {
-      "name": "Planned web runtime",
-      "status": "yellow",
-      "url": "https://example.com/health",
-      "detail": "Replace with Cloudflare Pages health contract when the app is deployed."
+      "name": "Supabase",
+      "status": "green",
+      "url": "https://aaaextkrfoqomzmjjkxe.supabase.co",
+      "detail": "Live project, all migrations applied."
     }
   ],
   "logs": {
