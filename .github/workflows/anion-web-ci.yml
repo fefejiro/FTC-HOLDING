@@ -36,5 +36,38 @@ jobs:
         run: npm run check --workspace APPS/anion
       - name: Build anion (Next.js)
         run: npm run build --workspace APPS/anion
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci
       - name: Build anion worker (Cloudflare)
         run: npm run build:worker --workspace APPS/anion
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci
+
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    # Placeholder credentials satisfy the Supabase client constructor.
+    # All smoke tests are unauthenticated, so no real Supabase call is made.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install root dependencies
+        run: npm ci
+      - name: Install anion workspace dependencies
+        run: npm ci --workspace APPS/anion
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: APPS/anion
+      - name: Run E2E smoke tests
+        run: npm run test:e2e --workspace APPS/anion
