@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start -p 4178",
     "check": "tsc --noEmit",
+    "perf:baseline": "k6 run ./scripts/perf-baseline.k6.js",
     "build:worker": "opennextjs-cloudflare build",
     "preview:worker": "opennextjs-cloudflare preview",
     "deploy:worker": "opennextjs-cloudflare deploy",

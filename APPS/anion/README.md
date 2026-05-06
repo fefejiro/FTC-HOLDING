@@ -21,6 +21,7 @@ Primary production delivery lane for Anion.
 - npm run build
 - npm run start
 - npm run check
+- npm run perf:baseline
 - npm run build:worker
 - npm run preview:worker
 - npm run deploy:worker

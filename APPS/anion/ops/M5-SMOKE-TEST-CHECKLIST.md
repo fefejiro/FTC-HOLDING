@@ -63,4 +63,13 @@ Pass/Fail: __________
 Expected: Build completes successfully.
 Pass/Fail: __________
 
+## 6. Performance Baseline Gate
+1. Run `npm run perf:baseline`.
+Expected: k6 run completes with non-destructive checks for `/api/health`, `/pricing`, and unauthenticated `/api/billing/checkout`.
+Pass/Fail: __________
+
+2. Save evidence in `ops/docs/perf-results/` using `ops/docs/perf-results/REPORT-TEMPLATE.md`.
+Expected: p50/p95/throughput interpretation captured with pass/watch/fail band.
+Pass/Fail: __________
+
 Notes:
