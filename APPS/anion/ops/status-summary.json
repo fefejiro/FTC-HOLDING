@@ -9,7 +9,7 @@
     {
       "label": "Docs",
       "value": "ready",
-      "detail": "Product, architecture, ADR, status docs, and CLIENT-HANDOVER.md are in place.",
+      "detail": "Product, architecture, ADR, status docs, CLIENT-HANDOVER.md, PRIVACY.md, TERMS.md, DISASTER-RECOVERY.md, MONITORING-ALERTS.md, and PRODUCTION-READINESS.md are in place.",
       "status": "green"
     },
     {
@@ -27,7 +27,13 @@
     {
       "label": "Live Runtime",
       "value": "pending-client-env-vars",
-      "detail": "Stripe and Daily keys are empty — client must add them before deploying to Cloudflare Workers.",
+      "detail": "Stripe and Daily keys are empty — client must complete PRODUCTION-READINESS.md external blocker checklist before deploying to Cloudflare Workers.",
+      "status": "yellow"
+    },
+    {
+      "label": "Trust Docs",
+      "value": "placeholder-ready",
+      "detail": "PRIVACY.md and TERMS.md created as implementation-ready placeholders awaiting legal review before publication.",
       "status": "yellow"
     }
   ],
@@ -50,7 +56,27 @@
     {
       "name": "Client handover",
       "status": "green",
-      "detail": "ops/CLIENT-HANDOVER.md created with full setup instructions."
+      "detail": "ops/CLIENT-HANDOVER.md updated with external blocker checklist for Stripe, Daily, Supabase, and Cloudflare."
+    },
+    {
+      "name": "Privacy & Terms",
+      "status": "yellow",
+      "detail": "docs/PRIVACY.md and docs/TERMS.md created as placeholders. Legal review required before publication."
+    },
+    {
+      "name": "Disaster recovery",
+      "status": "green",
+      "detail": "ops/DISASTER-RECOVERY.md documents RTO/RPO targets, backup strategy, restore runbooks, and incident response."
+    },
+    {
+      "name": "Monitoring & alerts",
+      "status": "green",
+      "detail": "ops/MONITORING-ALERTS.md documents metrics, thresholds, alert routing, and ownership."
+    },
+    {
+      "name": "Production readiness",
+      "status": "green",
+      "detail": "ops/PRODUCTION-READINESS.md is the consolidated pass/fail checklist for go-live including external blocker gates."
     }
   ],
   "connections": [
@@ -64,11 +90,17 @@
   "logs": {
     "weeklyStatus": "APPS/anion/ops/weekly-status.md",
     "releaseLog": "APPS/anion/ops/release-log.md",
-    "testEvidence": "DOCS/ANION/status/TEST_EVIDENCE.md"
+    "testEvidence": "DOCS/ANION/status/TEST_EVIDENCE.md",
+    "productionReadiness": "APPS/anion/ops/PRODUCTION-READINESS.md",
+    "disasterRecovery": "APPS/anion/ops/DISASTER-RECOVERY.md",
+    "monitoringAlerts": "APPS/anion/ops/MONITORING-ALERTS.md",
+    "privacy": "APPS/anion/docs/PRIVACY.md",
+    "terms": "APPS/anion/docs/TERMS.md"
   },
   "nextActions": [
-    "Close M1 hardening by applying RLS in the target Supabase environment and removing temporary service-role fallback.",
-    "Implement M2 vertical slice: tutor discovery, booking create flow, and parent/tutor lifecycle updates.",
-    "Add minimal automated smoke coverage for auth callback, dashboard role redirect, and booking lifecycle baseline."
+    "Complete PRODUCTION-READINESS.md external blocker checklist — configure Stripe live keys, Daily API key, Supabase domain allow-list, and Cloudflare env vars.",
+    "Obtain legal review and sign-off on docs/PRIVACY.md and docs/TERMS.md before publishing to users.",
+    "Configure uptime monitor for /api/health endpoint (see MONITORING-ALERTS.md §Setup Guide).",
+    "Run quarterly disaster recovery test and update DISASTER-RECOVERY.md test log."
   ]
 }
