@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/app/lib/rate-limit';
 import type { DailyRoomTokenRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -49,6 +50,23 @@ async function dailyFetch(path: string, method: string, body?: unknown) {
 }
 
 export async function POST(req: Request) {
+  // --- Rate limiting ---
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`daily-room:${ip}`, RATE_LIMITS.dailyRoom);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, code: 'RATE_LIMITED', retryAfter: Math.ceil((rl.resetAt - Date.now()) / 1000) },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+          'X-RateLimit-Limit': String(RATE_LIMITS.dailyRoom.limit),
+          'X-RateLimit-Remaining': '0',
+        },
+      },
+    );
+  }
+
   const body = (await req.json().catch(() => null)) as unknown;
   const validationErrors = validatePayload(body);
 

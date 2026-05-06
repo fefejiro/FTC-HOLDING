@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { stripe } from '@/app/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/app/lib/rate-limit';
+import { writeAudit } from '@/app/lib/audit';
 
 // Webhook handler must read the raw request body for signature verification.
 export const runtime = 'nodejs';
@@ -59,6 +61,23 @@ async function syncSubscription(
 }
 
 export async function POST(req: Request) {
+  // --- Rate limiting ---
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`stripe-webhook:${ip}`, RATE_LIMITS.stripeWebhook);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, code: 'RATE_LIMITED', retryAfter: Math.ceil((rl.resetAt - Date.now()) / 1000) },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+          'X-RateLimit-Limit': String(RATE_LIMITS.stripeWebhook.limit),
+          'X-RateLimit-Remaining': '0',
+        },
+      },
+    );
+  }
+
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
     console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET not configured');
@@ -90,6 +109,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, code: 'DB_INIT_FAILED' }, { status: 500 });
   }
 
+  // --- Idempotency: skip already-processed events ---
+  const { data: existingEvent } = await supabase
+    .from('webhook_events')
+    .select('id')
+    .eq('id', event.id)
+    .maybeSingle();
+
+  if (existingEvent) {
+    console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
+    return NextResponse.json({ ok: true, received: true, duplicate: true });
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -97,13 +128,35 @@ export async function POST(req: Request) {
         if (session.mode === 'subscription' && session.subscription) {
           const sub = await stripe.subscriptions.retrieve(String(session.subscription));
           await syncSubscription(supabase, sub);
+          void writeAudit({
+            action: 'billing.subscription_updated',
+            resourceType: 'subscription',
+            resourceId: sub.id,
+            metadata: { event_type: event.type, plan_id: sub.metadata?.planId, status: sub.status },
+          });
         }
         break;
       }
-      case 'customer.subscription.updated':
+      case 'customer.subscription.updated': {
+        const sub = event.data.object as Stripe.Subscription;
+        await syncSubscription(supabase, sub);
+        void writeAudit({
+          action: 'billing.subscription_updated',
+          resourceType: 'subscription',
+          resourceId: sub.id,
+          metadata: { event_type: event.type, plan_id: sub.metadata?.planId, status: sub.status },
+        });
+        break;
+      }
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription;
         await syncSubscription(supabase, sub);
+        void writeAudit({
+          action: 'billing.subscription_deleted',
+          resourceType: 'subscription',
+          resourceId: sub.id,
+          metadata: { event_type: event.type, status: sub.status },
+        });
         break;
       }
       default:
@@ -115,6 +168,11 @@ export async function POST(req: Request) {
     console.error(`[stripe-webhook] Handler error for ${event.type}:`, msg);
     return NextResponse.json({ ok: false, code: 'HANDLER_ERROR', message: msg }, { status: 500 });
   }
+
+  // Mark event as processed. ignoreDuplicates handles the rare concurrent-delivery race.
+  await supabase
+    .from('webhook_events')
+    .upsert({ id: event.id, event_type: event.type }, { ignoreDuplicates: true });
 
   return NextResponse.json({ ok: true, received: true, type: event.type });
 }

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { stripe } from '@/app/lib/stripe';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/app/lib/rate-limit';
+import { writeAudit } from '@/app/lib/audit';
 import type { BillingPortalRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -22,6 +24,23 @@ function validatePayload(body: unknown): string[] {
 }
 
 export async function POST(req: Request) {
+  // --- Rate limiting ---
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`billing-portal:${ip}`, RATE_LIMITS.billingPortal);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, code: 'RATE_LIMITED', retryAfter: Math.ceil((rl.resetAt - Date.now()) / 1000) },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+          'X-RateLimit-Limit': String(RATE_LIMITS.billingPortal.limit),
+          'X-RateLimit-Remaining': '0',
+        },
+      },
+    );
+  }
+
   const body = (await req.json().catch(() => null)) as unknown;
   const validationErrors = validatePayload(body);
 
@@ -65,6 +84,15 @@ export async function POST(req: Request) {
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: sub.stripe_customer_id,
     return_url: payload.returnUrl,
+  });
+
+  void writeAudit({
+    action: 'billing.portal_initiated',
+    actorId: user.profileId,
+    actorRole: user.role,
+    resourceType: 'billing_portal_session',
+    resourceId: portalSession.id,
+    metadata: { stripe_customer_id: sub.stripe_customer_id },
   });
 
   return NextResponse.json({ ok: true, url: portalSession.url });

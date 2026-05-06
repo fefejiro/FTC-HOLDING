@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { stripe, getPlan } from '@/app/lib/stripe';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/app/lib/rate-limit';
+import { writeAudit } from '@/app/lib/audit';
 import type { BillingCheckoutRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -28,6 +30,23 @@ function validatePayload(body: unknown): string[] {
 }
 
 export async function POST(req: Request) {
+  // --- Rate limiting ---
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`billing-checkout:${ip}`, RATE_LIMITS.billingCheckout);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, code: 'RATE_LIMITED', retryAfter: Math.ceil((rl.resetAt - Date.now()) / 1000) },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+          'X-RateLimit-Limit': String(RATE_LIMITS.billingCheckout.limit),
+          'X-RateLimit-Remaining': '0',
+        },
+      },
+    );
+  }
+
   const body = (await req.json().catch(() => null)) as unknown;
   const validationErrors = validatePayload(body);
 
@@ -102,6 +121,15 @@ export async function POST(req: Request) {
         profileId: user.profileId,
       },
     },
+  });
+
+  void writeAudit({
+    action: 'billing.checkout_initiated',
+    actorId: user.profileId,
+    actorRole: user.role,
+    resourceType: 'checkout_session',
+    resourceId: session.id,
+    metadata: { plan_id: payload.planId, booking_id: payload.bookingId },
   });
 
   return NextResponse.json({ ok: true, url: session.url });
