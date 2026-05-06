@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+/**
+ * stripe-replay.mjs
+ * Inventory helper for failed Stripe webhook events.
+ * This script does not post events programmatically; it prints safe manual replay steps.
+ */
 
 import { createClient } from '@supabase/supabase-js';
 

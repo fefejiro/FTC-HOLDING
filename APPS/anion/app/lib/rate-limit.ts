@@ -1,3 +1,7 @@
+/**
+ * In-memory sliding-window limiter.
+ * Note: limits are per-process and are not shared across instances.
+ */
 type RateLimitConfig = {
   limit: number;
   windowMs: number;

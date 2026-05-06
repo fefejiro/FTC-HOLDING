@@ -39,17 +39,6 @@ async function captureFailedEvent(
   );
 }
 
-async function markEventStatus(
-  supabase: ReturnType<typeof getServiceClient>,
-  eventId: string,
-  status: 'succeeded' | 'failed',
-) {
-  await supabase
-    .from('stripe_webhook_events')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('stripe_event_id', eventId);
-}
-
 async function syncSubscription(
   supabase: ReturnType<typeof getServiceClient>,
   subscription: Stripe.Subscription,
@@ -151,14 +140,15 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { data: existingEvent } = await supabase
+    const { error: claimError } = await supabase
       .from('webhook_events')
-      .select('id')
-      .eq('id', event.id)
-      .maybeSingle();
-    if (existingEvent) {
+      .insert({ id: event.id, event_type: event.type });
+    if (claimError?.code === '23505') {
       logger.info({ route, requestId, eventType: event.type, duplicate: true, latencyMs: Date.now() - start });
       return NextResponse.json({ ok: true, received: true, duplicate: true, type: event.type });
+    }
+    if (claimError) {
+      throw new Error(claimError.message);
     }
 
     switch (event.type) {
@@ -202,16 +192,11 @@ export async function POST(req: Request) {
         // Unhandled event type — acknowledge without error
         break;
     }
-
-    await supabase
-      .from('webhook_events')
-      .upsert({ id: event.id, event_type: event.type }, { ignoreDuplicates: true });
-    await markEventStatus(supabase, event.id, 'succeeded');
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
     try {
+      await supabase.from('webhook_events').delete().eq('id', event.id);
       await captureFailedEvent(supabase, event, msg);
-      await markEventStatus(supabase, event.id, 'failed');
     } catch (captureErr) {
       logger.error({
         route,
