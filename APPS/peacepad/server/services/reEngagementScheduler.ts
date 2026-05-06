@@ -53,7 +53,7 @@ export async function runReEngagementNotifications(): Promise<void> {
         await sendPushNotification(candidate.id, {
           title: 'Check in with your co-parent',
           body: "You haven't opened PeacePad in a while. Even a quick message keeps things on track.",
-          channel: 'peacepad_general',
+          channel: 'general',
           data: { url: '/chat', type: 're_engagement' },
         });
 

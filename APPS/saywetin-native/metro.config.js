@@ -2,6 +2,18 @@
 // The repo root has a `package.json` with `workspaces`, so Metro auto-detection
 // climbs up and picks the wrong project root. Lock it here.
 const path = require('path');
+const Module = require('module');
+
+// In this monorepo, @expo/metro-config can be hoisted outside the app.
+// Ensure Expo resolves from this app's node_modules first.
+process.env.NODE_PATH = [
+  path.resolve(__dirname, 'node_modules'),
+  process.env.NODE_PATH || '',
+]
+  .filter(Boolean)
+  .join(path.delimiter);
+Module._initPaths();
+
 const { getDefaultConfig } = require('expo/metro-config');
 
 const projectRoot = __dirname;

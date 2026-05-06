@@ -138,6 +138,11 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
     }
   };
 
+  const orbSemanticHint = useMemo(() => {
+    if (!track) return '';
+    return [track.title, track.artist, track.lyric, ...(track.chips || [])].filter(Boolean).join(' ');
+  }, [track]);
+
   const closeDecode = () => {
     setDecodeOpen(false);
     setSlangError(null);
@@ -468,6 +473,8 @@ export function HomeScreen({ ritual }: { ritual: RitualController }) {
                 animated
                 showGlow
                 phase={phase === 'matching' || recentlyMatched ? 'matching' : phase === 'listening' ? 'listening' : 'idle'}
+                semanticHint={orbSemanticHint}
+                confidence={track?.matchConfidence ?? 0}
               />
             </Animated.View>
           </Pressable>

@@ -1,0 +1,1 @@
+{"query":"{ __type(name: \"CustomDomain\") { fields { name } } }"}

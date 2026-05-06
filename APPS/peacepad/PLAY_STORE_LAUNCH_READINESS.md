@@ -1,5 +1,10 @@
 # PeacePad - Play Store Launch Readiness Checklist
 
+> Status: reference only.
+>
+> The canonical execution surface is `RELEASE_EXECUTION_CHECKLIST.md`.
+> This file contains historical launch planning context and supporting notes; do not use it as the primary task tracker.
+
 **Launch Date Target:** November 2, 2025 (2 days from now)  
 **Beta Testing:** 100 users via WhatsApp  
 **Domain:** peacepad.ca (dev.peacepad.ca for development)

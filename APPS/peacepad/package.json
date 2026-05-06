@@ -1,5 +1,10 @@
 {
-    "name":  "@ftc/peacepad",
+    "_buildId": "bust-1778003852",
+  "name":  "@ftc/peacepad",
+    "private": true,
+    "workspaces": [
+        "."
+    ],
     "version":  "1.0.9",
     "type":  "module",
     "license":  "MIT",

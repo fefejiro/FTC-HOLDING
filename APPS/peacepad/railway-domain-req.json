@@ -1,0 +1,1 @@
+{"query":"{ domains(projectId: \"d2f721b5-427b-4ee9-9f91-3f21cb837315\", serviceId: \"08fc8075-1201-412a-a2b7-508160e46653\", environmentId: \"bfe73023-d1d2-401f-bd67-51fa7b138f68\") { customDomains { id domain syncStatus } serviceDomains { id domain } } }"}

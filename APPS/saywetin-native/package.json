@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "brand:icons": "node ops/generate-brand-assets.mjs",
     "android:readiness": "node ops/android-readiness.cjs",
     "android:test:preflight": "node ops/android-test-loop.cjs preflight",
     "android:test:run": "node ops/android-test-loop.cjs run",
@@ -48,6 +49,7 @@
     "@react-native/metro-config": "^0.85.2",
     "@types/react": "~19.1.0",
     "@types/react-native": "^0.72.8",
+    "googleapis": "^171.4.0",
     "typescript": "~5.9.2"
   },
   "private": true,

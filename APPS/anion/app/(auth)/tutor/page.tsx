@@ -105,6 +105,25 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
                     </button>
                   </form>
                 ) : null}
+                {booking.status === 'accepted' ? (
+                  <a
+                    href={`/lesson/${booking.id}`}
+                    style={{
+                      display: 'inline-block',
+                      background: '#16a34a',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '8px 14px',
+                      cursor: 'pointer',
+                      textDecoration: 'none',
+                      fontSize: 14,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Join Lesson
+                  </a>
+                ) : null}
               </div>
             </article>
           ))

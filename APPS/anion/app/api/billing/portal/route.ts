@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import type {
-  BillingPortalRequest,
-  BillingPortalResponse,
-  PlaceholderErrorResponse,
-} from '@/src/types/api/scaffolds';
+import { stripe } from '@/app/lib/stripe';
+import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
+import { createServerClient } from '@/app/lib/supabase/server';
+import type { BillingPortalRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
   const errors: string[] = [];
@@ -27,24 +26,46 @@ export async function POST(req: Request) {
   const validationErrors = validatePayload(body);
 
   if (validationErrors.length > 0) {
-    const response: PlaceholderErrorResponse = {
-      ok: false,
-      placeholder: true,
-      code: 'INVALID_BILLING_PORTAL_REQUEST',
-      message: 'Malformed billing portal payload.',
-      todo: 'Provide account context before creating Stripe portal session.',
-      validationErrors,
-    };
-    return NextResponse.json(response, { status: 400 });
+    return NextResponse.json(
+      { ok: false, code: 'INVALID_BILLING_PORTAL_REQUEST', message: 'Malformed billing portal payload.', validationErrors },
+      { status: 400 },
+    );
   }
 
-  const response: BillingPortalResponse = {
-    ok: false,
-    placeholder: true,
-    code: 'BILLING_PORTAL_NOT_IMPLEMENTED',
-    message: 'Stripe billing portal session creation is scheduled for M3.',
-    todo: 'Create Stripe billing portal session and return portal URL.',
-  };
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ ok: false, code: 'UNAUTHENTICATED' }, { status: 401 });
+  }
+  if (user.role !== 'parent') {
+    return NextResponse.json({ ok: false, code: 'FORBIDDEN' }, { status: 403 });
+  }
 
-  return NextResponse.json(response, { status: 501 });
+  const payload = body as BillingPortalRequest;
+  const supabase = await createServerClient();
+
+  const { data: parentRow } = await supabase
+    .from('parents')
+    .select('id')
+    .eq('profile_id', user.profileId)
+    .single();
+  if (!parentRow) {
+    return NextResponse.json({ ok: false, code: 'PARENT_NOT_FOUND' }, { status: 404 });
+  }
+
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('stripe_customer_id')
+    .eq('parent_id', parentRow.id)
+    .single();
+
+  if (!sub?.stripe_customer_id) {
+    return NextResponse.json({ ok: false, code: 'NO_STRIPE_CUSTOMER', message: 'No billing account found. Subscribe first.' }, { status: 404 });
+  }
+
+  const portalSession = await stripe.billingPortal.sessions.create({
+    customer: sub.stripe_customer_id,
+    return_url: payload.returnUrl,
+  });
+
+  return NextResponse.json({ ok: true, url: portalSession.url });
 }

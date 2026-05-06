@@ -1,6 +1,11 @@
 # PeacePad Play Store Submission Checklist
 ## Complete Step-by-Step Readiness Guide
 
+> Status: reference only.
+>
+> The canonical execution surface is `RELEASE_EXECUTION_CHECKLIST.md`.
+> Use this file only for Play Store-specific background and detailed notes that have not yet been folded into the canonical checklist.
+
 ---
 
 ## ✅ Phase 1: Code & Configuration (COMPLETED)

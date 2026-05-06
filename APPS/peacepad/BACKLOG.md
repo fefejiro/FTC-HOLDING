@@ -1,5 +1,10 @@
 # PeacePad Backlog
 
+> Status: supporting backlog.
+>
+> Use `ACTIONABLE_TASK_QUEUE.md` for the short execution queue and `RELEASE_EXECUTION_CHECKLIST.md` for release gating.
+> Keep this file for broader roadmap and backlog context.
+
 > Last updated: December 12, 2025
 > Status: Production Live at peace-pad.replit.app (peacepad.ca pending DNS)
 

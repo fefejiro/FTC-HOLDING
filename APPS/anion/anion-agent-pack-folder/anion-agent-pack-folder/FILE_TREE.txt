@@ -1,0 +1,31 @@
+anion-agent-pack-folder/
+AGENTS.md
+README.md
+  .github/
+    copilot-instructions.md
+    pull_request_template.md
+    ISSUE_TEMPLATE/
+      agent-task.md
+    agents/
+      anion-billing-access.agent.md
+      anion-live-classroom.agent.md
+      anion-program-director.agent.md
+      anion-qa-release.agent.md
+      anion-web-builder.agent.md
+    instructions/
+      billing.instructions.md
+      live-class.instructions.md
+      ops.instructions.md
+      web.instructions.md
+  docs/
+    agent-routing-matrix.md
+    vscode-agent-handover.md
+  ops/
+    AGENT-ROLL-OUT-CHECKLIST.md
+    HANDOVER-TO-VSCODE-AGENT.md
+  skills/
+    daily-live-class.md
+    plan-governance.md
+    release-qa.md
+    stripe-billing-access.md
+    supabase-auth-roles.md

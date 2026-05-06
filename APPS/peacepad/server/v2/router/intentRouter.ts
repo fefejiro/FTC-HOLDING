@@ -40,7 +40,7 @@ function pickModuleId(
   text: string,
   conflictLevel: number,
   safetyFlags: IntentRouteResponse["safety_flags"],
-): ModuleId {
+): IntentRouteResponse["module_id"] {
   const lower = text.toLowerCase();
   const hasCrisisFlag = hasCrisisSafetyFlag(safetyFlags);
 

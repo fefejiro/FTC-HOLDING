@@ -1,5 +1,10 @@
 # PeacePad Development Deployment Setup Checklist
 
+> Status: supporting reference only.
+>
+> The canonical execution surface is `RELEASE_EXECUTION_CHECKLIST.md`.
+> This file remains useful for environment setup and deployment background, but it should not be used as the primary release task tracker.
+
 This guide walks you through creating a separate development deployment for `dev.peacepad.ca`.
 
 ---

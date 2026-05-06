@@ -157,6 +157,25 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   Status: <strong>{booking.status}</strong>
                 </p>
+                {booking.status === 'accepted' ? (
+                  <a
+                    href={`/lesson/${booking.id}`}
+                    style={{
+                      display: 'inline-block',
+                      marginTop: 10,
+                      background: '#16a34a',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '8px 14px',
+                      textDecoration: 'none',
+                      fontSize: 14,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Join Lesson
+                  </a>
+                ) : null}
               </article>
             ))}
           </div>

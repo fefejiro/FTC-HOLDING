@@ -14,13 +14,15 @@
     "status:sync": "node ../../scripts/update-anion-status.mjs"
   },
   "dependencies": {
+    "@daily-co/daily-js": "^0.89.1",
     "@ftc/anion-shared": "*",
     "@ftc/anion-types": "*",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.3",
     "next": "^15.1.8",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "stripe": "^22.1.0"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.0.0-beta.3",

@@ -1,5 +1,10 @@
 # PeacePad - Co-Parenting App
 
+## Start Here
+- Architecture and infra reference: `ARCHITECTURE.md`
+- Deployment specifics: `DEPLOYMENT_GUIDE.md`
+- Environment contract: `.env.example`
+
 ## Overview
 PeacePad is a co-parenting app designed to facilitate clear communication and reduce conflict between parents. Its core purpose is to provide immediate assistance in refining user messages for clarity. While it includes supporting features like Chat, Calendar, Conch Mode, and Expenses, its primary focus remains on enhancing message clarity. The project aims to offer quick and effective help to users in high-stress situations. The app targets co-parents actively seeking communication solutions.
 

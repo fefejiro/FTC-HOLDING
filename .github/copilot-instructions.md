@@ -21,9 +21,26 @@ Two skill libraries live in this monorepo. Load the matching `SKILL.md` before a
   - `ftc-live-qa` — live QA passes
   - `ftc-multi-agent-orchestration` — multi-agent task routing
   - `ftc-saywetin-android-qa` — SayWetin Android device matrix QA
+  - `anion-supabase-auth` — Anion Supabase auth session and role mapping
+  - `anion-stripe-billing` — Anion Stripe checkout, webhooks, entitlement
+  - `anion-daily-classroom` — Anion Daily React room, session lifecycle
+  - `anion-plan-governance` — Anion milestone governance and task shaping
+  - `anion-release-qa` — Anion release QA checklist and regression checks
 - `.agents/skills/` and `.windsurf/skills/` — Stripe-specific skills (`stripe-best-practices`, `stripe-projects`, `upgrade-stripe`); load when working in `workers/stripe-api/` or any Stripe integration.
 
 When work touches a repo and the structure is unclear, load `skills/ftc-cli/SKILL.md` before guessing.
+
+## Anion agents (multi-agent delivery system)
+
+Five specialist agents are registered for the Anion Class App delivery. Read `APPS/anion/AGENTS.md` for the full routing model.
+
+- `.github/agents/anion-program-director.agent.md` — Plans milestones, guards scope, maintains ADR discipline, routes work. **Start here for any Anion session.**
+- `.github/agents/anion-web-builder.agent.md` — Builds app routes, dashboards, auth, Supabase wiring, booking flows (M1, M2).
+- `.github/agents/anion-billing-access.agent.md` — Stripe checkout, webhooks, entitlement logic (M3).
+- `.github/agents/anion-live-classroom.agent.md` — Daily React room, session lifecycle, collaboration (M4).
+- `.github/agents/anion-qa-release.agent.md` — Tests, regressions, release readiness, acceptance checks (all milestones).
+
+Path-specific instructions auto-load from `.github/instructions/anion-*.instructions.md` when editing Anion files.
 
 ## General rules
 

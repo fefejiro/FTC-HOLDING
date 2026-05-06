@@ -1,5 +1,10 @@
 # Android QA Testing Checklist - PeacePad
 
+> Status: reference only.
+>
+> The canonical execution surface is `RELEASE_EXECUTION_CHECKLIST.md`.
+> Use this file for expanded manual QA depth after the canonical checklist identifies Android QA as in scope.
+
 ## 📱 Device Testing Matrix
 
 Test on minimum 3 devices with different specs:

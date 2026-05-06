@@ -15,6 +15,7 @@ const ORB_SIZE = 200;
 // Shazam-style outward pulse rings — staggered so a new ring launches every ~700ms.
 const PULSE_DELAYS_MS = [0, 700, 1400, 2100, 2800];
 const PULSE_DURATION_MS = 3500;
+const NIGERIA_GLYPHS = ['A', 'B', 'E', 'I', 'N', 'O', 'U', 'S', '1', '2', '3', '7', '#', 'N', 'o', '*', '+', '~', '♪', '♫'];
 
 export function OrbListener({ phase, onPress }: OrbListenerProps) {
   const isIdle = phase === 'idle';
@@ -29,6 +30,7 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
   const barValues = useRef(Array.from({ length: 7 }).map(() => new Animated.Value(0.3))).current;
   const refractionSpin = useRef(new Animated.Value(0)).current;
   const iconSpin = useRef(new Animated.Value(0)).current;
+  const glyphSpin = useRef(new Animated.Value(0)).current;
   // 0 = idle (violet), 1 = listening (amber), 2 = matching (mint)
   const colorPhase = useRef(new Animated.Value(0)).current;
 
@@ -79,6 +81,20 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
     anim.start();
     return () => anim.stop();
   }, [iconSpin, isListening, isMatching]);
+
+  useEffect(() => {
+    glyphSpin.setValue(0);
+    const anim = Animated.loop(
+      Animated.timing(glyphSpin, {
+        toValue: 1,
+        duration: isMatching ? 2600 : isListening ? 3400 : 5400,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [glyphSpin, isListening, isMatching]);
 
   // Gentle breathing of the orb itself.
   useEffect(() => {
@@ -199,6 +215,10 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
+  const glyphRotate = glyphSpin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
   const orbFloatY = breathe.interpolate({
     inputRange: [0, 1],
     outputRange: [1.5, -3.5],
@@ -268,6 +288,42 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
           ]}
         />
 
+        <Animated.View pointerEvents="none" style={[styles.glyphBurstLayer, { transform: [{ rotate: glyphRotate }] }]}>
+          {NIGERIA_GLYPHS.map((symbol, index) => {
+            const angle = (index / NIGERIA_GLYPHS.length) * Math.PI * 2;
+            const innerR = ORB_SIZE * 0.58;
+            const outerR = ORB_SIZE * 1.08;
+            const x0 = Math.cos(angle) * innerR;
+            const y0 = Math.sin(angle) * innerR;
+            const x1 = Math.cos(angle) * outerR;
+            const y1 = Math.sin(angle) * outerR;
+            const burstDriver = pulses[index % pulses.length];
+            const tx = burstDriver.interpolate({ inputRange: [0, 1], outputRange: [x0, x1] });
+            const ty = burstDriver.interpolate({ inputRange: [0, 1], outputRange: [y0, y1] });
+            const glyphOpacity = Animated.multiply(
+              activation,
+              burstDriver.interpolate({ inputRange: [0, 0.12, 0.85, 1], outputRange: [0, 0.95, 0.42, 0] }),
+            );
+            const glyphScale = burstDriver.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1.08] });
+
+            return (
+              <Animated.Text
+                key={`glyph-${index}`}
+                style={[
+                  styles.glyphSymbol,
+                  {
+                    color: letterGlowColor as unknown as string,
+                    opacity: glyphOpacity,
+                    transform: [{ translateX: tx }, { translateY: ty }, { scale: glyphScale }],
+                  },
+                ]}
+              >
+                {symbol}
+              </Animated.Text>
+            );
+          })}
+        </Animated.View>
+
         <Pressable onPress={onPress} disabled={!onPress} hitSlop={20}>
           <Animated.View
             style={[
@@ -332,16 +388,16 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
                 ]}
                 pointerEvents="none"
               />
-              <Animated.Image
-                source={require('../../assets/orb.png')}
-                resizeMode="contain"
+              <Animated.View
                 style={[
-                  styles.orbIcon,
+                  styles.orbIconMask,
                   {
                     transform: [{ translateY: letterFloatY }, { scale: letterScale }, { rotate: iconRotate }],
                   },
                 ]}
-              />
+              >
+                <Animated.Image source={require('../../assets/orb.png')} resizeMode="cover" style={styles.orbIcon} />
+              </Animated.View>
             </Animated.View>
           </Animated.View>
         </Pressable>
@@ -406,6 +462,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 60,
     elevation: 20,
+  },
+  glyphBurstLayer: {
+    position: 'absolute',
+    width: ORB_SIZE * 2.6,
+    height: ORB_SIZE * 2.6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glyphSymbol: {
+    position: 'absolute',
+    fontSize: 14,
+    fontWeight: '700',
+    textShadowColor: 'rgba(240, 214, 154, 0.35)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   orbHit: {
     width: ORB_SIZE,
@@ -473,9 +544,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  orbIcon: {
+  orbIconMask: {
     width: ORB_SIZE * 0.56,
     height: ORB_SIZE * 0.56,
+    borderRadius: (ORB_SIZE * 0.56) / 2,
+    overflow: 'hidden',
+  },
+  orbIcon: {
+    width: '100%',
+    height: '100%',
     opacity: 0.98,
   },
   statusLabel: {

@@ -113,6 +113,22 @@ function printPreflight() {
   return { ok: state.inSync, adbPath, devices };
 }
 
+function killPortUsers(port) {
+  // Windows: find and kill any process holding the given port so Expo doesn't
+  // prompt interactively (non-interactive mode would abort instead).
+  spawnSync(
+    'powershell',
+    [
+      '-Command',
+      `Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue ` +
+        `| Select-Object -ExpandProperty OwningProcess ` +
+        `| Sort-Object -Unique ` +
+        `| ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }`,
+    ],
+    { shell: false, encoding: 'utf8' },
+  );
+}
+
 function runAndroid() {
   const preflight = printPreflight();
   if (!preflight.ok) {
@@ -123,8 +139,24 @@ function runAndroid() {
     process.exit(1);
   }
 
-  console.log('Starting Android run via Expo...');
-  const result = run('npx', ['expo', 'run:android']);
+  console.log('Clearing port 8081...');
+  killPortUsers(8081);
+
+  console.log('Starting Android run via Expo (CI-safe no-bundler mode)...');
+  // On Windows, npx is a .cmd file - requires shell:true to resolve correctly.
+  const result = spawnSync('npx', ['expo', 'run:android', '--no-bundler'], {
+    cwd: root,
+    stdio: 'inherit',
+    shell: true,
+    encoding: 'utf8',
+  });
+
+  if (result.status === 0) {
+    console.log('Android smoke run completed successfully.');
+  } else {
+    console.error(`Android smoke run failed with exit code ${result.status ?? 'unknown'}.`);
+  }
+
   process.exit(result.status ?? 1);
 }
 
