@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
 import { logger } from '@/app/lib/logger';
 import { getOrCreateRequestId } from '@/app/lib/request-id';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/app/lib/rate-limit';
+import { withRetry } from '@/app/lib/retry';
 import type { DailyRoomTokenRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -54,6 +56,24 @@ export async function POST(req: Request) {
   const requestId = getOrCreateRequestId(req);
   const route = '/api/daily/room';
   const start = Date.now();
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`daily-room:${ip}`, RATE_LIMITS.dailyRoom);
+
+  if (!rl.allowed) {
+    const retryAfter = Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000));
+    logger.warn({ route, requestId, code: 'RATE_LIMITED', latencyMs: Date.now() - start });
+    return NextResponse.json(
+      { ok: false, code: 'RATE_LIMITED', retryAfter, requestId },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(retryAfter),
+          'X-RateLimit-Limit': String(RATE_LIMITS.dailyRoom.limit),
+          'X-RateLimit-Remaining': '0',
+        },
+      },
+    );
+  }
 
   const body = (await req.json().catch(() => null)) as unknown;
   const validationErrors = validatePayload(body);
@@ -106,36 +126,47 @@ export async function POST(req: Request) {
 
   try {
     // Try to get existing room first
-    const existing = await dailyFetch(`/rooms/${roomName}`, 'GET');
+    const existing = await withRetry(
+      () => dailyFetch(`/rooms/${roomName}`, 'GET'),
+      { label: `daily.getRoom(${roomName})` },
+    );
     roomUrl = String(existing.url);
   } catch {
     // Room doesn't exist — create it
-    const newRoom = await dailyFetch('/rooms', 'POST', {
-      name: roomName,
-      privacy: 'private',
-      properties: {
-        enable_recording: 'cloud',
-        max_participants: 10,
-        start_video_off: false,
-        start_audio_off: false,
-        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 3, // expires in 3 hours
-      },
-    });
+    const newRoom = await withRetry(
+      () =>
+        dailyFetch('/rooms', 'POST', {
+          name: roomName,
+          privacy: 'private',
+          properties: {
+            enable_recording: 'cloud',
+            max_participants: 10,
+            start_video_off: false,
+            start_audio_off: false,
+            exp: Math.floor(Date.now() / 1000) + 60 * 60 * 3, // expires in 3 hours
+          },
+        }),
+      { label: `daily.createRoom(${roomName})` },
+    );
     roomUrl = String(newRoom.url);
   }
 
   try {
     // Issue a meeting token for the participant
     const isOwner = payload.participantRole === 'tutor';
-    const tokenRes = await dailyFetch('/meeting-tokens', 'POST', {
-      properties: {
-        room_name: roomName,
-        user_name: user.displayName,
-        user_id: user.authUserId,
-        is_owner: isOwner,
-        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 3,
-      },
-    });
+    const tokenRes = await withRetry(
+      () =>
+        dailyFetch('/meeting-tokens', 'POST', {
+          properties: {
+            room_name: roomName,
+            user_name: user.displayName,
+            user_id: user.authUserId,
+            is_owner: isOwner,
+            exp: Math.floor(Date.now() / 1000) + 60 * 60 * 3,
+          },
+        }),
+      { label: `daily.meetingToken(${roomName})` },
+    );
 
     logger.info({ route, requestId, userId: user.profileId, latencyMs: Date.now() - start });
     return NextResponse.json({

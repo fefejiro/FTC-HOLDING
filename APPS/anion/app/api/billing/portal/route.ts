@@ -4,6 +4,8 @@ import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
 import { logger } from '@/app/lib/logger';
 import { getOrCreateRequestId } from '@/app/lib/request-id';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/app/lib/rate-limit';
+import { writeAudit } from '@/app/lib/audit';
 import type { BillingPortalRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -27,6 +29,24 @@ export async function POST(req: Request) {
   const requestId = getOrCreateRequestId(req);
   const route = '/api/billing/portal';
   const start = Date.now();
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`billing-portal:${ip}`, RATE_LIMITS.billingPortal);
+
+  if (!rl.allowed) {
+    const retryAfter = Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000));
+    logger.warn({ route, requestId, code: 'RATE_LIMITED', latencyMs: Date.now() - start });
+    return NextResponse.json(
+      { ok: false, code: 'RATE_LIMITED', retryAfter, requestId },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(retryAfter),
+          'X-RateLimit-Limit': String(RATE_LIMITS.billingPortal.limit),
+          'X-RateLimit-Remaining': '0',
+        },
+      },
+    );
+  }
 
   const body = (await req.json().catch(() => null)) as unknown;
   const validationErrors = validatePayload(body);
@@ -77,6 +97,15 @@ export async function POST(req: Request) {
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
       return_url: payload.returnUrl,
+    });
+
+    void writeAudit({
+      action: 'billing.portal_initiated',
+      actorId: user.profileId,
+      actorRole: user.role,
+      resourceType: 'billing_portal_session',
+      resourceId: portalSession.id,
+      metadata: { stripe_customer_id: sub.stripe_customer_id },
     });
 
     logger.info({ route, requestId, userId: user.profileId, latencyMs: Date.now() - start });
