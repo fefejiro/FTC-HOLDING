@@ -14928,6 +14928,64 @@ footer {
   margin: 0;
 }
 
+.intake-form-span-2 {
+  grid-column: span 2;
+}
+
+.garden-quote-progress {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.garden-quote-step {
+  border-radius: 12px;
+  border: 1px solid rgba(23, 61, 49, 0.14);
+  background: rgba(247, 251, 248, 0.9);
+  color: #3e5550;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 10px 12px;
+  text-transform: uppercase;
+}
+
+.garden-quote-step.is-active {
+  border-color: rgba(26, 123, 98, 0.35);
+  background: rgba(26, 123, 98, 0.12);
+  color: #195745;
+}
+
+.garden-quote-step.is-complete {
+  border-color: rgba(26, 123, 98, 0.24);
+  color: #2b6c57;
+}
+
+.garden-quote-summary {
+  border-radius: 12px;
+  border: 1px solid rgba(23, 61, 49, 0.12);
+  background: rgba(247, 251, 248, 0.9);
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.garden-quote-summary p {
+  color: #2d4a3e;
+  font-size: 0.92rem;
+}
+
+.garden-quote-summary .btn {
+  width: fit-content;
+}
+
+.garden-quote-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
 .garden-addons-fieldset legend {
   font-weight: 600;
   color: #173d31;
@@ -15239,6 +15297,19 @@ footer {
   .garden-image-panel { padding: 12px; }
   .garden-mini-proof-row { gap: 8px; }
   .garden-mini-proof-pill { width: 100%; justify-content: center; text-align: center; }
+  .garden-quote-progress {
+    grid-template-columns: 1fr;
+  }
+  .garden-quote-step-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .garden-quote-step-actions .btn {
+    width: 100%;
+  }
+  .intake-form-span-2 {
+    grid-column: auto;
+  }
 }
 
 .garden-brand-mark {
