@@ -83,7 +83,14 @@ function createCloudflareKvStore(env: NodeJS.ProcessEnv = process.env): RateLimi
         if (text) {
           try {
             const parsed = JSON.parse(text) as Partial<MemoryBucket>;
-            if (typeof parsed.count === 'number' && typeof parsed.resetAt === 'number') {
+            if (
+              typeof parsed.count === 'number' &&
+              Number.isFinite(parsed.count) &&
+              parsed.count >= 0 &&
+              typeof parsed.resetAt === 'number' &&
+              Number.isFinite(parsed.resetAt) &&
+              parsed.resetAt > 0
+            ) {
               bucket = parsed.resetAt > now ? { count: parsed.count, resetAt: parsed.resetAt } : { count: 0, resetAt: now + windowMs };
             }
           } catch {
@@ -158,9 +165,7 @@ function getRequestKey(request: Request): string {
 export async function enforceRateLimit(request: Request, options: EnforceRateLimitOptions): Promise<RateLimitDecision> {
   const { scope, maxRequests, windowMs } = options;
   const requestKey = options.key ?? getRequestKey(request);
-
-  const bucketId = Math.floor(Date.now() / windowMs);
-  const key = `${scope}:${requestKey}:${bucketId}`;
+  const key = `${scope}:${requestKey}`;
 
   const { driver, store } = resolveStore();
 
@@ -179,7 +184,7 @@ export async function enforceRateLimit(request: Request, options: EnforceRateLim
       driver,
     };
   } catch {
-    const fallbackStore = createMemoryStore();
+    const fallbackStore = resolveStore({ ...process.env, SECURITY_RATE_LIMIT_DRIVER: 'memory' }).store;
     const state = await fallbackStore.increment(key, windowMs);
     const remaining = Math.max(0, maxRequests - state.count);
     const limited = state.count > maxRequests;

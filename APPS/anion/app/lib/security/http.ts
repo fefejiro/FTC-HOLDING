@@ -9,7 +9,11 @@ export function getAllowedOrigins(env: NodeJS.ProcessEnv = process.env): string[
     .map((value) => value.trim())
     .filter(Boolean);
 
-  if (env.NODE_ENV !== 'production') {
+  const allowLocalhost =
+    env.SECURITY_ALLOW_LOCALHOST_ORIGINS === '1' ||
+    (env.NODE_ENV !== 'production' && env.CF_PAGES !== '1');
+
+  if (allowLocalhost) {
     configured.push('http://localhost:4178', 'http://127.0.0.1:4178', 'http://localhost:3000', 'http://127.0.0.1:3000');
   }
 

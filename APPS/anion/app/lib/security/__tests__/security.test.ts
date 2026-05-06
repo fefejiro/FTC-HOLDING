@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { selectRateLimitDriver } from '@/app/lib/security/rate-limit';
-import { isOriginAllowed } from '@/app/lib/security/http';
+import { getAllowedOrigins, isOriginAllowed } from '@/app/lib/security/http';
 import { validateCsrfRequest } from '@/app/lib/security/csrf';
 
 function withEnv(patch: NodeJS.ProcessEnv, run: () => void) {
@@ -56,6 +56,16 @@ test('cors wildcard is denied in production', () => {
   });
 
   assert.equal(allowed, false);
+});
+
+test('localhost origins are not auto-allowed on Cloudflare pages context', () => {
+  const allowedOrigins = getAllowedOrigins({
+    NODE_ENV: 'development',
+    CF_PAGES: '1',
+    SECURITY_ALLOWED_ORIGINS: '',
+  });
+
+  assert.equal(allowedOrigins.some((origin) => origin.includes('localhost')), false);
 });
 
 test('csrf rejects cross-site state-changing request', () => {

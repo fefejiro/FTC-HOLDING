@@ -49,7 +49,7 @@ Stripe webhook is intentionally excluded from CSRF enforcement to avoid interfer
 Implemented in `app/lib/security/http.ts` and enforced in `middleware.ts` for `/api/*`.
 
 - allowed origins from `SECURITY_ALLOWED_ORIGINS` (comma-separated)
-- localhost defaults are only added in non-production
+- localhost defaults are only added in non-production and non-Cloudflare Pages contexts, or explicitly with `SECURITY_ALLOW_LOCALHOST_ORIGINS=1`
 - wildcard `*` is denied in production path
 - preflight `OPTIONS` returns 204 only for allowed origins; denied origins return 403
 
