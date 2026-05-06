@@ -57,7 +57,7 @@ function checkMigrationSanity() {
   }
 
   // Expected format: YYYYMMDD_HHMMSS_description.sql
-  const invalidNames = sqlFiles.filter((name) => !/^\d{8}_\d{6}_\S+.*\.sql$/.test(name));
+  const invalidNames = sqlFiles.filter((name) => !/^\d{8}_\d{6}_[^\s]+.*\.sql$/.test(name));
   if (invalidNames.length > 0) {
     record('Migration file sanity', false, `Invalid filename format: ${invalidNames.join(', ')}`);
     return;

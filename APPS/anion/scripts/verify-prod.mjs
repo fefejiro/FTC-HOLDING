@@ -17,23 +17,28 @@ function parseArgs(argv) {
       .filter(Boolean),
   };
 
-  for (let i = 0; i < argv.length; i += 1) {
+  for (let i = 0; i < argv.length;) {
     const token = argv[i];
     if (token === '--base-url') {
       if (i + 1 < argv.length) {
         parsed.baseUrl = argv[i + 1] ?? '';
+        i += 2;
+        continue;
       }
       i += 1;
       continue;
     }
     if (token === '--check-stripe-webhook') {
       parsed.checkStripeWebhook = true;
+      i += 1;
       continue;
     }
     if (token === '--check-daily-room') {
       parsed.checkDailyRoom = true;
+      i += 1;
       continue;
     }
+    i += 1;
   }
 
   parsed.baseUrl = parsed.baseUrl.trim().replace(/\/+$/, '');
@@ -124,12 +129,9 @@ async function checkAuthCallback(baseUrl) {
     const pathname = extractPathname(location, baseUrl);
     const isRedirect = response.status >= 300 && response.status < 400;
     // Allow exact redirect paths and nested paths (for apps that mount dashboard/login deeper).
-    const matchesExpectedRedirectPath = config.expectedAuthRedirectPaths.some((expectedPath) => {
-      if (expectedPath === '/') {
-        return pathname === '/';
-      }
-      return pathname === expectedPath || pathname.startsWith(`${expectedPath}/`);
-    });
+    const matchesExpectedRedirectPath = config.expectedAuthRedirectPaths.some(
+      (expectedPath) => pathname === expectedPath || (expectedPath !== '/' && pathname.startsWith(`${expectedPath}/`)),
+    );
     const ok = isRedirect && matchesExpectedRedirectPath;
     record('Auth callback URL sanity (/auth/callback)', ok, `HTTP ${response.status}${location ? ` -> ${location}` : ''}`);
   } catch (error) {
