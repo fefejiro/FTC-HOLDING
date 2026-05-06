@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
+import { withRetry } from '@/app/lib/retry';
 import type { DailyRoomTokenRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -94,36 +95,47 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Try to get existing room first
-    const existing = await dailyFetch(`/rooms/${roomName}`, 'GET');
+    // Try to get existing room first (idempotent — room name is deterministic)
+    const existing = await withRetry(() => dailyFetch(`/rooms/${roomName}`, 'GET'), {
+      label: `daily.getRoom(${roomName})`,
+    });
     roomUrl = String(existing.url);
   } catch {
-    // Room doesn't exist — create it
-    const newRoom = await dailyFetch('/rooms', 'POST', {
-      name: roomName,
-      privacy: 'private',
-      properties: {
-        enable_recording: 'cloud',
-        max_participants: 10,
-        start_video_off: false,
-        start_audio_off: false,
-        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 3, // expires in 3 hours
-      },
-    });
+    // Room doesn't exist — create it (idempotent — same name produces same room)
+    const newRoom = await withRetry(
+      () =>
+        dailyFetch('/rooms', 'POST', {
+          name: roomName,
+          privacy: 'private',
+          properties: {
+            enable_recording: 'cloud',
+            max_participants: 10,
+            start_video_off: false,
+            start_audio_off: false,
+            exp: Math.floor(Date.now() / 1000) + 60 * 60 * 3, // expires in 3 hours
+          },
+        }),
+      { label: `daily.createRoom(${roomName})` },
+    );
     roomUrl = String(newRoom.url);
   }
 
-  // Issue a meeting token for the participant
+  // Issue a meeting token for the participant (idempotent by design — tokens are single-use but
+  // re-issuing one has no side-effects on the room or subscription state)
   const isOwner = payload.participantRole === 'tutor';
-  const tokenRes = await dailyFetch('/meeting-tokens', 'POST', {
-    properties: {
-      room_name: roomName,
-      user_name: user.displayName,
-      user_id: user.authUserId,
-      is_owner: isOwner,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 3,
-    },
-  });
+  const tokenRes = await withRetry(
+    () =>
+      dailyFetch('/meeting-tokens', 'POST', {
+        properties: {
+          room_name: roomName,
+          user_name: user.displayName,
+          user_id: user.authUserId,
+          is_owner: isOwner,
+          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 3,
+        },
+      }),
+    { label: `daily.meetingToken(${roomName})` },
+  );
 
   return NextResponse.json({
     ok: true,

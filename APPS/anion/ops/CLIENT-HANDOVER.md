@@ -115,6 +115,7 @@ All migrations have been applied to the live Supabase project. Files are in `sup
 | `20260506_000002_auth_rls.sql` | ✅ Applied |
 | `20260506_000003_bookings_m2.sql` | ✅ Applied |
 | `20260507_000004_subscriptions_m3.sql` | ✅ Applied |
+| `20260509_000006_stripe_webhook_events.sql` | ⏳ Apply before going live |
 
 To apply future migrations, use the Supabase Management API (see `scripts/run-migrations.cjs`).
 
@@ -157,6 +158,24 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 - [ ] Set all env vars in Cloudflare Workers
 - [ ] Run `npm run build:worker && npm run deploy:worker`
 - [ ] Test: sign up, book, subscribe, join lesson, admin view
+
+---
+
+## Operational Recovery
+
+If Stripe webhook events fail to process (e.g. DB outage, transient error), events are captured in the `stripe_webhook_events` table for safe replay.
+
+**See the full runbook:** [`ops/STRIPE-WEBHOOK-RECOVERY.md`](./STRIPE-WEBHOOK-RECOVERY.md)
+
+Quick replay command:
+
+```bash
+cd APPS/anion
+NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... STRIPE_SECRET_KEY=... \
+WEBHOOK_URL=https://your-production-domain.com/api/webhooks/stripe \
+node scripts/stripe-replay.mjs --dry-run  # preview first
+node scripts/stripe-replay.mjs             # then replay
+```
 
 ---
 

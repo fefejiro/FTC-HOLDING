@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start -p 4178",
     "check": "tsc --noEmit",
+    "test": "node --test app/lib/__tests__/*.test.mjs",
     "build:worker": "opennextjs-cloudflare build",
     "preview:worker": "opennextjs-cloudflare preview",
     "deploy:worker": "opennextjs-cloudflare deploy",

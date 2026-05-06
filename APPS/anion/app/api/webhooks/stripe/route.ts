@@ -13,6 +13,55 @@ function getServiceClient() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
+/**
+ * Capture a failed webhook event into stripe_webhook_events for later replay.
+ * Idempotent — uses stripe_event_id as unique key, increments attempt_count on conflict.
+ */
+async function captureFailedEvent(
+  supabase: ReturnType<typeof getServiceClient>,
+  event: Stripe.Event,
+  errorMessage: string,
+) {
+  try {
+    await supabase.from('stripe_webhook_events').upsert(
+      {
+        stripe_event_id: event.id,
+        event_type: event.type,
+        payload: event as unknown as Record<string, unknown>,
+        status: 'failed',
+        error_message: errorMessage,
+        attempt_count: 1,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'stripe_event_id',
+        ignoreDuplicates: false,
+      },
+    );
+  } catch (captureErr) {
+    // Log but don't throw — we must not fail the response because of capture errors
+    console.error('[stripe-webhook] Failed to capture event for replay:', captureErr);
+  }
+}
+
+/**
+ * Mark a previously captured event as succeeded after successful replay.
+ * Idempotent — safe to call multiple times.
+ */
+async function markEventSucceeded(
+  supabase: ReturnType<typeof getServiceClient>,
+  eventId: string,
+) {
+  try {
+    await supabase
+      .from('stripe_webhook_events')
+      .update({ status: 'succeeded', updated_at: new Date().toISOString() })
+      .eq('stripe_event_id', eventId);
+  } catch (err) {
+    console.error('[stripe-webhook] Failed to mark event succeeded:', err);
+  }
+}
+
 async function syncSubscription(
   supabase: ReturnType<typeof getServiceClient>,
   subscription: Stripe.Subscription,
@@ -110,11 +159,19 @@ export async function POST(req: Request) {
         // Unhandled event type — acknowledge without error
         break;
     }
+
+    // Mark event as succeeded if it was previously captured for replay
+    await markEventSucceeded(supabase, event.id);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
     console.error(`[stripe-webhook] Handler error for ${event.type}:`, msg);
+
+    // Capture failed event for operator replay
+    await captureFailedEvent(supabase, event, msg);
+
     return NextResponse.json({ ok: false, code: 'HANDLER_ERROR', message: msg }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, received: true, type: event.type });
 }
+
