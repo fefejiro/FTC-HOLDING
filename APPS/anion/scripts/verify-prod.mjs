@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import process from 'node:process';
+
 const args = process.argv.slice(2);
 
 function parseArgs(argv) {
@@ -7,6 +9,7 @@ function parseArgs(argv) {
     baseUrl: process.env.ANION_BASE_URL ?? process.env.ANION_PROD_BASE_URL ?? '',
     checkStripeWebhook: process.env.CHECK_STRIPE_WEBHOOK === '1',
     checkDailyRoom: process.env.CHECK_DAILY_ROOM_SMOKE === '1',
+    // This is the expected contract response for POST /api/daily/room with empty JSON body.
     expectedDailyErrorCode: process.env.EXPECTED_DAILY_ERROR_CODE ?? 'INVALID_DAILY_ROOM_REQUEST',
     expectedAuthRedirectPaths: (process.env.VERIFY_AUTH_REDIRECT_PATHS ?? '/login,/dashboard')
       .split(',')
@@ -121,9 +124,12 @@ async function checkAuthCallback(baseUrl) {
     const pathname = extractPathname(location, baseUrl);
     const isRedirect = response.status >= 300 && response.status < 400;
     // Allow exact redirect paths and nested paths (for apps that mount dashboard/login deeper).
-    const matchesExpectedRedirectPath = config.expectedAuthRedirectPaths.some(
-      (expectedPath) => pathname === expectedPath || pathname.startsWith(`${expectedPath}/`),
-    );
+    const matchesExpectedRedirectPath = config.expectedAuthRedirectPaths.some((expectedPath) => {
+      if (expectedPath === '/') {
+        return pathname === '/';
+      }
+      return pathname === expectedPath || pathname.startsWith(`${expectedPath}/`);
+    });
     const ok = isRedirect && matchesExpectedRedirectPath;
     record('Auth callback URL sanity (/auth/callback)', ok, `HTTP ${response.status}${location ? ` -> ${location}` : ''}`);
   } catch (error) {
@@ -148,6 +154,7 @@ async function checkStripeWebhook(baseUrl) {
       redirect: 'manual',
     });
 
+    // Reachability-only check: this confirms route wiring exists without requiring a valid signature.
     const ok = response.status !== 404;
     record('Stripe webhook endpoint reachability (optional)', ok, `HTTP ${response.status}`);
   } catch (error) {
