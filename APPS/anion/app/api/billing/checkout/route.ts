@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { stripe, getPlan } from '@/app/lib/stripe';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
+import { logger } from '@/app/lib/logger';
+import { getOrCreateRequestId } from '@/app/lib/request-id';
 import type { BillingCheckoutRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -28,31 +30,40 @@ function validatePayload(body: unknown): string[] {
 }
 
 export async function POST(req: Request) {
+  const requestId = getOrCreateRequestId(req);
+  const route = '/api/billing/checkout';
+  const start = Date.now();
+
   const body = (await req.json().catch(() => null)) as unknown;
   const validationErrors = validatePayload(body);
 
   if (validationErrors.length > 0) {
+    logger.warn({ route, requestId, code: 'INVALID_BILLING_CHECKOUT_REQUEST', latencyMs: Date.now() - start });
     return NextResponse.json(
-      { ok: false, code: 'INVALID_BILLING_CHECKOUT_REQUEST', message: 'Malformed billing checkout payload.', validationErrors },
+      { ok: false, code: 'INVALID_BILLING_CHECKOUT_REQUEST', message: 'Malformed billing checkout payload.', validationErrors, requestId },
       { status: 400 },
     );
   }
 
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ ok: false, code: 'UNAUTHENTICATED' }, { status: 401 });
+    logger.warn({ route, requestId, code: 'UNAUTHENTICATED', latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'UNAUTHENTICATED', requestId }, { status: 401 });
   }
   if (user.role !== 'parent') {
-    return NextResponse.json({ ok: false, code: 'FORBIDDEN' }, { status: 403 });
+    logger.warn({ route, requestId, userId: user.profileId, code: 'FORBIDDEN', latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'FORBIDDEN', requestId }, { status: 403 });
   }
 
   const payload = body as BillingCheckoutRequest;
   const plan = getPlan(payload.planId);
   if (!plan) {
-    return NextResponse.json({ ok: false, code: 'INVALID_PLAN_ID', message: `Unknown plan: ${payload.planId}` }, { status: 400 });
+    logger.warn({ route, requestId, userId: user.profileId, code: 'INVALID_PLAN_ID', latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'INVALID_PLAN_ID', message: `Unknown plan: ${payload.planId}`, requestId }, { status: 400 });
   }
   if (!plan.stripePriceId) {
-    return NextResponse.json({ ok: false, code: 'PLAN_NOT_CONFIGURED', message: 'Stripe price ID not configured for this plan.' }, { status: 503 });
+    logger.error({ route, requestId, userId: user.profileId, code: 'PLAN_NOT_CONFIGURED', latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'PLAN_NOT_CONFIGURED', message: 'Stripe price ID not configured for this plan.', requestId }, { status: 503 });
   }
 
   const supabase = await createServerClient();
@@ -64,7 +75,8 @@ export async function POST(req: Request) {
     .eq('profile_id', user.profileId)
     .single();
   if (!parentRow) {
-    return NextResponse.json({ ok: false, code: 'PARENT_NOT_FOUND' }, { status: 404 });
+    logger.error({ route, requestId, userId: user.profileId, code: 'PARENT_NOT_FOUND', latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'PARENT_NOT_FOUND', requestId }, { status: 404 });
   }
 
   // Get or create Stripe customer
@@ -83,26 +95,33 @@ export async function POST(req: Request) {
     customerId = customer.id;
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    customer: customerId,
-    line_items: [{ price: plan.stripePriceId, quantity: 1 }],
-    success_url: payload.successUrl,
-    cancel_url: payload.cancelUrl,
-    metadata: {
-      bookingId: payload.bookingId,
-      planId: payload.planId,
-      profileId: user.profileId,
-      parentId: parentRow.id,
-    },
-    subscription_data: {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: customerId,
+      line_items: [{ price: plan.stripePriceId, quantity: 1 }],
+      success_url: payload.successUrl,
+      cancel_url: payload.cancelUrl,
       metadata: {
+        bookingId: payload.bookingId,
         planId: payload.planId,
-        parentId: parentRow.id,
         profileId: user.profileId,
+        parentId: parentRow.id,
       },
-    },
-  });
+      subscription_data: {
+        metadata: {
+          planId: payload.planId,
+          parentId: parentRow.id,
+          profileId: user.profileId,
+        },
+      },
+    });
 
-  return NextResponse.json({ ok: true, url: session.url });
+    logger.info({ route, requestId, userId: user.profileId, latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: true, url: session.url });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown';
+    logger.error({ route, requestId, userId: user.profileId, code: 'STRIPE_ERROR', message: msg, latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'STRIPE_ERROR', requestId }, { status: 502 });
+  }
 }
