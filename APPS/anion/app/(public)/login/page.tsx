@@ -85,7 +85,7 @@ export default function LoginPage() {
       </form>
 
       <p className="muted" style={{ marginTop: '1.25rem', fontSize: '0.875rem', textAlign: 'center' }}>
-        <Link href="/">Back to home</Link>
+        <Link href="/">Back to home</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link>
       </p>
     </section>
   );

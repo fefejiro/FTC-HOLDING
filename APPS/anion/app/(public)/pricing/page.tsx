@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 
 const PLANS = [
@@ -164,7 +165,8 @@ export default function PricingPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-10">
-          Payments are processed securely by Stripe. No card stored on our servers.
+          Billing is handled by Stripe. See <Link href="/privacy" className="underline">Privacy</Link> and{' '}
+          <Link href="/terms" className="underline">Terms</Link> for policy details.
         </p>
       </div>
     </main>
