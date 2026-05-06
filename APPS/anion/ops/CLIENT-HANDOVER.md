@@ -124,6 +124,8 @@ All migrations have been applied to the live Supabase project. Files are in `sup
 | `20260506_000002_auth_rls.sql` | ✅ Applied |
 | `20260506_000003_bookings_m2.sql` | ✅ Applied |
 | `20260507_000004_subscriptions_m3.sql` | ✅ Applied |
+| `20260508_000005_security_hardening.sql` | ✅ Added |
+| `20260509_000006_stripe_webhook_events.sql` | ✅ Added |
 
 To apply future migrations, use the Supabase Management API (see `scripts/run-migrations.cjs`).
 
@@ -229,6 +231,7 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 | [PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md) | Full pass/fail production checklist |
 | [MONITORING-ALERTS.md](./MONITORING-ALERTS.md) | Metrics, thresholds, alert routing |
 | [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) | Backup, restore, incident response |
+| [STRIPE-WEBHOOK-RECOVERY.md](./STRIPE-WEBHOOK-RECOVERY.md) | Failed Stripe webhook replay procedure |
 | [M5-SMOKE-TEST-CHECKLIST.md](./M5-SMOKE-TEST-CHECKLIST.md) | Pre-release smoke tests |
 | [docs/PRIVACY.md](../docs/PRIVACY.md) | Privacy policy (placeholder — legal review required) |
 | [docs/TERMS.md](../docs/TERMS.md) | Terms of service (placeholder — legal review required) |
