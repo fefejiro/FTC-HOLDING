@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start -p 4178",
     "check": "tsc --noEmit",
+    "test": "tsx --test app/lib/security/__tests__/*.test.ts",
     "build:worker": "opennextjs-cloudflare build",
     "preview:worker": "opennextjs-cloudflare preview",
     "deploy:worker": "opennextjs-cloudflare deploy",
@@ -36,6 +37,7 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "tailwindcss": "^4.1.11",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "wrangler": "^4.16.0"
   }
