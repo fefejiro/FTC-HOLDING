@@ -1,4 +1,4 @@
-import { createBrowserClient } from '@ftc/supabase';
+import { createBrowserClient } from '@/app/lib/supabase/client';
 import type { AppRole, AppUser, BookingRequestRecord, TutorDirectoryEntry } from './foundation-data';
 import type { ParentProfile, StudentProfile } from '../types/domain';
 

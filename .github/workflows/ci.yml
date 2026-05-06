@@ -1,10 +1,19 @@
 name: CI
 
+# Scoped to una-labs-site only.
+# Anion changes are covered by anion-web-ci.yml.
+# Other apps have their own path-filtered workflows.
 on:
   push:
     branches: [ 'main' ]
+    paths:
+      - 'APPS/una-labs-site/**'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [ 'main' ]
+    paths:
+      - 'APPS/una-labs-site/**'
+      - '.github/workflows/ci.yml'
 
 jobs:
   una-labs-site:

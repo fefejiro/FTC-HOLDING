@@ -4,12 +4,12 @@
   "updatedAt": "2026-05-07T00:00:00.000Z",
   "overall": "green",
   "stage": "m1-m5-complete-client-handover",
-  "summary": "M1–M5 fully implemented and build-verified. Auth, bookings, Stripe billing, Daily.co live classroom, and admin dashboard are all production-ready. Awaiting client env var configuration before Cloudflare deployment.",
+  "summary": "M1–M5 implemented with merged security, resilience, observability, and CI isolation updates from PRs #53-#58. Awaiting final external configuration and deployment sequencing.",
   "metrics": [
     {
       "label": "Docs",
       "value": "ready",
-      "detail": "Product, architecture, ADR, status docs, and CLIENT-HANDOVER.md are in place.",
+      "detail": "Product, architecture, ADR, status docs, CLIENT-HANDOVER.md, PRIVACY.md, TERMS.md, DISASTER-RECOVERY.md, MONITORING-ALERTS.md, and PRODUCTION-READINESS.md are in place.",
       "status": "green"
     },
     {
@@ -20,14 +20,20 @@
     },
     {
       "label": "Database",
-      "value": "4-migrations-applied",
-      "detail": "All four migrations applied to live Supabase project (init, auth-rls, bookings, subscriptions).",
-      "status": "green"
+      "value": "6-migrations-defined",
+      "detail": "Migrations 000001-000005 are applied; 000006 (stripe_webhook_events) must be applied before production go-live replay operations.",
+      "status": "yellow"
     },
     {
       "label": "Live Runtime",
       "value": "pending-client-env-vars",
-      "detail": "Stripe and Daily keys are empty — client must add them before deploying to Cloudflare Workers.",
+      "detail": "Stripe and Daily keys are empty — client must complete external blocker checklist and deploy sequence in PR-MERGE-PLAYBOOK.md.",
+      "status": "yellow"
+    },
+    {
+      "label": "Trust Docs",
+      "value": "placeholder-ready",
+      "detail": "PRIVACY.md and TERMS.md created as implementation-ready placeholders awaiting legal review before publication.",
       "status": "yellow"
     }
   ],
@@ -43,14 +49,39 @@
       "detail": "npm run build passes cleanly — 19/19 pages compiled."
     },
     {
-      "name": "Git commits",
-      "status": "green",
-      "detail": "Two commits: 21e45561 (M1-M2) and 39e6dc32 (M3-M5). Ready to push."
-    },
-    {
       "name": "Client handover",
       "status": "green",
-      "detail": "ops/CLIENT-HANDOVER.md created with full setup instructions."
+      "detail": "ops/CLIENT-HANDOVER.md updated with external blocker checklist for Stripe, Daily, Supabase, and Cloudflare."
+    },
+    {
+      "name": "Privacy & Terms",
+      "status": "yellow",
+      "detail": "docs/PRIVACY.md and docs/TERMS.md created as placeholders. Legal review required before publication."
+    },
+    {
+      "name": "Disaster recovery",
+      "status": "green",
+      "detail": "ops/DISASTER-RECOVERY.md documents RTO/RPO targets, backup strategy, restore runbooks, and incident response."
+    },
+    {
+      "name": "Monitoring & alerts",
+      "status": "green",
+      "detail": "ops/MONITORING-ALERTS.md documents metrics, thresholds, alert routing, and ownership."
+    },
+    {
+      "name": "Production readiness",
+      "status": "green",
+      "detail": "ops/PRODUCTION-READINESS.md is the consolidated pass/fail checklist for go-live including external blocker gates."
+    },
+    {
+      "name": "Security + resilience",
+      "status": "green",
+      "detail": "Rate limits, audit logging, webhook idempotency, Daily retry/backoff, and Stripe failed-event replay path are implemented."
+    },
+    {
+      "name": "Observability",
+      "status": "green",
+      "detail": "Request IDs and structured logs are wired on billing, webhook, and Daily room critical APIs."
     }
   ],
   "connections": [
@@ -64,11 +95,20 @@
   "logs": {
     "weeklyStatus": "APPS/anion/ops/weekly-status.md",
     "releaseLog": "APPS/anion/ops/release-log.md",
-    "testEvidence": "DOCS/ANION/status/TEST_EVIDENCE.md"
+    "testEvidence": "DOCS/ANION/status/TEST_EVIDENCE.md",
+    "productionReadiness": "APPS/anion/ops/PRODUCTION-READINESS.md",
+    "disasterRecovery": "APPS/anion/ops/DISASTER-RECOVERY.md",
+    "monitoringAlerts": "APPS/anion/ops/MONITORING-ALERTS.md",
+    "privacy": "APPS/anion/docs/PRIVACY.md",
+    "terms": "APPS/anion/docs/TERMS.md",
+    "observability": "APPS/anion/ops/OBSERVABILITY.md",
+    "webhookRecovery": "APPS/anion/ops/STRIPE-WEBHOOK-RECOVERY.md",
+    "mergePlaybook": "APPS/anion/ops/PR-MERGE-PLAYBOOK.md"
   },
   "nextActions": [
-    "Close M1 hardening by applying RLS in the target Supabase environment and removing temporary service-role fallback.",
-    "Implement M2 vertical slice: tutor discovery, booking create flow, and parent/tutor lifecycle updates.",
-    "Add minimal automated smoke coverage for auth callback, dashboard role redirect, and booking lifecycle baseline."
+    "Apply migration 20260509_000006_stripe_webhook_events.sql in production before go-live.",
+    "Complete external blocker checklist in CLIENT-HANDOVER.md (Stripe, Daily, Supabase, Cloudflare).",
+    "Run check/build gates and then deploy worker following PR-MERGE-PLAYBOOK.md owner order.",
+    "Obtain legal review and sign-off on docs/PRIVACY.md and docs/TERMS.md before publication."
   ]
 }

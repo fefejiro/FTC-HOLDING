@@ -1,5 +1,8 @@
 name: anion-web-ci
 
+# Triggers only on Anion-related path changes.
+# Keeps Anion PR checks isolated from other app workflows.
+# Required branch-protection checks: validate / smoke
 on:
   pull_request:
     paths:
@@ -17,7 +20,9 @@ on:
       - '.github/workflows/anion-web-ci.yml'
 
 jobs:
+  # Required check 1: TypeScript typecheck + Next.js production build
   validate:
+    name: Typecheck & Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,5 +41,72 @@ jobs:
         run: npm run check --workspace APPS/anion
       - name: Build anion (Next.js)
         run: npm run build --workspace APPS/anion
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+
+  # Required check 2: Playwright smoke tests against public routes
+  smoke:
+    name: E2E Smoke
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: APPS/anion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install root dependencies
+        run: npm ci
+        working-directory: .
+      - name: Install anion workspace dependencies
+        run: npm ci --workspace APPS/anion
+        working-directory: .
+      - name: Build anion (Next.js)
+        run: npm run build --workspace APPS/anion
+        working-directory: .
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run Anion e2e smoke tests
+        run: npx playwright test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anion-playwright-report
+          path: APPS/anion/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Informational check: Cloudflare worker build (not required for PR merge)
+  worker-build:
+    name: Worker Build (Cloudflare)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install root dependencies
+        run: npm ci
+      - name: Install anion workspace dependencies
+        run: npm ci --workspace APPS/anion
       - name: Build anion worker (Cloudflare)
         run: npm run build:worker --workspace APPS/anion
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key

@@ -115,6 +115,8 @@ All migrations have been applied to the live Supabase project. Files are in `sup
 | `20260506_000002_auth_rls.sql` | ✅ Applied |
 | `20260506_000003_bookings_m2.sql` | ✅ Applied |
 | `20260507_000004_subscriptions_m3.sql` | ✅ Applied |
+| `20260508_000005_security_hardening.sql` | ✅ Applied |
+| `20260509_000006_stripe_webhook_events.sql` | ⏳ Apply before going live |
 
 To apply future migrations, use the Supabase Management API (see `scripts/run-migrations.cjs`).
 
@@ -158,6 +160,49 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 - [ ] Run `npm run build:worker && npm run deploy:worker`
 - [ ] Test: sign up, book, subscribe, join lesson, admin view
 
+> **Full production-readiness gate:** See [PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md) for the complete pass/fail checklist before going live.
+
+---
+
+## External Blocker Checklist
+
+**Deployment is blocked until all items below are resolved.** These require access to third-party accounts.
+
+### Stripe (required for billing)
+
+- [ ] **S1** — Stripe account in live mode
+- [ ] **S2** — `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_live_...`
+- [ ] **S3** — `STRIPE_SECRET_KEY` = `sk_live_...` (set as Cloudflare secret)
+- [ ] **S4** — Three prices created in Stripe (Starter, Growth, Unlimited)
+- [ ] **S5** — `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_UNLIMITED` set
+- [ ] **S6** — Webhook endpoint registered: `https://[domain]/api/webhooks/stripe`
+- [ ] **S7** — Webhook events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+- [ ] **S8** — `STRIPE_WEBHOOK_SECRET` = `whsec_...` (from Stripe webhook signing secret)
+- [ ] **S9** — Stripe test event → endpoint returns 200 ✅
+
+### Daily.co (required for live classroom)
+
+- [ ] **D1** — Daily.co account active and domain provisioned
+- [ ] **D2** — `DAILY_API_KEY` set (Cloudflare secret)
+- [ ] **D3** — `DAILY_DOMAIN` = `yourcompany.daily.co`
+- [ ] **D4** — Test room creation via `/api/daily/room` returns a valid room URL
+
+### Supabase (required for auth and data)
+
+- [ ] **SB1** — `NEXT_PUBLIC_SUPABASE_URL` set
+- [ ] **SB2** — `NEXT_PUBLIC_SUPABASE_ANON_KEY` set
+- [ ] **SB3** — `SUPABASE_SERVICE_ROLE_KEY` set (Cloudflare secret)
+- [ ] **SB4** — Production domain in Supabase Auth allow-list
+- [ ] **SB5** — Redirect URL `https://[domain]/auth/callback` in allow-list
+- [ ] **SB6** — All 6 migrations applied to live Supabase project
+
+### Cloudflare (required for deployment)
+
+- [ ] **CF1** — Custom domain configured and DNS propagated
+- [ ] **CF2** — SSL/TLS set to Full (Strict)
+- [ ] **CF3** — All env vars and secrets confirmed in Cloudflare Workers settings
+- [ ] **CF4** — `npm run deploy:worker` succeeds without errors
+
 ---
 
 ## Support Contacts
@@ -165,3 +210,34 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 - **Supabase project ref:** `aaaextkrfoqomzmjjkxe`
 - **GitHub repo:** `https://github.com/fefejiro/FTC-HOLDING`
 - **App path in monorepo:** `APPS/anion/`
+
+---
+
+## Operational Recovery
+
+If Stripe webhook events fail to process (for example during transient DB or provider failures), events are captured in `stripe_webhook_events` for replay.
+
+**Runbook:** [`ops/STRIPE-WEBHOOK-RECOVERY.md`](./STRIPE-WEBHOOK-RECOVERY.md)
+
+Quick replay command:
+
+```bash
+cd APPS/anion
+NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... STRIPE_SECRET_KEY=... \
+WEBHOOK_URL=https://your-production-domain.com/api/webhooks/stripe \
+node scripts/stripe-replay.mjs --dry-run
+node scripts/stripe-replay.mjs
+```
+
+---
+
+## Additional Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md) | Full pass/fail production checklist |
+| [MONITORING-ALERTS.md](./MONITORING-ALERTS.md) | Metrics, thresholds, alert routing |
+| [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) | Backup, restore, incident response |
+| [M5-SMOKE-TEST-CHECKLIST.md](./M5-SMOKE-TEST-CHECKLIST.md) | Pre-release smoke tests |
+| [docs/PRIVACY.md](../docs/PRIVACY.md) | Privacy policy (placeholder — legal review required) |
+| [docs/TERMS.md](../docs/TERMS.md) | Terms of service (placeholder — legal review required) |
