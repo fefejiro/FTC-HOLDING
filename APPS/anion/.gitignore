@@ -5,3 +5,5 @@ out/
 .env.local
 .wrangler/
 tsconfig.tsbuildinfo
+playwright-report/
+test-results/

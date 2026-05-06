@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start -p 4178",
     "check": "tsc --noEmit",
+    "test:e2e": "playwright test",
     "build:worker": "opennextjs-cloudflare build",
     "preview:worker": "opennextjs-cloudflare preview",
     "deploy:worker": "opennextjs-cloudflare deploy",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.0.0-beta.3",
+    "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/node": "^22.15.29",
     "@types/react": "^19.1.2",
