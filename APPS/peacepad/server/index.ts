@@ -31,11 +31,12 @@ if (global.gc && isBuildMode) {
 export const BUILD_ID = Date.now().toString();
 
 const app = express();
+const MAX_REQUEST_ID_LENGTH = 120;
 
 function normalizeRequestId(value: unknown): string | null {
   const safe = String(value ?? "").trim();
   if (!safe) return null;
-  return safe.slice(0, 120);
+  return safe.slice(0, MAX_REQUEST_ID_LENGTH);
 }
 
 const axiomToken = process.env.AXIOM_TOKEN || "";

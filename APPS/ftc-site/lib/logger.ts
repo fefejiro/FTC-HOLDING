@@ -1,6 +1,7 @@
 import { axiomTransport, createLogger } from "@ftc/logger";
 
 type LogMeta = Record<string, unknown> | undefined;
+const MAX_REQUEST_ID_LENGTH = 120;
 
 const axiomToken = process.env.AXIOM_TOKEN || "";
 const axiomDataset = process.env.AXIOM_DATASET_FTC_SITE || process.env.AXIOM_DATASET || "";
@@ -11,9 +12,10 @@ const serviceLogger = createLogger("ftc-site", {
 });
 
 function write(level: "info" | "warn" | "error", event: string, meta?: LogMeta) {
+  const suppliedRequestId = typeof meta?.requestId === "string" ? meta.requestId.trim() : "";
   const requestId =
-    typeof meta?.requestId === "string" && meta.requestId.trim()
-      ? meta.requestId.trim().slice(0, 120)
+    suppliedRequestId
+      ? suppliedRequestId.slice(0, MAX_REQUEST_ID_LENGTH)
       : crypto.randomUUID();
   const payload = { event, requestId, ...(meta ?? {}) };
   if (level === "error") {

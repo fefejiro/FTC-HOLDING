@@ -8,7 +8,7 @@ export interface Env {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const requestId = request.headers.get("x-request-id")?.trim() || crypto.randomUUID();
+    const requestId = request.headers.get("x-request-id")?.trim() || globalThis.crypto.randomUUID();
     const axiomToken = env.AXIOM_TOKEN?.trim() || "";
     const axiomDataset = env.AXIOM_DATASET_PEACEPADAI?.trim() || env.AXIOM_DATASET?.trim() || "";
     const logger = createLogger("peacepadai-worker", {

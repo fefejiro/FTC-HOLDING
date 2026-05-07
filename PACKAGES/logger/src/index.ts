@@ -30,6 +30,11 @@ export interface AxiomTransportOptions {
   baseUrl?: string;
 }
 
+type FetchLike = (
+  input: string,
+  init?: { method?: string; headers?: Record<string, string>; body?: string },
+) => Promise<{ ok: boolean }>;
+
 const DEFAULT_REDACTED_VALUE = "[REDACTED]";
 const SENSITIVE_KEY_PATTERN =
   /(email|phone|password|passcode|secret|token|authorization|cookie|session|payment|card|cvv|cvc|iban|routing|account)/i;
@@ -111,7 +116,14 @@ export class Logger {
 
     for (const transport of this.transports) {
       Promise.resolve(transport(payload)).catch(() => {
-        // Keep application flow safe if transport fails.
+        console.error(
+          JSON.stringify({
+            service: this.name,
+            level: LogLevel.WARN,
+            message: "log_transport_failed",
+            timestamp: new Date().toISOString(),
+          }),
+        );
       });
     }
   }
@@ -141,11 +153,7 @@ export function axiomTransport(options: AxiomTransportOptions): LogTransport {
   return async (entry) => {
     if (!token || !dataset) return;
 
-    const fetchFn = (globalThis as unknown as {
-      fetch?: (input: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{
-        ok: boolean;
-      }>;
-    }).fetch;
+    const fetchFn = (globalThis as { fetch?: FetchLike }).fetch;
 
     if (!fetchFn) return;
 
