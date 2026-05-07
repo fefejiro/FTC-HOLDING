@@ -51,8 +51,8 @@ https://gardencleaners.ca/garden-cleaners/contact /contact 301
 https://www.gardencleaners.ca/garden-cleaners/contact /contact 301
 https://gardencleaners.ca/garden-cleaners/quote /quote 301
 https://www.gardencleaners.ca/garden-cleaners/quote /quote 301
-https://gardencleaners.ca/garden-cleaners/portal /portal 301
-https://www.gardencleaners.ca/garden-cleaners/portal /portal 301
+https://gardencleaners.ca/garden-cleaners/portal /garden-cleaners/portal 200
+https://www.gardencleaners.ca/garden-cleaners/portal /garden-cleaners/portal 200
 
 # Garden - block any leftover OG paths on garden hosts.
 https://gardencleaners.ca/og-trades-academy* / 301
