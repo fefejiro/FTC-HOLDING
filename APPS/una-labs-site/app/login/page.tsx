@@ -4,7 +4,7 @@ import { LoginClient } from '@/app/login/LoginClient';
 
 export const metadata: Metadata = {
   title: 'Login',
-  description: 'Log in to Una Labs using Supabase-backed client authentication.',
+  description: 'Log in to Una Labs with Google OAuth authentication.',
 };
 
 export default function LoginPage() {

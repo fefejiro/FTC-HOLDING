@@ -1,11 +1,9 @@
 'use client';
 
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-
-type Mode = 'google' | 'password';
 
 function normalizeRedirectPath(value: string | null): string {
   if (!value) return '/dashboard';
@@ -14,23 +12,13 @@ function normalizeRedirectPath(value: string | null): string {
   return value;
 }
 
-function normalizeEmail(value: string): string {
-  return value.trim().toLowerCase();
-}
-
 export function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = normalizeRedirectPath(searchParams.get('redirect') ?? searchParams.get('next'));
-  const loginEmailHint = normalizeEmail(searchParams.get('email') ?? '');
-
-  const [mode, setMode] = useState<Mode>('google');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-  const activeModeRef = useRef<Mode>('google');
 
   useEffect(() => {
     let cancelled = false;
@@ -52,27 +40,6 @@ export function LoginClient() {
       cancelled = true;
     };
   }, [redirectTo, router]);
-
-  useEffect(() => {
-    activeModeRef.current = mode;
-  }, [mode]);
-
-  useEffect(() => {
-    if (!loginEmailHint) return;
-    setEmail((prev) => prev || loginEmailHint);
-  }, [loginEmailHint]);
-
-  function switchMode(nextMode: Mode) {
-    activeModeRef.current = nextMode;
-    setMode(nextMode);
-    setStatus('');
-    setError('');
-    setLoading(false);
-
-    if (nextMode === 'google') {
-      setPassword('');
-    }
-  }
 
   async function handleGoogleSignIn() {
     setLoading(true);
@@ -100,41 +67,6 @@ export function LoginClient() {
     }
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const submitMode = mode;
-    setLoading(true);
-    setStatus('');
-    setError('');
-
-    try {
-      const normalizedEmail = normalizeEmail(email);
-      if (mode === 'password') {
-        const { signInWithPassword } = await import('@ftc/auth');
-        const { error: authError } = await signInWithPassword(normalizedEmail, password);
-        if (authError) {
-          throw authError;
-        }
-        if (activeModeRef.current === submitMode) {
-          router.replace(redirectTo);
-        }
-      }
-    } catch (err) {
-      if (activeModeRef.current === submitMode) {
-        const rawMessage = err instanceof Error ? err.message : 'Unable to start sign-in.';
-        if (/email rate limit exceeded/i.test(rawMessage)) {
-          setError('Email rate limit reached. Wait a few minutes and try again.');
-        } else {
-          setError(rawMessage);
-        }
-      }
-    } finally {
-      if (activeModeRef.current === submitMode) {
-        setLoading(false);
-      }
-    }
-  }
-
   return (
     <section className="bg-white min-h-[70vh] flex items-center">
       <div className="max-w-tight mx-auto px-6 py-20 w-full">
@@ -143,101 +75,16 @@ export function LoginClient() {
         </div>
         <h1 className="text-h2 text-tx-heading text-center mb-2">Log in to Una Labs</h1>
         <p className="text-body text-tx-secondary text-center mb-10">
-          Access your Una Labs workspace to review project status and continue delivery.
+          Access your Una Labs workspace with Google sign-in.
         </p>
 
-        <div className="mb-6 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => switchMode('google')}
-            className={[
-              'rounded-full px-4 py-2 text-body-sm font-semibold transition-colors',
-              mode === 'google'
-                ? 'bg-brand-teal text-white'
-                : 'bg-bg-offwhite text-tx-secondary hover:text-tx-heading',
-            ].join(' ')}
-          >
-            Google
-          </button>
-          <button
-            type="button"
-            onClick={() => switchMode('password')}
-            className={[
-              'rounded-full px-4 py-2 text-body-sm font-semibold transition-colors',
-              mode === 'password'
-                ? 'bg-brand-teal text-white'
-                : 'bg-bg-offwhite text-tx-secondary hover:text-tx-heading',
-            ].join(' ')}
-          >
-            Password
-          </button>
+        <div className="mb-5">
+          <Button type="button" variant="primary" size="lg" className="w-full justify-center" onClick={() => void handleGoogleSignIn()} disabled={loading}>
+            {loading ? 'Redirecting…' : 'Continue with Google'}
+          </Button>
         </div>
 
-        {mode === 'google' && (
-          <div className="mb-5">
-            <Button type="button" variant="primary" size="lg" className="w-full justify-center" onClick={() => void handleGoogleSignIn()} disabled={loading}>
-              {loading ? 'Redirecting…' : 'Continue with Google'}
-            </Button>
-          </div>
-        )}
-
-        {mode === 'password' && (
-          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="login-email" className="block text-body font-medium text-tx-heading mb-1">
-                Email
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@company.com"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full px-4 py-3 border border-border rounded-lg text-body focus:outline-none focus:border-border-focus"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="login-password" className="block text-body font-medium text-tx-heading mb-1">
-                Password
-              </label>
-              <input
-                id="login-password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full px-4 py-3 border border-border rounded-lg text-body focus:outline-none focus:border-border-focus"
-              />
-            </div>
-
-            {error && (
-              <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-body-sm text-red-700">
-                {error}
-              </p>
-            )}
-
-            {status && (
-              <p className="rounded-lg border border-brand-teal/20 bg-brand-teal-light px-4 py-3 text-body-sm text-brand-teal">
-                {status}
-              </p>
-            )}
-
-            <Button type="submit" variant="primary" size="lg" className="w-full justify-center" disabled={loading}>
-              {loading ? 'Working…' : 'Log in'}
-            </Button>
-
-            <p className="text-center text-body-sm text-tx-secondary">
-              New here? <a href="/start" className="text-brand-teal hover:underline">Start with the intake form</a>.
-            </p>
-          </form>
-        )}
-
-        {mode === 'google' && (error || status) && (
+        {(error || status) && (
           <div className="mt-5">
             {error && (
               <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-body-sm text-red-700">
