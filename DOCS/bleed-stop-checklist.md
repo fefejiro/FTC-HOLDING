@@ -78,3 +78,27 @@ Full scan output in [docs/auth-allowlist-audit.txt](auth-allowlist-audit.txt) (1
 \`\`\`
 
 Confirm each match maps to the expected list. File any drift as \`[Bug]\` issues.
+
+---
+
+## PeacePad session restore hotfix - QA VERIFY (2026-05-07)
+
+### Completed
+
+- Client raw DB error copy sanitized and committed as `cd7f9ec6 fix(peacepad): sanitize session restore errors in client`.
+- Supabase SQL Editor used to create session store tables from `APPS/peacepad/migrations/hotfix_sessions.sql`.
+- `peacepad.sessions` verified in Supabase with row count `0`.
+- Railway `DATABASE_URL` shape now points to the Supabase shared pooler host; `SESSION_SCHEMA` is missing, so `public.sessions` must also exist.
+- `npm run check` and `npm run build` pass from `APPS/peacepad`.
+- Windows scheduled task `PeacePad Railway Redeploy 2026-05-07` created for 2026-05-07 8:05 PM ET to run `railway redeploy --service '@ftc/peacepad' --yes`.
+
+### Remaining
+
+- Confirm both session tables in Supabase:
+  ```sql
+  select
+    to_regclass('public.sessions') as public_sessions,
+    to_regclass('peacepad.sessions') as peacepad_sessions;
+  ```
+- After scheduled redeploy, retest PeacePad and tap `Retry session check`.
+- Mark GO only if no raw DB/session error appears and compose/no-login flow still works.
