@@ -42,7 +42,7 @@ jobs:
       - name: Lint gate
         run: |
           if [ -n "$LINT_CMD" ]; then
-            (cd "$APP_PATH" && bash -lc "$LINT_CMD")
+            (cd "$APP_PATH" && bash -c "$LINT_CMD")
           else
             echo "LINT_CMD not set, skipping"
           fi
@@ -50,7 +50,7 @@ jobs:
       - name: TypeScript gate
         run: |
           if [ -n "$TSC_CMD" ]; then
-            (cd "$APP_PATH" && bash -lc "$TSC_CMD")
+            (cd "$APP_PATH" && bash -c "$TSC_CMD")
           else
             echo "TSC_CMD not set, skipping"
           fi
@@ -58,7 +58,7 @@ jobs:
       - name: Dependency audit gate
         run: |
           if [ -n "$AUDIT_CMD" ]; then
-            (cd "$APP_PATH" && bash -lc "$AUDIT_CMD")
+            (cd "$APP_PATH" && bash -c "$AUDIT_CMD")
           else
             echo "AUDIT_CMD not set, skipping"
           fi
@@ -66,7 +66,7 @@ jobs:
       - name: Doc-drift gate
         run: |
           if [ -n "$DOC_DRIFT_CMD" ]; then
-            bash -lc "$DOC_DRIFT_CMD"
+            bash -c "$DOC_DRIFT_CMD"
           else
             echo "DOC_DRIFT_CMD not set, skipping"
           fi
