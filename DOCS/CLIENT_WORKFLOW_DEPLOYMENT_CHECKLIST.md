@@ -1,5 +1,10 @@
 # Client Workflow — Deployment Checklist & Validation
 
+> Status: canonical deployment runbook.
+>
+> Use this file for deployment and validation steps.
+> Pair it with `CLIENT_WORKFLOW_ARCHITECTURE.md` for design context.
+
 **Status**: Ready for Deployment  
 **Date**: 2026-04-23  
 **Target**: Anion Project (Pilot)

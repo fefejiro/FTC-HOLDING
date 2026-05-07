@@ -1,5 +1,10 @@
 # SayWetin Chrome Extension — Chrome Web Store Submission Checklist
 
+> Status: supporting reference.
+>
+> Use `RELEASE_QUEUE.md` for the active remaining work list.
+> This file should stay focused on store submission requirements and reference steps.
+
 ## 1. Manifest & Build
 - [x] manifest.json is Manifest V3, icons included
 - [x] Output in dist/ is clean and production-ready

@@ -1,5 +1,8 @@
 # Client Workflow Implementation Guide
 
+> Use `CLIENT_WORKFLOW_ARCHITECTURE.md` for canonical design decisions and `CLIENT_WORKFLOW_DEPLOYMENT_CHECKLIST.md` for the deployment runbook.
+> This file should stay focused on implementation context and the pilot case-study surface.
+
 **Status**: Phase 1 Implementation Ready  
 **Date**: 2026-04-23  
 **Owner**: Manchi / FTC Holding  

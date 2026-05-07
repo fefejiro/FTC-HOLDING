@@ -1,5 +1,8 @@
 # M2-M5 Lightweight Implementation Plan
 
+Use `NEXT-24H-EXECUTION-BOARD.md` as the active execution queue.
+This file remains the structured sequencing reference for M2-M5 scaffolding.
+
 Last updated: 2026-05-06
 Owner: anion web lane
 Scope: structured scaffolding only, no production feature completion

@@ -1,5 +1,10 @@
 # Client Workflow Implementation — Quick Start Guide
 
+> Status: reference only.
+>
+> Use this file as a short introduction only.
+> Prefer `CLIENT_WORKFLOW_ARCHITECTURE.md` for the full design, `CLIENT_WORKFLOW_DEPLOYMENT_CHECKLIST.md` for deployment, and `CLIENT_WORKFLOW_IMPLEMENTATION_GUIDE.md` for implementation detail.
+
 **Status**: ✅ READY FOR DEPLOYMENT  
 **Created**: 2026-04-23  
 **Pilot**: Anion (uby400@gmail.com)  

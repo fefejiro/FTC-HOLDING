@@ -1,5 +1,10 @@
 # Client Workflow Delivery — Complete Implementation Summary
 
+> Status: reference only.
+>
+> Prefer `CLIENT_WORKFLOW_ARCHITECTURE.md` for the canonical system design and `CLIENT_WORKFLOW_DEPLOYMENT_CHECKLIST.md` for execution steps.
+> This file remains useful as a high-level summary but should not be treated as the primary source of truth.
+
 **Project**: Unalabs Client Delivery Workflow (Intake → Scope → Approval → Build)  
 **Status**: ✅ COMPLETE & READY FOR DEPLOYMENT  
 **Date**: 2026-04-23  

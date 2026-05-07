@@ -115,6 +115,7 @@ Prefer project docs under either:
 ## Default Outputs For New Projects
 
 Create these files from the templates folder unless equivalent files already exist:
+- `TEMPLATE_SELECTION_GUIDE.md` (read first; do not instantiate per project)
 - `PROJECT_BRIEF.md`
 - `ARCHITECTURE_OVERVIEW.md`
 - `ADR.md`
@@ -123,6 +124,8 @@ Create these files from the templates folder unless equivalent files already exi
 - `RELEASE_LOG.md`
 - `WEEKLY_STATUS.md`
 - `STATUS_SUMMARY.json`
+
+Before creating the project artifacts, read `templates/TEMPLATE_SELECTION_GUIDE.md` to avoid generating overlapping documents for the same purpose.
 
 ## Verification
 

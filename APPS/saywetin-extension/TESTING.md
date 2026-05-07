@@ -1,5 +1,10 @@
 # SayWetin Chrome Extension — End-to-End Test Plan
 
+> Status: supporting reference.
+>
+> Use `RELEASE_QUEUE.md` for the active remaining work list.
+> This file should stay focused on test coverage and verification steps.
+
 ## 1. Popup UI
 - [x] Popup loads with hero image, orb, and branding
 - [x] Orb tap triggers listening state and disables button

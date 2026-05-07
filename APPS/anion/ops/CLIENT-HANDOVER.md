@@ -1,5 +1,10 @@
 # Anion Class App — Client Handover
 
+> Status: supporting reference.
+>
+> Use `NEXT-24H-EXECUTION-BOARD.md` for the active engineering execution queue.
+> This file should stay focused on handover prerequisites and client setup context.
+
 **Version:** 0.2.0  
 **Delivered:** 2026-05-07  
 **Milestones:** M1 Auth · M2 Bookings · M3 Stripe Billing · M4 Daily Live Classroom · M5 Admin Dashboard

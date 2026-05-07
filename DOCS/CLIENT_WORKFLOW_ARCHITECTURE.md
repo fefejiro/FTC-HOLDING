@@ -1,13 +1,16 @@
 # Client Workflow Architecture
 ## Unalabs as the Delivery Platform for Ongoing Client Projects
 
-**Status**: Design Phase  
+**Status**: COMPLETE (canonical architecture source)  
 **Date**: 2026-04-23  
 **Scope**: ATeam-inspired client intake → scope → active → build workflow, reusable for Anion, David Jumbo, and all future FTC clients  
 **Owner**: Manchi / FTC Holding  
 **Reference**: `/ateam` workflow (proven pattern), `APPS/una-labs-site` (delivery platform), `DOCS/ANION/` (first client case study)
 
 ---
+
+Use this file as the canonical source for client workflow architecture and design decisions.
+Use `CLIENT_WORKFLOW_DEPLOYMENT_CHECKLIST.md` for deployment steps and `CLIENT_WORKFLOW_IMPLEMENTATION_GUIDE.md` for implementation-specific context.
 
 ## Vision
 

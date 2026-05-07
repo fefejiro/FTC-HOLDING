@@ -1,5 +1,10 @@
 # Client Workflow Platform — Complete Implementation
 
+> Status: reference only.
+>
+> Prefer `CLIENT_WORKFLOW_ARCHITECTURE.md` for the system design, `CLIENT_WORKFLOW_DEPLOYMENT_CHECKLIST.md` for deployment steps, and `CLIENT_WORKFLOW_IMPLEMENTATION_GUIDE.md` for implementation context.
+> This file is retained as a navigation surface and is a candidate for archiving once downstream links are updated.
+
 **Project Status**: ✅ IMPLEMENTATION COMPLETE, READY FOR DEPLOYMENT  
 **Created**: 2026-04-23  
 **Pilot Client**: Anion (uby400@gmail.com)  

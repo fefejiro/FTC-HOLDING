@@ -1,5 +1,10 @@
 ## Phase 2 Acceptance Checklist
 
+> Status: supporting reference.
+>
+> Use `ACTIONABLE_TASK_QUEUE.md` for the active unresolved work list.
+> This file should stay focused on detailed acceptance procedures and evidence.
+
 Automated checks run:
 
 ```powershell

@@ -141,15 +141,15 @@ All external client sites (Garden, OG, Polar, Contrast) derive from `ClientSiteS
 
 Before any PR merges to main:
 
-- [ ] `npx tsc --noEmit` passes with zero errors
-- [ ] `npm run build` completes with zero errors
-- [ ] No `any` type except in explicitly commented legacy interop
-- [ ] All new auth-gated pages handle: `loading`, `unauthenticated`, `error`, `ready` states
-- [ ] All new pages respond to unknown/missing `?id` with a clear error message — never crash
-- [ ] No hardcoded hex color values
-- [ ] `AssistantDrawer` present on all portal/client surfaces
-- [ ] Print safety verified on all report/briefing pages
-- [ ] Responsive: tested at 375px (mobile), 768px (tablet), 1280px (desktop)
+- `npx tsc --noEmit` passes with zero errors
+- `npm run build` completes with zero errors
+- No `any` type except in explicitly commented legacy interop
+- All new auth-gated pages handle `loading`, `unauthenticated`, `error`, and `ready` states
+- All new pages respond to unknown or missing `?id` with a clear error message and never crash
+- No hardcoded hex color values
+- `AssistantDrawer` is present on all portal and client surfaces
+- Print safety is verified on all report and briefing pages
+- Responsive behavior is verified at 375px, 768px, and 1280px
 
 ---
 

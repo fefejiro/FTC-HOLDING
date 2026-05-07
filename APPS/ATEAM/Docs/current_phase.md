@@ -1,4 +1,5 @@
 Current Phase: Capability Decoupling Program - Phase 1 Foundation Hardening
+Execution Surface: Docs/ACTIONABLE_TASK_QUEUE.md
 Status: In Progress (Phase 1 scaffolding landed; extraction tracks pending soak/validation)
 Phase 0: Complete
 Phase 1: In Progress (capability namespace + contract envelope + auth/storage scaffolds)

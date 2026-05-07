@@ -5,13 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e475ca75-9849-4f46-b536-0e782fd94f7a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/credentials.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/credentials.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/eas.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/eas.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/metro.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/metro.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/e2e.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/e2e.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/vitest.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/vitest.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../supabase/.temp/cli-latest" beforeDir="false" afterPath="$PROJECT_DIR$/../../../supabase/.temp/cli-latest" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../.github/skills/ftc-project-governance/SKILL.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../.github/skills/ftc-project-governance/SKILL.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/ATEAM/Docs/acceptance_tests.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/ATEAM/Docs/acceptance_tests.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/ATEAM/Docs/build_plan.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/ATEAM/Docs/build_plan.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/ATEAM/Docs/current_phase.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/ATEAM/Docs/current_phase.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/anion/ops/CLIENT-HANDOVER.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/anion/ops/CLIENT-HANDOVER.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/anion/ops/M2-M5-IMPLEMENTATION-PLAN.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/anion/ops/M2-M5-IMPLEMENTATION-PLAN.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/anion/ops/NEXT-24H-EXECUTION-BOARD.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/anion/ops/NEXT-24H-EXECUTION-BOARD.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-extension/TESTING.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-extension/TESTING.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-extension/WEBSTORE.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-extension/WEBSTORE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/una-labs-site/DOCS/LAUNCH-GATE.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/una-labs-site/DOCS/LAUNCH-GATE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/una-labs-site/DOCS/UNA_WEBSITE_STANDARD_v1.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/una-labs-site/DOCS/UNA_WEBSITE_STANDARD_v1.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_ARCHITECTURE.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_ARCHITECTURE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_DELIVERY_SUMMARY.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_DELIVERY_SUMMARY.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_DEPLOYMENT_CHECKLIST.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_DEPLOYMENT_CHECKLIST.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_IMPLEMENTATION_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_IMPLEMENTATION_GUIDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_QUICK_START.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_QUICK_START.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../../DOCS/CLIENT_WORKFLOW_README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const API_BASE = "https://api.saywetin.app";
+const API_BASE = import.meta.env.VITE_SAYWETIN_API_BASE_URL?.replace(/\/$/, "") || "https://api.saywetin.app";
 
 // ?mock=1 in the popup URL skips tab capture and returns fake data instantly
 const IS_MOCK = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mock") === "1";

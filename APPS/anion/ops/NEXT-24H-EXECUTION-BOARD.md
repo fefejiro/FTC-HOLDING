@@ -1,5 +1,10 @@
 # Anion Next 24 Hours Execution Board
 
+This is the canonical execution surface for active Anion work.
+
+Use `CLIENT-HANDOVER.md` for deployment prerequisites and client-facing setup context.
+Use `M2-M5-IMPLEMENTATION-PLAN.md` for structured implementation sequencing.
+
 Window: 2026-05-06 to 2026-05-07
 Goal: Close M1 hardening and ship one M2 end-to-end vertical slice.
 
@@ -59,7 +64,20 @@ Goal: Close M1 hardening and ship one M2 end-to-end vertical slice.
   - Status docs match implementation state with no stale milestone labels.
   - Next action list references M2 vertical slice and smoke automation.
 
+## Task 5: Production Readiness Hand-off Closure
+- Owner: Delivery and Platform lane
+- Priority: P1
+- Scope:
+  - Complete Supabase production auth allow-list configuration.
+  - Confirm Stripe prices and webhook configuration are mapped into runtime env vars.
+  - Confirm Daily credentials are set in runtime environment.
+  - Run build and deploy workflow once runtime variables are present.
+- Acceptance criteria:
+  - Sign-up, booking, subscription, lesson join, and admin view are verified in production path.
+  - Handover checklist items in `CLIENT-HANDOVER.md` are resolved or explicitly deferred with owner and ETA.
+
 ## Completion Gate for Next 24 Hours
 - M1 hardening is closed and temporary fallback is removed.
 - M2 vertical slice is merged and manually validated in local runtime.
 - Smoke automation baseline is operational for auth and booking core.
+- Production readiness hand-off dependencies are tracked to closure or explicit defer.
