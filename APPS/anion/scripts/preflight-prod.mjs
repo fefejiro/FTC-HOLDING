@@ -130,7 +130,7 @@ function printSummaryAndExit() {
   const failures = results.filter((result) => !result.ok);
   console.log('\n=== Preflight Production Summary ===');
   for (const result of results) {
-    console.log(`- [${result.ok ? 'PASS' : 'FAIL'}] ${result.name}${result.detail ? ` — ${result.detail}` : ''}`);
+    console.log(`- [${result.ok ? 'PASS' : 'FAIL'}] ${result.name}${result.detail ? ` - ${result.detail}` : ''}`);
   }
 
   if (failures.length > 0) {
