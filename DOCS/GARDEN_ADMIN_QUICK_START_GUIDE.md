@@ -4,7 +4,15 @@ Welcome to your Garden Cleaners admin dashboard! This guide will help you log in
 
 ---
 
-## 1. Login Steps (Magic Link)
+
+## 1. Login Steps (Supported Auth)
+Garden Cleaners portal supports:
+- Supabase email/password
+- Magic link / OTP (sign-in link via email)
+- Invite and password reset flows
+
+Google/social OAuth is not implemented.
+
 1. Go to the Garden Cleaners portal: https://gardencleaners.ca/garden-cleaners/portal
 2. Enter your admin email address and click "Send Magic Link" (or similar button).
 3. Check your email inbox for a message titled "FTC Client Portal".
@@ -21,7 +29,10 @@ Welcome to your Garden Cleaners admin dashboard! This guide will help you log in
 
 ---
 
+
 ## 3. Admin Dashboard Orientation
+- **Roles:** admin, staff, client (assigned via env allowlists, admin UI, or DB)
+- **Admin UI capabilities:** invite/resend invite, password reset, disable/enable, role update, user listing
 - **Top Navigation:** Access main areas (dashboard, jobs, quotes, sign out)
 - **Quote/Job Queue:** List of all incoming quotes and jobs. Each row shows:
   - Client name and contact
@@ -39,6 +50,7 @@ Welcome to your Garden Cleaners admin dashboard! This guide will help you log in
 
 ---
 
+
 ## 4. Common Admin Tasks
 - **Review a Quote/Job:**
   - Click on any row in the queue to see details
@@ -53,6 +65,7 @@ Welcome to your Garden Cleaners admin dashboard! This guide will help you log in
   - Use the "Sign Out" or "Log Out" button in the navigation
 - **Request Support:**
   - Look for a "Support" or "Help" link, or contact your onboarding representative
+- **Audit logging:** Admin user-management actions are logged to `garden_cleaners_audit_log` where implemented. Broader dashboard telemetry is recommended for future.
 
 ---
 

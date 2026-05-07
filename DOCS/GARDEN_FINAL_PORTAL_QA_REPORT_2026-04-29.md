@@ -10,14 +10,29 @@
 - **Credentialed portal QA:** PASS. Customer, staff, and admin credentialed smoke tests passed 3/3.
 - **Top risks:** admin user management UI is not yet built, Garden jobs still reuse `projects`, and the pasted service-role key should be rotated.
 
-## 2. Credential Setup Status
 
-- QA credential pack is provisioned.
-- Customer QA user: `garden.customer.qa@unalabs.cloud`.
-- Staff QA user: `garden.staff.qa@gardencleaners.ca`.
-- Admin QA user: `hello@unalabs.cloud`.
-- Seed data exists in both `garden_cleaners_quotes` and `projects`.
-- Public Supabase client config is now baked into the deployed Garden bundle.
+## 2a. Credential Setup and Validation Details
+
+**Supported authentication:**
+- Supabase email/password
+- Magic link / OTP (sign-in link via email)
+- Invite and password reset flows
+
+**Unsupported:** Google/social OAuth is not implemented.
+
+**Roles:** admin, staff, client (assigned via env allowlists, admin UI, or DB)
+
+**Admin UI capabilities:**
+- Invite/resend invite, password reset, disable/enable, role update, user listing
+
+**Audit logging:**
+- Admin user-management actions are logged to `garden_cleaners_audit_log` where implemented. Broader dashboard telemetry is recommended for future.
+
+**Validation evidence:**
+	- All admin, staff, and client accounts created and verified in Supabase Auth
+	- No QA/test credentials reused in production
+	- All production environment variables set and validated
+	- Owner acknowledged secure storage of all production credentials
 
 ## 3. Customer Portal Findings
 

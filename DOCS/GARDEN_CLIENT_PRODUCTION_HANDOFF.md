@@ -31,33 +31,47 @@ For production client access, the following accounts should be created:
 
 ---
 
-### 4. Secure Handoff Process
+
+### 4. Supported Authentication Methods
+Garden Cleaners portal supports the following authentication methods:
+- **Supabase email/password**
+- **Magic link / OTP** (one-time password via email)
+- **Invite and password reset flows**
+
+**Unsupported:** Google or social OAuth is not implemented.
+
 To securely onboard production users:
 1. **Create user(s) in Supabase Auth** (via dashboard or admin UI).
-2. **Assign the correct role** in the database (client_owner, staff, etc.).
+2. **Assign the correct role** in the database (admin, staff, client) via environment allowlists, admin UI, or direct DB profile management.
 3. **Send password reset or invite link** to the user’s email address.
 4. **Never store or transmit passwords in documentation or email.**
 5. Confirm user can log in and access the correct portal features.
 
 ---
 
+
 ### 5. Pre-Handoff Security Gate
 - **Service role/key rotation is deferred for now, but is required before final external handoff.**
 - Rotation must be coordinated with environment variable updates, redeployment, and post-rotation QA.
 - Do not rotate keys or update secrets until all parties are ready and a coordinated plan is in place.
+- **Handoff status:** Controlled walkthrough GO; full handoff HOLD until owner acceptance, security signoff, and key rotation or explicit deferral.
 
 ---
 
 ### 6. Client Handoff Checklist
 - **Login URL:** [https://garden-cleaners.yoursite.com/portal](https://garden-cleaners.yoursite.com/portal)
-- **Role:** (e.g., client_owner, staff, etc. — specify per user)
+- **Roles:** admin, staff, client (assigned via env allowlists, admin UI, or DB)
 - **What client can do today:**
   - Access portal dashboard
   - View and manage quotes
   - Manage staff/cleaner accounts (if enabled)
   - View status and history
+- **Admin UI capabilities:**
+  - Invite/resend invite, password reset, disable/enable, role update, user listing
+- **Audit logging:** Admin user-management actions are logged to `garden_cleaners_audit_log` where implemented. Broader dashboard telemetry is recommended for future.
 - **What is still coming:**
   - Additional reporting features
+  - Broader telemetry/dashboard sync (future)
   - Enhanced notifications
   - Any other planned improvements (list specifics if known)
 - **Support/reset process:**

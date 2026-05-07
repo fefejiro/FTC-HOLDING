@@ -24,6 +24,13 @@
 
 ## 2. Admin User Manual
 
+**Supported authentication methods:**
+- Supabase email/password
+- Magic link / OTP (sign-in link via email)
+- Invite and password reset flows
+
+**Unsupported:** Google/social OAuth is not implemented.
+
 - **How to Access Portal:**
   - Go to https://gardencleaners.ca/garden-cleaners/portal
 - **How to Request Magic Link:**
@@ -37,14 +44,18 @@
 - **How to Read the Dashboard:**
   - View all active jobs, quotes, and assignments
   - Filter by status or assigned staff
+- **Admin UI capabilities:**
+  - Invite/resend invite, password reset, disable/enable, role update, user listing
+- **Roles:** admin, staff, client (assigned via env allowlists, admin UI, or DB)
 - **What Admin Can Currently Do:**
   - View and manage all jobs and quotes
   - Assign staff to jobs
   - Update job status
-  - Invite new staff (if enabled)
 - **What Staff/Customer Roles Can See:**
   - Staff: See assigned jobs and update status
   - Customer: View their own job status (preview)
+- **Audit logging:**
+  - Admin user-management actions are logged to `garden_cleaners_audit_log` where implemented. Broader dashboard telemetry is recommended for future.
 - **What Is Not Available Yet:**
   - Bulk actions, advanced reporting, and customer self-service (planned for next phase)
 

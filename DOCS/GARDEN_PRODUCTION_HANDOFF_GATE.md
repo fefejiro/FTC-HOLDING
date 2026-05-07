@@ -54,6 +54,8 @@ Full client handoff: GO pending only final owner/client acceptance/security sign
 
 ## Required Production Account Setup
 - Owner must create and verify all production admin, staff, and customer accounts in Supabase Auth.
+- Roles: admin, staff, client (assigned via env allowlists, admin UI, or DB)
+- Supported authentication: Supabase email/password, magic link/OTP, invite/reset. Google/social OAuth is not implemented.
 - No QA/test credentials may be reused in production.
 - All production environment variables must be set and validated.
 - Owner must securely store and acknowledge all production credentials.
