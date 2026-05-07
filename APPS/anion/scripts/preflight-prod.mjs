@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(scriptDir, '..');
 const migrationsDir = path.join(appRoot, 'supabase', 'migrations');
-const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmExecPath = process.env.npm_execpath;
 
 // Keep this list aligned with APPS/anion/.env.example and runtime usage in app/api/* routes.
 const requiredEnvVars = [
@@ -98,17 +98,30 @@ function checkMigrationSanity() {
 }
 
 function runCommandCheck(name, npmArgs) {
-  console.log(`\n> Running ${name}: ${npmCmd} ${npmArgs.join(' ')}`);
-  const child = spawnSync(npmCmd, npmArgs, {
+  const useNpmExecPath = typeof npmExecPath === 'string' && npmExecPath.trim().length > 0;
+  const cmd = useNpmExecPath ? process.execPath : (process.platform === 'win32' ? 'npm.cmd' : 'npm');
+  const args = useNpmExecPath ? [npmExecPath, ...npmArgs] : npmArgs;
+
+  console.log(`\n> Running ${name}: ${cmd} ${args.join(' ')}`);
+  const child = spawnSync(cmd, args, {
     cwd: appRoot,
     stdio: 'inherit',
     env: process.env,
   });
 
   const ok = child.status === 0;
-  const detail = ok
-    ? 'Completed successfully'
-    : `Exited with code ${typeof child.status === 'number' ? child.status : 'unknown'}`;
+  let detail = 'Completed successfully';
+  if (!ok) {
+    if (child.error) {
+      detail = `Command failed before exit code: ${child.error.message}`;
+    } else if (typeof child.status === 'number') {
+      detail = `Exited with code ${child.status}`;
+    } else if (child.signal) {
+      detail = `Terminated by signal ${child.signal}`;
+    } else {
+      detail = 'Exited with unknown failure mode';
+    }
+  }
 
   record(name, ok, detail);
 }
