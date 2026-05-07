@@ -11,6 +11,8 @@ import { initializeReEngagementScheduler } from "./services/reEngagementSchedule
 import { setupSoftAuth } from "./softAuth";
 import { killProcessOnPort, HealthMonitor, setupAutoCleanup } from "./autoRecovery";
 import path from "path";
+import { randomUUID } from "crypto";
+import { axiomTransport, createLogger } from "@ftc/logger";
 import { config } from "./config";
 
 // Detect build mode for Play Store APK/AAB builds
@@ -29,6 +31,19 @@ if (global.gc && isBuildMode) {
 export const BUILD_ID = Date.now().toString();
 
 const app = express();
+
+function normalizeRequestId(value: unknown): string | null {
+  const safe = String(value ?? "").trim();
+  if (!safe) return null;
+  return safe.slice(0, 120);
+}
+
+const axiomToken = process.env.AXIOM_TOKEN || "";
+const axiomDataset = process.env.AXIOM_DATASET_PEACEPAD || process.env.AXIOM_DATASET || "";
+const serviceLogger = createLogger("peacepad-api", {
+  context: { source: "peacepad-api" },
+  transports: axiomToken && axiomDataset ? [axiomTransport({ token: axiomToken, dataset: axiomDataset })] : [],
+});
 
 type JsonRpcId = string | number | null;
 
@@ -283,6 +298,16 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.set("trust proxy", 1);
 
+app.use((req: any, res, next) => {
+  const requestId =
+    normalizeRequestId(req.headers["x-request-id"]) ||
+    normalizeRequestId(req.headers["x-correlation-id"]) ||
+    randomUUID();
+  req.requestId = requestId;
+  res.setHeader("x-request-id", requestId);
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -317,13 +342,7 @@ app.use((req, res, next) => {
   app.use((req: any, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+  const requestId = normalizeRequestId(req.requestId) || randomUUID();
 
   res.on("finish", () => {
     const duration = Date.now() - start;
@@ -339,16 +358,21 @@ app.use((req, res, next) => {
       // Note: User tracking moved to routes.ts after auth middleware
       // so req.user is populated
       
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      const logPayload = {
+        requestId,
+        method: req.method,
+        path,
+        statusCode: res.statusCode,
+        durationMs: duration,
+      };
+      if (res.statusCode >= 500) {
+        serviceLogger.error("api_request_failed", logPayload);
+      } else if (res.statusCode >= 400) {
+        serviceLogger.warn("api_request_client_error", logPayload);
+      } else {
+        serviceLogger.info("api_request_completed", logPayload);
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "...";
-      }
-
-      log(logLine);
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
 
@@ -378,14 +402,23 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
+    const requestId = normalizeRequestId(((_req as any).requestId)) || randomUUID();
 
     // Only send response if headers haven't been sent yet
     if (!res.headersSent) {
+      res.setHeader("x-request-id", requestId);
       res.status(status).json({ message });
     }
 
     // Log the error but don't throw it (prevents double-sending headers)
     if (status >= 500) {
+      serviceLogger.error("server_error", {
+        requestId,
+        status,
+        path: _req.path,
+        method: _req.method,
+        message: err?.message || message,
+      });
       console.error('Server error:', err);
     }
   });

@@ -30,6 +30,7 @@
                     "guard:openai-secrets:test":  "node scripts/guard-openai-secrets.mjs --self-test"
                 },
     "dependencies":  {
+                         "@ftc/logger": "1.0.0",
                          "@capacitor/android":  "^7.4.5",
                          "@capacitor/app":  "^7.1.0",
                          "@capacitor/cli":  "^7.4.5",

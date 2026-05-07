@@ -1,16 +1,30 @@
+import { axiomTransport, createLogger } from "@ftc/logger";
+
 type LogMeta = Record<string, unknown> | undefined;
 
+const axiomToken = process.env.AXIOM_TOKEN || "";
+const axiomDataset = process.env.AXIOM_DATASET_FTC_SITE || process.env.AXIOM_DATASET || "";
+
+const serviceLogger = createLogger("ftc-site", {
+  context: { source: "ftc-site" },
+  transports: axiomToken && axiomDataset ? [axiomTransport({ token: axiomToken, dataset: axiomDataset })] : [],
+});
+
 function write(level: "info" | "warn" | "error", event: string, meta?: LogMeta) {
-  const payload = {
-    source: "ftc-site",
-    event,
-    ...(meta ?? {})
-  };
-
-  const loggerFn =
-    level === "error" ? console.error : level === "warn" ? console.warn : console.info;
-
-  loggerFn(`[ftc-site] ${event}`, payload);
+  const requestId =
+    typeof meta?.requestId === "string" && meta.requestId.trim()
+      ? meta.requestId.trim().slice(0, 120)
+      : crypto.randomUUID();
+  const payload = { event, requestId, ...(meta ?? {}) };
+  if (level === "error") {
+    serviceLogger.error(event, payload);
+    return;
+  }
+  if (level === "warn") {
+    serviceLogger.warn(event, payload);
+    return;
+  }
+  serviceLogger.info(event, payload);
 }
 
 export const logger = {
