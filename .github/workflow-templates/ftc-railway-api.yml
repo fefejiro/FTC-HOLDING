@@ -1,0 +1,65 @@
+name: ftc-railway-api
+
+on:
+  pull_request:
+    paths:
+      - 'APPS/<app-name>/**'
+      - '.github/workflows/<workflow-file>.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'APPS/<app-name>/**'
+      - '.github/workflows/<workflow-file>.yml'
+  workflow_dispatch:
+
+env:
+  APP_PATH: APPS/<app-name>
+  NODE_VERSION: '22'
+  BUILD_CMD: npm run build
+  RAILWAY_SERVICE: <railway-service-name>
+
+jobs:
+  ci:
+    name: Build API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build API
+        run: npm --prefix "$APP_PATH" run build
+
+  deploy:
+    name: Deploy API to Railway
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build API
+        run: npm --prefix "$APP_PATH" run build
+
+      - name: Deploy via Railway CLI
+        working-directory: ${{ env.APP_PATH }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm i -g @railway/cli
+          railway up --service "$RAILWAY_SERVICE" --ci

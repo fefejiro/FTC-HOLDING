@@ -1,0 +1,73 @@
+name: ftc-cf-pages
+
+on:
+  pull_request:
+    paths:
+      - 'APPS/<app-name>/**'
+      - '.github/workflows/<workflow-file>.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'APPS/<app-name>/**'
+      - '.github/workflows/<workflow-file>.yml'
+  workflow_dispatch:
+
+env:
+  APP_PATH: APPS/<app-name>
+  NODE_VERSION: '22'
+  CF_PAGES_PROJECT: <cloudflare-pages-project-name>
+  CF_BUILD_OUTPUT_DIR: .vercel/output/static
+
+jobs:
+  ci:
+    name: Build Next.js app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js for Cloudflare Pages
+        run: |
+          npm --prefix "$APP_PATH" run build
+          npx --yes @cloudflare/next-on-pages@1 --cwd "$APP_PATH"
+
+  deploy:
+    name: Deploy to Cloudflare Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js for Cloudflare Pages
+        run: |
+          npm --prefix "$APP_PATH" run build
+          npx --yes @cloudflare/next-on-pages@1 --cwd "$APP_PATH"
+
+      - name: Deploy preview/production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler pages deploy "$APP_PATH/$CF_BUILD_OUTPUT_DIR" \
+            --project-name "$CF_PAGES_PROJECT" \
+            --branch "${GITHUB_REF_NAME}"

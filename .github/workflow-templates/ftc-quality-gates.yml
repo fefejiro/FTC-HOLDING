@@ -1,0 +1,71 @@
+name: ftc-quality-gates
+
+on:
+  pull_request:
+    paths:
+      - 'APPS/<app-name>/**'
+      - '.github/workflows/<workflow-file>.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'APPS/<app-name>/**'
+      - '.github/workflows/<workflow-file>.yml'
+  workflow_dispatch:
+
+env:
+  APP_PATH: APPS/<app-name>
+  NODE_VERSION: '22'
+  LINT_CMD: npm run lint
+  TSC_CMD: npm run check
+  AUDIT_CMD: npm audit --audit-level=high
+  DOC_DRIFT_CMD: node scripts/docs-guard.mjs
+
+jobs:
+  quality-gates:
+    name: Quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint gate
+        run: |
+          if [ -n "$LINT_CMD" ]; then
+            (cd "$APP_PATH" && bash -lc "$LINT_CMD")
+          else
+            echo "LINT_CMD not set, skipping"
+          fi
+
+      - name: TypeScript gate
+        run: |
+          if [ -n "$TSC_CMD" ]; then
+            (cd "$APP_PATH" && bash -lc "$TSC_CMD")
+          else
+            echo "TSC_CMD not set, skipping"
+          fi
+
+      - name: Dependency audit gate
+        run: |
+          if [ -n "$AUDIT_CMD" ]; then
+            (cd "$APP_PATH" && bash -lc "$AUDIT_CMD")
+          else
+            echo "AUDIT_CMD not set, skipping"
+          fi
+
+      - name: Doc-drift gate
+        run: |
+          if [ -n "$DOC_DRIFT_CMD" ]; then
+            bash -lc "$DOC_DRIFT_CMD"
+          else
+            echo "DOC_DRIFT_CMD not set, skipping"
+          fi
