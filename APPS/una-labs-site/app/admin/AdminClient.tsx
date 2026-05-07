@@ -2064,7 +2064,7 @@ export function AdminClient() {
                     <div className="mt-3 space-y-2">
                       {panel.items.length === 0 && <p className="text-body-sm text-tx-muted">No items.</p>}
                       {panel.items.slice(0, 6).map((item) => (
-                        <a key={`${panel.title}-${item.issue_number}-${item.title}`} href={item.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border px-3 py-2 hover:bg-bg-offwhite transition-colors">
+                        <a key={`${panel.title}-${item.issue_number}`} href={item.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border px-3 py-2 hover:bg-bg-offwhite transition-colors">
                           <p className="text-body-sm font-medium text-tx-heading line-clamp-2">{item.title}</p>
                           <p className="text-[11px] uppercase tracking-wide text-tx-muted mt-1">{item.area} · {statusToken(item.status)}</p>
                         </a>
@@ -2123,7 +2123,7 @@ export function AdminClient() {
                         </thead>
                         <tbody>
                           {build.tasks.slice(0, 4).map((task) => (
-                            <tr key={`${build.id}-task-${task.issue_number}-${task.title}`} className="border-t border-border">
+                            <tr key={`${build.id}-task-${task.issue_number}`} className="border-t border-border">
                               <td className="px-3 py-2">
                                 <a href={task.url} target="_blank" rel="noopener noreferrer" className="hover:text-brand-teal line-clamp-2">
                                   {task.title}

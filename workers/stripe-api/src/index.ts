@@ -5358,6 +5358,9 @@ type CommandCenterPayload = {
   snapshots: CommandCenterSnapshot[];
 };
 
+const COMMAND_CENTER_TRACK_LABEL = 'Track A · High-polish 2.5D fast (weeks)';
+const FTC_HOLDING_ISSUES_URL = 'https://github.com/fefejiro/FTC-HOLDING/issues';
+
 function normalizeGitHubStatus(statusLabel: string | null, state: string): CommandCenterTask['status'] {
   if (state === 'closed') return 'done';
   const label = (statusLabel ?? '').toLowerCase();
@@ -5386,11 +5389,8 @@ function extractSnapshotUrls(body: string | null): string[] {
   return [...new Set(urls)];
 }
 
-function getTrackLabel(labels: string[]): string {
-  if (labels.some((label) => label.toLowerCase() === 'track:a')) {
-    return 'Track A · High-polish 2.5D fast (weeks)';
-  }
-  return 'Track A · High-polish 2.5D fast (weeks)';
+function getTrackLabel(): string {
+  return COMMAND_CENTER_TRACK_LABEL;
 }
 
 function buildBurndown(tasks: CommandCenterTask[]): Array<{ label: string; remaining: number }> {
@@ -5418,36 +5418,36 @@ function makeFallbackCommandCenter(ownerLogin: string, reason: string): { issues
     {
       issue_number: 900001,
       title: 'Track A command center polish pass',
-      url: 'https://github.com/fefejiro/FTC-HOLDING/issues',
+      url: FTC_HOLDING_ISSUES_URL,
       status: 'in-progress',
       status_label: 'status:in-progress',
       assignee: ownerLogin,
       area: 'una-labs',
-      track: 'Track A · High-polish 2.5D fast (weeks)',
+      track: COMMAND_CENTER_TRACK_LABEL,
       updated_at: now,
       created_at: now,
     },
     {
       issue_number: 900002,
       title: 'SayWetin build screenshot refresh',
-      url: 'https://github.com/fefejiro/FTC-HOLDING/issues',
+      url: FTC_HOLDING_ISSUES_URL,
       status: 'pending',
       status_label: 'status:pending',
       assignee: ownerLogin,
       area: 'saywetin',
-      track: 'Track A · High-polish 2.5D fast (weeks)',
+      track: COMMAND_CENTER_TRACK_LABEL,
       updated_at: now,
       created_at: now,
     },
     {
       issue_number: 900003,
       title: `GitHub API unavailable: ${reason}`,
-      url: 'https://github.com/fefejiro/FTC-HOLDING/issues',
+      url: FTC_HOLDING_ISSUES_URL,
       status: 'blocked',
       status_label: 'status:blocked',
       assignee: ownerLogin,
       area: 'ops',
-      track: 'Track A · High-polish 2.5D fast (weeks)',
+      track: COMMAND_CENTER_TRACK_LABEL,
       updated_at: now,
       created_at: now,
     },
@@ -5469,7 +5469,7 @@ function makeFallbackCommandCenter(ownerLogin: string, reason: string): { issues
       source: 'fallback',
       generated_at: now,
       owner_login: ownerLogin,
-      track: { key: 'track:a', label: 'Track A · High-polish 2.5D fast (weeks)' },
+      track: { key: 'track:a', label: COMMAND_CENTER_TRACK_LABEL },
       summary: {
         done: 0,
         pending: 1,
@@ -5487,7 +5487,7 @@ function makeFallbackCommandCenter(ownerLogin: string, reason: string): { issues
           id: 'fallback-una-labs',
           name: 'Una Labs',
           area: 'una-labs',
-          track: 'Track A · High-polish 2.5D fast (weeks)',
+          track: COMMAND_CENTER_TRACK_LABEL,
           completion_percent: 0,
           done_count: 0,
           open_count: 2,
@@ -5556,7 +5556,7 @@ async function handleAdminGitHubIssues(req: Request, env: Env, origin: string | 
           status_label: statusLabel,
           assignee: issue.assignee?.login ?? (issue.assignees?.[0]?.login ?? null),
           area,
-          track: getTrackLabel(labelNames),
+          track: getTrackLabel(),
           updated_at: issue.updated_at,
           created_at: issue.created_at,
         };
@@ -5600,7 +5600,7 @@ async function handleAdminGitHubIssues(req: Request, env: Env, origin: string | 
           id: `build-${area}`,
           name: toAreaTitle(area),
           area,
-          track: 'Track A · High-polish 2.5D fast (weeks)',
+          track: COMMAND_CENTER_TRACK_LABEL,
           completion_percent: completionPercent,
           done_count: areaDone,
           open_count: areaOpen.length,
@@ -5637,7 +5637,7 @@ async function handleAdminGitHubIssues(req: Request, env: Env, origin: string | 
       source: 'github',
       generated_at: new Date().toISOString(),
       owner_login: ownerLogin,
-      track: { key: 'track:a', label: 'Track A · High-polish 2.5D fast (weeks)' },
+      track: { key: 'track:a', label: COMMAND_CENTER_TRACK_LABEL },
       summary: {
         done: doneCount,
         pending: openTasks.filter((task) => task.status === 'pending' || task.status === 'unlabelled').length,
