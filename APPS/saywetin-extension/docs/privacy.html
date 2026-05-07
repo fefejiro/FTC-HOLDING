@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — SayWetin</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem; color: #1a1a1a; line-height: 1.7; }
+    h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    h2 { font-size: 1.15rem; margin-top: 2rem; }
+    p, li { font-size: 0.95rem; }
+    a { color: #1d6ed8; }
+    .meta { color: #666; font-size: 0.875rem; margin-bottom: 2rem; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy</h1>
+  <p class="meta">Last updated: May 6, 2026</p>
+
+  <p>SayWetin ("we", "our", or "us") operates the SayWetin Chrome extension and the API at <a href="https://api.saywetin.app">api.saywetin.app</a>. This policy explains what data we collect, how we use it, and your rights.</p>
+
+  <h2>1. What we collect</h2>
+  <ul>
+    <li><strong>Audio stream:</strong> When you tap the orb, the extension captures a short segment of audio from your active browser tab using the Chrome <code>tabCapture</code> API. This audio is sent to our backend for recognition only and is not stored after the recognition request completes.</li>
+    <li><strong>Recognition results:</strong> The recognized track name, artist, and cultural-analysis output are returned to your browser and, if you are signed in, saved to your recognition history in our database.</li>
+    <li><strong>Account data (optional):</strong> If you choose to sign in, we store your email address and recognition history. Sign-in is not required to use the extension.</li>
+    <li><strong>No browsing history:</strong> We do not read, store, or transmit your browser history, bookmarks, passwords, or any data from pages you visit.</li>
+  </ul>
+
+  <h2>2. How we use your data</h2>
+  <ul>
+    <li>Audio is used solely to identify the song playing in your tab. It is discarded immediately after the recognition response is produced.</li>
+    <li>Recognition results are used to power the in-extension display and, for signed-in users, to maintain a personal history.</li>
+    <li>We do not sell, rent, or share your data with third parties for advertising or marketing purposes.</li>
+  </ul>
+
+  <h2>3. Data storage and security</h2>
+  <p>Recognition history for signed-in users is stored in a secured database hosted on a cloud provider in Canada. We use HTTPS for all data in transit. Audio is never written to disk on our servers.</p>
+
+  <h2>4. Third-party services</h2>
+  <p>Our backend uses the following services to fulfil requests:</p>
+  <ul>
+    <li><strong>Railway</strong> — cloud hosting for the SayWetin API</li>
+    <li><strong>Music recognition provider</strong> — processes the audio fingerprint to identify the track. No personally identifiable information is sent to this provider.</li>
+  </ul>
+
+  <h2>5. Your rights</h2>
+  <ul>
+    <li>You may delete your recognition history at any time from within the extension.</li>
+    <li>You may request deletion of your account and all associated data by emailing <a href="mailto:hello@saywetin.app">hello@saywetin.app</a>.</li>
+    <li>You may use the extension without creating an account, in which case no personal data is stored on our servers.</li>
+  </ul>
+
+  <h2>6. Children</h2>
+  <p>SayWetin is not directed at children under 13. We do not knowingly collect data from children under 13.</p>
+
+  <h2>7. Changes to this policy</h2>
+  <p>We may update this policy. The "Last updated" date at the top will reflect any changes. Continued use of the extension after a policy change constitutes acceptance.</p>
+
+  <h2>8. Contact</h2>
+  <p>Questions? Email us at <a href="mailto:hello@saywetin.app">hello@saywetin.app</a>.</p>
+</body>
+</html>
