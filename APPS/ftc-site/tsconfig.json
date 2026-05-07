@@ -22,6 +22,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@ftc/stats-ledger": [
+        "../../PACKAGES/stats-ledger/src/index.ts"
       ]
     },
     "plugins": [

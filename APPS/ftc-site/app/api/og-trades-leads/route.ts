@@ -414,6 +414,49 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  try {
+    const statsUrl = new URL("/api/og-trades-stats-bot", req.nextUrl.origin).toString();
+    const statsEventType = supabaseError ? "lead_submission_storage_failed" : "lead_submitted";
+
+    const statsPayload = {
+      idempotencyKey: lead.requestId,
+      source: "og-trades-stats-bot",
+      eventType: statsEventType,
+      value: 1,
+      metadata: {
+        interest: lead.interest,
+        experienceLevel: lead.experienceLevel,
+        primaryGoal: lead.primaryGoal,
+        timeline: lead.timeline,
+        webhookSent,
+        confirmationSent: Boolean(confirmationSent),
+        supabaseOk: !supabaseError
+      },
+      occurredAt: lead.receivedAt
+    };
+
+    const statsResponse = await fetch(statsUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-idempotency-key": lead.requestId
+      },
+      body: JSON.stringify(statsPayload)
+    });
+
+    if (!statsResponse.ok) {
+      logger.warn("og_trades_stats_bot_record_failed", {
+        status: statsResponse.status,
+        requestId: lead.requestId
+      });
+    }
+  } catch (error) {
+    logger.warn("og_trades_stats_bot_record_error", {
+      requestId: lead.requestId,
+      message: error instanceof Error ? error.message : "unknown"
+    });
+  }
+
   return NextResponse.json(
     {
       ok: !supabaseError,

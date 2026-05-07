@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build:deps": "npm run build --workspace=@ftc/config && npm run build --workspace=@ftc/types && npm run build --workspace=@ftc/logger && npm run build --workspace=@ftc/supabase && npm run build --workspace=@ftc/auth",
+    "build:deps": "npm run build --workspace=@ftc/config && npm run build --workspace=@ftc/types && npm run build --workspace=@ftc/logger && npm run build --workspace=@ftc/supabase && npm run build --workspace=@ftc/auth && npm run build --workspace=@ftc/stats-ledger",
     "prebuild": "npm run build:deps",
     "build": "next build && node scripts/fix-vercel-monorepo-output.mjs",
     "start": "next start",
@@ -19,6 +19,7 @@
     "@ftc/auth": "0.0.0",
     "@ftc/config": "1.0.0",
     "@ftc/logger": "1.0.0",
+    "@ftc/stats-ledger": "*",
     "@ftc/supabase": "0.0.0",
     "@ftc/types": "1.0.0",
     "clsx": "^2.1.1",
