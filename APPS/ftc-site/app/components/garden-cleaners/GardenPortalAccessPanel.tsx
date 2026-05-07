@@ -171,6 +171,7 @@ function resolveRole(email: string): GardenPortalUserRole {
   const defaultAdmins = [
     "hello@unalabs.cloud",
     "fejiro.efiuvwere@gmail.com",
+    "mike.fejiro@mial.com",
     "uby400@gmail.com"
   ];
   const adminEmails = new Set([

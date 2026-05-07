@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 const ADMIN_EMAILS = new Set([
   "hello@unalabs.cloud",
   "fejiro.efiuvwere@gmail.com",
+  "mike.fejiro@mial.com",
   "uby400@gmail.com",
   ...(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS || "")
     .split(",")
