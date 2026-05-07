@@ -1,0 +1,28 @@
+name: SayWetin Extension — Docs Guard
+
+on:
+  pull_request:
+    paths:
+      - 'APPS/saywetin-extension/**'
+
+defaults:
+  run:
+    working-directory: APPS/saywetin-extension
+
+jobs:
+  docs-guard:
+    name: Docs Guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run docs guard
+        run: node scripts/docs-guard.mjs
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
