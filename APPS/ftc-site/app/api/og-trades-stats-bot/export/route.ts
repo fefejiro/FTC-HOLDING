@@ -3,6 +3,7 @@ import { toCsv } from "@ftc/stats-ledger";
 import { getStatsLedger, OG_TRADES_STATS_SOURCE } from "../../../../lib/statsLedger";
 
 export const runtime = "nodejs";
+const MAX_QUERY_LIMIT = 500;
 
 function asString(value: string | null): string | undefined {
   const normalized = (value || "").trim();
@@ -12,7 +13,7 @@ function asString(value: string | null): string | undefined {
 function asLimit(value: string | null): number {
   const num = Number(value || 100);
   if (!Number.isFinite(num)) return 100;
-  return Math.max(1, Math.min(500, Math.floor(num)));
+  return Math.max(1, Math.min(MAX_QUERY_LIMIT, Math.floor(num)));
 }
 
 export async function GET(req: NextRequest) {

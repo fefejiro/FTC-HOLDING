@@ -9,6 +9,7 @@ type Props = {
 };
 
 export const runtime = "nodejs";
+const MAX_QUERY_LIMIT = 500;
 
 export const metadata: Metadata = {
   title: "OG Trades Stats Bot Admin",
@@ -41,13 +42,17 @@ function toSparkline(points: Array<{ day: string; count: number }>): string {
     .join(" ");
 }
 
+function toDateInputValue(value: string): string {
+  return value ? value.slice(0, 10) : "";
+}
+
 export default async function OgTradesStatsBotPage({ searchParams }: Props) {
   const source = readSearchParam(searchParams, "source") || OG_TRADES_STATS_SOURCE;
   const eventType = readSearchParam(searchParams, "eventType");
   const from = readSearchParam(searchParams, "from");
   const to = readSearchParam(searchParams, "to");
   const limit = Number(readSearchParam(searchParams, "limit") || 100);
-  const boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(500, Math.floor(limit))) : 100;
+  const boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(MAX_QUERY_LIMIT, Math.floor(limit))) : 100;
 
   const ledger = getStatsLedger();
   const ledgerUnavailable = !ledger;
@@ -102,11 +107,11 @@ export default async function OgTradesStatsBotPage({ searchParams }: Props) {
               </label>
               <label>
                 <span>From</span>
-                <input type="date" name="from" defaultValue={from.slice(0, 10)} />
+                <input type="date" name="from" defaultValue={toDateInputValue(from)} />
               </label>
               <label>
                 <span>To</span>
-                <input type="date" name="to" defaultValue={to.slice(0, 10)} />
+                <input type="date" name="to" defaultValue={toDateInputValue(to)} />
               </label>
               <label>
                 <span>Limit</span>

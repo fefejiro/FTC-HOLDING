@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 
 const DEFAULT_TABLE_NAME = "stats_ledger_events";
+const MAX_QUERY_LIMIT = 500;
 
 type SqlValue = string | number | boolean | Date | null;
 
@@ -75,15 +76,16 @@ function assertTableName(input: string): string {
 }
 
 function toIsoString(value: unknown): string {
-  if (typeof value === "string") {
-    return new Date(value).toISOString();
+  const date =
+    typeof value === "string" || value instanceof Date
+      ? new Date(value)
+      : new Date(String(value));
+
+  if (Number.isNaN(date.getTime())) {
+    return new Date(0).toISOString();
   }
 
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  return new Date(String(value)).toISOString();
+  return date.toISOString();
 }
 
 function normalizeEvent(row: QueryResultRow): StatsLedgerEvent {
@@ -271,7 +273,7 @@ export function createStatsLedger(options: StatsLedgerOptions = {}): StatsLedger
   async function query(filter: StatsLedgerQueryFilter = {}): Promise<StatsLedgerEvent[]> {
     await ensureSchema();
 
-    const limit = Math.min(Math.max(filter.limit || 50, 1), 500);
+    const limit = Math.min(Math.max(filter.limit || 50, 1), MAX_QUERY_LIMIT);
     const values: SqlValue[] = [];
     const where = buildWhereClause(filter, values);
     values.push(limit);
