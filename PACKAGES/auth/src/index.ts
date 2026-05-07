@@ -17,7 +17,10 @@ export function normalizeEmail(email: string): string {
  * Build a redirect URL for auth flows, using origin or window.location.origin.
  */
 export function authRedirectTo(path: string, origin?: string): string {
-  const base = origin || (typeof window !== 'undefined' ? window.location.origin : '');
+  const runtime = globalThis as typeof globalThis & {
+    location?: { origin?: string };
+  };
+  const base = origin || runtime.location?.origin || '';
   if (!base) return path;
   return base.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path);
 }
