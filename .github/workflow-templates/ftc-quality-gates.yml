@@ -16,6 +16,7 @@ on:
 env:
   APP_PATH: APPS/<app-name>
   NODE_VERSION: '22'
+  # Set any command to an empty string to disable that gate.
   LINT_CMD: npm run lint
   TSC_CMD: npm run check
   AUDIT_CMD: npm audit --audit-level=high

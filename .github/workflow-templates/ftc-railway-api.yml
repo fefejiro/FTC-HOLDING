@@ -35,7 +35,7 @@ jobs:
         run: npm ci
 
       - name: Build API
-        run: npm --prefix "$APP_PATH" run build
+        run: (cd "$APP_PATH" && bash -lc "$BUILD_CMD")
 
   deploy:
     name: Deploy API to Railway
@@ -54,7 +54,7 @@ jobs:
         run: npm ci
 
       - name: Build API
-        run: npm --prefix "$APP_PATH" run build
+        run: (cd "$APP_PATH" && bash -lc "$BUILD_CMD")
 
       - name: Deploy via Railway CLI
         working-directory: ${{ env.APP_PATH }}
