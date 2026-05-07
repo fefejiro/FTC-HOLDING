@@ -1,4 +1,15 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
+// Helper to sanitize backend/internal session errors
+function getSafeSessionErrorCopy(error: unknown): string {
+  const raw = (error instanceof Error ? error.message : String(error || "")).toLowerCase();
+  if (
+    /relation|sessions|database|postgres|sql|connect-pg-simple|internal server error/.test(raw)
+  ) {
+    return "Session sync is temporarily unavailable. You can keep going and retry anytime.";
+  }
+  // Add more known backend/internal error patterns as needed
+  return error instanceof Error ? error.message : "Please try again.";
+}
 import { useLocation } from "wouter";
 import { ArrowRight, CheckCircle, Copy, Mail, MessageSquare, RefreshCw, Sparkles, Upload } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -194,7 +205,7 @@ export default function OnboardingPage() {
     } catch (error) {
       toast({
         title: "Could not continue",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description: getSafeSessionErrorCopy(error),
         variant: "destructive",
       });
     }

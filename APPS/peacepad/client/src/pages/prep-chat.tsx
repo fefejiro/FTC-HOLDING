@@ -1,4 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
+// Helper to sanitize backend/internal session errors
+function getSafeSessionErrorCopy(error: unknown): string {
+  const raw = (error instanceof Error ? error.message : String(error || "")).toLowerCase();
+  if (
+    /relation|sessions|database|postgres|sql|connect-pg-simple|internal server error/.test(raw)
+  ) {
+    return "Session sync is temporarily unavailable. You can keep going and retry anytime.";
+  }
+  // Add more known backend/internal error patterns as needed
+  return error instanceof Error ? error.message : "PeacePad could not start your guest session.";
+}
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Check, ClipboardList, MessageCircle, PenLine, Plus, RefreshCw, Sparkles } from "lucide-react";
@@ -116,9 +127,7 @@ export default function PrepChatPage() {
     ensureGuestSession()
       .catch((error) => {
         if (!cancelled) {
-          const message =
-            error instanceof Error ? error.message : "PeacePad could not start your guest session.";
-          setGuestBootstrapError(message);
+          setGuestBootstrapError(getSafeSessionErrorCopy(error));
         }
       })
       .finally(() => {
@@ -369,11 +378,7 @@ export default function PrepChatPage() {
                       setIsBootstrappingGuest(true);
                       ensureGuestSession()
                         .catch((error) => {
-                          const message =
-                            error instanceof Error
-                              ? error.message
-                              : "PeacePad could not start your guest session.";
-                          setGuestBootstrapError(message);
+                          setGuestBootstrapError(getSafeSessionErrorCopy(error));
                         })
                         .finally(() => {
                           setIsBootstrappingGuest(false);
