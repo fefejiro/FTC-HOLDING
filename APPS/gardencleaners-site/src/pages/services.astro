@@ -1,0 +1,83 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ServiceCard from '../components/ServiceCard.astro';
+import CTABanner from '../components/CTABanner.astro';
+import { services } from '../content/site';
+---
+<BaseLayout title="Cleaning Services — Garden Cleaners" description="Residential, commercial, deep, move-in/move-out, post-construction, recurring, and office cleaning across Oshawa and Durham Region.">
+  <section class="section">
+    <div class="container-page max-w-4xl">
+      <p class="eyebrow">Services</p>
+      <h1 class="h1 mt-2">Cleaning services for every kind of space.</h1>
+      <p class="lede mt-5">From routine home cleaning to commercial upkeep and turnover-ready deep cleans, Garden Cleaners offers a focused range of services for properties across Oshawa and Durham Region.</p>
+    </div>
+  </section>
+
+  <section class="section bg-white">
+    <div class="container-page">
+      <p class="eyebrow">How we scope service</p>
+      <h2 class="h2 mt-2">Three common starting points.</h2>
+      <div class="mt-8 grid md:grid-cols-3 gap-5">
+        <div class="card">
+          <h3 class="h3">Standard recurring upkeep</h3>
+          <ul class="mt-3 space-y-2 text-sm text-gc-ink/80">
+            <li>Weekly, bi-weekly, monthly</li>
+            <li>Predictable rhythm</li>
+            <li>Consistent baseline standard</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 class="h3">Deep clean and reset</h3>
+          <ul class="mt-3 space-y-2 text-sm text-gc-ink/80">
+            <li>First-visit detailed reset</li>
+            <li>Seasonal or pre-listing</li>
+            <li>Optional add-ons available</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 class="h3">Turnover and handoff</h3>
+          <ul class="mt-3 space-y-2 text-sm text-gc-ink/80">
+            <li>Move-in / move-out</li>
+            <li>Post-construction cleanup</li>
+            <li>Vacancy ready for new occupants</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-page">
+      <p class="eyebrow">Full service list</p>
+      <h2 class="h2 mt-2">Pick the service that fits the property.</h2>
+      <div class="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {services.map((s) => (
+          <div id={s.slug}><ServiceCard service={s} /></div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section bg-white">
+    <div class="container-page">
+      <p class="eyebrow">What shapes pricing</p>
+      <h2 class="h2 mt-2">Quotes are built on real property factors.</h2>
+      <div class="mt-8 grid md:grid-cols-3 gap-5">
+        <div class="card"><h3 class="h3">Property size and layout</h3><p class="mt-2 text-sm text-gc-ink/80">Square footage, room count, bathrooms, and floor type all affect the time and team required.</p></div>
+        <div class="card"><h3 class="h3">Current condition and reset level</h3><p class="mt-2 text-sm text-gc-ink/80">A regular maintenance visit and a first-time deep clean are not the same job. We scope accordingly.</p></div>
+        <div class="card"><h3 class="h3">Scheduling and service rhythm</h3><p class="mt-2 text-sm text-gc-ink/80">Recurring schedules typically price differently than one-time visits or last-minute turnover work.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-page card max-w-3xl">
+      <p class="eyebrow">Client portal</p>
+      <h2 class="h3 mt-2">Returning client?</h2>
+      <p class="mt-2 text-sm text-gc-ink/80">Existing clients can access their portal for upcoming visits and account details.</p>
+      <a href="/portal" class="mt-4 inline-block btn-secondary" data-analytics-event="garden_portal_entry_click">Open Client Portal</a>
+    </div>
+  </section>
+
+  <CTABanner title="Ready to scope a clean?" description="Submit a quote and we'll align the right service to your property." />
+</BaseLayout>

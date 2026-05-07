@@ -1,15 +1,15 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import http from 'node:http';
-import { spawnSync } from 'node:child_process';
+import fs from "node:fs";
+import path from "node:path";
+import http from "node:http";
+import { spawnSync } from "node:child_process";
 
 const ROOT = process.cwd();
-const CAREER_DIR = path.join(ROOT, 'career');
-const OUTPUTS_DIR = path.join(CAREER_DIR, 'outputs');
-const PROFILE_PATH = path.join(CAREER_DIR, 'profile.json');
-const ANSWERS_PATH = path.join(CAREER_DIR, 'candidate-answers.json');
+const CAREER_DIR = path.join(ROOT, "career");
+const OUTPUTS_DIR = path.join(CAREER_DIR, "outputs");
+const PROFILE_PATH = path.join(CAREER_DIR, "profile.json");
+const ANSWERS_PATH = path.join(CAREER_DIR, "candidate-answers.json");
 
-function parseArg(flag, fallback = '') {
+function parseArg(flag, fallback = "") {
   const i = process.argv.indexOf(flag);
   if (i >= 0 && i + 1 < process.argv.length) return process.argv[i + 1];
   return fallback;
@@ -29,55 +29,66 @@ function newestFileByPrefixAndExt(dir, prefix, ext) {
       mtime: fs.statSync(path.join(dir, f)).mtimeMs,
     }))
     .sort((a, b) => b.mtime - a.mtime);
-  return files[0]?.full || '';
+  return files[0]?.full || "";
 }
 
 function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
 function splitName(fullName) {
-  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return { firstName: parts[0] || '', lastName: '' };
-  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+  const parts = String(fullName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length <= 1) return { firstName: parts[0] || "", lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
 }
 
 function isQuickApplyLikely(job) {
-  const blob = `${job.source || ''} ${job.title || ''} ${job.description || ''} ${job.link || ''}`.toLowerCase();
+  const blob =
+    `${job.source || ""} ${job.title || ""} ${job.description || ""} ${job.link || ""}`.toLowerCase();
   if (/easy\s*apply/.test(blob)) return true;
-  if (/linkedin|indeed/.test(String(job.source || '').toLowerCase())) return true;
+  if (/linkedin|indeed/.test(String(job.source || "").toLowerCase()))
+    return true;
   return false;
 }
 
 function escHtml(s) {
-  return String(s || '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
+  return String(s || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 function buildAutofillPayload(profile, answers) {
-  const { firstName, lastName } = splitName(profile?.candidate?.name || answers?.contact?.name || '');
-  const location = profile?.candidate?.location || '';
+  const { firstName, lastName } = splitName(
+    profile?.candidate?.name || answers?.contact?.name || "",
+  );
+  const location = profile?.candidate?.location || "";
 
   return {
     firstName,
     lastName,
-    fullName: profile?.candidate?.name || answers?.contact?.name || '',
-    email: answers?.contact?.email || profile?.candidate?.email || '',
-    phone: answers?.contact?.phone || profile?.candidate?.phone || '',
+    fullName: profile?.candidate?.name || answers?.contact?.name || "",
+    email: answers?.contact?.email || profile?.candidate?.email || "",
+    phone: answers?.contact?.phone || profile?.candidate?.phone || "",
     location,
-    city: location.split(',')[0]?.trim() || '',
-    linkedin: answers?.contact?.linkedin || profile?.candidate?.linkedin || '',
-    website: answers?.contact?.website || profile?.candidate?.website || '',
-    availabilityToStart: answers?.availabilityToStart || 'Immediate',
-    availabilityToInterview: answers?.availabilityToInterview || 'Immediate',
-    rateExpectation: answers?.rateExpectation || 'Starting at $85/hr contract, can be higher depending on scope and complexity',
-    authorizedToWork: answers?.authorizedToWork || 'Yes',
-    requiresSponsorship: answers?.requiresSponsorship || 'No',
-    openToTravel: answers?.openToTravel || 'Yes',
-    workPreference: answers?.workPreference || 'Remote priority, open to US and Canada contract roles, open to Ontario hybrid',
+    city: location.split(",")[0]?.trim() || "",
+    linkedin: answers?.contact?.linkedin || profile?.candidate?.linkedin || "",
+    website: answers?.contact?.website || profile?.candidate?.website || "",
+    availabilityToStart: answers?.availabilityToStart || "Immediate",
+    availabilityToInterview: answers?.availabilityToInterview || "Immediate",
+    rateExpectation:
+      answers?.rateExpectation ||
+      "Starting at $85/hr contract, can be higher depending on scope and complexity",
+    authorizedToWork: answers?.authorizedToWork || "Yes",
+    requiresSponsorship: answers?.requiresSponsorship || "No",
+    openToTravel: answers?.openToTravel || "Yes",
+    workPreference:
+      answers?.workPreference ||
+      "Remote priority, open to US and Canada contract roles, open to Ontario hybrid",
   };
 }
 
@@ -159,13 +170,15 @@ function createDashboardHtml(jobs, payload, autoScript, runFileName) {
 
   const rows = jobs
     .map((j, idx) => {
-      const applyType = isQuickApplyLikely(j) ? 'Quick Apply Likely' : 'Manual Apply';
-      const outreach = escHtml(j.outreach || '');
-      const bullets = escHtml((j.bullets?.summary || []).join('\n'));
-      const desc = escHtml(j.description || 'No description');
+      const applyType = isQuickApplyLikely(j)
+        ? "Quick Apply Likely"
+        : "Manual Apply";
+      const outreach = escHtml(j.outreach || "");
+      const bullets = escHtml((j.bullets?.summary || []).join("\n"));
+      const desc = escHtml(j.description || "No description");
       return `<tr>
         <td>${idx + 1}</td>
-        <td>${escHtml(j.score ?? '')}</td>
+        <td>${escHtml(j.score ?? "")}</td>
         <td><a class="roleLink" href="${escHtml(j.link)}" target="_blank" rel="noreferrer">${escHtml(j.title)}</a></td>
         <td>${escHtml(j.company)}</td>
         <td>${escHtml(j.source)}</td>
@@ -197,14 +210,14 @@ function createDashboardHtml(jobs, payload, autoScript, runFileName) {
               </div>
               <div>
                 <div class="k">Tailored Resume Bullets</div>
-                <pre class="expandPre">${bullets || 'No tailored bullets'}</pre>
+                <pre class="expandPre">${bullets || "No tailored bullets"}</pre>
               </div>
             </div>
           </div>
         </td>
       </tr>`;
     })
-    .join('\n');
+    .join("\n");
 
   return `<!doctype html>
 <html lang="en">
@@ -369,25 +382,29 @@ function createDashboardHtml(jobs, payload, autoScript, runFileName) {
 }
 
 function openBrowser(url) {
-  if (process.platform === 'win32') {
-    spawnSync('cmd', ['/c', 'start', '', url], { stdio: 'ignore' });
+  if (process.platform === "win32") {
+    spawnSync("cmd", ["/c", "start", "", url], { stdio: "ignore" });
     return;
   }
-  if (process.platform === 'darwin') {
-    spawnSync('open', [url], { stdio: 'ignore' });
+  if (process.platform === "darwin") {
+    spawnSync("open", [url], { stdio: "ignore" });
     return;
   }
-  spawnSync('xdg-open', [url], { stdio: 'ignore' });
+  spawnSync("xdg-open", [url], { stdio: "ignore" });
 }
 
 function main() {
-  const port = Number(parseArg('--port', '4317')) || 4317;
-  const buildOnly = hasFlag('--build-only');
-  const noOpen = hasFlag('--no-open');
+  const port = Number(parseArg("--port", "4317")) || 4317;
+  const buildOnly = hasFlag("--build-only");
+  const noOpen = hasFlag("--no-open");
 
-  const latestQuickApply = newestFileByPrefixAndExt(OUTPUTS_DIR, 'quick-apply-', '.json');
+  const latestQuickApply = newestFileByPrefixAndExt(
+    OUTPUTS_DIR,
+    "quick-apply-",
+    ".json",
+  );
   if (!latestQuickApply) {
-    console.error('No quick-apply JSON found. Run discovery + batch first.');
+    console.error("No quick-apply JSON found. Run discovery + batch first.");
     process.exit(1);
   }
 
@@ -397,12 +414,18 @@ function main() {
   const payload = buildAutofillPayload(profile, answers);
   const autoScript = buildAutofillScript(payload);
 
-  const dashboardDir = path.join(OUTPUTS_DIR, 'dashboard');
-  const dashboardPath = path.join(dashboardDir, 'index.html');
-  if (!fs.existsSync(dashboardDir)) fs.mkdirSync(dashboardDir, { recursive: true });
+  const dashboardDir = path.join(OUTPUTS_DIR, "dashboard");
+  const dashboardPath = path.join(dashboardDir, "index.html");
+  if (!fs.existsSync(dashboardDir))
+    fs.mkdirSync(dashboardDir, { recursive: true });
 
-  const html = createDashboardHtml(jobs, payload, autoScript, path.basename(latestQuickApply));
-  fs.writeFileSync(dashboardPath, html, 'utf8');
+  const html = createDashboardHtml(
+    jobs,
+    payload,
+    autoScript,
+    path.basename(latestQuickApply),
+  );
+  fs.writeFileSync(dashboardPath, html, "utf8");
 
   if (buildOnly) {
     console.log(`Dashboard built: ${dashboardPath}`);
@@ -410,25 +433,25 @@ function main() {
   }
 
   const server = http.createServer((req, res) => {
-    const pathname = (req.url || '/').split('?')[0];
-    if (pathname !== '/' && pathname !== '/index.html') {
-      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('Not found');
+    const pathname = (req.url || "/").split("?")[0];
+    if (pathname !== "/" && pathname !== "/index.html") {
+      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      res.end("Not found");
       return;
     }
 
     const data = fs.readFileSync(dashboardPath);
     res.writeHead(200, {
-      'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'no-store',
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
     });
     res.end(data);
   });
 
-  server.listen(port, '127.0.0.1', () => {
+  server.listen(port, "127.0.0.1", () => {
     const url = `http://127.0.0.1:${port}`;
     console.log(`Private dashboard running at: ${url}`);
-    console.log('Press Ctrl+C to stop.');
+    console.log("Press Ctrl+C to stop.");
     if (!noOpen) openBrowser(url);
   });
 }

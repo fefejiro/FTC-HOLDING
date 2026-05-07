@@ -179,8 +179,8 @@ const App: React.FC = () => {
     }
 
     try {
-      // @ts-ignore: Chrome extension API
-      chrome.runtime.sendMessage({ type: "START_TAB_CAPTURE" }, async (response: any) => {
+      // @ts-expect-error: Chrome extension API
+      chrome.runtime.sendMessage({ type: "START_TAB_CAPTURE" }, async (response: { error?: string; streamId?: string }) => {
         if (response?.error) {
           setError(response.error);
           setAppState("error");
@@ -195,13 +195,13 @@ const App: React.FC = () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             audio: {
-              // @ts-ignore
+              // @ts-expect-error Chrome tab audio capture constraint
               mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId },
-            } as any,
+            } as MediaTrackConstraints,
           });
           const recorder = new MediaRecorder(stream);
           const chunks: BlobPart[] = [];
-          recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+          recorder.ondataavailable = (e: BlobEvent) => { if (e.data.size > 0) chunks.push(e.data); };
           recorder.onstop = async () => {
             stream.getTracks().forEach((t) => t.stop());
             const blob = new Blob(chunks, { type: "audio/webm" });
@@ -231,20 +231,20 @@ const App: React.FC = () => {
                   });
                 }
               } catch { /* non-fatal */ }
-            } catch (err: any) {
-              setError(err.message || "Recognition failed");
+            } catch (err) {
+              setError((err as Error).message || "Recognition failed");
               setAppState("error");
             }
           };
           recorder.start();
           setTimeout(() => recorder.stop(), 7000);
-        } catch (err: any) {
-          setError(err.message || "Could not capture tab audio");
+        } catch (err) {
+          setError((err as Error).message || "Could not capture tab audio");
           setAppState("error");
         }
       });
-    } catch (e: any) {
-      setError(e.message || "Unknown error");
+    } catch (e) {
+      setError((e as Error).message || "Unknown error");
       setAppState("error");
     }
   };

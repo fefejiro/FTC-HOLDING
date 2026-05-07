@@ -1,0 +1,18 @@
+---
+import type { Service } from '../content/site';
+interface Props { service: Service }
+const { service } = Astro.props;
+---
+<article class="card flex flex-col h-full">
+  <h3 class="h3 text-gc-ink">{service.title}</h3>
+  <p class="text-gc-ink/70 mt-2 text-sm">{service.summary}</p>
+  <p class="text-gc-ink/80 mt-3 text-sm">{service.detail}</p>
+  <ul class="mt-4 space-y-1.5 text-sm">
+    {service.bullets.map((b) => (
+      <li class="flex gap-2 text-gc-ink/75"><span aria-hidden="true" class="mt-2 w-1.5 h-1.5 rounded-full bg-gc-leaf shrink-0"></span><span>{b}</span></li>
+    ))}
+  </ul>
+  <div class="mt-5 pt-5 border-t border-black/5">
+    <a href="/quote" class="text-sm font-semibold text-gc-moss hover:underline">Request a quote &rarr;</a>
+  </div>
+</article>

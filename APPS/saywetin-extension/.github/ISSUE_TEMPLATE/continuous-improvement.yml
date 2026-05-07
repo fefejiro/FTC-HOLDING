@@ -1,0 +1,31 @@
+---
+name: "Continuous Improvement"
+description: "A recurring or backlog improvement for Copilot Coding Agent."
+title: "[CI] <improvement summary>"
+labels: ["continuous-improvement", "backlog"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Continuous Improvement**
+        This issue is for ongoing or recurring improvements. It should:
+        - Be actionable and not blocked
+        - Improve code quality, docs, or automation
+        - Be suitable for agent or human pickup
+  - type: textarea
+    id: improvement
+    attributes:
+      label: Improvement Description
+      description: What is the improvement or recurring task?
+      placeholder: "Refactor X, add Y test, update Z doc."
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What must be true for this to be considered done?
+      placeholder: "- [ ] Code compiles\n- [ ] Tests pass\n- [ ] Improvement is measurable"
+    validations:
+      required: true

@@ -10,6 +10,7 @@ on:
 
 jobs:
   deploy:
+    if: false  # DISABLED 2026-04-30 — bleed-stop. Re-enable when og-trades is ready for autodeploy.
     name: Build and Deploy to Cloudflare Pages
     runs-on: ubuntu-latest
     environment: production

@@ -1,0 +1,46 @@
+name: "🔁 Continuous Improvement"
+description: "Small, low-risk, agent-safe job. Auto-grazed nightly by the Coding Agent."
+title: "[CI] "
+labels: ["continuous-improvement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Continuous Improvement
+        Small jobs the agent can pick up overnight without supervision.
+        Examples: typo fixes, dep bumps, README polish, test coverage, lint warnings, dead code, a11y tweaks, SEO meta tags, doc sync.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      placeholder: "Fix all ESLint warnings in APPS/peacepad/client/src/"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      value: |
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
+  - type: input
+    id: scope
+    attributes:
+      label: Scope (paths)
+      placeholder: "APPS/peacepad/client/src/**"
+    validations:
+      required: true
+  - type: input
+    id: verification
+    attributes:
+      label: Verification command
+      placeholder: "cd APPS/peacepad && npm run lint"
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Don't touch
+      placeholder: "No behavioral changes; cosmetic/structural only."

@@ -1,0 +1,34 @@
+name: Assign Agent-Ready Issues for Mobile
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # 4am UTC nightly
+  workflow_dispatch:
+
+jobs:
+  assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find agent-ready issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'agent-ready',
+              state: 'open',
+              per_page: 100
+            });
+            for (const issue of issues.data) {
+              if (!issue.assignee) {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  assignees: ['fefejiro']
+                });
+              }
+            }
+      - name: Notify via GitHub Mobile
+        run: echo "Agent-ready issues assigned to @fefejiro for mobile triage."

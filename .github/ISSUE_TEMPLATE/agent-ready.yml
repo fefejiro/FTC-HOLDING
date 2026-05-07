@@ -1,0 +1,59 @@
+name: "🤖 Agent-Ready Task"
+description: "Well-scoped task for Copilot Coding Agent to execute autonomously."
+title: "[Agent-Ready] "
+labels: ["agent-ready"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Agent-Ready Issue
+        Use this when the task is well-scoped enough that Copilot Coding Agent can execute it without further clarification.
+        **Required**: clear acceptance criteria, files to touch, verification command, "don't touch" boundaries.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One sentence — what should be true when this is done?
+      placeholder: "Extract @ftc/backend-template from APPS/peacepad/server/ as a reusable package."
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Bulleted list (3-5 items). Specific, verifiable.
+      value: |
+        - [ ] 
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Files to touch
+      description: Paths the agent should create/modify.
+      placeholder: "PACKAGES/backend-template/src/index.ts\nPACKAGES/backend-template/package.json"
+    validations:
+      required: true
+  - type: input
+    id: verification
+    attributes:
+      label: Verification command
+      description: A single shell command that proves it works.
+      placeholder: "cd PACKAGES/backend-template && npm run build && npm test"
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Don't touch
+      description: Paths or behaviors the agent must NOT modify.
+      placeholder: "Do not modify APPS/peacepad/server/index.ts; create a new package."
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / context
+      description: Optional. Links to related issues, PRs, or docs.

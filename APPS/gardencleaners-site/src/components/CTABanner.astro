@@ -1,0 +1,30 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  primaryLabel?: string;
+  primaryHref?: string;
+  secondaryLabel?: string;
+  secondaryHref?: string;
+}
+const {
+  title,
+  description = 'Request a free quote and Garden Cleaners will follow up with the right next step for your property.',
+  primaryLabel = 'Get a Free Quote',
+  primaryHref = '/quote',
+  secondaryLabel = 'Contact Us',
+  secondaryHref = '/contact'
+} = Astro.props;
+---
+<section class="section">
+  <div class="container-page">
+    <div class="card bg-gc-moss text-white p-10 sm:p-14 text-center">
+      <h2 class="h2 text-white">{title}</h2>
+      <p class="mt-4 text-white/85 max-w-prose mx-auto">{description}</p>
+      <div class="mt-7 flex flex-wrap items-center justify-center gap-3">
+        <a href={primaryHref} class="btn bg-white text-gc-moss hover:bg-gc-mint">{primaryLabel}</a>
+        <a href={secondaryHref} class="btn border border-white/40 text-white hover:bg-white/10">{secondaryLabel}</a>
+      </div>
+    </div>
+  </div>
+</section>

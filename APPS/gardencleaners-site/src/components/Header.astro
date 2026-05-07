@@ -1,0 +1,30 @@
+---
+import { nav, site } from '../content/site';
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+<header class="bg-white/80 backdrop-blur sticky top-0 z-30 border-b border-black/5">
+  <div class="container-page flex items-center justify-between gap-6 py-4">
+    <a href="/" class="flex items-center gap-2 font-display text-xl font-semibold text-gc-moss">
+      <span aria-hidden="true" class="inline-block w-8 h-8 rounded-full bg-gc-moss text-white grid place-items-center text-base">GC</span>
+      <span>Garden Cleaners</span>
+    </a>
+    <nav aria-label="Primary" class="hidden md:flex items-center gap-7 text-sm font-medium text-gc-ink/80">
+      {nav.filter((n) => n.href !== '/quote').map((item) => {
+        const active = item.href === path;
+        return (
+          <a
+            href={item.href}
+            class={`hover:text-gc-moss transition-colors ${active ? 'text-gc-moss' : ''}`}
+            aria-current={active ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        );
+      })}
+    </nav>
+    <div class="flex items-center gap-3">
+      <a href={site.phoneHref} class="hidden sm:inline text-sm font-semibold text-gc-moss hover:underline">{site.phoneDisplay}</a>
+      <a href="/quote" class="btn-primary text-sm py-2 px-4">Get a Quote</a>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,13 @@
+---
+import { site } from '../content/site';
+---
+<section class="border-y border-black/5 bg-white">
+  <div class="container-page py-8 grid sm:grid-cols-2 lg:grid-cols-5 gap-3 text-sm">
+    {site.trustBullets.map((b) => (
+      <div class="flex items-start gap-2">
+        <span aria-hidden="true" class="mt-1 inline-block w-2 h-2 rounded-full bg-gc-leaf"></span>
+        <span class="text-gc-ink/80">{b}</span>
+      </div>
+    ))}
+  </div>
+</section>

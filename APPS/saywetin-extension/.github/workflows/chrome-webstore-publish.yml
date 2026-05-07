@@ -7,6 +7,7 @@ on:
 
 jobs:
   publish:
+    if: false # Disabled for infra bleed-stop — re-enable when Chrome Web Store credentials are wired
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

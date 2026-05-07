@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Fraunces', Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+@layer components {
+  .container-page {
+    @apply max-w-6xl mx-auto px-5 sm:px-8;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center font-semibold rounded-full px-6 py-3 transition-colors;
+  }
+  .btn-primary {
+    @apply btn bg-gc-moss text-white hover:bg-gc-leaf;
+  }
+  .btn-secondary {
+    @apply btn border border-gc-moss/40 text-gc-moss hover:bg-gc-mint;
+  }
+  .eyebrow {
+    @apply uppercase tracking-[0.18em] text-xs font-semibold text-gc-leaf;
+  }
+  .card {
+    @apply bg-white rounded-2xl p-6 shadow-sm border border-black/5;
+  }
+  .section {
+    @apply py-16 sm:py-20;
+  }
+  .h1 {
+    @apply text-4xl sm:text-5xl lg:text-6xl font-semibold leading-[1.05];
+  }
+  .h2 {
+    @apply text-3xl sm:text-4xl font-semibold leading-tight;
+  }
+  .h3 {
+    @apply text-xl sm:text-2xl font-semibold;
+  }
+  .lede {
+    @apply text-lg text-gc-ink/75 max-w-prose;
+  }
+}

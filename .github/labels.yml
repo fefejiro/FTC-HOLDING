@@ -1,0 +1,67 @@
+# Label registry — synced by .github/workflows/bootstrap-labels.yml
+
+- name: agent-ready
+  color: "0E8A16"
+  description: "Well-scoped task — Copilot Coding Agent can execute autonomously."
+
+- name: continuous-improvement
+  color: "1D76DB"
+  description: "Small, low-risk, agent-safe job. Auto-grazed nightly."
+
+- name: bug
+  color: "D73A4A"
+  description: "Something broken in prod or dev."
+
+- name: idea
+  color: "FBCA04"
+  description: "Captured idea, not yet scoped."
+
+- name: blocked
+  color: "B60205"
+  description: "Cannot proceed — waiting on dependency or decision."
+
+- name: phase-a
+  color: "5319E7"
+  description: "Phase A — bleed-stop + workflow."
+
+- name: phase-b
+  color: "5319E7"
+  description: "Phase B — Engine + Bushy."
+
+- name: phase-c
+  color: "5319E7"
+  description: "Phase C — Productize Factory + UBY rest."
+
+- name: phase-d
+  color: "5319E7"
+  description: "Phase D — Legal + Scale."
+
+- name: app:peacepad
+  color: "BFD4F2"
+- name: app:saywetin
+  color: "BFD4F2"
+- name: app:dispatch
+  color: "BFD4F2"
+- name: app:una-labs
+  color: "BFD4F2"
+- name: app:bushy
+  color: "BFD4F2"
+- name: app:og-trades
+  color: "BFD4F2"
+- name: app:anion
+  color: "BFD4F2"
+- name: app:garden-cleaners
+  color: "BFD4F2"
+
+- name: pkg:backend-template
+  color: "C5DEF5"
+- name: pkg:ui-kit
+  color: "C5DEF5"
+- name: pkg:ai
+  color: "C5DEF5"
+- name: pkg:telegram-bot-template
+  color: "C5DEF5"
+- name: pkg:stats-ledger
+  color: "C5DEF5"
+- name: pkg:logger
+  color: "C5DEF5"

@@ -1,0 +1,41 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import QuoteForm from '../components/QuoteForm.astro';
+import { site } from '../content/site';
+---
+<BaseLayout title="Contact — Garden Cleaners" description="Contact Garden Cleaners for residential or commercial cleaning service in Oshawa and Durham Region.">
+  <section class="section">
+    <div class="container-page grid lg:grid-cols-2 gap-10">
+      <div>
+        <p class="eyebrow">Contact</p>
+        <h1 class="h1 mt-2">Talk to Garden Cleaners.</h1>
+        <p class="lede mt-5">Reach out to book a service, ask a question, or request a tailored quote. We respond within one business day.</p>
+
+        <div class="card mt-8 space-y-3 text-sm">
+          <p><span class="font-semibold text-gc-ink">Phone:</span> <a class="text-gc-moss hover:underline" href={site.phoneHref}>{site.phoneDisplay}</a></p>
+          <p><span class="font-semibold text-gc-ink">Email:</span> <a class="text-gc-moss hover:underline" href={site.emailHref}>{site.email}</a></p>
+          <p><span class="font-semibold text-gc-ink">Location:</span> {site.addressLine}</p>
+          <div>
+            <p class="font-semibold text-gc-ink">Business hours</p>
+            <ul class="mt-1 space-y-0.5 text-gc-ink/75">
+              {site.businessHours.map((h) => <li>{h}</li>)}
+            </ul>
+          </div>
+          <p class="text-gc-ink/70">Serving {site.serviceAreas.join(', ')}.</p>
+        </div>
+
+        <div class="mt-6 rounded-3xl overflow-hidden border border-black/5 aspect-[4/3]">
+          <img src="/images/garden-cleaners/gc-team-supplies.webp" alt="Garden Cleaners team prepared with cleaning supplies." class="w-full h-full object-cover" loading="lazy" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="h3">Send a request</h2>
+        <p class="mt-2 text-sm text-gc-ink/75">Share property details and we'll follow up shortly.</p>
+        <div class="mt-5">
+          <QuoteForm source="contact_page" />
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

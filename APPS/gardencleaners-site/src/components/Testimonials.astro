@@ -1,0 +1,20 @@
+---
+import { testimonials } from '../content/site';
+---
+<section class="section">
+  <div class="container-page">
+    <p class="eyebrow">Client experience</p>
+    <h2 class="h2 mt-2">Local feedback from homes and businesses we have cleaned.</h2>
+    <div class="mt-8 grid md:grid-cols-3 gap-5">
+      {testimonials.map((t) => (
+        <figure class="card flex flex-col h-full">
+          <blockquote class="text-gc-ink/85 text-[15px] leading-relaxed">&ldquo;{t.quote}&rdquo;</blockquote>
+          <figcaption class="mt-4 pt-4 border-t border-black/5 text-sm">
+            <p class="font-semibold text-gc-ink">{t.name}</p>
+            <p class="text-gc-ink/60">{t.role}</p>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  </div>
+</section>

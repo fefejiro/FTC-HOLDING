@@ -1,0 +1,30 @@
+name: "🐛 Bug"
+description: "Something is broken in production or local dev."
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What broke?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Repro steps
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+  - type: input
+    id: scope
+    attributes:
+      label: Affected app / package
+      placeholder: "APPS/peacepad"
+    validations:
+      required: true

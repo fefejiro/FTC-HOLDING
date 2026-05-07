@@ -8,6 +8,7 @@ on:
 
 jobs:
   build-and-zip:
+    if: false # Disabled for infra bleed-stop — re-enable when release pipeline is needed
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

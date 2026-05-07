@@ -1,0 +1,39 @@
+---
+import { nav, site } from '../content/site';
+const year = new Date().getFullYear();
+---
+<footer class="bg-gc-ink text-white/80 mt-16">
+  <div class="container-page py-14 grid gap-10 md:grid-cols-4">
+    <div class="md:col-span-2">
+      <p class="font-display text-2xl text-white">{site.name}</p>
+      <p class="mt-3 max-w-md text-sm leading-relaxed">
+        Professional residential and commercial cleaning across Oshawa and the Durham Region.
+      </p>
+      <div class="mt-5 space-y-1 text-sm">
+        <p><a href={site.phoneHref} class="hover:text-white">{site.phoneDisplay}</a></p>
+        <p><a href={site.emailHref} class="hover:text-white">{site.email}</a></p>
+        <p>{site.addressLine}</p>
+      </div>
+    </div>
+    <div>
+      <p class="text-white text-sm font-semibold uppercase tracking-wider">Pages</p>
+      <ul class="mt-3 space-y-2 text-sm">
+        {nav.map((item) => (
+          <li><a href={item.href} class="hover:text-white">{item.label}</a></li>
+        ))}
+      </ul>
+    </div>
+    <div>
+      <p class="text-white text-sm font-semibold uppercase tracking-wider">Hours</p>
+      <ul class="mt-3 space-y-2 text-sm">
+        {site.businessHours.map((line) => <li>{line}</li>)}
+      </ul>
+    </div>
+  </div>
+  <div class="border-t border-white/10">
+    <div class="container-page py-5 text-xs flex flex-wrap items-center justify-between gap-3">
+      <p>&copy; {year} {site.name}. All rights reserved.</p>
+      <p>{site.city}, {site.region}, {site.country}</p>
+    </div>
+  </div>
+</footer>

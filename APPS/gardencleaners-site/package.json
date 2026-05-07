@@ -1,0 +1,23 @@
+{
+  "name": "@ftc/gardencleaners-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "deploy": "wrangler pages deploy dist --project-name gardencleaners --branch main --commit-dirty=true"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.2.1",
+    "@astrojs/tailwind": "^5.1.4",
+    "astro": "^5.0.5",
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "wrangler": "^4.87.0"
+  }
+}

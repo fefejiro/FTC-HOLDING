@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CTABanner from '../components/CTABanner.astro';
+import { site } from '../content/site';
+---
+<BaseLayout title="About — Garden Cleaners" description="Learn about Garden Cleaners — a professional cleaning service serving Oshawa, Whitby, Ajax, Pickering, Courtice, and Durham Region.">
+  <section class="section">
+    <div class="container-page max-w-4xl">
+      <p class="eyebrow">About</p>
+      <h1 class="h1 mt-2">Trusted local cleaning, built on detail and consistency.</h1>
+      <p class="lede mt-5">Garden Cleaners is a {site.city}-based cleaning service supporting homeowners, property managers, and businesses across {site.region}. We focus on dependable scheduling, careful attention to detail, and an end result that is clearly cleaner than when we arrived.</p>
+    </div>
+  </section>
+
+  <section class="section bg-white">
+    <div class="container-page grid md:grid-cols-2 gap-6">
+      <article class="card">
+        <h2 class="h3">Who we are</h2>
+        <p class="mt-3 text-sm text-gc-ink/80">A local cleaning team focused on residential and commercial cleaning. Garden Cleaners works with families, offices, property managers, and turnover scenarios — bringing a consistent standard to every visit.</p>
+      </article>
+      <article class="card">
+        <h2 class="h3">Our commitment to quality</h2>
+        <p class="mt-3 text-sm text-gc-ink/80">Every clean is approached with care: the right products, the right tools, and the right amount of time. We aim to leave every property in a state that feels noticeably better than when we arrived.</p>
+      </article>
+      <article class="card">
+        <h2 class="h3">Why clients choose us</h2>
+        <p class="mt-3 text-sm text-gc-ink/80">Reliability, professionalism, and clear communication. Whether the booking is a one-time deep clean or a recurring schedule, the experience is meant to feel organized and easy from first contact to job complete.</p>
+      </article>
+      <article class="card">
+        <h2 class="h3">Service area</h2>
+        <p class="mt-3 text-sm text-gc-ink/80">Garden Cleaners primarily serves {site.city} and surrounding {site.region} — Whitby, Ajax, Pickering, Courtice, and Durham Region. Reach out to confirm availability for your location.</p>
+      </article>
+    </div>
+  </section>
+
+  <CTABanner title="Want to work with us?" description="Tell us about the property and we will scope the right service." />
+</BaseLayout>

@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   sync-telemetry:
+    if: false  # DISABLED 2026-04-30 — bleed-stop (was running every 15min). Re-enable when telemetry pipeline is needed.
     name: Run portfolio E2E and publish telemetry
     runs-on: ubuntu-latest
 

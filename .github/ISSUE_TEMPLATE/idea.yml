@@ -1,0 +1,19 @@
+name: "💡 Idea"
+description: "Capture an idea before it's scoped. Triage later into agent-ready or CI."
+title: "[Idea] "
+labels: ["idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+  - type: textarea
+    id: maybe
+    attributes:
+      label: Rough scope (optional)

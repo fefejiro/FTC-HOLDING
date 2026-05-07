@@ -1,0 +1,184 @@
+---
+import { propertyTypes, services, frequencies, addOns, QUOTE_INTAKE_EMAIL, site } from '../content/site';
+interface Props { source?: string }
+const { source = 'quote_page' } = Astro.props;
+---
+<form id="garden-quote-form" class="space-y-5" novalidate data-source={source} data-intake={QUOTE_INTAKE_EMAIL} data-phone={site.phoneDisplay}>
+  <input type="text" name="website" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true" />
+
+  <div class="grid sm:grid-cols-2 gap-4">
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Full name</span>
+      <input required name="fullName" type="text" minlength="2" maxlength="100" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gc-leaf/40" />
+    </label>
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Email</span>
+      <input required name="email" type="email" maxlength="120" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gc-leaf/40" />
+    </label>
+  </div>
+
+  <div class="grid sm:grid-cols-2 gap-4">
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Phone</span>
+      <input required name="phone" type="tel" minlength="7" maxlength="40" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gc-leaf/40" />
+    </label>
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Service region</span>
+      <select name="region" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 bg-white">
+        <option value="">Select...</option>
+        {site.serviceAreas.map((r) => <option value={r}>{r}</option>)}
+      </select>
+    </label>
+  </div>
+
+  <label class="block text-sm">
+    <span class="font-medium text-gc-ink">Service address</span>
+    <input required name="address" type="text" minlength="5" maxlength="160" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gc-leaf/40" />
+  </label>
+
+  <div class="grid sm:grid-cols-2 gap-4">
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">City</span>
+      <input required name="city" type="text" minlength="2" maxlength="80" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gc-leaf/40" />
+    </label>
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Postal code</span>
+      <input name="postalCode" type="text" maxlength="20" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gc-leaf/40" />
+    </label>
+  </div>
+
+  <div class="grid sm:grid-cols-2 gap-4">
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Property type</span>
+      <select required name="propertyType" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 bg-white">
+        <option value="">Select...</option>
+        {propertyTypes.map((p) => <option value={p}>{p}</option>)}
+      </select>
+    </label>
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Service needed</span>
+      <select required name="serviceNeeded" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 bg-white">
+        <option value="">Select...</option>
+        {services.map((s) => <option value={s.title}>{s.title}</option>)}
+      </select>
+    </label>
+  </div>
+
+  <div class="grid sm:grid-cols-3 gap-4">
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Preferred date</span>
+      <input required name="preferredDate" type="date" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2" />
+    </label>
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Preferred time</span>
+      <input name="preferredTime" type="text" maxlength="60" placeholder="e.g. Morning, 2pm" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2" />
+    </label>
+    <label class="block text-sm">
+      <span class="font-medium text-gc-ink">Frequency</span>
+      <select required name="frequency" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 bg-white">
+        <option value="">Select...</option>
+        {frequencies.map((f) => <option value={f}>{f}</option>)}
+      </select>
+    </label>
+  </div>
+
+  <fieldset class="text-sm">
+    <legend class="font-medium text-gc-ink mb-2">Add-ons (optional)</legend>
+    <div class="grid sm:grid-cols-2 gap-2">
+      {addOns.map((a) => (
+        <label class="flex items-center gap-2 text-gc-ink/80">
+          <input type="checkbox" name="addOns" value={a} class="rounded border-black/20 text-gc-moss focus:ring-gc-leaf/40" />
+          <span>{a}</span>
+        </label>
+      ))}
+    </div>
+  </fieldset>
+
+  <label class="block text-sm">
+    <span class="font-medium text-gc-ink">Tell us about the space</span>
+    <textarea required name="message" minlength="20" maxlength="2000" rows="5" class="mt-1 w-full rounded-lg border border-black/15 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gc-leaf/40" placeholder="Square footage, number of rooms/bathrooms, condition, timing, anything we should know."></textarea>
+  </label>
+
+  <div class="flex flex-col sm:flex-row sm:items-center gap-4 pt-2">
+    <button type="submit" class="btn-primary">Send Quote Request</button>
+    <p class="text-xs text-gc-ink/60">Your email client will open with the request prefilled. Just hit send.</p>
+  </div>
+
+  <div role="status" aria-live="polite" class="text-sm hidden" data-status></div>
+</form>
+
+<script>
+  const form = document.getElementById('garden-quote-form') as HTMLFormElement | null;
+  if (form) {
+    const status = form.querySelector('[data-status]') as HTMLElement | null;
+    const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    const intake = form.dataset.intake || 'gardencleaners@gmail.com';
+    const phone = form.dataset.phone || '';
+    const source = form.dataset.source || 'quote_page';
+
+    function setStatus(message: string, kind: 'ok' | 'error' | 'info') {
+      if (!status) return;
+      status.textContent = message;
+      status.classList.remove('hidden', 'text-red-600', 'text-gc-leaf', 'text-gc-ink/70');
+      status.classList.add(kind === 'ok' ? 'text-gc-leaf' : kind === 'error' ? 'text-red-600' : 'text-gc-ink/70');
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // Honeypot - silently bail.
+      const honey = (form.querySelector('input[name="website"]') as HTMLInputElement | null)?.value || '';
+      if (honey.trim().length > 0) {
+        setStatus('Thanks. Your request was received.', 'ok');
+        return;
+      }
+
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const fd = new FormData(form);
+      const get = (k: string) => String(fd.get(k) || '').trim();
+      const addOnsList: string[] = [];
+      fd.forEach((v, k) => { if (k === 'addOns' && typeof v === 'string') addOnsList.push(v); });
+
+      const fullName = get('fullName');
+      const email = get('email');
+      const subject = `Quote Request - ${get('serviceNeeded')} - ${fullName}`;
+      const lines = [
+        `Name: ${fullName}`,
+        `Email: ${email}`,
+        `Phone: ${get('phone')}`,
+        `Service: ${get('serviceNeeded')}`,
+        `Frequency: ${get('frequency')}`,
+        `Property: ${get('propertyType')}`,
+        `Region: ${get('region') || '-'}`,
+        `Address: ${get('address')}, ${get('city')}${get('postalCode') ? ' ' + get('postalCode') : ''}`,
+        `Preferred date: ${get('preferredDate')}`,
+        `Preferred time: ${get('preferredTime') || '-'}`,
+        `Add-ons: ${addOnsList.length ? addOnsList.join(', ') : '-'}`,
+        `Source: ${source}`,
+        '',
+        'Message:',
+        get('message')
+      ];
+      const body = lines.join('\n');
+      const href = `mailto:${intake}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      try {
+        window.location.href = href;
+        setStatus(`Your email client is opening. If nothing happens, email ${intake}${phone ? ' or call ' + phone : ''}.`, 'ok');
+      } catch {
+        setStatus(`Could not open your email client. Please email ${intake}${phone ? ' or call ' + phone : ''} directly.`, 'error');
+      }
+
+      if (submit) {
+        submit.disabled = true;
+        const original = submit.textContent || 'Send Quote Request';
+        submit.textContent = 'Opening email...';
+        setTimeout(() => { submit.disabled = false; submit.textContent = original; }, 4000);
+      }
+    });
+  }
+</script>

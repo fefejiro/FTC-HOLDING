@@ -1,0 +1,31 @@
+---
+import { site } from '../content/site';
+const { hero } = site;
+---
+<section class="relative overflow-hidden bg-gradient-to-br from-gc-mint via-white to-white">
+  <div class="container-page py-20 sm:py-28 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-7">
+      <p class="eyebrow">Oshawa, Ontario · Durham Region</p>
+      <h1 class="h1 mt-3 text-gc-ink">{hero.headline}</h1>
+      <p class="lede mt-5">{hero.sub}</p>
+      <ul class="mt-7 flex flex-wrap gap-2">
+        {hero.highlights.map((h) => (
+          <li class="text-sm bg-white border border-gc-moss/15 text-gc-moss px-3 py-1.5 rounded-full">{h}</li>
+        ))}
+      </ul>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="/quote" class="btn-primary">Get a Free Quote</a>
+        <a href="/services" class="btn-secondary">View Services</a>
+      </div>
+    </div>
+    <div class="lg:col-span-5">
+      <div class="relative rounded-3xl overflow-hidden shadow-xl border border-black/5 aspect-[4/5] bg-gc-mint">
+        <img src="/images/garden-cleaners/hero-office-team.webp" alt="Professional cleaning team ready to begin service in a modern office corridor." class="w-full h-full object-cover" loading="eager" decoding="async" />
+        <div class="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur rounded-2xl p-4 text-sm">
+          <p class="text-gc-leaf font-semibold uppercase text-xs tracking-wider">Commercial and office cleaning</p>
+          <p class="font-medium text-gc-ink mt-1">A team presence clients can trust from first contact.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

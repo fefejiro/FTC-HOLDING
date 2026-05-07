@@ -6,6 +6,7 @@ on:
 
 jobs:
   scaffold:
+    if: false  # DISABLED 2026-04-30 — bleed-stop. Re-enable when client intake reactivates.
     runs-on: ubuntu-latest
     env:
       PROJECT_NAME: ${{ github.event.client_payload.project_name }}

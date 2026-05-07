@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { site } from '../content/site';
+---
+<BaseLayout title="Client Portal — Garden Cleaners" description="Garden Cleaners client portal for existing customers. Reach out for portal access or to book a new visit.">
+  <section class="section">
+    <div class="container-page max-w-3xl">
+      <p class="eyebrow">Client portal</p>
+      <h1 class="h1 mt-2">Welcome back.</h1>
+      <p class="lede mt-5">The Garden Cleaners client portal is being upgraded. In the meantime, existing clients can reach us directly for upcoming visits, schedule changes, or new bookings.</p>
+
+      <div class="card mt-8 space-y-3 text-sm">
+        <p><span class="font-semibold text-gc-ink">Phone:</span> <a class="text-gc-moss hover:underline" href={site.phoneHref}>{site.phoneDisplay}</a></p>
+        <p><span class="font-semibold text-gc-ink">Email:</span> <a class="text-gc-moss hover:underline" href={site.emailHref}>{site.email}</a></p>
+        <p class="text-gc-ink/75">If you are a new client, head to the quote form to get started.</p>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a href="/quote" class="btn-primary">Request a Quote</a>
+        <a href="/contact" class="btn-secondary">Contact Garden Cleaners</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

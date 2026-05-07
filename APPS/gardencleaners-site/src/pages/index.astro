@@ -1,0 +1,117 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import TrustStrip from '../components/TrustStrip.astro';
+import ServiceCard from '../components/ServiceCard.astro';
+import Testimonials from '../components/Testimonials.astro';
+import FaqList from '../components/FaqList.astro';
+import CTABanner from '../components/CTABanner.astro';
+import { services, site, faqs } from '../content/site';
+
+const homeServices = services.slice(0, 6);
+
+const orgJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'HouseCleaning',
+  name: site.name,
+  url: site.url,
+  telephone: site.phoneDisplay,
+  email: site.email,
+  areaServed: site.serviceAreas.map((a) => ({ '@type': 'City', name: a })),
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: site.city,
+    addressRegion: site.region,
+    addressCountry: site.country
+  },
+  openingHours: ['Mo-Fr 08:00-18:00', 'Sa 09:00-15:00']
+};
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.question,
+    acceptedAnswer: { '@type': 'Answer', text: f.answer }
+  }))
+};
+---
+<BaseLayout title="Garden Cleaners — Professional Cleaning Services in Oshawa" description="Reliable residential, commercial, deep, and move-in/move-out cleaning serving Oshawa, Whitby, Ajax, Pickering, Courtice, and Durham Region." jsonLd={[orgJsonLd, faqJsonLd]}>
+  <Hero />
+  <TrustStrip />
+
+  <section class="section bg-white">
+    <div class="container-page grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-5 order-2 lg:order-1">
+        <div class="rounded-3xl overflow-hidden border border-black/5 shadow-lg aspect-[4/3]">
+          <img src="/images/garden-cleaners/gc-floor-cleaning.webp" alt="Detailed floor cleaning during a deep clean visit." class="w-full h-full object-cover" loading="lazy" />
+        </div>
+      </div>
+      <div class="lg:col-span-7 order-1 lg:order-2">
+        <p class="eyebrow">Deep cleaning specialists</p>
+        <h2 class="h2 mt-2">A reset that goes further than the standard clean.</h2>
+        <p class="lede mt-4">When a property needs more than the usual visit — first-time service, seasonal reset, post-rental, or after construction — the Garden Cleaners team works through the space methodically, top to bottom.</p>
+        <ul class="mt-5 grid sm:grid-cols-2 gap-2 text-sm text-gc-ink/80">
+          <li class="flex gap-2"><span class="mt-2 w-1.5 h-1.5 rounded-full bg-gc-leaf shrink-0"></span>High-touch surfaces and edges</li>
+          <li class="flex gap-2"><span class="mt-2 w-1.5 h-1.5 rounded-full bg-gc-leaf shrink-0"></span>Kitchen and bathroom detail</li>
+          <li class="flex gap-2"><span class="mt-2 w-1.5 h-1.5 rounded-full bg-gc-leaf shrink-0"></span>Floors, baseboards, fixtures</li>
+          <li class="flex gap-2"><span class="mt-2 w-1.5 h-1.5 rounded-full bg-gc-leaf shrink-0"></span>Reset before recurring service</li>
+        </ul>
+        <a href="/services" class="mt-6 inline-block btn-secondary">Explore Services</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-page">
+      <p class="eyebrow">How it works</p>
+      <h2 class="h2 mt-2">A simple path from quote to clean.</h2>
+      <div class="mt-8 grid md:grid-cols-3 gap-5">
+        <div class="card"><span class="text-gc-leaf font-semibold">01.</span><h3 class="h3 mt-2">Tell us about the space</h3><p class="text-sm text-gc-ink/75 mt-2">Submit a quote with property type, service required, and timing.</p></div>
+        <div class="card"><span class="text-gc-leaf font-semibold">02.</span><h3 class="h3 mt-2">We confirm the plan</h3><p class="text-sm text-gc-ink/75 mt-2">Garden Cleaners follows up to lock the visit, scope, and any add-ons.</p></div>
+        <div class="card"><span class="text-gc-leaf font-semibold">03.</span><h3 class="h3 mt-2">Service day</h3><p class="text-sm text-gc-ink/75 mt-2">Our team arrives on time, prepared, and works through the space to a clear standard.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bg-white">
+    <div class="container-page">
+      <p class="eyebrow">Services</p>
+      <h2 class="h2 mt-2">Cleaning support for homes, offices, and turnovers.</h2>
+      <div class="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {homeServices.map((s) => <ServiceCard service={s} />)}
+      </div>
+      <div class="mt-8"><a href="/services" class="btn-secondary">See all services</a></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-page grid lg:grid-cols-2 gap-10">
+      <div class="card">
+        <h3 class="h3">Residential cleaning</h3>
+        <p class="mt-2 text-gc-ink/75 text-sm">Routine and one-time cleaning for homes across Oshawa and Durham Region. Built around your schedule.</p>
+        <a href="/services#residential-cleaning" class="mt-4 inline-block text-gc-moss font-semibold text-sm hover:underline">Learn more &rarr;</a>
+      </div>
+      <div class="card">
+        <h3 class="h3">Commercial and office</h3>
+        <p class="mt-2 text-gc-ink/75 text-sm">Dependable service for offices, studios, and customer-facing spaces — scheduled around your business hours.</p>
+        <a href="/services#commercial-cleaning" class="mt-4 inline-block text-gc-moss font-semibold text-sm hover:underline">Learn more &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bg-white">
+    <div class="container-page">
+      <p class="eyebrow">Coverage</p>
+      <h2 class="h2 mt-2">Local across Oshawa and Durham Region.</h2>
+      <div class="mt-6 flex flex-wrap gap-2">
+        {site.serviceAreas.map((a) => <span class="px-3 py-1.5 rounded-full bg-gc-mint text-gc-moss text-sm font-medium">{a}</span>)}
+      </div>
+    </div>
+  </section>
+
+  <Testimonials />
+  <FaqList />
+  <CTABanner title="Ready for a clean reset?" description="Tell us about the property and Garden Cleaners will follow up with a tailored quote." />
+</BaseLayout>

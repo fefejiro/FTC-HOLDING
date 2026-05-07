@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Inbox capture (offline)
+    url: https://github.com/fefejiro/FTC-HOLDING/blob/main/INBOX.md
+    about: Drop ideas in INBOX.md — they flush to issues on reconnect.

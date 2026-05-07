@@ -79,3 +79,7 @@ secrets/
 !.agents/skills/
 !.agents/skills/**
 .windsurf/
+
+# Local capture inbox (flushed to GitHub Issues by scripts/flush-inbox.mjs)
+INBOX.md
+tmp/ai-queue/
