@@ -60,7 +60,7 @@ function AuthCallbackClient() {
 
         const { data } = await client.auth.getSession();
         if (!data.session?.user) {
-          throw new Error('No active session after magic link verification.');
+          throw new Error('No active session after sign-in verification.');
         }
 
         if (!cancelled) {
@@ -103,7 +103,7 @@ function AuthCallbackClient() {
       <div className="max-w-tight mx-auto px-6 py-20 w-full text-center">
         <div className="w-12 h-12 border-4 border-brand-teal border-t-transparent rounded-full animate-spin mx-auto mb-4" />
         <h1 className="text-h2 text-tx-heading mb-2">Completing sign-in</h1>
-        <p className="text-body text-tx-secondary">Please wait while we verify your magic link.</p>
+        <p className="text-body text-tx-secondary">Please wait while we verify your sign-in.</p>
       </div>
     </section>
   );

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 
-type Mode = 'magic-link' | 'password';
+type Mode = 'google' | 'password';
 
 function normalizeRedirectPath(value: string | null): string {
   if (!value) return '/dashboard';
@@ -21,16 +21,16 @@ function normalizeEmail(value: string): string {
 export function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = normalizeRedirectPath(searchParams.get('redirect'));
+  const redirectTo = normalizeRedirectPath(searchParams.get('redirect') ?? searchParams.get('next'));
   const loginEmailHint = normalizeEmail(searchParams.get('email') ?? '');
 
-  const [mode, setMode] = useState<Mode>('magic-link');
+  const [mode, setMode] = useState<Mode>('google');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-  const activeModeRef = useRef<Mode>('magic-link');
+  const activeModeRef = useRef<Mode>('google');
 
   useEffect(() => {
     let cancelled = false;
@@ -69,8 +69,34 @@ export function LoginClient() {
     setError('');
     setLoading(false);
 
-    if (nextMode === 'magic-link') {
+    if (nextMode === 'google') {
       setPassword('');
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setLoading(true);
+    setStatus('');
+    setError('');
+
+    try {
+      const { signInWithGoogle } = await import('@ftc/auth');
+      const callbackRedirect = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+      const { data, error: authError } = await signInWithGoogle(callbackRedirect);
+      if (authError) {
+        throw authError;
+      }
+
+      if (data?.url) {
+        window.location.assign(data.url);
+        return;
+      }
+
+      setStatus('Redirecting to Google sign-in...');
+    } catch (err) {
+      const rawMessage = err instanceof Error ? err.message : 'Unable to start Google sign-in.';
+      setError(rawMessage);
+      setLoading(false);
     }
   }
 
@@ -83,17 +109,7 @@ export function LoginClient() {
 
     try {
       const normalizedEmail = normalizeEmail(email);
-      if (mode === 'magic-link') {
-        const { signInWithOtpEmail } = await import('@ftc/auth');
-        const callbackRedirect = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}&email=${encodeURIComponent(normalizedEmail)}`;
-        const { error: authError } = await signInWithOtpEmail(normalizedEmail, callbackRedirect);
-        if (authError) {
-          throw authError;
-        }
-        if (activeModeRef.current === submitMode) {
-          setStatus(`Magic link sent to ${normalizedEmail}. Open it from the same browser session when possible.`);
-        }
-      } else {
+      if (mode === 'password') {
         const { signInWithPassword } = await import('@ftc/auth');
         const { error: authError } = await signInWithPassword(normalizedEmail, password);
         if (authError) {
@@ -107,7 +123,7 @@ export function LoginClient() {
       if (activeModeRef.current === submitMode) {
         const rawMessage = err instanceof Error ? err.message : 'Unable to start sign-in.';
         if (/email rate limit exceeded/i.test(rawMessage)) {
-          setError('Email rate limit reached. Wait a few minutes, then request one magic link only once.');
+          setError('Email rate limit reached. Wait a few minutes and try again.');
         } else {
           setError(rawMessage);
         }
@@ -127,22 +143,21 @@ export function LoginClient() {
         </div>
         <h1 className="text-h2 text-tx-heading text-center mb-2">Log in to Una Labs</h1>
         <p className="text-body text-tx-secondary text-center mb-10">
-          Access your Una Labs workspace to review project status and continue delivery. If you are new,
-          start by submitting a request through the intake flow.
+          Access your Una Labs workspace to review project status and continue delivery.
         </p>
 
         <div className="mb-6 flex justify-center gap-3">
           <button
             type="button"
-            onClick={() => switchMode('magic-link')}
+            onClick={() => switchMode('google')}
             className={[
               'rounded-full px-4 py-2 text-body-sm font-semibold transition-colors',
-              mode === 'magic-link'
+              mode === 'google'
                 ? 'bg-brand-teal text-white'
                 : 'bg-bg-offwhite text-tx-secondary hover:text-tx-heading',
             ].join(' ')}
           >
-            Magic link
+            Google
           </button>
           <button
             type="button"
@@ -158,24 +173,32 @@ export function LoginClient() {
           </button>
         </div>
 
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="login-email" className="block text-body font-medium text-tx-heading mb-1">
-              Email
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@company.com"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full px-4 py-3 border border-border rounded-lg text-body focus:outline-none focus:border-border-focus"
-            />
+        {mode === 'google' && (
+          <div className="mb-5">
+            <Button type="button" variant="primary" size="lg" className="w-full justify-center" onClick={() => void handleGoogleSignIn()} disabled={loading}>
+              {loading ? 'Redirecting…' : 'Continue with Google'}
+            </Button>
           </div>
+        )}
 
-          {mode === 'password' && (
+        {mode === 'password' && (
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="login-email" className="block text-body font-medium text-tx-heading mb-1">
+                Email
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@company.com"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full px-4 py-3 border border-border rounded-lg text-body focus:outline-none focus:border-border-focus"
+              />
+            </div>
+
             <div>
               <label htmlFor="login-password" className="block text-body font-medium text-tx-heading mb-1">
                 Password
@@ -191,28 +214,47 @@ export function LoginClient() {
                 className="w-full px-4 py-3 border border-border rounded-lg text-body focus:outline-none focus:border-border-focus"
               />
             </div>
-          )}
 
-          {error && (
-            <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-body-sm text-red-700">
-              {error}
+            {error && (
+              <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-body-sm text-red-700">
+                {error}
+              </p>
+            )}
+
+            {status && (
+              <p className="rounded-lg border border-brand-teal/20 bg-brand-teal-light px-4 py-3 text-body-sm text-brand-teal">
+                {status}
+              </p>
+            )}
+
+            <Button type="submit" variant="primary" size="lg" className="w-full justify-center" disabled={loading}>
+              {loading ? 'Working…' : 'Log in'}
+            </Button>
+
+            <p className="text-center text-body-sm text-tx-secondary">
+              New here? <a href="/start" className="text-brand-teal hover:underline">Start with the intake form</a>.
             </p>
-          )}
+          </form>
+        )}
 
-          {status && (
-            <p className="rounded-lg border border-brand-teal/20 bg-brand-teal-light px-4 py-3 text-body-sm text-brand-teal">
-              {status}
-            </p>
-          )}
+        {mode === 'google' && (error || status) && (
+          <div className="mt-5">
+            {error && (
+              <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-body-sm text-red-700">
+                {error}
+              </p>
+            )}
+            {status && (
+              <p className="rounded-lg border border-brand-teal/20 bg-brand-teal-light px-4 py-3 text-body-sm text-brand-teal">
+                {status}
+              </p>
+            )}
+          </div>
+        )}
 
-          <Button type="submit" variant="primary" size="lg" className="w-full justify-center" disabled={loading}>
-            {loading ? 'Working…' : mode === 'magic-link' ? 'Send magic link' : 'Log in'}
-          </Button>
-
-          <p className="text-center text-body-sm text-tx-secondary">
-            New here? <a href="/start" className="text-brand-teal hover:underline">Start with the intake form</a>.
-          </p>
-        </form>
+        <p className="mt-6 text-center text-body-sm text-tx-secondary">
+          New here? <a href="/start" className="text-brand-teal hover:underline">Start with the intake form</a>.
+        </p>
       </div>
     </section>
   );

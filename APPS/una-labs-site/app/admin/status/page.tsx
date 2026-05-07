@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { loadPortfolioStatus, type ProjectStatusSummary, type Rag } from '@/lib/portfolio-status';
-
-const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
+import { hasAdminAccess } from '@/lib/auth-guards';
 
 function ragStyles(status: Rag): string {
   if (status === 'green') return 'bg-teal-100 text-teal-700 border-teal-200';
@@ -39,10 +38,10 @@ export default function AdminStatusPage() {
       const { getSession } = await import('@ftc/auth');
       const session = await getSession();
       if (!session?.user) {
-        window.location.href = '/login?next=/admin/status';
+        window.location.href = '/login?redirect=/admin/status';
         return;
       }
-      if (session.user.email !== ADMIN_EMAIL) {
+      if (!hasAdminAccess(session)) {
         setAuthError('Access denied.');
         return;
       }

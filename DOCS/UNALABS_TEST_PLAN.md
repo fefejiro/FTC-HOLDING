@@ -48,7 +48,7 @@ Public routes:
 - `/products/dispatch`
 - `/products/peacepad`
 - `/products/saywetin`
-- `/realtor`
+- `/login`
 - `/start`
 - `/start/summary`
 - `/confirmation`

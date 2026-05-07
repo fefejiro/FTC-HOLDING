@@ -72,6 +72,17 @@ export async function signInWithPassword(email: string, password: string) {
   return client.auth.signInWithPassword({ email, password });
 }
 
+export async function signInWithGoogle(redirectTo?: string) {
+  const client = getClient();
+  return client.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      ...(redirectTo ? { redirectTo } : {}),
+      queryParams: { prompt: 'select_account' },
+    },
+  });
+}
+
 export async function signOut() {
   const client = getClient();
   return client.auth.signOut();
@@ -102,6 +113,7 @@ export function isAuthed(session: Session | null): boolean {
 export default {
   signInWithOtpEmail,
   signInWithPassword,
+  signInWithGoogle,
   signOut,
   getSession,
   onAuthStateChange,

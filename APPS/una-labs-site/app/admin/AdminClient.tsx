@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { getStripeApiUrl } from '@/lib/stripe-config';
 import { ACTIVATION_BANDS, getCommercialBillingLabel, getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
+import { hasAdminAccess } from '@/lib/auth-guards';
 
 type Project = {
   id: string;
@@ -152,8 +153,6 @@ type State =
   | { phase: 'denied'; reason: 'unauthenticated' | 'unauthorized' }
   | { phase: 'error'; message: string }
   | { phase: 'ready'; projects: Project[]; milestones: Milestone[]; subscribers: Subscriber[]; contracts: Contract[]; invoices: Invoice[]; instantBills: InstantBill[]; leads: Lead[] };
-
-const ADMIN_EMAIL = 'mike.fejiro@gmail.com';
 
 const TIER_PRICE: Record<string, number> = {
   starter: 67,
@@ -348,7 +347,7 @@ export function AdminClient() {
         setState({ phase: 'denied', reason: 'unauthenticated' });
         return;
       }
-      if (session.user.email !== ADMIN_EMAIL) {
+      if (!hasAdminAccess(session)) {
         setState({ phase: 'denied', reason: 'unauthorized' });
         return;
       }
