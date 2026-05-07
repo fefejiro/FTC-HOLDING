@@ -47,7 +47,7 @@ type UbyAppConfig = {
 type UbyCardData = UbyAppConfig & {
   liveStatus: string;
   recentJobs: string[];
-  recentLeads: string[];
+  recentLeads: Array<{ id: string; label: string }>;
   alerts: string[];
 };
 
@@ -151,17 +151,19 @@ export function UbyPortalClient() {
 
     async function load() {
       try {
-        const [artifactRes, leadsRes] = await Promise.all([
-          fetch('/ops/portfolio-e2e-status.json', { cache: 'no-store' }),
-          fetch(getStripeApiUrl('/api/admin/leads?limit=50'), {
-            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          }),
-        ]);
+        const artifactPromise = fetch('/ops/portfolio-e2e-status.json', { cache: 'no-store' });
+        const leadsPromise = token
+          ? fetch(getStripeApiUrl('/api/admin/leads?limit=50'), {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          : Promise.resolve(null);
+
+        const [artifactRes, leadsRes] = await Promise.all([artifactPromise, leadsPromise]);
 
         if (!artifactRes.ok) throw new Error('Could not load portfolio status feed.');
 
         const nextArtifact = (await artifactRes.json()) as E2EArtifact;
-        const leadBody = leadsRes.ok ? (await leadsRes.json()) as { leads?: Lead[] } : { leads: [] };
+        const leadBody = leadsRes?.ok ? (await leadsRes.json()) as { leads?: Lead[] } : { leads: [] };
 
         if (!cancelled) {
           setArtifact(nextArtifact);
@@ -205,7 +207,7 @@ export function UbyPortalClient() {
           return includesAny(searchable, app.keywords);
         })
         .slice(0, 3)
-        .map((lead) => `${lead.status ?? 'new'} · ${formatDate(lead.created_at)}`);
+        .map((lead) => ({ id: lead.id, label: `${lead.status ?? 'new'} · ${formatDate(lead.created_at)}` }));
 
       const recentJobs = (suite?.checks ?? []).slice(0, 3).map((check) => check.detail);
       const alerts: string[] = [];
@@ -290,10 +292,10 @@ export function UbyPortalClient() {
               </div>
 
               <div>
-                <p className="text-eyebrow text-tx-muted">Recent leads/jobs</p>
+                <p className="text-eyebrow text-tx-muted">Recent leads</p>
                 <ul className="mt-2 space-y-1.5 text-body-sm text-tx-secondary">
                   {card.recentLeads.length > 0 ? card.recentLeads.map((lead) => (
-                    <li key={lead}>• {lead}</li>
+                    <li key={lead.id}>• {lead.label}</li>
                   )) : <li>• No recent leads mapped to this app.</li>}
                 </ul>
               </div>
