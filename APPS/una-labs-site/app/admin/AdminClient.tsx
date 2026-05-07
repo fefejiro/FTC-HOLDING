@@ -123,6 +123,66 @@ type GitHubIssue = {
   updated_at: string;
 };
 
+type CommandCenterTask = {
+  issue_number: number;
+  title: string;
+  url: string;
+  status: 'pending' | 'in-progress' | 'review' | 'blocked' | 'done' | 'unlabelled';
+  status_label: string | null;
+  assignee: string | null;
+  area: string;
+  track: string;
+  updated_at: string;
+  created_at: string;
+};
+
+type CommandCenterBuild = {
+  id: string;
+  name: string;
+  area: string;
+  track: string;
+  completion_percent: number;
+  done_count: number;
+  open_count: number;
+  pending_count: number;
+  blocked_count: number;
+  left: string[];
+  needed: string[];
+  tasks: CommandCenterTask[];
+  burndown: Array<{ label: string; remaining: number }>;
+};
+
+type CommandCenterSnapshot = {
+  id: string;
+  issue_number: number;
+  title: string;
+  image_url: string;
+  source_url: string;
+  updated_at: string;
+  area: string;
+};
+
+type CommandCenterPayload = {
+  source: 'github' | 'fallback';
+  generated_at: string;
+  owner_login: string;
+  track: { key: string; label: string };
+  summary: {
+    done: number;
+    pending: number;
+    in_progress: number;
+    review: number;
+    blocked: number;
+    open_total: number;
+    total: number;
+  };
+  pending_items: CommandCenterTask[];
+  blocked_items: CommandCenterTask[];
+  owner_tasks: CommandCenterTask[];
+  builds: CommandCenterBuild[];
+  snapshots: CommandCenterSnapshot[];
+};
+
 type AutoCollectHealth = {
   generated_at: string;
   queue_total: number;
@@ -221,6 +281,24 @@ function formatPriceRange(min?: number | null, max?: number | null) {
   return `CA$${Number(min).toLocaleString('en-CA')} - CA$${Number(max).toLocaleString('en-CA')}`;
 }
 
+function statusToken(status: CommandCenterTask['status']) {
+  if (status === 'in-progress') return 'In progress';
+  if (status === 'unlabelled') return 'Pending';
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function burndownPolyline(points: Array<{ remaining: number }>): string {
+  if (points.length === 0) return '';
+  const maxRemaining = Math.max(1, ...points.map((point) => point.remaining));
+  return points
+    .map((point, index) => {
+      const x = points.length === 1 ? 0 : (index / (points.length - 1)) * 100;
+      const y = 100 - (point.remaining / maxRemaining) * 100;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(' ');
+}
+
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
@@ -254,6 +332,7 @@ export function AdminClient() {
   const [githubIssues, setGithubIssues] = useState<GitHubIssue[]>([]);
   const [githubIssuesLoading, setGithubIssuesLoading] = useState(false);
   const [githubIssuesError, setGithubIssuesError] = useState<string | null>(null);
+  const [commandCenter, setCommandCenter] = useState<CommandCenterPayload | null>(null);
   const [brandingProjectId, setBrandingProjectId] = useState('');
   const [brandingForm, setBrandingForm] = useState({ companyName: '', primaryColor: '#4DB8A8', logoUrl: '', tagline: '', replyEmail: '' });
   const [brandingSaving, setBrandingSaving] = useState(false);
@@ -431,14 +510,25 @@ export function AdminClient() {
           const ghRes = await fetch(getStripeApiUrl('/api/admin/github-issues'), {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
-          const ghPayload = await ghRes.json() as { issues?: GitHubIssue[]; error?: string };
+          const ghPayload = await ghRes.json() as {
+            issues?: GitHubIssue[];
+            command_center?: CommandCenterPayload;
+            warning?: string;
+            error?: string;
+          };
           if (ghRes.ok) {
             setGithubIssues(ghPayload.issues ?? []);
+            setCommandCenter(ghPayload.command_center ?? null);
+            if (ghPayload.warning) {
+              setGithubIssuesError(ghPayload.warning);
+            }
           } else {
             setGithubIssuesError(ghPayload.error ?? 'Failed to load engineering queue.');
+            setCommandCenter(null);
           }
         } catch {
           setGithubIssuesError('Network error while loading engineering queue.');
+          setCommandCenter(null);
         }
         setGithubIssuesLoading(false);
       })();
@@ -1918,6 +2008,168 @@ export function AdminClient() {
               <p className="text-body-sm text-tx-muted">Select a project above to manage its Connect onboarding.</p>
             )}
           </div>
+        </div>
+
+        <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-8">
+          <div className="px-8 py-5 border-b border-border flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <Badge variant="orange">Command center</Badge>
+              <h2 className="mt-1 text-h3 text-tx-heading">Track A · High-polish 2.5D fast (weeks)</h2>
+              <p className="mt-1 text-body-sm text-tx-secondary">At-a-glance progress, burndown, pending/blocked queues, and owner visibility.</p>
+            </div>
+            {commandCenter?.generated_at && (
+              <p className="text-body-sm text-tx-muted">Updated {formatDate(commandCenter.generated_at)}</p>
+            )}
+          </div>
+
+          {githubIssuesLoading && (
+            <div className="px-8 py-10 text-center text-body text-tx-muted animate-pulse">Loading command center...</div>
+          )}
+
+          {!githubIssuesLoading && commandCenter && (
+            <div className="p-8 space-y-8">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <Stat label="Done" value={commandCenter.summary.done} />
+                <Stat label="Pending" value={commandCenter.summary.pending} />
+                <Stat label="Blocked" value={commandCenter.summary.blocked} />
+                <Stat label="Open" value={commandCenter.summary.open_total} sub={`${commandCenter.summary.total} total`} />
+              </div>
+
+              <div className="rounded-2xl border border-border p-4 bg-bg-offwhite/40">
+                <div className="flex items-center justify-between gap-4 text-body-sm text-tx-muted">
+                  <span>Overall progress</span>
+                  <span>{commandCenter.summary.total > 0 ? Math.round((commandCenter.summary.done / commandCenter.summary.total) * 100) : 0}% complete</span>
+                </div>
+                <div className="mt-3 h-3 w-full rounded-full overflow-hidden bg-white border border-border flex">
+                  {commandCenter.summary.total > 0 && (
+                    <>
+                      <span className="bg-emerald-500" style={{ width: `${(commandCenter.summary.done / commandCenter.summary.total) * 100}%` }} />
+                      <span className="bg-blue-500" style={{ width: `${(commandCenter.summary.in_progress / commandCenter.summary.total) * 100}%` }} />
+                      <span className="bg-amber-500" style={{ width: `${(commandCenter.summary.review / commandCenter.summary.total) * 100}%` }} />
+                      <span className="bg-red-500" style={{ width: `${(commandCenter.summary.blocked / commandCenter.summary.total) * 100}%` }} />
+                      <span className="bg-slate-300" style={{ width: `${(commandCenter.summary.pending / commandCenter.summary.total) * 100}%` }} />
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid xl:grid-cols-3 gap-4">
+                {[
+                  { title: 'Pending items', items: commandCenter.pending_items },
+                  { title: 'Blocked items', items: commandCenter.blocked_items },
+                  { title: `My tasks (${commandCenter.owner_login})`, items: commandCenter.owner_tasks },
+                ].map((panel) => (
+                  <div key={panel.title} className="rounded-2xl border border-border p-4">
+                    <p className="text-body-sm font-semibold text-tx-heading">{panel.title}</p>
+                    <div className="mt-3 space-y-2">
+                      {panel.items.length === 0 && <p className="text-body-sm text-tx-muted">No items.</p>}
+                      {panel.items.slice(0, 6).map((item) => (
+                        <a key={`${panel.title}-${item.issue_number}-${item.title}`} href={item.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border px-3 py-2 hover:bg-bg-offwhite transition-colors">
+                          <p className="text-body-sm font-medium text-tx-heading line-clamp-2">{item.title}</p>
+                          <p className="text-[11px] uppercase tracking-wide text-tx-muted mt-1">{item.area} · {statusToken(item.status)}</p>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid xl:grid-cols-2 gap-4">
+                {commandCenter.builds.map((build) => (
+                  <div key={build.id} className="rounded-2xl border border-border p-4 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-tx-muted">{build.track}</p>
+                        <h3 className="text-h4 text-tx-heading mt-1">{build.name}</h3>
+                      </div>
+                      <Badge variant="muted">{build.completion_percent}% complete</Badge>
+                    </div>
+                    <div className="rounded-xl border border-border p-3 bg-bg-offwhite/40">
+                      <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-tx-muted mb-2">
+                        <span>Burndown</span>
+                        <span>{build.open_count} open</span>
+                      </div>
+                      <svg viewBox="0 0 100 100" className="w-full h-24" role="img" aria-label={`${build.name} burndown`}>
+                        <polyline fill="none" stroke="#0ea5e9" strokeWidth="2.5" points={burndownPolyline(build.burndown)} />
+                      </svg>
+                      <div className="flex justify-between text-[10px] text-tx-muted">
+                        {build.burndown.map((point) => (
+                          <span key={`${build.id}-${point.label}`}>{point.label}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-tx-muted">What is left</p>
+                        <ul className="mt-2 space-y-1 text-body-sm text-tx-secondary">
+                          {build.left.slice(0, 3).map((item) => <li key={`${build.id}-left-${item}`}>• {item}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-tx-muted">What is needed</p>
+                        <ul className="mt-2 space-y-1 text-body-sm text-tx-secondary">
+                          {build.needed.slice(0, 3).map((item) => <li key={`${build.id}-needed-${item}`}>• {item}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-border">
+                      <table className="w-full text-body-sm">
+                        <thead className="bg-bg-offwhite/60">
+                          <tr>
+                            {['Task', 'Owner', 'Status'].map((heading) => (
+                              <th key={`${build.id}-${heading}`} className="px-3 py-2 text-left text-[11px] uppercase tracking-wide text-tx-muted">{heading}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {build.tasks.slice(0, 4).map((task) => (
+                            <tr key={`${build.id}-task-${task.issue_number}-${task.title}`} className="border-t border-border">
+                              <td className="px-3 py-2">
+                                <a href={task.url} target="_blank" rel="noopener noreferrer" className="hover:text-brand-teal line-clamp-2">
+                                  {task.title}
+                                </a>
+                              </td>
+                              <td className="px-3 py-2 text-tx-muted">{task.assignee ?? '—'}</td>
+                              <td className="px-3 py-2 text-tx-muted">{statusToken(task.status)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <p className="text-body-sm font-semibold text-tx-heading">Latest snapshots / artifacts</p>
+                {commandCenter.snapshots.length === 0 ? (
+                  <p className="text-body-sm text-tx-muted mt-2">No screenshot artifacts found in recent issues.</p>
+                ) : (
+                  <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+                    {commandCenter.snapshots.slice(0, 12).map((snapshot) => (
+                      <a
+                        key={snapshot.id}
+                        href={snapshot.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-[180px] max-w-[180px] rounded-xl border border-border overflow-hidden bg-bg-offwhite hover:border-brand-teal transition-colors"
+                      >
+                        <img src={snapshot.image_url} alt={snapshot.title} className="h-24 w-full object-cover" loading="lazy" />
+                        <div className="p-2">
+                          <p className="text-[11px] font-semibold text-tx-heading line-clamp-2">{snapshot.title}</p>
+                          <p className="text-[10px] uppercase tracking-wide text-tx-muted mt-1">{snapshot.area}</p>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!githubIssuesLoading && !commandCenter && (
+            <div className="px-8 py-8 text-body-sm text-tx-muted">Command-center data unavailable.</div>
+          )}
         </div>
 
         <div className="bg-white rounded-[28px] border border-border shadow-sm overflow-hidden mb-8">

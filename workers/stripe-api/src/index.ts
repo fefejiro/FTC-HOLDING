@@ -27,6 +27,7 @@ export interface Env {
   AUTOCOLLECT_DAILY_EMAIL_CAP?: string;
   AUTOCOLLECT_MAX_SEND_PER_RUN?: string;
   GITHUB_TOKEN?: string;
+  GITHUB_OWNER_LOGIN?: string;
 }
 
 // ── Spark in-memory rate limit store (per worker instance) ─────────────
@@ -5297,10 +5298,224 @@ type GitHubIssueSummary = {
   updated_at: string;
 };
 
+type CommandCenterTask = {
+  issue_number: number;
+  title: string;
+  url: string;
+  status: 'pending' | 'in-progress' | 'review' | 'blocked' | 'done' | 'unlabelled';
+  status_label: string | null;
+  assignee: string | null;
+  area: string;
+  track: string;
+  updated_at: string;
+  created_at: string;
+};
+
+type CommandCenterSnapshot = {
+  id: string;
+  issue_number: number;
+  title: string;
+  image_url: string;
+  source_url: string;
+  updated_at: string;
+  area: string;
+};
+
+type CommandCenterBuild = {
+  id: string;
+  name: string;
+  area: string;
+  track: string;
+  completion_percent: number;
+  done_count: number;
+  open_count: number;
+  pending_count: number;
+  blocked_count: number;
+  left: string[];
+  needed: string[];
+  tasks: CommandCenterTask[];
+  burndown: Array<{ label: string; remaining: number }>;
+};
+
+type CommandCenterPayload = {
+  source: 'github' | 'fallback';
+  generated_at: string;
+  owner_login: string;
+  track: { key: string; label: string };
+  summary: {
+    done: number;
+    pending: number;
+    in_progress: number;
+    review: number;
+    blocked: number;
+    open_total: number;
+    total: number;
+  };
+  pending_items: CommandCenterTask[];
+  blocked_items: CommandCenterTask[];
+  owner_tasks: CommandCenterTask[];
+  builds: CommandCenterBuild[];
+  snapshots: CommandCenterSnapshot[];
+};
+
+function normalizeGitHubStatus(statusLabel: string | null, state: string): CommandCenterTask['status'] {
+  if (state === 'closed') return 'done';
+  const label = (statusLabel ?? '').toLowerCase();
+  if (label === 'status:in-progress') return 'in-progress';
+  if (label === 'status:review') return 'review';
+  if (label === 'status:blocked') return 'blocked';
+  if (label === 'status:pending') return 'pending';
+  return 'unlabelled';
+}
+
+function normalizeAreaLabel(areaLabels: string[]): string {
+  const area = areaLabels[0] ?? 'area:una-labs';
+  return area.startsWith('area:') ? area.slice(5) : area;
+}
+
+function toAreaTitle(area: string): string {
+  return area
+    .split('-')
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(' ');
+}
+
+function extractSnapshotUrls(body: string | null): string[] {
+  const text = body ?? '';
+  const urls = text.match(/https?:\/\/[^\s)]+?\.(?:png|jpe?g|gif|webp)/gi) ?? [];
+  return [...new Set(urls)];
+}
+
+function getTrackLabel(labels: string[]): string {
+  if (labels.some((label) => label.toLowerCase() === 'track:a')) {
+    return 'Track A · High-polish 2.5D fast (weeks)';
+  }
+  return 'Track A · High-polish 2.5D fast (weeks)';
+}
+
+function buildBurndown(tasks: CommandCenterTask[]): Array<{ label: string; remaining: number }> {
+  const now = new Date();
+  const points: Array<{ label: string; remaining: number }> = [];
+  for (let i = 5; i >= 0; i -= 1) {
+    const end = new Date(now);
+    end.setUTCDate(end.getUTCDate() - i * 7);
+    end.setUTCHours(23, 59, 59, 999);
+    const remaining = tasks.filter((task) => {
+      const createdAt = new Date(task.created_at);
+      if (Number.isNaN(createdAt.getTime()) || createdAt.getTime() > end.getTime()) return false;
+      if (task.status !== 'done') return true;
+      const closedWindow = new Date(task.updated_at);
+      return Number.isNaN(closedWindow.getTime()) || closedWindow.getTime() > end.getTime();
+    }).length;
+    points.push({ label: i === 0 ? 'Now' : `W-${i}`, remaining });
+  }
+  return points;
+}
+
+function makeFallbackCommandCenter(ownerLogin: string, reason: string): { issues: GitHubIssueSummary[]; commandCenter: CommandCenterPayload } {
+  const now = new Date().toISOString();
+  const fallbackTasks: CommandCenterTask[] = [
+    {
+      issue_number: 900001,
+      title: 'Track A command center polish pass',
+      url: 'https://github.com/fefejiro/FTC-HOLDING/issues',
+      status: 'in-progress',
+      status_label: 'status:in-progress',
+      assignee: ownerLogin,
+      area: 'una-labs',
+      track: 'Track A · High-polish 2.5D fast (weeks)',
+      updated_at: now,
+      created_at: now,
+    },
+    {
+      issue_number: 900002,
+      title: 'SayWetin build screenshot refresh',
+      url: 'https://github.com/fefejiro/FTC-HOLDING/issues',
+      status: 'pending',
+      status_label: 'status:pending',
+      assignee: ownerLogin,
+      area: 'saywetin',
+      track: 'Track A · High-polish 2.5D fast (weeks)',
+      updated_at: now,
+      created_at: now,
+    },
+    {
+      issue_number: 900003,
+      title: `GitHub API unavailable: ${reason}`,
+      url: 'https://github.com/fefejiro/FTC-HOLDING/issues',
+      status: 'blocked',
+      status_label: 'status:blocked',
+      assignee: ownerLogin,
+      area: 'ops',
+      track: 'Track A · High-polish 2.5D fast (weeks)',
+      updated_at: now,
+      created_at: now,
+    },
+  ];
+
+  const fallbackIssues: GitHubIssueSummary[] = fallbackTasks.map((task) => ({
+    number: task.issue_number,
+    title: task.title,
+    url: task.url,
+    status_label: task.status_label,
+    area_labels: [`area:${task.area}`],
+    assignee: task.assignee,
+    updated_at: task.updated_at,
+  }));
+
+  return {
+    issues: fallbackIssues,
+    commandCenter: {
+      source: 'fallback',
+      generated_at: now,
+      owner_login: ownerLogin,
+      track: { key: 'track:a', label: 'Track A · High-polish 2.5D fast (weeks)' },
+      summary: {
+        done: 0,
+        pending: 1,
+        in_progress: 1,
+        review: 0,
+        blocked: 1,
+        open_total: 3,
+        total: 3,
+      },
+      pending_items: fallbackTasks.filter((task) => task.status === 'pending'),
+      blocked_items: fallbackTasks.filter((task) => task.status === 'blocked'),
+      owner_tasks: fallbackTasks,
+      builds: [
+        {
+          id: 'fallback-una-labs',
+          name: 'Una Labs',
+          area: 'una-labs',
+          track: 'Track A · High-polish 2.5D fast (weeks)',
+          completion_percent: 0,
+          done_count: 0,
+          open_count: 2,
+          pending_count: 1,
+          blocked_count: 0,
+          left: ['Finalize command center widgets', 'Capture latest snapshot strip'],
+          needed: ['Mark tasks with status labels', 'Attach screenshot evidence'],
+          tasks: fallbackTasks.filter((task) => task.area === 'una-labs' || task.area === 'saywetin'),
+          burndown: [
+            { label: 'W-5', remaining: 5 },
+            { label: 'W-4', remaining: 5 },
+            { label: 'W-3', remaining: 4 },
+            { label: 'W-2', remaining: 4 },
+            { label: 'W-1', remaining: 3 },
+            { label: 'Now', remaining: 2 },
+          ],
+        },
+      ],
+      snapshots: [],
+    },
+  };
+}
+
 async function handleAdminGitHubIssues(req: Request, env: Env, origin: string | null): Promise<Response> {
   const auth = await verifyAdmin(req, env);
   if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
 
+  const ownerLogin = sanitize(env.GITHUB_OWNER_LOGIN ?? 'fefejiro', 80) || 'fefejiro';
   const token = env.GITHUB_TOKEN;
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',
@@ -5312,39 +5527,145 @@ async function handleAdminGitHubIssues(req: Request, env: Env, origin: string | 
 
   try {
     const res = await fetch(
-      'https://api.github.com/repos/fefejiro/FTC-HOLDING/issues?state=open&type=issue&per_page=100',
+      'https://api.github.com/repos/fefejiro/FTC-HOLDING/issues?state=all&type=issue&per_page=100&sort=updated&direction=desc',
       { headers }
     );
     if (!res.ok) {
       const rateLimitRemaining = res.headers.get('x-ratelimit-remaining');
       if (res.status === 403 && rateLimitRemaining === '0') {
-        return json({ error: 'GitHub API rate limit exceeded. Set GITHUB_TOKEN to increase limits.' }, 429, origin);
+        const fallback = makeFallbackCommandCenter(ownerLogin, 'rate limit exceeded');
+        return json({ issues: fallback.issues, command_center: fallback.commandCenter, warning: 'GitHub API rate limit exceeded.' }, 200, origin);
       }
-      return json({ error: `GitHub API error: ${res.status}` }, 502, origin);
+      const fallback = makeFallbackCommandCenter(ownerLogin, `GitHub API error ${res.status}`);
+      return json({ issues: fallback.issues, command_center: fallback.commandCenter, warning: `GitHub API error: ${res.status}` }, 200, origin);
     }
 
     const rawIssues = await res.json() as GitHubIssueRaw[];
-
-    const issues: GitHubIssueSummary[] = rawIssues
+    const tasks: CommandCenterTask[] = rawIssues
       .filter((issue) => !('pull_request' in issue))
       .map((issue) => {
         const labelNames = (issue.labels ?? []).map((l) => l.name);
         const statusLabel = labelNames.find((n) => n.startsWith('status:')) ?? null;
         const areaLabels = labelNames.filter((n) => n.startsWith('area:'));
+        const area = normalizeAreaLabel(areaLabels);
         return {
-          number: issue.number,
+          issue_number: issue.number,
           title: issue.title,
           url: issue.html_url,
+          status: normalizeGitHubStatus(statusLabel, issue.state),
           status_label: statusLabel,
-          area_labels: areaLabels,
           assignee: issue.assignee?.login ?? (issue.assignees?.[0]?.login ?? null),
+          area,
+          track: getTrackLabel(labelNames),
           updated_at: issue.updated_at,
+          created_at: issue.created_at,
         };
       });
 
-    return json({ issues }, 200, origin);
+    const issues: GitHubIssueSummary[] = tasks
+      .filter((task) => task.status !== 'done')
+      .map((task) => ({
+        number: task.issue_number,
+        title: task.title,
+        url: task.url,
+        status_label: task.status_label,
+        area_labels: [`area:${task.area}`],
+        assignee: task.assignee,
+        updated_at: task.updated_at,
+      }));
+
+    const openTasks = tasks.filter((task) => task.status !== 'done');
+    const doneCount = tasks.length - openTasks.length;
+    const pendingItems = openTasks
+      .filter((task) => task.status === 'pending' || task.status === 'unlabelled')
+      .slice(0, 12);
+    const blockedItems = openTasks.filter((task) => task.status === 'blocked').slice(0, 12);
+    const ownerTasks = openTasks.filter((task) => (task.assignee ?? '').toLowerCase() === ownerLogin.toLowerCase()).slice(0, 12);
+
+    const byArea = new Map<string, CommandCenterTask[]>();
+    for (const task of tasks) {
+      if (!byArea.has(task.area)) byArea.set(task.area, []);
+      byArea.get(task.area)!.push(task);
+    }
+
+    const builds: CommandCenterBuild[] = [...byArea.entries()]
+      .map(([area, areaTasks]) => {
+        const areaOpen = areaTasks.filter((task) => task.status !== 'done');
+        if (areaOpen.length === 0) return null;
+        const areaDone = areaTasks.length - areaOpen.length;
+        const pendingCount = areaOpen.filter((task) => task.status === 'pending' || task.status === 'unlabelled').length;
+        const blockedCount = areaOpen.filter((task) => task.status === 'blocked').length;
+        const completionPercent = areaTasks.length ? Math.round((areaDone / areaTasks.length) * 100) : 0;
+        return {
+          id: `build-${area}`,
+          name: toAreaTitle(area),
+          area,
+          track: 'Track A · High-polish 2.5D fast (weeks)',
+          completion_percent: completionPercent,
+          done_count: areaDone,
+          open_count: areaOpen.length,
+          pending_count: pendingCount,
+          blocked_count: blockedCount,
+          left: areaOpen.slice(0, 4).map((task) => task.title),
+          needed: areaOpen.filter((task) => task.status === 'review' || task.status === 'pending' || task.status === 'unlabelled').slice(0, 4).map((task) => task.title),
+          tasks: areaOpen.slice(0, 12),
+          burndown: buildBurndown(areaTasks),
+        };
+      })
+      .filter((value): value is CommandCenterBuild => Boolean(value))
+      .sort((a, b) => b.open_count - a.open_count);
+
+    const snapshots: CommandCenterSnapshot[] = rawIssues
+      .filter((issue) => !('pull_request' in issue))
+      .flatMap((issue) => {
+        const labelNames = (issue.labels ?? []).map((label) => label.name);
+        const areaLabels = labelNames.filter((n) => n.startsWith('area:'));
+        const area = normalizeAreaLabel(areaLabels);
+        return extractSnapshotUrls(issue.body).map((imageUrl, index) => ({
+          id: `issue-${issue.number}-${index}`,
+          issue_number: issue.number,
+          title: issue.title,
+          image_url: imageUrl,
+          source_url: issue.html_url,
+          updated_at: issue.updated_at,
+          area,
+        }));
+      })
+      .slice(0, 24);
+
+    const commandCenter: CommandCenterPayload = {
+      source: 'github',
+      generated_at: new Date().toISOString(),
+      owner_login: ownerLogin,
+      track: { key: 'track:a', label: 'Track A · High-polish 2.5D fast (weeks)' },
+      summary: {
+        done: doneCount,
+        pending: openTasks.filter((task) => task.status === 'pending' || task.status === 'unlabelled').length,
+        in_progress: openTasks.filter((task) => task.status === 'in-progress').length,
+        review: openTasks.filter((task) => task.status === 'review').length,
+        blocked: openTasks.filter((task) => task.status === 'blocked').length,
+        open_total: openTasks.length,
+        total: tasks.length,
+      },
+      pending_items: pendingItems,
+      blocked_items: blockedItems,
+      owner_tasks: ownerTasks,
+      builds,
+      snapshots,
+    };
+
+    return json({ issues, command_center: commandCenter }, 200, origin);
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Failed to fetch GitHub issues.' }, 502, origin);
+    const fallback = makeFallbackCommandCenter(ownerLogin, error instanceof Error ? error.message : 'request failed');
+    return json(
+      {
+        issues: fallback.issues,
+        command_center: fallback.commandCenter,
+        warning: error instanceof Error ? error.message : 'Failed to fetch GitHub issues.',
+      },
+      200,
+      origin
+    );
   }
 }
 
