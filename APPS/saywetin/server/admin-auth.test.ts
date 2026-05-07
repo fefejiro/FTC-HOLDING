@@ -17,14 +17,17 @@ describe("admin-auth", () => {
     vi.unstubAllEnvs();
   });
 
-  it("accepts default fallback credentials", () => {
-    const result = authenticateAdminCredentials("mike.fejiro@gmail.com", "Efiuvwere@1234!");
-    expect(result.ok).toBe(true);
-    expect(result.username).toBe("mike.fejiro@gmail.com");
+  it("rejects authentication when env vars are not configured", () => {
+    // No SAYWETIN_ADMIN_USERNAME or SAYWETIN_ADMIN_PASSWORD set — must always reject
+    const result = authenticateAdminCredentials("any@example.com", "any-password");
+    expect(result.ok).toBe(false);
   });
 
   it("rejects invalid password", () => {
-    const result = authenticateAdminCredentials("mike.fejiro@gmail.com", "wrong-password");
+    vi.stubEnv("SAYWETIN_ADMIN_USERNAME", "admin@example.com");
+    vi.stubEnv("SAYWETIN_ADMIN_PASSWORD", "correct-secret");
+
+    const result = authenticateAdminCredentials("admin@example.com", "wrong-password");
     expect(result.ok).toBe(false);
   });
 
@@ -32,7 +35,7 @@ describe("admin-auth", () => {
     vi.stubEnv("SAYWETIN_ADMIN_USERNAME", "ops@example.com");
     vi.stubEnv("SAYWETIN_ADMIN_PASSWORD", "ops-secret");
 
-    expect(authenticateAdminCredentials("mike.fejiro@gmail.com", "Efiuvwere@1234!").ok).toBe(false);
+    expect(authenticateAdminCredentials("other@example.com", "other-password").ok).toBe(false);
     expect(authenticateAdminCredentials("ops@example.com", "ops-secret").ok).toBe(true);
   });
 

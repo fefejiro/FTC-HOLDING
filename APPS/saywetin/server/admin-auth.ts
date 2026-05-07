@@ -1,16 +1,12 @@
 import crypto from "crypto";
 import type { Request } from "express";
 
-const DEFAULT_ADMIN_USERNAME = "mike.fejiro@gmail.com";
-const DEFAULT_ADMIN_PASSWORD = "Efiuvwere@1234!";
-
 function resolveAdminUsername(): string {
-  return (process.env.SAYWETIN_ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME).trim().toLowerCase();
+  return (process.env.SAYWETIN_ADMIN_USERNAME || "").trim().toLowerCase();
 }
 
 function resolveAdminPassword(): string {
-  const configured = (process.env.SAYWETIN_ADMIN_PASSWORD || "").trim();
-  return configured || DEFAULT_ADMIN_PASSWORD;
+  return (process.env.SAYWETIN_ADMIN_PASSWORD || "").trim();
 }
 
 function timingSafeEqualText(a: string, b: string): boolean {
@@ -40,7 +36,7 @@ export function authenticateAdminCredentials(
   const validUser = timingSafeEqualText(normalizedUsername, expectedUsername);
   const validPassword = timingSafeEqualText(suppliedPassword, expectedPassword);
 
-  if (!validUser || !validPassword) {
+  if (!expectedUsername || !expectedPassword || !validUser || !validPassword) {
     return { ok: false };
   }
 

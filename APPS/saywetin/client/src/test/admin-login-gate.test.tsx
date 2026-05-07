@@ -33,7 +33,7 @@ describe("admin page login gate", () => {
 
       if (url.includes("/api/admin/login") && init?.method === "POST") {
         const payload = JSON.parse(String(init.body || "{}"));
-        if (payload.username === "mike.fejiro@gmail.com" && payload.password === "Efiuvwere@1234!") {
+        if (payload.username === "mike.fejiro@gmail.com" && payload.password === "test-admin-pass") {
           return new Response(JSON.stringify({ authenticated: true }), {
             status: 200,
             headers: { "Content-Type": "application/json" },
@@ -70,7 +70,7 @@ describe("admin page login gate", () => {
     renderWithClient();
 
     await screen.findByText("Admin login required");
-    await user.type(screen.getByTestId("input-admin-password"), "Efiuvwere@1234!");
+    await user.type(screen.getByTestId("input-admin-password"), "test-admin-pass");
     await user.click(screen.getByTestId("button-admin-login"));
 
     await waitFor(() => {
