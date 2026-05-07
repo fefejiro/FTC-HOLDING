@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/sidebar";
 
 const NAV_ITEMS = [
-  { title: "Compose", url: "/compose", icon: MessageCircle },
-  { title: "Prep Chat", url: "/prep-chat", icon: Sparkles },
+  { title: "Messages", url: "/chat", icon: MessageCircle },
+  { title: "Prep", url: "/prep-chat", icon: Sparkles },
   { title: "Calendar", url: "/scheduling", icon: CalendarDays },
   { title: "You", url: "/settings", icon: Settings },
 ];
@@ -41,9 +41,11 @@ export function AppSidebar() {
     activePartnership?.partner?.displayName ||
     activePartnership?.partner?.email ||
     null;
-  const items = user?.activePartnershipId
-    ? NAV_ITEMS.map((item) => (item.url === "/compose" ? { ...item, title: "Messages", url: "/chat" } : item))
-    : NAV_ITEMS;
+  const items = NAV_ITEMS.map((item) =>
+    item.title === "Messages"
+      ? { ...item, url: user?.activePartnershipId ? "/chat" : "/compose" }
+      : item,
+  );
 
   return (
     <Sidebar>
@@ -66,7 +68,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>MVP</SidebarGroupLabel>
+          <SidebarGroupLabel>Core</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (

@@ -29,7 +29,7 @@ export function SEOHead({
   jsonLd,
   article,
 }: SEOHeadProps) {
-  const baseUrl = "https://peacepad.ca";
+  const baseUrl = (import.meta.env.VITE_BASE_URL || "https://peacepad.ca").replace(/\/+$/, "");
   const fullCanonical = canonical || window.location.pathname;
   const canonicalUrl = fullCanonical.startsWith('http') ? fullCanonical : `${baseUrl}${fullCanonical}`;
   const fullTitle = title.includes("PeacePad") ? title : `${title} | PeacePad`;

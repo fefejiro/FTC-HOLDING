@@ -362,9 +362,9 @@ export default function OnboardingPage() {
               {step === 1 && (
                 <>
                   <div className="space-y-2">
-                    <CardTitle className="text-3xl leading-tight">Find a softer tone for hard conversations.</CardTitle>
+                    <CardTitle className="text-3xl leading-tight">A calmer space for co-parent communication.</CardTitle>
                     <CardDescription className="text-base">
-                      For co-parents who want help saying something difficult more calmly.
+                      Write what you need to say, check tone before sending, and keep communication focused on the kids.
                     </CardDescription>
                   </div>
                 </>
@@ -373,29 +373,29 @@ export default function OnboardingPage() {
               {step === 1.5 && (
                 <>
                   <div className="space-y-2">
-                    <CardTitle>Here's how it works</CardTitle>
-                    <CardDescription>Three steps between conflict and clarity.</CardDescription>
+                    <CardTitle>How PeacePad helps in real moments</CardTitle>
+                    <CardDescription>Simple flow: draft, soften, send.</CardDescription>
                   </div>
                   <div className="grid gap-3">
                     <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
                       <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
                       <div>
-                        <p className="text-sm font-semibold">Write your message</p>
-                        <p className="text-xs text-muted-foreground">Type what you want to say — rough draft is fine.</p>
+                        <p className="text-sm font-semibold">Write your first draft</p>
+                        <p className="text-xs text-muted-foreground">Say it exactly as it is. You can refine it next.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
                       <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
                       <div>
-                        <p className="text-sm font-semibold">PeacePad checks your tone</p>
-                        <p className="text-xs text-muted-foreground">We flag anything that could escalate and suggest a calmer version.</p>
+                        <p className="text-sm font-semibold">Get a calmer rewrite option</p>
+                        <p className="text-xs text-muted-foreground">We flag phrases that may escalate and suggest clearer language.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
                       <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
                       <div>
-                        <p className="text-sm font-semibold">Send when you're ready</p>
-                        <p className="text-xs text-muted-foreground">You decide. We just make sure the message works for you.</p>
+                        <p className="text-sm font-semibold">Send when it feels right</p>
+                        <p className="text-xs text-muted-foreground">You stay in control. PeacePad helps you reduce friction.</p>
                       </div>
                     </div>
                   </div>
@@ -480,8 +480,8 @@ export default function OnboardingPage() {
               {step === 4 && (
                 <>
                   <div className="space-y-2">
-                    <CardTitle>Choose your first step</CardTitle>
-                    <CardDescription>Pick the path that helps you most right now.</CardDescription>
+                    <CardTitle>Pick your first calm action</CardTitle>
+                    <CardDescription>Start with message prep or invite your co-parent now.</CardDescription>
                   </div>
                   <div className="grid gap-3">
                     <button

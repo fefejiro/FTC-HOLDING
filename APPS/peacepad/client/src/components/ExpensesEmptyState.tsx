@@ -12,9 +12,9 @@ export function ExpensesEmptyState({ onAddExpense }: ExpensesEmptyStateProps) {
         <div className="mb-4 flex justify-center">
           <DollarSign className="h-12 w-12 text-primary" />
         </div>
-        <h2 className="text-xl font-semibold mb-1">No Expenses Yet</h2>
+        <h2 className="text-xl font-semibold mb-1">No shared costs yet</h2>
         <p className="text-sm text-muted-foreground">
-          Track and split shared costs
+          Add the first item to keep payments clear and reduce follow-up conflict.
         </p>
       </div>
 
@@ -26,7 +26,7 @@ export function ExpensesEmptyState({ onAddExpense }: ExpensesEmptyStateProps) {
           data-testid="button-add-first-expense"
         >
           <DollarSign className="w-4 h-4 mr-2" />
-          Add First Expense
+          Add First Shared Cost
         </Button>
       </div>
     </div>

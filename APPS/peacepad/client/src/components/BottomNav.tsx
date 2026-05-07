@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
 const NAV_ITEMS = [
-  { path: "/compose", label: "Compose", icon: MessageCircle },
-  { path: "/prep-chat", label: "Prep Chat", icon: Sparkles },
+  { path: "/compose", label: "Messages", icon: MessageCircle },
+  { label: "Prep", path: "/prep-chat", icon: Sparkles },
   { path: "/scheduling", label: "Calendar", icon: CalendarDays },
   { path: "/settings", label: "You", icon: Settings },
 ];
@@ -13,9 +13,11 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const [location] = useLocation();
   const { user } = useAuth();
-  const items = user?.activePartnershipId
-    ? NAV_ITEMS.map((item) => (item.path === "/compose" ? { ...item, path: "/chat", label: "Messages" } : item))
-    : NAV_ITEMS;
+  const items = NAV_ITEMS.map((item) =>
+    item.label === "Messages"
+      ? { ...item, path: user?.activePartnershipId ? "/chat" : "/compose" }
+      : item,
+  );
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-[9999] border-t bg-background/95 backdrop-blur lg:hidden">
@@ -29,7 +31,9 @@ export function BottomNav() {
               <button
                 className={cn(
                   "flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs font-medium transition",
-                  isActive ? "text-primary" : "text-muted-foreground",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
               >

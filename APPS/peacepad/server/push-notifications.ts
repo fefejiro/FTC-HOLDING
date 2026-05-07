@@ -8,7 +8,9 @@ let firebaseInitialized = false;
 
 // VAPID keys from environment variables
 // Generate keys with: npx web-push generate-vapid-keys
-// Development fallback keys (REPLACE IN PRODUCTION)
+// Development fallback keys are ONLY used outside production. In production,
+// missing VAPID env vars cause web push to be disabled rather than silently
+// configuring with shared dev keys (which would be a privacy/security issue).
 const DEV_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFVvGPlWkZ5bvAKixGJXnRnZNfLKvShYvH9I44lBuDzKRk';
 const DEV_PRIVATE_KEY = 'vL7u8JXqShHEhVfuJ-TZ1JQrj1NKT65wHO4nG5fKsqM';
 
@@ -18,25 +20,40 @@ function cleanVapidKey(key: string | undefined): string | undefined {
   return key.trim().replace(/[\s\n\r=]+/g, '');
 }
 
-const VAPID_PUBLIC_KEY = cleanVapidKey(config.integrations.vapidPublicKey) || DEV_PUBLIC_KEY;
-const VAPID_PRIVATE_KEY = cleanVapidKey(config.integrations.vapidPrivateKey) || DEV_PRIVATE_KEY;
+const envPublicKey = cleanVapidKey(config.integrations.vapidPublicKey);
+const envPrivateKey = cleanVapidKey(config.integrations.vapidPrivateKey);
 
-// Warn if using development keys in production
-if (!config.integrations.vapidPublicKey && config.isProduction) {
-  console.warn('WARNING: Using development VAPID keys. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment variables for production!');
-}
+const isProductionEnv = config.isProduction;
+const hasProductionVapid = Boolean(envPublicKey && envPrivateKey);
 
-// Configure web-push with VAPID details
-try {
-  webpush.setVapidDetails(
-    config.integrations.vapidEmail || 'mailto:support@peacepad.com',
-    VAPID_PUBLIC_KEY,
-    VAPID_PRIVATE_KEY
+// In production we refuse to fall back to dev keys.
+const VAPID_PUBLIC_KEY = isProductionEnv
+  ? (envPublicKey || '')
+  : (envPublicKey || DEV_PUBLIC_KEY);
+const VAPID_PRIVATE_KEY = isProductionEnv
+  ? (envPrivateKey || '')
+  : (envPrivateKey || DEV_PRIVATE_KEY);
+
+let webPushConfigured = false;
+
+if (isProductionEnv && !hasProductionVapid) {
+  console.error(
+    '❌ VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY are not set. Web push notifications are DISABLED for this production process. ' +
+    'Generate keys with: npx web-push generate-vapid-keys'
   );
-  console.log('✅ Web Push VAPID configured successfully');
-} catch (error: any) {
-  console.error('❌ Failed to configure VAPID:', error?.message);
-  console.warn('Web push notifications will not work. Check VAPID key format.');
+} else {
+  try {
+    webpush.setVapidDetails(
+      config.integrations.vapidEmail || 'mailto:support@peacepad.ca',
+      VAPID_PUBLIC_KEY,
+      VAPID_PRIVATE_KEY
+    );
+    webPushConfigured = true;
+    console.log('✅ Web Push VAPID configured successfully');
+  } catch (error: any) {
+    console.error('❌ Failed to configure VAPID:', error?.message);
+    console.warn('Web push notifications will not work. Check VAPID key format.');
+  }
 }
 
 // CRITICAL: Initialization promise to prevent race conditions
@@ -123,6 +140,11 @@ export async function sendPushNotification(userId: string, notification: {
     const sendPromises = subscriptions.map(async (sub) => {
       // Handle web push
       if (sub.platform === 'web' && sub.endpoint && sub.p256dh && sub.auth) {
+        if (!webPushConfigured) {
+          // VAPID keys not configured (e.g. production without env values).
+          // Skip web push silently per-call to avoid log spam.
+          return;
+        }
         const pushSubscription = {
           endpoint: sub.endpoint,
           keys: {
@@ -229,5 +251,5 @@ export async function sendPushNotification(userId: string, notification: {
 }
 
 export function getVapidPublicKey() {
-  return VAPID_PUBLIC_KEY;
+  return webPushConfigured ? VAPID_PUBLIC_KEY : '';
 }

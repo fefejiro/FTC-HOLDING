@@ -1,5 +1,43 @@
 # 🚀 PeacePad Production Readiness - Complete Checklist
 
+> **Status (May 2026):** The five items previously listed as “CRITICAL FIXES REQUIRED”
+> have all been addressed in code. This document is kept as an environment / ops
+> reference only. See the **Resolved** section at the top before treating any item below
+> as a blocker.
+>
+> **Canonical release gate:** [RELEASE_EXECUTION_CHECKLIST.md](./RELEASE_EXECUTION_CHECKLIST.md)
+> **Current state:** [STATUS_FOR_USER.md](./STATUS_FOR_USER.md)
+
+---
+
+## ✅ Resolved (do not re-fix)
+
+1. **CORS hardened** — `server/index.ts` uses an allow-list built from
+   `config.cors.allowedOrigins` (`APP_ORIGINS` / `CORS_ALLOWED_ORIGINS`); there is
+   no `origin: true` in production.
+2. **Admin RBAC implemented** — `isAdmin` middleware in `server/replitAuth.ts`
+   checks the database `users.isAdmin` flag and gates every `/api/admin/*`
+   endpoint in `server/routes.ts`.
+3. **VAPID dev fallback removed in production** — `server/push-notifications.ts`
+   refuses to fall back to the shared dev keys when `NODE_ENV=production`. If
+   `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` are missing, web push is disabled
+   loudly rather than silently shipping a leaked dev key.
+4. **SEO canonical respects env** — `client/src/components/SEOHead.tsx` uses
+   `VITE_BASE_URL` when set and falls back to `https://peacepad.ca`.
+5. **Uploads persistence** — production deployment serves uploads from the
+   provisioned persistent volume via `server/index.ts` (`/uploads` static
+   handler). Verify the volume is mounted in your platform settings before each
+   release.
+
+The remaining content of this file is the historical ops checklist for setting
+production environment variables. Treat it as a reference, not as outstanding
+work.
+
+---
+
+## ⚠️ Historical Notes (env-config reference only)
+
+
 ## ⚠️ CRITICAL FIXES REQUIRED
 
 ### 1. **SECURITY: Fix CORS Configuration** ⚠️ HIGH PRIORITY
