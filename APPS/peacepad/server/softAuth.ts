@@ -388,6 +388,7 @@ export function getSession() {
     pool: pool,
     createTableIfMissing: true,
     ttl: sessionTtl,
+    schemaName: process.env.SESSION_SCHEMA || "public",
     tableName: "sessions",
     errorLog: (error) => {
       if (error.message?.includes("disabled") || error.message?.includes("suspended")) {

@@ -42,6 +42,7 @@ export function getSession() {
     conString: appConfig.database.url,
     createTableIfMissing: false,
     ttl: sessionTtl,
+    schemaName: process.env.SESSION_SCHEMA || "public",
     tableName: "sessions",
   });
   return session({
