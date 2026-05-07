@@ -31,7 +31,7 @@ try {
   process.exit(1);
 }
 
-const raw = fs.readFileSync(INBOX, 'utf8');
+const raw = fs.readFileSync(INBOX, 'utf8').replace(/\r\n/g, '\n');
 const lines = raw.split('\n');
 const markerIdx = lines.indexOf(MARKER);
 if (markerIdx === -1) {

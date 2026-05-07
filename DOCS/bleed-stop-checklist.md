@@ -12,7 +12,11 @@ Confirmed deleted by user.
 
 ---
 
-## A2. Cancel failing GH Actions runs — **MANUAL** (one command)
+## A2. Cancel failing GH Actions runs — **DONE** (2026-05-07)
+
+Active queue (queued + in_progress + waiting) verified empty after A3 disabled noisy workflows. The 200+ historical `failure` rows are cosmetic noise — `gh run cancel` is a no-op on completed runs. A3 prevents new failures from spawning.
+
+### Original instructions (kept for reference)
 
 \`\`\`powershell
 gh run list --repo fefejiro/FTC-HOLDING --status failure --limit 200 --json databaseId | `
