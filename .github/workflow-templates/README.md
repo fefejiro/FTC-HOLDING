@@ -13,7 +13,7 @@ Drop these templates into `.github/workflows/` when scaffolding a new app.
 
 1. Copy the template file into `.github/workflows/<your-workflow-name>.yml`.
 2. Replace all `<...>` placeholders (`<app-name>`, `<workflow-file>`, `<worker-name>`, etc.).
-   - `<workflow-file>` must match the real file name you save in `.github/workflows/` so path triggers work.
+   - `<workflow-file>` appears in each template `paths` trigger; replace it with your real workflow file (for example `.github/workflows/my-app.yml`).
 3. Set required repository secrets:
    - `CLOUDFLARE_API_TOKEN`
    - `CLOUDFLARE_ACCOUNT_ID`

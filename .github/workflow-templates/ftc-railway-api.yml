@@ -16,7 +16,6 @@ on:
 env:
   APP_PATH: APPS/<app-name>
   NODE_VERSION: '22'
-  BUILD_CMD: npm run build
   RAILWAY_SERVICE: <railway-service-name>
 
 jobs:
@@ -35,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Build API
-        run: (cd "$APP_PATH" && bash -c "$BUILD_CMD")
+        run: npm --prefix "$APP_PATH" run build
 
   deploy:
     name: Deploy API to Railway
@@ -54,7 +53,7 @@ jobs:
         run: npm ci
 
       - name: Build API
-        run: (cd "$APP_PATH" && bash -c "$BUILD_CMD")
+        run: npm --prefix "$APP_PATH" run build
 
       - name: Deploy via Railway CLI
         working-directory: ${{ env.APP_PATH }}
