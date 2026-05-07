@@ -87,7 +87,20 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
       (line) => line.startMs <= positionMs && positionMs < line.endMs,
     );
 
-    return matchIndex >= 0 ? matchIndex : 0;
+    if (matchIndex >= 0) {
+      return matchIndex;
+    }
+
+    // If the current position falls in timing gaps or beyond the last line,
+    // keep the nearest previous line instead of snapping back to the first line.
+    const nearestPast = lyrics.reduce((best, line, index) => {
+      if (line.startMs <= positionMs) {
+        return index;
+      }
+      return best;
+    }, -1);
+
+    return nearestPast >= 0 ? nearestPast : 0;
   }, [lyrics, positionMs]);
 
   const activeLine = lyrics[currentLineIndex] ?? null;

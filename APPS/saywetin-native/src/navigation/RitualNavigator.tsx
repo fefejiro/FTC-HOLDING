@@ -93,6 +93,8 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
                   ritual.setRecognizedTrack({
                     ...ritual.track,
                     syncedLyrics: fetched.lines,
+                    lyricsAnchorOffsetMs: Math.max(0, fetched.songOffsetMs || 0),
+                    sampleCapturedAtMs: Date.now(),
                   });
                 }
               }
