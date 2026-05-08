@@ -23,10 +23,15 @@ Una Labs public web shell that explains studio identity, showcases products/case
 
 ## Canonical domain policy
 
-- Phase A canonical host: `ftc.peacepad.ca`
-- Phase B canonical host target: `unalabs.cloud`
-- Requests arriving on `*.pages.dev` are redirected to canonical host.
+- Canonical host: `unalabs.cloud`
+- Requests arriving on `*.pages.dev` should redirect to canonical/public hosts.
 - `robots.txt` and `sitemap.xml` emit canonical host URLs.
+- Brand host routing is handled at Cloudflare Pages edge via `functions/_middleware.ts`.
+- Current host ownership map:
+	- Una Labs: `unalabs.cloud`, `www.unalabs.cloud`
+	- Garden Cleaners: `gardencleaners.ca`, `www.gardencleaners.ca`
+	- OG alias: `og.unalabs.cloud`
+	- OG public custom domains (`ogtradesacademy.com`, `www.ogtradesacademy.com`) are pending external DNS verification.
 
 ## Content strategy
 
@@ -36,6 +41,6 @@ Una Labs public web shell that explains studio identity, showcases products/case
 
 ## Operational notes
 
-- Phase A runs on `https://ftc.peacepad.ca`
-- Phase B migrates canonical to `https://unalabs.cloud` with old-host 308 redirects
+- Production canonical runs on `https://unalabs.cloud`
+- Legacy hosts should 308 to canonical where applicable
 - Intake backend is live at `POST /api/intake` with anti-spam + rate limiting

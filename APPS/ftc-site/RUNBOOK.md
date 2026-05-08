@@ -6,6 +6,35 @@
 - npm
 - Cloudflare Wrangler authenticated (`pages` write scope)
 
+## Infrastructure Source Of Truth (2026-05-08)
+
+Use this section as the canonical map. If dashboard state differs, treat dashboard as drift and correct it.
+
+- Canonical Pages project for Una Labs + brand hosts: `ftc-site-pages`
+- Canonical production domain: `unalabs.cloud`
+- Garden domains now attached to `ftc-site-pages`:
+  - `gardencleaners.ca`
+  - `www.gardencleaners.ca`
+- OG preview alias attached to `ftc-site-pages`:
+  - `og.unalabs.cloud`
+- OG public custom domains are attached but pending verification:
+  - `ogtradesacademy.com`
+  - `www.ogtradesacademy.com`
+
+Known external ownership:
+
+- `ogtradesacademy.com` DNS is managed outside Cloudflare (Google nameservers).
+- Old OG apex records still point to Squarespace IPs unless corrected in the external DNS host.
+
+Clean-up status already completed:
+
+- Removed stale Pages projects that caused split routing:
+  - `og-trades-pages`
+  - `gardencleaners-pages`
+  - `og-trades-academy-pages`
+  - `gidi-dashers`
+  - `gidi-dashers-portal`
+
 ## Install (repo root)
 
 ```powershell
@@ -96,6 +125,10 @@ npm --workspace=@ftc/ftc-site run dev
 npm --workspace=@ftc/ftc-site run build
 ```
 
+This outputs static assets to:
+
+- `APPS/ftc-site/.vercel/output/static`
+
 ## Test
 
 ```powershell
@@ -144,14 +177,32 @@ Set-Location "C:\FTC HOLDING\APPS\ftc-site"
 npx wrangler pages download config ftc-site-pages
 ```
 
-Expected project binding for V1:
+Expected project/domain binding:
 
 - Pages project: `ftc-site-pages`
-- Custom domain: `ftc.peacepad.ca`
-- Build root: repository root
-- Build command: `npm --prefix APPS/ftc-site run build && cd APPS/ftc-site && npx @cloudflare/next-on-pages@1`
-- Output directory: `APPS/ftc-site/.vercel/output/static`
+- Core domains:
+  - `unalabs.cloud`
+  - `www.unalabs.cloud`
+  - `gardencleaners.ca`
+  - `www.gardencleaners.ca`
+  - `og.unalabs.cloud`
+- Pending external DNS cutover domains:
+  - `ogtradesacademy.com`
+  - `www.ogtradesacademy.com`
 - Production branch: `main`
+
+Deploy rule to avoid guessing:
+
+1. Build from `APPS/ftc-site`.
+2. Deploy that exact output folder to `ftc-site-pages`.
+
+```powershell
+Set-Location "C:\FTC HOLDING\APPS\ftc-site"
+npm run build
+npx wrangler pages deploy .vercel/output/static --project-name ftc-site-pages
+```
+
+If Cloudflare dashboard build settings do not point to `APPS/ftc-site/.vercel/output/static`, do not trust auto deploy output until fixed.
 
 If production is still showing legacy pages, trigger a production redeploy from the
 Cloudflare Pages dashboard after confirming the build command and output path above.
@@ -190,6 +241,30 @@ Expected after Phase B switch:
 - canonical host = `https://unalabs.cloud`
 - `https://www.unalabs.cloud` serves production (or redirects to apex)
 - `https://ftc.peacepad.ca` returns `308` to `https://unalabs.cloud`
+
+### Brand isolation verification (current)
+
+```powershell
+curl -I https://gardencleaners.ca/
+curl -I https://gardencleaners.ca/about
+curl -I https://gardencleaners.ca/services
+curl -I https://og.unalabs.cloud/
+curl -I https://og.unalabs.cloud/about
+curl -I https://unalabs.cloud/about
+```
+
+Expected content behavior:
+
+- Garden host paths render Garden content only.
+- OG alias host paths render OG content only.
+- Una Labs host paths render Una Labs content only.
+
+External DNS action still required for OG public host:
+
+- At the external DNS provider for `ogtradesacademy.com`:
+  - set `www.ogtradesacademy.com` CNAME -> `ftc-site-pages.pages.dev`
+  - set apex `ogtradesacademy.com` ALIAS/ANAME -> `ftc-site-pages.pages.dev` (or redirect apex to `www`)
+  - remove legacy Squarespace A/AAAA records once cutover is active
 
 ## Launch readiness artifacts
 

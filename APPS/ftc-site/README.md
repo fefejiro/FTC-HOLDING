@@ -109,8 +109,13 @@ Operator security model:
 
 ## Current launch mode
 
-- Phase A canonical URL: `https://ftc.peacepad.ca`
-- Phase B canonical URL target: `https://unalabs.cloud`
+- Canonical URL: `https://unalabs.cloud`
+- Brand hosts are routed at Cloudflare edge (Pages Function in `functions/_middleware.ts`)
+- Garden hosts: `https://gardencleaners.ca`, `https://www.gardencleaners.ca`
+- OG alias host: `https://og.unalabs.cloud`
+- OG public domains are attached in Cloudflare but may remain pending until external DNS is updated:
+  - `https://ogtradesacademy.com`
+  - `https://www.ogtradesacademy.com`
 - Keep `peacepad.ca`, `www.peacepad.ca`, `api.peacepad.ca`, and `saywetin.app`
   production mappings unchanged in this rollout.
 
