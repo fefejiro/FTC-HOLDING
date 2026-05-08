@@ -53,3 +53,24 @@
 - If approved, confirm production rollout completion in Play Console
 - Smoke test installed Android app after approval
 - Update screenshots/store creatives later if needed to better match the MVP refocus
+
+## Hotfix — 2026-05-08: Guest auth 500 on Railway
+
+Symptom: Web and Android shell showed "Failed to authenticate guest" toast on first open. `POST /api/guest/start` returned HTTP 500 with body `{"message":"Failed to authenticate guest"}`.
+
+Root cause: Supabase Postgres pooled connections defaulted to `search_path = "$user", public, extensions`. All PeacePad tables live in the `peacepad` schema (`peacepad.users`, `peacepad.guest_sessions`, etc.), so unqualified Drizzle queries failed with `relation "users" does not exist` / `relation "guest_sessions" does not exist`.
+
+Fix: `APPS/peacepad/server/db.ts` — added `pool.on('connect')` hook that runs `SET search_path TO peacepad, public, extensions` on every new pooled connection. Commit `2fc8f2d4` on `main`. Railway auto-deployed `@ftc/peacepad` service in `lively-simplicity` project.
+
+Verification (2026-05-08, live):
+- `GET /health` → 200
+- `POST /api/guest/start` → 200 (returns guestId, guestSessionId, expiresAt)
+- `GET /api/auth/user` (with guest cookie) → 200 (guest user resolved, isGuest:true)
+- `GET /api/messages` → 200 (3 demo messages seeded)
+- `GET /api/notes` → 200 `[]`
+- `GET /api/tasks` → 200 `[]`
+- `GET /api/partnerships` → 200 (demo co-parent created)
+
+User confirmation: Web works after refresh. Android Play Store build (1.0.9 / 41) starts working after force-stop + relaunch (stale cookie clears on next request because the server now creates a new guest session when restore fails).
+
+No client/AAB rebuild required — pure server-side fix.
