@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '../../lib/auth/getCurrentUser';
-import { createBookingRequest, listParentBookings, listTutorOptions } from '../../lib/bookings';
+import { createBookingRequest, listParentBookings, listParentLinkedStudents, listTutorOptions } from '../../lib/bookings';
 
 type ParentPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -15,7 +15,11 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
   const params = (await searchParams) ?? {};
   const bookingError = typeof params.bookingError === 'string' ? params.bookingError : null;
 
-  const [tutors, bookings] = await Promise.all([listTutorOptions(), listParentBookings()]);
+  const [tutors, bookings, linkedStudents] = await Promise.all([
+    listTutorOptions(),
+    listParentBookings(),
+    listParentLinkedStudents(),
+  ]);
 
   async function createBookingAction(formData: FormData) {
     'use server';
@@ -176,6 +180,28 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
                     Join Lesson
                   </a>
                 ) : null}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="surface card">
+        <p className="kicker">Family Setup</p>
+        <h2 className="h2">Linked Students</h2>
+        {linkedStudents.length === 0 ? (
+          <p className="muted">No students are linked to this parent account yet. Ask admin to link a student.</p>
+        ) : (
+          <div className="grid" style={{ gap: 10 }}>
+            {linkedStudents.map((student) => (
+              <article key={student.id} className="surface card" style={{ boxShadow: 'none' }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>Student {student.id.slice(0, 8)}</p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Grade: {student.grade_level ?? 'Not set'}
+                </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Linked on: {new Date(student.linked_at).toLocaleDateString()}
+                </p>
               </article>
             ))}
           </div>

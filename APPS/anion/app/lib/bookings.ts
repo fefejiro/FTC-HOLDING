@@ -28,6 +28,12 @@ export type StudentLessonCard = {
   status: BookingStatus;
 };
 
+export type ParentLinkedStudent = {
+  id: string;
+  grade_level: string | null;
+  linked_at: string;
+};
+
 async function getProfileIdForAuthUser(supabase: Awaited<ReturnType<typeof createServerClient>>) {
   const {
     data: { user },
@@ -79,6 +85,53 @@ export async function listParentBookings(): Promise<BookingRow[]> {
   }
 
   return (data ?? []) as BookingRow[];
+}
+
+export async function listParentLinkedStudents(): Promise<ParentLinkedStudent[]> {
+  const supabase = await createServerClient();
+  const profileId = await getProfileIdForAuthUser(supabase);
+
+  const { data: parent, error: parentError } = await supabase
+    .from('parents')
+    .select('id')
+    .eq('profile_id', profileId)
+    .single();
+
+  if (parentError || !parent) {
+    throw new Error('Parent account not found for current user.');
+  }
+
+  const { data: links, error: linksError } = await supabase
+    .from('parent_student_links')
+    .select('student_id, created_at')
+    .eq('parent_id', parent.id)
+    .order('created_at', { ascending: false });
+
+  if (linksError) {
+    throw new Error(linksError.message);
+  }
+
+  const studentIds = Array.from(new Set((links ?? []).map((row) => row.student_id as string)));
+  if (studentIds.length === 0) {
+    return [];
+  }
+
+  const { data: students, error: studentsError } = await supabase
+    .from('students')
+    .select('id, grade_level')
+    .in('id', studentIds);
+
+  if (studentsError) {
+    throw new Error(studentsError.message);
+  }
+
+  const gradeByStudentId = new Map((students ?? []).map((row) => [row.id as string, row.grade_level as string | null]));
+
+  return (links ?? []).map((link) => ({
+    id: link.student_id as string,
+    grade_level: gradeByStudentId.get(link.student_id as string) ?? null,
+    linked_at: link.created_at as string,
+  }));
 }
 
 export async function listTutorBookings(): Promise<BookingRow[]> {
