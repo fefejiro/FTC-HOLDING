@@ -109,6 +109,29 @@ test.describe("OG Trades Academy public QA", () => {
     expect(text).toMatch(/OG.Trades Academy/i);
   });
 
+  test("custom domain clean paths render OG content (no Una Labs bleed)", async ({
+    page,
+    baseURL
+  }) => {
+    test.skip(!baseURL || !/ogtradesacademy\.com/i.test(baseURL), "Requires OG custom domain baseURL");
+
+    const routeChecks = [
+      { path: "/", heading: /Learn forex with more structure, mentorship, and g/i },
+      { path: "/about", heading: /Meet OG Trades, founder and lead instruc/i },
+      { path: "/course", heading: /8 Week Beginner Forex Course/i },
+      { path: "/community", heading: /Stay connected with OG Trades Academy betw/i },
+      { path: "/resources", heading: /Free resources and video lessons to help y/i },
+      { path: "/contact", heading: /Contact OG Trades Academy and get guidan/i },
+    ] as const;
+
+    for (const route of routeChecks) {
+      await page.goto(url(route.path), { waitUntil: "domcontentloaded" });
+      await expect(page.locator("header")).toContainText(/OG.Trades Academy/i);
+      await expect(page.getByRole("heading", { level: 1, name: route.heading })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: /About Una Labs/i })).toHaveCount(0);
+    }
+  });
+
   test("safety blocklist — gardencleaners.ca host does not render OG Trades shell", async ({
     request
   }) => {

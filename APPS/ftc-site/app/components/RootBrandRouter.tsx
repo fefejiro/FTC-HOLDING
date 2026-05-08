@@ -1,8 +1,16 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { isGardenCleanersCustomHost } from '../../lib/gardenCleaners';
-import { isOgTradesCustomHost } from '../../lib/ogTradesAcademy';
+import {
+  isGardenCleanersCustomHost,
+  isGardenCleanersPublicPath,
+  stripGardenCleanersBasePath,
+} from '../../lib/gardenCleaners';
+import {
+  isOgTradesCustomHost,
+  isOgTradesPublicPath,
+  stripOgTradesBasePath,
+} from '../../lib/ogTradesAcademy';
 
 /**
  * Root-level brand isolation router for ftc-site.
@@ -44,16 +52,36 @@ export default function RootBrandRouter({ children }: { children: ReactNode }) {
     const host = window.location.host.toLowerCase();
     const pathname = window.location.pathname;
 
-    // Garden Cleaners: redirect if host is garden but route is not /garden-cleaners/*
-    if (isGardenCleanersCustomHost(host) && !pathname.startsWith('/garden-cleaners')) {
-      window.location.replace('/garden-cleaners');
-      return;
+    if (isGardenCleanersCustomHost(host)) {
+      const stripped = stripGardenCleanersBasePath(pathname);
+
+      // If an internal prefixed path appears on the custom domain,
+      // normalize to the clean branded route (/about, /services, etc.).
+      if (stripped && isGardenCleanersPublicPath(stripped)) {
+        window.location.replace(stripped);
+        return;
+      }
+
+      if (!isGardenCleanersPublicPath(pathname)) {
+        window.location.replace('/');
+        return;
+      }
     }
 
-    // OG Trades: redirect if host is OG Trades but route is not /og-trades-academy/*
-    if (isOgTradesCustomHost(host) && !pathname.startsWith('/og-trades-academy')) {
-      window.location.replace('/og-trades-academy');
-      return;
+    if (isOgTradesCustomHost(host)) {
+      const stripped = stripOgTradesBasePath(pathname);
+
+      // If an internal prefixed path appears on the custom domain,
+      // normalize to the clean branded route (/about, /course, etc.).
+      if (stripped && isOgTradesPublicPath(stripped)) {
+        window.location.replace(stripped);
+        return;
+      }
+
+      if (!isOgTradesPublicPath(pathname)) {
+        window.location.replace('/');
+        return;
+      }
     }
 
     // All other hosts (including unalabs.cloud): allow render
