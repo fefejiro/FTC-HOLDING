@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import getSupabase from "../../lib/supabase";
+import { getAdminDashboardUrl } from "../../lib/authDestinations";
 import { isGardenPortalAuthConfigured } from "../../lib/gardenPortalAuth";
 
 export default function LoginPage() {
@@ -18,7 +19,7 @@ export default function LoginPage() {
 
     try {
       const supabase = getSupabase();
-      const redirectTo = `${window.location.origin}/garden-cleaners/portal`;
+      const redirectTo = `${window.location.origin}/auth/callback`;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo }
@@ -40,8 +41,9 @@ export default function LoginPage() {
           <p className="sunrise-kicker">Account access</p>
           <h1>Login</h1>
           <p>
-            Sign in with Google to access your portal workspace. If your account has
-            already been invited, you will land in the portal after authentication.
+            Sign in with Google to access your workspace. Admin accounts are routed to
+            the Una Labs admin dashboard after authentication, while client accounts go
+            to the portal.
           </p>
         </div>
 
@@ -58,7 +60,8 @@ export default function LoginPage() {
                 {pending ? "Redirecting to Google..." : "Continue with Google"}
               </button>
               <p className="muted" style={{ marginTop: 12 }}>
-                You will be redirected to Google and returned to your portal session.
+                You will be redirected to Google and then sent to the correct workspace
+                for your account.
               </p>
             </>
           ) : (
@@ -71,8 +74,8 @@ export default function LoginPage() {
                 <Link href="/connect" className="btn btn-primary">
                   Contact support
                 </Link>
-                <Link href="/garden-cleaners/portal" className="btn btn-secondary">
-                  Open portal page
+                <Link href={getAdminDashboardUrl()} className="btn btn-secondary">
+                  Open admin dashboard
                 </Link>
               </div>
             </>

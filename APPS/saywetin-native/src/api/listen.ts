@@ -152,6 +152,7 @@ function mapRecognizedTrack(
         ? Math.max(0, recognized.matchedOffsetMs)
         : 0,
     matchSource,
+    recognitionSource: matchSource === 'lyric_text' ? 'text_query' : 'microphone',
     culturalAnalyses: [],
   };
 }

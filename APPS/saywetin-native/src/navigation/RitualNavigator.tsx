@@ -8,8 +8,8 @@ import { ShareModeScreen } from '../screens/ShareModeScreen';
 import { VibeSearchScreen } from '../screens/VibeSearchScreen';
 import type { RitualController, RitualScreen } from '../state/ritual-state';
 
-// Matching is no longer a separate navigation route — it lives as an internal
-// sub-state inside ListenScreen. The public ritual flow is: Home → Listen → Result.
+// Matching is no longer a separate navigation route. It lives as an internal
+// sub-state inside ListenScreen. The public ritual flow is: Listen -> Result.
 export type RitualStackParamList = {
   Home: undefined;
   Listen: undefined;
@@ -44,7 +44,7 @@ function mapRouteToScreen(routeName: keyof RitualStackParamList): RitualScreen {
 export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps) {
   return (
     <Stack.Navigator
-      initialRouteName="Home"
+      initialRouteName="Listen"
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: 'transparent' },
@@ -102,7 +102,7 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
             }}
             onReset={() => {
               ritual.reset();
-              navigation.navigate('Home');
+              navigation.navigate('Listen');
             }}
           />
         )}

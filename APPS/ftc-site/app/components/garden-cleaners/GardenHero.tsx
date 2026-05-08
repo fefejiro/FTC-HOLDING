@@ -1,6 +1,6 @@
 ﻿import Link from "next/link";
 import GardenImagePanel from "./GardenImagePanel";
-import { gardenCleanersConfig } from "../../../lib/gardenCleaners";
+import { gardenCleanersConfig, getGardenCleanersPortalUrl } from "../../../lib/gardenCleaners";
 
 export default function GardenHero() {
   return (
@@ -26,7 +26,7 @@ export default function GardenHero() {
             <span className="garden-contact-chip-icon" aria-hidden="true">✉️</span>
             {gardenCleanersConfig.email}
           </a>
-          <Link href="/garden-cleaners/portal" prefetch={false} className="garden-contact-chip garden-contact-chip--portal">
+          <Link href={getGardenCleanersPortalUrl()} prefetch={false} className="garden-contact-chip garden-contact-chip--portal">
             Sign In / Portal
           </Link>
         </div>

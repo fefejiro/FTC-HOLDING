@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { GardenPortalUserRole } from "../../../lib/gardenContracts";
+import { isSharedAdminEmail } from "../../../lib/adminEmails";
 import { isGardenPortalAuthConfigured } from "../../../lib/gardenPortalAuth";
 import getSupabase from "../../../lib/supabase";
 
@@ -189,11 +190,7 @@ function normalizePortalEmail(email: string): string {
 
 function resolveRole(email: string): GardenPortalUserRole {
   const normalizedEmail = normalizePortalEmail(email);
-  const gardenAdmins = [
-    "uby400@gmail.com",
-    "mike.fejiro@gmail.com"
-  ];
-  if (gardenAdmins.includes(normalizedEmail)) {
+  if (isSharedAdminEmail(normalizedEmail)) {
     return "admin";
   }
   if (normalizedEmail.endsWith("@gardencleaners.ca")) {
@@ -717,7 +714,7 @@ export default function GardenPortalAccessPanel() {
 
   async function handleGoogleSignIn() {
     const supabase = getSupabase();
-    const redirectTo = `${window.location.origin}/garden-cleaners/portal`;
+    const redirectTo = `${window.location.origin}/auth/callback`;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo }

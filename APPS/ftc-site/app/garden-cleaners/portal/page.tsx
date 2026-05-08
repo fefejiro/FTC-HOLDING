@@ -13,12 +13,12 @@ export const metadata: Metadata = {
     shortcut: "/brand/garden-cleaners-mark.svg",
     apple: "/brand/garden-cleaners-mark.svg"
   },
-  alternates: { canonical: "https://gardencleaners.ca/garden-cleaners/portal" },
+  alternates: { canonical: "https://gardencleaners.ca/portal" },
   openGraph: {
     title: "Client Portal | Garden Cleaners",
     description:
       "Sign in to your Garden Cleaners client portal to view your quote status, job updates, and service history.",
-    url: "https://gardencleaners.ca/garden-cleaners/portal",
+    url: "https://gardencleaners.ca/portal",
     siteName: "Garden Cleaners",
     type: "website",
     images: [

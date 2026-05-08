@@ -3,6 +3,7 @@ import { logger } from "../../../lib/logger";
 import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions } from "../../../lib/gardenCleaners";
 import type { GardenQuotePayload } from "../../../lib/gardenContracts";
 import { createServerClient } from "@ftc/supabase";
+import { getSharedAdminEmailSet, normalizeAdminEmail } from "@/lib/adminEmails";
 
 export const runtime = "edge";
 
@@ -12,13 +13,6 @@ const RATE_LIMIT_ENABLED = process.env.NODE_ENV === "production";
 const PROPERTY_TYPE_VALUES = new Set(gardenPropertyTypes);
 const SERVICE_VALUES = new Set(gardenServiceOptions);
 const FREQUENCY_VALUES = new Set(gardenFrequencies);
-const DEFAULT_ADMIN_EMAILS = [
-  "hello@unalabs.cloud",
-  "fejiro.efiuvwere@gmail.com",
-  "mike.fejiro@gmail.com",
-  "uby400@gmail.com"
-];
-
 type QuotePayload = Partial<Record<keyof GardenQuotePayload, unknown>>;
 
 type RateLimitStore = Map<string, number[]>;
@@ -65,18 +59,11 @@ function badRequest(message: string, status = 400) {
 }
 
 function normalizePortalEmail(value: unknown): string {
-  return String(value || "").trim().toLowerCase();
-}
-
-function parseAdminEmails(value: string | undefined): string[] {
-  return String(value || "")
-    .split(",")
-    .map((item) => normalizePortalEmail(item))
-    .filter(Boolean);
+  return normalizeAdminEmail(String(value || ""));
 }
 
 function getAdminEmailSet(): Set<string> {
-  return new Set([...DEFAULT_ADMIN_EMAILS, ...parseAdminEmails(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS)]);
+  return getSharedAdminEmailSet();
 }
 
 async function resolveAuthenticatedEmail(req: NextRequest): Promise<string | null> {

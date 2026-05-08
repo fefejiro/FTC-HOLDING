@@ -32,7 +32,7 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
   const driftSinceMs = useRef<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const lineHeights = useRef<Record<number, number>>({});
-  const inFlightExplainRef = useRef<Record<string, Promise<SyncedLyricLine>>>({});
+  const inFlightExplainRef = useRef<Record<string, Promise<SyncedLyricLine> | undefined>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -129,8 +129,9 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
       return lineMeaningCache[line.id];
     }
 
-    if (inFlightExplainRef.current[line.id]) {
-      return inFlightExplainRef.current[line.id];
+    const inFlight = inFlightExplainRef.current[line.id];
+    if (inFlight) {
+      return inFlight;
     }
 
     setLineLoadingById((current) => ({

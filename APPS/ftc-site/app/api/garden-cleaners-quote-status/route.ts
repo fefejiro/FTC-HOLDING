@@ -1,28 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@ftc/supabase";
-
-const DEFAULT_ADMIN_EMAILS = [
-  "hello@unalabs.cloud",
-  "fejiro.efiuvwere@gmail.com",
-  "mike.fejiro@gmail.com",
-  "uby400@gmail.com"
-];
+import { getSharedAdminEmailSet, normalizeAdminEmail } from "@/lib/adminEmails";
 
 const ALLOWED_QUOTE_STATUSES = new Set(["new", "approved", "rejected", "converted"]);
 
 function normalizePortalEmail(value: unknown): string {
-  return String(value || "").trim().toLowerCase();
-}
-
-function parseAdminEmails(value: string | undefined): string[] {
-  return String(value || "")
-    .split(",")
-    .map((item) => normalizePortalEmail(item))
-    .filter(Boolean);
+  return normalizeAdminEmail(String(value || ""));
 }
 
 function getAdminEmailSet(): Set<string> {
-  return new Set([...DEFAULT_ADMIN_EMAILS, ...parseAdminEmails(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS)]);
+  return getSharedAdminEmailSet();
 }
 
 async function resolveAuthenticatedEmail(req: NextRequest): Promise<string | null> {

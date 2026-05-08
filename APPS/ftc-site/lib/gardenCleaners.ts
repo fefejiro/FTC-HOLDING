@@ -33,7 +33,15 @@ export type GardenMediaAsset = {
 };
 
 export const gardenCleanersBasePath = '/garden-cleaners' as const;
-export const GARDEN_CLEANERS_SITE_URL = 'https://gardencleaners.ca';
+const GARDEN_CLEANERS_SITE_URL_DEFAULT = 'https://gardencleaners.ca';
+const configuredGardenCleanersSiteUrl = String(
+  process.env.NEXT_PUBLIC_GARDEN_CLEANERS_SITE_URL || GARDEN_CLEANERS_SITE_URL_DEFAULT
+)
+  .trim()
+  .replace(/\/+$/, '');
+
+export const GARDEN_CLEANERS_SITE_URL = configuredGardenCleanersSiteUrl || GARDEN_CLEANERS_SITE_URL_DEFAULT;
+export const GARDEN_CLEANERS_PORTAL_PATH = '/portal';
 const GARDEN_CLEANERS_OG_IMAGE = '/garden-cleaners/opengraph-image';
 export const gardenCleanersKeywords = [
   'Garden Cleaners',
@@ -105,6 +113,17 @@ export function stripGardenCleanersBasePath(pathname = '/') {
     return normalized.slice(gardenCleanersBasePath.length);
   }
   return null;
+}
+
+export function getGardenCleanersPortalUrl(hash = '') {
+  const normalizedHash = String(hash || '').trim();
+  const suffix = normalizedHash
+    ? normalizedHash.startsWith('#')
+      ? normalizedHash
+      : `#${normalizedHash}`
+    : '';
+
+  return `${GARDEN_CLEANERS_SITE_URL}${GARDEN_CLEANERS_PORTAL_PATH}${suffix}`;
 }
 
 export function getGardenCleanersNavLinks(

@@ -21,6 +21,19 @@ type ResultScreenProps = {
   onFollowLiveLyrics: () => void | Promise<void>;
 };
 
+function confidenceLabel(score: number) {
+  if (score >= 85) {
+    return 'Strong match';
+  }
+  if (score >= 65) {
+    return 'High confidence';
+  }
+  if (score >= 45) {
+    return 'Likely match';
+  }
+  return 'Tentative match';
+}
+
 export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScreenProps) {
   const [openingLiveLyrics, setOpeningLiveLyrics] = useState(false);
 
@@ -80,6 +93,12 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
   };
 
   const inlineLyrics = (track.lyric || '').trim();
+  const meaningText = (track.meaning || '').trim();
+  const culturalDetail = track.culturalAnalyses[0];
+  const culturalSummary = [culturalDetail?.culturalContext, culturalDetail?.deeperMeaning]
+    .filter((part) => Boolean(part && part.trim().length > 0))
+    .join(' ')
+    .trim();
 
   const openLiveLyrics = async () => {
     if (openingLiveLyrics) {
@@ -105,6 +124,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
 
           <View style={styles.badgesRow}>
             <Text style={styles.badge}>{MATCH_SOURCE_LABELS[track.matchSource]}</Text>
+            <Text style={styles.badge}>{confidenceLabel(track.matchConfidence)}</Text>
             {track.matchedInMs > 0 ? (
               <Text style={styles.badge}>matched in {(track.matchedInMs / 1000).toFixed(1)}s</Text>
             ) : null}
@@ -113,12 +133,23 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
           {track.albumArt ? <Image source={{ uri: track.albumArt }} style={styles.cover} /> : null}
 
           <View style={styles.lyricCard}>
+            <Text style={styles.sectionLabel}>Lyrics</Text>
             {inlineLyrics ? (
               <Text style={styles.lyricText}>{inlineLyrics}</Text>
             ) : (
-              <Text style={styles.lyricHint}>Lyrics are not available for this track yet.</Text>
+              <Text style={styles.pendingText}>Lyrics are still loading. Open Live Lyrics to fetch more lines.</Text>
             )}
-            {track.meaning ? <Text style={styles.meaningText}>{track.meaning}</Text> : null}
+
+            <Text style={styles.sectionLabel}>Meaning</Text>
+            {meaningText ? (
+              <Text style={styles.meaningText}>{meaningText}</Text>
+            ) : (
+              <Text style={styles.pendingText}>Meaning is still loading for this track.</Text>
+            )}
+
+            {culturalSummary ? (
+              <Text style={styles.culturalText}>{culturalSummary}</Text>
+            ) : null}
           </View>
 
           {track.chips.length > 0 ? (
@@ -233,10 +264,28 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 15,
   },
+  sectionLabel: {
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  pendingText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   meaningText: {
     color: colors.amber,
     fontSize: 14,
     lineHeight: 20,
+  },
+  culturalText: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 19,
+    opacity: 0.9,
   },
   chipsRow: {
     flexDirection: 'row',

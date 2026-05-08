@@ -1,8 +1,43 @@
 import { useMemo, useState } from 'react';
 
-// 'matching' is no longer a separate navigation step — it is an internal
-// sub-state owned by ListenScreen. The navigator only owns: home → listen → result.
+// 'matching' is no longer a separate navigation step. It is an internal
+// sub-state owned by ListenScreen. The navigator owns: home -> listen -> result.
 export type RitualScreen = 'home' | 'listen' | 'result';
+
+export type MatchSource =
+  | 'acrcloud'
+  | 'ai_transcript'
+  | 'lyric_text'
+  | 'manual'
+  | 'spotify'
+  | 'unknown';
+
+export type RecognitionSource = 'microphone' | 'text_query';
+
+export type FailureReason =
+  | 'permission_denied'
+  | 'capture_failed'
+  | 'upload_failed'
+  | 'match_not_found'
+  | 'network_error'
+  | 'unknown';
+
+export type SyncedLyricLine = {
+  id: string;
+  text: string;
+  startMs: number;
+  endMs: number;
+  tappable: boolean;
+  meaning: string;
+  alternates: string[];
+  related: string[];
+};
+
+export type CulturalAnalysisEntry = {
+  translation: string;
+  culturalContext: string;
+  deeperMeaning: string;
+};
 
 export type RitualTrack = {
   id: string;

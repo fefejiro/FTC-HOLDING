@@ -10,7 +10,7 @@ import GardenServiceShowcase from "../components/garden-cleaners/GardenServiceSh
 import GardenTestimonials from "../components/garden-cleaners/GardenTestimonials";
 import GardenTrustStrip from "../components/garden-cleaners/GardenTrustStrip";
 import type { GardenContentSection } from "../../lib/gardenContracts";
-import { gardenCleanersConfig, gardenServices, getGardenCleanersMetadata } from "../../lib/gardenCleaners";
+import { gardenCleanersConfig, gardenServices, getGardenCleanersMetadata, getGardenCleanersPortalUrl } from "../../lib/gardenCleaners";
 
 const workflowSection: GardenContentSection = {
   id: "garden-home-workflow",
@@ -185,7 +185,7 @@ export default function GardenCleanersHomePage() {
             </p>
             <p>
               <Link
-                href="/garden-cleaners/portal"
+                href={getGardenCleanersPortalUrl()}
                 prefetch={false}
                 className="inline-link"
                 data-analytics-event="garden_portal_entry_click"
@@ -365,7 +365,7 @@ export default function GardenCleanersHomePage() {
               <ul className="feature-list compact-feature-list">
                 <li><Link href="/garden-cleaners/quote" prefetch={false} className="inline-link">Get a Free Quote</Link></li>
                 <li><Link href="/garden-cleaners/services" prefetch={false} className="inline-link">Services</Link></li>
-                <li><Link href="/garden-cleaners/portal" prefetch={false} className="inline-link">Regional Portal</Link></li>
+                <li><Link href={getGardenCleanersPortalUrl()} prefetch={false} className="inline-link">Regional Portal</Link></li>
               </ul>
             </article>
             <article className="card garden-proof-card">

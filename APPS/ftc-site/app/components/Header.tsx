@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   gardenCleanersConfig,
   getGardenCleanersBrandedPath,
+  getGardenCleanersPortalUrl,
   getGardenCleanersNavLinks,
   isGardenCleanersCustomHost
 } from "../../lib/gardenCleaners";
@@ -64,6 +65,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
   const isDefaultUnaSite = !isGardenSite && !isOgTradesSite && !isPolarSite;
   const isGardenPortalAuthReady = isGardenPortalAuthConfigured();
+  const gardenPortalHref = getGardenCleanersPortalUrl("#portal-access");
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -196,7 +198,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                 return [
                   <Link
                     key="portal-login"
-                    href="/garden-cleaners/portal#portal-access"
+                    href={gardenPortalHref}
                     prefetch={false}
                     className="garden-portal-login-cta"
                     aria-label="Sign In to client portal"
@@ -292,7 +294,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                     return [
                       <Link
                         key="portal-login-mobile"
-                        href="/garden-cleaners/portal#portal-access"
+                        href={gardenPortalHref}
                         prefetch={false}
                         className="mobile-panel-link garden-portal-login-cta"
                         aria-label="Portal Login"

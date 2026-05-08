@@ -5,7 +5,7 @@ import CTABanner from "../../components/CTABanner";
 import GardenServiceCard from "../../components/garden-cleaners/GardenServiceCard";
 import GardenServiceShowcase from "../../components/garden-cleaners/GardenServiceShowcase";
 import type { GardenContentSection } from "../../../lib/gardenContracts";
-import { gardenCleanersConfig, gardenServices, getGardenCleanersMetadata } from "../../../lib/gardenCleaners";
+import { gardenCleanersConfig, gardenServices, getGardenCleanersMetadata, getGardenCleanersPortalUrl } from "../../../lib/gardenCleaners";
 
 const serviceSelectionSection: GardenContentSection = {
   id: "garden-services-selection-guide",
@@ -74,7 +74,7 @@ export default function GardenServicesPage() {
         <p className="page-intro">Garden Cleaners offers practical, professional cleaning support for residential and commercial clients in Oshawa and surrounding areas.</p>
         <p>
           <Link
-            href="/garden-cleaners/portal"
+            href={getGardenCleanersPortalUrl()}
             prefetch={false}
             className="inline-link"
             data-analytics-event="garden_portal_entry_click"
