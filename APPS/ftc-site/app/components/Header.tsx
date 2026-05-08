@@ -9,14 +9,12 @@ import {
   getGardenCleanersNavLinks,
   isGardenCleanersCustomHost
 } from "../../lib/gardenCleaners";
+import { isGardenPortalAuthConfigured } from "../../lib/gardenPortalAuth";
 import { getOgTradesBrandedPath, getOgTradesNavLinks, isOgTradesCustomHost, ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
-import { siteNav } from "../../lib/content";
-import { ATEAM_SITE_URL } from "../../lib/site";
 import GardenBrandMark from "./garden-cleaners/GardenBrandMark";
 import OgTradesBrandMark from "./og-trades/OgTradesBrandMark";
 import PolarBrandMark from "./polar-anchor/PolarBrandMark";
-import Logo from "./Logo";
 
 const productMenuItems = [
   {
@@ -65,6 +63,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
   const isOgTradesSite = (pathname?.startsWith("/og-trades-academy") ?? false) || isOgTradesHost;
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
   const isDefaultUnaSite = !isGardenSite && !isOgTradesSite && !isPolarSite;
+  const isGardenPortalAuthReady = isGardenPortalAuthConfigured();
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -110,9 +109,13 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
     if (isPolarSite) {
       return polarAnchorConfig.nav;
     }
-    return siteNav
-      .filter((link) => link.label !== "Start a Project")
-      .map((link) => ({ label: link.label, href: link.href }));
+    return [
+      { label: "Product", href: "/products" },
+      { label: "Solutions", href: "/services" },
+      { label: "Resources", href: "/work" },
+      { label: "Pricing", href: "/pricing" },
+      { label: "How It Works", href: "/how-it-works" }
+    ];
   }, [isGardenSite, isOgTradesSite, isPolarSite, runtimeHost]);
 
   const homeHref = isGardenSite
@@ -135,7 +138,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
       ? ogTradesAcademyConfig.tagline
       : isPolarSite
         ? polarAnchorConfig.tagline
-        : "Trusted AI workflows | lead systems | delivery";
+        : "";
   const ogHeaderCta = (
     <a
       href={ogTradesAcademyConfig.coursePurchaseUrl}
@@ -152,17 +155,17 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
       <div className="container site-header">
         <div className="logo-row">
           <Link href={homeHref} className="logo-link" aria-label={`${brandName} homepage`}>
-            {isGardenSite ? <GardenBrandMark /> : isOgTradesSite ? <OgTradesBrandMark /> : isPolarSite ? <PolarBrandMark /> : <Logo />}
+            {isGardenSite ? <GardenBrandMark /> : isOgTradesSite ? <OgTradesBrandMark /> : isPolarSite ? <PolarBrandMark /> : null}
           </Link>
           <div>
             <p className="brand">{brandName}</p>
-            <p className="brand-subtitle">{brandSubtitle}</p>
+            {brandSubtitle ? <p className="brand-subtitle">{brandSubtitle}</p> : null}
           </div>
         </div>
 
         <nav className="primary" aria-label="Main navigation">
           {navLinks.map((link) => {
-            if (isDefaultUnaSite && link.label === "Products") {
+            if (isDefaultUnaSite && (link.label === "Products" || link.label === "Product")) {
               const productsActive = isProductsPath(pathname);
               return (
                 <div key="products-nav-dropdown" className="nav-dropdown">
@@ -172,7 +175,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                     className={`nav-link nav-link--dropdown${productsActive ? " active" : ""}`}
                     aria-current={productsActive ? "page" : undefined}
                   >
-                    Products
+                    Product
                   </Link>
                   <div className="nav-dropdown-panel" role="menu" aria-label="Products menu">
                     {productMenuItems.map((item) => (
@@ -188,17 +191,31 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
 
             // --- GARDEN CLEANERS: Insert Portal Login CTA ---
             if (isGardenSite && link.label === "Get a Quote") {
-              // Insert Portal Login before Get a Quote
-              return [
-                <Link
-                  key="portal-login"
-                  href="/garden-cleaners/portal#portal-access"
-                  prefetch={false}
-                  className="garden-portal-login-cta"
-                  aria-label="Sign In to client portal"
-                >
-                  Sign In
-                </Link>,
+              if (isGardenPortalAuthReady) {
+                // Insert portal sign-in before quote only when auth is configured.
+                return [
+                  <Link
+                    key="portal-login"
+                    href="/garden-cleaners/portal#portal-access"
+                    prefetch={false}
+                    className="garden-portal-login-cta"
+                    aria-label="Sign In to client portal"
+                  >
+                    Sign In
+                  </Link>,
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    prefetch={false}
+                    className={`nav-link${isPathActive(pathname, link.href) ? " active" : ""}`}
+                    aria-current={isPathActive(pathname, link.href) ? "page" : undefined}
+                  >
+                    {link.label}
+                  </Link>
+                ];
+              }
+
+              return (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -208,7 +225,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                 >
                   {link.label}
                 </Link>
-              ];
+              );
             }
 
             const isActive = isPathActive(pathname, link.href);
@@ -227,16 +244,12 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
         </nav>
 
         {isDefaultUnaSite ? (
-          <div className="header-actions">
-            <a href={ATEAM_SITE_URL} className="header-ateam-btn">
-              Enter ATEAM
-            </a>
-            <a href="tel:+14164732732" className="header-call-chip">
-              Talk to an Expert
-              <strong>+1 (416) 473-2732</strong>
-            </a>
-            <Link href="/work-with-ftc" prefetch={false} className="header-contact-btn">
-              Contact Us
+          <div className="header-actions header-actions--classic">
+            <Link href="/login" prefetch={false} className="header-login-link">
+              Login
+            </Link>
+            <Link href="/start" prefetch={false} className="header-start-btn">
+              Start Your Project
             </Link>
           </div>
         ) : null}
@@ -275,17 +288,32 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
               {navLinks.map((link) => {
                 // Insert Portal Login before Get a Quote in mobile nav
                 if (isGardenSite && link.label === "Get a Quote") {
-                  return [
-                    <Link
-                      key="portal-login-mobile"
-                      href="/garden-cleaners/portal#portal-access"
-                      prefetch={false}
-                      className="mobile-panel-link garden-portal-login-cta"
-                      aria-label="Portal Login"
-                      onClick={closeMenu}
-                    >
-                      Portal Login
-                    </Link>,
+                  if (isGardenPortalAuthReady) {
+                    return [
+                      <Link
+                        key="portal-login-mobile"
+                        href="/garden-cleaners/portal#portal-access"
+                        prefetch={false}
+                        className="mobile-panel-link garden-portal-login-cta"
+                        aria-label="Portal Login"
+                        onClick={closeMenu}
+                      >
+                        Portal Login
+                      </Link>,
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        prefetch={false}
+                        className={`mobile-panel-link${isPathActive(pathname, link.href) ? " active" : ""}`}
+                        aria-current={isPathActive(pathname, link.href) ? "page" : undefined}
+                        onClick={closeMenu}
+                      >
+                        {link.label}
+                      </Link>
+                    ];
+                  }
+
+                  return (
                     <Link
                       key={link.href}
                       href={link.href}
@@ -296,9 +324,9 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                     >
                       {link.label}
                     </Link>
-                  ];
+                  );
                 }
-                const isActive = link.label === "Products" && isDefaultUnaSite
+                const isActive = (link.label === "Products" || link.label === "Product") && isDefaultUnaSite
                   ? isProductsPath(pathname)
                   : isPathActive(pathname, link.href);
                 return (
@@ -332,9 +360,12 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
 
             {isDefaultUnaSite ? (
               <div className="mobile-products-group" aria-label="Products">
-                <a href={ATEAM_SITE_URL} className="mobile-project-btn" onClick={closeMenu}>
-                  Enter ATEAM
-                </a>
+                <Link href="/start" prefetch={false} className="mobile-project-btn" onClick={closeMenu}>
+                  Start Your Project
+                </Link>
+                <Link href="/login" prefetch={false} className="mobile-project-btn" onClick={closeMenu}>
+                  Login
+                </Link>
                 <p className="mobile-products-title">Products</p>
                 {productMenuItems.map((item) => (
                   <Link
@@ -348,9 +379,6 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                     <span>{item.description}</span>
                   </Link>
                 ))}
-                <Link href="/work-with-ftc" prefetch={false} className="mobile-project-btn" onClick={closeMenu}>
-                  Start a Project
-                </Link>
               </div>
             ) : null}
           </div>

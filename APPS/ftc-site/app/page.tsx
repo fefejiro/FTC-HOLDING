@@ -4,7 +4,7 @@ import HomePageExperience from "./components/HomePageExperience";
 export const metadata: Metadata = {
   title: "Una Labs | Rough Request In. Scoped Delivery Out.",
   description:
-    "Una Labs takes your need — no matter how unformed — through ATEAM: structured intake, clear scope, a real proposal, and governed delivery execution.",
+    "Una Labs takes your need, no matter how unformed, through ATEAM with structured intake, clear scope, a real proposal, and governed delivery execution.",
   alternates: {
     canonical: "https://unalabs.cloud"
   }

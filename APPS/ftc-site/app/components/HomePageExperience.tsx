@@ -1,13 +1,6 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import ClientLogoStrip from "./ClientLogoStrip";
-import FeatureCarousel from "./FeatureCarousel";
-import HeroMockupStack from "./HeroMockupStack";
-import ProductBrandBadge from "./ProductBrandBadge";
-import ProductStatusBadge from "./ProductStatusBadge";
 import { clientLaunches } from "../../lib/recentWork";
 import { projectCaseStudies } from "../../lib/content";
-import { productCardBranding } from "../../lib/productCardBranding";
 import { engagementOffers } from "../../lib/engagementOffers";
 
 function getProductHref(slug: string) {
@@ -42,91 +35,119 @@ const FLOW_STEPS = [
 
 export default function HomePageExperience() {
   const primaryProducts = projectCaseStudies.filter((p) => p.slug !== "ateam").slice(0, 3);
+  const featuredLaunch = clientLaunches[0];
 
   return (
-    <div className="home-page">
-
-      {/* ── 1. HERO ──────────────────────────────────────────────── */}
-      <section className="section">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <section className="section sunrise-hero-section">
         <div className="container">
-          <div className="card home-hero home-hero-enterprise">
-            <div className="premium-hero-grid">
-
-              <div className="premium-hero-copy">
-                <p className="eyebrow">Una Labs · Digital and AI workflow systems</p>
-                <h1 className="hero-primary-title">
-                  Rough request in.<br />
-                  <span className="hero-accent-word">Scoped delivery</span> out.
-                </h1>
-                <p className="lead">
-                  <span>Structured intake, clear scope, a real proposal,</span>
-                  <span>and governed delivery across digital, SEO, AI, and automation.</span>
-                  <span>No fluff. No retainers. Outcomes with proof.</span>
-                </p>
-                <div className="hero-trust-inline">
-                  <span>⭐ 4.8 on Google</span>
-                  <span aria-hidden="true">·</span>
-                  <span>48h first response</span>
-                  <span aria-hidden="true">·</span>
-                  <span>Stripe-secured payments</span>
-                </div>
-                <div className="hero-cta-row">
-                  <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
-                    Start with your request
-                  </Link>
-                  <Link href="/work" prefetch={false} className="btn btn-secondary">
-                    See delivery proof
-                  </Link>
-                </div>
-                <p className="hero-friction-note">
-                  No account needed. No upfront commitment. We scope the next move.
-                </p>
+          <div className="sunrise-hero-shell">
+            <div className="sunrise-hero-copy">
+              <p className="sunrise-kicker">Una Labs</p>
+              <h1>From client request to delivered project, with proof.</h1>
+              <p className="sunrise-lead">
+                Una Labs structures your intake, scopes the work with AI, and gives every project a live workspace.
+                Your clients can see what is done, what is in progress, and what comes next.
+              </p>
+              <div className="sunrise-action-row">
+                <Link href="/start" prefetch={false} className="sunrise-btn sunrise-btn--primary">
+                  Start Your Project
+                </Link>
+                <Link href="/login" prefetch={false} className="sunrise-btn sunrise-btn--secondary">
+                  Login
+                </Link>
               </div>
-
-              <div className="premium-hero-right">
-                <HeroMockupStack />
-              </div>
-
             </div>
+
+            <div className="sunrise-preview-card" aria-hidden="true">
+              <div className="sunrise-browser-bar">
+                <span />
+                <span />
+                <span />
+                <div className="sunrise-browser-address">app.unalabs.cloud/project/MRD-2041</div>
+              </div>
+              <div className="sunrise-preview-content">
+                <div className="sunrise-preview-header-row">
+                  <strong>Enterprise Intake Automation</strong>
+                  <span>In Progress</span>
+                </div>
+                <div className="sunrise-progress-track">
+                  <div className="sunrise-progress-fill" />
+                </div>
+                <div className="sunrise-preview-panel">
+                  <p>Milestone tracker</p>
+                  <ul>
+                    <li><span>Kickoff and discovery</span><strong>Apr 3</strong></li>
+                    <li><span>Intake form live</span><strong>Apr 7</strong></li>
+                    <li><span>Email sequence configured</span><strong>Apr 11</strong></li>
+                    <li className="is-active"><span>CRM integration</span><strong>Apr 15</strong></li>
+                    <li><span>Final handoff and sign-off</span><strong>Apr 18</strong></li>
+                  </ul>
+                </div>
+                <div className="sunrise-stats-row">
+                  <div><strong>3/4</strong><span>Deliverables done</span></div>
+                  <div><strong>0</strong><span>Blockers</span></div>
+                  <div><strong>3d</strong><span>Until sign-off</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="sunrise-proof-grid">
+            <article className="sunrise-proof-card">
+              <h3>Full site</h3>
+              <p className="sunrise-proof-label">Not a mockup</p>
+              <p>Positioning, pages, intake, and conversion paths built as real launch-ready routes.</p>
+            </article>
+            <article className="sunrise-proof-card">
+              <h3>Local SEO</h3>
+              <p className="sunrise-proof-label">Built in</p>
+              <p>Canonical URLs, structured metadata, and local search setup are part of delivery, not an add-on.</p>
+            </article>
+            <article className="sunrise-proof-card">
+              <h3>Workflow scope</h3>
+              <p className="sunrise-proof-label">Functional</p>
+              <p>Request handling, approvals, and operational handoff are wired into the build path from day one.</p>
+            </article>
           </div>
         </div>
       </section>
 
-      {/* ── 2. CLIENT LOGOS ──────────────────────────────────────── */}
-      <ClientLogoStrip />
-
-      {/* ── 3. FEATURE CAROUSEL ──────────────────────────────────── */}
-      <FeatureCarousel />
-
-      {/* ── 4. ENGAGEMENT PATHS ──────────────────────────────────── */}
-      <section className="section">
+      <section className="section sunrise-section">
         <div className="container">
-          <div className="section-heading home-section-heading">
-            <p className="eyebrow">Engagement paths</p>
-            <h2>Pick the right entry point</h2>
-            <p>
-              Every request routes to one of three tracks. Choose the one that matches where you are.
-              Deposits confirm the engagement — paid through Stripe.
-            </p>
+          <div className="sunrise-section-heading">
+            <p className="sunrise-kicker">How it works</p>
+            <h2>One delivery path from rough ask to shipped outcome</h2>
+            <p>No vague consulting loop. The request gets structured, priced, approved, and delivered in a visible sequence.</p>
           </div>
+          <div className="sunrise-steps-grid">
+            {FLOW_STEPS.map((step) => (
+              <article key={step.num} className="sunrise-step-card">
+                <span className="sunrise-step-number">{step.num}</span>
+                <h3>{step.label}</h3>
+                <p>{step.detail}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          <div className="home-offers-grid">
-            {engagementOffers.map((offer, i) => (
-              <article key={offer.value} className={`card home-offer-card${i === 1 ? " home-offer-card--featured" : ""}`}>
-                <div className="home-offer-card-head">
-                  <p className="card-kicker">{offer.meta}</p>
-                  <h3>{offer.title}</h3>
-                  <p className="home-offer-price">{offer.price}</p>
-                </div>
-                <p className="home-offer-summary">{offer.summary}</p>
-                <p className="home-offer-ideal">
-                  <span className="home-offer-ideal-label">Best for</span> {offer.idealFor}
-                </p>
-                <Link
-                  href={`/work-with-ftc?offer=${offer.value}`}
-                  prefetch={false}
-                  className={i === 1 ? "btn btn-primary" : "btn btn-secondary"}
-                >
+      <section className="section sunrise-section">
+        <div className="container">
+          <div className="sunrise-section-heading">
+            <p className="sunrise-kicker">Engagement paths</p>
+            <h2>Pick the right way in</h2>
+            <p>Each track matches a different level of clarity, urgency, and build depth.</p>
+          </div>
+          <div className="sunrise-offers-grid">
+            {engagementOffers.map((offer, index) => (
+              <article key={offer.value} className={`sunrise-offer-card${index === 0 ? " is-featured" : ""}`}>
+                <p className="sunrise-offer-meta">{offer.meta}</p>
+                <h3>{offer.title}</h3>
+                <p className="sunrise-offer-price">{offer.price}</p>
+                <p>{offer.summary}</p>
+                <p className="sunrise-offer-ideal"><strong>Best for:</strong> {offer.idealFor}</p>
+                <Link href={`/work-with-ftc?offer=${offer.value}`} prefetch={false} className={index === 0 ? "sunrise-btn sunrise-btn--primary" : "sunrise-btn sunrise-btn--secondary"}>
                   Start with this track
                 </Link>
               </article>
@@ -135,140 +156,72 @@ export default function HomePageExperience() {
         </div>
       </section>
 
-      {/* ── 4. HOW ATEAM POWERS THIS ─────────────────────────────── */}
-      <section className="section">
+      <section className="section sunrise-section">
         <div className="container">
-          <div className="card home-engine-card">
-            <div className="home-engine-copy">
-              <p className="eyebrow">ATEAM — the operating engine</p>
-              <h2>Una Labs runs on ATEAM</h2>
-              <p>
-                ATEAM is not a separate product you go to. It is the internal system that structures
-                every intake, generates scoping briefs, governs approvals, manages documents, and
-                tracks delivery. When you submit a request through Una Labs, ATEAM is handling the
-                work behind it.
-              </p>
-              <ul className="home-engine-bullets">
-                <li>Intake routes automatically to the right execution lane</li>
-                <li>Scope, brief, and proposal generated from your request</li>
-                <li>Approval gates keep work visible before money moves</li>
-                <li>Delivery tracked through to handoff-ready output</li>
-              </ul>
-            </div>
-            <div className="home-engine-stats">
-              <div className="home-engine-stat">
-                <span className="home-engine-stat-value">3</span>
-                <span className="home-engine-stat-label">Execution tracks</span>
-              </div>
-              <div className="home-engine-stat">
-                <span className="home-engine-stat-value">4</span>
-                <span className="home-engine-stat-label">Approval gates</span>
-              </div>
-              <div className="home-engine-stat">
-                <span className="home-engine-stat-value">48h</span>
-                <span className="home-engine-stat-label">Typical first reply</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 5. CLIENT LAUNCHES ───────────────────────────────────── */}
-      <section className="section">
-        <div className="container">
-          <div className="section-heading home-section-heading">
-            <p className="eyebrow">Delivery proof</p>
-            <h2>Live launches and shipped systems</h2>
-            <p>Real work that moved through intake, scope, and governed delivery.</p>
-          </div>
-
-          <div className="cards-grid cards-grid-3 home-product-preview-grid">
-            {clientLaunches.slice(0, 3).map((launch) => {
-              const style = {
-                "--glance-accent": launch.brand.accent,
-                "--glance-soft": launch.brand.accentSoft
-              } as CSSProperties;
-
-              return (
-                <article key={launch.slug} className="card home-product-preview-card">
-                  <div className="home-glance-launch-badge" style={style}>
-                    <span>{launch.brand.mark}</span>
-                  </div>
-                  <h3>{launch.brand.wordmark}</h3>
-                  <p className="muted">{launch.service}</p>
-                  <p className="home-proof-offer-badge">
-                    {launch.offerProof.label}
-                  </p>
-                  <Link href={`/work/${launch.slug}`} prefetch={false} className="inline-link">
-                    View launch →
-                  </Link>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 6. PRODUCTS ──────────────────────────────────────────── */}
-      <section className="section">
-        <div className="container">
-          <div className="section-heading home-section-heading">
-            <p className="eyebrow">Studio products</p>
-            <h2>Built inside the same system</h2>
-            <p>Dispatch, SayWetin, and PeacePad are studio-owned products designed and shipped through ATEAM.</p>
-          </div>
-
-          <div className="cards-grid cards-grid-3 home-product-preview-grid">
-            {primaryProducts.map((project) => {
-              const branding = productCardBranding[project.slug];
-              return (
-                <article key={project.slug} className="card home-product-preview-card">
-                  <div className="project-card-top">
-                    <p className="card-kicker">{project.availabilityLabel ?? project.pillar.replace("-", " ")}</p>
-                    <ProductStatusBadge status={project.status} />
-                  </div>
-                  <div className="product-card-header">
-                    {branding?.logo ? <ProductBrandBadge logo={branding.logo} /> : null}
-                    <div className="product-card-heading">
-                      <h3>{project.name}</h3>
-                      <p className="muted">{project.tagline}</p>
-                    </div>
-                  </div>
-                  <p>{project.summary}</p>
-                  <Link href={getProductHref(project.slug)} prefetch={false} className="inline-link">
-                    View product →
-                  </Link>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 7. FINAL CTA ─────────────────────────────────────────── */}
-      <section className="section">
-        <div className="container">
-          <article className="card final-cta-card home-final-cta-card">
+          <div className="sunrise-feature-band">
             <div>
-              <p className="eyebrow">Start here</p>
-              <h2>Describe what you need. We scope the next move.</h2>
-              <p className="muted">
-                Submit a rough request. ATEAM structures it into a brief. Una Labs replies
-                with the clearest, fastest credible path and the right offer for where you are.
+              <p className="sunrise-kicker">Delivery proof</p>
+              <h2>{featuredLaunch?.brand.wordmark ?? "Recent client launch"}</h2>
+              <p>
+                {featuredLaunch?.service ?? "Recent delivery work"} moved through the same intake, scope, and governed execution model.
               </p>
+              <Link href={`/work/${featuredLaunch?.slug ?? "garden-cleaners"}`} prefetch={false} className="sunrise-inline-link">
+                View launch proof
+              </Link>
             </div>
-            <div className="product-actions final-cta-actions">
-              <Link href="/work-with-ftc" prefetch={false} className="btn btn-primary">
+            <div className="sunrise-mini-proof-grid">
+              {clientLaunches.slice(0, 3).map((launch) => (
+                <article key={launch.slug} className="sunrise-mini-proof-card">
+                  <h3>{launch.brand.wordmark}</h3>
+                  <p>{launch.offerProof.label}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section sunrise-section">
+        <div className="container">
+          <div className="sunrise-section-heading">
+            <p className="sunrise-kicker">Studio products</p>
+            <h2>Built inside the same operating system</h2>
+            <p>Dispatch, SayWetin, and PeacePad are product proofs of the same workflow-led delivery model.</p>
+          </div>
+          <div className="sunrise-products-grid">
+            {primaryProducts.map((project) => (
+              <article key={project.slug} className="sunrise-product-card">
+                <p className="sunrise-product-label">{project.availabilityLabel ?? project.pillar.replace("-", " ")}</p>
+                <h3>{project.name}</h3>
+                <p>{project.summary}</p>
+                <Link href={getProductHref(project.slug)} prefetch={false} className="sunrise-inline-link">
+                  View product
+                </Link>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section sunrise-section sunrise-section--final">
+        <div className="container">
+          <div className="sunrise-final-cta">
+            <div>
+              <p className="sunrise-kicker">Start here</p>
+              <h2>Describe what you need. We will scope the next move.</h2>
+              <p>Bring the brief, the rough idea, or the messy operational problem. Una Labs turns it into the clearest next deliverable.</p>
+            </div>
+            <div className="sunrise-action-row">
+              <Link href="/work-with-ftc" prefetch={false} className="sunrise-btn sunrise-btn--primary">
                 Start your request
               </Link>
-              <Link href="/services" prefetch={false} className="btn btn-secondary">
-                View service offerings
+              <Link href="/services" prefetch={false} className="sunrise-btn sunrise-btn--secondary">
+                View services
               </Link>
             </div>
-          </article>
+          </div>
         </div>
       </section>
-
     </div>
   );
 }
