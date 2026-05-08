@@ -20,8 +20,8 @@
     },
     {
       "label": "Database",
-      "value": "6-migrations-applied",
-      "detail": "All six migrations applied to live Supabase project (foundation, auth-rls, bookings, subscriptions, security hardening, webhook events).",
+      "value": "7-migrations-applied",
+      "detail": "All seven migrations applied to live Supabase project (foundation, auth-rls, bookings, subscriptions, security hardening, webhook events, classroom posts).",
       "status": "green"
     },
     {
