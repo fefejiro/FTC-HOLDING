@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { GardenPortalUserRole } from "../../../lib/gardenContracts";
+import { isGardenPortalAuthConfigured } from "../../../lib/gardenPortalAuth";
 import getSupabase from "../../../lib/supabase";
 
 // Types for admin user management
@@ -15,6 +16,16 @@ type AdminUserRecord = {
   service_region: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type AdminAuditRecord = {
+  id: string;
+  actor_email: string;
+  action: string;
+  target_email: string | null;
+  target_user_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
 };
 
 type UsersMgmtState = "idle" | "loading" | "error";
@@ -46,6 +57,7 @@ type QuoteRecord = {
   service_type?: string;
   service_frequency?: string;
   property_type?: string;
+  status?: string;
   created_at?: string;
 };
 
@@ -59,18 +71,24 @@ type PortalProjectRecord = {
   assigned_owner: string | null;
 };
 
+type PortalProfileRecord = {
+  id: string;
+  role: GardenPortalUserRole | null;
+  is_active: boolean | null;
+};
+
 type AuthState = "loading" | "authenticated" | "unauthenticated" | "unavailable";
 type SignInState = "idle" | "submitting" | "error" | "success";
-type QueueFilter = "all" | "new" | "triaged" | "scheduled" | "completed" | "cancelled";
+type QueueFilter = "all" | "pending" | "assigned" | "in_progress" | "completed" | "cancelled";
 type RegionTag = "Oshawa" | "Whitby" | "Ajax" | "Pickering" | "Courtice" | "Durham Region" | "Unspecified";
 
 const REGION_OPTIONS: RegionTag[] = ["Oshawa", "Whitby", "Ajax", "Pickering", "Courtice", "Durham Region", "Unspecified"];
 const PORTAL_REGION_CTA_OPTIONS: Exclude<RegionTag, "Unspecified">[] = ["Oshawa", "Whitby", "Ajax", "Pickering", "Courtice", "Durham Region"];
 
 const VALID_QUEUE_STATUSES = new Set<Exclude<QueueFilter, "all">>([
-  "new",
-  "triaged",
-  "scheduled",
+  "pending",
+  "assigned",
+  "in_progress",
   "completed",
   "cancelled"
 ]);
@@ -80,7 +98,7 @@ function normalizeStatus(value: string | null): Exclude<QueueFilter, "all"> {
   if (VALID_QUEUE_STATUSES.has(candidate as Exclude<QueueFilter, "all">)) {
     return candidate as Exclude<QueueFilter, "all">;
   }
-  return "new";
+  return "pending";
 }
 
 function inferRegion(name: string | null, description: string | null): RegionTag {
@@ -184,7 +202,16 @@ function resolveRole(email: string): GardenPortalUserRole {
   return "client";
 }
 
+function resolveRoleFromProfile(sessionEmail: string, profileRole: string | null): GardenPortalUserRole {
+  const roleCandidate = String(profileRole || "").trim().toLowerCase();
+  if (roleCandidate === "admin" || roleCandidate === "staff" || roleCandidate === "client") {
+    return roleCandidate;
+  }
+  return resolveRole(sessionEmail);
+}
+
 export default function GardenPortalAccessPanel() {
+  const portalAuthConfigured = isGardenPortalAuthConfigured();
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [userEmail, setUserEmail] = useState<string>("");
   const [role, setRole] = useState<GardenPortalUserRole | null>(null);
@@ -198,6 +225,7 @@ export default function GardenPortalAccessPanel() {
   const [pendingRegionProjectId, setPendingRegionProjectId] = useState<string>("");
   const [regionDraftByProjectId, setRegionDraftByProjectId] = useState<Record<string, RegionTag>>({});
   const [queueMessage, setQueueMessage] = useState<string>("");
+  const [pendingQuoteActionId, setPendingQuoteActionId] = useState<string>("");
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const [queueSearch, setQueueSearch] = useState<string>("");
   const [queueRegion, setQueueRegion] = useState<"all" | RegionTag>("all");
@@ -215,6 +243,9 @@ export default function GardenPortalAccessPanel() {
   const [usersMgmtState, setUsersMgmtState] = useState<UsersMgmtState>("idle");
   const [usersMgmtError, setUsersMgmtError] = useState<string>("");
   const [usersMgmtMessage, setUsersMgmtMessage] = useState<string>("");
+  const [adminAuditEntries, setAdminAuditEntries] = useState<AdminAuditRecord[]>([]);
+  const [adminAuditState, setAdminAuditState] = useState<UsersMgmtState>("idle");
+  const [adminAuditError, setAdminAuditError] = useState<string>("");
   // Invite form
   const [showInviteForm, setShowInviteForm] = useState<boolean>(false);
   const [inviteEmail, setInviteEmail] = useState<string>("");
@@ -322,11 +353,25 @@ export default function GardenPortalAccessPanel() {
     let mounted = true;
     let unsubscribe: (() => void) | null = null;
 
+    if (!portalAuthConfigured) {
+      setAuthState("unavailable");
+      setUserEmail("");
+      setRole(null);
+      setStaffProfileId(null);
+      setJobs([]);
+      setQuotes([]);
+      setLoadError("Portal sign-in is not configured for this deployment yet.");
+      return () => {
+        mounted = false;
+      };
+    }
+
     async function loadSessionAndData(emailFromSession?: string) {
       try {
         const supabase = getSupabase();
         const { data: sessionData } = await supabase.auth.getSession();
         const sessionEmail = (emailFromSession || sessionData.session?.user?.email || "").trim().toLowerCase();
+        const authUserId = sessionData.session?.user?.id || "";
 
         if (!mounted) return;
         if (!sessionEmail) {
@@ -340,25 +385,42 @@ export default function GardenPortalAccessPanel() {
           setQueueMessage("");
           return;
         }
-        const nextRole = resolveRole(sessionEmail);
+
+        let profileRow: PortalProfileRecord | null = null;
+        if (authUserId) {
+          try {
+            const { data } = await supabase
+              .from("garden_cleaners_profiles")
+              .select("id, role, is_active")
+              .eq("auth_user_id", authUserId)
+              .maybeSingle();
+            profileRow = data as PortalProfileRecord | null;
+          } catch {
+            profileRow = null;
+          }
+        }
+
+        const nextRole = resolveRoleFromProfile(sessionEmail, profileRow?.role ?? null);
         setAuthState("authenticated");
         setUserEmail(sessionEmail);
         setRole(nextRole);
 
+        if (profileRow?.is_active === false) {
+          setAuthState("unauthenticated");
+          setUserEmail("");
+          setRole(null);
+          setStaffProfileId(null);
+          setJobs([]);
+          setQuotes([]);
+          setLoadError("Your portal account is currently disabled. Please contact Garden Cleaners support.");
+          setQueueMessage("");
+          return;
+        }
+
         // Fetch and store the staff profile ID so that visibleJobs can filter by it
         if (nextRole === "staff") {
-          try {
-            const supabase = getSupabase();
-            const { data: profileRow } = await supabase
-              .from("garden_cleaners_profiles")
-              .select("id")
-              .eq("auth_user_id", sessionData.session?.user?.id ?? "")
-              .maybeSingle();
-            if (mounted) {
-              setStaffProfileId(profileRow?.id ?? null);
-            }
-          } catch {
-            if (mounted) setStaffProfileId(null);
+          if (mounted) {
+            setStaffProfileId(profileRow?.id ?? null);
           }
         } else {
           if (mounted) setStaffProfileId(null);
@@ -394,7 +456,7 @@ export default function GardenPortalAccessPanel() {
       mounted = false;
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [portalAuthConfigured]);
 
   // Staff: update job status
   async function updateJobStatus(jobId: string, nextStatus: string) {
@@ -420,6 +482,7 @@ export default function GardenPortalAccessPanel() {
   async function convertQuoteToJob(quoteId: string) {
     if (!isAdmin) return;
     setQueueMessage("");
+    setPendingQuoteActionId(quoteId);
     try {
       const res = await fetchWithAuth("/api/garden-cleaners-job", {
         method: "POST",
@@ -431,6 +494,33 @@ export default function GardenPortalAccessPanel() {
       await loadPortalData("admin");
     } catch (e: any) {
       setQueueMessage(e.message || "Unable to convert quote");
+    } finally {
+      setPendingQuoteActionId("");
+    }
+  }
+
+  async function updateQuoteStatus(quoteId: string, status: "approved" | "rejected") {
+    if (!isAdmin) return;
+    setQueueMessage("");
+    setPendingQuoteActionId(quoteId);
+    try {
+      const res = await fetchWithAuth("/api/garden-cleaners-quote-status", {
+        method: "POST",
+        body: JSON.stringify({ quote_id: quoteId, status })
+      }).then((r) => r.json());
+
+      if (!res.ok) {
+        throw new Error(res.error || "Unable to update quote status");
+      }
+
+      setQuotes((prev) =>
+        prev.map((quote) => (quote.id === quoteId ? { ...quote, status } : quote))
+      );
+      setQueueMessage(status === "approved" ? "Quote approved" : "Quote rejected");
+    } catch (e: any) {
+      setQueueMessage(e.message || "Unable to update quote status");
+    } finally {
+      setPendingQuoteActionId("");
     }
   }
 
@@ -501,6 +591,21 @@ export default function GardenPortalAccessPanel() {
     }
   }
 
+  async function loadAdminAudit() {
+    if (!isAdmin) return;
+    setAdminAuditState("loading");
+    setAdminAuditError("");
+    try {
+      const res = await fetchWithAuth("/api/garden-cleaners-admin-users?view=audit&page=1&per_page=20").then((r) => r.json());
+      if (!res.ok) throw new Error(res.error || "Failed to load audit log");
+      setAdminAuditEntries(res.entries || []);
+      setAdminAuditState("idle");
+    } catch (e: any) {
+      setAdminAuditError(e.message || "Unable to load audit log");
+      setAdminAuditState("error");
+    }
+  }
+
   async function submitInviteUser(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!isAdmin) return;
@@ -527,6 +632,7 @@ export default function GardenPortalAccessPanel() {
       setInviteRegion("");
       setShowInviteForm(false);
       await loadAdminUsers(1);
+      await loadAdminAudit();
     } catch (e: any) {
       setInviteFormState("error");
       setInviteFormMessage(e.message || "Unable to invite user.");
@@ -545,6 +651,7 @@ export default function GardenPortalAccessPanel() {
       if (!res.ok) throw new Error(res.error || "Failed to update role");
       setAdminUsers((prev) => prev.map((u) => (u.id === profileId ? { ...u, role: newRole } : u)));
       setUsersMgmtMessage("Role updated.");
+      await loadAdminAudit();
     } catch (e: any) {
       setUsersMgmtMessage(e.message || "Unable to update role.");
     } finally {
@@ -569,6 +676,7 @@ export default function GardenPortalAccessPanel() {
       if (!res.ok) throw new Error(res.error || "Failed to update status");
       setAdminUsers((prev) => prev.map((u) => (u.id === profileId ? { ...u, is_active: isActive } : u)));
       setUsersMgmtMessage(isActive ? "User reactivated." : "User disabled.");
+      await loadAdminAudit();
     } catch (e: any) {
       setUsersMgmtMessage(e.message || "Unable to update user status.");
     } finally {
@@ -587,6 +695,7 @@ export default function GardenPortalAccessPanel() {
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error || "Failed to send reset");
       setUsersMgmtMessage(`Reset/invite sent to ${email}.`);
+      await loadAdminAudit();
     } catch (e: any) {
       setUsersMgmtMessage(e.message || "Unable to send reset.");
     } finally {
@@ -619,11 +728,11 @@ export default function GardenPortalAccessPanel() {
     <section className="section garden-section" id="portal-access" tabIndex={-1}>
       <div className="section-heading">
         <p className="eyebrow">Portal access</p>
-        <h2>Role-based Garden Cleaners portal</h2>
+        <h2>Garden Cleaners client portal</h2>
         <p>
-          {isAdmin && "Admin: manage all jobs, convert quotes, assign staff."}
-          {isStaff && "Staff: view and update assigned jobs."}
-          {isCustomer && "Customer: view your job status."}
+          {isAdmin && "Admin view: manage jobs, convert quotes, and assign staff."}
+          {isStaff && "Staff view: check assigned jobs and keep status up to date."}
+          {isCustomer && "Client view: track your current job status."}
         </p>
       </div>
 
@@ -631,7 +740,7 @@ export default function GardenPortalAccessPanel() {
         <p className="garden-panel-kicker">Regional portal</p>
         <h3 style={{ marginTop: 0 }}>Need quote help before sign-in?</h3>
         <p className="muted" style={{ marginTop: 0 }}>
-          Start a regional quote path or contact operations directly.
+          Start a regional quote request or contact our team directly.
         </p>
         <div className="hero-actions" style={{ marginBottom: 12 }}>
           <a
@@ -679,7 +788,7 @@ export default function GardenPortalAccessPanel() {
           <h2>
             {authState === "loading" && "Checking portal session..."}
             {authState === "unauthenticated" && "Sign in required"}
-            {authState === "unavailable" && "Portal auth unavailable"}
+            {authState === "unavailable" && "Portal sign-in setup in progress"}
             {authState === "authenticated" && `Signed in as ${role}`}
           </h2>
           {userEmail ? <p>{userEmail}</p> : null}
@@ -698,10 +807,14 @@ export default function GardenPortalAccessPanel() {
           )}
           {authState === "loading" && loadingTimeout && (
             <div style={{ color: "#b94a48", background: "#fff0f0", borderRadius: 8, padding: "12px 16px", marginTop: 16 }}>
-              We couldn't load your portal access yet. Please sign out and try again, or contact support.
+              We could not load your portal access yet. Please sign out and try again, or contact support.
             </div>
           )}
-          {authState === "unavailable" ? <p>{loadError}</p> : null}
+          {authState === "unavailable" ? (
+            <p>
+              {loadError || "Portal sign-in is temporarily unavailable."} Please use quote or contact operations and we will follow up directly.
+            </p>
+          ) : null}
           {authState === "authenticated" ? (
             <button type="button" className="btn btn-secondary" onClick={signOut}>Sign out of portal session</button>
           ) : null}
@@ -712,7 +825,7 @@ export default function GardenPortalAccessPanel() {
             {authState === "loading" && "Checking access..."}
             {authState === "unauthenticated" && "Sign in to view your dashboard."}
             {authState === "authenticated" && role && `Role: ${role.charAt(0).toUpperCase() + role.slice(1)}`}
-            {authState === "unavailable" && "Portal unavailable"}
+            {authState === "unavailable" && "Access temporarily disabled"}
           </h2>
           {authState === "authenticated" && isAdmin ? (
             <p className="muted">
@@ -781,6 +894,7 @@ export default function GardenPortalAccessPanel() {
                 onClick={() => {
                   setAdminTab("users");
                   if (adminUsers.length === 0) void loadAdminUsers(1);
+                  if (adminAuditEntries.length === 0) void loadAdminAudit();
                 }}
               >
                 Users
@@ -794,8 +908,35 @@ export default function GardenPortalAccessPanel() {
               <ul>
                 {quotes.map((q) => (
                   <li key={q.id}>
-                    <div>Email: {q.email} | {q.address} {q.city} | {q.service_type} | {q.property_type}</div>
-                    <button className="btn btn-secondary" onClick={() => convertQuoteToJob(q.id)}>Convert to Job</button>
+                    <div>
+                      Email: {q.email} | {q.address} {q.city} | {q.service_type} | {q.property_type}
+                    </div>
+                    <div>
+                      <strong>Status:</strong> {String(q.status || "new")}
+                    </div>
+                    <div className="hero-actions" style={{ marginTop: 8 }}>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => updateQuoteStatus(q.id, "approved")}
+                        disabled={pendingQuoteActionId === q.id || String(q.status || "new") === "converted"}
+                      >
+                        {String(q.status || "new") === "approved" ? "Approved" : "Approve"}
+                      </button>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => updateQuoteStatus(q.id, "rejected")}
+                        disabled={pendingQuoteActionId === q.id || String(q.status || "new") === "converted"}
+                      >
+                        {String(q.status || "new") === "rejected" ? "Rejected" : "Reject"}
+                      </button>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => convertQuoteToJob(q.id)}
+                        disabled={pendingQuoteActionId === q.id || String(q.status || "new") !== "approved"}
+                      >
+                        Convert to Job
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -1080,6 +1221,54 @@ export default function GardenPortalAccessPanel() {
               ) : usersMgmtState === "idle" ? (
                 <div style={{ color: "#4a6a4a", fontSize: 14 }}>No users found. Search above or invite a new user.</div>
               ) : null}
+
+              <div style={{ marginTop: 20, borderTop: "1px solid #e6ece6", paddingTop: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <h4 style={{ margin: 0 }}>Recent admin activity</h4>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: 13 }}
+                    onClick={() => void loadAdminAudit()}
+                    disabled={adminAuditState === "loading"}
+                  >
+                    {adminAuditState === "loading" ? "Refreshing..." : "Refresh activity"}
+                  </button>
+                </div>
+                {adminAuditError ? (
+                  <p style={{ color: "#b94a48", background: "#fff0f0", borderRadius: 6, padding: "8px 10px", fontSize: 14, marginTop: 10 }}>
+                    {adminAuditError}
+                  </p>
+                ) : null}
+                {adminAuditEntries.length > 0 ? (
+                  <div style={{ marginTop: 12, overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid #e6ece6", textAlign: "left" }}>
+                          <th style={{ padding: "8px 10px" }}>When</th>
+                          <th style={{ padding: "8px 10px" }}>Actor</th>
+                          <th style={{ padding: "8px 10px" }}>Action</th>
+                          <th style={{ padding: "8px 10px" }}>Target</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminAuditEntries.map((entry) => (
+                          <tr key={entry.id} style={{ borderBottom: "1px solid #e6ece6" }}>
+                            <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                              {entry.created_at ? new Date(entry.created_at).toLocaleString("en-CA") : "-"}
+                            </td>
+                            <td style={{ padding: "8px 10px", wordBreak: "break-all" }}>{entry.actor_email || "-"}</td>
+                            <td style={{ padding: "8px 10px" }}>{entry.action || "-"}</td>
+                            <td style={{ padding: "8px 10px", wordBreak: "break-all" }}>{entry.target_email || entry.target_user_id || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="muted" style={{ marginTop: 10 }}>No recent admin activity yet.</p>
+                )}
+              </div>
             </article>
           )}
           {/* Customer: Own jobs/status */}

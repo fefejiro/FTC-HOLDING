@@ -503,7 +503,7 @@ export const ogTradesAcademyConfig = {
     "Trading psychology and mindset resets"
   ],
   disclaimer:
-    "Trading involves real risk. OG Trades Academy provides education, discipline, risk management, and market understanding — not financial advice, and not a guarantee of trading profits. Only risk capital you can afford to lose."
+    "Trading involves real risk. OG Trades Academy provides education, discipline, risk management, and market understanding, not financial advice, and not a guarantee of trading profits. Only risk capital you can afford to lose."
 } as const;
 
 export function getOgTradesMetadata({
