@@ -78,7 +78,7 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
               <option value="">Select student</option>
               {linkedStudents.map((student) => (
                 <option key={student.id} value={student.id}>
-                  Student {student.id.slice(0, 8)}
+                    {student.display_name}
                   {student.grade_level ? ` (Grade ${student.grade_level})` : ''}
                 </option>
               ))}
@@ -174,7 +174,7 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
                   {new Date(booking.requested_start_at).toLocaleString()} • {booking.duration_minutes} mins
                 </p>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
-                  Student: {booking.student_id ? `Student ${booking.student_id.slice(0, 8)}` : 'Legacy booking'}
+                  Student: {booking.student_name ?? 'Legacy booking'}
                 </p>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   Status: <strong>{booking.status}</strong>
@@ -213,7 +213,7 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
           <div className="grid" style={{ gap: 10 }}>
             {linkedStudents.map((student) => (
               <article key={student.id} className="surface card" style={{ boxShadow: 'none' }}>
-                <p style={{ margin: 0, fontWeight: 600 }}>Student {student.id.slice(0, 8)}</p>
+                <p style={{ margin: 0, fontWeight: 600 }}>{student.display_name}</p>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   Grade: {student.grade_level ?? 'Not set'}
                 </p>

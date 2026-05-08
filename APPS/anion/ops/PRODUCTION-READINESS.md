@@ -55,7 +55,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | SB3 | `SUPABASE_SERVICE_ROLE_KEY` is set | Cloudflare Workers env vars (secret) | ☐ |
 | SB4 | Production domain added to Supabase Auth allow-list | [Supabase → Auth → URL Configuration](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/auth/url-configuration) | ☐ |
 | SB5 | Redirect URL `https://[domain]/auth/callback` is in the allow-list | Same as above | ☐ |
-| SB6 | All current migrations applied to live database (currently 11) | Check `supabase/migrations/` vs applied | ☐ |
+| SB6 | All current migrations applied to live database (currently 13) | Check `supabase/migrations/` vs applied | ☐ |
 | SB7 | RLS policies verified: profiles, bookings, subscriptions, user_roles | Run `SELECT * FROM pg_policies` | ☐ |
 
 ### 2D — Cloudflare

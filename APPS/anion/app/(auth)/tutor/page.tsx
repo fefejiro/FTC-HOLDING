@@ -208,7 +208,7 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
                   {new Date(booking.requested_start_at).toLocaleString()} • {booking.duration_minutes} mins
                 </p>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
-                  Student: {booking.student_id ? `Student ${booking.student_id.slice(0, 8)}` : 'Legacy family booking'}
+                  Student: {booking.student_name ?? 'Legacy family booking'}
                 </p>
                 {booking.notes ? (
                   <p className="muted" style={{ margin: '6px 0 0' }}>

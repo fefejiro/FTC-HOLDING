@@ -7,6 +7,7 @@ export type BookingRow = {
   parent_id: string;
   tutor_id: string;
   student_id: string | null;
+  student_name: string | null;
   subject: string;
   requested_start_at: string;
   duration_minutes: number;
@@ -32,9 +33,69 @@ export type StudentLessonCard = {
 
 export type ParentLinkedStudent = {
   id: string;
+  display_name: string;
   grade_level: string | null;
   linked_at: string;
 };
+
+type StudentProfileRow = {
+  id: string;
+  profile_id: string;
+  grade_level: string | null;
+};
+
+type ProfileDisplayRow = {
+  id: string;
+  display_name: string;
+};
+
+async function getStudentNameMap(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  studentIds: string[],
+): Promise<Map<string, { displayName: string; gradeLevel: string | null }>> {
+  const uniqueStudentIds = Array.from(new Set(studentIds.filter(Boolean)));
+  if (uniqueStudentIds.length === 0) {
+    return new Map();
+  }
+
+  const { data: students, error: studentsError } = await supabase
+    .from('students')
+    .select('id, profile_id, grade_level')
+    .in('id', uniqueStudentIds);
+
+  if (studentsError) {
+    throw new Error(studentsError.message);
+  }
+
+  const studentRows = (students ?? []) as StudentProfileRow[];
+  const profileIds = Array.from(new Set(studentRows.map((row) => row.profile_id)));
+
+  let profileNameMap = new Map<string, string>();
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', profileIds);
+
+    if (profilesError) {
+      throw new Error(profilesError.message);
+    }
+
+    profileNameMap = new Map(
+      ((profiles ?? []) as ProfileDisplayRow[]).map((row) => [row.id, row.display_name]),
+    );
+  }
+
+  return new Map(
+    studentRows.map((row) => [
+      row.id,
+      {
+        displayName: profileNameMap.get(row.profile_id) ?? `Student ${row.id.slice(0, 8)}`,
+        gradeLevel: row.grade_level,
+      },
+    ]),
+  );
+}
 
 async function getProfileIdForAuthUser(supabase: Awaited<ReturnType<typeof createServerClient>>) {
   const {
@@ -86,7 +147,16 @@ export async function listParentBookings(): Promise<BookingRow[]> {
     throw new Error(error.message);
   }
 
-  return (data ?? []) as BookingRow[];
+  const rows = (data ?? []) as Omit<BookingRow, 'student_name'>[];
+  const studentNameMap = await getStudentNameMap(
+    supabase,
+    rows.map((row) => row.student_id).filter((value): value is string => Boolean(value)),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    student_name: row.student_id ? (studentNameMap.get(row.student_id)?.displayName ?? null) : null,
+  }));
 }
 
 export async function listParentLinkedStudents(): Promise<ParentLinkedStudent[]> {
@@ -118,20 +188,12 @@ export async function listParentLinkedStudents(): Promise<ParentLinkedStudent[]>
     return [];
   }
 
-  const { data: students, error: studentsError } = await supabase
-    .from('students')
-    .select('id, grade_level')
-    .in('id', studentIds);
-
-  if (studentsError) {
-    throw new Error(studentsError.message);
-  }
-
-  const gradeByStudentId = new Map((students ?? []).map((row) => [row.id as string, row.grade_level as string | null]));
+  const studentNameMap = await getStudentNameMap(supabase, studentIds);
 
   return (links ?? []).map((link) => ({
     id: link.student_id as string,
-    grade_level: gradeByStudentId.get(link.student_id as string) ?? null,
+    display_name: studentNameMap.get(link.student_id as string)?.displayName ?? `Student ${(link.student_id as string).slice(0, 8)}`,
+    grade_level: studentNameMap.get(link.student_id as string)?.gradeLevel ?? null,
     linked_at: link.created_at as string,
   }));
 }
@@ -148,7 +210,16 @@ export async function listTutorBookings(): Promise<BookingRow[]> {
     throw new Error(error.message);
   }
 
-  return (data ?? []) as BookingRow[];
+  const rows = (data ?? []) as Omit<BookingRow, 'student_name'>[];
+  const studentNameMap = await getStudentNameMap(
+    supabase,
+    rows.map((row) => row.student_id).filter((value): value is string => Boolean(value)),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    student_name: row.student_id ? (studentNameMap.get(row.student_id)?.displayName ?? null) : null,
+  }));
 }
 
 export async function listStudentAcceptedBookings(): Promise<StudentLessonCard[]> {
