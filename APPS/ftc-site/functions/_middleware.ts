@@ -24,8 +24,7 @@ const GARDEN_PUBLIC_PATHS = new Set([
   "/about",
   "/services",
   "/contact",
-  "/quote",
-  "/portal"
+  "/quote"
 ]);
 
 const OG_PUBLIC_PATHS = new Set([
@@ -104,6 +103,10 @@ function handleGardenHost(request: Request, env: Env, pathname: string) {
   if (pathname.startsWith("/garden-cleaners")) {
     const cleanPath = stripBasePath(pathname, "/garden-cleaners");
     return redirect(request, cleanPath, 308);
+  }
+
+  if (pathname === "/portal") {
+    return null;
   }
 
   if (GARDEN_PUBLIC_PATHS.has(pathname)) {

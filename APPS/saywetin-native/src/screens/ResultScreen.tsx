@@ -1,10 +1,28 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { MatchSource, RitualTrack } from '../state/ritual-state';
 import { FadeInView } from '../components/FadeInView';
 import { ritualTokens } from '../theme/tokens';
+import { fetchLyricSection, fetchMeaningSection, isSectionError } from '../api/result-sections';
+import {
+  getRecognitionDurationLabel,
+  getRecognitionPerformanceHint,
+  isFastRecognition,
+  isSlowRecognition,
+} from '../utils/timing';
+import RetryPersistence from '../api/retry-persistence';
+import ResultScreenAnalytics from '../api/analytics';
 
 const { colors } = ritualTokens;
+
+type SectionState = {
+  ready: boolean;
+  loading: boolean;
+  error: string | null;
+};
+
+const SLOW_SECTION_THRESHOLD_MS = 3000;
+const SECTION_RETRY_DELAY_MS = 500;
 
 const MATCH_SOURCE_LABELS: Record<MatchSource, string> = {
   acrcloud: 'Matched by audio',
@@ -36,6 +54,24 @@ function confidenceLabel(score: number) {
 
 export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScreenProps) {
   const [openingLiveLyrics, setOpeningLiveLyrics] = useState(false);
+  const [lyricsSection, setLyricsSection] = useState<SectionState>({
+    ready: (track.lyric || '').trim().length > 0,
+    loading: false,
+    error: null,
+  });
+  const [meaningSection, setMeaningSection] = useState<SectionState>({
+    ready: (track.meaning || '').trim().length > 0 || track.culturalAnalyses.length > 0,
+    loading: false,
+    error: null,
+  });
+  const [resultShownAtMs] = useState(Date.now());
+  const [sectionsCheckedAtMs, setSectionsCheckedAtMs] = useState<number | null>(null);
+  const [fetchedLyric, setFetchedLyric] = useState<string | null>(null);
+  const [fetchedAnalyses, setFetchedAnalyses] = useState<typeof track.culturalAnalyses | null>(null);
+
+  const retryPersistenceRef = useRef(RetryPersistence.getInstance());
+  const analyticsRef = useRef(ResultScreenAnalytics.getInstance());
+  const sectionLoadStartTimesRef = useRef<Record<string, number>>({});
 
   const extractSpotifyTrackId = (url: string) => {
     const match = url.match(/track\/([a-zA-Z0-9]+)/);
@@ -92,13 +128,198 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     }
   };
 
-  const inlineLyrics = (track.lyric || '').trim();
+  useEffect(() => {
+    setSectionsCheckedAtMs(Date.now());
+  }, [track.id]);
+
+  useEffect(() => {
+    const initializeAndSync = async () => {
+      try {
+        await retryPersistenceRef.current.initialize();
+        await analyticsRef.current.initialize();
+        analyticsRef.current.startSession();
+
+        // Sync any pending retries from previous sessions
+        await retryPersistenceRef.current.syncPendingRetries(
+          (trackId, sectionType) => {
+            // Retry succeeded
+            if (sectionType === 'lyrics' && trackId === track.id) {
+              retryLyricsSection();
+            } else if (sectionType === 'meaning' && trackId === track.id) {
+              retryMeaningSection();
+            }
+          },
+          (trackId, sectionType, error) => {
+            // Retry failed, will be re-queued
+            console.log('[result-screen] retry sync failed', { trackId, sectionType, error });
+          },
+        );
+      } catch (error) {
+        console.error('[result-screen] initialization failed', error);
+      }
+    };
+
+    initializeAndSync();
+
+    return () => {
+      analyticsRef.current.endSession();
+    };
+  }, [track.id]);
+
+  const inlineLyrics = (fetchedLyric || track.lyric || '').trim();
   const meaningText = (track.meaning || '').trim();
-  const culturalDetail = track.culturalAnalyses[0];
+  const analysesToUse = fetchedAnalyses || track.culturalAnalyses;
+  const culturalDetail = analysesToUse[0];
   const culturalSummary = [culturalDetail?.culturalContext, culturalDetail?.deeperMeaning]
     .filter((part) => Boolean(part && part.trim().length > 0))
     .join(' ')
     .trim();
+
+  const elapsedSinceResultMs = Date.now() - resultShownAtMs;
+  const isLyricsStalled = !lyricsSection.ready && !lyricsSection.loading && !lyricsSection.error && elapsedSinceResultMs > SLOW_SECTION_THRESHOLD_MS;
+  const isMeaningStalled = !meaningSection.ready && !meaningSection.loading && !meaningSection.error && elapsedSinceResultMs > SLOW_SECTION_THRESHOLD_MS;
+
+  const retryLyricsSection = async () => {
+    if (lyricsSection.loading) return;
+    setLyricsSection({ ready: false, loading: true, error: null });
+    
+    const startTimeMs = Date.now();
+    sectionLoadStartTimesRef.current['lyrics'] = startTimeMs;
+    
+    try {
+      const result = await fetchLyricSection(track.id);
+      const durationMs = Date.now() - startTimeMs;
+      
+      if (isSectionError(result)) {
+        setLyricsSection({ ready: false, loading: false, error: result.message });
+        
+        // Track failed load and add to retry queue
+        analyticsRef.current.recordSectionLoad({
+          trackId: track.id,
+          sectionType: 'lyrics',
+          success: false,
+          durationMs,
+          errorType: result.code,
+          isRetry: lyricsSection.error !== null,
+          attemptNumber: 1,
+        });
+        
+        await retryPersistenceRef.current.addRetryItem(track.id, 'lyrics', result.message);
+      } else {
+        setFetchedLyric(result.lyric);
+        setLyricsSection({ ready: true, loading: false, error: null });
+        
+        // Track successful load
+        analyticsRef.current.recordSectionLoad({
+          trackId: track.id,
+          sectionType: 'lyrics',
+          success: true,
+          durationMs,
+          isRetry: lyricsSection.error !== null,
+          attemptNumber: 1,
+        });
+        
+        // Remove from retry queue if present
+        await retryPersistenceRef.current.removeRetryItem(track.id, 'lyrics');
+      }
+    } catch (err) {
+      const durationMs = Date.now() - startTimeMs;
+      const errorMsg = err instanceof Error ? err.message : 'Failed to load lyrics. Try again?';
+      setLyricsSection({ ready: false, loading: false, error: errorMsg });
+      
+      // Track error and add to retry queue
+      analyticsRef.current.recordSectionLoad({
+        trackId: track.id,
+        sectionType: 'lyrics',
+        success: false,
+        durationMs,
+        errorType: 'network_error',
+        isRetry: lyricsSection.error !== null,
+        attemptNumber: 1,
+      });
+      
+      await retryPersistenceRef.current.addRetryItem(track.id, 'lyrics', errorMsg);
+    }
+  };
+
+  const retryMeaningSection = async () => {
+    if (meaningSection.loading) return;
+    setMeaningSection({ ready: false, loading: true, error: null });
+    
+    const startTimeMs = Date.now();
+    sectionLoadStartTimesRef.current['meaning'] = startTimeMs;
+    
+    try {
+      const result = await fetchMeaningSection(track.id);
+      const durationMs = Date.now() - startTimeMs;
+      
+      if (isSectionError(result)) {
+        setMeaningSection({ ready: false, loading: false, error: result.message });
+        
+        // Track failed load and add to retry queue
+        analyticsRef.current.recordSectionLoad({
+          trackId: track.id,
+          sectionType: 'meaning',
+          success: false,
+          durationMs,
+          errorType: result.code,
+          isRetry: meaningSection.error !== null,
+          attemptNumber: 1,
+        });
+        
+        await retryPersistenceRef.current.addRetryItem(track.id, 'meaning', result.message);
+      } else {
+        if (result.culturalAnalyses.length > 0) {
+          setFetchedAnalyses(result.culturalAnalyses);
+          setMeaningSection({ ready: true, loading: false, error: null });
+          
+          // Track successful load
+          analyticsRef.current.recordSectionLoad({
+            trackId: track.id,
+            sectionType: 'meaning',
+            success: true,
+            durationMs,
+            isRetry: meaningSection.error !== null,
+            attemptNumber: 1,
+          });
+          
+          // Remove from retry queue if present
+          await retryPersistenceRef.current.removeRetryItem(track.id, 'meaning');
+        } else {
+          const errorMsg = 'Meaning analysis not available yet. Check Live Lyrics for context.';
+          setMeaningSection({ ready: false, loading: false, error: errorMsg });
+          
+          // Track as unavailable
+          analyticsRef.current.recordSectionLoad({
+            trackId: track.id,
+            sectionType: 'meaning',
+            success: false,
+            durationMs,
+            errorType: 'unavailable',
+            isRetry: meaningSection.error !== null,
+            attemptNumber: 1,
+          });
+        }
+      }
+    } catch (err) {
+      const durationMs = Date.now() - startTimeMs;
+      const errorMsg = err instanceof Error ? err.message : 'Failed to load meaning. Try again?';
+      setMeaningSection({ ready: false, loading: false, error: errorMsg });
+      
+      // Track error and add to retry queue
+      analyticsRef.current.recordSectionLoad({
+        trackId: track.id,
+        sectionType: 'meaning',
+        success: false,
+        durationMs,
+        errorType: 'network_error',
+        isRetry: meaningSection.error !== null,
+        attemptNumber: 1,
+      });
+      
+      await retryPersistenceRef.current.addRetryItem(track.id, 'meaning', errorMsg);
+    }
+  };
 
   const openLiveLyrics = async () => {
     if (openingLiveLyrics) {
@@ -130,26 +351,94 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
             ) : null}
           </View>
 
+          {(() => {
+            const durationLabel = getRecognitionDurationLabel(
+              track.listenStartedAtMs,
+              track.recognitionReceivedAtMs,
+            );
+            const performanceHint = getRecognitionPerformanceHint(
+              track.listenStartedAtMs,
+              track.recognitionReceivedAtMs,
+            );
+            const fast = isFastRecognition(track.listenStartedAtMs, track.recognitionReceivedAtMs);
+            const slow = isSlowRecognition(track.listenStartedAtMs, track.recognitionReceivedAtMs);
+
+            return durationLabel || performanceHint ? (
+              <View style={styles.timingHintRow}>
+                {durationLabel ? (
+                  <Text
+                    style={[
+                      styles.timingHintText,
+                      fast && styles.timingHintFast,
+                      slow && styles.timingHintSlow,
+                    ]}
+                  >
+                    {durationLabel}
+                  </Text>
+                ) : null}
+                {performanceHint ? (
+                  <Text
+                    style={[
+                      styles.timingHintText,
+                      fast && styles.timingHintFast,
+                      slow && styles.timingHintSlow,
+                    ]}
+                  >
+                    {performanceHint}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null;
+          })()}
+
           {track.albumArt ? <Image source={{ uri: track.albumArt }} style={styles.cover} /> : null}
 
           <View style={styles.lyricCard}>
-            <Text style={styles.sectionLabel}>Lyrics</Text>
-            {inlineLyrics ? (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>Lyrics</Text>
+              {lyricsSection.error && (
+                <Pressable onPress={retryLyricsSection} style={styles.sectionRetry}>
+                  <Text style={styles.sectionRetryText}>Retry</Text>
+                </Pressable>
+              )}
+            </View>
+            {lyricsSection.loading ? (
+              <Text style={styles.loadingText}>Loading lyrics…</Text>
+            ) : lyricsSection.error ? (
+              <Text style={styles.errorText}>{lyricsSection.error}</Text>
+            ) : inlineLyrics ? (
               <Text style={styles.lyricText}>{inlineLyrics}</Text>
+            ) : isLyricsStalled ? (
+              <Text style={styles.stalledText}>Lyrics taking longer than expected. Open Live Lyrics or retry.</Text>
             ) : (
               <Text style={styles.pendingText}>Lyrics are still loading. Open Live Lyrics to fetch more lines.</Text>
             )}
 
-            <Text style={styles.sectionLabel}>Meaning</Text>
-            {meaningText ? (
+            <View style={styles.sectionDivider} />
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>Meaning</Text>
+              {meaningSection.error && (
+                <Pressable onPress={retryMeaningSection} style={styles.sectionRetry}>
+                  <Text style={styles.sectionRetryText}>Retry</Text>
+                </Pressable>
+              )}
+            </View>
+            {meaningSection.loading ? (
+              <Text style={styles.loadingText}>Loading meaning…</Text>
+            ) : meaningSection.error ? (
+              <Text style={styles.errorText}>{meaningSection.error}</Text>
+            ) : meaningText ? (
               <Text style={styles.meaningText}>{meaningText}</Text>
+            ) : isMeaningStalled ? (
+              <Text style={styles.stalledText}>Meaning analysis is slow. Check back shortly or open Live Lyrics.</Text>
             ) : (
               <Text style={styles.pendingText}>Meaning is still loading for this track.</Text>
             )}
 
-            {culturalSummary ? (
+            {culturalSummary && (
               <Text style={styles.culturalText}>{culturalSummary}</Text>
-            ) : null}
+            )}
           </View>
 
           {track.chips.length > 0 ? (
@@ -240,6 +529,22 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     fontSize: 12,
   },
+  timingHintRow: {
+    gap: 8,
+    marginVertical: 4,
+  },
+  timingHintText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
+  timingHintFast: {
+    color: colors.violetSoft,
+  },
+  timingHintSlow: {
+    color: colors.amber,
+  },
   cover: {
     width: 180,
     height: 180,
@@ -264,12 +569,52 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 15,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   sectionLabel: {
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     fontSize: 11,
     fontWeight: '700',
+  },
+  sectionRetry: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: colors.violetWash,
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+  },
+  sectionRetryText: {
+    color: colors.violetSoft,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    opacity: 0.5,
+    marginVertical: 8,
+  },
+  loadingText: {
+    color: colors.violetSoft,
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  stalledText: {
+    color: colors.amber,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  errorText: {
+    color: colors.amber,
+    fontSize: 13,
+    lineHeight: 19,
   },
   pendingText: {
     color: colors.textMuted,

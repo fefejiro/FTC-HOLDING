@@ -64,6 +64,9 @@ function gardenAssetPath(pathname) {
   if (normalized.startsWith("/garden-cleaners")) {
     return normalized;
   }
+  if (normalized === "/portal") {
+    return "/portal";
+  }
   if (GARDEN_PUBLIC_PATHS.has(normalized)) {
     return normalized === "/" ? "/garden-cleaners" : `/garden-cleaners${normalized}`;
   }

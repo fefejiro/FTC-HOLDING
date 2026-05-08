@@ -326,6 +326,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
           ...recognizedTrack,
           lyricsAnchorOffsetMs: songPositionAtResponseMs + MATCHING_AUTO_ADVANCE_MS,
           sampleCapturedAtMs: capturedAtMs + MATCHING_AUTO_ADVANCE_MS,
+          resultShownAtMs: Date.now(),
         });
       }, MATCHING_AUTO_ADVANCE_MS);
     } catch (error: any) {
@@ -377,6 +378,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       onRecognizedRef.current({
         ...recognizedTrack,
         lyricsAnchorOffsetMs: 0,
+        resultShownAtMs: Date.now(),
       });
     } catch (error: any) {
       if (attemptIdRef.current !== requestId) {

@@ -281,9 +281,12 @@ export async function uploadListenSample(
   const matchSource = normalizeMatchSource(
     payload.recognizedTrack.matchSource ?? payload.matchSource ?? 'acrcloud',
   );
+  const recognitionReceivedAt = Date.now();
   const baseTrack = {
     ...mapRecognizedTrack(payload.recognizedTrack, matchSource),
-    matchedInMs: Date.now() - startedAt,
+    matchedInMs: recognitionReceivedAt - startedAt,
+    listenStartedAtMs: startedAt,
+    recognitionReceivedAtMs: recognitionReceivedAt,
   };
 
   try {

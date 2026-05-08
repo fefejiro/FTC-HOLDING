@@ -16058,3 +16058,35 @@ body.brand-garden .main-shell {
 @media (max-width: 900px) {
   .pricing-trust-faq-grid { grid-template-columns: 1fr; }
 }
+
+/* Force Una Labs dark visual system for non-Garden and non-OG contexts. */
+body:not(.brand-garden):not(.brand-og-trades),
+body.brand-una {
+  color-scheme: dark;
+  --bg: #0b0b0f;
+  --bg-soft: #11131a;
+  --surface: #151823;
+  --surface-2: #1a1f2d;
+  --surface-3: #101421;
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --text: #ffffff;
+  --muted: #b8b8c0;
+  --copy: #e5e7eb;
+  --accent: #6c5ce7;
+  --accent-2: #00d4ff;
+  --shadow-soft: 0 16px 40px rgba(0, 0, 0, 0.32);
+  --shadow-glow: 0 0 0 1px rgba(108, 92, 231, 0.25), 0 18px 44px rgba(0, 212, 255, 0.18);
+  color: var(--text);
+  background:
+    radial-gradient(1000px 620px at -10% -20%, rgba(108, 92, 231, 0.3) 0%, transparent 60%),
+    radial-gradient(900px 560px at 115% -10%, rgba(0, 212, 255, 0.22) 0%, transparent 62%),
+    linear-gradient(180deg, #0c0e15 0%, #090b11 100%);
+}
+
+body:not(.brand-garden):not(.brand-og-trades) header,
+body.brand-una header {
+  background: rgba(8, 10, 16, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+}

@@ -1,14 +1,29 @@
-import { OPS_SITE_URL } from "@/lib/site";
+import { OPS_SITE_URL, SITE_URL } from "@/lib/site";
 import { isSharedAdminEmail } from "@/lib/adminEmails";
-import { getGardenCleanersPortalUrl } from "@/lib/gardenCleaners";
+import { getGardenCleanersPortalUrl, isGardenCleanersCustomHost } from "@/lib/gardenCleaners";
 
 export function getAdminDashboardUrl(): string {
   return OPS_SITE_URL;
 }
 
 export function getDefaultPortalUrl(origin: string): string {
-  void origin;
-  return getGardenCleanersPortalUrl();
+  const fallback = `${SITE_URL}/products`;
+  const normalizedOrigin = String(origin || "").trim().replace(/\/+$/, "");
+
+  if (!normalizedOrigin) {
+    return fallback;
+  }
+
+  try {
+    const host = new URL(normalizedOrigin).host;
+    if (isGardenCleanersCustomHost(host)) {
+      return getGardenCleanersPortalUrl();
+    }
+
+    return `${normalizedOrigin}/products`;
+  } catch {
+    return fallback;
+  }
 }
 
 export function getPostLoginDestination(email: string | null | undefined, origin: string): string {

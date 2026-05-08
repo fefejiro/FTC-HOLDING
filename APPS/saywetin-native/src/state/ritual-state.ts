@@ -58,6 +58,12 @@ export type RitualTrack = {
   matchSource: MatchSource;
   recognitionSource: RecognitionSource;
   culturalAnalyses: CulturalAnalysisEntry[];
+  // Phase 2c: Timing fields for performance metrics
+  listenStartedAtMs?: number;
+  listenEndedAtMs?: number;
+  recognitionReceivedAtMs?: number;
+  resultShownAtMs?: number;
+  providerSongOffsetMs?: number;
 };
 
 export type RitualController = {
