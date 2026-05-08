@@ -177,6 +177,9 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
                   Student: {booking.student_name ?? 'Legacy booking'}
                 </p>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Tutor: {booking.tutor_name ?? 'Unknown tutor'}
+                </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
                   Status: <strong>{booking.status}</strong>
                 </p>
                 {booking.status === 'accepted' ? (
