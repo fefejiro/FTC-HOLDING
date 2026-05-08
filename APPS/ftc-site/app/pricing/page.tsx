@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Pricing | Una Labs",
   description:
-    "One focused package. We scope, build, and ship your Version 1 in one month — then support it for a month after launch.",
+    "One focused package. We scope, build, and ship your Version 1 in one month, then support it for a month after launch.",
   alternates: {
     canonical: "https://unalabs.cloud/pricing"
   }
@@ -20,7 +20,7 @@ export default function PricingPage() {
             <h1>One package. One month. One shipped product.</h1>
             <p className="lead">
               We don't do retainers, scope creep, or surprise invoices. You get a focused
-              Version 1 build and a full month of support — nothing more, nothing less.
+              Version 1 build and a full month of support, nothing more, nothing less.
             </p>
           </div>
         </div>
@@ -73,7 +73,7 @@ export default function PricingPage() {
                     <span className="pricing-feature-check">✓</span>
                     <div>
                       <strong>Founder-direct communication</strong>
-                      <p>No account managers or handoffs — Mike builds it</p>
+                      <p>No account managers or handoffs, Mike builds it</p>
                     </div>
                   </li>
                 </ul>
@@ -102,7 +102,7 @@ export default function PricingPage() {
                   <div className="pricing-faq-item">
                     <strong>What counts as Version 1?</strong>
                     <p>
-                      The core user flow — the thing that needs to work for your first real users.
+                      The core user flow, the thing that needs to work for your first real users.
                       We scope it together during intake so there are no surprises.
                     </p>
                   </div>
@@ -110,7 +110,7 @@ export default function PricingPage() {
                     <strong>What if my project needs more?</strong>
                     <p>
                       We discuss scope honestly upfront. Complex projects may require a higher
-                      starting price — we'll tell you before you pay anything.
+                      starting price, and we will tell you before you pay anything.
                     </p>
                   </div>
                   <div className="pricing-faq-item">
@@ -134,7 +134,7 @@ export default function PricingPage() {
                 <h3>Built by Una Labs</h3>
                 <p>
                   PeacePad, SayWetin, and Dispatch are all production-deployed products built
-                  and maintained solo. This isn't an agency pitch — it's the same system we
+                  and maintained solo. This isn't an agency pitch, it's the same system we
                   use for our own products, applied to yours.
                 </p>
                 <Link href="/work" className="inline-link" prefetch={false}>
