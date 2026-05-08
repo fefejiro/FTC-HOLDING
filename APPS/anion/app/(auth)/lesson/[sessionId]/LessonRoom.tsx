@@ -7,6 +7,9 @@ type Props = {
   userId: string;
   participantRole: 'student' | 'tutor';
   displayName: string;
+  lessonTitle: string;
+  studentName: string | null;
+  tutorName: string | null;
 };
 
 type RoomData = {
@@ -18,7 +21,15 @@ type RoomData = {
   code?: string;
 };
 
-export default function LessonRoom({ sessionId, userId, participantRole, displayName }: Props) {
+export default function LessonRoom({
+  sessionId,
+  userId,
+  participantRole,
+  displayName,
+  lessonTitle,
+  studentName,
+  tutorName,
+}: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'left'>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -128,8 +139,12 @@ export default function LessonRoom({ sessionId, userId, participantRole, display
         <div>
           <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">Live Session</span>
           <h1 className="text-lg font-bold text-gray-900">
-            {status === 'loading' ? 'Connecting…' : 'You are live'}
+            {status === 'loading' ? `Connecting to ${lessonTitle}…` : lessonTitle}
           </h1>
+          <p className="text-xs text-gray-500 mt-1 mb-0">
+            Student: {studentName ?? 'Legacy booking'}
+            {' '}• Tutor: {tutorName ?? 'Unknown tutor'}
+          </p>
         </div>
         {status === 'ready' && (
           <span className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full font-medium">

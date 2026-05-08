@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
+import { listAdminRecentBookings } from '@/app/lib/bookings';
 
 type MetricCardProps = { label: string; value: string | number; sub?: string };
 function MetricCard({ label, value, sub }: MetricCardProps) {
@@ -85,11 +86,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     { count: acceptedCount },
     { count: subCount },
     { count: activeSubCount },
-    { data: recentBookings },
     { data: recentProfiles },
     { data: parentRows },
     { data: studentRows },
     { data: linkRows },
+    recentBookings,
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('parents').select('*', { count: 'exact', head: true }),
@@ -101,11 +102,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     supabase.from('subscriptions').select('*', { count: 'exact', head: true }),
     supabase.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase
-      .from('bookings')
-      .select('id, subject, status, requested_start_at, duration_minutes')
-      .order('created_at', { ascending: false })
-      .limit(10),
-    supabase
       .from('profiles')
       .select('id, display_name, created_at')
       .order('created_at', { ascending: false })
@@ -113,6 +109,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     supabase.from('parents').select('id, profile_id').order('created_at', { ascending: true }),
     supabase.from('students').select('id, profile_id, grade_level').order('created_at', { ascending: true }),
     supabase.from('parent_student_links').select('parent_id, student_id, created_at').order('created_at', { ascending: false }),
+    listAdminRecentBookings(),
   ]);
 
   const parentList = (parentRows ?? []) as ParentRow[];
@@ -245,7 +242,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  {['Subject', 'Date', 'Duration', 'Status'].map((h) => (
+                  {['Subject', 'Student', 'Tutor', 'Date', 'Duration', 'Status'].map((h) => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 12 }}>{h}</th>
                   ))}
                 </tr>
@@ -254,6 +251,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 {recentBookings.map((b) => (
                   <tr key={b.id} style={{ borderTop: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '10px 14px', fontWeight: 500 }}>{b.subject}</td>
+                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{b.student_name ?? 'Legacy booking'}</td>
+                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{b.tutor_name ?? 'Unknown tutor'}</td>
                     <td style={{ padding: '10px 14px', color: '#64748b' }}>{new Date(b.requested_start_at).toLocaleDateString()}</td>
                     <td style={{ padding: '10px 14px', color: '#64748b' }}>{b.duration_minutes} min</td>
                     <td style={{ padding: '10px 14px' }}><StatusBadge status={b.status} /></td>
