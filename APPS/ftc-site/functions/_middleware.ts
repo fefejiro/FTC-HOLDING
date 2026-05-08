@@ -70,7 +70,15 @@ function rewrite(request: Request, env: Env, pathname: string) {
 }
 
 function handleGardenHost(request: Request, env: Env, pathname: string) {
-  if (pathname.startsWith("/og-trades-academy") || pathname.startsWith("/work/og-trades-academy")) {
+  if (
+    pathname.startsWith("/og-trades-academy") ||
+    pathname.startsWith("/work/og-trades-academy") ||
+    pathname.startsWith("/products/og-trades-academy")
+  ) {
+    return redirect(request, "/", 308);
+  }
+
+  if (pathname.startsWith("/products/garden-cleaners") || pathname.startsWith("/work/garden-cleaners")) {
     return redirect(request, "/", 308);
   }
 
@@ -87,7 +95,15 @@ function handleGardenHost(request: Request, env: Env, pathname: string) {
 }
 
 function handleOgHost(request: Request, env: Env, pathname: string) {
-  if (pathname.startsWith("/garden-cleaners") || pathname.startsWith("/work/garden-cleaners")) {
+  if (
+    pathname.startsWith("/garden-cleaners") ||
+    pathname.startsWith("/work/garden-cleaners") ||
+    pathname.startsWith("/products/garden-cleaners")
+  ) {
+    return redirect(request, "/", 308);
+  }
+
+  if (pathname.startsWith("/products/og-trades-academy") || pathname.startsWith("/work/og-trades-academy")) {
     return redirect(request, "/", 308);
   }
 
