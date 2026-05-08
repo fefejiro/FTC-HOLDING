@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
-import { createServerClient } from '@/app/lib/supabase/server';
 import { validateCsrfRequest } from '@/app/lib/security/csrf';
 import { enforceRateLimit } from '@/app/lib/security/rate-limit';
 import { logger } from '@/app/lib/logger';
 import { getOrCreateRequestId } from '@/app/lib/request-id';
+import { resolveLessonParticipantRoleForUser } from '@/app/lib/bookings';
 import type { DailyRoomTokenRequest } from '@/src/types/api/scaffolds';
 
 function validatePayload(body: unknown): string[] {
@@ -12,7 +12,6 @@ function validatePayload(body: unknown): string[] {
   const payload = body as Partial<DailyRoomTokenRequest> | null;
   if (!payload || typeof payload !== 'object') return ['Body must be a JSON object.'];
   if (!payload.bookingId) errors.push('bookingId is required.');
-  if (!payload.userId) errors.push('userId is required.');
   if (!payload.participantRole) {
     errors.push('participantRole is required.');
   } else if (!['student', 'tutor'].includes(payload.participantRole)) {
@@ -80,16 +79,17 @@ export async function POST(req: Request) {
   }
 
   const payload = body as DailyRoomTokenRequest;
-  const supabase = await createServerClient();
-  const { data: booking } = await supabase.from('bookings').select('id, tutor_id, status').eq('id', payload.bookingId).single();
-
-  if (!booking) {
-    logger.warn({ route, requestId, userId: user.profileId, code: 'BOOKING_NOT_FOUND', latencyMs: Date.now() - start });
-    return NextResponse.json({ ok: false, code: 'BOOKING_NOT_FOUND', requestId }, { status: 404 });
-  }
-  if (booking.status !== 'accepted') {
-    logger.warn({ route, requestId, userId: user.profileId, code: 'BOOKING_NOT_ACCEPTED', latencyMs: Date.now() - start });
-    return NextResponse.json({ ok: false, code: 'BOOKING_NOT_ACCEPTED', message: 'Room is only available for accepted bookings.', requestId }, { status: 403 });
+  let participantRole: 'student' | 'tutor';
+  try {
+    participantRole = await resolveLessonParticipantRoleForUser({
+      bookingId: payload.bookingId,
+      profileId: user.profileId,
+      role: user.role,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Not authorized for this lesson.';
+    logger.warn({ route, requestId, userId: user.profileId, code: 'LESSON_ACCESS_DENIED', message, latencyMs: Date.now() - start });
+    return NextResponse.json({ ok: false, code: 'LESSON_ACCESS_DENIED', message, requestId }, { status: 403 });
   }
 
   const roomName = `anion-${payload.bookingId}`;
@@ -120,7 +120,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const isOwner = payload.participantRole === 'tutor';
+    const isOwner = participantRole === 'tutor';
     const tokenRes = await dailyFetch('/meeting-tokens', 'POST', {
       properties: {
         room_name: roomName,

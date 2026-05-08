@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '../../lib/auth/getCurrentUser';
 import { createClassroomPost, listClassroomPosts } from '../../lib/classroom';
+import { listStudentAcceptedBookings } from '../../lib/bookings';
 
 type StudentPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -15,7 +16,7 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
   const params = (await searchParams) ?? {};
   const postError = typeof params.postError === 'string' ? params.postError : null;
 
-  const posts = await listClassroomPosts();
+  const [posts, lessons] = await Promise.all([listClassroomPosts(), listStudentAcceptedBookings()]);
 
   async function createPostAction(formData: FormData) {
     'use server';
@@ -91,6 +92,42 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
                   {new Date(post.createdAt).toLocaleString()}
                 </p>
                 <p style={{ margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>{post.body}</p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="surface card">
+        <p className="kicker">Live Learning</p>
+        <h2 className="h2">Upcoming Lessons</h2>
+        {lessons.length === 0 ? (
+          <p className="muted">No accepted lessons yet. Your teacher will confirm soon.</p>
+        ) : (
+          <div className="grid" style={{ gap: 10 }}>
+            {lessons.map((lesson) => (
+              <article key={lesson.id} className="surface card" style={{ boxShadow: 'none' }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>{lesson.subject}</p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  {new Date(lesson.requested_start_at).toLocaleString()} • {lesson.duration_minutes} mins
+                </p>
+                <a
+                  href={`/lesson/${lesson.id}`}
+                  style={{
+                    display: 'inline-block',
+                    marginTop: 10,
+                    background: '#16a34a',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '8px 14px',
+                    textDecoration: 'none',
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
+                  Join Lesson
+                </a>
               </article>
             ))}
           </div>

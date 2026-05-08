@@ -8,6 +8,24 @@ type TutorPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
+const assignmentTemplates = [
+  {
+    key: 'homework',
+    label: 'Homework Prompt',
+    body: 'Homework: Write 5 sentences using today\'s vocabulary words. Post your answer before 7:00 PM.',
+  },
+  {
+    key: 'revision',
+    label: 'Revision Task',
+    body: 'Revision task: Summarize today\'s lesson in 3 short points and share one question you still have.',
+  },
+  {
+    key: 'reading',
+    label: 'Reading Assignment',
+    body: 'Reading assignment: Read pages 12-16 and post one key idea plus one new word you learned.',
+  },
+] as const;
+
 export default async function TutorPage({ searchParams }: TutorPageProps) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
@@ -58,6 +76,27 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
     redirect('/tutor');
   }
 
+  async function createTemplatePostAction(formData: FormData) {
+    'use server';
+
+    const templateKey = String(formData.get('templateKey') ?? '');
+    const template = assignmentTemplates.find((item) => item.key === templateKey);
+    if (!template) {
+      redirect('/tutor?postError=Invalid%20template%20selection');
+    }
+
+    try {
+      await createClassroomPost({ body: template.body });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to publish template post';
+      redirect(`/tutor?postError=${encodeURIComponent(message)}`);
+    }
+
+    revalidatePath('/tutor');
+    revalidatePath('/student');
+    redirect('/tutor');
+  }
+
   return (
     <div className="grid" style={{ gap: 16 }}>
       <section className="surface card">
@@ -98,6 +137,33 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
             Post to Feed
           </button>
         </form>
+
+        <div className="grid" style={{ gap: 8, marginTop: 14 }}>
+          <p className="muted" style={{ margin: 0 }}>
+            Quick assignment templates
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {assignmentTemplates.map((template) => (
+              <form key={template.key} action={createTemplatePostAction}>
+                <input type="hidden" name="templateKey" value={template.key} />
+                <button
+                  type="submit"
+                  style={{
+                    background: '#fff',
+                    color: 'var(--brand)',
+                    border: '1px solid #99f6e4',
+                    borderRadius: 999,
+                    padding: '8px 12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {template.label}
+                </button>
+              </form>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="surface card">

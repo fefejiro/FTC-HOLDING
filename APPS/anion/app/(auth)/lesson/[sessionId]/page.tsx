@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
+import { resolveLessonParticipantRoleForUser } from '@/app/lib/bookings';
 import LessonRoom from './LessonRoom';
 
 type LessonPageProps = {
@@ -13,7 +14,19 @@ export default async function LessonSessionPage({ params }: LessonPageProps) {
 
   const user = await getCurrentUser();
   if (!user) redirect('/login');
-  if (user.role !== 'parent' && user.role !== 'tutor' && user.role !== 'admin') {
+
+  if (user.role !== 'parent' && user.role !== 'tutor' && user.role !== 'admin' && user.role !== 'student') {
+    redirect('/dashboard');
+  }
+
+  let participantRole: 'student' | 'tutor';
+  try {
+    participantRole = await resolveLessonParticipantRoleForUser({
+      bookingId: sessionId,
+      profileId: user.profileId,
+      role: user.role,
+    });
+  } catch {
     redirect('/dashboard');
   }
 
@@ -21,7 +34,7 @@ export default async function LessonSessionPage({ params }: LessonPageProps) {
     <LessonRoom
       sessionId={sessionId}
       userId={user.authUserId}
-      participantRole={user.role === 'tutor' ? 'tutor' : 'student'}
+      participantRole={participantRole}
       displayName={user.displayName}
     />
   );
