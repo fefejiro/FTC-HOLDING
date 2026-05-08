@@ -57,6 +57,25 @@ function toInternalPath(basePath: string, publicPath: string) {
   return publicPath === "/" ? basePath : `${basePath}${publicPath}`;
 }
 
+// Paths that must pass through unmodified on brand hosts (build assets, metadata files).
+const PASSTHROUGH_PREFIXES = ["/_next/", "/_assets/", "/assets/", "/static/"];
+const PASSTHROUGH_EXACT = new Set([
+  "/favicon.ico",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/manifest.json",
+  "/manifest.webmanifest"
+]);
+const ASSET_EXTENSION = /\.[a-zA-Z0-9]{2,5}$/;
+
+function isAssetPath(pathname: string) {
+  if (PASSTHROUGH_EXACT.has(pathname)) return true;
+  for (const prefix of PASSTHROUGH_PREFIXES) {
+    if (pathname.startsWith(prefix)) return true;
+  }
+  return ASSET_EXTENSION.test(pathname);
+}
+
 function redirect(request: Request, pathname: string, status = 308) {
   const url = new URL(request.url);
   url.pathname = pathname;
@@ -91,7 +110,11 @@ function handleGardenHost(request: Request, env: Env, pathname: string) {
     return rewrite(request, env, toInternalPath("/garden-cleaners", pathname));
   }
 
-  return null;
+  if (isAssetPath(pathname)) {
+    return null;
+  }
+
+  return redirect(request, "/", 308);
 }
 
 function handleOgHost(request: Request, env: Env, pathname: string) {
@@ -116,7 +139,11 @@ function handleOgHost(request: Request, env: Env, pathname: string) {
     return rewrite(request, env, toInternalPath("/og-trades-academy", pathname));
   }
 
-  return null;
+  if (isAssetPath(pathname)) {
+    return null;
+  }
+
+  return redirect(request, "/", 308);
 }
 
 export const onRequest: PagesFunction<Env> = async (context) => {
