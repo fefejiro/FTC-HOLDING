@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 :root {
+  /* Force light theme for native form widgets, scrollbars, autofill */
+  color-scheme: light;
+
   /* Brand Colors */
   --color-brand-teal: #4DB8A8;
   --color-brand-orange: #FF3D00;
@@ -68,9 +71,12 @@ body {
   margin: 0;
   background-color: #ffffff;
   color: #3D424B;
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
 }
 
 html,
 body {
   min-height: 100%;
+  background-color: #ffffff;
 }

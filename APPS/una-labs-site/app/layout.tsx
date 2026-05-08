@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import { Header } from '@/components/layout/Header';
@@ -60,6 +60,11 @@ export const metadata: Metadata = {
     description: defaultDescription,
     images: ['/opengraph-image'],
   },
+};
+
+export const viewport: Viewport = {
+  colorScheme: 'light',
+  themeColor: '#FF3D00',
 };
 
 const jsonLd = {

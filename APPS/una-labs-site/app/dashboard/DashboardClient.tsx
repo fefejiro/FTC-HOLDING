@@ -774,16 +774,7 @@ export function DashboardClient() {
         const session = await getSession();
         if (session?.user) {
           await loadForSession(session);
-        } else if (!window.location.hash.includes('access_token=')) {
           if (!cancelled) setState({ phase: 'unauthenticated' });
-        } else {
-          // OAuth callback in flight: hash contains access_token but Supabase
-          // has not yet fired SIGNED_IN. If the auth event never arrives within
-          // the timeout window, fall back to unauthenticated rather than
-          // hanging on "Loading your portal..." forever.
-          loadingTimeout = window.setTimeout(() => {
-            if (!cancelled) setState({ phase: 'unauthenticated' });
-          }, 8000);
         }
       } catch (error) {
         if (!cancelled) {

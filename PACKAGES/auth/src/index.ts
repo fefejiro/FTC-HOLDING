@@ -62,14 +62,6 @@ export function isAdminRole(role?: string | null): boolean {
   ].includes(role);
 }
 
-export async function signInWithOtpEmail(email: string, redirectTo?: string) {
-  const client = getClient();
-  return client.auth.signInWithOtp({
-    email,
-    options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
-  });
-}
-
 export async function signInWithPassword(email: string, password: string) {
   const client = getClient();
   return client.auth.signInWithPassword({ email, password });
@@ -114,7 +106,6 @@ export function isAuthed(session: Session | null): boolean {
 }
 
 export default {
-  signInWithOtpEmail,
   signInWithPassword,
   signInWithGoogle,
   signOut,

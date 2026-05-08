@@ -10,17 +10,14 @@ function normalizeRedirectPath(value: string | null): string {
   return value;
 }
 
-function buildLoginHref(nextPath: string, email: string): string {
-  const base = `/login?redirect=${encodeURIComponent(nextPath)}`;
-  if (!email) return base;
-  return `${base}&email=${encodeURIComponent(email)}`;
+function buildLoginHref(nextPath: string): string {
+  return `/login?redirect=${encodeURIComponent(nextPath)}`;
 }
 
 function AuthCallbackClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = useMemo(() => normalizeRedirectPath(searchParams.get('next')), [searchParams]);
-  const email = useMemo(() => (searchParams.get('email') ?? '').trim().toLowerCase(), [searchParams]);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -32,31 +29,12 @@ function AuthCallbackClient() {
         const client = createBrowserClient();
 
         const code = searchParams.get('code');
-        const tokenHash = searchParams.get('token_hash');
-        const typeParam = searchParams.get('type') ?? 'magiclink';
-
-        if (code) {
-          const { error: exchangeError } = await client.auth.exchangeCodeForSession(code);
-          if (exchangeError) throw exchangeError;
-        } else if (tokenHash) {
-          const { error: verifyError } = await client.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: typeParam as Parameters<typeof client.auth.verifyOtp>[0]['type'],
-          });
-          if (verifyError) throw verifyError;
-        } else {
-          const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-          const accessToken = hash.get('access_token');
-          const refreshToken = hash.get('refresh_token');
-          if (accessToken && refreshToken) {
-            const { error: setSessionError } = await client.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            if (setSessionError) throw setSessionError;
-            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-          }
+        if (!code) {
+          throw new Error('Google sign-in could not be verified. Please start again from the login page.');
         }
+
+        const { error: exchangeError } = await client.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
 
         const { data } = await client.auth.getSession();
         if (!data.session?.user) {
@@ -79,7 +57,7 @@ function AuthCallbackClient() {
     return () => {
       cancelled = true;
     };
-  }, [email, nextPath, router, searchParams]);
+  }, [nextPath, router, searchParams]);
 
   if (error) {
     return (
@@ -88,7 +66,7 @@ function AuthCallbackClient() {
           <h1 className="text-h2 text-tx-heading mb-3">Could not complete login</h1>
           <p className="text-body text-tx-secondary mb-6">{error}</p>
           <a
-            href={buildLoginHref(nextPath, email)}
+            href={buildLoginHref(nextPath)}
             className="inline-block rounded-lg px-6 py-3 bg-brand-teal text-white font-semibold hover:bg-brand-teal/90"
           >
             Back to login
