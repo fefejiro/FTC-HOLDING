@@ -25,12 +25,13 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
     'use server';
 
     const tutorId = String(formData.get('tutorId') ?? '');
+    const studentId = String(formData.get('studentId') ?? '');
     const subject = String(formData.get('subject') ?? '');
     const requestedStartAt = String(formData.get('requestedStartAt') ?? '');
     const durationMinutesRaw = String(formData.get('durationMinutes') ?? '60');
     const notes = String(formData.get('notes') ?? '');
 
-    if (!tutorId || !subject || !requestedStartAt) {
+    if (!tutorId || !studentId || !subject || !requestedStartAt) {
       redirect('/parent?bookingError=Missing%20required%20fields');
     }
 
@@ -42,6 +43,7 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
     try {
       await createBookingRequest({
         tutorId,
+        studentId,
         subject,
         requestedStartAt,
         durationMinutes,
@@ -70,6 +72,19 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
         ) : null}
 
         <form action={createBookingAction} className="grid" style={{ marginTop: 16 }}>
+          <label className="grid" style={{ gap: 6 }}>
+            <span className="muted">Student</span>
+            <select name="studentId" required style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe3f0' }}>
+              <option value="">Select student</option>
+              {linkedStudents.map((student) => (
+                <option key={student.id} value={student.id}>
+                  Student {student.id.slice(0, 8)}
+                  {student.grade_level ? ` (Grade ${student.grade_level})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label className="grid" style={{ gap: 6 }}>
             <span className="muted">Tutor</span>
             <select name="tutorId" required style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe3f0' }}>
@@ -157,6 +172,9 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
                 <p style={{ margin: 0, fontWeight: 600 }}>{booking.subject}</p>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   {new Date(booking.requested_start_at).toLocaleString()} • {booking.duration_minutes} mins
+                </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Student: {booking.student_id ? `Student ${booking.student_id.slice(0, 8)}` : 'Legacy booking'}
                 </p>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   Status: <strong>{booking.status}</strong>

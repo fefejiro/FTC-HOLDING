@@ -6,6 +6,7 @@ export type BookingRow = {
   id: string;
   parent_id: string;
   tutor_id: string;
+  student_id: string | null;
   subject: string;
   requested_start_at: string;
   duration_minutes: number;
@@ -22,6 +23,7 @@ export type TutorOption = {
 
 export type StudentLessonCard = {
   id: string;
+  student_id: string | null;
   subject: string;
   requested_start_at: string;
   duration_minutes: number;
@@ -77,7 +79,7 @@ export async function listParentBookings(): Promise<BookingRow[]> {
 
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, parent_id, tutor_id, subject, requested_start_at, duration_minutes, notes, status, created_at')
+    .select('id, parent_id, tutor_id, student_id, subject, requested_start_at, duration_minutes, notes, status, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -139,7 +141,7 @@ export async function listTutorBookings(): Promise<BookingRow[]> {
 
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, parent_id, tutor_id, subject, requested_start_at, duration_minutes, notes, status, created_at')
+    .select('id, parent_id, tutor_id, student_id, subject, requested_start_at, duration_minutes, notes, status, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -163,24 +165,9 @@ export async function listStudentAcceptedBookings(): Promise<StudentLessonCard[]
     throw new Error('Student account not found for current user.');
   }
 
-  const { data: links, error: linksError } = await supabase
-    .from('parent_student_links')
-    .select('parent_id')
-    .eq('student_id', student.id);
-
-  if (linksError) {
-    throw new Error(linksError.message);
-  }
-
-  const parentIds = Array.from(new Set((links ?? []).map((row) => row.parent_id as string)));
-  if (parentIds.length === 0) {
-    return [];
-  }
-
   const { data: bookings, error: bookingsError } = await supabase
     .from('bookings')
-    .select('id, subject, requested_start_at, duration_minutes, status')
-    .in('parent_id', parentIds)
+    .select('id, student_id, subject, requested_start_at, duration_minutes, status')
     .eq('status', 'accepted')
     .order('requested_start_at', { ascending: true })
     .limit(20);
@@ -201,7 +188,7 @@ export async function resolveLessonParticipantRoleForUser(input: {
 
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
-    .select('id, parent_id, tutor_id, status')
+    .select('id, parent_id, tutor_id, student_id, status')
     .eq('id', input.bookingId)
     .single();
 
@@ -251,15 +238,21 @@ export async function resolveLessonParticipantRoleForUser(input: {
       .single();
 
     if (!studentError && student) {
-      const { data: link, error: linkError } = await supabase
-        .from('parent_student_links')
-        .select('parent_id')
-        .eq('student_id', student.id)
-        .eq('parent_id', booking.parent_id)
-        .maybeSingle();
-
-      if (!linkError && link) {
+      if (booking.student_id === student.id) {
         return 'student';
+      }
+
+      if (!booking.student_id) {
+        const { data: link, error: linkError } = await supabase
+          .from('parent_student_links')
+          .select('parent_id')
+          .eq('student_id', student.id)
+          .eq('parent_id', booking.parent_id)
+          .maybeSingle();
+
+        if (!linkError && link) {
+          return 'student';
+        }
       }
     }
   }
@@ -269,6 +262,7 @@ export async function resolveLessonParticipantRoleForUser(input: {
 
 export async function createBookingRequest(input: {
   tutorId: string;
+  studentId: string;
   subject: string;
   requestedStartAt: string;
   durationMinutes: number;
@@ -288,9 +282,25 @@ export async function createBookingRequest(input: {
     throw new Error('Parent account not found for current user.');
   }
 
+  const { data: link, error: linkError } = await supabase
+    .from('parent_student_links')
+    .select('student_id')
+    .eq('parent_id', parent.id)
+    .eq('student_id', input.studentId)
+    .maybeSingle();
+
+  if (linkError) {
+    throw new Error(linkError.message);
+  }
+
+  if (!link) {
+    throw new Error('Selected student is not linked to this parent account.');
+  }
+
   const { error } = await supabase.from('bookings').insert({
     parent_id: parent.id,
     tutor_id: input.tutorId,
+    student_id: input.studentId,
     subject: input.subject.trim(),
     requested_start_at: input.requestedStartAt,
     duration_minutes: input.durationMinutes,

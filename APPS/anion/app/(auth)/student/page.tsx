@@ -111,6 +111,9 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   {new Date(lesson.requested_start_at).toLocaleString()} • {lesson.duration_minutes} mins
                 </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Booking scope: {lesson.student_id ? `Assigned to you` : 'Legacy family booking'}
+                </p>
                 <a
                   href={`/lesson/${lesson.id}`}
                   style={{
