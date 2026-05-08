@@ -210,6 +210,9 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   Student: {booking.student_name ?? 'Legacy family booking'}
                 </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Parent: {booking.parent_name ?? 'Unknown parent'}
+                </p>
                 {booking.notes ? (
                   <p className="muted" style={{ margin: '6px 0 0' }}>
                     Notes: {booking.notes}

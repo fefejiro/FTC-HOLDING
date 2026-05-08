@@ -44,8 +44,10 @@ export default async function LessonSessionPage({ params }: LessonPageProps) {
       participantRole={participantRole}
       displayName={user.displayName}
       lessonTitle={bookingDetail.subject}
+      parentName={bookingDetail.parent_name}
       studentName={bookingDetail.student_name}
       tutorName={bookingDetail.tutor_name}
+      bookingNotes={bookingDetail.notes}
     />
   );
 }

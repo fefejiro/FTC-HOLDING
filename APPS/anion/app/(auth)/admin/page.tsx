@@ -242,7 +242,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  {['Subject', 'Student', 'Tutor', 'Date', 'Duration', 'Status'].map((h) => (
+                  {['Subject', 'Student', 'Parent', 'Tutor', 'Date', 'Duration', 'Status'].map((h) => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 12 }}>{h}</th>
                   ))}
                 </tr>
@@ -252,6 +252,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   <tr key={b.id} style={{ borderTop: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '10px 14px', fontWeight: 500 }}>{b.subject}</td>
                     <td style={{ padding: '10px 14px', color: '#64748b' }}>{b.student_name ?? 'Legacy booking'}</td>
+                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{b.parent_name ?? 'Unknown parent'}</td>
                     <td style={{ padding: '10px 14px', color: '#64748b' }}>{b.tutor_name ?? 'Unknown tutor'}</td>
                     <td style={{ padding: '10px 14px', color: '#64748b' }}>{new Date(b.requested_start_at).toLocaleDateString()}</td>
                     <td style={{ padding: '10px 14px', color: '#64748b' }}>{b.duration_minutes} min</td>

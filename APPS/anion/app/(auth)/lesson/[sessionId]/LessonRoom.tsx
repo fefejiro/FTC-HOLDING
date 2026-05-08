@@ -8,8 +8,10 @@ type Props = {
   participantRole: 'student' | 'tutor';
   displayName: string;
   lessonTitle: string;
+  parentName: string | null;
   studentName: string | null;
   tutorName: string | null;
+  bookingNotes: string | null;
 };
 
 type RoomData = {
@@ -27,8 +29,10 @@ export default function LessonRoom({
   participantRole,
   displayName,
   lessonTitle,
+  parentName,
   studentName,
   tutorName,
+  bookingNotes,
 }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'left'>('loading');
@@ -144,6 +148,7 @@ export default function LessonRoom({
           <p className="text-xs text-gray-500 mt-1 mb-0">
             Student: {studentName ?? 'Legacy booking'}
             {' '}• Tutor: {tutorName ?? 'Unknown tutor'}
+            {' '}• Parent: {parentName ?? 'Unknown parent'}
           </p>
         </div>
         {status === 'ready' && (
@@ -162,6 +167,12 @@ export default function LessonRoom({
         className="flex-1 bg-gray-900 rounded-xl overflow-hidden shadow-lg"
         style={{ minHeight: '400px' }}
       />
+
+      {bookingNotes ? (
+        <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm">
+          <strong className="text-gray-900">Booking notes:</strong> {bookingNotes}
+        </div>
+      ) : null}
     </section>
   );
 }

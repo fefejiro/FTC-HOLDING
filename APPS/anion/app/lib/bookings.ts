@@ -5,6 +5,7 @@ export type BookingStatus = 'pending' | 'accepted' | 'declined';
 export type BookingRow = {
   id: string;
   parent_id: string;
+  parent_name: string | null;
   tutor_id: string;
   student_id: string | null;
   student_name: string | null;
@@ -44,6 +45,8 @@ export type BookingDisplayDetail = {
   status: BookingStatus;
   requested_start_at: string;
   duration_minutes: number;
+  notes: string | null;
+  parent_name: string | null;
   student_id: string | null;
   student_name: string | null;
   tutor_name: string | null;
@@ -61,6 +64,11 @@ type ProfileDisplayRow = {
 };
 
 type TutorProfileRow = {
+  id: string;
+  profile_id: string;
+};
+
+type ParentProfileRow = {
   id: string;
   profile_id: string;
 };
@@ -155,6 +163,48 @@ async function getTutorNameMap(
   );
 }
 
+async function getParentNameMap(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  parentIds: string[],
+): Promise<Map<string, string>> {
+  const uniqueParentIds = Array.from(new Set(parentIds.filter(Boolean)));
+  if (uniqueParentIds.length === 0) {
+    return new Map();
+  }
+
+  const { data: parents, error: parentsError } = await supabase
+    .from('parents')
+    .select('id, profile_id')
+    .in('id', uniqueParentIds);
+
+  if (parentsError) {
+    throw new Error(parentsError.message);
+  }
+
+  const parentRows = (parents ?? []) as ParentProfileRow[];
+  const profileIds = Array.from(new Set(parentRows.map((row) => row.profile_id)));
+
+  let profileNameMap = new Map<string, string>();
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', profileIds);
+
+    if (profilesError) {
+      throw new Error(profilesError.message);
+    }
+
+    profileNameMap = new Map(
+      ((profiles ?? []) as ProfileDisplayRow[]).map((row) => [row.id, row.display_name]),
+    );
+  }
+
+  return new Map(
+    parentRows.map((row) => [row.id, profileNameMap.get(row.profile_id) ?? `Parent ${row.id.slice(0, 8)}`]),
+  );
+}
+
 async function getProfileIdForAuthUser(supabase: Awaited<ReturnType<typeof createServerClient>>) {
   const {
     data: { user },
@@ -205,14 +255,16 @@ export async function listParentBookings(): Promise<BookingRow[]> {
     throw new Error(error.message);
   }
 
-  const rows = (data ?? []) as Omit<BookingRow, 'student_name'>[];
+  const rows = (data ?? []) as Omit<BookingRow, 'student_name' | 'parent_name'>[];
   const studentNameMap = await getStudentNameMap(
     supabase,
     rows.map((row) => row.student_id).filter((value): value is string => Boolean(value)),
   );
+  const parentNameMap = await getParentNameMap(supabase, rows.map((row) => row.parent_id));
 
   return rows.map((row) => ({
     ...row,
+    parent_name: parentNameMap.get(row.parent_id) ?? null,
     student_name: row.student_id ? (studentNameMap.get(row.student_id)?.displayName ?? null) : null,
   }));
 }
@@ -268,14 +320,16 @@ export async function listTutorBookings(): Promise<BookingRow[]> {
     throw new Error(error.message);
   }
 
-  const rows = (data ?? []) as Omit<BookingRow, 'student_name'>[];
+  const rows = (data ?? []) as Omit<BookingRow, 'student_name' | 'parent_name'>[];
   const studentNameMap = await getStudentNameMap(
     supabase,
     rows.map((row) => row.student_id).filter((value): value is string => Boolean(value)),
   );
+  const parentNameMap = await getParentNameMap(supabase, rows.map((row) => row.parent_id));
 
   return rows.map((row) => ({
     ...row,
+    parent_name: parentNameMap.get(row.parent_id) ?? null,
     student_name: row.student_id ? (studentNameMap.get(row.student_id)?.displayName ?? null) : null,
   }));
 }
@@ -285,7 +339,7 @@ export async function listAdminRecentBookings(limit = 10): Promise<BookingDispla
 
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, tutor_id, student_id, subject, status, requested_start_at, duration_minutes')
+    .select('id, parent_id, tutor_id, student_id, subject, status, requested_start_at, duration_minutes, notes')
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -295,12 +349,14 @@ export async function listAdminRecentBookings(limit = 10): Promise<BookingDispla
 
   const rows = (data ?? []) as Array<{
     id: string;
+    parent_id: string;
     tutor_id: string;
     student_id: string | null;
     subject: string;
     status: BookingStatus;
     requested_start_at: string;
     duration_minutes: number;
+    notes: string | null;
   }>;
 
   const studentNameMap = await getStudentNameMap(
@@ -308,6 +364,7 @@ export async function listAdminRecentBookings(limit = 10): Promise<BookingDispla
     rows.map((row) => row.student_id).filter((value): value is string => Boolean(value)),
   );
   const tutorNameMap = await getTutorNameMap(supabase, rows.map((row) => row.tutor_id));
+  const parentNameMap = await getParentNameMap(supabase, rows.map((row) => row.parent_id));
 
   return rows.map((row) => ({
     id: row.id,
@@ -315,6 +372,8 @@ export async function listAdminRecentBookings(limit = 10): Promise<BookingDispla
     status: row.status,
     requested_start_at: row.requested_start_at,
     duration_minutes: row.duration_minutes,
+    notes: row.notes,
+    parent_name: parentNameMap.get(row.parent_id) ?? null,
     student_id: row.student_id,
     student_name: row.student_id ? (studentNameMap.get(row.student_id)?.displayName ?? null) : null,
     tutor_name: tutorNameMap.get(row.tutor_id) ?? null,
@@ -326,7 +385,7 @@ export async function getBookingDisplayDetail(bookingId: string): Promise<Bookin
 
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, tutor_id, student_id, subject, status, requested_start_at, duration_minutes')
+    .select('id, parent_id, tutor_id, student_id, subject, status, requested_start_at, duration_minutes, notes')
     .eq('id', bookingId)
     .single();
 
@@ -336,12 +395,14 @@ export async function getBookingDisplayDetail(bookingId: string): Promise<Bookin
 
   const row = data as {
     id: string;
+    parent_id: string;
     tutor_id: string;
     student_id: string | null;
     subject: string;
     status: BookingStatus;
     requested_start_at: string;
     duration_minutes: number;
+    notes: string | null;
   };
 
   const studentNameMap = await getStudentNameMap(
@@ -349,6 +410,7 @@ export async function getBookingDisplayDetail(bookingId: string): Promise<Bookin
     row.student_id ? [row.student_id] : [],
   );
   const tutorNameMap = await getTutorNameMap(supabase, [row.tutor_id]);
+  const parentNameMap = await getParentNameMap(supabase, [row.parent_id]);
 
   return {
     id: row.id,
@@ -356,6 +418,8 @@ export async function getBookingDisplayDetail(bookingId: string): Promise<Bookin
     status: row.status,
     requested_start_at: row.requested_start_at,
     duration_minutes: row.duration_minutes,
+    notes: row.notes,
+    parent_name: parentNameMap.get(row.parent_id) ?? null,
     student_id: row.student_id,
     student_name: row.student_id ? (studentNameMap.get(row.student_id)?.displayName ?? null) : null,
     tutor_name: tutorNameMap.get(row.tutor_id) ?? null,
