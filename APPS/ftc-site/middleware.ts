@@ -35,6 +35,9 @@ const CLIENT_DOMAIN_ROOT_REWRITES: Record<string, string> = {
   "www.polaranchor.ca": "/polar-anchor"
 };
 
+const DISPATCH_PUBLIC_HOST = "dispatch.unalabs.cloud";
+const DISPATCH_ADMIN_HOST = "dispatch-admin.unalabs.cloud";
+
 const OG_TRADES_ROOT_LANDING_PATH = "/og-trades-academy";
 const OG_TRADES_STABLE_ALIAS_PATH = "/og-trades-academy-home";
 
@@ -73,7 +76,13 @@ function truthy(value?: string): boolean {
 }
 
 function isLocalHost(host: string): boolean {
-  return host === "localhost:3001" || host === "localhost" || host === "127.0.0.1:3001" || host === "127.0.0.1";
+  const normalized = String(host || "").toLowerCase();
+  return (
+    normalized === "localhost" ||
+    normalized.startsWith("localhost:") ||
+    normalized === "127.0.0.1" ||
+    normalized.startsWith("127.0.0.1:")
+  );
 }
 
 function isAteamOperatorEnabled(): boolean {
@@ -172,6 +181,29 @@ export function middleware(req: NextRequest) {
   if (clientRootRewrite && pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = clientRootRewrite;
+    return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
+  }
+
+  // ATEAM custom host fallback routing.
+  // Map legacy/operator host entry routes to the in-app ATEAM surface to prevent 404s.
+  if (effectiveHost === ATEAM_SITE_HOST) {
+    const url = req.nextUrl.clone();
+    if (pathname === "/" || pathname === "/office") {
+      url.pathname = "/ateam";
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
+    }
+    if (pathname === "/memory" || pathname === "/team" || pathname === "/factory" || pathname === "/pipeline") {
+      url.pathname = "/ateam";
+      url.searchParams.set("surface", pathname.slice(1));
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
+    }
+  }
+
+  // Dispatch custom host fallback routing.
+  // The canonical product page remains on unalabs.cloud; keep subdomains alive by forwarding there.
+  if (effectiveHost === DISPATCH_PUBLIC_HOST || effectiveHost === DISPATCH_ADMIN_HOST) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/products/dispatch";
     return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
   }
 

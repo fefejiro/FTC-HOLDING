@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "pipeline:update": "node scripts/update-pipeline-stage.mjs",
+    "portal:env:check": "node scripts/verify-garden-portal-env.mjs",
     "test:e2e": "playwright test",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "test": "npm run test:e2e",

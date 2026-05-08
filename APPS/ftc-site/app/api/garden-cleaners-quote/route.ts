@@ -12,6 +12,12 @@ const RATE_LIMIT_ENABLED = process.env.NODE_ENV === "production";
 const PROPERTY_TYPE_VALUES = new Set(gardenPropertyTypes);
 const SERVICE_VALUES = new Set(gardenServiceOptions);
 const FREQUENCY_VALUES = new Set(gardenFrequencies);
+const DEFAULT_ADMIN_EMAILS = [
+  "hello@unalabs.cloud",
+  "fejiro.efiuvwere@gmail.com",
+  "mike.fejiro@gmail.com",
+  "uby400@gmail.com"
+];
 
 type QuotePayload = Partial<Record<keyof GardenQuotePayload, unknown>>;
 
@@ -56,6 +62,75 @@ function isRateLimited(clientKey: string): boolean {
 
 function badRequest(message: string, status = 400) {
   return NextResponse.json({ ok: false, message }, { status });
+}
+
+function normalizePortalEmail(value: unknown): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+function parseAdminEmails(value: string | undefined): string[] {
+  return String(value || "")
+    .split(",")
+    .map((item) => normalizePortalEmail(item))
+    .filter(Boolean);
+}
+
+function getAdminEmailSet(): Set<string> {
+  return new Set([...DEFAULT_ADMIN_EMAILS, ...parseAdminEmails(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS)]);
+}
+
+async function resolveAuthenticatedEmail(req: NextRequest): Promise<string | null> {
+  try {
+    const supabase = createServerClient(req.headers);
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user?.email) {
+      return null;
+    }
+    return normalizePortalEmail(data.user.email);
+  } catch {
+    return null;
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const callerEmail = await resolveAuthenticatedEmail(req);
+  if (!callerEmail) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const admins = getAdminEmailSet();
+  if (!admins.has(callerEmail)) {
+    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const status = normalizeText(searchParams.get("status") || "").toLowerCase();
+  const limit = Math.min(200, Math.max(1, Number(searchParams.get("limit") || 100)));
+
+  try {
+    const supabase = createServerClient(req.headers);
+    let query = supabase
+      .from("garden_cleaners_quotes")
+      .select("id,email,address,city,region,service_type,service_frequency,property_type,status,created_at,updated_at")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (status) {
+      query = query.eq("status", status);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, quotes: data || [] });
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : "Unable to load quotes" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {

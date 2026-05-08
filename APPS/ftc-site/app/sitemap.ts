@@ -3,24 +3,10 @@ export const runtime = "edge";
 import type { MetadataRoute } from "next";
 import { blogPosts } from "../lib/blog";
 import { projectCaseStudies } from "../lib/content";
-import { getOgTradesAbsoluteUrl, isOgTradesCustomHost } from "../lib/ogTradesAcademy";
-import { getRequestHost } from "../lib/requestHost";
 import { SITE_URL } from "../lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const requestHost = getRequestHost();
   const lastModified = new Date();
-
-  if (isOgTradesCustomHost(requestHost)) {
-    return [
-      { url: getOgTradesAbsoluteUrl("/", { host: requestHost }), lastModified, priority: 1.0 },
-      { url: getOgTradesAbsoluteUrl("/about", { host: requestHost }), lastModified, priority: 0.8 },
-      { url: getOgTradesAbsoluteUrl("/course", { host: requestHost }), lastModified, priority: 0.9 },
-      { url: getOgTradesAbsoluteUrl("/resources", { host: requestHost }), lastModified, priority: 0.8 },
-      { url: getOgTradesAbsoluteUrl("/community", { host: requestHost }), lastModified, priority: 0.8 },
-      { url: getOgTradesAbsoluteUrl("/contact", { host: requestHost }), lastModified, priority: 0.8 }
-    ];
-  }
 
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, lastModified, priority: 1.0 },

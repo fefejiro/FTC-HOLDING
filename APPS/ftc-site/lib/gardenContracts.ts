@@ -64,7 +64,7 @@ export type GardenContentSection = {
 };
 
 export type GardenPortalUserRole = "client" | "staff" | "admin";
-export type GardenQuoteStatus = "new" | "triaged" | "scheduled" | "completed" | "cancelled";
+export type GardenQuoteStatus = "new" | "approved" | "rejected" | "converted";
 
 export type GardenPortalQuoteRecord = {
   id: string;

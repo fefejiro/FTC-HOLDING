@@ -109,7 +109,7 @@ async function ensureCompatibilityMirror() {
   // Ensure public static assets (images, brand, media, etc.) exist in output root.
   if (await pathExists(publicDir)) {
     await mkdir(vercelOutputStaticDir, { recursive: true });
-    for (const entry of ["images", "brand", "media", "connect", "favicon.ico", "logo.png"]) {
+    for (const entry of ["images", "brand", "media", "connect", "favicon.ico", "logo.png", "sitemap.xml"]) {
       const sourcePath = path.join(publicDir, entry);
       const destinationPath = path.join(vercelOutputStaticDir, entry);
       if (await pathExists(sourcePath)) {

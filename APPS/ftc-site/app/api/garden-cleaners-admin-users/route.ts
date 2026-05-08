@@ -72,6 +72,37 @@ export async function GET(req: NextRequest) {
   if (caller instanceof NextResponse) return caller;
 
   const { searchParams } = new URL(req.url);
+  const view = (searchParams.get("view") || "").trim().toLowerCase();
+
+  if (view === "audit") {
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const perPage = Math.min(100, Math.max(1, parseInt(searchParams.get("per_page") || "25", 10)));
+    const action = (searchParams.get("action") || "").trim().toLowerCase();
+
+    try {
+      const admin = createAdminClient();
+      let query = admin
+        .from("garden_cleaners_audit_log")
+        .select("id, actor_email, action, target_email, target_user_id, details, created_at", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range((page - 1) * perPage, page * perPage - 1);
+
+      if (action) {
+        query = query.eq("action", action);
+      }
+
+      const { data, error, count } = await query;
+      if (error) {
+        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ ok: true, entries: data || [], total: count ?? 0, page, perPage });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Internal error";
+      return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    }
+  }
+
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
   const perPage = Math.min(100, Math.max(1, parseInt(searchParams.get("per_page") || "50", 10)));
   const search = (searchParams.get("search") || "").trim().toLowerCase();
