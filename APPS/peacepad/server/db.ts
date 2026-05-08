@@ -13,6 +13,17 @@ export const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
+// Ensure every new pooled connection resolves unqualified table names against
+// the peacepad schema first, then public. All Drizzle tables are defined
+// without a schema prefix, but production tables live under `peacepad.*`.
+// connect-pg-simple's `sessions` table also exists in `public` (created by
+// migrations/hotfix_sessions.sql), so this ordering keeps both happy.
+pool.on('connect', (client) => {
+  client.query('SET search_path TO peacepad, public, extensions').catch((err) => {
+    console.error('[Database] Failed to set search_path on new connection:', err);
+  });
+});
+
 export const db = drizzle(pool, { schema });
 
 // Health check function with retry logic
