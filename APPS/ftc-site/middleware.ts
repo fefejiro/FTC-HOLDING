@@ -159,30 +159,30 @@ export function middleware(req: NextRequest) {
   }
 
   // OG Trades custom domain handling
-  if (isOgTradesCustomHost(hostWithoutPort)) {
+  if (isOgTradesCustomHost(effectiveHost)) {
     // Root or landing paths: rewrite to premium page (no redirect)
     if (pathname === "/" || pathname === OG_TRADES_ROOT_LANDING_PATH || pathname === "/work/og-trades-academy") {
       const url = req.nextUrl.clone();
       url.pathname = OG_TRADES_STABLE_ALIAS_PATH;
-      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
     }
   }
 
-  const clientRootRewrite = CLIENT_DOMAIN_ROOT_REWRITES[hostWithoutPort];
+  const clientRootRewrite = CLIENT_DOMAIN_ROOT_REWRITES[effectiveHost];
   if (clientRootRewrite && pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = clientRootRewrite;
-    return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+    return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
   }
 
-  if (isOgTradesRedirectHost(hostWithoutPort)) {
+  if (isOgTradesRedirectHost(effectiveHost)) {
     const url = req.nextUrl.clone();
     url.protocol = "https";
     url.host = OG_TRADES_SITE_HOST;
     return NextResponse.redirect(url, 308);
   }
 
-  if (isOgTradesCustomHost(hostWithoutPort)) {
+  if (isOgTradesCustomHost(effectiveHost)) {
     const brandedPath = stripOgTradesBasePath(pathname);
     if (brandedPath) {
       const url = req.nextUrl.clone();
@@ -193,10 +193,10 @@ export function middleware(req: NextRequest) {
     if (isOgTradesPublicPath(pathname)) {
       const url = req.nextUrl.clone();
       url.pathname = getOgTradesInternalPath(pathname);
-      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, hostWithoutPort, url));
+      return withRuntimePageHeaders(req, rewriteWithRequestHost(req, effectiveHost, url));
     }
 
-    return nextWithRequestHost(req, hostWithoutPort);
+    return nextWithRequestHost(req, effectiveHost);
   }
 
   if (pathname === "/ateam" || pathname === "/ateam/" || pathname.startsWith("/ateam/")) {
@@ -220,11 +220,11 @@ export function middleware(req: NextRequest) {
   }
 
   if (allowPagesPreviewBypass(req, host)) {
-    return withRuntimePageHeaders(req, nextWithRequestHost(req, hostWithoutPort || host));
+    return withRuntimePageHeaders(req, nextWithRequestHost(req, effectiveHost || host));
   }
 
   if (!shouldRedirectToCanonical(host)) {
-    return withRuntimePageHeaders(req, nextWithRequestHost(req, hostWithoutPort || host));
+    return withRuntimePageHeaders(req, nextWithRequestHost(req, effectiveHost || host));
   }
 
   const url = req.nextUrl.clone();
