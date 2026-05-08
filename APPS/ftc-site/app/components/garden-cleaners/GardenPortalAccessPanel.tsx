@@ -165,32 +165,22 @@ function parseEmailList(value?: string): string[] {
     .filter(Boolean);
 }
 
-function resolveRole(email: string): GardenPortalUserRole {
-  const normalizedEmail = email.trim().toLowerCase();
-  // Always treat these as admin, even if env is missing
-  const defaultAdmins = [
-    "hello@unalabs.cloud",
-    "fejiro.efiuvwere@gmail.com",
-    "mike.fejiro@gmail.com",
-    "uby400@gmail.com"
-  ];
-  const adminEmails = new Set([
-    ...defaultAdmins,
-    ...parseEmailList(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS)
-  ]);
-  const staffEmails = new Set([
-    "garden.staff.qa@gardencleaners.ca",
-    ...parseEmailList(process.env.NEXT_PUBLIC_GARDEN_PORTAL_STAFF_EMAILS)
-  ]);
+function normalizePortalEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
 
-  if (adminEmails.has(normalizedEmail)) {
+function resolveRole(email: string): GardenPortalUserRole {
+  const normalizedEmail = normalizePortalEmail(email);
+  const gardenAdmins = [
+    "uby400@gmail.com",
+    "mike.fejiro@gmail.com"
+  ];
+  if (gardenAdmins.includes(normalizedEmail)) {
     return "admin";
   }
-
-  if (staffEmails.has(normalizedEmail) || normalizedEmail.endsWith("@gardencleaners.ca")) {
+  if (normalizedEmail.endsWith("@gardencleaners.ca")) {
     return "staff";
   }
-
   return "client";
 }
 
@@ -203,10 +193,6 @@ export default function GardenPortalAccessPanel() {
   const [jobs, setJobs] = useState<JobRecord[]>([]);
   const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
   const [loadError, setLoadError] = useState<string>("");
-  const [signInEmail, setSignInEmail] = useState<string>("");
-  const [signInPassword, setSignInPassword] = useState<string>("");
-  const [signInState, setSignInState] = useState<SignInState>("idle");
-  const [signInMessage, setSignInMessage] = useState<string>("");
   const [pendingStatusProjectId, setPendingStatusProjectId] = useState<string>("");
   const [pendingAssignmentProjectId, setPendingAssignmentProjectId] = useState<string>("");
   const [pendingRegionProjectId, setPendingRegionProjectId] = useState<string>("");
@@ -410,84 +396,6 @@ export default function GardenPortalAccessPanel() {
     };
   }, []);
 
-  async function signInWithPassword(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const email = signInEmail.trim().toLowerCase();
-    const password = signInPassword.trim();
-
-    if (!email || !password) {
-      setSignInState("error");
-      setSignInMessage("Email and password are required.");
-      return;
-    }
-
-    try {
-      const supabase = getSupabase();
-      setSignInState("submitting");
-      setSignInMessage("");
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setSignInState("error");
-        setSignInMessage(error.message || "Unable to sign in with email and password.");
-        return;
-      }
-
-      setSignInState("success");
-      setSignInMessage("Signed in. Loading your portal records...");
-      setSignInPassword("");
-    } catch {
-      setSignInState("error");
-      setSignInMessage("Sign-in is unavailable in this deployment.");
-    }
-  }
-
-  async function sendMagicLink() {
-    const email = signInEmail.trim().toLowerCase();
-    if (!email) {
-      setSignInState("error");
-      setSignInMessage("Enter your email first to send a magic link.");
-      return;
-    }
-
-    try {
-      const supabase = getSupabase();
-      setSignInState("submitting");
-      setSignInMessage("");
-      // Add #portal-access to redirect
-      const redirectTo = `${window.location.origin}/garden-cleaners/portal#portal-access`;
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: redirectTo
-        }
-      });
-      if (error) {
-        setSignInState("error");
-        setSignInMessage(error.message || "Unable to send magic link.");
-        return;
-      }
-
-      setSignInState("success");
-      setSignInMessage("Magic link sent. Check your inbox and return to this portal tab.");
-    } catch {
-      setSignInState("error");
-      setSignInMessage("Magic link delivery is unavailable in this deployment.");
-    }
-    // Scroll/focus to #portal-access after auth if hash present
-    useEffect(() => {
-      if (typeof window === "undefined") return;
-      if (window.location.hash === "#portal-access") {
-        const el = document.getElementById("portal-access");
-        if (el) {
-          setTimeout(() => {
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
-            el.focus && el.focus();
-          }, 300);
-        }
-      }
-    }, [authState]);
-  }
-
   // Staff: update job status
   async function updateJobStatus(jobId: string, nextStatus: string) {
     if (!isStaff && !isAdmin) return;
@@ -687,6 +595,26 @@ export default function GardenPortalAccessPanel() {
   }
 
   // --- UI ---
+  // Loading fallback for infinite loading
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  useEffect(() => {
+    if (authState === "loading") {
+      const timeout = setTimeout(() => setLoadingTimeout(true), 12000);
+      return () => clearTimeout(timeout);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [authState]);
+
+  async function handleGoogleSignIn() {
+    const supabase = getSupabase();
+    const redirectTo = `${window.location.origin}/garden-cleaners/portal`;
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo }
+    });
+  }
+
   return (
     <section className="section garden-section" id="portal-access" tabIndex={-1}>
       <div className="section-heading">
@@ -756,151 +684,23 @@ export default function GardenPortalAccessPanel() {
           </h2>
           {userEmail ? <p>{userEmail}</p> : null}
 
-          {authState === "unauthenticated" ? (
-            <form
-              className="intake-form garden-login-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                // Only submit password login if password is filled
-                if (signInPassword) {
-                  await signInWithPassword(e);
-                }
-              }}
-              noValidate
-              style={{
-                background: '#fff',
-                borderRadius: 16,
-                boxShadow: '0 2px 16px rgba(60,80,60,0.07)',
-                padding: 24,
-                maxWidth: 400,
-                margin: '0 auto',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 18,
-                border: '1px solid #e6ece6',
-              }}
-            >
-              <div style={{ marginBottom: 4 }}>
-                <h3 style={{ margin: 0, fontWeight: 600, color: '#2d4a2d', fontSize: 22 }}>Sign in to Garden Cleaners</h3>
-                <p style={{ color: '#3a5c3a', fontSize: 15, margin: '8px 0 0 0' }}>
-                  No password yet? Enter your email and we’ll send a secure sign-in link.
-                </p>
-              </div>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ color: '#2d4a2d', fontWeight: 500 }}>Email</span>
-                <input
-                  type="email"
-                  name="portalEmail"
-                  value={signInEmail}
-                  autoComplete="email"
-                  onChange={(e) => setSignInEmail(e.currentTarget.value)}
-                  placeholder="you@example.com"
-                  required
-                  style={{
-                    background: '#f8faf8',
-                    border: '1px solid #cfe3cf',
-                    borderRadius: 8,
-                    padding: '10px 12px',
-                    fontSize: 16,
-                    color: '#2d4a2d',
-                    outline: 'none',
-                    boxShadow: 'none',
-                  }}
-                  onFocus={e => (e.currentTarget.style.border = '1.5px solid #7fc97f')}
-                  onBlur={e => (e.currentTarget.style.border = '1px solid #cfe3cf')}
-                />
-              </label>
+          {authState === "unauthenticated" && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 32 }}>
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{
-                  background: '#7fc97f',
-                  color: '#fff',
-                  fontWeight: 600,
-                  fontSize: 16,
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '12px 0',
-                  marginTop: 6,
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 4px rgba(60,80,60,0.04)',
-                }}
-                onClick={sendMagicLink}
-                disabled={signInState === "submitting"}
+                style={{ fontSize: 18, padding: "14px 32px", borderRadius: 8 }}
+                onClick={handleGoogleSignIn}
               >
-                {signInState === "submitting" ? "Sending..." : "Email me a secure login link"}
+                Continue with Google
               </button>
-              <div style={{ color: '#4a6a4a', fontSize: 13, marginTop: 2, marginBottom: 8 }}>
-                Use this if this is your first time signing in.
-              </div>
-              <div style={{ borderTop: '1px solid #e6ece6', margin: '12px 0' }} />
-              <div style={{ color: '#2d4a2d', fontWeight: 500, fontSize: 14, marginBottom: 2 }}>Already have a password?</div>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ color: '#2d4a2d' }}>Password</span>
-                <input
-                  type="password"
-                  name="portalPassword"
-                  value={signInPassword}
-                  autoComplete="current-password"
-                  onChange={(e) => setSignInPassword(e.currentTarget.value)}
-                  placeholder="Enter your password"
-                  style={{
-                    background: '#f8faf8',
-                    border: '1px solid #cfe3cf',
-                    borderRadius: 8,
-                    padding: '10px 12px',
-                    fontSize: 16,
-                    color: '#2d4a2d',
-                    outline: 'none',
-                    boxShadow: 'none',
-                  }}
-                  onFocus={e => (e.currentTarget.style.border = '1.5px solid #7fc97f')}
-                  onBlur={e => (e.currentTarget.style.border = '1px solid #cfe3cf')}
-                />
-              </label>
-              <button
-                type="submit"
-                className="btn btn-secondary"
-                style={{
-                  background: '#e6ece6',
-                  color: '#2d4a2d',
-                  fontWeight: 500,
-                  fontSize: 15,
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '10px 0',
-                  marginTop: 6,
-                  cursor: 'pointer',
-                }}
-                disabled={signInState === "submitting" || !signInPassword}
-              >
-                {signInState === "submitting" ? "Signing in..." : "Sign in with password"}
-              </button>
-              {signInMessage && (
-                <p
-                  style={{
-                    color:
-                      signInState === "error"
-                        ? "#b94a48"
-                        : signInState === "success"
-                        ? "#2d4a2d"
-                        : "#4a6a4a",
-                    background: signInState === "error" ? "#fff0f0" : signInState === "success" ? "#f0fff0" : "#f8faf8",
-                    borderRadius: 8,
-                    padding: '10px 12px',
-                    margin: '10px 0 0 0',
-                    fontSize: 15,
-                  }}
-                >
-                  {signInState === "success" && signInMessage.includes("Magic link sent")
-                    ? "Check your inbox for your Garden Cleaners login link. It may take a minute."
-                    : signInState === "error" && signInMessage.includes("Unable to send magic link")
-                    ? "We could not send the link. Please check the email address or contact support."
-                    : signInMessage}
-                </p>
-              )}
-            </form>
-          ) : null}
+            </div>
+          )}
+          {authState === "loading" && loadingTimeout && (
+            <div style={{ color: "#b94a48", background: "#fff0f0", borderRadius: 8, padding: "12px 16px", marginTop: 16 }}>
+              We couldn't load your portal access yet. Please sign out and try again, or contact support.
+            </div>
+          )}
           {authState === "unavailable" ? <p>{loadError}</p> : null}
           {authState === "authenticated" ? (
             <button type="button" className="btn btn-secondary" onClick={signOut}>Sign out of portal session</button>
@@ -1132,7 +932,7 @@ export default function GardenPortalAccessPanel() {
                       onChange={(e) => setInviteRegion(e.currentTarget.value)}
                       style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #cfe3cf", fontSize: 15 }}
                     >
-                      <option value="">— Any —</option>
+                      <option value="">- Any -</option>
                       {REGION_OPTIONS.filter((r) => r !== "Unspecified").map((r) => (
                         <option key={r} value={r}>{r}</option>
                       ))}
@@ -1211,7 +1011,7 @@ export default function GardenPortalAccessPanel() {
                         return (
                           <tr key={u.id} style={{ borderBottom: "1px solid #e6ece6", opacity: isPending ? 0.6 : 1 }}>
                             <td style={{ padding: "8px 12px", wordBreak: "break-all" }}>{u.email}</td>
-                            <td style={{ padding: "8px 12px" }}>{u.display_name || <span style={{ color: "#aaa" }}>—</span>}</td>
+                            <td style={{ padding: "8px 12px" }}>{u.display_name || <span style={{ color: "#aaa" }}>-</span>}</td>
                             <td style={{ padding: "8px 12px" }}>
                               <select
                                 value={u.role}
@@ -1224,7 +1024,7 @@ export default function GardenPortalAccessPanel() {
                                 <option value="admin">Admin</option>
                               </select>
                             </td>
-                            <td style={{ padding: "8px 12px" }}>{u.service_region || <span style={{ color: "#aaa" }}>—</span>}</td>
+                            <td style={{ padding: "8px 12px" }}>{u.service_region || <span style={{ color: "#aaa" }}>-</span>}</td>
                             <td style={{ padding: "8px 12px" }}>
                               <span style={{
                                 display: "inline-block",
@@ -1273,7 +1073,7 @@ export default function GardenPortalAccessPanel() {
                   {/* Pagination */}
                   <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
                     <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} disabled={adminUsersPage <= 1} onClick={() => void loadAdminUsers(adminUsersPage - 1)}>Prev</button>
-                    <span style={{ fontSize: 13 }}>Page {adminUsersPage} · {adminUsersTotal} total</span>
+                    <span style={{ fontSize: 13 }}>Page {adminUsersPage} - {adminUsersTotal} total</span>
                     <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} disabled={adminUsersPage * 25 >= adminUsersTotal} onClick={() => void loadAdminUsers(adminUsersPage + 1)}>Next</button>
                   </div>
                 </div>
@@ -1304,4 +1104,3 @@ export default function GardenPortalAccessPanel() {
     </section>
   );
 }
-

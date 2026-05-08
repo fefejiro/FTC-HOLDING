@@ -102,3 +102,32 @@ Confirm each match maps to the expected list. File any drift as \`[Bug]\` issues
   ```
 - After scheduled redeploy, retest PeacePad and tap `Retry session check`.
 - Mark GO only if no raw DB/session error appears and compose/no-login flow still works.
+
+---
+
+## Garden Cleaners portal auth - GO for deploy QA (2026-05-07)
+
+### Completed
+
+- Garden portal UI is now Google OAuth only.
+- Magic-link, OTP, email secure-link, and password login UI were removed from the Garden portal.
+- Garden admin allowlist is restricted to:
+  - `uby400@gmail.com`
+  - `mike.fejiro@gmail.com`
+- Staff access still resolves for `@gardencleaners.ca` addresses.
+- Unknown authenticated users resolve as client users.
+- Portal loading fallback added so the user is not left on an indefinite loading state.
+- Stripe API version references in ftc-site checkout/activation routes were aligned with the installed Stripe SDK type definitions.
+- Validation passed:
+  - `git diff --check`
+  - `npm.cmd --workspace=@ftc/auth run build`
+  - `npm.cmd --workspace=@ftc/ftc-site run build`
+
+### Remaining
+
+- Push and deploy the Garden ftc-site build to Cloudflare Pages.
+- Confirm Supabase Google provider is enabled and redirect URLs include `https://gardencleaners.ca/garden-cleaners/portal`.
+- Retest Google login on live Garden portal with:
+  - `uby400@gmail.com`
+  - `mike.fejiro@gmail.com`
+- Mark final owner/client GO only after both admin dashboard sessions load live.

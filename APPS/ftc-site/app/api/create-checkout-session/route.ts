@@ -15,7 +15,7 @@ function getStripe(): InstanceType<typeof Stripe> {
     throw new Error("STRIPE_SECRET_KEY is not configured.");
   }
   return new Stripe(key, {
-    apiVersion: "2026-03-25.dahlia",
+    apiVersion: "2026-04-22.dahlia",
     httpClient: Stripe.createFetchHttpClient()
   });
 }
