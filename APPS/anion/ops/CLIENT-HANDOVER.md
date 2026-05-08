@@ -210,7 +210,7 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 - [ ] **SB3** — `SUPABASE_SERVICE_ROLE_KEY` set (Cloudflare secret)
 - [ ] **SB4** — Production domain in Supabase Auth allow-list
 - [ ] **SB5** — Redirect URL `https://[domain]/auth/callback` in allow-list
-- [ ] **SB6** — All 4 migrations applied to live Supabase project
+- [ ] **SB6** — All current migrations applied to live Supabase project (currently 6)
 
 ### Cloudflare (required for deployment)
 
