@@ -1,64 +1,7 @@
 # Cloudflare Pages _redirects
-# IMPORTANT: This file is shipped to MULTIPLE Pages projects (gardencleaners,
-# og-trades-pages, etc.). Every rule MUST be host-scoped so it does not bleed
-# across projects. Do NOT add bare "/ /<path>" rules here.
+# Host-based brand routing is handled in functions/_middleware.ts.
+# Keep this file path-only because Cloudflare Pages ignores host-prefixed rules.
 
-# ---- OG Trades Academy hosts ----
-https://ogtradesacademy.com/ /og-trades-academy 302
-https://www.ogtradesacademy.com/ /og-trades-academy 302
-https://ogtradesacademy.ca/ /og-trades-academy 302
-https://www.ogtradesacademy.ca/ /og-trades-academy 302
-https://og-trades-pages.pages.dev/ /og-trades-academy 302
-https://*.og-trades-pages.pages.dev/ /og-trades-academy 302
-
-# OG Trades - in-page nav uses bare /about, /course, etc., so map those on
-# OG hosts only (do not rewrite globally; FTC site has its own /about etc.).
-https://www.ogtradesacademy.com/about /og-trades-academy/about 302
-https://www.ogtradesacademy.com/course /og-trades-academy/course 302
-https://www.ogtradesacademy.com/community /og-trades-academy/community 302
-https://www.ogtradesacademy.com/resources /og-trades-academy/resources 302
-https://www.ogtradesacademy.com/contact /og-trades-academy/contact 302
-https://ogtradesacademy.com/about /og-trades-academy/about 302
-https://ogtradesacademy.com/course /og-trades-academy/course 302
-https://ogtradesacademy.com/community /og-trades-academy/community 302
-https://ogtradesacademy.com/resources /og-trades-academy/resources 302
-https://ogtradesacademy.com/contact /og-trades-academy/contact 302
-
-# ---- Garden Cleaners hosts ----
-https://gardencleaners.ca/ /garden-cleaners 200
-https://www.gardencleaners.ca/ /garden-cleaners 200
-https://gardencleaners.pages.dev/ /garden-cleaners 200
-https://*.gardencleaners.pages.dev/ /garden-cleaners 200
-https://gardencleaners.ca/about /garden-cleaners/about 200
-https://www.gardencleaners.ca/about /garden-cleaners/about 200
-https://gardencleaners.ca/services /garden-cleaners/services 200
-https://www.gardencleaners.ca/services /garden-cleaners/services 200
-https://gardencleaners.ca/contact /garden-cleaners/contact 200
-https://www.gardencleaners.ca/contact /garden-cleaners/contact 200
-https://gardencleaners.ca/quote /garden-cleaners/quote 200
-https://www.gardencleaners.ca/quote /garden-cleaners/quote 200
-https://gardencleaners.ca/portal /garden-cleaners/portal 200
-https://www.gardencleaners.ca/portal /garden-cleaners/portal 200
-
-# Garden - keep public custom-domain URLs clean.
-https://gardencleaners.ca/garden-cleaners / 301
-https://www.gardencleaners.ca/garden-cleaners / 301
-https://gardencleaners.ca/garden-cleaners/about /about 301
-https://www.gardencleaners.ca/garden-cleaners/about /about 301
-https://gardencleaners.ca/garden-cleaners/services /services 301
-https://www.gardencleaners.ca/garden-cleaners/services /services 301
-https://gardencleaners.ca/garden-cleaners/contact /contact 301
-https://www.gardencleaners.ca/garden-cleaners/contact /contact 301
-https://gardencleaners.ca/garden-cleaners/quote /quote 301
-https://www.gardencleaners.ca/garden-cleaners/quote /quote 301
-https://gardencleaners.ca/garden-cleaners/portal /garden-cleaners/portal 200
-https://www.gardencleaners.ca/garden-cleaners/portal /garden-cleaners/portal 200
-
-# Garden - block any leftover OG paths on garden hosts.
-https://gardencleaners.ca/og-trades-academy* / 301
-https://www.gardencleaners.ca/og-trades-academy* / 301
-https://gardencleaners.ca/work/og-trades-academy / 301
-https://www.gardencleaners.ca/work/og-trades-academy / 301
-
-# ---- Internal path normalization (host-agnostic, safe on all projects) ----
+# Internal path normalization (host-agnostic)
 /garden-cleaners/ /garden-cleaners 301
+/og-trades-academy/ /og-trades-academy 301
