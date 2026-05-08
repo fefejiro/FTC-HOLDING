@@ -8,6 +8,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ScrollReveal from "./components/ScrollReveal";
 import ChatWidget from "./components/ChatWidget";
+import RootBrandRouter from "./components/RootBrandRouter";
 
 const Analytics = dynamic(() => import("./components/Analytics"), { ssr: false });
 
@@ -106,9 +107,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <ScrollReveal />
-        <Header />
-        <main className="main-shell">{children}</main>
-        <Footer />
+        <RootBrandRouter>
+          <Header />
+          <main className="main-shell">{children}</main>
+          <Footer />
+        </RootBrandRouter>
         {GOOGLE_ANALYTICS_ID ? <Analytics /> : null}
         <ChatWidget />
       </body>

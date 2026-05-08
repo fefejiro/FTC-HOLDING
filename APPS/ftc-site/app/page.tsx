@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import HomeHostRouter from "./components/HomeHostRouter";
 import HomePageExperience from "./components/HomePageExperience";
 
 export const metadata: Metadata = {
@@ -12,9 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return (
-    <HomeHostRouter>
-      <HomePageExperience />
-    </HomeHostRouter>
-  );
+  return <HomePageExperience />;
 }
