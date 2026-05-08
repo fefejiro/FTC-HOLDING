@@ -20,8 +20,8 @@
     },
     {
       "label": "Database",
-      "value": "15-migrations-applied",
-      "detail": "All fifteen migrations applied to live Supabase project (foundation, auth-rls, bookings, subscriptions, security hardening, webhook events, classroom posts, student booking access, parent-student link RLS, parent linked-student visibility, booking student assignment, related profile visibility, tutor assigned-student visibility, parent-name visibility for related users, tutor-name visibility for families).",
+      "value": "16-migrations-applied",
+      "detail": "All sixteen migrations applied to live Supabase project (foundation, auth-rls, bookings, subscriptions, security hardening, webhook events, classroom posts, student booking access, parent-student link RLS, parent linked-student visibility, booking student assignment, related profile visibility, tutor assigned-student visibility, parent-name visibility for related users, tutor-name visibility for families, classroom post student scoping).",
       "status": "green"
     },
     {

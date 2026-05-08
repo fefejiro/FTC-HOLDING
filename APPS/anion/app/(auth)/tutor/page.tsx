@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '../../lib/auth/getCurrentUser';
 import { listTutorBookings, setBookingStatus } from '../../lib/bookings';
-import { createClassroomPost, listClassroomPosts } from '../../lib/classroom';
+import { createClassroomPost, listClassroomPosts, listTutorClassroomStudents } from '../../lib/classroom';
 
 type TutorPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -35,7 +35,11 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
   const bookingError = typeof params.bookingError === 'string' ? params.bookingError : null;
   const postError = typeof params.postError === 'string' ? params.postError : null;
 
-  const [bookings, posts] = await Promise.all([listTutorBookings(), listClassroomPosts()]);
+  const [bookings, posts, classroomStudents] = await Promise.all([
+    listTutorBookings(),
+    listClassroomPosts(),
+    listTutorClassroomStudents(),
+  ]);
 
   async function updateBookingStatusAction(formData: FormData) {
     'use server';
@@ -62,10 +66,11 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
   async function createPostAction(formData: FormData) {
     'use server';
 
+    const studentId = String(formData.get('studentId') ?? '');
     const body = String(formData.get('body') ?? '');
 
     try {
-      await createClassroomPost({ body });
+      await createClassroomPost({ body, studentId });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to publish post';
       redirect(`/tutor?postError=${encodeURIComponent(message)}`);
@@ -79,6 +84,7 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
   async function createTemplatePostAction(formData: FormData) {
     'use server';
 
+    const studentId = String(formData.get('studentId') ?? '');
     const templateKey = String(formData.get('templateKey') ?? '');
     const template = assignmentTemplates.find((item) => item.key === templateKey);
     if (!template) {
@@ -86,7 +92,7 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
     }
 
     try {
-      await createClassroomPost({ body: template.body });
+      await createClassroomPost({ body: template.body, studentId });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to publish template post';
       redirect(`/tutor?postError=${encodeURIComponent(message)}`);
@@ -108,8 +114,26 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
             {postError}
           </p>
         ) : null}
+        {classroomStudents.length === 0 ? (
+          <p className="muted" style={{ marginTop: 12 }}>
+            Accept a booking with a specific student before posting to the classroom feed.
+          </p>
+        ) : null}
 
         <form action={createPostAction} className="grid" style={{ gap: 10, marginTop: 14 }}>
+          <label className="grid" style={{ gap: 6 }}>
+            <span className="muted">Student</span>
+            <select name="studentId" required style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe3f0' }}>
+              <option value="">Select student</option>
+              {classroomStudents.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.displayName}
+                  {student.gradeLevel ? ` (Grade ${student.gradeLevel})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label className="grid" style={{ gap: 6 }}>
             <span className="muted">Write to students</span>
             <textarea
@@ -124,6 +148,7 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
 
           <button
             type="submit"
+            disabled={classroomStudents.length === 0}
             style={{
               background: 'var(--brand)',
               color: '#fff',
@@ -131,39 +156,54 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
               borderRadius: 10,
               padding: '10px 14px',
               width: 'fit-content',
-              cursor: 'pointer',
+              cursor: classroomStudents.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: classroomStudents.length === 0 ? 0.6 : 1,
             }}
           >
             Post to Feed
           </button>
         </form>
 
-        <div className="grid" style={{ gap: 8, marginTop: 14 }}>
+        <form action={createTemplatePostAction} className="grid" style={{ gap: 8, marginTop: 14 }}>
           <p className="muted" style={{ margin: 0 }}>
             Quick assignment templates
           </p>
+          <label className="grid" style={{ gap: 6 }}>
+            <span className="muted">Student</span>
+            <select name="studentId" required style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe3f0' }}>
+              <option value="">Select student</option>
+              {classroomStudents.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.displayName}
+                  {student.gradeLevel ? ` (Grade ${student.gradeLevel})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {assignmentTemplates.map((template) => (
-              <form key={template.key} action={createTemplatePostAction}>
-                <input type="hidden" name="templateKey" value={template.key} />
-                <button
-                  type="submit"
-                  style={{
-                    background: '#fff',
-                    color: 'var(--brand)',
-                    border: '1px solid #99f6e4',
-                    borderRadius: 999,
-                    padding: '8px 12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {template.label}
-                </button>
-              </form>
+              <button
+                key={template.key}
+                type="submit"
+                name="templateKey"
+                value={template.key}
+                disabled={classroomStudents.length === 0}
+                style={{
+                  background: '#fff',
+                  color: 'var(--brand)',
+                  border: '1px solid #99f6e4',
+                  borderRadius: 999,
+                  padding: '8px 12px',
+                  fontWeight: 600,
+                  cursor: classroomStudents.length === 0 ? 'not-allowed' : 'pointer',
+                  opacity: classroomStudents.length === 0 ? 0.6 : 1,
+                }}
+              >
+                {template.label}
+              </button>
             ))}
           </div>
-        </div>
+        </form>
       </section>
 
       <section className="surface card">
@@ -179,6 +219,9 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
                 <p className="muted" style={{ margin: '4px 0 0' }}>
                   {post.authorRole === 'tutor' ? 'Teacher' : 'Student'} •{' '}
                   {new Date(post.createdAt).toLocaleString()}
+                </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Student thread: {post.studentName ?? 'Unknown student'}
                 </p>
                 <p style={{ margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>{post.body}</p>
               </article>

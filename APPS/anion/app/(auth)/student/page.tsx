@@ -91,6 +91,11 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
                   {post.authorRole === 'tutor' ? 'Teacher' : 'Student'} •{' '}
                   {new Date(post.createdAt).toLocaleString()}
                 </p>
+                {post.authorRole === 'tutor' ? (
+                  <p className="muted" style={{ margin: '6px 0 0' }}>
+                    For: {post.studentName ?? 'Your class thread'}
+                  </p>
+                ) : null}
                 <p style={{ margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>{post.body}</p>
               </article>
             ))}
