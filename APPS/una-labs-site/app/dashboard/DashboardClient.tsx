@@ -698,6 +698,7 @@ export function DashboardClient() {
   useEffect(() => {
     let cancelled = false;
     let unsubscribe: (() => void) | undefined;
+    let loadingTimeout: number | undefined;
 
     async function loadForSession(session: { user: { email?: string } }) {
       const { createBrowserClient } = await import('@ftc/supabase');
@@ -775,6 +776,14 @@ export function DashboardClient() {
           await loadForSession(session);
         } else if (!window.location.hash.includes('access_token=')) {
           if (!cancelled) setState({ phase: 'unauthenticated' });
+        } else {
+          // OAuth callback in flight: hash contains access_token but Supabase
+          // has not yet fired SIGNED_IN. If the auth event never arrives within
+          // the timeout window, fall back to unauthenticated rather than
+          // hanging on "Loading your portal..." forever.
+          loadingTimeout = window.setTimeout(() => {
+            if (!cancelled) setState({ phase: 'unauthenticated' });
+          }, 8000);
         }
       } catch (error) {
         if (!cancelled) {
@@ -786,11 +795,30 @@ export function DashboardClient() {
       }
     }
 
+    // Hard safety net: if nothing has resolved the loading state within
+    // 12 seconds (Supabase API hang, missing public env, network failure),
+    // surface an error instead of an indefinite spinner.
+    const hardTimeout = window.setTimeout(() => {
+      if (!cancelled) {
+        setState((previous) =>
+          previous.phase === 'loading'
+            ? {
+                phase: 'error',
+                message:
+                  'Portal took too long to load. Refresh the page or sign in again.',
+              }
+            : previous,
+        );
+      }
+    }, 12000);
+
     void init();
 
     return () => {
       cancelled = true;
       unsubscribe?.();
+      if (loadingTimeout) window.clearTimeout(loadingTimeout);
+      window.clearTimeout(hardTimeout);
     };
   }, []);
 
