@@ -43,6 +43,42 @@ type TutorRow = {
   profile_id: string;
 };
 
+async function mapClassroomPosts(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  posts: ClassroomPostRow[],
+): Promise<ClassroomPost[]> {
+  const profileIds = Array.from(new Set(posts.map((post) => post.author_profile_id)));
+
+  let profileMap = new Map<string, string>();
+  if (profileIds.length > 0) {
+    const { data: profileRows, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', profileIds);
+
+    if (profileError) {
+      throw new Error(profileError.message);
+    }
+
+    profileMap = new Map((profileRows ?? []).map((row) => [row.id as string, row.display_name as string]));
+  }
+
+  const studentMap = await getStudentNameMap(
+    supabase,
+    posts.map((post) => post.student_id).filter((value): value is string => Boolean(value)),
+  );
+
+  return posts.map((post) => ({
+    id: post.id,
+    authorRole: post.author_role,
+    authorName: profileMap.get(post.author_profile_id) ?? 'Unknown',
+    studentId: post.student_id,
+    studentName: post.student_id ? (studentMap.get(post.student_id)?.displayName ?? null) : null,
+    body: post.body,
+    createdAt: post.created_at,
+  }));
+}
+
 async function getStudentNameMap(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   studentIds: string[],
@@ -190,6 +226,20 @@ export async function listClassroomPosts(limit = 50): Promise<ClassroomPost[]> {
     return [];
   }
 
+  return listClassroomPostsForStudentIds(visibleStudentIds, limit, supabase);
+}
+
+export async function listClassroomPostsForStudentIds(
+  studentIds: string[],
+  limit = 50,
+  existingClient?: Awaited<ReturnType<typeof createServerClient>>,
+): Promise<ClassroomPost[]> {
+  const supabase = existingClient ?? await createServerClient();
+  const visibleStudentIds = Array.from(new Set(studentIds.filter(Boolean)));
+  if (visibleStudentIds.length === 0) {
+    return [];
+  }
+
   const { data: rows, error } = await supabase
     .from('classroom_posts')
     .select('id, author_profile_id, author_role, student_id, body, created_at')
@@ -201,37 +251,7 @@ export async function listClassroomPosts(limit = 50): Promise<ClassroomPost[]> {
     throw new Error(error.message);
   }
 
-  const posts = (rows ?? []) as ClassroomPostRow[];
-  const profileIds = Array.from(new Set(posts.map((post) => post.author_profile_id)));
-
-  let profileMap = new Map<string, string>();
-  if (profileIds.length > 0) {
-    const { data: profileRows, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, display_name')
-      .in('id', profileIds);
-
-    if (profileError) {
-      throw new Error(profileError.message);
-    }
-
-    profileMap = new Map((profileRows ?? []).map((row) => [row.id as string, row.display_name as string]));
-  }
-
-  const studentMap = await getStudentNameMap(
-    supabase,
-    posts.map((post) => post.student_id).filter((value): value is string => Boolean(value)),
-  );
-
-  return posts.map((post) => ({
-    id: post.id,
-    authorRole: post.author_role,
-    authorName: profileMap.get(post.author_profile_id) ?? 'Unknown',
-    studentId: post.student_id,
-    studentName: post.student_id ? (studentMap.get(post.student_id)?.displayName ?? null) : null,
-    body: post.body,
-    createdAt: post.created_at,
-  }));
+  return mapClassroomPosts(supabase, (rows ?? []) as ClassroomPostRow[]);
 }
 
 export async function listTutorClassroomStudents(): Promise<TutorClassroomStudent[]> {

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { getBookingDisplayDetail, resolveLessonParticipantRoleForUser } from '@/app/lib/bookings';
+import { listClassroomPostsForStudentIds } from '@/app/lib/classroom';
 import LessonRoom from './LessonRoom';
 
 type LessonPageProps = {
@@ -37,6 +38,10 @@ export default async function LessonSessionPage({ params }: LessonPageProps) {
     redirect('/dashboard');
   }
 
+  const classroomTimeline = bookingDetail.student_id
+    ? await listClassroomPostsForStudentIds([bookingDetail.student_id], 8)
+    : [];
+
   return (
     <LessonRoom
       sessionId={sessionId}
@@ -48,6 +53,7 @@ export default async function LessonSessionPage({ params }: LessonPageProps) {
       studentName={bookingDetail.student_name}
       tutorName={bookingDetail.tutor_name}
       bookingNotes={bookingDetail.notes}
+      classroomTimeline={classroomTimeline}
     />
   );
 }

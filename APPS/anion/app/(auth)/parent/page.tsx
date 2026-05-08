@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '../../lib/auth/getCurrentUser';
 import { createBookingRequest, listParentBookings, listParentLinkedStudents, listTutorOptions } from '../../lib/bookings';
+import { listClassroomPostsForStudentIds } from '../../lib/classroom';
 
 type ParentPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -20,6 +21,7 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
     listParentBookings(),
     listParentLinkedStudents(),
   ]);
+  const recentActivity = await listClassroomPostsForStudentIds(linkedStudents.map((student) => student.id), 10);
 
   async function createBookingAction(formData: FormData) {
     'use server';
@@ -223,6 +225,29 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   Linked on: {new Date(student.linked_at).toLocaleDateString()}
                 </p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="surface card">
+        <p className="kicker">Learning Activity</p>
+        <h2 className="h2">Recent Student Timeline</h2>
+        {recentActivity.length === 0 ? (
+          <p className="muted">No classroom updates yet for your linked students.</p>
+        ) : (
+          <div className="grid" style={{ gap: 10 }}>
+            {recentActivity.map((entry) => (
+              <article key={entry.id} className="surface card" style={{ boxShadow: 'none' }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>{entry.studentName ?? 'Student thread'}</p>
+                <p className="muted" style={{ margin: '4px 0 0' }}>
+                  {entry.authorRole === 'tutor' ? 'Teacher update' : 'Student update'} by {entry.authorName}
+                </p>
+                <p className="muted" style={{ margin: '4px 0 0' }}>
+                  {new Date(entry.createdAt).toLocaleString()}
+                </p>
+                <p style={{ margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>{entry.body}</p>
               </article>
             ))}
           </div>

@@ -2,6 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+type ClassroomTimelineItem = {
+  id: string;
+  authorRole: 'student' | 'tutor';
+  authorName: string;
+  studentId: string | null;
+  studentName: string | null;
+  body: string;
+  createdAt: string;
+};
+
 type Props = {
   sessionId: string;
   userId: string;
@@ -12,6 +22,7 @@ type Props = {
   studentName: string | null;
   tutorName: string | null;
   bookingNotes: string | null;
+  classroomTimeline: ClassroomTimelineItem[];
 };
 
 type RoomData = {
@@ -33,6 +44,7 @@ export default function LessonRoom({
   studentName,
   tutorName,
   bookingNotes,
+  classroomTimeline,
 }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'left'>('loading');
@@ -138,7 +150,7 @@ export default function LessonRoom({
   }
 
   return (
-    <section className="flex flex-col h-[90vh] p-4 gap-4">
+    <section className="flex flex-col h-[90vh] p-4 gap-4 overflow-hidden">
       <div className="flex items-center justify-between">
         <div>
           <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">Live Session</span>
@@ -162,11 +174,38 @@ export default function LessonRoom({
         )}
       </div>
 
-      <div
-        ref={frameRef}
-        className="flex-1 bg-gray-900 rounded-xl overflow-hidden shadow-lg"
-        style={{ minHeight: '400px' }}
-      />
+      <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] min-h-0">
+        <div
+          ref={frameRef}
+          className="bg-gray-900 rounded-xl overflow-hidden shadow-lg min-h-[400px]"
+        />
+
+        <aside className="rounded-xl border border-gray-200 bg-white shadow-sm min-h-[400px] flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">Student Activity</p>
+            <h2 className="text-sm font-semibold text-gray-900 m-0">Recent classroom timeline</h2>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-3">
+            {classroomTimeline.length === 0 ? (
+              <p className="text-sm text-gray-500 m-0">No classroom posts yet for this student.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {classroomTimeline.map((entry) => (
+                  <article key={entry.id} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3">
+                    <p className="m-0 text-sm font-semibold text-gray-900">{entry.authorName}</p>
+                    <p className="m-0 mt-1 text-xs text-gray-500">
+                      {entry.authorRole === 'tutor' ? 'Teacher update' : 'Student update'}
+                      {' '}• {new Date(entry.createdAt).toLocaleString()}
+                    </p>
+                    <p className="m-0 mt-2 text-sm text-gray-700 whitespace-pre-wrap">{entry.body}</p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
 
       {bookingNotes ? (
         <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm">
