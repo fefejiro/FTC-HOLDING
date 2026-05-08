@@ -2,6 +2,9 @@ import { expect, test } from "@playwright/test";
 
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
 const url = (path: string) => new URL(path, baseUrl).toString();
+const hasSupabasePublicEnv = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL
+);
 
 const ogRoutes = [
   {
@@ -66,6 +69,11 @@ test.describe("OG Trades Academy public QA", () => {
     page,
     context
   }) => {
+    test.skip(
+      !hasSupabasePublicEnv,
+      "Supabase public env is not set for this run; skipping API submission assertion."
+    );
+
     await page.goto(url("/og-trades-academy/contact"), { waitUntil: "domcontentloaded" });
 
     // Wait for React to hydrate: the submit button must be visible and stable before we
