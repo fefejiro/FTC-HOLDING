@@ -51,8 +51,16 @@ export default function RootBrandRouter({ children }: { children: ReactNode }) {
 
     const host = window.location.host.toLowerCase();
     const pathname = window.location.pathname;
+    const isGardenRoute = pathname === '/garden-cleaners' || pathname.startsWith('/garden-cleaners/');
+    const isOgTradesRoute = pathname === '/og-trades-academy' || pathname.startsWith('/og-trades-academy/');
 
-    if (isGardenCleanersCustomHost(host)) {
+    document.body.classList.remove('brand-una', 'brand-garden', 'brand-og-trades');
+
+    if (isGardenCleanersCustomHost(host) || isGardenRoute) {
+      document.body.classList.add('brand-garden');
+
+      // Strict routing checks only apply on the custom domain.
+      if (isGardenCleanersCustomHost(host)) {
       const stripped = stripGardenCleanersBasePath(pathname);
 
       // If an internal prefixed path appears on the custom domain,
@@ -66,9 +74,14 @@ export default function RootBrandRouter({ children }: { children: ReactNode }) {
         window.location.replace('/');
         return;
       }
+      }
     }
 
-    if (isOgTradesCustomHost(host)) {
+    if (isOgTradesCustomHost(host) || isOgTradesRoute) {
+      document.body.classList.add('brand-og-trades');
+
+      // Strict routing checks only apply on the custom domain.
+      if (isOgTradesCustomHost(host)) {
       const stripped = stripOgTradesBasePath(pathname);
 
       // If an internal prefixed path appears on the custom domain,
@@ -82,6 +95,11 @@ export default function RootBrandRouter({ children }: { children: ReactNode }) {
         window.location.replace('/');
         return;
       }
+      }
+    }
+
+    if (!(isGardenCleanersCustomHost(host) || isGardenRoute) && !(isOgTradesCustomHost(host) || isOgTradesRoute)) {
+      document.body.classList.add('brand-una');
     }
 
     // All other hosts (including unalabs.cloud): allow render
