@@ -320,6 +320,416 @@ nav.primary {
   color: var(--muted);
 }
 
+.home-page--sunrise {
+  color: #16202d;
+}
+
+.home-page--sunrise .section {
+  padding: 48px 0;
+}
+
+.home-page--sunrise .container {
+  max-width: 1180px;
+}
+
+.sunrise-hero-section {
+  padding-top: 44px;
+}
+
+.sunrise-hero-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.92fr);
+  gap: 40px;
+  align-items: center;
+}
+
+.sunrise-hero-copy {
+  display: grid;
+  gap: 18px;
+}
+
+.sunrise-kicker {
+  width: fit-content;
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #ebfbf7;
+  color: #5fb7aa;
+  font-size: 0.77rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sunrise-hero-copy h1,
+.sunrise-section-heading h2,
+.sunrise-feature-band h2,
+.sunrise-final-cta h2 {
+  color: #101828;
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.sunrise-hero-copy h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1.04;
+  max-width: 11ch;
+}
+
+.sunrise-lead,
+.sunrise-section-heading p,
+.sunrise-feature-band p,
+.sunrise-final-cta p,
+.sunrise-proof-card p,
+.sunrise-step-card p,
+.sunrise-offer-card p,
+.sunrise-product-card p,
+.sunrise-mini-proof-card p {
+  color: #667085;
+  font-size: 1.03rem;
+  line-height: 1.6;
+}
+
+.sunrise-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+
+.sunrise-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 22px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.sunrise-btn:hover {
+  transform: translateY(-1px);
+}
+
+.sunrise-btn--primary {
+  background: linear-gradient(180deg, #ff6f1a 0%, #ff4f0f 100%);
+  color: #ffffff;
+  box-shadow: 0 16px 30px rgba(255, 94, 20, 0.22);
+}
+
+.sunrise-btn--secondary {
+  border: 1.5px solid #62cdbf;
+  color: #48b5a7;
+  background: #ffffff;
+}
+
+.sunrise-live-url {
+  font-size: 0.95rem;
+  color: #98a2b3;
+}
+
+.sunrise-live-url a,
+.sunrise-inline-link {
+  color: #ff5c14;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.sunrise-preview-card {
+  position: relative;
+  padding: 14px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, #e7faf7 0%, #edf9f6 100%);
+  box-shadow: inset 0 0 0 1px rgba(111, 207, 198, 0.2);
+}
+
+.sunrise-preview-card::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 18px 42px rgba(135, 196, 190, 0.18);
+}
+
+.sunrise-browser-bar,
+.sunrise-preview-content {
+  position: relative;
+  z-index: 1;
+}
+
+.sunrise-browser-bar {
+  display: grid;
+  grid-template-columns: 10px 10px 10px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 16px 16px 10px;
+}
+
+.sunrise-browser-bar > span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.sunrise-browser-bar > span:nth-child(1) { background: #ff8b5e; }
+.sunrise-browser-bar > span:nth-child(2) { background: #f8c24f; }
+.sunrise-browser-bar > span:nth-child(3) { background: #53cf88; }
+
+.sunrise-browser-address {
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f4f7fb;
+  color: #adb5c2;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sunrise-preview-content {
+  padding: 8px 16px 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.sunrise-preview-header-row,
+.sunrise-stats-row,
+.sunrise-preview-panel li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sunrise-preview-header-row strong,
+.sunrise-preview-panel p,
+.sunrise-preview-panel li span,
+.sunrise-stats-row strong {
+  color: #1f2937;
+}
+
+.sunrise-preview-header-row span,
+.sunrise-preview-panel li strong,
+.sunrise-stats-row span {
+  color: #98a2b3;
+  font-size: 0.76rem;
+}
+
+.sunrise-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e7eef5;
+  overflow: hidden;
+}
+
+.sunrise-progress-fill {
+  width: 68%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5ec8bb 0%, #4fb8a8 100%);
+}
+
+.sunrise-preview-panel {
+  padding: 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e7edf4;
+}
+
+.sunrise-preview-panel p {
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.sunrise-preview-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.sunrise-preview-panel li::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-right: 10px;
+  border-radius: 999px;
+  background: #62cdbf;
+  box-shadow: 0 0 0 4px rgba(98, 205, 191, 0.16);
+  flex-shrink: 0;
+}
+
+.sunrise-preview-panel li {
+  justify-content: flex-start;
+}
+
+.sunrise-preview-panel li span {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.sunrise-preview-panel li.is-active {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #ecfbf8;
+}
+
+.sunrise-stats-row {
+  gap: 12px;
+}
+
+.sunrise-stats-row > div {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #e7edf4;
+}
+
+.sunrise-proof-grid,
+.sunrise-steps-grid,
+.sunrise-offers-grid,
+.sunrise-products-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.sunrise-proof-card,
+.sunrise-step-card,
+.sunrise-offer-card,
+.sunrise-product-card,
+.sunrise-mini-proof-card {
+  padding: 22px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e6ebf2;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.04);
+}
+
+.sunrise-proof-card h3,
+.sunrise-step-card h3,
+.sunrise-offer-card h3,
+.sunrise-product-card h3,
+.sunrise-mini-proof-card h3 {
+  margin-bottom: 10px;
+  color: #ff4f0f;
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.sunrise-proof-label,
+.sunrise-offer-meta,
+.sunrise-product-label {
+  margin-bottom: 8px;
+  color: #101828;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.sunrise-step-number {
+  display: inline-flex;
+  margin-bottom: 14px;
+  color: #ff7b36;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.sunrise-offer-card.is-featured {
+  background: linear-gradient(180deg, #fff7f1 0%, #fffdfb 100%);
+  border-color: rgba(255, 111, 26, 0.18);
+}
+
+.sunrise-offer-price {
+  margin: 6px 0 10px;
+  color: #101828;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.sunrise-offer-ideal {
+  margin-bottom: 14px;
+}
+
+.sunrise-section-heading {
+  max-width: 760px;
+}
+
+.sunrise-feature-band,
+.sunrise-final-cta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.92fr);
+  gap: 24px;
+  align-items: start;
+  padding: 28px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #fffaf4 0%, #fff 100%);
+  border: 1px solid rgba(255, 111, 26, 0.14);
+  box-shadow: 0 18px 42px rgba(255, 111, 26, 0.06);
+}
+
+.sunrise-mini-proof-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.sunrise-section--final {
+  padding-bottom: 84px;
+}
+
+@media (max-width: 1024px) {
+  .sunrise-hero-shell,
+  .sunrise-feature-band,
+  .sunrise-final-cta {
+    grid-template-columns: 1fr;
+  }
+
+  .sunrise-proof-grid,
+  .sunrise-steps-grid,
+  .sunrise-offers-grid,
+  .sunrise-products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .sunrise-proof-grid,
+  .sunrise-steps-grid,
+  .sunrise-offers-grid,
+  .sunrise-products-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sunrise-hero-copy h1 {
+    max-width: none;
+    font-size: clamp(2.1rem, 11vw, 3rem);
+  }
+
+  .sunrise-action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sunrise-btn {
+    width: 100%;
+  }
+}
+
 /* Hero */
 .hero {
   position: relative;
@@ -4914,7 +5324,7 @@ nav.primary {
   }
 }
 
-/* -- ATEAM Workflow (clean rebuild) ------------------------------------------- */
+/* ── ATEAM Workflow (clean rebuild) ─────────────────────────────────────────── */
 
 .wf-shell {
   min-height: 100dvh;
@@ -5038,7 +5448,7 @@ nav.primary {
   gap: 20px;
 }
 
-/* -- Intake stage -- */
+/* ── Intake stage ── */
 
 .wf-intro {
   max-width: 640px;
@@ -5356,7 +5766,7 @@ nav.primary {
   font-size: 0.92rem;
 }
 
-/* -- Working animation -- */
+/* ── Working animation ── */
 
 .wf-idea-echo {
   background: rgba(255, 255, 255, 0.03);
@@ -5484,7 +5894,7 @@ nav.primary {
 .wf-wnode--active .wf-wnode-detail { color: rgba(255, 255, 255, 0.5); }
 .wf-wnode--done .wf-wnode-detail { color: rgba(0, 212, 255, 0.45); }
 
-/* -- Clarify stage -- */
+/* ── Clarify stage ── */
 
 .wf-clarify-head {
   max-width: 560px;
@@ -5574,7 +5984,7 @@ nav.primary {
   gap: 14px;
 }
 
-/* -- Output / Decision Pack -- */
+/* ── Output / Decision Pack ── */
 
 .wf-pack-head {
   display: flex;
@@ -6072,7 +6482,7 @@ nav.primary {
   }
 }
 
-/* -- ATEAM Home Widget -------------------------------------------------------- */
+/* ── ATEAM Home Widget ──────────────────────────────────────────────────────── */
 
 .ahw-shell {
   position: relative;
@@ -6214,7 +6624,7 @@ nav.primary {
 .ahw-node--intro-3 .ahw-node-ring,
 .ahw-node--intro-3 .ahw-node-label { animation-delay: 900ms; }
 
-/* Idle pulse � staggered per node */
+/* Idle pulse — staggered per node */
 .ahw-node--idle .ahw-node-dot {
   animation: ahw-idle 3.2s ease-in-out infinite;
 }
@@ -6489,7 +6899,7 @@ nav.primary {
   }
 }
 
-/* -- ATEAM Split Layout -------------------------------------------------------- */
+/* ── ATEAM Split Layout ──────────────────────────────────────────────────────── */
 
 .wf-split {
   display: grid;
@@ -6533,7 +6943,7 @@ nav.primary {
   }
 }
 
-/* -- Operator Panel (opi-*) ---------------------------------------------------- */
+/* ── Operator Panel (opi-*) ──────────────────────────────────────────────────── */
 
 .opi-shell {
   display: flex;
@@ -6615,7 +7025,7 @@ nav.primary {
   letter-spacing: 0.01em;
 }
 
-/* 2-column agent grid � hero layout */
+/* 2-column agent grid — hero layout */
 .opi-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -6800,7 +7210,7 @@ nav.primary {
   }
 }
 
-/* -- Animations ---------------------------------------------------------------- */
+/* ── Animations ──────────────────────────────────────────────────────────────── */
 
 @keyframes opi-idle-float {
   0%, 100% { transform: translateY(0); }
@@ -6838,7 +7248,7 @@ nav.primary {
   100% { inset: -18px; opacity: 0;  border-width: 1px; }
 }
 
-/* -- ATEAM light-surface refresh --------------------------------------------- */
+/* ── ATEAM light-surface refresh ───────────────────────────────────────────── */
 
 .wf-shell {
   background:
@@ -10145,7 +10555,7 @@ body {
   }
 }
 
-/* -- Homepage ATEAM hero � full-width variant ----------------------------- */
+/* ── Homepage ATEAM hero — full-width variant ───────────────────────────── */
 
 .home-ateam-hero--hp {
   border: none;
@@ -12172,7 +12582,7 @@ footer {
   }
 }
 
-/* -- Homepage ATEAM surface -- */
+/* ── Homepage ATEAM surface ── */
 .hp-ateam-surface {
   min-height: 100vh;
 }
@@ -12368,7 +12778,7 @@ footer {
   background: rgba(108, 71, 255, 0.05);
 }
 
-/* Homepage ATEAM: working + output stages � full width, centered */
+/* Homepage ATEAM: working + output stages — full width, centered */
 .hp-ateam-surface .wf-stage--working,
 .hp-ateam-surface .wf-stage--clarify,
 .hp-ateam-surface .wf-stage--output {
@@ -12402,9 +12812,9 @@ footer {
   }
 }
 
-/* -- Mobile fixes: ATEAM + Homepage -- */
+/* ── Mobile fixes: ATEAM + Homepage ── */
 
-/* -- /ateam intake: stack grid on mobile -- */
+/* ── /ateam intake: stack grid on mobile ── */
 @media (max-width: 760px) {
   .wf-stage--intake {
     grid-template-columns: 1fr !important;
@@ -12436,7 +12846,7 @@ footer {
   }
 }
 
-/* -- Guided grid: single column on mobile -- */
+/* ── Guided grid: single column on mobile ── */
 @media (max-width: 640px) {
   .wf-guided-grid {
     grid-template-columns: 1fr;
@@ -12517,7 +12927,7 @@ footer {
   }
 }
 
-/* -- Homepage hero: extra-small screens -- */
+/* ── Homepage hero: extra-small screens ── */
 @media (max-width: 480px) {
   .wf-hp-headline {
     font-size: 2.1rem;
@@ -12548,7 +12958,7 @@ footer {
   }
 }
 
-/* -- Working stage: mobile -- */
+/* ── Working stage: mobile ── */
 @media (max-width: 640px) {
   .wf-stage--working {
     padding: 24px 0;
@@ -12575,7 +12985,7 @@ footer {
   }
 }
 
-/* -- Output / pack: mobile -- */
+/* ── Output / pack: mobile ── */
 @media (max-width: 640px) {
   .wf-pack-title {
     font-size: clamp(1.4rem, 5vw, 2rem);
@@ -12700,7 +13110,7 @@ footer {
   }
 }
 
-/* -- Nav: ensure header CTA doesn't overflow on small screens -- */
+/* ── Nav: ensure header CTA doesn't overflow on small screens ── */
 @media (max-width: 480px) {
   .site-header .container {
     padding-left: 14px;
@@ -12718,7 +13128,7 @@ footer {
   }
 }
 
-/* -- hp-ateam-surface: ensure wf-body doesn't clip on narrow screens -- */
+/* ── hp-ateam-surface: ensure wf-body doesn't clip on narrow screens ── */
 @media (max-width: 480px) {
   .hp-ateam-surface .wf-stage--working,
   .hp-ateam-surface .wf-stage--clarify,
@@ -12728,25 +13138,12 @@ footer {
 }
 
 
-/* -----------------------------------------------
+/* ═══════════════════════════════════════════════
    PRICING PAGE
-   ----------------------------------------------- */
+   ═══════════════════════════════════════════════ */
 
 .pricing-hero {
   max-width: 720px;
-}
-
-.pricing-page {
-  color: #16202d;
-  background: #f5f7f9;
-}
-
-.pricing-page .eyebrow {
-  color: #ff7b36;
-}
-
-.pricing-page .lead {
-  color: #4b5563;
 }
 
 .pricing-grid {
@@ -12757,22 +13154,21 @@ footer {
 }
 
 .pricing-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--surface);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.06);
 }
 
 .pricing-card--featured {
-  border-color: rgba(255, 111, 26, 0.28);
-  box-shadow: 0 16px 36px rgba(255, 94, 20, 0.14);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-glow);
 }
 
 .pricing-card-header {
   padding: 36px 40px 28px;
-  border-bottom: 1px solid #e5e7eb;
-  background: linear-gradient(135deg, #fff8f2 0%, #fffdf9 100%);
+  border-bottom: 1px solid var(--glass-border);
+  background: linear-gradient(135deg, rgba(108,92,231,0.12) 0%, rgba(0,212,255,0.06) 100%);
 }
 
 .pricing-card-label {
@@ -12780,7 +13176,7 @@ footer {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #ff7b36;
+  color: var(--accent-2);
   margin-bottom: 12px;
 }
 
@@ -12792,7 +13188,7 @@ footer {
 }
 
 .pricing-card-from {
-  color: #6b7280;
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
@@ -12801,11 +13197,10 @@ footer {
   font-weight: 800;
   font-family: var(--font-space-grotesk), sans-serif;
   letter-spacing: -0.02em;
-  color: #0f172a;
 }
 
 .pricing-card-currency {
-  color: #6b7280;
+  color: var(--muted);
   font-size: 0.9rem;
   align-self: flex-end;
   padding-bottom: 6px;
@@ -12831,7 +13226,7 @@ footer {
 }
 
 .pricing-feature-check {
-  color: #1f7a61;
+  color: var(--accent-2);
   font-size: 1rem;
   font-weight: 700;
   flex-shrink: 0;
@@ -12840,19 +13235,19 @@ footer {
 
 .pricing-feature-list li div strong {
   display: block;
-  color: #0f172a;
+  color: var(--text);
   font-size: 0.95rem;
   margin-bottom: 2px;
 }
 
 .pricing-feature-list li div p {
-  color: #4b5563;
+  color: var(--muted);
   font-size: 0.85rem;
 }
 
 .pricing-deposit-note {
-  background: #fff7f1;
-  border: 1px solid rgba(255, 111, 26, 0.24);
+  background: rgba(108,92,231,0.1);
+  border: 1px solid rgba(108,92,231,0.25);
   border-radius: 10px;
   padding: 16px 20px;
   margin-bottom: 28px;
@@ -12860,7 +13255,7 @@ footer {
 
 .pricing-deposit-note p {
   font-size: 0.88rem;
-  color: #334155;
+  color: var(--copy);
   line-height: 1.6;
 }
 
@@ -12873,7 +13268,7 @@ footer {
 
 .pricing-cta-sub {
   text-align: center;
-  color: #6b7280;
+  color: var(--muted);
   font-size: 0.8rem;
   margin-top: 10px;
 }
@@ -12887,16 +13282,12 @@ footer {
 .pricing-faq-card,
 .pricing-trust-card {
   padding: 28px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.05);
 }
 
 .pricing-faq-card h3,
 .pricing-trust-card h3 {
   font-size: 1.05rem;
   margin-bottom: 20px;
-  color: #0f172a;
 }
 
 .pricing-faq-list {
@@ -12908,19 +13299,19 @@ footer {
 .pricing-faq-item strong {
   display: block;
   font-size: 0.88rem;
-  color: #0f172a;
+  color: var(--text);
   margin-bottom: 4px;
 }
 
 .pricing-faq-item p {
   font-size: 0.83rem;
-  color: #4b5563;
+  color: var(--muted);
   line-height: 1.55;
 }
 
 .pricing-trust-card p {
   font-size: 0.88rem;
-  color: #4b5563;
+  color: var(--copy);
   line-height: 1.65;
   margin-bottom: 14px;
 }
@@ -12928,18 +13319,14 @@ footer {
 .pricing-bottom-cta {
   text-align: center;
   padding: 56px 40px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 12px 28px rgba(16, 24, 40, 0.06);
 }
 
 .pricing-bottom-cta h2 {
   margin-bottom: 12px;
-  color: #0f172a;
 }
 
 .pricing-bottom-cta p {
-  color: #4b5563;
+  color: var(--muted);
   max-width: 480px;
   margin: 0 auto 28px;
   font-size: 1rem;
@@ -12960,9 +13347,9 @@ footer {
 }
 
 
-/* -----------------------------------------------
+/* ═══════════════════════════════════════════════
    BUILD / INTAKE PAGE
-   ----------------------------------------------- */
+   ═══════════════════════════════════════════════ */
 
 .build-hero {
   max-width: 680px;
@@ -13214,7 +13601,7 @@ footer {
 }
 
 .build-sidebar-includes li::before {
-  content: "?";
+  content: "✓";
   position: absolute;
   left: 0;
   color: var(--accent-2);
@@ -13385,9 +13772,9 @@ footer {
 }
 
 
-/* -----------------------------------------------
+/* ═══════════════════════════════════════════════
    SUMMARY PAGE
-   ----------------------------------------------- */
+   ═══════════════════════════════════════════════ */
 
 .summary-hero {
   max-width: 680px;
@@ -13707,9 +14094,9 @@ footer {
 }
 
 
-/* -----------------------------------------------
+/* ═══════════════════════════════════════════════
    CONFIRMATION PAGE
-   ----------------------------------------------- */
+   ═══════════════════════════════════════════════ */
 
 .confirmation-container {
   max-width: 680px;
@@ -13823,7 +14210,7 @@ footer {
 }
 
 /* ============================================================
-   HOME � intake-forward narrative (pass: story restructure)
+   HOME — intake-forward narrative (pass: story restructure)
    ============================================================ */
 
 /* Hero sub-note */
@@ -13833,7 +14220,7 @@ footer {
   margin-top: -4px;
 }
 
-/* -- Flow visual (hero RHS) -- */
+/* ── Flow visual (hero RHS) ── */
 .home-flow-visual {
   display: flex;
   flex-direction: column;
@@ -13911,7 +14298,7 @@ footer {
   line-height: 1.5;
 }
 
-/* -- Engagement offers grid -- */
+/* ── Engagement offers grid ── */
 .home-offers-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -13927,9 +14314,9 @@ footer {
 }
 
 .home-offer-card--featured {
-  border-color: rgba(0, 212, 255, 0.28);
-  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.12), 0 20px 40px rgba(0, 0, 0, 0.2);
-  background: linear-gradient(160deg, rgba(0, 212, 255, 0.05), rgba(108, 92, 231, 0.06));
+  border-color: rgba(242, 140, 40, 0.28);
+  box-shadow: 0 0 0 1px rgba(242, 140, 40, 0.12), 0 20px 40px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(160deg, rgba(242, 140, 40, 0.08), rgba(255, 179, 71, 0.05));
 }
 
 .home-offer-card-head {
@@ -13941,12 +14328,13 @@ footer {
 .home-offer-card-head h3 {
   font-size: 1.05rem;
   font-weight: 800;
+  color: #f6efe7;
 }
 
 .home-offer-price {
   font-size: 0.88rem;
   font-weight: 700;
-  color: rgba(143, 220, 255, 0.85);
+  color: rgba(255, 191, 115, 0.92);
   margin: 0;
 }
 
@@ -13973,7 +14361,20 @@ footer {
   letter-spacing: 0.05em;
 }
 
-/* -- Engine card -- */
+.home-offer-card .btn-secondary {
+  background: linear-gradient(180deg, #fff7ef 0%, #fff1df 100%);
+  color: #9f4e17;
+  border-color: rgba(242, 140, 40, 0.18);
+  box-shadow: 0 10px 24px rgba(242, 140, 40, 0.08);
+}
+
+.home-offer-card .btn-secondary:hover {
+  background: linear-gradient(180deg, #fff0db 0%, #ffe5c3 100%);
+  color: #7f3f12;
+  border-color: rgba(242, 140, 40, 0.34);
+}
+
+/* ── Engine card ── */
 .home-engine-card {
   padding: clamp(24px, 3.5vw, 40px);
 }
@@ -14052,7 +14453,7 @@ footer {
   font-weight: 600;
 }
 
-/* -- Proof badge on launch cards -- */
+/* ── Proof badge on launch cards ── */
 .home-proof-offer-badge {
   display: inline-flex;
   font-size: 0.75rem;
@@ -14063,7 +14464,7 @@ footer {
   margin: 0;
 }
 
-/* -- Responsive -- */
+/* ── Responsive ── */
 @media (max-width: 860px) {
   .home-offers-grid {
     grid-template-columns: 1fr;
@@ -14104,17 +14505,17 @@ footer {
 }
 
 /* ============================================================
-   Work / Client Launches page � polished rewrite
+   Work / Client Launches page — polished rewrite
    ============================================================ */
 
-/* -- Page shell -- */
+/* ── Page shell ── */
 .client-launches-page {
   display: grid;
   gap: 64px;
   padding-bottom: 48px;
 }
 
-/* -- Hero -- */
+/* ── Hero ── */
 .wl-hero {
   display: grid;
   gap: 28px;
@@ -14179,7 +14580,7 @@ footer {
   letter-spacing: 0.06em;
 }
 
-/* -- Section heads -- */
+/* ── Section heads ── */
 .wl-section-head {
   display: grid;
   gap: 10px;
@@ -14198,7 +14599,7 @@ footer {
   line-height: 1.6;
 }
 
-/* -- Divider -- */
+/* ── Divider ── */
 .wl-divider {
   display: flex;
   align-items: center;
@@ -14223,7 +14624,7 @@ footer {
   white-space: nowrap;
 }
 
-/* -- Offer grid -- */
+/* ── Offer grid ── */
 .wl-offer-section {
   display: grid;
   gap: 28px;
@@ -14377,7 +14778,7 @@ footer {
   padding: 9px 14px;
 }
 
-/* -- Launch cards -- */
+/* ── Launch cards ── */
 .wl-launch-card {
   border-radius: 24px;
   border: 1px solid rgba(15, 27, 73, 0.09);
@@ -14522,7 +14923,7 @@ footer {
   margin: 0;
 }
 
-/* -- Phase bar -- */
+/* ── Phase bar ── */
 .wl-phase-bar {
   display: flex;
   align-items: center;
@@ -14561,7 +14962,7 @@ footer {
   color: #5a688a;
 }
 
-/* -- Signal blocks -- */
+/* ── Signal blocks ── */
 .wl-launch-signals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -14614,7 +15015,7 @@ footer {
 }
 
 .wl-signal-list li::before {
-  content: "�";
+  content: "—";
   color: #c0c9de;
   font-size: 0.75rem;
   flex-shrink: 0;
@@ -14628,7 +15029,7 @@ footer {
   margin: 8px 0 0;
 }
 
-/* -- Offer badge -- */
+/* ── Offer badge ── */
 .wl-offer-badge {
   display: inline-flex;
   align-items: center;
@@ -14650,7 +15051,7 @@ footer {
   flex-wrap: wrap;
 }
 
-/* -- Launch actions -- */
+/* ── Launch actions ── */
 .wl-launch-actions {
   display: flex;
   flex-wrap: wrap;
@@ -14658,7 +15059,7 @@ footer {
   padding-top: 4px;
 }
 
-/* -- Additional launches grid -- */
+/* ── Additional launches grid ── */
 .wl-grid-section {
   display: grid;
   gap: 28px;
@@ -14671,7 +15072,7 @@ footer {
   align-items: start;
 }
 
-/* -- Final CTA -- */
+/* ── Final CTA ── */
 .wl-cta-card {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -14711,7 +15112,7 @@ footer {
   flex-shrink: 0;
 }
 
-/* -- Responsive -- */
+/* ── Responsive ── */
 @media (max-width: 900px) {
   .wl-offer-grid {
     grid-template-columns: 1fr;
@@ -14800,24 +15201,6 @@ footer {
 .garden-portal-login-cta:hover {
   background: #1a7b62;
   color: #fff !important;
-}
-
-body.brand-garden {
-  color-scheme: light;
-  color: #20332d;
-  background:
-    radial-gradient(780px 420px at 0% 0%, rgba(44, 164, 129, 0.12), transparent 58%),
-    linear-gradient(180deg, #f7fbf8 0%, #eff7f2 100%);
-}
-
-body.brand-garden header:not(.og-site-header) {
-  background: rgba(246, 249, 247, 0.92);
-  border-bottom: 1px solid rgba(18, 62, 48, 0.12);
-  backdrop-filter: blur(8px);
-}
-
-body.brand-garden .main-shell {
-  background: transparent;
 }
 
 .garden-site-header {
@@ -15394,20 +15777,62 @@ body.brand-garden .main-shell {
 
 
 
-/* ---------------------------------------------------------------
-   UNA LABS � PHASE 1 HOMEPAGE UPGRADE
+/* ═══════════════════════════════════════════════════════════════
+   UNA LABS — PHASE 1 HOMEPAGE UPGRADE
    Added: HeroMockupStack, FeatureCarousel, hero copy upgrades,
           /how-it-works page, CSS tokens
-   --------------------------------------------------------------- */
+   ═══════════════════════════════════════════════════════════════ */
 
-/* -- NEW CSS TOKENS ------------------------------------------- */
+/* ── NEW CSS TOKENS ─────────────────────────────────────────── */
 :root {
-  --cta-hover: #5a4dd6;
-  --accent-warm: #e07b39;
-  --surface-glow: rgba(108, 92, 231, 0.08);
+  --accent: #f28c28;
+  --accent-2: #ffb347;
+  --cta-hover: #d96d1f;
+  --accent-warm: #ff9a3d;
+  --surface-glow: rgba(242, 140, 40, 0.12);
+  --shadow-glow: 0 0 0 1px rgba(242, 140, 40, 0.24), 0 18px 44px rgba(255, 179, 71, 0.18);
 }
 
-/* -- HERO UPGRADES -------------------------------------------- */
+body {
+  background:
+    radial-gradient(1100px 700px at -8% -18%, rgba(242, 140, 40, 0.28) 0%, transparent 58%),
+    radial-gradient(860px 540px at 112% -10%, rgba(255, 179, 71, 0.2) 0%, transparent 60%),
+    linear-gradient(180deg, #140d08 0%, #0f0a07 52%, #0b0908 100%);
+}
+
+.logo-mark {
+  background: linear-gradient(150deg, rgba(242, 140, 40, 0.18), rgba(255, 179, 71, 0.08));
+  box-shadow: var(--shadow-glow);
+}
+
+.nav-link.active {
+  background: linear-gradient(120deg, rgba(242, 140, 40, 0.26), rgba(255, 179, 71, 0.18));
+}
+
+.eyebrow,
+.card-kicker,
+.home-page .eyebrow,
+.home-page .card-kicker,
+.hero-accent-word {
+  color: #ffbf73;
+}
+
+.home-page .muted,
+.home-page .field-help,
+.hero-trust-inline,
+.hero-friction-note {
+  color: #d7c9bc;
+}
+
+.home-hero-enterprise {
+  background:
+    radial-gradient(circle at top left, rgba(242, 140, 40, 0.12), transparent 34%),
+    radial-gradient(circle at right center, rgba(255, 179, 71, 0.1), transparent 36%),
+    linear-gradient(145deg, rgba(30, 18, 12, 0.94), rgba(18, 12, 9, 0.96));
+  border-color: rgba(255, 179, 71, 0.14);
+}
+
+/* ── HERO UPGRADES ──────────────────────────────────────────── */
 .hero-accent-word {
   color: var(--accent-2);
 }
@@ -15447,7 +15872,7 @@ body.brand-garden .main-shell {
 
 .btn-primary:hover {
   background: var(--cta-hover);
-  box-shadow: 0 6px 20px rgba(108, 92, 231, 0.35);
+  box-shadow: 0 10px 24px rgba(242, 140, 40, 0.3);
   transform: translateY(-1px);
 }
 
@@ -15461,7 +15886,17 @@ body.brand-garden .main-shell {
   color: var(--accent-2);
 }
 
-/* -- HERO MOCKUP STACK ---------------------------------------- */
+.btn-primary {
+  color: #1f1207;
+  background: linear-gradient(135deg, #f28c28, #ffb347);
+  box-shadow: 0 12px 28px rgba(242, 140, 40, 0.24);
+}
+
+.btn-secondary {
+  border-color: rgba(255, 179, 71, 0.16);
+}
+
+/* ── HERO MOCKUP STACK ──────────────────────────────────────── */
 .hero-mockup-stack {
   position: relative;
   width: 280px;
@@ -15475,7 +15910,7 @@ body.brand-garden .main-shell {
   top: -40px;
   width: 420px;
   height: 520px;
-  background: radial-gradient(ellipse at 60% 40%, rgba(108, 92, 231, 0.18) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 60% 40%, rgba(242, 140, 40, 0.22) 0%, transparent 70%);
   border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%;
   z-index: 0;
   pointer-events: none;
@@ -15583,7 +16018,7 @@ body.brand-garden .main-shell {
   margin-top: 2px;
 }
 
-/* -- FEATURE CAROUSEL ----------------------------------------- */
+/* ── FEATURE CAROUSEL ───────────────────────────────────────── */
 .feature-carousel-section {
   background: var(--bg);
 }
@@ -15677,7 +16112,7 @@ body.brand-garden .main-shell {
   transform: scale(1.25);
 }
 
-/* -- HOW IT WORKS PAGE ---------------------------------------- */
+/* ── HOW IT WORKS PAGE ──────────────────────────────────────── */
 .hiw-hero {
   max-width: 760px;
 }
@@ -15826,7 +16261,7 @@ body.brand-garden .main-shell {
 }
 
 .hiw-ateam-bullets li::before {
-  content: "?";
+  content: "→";
   color: var(--accent);
   font-weight: 700;
   flex-shrink: 0;
@@ -15890,7 +16325,7 @@ body.brand-garden .main-shell {
   line-height: 1.6;
 }
 
-/* -- PRICING PAGE � TIER CARDS, COMPARE TABLE, TRUST/FAQ GRID -- */
+/* ── PRICING PAGE — TIER CARDS, COMPARE TABLE, TRUST/FAQ GRID ── */
 
 .pricing-page { }
 
@@ -16057,36 +16492,4 @@ body.brand-garden .main-shell {
 
 @media (max-width: 900px) {
   .pricing-trust-faq-grid { grid-template-columns: 1fr; }
-}
-
-/* Force Una Labs dark visual system for non-Garden and non-OG contexts. */
-body:not(.brand-garden):not(.brand-og-trades),
-body.brand-una {
-  color-scheme: dark;
-  --bg: #0b0b0f;
-  --bg-soft: #11131a;
-  --surface: #151823;
-  --surface-2: #1a1f2d;
-  --surface-3: #101421;
-  --glass: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.15);
-  --text: #ffffff;
-  --muted: #b8b8c0;
-  --copy: #e5e7eb;
-  --accent: #6c5ce7;
-  --accent-2: #00d4ff;
-  --shadow-soft: 0 16px 40px rgba(0, 0, 0, 0.32);
-  --shadow-glow: 0 0 0 1px rgba(108, 92, 231, 0.25), 0 18px 44px rgba(0, 212, 255, 0.18);
-  color: var(--text);
-  background:
-    radial-gradient(1000px 620px at -10% -20%, rgba(108, 92, 231, 0.3) 0%, transparent 60%),
-    radial-gradient(900px 560px at 115% -10%, rgba(0, 212, 255, 0.22) 0%, transparent 62%),
-    linear-gradient(180deg, #0c0e15 0%, #090b11 100%);
-}
-
-body:not(.brand-garden):not(.brand-og-trades) header,
-body.brand-una header {
-  background: rgba(8, 10, 16, 0.72);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
 }

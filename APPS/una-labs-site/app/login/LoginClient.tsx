@@ -80,7 +80,7 @@ export function LoginClient() {
 
         <div className="mb-5">
           <Button type="button" variant="primary" size="lg" className="w-full justify-center" onClick={() => void handleGoogleSignIn()} disabled={loading}>
-            {loading ? 'Redirecting...' : 'Continue with Google'}
+            {loading ? 'Redirecting…' : 'Continue with Google'}
           </Button>
         </div>
 

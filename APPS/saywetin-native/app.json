@@ -2,10 +2,10 @@
   "expo": {
     "name": "SayWetin",
     "slug": "saywetin",
-    "version": "1.3.5",
+    "version": "1.3.6",
     "android": {
       "package": "com.saywetin.app",
-      "versionCode": 41
+      "versionCode": 42
     }
   }
 }

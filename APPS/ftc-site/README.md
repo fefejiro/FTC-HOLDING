@@ -107,6 +107,40 @@ Operator security model:
 - the public host never proxies private operator APIs
 - if Access is not configured yet, the ops worker can enforce worker-level Basic Auth as a secure fallback
 
+## Authentication & routing
+
+### Post-login destination logic
+
+After OAuth sign-in with Google:
+
+- **Admin accounts** (in `NEXT_PUBLIC_UNALABS_ADMIN_EMAILS` or `NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS`):
+  - Route to `https://ops.unalabs.cloud` (Una Labs admin dashboard).
+  - Includes `mike.fejiro@gmail.com` and `uby400@gmail.com` by default.
+
+- **Non-admin accounts from Uma Labs origin** (unalabs.cloud, localhost:3001):
+  - Route to `/products` page on the same origin (Una Labs product catalog).
+
+- **Non-admin accounts from Garden domain** (gardencleaners.ca):
+  - Route to the independent Garden portal at `https://gardencleaners.ca/portal`.
+
+This prevents non-admin users from accidentally landing on the wrong brand surface.
+
+### Theme system
+
+**Una Labs default theme (dark):**
+- Dark background with purple + cyan accent gradients.
+- Applied to all routes except branded subdomains.
+
+**Garden Cleaners theme (light):**
+- Light background with green accents.
+- Applied only to `gardencleaners.ca` and related routes.
+
+**OG Trades Academy theme (light):**
+- Light background with orange/warm accents.
+- Applied only to `ogtradesacademy.com` and related routes.
+
+Theme is enforced at both CSS level (`styles/globals.css`) and client-side router level (`app/components/RootBrandRouter.tsx`).
+
 ## Current launch mode
 
 - Canonical URL: `https://unalabs.cloud`

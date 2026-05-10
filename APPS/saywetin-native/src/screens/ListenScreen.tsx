@@ -8,6 +8,7 @@ import { useAudioSession } from '../audio/useAudioSession';
 import { identifyByText, uploadListenSample } from '../api/listen';
 import type { RitualTrack } from '../state/ritual-state';
 import { ritualTokens } from '../theme/tokens';
+import { getStatusChip, getStatusSubtitle, shouldShowSlowNetworkWarning, getSlowNetworkMessage } from '../utils/status-messaging';
 
 const { colors } = ritualTokens;
 const CAPTURE_DURATION_MS = 5000;
@@ -396,58 +397,20 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
   };
 
   const stageChip = useMemo(() => {
-    if (phase === 'requesting-permission') {
-      return 'Preparing mic';
-    }
-    if (phase === 'capturing') {
-      return 'Listening live';
-    }
-    if (phase === 'uploading') {
-      return stageElapsedMs > 4500 ? 'Uploading (slow network)' : 'Uploading sample';
-    }
-    if (phase === 'matching') {
-      return stageElapsedMs > 7000 ? 'Matching (still working)' : 'Matching song';
-    }
-    if (phase === 'offline') {
-      return 'Offline fallback';
-    }
-    if (phase === 'failed') {
-      return 'Match failed';
-    }
-    if (phase === 'cancelled') {
-      return 'Capture stopped';
-    }
-    return 'Ready';
-  }, [phase, stageElapsedMs]);
+    return getStatusChip({ phase, elapsedMs: stageElapsedMs, secondsLeft });
+  }, [phase, stageElapsedMs, secondsLeft]);
 
   const subtitleText = useMemo(() => {
-    if (phase === 'requesting-permission') {
-      return 'Checking microphone permissions.';
-    }
-    if (phase === 'capturing') {
-      return `Capturing audio - ${secondsLeft}s left. Tap orb to stop early.`;
-    }
-    if (phase === 'uploading') {
-      return stageElapsedMs > 4500
-        ? 'Connection is slower than usual. Keep app open while we upload your sample.'
-        : 'Sending sample to recognition service.';
-    }
-    if (phase === 'matching') {
-      return stageElapsedMs > 7000
-        ? 'Still matching the song. We will use lyric fallback if needed.'
-        : 'Fingerprint lock in progress.';
-    }
-    if (phase === 'offline') {
-      return 'Network unstable. You can still match by lyric below.';
-    }
-    if (phase === 'failed') {
-      return 'No confident match yet. Try again or switch to lyric input.';
-    }
-    if (phase === 'cancelled') {
-      return 'Capture cancelled. Tap again when ready.';
-    }
-    return microcopy;
-  }, [microcopy, phase, secondsLeft, stageElapsedMs]);
+    return getStatusSubtitle({ phase, elapsedMs: stageElapsedMs, secondsLeft, errorMessage });
+  }, [phase, stageElapsedMs, secondsLeft, errorMessage]);
+
+  const slowNetworkWarningVisible = useMemo(() => {
+    return shouldShowSlowNetworkWarning(phase, stageElapsedMs);
+  }, [phase, stageElapsedMs]);
+
+  const slowNetworkWarningText = useMemo(() => {
+    return getSlowNetworkMessage(phase, stageElapsedMs);
+  }, [phase, stageElapsedMs]);
 
   return (
     <FadeInView duration={orbPhase === 'matching' ? 220 : 180}>
@@ -471,6 +434,10 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
         </Text>
 
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+        {slowNetworkWarningVisible && slowNetworkWarningText ? (
+          <Text style={[styles.errorText, { color: colors.amber, opacity: 0.8 }]}>{slowNetworkWarningText}</Text>
+        ) : null}
 
         {showLyricInput ? (
           <View style={styles.lyricBox}>

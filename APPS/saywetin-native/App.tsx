@@ -6,7 +6,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useRitualState, type RitualScreen } from './src/state/ritual-state';
 import { ritualTokens } from './src/theme/tokens';
 import { RitualNavigator } from './src/navigation/RitualNavigator';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { colors } = ritualTokens;
@@ -17,8 +17,19 @@ export default function App() {
   });
   const ritual = useRitualState();
   const [, setActiveScreen] = useState<RitualScreen>('home');
+  const [fontLoadTimedOut, setFontLoadTimedOut] = useState(false);
 
-  if (!fontsLoaded && !fontError) {
+  useEffect(() => {
+    if (fontsLoaded || fontError) return;
+
+    const timeoutId = setTimeout(() => {
+      setFontLoadTimedOut(true);
+    }, 2500);
+
+    return () => clearTimeout(timeoutId);
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError && !fontLoadTimedOut) {
     return null;
   }
 

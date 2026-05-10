@@ -2,7 +2,6 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { GardenPortalUserRole } from "../../../lib/gardenContracts";
-import { isSharedAdminEmail } from "../../../lib/adminEmails";
 import { isGardenPortalAuthConfigured } from "../../../lib/gardenPortalAuth";
 import getSupabase from "../../../lib/supabase";
 
@@ -70,12 +69,6 @@ type PortalProjectRecord = {
   created_at: string | null;
   service_region: string | null;
   assigned_owner: string | null;
-};
-
-type PortalProfileRecord = {
-  id: string;
-  role: GardenPortalUserRole | null;
-  is_active: boolean | null;
 };
 
 type AuthState = "loading" | "authenticated" | "unauthenticated" | "unavailable";
@@ -190,21 +183,17 @@ function normalizePortalEmail(email: string): string {
 
 function resolveRole(email: string): GardenPortalUserRole {
   const normalizedEmail = normalizePortalEmail(email);
-  if (isSharedAdminEmail(normalizedEmail)) {
+  const gardenAdmins = [
+    "uby400@gmail.com",
+    "mike.fejiro@gmail.com"
+  ];
+  if (gardenAdmins.includes(normalizedEmail)) {
     return "admin";
   }
   if (normalizedEmail.endsWith("@gardencleaners.ca")) {
     return "staff";
   }
   return "client";
-}
-
-function resolveRoleFromProfile(sessionEmail: string, profileRole: string | null): GardenPortalUserRole {
-  const roleCandidate = String(profileRole || "").trim().toLowerCase();
-  if (roleCandidate === "admin" || roleCandidate === "staff" || roleCandidate === "client") {
-    return roleCandidate;
-  }
-  return resolveRole(sessionEmail);
 }
 
 export default function GardenPortalAccessPanel() {
@@ -368,7 +357,6 @@ export default function GardenPortalAccessPanel() {
         const supabase = getSupabase();
         const { data: sessionData } = await supabase.auth.getSession();
         const sessionEmail = (emailFromSession || sessionData.session?.user?.email || "").trim().toLowerCase();
-        const authUserId = sessionData.session?.user?.id || "";
 
         if (!mounted) return;
         if (!sessionEmail) {
@@ -382,42 +370,25 @@ export default function GardenPortalAccessPanel() {
           setQueueMessage("");
           return;
         }
-
-        let profileRow: PortalProfileRecord | null = null;
-        if (authUserId) {
-          try {
-            const { data } = await supabase
-              .from("garden_cleaners_profiles")
-              .select("id, role, is_active")
-              .eq("auth_user_id", authUserId)
-              .maybeSingle();
-            profileRow = data as PortalProfileRecord | null;
-          } catch {
-            profileRow = null;
-          }
-        }
-
-        const nextRole = resolveRoleFromProfile(sessionEmail, profileRow?.role ?? null);
+        const nextRole = resolveRole(sessionEmail);
         setAuthState("authenticated");
         setUserEmail(sessionEmail);
         setRole(nextRole);
 
-        if (profileRow?.is_active === false) {
-          setAuthState("unauthenticated");
-          setUserEmail("");
-          setRole(null);
-          setStaffProfileId(null);
-          setJobs([]);
-          setQuotes([]);
-          setLoadError("Your portal account is currently disabled. Please contact Garden Cleaners support.");
-          setQueueMessage("");
-          return;
-        }
-
         // Fetch and store the staff profile ID so that visibleJobs can filter by it
         if (nextRole === "staff") {
-          if (mounted) {
-            setStaffProfileId(profileRow?.id ?? null);
+          try {
+            const supabase = getSupabase();
+            const { data: profileRow } = await supabase
+              .from("garden_cleaners_profiles")
+              .select("id")
+              .eq("auth_user_id", sessionData.session?.user?.id ?? "")
+              .maybeSingle();
+            if (mounted) {
+              setStaffProfileId(profileRow?.id ?? null);
+            }
+          } catch {
+            if (mounted) setStaffProfileId(null);
           }
         } else {
           if (mounted) setStaffProfileId(null);
@@ -714,7 +685,7 @@ export default function GardenPortalAccessPanel() {
 
   async function handleGoogleSignIn() {
     const supabase = getSupabase();
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const redirectTo = `${window.location.origin}/garden-cleaners/portal`;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo }
@@ -725,11 +696,11 @@ export default function GardenPortalAccessPanel() {
     <section className="section garden-section" id="portal-access" tabIndex={-1}>
       <div className="section-heading">
         <p className="eyebrow">Portal access</p>
-        <h2>Garden Cleaners client portal</h2>
+        <h2>Role-based Garden Cleaners portal</h2>
         <p>
-          {isAdmin && "Admin view: manage jobs, convert quotes, and assign staff."}
-          {isStaff && "Staff view: check assigned jobs and keep status up to date."}
-          {isCustomer && "Client view: track your current job status."}
+          {isAdmin && "Admin: manage all jobs, convert quotes, assign staff."}
+          {isStaff && "Staff: view and update assigned jobs."}
+          {isCustomer && "Customer: view your job status."}
         </p>
       </div>
 
@@ -737,7 +708,7 @@ export default function GardenPortalAccessPanel() {
         <p className="garden-panel-kicker">Regional portal</p>
         <h3 style={{ marginTop: 0 }}>Need quote help before sign-in?</h3>
         <p className="muted" style={{ marginTop: 0 }}>
-          Start a regional quote request or contact our team directly.
+          Start a regional quote path or contact operations directly.
         </p>
         <div className="hero-actions" style={{ marginBottom: 12 }}>
           <a
@@ -804,7 +775,7 @@ export default function GardenPortalAccessPanel() {
           )}
           {authState === "loading" && loadingTimeout && (
             <div style={{ color: "#b94a48", background: "#fff0f0", borderRadius: 8, padding: "12px 16px", marginTop: 16 }}>
-              We could not load your portal access yet. Please sign out and try again, or contact support.
+              We couldn't load your portal access yet. Please sign out and try again, or contact support.
             </div>
           )}
           {authState === "unavailable" ? (

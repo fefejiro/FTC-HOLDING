@@ -8,7 +8,19 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "docs:guard": "node scripts/docs-guard.mjs"
+    "docs:guard": "node scripts/docs-guard.mjs",
+    "g41:copy": "node scripts/chatgpt-fallback.mjs --mode g41",
+    "g41:open": "node scripts/chatgpt-fallback.mjs --mode g41 --open",
+    "g41:go": "node scripts/chatgpt-fallback.mjs --mode g41 --open --paste",
+    "g41:send": "node scripts/chatgpt-fallback.mjs --mode g41 --open --paste --send",
+    "g41qa:copy": "node scripts/chatgpt-fallback.mjs --mode g41qa",
+    "g41qa:open": "node scripts/chatgpt-fallback.mjs --mode g41qa --open",
+    "g41qa:go": "node scripts/chatgpt-fallback.mjs --mode g41qa --open --paste",
+    "g41qa:send": "node scripts/chatgpt-fallback.mjs --mode g41qa --open --paste --send",
+    "g41audit:copy": "node scripts/chatgpt-fallback.mjs --mode g41audit",
+    "g41audit:open": "node scripts/chatgpt-fallback.mjs --mode g41audit --open",
+    "g41audit:go": "node scripts/chatgpt-fallback.mjs --mode g41audit --open --paste",
+    "g41audit:send": "node scripts/chatgpt-fallback.mjs --mode g41audit --open --paste --send"
   },
   "dependencies": {
     "react": "^19.2.5",

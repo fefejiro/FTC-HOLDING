@@ -166,7 +166,6 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 
 ## What the Client Needs to Do
 
-<<<<<<< Updated upstream
 - [ ] Add production domain to Supabase Auth allow-list
 - [ ] Create 3 Stripe prices and copy IDs into env vars
 - [ ] Register Stripe webhook endpoint and copy signing secret
@@ -211,7 +210,7 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 - [ ] **SB3** — `SUPABASE_SERVICE_ROLE_KEY` set (Cloudflare secret)
 - [ ] **SB4** — Production domain in Supabase Auth allow-list
 - [ ] **SB5** — Redirect URL `https://[domain]/auth/callback` in allow-list
-- [ ] **SB6** — All 4 migrations applied to live Supabase project
+- [ ] **SB6** — All current migrations applied to live Supabase project (currently 17)
 
 ### Cloudflare (required for deployment)
 
@@ -219,15 +218,6 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 - [ ] **CF2** — SSL/TLS set to Full (Strict)
 - [ ] **CF3** — All env vars and secrets confirmed in Cloudflare Workers settings
 - [ ] **CF4** — `npm run deploy:worker` succeeds without errors
-=======
-- Add production domain to Supabase Auth allow-list
-- Create 3 Stripe prices and copy IDs into env vars
-- Register Stripe webhook endpoint and copy signing secret
-- Get Daily.co API key and domain
-- Set all env vars in Cloudflare Workers
-- Run `npm run build:worker && npm run deploy:worker`
-- Test: sign up, book, subscribe, join lesson, and admin view
->>>>>>> Stashed changes
 
 ---
 

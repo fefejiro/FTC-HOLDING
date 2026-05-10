@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '../../lib/auth/getCurrentUser';
-import { createBookingRequest, listParentBookings, listTutorOptions } from '../../lib/bookings';
+import { createBookingRequest, listParentBookings, listParentLinkedStudents, listTutorOptions } from '../../lib/bookings';
+import { listClassroomPostsForStudentIds } from '../../lib/classroom';
 
 type ParentPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -15,18 +16,24 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
   const params = (await searchParams) ?? {};
   const bookingError = typeof params.bookingError === 'string' ? params.bookingError : null;
 
-  const [tutors, bookings] = await Promise.all([listTutorOptions(), listParentBookings()]);
+  const [tutors, bookings, linkedStudents] = await Promise.all([
+    listTutorOptions(),
+    listParentBookings(),
+    listParentLinkedStudents(),
+  ]);
+  const recentActivity = await listClassroomPostsForStudentIds(linkedStudents.map((student) => student.id), 10);
 
   async function createBookingAction(formData: FormData) {
     'use server';
 
     const tutorId = String(formData.get('tutorId') ?? '');
+    const studentId = String(formData.get('studentId') ?? '');
     const subject = String(formData.get('subject') ?? '');
     const requestedStartAt = String(formData.get('requestedStartAt') ?? '');
     const durationMinutesRaw = String(formData.get('durationMinutes') ?? '60');
     const notes = String(formData.get('notes') ?? '');
 
-    if (!tutorId || !subject || !requestedStartAt) {
+    if (!tutorId || !studentId || !subject || !requestedStartAt) {
       redirect('/parent?bookingError=Missing%20required%20fields');
     }
 
@@ -38,6 +45,7 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
     try {
       await createBookingRequest({
         tutorId,
+        studentId,
         subject,
         requestedStartAt,
         durationMinutes,
@@ -66,6 +74,19 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
         ) : null}
 
         <form action={createBookingAction} className="grid" style={{ marginTop: 16 }}>
+          <label className="grid" style={{ gap: 6 }}>
+            <span className="muted">Student</span>
+            <select name="studentId" required style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe3f0' }}>
+              <option value="">Select student</option>
+              {linkedStudents.map((student) => (
+                <option key={student.id} value={student.id}>
+                    {student.display_name}
+                  {student.grade_level ? ` (Grade ${student.grade_level})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label className="grid" style={{ gap: 6 }}>
             <span className="muted">Tutor</span>
             <select name="tutorId" required style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe3f0' }}>
@@ -155,6 +176,12 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
                   {new Date(booking.requested_start_at).toLocaleString()} • {booking.duration_minutes} mins
                 </p>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Student: {booking.student_name ?? 'Legacy booking'}
+                </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Tutor: {booking.tutor_name ?? 'Unknown tutor'}
+                </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
                   Status: <strong>{booking.status}</strong>
                 </p>
                 {booking.status === 'accepted' ? (
@@ -176,6 +203,51 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
                     Join Lesson
                   </a>
                 ) : null}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="surface card">
+        <p className="kicker">Family Setup</p>
+        <h2 className="h2">Linked Students</h2>
+        {linkedStudents.length === 0 ? (
+          <p className="muted">No students are linked to this parent account yet. Ask admin to link a student.</p>
+        ) : (
+          <div className="grid" style={{ gap: 10 }}>
+            {linkedStudents.map((student) => (
+              <article key={student.id} className="surface card" style={{ boxShadow: 'none' }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>{student.display_name}</p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Grade: {student.grade_level ?? 'Not set'}
+                </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  Linked on: {new Date(student.linked_at).toLocaleDateString()}
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="surface card">
+        <p className="kicker">Learning Activity</p>
+        <h2 className="h2">Recent Student Timeline</h2>
+        {recentActivity.length === 0 ? (
+          <p className="muted">No classroom updates yet for your linked students.</p>
+        ) : (
+          <div className="grid" style={{ gap: 10 }}>
+            {recentActivity.map((entry) => (
+              <article key={entry.id} className="surface card" style={{ boxShadow: 'none' }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>{entry.studentName ?? 'Student thread'}</p>
+                <p className="muted" style={{ margin: '4px 0 0' }}>
+                  {entry.authorRole === 'tutor' ? 'Teacher update' : 'Student update'} by {entry.authorName}
+                </p>
+                <p className="muted" style={{ margin: '4px 0 0' }}>
+                  {new Date(entry.createdAt).toLocaleString()}
+                </p>
+                <p style={{ margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>{entry.body}</p>
               </article>
             ))}
           </div>

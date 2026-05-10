@@ -63,6 +63,20 @@ Documentation updates are now enforced in CI on pull requests.
 - Guard workflow: `.github/workflows/docs-guard.yml`
 - Guard script: `scripts/docs-guard.mjs`
 
+## ChatGPT 4.1 Fallback
+
+When Copilot premium data is exhausted, use the repo fallback prompts for strict, evidence-based execution:
+
+- Master prompt: `.github/prompts/chatgpt41-fallback.prompt.md`
+- QA prompt (Playwright E2E): `.github/prompts/chatgpt41-fallback-qa-e2e.prompt.md`
+- Runbook: `docs/CHATGPT41-FALLBACK-RUNBOOK.md`
+- IDE quick keywords: `/g41`, `/g41qa`
+- Clipboard automation: `npm run g41:copy -- --task "..."`, `npm run g41qa:copy -- --task "..."`
+- One-shot automation: `npm run g41:go -- --task "..."`, `npm run g41qa:go -- --task "..."`
+- Independent audit automation: `npm run g41audit:go -- --task "..."`, `npm run g41audit:send -- --task "..."`
+
+These prompts are designed to reduce directory hallucination and enforce verification discipline.
+
 
 ## Build
 ```

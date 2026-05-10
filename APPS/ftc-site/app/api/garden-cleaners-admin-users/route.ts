@@ -1,13 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { getSharedAdminEmailSet } from "@/lib/adminEmails";
-import { getGardenCleanersPortalUrl } from "@/lib/gardenCleaners";
 
 // Admin-only user management API for Garden Cleaners portal.
 // All privileged operations use the Supabase service-role key server-side.
 // The service-role key is NEVER sent to the browser.
 
-const ADMIN_EMAILS = getSharedAdminEmailSet();
+const ADMIN_EMAILS = new Set([
+  "hello@unalabs.cloud",
+  "fejiro.efiuvwere@gmail.com",
+  "mike.fejiro@gmail.com",
+  "uby400@gmail.com",
+  ...(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+]);
 
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -161,7 +168,7 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient();
 
     // Invite the user via Supabase Auth
-    const redirectTo = getGardenCleanersPortalUrl("#portal-access");
+    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || "https://gardencleaners.ca"}/garden-cleaners/portal#portal-access`;
     const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
       redirectTo,
       data: { display_name: displayName, garden_role: role },
@@ -302,7 +309,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     const admin = createAdminClient();
-    const redirectTo = getGardenCleanersPortalUrl("#portal-access");
+    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || "https://gardencleaners.ca"}/garden-cleaners/portal#portal-access`;
 
     // Find existing auth user by email
     const { data: listData, error: listError } = await admin.auth.admin.listUsers();
