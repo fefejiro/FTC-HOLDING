@@ -5,8 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e475ca75-9849-4f46-b536-0e782fd94f7a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/android/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/android/app/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/job-reply-agent/data/job_leads.sqlite" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/job-reply-agent/data/job_leads.sqlite" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/bat.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/bat.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/e2e.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/e2e.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/summary.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/summary.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/uat.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/uat.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/vitest.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/vitest.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

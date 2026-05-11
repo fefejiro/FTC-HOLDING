@@ -1,16 +1,8 @@
 {
   "layer": "e2e",
-  "startedAt": "2026-05-05T15:56:43.324Z",
-  "runs": [
-    {
-      "flow": "cold-launch.yaml",
-      "ok": false,
-      "stdoutTail": "",
-      "stderrTail": "",
-      "code": null
-    }
-  ],
+  "startedAt": "2026-05-11T21:52:49.938Z",
+  "runs": [],
   "ok": false,
-  "skipped": false,
-  "reason": ""
+  "skipped": true,
+  "reason": "maestro CLI not installed (see qa/e2e/run.mjs header)"
 }

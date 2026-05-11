@@ -1,6 +1,6 @@
 {
   "layer": "uat",
-  "startedAt": "2026-04-27T16:23:33.756Z",
+  "startedAt": "2026-05-11T21:52:43.396Z",
   "scenarios": [
     {
       "file": "identify-journey.json",
@@ -34,16 +34,19 @@
               "providers": [
                 "LRCLIB",
                 "Lyrics.ovh",
-                "AZLyrics"
+                "Genius",
+                "AZLyrics",
+                "AI recall fallback"
               ],
-              "geniusApiKey": "Not set",
-              "aiFallback": "Disabled"
+              "geniusApiKey": "Configured",
+              "aiFallback": "openai configured"
             },
             "openai": {
-              "configured": false,
-              "provider": "none",
+              "configured": true,
+              "provider": "openai",
               "model": "gpt-4o-mini",
-              "apiKeySource": null,
+              "apiKeySource": "OPENAI_API_KEY",
+              "baseURLSource": null,
               "service": "AI Cultural Context"
             },
             "database": {
@@ -57,15 +60,28 @@
           "id": "U3",
           "title": "User searches song by lyric snippet (Burna Boy)",
           "ok": true,
-          "skipped": true,
-          "status": 503,
+          "status": 200,
           "failures": [],
           "body": {
-            "success": false,
-            "errorCode": "AI_NOT_CONFIGURED",
-            "error": "Lyric matching is not available right now. Try again later."
-          },
-          "skipReason": "OPENAI_API_KEY not set on backend (intentional gate)"
+            "success": true,
+            "sessionId": "a9649b03-d7b2-43ca-8889-b173a43483e5",
+            "recognizedTrack": {
+              "id": "0678a47a-deee-4aaa-8f49-2f80baa6c832",
+              "title": "Forever",
+              "artist": "Burna Boy",
+              "album": null,
+              "duration": null,
+              "genre": null,
+              "spotifyId": null,
+              "youtubeId": null,
+              "confidenceScore": 90,
+              "coverArtUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/e9/a0/16/e9a016aa-a82f-8e67-50b2-f1101e0be964/22UM1IM30248.rgb.jpg/1200x1200bb.jpg",
+              "matchSource": "lyric_text"
+            },
+            "matchSource": "lyric_text",
+            "confidence": 90,
+            "processingTime": 1057
+          }
         },
         {
           "id": "U4",

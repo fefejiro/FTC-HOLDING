@@ -15,35 +15,37 @@
   .badge.fail{background:#fce8e6;color:#b00020}
 </style></head><body>
 <h1>SayWetin QA Report <span class="badge fail">RED</span></h1>
-<div class="meta">Generated 2026-04-27T01:30:52.243Z</div>
+<div class="meta">Generated 2026-05-11T21:52:49.984Z</div>
 <table><thead><tr><th>Layer</th><th>Result</th><th>Duration</th><th>Exit</th><th>Tail</th></tr></thead>
 <tbody>
-  <tr class="ok">
+  <tr class="fail">
     <td>smoke</td>
-    <td>PASS</td>
-    <td>1.3s</td>
-    <td>exit 0</td>
+    <td>FAIL</td>
+    <td>5.2s</td>
+    <td>exit 3221226505</td>
     <td><pre>SayWetin backend smoke @ https://saywetin-api-production.up.railway.app
   ... health PASS (status ok)
-  ... identify-by-text (well-known lyric) PASS (SKIPPED (AI_NOT_CONFIGURED — OPENAI_API_KEY not set))
+  ... identify-by-text (well-known lyric) PASS (Burna Boy — Forever)
 
 2/2 passed
+Assertion failed: !(handle-&gt;flags &amp; UV_HANDLE_CLOSING), file src\win\async.c, line 76
 </pre></td>
   </tr>
   <tr class="ok">
     <td>unit</td>
     <td>PASS</td>
-    <td>2.0s</td>
+    <td>14.3s</td>
     <td>exit 0</td>
     <td><pre>
 [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FTC HOLDING/APPS/saywetin-native/qa[39m
 
- [32m✓[39m unit/confidence.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 3[2mms[22m[39m
+ [32m✓[39m unit/live-lyrics-index.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m unit/confidence.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 11[2mms[22m[39m
 
-[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
-[2m      Tests [22m [1m[32m2 passed[39m[22m[90m (2)[39m
-[2m   Start at [22m 21:29:45
-[2m   Duration [22m 766ms[2m (transform 42ms, setup 0ms, collect 36ms, tests 3ms, environment 0ms, prepare 207ms)[22m
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m6 passed[39m[22m[90m (6)[39m
+[2m   Start at [22m 17:51:29
+[2m   Duration [22m 4.23s[2m (transform 198ms, setup 0ms, collect 220ms, tests 28ms, environment 2ms, prepare 1.73s)[22m
 
 JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json
 </pre></td>
@@ -51,19 +53,20 @@ JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.jso
   <tr class="ok">
     <td>api</td>
     <td>PASS</td>
-    <td>3.7s</td>
+    <td>12.1s</td>
     <td>exit 0</td>
     <td><pre>
 [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FTC HOLDING/APPS/saywetin-native/qa[39m
 
- [32m✓[39m api/endpoints.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 1711[2mms[22m[39m
-   [33m[2m✓[22m[39m API integration @ https://saywetin-api-production.up.railway.app[2m &gt; [22mGET /api/health -&gt; 200 ok [33m416[2mms[22m[39m
-   [33m[2m✓[22m[39m API integration @ https://saywetin-api-production.up.railway.app[2m &gt; [22mGET /api/status -&gt; reports configured services [33m630[2mms[22m[39m
+ [32m✓[39m api/endpoints.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2612[2mms[22m[39m
+   [33m[2m✓[22m[39m API integration @ https://api.saywetin.app[2m &gt; [22mGET /api/health -&gt; 200 ok [33m358[2mms[22m[39m
+   [33m[2m✓[22m[39m API integration @ https://api.saywetin.app[2m &gt; [22mGET /api/status -&gt; reports configured services [33m807[2mms[22m[39m
+   [33m[2m✓[22m[39m API integration @ https://api.saywetin.app[2m &gt; [22mPOST /api/identify-by-text -&gt; 200 OR 503 (until OpenAI key set) [33m1248[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m5 passed[39m[22m[90m (5)[39m
-[2m   Start at [22m 21:29:47
-[2m   Duration [22m 2.47s[2m (transform 49ms, setup 0ms, collect 59ms, tests 1.71s, environment 0ms, prepare 223ms)[22m
+[2m   Start at [22m 17:51:41
+[2m   Duration [22m 4.69s[2m (transform 124ms, setup 0ms, collect 121ms, tests 2.61s, environment 1ms, prepare 413ms)[22m
 
 JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json
 </pre></td>
@@ -71,69 +74,72 @@ JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.jso
   <tr class="ok">
     <td>contract</td>
     <td>PASS</td>
-    <td>3.1s</td>
+    <td>7.9s</td>
     <td>exit 0</td>
     <td><pre>
 [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FTC HOLDING/APPS/saywetin-native/qa[39m
 
- [32m✓[39m contract/shapes.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1010[2mms[22m[39m
-   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/health matches schema [33m396[2mms[22m[39m
-   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/status matches schema [33m401[2mms[22m[39m
+ [32m✓[39m contract/shapes.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 2565[2mms[22m[39m
+   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/health matches schema [33m403[2mms[22m[39m
+   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/status matches schema [33m360[2mms[22m[39m
+   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/identify-by-text matches success-or-error union [33m1796[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
-[2m   Start at [22m 21:29:51
-[2m   Duration [22m 1.81s[2m (transform 56ms, setup 0ms, collect 76ms, tests 1.01s, environment 0ms, prepare 269ms)[22m
+[2m   Start at [22m 17:51:49
+[2m   Duration [22m 4.48s[2m (transform 251ms, setup 0ms, collect 411ms, tests 2.56s, environment 1ms, prepare 555ms)[22m
 
 JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json
 </pre></td>
   </tr>
-  <tr class="ok">
+  <tr class="fail">
     <td>security</td>
-    <td>PASS</td>
-    <td>3.4s</td>
-    <td>exit 0</td>
+    <td>FAIL</td>
+    <td>15.0s</td>
+    <td>exit 3221226505</td>
     <td><pre>  PASS npm-audit (saywetin-native) (critical=0 high=0)
   PASS secret-scan (clean)
-  PASS https-headers (gated: missing x-content-type-options, strict-transport-security (awaiting Railway redeploy))
+  FAIL https-headers (missing: x-content-type-options, strict-transport-security)
   PASS admin-protected (status=404)
+Assertion failed: !(handle-&gt;flags &amp; UV_HANDLE_CLOSING), file src\win\async.c, line 76
 </pre></td>
   </tr>
-  <tr class="fail">
+  <tr class="ok">
     <td>perf</td>
-    <td>FAIL</td>
-    <td>31.1s</td>
-    <td>exit 1</td>
-    <td><pre>[perf] health -&gt; GET https://saywetin-api-production.up.railway.app/api/health
-[perf] status -&gt; GET https://saywetin-api-production.up.railway.app/api/status
-  FAIL health: p99=829ms rps=101.0 err=2
-  PASS status: p99=1028ms rps=67.8 err=0
+    <td>PASS</td>
+    <td>32.9s</td>
+    <td>exit 0</td>
+    <td><pre>[perf] health -&gt; GET https://api.saywetin.app/api/health
+[perf] status -&gt; GET https://api.saywetin.app/api/status
+  PASS health: p99=192ms rps=256.2 err=0
+  PASS status: p99=852ms rps=82.8 err=0
 </pre></td>
   </tr>
   <tr class="ok">
     <td>uat</td>
     <td>PASS</td>
-    <td>2.1s</td>
+    <td>3.3s</td>
     <td>exit 0</td>
     <td><pre>  PASS uat UAT — End-user music recognition journey :: U1 Backend reachable
   PASS uat UAT — End-user music recognition journey :: U2 Backend reports DB schema ready
-  SKIP uat UAT — End-user music recognition journey :: U3 User searches song by lyric snippet (Burna Boy) — OPENAI_API_KEY not set on backend (intentional gate)
+  PASS uat UAT — End-user music recognition journey :: U3 User searches song by lyric snippet (Burna Boy)
   PASS uat UAT — End-user music recognition journey :: U4 Listening history is queryable
 </pre></td>
   </tr>
   <tr class="fail">
     <td>bat</td>
     <td>FAIL</td>
-    <td>21.9s</td>
-    <td>exit 1</td>
-    <td><pre>  FAIL bat BAT — Business acceptance: recognition core works for paying-tier flow :: B1 ERROR fetch failed
-  FAIL bat BAT — Business acceptance: recognition core works for paying-tier flow :: B2 ERROR fetch failed
+    <td>3.2s</td>
+    <td>exit 3221226505</td>
+    <td><pre>  PASS bat BAT — Business acceptance: recognition core works for paying-tier flow :: B1 Recognition by text returns artist + title
+  PASS bat BAT — Business acceptance: recognition core works for paying-tier flow :: B2 Garbage input is rejected, not 500
+Assertion failed: !(handle-&gt;flags &amp; UV_HANDLE_CLOSING), file src\win\async.c, line 76
 </pre></td>
   </tr>
   <tr class="ok">
     <td>e2e</td>
     <td>PASS</td>
-    <td>0.8s</td>
+    <td>1.4s</td>
     <td>exit 0</td>
     <td><pre></pre></td>
   </tr></tbody></table>
