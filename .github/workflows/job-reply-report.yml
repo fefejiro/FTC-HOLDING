@@ -1,10 +1,9 @@
-name: Job Reply — Gmail Cycle
+name: Job Reply — Daily Report
 
 on:
   schedule:
-    # Every 15 min, Mon–Fri, 8 AM – 9 PM EST (13:00–02:00 UTC)
-    - cron: "*/15 13-23 * * 1-5"
-    - cron: "*/15 0-2 * * 2-6"
+    # 6 PM EST = 23:00 UTC, Mon–Fri
+    - cron: "0 23 * * 1-5"
   workflow_dispatch: {}
 
 defaults:
@@ -12,8 +11,8 @@ defaults:
     working-directory: APPS/job-reply-agent
 
 jobs:
-  gmail-cycle:
-    name: Gmail Cycle
+  daily-report:
+    name: Daily Report
     runs-on: ubuntu-latest
 
     steps:
@@ -69,12 +68,5 @@ jobs:
           printf 'AGENT_TZ=America/Toronto\n' >> .env
           printf 'DAILY_REPORT_ENABLE_SEND=true\n' >> .env
 
-      - name: Run Gmail cycle
-        run: node dist/main.js run:gmail-cycle
-
-      - name: Save data cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: APPS/job-reply-agent/data/job_leads.sqlite
-          key: job-agent-db-${{ steps.date.outputs.date }}
+      - name: Send daily report
+        run: node dist/main.js report:daily
