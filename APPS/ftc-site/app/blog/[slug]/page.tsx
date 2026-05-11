@@ -76,7 +76,8 @@ export default function BlogDetailPage({ params }: { params: { slug: string } })
   };
 
   return (
-    <article className="container page-content case-study blog-detail">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <article className="container case-study blog-detail">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -131,6 +132,7 @@ export default function BlogDetailPage({ params }: { params: { slug: string } })
           </Link>
         </p>
       </section>
-    </article>
+      </article>
+    </div>
   );
 }

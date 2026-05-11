@@ -9,13 +9,15 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="container page-content legal-page">
-      <p className="eyebrow">Legal</p>
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container legal-page">
+      <p className="sunrise-kicker">Legal</p>
       <h1>Terms of Use</h1>
-      <p className="page-intro">
+      <p className="sunrise-lead">
         Terms are currently being finalized. For any questions, contact{" "}
         <a href="mailto:hello@unalabs.cloud">hello@unalabs.cloud</a>.
       </p>
+      </div>
     </div>
   );
 }

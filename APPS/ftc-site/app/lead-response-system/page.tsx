@@ -64,14 +64,15 @@ export const metadata: Metadata = {
 
 export default function LeadResponseSystemPage() {
   return (
-    <div className="container page-content">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container">
       <section className="hero home-hero">
         <div className="hero-noise" aria-hidden="true" />
         <div className="hero-grid home-hero-grid">
           <div className="hero-copy home-hero-copy">
-            <p className="eyebrow">Featured Offer</p>
+            <p className="sunrise-kicker">Featured Offer</p>
             <h1>48-Hour Lead Response System</h1>
-            <p className="lead hero-subtitle">
+            <p className="sunrise-lead hero-subtitle">
               A fast setup for businesses that want to stop losing leads to slow replies,
               missed calls, and scattered follow-up.
             </p>
@@ -162,6 +163,7 @@ export default function LeadResponseSystemPage() {
           Prefer to review the broader studio first? <Link href="/work" className="inline-link">See recent work</Link>.
         </p>
       </section>
+      </div>
     </div>
   );
 }

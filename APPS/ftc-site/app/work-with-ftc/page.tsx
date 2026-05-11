@@ -28,11 +28,12 @@ export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) 
     : "not-sure-yet";
 
   return (
-    <div className="container page-content work-intake-page">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container work-intake-page">
       <section className="work-intake-hero">
-        <p className="eyebrow">{isAteamHandoff ? "ATEAM handoff" : "Start a Project"}</p>
+        <p className="sunrise-kicker">{isAteamHandoff ? "ATEAM handoff" : "Start a Project"}</p>
         <h1>{isAteamHandoff ? "ATEAM already shaped the first pass." : "Turn the idea into a scoped next step."}</h1>
-        <p className="page-intro">
+        <p className="sunrise-lead">
           {isAteamHandoff
             ? "You do not need to rewrite the idea. ATEAM already attached the intent, the visible work, and the first output pack. Add the missing business context and Una Labs can respond with the next commercial move."
             : "This request is for teams that need a clear path, not a vague consultation. Una Labs uses it to decide whether the right next move is a scoped first pass, prototype direction sprint, or build execution track."}
@@ -105,6 +106,7 @@ export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) 
         </div>
         <WorkIntakeForm initialEngagementType={normalizedOffer} />
       </section>
+      </div>
     </div>
   );
 }
