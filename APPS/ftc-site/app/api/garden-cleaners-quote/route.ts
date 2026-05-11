@@ -79,6 +79,14 @@ function getAdminEmailSet(): Set<string> {
   return new Set([...DEFAULT_ADMIN_EMAILS, ...parseAdminEmails(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS)]);
 }
 
+function hasMissingAddOnsColumn(error: unknown): boolean {
+  const message =
+    typeof error === "object" && error && "message" in error
+      ? String((error as { message?: unknown }).message || "")
+      : "";
+  return /add_ons/i.test(message) && /column/i.test(message);
+}
+
 async function resolveAuthenticatedEmail(req: NextRequest): Promise<string | null> {
   try {
     const supabase = createServerClient(req.headers);
@@ -235,10 +243,14 @@ export async function POST(req: NextRequest) {
   };
 
   // Insert into Supabase
-  let supabaseError = null;
+  let supabaseError: unknown = null;
   try {
     const supabase = createServerClient();
-    const { error } = await supabase.from("garden_cleaners_quotes").insert([quoteRecord]);
+    let { error } = await supabase.from("garden_cleaners_quotes").insert([quoteRecord]);
+    if (error && hasMissingAddOnsColumn(error)) {
+      const { add_ons, ...quoteRecordWithoutAddOns } = quoteRecord;
+      ({ error } = await supabase.from("garden_cleaners_quotes").insert([quoteRecordWithoutAddOns]));
+    }
     if (error) {
       supabaseError = error;
       logger.error('garden_cleaners_quote_supabase_error', { message: error.message });

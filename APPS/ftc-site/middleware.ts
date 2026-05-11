@@ -42,11 +42,29 @@ const OG_TRADES_ROOT_LANDING_PATH = "/og-trades-academy";
 const OG_TRADES_STABLE_ALIAS_PATH = "/og-trades-academy-home";
 
 function resolveRequestHost(req: NextRequest): string {
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
-  return String(host || "")
+  const explicitHost = String(req.headers.get("x-request-host") || "")
     .split(",")[0]
     .trim()
     .toLowerCase();
+  if (explicitHost) {
+    return explicitHost;
+  }
+
+  const hostHeader = String(req.headers.get("host") || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  const forwardedHost = String(req.headers.get("x-forwarded-host") || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+
+  // Prefer direct host when it's a concrete custom domain (useful in local QA and request tests).
+  if (hostHeader && !isLocalHost(hostHeader)) {
+    return hostHeader;
+  }
+
+  return forwardedHost || hostHeader;
 }
 function buildRequestHeaders(req: NextRequest, host: string) {
   const requestHeaders = new Headers(req.headers);

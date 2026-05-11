@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions, gardenAddOns } from "../../../lib/gardenCleaners";
 import { trackEvent } from "../../../lib/analytics";
@@ -17,6 +17,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFormProps) {
   const searchParams = useSearchParams();
   const selectedRegion = String(searchParams.get("region") || "").trim();
+  const [regionValue, setRegionValue] = useState(selectedRegion);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
@@ -29,6 +30,18 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
   const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
   const formRef = useRef<HTMLFormElement | null>(null);
   const startedAtRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    if (selectedRegion) {
+      setRegionValue(selectedRegion);
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      const fallbackRegion = new URLSearchParams(window.location.search).get("region");
+      setRegionValue(String(fallbackRegion || "").trim());
+    }
+  }, [selectedRegion]);
 
   function toggleAddOn(addon: string) {
     setSelectedAddOns((prev) => {
@@ -56,7 +69,7 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
       preferredDate: String(formData.get("preferredDate") || "").trim(),
       preferredTime: String(formData.get("preferredTime") || "").trim(),
       frequency: String(formData.get("frequency") || "").trim(),
-      region: String(formData.get("region") || "").trim(),
+      region: String(formData.get("region") || regionValue || "").trim(),
       message: String(formData.get("message") || "").trim(),
       website: String(formData.get("website") || "").trim(),
       startedAt: startedAtRef.current,
@@ -158,6 +171,15 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
         <div className={`garden-quote-step ${step === 1 ? "is-active" : "is-complete"}`}>1. Quick details</div>
         <div className={`garden-quote-step ${step === 2 ? "is-active" : ""}`}>2. Service details</div>
       </div>
+
+      {regionValue ? (
+        <label>
+          <span>Service Region</span>
+          <input type="text" name="region" value={regionValue} readOnly />
+        </label>
+      ) : (
+        <input type="hidden" name="region" value="" />
+      )}
 
       {step === 1 ? (
         <>
@@ -298,14 +320,6 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
             </div>
           </fieldset>
 
-          {selectedRegion ? (
-            <label>
-              <span>Service Region</span>
-              <input type="text" name="region" value={selectedRegion} readOnly />
-            </label>
-          ) : (
-            <input type="hidden" name="region" value="" />
-          )}
         </>
       )}
 

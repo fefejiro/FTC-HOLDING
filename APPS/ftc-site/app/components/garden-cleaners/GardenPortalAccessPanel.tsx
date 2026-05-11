@@ -696,11 +696,12 @@ export default function GardenPortalAccessPanel() {
     <section className="section garden-section" id="portal-access" tabIndex={-1}>
       <div className="section-heading">
         <p className="eyebrow">Portal access</p>
-        <h2>Role-based Garden Cleaners portal</h2>
+        <h1>Regional service coverage, client intake, and operations routing</h1>
         <p>
           {isAdmin && "Admin: manage all jobs, convert quotes, assign staff."}
           {isStaff && "Staff: view and update assigned jobs."}
           {isCustomer && "Customer: view your job status."}
+          {!isAdmin && !isStaff && !isCustomer && "Client lane and operations lane access are available from this portal entry."}
         </p>
       </div>
 
@@ -729,13 +730,22 @@ export default function GardenPortalAccessPanel() {
           >
             Contact operations
           </a>
+          <a
+            className="btn btn-secondary"
+            href="/garden-cleaners/quote?region=Oshawa"
+            data-analytics-event="garden_portal_cta_click"
+            data-analytics-location="portal_hero"
+            data-analytics-label="same_week_quote_oshawa"
+          >
+            Get same-week quote
+          </a>
         </div>
 
         <div className="cards-grid cards-grid-3" style={{ marginTop: 8 }}>
           {PORTAL_REGION_CTA_OPTIONS.map((regionName) => (
             <article key={regionName} className="card garden-proof-card">
               <h4 style={{ marginTop: 0 }}>{regionName}</h4>
-              <p className="muted">Start a quote path for {regionName}.</p>
+              <p className="muted">Regional quote path for {regionName}.</p>
               <a
                 className="inline-link"
                 href={`/garden-cleaners/quote?region=${encodeURIComponent(regionName)}`}

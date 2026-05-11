@@ -31,16 +31,16 @@ test.describe("Garden Cleaners public QA", () => {
     await page.goto(url("/garden-cleaners"));
     const nav = page.getByLabel("Main navigation");
 
-    await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("href", "/");
-    await expect(nav.getByRole("link", { name: "Regional Portal", exact: true })).toHaveAttribute("href", "/portal");
-    await expect(nav.getByRole("link", { name: "About", exact: true })).toHaveAttribute("href", "/about");
-    await expect(nav.getByRole("link", { name: "Services", exact: true })).toHaveAttribute("href", "/services");
-    await expect(nav.getByRole("link", { name: "Contact", exact: true })).toHaveAttribute("href", "/contact");
-    await expect(nav.getByRole("link", { name: "Get a Quote", exact: true })).toHaveAttribute("href", "/quote");
+    await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("href", "/garden-cleaners");
+    await expect(nav.getByRole("link", { name: "Regional Portal", exact: true })).toHaveAttribute("href", "/garden-cleaners/portal");
+    await expect(nav.getByRole("link", { name: "About", exact: true })).toHaveAttribute("href", "/garden-cleaners/about");
+    await expect(nav.getByRole("link", { name: "Services", exact: true })).toHaveAttribute("href", "/garden-cleaners/services");
+    await expect(nav.getByRole("link", { name: "Contact", exact: true })).toHaveAttribute("href", "/garden-cleaners/contact");
+    await expect(nav.getByRole("link", { name: "Get a Quote", exact: true })).toHaveAttribute("href", "/garden-cleaners/quote");
   });
 
   test("custom domain uses clean public Garden paths", async ({ request }) => {
-    const hostHeaders = { host: "gardencleaners.ca" };
+    const hostHeaders = { host: "gardencleaners.ca", "x-forwarded-host": "gardencleaners.ca" };
 
     const root = await request.get(url("/"), { headers: hostHeaders });
     expect(root.status()).toBe(200);
@@ -66,7 +66,7 @@ test.describe("Garden Cleaners public QA", () => {
     await expect(mobileDialog).toBeVisible();
 
     await mobileDialog.getByRole("link", { name: "Get a Quote" }).click();
-    await expect(page).toHaveURL(url("/quote"));
+    await expect(page).toHaveURL(url("/garden-cleaners/quote"));
     await expect(page.getByRole("heading", { level: 1, name: /Tell us what needs cleaning/i })).toBeVisible();
   });
 
@@ -76,11 +76,12 @@ test.describe("Garden Cleaners public QA", () => {
     await page.getByLabel("Full Name").fill("Garden QA Tester");
     await page.getByLabel("Email").fill("garden-qa@example.com");
     await page.getByLabel("Phone").fill("9055550100");
+    await page.getByLabel("Property Type").selectOption("House");
+    await page.getByLabel("Service Needed").selectOption("Residential Cleaning");
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Service Address").fill("123 QA Street");
     await page.getByLabel("City").fill("Oshawa");
     await page.getByLabel("Postal Code").fill("L1H 1A1");
-    await page.getByLabel("Property Type").selectOption("House");
-    await page.getByLabel("Service Needed").selectOption("Residential Cleaning");
     await page.getByLabel("Preferred Date").fill("2026-05-05");
     await page.getByLabel("Preferred Time").selectOption("Morning");
     await page.getByLabel("Frequency").selectOption("One-time");
