@@ -375,7 +375,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
               <Text style={styles.pendingText}>Finding the best lyric match...</Text>
             ) : (
               <Text style={styles.loadingText}>Finding the best lyric match...</Text>
-            )
+            )}
 
             <View style={styles.sectionDivider} />
 
@@ -401,7 +401,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
               <Text style={styles.pendingText}>Meaning is not available yet for this line.</Text>
             ) : (
               <Text style={styles.loadingText}>Preparing meaning...</Text>
-            )
+            )}
 
             {culturalSummary && (
               <Text style={styles.culturalText}>{culturalSummary}</Text>

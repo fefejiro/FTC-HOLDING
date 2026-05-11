@@ -122,6 +122,13 @@ export interface RulesConfig {
     require_review_keywords: string[];
   };
   trusted_recruiter_domains: string[];
+  resume_tailoring?: {
+    enabled: boolean;
+    template_path: string;
+    output_dir: string;
+    attach_mode: "docx_only" | "docx_and_pdf" | "pdf_only";
+    auto_send: boolean;
+  };
 }
 
 export interface ResumeMapConfig {

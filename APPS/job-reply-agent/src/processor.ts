@@ -16,6 +16,7 @@ import {
 import { evaluateRisk } from "./red_flags.js";
 import { generateReply } from "./reply_generator.js";
 import { selectResume } from "./resume_selector.js";
+import { tailorResumeForJD } from "./resume_tailor.js";
 import type { ProfileConfig, RecruiterMessage, ResumeMapConfig, RulesConfig } from "./types.js";
 
 type GmailLabelStatus = "drafted" | "needs_review" | "sent" | "skipped" | "blocked";
@@ -170,15 +171,40 @@ export async function processGmailInbox(params: {
       profile
     });
 
+    let attachPath = resume.resumePath;
+    const tailoring = rules.resume_tailoring;
+    if (tailoring?.enabled) {
+      try {
+        const tailored = await tailorResumeForJD({
+          parsed,
+          jdText: message.body,
+          templatePath: tailoring.template_path,
+          outputDir: tailoring.output_dir
+        });
+        attachPath = tailored.docxPath;
+        insertDecision(
+          db,
+          message.messageId,
+          "processed",
+          `Tailored resume generated: ${tailored.docxPath}`
+        );
+      } catch (error) {
+        logger.warn(
+          { messageId: message.messageId, error: error instanceof Error ? error.message : String(error) },
+          "Tailoring failed; falling back to static resume."
+        );
+      }
+    }
+
     try {
       const draftMeta = await params.createDraft({
         message,
         subject: reply.subject,
         body: reply.body,
-        resumePath: resume.resumePath
+        resumePath: attachPath
       });
 
-      upsertDraft(db, message, reply.subject, reply.body, resume, {
+      upsertDraft(db, message, reply.subject, reply.body, { ...resume, resumePath: attachPath }, {
         gmailDraftId: draftMeta.draftId,
         recipientEmail: draftMeta.recipientEmail
       });
@@ -201,7 +227,7 @@ export async function processGmailInbox(params: {
     }
 
     drafted += 1;
-    insertDecision(db, message.messageId, "drafted", `Resume selected: ${resume.resumePath}`);
+    insertDecision(db, message.messageId, "drafted", `Resume selected: ${attachPath}`);
     await params.onStatusChange?.(message.messageId, "drafted");
   }
 

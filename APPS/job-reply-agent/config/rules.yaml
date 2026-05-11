@@ -31,3 +31,10 @@ risk_controls:
 
 trusted_recruiter_domains:
   - example-recruiter.com
+
+resume_tailoring:
+  enabled: true
+  template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Fejiro_Efiuvwere_WMS_Project_Manager_North_West_Company_Tailored.docx"
+  output_dir: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes"
+  attach_mode: docx_only
+  auto_send: false

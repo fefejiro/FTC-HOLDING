@@ -43,7 +43,16 @@ const rulesSchema = z.object({
     block_keywords: z.array(z.string()),
     require_review_keywords: z.array(z.string())
   }),
-  trusted_recruiter_domains: z.array(z.string())
+  trusted_recruiter_domains: z.array(z.string()),
+  resume_tailoring: z
+    .object({
+      enabled: z.boolean(),
+      template_path: z.string(),
+      output_dir: z.string(),
+      attach_mode: z.enum(["docx_only", "docx_and_pdf", "pdf_only"]),
+      auto_send: z.boolean()
+    })
+    .optional()
 });
 
 const resumeMapSchema = z.object({
