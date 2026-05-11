@@ -23,6 +23,8 @@ export interface RecruiterMessage {
 
 export interface ParsedOpportunity {
   roleTitle: string;
+  cleanRoleTitle: string;
+  alignmentKeywords: string[];
   company: string;
   location: string;
   employmentType: string;
@@ -104,9 +106,23 @@ export interface RulesConfig {
     timezone: string;
     max_drafts_per_day: number;
     max_sends_per_day: number;
+    schedule?: {
+      business_hours_start?: number;
+      business_hours_end?: number;
+      business_hours_interval_minutes?: number;
+      after_hours_interval_minutes?: number;
+      quiet_hours_start?: number;
+      quiet_hours_end?: number;
+      no_auto_send_weekdays?: number[];
+    };
   };
   filters: {
     min_match_score: number;
+    score_bands?: {
+      auto_send_min: number;
+      draft_min: number;
+      needs_review_min: number;
+    };
     labels: {
       inbound: string;
       drafted: string;
@@ -115,6 +131,10 @@ export interface RulesConfig {
       sent: string;
       skipped: string;
       blocked: string;
+      approved: string;
+      trusted_recruiter?: string;
+      resume_generated?: string;
+      error?: string;
     };
   };
   risk_controls: {
@@ -128,6 +148,15 @@ export interface RulesConfig {
     output_dir: string;
     attach_mode: "docx_only" | "docx_and_pdf" | "pdf_only";
     auto_send: boolean;
+    auto_send_criteria?: {
+      min_score?: number;
+      require_recruiter_name?: boolean;
+      require_clean_role_title?: boolean;
+      require_resume_generated?: boolean;
+      max_body_words?: number;
+      no_html_artifacts?: boolean;
+      no_sensitive_requests?: boolean;
+    };
   };
 }
 

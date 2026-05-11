@@ -18,6 +18,7 @@ export interface GmailStatusLabelConfig {
   sent: string;
   skipped: string;
   blocked: string;
+  approved: string;
 }
 
 export type GmailStatusLabelState = keyof GmailStatusLabelConfig;

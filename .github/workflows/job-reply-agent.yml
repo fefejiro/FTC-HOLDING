@@ -1,0 +1,145 @@
+name: Job Reply Agent
+
+on:
+  schedule:
+    # Gmail cycle: every 15 min, Mon–Fri, 8 AM–9 PM EST (13:00–02:00 UTC)
+    # Split into two cron windows because cron can't wrap midnight in one expression
+    - cron: "*/15 13-23 * * 1-5"   # 8 AM – 6:45 PM EST
+    - cron: "*/15 0-2 * * 2-6"     # 7 PM – 2:45 AM UTC (= 2 PM – 9:45 PM EST next day)
+    # Daily report: 6 PM EST (23:00 UTC) weekdays
+    - cron: "0 23 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Command to run (run:gmail-cycle | report:daily)"
+        required: false
+        default: "run:gmail-cycle"
+
+defaults:
+  run:
+    working-directory: APPS/job-reply-agent
+
+jobs:
+  gmail-cycle:
+    name: Gmail Cycle
+    runs-on: ubuntu-latest
+    # Skip this job when triggered by the report-only cron (0 23 * * 1-5)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && !startsWith(github.event.schedule, '0 23'))
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: APPS/job-reply-agent/package-lock.json
+
+      - name: Get date for cache key
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Restore data cache
+        uses: actions/cache@v4
+        with:
+          path: APPS/job-reply-agent/data/job_leads.sqlite
+          key: job-agent-db-${{ steps.date.outputs.date }}
+          restore-keys: |
+            job-agent-db-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Write Gmail tokens
+        run: |
+          mkdir -p data
+          echo '${{ secrets.JOB_AGENT_GMAIL_TOKENS_JSON }}' > data/gmail_tokens.json
+
+      - name: Write .env
+        run: |
+          cat > .env << 'EOF'
+          GMAIL_AUTH_MODE=oauth
+          GMAIL_CLIENT_ID=${{ secrets.JOB_AGENT_GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET=${{ secrets.JOB_AGENT_GMAIL_CLIENT_SECRET }}
+          GMAIL_REDIRECT_URI=http://localhost:3007/oauth2callback
+          GMAIL_TOKENS_PATH=./data/gmail_tokens.json
+          GMAIL_ACCOUNT_EMAIL=${{ secrets.JOB_AGENT_GMAIL_ACCOUNT_EMAIL }}
+          REPORT_TO=${{ secrets.JOB_AGENT_REPORT_TO }}
+          AGENT_TZ=America/Toronto
+          DAILY_REPORT_ENABLE_SEND=true
+          EOF
+
+      - name: Run Gmail cycle
+        run: node dist/main.js run:gmail-cycle
+
+      - name: Save data cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: APPS/job-reply-agent/data/job_leads.sqlite
+          key: job-agent-db-${{ steps.date.outputs.date }}
+
+  daily-report:
+    name: Daily Report
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.command == 'report:daily')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: APPS/job-reply-agent/package-lock.json
+
+      - name: Get date for cache key
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Restore data cache
+        uses: actions/cache@v4
+        with:
+          path: APPS/job-reply-agent/data/job_leads.sqlite
+          key: job-agent-db-${{ steps.date.outputs.date }}
+          restore-keys: |
+            job-agent-db-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Write Gmail tokens
+        run: |
+          mkdir -p data
+          echo '${{ secrets.JOB_AGENT_GMAIL_TOKENS_JSON }}' > data/gmail_tokens.json
+
+      - name: Write .env
+        run: |
+          cat > .env << 'EOF'
+          GMAIL_AUTH_MODE=oauth
+          GMAIL_CLIENT_ID=${{ secrets.JOB_AGENT_GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET=${{ secrets.JOB_AGENT_GMAIL_CLIENT_SECRET }}
+          GMAIL_REDIRECT_URI=http://localhost:3007/oauth2callback
+          GMAIL_TOKENS_PATH=./data/gmail_tokens.json
+          GMAIL_ACCOUNT_EMAIL=${{ secrets.JOB_AGENT_GMAIL_ACCOUNT_EMAIL }}
+          REPORT_TO=${{ secrets.JOB_AGENT_REPORT_TO }}
+          AGENT_TZ=America/Toronto
+          DAILY_REPORT_ENABLE_SEND=true
+          EOF
+
+      - name: Send daily report
+        run: node dist/main.js report:daily

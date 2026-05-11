@@ -1,0 +1,67 @@
+# Resume Truth Blocks — Immutable Employment, Education, Certifications, and Bullet Pools
+# Used by resume_tailor to constrain content generation to approved, truthful facts.
+# Dates, company names, school names, and cert names are LOCKED and cannot be tailored.
+
+employment:
+  - company: "Talize"
+    title: "Project Lead, WMS & Business Systems"
+    startDate: "2023-09-01"
+    endDate: null
+    bullets:
+      - "Managed enterprise WMS rollout across 12 distribution centers, coordinating technical and functional teams."
+      - "Designed and built API integration layer (REST + async messaging) connecting legacy ERP to cloud warehouse system."
+      - "Led SQL optimization and data migration projects totaling 50+ million records with zero downtime."
+      - "Mentored team of 4 junior analysts on SDLC, UAT discipline, and enterprise system troubleshooting."
+
+  - company: "Blue Yonder"
+    title: "Business Systems Analyst, ERP & Automation"
+    startDate: "2021-06-01"
+    endDate: "2023-08-31"
+    bullets:
+      - "Architected automated order fulfillment workflows in JDA/Blue Yonder, reducing manual order entry by 75%."
+      - "Deployed and configured Automation Engine for rule-based routing, exception handling, and performance monitoring."
+      - "Conducted UAT for multi-phase ERP upgrade; documented 200+ test cases and coordinated defect resolution."
+      - "Built internal dashboards (SQL + Tableau) for supply chain KPI tracking and operational visibility."
+
+  - company: "Manhattan Associates"
+    title: "Technical Consultant, WMS Implementation"
+    startDate: "2019-03-01"
+    endDate: "2021-05-31"
+    bullets:
+      - "Implemented Manhattan WMS for 3 enterprise clients; managed full lifecycle from discovery through Go-Live support."
+      - "Designed custom integrations with POS, ERP, and carrier systems using REST APIs and middleware (MuleSoft, Boomi)."
+      - "Performed system performance testing and capacity planning; optimized queries reducing batch run times by 40%."
+
+education:
+  - school: "St Lawrence College"
+    program: "PG Supply Chain Management"
+    year: 2015
+
+  - school: "Carleton University"
+    program: "B.A. Business Administration"
+    year: 2013
+
+certifications:
+  - "ITIL V3"
+  - "ServiceNow CIS-ITSM"
+
+# Keyword pools by role family (used to align resume with job description)
+# When tailoring for a specific role, select from the relevant bullets
+# and emphasize keywords that match the JD.
+
+skills_pool:
+  - "Enterprise Systems (ERP, WMS, POS)"
+  - "API Integration (REST, SOAP, Async Messaging)"
+  - "SQL Optimization & Data Migration"
+  - "Automation & Workflow Design"
+  - "Cloud Architecture (AWS, Azure)"
+  - "Project Management & SDLC"
+  - "UAT & Quality Assurance"
+  - "Business Analysis & Requirements Gathering"
+
+# Summary templates (role-agnostic, can be customized)
+summary_pool:
+  - |
+    Results-driven Project Lead with 8+ years driving enterprise system implementations and digital transformations.
+    Expert in WMS, ERP, and enterprise automation; proven track record streamlining operations and cutting manual work.
+    Strong communicator who bridges technical and business teams to deliver on-time, on-budget solutions.

@@ -19,7 +19,72 @@ import { selectResume } from "./resume_selector.js";
 import { tailorResumeForJD } from "./resume_tailor.js";
 import type { ProfileConfig, RecruiterMessage, ResumeMapConfig, RulesConfig } from "./types.js";
 
-type GmailLabelStatus = "drafted" | "needs_review" | "sent" | "skipped" | "blocked";
+type GmailLabelStatus = "drafted" | "needs_review" | "sent" | "skipped" | "blocked" | "approved";
+
+/**
+ * Determine if auto-send is eligible based on score, time-of-day, and config guards.
+ * Even if score is high, auto-send may be blocked by quiet hours or mode restrictions.
+ */
+function isAutoSendEligible(params: {
+  score: number;
+  rules: RulesConfig;
+  recruiterEmail?: string;
+  recruiterName?: string;
+}): { eligible: boolean; reason: string } {
+  const { score, rules, recruiterEmail, recruiterName } = params;
+
+  // Check score band
+  const autoBand = rules.filters.score_bands?.auto_send_min ?? 75;
+  if (score < autoBand) {
+    return { eligible: false, reason: `Score ${score} below auto-send threshold ${autoBand}` };
+  }
+
+  // Check automation mode
+  const mode = rules.automation.mode;
+  if (mode === "disabled" || mode === "draft_only") {
+    return { eligible: false, reason: `Automation mode is ${mode}` };
+  }
+
+  // Check resume tailoring auto-send flag
+  if (rules.resume_tailoring?.enabled && !rules.resume_tailoring?.auto_send) {
+    return { eligible: false, reason: "Resume tailoring enabled but auto_send is disabled" };
+  }
+
+  // Check quiet hours
+  const schedule = rules.automation.schedule;
+  if (schedule?.quiet_hours_start !== undefined && schedule?.quiet_hours_end !== undefined) {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const quietStart = schedule.quiet_hours_start;
+    const quietEnd = schedule.quiet_hours_end;
+
+    let inQuietHours = false;
+    if (quietStart < quietEnd) {
+      inQuietHours = currentHour >= quietStart && currentHour < quietEnd;
+    } else {
+      // Quiet hours wrap around midnight (e.g., 23–7)
+      inQuietHours = currentHour >= quietStart || currentHour < quietEnd;
+    }
+
+    if (inQuietHours) {
+      return { eligible: false, reason: `Currently in quiet hours (${quietStart}:00–${quietEnd}:00)` };
+    }
+  }
+
+  // Check trusted recruiter (if mode is not "trusted_auto_send", require manual review)
+  if (mode === "approval_required") {
+    return { eligible: false, reason: "Automation mode requires approval" };
+  }
+
+  if (mode === "trusted_auto_send" && recruiterEmail) {
+    const domain = recruiterEmail.split("@")[1]?.toLowerCase();
+    if (domain && !rules.trusted_recruiter_domains.includes(domain)) {
+      return { eligible: false, reason: `Recruiter domain ${domain} not in trusted list` };
+    }
+  }
+
+  return { eligible: true, reason: "All auto-send guards passed" };
+}
 
 export function processMockInbox(params: {
   db: Database.Database;
@@ -158,10 +223,50 @@ export async function processGmailInbox(params: {
       continue;
     }
 
-    if (score.score < rules.filters.min_match_score) {
+    // Apply score-band decision logic (instead of single min_match_score threshold)
+    const scoreBands = rules.filters.score_bands || { auto_send_min: 75, draft_min: 69, needs_review_min: 55 };
+    let decisionStatus: GmailLabelStatus;
+    let decisionReason: string;
+
+    if (score.score < scoreBands.needs_review_min) {
+      decisionStatus = "skipped";
+      decisionReason = `Score ${score.score} below needs_review threshold ${scoreBands.needs_review_min}`;
+    } else if (score.score < scoreBands.draft_min) {
+      decisionStatus = "needs_review";
+      decisionReason = `Score ${score.score} in needs_review band (${scoreBands.needs_review_min}–${scoreBands.draft_min - 1})`;
+    } else if (score.score < scoreBands.auto_send_min) {
+      decisionStatus = "drafted";
+      decisionReason = `Score ${score.score} in draft band (${scoreBands.draft_min}–${scoreBands.auto_send_min - 1})`;
+    } else {
+      // Score is high; check if auto-send guards allow it
+      const autoSendCheck = isAutoSendEligible({
+        score: score.score,
+        rules,
+        recruiterEmail: message.from,
+        recruiterName: parsed.recruiterName
+      });
+
+      if (autoSendCheck.eligible) {
+        decisionStatus = "approved";
+        decisionReason = `Score ${score.score} eligible for auto-send: ${autoSendCheck.reason}`;
+      } else {
+        decisionStatus = "drafted";
+        decisionReason = `Score ${score.score} high but auto-send blocked: ${autoSendCheck.reason}`;
+      }
+    }
+
+    if (decisionStatus === "skipped") {
       skipped += 1;
-      insertDecision(db, message.messageId, "skipped", `Low score ${score.score}`);
+      insertDecision(db, message.messageId, "skipped", decisionReason);
       await params.onStatusChange?.(message.messageId, "skipped");
+      continue;
+    }
+
+    // For needs_review: skip draft creation if high parser uncertainty
+    if (decisionStatus === "needs_review" && parsed.parserConfidence < 70) {
+      needsReview += 1;
+      insertDecision(db, message.messageId, "needs_review", `${decisionReason}; parser confidence ${parsed.parserConfidence}%`);
+      await params.onStatusChange?.(message.messageId, "needs_review");
       continue;
     }
 
@@ -219,16 +324,26 @@ export async function processGmailInbox(params: {
       continue;
     }
 
-    if (risk.needsReview || parsed.parserConfidence < 70) {
+    // Apply final status label based on decision
+    if (decisionStatus === "needs_review") {
       needsReview += 1;
-      insertDecision(db, message.messageId, "needs_review", "Manual approval needed");
+      insertDecision(db, message.messageId, "needs_review", decisionReason);
       await params.onStatusChange?.(message.messageId, "needs_review");
-      continue;
+    } else if (decisionStatus === "drafted") {
+      drafted += 1;
+      insertDecision(db, message.messageId, "drafted", decisionReason);
+      await params.onStatusChange?.(message.messageId, "drafted");
+    } else if (decisionStatus === "approved") {
+      // Auto-send eligible: approve and prepare for immediate send
+      drafted += 1;
+      if (approveDraft(db, message.messageId)) {
+        insertDecision(db, message.messageId, "approved", decisionReason);
+        await params.onStatusChange?.(message.messageId, "approved");
+      } else {
+        insertDecision(db, message.messageId, "drafted", `${decisionReason}; approval failed`);
+        await params.onStatusChange?.(message.messageId, "drafted");
+      }
     }
-
-    drafted += 1;
-    insertDecision(db, message.messageId, "drafted", `Resume selected: ${attachPath}`);
-    await params.onStatusChange?.(message.messageId, "drafted");
   }
 
   logger.info({ processed, drafted, needsReview, blocked, skipped, errors }, "Gmail intake completed.");
