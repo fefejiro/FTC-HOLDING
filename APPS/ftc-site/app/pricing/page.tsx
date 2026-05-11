@@ -12,13 +12,13 @@ export const metadata: Metadata = {
 
 export default function PricingPage() {
   return (
-    <div className="pricing-page main-shell">
-      <section className="section section-hero">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <section className="section" style={{ paddingTop: "44px" }}>
         <div className="container">
           <div className="pricing-hero">
-            <p className="eyebrow">Transparent pricing</p>
+            <p className="sunrise-kicker">Transparent pricing</p>
             <h1>One package. One month. One shipped product.</h1>
-            <p className="lead">
+            <p className="sunrise-lead">
               We don't do retainers, scope creep, or surprise invoices. You get a focused
               Version 1 build and a full month of support, nothing more, nothing less.
             </p>

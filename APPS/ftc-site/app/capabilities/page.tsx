@@ -11,12 +11,13 @@ export const metadata = {
 
 export default function CapabilitiesPage() {
   return (
-    <div className="container page-content">
-      <h1>Studio</h1>
-      <p className="page-intro">
-        Una Labs combines engineering rigor and creative execution to deliver capability-led
-        systems that can evolve into reusable platform modules.
-      </p>
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container">
+        <h1>Studio</h1>
+        <p className="sunrise-lead">
+          Una Labs combines engineering rigor and creative execution to deliver capability-led
+          systems that can evolve into reusable platform modules.
+        </p>
 
       <div className="cards-grid cards-grid-3">
         {capabilities.map((capability) => (
@@ -24,12 +25,13 @@ export default function CapabilitiesPage() {
         ))}
       </div>
 
-      <CTABanner
-        title="Need one of these capabilities in your workflow?"
-        description="We can integrate directly into existing operations or build net-new products."
-        primaryLabel="Start a Project"
-        primaryHref="/work-with-ftc"
-      />
+        <CTABanner
+          title="Need one of these capabilities in your workflow?"
+          description="We can integrate directly into existing operations or build net-new products."
+          primaryLabel="Start a Project"
+          primaryHref="/work-with-ftc"
+        />
+      </div>
     </div>
   );
 }

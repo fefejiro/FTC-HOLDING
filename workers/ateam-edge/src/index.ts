@@ -502,6 +502,10 @@ export default {
     }
 
     if (url.pathname === "/ateam" || url.pathname === "/ateam/" || url.pathname.startsWith("/ateam/")) {
+      // Serve standalone intake page for GET /ateam
+      if ((url.pathname === "/ateam" || url.pathname === "/ateam/") && request.method === "GET") {
+        return html(buildPage(getAteamOrigin(env), opsOrigin), { status: 200 });
+      }
       const strippedPathname =
         url.pathname === "/ateam" || url.pathname === "/ateam/"
           ? "/"
