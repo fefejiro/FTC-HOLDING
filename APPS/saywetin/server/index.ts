@@ -82,6 +82,14 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.set("trust proxy", 1);
 
+// Security headers
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.setHeader("X-Frame-Options", "DENY");
+  next();
+});
+
 app.use(
   express.json({
     verify: (req, _res, buf) => {
