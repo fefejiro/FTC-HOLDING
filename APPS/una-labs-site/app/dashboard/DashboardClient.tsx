@@ -80,6 +80,39 @@ type OpsMetrics = {
   nextActions: string[];
 };
 
+type InfraService = {
+  name: string;
+  status: 'green' | 'yellow' | 'red';
+  detail: string;
+  lastCheckedAt?: string;
+};
+
+type InfraProvider = {
+  id: string;
+  label: string;
+  status: 'green' | 'yellow' | 'red';
+  services: InfraService[];
+};
+
+type InfraAlert = {
+  source: string;
+  level: 'info' | 'warning' | 'critical';
+  message: string;
+  at: string;
+};
+
+type InfraMonitor = {
+  generatedAt: string;
+  summary: {
+    overallStatus: 'green' | 'yellow' | 'red';
+    activeAlerts: number;
+    autoDebugEnabled: boolean;
+    note: string;
+  };
+  providers: InfraProvider[];
+  recentAlerts: InfraAlert[];
+};
+
 const STATUS_CONFIG: Record<string, { label: string; description: string; next: string; badge: 'teal' | 'orange' | 'muted' }> = {
   intake: {
     label: 'Getting started',
@@ -686,6 +719,8 @@ export function DashboardClient() {
   const [adminError, setAdminError] = useState('');
   const [opsMetrics, setOpsMetrics] = useState<OpsMetrics | null>(null);
   const [opsMetricsError, setOpsMetricsError] = useState('');
+  const [infraMonitor, setInfraMonitor] = useState<InfraMonitor | null>(null);
+  const [infraMonitorError, setInfraMonitorError] = useState('');
   const [handoverPreview, setHandoverPreview] = useState<{ projectId: string; projectName: string; doc: string } | null>(null);
   const [adminSearch, setAdminSearch] = useState('');
   const [adminStatusFilter, setAdminStatusFilter] = useState<string>('all');
@@ -836,9 +871,25 @@ export function DashboardClient() {
       }
     };
 
+    const loadInfraMonitor = async () => {
+      try {
+        const response = await fetch(`/ops/infra-live-status.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Infra monitor unavailable (${response.status})`);
+        const payload = await response.json() as InfraMonitor;
+        if (!active) return;
+        setInfraMonitor(payload);
+        setInfraMonitorError('');
+      } catch (error) {
+        if (!active) return;
+        setInfraMonitorError(error instanceof Error ? error.message : 'Unable to load infra monitor.');
+      }
+    };
+
     void loadOpsMetrics();
+    void loadInfraMonitor();
     const interval = window.setInterval(() => {
       void loadOpsMetrics();
+      void loadInfraMonitor();
     }, 30000);
 
     return () => {
@@ -1212,6 +1263,65 @@ export function DashboardClient() {
 
         {isAdmin && (
           <div className="mt-12 rounded-[28px] border border-border bg-white p-8 shadow-sm">
+            <div className="rounded-2xl border border-border bg-bg-offwhite p-5 mb-6">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <Badge variant="orange">Infra monitor</Badge>
+                  <h3 className="mt-3 text-h4 text-tx-heading">Railway, Cloudflare, and Supabase live state</h3>
+                  <p className="mt-1 text-body-sm text-tx-secondary">This is the same monitoring feed used by Una Labs admin and dashboard views.</p>
+                </div>
+                <a
+                  href="/ops/infra-live-status.json"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-border px-3 py-2 text-body-sm font-semibold text-tx-heading hover:bg-white"
+                >
+                  Open infra feed
+                </a>
+              </div>
+
+              {infraMonitorError && <p className="mt-4 text-body-sm text-red-600">{infraMonitorError}</p>}
+
+              {infraMonitor && (
+                <>
+                  <div className="mt-4 grid gap-3 md:grid-cols-4">
+                    <div className="rounded-xl border border-border bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-wider text-tx-muted">Overall</p>
+                      <p className="mt-1 text-h4 text-tx-heading uppercase">{infraMonitor.summary.overallStatus}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-wider text-tx-muted">Active alerts</p>
+                      <p className="mt-1 text-h4 text-tx-heading">{infraMonitor.summary.activeAlerts}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-wider text-tx-muted">Auto debug</p>
+                      <p className="mt-1 text-h4 text-tx-heading">{infraMonitor.summary.autoDebugEnabled ? 'On' : 'Off'}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-wider text-tx-muted">Updated</p>
+                      <p className="mt-1 text-body-sm text-tx-heading">{formatDate(infraMonitor.generatedAt)}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    {infraMonitor.providers.map((provider) => (
+                      <div key={provider.id} className="rounded-xl border border-border bg-white px-4 py-3">
+                        <p className="text-body-sm font-semibold text-tx-heading">{provider.label}</p>
+                        <p className="mt-1 text-[11px] uppercase tracking-wider text-tx-muted">Status: {provider.status}</p>
+                        <ul className="mt-3 space-y-2">
+                          {provider.services.map((service) => (
+                            <li key={service.name} className="text-body-sm text-tx-secondary">
+                              <span className="font-semibold text-tx-heading">{service.name}</span> - {service.status}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="rounded-2xl border border-border bg-bg-offwhite p-5">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
