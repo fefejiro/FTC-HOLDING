@@ -38,14 +38,15 @@ export default function DispatchProductPage() {
   const dispatchStatus = dispatchProduct?.status ?? "early";
 
   return (
-    <div className="container page-content products-page">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container products-page">
       <section className="products-intro">
         <div className="product-hero-top">
-          <p className="eyebrow">Product</p>
+          <p className="sunrise-kicker">Product</p>
           <ProductStatusBadge status={dispatchStatus} />
         </div>
         <h1>Dispatch</h1>
-        <p className="page-intro">
+        <p className="sunrise-lead">
           Dispatch is the live Ottawa roadside assistance product inside Una Labs. The client path is
           simple: submit a sample roadside request, sign in as the invited operator, work the request,
           and send feedback from inside the system.
@@ -142,6 +143,7 @@ export default function DispatchProductPage() {
           </a>
         </div>
       </article>
+      </div>
     </div>
   );
 }

@@ -74,15 +74,17 @@ export default function MissionControlPage() {
     }
   }
 
-  return (
-    <div className="container page-content mission-control-page">
+  return ( 
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container mission-control-page">
       <section className="hero mission-control-hero">
         <div className="hero-noise" aria-hidden="true" />
         <div className="mission-control-hero-grid">
           <div className="hero-copy mission-control-copy">
             <p className="eyebrow">Mission Control</p>
+            <p className="sunrise-kicker">Mission Control</p>
             <h1>Visible execution, not buried intentions.</h1>
-            <p className="lead hero-subtitle">
+            <p className="sunrise-lead hero-subtitle">
               This is the operating surface for today, this week, job momentum, follow-ups,
               deadlines, and recurring routines.
             </p>
@@ -349,6 +351,7 @@ export default function MissionControlPage() {
           </article>
         </div>
       </section>
+      </div>
     </div>
   );
 }
