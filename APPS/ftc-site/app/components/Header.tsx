@@ -115,6 +115,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
       { label: "Product", href: "/products" },
       { label: "Solutions", href: "/services" },
       { label: "Resources", href: "/work" },
+      { label: "ATEAM", href: "/ateam" },
       { label: "Pricing", href: "/pricing" },
       { label: "How It Works", href: "/how-it-works" }
     ];

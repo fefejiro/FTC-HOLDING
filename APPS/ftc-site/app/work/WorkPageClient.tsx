@@ -42,7 +42,7 @@ export default function WorkPageClient() {
       <section className="wl-hero">
         <div className="wl-hero-copy">
           <p className="eyebrow">Client Launches</p>
-          <h1>Proof that Una Labs scopes and ships real systems.</h1>
+          <h1>Live delivery snapshots, kept separate from products.</h1>
           <p className="wl-hero-lead">
             Every project below moved through structured intake, a clear scope decision, and governed
             delivery execution. This is the delivery side of the studio — not a portfolio, a live track record.

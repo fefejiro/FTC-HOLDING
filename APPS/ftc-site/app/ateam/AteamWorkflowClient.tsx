@@ -1235,17 +1235,26 @@ export default function AteamWorkflowClient({
                 /* ── /ATEAM PAGE MODE: full intake form ── */
                 <>
                   <div className="wf-intro">
-                    <p className="wf-intro-eyebrow">Trusted AI workflow infrastructure</p>
+                    <p className="wf-intro-eyebrow">Private Beta</p>
                     <h1 className="wf-intro-headline">
-                      Start with the request.
-                      <br />
-                      Move only the approved next step.
+                      Turn a rough idea into a scoped, approved next step.
                     </h1>
                     <p className="wf-intro-lead">
                       ATEAM is the workflow surface inside Una Labs: describe the request, review the
                       scoped plan, approve what should move forward, and leave with a decision-ready
                       output before delivery starts.
                     </p>
+                    <button
+                      type="button"
+                      className="sunrise-btn sunrise-btn--primary"
+                      aria-label="Start ATEAM"
+                      onClick={() => {
+                        const textarea = document.querySelector<HTMLTextAreaElement>(".wf-input-area, .wf-hp-textarea");
+                        if (textarea) textarea.focus();
+                      }}
+                    >
+                      Start ATEAM
+                    </button>
                   </div>
 
                   <div className="wf-proof-strip" aria-label="How ATEAM moves work forward">
@@ -2187,7 +2196,7 @@ export default function AteamWorkflowClient({
               </div>
               <div className="wf-placeholder-arrow">{"->"}</div>
               <div className="wf-placeholder-node">
-                <span>✦</span><p>Approved output</p>
+                <span>✦</span><p>Decision pack</p>
               </div>
               <div className="wf-placeholder-arrow">{"->"}</div>
               <div className="wf-placeholder-node wf-placeholder-node--cta">

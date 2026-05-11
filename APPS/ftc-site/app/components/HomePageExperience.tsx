@@ -44,7 +44,7 @@ export default function HomePageExperience() {
           <div className="sunrise-hero-shell">
             <div className="sunrise-hero-copy">
               <p className="sunrise-kicker">Una Labs</p>
-              <h1>From client request to delivered project, with proof.</h1>
+              <h1>Fast websites, lead systems, and AI-assisted workflows.</h1>
               <p className="sunrise-lead">
                 Una Labs structures your intake, scopes the work with AI, and gives every project a live workspace.
                 Your clients can see what is done, what is in progress, and what comes next.
@@ -109,6 +109,21 @@ export default function HomePageExperience() {
               <p className="sunrise-proof-label">Functional</p>
               <p>Request handling, approvals, and operational handoff are wired into the build path from day one.</p>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="section sunrise-section">
+        <div className="container">
+          <div className="sunrise-section-heading">
+            <p className="sunrise-kicker">ATEAM — AI workflow surface</p>
+            <h2>Turn a rough idea into a scoped, approved next step.</h2>
+            <p>Describe the request. ATEAM structures it, scopes it, and surfaces a decision-ready output before delivery starts.</p>
+            <div className="sunrise-action-row" style={{ marginTop: "1.5rem" }}>
+              <Link href="/ateam" prefetch={false} className="sunrise-btn sunrise-btn--primary" aria-label="Start ATEAM">
+                Start ATEAM
+              </Link>
+            </div>
           </div>
         </div>
       </section>

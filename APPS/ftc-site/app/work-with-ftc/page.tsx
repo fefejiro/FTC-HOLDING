@@ -31,7 +31,7 @@ export default function WorkWithFtcPage({ searchParams }: WorkWithFtcPageProps) 
     <div className="container page-content work-intake-page">
       <section className="work-intake-hero">
         <p className="eyebrow">{isAteamHandoff ? "ATEAM handoff" : "Start a Project"}</p>
-        <h1>{isAteamHandoff ? "ATEAM already shaped the first pass." : "Start with the shortest credible next step."}</h1>
+        <h1>{isAteamHandoff ? "ATEAM already shaped the first pass." : "Turn the idea into a scoped next step."}</h1>
         <p className="page-intro">
           {isAteamHandoff
             ? "You do not need to rewrite the idea. ATEAM already attached the intent, the visible work, and the first output pack. Add the missing business context and Una Labs can respond with the next commercial move."
