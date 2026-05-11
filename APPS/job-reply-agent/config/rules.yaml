@@ -1,0 +1,33 @@
+automation:
+  enabled: true
+  mode: approval_required
+  timezone: America/Toronto
+  max_drafts_per_day: 50
+  max_sends_per_day: 50
+
+filters:
+  min_match_score: 65
+  labels:
+    inbound: JOB AGENT/Recruiter Inbound
+    drafted: JOB AGENT/Drafted
+    needs_review: JOB AGENT/NeedsReview
+    approve_send: JOB AGENT/ApproveSend
+    sent: JOB AGENT/Sent
+    skipped: JOB AGENT/Skipped
+    blocked: JOB AGENT/Blocked
+
+risk_controls:
+  block_keywords:
+    - sin
+    - ssn
+    - passport
+    - date of birth
+    - full address
+    - banking information
+    - right to represent
+  require_review_keywords:
+    - exclusive representation
+    - urgent share details
+
+trusted_recruiter_domains:
+  - example-recruiter.com

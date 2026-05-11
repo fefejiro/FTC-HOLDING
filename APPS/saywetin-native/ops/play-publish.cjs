@@ -24,6 +24,7 @@ const PACKAGE_NAME = 'com.saywetin.app';
 const DEFAULT_KEY_PATH =
   process.env.SAYWETIN_PLAY_KEY_PATH ||
   'C:\\Users\\mikef\\Documents\\saywetin-play-service-account.json';
+const DEFAULT_RELEASE_KEYSTORE = path.join(ANDROID_DIR, 'app', 'saywetin-release.keystore');
 
 function parseArgs(argv) {
   const out = { track: 'internal', rollout: 1.0, promote: false, from: null, to: null, notes: null };
@@ -54,6 +55,36 @@ async function authClient() {
   return auth.getClient();
 }
 
+function hasSigningEnv() {
+  return Boolean(
+    process.env.SAYWETIN_KEYSTORE_PASSWORD &&
+      process.env.SAYWETIN_KEY_ALIAS &&
+      process.env.SAYWETIN_KEY_PASSWORD,
+  );
+}
+
+function resolveReleaseKeystorePath() {
+  return (
+    process.env.SAYWETIN_KEYSTORE_PATH ||
+    (fs.existsSync(DEFAULT_RELEASE_KEYSTORE) ? DEFAULT_RELEASE_KEYSTORE : '')
+  );
+}
+
+function failFastIfSigningMissing() {
+  const keystorePath = resolveReleaseKeystorePath();
+  if (!keystorePath) {
+    throw new Error(
+      'Release keystore not found. Set SAYWETIN_KEYSTORE_PATH or decode android/app/saywetin-release.keystore first.',
+    );
+  }
+  if (!hasSigningEnv()) {
+    throw new Error(
+      'Missing release signing env vars. Set SAYWETIN_KEYSTORE_PASSWORD, SAYWETIN_KEY_ALIAS, and SAYWETIN_KEY_PASSWORD.',
+    );
+  }
+  process.env.SAYWETIN_KEYSTORE_PATH = keystorePath;
+}
+
 function readReleaseNotes(explicit) {
   if (explicit) return explicit;
   const file = path.join(APP_ROOT, 'release-notes.txt');
@@ -62,6 +93,7 @@ function readReleaseNotes(explicit) {
 }
 
 async function uploadAAB({ args }) {
+  failFastIfSigningMissing();
   if (!fs.existsSync(AAB_PATH)) {
     throw new Error(`AAB not found at ${AAB_PATH}. Build it first with 'gradlew bundleRelease'.`);
   }
@@ -105,6 +137,7 @@ async function uploadAAB({ args }) {
 }
 
 async function promote({ args }) {
+  failFastIfSigningMissing();
   if (!args.from || !args.to) throw new Error('Promote requires --from and --to');
   const auth = await authClient();
   const publisher = google.androidpublisher({ version: 'v3', auth });

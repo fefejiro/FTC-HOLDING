@@ -93,15 +93,21 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
                   ritual.setRecognizedTrack({
                     ...ritual.track,
                     syncedLyrics: fetched.lines,
-                    lyricsAnchorOffsetMs: Math.max(0, fetched.songOffsetMs || 0),
-                    sampleCapturedAtMs: Date.now(),
+                    lyricsAnchorOffsetMs: Math.max(0, fetched.songOffsetMs || ritual.track.lyricsAnchorOffsetMs || 0),
+                    displaySongOffsetMs: Math.max(0, fetched.timing.displaySongOffsetMs ?? fetched.songOffsetMs ?? ritual.track.displaySongOffsetMs ?? 0),
+                    matchedSongOffsetMs: Math.max(0, fetched.timing.matchedSongOffsetMs ?? ritual.track.matchedSongOffsetMs ?? 0),
+                    listenStartedAtMs: fetched.timing.listenStartedAtMs ?? ritual.track.listenStartedAtMs,
+                    listenEndedAtMs: fetched.timing.listenEndedAtMs ?? ritual.track.listenEndedAtMs,
+                    audioSampleMidpointAtMs: fetched.timing.audioSampleMidpointAtMs ?? ritual.track.audioSampleMidpointAtMs,
+                    recognitionEndedAtMs: fetched.timing.recognitionEndedAtMs ?? ritual.track.recognitionEndedAtMs,
+                    resultShownAtMs: fetched.timing.resultShownAtMs ?? ritual.track.resultShownAtMs,
                   });
                 }
               }
               navigation.navigate('LiveLyrics');
             }}
             onReset={() => {
-              ritual.reset();
+              ritual.resetRecognitionSession();
               navigation.navigate('Listen');
             }}
           />

@@ -1,4 +1,4 @@
-import type { MatchSource, RitualTrack } from '../state/ritual-state';
+import type { MatchSource, RitualTrack, ResolvedSpotifyLink, ResolvedYoutubeLink } from '../state/ritual-state';
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
 const railWayFallbackBaseUrl = 'https://saywetin-api-production.up.railway.app';
@@ -15,6 +15,15 @@ type ListenResponse = {
     genre?: string | null;
     spotifyId?: string | null;
     youtubeId?: string | null;
+    spotifyUrl?: string | null;
+    youtubeUrl?: string | null;
+    youtube?: {
+      videoId?: string | null;
+      url?: string | null;
+      title?: string | null;
+      channelTitle?: string | null;
+      source?: string | null;
+    } | null;
     confidenceScore?: number | null;
     coverArtUrl?: string | null;
     matchSource?: string | null;
@@ -74,7 +83,16 @@ function normalizeExternalUrl(url: string, fallbackUrl: string) {
   return fallbackUrl;
 }
 
-function resolveSpotifyUrl(spotifyId: string | null | undefined, fallbackSearchUrl: string) {
+function resolveSpotifyUrl(
+  spotifyId: string | null | undefined,
+  spotifyUrl: string | null | undefined,
+  fallbackSearchUrl: string,
+) {
+  const explicitUrl = (spotifyUrl || '').trim();
+  if (explicitUrl) {
+    return normalizeExternalUrl(explicitUrl, fallbackSearchUrl);
+  }
+
   const value = (spotifyId || '').trim();
   if (!value) {
     return fallbackSearchUrl;
@@ -87,7 +105,16 @@ function resolveSpotifyUrl(spotifyId: string | null | undefined, fallbackSearchU
   return `https://open.spotify.com/track/${encodeURIComponent(value)}`;
 }
 
-function resolveYoutubeUrl(youtubeId: string | null | undefined, fallbackSearchUrl: string) {
+function resolveYoutubeUrl(
+  youtubeId: string | null | undefined,
+  youtubeUrl: string | null | undefined,
+  fallbackSearchUrl: string,
+) {
+  const explicitUrl = (youtubeUrl || '').trim();
+  if (explicitUrl) {
+    return normalizeExternalUrl(explicitUrl, fallbackSearchUrl);
+  }
+
   const value = (youtubeId || '').trim();
   if (!value) {
     return fallbackSearchUrl;
@@ -104,14 +131,105 @@ function resolveYoutubeUrl(youtubeId: string | null | undefined, fallbackSearchU
   return `https://www.youtube.com/watch?v=${encodeURIComponent(value)}`;
 }
 
-function buildTrackLinks(title: string, artist: string, spotifyId?: string | null, youtubeId?: string | null) {
+function extractSpotifyTrackId(input: string | null | undefined) {
+  const value = (input || '').trim();
+  if (!value) {
+    return null;
+  }
+
+  const trackPathMatch = value.match(/track\/([a-zA-Z0-9]+)/);
+  if (trackPathMatch?.[1]) {
+    return trackPathMatch[1];
+  }
+
+  if (value.startsWith('spotify:track:')) {
+    return value.split(':').pop() || null;
+  }
+
+  return /^[a-zA-Z0-9]+$/.test(value) ? value : null;
+}
+
+function extractYoutubeVideoId(input: string | null | undefined) {
+  const value = (input || '').trim();
+  if (!value) {
+    return null;
+  }
+
+  if (/^[a-zA-Z0-9_-]{6,}$/.test(value) && !value.includes('http')) {
+    return value;
+  }
+
+  try {
+    const parsed = new URL(value);
+    if (parsed.hostname.includes('youtu.be')) {
+      return parsed.pathname.replace('/', '') || null;
+    }
+    return parsed.searchParams.get('v');
+  } catch {
+    return null;
+  }
+}
+
+function normalizeYoutubeSource(
+  source: string | null | undefined,
+  hasDirectVideo: boolean,
+): ResolvedYoutubeLink['source'] {
+  const value = (source || '').toLowerCase().trim();
+  if (value === 'official' || value === 'vevo' || value === 'topic') {
+    return value;
+  }
+  if (!hasDirectVideo) {
+    return 'search_fallback';
+  }
+  return 'unknown';
+}
+
+function buildTrackLinks(
+  title: string,
+  artist: string,
+  spotifyId?: string | null,
+  youtubeId?: string | null,
+  spotifyUrl?: string | null,
+  youtubeUrl?: string | null,
+  youtubeMeta?: ListenResponse['recognizedTrack'] extends infer T
+    ? T extends { youtube?: infer Y }
+      ? Y
+      : never
+    : never,
+) {
   const searchQuery = encodeURIComponent(`${artist} ${title}`.trim());
   const spotifySearchUrl = `https://open.spotify.com/search/${searchQuery}`;
   const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery}`;
-  const spotifyUrl = resolveSpotifyUrl(spotifyId, spotifySearchUrl);
-  const youtubeUrl = resolveYoutubeUrl(youtubeId, youtubeSearchUrl);
+  const resolvedSpotifyUrl = resolveSpotifyUrl(spotifyId, spotifyUrl, spotifySearchUrl);
+  const resolvedYoutubeUrl = resolveYoutubeUrl(youtubeId, youtubeUrl, youtubeSearchUrl);
 
-  return { spotifyUrl, youtubeUrl };
+  const spotifyTrackId =
+    extractSpotifyTrackId(spotifyId) ||
+    extractSpotifyTrackId(spotifyUrl) ||
+    extractSpotifyTrackId(resolvedSpotifyUrl);
+  const youtubeVideoId =
+    extractYoutubeVideoId(youtubeMeta?.videoId) ||
+    extractYoutubeVideoId(youtubeId) ||
+    extractYoutubeVideoId(youtubeMeta?.url) ||
+    extractYoutubeVideoId(youtubeUrl) ||
+    extractYoutubeVideoId(resolvedYoutubeUrl);
+
+  const spotify: ResolvedSpotifyLink = {
+    trackId: spotifyTrackId,
+    uri: spotifyTrackId ? `spotify:track:${spotifyTrackId}` : null,
+    url: resolvedSpotifyUrl,
+    source: spotifyTrackId ? 'direct' : 'search_fallback',
+  };
+
+  const youtube: ResolvedYoutubeLink = {
+    videoId: youtubeVideoId,
+    url: youtubeVideoId ? `https://www.youtube.com/watch?v=${encodeURIComponent(youtubeVideoId)}` : resolvedYoutubeUrl,
+    title: youtubeMeta?.title?.trim() || null,
+    channelTitle: youtubeMeta?.channelTitle?.trim() || null,
+    source: normalizeYoutubeSource(youtubeMeta?.source, Boolean(youtubeVideoId)),
+  };
+
+  return { spotifyUrl: resolvedSpotifyUrl, youtubeUrl: resolvedYoutubeUrl, spotify, youtube };
 }
 
 function normalizeMatchSource(value?: string | null): MatchSource {
@@ -131,6 +249,9 @@ function mapRecognizedTrack(
     recognized.artist,
     recognized.spotifyId,
     recognized.youtubeId,
+    recognized.spotifyUrl,
+    recognized.youtubeUrl,
+    recognized.youtube,
   );
 
   return {
@@ -145,6 +266,8 @@ function mapRecognizedTrack(
     meaning: '',
     spotifyUrl: links.spotifyUrl,
     youtubeUrl: links.youtubeUrl,
+    spotify: links.spotify,
+    youtube: links.youtube,
     chips: recognized.genre ? [recognized.genre] : [],
     syncedLyrics: [],
     lyricsAnchorOffsetMs:
@@ -154,6 +277,10 @@ function mapRecognizedTrack(
     matchSource,
     recognitionSource: matchSource === 'lyric_text' ? 'text_query' : 'microphone',
     culturalAnalyses: [],
+    matchedSongOffsetMs:
+      typeof recognized.matchedOffsetMs === 'number' && Number.isFinite(recognized.matchedOffsetMs)
+        ? Math.max(0, recognized.matchedOffsetMs)
+        : 0,
   };
 }
 
@@ -204,7 +331,10 @@ function mergeDetailedTrack(base: RitualTrack, detail: RecognizedTrackDetailResp
     chips: track.genre ? [track.genre] : base.chips,
     spotifyUrl: links.spotifyUrl,
     youtubeUrl: links.youtubeUrl,
+    spotify: links.spotify,
+    youtube: links.youtube,
     lyricsAnchorOffsetMs: Math.max(0, matchedOffsetMs || 0),
+    matchedSongOffsetMs: Math.max(0, matchedOffsetMs || 0),
     culturalAnalyses: analyses.length > 0 ? analyses : base.culturalAnalyses,
   };
 }
@@ -286,6 +416,8 @@ export async function uploadListenSample(
     ...mapRecognizedTrack(payload.recognizedTrack, matchSource),
     matchedInMs: recognitionReceivedAt - startedAt,
     listenStartedAtMs: startedAt,
+    recognitionStartedAtMs: startedAt,
+    recognitionEndedAtMs: recognitionReceivedAt,
     recognitionReceivedAtMs: recognitionReceivedAt,
   };
 
@@ -361,6 +493,9 @@ export async function identifyByText(query: string): Promise<RitualTrack> {
   const baseTrack = {
     ...mapRecognizedTrack(payload.recognizedTrack, matchSource),
     matchedInMs: Date.now() - startedAt,
+    recognitionStartedAtMs: startedAt,
+    recognitionEndedAtMs: Date.now(),
+    recognitionReceivedAtMs: Date.now(),
   };
 
   try {

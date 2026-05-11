@@ -1,0 +1,26 @@
+[
+  {
+    "messageId": "gmail-msg-1001",
+    "threadId": "gmail-thread-9001",
+    "from": "nidhi.bhati@esolutionsinc.com",
+    "subject": "Technical Program Manager II - Remote",
+    "body": "Hi Fejiro,\n\nCompany: E-solutions Inc.\nLocation: Remote\nEmployment Type: Contract\nRate: $85/hr\nWe are hiring for Technical Program Manager II with Salesforce Cloud and enterprise integration experience.\n\nRegards,\nNidhi Bhati",
+    "receivedAt": "2026-05-11T14:10:00.000Z"
+  },
+  {
+    "messageId": "gmail-msg-1002",
+    "threadId": "gmail-thread-9002",
+    "from": "koshal.arora@diverselynx.com",
+    "subject": "Business Analyst, Mobile Applications",
+    "body": "Hello,\n\nCompany: Diverse Lynx\nLocation: Lisle, IL (Onsite Day 1)\nEmployment Type: Full-time\nRate: $90K-$110K\nNeed strong business analysis, user stories, acceptance criteria and mobile app delivery.\nPlease share right to represent and full address.\n\nBest regards,\nKoshal Arora",
+    "receivedAt": "2026-05-11T14:20:00.000Z"
+  },
+  {
+    "messageId": "gmail-msg-1003",
+    "threadId": "gmail-thread-9003",
+    "from": "recruiter@talentgrid.io",
+    "subject": "ERP Systems Analyst - Hybrid Toronto",
+    "body": "Hi Fejiro,\n\nClient: Enterprise Retail Group\nLocation: Hybrid Toronto\nEmployment Type: Contract\nSeeking ERP, WMS, POS integration analyst with UAT and stakeholder management experience.\n\nThanks,\nSarah Lee",
+    "receivedAt": "2026-05-11T14:30:00.000Z"
+  }
+]

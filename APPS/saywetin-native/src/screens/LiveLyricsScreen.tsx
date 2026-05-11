@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { fetchLineExplain, fetchSyncedLyrics, postSignal } from '../api/live-lyrics';
 import { TapExplainSheet } from '../components/TapExplainSheet';
 import type { RitualTrack, SyncedLyricLine } from '../state/ritual-state';
@@ -12,27 +13,59 @@ type LiveLyricsScreenProps = {
   onBack: () => void;
 };
 
+type ContextTab = 'meaning' | 'slang' | 'vibe' | 'culture' | 'reply';
+
 export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
-  // Compute song position now, accounting for time elapsed since the sample was captured
-  // (upload latency + time browsing result screen before opening lyrics).
-  const sampleAge = track.sampleCapturedAtMs
-    ? Math.max(0, Date.now() - track.sampleCapturedAtMs)
-    : 0;
-  const initialSongOffsetMs = Math.max(0, (track.lyricsAnchorOffsetMs ?? track.matchedInMs ?? 0) + sampleAge);
+  // Initialize timing references at component mount time for accuracy
+  const screenMountTimeRef = useRef(Date.now());
+  const now = screenMountTimeRef.current;
+  
+  const effectiveResultShownAtMs = track.resultShownAtMs ?? now;
+  const effectiveMidpointAtMs =
+    track.audioSampleMidpointAtMs ?? track.sampleCapturedAtMs ?? effectiveResultShownAtMs;
+  const effectiveMatchedOffsetMs =
+    track.matchedSongOffsetMs ?? track.providerSongOffsetMs ?? track.lyricsAnchorOffsetMs ?? 0;
+
+  const derivedDisplaySongOffsetMs = Math.max(
+    0,
+    effectiveMatchedOffsetMs + (effectiveResultShownAtMs - effectiveMidpointAtMs),
+  );
+
+  const initialDisplaySongOffsetMs = Math.max(
+    0,
+    track.displaySongOffsetMs ?? derivedDisplaySongOffsetMs,
+  );
+
+  // Only calculate elapsed if result was shown in the past (avoid future timestamps)
+  const elapsedSinceResultShownMs = Math.max(0, Math.min(Date.now() - effectiveResultShownAtMs, 120000)); // Cap at 2 min
+  const initialSongOffsetMs = initialDisplaySongOffsetMs + elapsedSinceResultShownMs;
+
   const [lyrics, setLyrics] = useState<SyncedLyricLine[]>(track.syncedLyrics);
   const [positionMs, setPositionMs] = useState(initialSongOffsetMs);
   const [syncWarn, setSyncWarn] = useState(false);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [selectedLine, setSelectedLine] = useState<SyncedLyricLine | null>(null);
-  const [contextTab, setContextTab] = useState<'meaning' | 'alternates' | 'related'>('meaning');
+  const [contextTab, setContextTab] = useState<ContextTab>('meaning');
+  const [manualOffsetMs, setManualOffsetMs] = useState(0);
   const [lineMeaningCache, setLineMeaningCache] = useState<Record<string, SyncedLyricLine>>({});
   const [lineLoadingById, setLineLoadingById] = useState<Record<string, boolean>>({});
-  const startedAtRef = useRef(Date.now());
-  const startOffsetMs = useRef(initialSongOffsetMs);
+
+  const baseDisplayOffsetRef = useRef(initialDisplaySongOffsetMs);
+  const resultShownAtRef = useRef(effectiveResultShownAtMs);
   const driftSinceMs = useRef<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const lineHeights = useRef<Record<number, number>>({});
   const inFlightExplainRef = useRef<Record<string, Promise<SyncedLyricLine>>>({});
+
+  // Handle hardware back button to return to Result (not reset)
+  useFocusEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      onBack();
+      return true;
+    });
+
+    return () => backHandler.remove();
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -44,11 +77,13 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
 
       if (loaded && loaded.lines.length > 0) {
         setLyrics(loaded.lines);
+        if (loaded.songOffsetMs > 0 && !track.displaySongOffsetMs) {
+          baseDisplayOffsetRef.current = loaded.songOffsetMs;
+        }
         setFallbackReason(null);
         return;
       }
 
-      // Prevent flash from index 0 if timing/target is unresolved
       setLyrics([]);
       setFallbackReason('notiming');
     })();
@@ -56,21 +91,21 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     return () => {
       mounted = false;
     };
-  }, [track.id]);
+  }, [track.id, track.displaySongOffsetMs]);
 
   useEffect(() => {
     let frame = 0;
 
     const tick = () => {
-      const elapsed = Date.now() - startedAtRef.current;
-      setPositionMs(startOffsetMs.current + elapsed);
+      const elapsed = Math.max(0, Date.now() - resultShownAtRef.current);
+      const activeOffsetMs = Math.max(0, baseDisplayOffsetRef.current + elapsed + manualOffsetMs);
+      setPositionMs(activeOffsetMs);
       frame = requestAnimationFrame(tick);
     };
 
     frame = requestAnimationFrame(tick);
-
     return () => cancelAnimationFrame(frame);
-  }, []);
+  }, [manualOffsetMs]);
 
   useEffect(() => {
     return () => {
@@ -83,16 +118,11 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
       return 0;
     }
 
-    const matchIndex = lyrics.findIndex(
-      (line) => line.startMs <= positionMs && positionMs < line.endMs,
-    );
-
+    const matchIndex = lyrics.findIndex((line) => line.startMs <= positionMs && positionMs < line.endMs);
     if (matchIndex >= 0) {
       return matchIndex;
     }
 
-    // If the current position falls in timing gaps or beyond the last line,
-    // keep the nearest previous line instead of snapping back to the first line.
     const nearestPast = lyrics.reduce((best, line, index) => {
       if (line.startMs <= positionMs) {
         return index;
@@ -105,24 +135,17 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
 
   const activeLine = lyrics[currentLineIndex] ?? null;
 
-  // Auto-scroll to keep active line roughly centered
   useEffect(() => {
-    if (!scrollRef.current || currentLineIndex <= 0) return;
+    if (!scrollRef.current || currentLineIndex <= 0) {
+      return;
+    }
+
     let offset = 0;
-    for (let i = 0; i < currentLineIndex; i++) {
+    for (let i = 0; i < currentLineIndex; i += 1) {
       offset += lineHeights.current[i] ?? 80;
     }
-    offset = Math.max(0, offset - 160);
-    scrollRef.current.scrollTo({ y: offset, animated: true });
+    scrollRef.current.scrollTo({ y: Math.max(0, offset - 160), animated: true });
   }, [currentLineIndex]);
-
-  const prefetchNearby = async (centerIndex: number) => {
-    const candidates = [centerIndex - 2, centerIndex - 1, centerIndex, centerIndex + 1, centerIndex + 2]
-      .filter((position) => position >= 0 && position < lyrics.length)
-      .map((position) => lyrics[position]);
-
-    await Promise.all(candidates.map((candidate) => hydrateLineMeaning(candidate)));
-  };
 
   const hydrateLineMeaning = async (line: SyncedLyricLine): Promise<SyncedLyricLine> => {
     if (lineMeaningCache[line.id]) {
@@ -144,9 +167,13 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
         return line;
       }
 
-      const merged = {
+      const merged: SyncedLyricLine = {
         ...line,
         meaning: explain.meaning || line.meaning,
+        vibe: explain.vibe || line.vibe,
+        culture: explain.culture || line.culture,
+        artistIntent: explain.artistIntent || line.artistIntent,
+        reply: explain.reply || line.reply,
         alternates: explain.alternates.length > 0 ? explain.alternates : line.alternates,
         related: explain.related.length > 0 ? explain.related : line.related,
       };
@@ -172,6 +199,14 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     }
   };
 
+  const prefetchNearby = async (centerIndex: number) => {
+    const candidates = [centerIndex - 2, centerIndex - 1, centerIndex, centerIndex + 1, centerIndex + 2]
+      .filter((index) => index >= 0 && index < lyrics.length)
+      .map((index) => lyrics[index]);
+
+    await Promise.all(candidates.map((candidate) => hydrateLineMeaning(candidate)));
+  };
+
   const openExplain = (line: SyncedLyricLine, index: number) => {
     void postSignal('tap', track.id, line.id);
     setSelectedLine(line);
@@ -190,108 +225,145 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     void prefetchNearby(currentLineIndex);
   }, [currentLineIndex, lyrics]);
 
+  // Only render lyrics within a window to prevent "pop all at once" effect
+  const displayedLyrics = useMemo(() => {
+    if (lyrics.length === 0) return [];
+    
+    const VISIBLE_WINDOW = 8; // Show 8 lines around current line
+    const start = Math.max(0, currentLineIndex - VISIBLE_WINDOW);
+    const end = Math.min(lyrics.length, currentLineIndex + VISIBLE_WINDOW + 1);
+    
+    return lyrics.slice(start, end).map((line, displayIndex) => ({
+      line,
+      originalIndex: start + displayIndex,
+    }));
+  }, [lyrics, currentLineIndex]);
+
   const onResync = () => {
-    startedAtRef.current = Date.now();
-    startOffsetMs.current = 0;
-    setPositionMs(0);
+    resultShownAtRef.current = Date.now();
+    baseDisplayOffsetRef.current = initialDisplaySongOffsetMs;
+    setManualOffsetMs(0);
+    setPositionMs(initialDisplaySongOffsetMs);
     setSyncWarn(false);
     driftSinceMs.current = null;
     void postSignal('resync', track.id);
   };
 
+  const adjustSync = (deltaMs: number) => {
+    setManualOffsetMs((current) => current + deltaMs);
+    setSyncWarn(false);
+  };
+
   const inlineIndicator = fallbackReason
-    ? 'Synced lyrics are not ready yet. Showing best available line.'
+    ? 'Exact lyric timing is unavailable.'
     : syncWarn
       ? 'Timing drift detected. Tap Re-sync if lines feel off.'
       : null;
 
   return (
     <View style={styles.screen}>
-      {/* Ambient glow behind active area */}
       <View style={styles.ambientGlow} pointerEvents="none" />
 
-      {/* Top controls */}
       <View style={styles.topRow}>
-        {syncWarn ? (
+        <View style={styles.syncControlRow}>
+          <Pressable onPress={() => adjustSync(-5000)} style={styles.syncButton}>
+            <Text style={styles.syncButtonText}>Sync -5s</Text>
+          </Pressable>
+          <Pressable onPress={() => adjustSync(5000)} style={styles.syncButton}>
+            <Text style={styles.syncButtonText}>Sync +5s</Text>
+          </Pressable>
           <Pressable onPress={onResync} style={styles.resyncButton}>
             <Text style={styles.resyncButtonText}>Re-sync</Text>
           </Pressable>
-        ) : (
-          <View style={styles.topSpacer} />
-        )}
+        </View>
+
         <Pressable onPress={onBack} style={styles.doneButton}>
           <Text style={styles.doneButtonText}>Done</Text>
         </Pressable>
       </View>
 
-      {fallbackReason ? (
+      {inlineIndicator ? (
         <View style={styles.syncNotice}>
-          <Text style={styles.syncNoticeText}>Synced lyrics are not ready yet — showing best available.</Text>
+          <Text style={styles.syncNoticeText}>{inlineIndicator}</Text>
         </View>
       ) : null}
 
-      {/* Immersive lyric scroll */}
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={styles.lyricsWrap}
-        showsVerticalScrollIndicator={false}
-      >
-        {lyrics.length === 0 ? (
-          <Text style={styles.waitingText}>Waiting for lyrics…</Text>
-        ) : null}
-        {lyrics.map((line, index) => {
-          const active = index === currentLineIndex;
-          const distance = Math.abs(index - currentLineIndex);
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.lyricsWrap} showsVerticalScrollIndicator={false}>
+        {lyrics.length === 0 ? <Text style={styles.waitingText}>Waiting for lyrics...</Text> : null}
+
+        {displayedLyrics.map(({ line, originalIndex }) => {
+          const active = originalIndex === currentLineIndex;
+          const distance = Math.abs(originalIndex - currentLineIndex);
           const opacity = active ? 1 : distance === 1 ? 0.45 : distance === 2 ? 0.22 : 0.12;
           const fontSize = active ? 30 : distance === 1 ? 20 : 16;
+
           return (
             <Pressable
               key={line.id}
-              onPress={() => { openExplain(line, index); setContextTab('meaning'); }}
-              onLayout={(e) => { lineHeights.current[index] = e.nativeEvent.layout.height; }}
+              onPress={() => {
+                openExplain(line, originalIndex);
+                setContextTab('meaning');
+              }}
+              onLayout={(event) => {
+                lineHeights.current[originalIndex] = event.nativeEvent.layout.height;
+              }}
               style={styles.linePressable}
             >
-              <Text
-                style={[styles.lineText, { opacity, fontSize, lineHeight: fontSize * 1.35 }]}
-              >
-                {line.text}
-              </Text>
-              {/* Inline context card for active line */}
+              <Text style={[styles.lineText, { opacity, fontSize, lineHeight: fontSize * 1.35 }]}>{line.text}</Text>
+
               {active && activeLine?.meaning ? (
                 <View style={styles.contextCard}>
                   <View style={styles.contextTabRow}>
-                    {(['meaning', 'alternates', 'related'] as const).map((t) => (
+                    {(['meaning', 'slang', 'vibe', 'culture', 'reply'] as const).map((tabKey) => (
                       <Pressable
-                        key={t}
-                        style={[styles.contextTab, contextTab === t && styles.contextTabActive]}
-                        onPress={() => setContextTab(t)}
+                        key={tabKey}
+                        style={[styles.contextTab, contextTab === tabKey && styles.contextTabActive]}
+                        onPress={() => setContextTab(tabKey)}
                       >
-                        <Text style={[styles.contextTabText, contextTab === t && styles.contextTabTextActive]}>
-                          {t === 'meaning' ? 'Meaning' : t === 'alternates' ? 'Slang' : 'Culture'}
+                        <Text style={[styles.contextTabText, contextTab === tabKey && styles.contextTabTextActive]}>
+                          {tabKey === 'meaning'
+                            ? 'Meaning'
+                            : tabKey === 'slang'
+                              ? 'Slang'
+                              : tabKey === 'vibe'
+                                ? 'Vibe'
+                                : tabKey === 'culture'
+                                  ? 'Culture'
+                                  : 'Reply'}
                         </Text>
                       </Pressable>
                     ))}
                   </View>
+
                   <Text style={styles.contextBody}>
                     {contextTab === 'meaning'
                       ? activeLine.meaning
-                      : contextTab === 'alternates'
-                        ? (activeLine.alternates.length > 0 ? activeLine.alternates.join(' · ') : 'No slang notes yet.')
-                        : (activeLine.related.length > 0 ? activeLine.related.join(' · ') : 'No cultural notes yet.')}
+                      : contextTab === 'slang'
+                        ? activeLine.alternates.length > 0
+                          ? activeLine.alternates.join(' · ')
+                          : 'No slang notes yet.'
+                        : contextTab === 'vibe'
+                          ? activeLine.vibe || 'Vibe note not available yet.'
+                          : contextTab === 'culture'
+                            ? activeLine.culture || (activeLine.related.length > 0 ? activeLine.related.join(' · ') : 'No culture note yet.')
+                            : activeLine.reply || activeLine.artistIntent || 'No reply cue yet.'}
                   </Text>
                 </View>
               ) : null}
             </Pressable>
           );
         })}
-        {/* Bottom padding so last line can scroll to center */}
-        <View style={{ height: 200 }} />
+
+        <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Footer: song meta */}
       <View style={styles.footer}>
-        <Text style={styles.footerTitle} numberOfLines={1}>{track.title}</Text>
-        <Text style={styles.footerArtist} numberOfLines={1}>{track.artist}</Text>
+        <Text style={styles.footerTitle} numberOfLines={1}>
+          {track.title}
+        </Text>
+        <Text style={styles.footerArtist} numberOfLines={1}>
+          {track.artist}
+        </Text>
       </View>
 
       <TapExplainSheet
@@ -325,8 +397,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 4,
+    gap: 8,
   },
-  topSpacer: { width: 60 },
+  syncControlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  syncButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  syncButtonText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
   doneButton: {
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -384,7 +476,7 @@ const styles = StyleSheet.create({
   },
   lineText: {
     color: colors.text,
-    fontFamily: 'PlayfairDisplay_400Regular_Italic',
+    fontWeight: '600',
     letterSpacing: -0.3,
     textAlign: 'left',
   },
@@ -400,9 +492,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: colors.violetEdge,
+    flexWrap: 'wrap',
   },
   contextTab: {
-    flex: 1,
+    flexGrow: 1,
+    minWidth: '20%',
     paddingVertical: 9,
     alignItems: 'center',
   },
@@ -442,5 +536,8 @@ const styles = StyleSheet.create({
   footerArtist: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  bottomSpacer: {
+    height: 200,
   },
 });

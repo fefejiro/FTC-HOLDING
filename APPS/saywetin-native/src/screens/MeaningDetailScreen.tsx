@@ -12,10 +12,16 @@ type MeaningDetailBodyProps = {
 export function MeaningDetailBody({ line }: MeaningDetailBodyProps) {
   const [expanded, setExpanded] = useState(false);
 
+  const compactMeaning = line.meaning || 'Meaning is still being prepared.';
+  const vibeText = line.vibe || 'Vibe note not available yet.';
+  const cultureText = line.culture || (line.related.length > 0 ? line.related.join(' · ') : 'Culture note not available yet.');
+  const intentText = line.artistIntent || 'Artist intent note not available yet.';
+  const relatedText = line.related.length > 0 ? line.related.join(' · ') : 'No related keywords yet.';
+
   return (
     <View style={styles.panel}>
       <Text style={styles.heading}>Meaning</Text>
-      <Text style={styles.bodyText}>{line.meaning}</Text>
+      <Text style={styles.bodyText}>{compactMeaning}</Text>
 
       <Pressable onPress={() => setExpanded((value) => !value)} style={styles.moreButton}>
         <Text style={styles.moreButtonText}>{expanded ? 'Hide context' : 'More context'}</Text>
@@ -23,18 +29,14 @@ export function MeaningDetailBody({ line }: MeaningDetailBodyProps) {
 
       {expanded ? (
         <View style={styles.contextPanel}>
-          <Text style={styles.contextTitle}>Story</Text>
-          <Text style={styles.contextText}>
-            The line sits inside a confidence arc that projects motion and control.
-          </Text>
-          <Text style={styles.contextTitle}>Artist Intent</Text>
-          <Text style={styles.contextText}>
-            Delivery is direct on purpose. The artist signals certainty over hesitation.
-          </Text>
-          <Text style={styles.contextTitle}>Language Note</Text>
-          <Text style={styles.contextText}>
-            Pidgin compression keeps rhythm tight while preserving layered meaning.
-          </Text>
+          <Text style={styles.contextTitle}>Vibe</Text>
+          <Text style={styles.contextText}>{vibeText}</Text>
+          <Text style={styles.contextTitle}>Culture</Text>
+          <Text style={styles.contextText}>{cultureText}</Text>
+          <Text style={styles.contextTitle}>Artist intent</Text>
+          <Text style={styles.contextText}>{intentText}</Text>
+          <Text style={styles.contextTitle}>Related</Text>
+          <Text style={styles.contextText}>{relatedText}</Text>
         </View>
       ) : null}
     </View>

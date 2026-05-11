@@ -193,11 +193,12 @@ const App: React.FC = () => {
           return;
         }
         try {
+          const tabAudioConstraints = {
+            mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId },
+          } as unknown as MediaTrackConstraints;
+
           const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              // @ts-expect-error Chrome tab audio capture constraint
-              mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId },
-            } as MediaTrackConstraints,
+            audio: tabAudioConstraints,
           });
           const recorder = new MediaRecorder(stream);
           const chunks: BlobPart[] = [];

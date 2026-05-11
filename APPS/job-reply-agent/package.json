@@ -1,0 +1,51 @@
+{
+  "name": "job-reply-agent",
+  "version": "0.1.0",
+  "description": "Recruiter email intake, drafting, approval, and daily reporting agent.",
+  "main": "dist/main.js",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/main.ts",
+    "serve": "tsx src/server.ts",
+    "start": "node dist/main.js",
+    "start:server": "node dist/server.js",
+    "report": "tsx src/main.ts report:daily",
+    "gmail:auth:url": "tsx src/main.ts gmail:auth:url",
+    "gmail:auth:save": "tsx src/main.ts gmail:auth:save",
+    "db:reset": "tsx src/main.ts db:reset",
+    "seed": "tsx src/main.ts seed:sample",
+    "process:mock": "tsx src/main.ts process:mock",
+    "process:gmail": "tsx src/main.ts process:gmail",
+    "approve:all": "tsx src/main.ts approve:all",
+    "send:approved": "tsx src/main.ts send:approved",
+    "send:approved:gmail": "tsx src/main.ts send:approved:gmail",
+    "run:mock-cycle": "tsx src/main.ts run:mock-cycle",
+    "run:gmail-cycle": "tsx src/main.ts run:gmail-cycle",
+    "lint": "echo lint-placeholder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
+    "googleapis": "^148.0.0",
+    "nodemailer": "^6.9.15",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.2.2",
+    "yaml": "^2.6.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.19.35",
+    "@types/nodemailer": "^6.4.16",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.6"
+  }
+}

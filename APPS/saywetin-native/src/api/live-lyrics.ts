@@ -24,6 +24,11 @@ type SyncedLyricsResponse = {
 type ExplainResponse = {
   literal: string;
   cultural: string;
+  vibe?: string;
+  culture?: string;
+  artistIntent?: string;
+  reply?: string;
+  relatedKeyword?: string;
   relatedPhrases: string[];
   alternates?: Array<{ title: string; body: string; confidence: number }>;
 };
@@ -47,6 +52,15 @@ async function readJson<T>(response: Response): Promise<T> {
 export type FetchedLyrics = {
   lines: SyncedLyricLine[];
   songOffsetMs: number;
+  timing: {
+    listenStartedAtMs?: number;
+    listenEndedAtMs?: number;
+    audioSampleMidpointAtMs?: number;
+    recognitionEndedAtMs?: number;
+    resultShownAtMs?: number;
+    matchedSongOffsetMs?: number;
+    displaySongOffsetMs?: number;
+  };
 };
 
 export async function fetchSyncedLyrics(trackId: string): Promise<FetchedLyrics | null> {
@@ -68,11 +82,27 @@ export async function fetchSyncedLyrics(trackId: string): Promise<FetchedLyrics 
       endMs: line.endMs,
       tappable: line.tappable,
       meaning: '',
+      vibe: '',
+      culture: '',
+      artistIntent: '',
+      reply: '',
       alternates: [],
       related: [],
     }));
 
-    return { lines, songOffsetMs };
+    return {
+      lines,
+      songOffsetMs,
+      timing: {
+        listenStartedAtMs: json.listenStartedAtMs,
+        listenEndedAtMs: json.listenEndedAtMs,
+        audioSampleMidpointAtMs: json.sampleMidpointAtMs,
+        recognitionEndedAtMs: json.recognitionReceivedAtMs,
+        resultShownAtMs: json.resultShownAtMs,
+        matchedSongOffsetMs: json.providerSongOffsetMs,
+        displaySongOffsetMs: json.calculatedDisplayOffsetMs,
+      },
+    };
   } catch {
     return null;
   }
@@ -82,7 +112,7 @@ export async function fetchLineExplain(
   trackId: string,
   line: SyncedLyricLine,
   positionMs: number,
-): Promise<Pick<SyncedLyricLine, 'meaning' | 'alternates' | 'related'> | null> {
+): Promise<Pick<SyncedLyricLine, 'meaning' | 'vibe' | 'culture' | 'artistIntent' | 'reply' | 'alternates' | 'related'> | null> {
   if (!hasApiBaseUrl()) {
     return null;
   }
@@ -105,8 +135,12 @@ export async function fetchLineExplain(
 
     return {
       meaning: [json.literal, json.cultural].filter(Boolean).join(' '),
+      vibe: (json.vibe || '').trim(),
+      culture: (json.culture || json.cultural || '').trim(),
+      artistIntent: (json.artistIntent || '').trim(),
+      reply: (json.reply || '').trim(),
       alternates: (json.alternates ?? []).map((entry) => entry.body || entry.title),
-      related: json.relatedPhrases ?? [],
+      related: [json.relatedKeyword || '', ...(json.relatedPhrases ?? [])].filter((entry) => entry.trim().length > 0),
     };
   } catch {
     return null;

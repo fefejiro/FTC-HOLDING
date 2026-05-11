@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { AudioModule, RecordingPresets, useAudioRecorder } from 'expo-audio';
 import { FadeInView } from '../components/FadeInView';
 import { OrbListener } from '../components/OrbListener';
@@ -8,18 +9,12 @@ import { useAudioSession } from '../audio/useAudioSession';
 import { identifyByText, uploadListenSample } from '../api/listen';
 import type { RitualTrack } from '../state/ritual-state';
 import { ritualTokens } from '../theme/tokens';
-import { getStatusChip, getStatusSubtitle, shouldShowSlowNetworkWarning, getSlowNetworkMessage } from '../utils/status-messaging';
+import { getStatusSubtitle, shouldShowSlowNetworkWarning, getSlowNetworkMessage } from '../utils/status-messaging';
 
 const { colors } = ritualTokens;
 const CAPTURE_DURATION_MS = 5000;
 const MATCHING_AUTO_ADVANCE_MS = 250;
-const LISTEN_MICROCOPY = [
-  'Tap once to listen. Tap again to stop early.',
-  'Catch am quick. Match am clean.',
-  'Live audio in, fingerprint out.',
-  'One tap starts. Second tap cuts early.',
-  'Play am loud. We go find am fast.',
-];
+const LISTEN_MICROCOPY = ['Tap to listen'];
 
 type ListenPhase =
   | 'idle'
@@ -39,7 +34,9 @@ type AttemptTimeline = {
   permissionGrantedAtMs?: number;
   captureStartedAtMs?: number;
   captureEndedAtMs?: number;
+  sampleMidpointAtMs?: number;
   uploadStartedAtMs?: number;
+  recognitionStartedAtMs?: number;
   matchReadyAtMs?: number;
 };
 
@@ -143,6 +140,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
   const attemptIdRef = useRef(0);
   const stageStartedAtRef = useRef(0);
   const timelineRef = useRef<AttemptTimeline | null>(null);
+  const abortControllerRef = useRef(new AbortController());
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const audioRoute = useAudioRoute();
@@ -153,6 +151,30 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
 
   // Configure audio session to avoid killing existing playback while recording.
   useAudioSession();
+
+  // Handle hardware back button to cancel early if recording/uploading
+  useFocusEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isBusyPhase(phase)) {
+        // If recording: stop early
+        if (phase === 'capturing') {
+          stopCaptureEarly();
+          return true;
+        }
+        // If uploading/matching: abort request and cancel
+        abortControllerRef.current.abort();
+        setPhase('cancelled');
+        setTimeout(() => {
+          setPhase('idle');
+        }, 180);
+        return true;
+      }
+      // If idle or error: allow default back behavior
+      return false;
+    });
+
+    return () => backHandler.remove();
+  });
 
   useEffect(() => {
     stageStartedAtRef.current = Date.now();
@@ -286,9 +308,16 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
         throw new Error('No recording captured');
       }
 
+      const captureEndedAtMs = Date.now();
+      const sampleMidpointAtMs =
+        timelineRef.current?.captureStartedAtMs
+          ? Math.round((timelineRef.current.captureStartedAtMs + captureEndedAtMs) / 2)
+          : captureEndedAtMs;
+
       timelineRef.current = {
         ...(timelineRef.current || { requestId, startedAtMs: Date.now() }),
-        captureEndedAtMs: Date.now(),
+        captureEndedAtMs,
+        sampleMidpointAtMs,
         uploadStartedAtMs: Date.now(),
       };
 
@@ -301,6 +330,9 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
 
       timelineRef.current = {
         ...(timelineRef.current || { requestId, startedAtMs: Date.now() }),
+        captureEndedAtMs,
+        sampleMidpointAtMs,
+        recognitionStartedAtMs: timelineRef.current?.uploadStartedAtMs ?? captureEndedAtMs,
         matchReadyAtMs: Date.now(),
       };
 
@@ -308,9 +340,15 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
 
       const songPositionAtResponseMs = Math.max(
         0,
-        (recognizedTrack.lyricsAnchorOffsetMs ?? 0) + CAPTURE_DURATION_MS,
+        recognizedTrack.matchedSongOffsetMs ?? recognizedTrack.lyricsAnchorOffsetMs ?? 0,
       );
-      const capturedAtMs = Date.now();
+      const resultShownAtMs = Date.now() + MATCHING_AUTO_ADVANCE_MS;
+
+      const displaySongOffsetMs = Math.max(
+        0,
+        songPositionAtResponseMs +
+          (resultShownAtMs - (timelineRef.current?.sampleMidpointAtMs ?? resultShownAtMs)),
+      );
 
       console.log('[listen] recognition timeline', {
         requestId,
@@ -325,9 +363,17 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
 
         onRecognizedRef.current({
           ...recognizedTrack,
-          lyricsAnchorOffsetMs: songPositionAtResponseMs + MATCHING_AUTO_ADVANCE_MS,
-          sampleCapturedAtMs: capturedAtMs + MATCHING_AUTO_ADVANCE_MS,
-          resultShownAtMs: Date.now(),
+          listenStartedAtMs: timelineRef.current?.startedAtMs,
+          listenEndedAtMs: timelineRef.current?.captureEndedAtMs,
+          audioSampleMidpointAtMs: timelineRef.current?.sampleMidpointAtMs,
+          recognitionStartedAtMs: timelineRef.current?.recognitionStartedAtMs,
+          recognitionEndedAtMs: timelineRef.current?.matchReadyAtMs,
+          recognitionReceivedAtMs: timelineRef.current?.matchReadyAtMs,
+          matchedSongOffsetMs: songPositionAtResponseMs,
+          displaySongOffsetMs,
+          lyricsAnchorOffsetMs: displaySongOffsetMs,
+          sampleCapturedAtMs: timelineRef.current?.captureEndedAtMs,
+          resultShownAtMs,
         });
       }, MATCHING_AUTO_ADVANCE_MS);
     } catch (error: any) {
@@ -338,7 +384,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       const message = String(error?.message || 'Could not identify song. Try again.');
       const network = isNetworkError(message);
       setPhase(network ? 'offline' : 'failed');
-      setErrorMessage(network ? 'Network slow or offline. Try again or use lyric match below.' : message);
+      setErrorMessage('I could not hear enough music.');
       setShowLyricInput(true);
       setSecondsLeft(0);
 
@@ -376,10 +422,22 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
         return;
       }
 
+      const nowMs = Date.now();
+      const matchedOffsetMs = recognizedTrack.matchedSongOffsetMs ?? recognizedTrack.lyricsAnchorOffsetMs ?? 0;
+
       onRecognizedRef.current({
         ...recognizedTrack,
-        lyricsAnchorOffsetMs: 0,
-        resultShownAtMs: Date.now(),
+        listenStartedAtMs: nowMs,
+        listenEndedAtMs: nowMs,
+        audioSampleMidpointAtMs: nowMs,
+        recognitionStartedAtMs: nowMs,
+        recognitionEndedAtMs: nowMs,
+        recognitionReceivedAtMs: nowMs,
+        matchedSongOffsetMs: matchedOffsetMs,
+        displaySongOffsetMs: matchedOffsetMs,
+        lyricsAnchorOffsetMs: matchedOffsetMs,
+        sampleCapturedAtMs: nowMs,
+        resultShownAtMs: nowMs,
       });
     } catch (error: any) {
       if (attemptIdRef.current !== requestId) {
@@ -395,10 +453,6 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       }
     }
   };
-
-  const stageChip = useMemo(() => {
-    return getStatusChip({ phase, elapsedMs: stageElapsedMs, secondsLeft });
-  }, [phase, stageElapsedMs, secondsLeft]);
 
   const subtitleText = useMemo(() => {
     return getStatusSubtitle({ phase, elapsedMs: stageElapsedMs, secondsLeft, errorMessage });
@@ -421,16 +475,12 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
           SayWetin
         </Text>
 
-        <View style={styles.phaseChip}>
-          <Text style={styles.phaseChipText}>{stageChip}</Text>
-        </View>
-
         <Text style={styles.subtitle}>{subtitleText}</Text>
 
         <OrbListener phase={orbPhase} onPress={orbPhase === 'matching' ? undefined : startRecognition} />
 
         <Text style={styles.orbHint}>
-          {phase === 'capturing' ? `Listening... ${secondsLeft}s - tap orb to stop early` : 'Tap orb to start match'}
+          {phase === 'capturing' ? 'Tap to stop' : phase === 'idle' ? microcopy : ''}
         </Text>
 
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
@@ -486,21 +536,6 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     fontWeight: '600',
     letterSpacing: -0.3,
-  },
-  phaseChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.violetEdge,
-    backgroundColor: colors.violetWash,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  phaseChipText: {
-    color: colors.violetSoft,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    fontSize: 11,
-    fontWeight: '700',
   },
   subtitle: {
     color: colors.textMuted,

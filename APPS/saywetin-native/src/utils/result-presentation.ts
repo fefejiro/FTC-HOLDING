@@ -150,23 +150,23 @@ export function getPhaseMessage(
 ): string {
   if (phase === 'uploading') {
     if (elapsedMs > 4500) {
-      return 'Connection is slow. Keep app open while we upload your sample.';
+      return 'Taking longer than expected...';
     }
-    return 'Sending sample to recognition service.';
+    return 'Finding the song...';
   }
 
   if (phase === 'matching') {
     if (elapsedMs > 7000) {
-      return 'Still matching the song. We will use lyric fallback if needed.';
+      return 'Taking longer than expected...';
     }
-    return 'Fingerprint lock in progress.';
+    return 'Finding the song...';
   }
 
   if (phase === 'context') {
     if (elapsedMs > 3000) {
-      return 'Preparing cultural context...';
+      return 'Taking longer than expected...';
     }
-    return 'Enriching with cultural analysis...';
+    return 'Finding the meaning...';
   }
 
   return '';

@@ -1,0 +1,109 @@
+# Job Reply Agent resume map - approved assets
+# Copy the PDF files in ./resumes into APPS/job-reply-agent/resumes/
+# Copy the DOCX source files into APPS/job-reply-agent/resumes/source/ for manual edits.
+
+resume_lanes:
+  enterprise_systems:
+    file: resumes/Fejiro_Enterprise_Systems.pdf
+    source: resumes/source/Fejiro_Enterprise_Systems.docx
+    trigger_keywords:
+      - enterprise systems
+      - systems analyst
+      - business systems
+      - digital transformation
+      - system modernization
+      - integrations
+      - api
+      - erp
+      - pos
+      - wms
+  technical_program_manager:
+    file: resumes/Fejiro_TPM_Systems.pdf
+    source: resumes/source/Fejiro_TPM_Systems.docx
+    trigger_keywords:
+      - technical program manager
+      - tpm
+      - program manager
+      - project manager
+      - delivery lead
+      - roadmap
+      - cross-functional
+      - release readiness
+      - stakeholder management
+  business_analyst:
+    file: resumes/Fejiro_Business_Analyst.pdf
+    source: resumes/source/Fejiro_Business_Analyst.docx
+    trigger_keywords:
+      - business analyst
+      - business systems analyst
+      - requirements
+      - brd
+      - frd
+      - user stories
+      - acceptance criteria
+      - uat
+      - process mapping
+  mobile_app_ba:
+    file: resumes/Fejiro_Mobile_App_BA.pdf
+    source: resumes/source/Fejiro_Mobile_App_BA.docx
+    trigger_keywords:
+      - mobile application
+      - mobile app
+      - ios
+      - android
+      - product ba
+      - ux
+      - ui
+      - ecommerce
+      - loyalty
+      - payment
+  erp_wms_pos:
+    file: resumes/Fejiro_ERP_WMS_POS.pdf
+    source: resumes/source/Fejiro_ERP_WMS_POS.docx
+    trigger_keywords:
+      - erp
+      - wms
+      - pos
+      - warehouse
+      - inventory
+      - fulfillment
+      - supply chain
+      - manhattan
+      - blue yonder
+      - tecsys
+      - red prairie
+      - sap
+      - netSuite
+      - logfire
+  ai_workflow:
+    file: resumes/Fejiro_AI_Workflow.pdf
+    source: resumes/source/Fejiro_AI_Workflow.docx
+    trigger_keywords:
+      - ai workflow
+      - product strategy
+      - llm
+      - agent
+      - automation
+      - mcp
+      - secure workflow
+      - approval workflow
+      - human in the loop
+      - prompt engineering
+  salesforce_tpm:
+    file: resumes/Fejiro_Salesforce_TPM.pdf
+    source: resumes/source/Fejiro_Salesforce_TPM.docx
+    trigger_keywords:
+      - salesforce
+      - crm
+      - cloud
+      - enterprise applications
+      - implementation
+      - data migration
+      - service cloud
+      - sales cloud
+
+selection_rules:
+  default_resume: resumes/Fejiro_Enterprise_Systems.pdf
+  minimum_score_to_attach: 65
+  do_not_attach_if_red_flags: true
+  never_rewrite_resume_automatically: true

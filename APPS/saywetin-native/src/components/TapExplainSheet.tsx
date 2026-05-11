@@ -6,7 +6,7 @@ import { MeaningDetailBody } from '../screens/MeaningDetailScreen';
 
 const { colors } = ritualTokens;
 
-type TabKey = 'meaning' | 'alternates' | 'related';
+type TabKey = 'meaning' | 'slang' | 'vibe' | 'culture' | 'reply';
 
 type TapExplainSheetProps = {
   visible: boolean;
@@ -27,12 +27,20 @@ export function TapExplainSheet({ visible, line, loading = false, onClose }: Tap
       return [];
     }
 
-    if (tab === 'alternates') {
+    if (tab === 'slang') {
       return line.alternates;
     }
 
-    if (tab === 'related') {
+    if (tab === 'culture') {
       return line.related;
+    }
+
+    if (tab === 'vibe') {
+      return line.vibe ? [line.vibe] : [];
+    }
+
+    if (tab === 'reply') {
+      return [line.reply, line.artistIntent].filter((entry) => entry.trim().length > 0);
     }
 
     return [];
@@ -48,12 +56,10 @@ export function TapExplainSheet({ visible, line, loading = false, onClose }: Tap
 
           <View style={styles.tabRow}>
             <TabButton label="Meaning" active={tab === 'meaning'} onPress={() => setTab('meaning')} />
-            <TabButton
-              label="Alternates"
-              active={tab === 'alternates'}
-              onPress={() => setTab('alternates')}
-            />
-            <TabButton label="Related" active={tab === 'related'} onPress={() => setTab('related')} />
+            <TabButton label="Slang" active={tab === 'slang'} onPress={() => setTab('slang')} />
+            <TabButton label="Vibe" active={tab === 'vibe'} onPress={() => setTab('vibe')} />
+            <TabButton label="Culture" active={tab === 'culture'} onPress={() => setTab('culture')} />
+            <TabButton label="Reply" active={tab === 'reply'} onPress={() => setTab('reply')} />
           </View>
 
           {line ? (
@@ -67,7 +73,7 @@ export function TapExplainSheet({ visible, line, loading = false, onClose }: Tap
                     <Text style={styles.emptyText}>Loading context…</Text>
                   </View>
                 ) : tabLines.length === 0 ? (
-                  <Text style={styles.emptyText}>No entries yet for this section.</Text>
+                  <Text style={styles.emptyText}>No context yet for this section.</Text>
                 ) : (
                   tabLines.map((item) => (
                     <View key={item} style={styles.listItem}>
@@ -135,9 +141,10 @@ const styles = StyleSheet.create({
   tabRow: {
     flexDirection: 'row',
     gap: 8,
+    flexWrap: 'wrap',
   },
   tabButton: {
-    flex: 1,
+    minWidth: 86,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.border,

@@ -1,15 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View, BackHandler } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { MatchSource, RitualTrack } from '../state/ritual-state';
 import { FadeInView } from '../components/FadeInView';
 import { ritualTokens } from '../theme/tokens';
 import { fetchLyricSection, fetchMeaningSection, isSectionError } from '../api/result-sections';
-import {
-  getRecognitionDurationLabel,
-  getRecognitionPerformanceHint,
-  isFastRecognition,
-  isSlowRecognition,
-} from '../utils/timing';
 import RetryPersistence from '../api/retry-persistence';
 import ResultScreenAnalytics from '../api/analytics';
 
@@ -19,18 +14,19 @@ type SectionState = {
   ready: boolean;
   loading: boolean;
   error: string | null;
+  errorCode: string | null;
 };
 
 const SLOW_SECTION_THRESHOLD_MS = 3000;
 const SECTION_RETRY_DELAY_MS = 500;
 
 const MATCH_SOURCE_LABELS: Record<MatchSource, string> = {
-  acrcloud: 'Matched by audio',
-  ai_transcript: 'Matched by transcript',
-  lyric_text: 'Matched by lyric',
-  manual: 'Manual entry',
-  spotify: 'From Spotify',
-  unknown: 'Matched',
+  acrcloud: 'Found by audio',
+  ai_transcript: 'Found by transcript',
+  lyric_text: 'Found by lyric',
+  manual: 'Found manually',
+  spotify: 'Found from Spotify',
+  unknown: 'Found',
 };
 
 type ResultScreenProps = {
@@ -40,16 +36,10 @@ type ResultScreenProps = {
 };
 
 function confidenceLabel(score: number) {
-  if (score >= 85) {
+  if (score >= 70) {
     return 'Strong match';
   }
-  if (score >= 65) {
-    return 'High confidence';
-  }
-  if (score >= 45) {
-    return 'Likely match';
-  }
-  return 'Tentative match';
+  return 'Match found';
 }
 
 export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScreenProps) {
@@ -58,11 +48,13 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     ready: (track.lyric || '').trim().length > 0,
     loading: false,
     error: null,
+    errorCode: null,
   });
   const [meaningSection, setMeaningSection] = useState<SectionState>({
     ready: (track.meaning || '').trim().length > 0 || track.culturalAnalyses.length > 0,
     loading: false,
     error: null,
+    errorCode: null,
   });
   const [resultShownAtMs] = useState(Date.now());
   const [sectionsCheckedAtMs, setSectionsCheckedAtMs] = useState<number | null>(null);
@@ -73,59 +65,52 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
   const analyticsRef = useRef(ResultScreenAnalytics.getInstance());
   const sectionLoadStartTimesRef = useRef<Record<string, number>>({});
 
-  const extractSpotifyTrackId = (url: string) => {
-    const match = url.match(/track\/([a-zA-Z0-9]+)/);
-    return match?.[1] ?? null;
-  };
+  const fallbackQuery = `${track.artist} ${track.title}`.trim();
+  const spotifySearchUrl = `https://open.spotify.com/search/${encodeURIComponent(fallbackQuery)}`;
+  const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(fallbackQuery)}`;
 
-  const extractYoutubeVideoId = (url: string) => {
-    try {
-      const parsed = new URL(url);
-      if (parsed.hostname.includes('youtu.be')) {
-        return parsed.pathname.replace('/', '') || null;
-      }
-      return parsed.searchParams.get('v');
-    } catch {
-      return null;
-    }
-  };
-
-  const openLink = async (url: string, fallbackQuery: string, platformName: 'Spotify' | 'YouTube') => {
-    const trimmedUrl = url.trim();
-    const fallbackUrl =
-      platformName === 'Spotify'
-        ? `https://open.spotify.com/search/${encodeURIComponent(fallbackQuery)}`
-        : `https://www.youtube.com/results?search_query=${encodeURIComponent(fallbackQuery)}`;
-
-    const appUri =
-      platformName === 'Spotify'
-        ? (() => {
-            const trackId = extractSpotifyTrackId(trimmedUrl);
-            return trackId ? `spotify:track:${trackId}` : null;
-          })()
-        : (() => {
-            const videoId = extractYoutubeVideoId(trimmedUrl);
-            return videoId ? `vnd.youtube://${videoId}` : null;
-          })();
-
-    const candidates = [appUri, trimmedUrl, fallbackUrl].filter(
-      (candidate): candidate is string => Boolean(candidate),
+  const openSpotify = async () => {
+    const candidates = [track.spotify.uri, track.spotify.url, track.spotifyUrl, spotifySearchUrl].filter(
+      (candidate): candidate is string => Boolean(candidate && candidate.trim().length > 0),
     );
 
-    try {
-      for (const candidate of candidates) {
-        try {
-          await Linking.openURL(candidate);
-          return;
-        } catch {
-          // Try next candidate.
-        }
+    for (const candidate of candidates) {
+      try {
+        await Linking.openURL(candidate);
+        return;
+      } catch {
+        // Try next candidate.
       }
-
-      Alert.alert('Link unavailable', `Could not open ${platformName} right now.`);
-    } catch {
-      Alert.alert('Link unavailable', `Could not open ${platformName}. Please try again.`);
     }
+
+    Alert.alert('Link unavailable', 'Could not open Spotify right now.');
+  };
+
+  const openYoutube = async () => {
+    const directVideoId = track.youtube.videoId;
+    const directUrl = directVideoId
+      ? `https://www.youtube.com/watch?v=${encodeURIComponent(directVideoId)}`
+      : null;
+
+    // Prioritize HTTPS URL first for better compatibility, then fallback to other schemes
+    const candidates = [
+      directUrl,  // Try direct HTTPS link first
+      directVideoId ? `youtube://watch?v=${directVideoId}` : null,  // YouTube app deep link
+      track.youtube.url,
+      track.youtubeUrl,
+      youtubeSearchUrl,
+    ].filter((candidate): candidate is string => Boolean(candidate && candidate.trim().length > 0));
+
+    for (const candidate of candidates) {
+      try {
+        await Linking.openURL(candidate);
+        return;
+      } catch {
+        // Try next candidate.
+      }
+    }
+
+    Alert.alert('Link unavailable', 'Could not open YouTube right now.');
   };
 
   useEffect(() => {
@@ -166,6 +151,16 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     };
   }, [track.id]);
 
+  // Handle hardware back button to reset state before navigating
+  useFocusEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      onReset();
+      return true;
+    });
+
+    return () => backHandler.remove();
+  });
+
   const inlineLyrics = (fetchedLyric || track.lyric || '').trim();
   const meaningText = (track.meaning || '').trim();
   const analysesToUse = fetchedAnalyses || track.culturalAnalyses;
@@ -181,7 +176,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
 
   const retryLyricsSection = async () => {
     if (lyricsSection.loading) return;
-    setLyricsSection({ ready: false, loading: true, error: null });
+    setLyricsSection({ ready: false, loading: true, error: null, errorCode: null });
     
     const startTimeMs = Date.now();
     sectionLoadStartTimesRef.current['lyrics'] = startTimeMs;
@@ -191,7 +186,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
       const durationMs = Date.now() - startTimeMs;
       
       if (isSectionError(result)) {
-        setLyricsSection({ ready: false, loading: false, error: result.message });
+        setLyricsSection({ ready: false, loading: false, error: result.message, errorCode: result.code });
         
         // Track failed load and add to retry queue
         analyticsRef.current.recordSectionLoad({
@@ -207,7 +202,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
         await retryPersistenceRef.current.addRetryItem(track.id, 'lyrics', result.message);
       } else {
         setFetchedLyric(result.lyric);
-        setLyricsSection({ ready: true, loading: false, error: null });
+        setLyricsSection({ ready: true, loading: false, error: null, errorCode: null });
         
         // Track successful load
         analyticsRef.current.recordSectionLoad({
@@ -225,7 +220,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     } catch (err) {
       const durationMs = Date.now() - startTimeMs;
       const errorMsg = err instanceof Error ? err.message : 'Failed to load lyrics. Try again?';
-      setLyricsSection({ ready: false, loading: false, error: errorMsg });
+      setLyricsSection({ ready: false, loading: false, error: errorMsg, errorCode: 'network_error' });
       
       // Track error and add to retry queue
       analyticsRef.current.recordSectionLoad({
@@ -244,7 +239,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
 
   const retryMeaningSection = async () => {
     if (meaningSection.loading) return;
-    setMeaningSection({ ready: false, loading: true, error: null });
+    setMeaningSection({ ready: false, loading: true, error: null, errorCode: null });
     
     const startTimeMs = Date.now();
     sectionLoadStartTimesRef.current['meaning'] = startTimeMs;
@@ -254,7 +249,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
       const durationMs = Date.now() - startTimeMs;
       
       if (isSectionError(result)) {
-        setMeaningSection({ ready: false, loading: false, error: result.message });
+        setMeaningSection({ ready: false, loading: false, error: result.message, errorCode: result.code });
         
         // Track failed load and add to retry queue
         analyticsRef.current.recordSectionLoad({
@@ -271,7 +266,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
       } else {
         if (result.culturalAnalyses.length > 0) {
           setFetchedAnalyses(result.culturalAnalyses);
-          setMeaningSection({ ready: true, loading: false, error: null });
+          setMeaningSection({ ready: true, loading: false, error: null, errorCode: null });
           
           // Track successful load
           analyticsRef.current.recordSectionLoad({
@@ -287,7 +282,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
           await retryPersistenceRef.current.removeRetryItem(track.id, 'meaning');
         } else {
           const errorMsg = 'Meaning analysis not available yet. Check Live Lyrics for context.';
-          setMeaningSection({ ready: false, loading: false, error: errorMsg });
+          setMeaningSection({ ready: false, loading: false, error: errorMsg, errorCode: 'unavailable' });
           
           // Track as unavailable
           analyticsRef.current.recordSectionLoad({
@@ -304,7 +299,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     } catch (err) {
       const durationMs = Date.now() - startTimeMs;
       const errorMsg = err instanceof Error ? err.message : 'Failed to load meaning. Try again?';
-      setMeaningSection({ ready: false, loading: false, error: errorMsg });
+      setMeaningSection({ ready: false, loading: false, error: errorMsg, errorCode: 'network_error' });
       
       // Track error and add to retry queue
       analyticsRef.current.recordSectionLoad({
@@ -334,6 +329,13 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     }
   };
 
+  const isSoftLyricsDelay =
+    lyricsSection.errorCode === 'unavailable' || lyricsSection.errorCode === 'timeout';
+  const isSoftMeaningDelay =
+    meaningSection.errorCode === 'unavailable' || meaningSection.errorCode === 'timeout';
+  const spotifyDirectAvailable = Boolean(track.spotify.trackId || track.spotify.uri);
+  const youtubeDirectAvailable = Boolean(track.youtube.videoId);
+
   return (
     <FadeInView>
       <View style={styles.screen}>
@@ -346,50 +348,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
           <View style={styles.badgesRow}>
             <Text style={styles.badge}>{MATCH_SOURCE_LABELS[track.matchSource]}</Text>
             <Text style={styles.badge}>{confidenceLabel(track.matchConfidence)}</Text>
-            {track.matchedInMs > 0 ? (
-              <Text style={styles.badge}>matched in {(track.matchedInMs / 1000).toFixed(1)}s</Text>
-            ) : null}
           </View>
-
-          {(() => {
-            const durationLabel = getRecognitionDurationLabel(
-              track.listenStartedAtMs,
-              track.recognitionReceivedAtMs,
-            );
-            const performanceHint = getRecognitionPerformanceHint(
-              track.listenStartedAtMs,
-              track.recognitionReceivedAtMs,
-            );
-            const fast = isFastRecognition(track.listenStartedAtMs, track.recognitionReceivedAtMs);
-            const slow = isSlowRecognition(track.listenStartedAtMs, track.recognitionReceivedAtMs);
-
-            return durationLabel || performanceHint ? (
-              <View style={styles.timingHintRow}>
-                {durationLabel ? (
-                  <Text
-                    style={[
-                      styles.timingHintText,
-                      fast && styles.timingHintFast,
-                      slow && styles.timingHintSlow,
-                    ]}
-                  >
-                    {durationLabel}
-                  </Text>
-                ) : null}
-                {performanceHint ? (
-                  <Text
-                    style={[
-                      styles.timingHintText,
-                      fast && styles.timingHintFast,
-                      slow && styles.timingHintSlow,
-                    ]}
-                  >
-                    {performanceHint}
-                  </Text>
-                ) : null}
-              </View>
-            ) : null;
-          })()}
 
           {track.albumArt ? <Image source={{ uri: track.albumArt }} style={styles.cover} /> : null}
 
@@ -403,16 +362,20 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
               )}
             </View>
             {lyricsSection.loading ? (
-              <Text style={styles.loadingText}>Loading lyrics…</Text>
+              <Text style={styles.loadingText}>Finding the best lyric match...</Text>
             ) : lyricsSection.error ? (
-              <Text style={styles.errorText}>{lyricsSection.error}</Text>
+              <Text style={isSoftLyricsDelay ? styles.pendingText : styles.errorText}>
+                {isSoftLyricsDelay
+                  ? 'Finding the best lyric match...'
+                  : lyricsSection.error}
+              </Text>
             ) : inlineLyrics ? (
               <Text style={styles.lyricText}>{inlineLyrics}</Text>
             ) : isLyricsStalled ? (
-              <Text style={styles.stalledText}>Lyrics taking longer than expected. Open Live Lyrics or retry.</Text>
+              <Text style={styles.pendingText}>Finding the best lyric match...</Text>
             ) : (
-              <Text style={styles.pendingText}>Lyrics are still loading. Open Live Lyrics to fetch more lines.</Text>
-            )}
+              <Text style={styles.loadingText}>Finding the best lyric match...</Text>
+            )
 
             <View style={styles.sectionDivider} />
 
@@ -425,16 +388,20 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
               )}
             </View>
             {meaningSection.loading ? (
-              <Text style={styles.loadingText}>Loading meaning…</Text>
+              <Text style={styles.loadingText}>Preparing meaning...</Text>
             ) : meaningSection.error ? (
-              <Text style={styles.errorText}>{meaningSection.error}</Text>
+              <Text style={isSoftMeaningDelay ? styles.pendingText : styles.errorText}>
+                {isSoftMeaningDelay
+                  ? 'Meaning is not available yet for this line.'
+                  : meaningSection.error}
+              </Text>
             ) : meaningText ? (
               <Text style={styles.meaningText}>{meaningText}</Text>
             ) : isMeaningStalled ? (
-              <Text style={styles.stalledText}>Meaning analysis is slow. Check back shortly or open Live Lyrics.</Text>
+              <Text style={styles.pendingText}>Meaning is not available yet for this line.</Text>
             ) : (
-              <Text style={styles.pendingText}>Meaning is still loading for this track.</Text>
-            )}
+              <Text style={styles.loadingText}>Preparing meaning...</Text>
+            )
 
             {culturalSummary && (
               <Text style={styles.culturalText}>{culturalSummary}</Text>
@@ -452,17 +419,11 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
           ) : null}
 
           <View style={styles.linksRow}>
-            <Pressable
-              onPress={() => openLink(track.spotifyUrl, `${track.artist} ${track.title}`, 'Spotify')}
-              style={styles.linkButton}
-            >
-              <Text style={styles.linkButtonText}>Spotify</Text>
+            <Pressable onPress={openSpotify} style={styles.linkButton}>
+              <Text style={styles.linkButtonText}>{spotifyDirectAvailable ? 'Spotify' : 'Search Spotify'}</Text>
             </Pressable>
-            <Pressable
-              onPress={() => openLink(track.youtubeUrl, `${track.artist} ${track.title}`, 'YouTube')}
-              style={styles.linkButton}
-            >
-              <Text style={styles.linkButtonText}>YouTube</Text>
+            <Pressable onPress={openYoutube} style={styles.linkButton}>
+              <Text style={styles.linkButtonText}>{youtubeDirectAvailable ? 'YouTube' : 'Search YouTube'}</Text>
             </Pressable>
           </View>
 
@@ -472,7 +433,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
               style={[styles.primaryButton, openingLiveLyrics && styles.primaryButtonBusy]}
             >
               <Text style={styles.primaryButtonText}>
-                {openingLiveLyrics ? 'Opening live lyrics…' : 'Follow Live Lyrics'}
+                {openingLiveLyrics ? 'Opening Live Lyrics...' : 'Follow Live Lyrics'}
               </Text>
             </Pressable>
             <Pressable onPress={onReset} style={styles.secondaryButton}>
@@ -528,22 +489,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 12,
-  },
-  timingHintRow: {
-    gap: 8,
-    marginVertical: 4,
-  },
-  timingHintText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
-    fontStyle: 'italic',
-  },
-  timingHintFast: {
-    color: colors.violetSoft,
-  },
-  timingHintSlow: {
-    color: colors.amber,
   },
   cover: {
     width: 180,
@@ -605,11 +550,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontStyle: 'italic',
-  },
-  stalledText: {
-    color: colors.amber,
-    fontSize: 14,
-    lineHeight: 20,
   },
   errorText: {
     color: colors.amber,

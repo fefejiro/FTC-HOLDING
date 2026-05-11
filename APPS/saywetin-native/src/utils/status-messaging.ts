@@ -29,56 +29,38 @@ export type StatusMessageContext = {
  * Updates frequently to give sense of progress on slow networks
  */
 export function getStatusChip(context: StatusMessageContext): string {
-  const { phase, elapsedMs, secondsLeft, isSlowNetwork } = context;
+  const { phase, elapsedMs } = context;
 
   switch (phase) {
     case 'requesting-permission':
-      return 'Preparing mic';
+      return 'Ready to listen';
 
     case 'capturing':
-      return secondsLeft ? `Listening (${secondsLeft}s)` : 'Listening';
+      return 'Listening...';
 
     case 'uploading':
-      if (elapsedMs > 4500) {
-        return 'Uploading (slow)';
-      }
-      if (elapsedMs > 2000) {
-        return 'Uploading sample';
-      }
-      return 'Uploading';
+      return elapsedMs > 4500 ? 'Taking longer than expected...' : 'Finding the song...';
 
     case 'matching':
-      if (elapsedMs > 7000) {
-        return 'Still matching...';
-      }
-      if (elapsedMs > 4000) {
-        return 'Finding match';
-      }
-      if (elapsedMs > 2000) {
-        return 'Matching track';
-      }
-      return 'Fingerprinting';
+      return elapsedMs > 7000 ? 'Taking longer than expected...' : 'Finding the song...';
 
     case 'context-loading':
-      if (elapsedMs > 2000) {
-        return 'Preparing context';
-      }
-      return 'Enriching result';
+      return elapsedMs > 3000 ? 'Taking longer than expected...' : 'Finding the lyrics...';
 
     case 'result-ready':
-      return 'Match found';
+      return 'Found it.';
 
     case 'offline':
-      return 'Offline fallback';
+      return 'I could not hear enough music.';
 
     case 'failed':
-      return 'Match failed';
+      return 'I could not hear enough music.';
 
     case 'cancelled':
-      return 'Capture stopped';
+      return 'Ready to listen';
 
     default:
-      return 'Ready';
+      return 'Ready to listen';
   }
 }
 
@@ -87,56 +69,38 @@ export function getStatusChip(context: StatusMessageContext): string {
  * More explanatory than chip, changes with elapsed time
  */
 export function getStatusSubtitle(context: StatusMessageContext): string {
-  const { phase, elapsedMs, secondsLeft, isSlowNetwork, isOffline, errorMessage } = context;
+  const { phase, elapsedMs } = context;
 
   switch (phase) {
     case 'requesting-permission':
-      return 'Checking microphone permissions.';
+      return 'Ready to listen';
 
     case 'capturing':
-      return `Capturing audio - ${secondsLeft}s left. Tap orb to stop early.`;
+      return 'Listening...';
 
     case 'uploading':
-      if (elapsedMs > 4500) {
-        return `Connection is slower than usual. Upload in progress... ${(elapsedMs / 1000).toFixed(1)}s elapsed.`;
-      }
-      if (elapsedMs > 2000) {
-        return `Sending sample to recognition service... ${(elapsedMs / 1000).toFixed(1)}s elapsed.`;
-      }
-      return 'Preparing audio sample for upload.';
+      return elapsedMs > 4500 ? 'Taking longer than expected...' : 'Finding the song...';
 
     case 'matching':
-      if (elapsedMs > 7000) {
-        return `Still fingerprinting. ${(elapsedMs / 1000).toFixed(1)}s elapsed. We will use lyric fallback if needed.`;
-      }
-      if (elapsedMs > 4000) {
-        return `Searching music database... ${(elapsedMs / 1000).toFixed(1)}s elapsed.`;
-      }
-      if (elapsedMs > 2000) {
-        return `Fingerprint lock in progress... ${(elapsedMs / 1000).toFixed(1)}s elapsed.`;
-      }
-      return 'Analyzing audio fingerprint...';
+      return elapsedMs > 7000 ? 'Taking longer than expected...' : 'Finding the song...';
 
     case 'context-loading':
-      if (elapsedMs > 2000) {
-        return `Loading cultural context... ${(elapsedMs / 1000).toFixed(1)}s elapsed.`;
-      }
-      return 'Preparing meaning and cultural context...';
+      return elapsedMs > 3000 ? 'Taking longer than expected...' : 'Finding the meaning...';
 
     case 'result-ready':
-      return 'Song identified! Tap to explore.';
+      return 'Found it.';
 
     case 'offline':
-      return 'Network unstable. You can still match by lyric below.';
+      return 'I could not hear enough music.';
 
     case 'failed':
-      return errorMessage || 'No confident match yet. Try again or switch to lyric input.';
+      return 'I could not hear enough music.';
 
     case 'cancelled':
-      return 'Capture cancelled. Tap again when ready.';
+      return 'Ready to listen';
 
     default:
-      return 'Ready to listen.';
+      return 'Ready to listen';
   }
 }
 
@@ -165,13 +129,13 @@ export function shouldShowSlowNetworkWarning(
  */
 export function getSlowNetworkMessage(phase: ListenPhase, elapsedMs: number): string | null {
   if (phase === 'uploading' && elapsedMs > 4500) {
-    return '📡 Connection is slow. Keep the app open.';
+    return 'Taking longer than expected...';
   }
   if (phase === 'matching' && elapsedMs > 7000) {
-    return '🔍 Still searching. Checking backup systems...';
+    return 'Taking longer than expected...';
   }
   if (phase === 'context-loading' && elapsedMs > 2000) {
-    return '📚 Context loading. Please wait...';
+    return 'Taking longer than expected...';
   }
   return null;
 }

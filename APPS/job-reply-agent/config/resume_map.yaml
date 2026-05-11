@@ -1,0 +1,20 @@
+default_resume: resumes/Fejiro_Enterprise_Systems.pdf
+mappings:
+  - role_family: technical_program_management
+    keywords: [technical program manager, tpm, program manager, project manager, delivery lead, roadmap, cross-functional, release readiness, stakeholder management]
+    resume: resumes/Fejiro_TPM_Systems.pdf
+  - role_family: business_systems_analysis
+    keywords: [business analyst, business systems analyst, requirements, brd, frd, user stories, acceptance criteria, uat, process mapping]
+    resume: resumes/Fejiro_Business_Analyst.pdf
+  - role_family: mobile_app_ba
+    keywords: [mobile application, mobile app, ios, android, product ba, ux, ui, ecommerce, loyalty, payment]
+    resume: resumes/Fejiro_Mobile_App_BA.pdf
+  - role_family: erp_wms_pos
+    keywords: [erp, wms, pos, warehouse, inventory, fulfillment, supply chain, manhattan, blue yonder, tecsys, red prairie, sap, netsuite, logfire]
+    resume: resumes/Fejiro_ERP_WMS_POS.pdf
+  - role_family: ai_workflow
+    keywords: [ai workflow, product strategy, llm, agent, automation, mcp, secure workflow, approval workflow, human in the loop, prompt engineering]
+    resume: resumes/Fejiro_AI_Workflow.pdf
+  - role_family: salesforce_tpm
+    keywords: [salesforce, crm, cloud, enterprise applications, implementation, data migration, service cloud, sales cloud]
+    resume: resumes/Fejiro_Salesforce_TPM.pdf
