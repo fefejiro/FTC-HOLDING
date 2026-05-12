@@ -10,7 +10,6 @@ import {
   getGardenCleanersNavLinks,
   isGardenCleanersCustomHost
 } from "../../lib/gardenCleaners";
-import { isGardenPortalAuthConfigured } from "../../lib/gardenPortalAuth";
 import { getOgTradesBrandedPath, getOgTradesNavLinks, isOgTradesCustomHost, ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
 import GardenBrandMark from "./garden-cleaners/GardenBrandMark";
@@ -64,7 +63,6 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
   const isOgTradesSite = (pathname?.startsWith("/og-trades-academy") ?? false) || isOgTradesHost;
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
   const isDefaultUnaSite = !isGardenSite && !isOgTradesSite && !isPolarSite;
-  const isGardenPortalAuthReady = isGardenPortalAuthConfigured();
   const gardenPortalHref = getGardenCleanersPortalUrl("#portal-access");
 
   useEffect(() => {
@@ -198,14 +196,10 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
               return [
                 <Link
                   key="portal-login"
-                  href={isGardenPortalAuthReady ? gardenPortalHref : "#"}
+                  href={gardenPortalHref}
                   prefetch={false}
-                  className={`garden-portal-login-cta${!isGardenPortalAuthReady ? " disabled" : ""}`}
+                  className="garden-portal-login-cta"
                   aria-label="Sign In to client portal"
-                  tabIndex={isGardenPortalAuthReady ? 0 : -1}
-                  aria-disabled={!isGardenPortalAuthReady}
-                  title={isGardenPortalAuthReady ? undefined : "Portal login is temporarily unavailable. Please try again later."}
-                  onClick={e => { if (!isGardenPortalAuthReady) e.preventDefault(); }}
                 >
                   Sign In
                 </Link>,
@@ -285,14 +279,11 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                   return [
                     <Link
                       key="portal-login-mobile"
-                      href={isGardenPortalAuthReady ? gardenPortalHref : "#"}
+                      href={gardenPortalHref}
                       prefetch={false}
-                      className={`mobile-panel-link garden-portal-login-cta${!isGardenPortalAuthReady ? " disabled" : ""}`}
+                      className="mobile-panel-link garden-portal-login-cta"
                       aria-label="Portal Login"
-                      tabIndex={isGardenPortalAuthReady ? 0 : -1}
-                      aria-disabled={!isGardenPortalAuthReady}
-                      title={isGardenPortalAuthReady ? undefined : "Portal login is temporarily unavailable. Please try again later."}
-                      onClick={e => { if (!isGardenPortalAuthReady) { e.preventDefault(); closeMenu(); } else { closeMenu(); } }}
+                      onClick={closeMenu}
                     >
                       Portal Login
                     </Link>,
