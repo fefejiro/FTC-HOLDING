@@ -5,8 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e475ca75-9849-4f46-b536-0e782fd94f7a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../../../APPS/job-reply-agent/data/job_leads.sqlite" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/job-reply-agent/data/job_leads.sqlite" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/bat.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/bat.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/e2e.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/e2e.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../../../APPS/saywetin-native/qa/_report/index.html" afterDir="false" />

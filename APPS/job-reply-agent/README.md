@@ -127,6 +127,24 @@ For a report-only daily task (optional), use:
 
 `powershell -ExecutionPolicy Bypass -File scripts/register-daily-report-task.ps1 -RunTime 19:00`
 
+## GitHub Actions Automation
+
+The job-reply-agent is deployed to GitHub Actions for scheduled, hands-off operation:
+
+- **Workflow**: `.github/workflows/job-reply-agent.yml`
+  - Runs every 15 minutes, weekdays 8AM–9PM EST
+  - Executes `npm run run:gmail-cycle` (full intake + draft + send cycle)
+  - All 5 secrets configured: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REDIRECT_URI`, `GMAIL_ACCOUNT_EMAIL`, `ATEAM_KEY`
+
+- **Report Workflow**: `.github/workflows/job-reply-report.yml`
+  - Runs daily at 6PM EST
+  - Executes `npm run report:daily` to send end-of-day summary email
+
+**Status (as of 2026-05-11):**
+- Repository changed from private → **public** to unlock unlimited free GitHub Actions minutes
+- Both workflows verified working: runners assigned, jobs execute to completion with `conclusion="success"`
+- Last backfill test (2026-05-04 to 2026-05-10): 38 recruiter-like emails scanned, 0 qualified for draft/send (all marked `status="skipped"` due to multi-band scoring thresholds)
+
 ## Roadmap
 
 See:

@@ -87,6 +87,9 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
           <ResultScreen
             track={ritual.track}
             onFollowLiveLyrics={async () => {
+              navigation.navigate('LiveLyrics');
+
+              // Warm the shared ritual state in the background without blocking navigation.
               if ((ritual.track.syncedLyrics?.length ?? 0) === 0) {
                 const fetched = await fetchSyncedLyrics(ritual.track.id);
                 if (fetched && fetched.lines.length > 0) {
@@ -104,7 +107,6 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
                   });
                 }
               }
-              navigation.navigate('LiveLyrics');
             }}
             onReset={() => {
               ritual.resetRecognitionSession();

@@ -1,5 +1,12 @@
 # Job Reply Agent Backlog
 
+## Status (as of 2026-05-11)
+
+- **GitHub Actions Workflows**: ✅ OPERATIONAL — `job-reply-agent.yml` (15-min cycle) and `job-reply-report.yml` (daily 6PM report) both verified working
+- **Repository Visibility**: Changed from private → **public** (2026-05-11) to unlock unlimited free Actions minutes
+- **Multi-band Scoring**: ✅ ACTIVE — auto_send≥75, draft 69–74, needs_review 55–68, skip <55
+- **Last Verification**: 38 emails from 2026-05-04 to 2026-05-10 scanned, 0 qualified for output (all skipped per thresholds)
+
 ## M0 Foundation
 
 1. M0-01: Project scaffold and config loader.
