@@ -75,6 +75,10 @@ function isAssetPath(pathname: string) {
   return ASSET_EXTENSION.test(pathname);
 }
 
+function isRuntimePassthroughPath(pathname: string) {
+  return pathname.startsWith("/api/") || pathname.startsWith("/auth/");
+}
+
 function redirect(request: Request, pathname: string, status = 308) {
   const url = new URL(request.url);
   url.pathname = pathname;
@@ -109,6 +113,10 @@ function handleGardenHost(request: Request, env: Env, pathname: string) {
     return null;
   }
 
+  if (isRuntimePassthroughPath(pathname)) {
+    return null;
+  }
+
   if (GARDEN_PUBLIC_PATHS.has(pathname)) {
     return rewrite(request, env, toInternalPath("/garden-cleaners", pathname));
   }
@@ -136,6 +144,10 @@ function handleOgHost(request: Request, env: Env, pathname: string) {
   if (pathname.startsWith("/og-trades-academy")) {
     const cleanPath = stripBasePath(pathname, "/og-trades-academy");
     return redirect(request, cleanPath, 308);
+  }
+
+  if (isRuntimePassthroughPath(pathname)) {
+    return null;
   }
 
   if (OG_PUBLIC_PATHS.has(pathname)) {

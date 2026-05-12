@@ -155,6 +155,20 @@ Theme is enforced at both CSS level (`styles/globals.css`) and client-side route
 
 ## Runtime configuration
 
+Required for Garden Cleaners portal auth + booking:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_SITE_URL`
+
+Recommended for Garden portal operations:
+
+- `NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS` (comma-separated admin list)
+- `RESEND_API_KEY` (quote/admin email notifications)
+- `GARDEN_CLEANERS_ADMIN_EMAIL` (notification recipient)
+- `GARDEN_CLEANERS_QUOTE_WEBHOOK_URL` (optional automation sink)
+
 Optional environment variables:
 
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID` (GA4 web stream id, enables analytics)

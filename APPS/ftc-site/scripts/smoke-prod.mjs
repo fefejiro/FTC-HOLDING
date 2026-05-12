@@ -8,6 +8,10 @@ const PAGES_URL =
   process.env.UNALABS_SMOKE_PAGES_URL ||
   process.env.FTC_SMOKE_PAGES_URL ||
   "https://ftc-site-pages.pages.dev";
+const GARDEN_URL =
+  process.env.UNALABS_SMOKE_GARDEN_URL ||
+  process.env.FTC_SMOKE_GARDEN_URL ||
+  "https://gardencleaners.ca";
 
 /**
  * @typedef {{url:string, expectedStatus:number[], locationIncludes?:string}} RouteCheck
@@ -29,7 +33,11 @@ const ROUTE_CHECKS = [
   { url: `${BASE_URL}/c`, expectedStatus: [200, 301, 308], locationIncludes: `${BASE_URL}/connect` },
   { url: `${BASE_URL}/robots.txt`, expectedStatus: [200] },
   { url: `${BASE_URL}/sitemap.xml`, expectedStatus: [200] },
-  { url: `${PAGES_URL}/`, expectedStatus: [200, 301, 308], locationIncludes: `${BASE_URL}/` }
+  { url: `${PAGES_URL}/`, expectedStatus: [200, 301, 308], locationIncludes: `${BASE_URL}/` },
+  { url: `${GARDEN_URL}/`, expectedStatus: [200] },
+  { url: `${GARDEN_URL}/portal`, expectedStatus: [200] },
+  { url: `${GARDEN_URL}/quote`, expectedStatus: [200] },
+  { url: `${GARDEN_URL}/api/garden-cleaners-quote`, expectedStatus: [200, 400, 401, 405, 422, 429, 500] }
 ];
 
 async function request(url, method = "HEAD") {
@@ -44,6 +52,7 @@ async function run() {
   let hasFailure = false;
   console.log(`Smoke base URL: ${BASE_URL}`);
   console.log(`Pages URL: ${PAGES_URL}`);
+  console.log(`Garden URL: ${GARDEN_URL}`);
 
   for (const check of ROUTE_CHECKS) {
     let response = await request(check.url, "HEAD");
