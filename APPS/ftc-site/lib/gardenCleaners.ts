@@ -42,7 +42,7 @@ const configuredGardenCleanersSiteUrl = String(
 
 export const GARDEN_CLEANERS_SITE_URL = configuredGardenCleanersSiteUrl || GARDEN_CLEANERS_SITE_URL_DEFAULT;
 export const GARDEN_CLEANERS_PORTAL_PATH = '/portal';
-const GARDEN_CLEANERS_OG_IMAGE = '/garden-cleaners/opengraph-image';
+const GARDEN_CLEANERS_OG_IMAGE = `${GARDEN_CLEANERS_SITE_URL}/garden-cleaners/opengraph-image`;
 export const gardenCleanersKeywords = [
   'Garden Cleaners',
   'Oshawa cleaning services',
