@@ -43,4 +43,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy APPS/ftc-site/.vercel/output/static --project-name=ftc-site-pages --branch=main
+          workingDirectory: APPS/ftc-site
+          command: pages deploy .vercel/output/static --project-name=ftc-site-pages --branch=main

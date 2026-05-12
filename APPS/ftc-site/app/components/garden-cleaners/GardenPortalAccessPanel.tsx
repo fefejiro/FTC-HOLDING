@@ -196,6 +196,45 @@ function resolveRole(email: string): GardenPortalUserRole {
   return "client";
 }
 
+async function resolveRoleFromProfile(email: string, authUserId: string | null): Promise<GardenPortalUserRole> {
+  const supabase = getSupabase();
+  const normalizedEmail = normalizePortalEmail(email);
+
+  try {
+    let profileQuery = supabase
+      .from("garden_cleaners_profiles")
+      .select("id, role, auth_user_id")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    const { data: emailProfile } = await profileQuery;
+    if (emailProfile?.role) {
+      if (authUserId && !emailProfile.auth_user_id) {
+        void supabase
+          .from("garden_cleaners_profiles")
+          .update({ auth_user_id: authUserId })
+          .eq("id", emailProfile.id);
+      }
+      return emailProfile.role as GardenPortalUserRole;
+    }
+
+    if (authUserId) {
+      const { data: authProfile } = await supabase
+        .from("garden_cleaners_profiles")
+        .select("role")
+        .eq("auth_user_id", authUserId)
+        .maybeSingle();
+      if (authProfile?.role) {
+        return authProfile.role as GardenPortalUserRole;
+      }
+    }
+  } catch {
+    // Fall through to legacy email-based role resolution if profile lookup fails.
+  }
+
+  return resolveRole(normalizedEmail);
+}
+
 export default function GardenPortalAccessPanel() {
   const portalAuthConfigured = isGardenPortalAuthConfigured();
   const [authState, setAuthState] = useState<AuthState>("loading");
@@ -370,7 +409,7 @@ export default function GardenPortalAccessPanel() {
           setQueueMessage("");
           return;
         }
-        const nextRole = resolveRole(sessionEmail);
+        const nextRole = await resolveRoleFromProfile(sessionEmail, sessionData.session?.user?.id ?? null);
         setAuthState("authenticated");
         setUserEmail(sessionEmail);
         setRole(nextRole);

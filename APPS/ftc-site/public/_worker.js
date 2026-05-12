@@ -211,6 +211,171 @@ function getSupabaseConfig(env) {
   return { supabaseUrl, supabaseKey };
 }
 
+function getSupabaseServiceConfig(env) {
+  const supabaseUrl = normalizeText(
+    env.NEXT_PUBLIC_SUPABASE_URL ||
+    env.VITE_SUPABASE_URL ||
+    env.SUPABASE_URL
+  ).replace(/\/+$/, "");
+  const serviceRoleKey = normalizeText(env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null;
+  }
+  return { supabaseUrl, serviceRoleKey };
+}
+
+function getGardenAdminEmails(env) {
+  return new Set([
+    "hello@unalabs.cloud",
+    "fejiro.efiuvwere@gmail.com",
+    "mike.fejiro@gmail.com",
+    "uby400@gmail.com",
+    ...String(env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS || "")
+      .split(",")
+      .map((item) => normalizeEmail(item))
+      .filter(Boolean)
+  ]);
+}
+
+async function supabaseAdminRest(env, path, options = {}) {
+  const config = getSupabaseServiceConfig(env);
+  if (!config) {
+    return json({ ok: false, error: "Supabase admin access is not configured." }, 500);
+  }
+
+  const headers = {
+    "apikey": config.serviceRoleKey,
+    "authorization": `Bearer ${config.serviceRoleKey}`,
+    "content-type": "application/json"
+  };
+  if (options.prefer) {
+    headers.prefer = options.prefer;
+  }
+
+  const response = await fetch(`${config.supabaseUrl}/${path}`, {
+    method: options.method || "GET",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+
+  const text = await response.text();
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!response.ok) {
+    return json({ ok: false, error: typeof data === "string" ? data : data?.message || `Supabase admin request failed with status ${response.status}.` }, response.status);
+  }
+
+  return { ok: true, data };
+}
+
+async function resolveCaller(request, env) {
+  const authHeader = request.headers.get("authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    return null;
+  }
+
+  const config = getSupabaseServiceConfig(env) || getSupabaseConfig(env);
+  if (!config) {
+    return null;
+  }
+
+  const apiKey = config.serviceRoleKey || config.supabaseKey;
+  const response = await fetch(`${config.supabaseUrl}/auth/v1/user`, {
+    headers: {
+      "apikey": apiKey,
+      "authorization": `Bearer ${token}`
+    }
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const user = await response.json().catch(() => null);
+  const email = normalizeEmail(user?.email);
+  const authUserId = normalizeText(user?.id);
+  if (!email) {
+    return null;
+  }
+
+  let profile = null;
+  const profileResult = await supabaseAdminRest(
+    env,
+    `rest/v1/garden_cleaners_profiles?select=id,email,role,is_active,service_region,auth_user_id&or=(auth_user_id.eq.${encodeURIComponent(authUserId)},email.eq.${encodeURIComponent(email)})&limit=1`
+  );
+  if (!(profileResult instanceof Response)) {
+    profile = Array.isArray(profileResult.data) ? profileResult.data[0] || null : null;
+  }
+
+  let role = profile?.role || null;
+  if (!role) {
+    role = getGardenAdminEmails(env).has(email)
+      ? "admin"
+      : email.endsWith("@gardencleaners.ca")
+      ? "staff"
+      : "client";
+  }
+
+  return {
+    token,
+    email,
+    authUserId,
+    role,
+    profile,
+    isAdmin: role === "admin"
+  };
+}
+
+function unauthorized(message = "Unauthorized") {
+  return json({ ok: false, error: message }, 401);
+}
+
+function forbidden(message = "Forbidden") {
+  return json({ ok: false, error: message }, 403);
+}
+
+async function requireCaller(request, env) {
+  const caller = await resolveCaller(request, env);
+  return caller || unauthorized();
+}
+
+async function requireAdmin(request, env) {
+  const caller = await resolveCaller(request, env);
+  if (!caller) {
+    return unauthorized();
+  }
+  if (!caller.isAdmin) {
+    return forbidden();
+  }
+  return caller;
+}
+
+async function writeAuditLog(env, actorEmail, action, targetEmail, targetUserId, details) {
+  await supabaseAdminRest(env, "rest/v1/garden_cleaners_audit_log", {
+    method: "POST",
+    body: [{
+      actor_email: actorEmail,
+      action,
+      target_email: targetEmail || null,
+      target_user_id: targetUserId || null,
+      details: details || null
+    }],
+    prefer: "return=minimal"
+  });
+}
+
 async function persistGardenQuote(quoteRecord, env) {
   const config = getSupabaseConfig(env);
   if (!config) {
@@ -274,9 +439,9 @@ async function supabaseRest(request, env, table, options = {}) {
 
 async function handleGardenQuotesApi(request, env) {
   if (request.method === "GET") {
-    const result = await supabaseRest(request, env, "garden_cleaners_quotes", {
-      path: "garden_cleaners_quotes?select=*&order=created_at.desc&limit=50"
-    });
+    const caller = await requireAdmin(request, env);
+    if (caller instanceof Response) return caller;
+    const result = await supabaseAdminRest(env, "rest/v1/garden_cleaners_quotes?select=*&order=created_at.desc&limit=50");
     if (result instanceof Response) return result;
     return json({ ok: true, quotes: result.data || [] });
   }
@@ -286,9 +451,9 @@ async function handleGardenQuotesApi(request, env) {
 
 async function handleGardenJobs(request, env) {
   if (request.method === "GET") {
-    const result = await supabaseRest(request, env, "garden_cleaners_jobs", {
-      path: "garden_cleaners_jobs?select=*&order=created_at.desc"
-    });
+    const caller = await requireAdmin(request, env);
+    if (caller instanceof Response) return caller;
+    const result = await supabaseAdminRest(env, "rest/v1/garden_cleaners_jobs?select=*&order=created_at.desc");
     if (result instanceof Response) return result;
     return json({ ok: true, jobs: result.data || [] });
   }
@@ -297,15 +462,16 @@ async function handleGardenJobs(request, env) {
     return json({ ok: false, error: "Method not allowed." }, 405);
   }
 
+  const caller = await requireAdmin(request, env);
+  if (caller instanceof Response) return caller;
+
   const payload = await request.json().catch(() => null);
   const quoteId = normalizeText(payload?.quote_id);
   if (!quoteId) {
     return json({ ok: false, error: "quote_id is required." }, 400);
   }
 
-  const quoteResult = await supabaseRest(request, env, "garden_cleaners_quotes", {
-    path: `garden_cleaners_quotes?select=*&id=eq.${encodeURIComponent(quoteId)}&limit=1`
-  });
+  const quoteResult = await supabaseAdminRest(env, `rest/v1/garden_cleaners_quotes?select=*&id=eq.${encodeURIComponent(quoteId)}&limit=1`);
   if (quoteResult instanceof Response) return quoteResult;
   const quote = Array.isArray(quoteResult.data) ? quoteResult.data[0] : null;
   if (!quote) {
@@ -327,7 +493,7 @@ async function handleGardenJobs(request, env) {
     created_at: now,
     updated_at: now
   };
-  const insertResult = await supabaseRest(request, env, "garden_cleaners_jobs", {
+  const insertResult = await supabaseAdminRest(env, "rest/v1/garden_cleaners_jobs", {
     method: "POST",
     body: [jobRecord],
     prefer: "return=representation"
@@ -340,9 +506,26 @@ async function handleGardenMyJobs(request, env) {
   if (request.method !== "GET") {
     return json({ ok: false, error: "Method not allowed." }, 405);
   }
-  const result = await supabaseRest(request, env, "garden_cleaners_jobs", {
-    path: "garden_cleaners_jobs?select=*&order=created_at.desc"
-  });
+  const caller = await requireCaller(request, env);
+  if (caller instanceof Response) return caller;
+
+  if (caller.role === "admin") {
+    const result = await supabaseAdminRest(env, "rest/v1/garden_cleaners_jobs?select=*&order=created_at.desc");
+    if (result instanceof Response) return result;
+    return json({ ok: true, jobs: result.data || [] });
+  }
+
+  if (caller.role === "staff") {
+    const staffProfileId = normalizeText(caller.profile?.id || "");
+    if (!staffProfileId) {
+      return json({ ok: true, jobs: [] });
+    }
+    const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_jobs?select=*&staff_profile_id=eq.${encodeURIComponent(staffProfileId)}&order=created_at.desc`);
+    if (result instanceof Response) return result;
+    return json({ ok: true, jobs: result.data || [] });
+  }
+
+  const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_jobs?select=*&customer_email=eq.${encodeURIComponent(caller.email)}&order=created_at.desc`);
   if (result instanceof Response) return result;
   return json({ ok: true, jobs: result.data || [] });
 }
@@ -351,6 +534,8 @@ async function handleGardenJobAssign(request, env) {
   if (request.method !== "POST") {
     return json({ ok: false, error: "Method not allowed." }, 405);
   }
+  const caller = await requireAdmin(request, env);
+  if (caller instanceof Response) return caller;
   const payload = await request.json().catch(() => null);
   const jobId = normalizeText(payload?.job_id);
   const staffProfileId = normalizeText(payload?.staff_profile_id);
@@ -358,7 +543,7 @@ async function handleGardenJobAssign(request, env) {
     return json({ ok: false, error: "job_id and staff_profile_id are required." }, 400);
   }
   const now = new Date().toISOString();
-  const result = await supabaseRest(request, env, "garden_cleaners_job_assignments", {
+  const result = await supabaseAdminRest(env, "rest/v1/garden_cleaners_job_assignments", {
     method: "POST",
     body: [{ job_id: jobId, staff_profile_id: staffProfileId, assigned_at: now, status: "assigned", status_updated_at: now }],
     prefer: "return=minimal"
@@ -371,20 +556,163 @@ async function handleGardenJobStatus(request, env) {
   if (request.method !== "POST") {
     return json({ ok: false, error: "Method not allowed." }, 405);
   }
+  const caller = await requireCaller(request, env);
+  if (caller instanceof Response) return caller;
   const payload = await request.json().catch(() => null);
   const jobId = normalizeText(payload?.job_id);
   const status = normalizeText(payload?.status);
   if (!jobId || !status) {
     return json({ ok: false, error: "job_id and status are required." }, 400);
   }
-  const result = await supabaseRest(request, env, "garden_cleaners_jobs", {
+
+  if (caller.role === "staff") {
+    const staffProfileId = normalizeText(caller.profile?.id || "");
+    if (!staffProfileId) {
+      return forbidden();
+    }
+    const ownedJobResult = await supabaseAdminRest(env, `rest/v1/garden_cleaners_jobs?select=id&staff_profile_id=eq.${encodeURIComponent(staffProfileId)}&id=eq.${encodeURIComponent(jobId)}&limit=1`);
+    if (ownedJobResult instanceof Response) return ownedJobResult;
+    const ownedJob = Array.isArray(ownedJobResult.data) ? ownedJobResult.data[0] : null;
+    if (!ownedJob) {
+      return forbidden();
+    }
+  } else if (caller.role !== "admin") {
+    return forbidden();
+  }
+
+  const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_jobs?id=eq.${encodeURIComponent(jobId)}`, {
     method: "PATCH",
-    path: `garden_cleaners_jobs?id=eq.${encodeURIComponent(jobId)}`,
     body: { status, status_updated_at: new Date().toISOString() },
     prefer: "return=minimal"
   });
   if (result instanceof Response) return result;
   return json({ ok: true });
+}
+
+async function handleGardenQuoteStatus(request, env) {
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed." }, 405);
+  }
+  const caller = await requireAdmin(request, env);
+  if (caller instanceof Response) return caller;
+  const payload = await request.json().catch(() => null);
+  const quoteId = normalizeText(payload?.quote_id);
+  const status = normalizeText(payload?.status);
+  if (!quoteId || !["approved", "rejected"].includes(status)) {
+    return json({ ok: false, error: "quote_id and valid status are required." }, 400);
+  }
+  const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_quotes?id=eq.${encodeURIComponent(quoteId)}`, {
+    method: "PATCH",
+    body: { status, updated_at: new Date().toISOString() },
+    prefer: "return=minimal"
+  });
+  if (result instanceof Response) return result;
+  return json({ ok: true });
+}
+
+async function handleGardenAdminUsers(request, env) {
+  const caller = await requireAdmin(request, env);
+  if (caller instanceof Response) return caller;
+
+  const url = new URL(request.url);
+  const page = Math.max(1, Number(url.searchParams.get("page") || 1));
+  const perPage = Math.min(100, Math.max(1, Number(url.searchParams.get("per_page") || 25)));
+  const start = (page - 1) * perPage;
+  const end = start + perPage - 1;
+
+  if (request.method === "GET") {
+    const view = normalizeText(url.searchParams.get("view") || "").toLowerCase();
+    if (view === "audit") {
+      const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_audit_log?select=id,actor_email,action,target_email,target_user_id,details,created_at&order=created_at.desc&offset=${start}&limit=${perPage}`);
+      if (result instanceof Response) return result;
+      return json({ ok: true, entries: result.data || [] });
+    }
+
+    const search = normalizeText(url.searchParams.get("search") || "").toLowerCase();
+    const role = normalizeText(url.searchParams.get("role") || "all");
+    const status = normalizeText(url.searchParams.get("status") || "all");
+    const filters = [
+      "select=id,auth_user_id,email,display_name,role,is_active,service_region,created_at,updated_at",
+      "order=created_at.desc",
+      `offset=${start}`,
+      `limit=${perPage}`
+    ];
+    if (search) {
+      filters.push(`or=(email.ilike.*${encodeURIComponent(search)}*,display_name.ilike.*${encodeURIComponent(search)}*)`);
+    }
+    if (role !== "all") {
+      filters.push(`role=eq.${encodeURIComponent(role)}`);
+    }
+    if (status === "active") {
+      filters.push("is_active=eq.true");
+    } else if (status === "disabled") {
+      filters.push("is_active=eq.false");
+    }
+    const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_profiles?${filters.join("&")}`);
+    if (result instanceof Response) return result;
+    return json({ ok: true, users: result.data || [], total: Array.isArray(result.data) ? result.data.length : 0, page, perPage });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return json({ ok: false, error: "Invalid request body" }, 400);
+  }
+
+  if (request.method === "POST") {
+    const email = normalizeEmail(body.email);
+    const role = normalizeText(body.role || "client");
+    if (!email || !["admin", "staff", "client"].includes(role)) {
+      return json({ ok: false, error: "Valid email and role are required." }, 400);
+    }
+    const profile = {
+      email,
+      display_name: normalizeText(body.display_name) || null,
+      role,
+      is_active: true,
+      service_region: normalizeText(body.service_region) || null,
+      created_by: caller.email,
+      updated_by: caller.email
+    };
+    const result = await supabaseAdminRest(env, "rest/v1/garden_cleaners_profiles?on_conflict=email", {
+      method: "POST",
+      body: [profile],
+      prefer: "resolution=merge-duplicates,return=representation"
+    });
+    if (result instanceof Response) return result;
+    await writeAuditLog(env, caller.email, "invite_user", email, null, { role });
+    return json({ ok: true, email, role });
+  }
+
+  if (request.method === "PATCH") {
+    const profileId = normalizeText(body.profile_id);
+    if (!profileId) {
+      return json({ ok: false, error: "profile_id is required." }, 400);
+    }
+    const updates = { updated_by: caller.email };
+    if (body.role !== undefined) updates.role = normalizeText(body.role) || null;
+    if (body.is_active !== undefined) updates.is_active = !!body.is_active;
+    if (body.display_name !== undefined) updates.display_name = normalizeText(body.display_name) || null;
+    if (body.service_region !== undefined) updates.service_region = normalizeText(body.service_region) || null;
+    const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_profiles?id=eq.${encodeURIComponent(profileId)}`, {
+      method: "PATCH",
+      body: updates,
+      prefer: "return=minimal"
+    });
+    if (result instanceof Response) return result;
+    await writeAuditLog(env, caller.email, body.role ? "change_role" : "update_user", null, profileId, updates);
+    return json({ ok: true });
+  }
+
+  if (request.method === "PUT") {
+    const email = normalizeEmail(body.email);
+    if (!email) {
+      return json({ ok: false, error: "Email is required." }, 400);
+    }
+    await writeAuditLog(env, caller.email, "resend_invite", email, null, { mode: "google_sign_in" });
+    return json({ ok: true, message: "User can sign in with Google using this email address." });
+  }
+
+  return json({ ok: false, error: "Method not allowed." }, 405);
 }
 
 async function handleGardenQuote(request, env) {
@@ -473,6 +801,9 @@ export default {
     if (url.pathname === "/api/garden-cleaners-quote") {
       return handleGardenQuotesApi(request, env);
     }
+    if (url.pathname === "/api/garden-cleaners-quote-status") {
+      return handleGardenQuoteStatus(request, env);
+    }
     if (url.pathname === "/api/garden-cleaners-job") {
       return handleGardenJobs(request, env);
     }
@@ -484,6 +815,9 @@ export default {
     }
     if (url.pathname === "/api/garden-cleaners-job-status") {
       return handleGardenJobStatus(request, env);
+    }
+    if (url.pathname === "/api/garden-cleaners-admin-users") {
+      return handleGardenAdminUsers(request, env);
     }
 
     const host = hostFrom(request);
