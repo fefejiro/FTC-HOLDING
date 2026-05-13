@@ -21,24 +21,8 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - name: Diagnose tree
-        run: |
-          pwd
-          ls -la
-          echo "---APPS---"
-          ls -la APPS || echo "APPS missing"
-          echo "---APPS/anion---"
-          ls -la APPS/anion 2>/dev/null | head -20 || echo "APPS/anion missing"
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Verify APPS/anion present
-        run: |
-          if [ ! -d APPS/anion ]; then
-            echo "ERROR: APPS/anion missing after install"
-            ls -la APPS
-            exit 1
-          fi
-          echo "APPS/anion present"
       - name: Build Next.js
         working-directory: APPS/anion
         run: npm run build
