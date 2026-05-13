@@ -94,6 +94,11 @@ async function ensureCompatibilityMirror() {
     );
   }
 
+  if (await pathExists(vercelOutputStaticDir)) {
+    await rm(vercelOutputStaticDir, { recursive: true, force: true });
+    console.log("[build-fix] Removed stale .vercel/output/static before packaging.");
+  }
+
   // Copy .next/static to .vercel/output/static for Cloudflare Pages
   const nextStaticDir = path.join(nextDir, "static");
   if (await pathExists(nextStaticDir)) {
