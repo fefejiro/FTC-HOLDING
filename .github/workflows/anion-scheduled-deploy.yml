@@ -31,6 +31,17 @@ jobs:
           ls -la APPS/anion 2>/dev/null | head -20 || echo "APPS/anion missing"
       - name: Install dependencies
         run: npm ci
+      - name: Diagnose after install
+        run: |
+          pwd
+          echo "---APPS after install---"
+          ls -la APPS || echo "APPS missing"
+          echo "---APPS/anion after install---"
+          ls -la APPS/anion 2>/dev/null | head -20 || echo "APPS/anion missing"
+          echo "---node_modules/@ftc/anion symlink---"
+          ls -la node_modules/@ftc/anion 2>/dev/null || echo "no symlink"
+          echo "---workspace list---"
+          npm query .workspace 2>&1 | head -30 || echo "query failed"
       - name: Build Next.js
         working-directory: APPS/anion
         run: npm run build
