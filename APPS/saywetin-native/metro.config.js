@@ -17,6 +17,8 @@ Module._initPaths();
 const { getDefaultConfig } = require('expo/metro-config');
 
 const projectRoot = __dirname;
+const monorepoNodeModules = path.resolve(projectRoot, '..', '..', 'node_modules');
+const hasMonorepoNodeModules = require('fs').existsSync(monorepoNodeModules);
 
 const config = getDefaultConfig(projectRoot);
 config.projectRoot = projectRoot;
@@ -42,7 +44,7 @@ config.resolver.nodeModulesPaths = [
   // Monorepo root node_modules for packages hoisted there by npm workspaces.
   // NOTE: this is NOT in watchFolders — adding it there was the original bug
   // that caused Metro to resolve ./index.ts from C:\FTC HOLDING.
-  path.resolve(projectRoot, '..', '..', 'node_modules'),
+  ...(hasMonorepoNodeModules ? [monorepoNodeModules] : []),
 ];
 // Only watch the app's own directory. Including the monorepo root in
 // watchFolders causes Metro's legacySinglePageExportBundleAsync to resolve
@@ -54,7 +56,7 @@ config.resolver.nodeModulesPaths = [
 // cause ./index.ts to resolve from the monorepo root.
 config.watchFolders = [
   projectRoot,
-  path.resolve(projectRoot, '..', '..', 'node_modules'),
+  ...(hasMonorepoNodeModules ? [monorepoNodeModules] : []),
 ];
 
 // Use resolveRequest to pin react to the app's own copy. This intercepts
