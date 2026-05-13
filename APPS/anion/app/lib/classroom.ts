@@ -43,6 +43,10 @@ type TutorRow = {
   profile_id: string;
 };
 
+type BookingStudentIdRow = {
+  student_id: string | null;
+};
+
 async function mapClassroomPosts(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   posts: ClassroomPostRow[],
@@ -60,7 +64,7 @@ async function mapClassroomPosts(
       throw new Error(profileError.message);
     }
 
-    profileMap = new Map((profileRows ?? []).map((row) => [row.id as string, row.display_name as string]));
+    profileMap = new Map((profileRows ?? []).map((row: ProfileRow) => [row.id as string, row.display_name as string]));
   }
 
   const studentMap = await getStudentNameMap(
@@ -111,7 +115,8 @@ async function getStudentNameMap(
       throw new Error(profileError.message);
     }
 
-    profileMap = new Map((profileRows ?? []).map((row) => [row.id as string, row.display_name as string]));
+    const typedProfileRows = (profileRows ?? []) as ProfileRow[];
+    profileMap = new Map(typedProfileRows.map((row) => [row.id, row.display_name]));
   }
 
   return new Map(
@@ -221,7 +226,8 @@ export async function listClassroomPosts(limit = 50): Promise<ClassroomPost[]> {
       throw new Error(bookingsError.message);
     }
 
-    visibleStudentIds = Array.from(new Set((bookings ?? []).map((row) => row.student_id as string).filter(Boolean)));
+    const bookingRows = (bookings ?? []) as BookingStudentIdRow[];
+    visibleStudentIds = Array.from(new Set(bookingRows.map((row) => row.student_id).filter((value): value is string => Boolean(value))));
   }
 
   if (visibleStudentIds.length === 0) {
@@ -275,7 +281,8 @@ export async function listTutorClassroomStudents(): Promise<TutorClassroomStuden
     throw new Error(bookingsError.message);
   }
 
-  const studentIds = Array.from(new Set((bookings ?? []).map((row) => row.student_id as string).filter(Boolean)));
+  const bookingRows = (bookings ?? []) as BookingStudentIdRow[];
+  const studentIds = Array.from(new Set(bookingRows.map((row) => row.student_id).filter((value): value is string => Boolean(value))));
   const studentMap = await getStudentNameMap(supabase, studentIds);
 
   return studentIds
