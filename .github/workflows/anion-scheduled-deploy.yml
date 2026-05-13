@@ -24,11 +24,8 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - name: Install root dependencies
+      - name: Install dependencies
         run: npm ci
-        working-directory: .
-      - name: Install anion dependencies
-        run: npm ci --workspace APPS/anion
         working-directory: .
       - name: Build Next.js
         run: npm run build
