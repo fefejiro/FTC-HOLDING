@@ -45,7 +45,7 @@ export default function ConfirmationClient() {
 
       <h1>Your build has started.</h1>
       <p className="lead">
-        Payment confirmed. Your project is now in the queue and we're on it.
+        Payment confirmed. Your project is now in the queue and we&apos;re on it.
       </p>
 
       {status === "activating" ? (
@@ -66,7 +66,7 @@ export default function ConfirmationClient() {
           <li>
             <strong>Check your inbox</strong>
             <p>
-              You'll receive a project kickoff email within 24 hours confirming your brief and
+              You&apos;ll receive a project kickoff email within 24 hours confirming your brief and
               next steps.
             </p>
           </li>
@@ -79,7 +79,7 @@ export default function ConfirmationClient() {
           <li>
             <strong>Build begins</strong>
             <p>
-              Development starts on schedule. You'll get progress updates throughout the month.
+              Development starts on schedule. You&apos;ll get progress updates throughout the month.
             </p>
           </li>
           <li>
@@ -96,7 +96,7 @@ export default function ConfirmationClient() {
           Back to Una Labs
         </Link>
         <Link href="/work" className="btn btn-secondary" prefetch={false}>
-          See what we've shipped
+          See what we&apos;ve shipped
         </Link>
       </div>
 

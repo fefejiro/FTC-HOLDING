@@ -9,14 +9,12 @@ import { ATEAM_BRAND_LOGO_PATH } from "../../lib/ateamEmbed";
 import { isAteamOperatorEnabled } from "../../lib/ateamOperator";
 import OperatorOfficePanel, { type OfficePhase } from "../components/OperatorOfficePanel";
 import {
-  type WorkflowAgentRole,
   type WorkflowCatalog,
   type WorkflowIntake,
   type WorkflowCategoryValue,
   type WorkflowTemplate,
   type WorkflowRun,
 } from "../../lib/ateamWorkflow";
-import { getProjectCaseStudy } from "../../lib/content";
 import {
   clearAteamDemoHandoff,
   saveAteamWorkflowHandoff,
@@ -94,8 +92,6 @@ const VOICE_SILENCE_STOP_MS = 6500;
 const VOICE_RESTART_DELAY_MS = 240;
 const VOICE_MAX_RESTARTS = 2;
 const LOCAL_DEMO_MESSAGE = "Demo mode active. Runs currently stay in this browser.";
-
-const ateamProject = getProjectCaseStudy("ateam");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -338,7 +334,7 @@ export default function AteamWorkflowClient({
   const [supportsVoice, setSupportsVoice] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [entrySequence, setEntrySequence] = useState<"idle" | "reading" | "understood">("idle");
-  const [showAssumptions, setShowAssumptions] = useState(false);
+  const [, setShowAssumptions] = useState(false);
 
   const runId = String(searchParams.get("run") || "").trim();
   const operatorEnabled = isAteamOperatorEnabled();
@@ -702,83 +698,6 @@ export default function AteamWorkflowClient({
     : processingStageIndex <= 3
     ? "building"
     : "packaging";
-
-  const understandingTitle =
-    run?.request?.normalized?.goal ||
-    run?.brief?.primaryGoal ||
-    "ATEAM captured the request";
-  const understandingSummary =
-    run?.publicFlow?.understanding?.summary ||
-    run?.brief?.summary ||
-    run?.plan?.summary ||
-    "ATEAM preserved the request and prepared the next step.";
-  const assumptionItems = (run?.plan?.assumptions || run?.request?.assumptions || []).slice(0, 4);
-  const likelyBlockers = (run?.plan?.blockers || []).slice(0, 4);
-  const planStepsSource = (run?.plan?.proposedSteps || []).slice(0, 3);
-  const planSteps =
-    planStepsSource.length > 0
-      ? planStepsSource.map((step, index) => ({
-          id: step.id || `step-${index + 1}`,
-          title:
-            index === 0
-              ? "Understand your goal"
-              : index === 1
-              ? "Build your plan"
-              : "Deliver your output",
-          detail:
-            String(step.detail || step.title || "").trim() ||
-            (index === 0
-              ? "ATEAM restates the request in plain language and protects the real intent."
-              : index === 1
-              ? "ATEAM shapes the clearest first-pass path, expected artifact, and visible scope."
-              : "ATEAM packages the approved work into a decision-ready output."),
-        }))
-      : [
-          {
-            id: "step-1",
-            title: "Understand your goal",
-            detail: "ATEAM restates the request in plain language and protects the real intent.",
-          },
-          {
-            id: "step-2",
-            title: "Build your plan",
-            detail: "ATEAM shapes the clearest first-pass path, expected artifact, and visible scope.",
-          },
-          {
-            id: "step-3",
-            title: "Deliver your output",
-            detail: "ATEAM packages the approved work into a decision-ready output.",
-          },
-        ];
-  const executionStepIndex =
-    processingStageIndex <= 1 ? 0 : processingStageIndex <= 3 ? 1 : 2;
-  const executionSteps = planSteps.map((step, index) => ({
-    ...step,
-    state: index < executionStepIndex ? "done" : index === executionStepIndex ? "running" : "waiting",
-  }));
-  const executionRoles = [
-    { label: "Lead", state: executionStepIndex > 0 ? "done" : "running" },
-    { label: "Scout", state: executionStepIndex > 0 ? "done" : "running" },
-    { label: "Architect", state: executionStepIndex > 1 ? "done" : executionStepIndex === 1 ? "running" : "waiting" },
-    { label: "Builder", state: executionStepIndex > 2 ? "done" : executionStepIndex >= 2 ? "running" : "waiting" },
-  ] as const;
-  const showDemoBanner =
-    localFallbackEnabled && (Boolean(run) || workflowReady || isWorking || entrySequence !== "idle");
-  const visibleStateIndex = workflowReady
-    ? currentStateIndex
-    : run
-      ? Math.max(currentStateIndex, 1)
-      : entrySequence !== "idle"
-        ? 1
-        : -1;
-  const showStateStrip = visibleStateIndex >= 0;
-  const showEntryStage = !run && !isWorking && !workflowReady && entrySequence === "idle";
-  const showSequenceStage = !run && !workflowReady && entrySequence !== "idle";
-  const showReviewStage = Boolean(run && !workflowReady && !isWorking);
-  const showExecutionStage = Boolean(run && isWorking && !workflowReady);
-  const outputTitle = run?.recentArtifact?.title || run?.brief?.title || "Your output is ready";
-  const outputSummary =
-    run?.recentArtifact?.summary || run?.brief?.summary || "ATEAM packaged the approved next step.";
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 

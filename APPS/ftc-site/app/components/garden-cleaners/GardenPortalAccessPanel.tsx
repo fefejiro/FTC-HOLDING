@@ -3,6 +3,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { GardenPortalUserRole } from "../../../lib/gardenContracts";
 import { isGardenPortalAuthConfigured } from "../../../lib/gardenPortalAuth";
+import { buildProductCallbackUrl, resolveProductRole } from "../../../lib/productAuth";
 import getSupabase from "../../../lib/supabase";
 
 // Types for admin user management
@@ -61,138 +62,33 @@ type QuoteRecord = {
   created_at?: string;
 };
 
-type PortalProjectRecord = {
-  id: string;
-  name: string | null;
-  status: string | null;
-  description: string | null;
-  created_at: string | null;
-  service_region: string | null;
-  assigned_owner: string | null;
-};
-
 type AuthState = "loading" | "authenticated" | "unauthenticated" | "unavailable";
-type SignInState = "idle" | "submitting" | "error" | "success";
 type QueueFilter = "all" | "pending" | "assigned" | "in_progress" | "completed" | "cancelled";
 type RegionTag = "Oshawa" | "Whitby" | "Ajax" | "Pickering" | "Courtice" | "Durham Region" | "Unspecified";
 
 const REGION_OPTIONS: RegionTag[] = ["Oshawa", "Whitby", "Ajax", "Pickering", "Courtice", "Durham Region", "Unspecified"];
 const PORTAL_REGION_CTA_OPTIONS: Exclude<RegionTag, "Unspecified">[] = ["Oshawa", "Whitby", "Ajax", "Pickering", "Courtice", "Durham Region"];
 
-const VALID_QUEUE_STATUSES = new Set<Exclude<QueueFilter, "all">>([
-  "pending",
-  "assigned",
-  "in_progress",
-  "completed",
-  "cancelled"
-]);
-
-function normalizeStatus(value: string | null): Exclude<QueueFilter, "all"> {
-  const candidate = String(value || "").trim().toLowerCase();
-  if (VALID_QUEUE_STATUSES.has(candidate as Exclude<QueueFilter, "all">)) {
-    return candidate as Exclude<QueueFilter, "all">;
-  }
-  return "pending";
-}
-
-function inferRegion(name: string | null, description: string | null): RegionTag {
-  const text = `${name || ""} ${description || ""}`.toLowerCase();
-  if (text.includes("oshawa")) {
-    return "Oshawa";
-  }
-  if (text.includes("whitby")) {
-    return "Whitby";
-  }
-  if (text.includes("ajax")) {
-    return "Ajax";
-  }
-  if (text.includes("pickering")) {
-    return "Pickering";
-  }
-  if (text.includes("courtice")) {
-    return "Courtice";
-  }
-  if (text.includes("durham")) {
-    return "Durham Region";
-  }
-  return "Unspecified";
-}
-
-function inferOwner(description: string | null): string {
-  const text = description || "";
-  const match = text.match(/(?:owner|assignee|assigned to)\s*[:\-]\s*([a-z0-9 ._@-]{3,80})/i);
-  if (!match) {
-    return "Unassigned";
-  }
-
-  return match[1].trim();
-}
-
-function normalizeRegion(value: string | null): RegionTag | null {
-  const candidate = String(value || "").trim().toLowerCase();
-  if (!candidate) {
-    return null;
-  }
-  if (candidate === "oshawa") {
-    return "Oshawa";
-  }
-  if (candidate === "whitby") {
-    return "Whitby";
-  }
-  if (candidate === "ajax") {
-    return "Ajax";
-  }
-  if (candidate === "pickering") {
-    return "Pickering";
-  }
-  if (candidate === "courtice") {
-    return "Courtice";
-  }
-  if (candidate === "durham" || candidate === "durham region") {
-    return "Durham Region";
-  }
-  if (candidate === "unspecified") {
-    return "Unspecified";
-  }
-  return null;
-}
-
-function resolveRecordRegion(record: PortalProjectRecord): RegionTag {
-  return normalizeRegion(record.service_region) || inferRegion(record.name, record.description);
-}
-
-function resolveRecordOwner(record: PortalProjectRecord): string {
-  return String(record.assigned_owner || "").trim() || inferOwner(record.description);
-}
-
-function isMissingColumnError(message: string, columnName: string): boolean {
-  const text = message.toLowerCase();
-  return text.includes("column") && text.includes(columnName.toLowerCase()) && text.includes("does not exist");
-}
-
-function parseEmailList(value?: string): string[] {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 function normalizePortalEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message || fallback : fallback;
+}
+
 function resolveRole(email: string): GardenPortalUserRole {
   const normalizedEmail = normalizePortalEmail(email);
-  const gardenAdmins = [
-    "uby400@gmail.com",
-    "mike.fejiro@gmail.com"
-  ];
-  if (gardenAdmins.includes(normalizedEmail)) {
+  const productRole = resolveProductRole("garden", normalizedEmail);
+
+  if (productRole === "garden_admin") {
     return "admin";
   }
-  if (normalizedEmail.endsWith("@gardencleaners.ca")) {
+
+  if (productRole === "garden_staff") {
     return "staff";
   }
+
   return "client";
 }
 
@@ -201,7 +97,7 @@ async function resolveRoleFromProfile(email: string, authUserId: string | null):
   const normalizedEmail = normalizePortalEmail(email);
 
   try {
-    let profileQuery = supabase
+    const profileQuery = supabase
       .from("garden_cleaners_profiles")
       .select("id, role, auth_user_id")
       .eq("email", normalizedEmail)
@@ -245,10 +141,7 @@ export default function GardenPortalAccessPanel() {
   const [jobs, setJobs] = useState<JobRecord[]>([]);
   const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
   const [loadError, setLoadError] = useState<string>("");
-  const [pendingStatusProjectId, setPendingStatusProjectId] = useState<string>("");
-  const [pendingAssignmentProjectId, setPendingAssignmentProjectId] = useState<string>("");
-  const [pendingRegionProjectId, setPendingRegionProjectId] = useState<string>("");
-  const [regionDraftByProjectId, setRegionDraftByProjectId] = useState<Record<string, RegionTag>>({});
+  const [, setPendingStatusProjectId] = useState<string>("");
   const [queueMessage, setQueueMessage] = useState<string>("");
   const [pendingQuoteActionId, setPendingQuoteActionId] = useState<string>("");
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
@@ -365,8 +258,8 @@ export default function GardenPortalAccessPanel() {
         setJobs(jobsRes.jobs || []);
         setQuotes([]);
       }
-    } catch (e: any) {
-      setLoadError(e.message || "Failed to load portal data");
+    } catch (error: unknown) {
+      setLoadError(getErrorMessage(error, "Failed to load portal data"));
       setJobs([]);
       setQuotes([]);
     } finally {
@@ -478,8 +371,8 @@ export default function GardenPortalAccessPanel() {
       if (!res.ok) throw new Error(res.error || "Failed to update status");
       setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, status: nextStatus } : j)));
       setQueueMessage(`Job status updated to ${nextStatus}`);
-    } catch (e: any) {
-      setQueueMessage(e.message || "Unable to update job status");
+    } catch (error: unknown) {
+      setQueueMessage(getErrorMessage(error, "Unable to update job status"));
     } finally {
       setPendingStatusProjectId("");
     }
@@ -499,8 +392,8 @@ export default function GardenPortalAccessPanel() {
       setQuotes((prev) => prev.filter((q) => q.id !== quoteId));
       setQueueMessage("Quote converted to job");
       await loadPortalData("admin");
-    } catch (e: any) {
-      setQueueMessage(e.message || "Unable to convert quote");
+    } catch (error: unknown) {
+      setQueueMessage(getErrorMessage(error, "Unable to convert quote"));
     } finally {
       setPendingQuoteActionId("");
     }
@@ -524,8 +417,8 @@ export default function GardenPortalAccessPanel() {
         prev.map((quote) => (quote.id === quoteId ? { ...quote, status } : quote))
       );
       setQueueMessage(status === "approved" ? "Quote approved" : "Quote rejected");
-    } catch (e: any) {
-      setQueueMessage(e.message || "Unable to update quote status");
+    } catch (error: unknown) {
+      setQueueMessage(getErrorMessage(error, "Unable to update quote status"));
     } finally {
       setPendingQuoteActionId("");
     }
@@ -543,8 +436,8 @@ export default function GardenPortalAccessPanel() {
       if (!res.ok) throw new Error(res.error || "Failed to assign staff");
       setQueueMessage("Staff assigned to job");
       await loadPortalData("admin");
-    } catch (e: any) {
-      setQueueMessage(e.message || "Unable to assign staff");
+    } catch (error: unknown) {
+      setQueueMessage(getErrorMessage(error, "Unable to assign staff"));
     }
   }
 
@@ -592,8 +485,8 @@ export default function GardenPortalAccessPanel() {
       setAdminUsersTotal(res.total || 0);
       setAdminUsersPage(page);
       setUsersMgmtState("idle");
-    } catch (e: any) {
-      setUsersMgmtError(e.message || "Unable to load users");
+    } catch (error: unknown) {
+      setUsersMgmtError(getErrorMessage(error, "Unable to load users"));
       setUsersMgmtState("error");
     }
   }
@@ -607,8 +500,8 @@ export default function GardenPortalAccessPanel() {
       if (!res.ok) throw new Error(res.error || "Failed to load audit log");
       setAdminAuditEntries(res.entries || []);
       setAdminAuditState("idle");
-    } catch (e: any) {
-      setAdminAuditError(e.message || "Unable to load audit log");
+    } catch (error: unknown) {
+      setAdminAuditError(getErrorMessage(error, "Unable to load audit log"));
       setAdminAuditState("error");
     }
   }
@@ -640,9 +533,9 @@ export default function GardenPortalAccessPanel() {
       setShowInviteForm(false);
       await loadAdminUsers(1);
       await loadAdminAudit();
-    } catch (e: any) {
+    } catch (error: unknown) {
       setInviteFormState("error");
-      setInviteFormMessage(e.message || "Unable to invite user.");
+      setInviteFormMessage(getErrorMessage(error, "Unable to invite user."));
     }
   }
 
@@ -659,8 +552,8 @@ export default function GardenPortalAccessPanel() {
       setAdminUsers((prev) => prev.map((u) => (u.id === profileId ? { ...u, role: newRole } : u)));
       setUsersMgmtMessage("Role updated.");
       await loadAdminAudit();
-    } catch (e: any) {
-      setUsersMgmtMessage(e.message || "Unable to update role.");
+    } catch (error: unknown) {
+      setUsersMgmtMessage(getErrorMessage(error, "Unable to update role."));
     } finally {
       setPendingUserAction("");
     }
@@ -684,8 +577,8 @@ export default function GardenPortalAccessPanel() {
       setAdminUsers((prev) => prev.map((u) => (u.id === profileId ? { ...u, is_active: isActive } : u)));
       setUsersMgmtMessage(isActive ? "User reactivated." : "User disabled.");
       await loadAdminAudit();
-    } catch (e: any) {
-      setUsersMgmtMessage(e.message || "Unable to update user status.");
+    } catch (error: unknown) {
+      setUsersMgmtMessage(getErrorMessage(error, "Unable to update user status."));
     } finally {
       setPendingUserAction("");
     }
@@ -703,8 +596,8 @@ export default function GardenPortalAccessPanel() {
       if (!res.ok) throw new Error(res.error || "Failed to send reset");
       setUsersMgmtMessage(`Reset/invite sent to ${email}.`);
       await loadAdminAudit();
-    } catch (e: any) {
-      setUsersMgmtMessage(e.message || "Unable to send reset.");
+    } catch (error: unknown) {
+      setUsersMgmtMessage(getErrorMessage(error, "Unable to send reset."));
     } finally {
       setPendingUserAction("");
     }
@@ -724,7 +617,11 @@ export default function GardenPortalAccessPanel() {
 
   async function handleGoogleSignIn() {
     const supabase = getSupabase();
-    const redirectTo = `${window.location.origin}/garden-cleaners/portal`;
+    const redirectTo = buildProductCallbackUrl({
+      origin: window.location.origin,
+      product: "garden",
+      returnTo: "/garden-cleaners/portal"
+    });
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo }
@@ -824,7 +721,7 @@ export default function GardenPortalAccessPanel() {
           )}
           {authState === "loading" && loadingTimeout && (
             <div style={{ color: "#b94a48", background: "#fff0f0", borderRadius: 8, padding: "12px 16px", marginTop: 16 }}>
-              We couldn't load your portal access yet. Please sign out and try again, or contact support.
+              We couldn&apos;t load your portal access yet. Please sign out and try again, or contact support.
             </div>
           )}
           {authState === "unavailable" ? (

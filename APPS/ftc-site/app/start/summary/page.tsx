@@ -14,7 +14,7 @@ export default function SummaryPage() {
         <div className="container">
           <div className="summary-hero">
             <p className="eyebrow">Step 2 of 3 — Review &amp; pay</p>
-            <h1>Here's your project brief.</h1>
+            <h1>Here&apos;s your project brief.</h1>
             <p className="lead">
               Review the summary below. If everything looks right, choose a payment plan to proceed.
             </p>

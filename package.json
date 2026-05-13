@@ -49,5 +49,8 @@
     "verify:peacepad:prod": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-prod.ps1",
     "verify:peacepad:local": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-local.ps1",
     "verify:peacepad:ownership": "npm --workspace=@ftc/peacepad run verify:deployment-ownership"
+  },
+  "devDependencies": {
+    "unenv": "^2.0.0-rc.24"
   }
 }

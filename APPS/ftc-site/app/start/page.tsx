@@ -19,7 +19,7 @@ export default function BuildPage() {
             <p className="eyebrow">App Development Package — Starting at $3,999</p>
             <h1>Tell us about your project.</h1>
             <p className="lead">
-              Fill this out and we'll generate a structured summary of your project.
+              Fill this out and we&apos;ll generate a structured summary of your project.
               Then you choose how to proceed — deposit or pay in full.
             </p>
             <div className="build-hero-steps">

@@ -45,7 +45,7 @@ export default function OgTradesResourcesPage() {
         <section className="section og-section">
           <div className="section-heading">
             <p className="eyebrow">How these resources help</p>
-            <h2>Start with the basics, build better habits, and stay connected to the academy's teaching style.</h2>
+            <h2>Start with the basics, build better habits, and stay connected to the academy&apos;s teaching style.</h2>
           </div>
           <div className="cards-grid cards-grid-3">
             <article className="card">
@@ -63,7 +63,7 @@ export default function OgTradesResourcesPage() {
             <article className="card">
               <h3>Learn before and after paid programs</h3>
               <p className="muted">
-                These resources work well for people who are just starting, as well as students who want extra support alongside the academy's paid offers.
+                These resources work well for people who are just starting, as well as students who want extra support alongside the academy&apos;s paid offers.
               </p>
             </article>
           </div>

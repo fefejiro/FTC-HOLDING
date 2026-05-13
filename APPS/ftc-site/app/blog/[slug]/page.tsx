@@ -4,7 +4,7 @@ export const runtime = "edge";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { blogPosts, getBlogPost } from "../../../lib/blog";
+import { getBlogPost } from "../../../lib/blog";
 import { SITE_URL } from "../../../lib/site";
 
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {

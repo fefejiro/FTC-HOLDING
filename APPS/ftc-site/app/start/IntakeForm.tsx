@@ -144,7 +144,7 @@ export default function IntakeForm() {
         <label htmlFor="users" className="intake-label">
           Who are your target users? <span className="intake-required">*</span>
         </label>
-        <p className="intake-hint">Be specific — not just "everyone."</p>
+        <p className="intake-hint">Be specific — not just &quot;everyone.&quot;</p>
         <input
           id="users"
           type="text"
@@ -198,7 +198,7 @@ export default function IntakeForm() {
       </button>
 
       <p className="intake-submit-note">
-        No payment yet. You'll review everything before choosing a plan.
+        No payment yet. You&apos;ll review everything before choosing a plan.
       </p>
     </form>
   );

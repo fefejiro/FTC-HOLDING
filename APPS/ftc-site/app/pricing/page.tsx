@@ -19,7 +19,7 @@ export default function PricingPage() {
             <p className="sunrise-kicker">Transparent pricing</p>
             <h1>One package. One month. One shipped product.</h1>
             <p className="sunrise-lead">
-              We don't do retainers, scope creep, or surprise invoices. You get a focused
+              We don&apos;t do retainers, scope creep, or surprise invoices. You get a focused
               Version 1 build and a full month of support, nothing more, nothing less.
             </p>
           </div>
@@ -114,7 +114,7 @@ export default function PricingPage() {
                     </p>
                   </div>
                   <div className="pricing-faq-item">
-                    <strong>What's the deposit for?</strong>
+                    <strong>What&apos;s the deposit for?</strong>
                     <p>
                       It locks in your place in the build queue and kicks off the intake process.
                       The remaining $3,000 is due before build work begins.
@@ -124,7 +124,7 @@ export default function PricingPage() {
                     <strong>What tech stack do you use?</strong>
                     <p>
                       Depends on your project. Typically Next.js, React Native, Railway, Cloudflare.
-                      Thin, durable stacks that don't need babysitting.
+                      Thin, durable stacks that don&apos;t need babysitting.
                     </p>
                   </div>
                 </div>
@@ -134,7 +134,7 @@ export default function PricingPage() {
                 <h3>Built by Una Labs</h3>
                 <p>
                   PeacePad, SayWetin, and Dispatch are all production-deployed products built
-                  and maintained solo. This isn't an agency pitch, it's the same system we
+                  and maintained solo. This isn&apos;t an agency pitch, it&apos;s the same system we
                   use for our own products, applied to yours.
                 </p>
                 <Link href="/work" className="inline-link" prefetch={false}>
@@ -151,8 +151,8 @@ export default function PricingPage() {
           <div className="pricing-bottom-cta card">
             <h2>Ready to build?</h2>
             <p>
-              Fill out the intake form. We'll review your project and confirm fit before
-              you're charged anything.
+              Fill out the intake form. We&apos;ll review your project and confirm fit before
+              you&apos;re charged anything.
             </p>
             <Link href="/start" className="btn btn-primary">
               Start Your Build
