@@ -39,10 +39,13 @@
     "@types/node": "^22.15.29",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "lightningcss-win32-x64-msvc": "^1.32.0",
+    "cloudflare": "^4.4.1",
     "tailwindcss": "^4.1.11",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "wrangler": "^4.16.0"
+  },
+  "optionalDependencies": {
+    "lightningcss-win32-x64-msvc": "^1.32.0"
   }
 }
