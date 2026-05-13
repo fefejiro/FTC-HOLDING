@@ -15,30 +15,34 @@ jobs:
   deploy:
     name: Deploy Anion to Cloudflare Workers
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: APPS/anion
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
+      - name: Diagnose tree
+        run: |
+          pwd
+          ls -la
+          echo "---APPS---"
+          ls -la APPS || echo "APPS missing"
+          echo "---APPS/anion---"
+          ls -la APPS/anion 2>/dev/null | head -20 || echo "APPS/anion missing"
       - name: Install dependencies
         run: npm ci
-        working-directory: .
       - name: Build Next.js
-        run: npm run build
+        run: npm --workspace=@ftc/anion run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ANION_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.ANION_SUPABASE_ANON_KEY }}
       - name: Build Cloudflare Worker
-        run: npm run build:worker
+        run: npm --workspace=@ftc/anion run build:worker
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ANION_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.ANION_SUPABASE_ANON_KEY }}
       - name: Deploy to Cloudflare Workers
-        run: npm run deploy:worker
+        run: npm --workspace=@ftc/anion run deploy:worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
