@@ -30,3 +30,7 @@
 /garden-cleaners /products/garden-cleaners/ 301
 /garden-cleaners/ /products/garden-cleaners/ 301
 /garden-cleaners/* /products/garden-cleaners/ 301
+/anion https://anion.unalabs.cloud 302
+/anion/ https://anion.unalabs.cloud 302
+/products/anion https://anion.unalabs.cloud 302
+/products/anion/ https://anion.unalabs.cloud 302
