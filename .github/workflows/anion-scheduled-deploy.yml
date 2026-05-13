@@ -32,17 +32,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build Next.js
-        run: npm --workspace=@ftc/anion run build
+        working-directory: APPS/anion
+        run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ANION_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.ANION_SUPABASE_ANON_KEY }}
       - name: Build Cloudflare Worker
-        run: npm --workspace=@ftc/anion run build:worker
+        working-directory: APPS/anion
+        run: npm run build:worker
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ANION_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.ANION_SUPABASE_ANON_KEY }}
       - name: Deploy to Cloudflare Workers
-        run: npm --workspace=@ftc/anion run deploy:worker
+        working-directory: APPS/anion
+        run: npm run deploy:worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
