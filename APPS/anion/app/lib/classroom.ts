@@ -139,16 +139,18 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
     .from('profiles')
     .select('id, display_name')
     .eq('auth_user_id', user.id)
-    .single<ProfileRow>();
+    .single();
 
-  if (profileError || !profile) {
+  const typedProfile = profile as ProfileRow | null;
+
+  if (profileError || !typedProfile) {
     throw new Error('Profile not found for current user.');
   }
 
   const { data: roles, error: roleError } = await supabase
     .from('user_roles')
     .select('role')
-    .eq('profile_id', profile.id)
+    .eq('profile_id', typedProfile.id)
     .in('role', ['student', 'tutor'])
     .order('created_at', { ascending: true })
     .limit(1);
@@ -166,7 +168,7 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select('id, profile_id, grade_level')
-      .eq('profile_id', profile.id)
+      .eq('profile_id', typedProfile.id)
       .single();
 
     if (studentError || !student) {
@@ -174,7 +176,7 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
     }
 
     return {
-      profile,
+      profile: typedProfile,
       role,
       student: student as StudentRow,
       tutor: null,
@@ -184,7 +186,7 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
   const { data: tutor, error: tutorError } = await supabase
     .from('tutors')
     .select('id, profile_id')
-    .eq('profile_id', profile.id)
+    .eq('profile_id', typedProfile.id)
     .single();
 
   if (tutorError || !tutor) {
@@ -192,7 +194,7 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
   }
 
   return {
-    profile,
+    profile: typedProfile,
     role,
     student: null,
     tutor: tutor as TutorRow,
