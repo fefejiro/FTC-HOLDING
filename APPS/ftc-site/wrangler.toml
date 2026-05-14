@@ -1,4 +1,7 @@
 name = "ftc-site-pages"
 compatibility_date = "2026-03-08"
 compatibility_flags = ["nodejs_compat"]
+# Cloudflare dashboard Git builds run from the repo root and must publish
+# APPS/ftc-site/.vercel/output/static. This app-level path is for Wrangler
+# commands run from APPS/ftc-site.
 pages_build_output_dir = ".vercel/output/static"
