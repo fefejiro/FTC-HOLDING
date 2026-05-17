@@ -11,10 +11,11 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="container page-content legal-page">
-      <p className="eyebrow">Legal</p>
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container legal-page">
+      <p className="sunrise-kicker">Legal</p>
       <h1>Privacy Policy</h1>
-      <p className="page-intro">
+      <p className="sunrise-lead">
         Una Labs is committed to clear, practical privacy practices. This page
         covers our website and product-specific privacy practices, including the
         Dispatch Emergency Prompt app distributed on Google Play.
@@ -71,6 +72,7 @@ export default function PrivacyPage() {
         You may request access, correction, or deletion of personal information
         by emailing <a href="mailto:hello@unalabs.cloud">hello@unalabs.cloud</a>.
       </p>
+      </div>
     </div>
   );
 }

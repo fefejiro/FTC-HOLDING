@@ -45,7 +45,7 @@ export default function OgTradesCoursePage() {
             <p className="eyebrow">Flagship program</p>
             <h1>{ogTradesAcademyConfig.courseName}</h1>
             <p className="page-intro">
-              The academy's flagship beginner program helps new traders build their foundation with structure, guidance, and a risk-first approach to learning forex.
+              The academy&apos;s flagship beginner program helps new traders build their foundation with structure, guidance, and a risk-first approach to learning forex.
             </p>
 
             <div className="og-course-price-callout">

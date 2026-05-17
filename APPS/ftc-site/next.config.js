@@ -1,3 +1,5 @@
+const path = require("path");
+
 const trimTrailingSlash = (value = "") => String(value || "").replace(/\/+$/, "");
 const truthy = (value = "") => ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
 
@@ -24,6 +26,15 @@ module.exports = {
     unoptimized: true,
   },
   transpilePackages: ["@ftc/supabase", "@ftc/config", "@ftc/types", "@ftc/auth"],
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+    config.resolve.alias["@supabase/phoenix"] = path.resolve(
+      __dirname,
+      "../../node_modules/@supabase/phoenix/priv/static/phoenix.mjs"
+    );
+    return config;
+  },
   async headers() {
     const noStoreHeaders = [
       {

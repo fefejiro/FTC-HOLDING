@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-11T22:30:00.000Z",
+  "summary": {
+    "overallStatus": "yellow",
+    "activeAlerts": 3,
+    "autoDebugEnabled": true,
+    "note": "Agent monitors GitHub Actions, Railway, Cloudflare, and Supabase."
+  },
+  "providers": [
+    {
+      "id": "railway",
+      "label": "Railway",
+      "status": "yellow",
+      "services": [
+        {
+          "name": "splendid-spirit",
+          "status": "red",
+          "detail": "Recent production deploy crash alert for @ftc/peacepad.",
+          "lastCheckedAt": "2026-05-11T21:52:00.000Z"
+        },
+        {
+          "name": "lively",
+          "status": "green",
+          "detail": "No recent crash alerts in the latest monitoring window.",
+          "lastCheckedAt": "2026-05-11T21:52:00.000Z"
+        },
+        {
+          "name": "enchanting",
+          "status": "yellow",
+          "detail": "Legacy SayWetin service history detected; keep under observation.",
+          "lastCheckedAt": "2026-05-11T21:52:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "cloudflare",
+      "label": "Cloudflare",
+      "status": "yellow",
+      "services": [
+        {
+          "name": "Pages (unalabs.cloud)",
+          "status": "yellow",
+          "detail": "Custom-domain route conflict observed on /ateam; preview route is healthy.",
+          "lastCheckedAt": "2026-05-11T21:52:00.000Z"
+        },
+        {
+          "name": "Workers + Routes",
+          "status": "yellow",
+          "detail": "Requires route cleanup for unalabs.cloud/ateam* to avoid interception.",
+          "lastCheckedAt": "2026-05-11T21:52:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "supabase",
+      "label": "Supabase",
+      "status": "green",
+      "services": [
+        {
+          "name": "Auth + Database",
+          "status": "green",
+          "detail": "No auth or database outages detected from app-level checks.",
+          "lastCheckedAt": "2026-05-11T21:52:00.000Z"
+        }
+      ]
+    }
+  ],
+  "recentAlerts": [
+    {
+      "source": "GitHub Actions",
+      "level": "critical",
+      "message": "PeacePad Production Gates failed on main.",
+      "at": "2026-05-11T21:52:00.000Z"
+    },
+    {
+      "source": "Railway",
+      "level": "critical",
+      "message": "Deployment crashed for @ftc/peacepad in splendid-spirit production.",
+      "at": "2026-05-11T08:44:00.000Z"
+    },
+    {
+      "source": "Cloudflare",
+      "level": "warning",
+      "message": "Custom-domain /ateam route not resolving while preview URL is healthy.",
+      "at": "2026-05-11T21:10:00.000Z"
+    }
+  ]
+}

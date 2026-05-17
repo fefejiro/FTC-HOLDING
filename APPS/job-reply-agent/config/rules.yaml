@@ -4,17 +4,33 @@ automation:
   timezone: America/Toronto
   max_drafts_per_day: 50
   max_sends_per_day: 50
+  schedule:
+    business_hours_start: 8
+    business_hours_end: 21
+    business_hours_interval_minutes: 15
+    after_hours_interval_minutes: 60
+    quiet_hours_start: 23
+    quiet_hours_end: 7
+    no_auto_send_weekdays: []
 
 filters:
-  min_match_score: 65
+  min_match_score: 55
+  score_bands:
+    auto_send_min: 75
+    draft_min: 69
+    needs_review_min: 55
   labels:
     inbound: JOB AGENT/Recruiter Inbound
     drafted: JOB AGENT/Drafted
-    needs_review: JOB AGENT/NeedsReview
-    approve_send: JOB AGENT/ApproveSend
+    needs_review: JOB AGENT/Needs Review
+    approve_send: JOB AGENT/Approved Send
     sent: JOB AGENT/Sent
     skipped: JOB AGENT/Skipped
     blocked: JOB AGENT/Blocked
+    approved: JOB AGENT/Approved Send
+    trusted_recruiter: JOB AGENT/Trusted Recruiter
+    resume_generated: JOB AGENT/Resume Generated
+    error: JOB AGENT/Error
 
 risk_controls:
   block_keywords:
@@ -25,9 +41,34 @@ risk_controls:
     - full address
     - banking information
     - right to represent
+    - payment to apply
+    - unknown sender attachment
+    - suspicious link
   require_review_keywords:
     - exclusive representation
     - urgent share details
+    - salary expectation
+    - work authorization
+    - u.s. onsite
+    - relocation
+    - clearance required
+    - u.s. citizenship required
+    - green card required
 
 trusted_recruiter_domains:
   - example-recruiter.com
+
+resume_tailoring:
+  enabled: true
+  template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Fejiro_Efiuvwere_WMS_Project_Manager_North_West_Company_Tailored.docx"
+  output_dir: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes"
+  attach_mode: docx_only
+  auto_send: false
+  auto_send_criteria:
+    min_score: 75
+    require_recruiter_name: true
+    require_clean_role_title: true
+    require_resume_generated: true
+    max_body_words: 160
+    no_html_artifacts: true
+    no_sensitive_requests: true

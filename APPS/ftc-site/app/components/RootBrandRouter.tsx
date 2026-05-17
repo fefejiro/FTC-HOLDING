@@ -11,6 +11,7 @@ import {
   isOgTradesPublicPath,
   stripOgTradesBasePath,
 } from '../../lib/ogTradesAcademy';
+import { PRODUCT_AUTH_CONFIG } from '../../lib/productAuth';
 
 /**
  * Root-level brand isolation router for ftc-site.
@@ -45,6 +46,8 @@ import {
  */
 export default function RootBrandRouter({ children }: { children: ReactNode }) {
   const [shouldRender, setShouldRender] = useState(false);
+  const unaThemeClass = PRODUCT_AUTH_CONFIG.una.themeBodyClass;
+  const gardenThemeClass = PRODUCT_AUTH_CONFIG.garden.themeBodyClass;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -54,10 +57,10 @@ export default function RootBrandRouter({ children }: { children: ReactNode }) {
     const isGardenRoute = pathname === '/garden-cleaners' || pathname.startsWith('/garden-cleaners/');
     const isOgTradesRoute = pathname === '/og-trades-academy' || pathname.startsWith('/og-trades-academy/');
 
-    document.body.classList.remove('brand-una', 'brand-garden', 'brand-og-trades');
+    document.body.classList.remove(unaThemeClass, gardenThemeClass, 'brand-og-trades');
 
     if (isGardenCleanersCustomHost(host) || isGardenRoute) {
-      document.body.classList.add('brand-garden');
+      document.body.classList.add(gardenThemeClass);
 
       // Strict routing checks only apply on the custom domain.
       if (isGardenCleanersCustomHost(host)) {
@@ -99,7 +102,7 @@ export default function RootBrandRouter({ children }: { children: ReactNode }) {
     }
 
     if (!(isGardenCleanersCustomHost(host) || isGardenRoute) && !(isOgTradesCustomHost(host) || isOgTradesRoute)) {
-      document.body.classList.add('brand-una');
+      document.body.classList.add(unaThemeClass);
     }
 
     // All other hosts (including unalabs.cloud): allow render

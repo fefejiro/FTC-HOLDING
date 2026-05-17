@@ -25,10 +25,28 @@ const rulesSchema = z.object({
     mode: z.enum(["disabled", "draft_only", "approval_required", "trusted_auto_send"]),
     timezone: z.string(),
     max_drafts_per_day: z.number().int().positive(),
-    max_sends_per_day: z.number().int().positive()
+    max_sends_per_day: z.number().int().positive(),
+    schedule: z
+      .object({
+        business_hours_start: z.number().int().min(0).max(23).optional(),
+        business_hours_end: z.number().int().min(0).max(23).optional(),
+        business_hours_interval_minutes: z.number().int().positive().optional(),
+        after_hours_interval_minutes: z.number().int().positive().optional(),
+        quiet_hours_start: z.number().int().min(0).max(23).optional(),
+        quiet_hours_end: z.number().int().min(0).max(23).optional(),
+        no_auto_send_weekdays: z.array(z.number().int().min(0).max(6)).optional()
+      })
+      .optional()
   }),
   filters: z.object({
     min_match_score: z.number().int().min(0).max(100),
+    score_bands: z
+      .object({
+        auto_send_min: z.number().int().min(0).max(100),
+        draft_min: z.number().int().min(0).max(100),
+        needs_review_min: z.number().int().min(0).max(100)
+      })
+      .optional(),
     labels: z.object({
       inbound: z.string(),
       drafted: z.string(),
@@ -36,14 +54,38 @@ const rulesSchema = z.object({
       approve_send: z.string(),
       sent: z.string(),
       skipped: z.string(),
-      blocked: z.string()
+      blocked: z.string(),
+      approved: z.string(),
+      trusted_recruiter: z.string().optional(),
+      resume_generated: z.string().optional(),
+      error: z.string().optional()
     })
   }),
   risk_controls: z.object({
     block_keywords: z.array(z.string()),
     require_review_keywords: z.array(z.string())
   }),
-  trusted_recruiter_domains: z.array(z.string())
+  trusted_recruiter_domains: z.array(z.string()),
+  resume_tailoring: z
+    .object({
+      enabled: z.boolean(),
+      template_path: z.string(),
+      output_dir: z.string(),
+      attach_mode: z.enum(["docx_only", "docx_and_pdf", "pdf_only"]),
+      auto_send: z.boolean(),
+      auto_send_criteria: z
+        .object({
+          min_score: z.number().int().min(0).max(100).optional(),
+          require_recruiter_name: z.boolean().optional(),
+          require_clean_role_title: z.boolean().optional(),
+          require_resume_generated: z.boolean().optional(),
+          max_body_words: z.number().int().positive().optional(),
+          no_html_artifacts: z.boolean().optional(),
+          no_sensitive_requests: z.boolean().optional()
+        })
+        .optional()
+    })
+    .optional()
 });
 
 const resumeMapSchema = z.object({

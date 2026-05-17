@@ -17,9 +17,6 @@ function Run-Step($label, $cmd) {
   }
 }
 
-Run-Step "1. Scan + Draft" "npm run process:gmail"
-Run-Step "2. Approve drafts" "npm run approve:all"
-Run-Step "3. Send approved" "npm run send:approved:gmail"
-Run-Step "4. Morning report" "npm run report"
+Run-Step "1. Scan + Draft" "npm run run:gmail-cycle"
 
 "=== Done $(Get-Date -Format 'HH:mm:ss') ===" | Tee-Object -FilePath $log -Append

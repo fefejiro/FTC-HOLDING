@@ -1,0 +1,43 @@
+name: anion-scheduled-deploy
+
+on:
+  schedule:
+    # 8pm EST = 01:00 UTC (UTC-5). During EDT (summer) this fires at 9pm EDT.
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deploy'
+        required: false
+        default: 'Manual trigger'
+
+jobs:
+  deploy:
+    name: Deploy Anion to Cloudflare Workers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build Next.js
+        working-directory: APPS/anion
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ANION_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.ANION_SUPABASE_ANON_KEY }}
+      - name: Build Cloudflare Worker
+        working-directory: APPS/anion
+        run: npm run build:worker
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ANION_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.ANION_SUPABASE_ANON_KEY }}
+      - name: Deploy to Cloudflare Workers
+        working-directory: APPS/anion
+        run: npm run deploy:worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

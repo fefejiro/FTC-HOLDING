@@ -43,6 +43,10 @@ type TutorRow = {
   profile_id: string;
 };
 
+type BookingStudentIdRow = {
+  student_id: string | null;
+};
+
 async function mapClassroomPosts(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   posts: ClassroomPostRow[],
@@ -60,7 +64,7 @@ async function mapClassroomPosts(
       throw new Error(profileError.message);
     }
 
-    profileMap = new Map((profileRows ?? []).map((row) => [row.id as string, row.display_name as string]));
+    profileMap = new Map((profileRows ?? []).map((row: ProfileRow) => [row.id as string, row.display_name as string]));
   }
 
   const studentMap = await getStudentNameMap(
@@ -111,7 +115,8 @@ async function getStudentNameMap(
       throw new Error(profileError.message);
     }
 
-    profileMap = new Map((profileRows ?? []).map((row) => [row.id as string, row.display_name as string]));
+    const typedProfileRows = (profileRows ?? []) as ProfileRow[];
+    profileMap = new Map(typedProfileRows.map((row) => [row.id, row.display_name]));
   }
 
   return new Map(
@@ -139,16 +144,18 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
     .from('profiles')
     .select('id, display_name')
     .eq('auth_user_id', user.id)
-    .single<ProfileRow>();
+    .single();
 
-  if (profileError || !profile) {
+  const typedProfile = profile as ProfileRow | null;
+
+  if (profileError || !typedProfile) {
     throw new Error('Profile not found for current user.');
   }
 
   const { data: roles, error: roleError } = await supabase
     .from('user_roles')
     .select('role')
-    .eq('profile_id', profile.id)
+    .eq('profile_id', typedProfile.id)
     .in('role', ['student', 'tutor'])
     .order('created_at', { ascending: true })
     .limit(1);
@@ -166,7 +173,7 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select('id, profile_id, grade_level')
-      .eq('profile_id', profile.id)
+      .eq('profile_id', typedProfile.id)
       .single();
 
     if (studentError || !student) {
@@ -174,7 +181,7 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
     }
 
     return {
-      profile,
+      profile: typedProfile,
       role,
       student: student as StudentRow,
       tutor: null,
@@ -184,7 +191,7 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
   const { data: tutor, error: tutorError } = await supabase
     .from('tutors')
     .select('id, profile_id')
-    .eq('profile_id', profile.id)
+    .eq('profile_id', typedProfile.id)
     .single();
 
   if (tutorError || !tutor) {
@@ -192,7 +199,7 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
   }
 
   return {
-    profile,
+    profile: typedProfile,
     role,
     student: null,
     tutor: tutor as TutorRow,
@@ -219,7 +226,8 @@ export async function listClassroomPosts(limit = 50): Promise<ClassroomPost[]> {
       throw new Error(bookingsError.message);
     }
 
-    visibleStudentIds = Array.from(new Set((bookings ?? []).map((row) => row.student_id as string).filter(Boolean)));
+    const bookingRows = (bookings ?? []) as BookingStudentIdRow[];
+    visibleStudentIds = Array.from(new Set(bookingRows.map((row) => row.student_id).filter((value): value is string => Boolean(value))));
   }
 
   if (visibleStudentIds.length === 0) {
@@ -273,7 +281,8 @@ export async function listTutorClassroomStudents(): Promise<TutorClassroomStuden
     throw new Error(bookingsError.message);
   }
 
-  const studentIds = Array.from(new Set((bookings ?? []).map((row) => row.student_id as string).filter(Boolean)));
+  const bookingRows = (bookings ?? []) as BookingStudentIdRow[];
+  const studentIds = Array.from(new Set(bookingRows.map((row) => row.student_id).filter((value): value is string => Boolean(value))));
   const studentMap = await getStudentNameMap(supabase, studentIds);
 
   return studentIds

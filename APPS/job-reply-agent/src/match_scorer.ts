@@ -10,8 +10,22 @@ export function scoreOpportunity(
   let score = 0;
   const reasons: string[] = [];
 
+  const withTitleVariants = (title: string): string[] => {
+    const base = title.toLowerCase().trim();
+    const variants = new Set<string>([base]);
+
+    // Common singular/plural variants in recruiter emails.
+    variants.add(base.replace(/\bsystems\b/g, "system"));
+    variants.add(base.replace(/\bsystem\b/g, "systems"));
+    variants.add(base.replace(/\banalysts\b/g, "analyst"));
+    variants.add(base.replace(/\banalyst\b/g, "analysts"));
+
+    return Array.from(variants);
+  };
+
   for (const title of profile.target_titles) {
-    if (text.includes(title.toLowerCase())) {
+    const titleMatches = withTitleVariants(title);
+    if (titleMatches.some((candidate) => text.includes(candidate))) {
       score += 30;
       reasons.push(`Target title match: ${title}`);
       break;
@@ -34,7 +48,13 @@ export function scoreOpportunity(
     reasons.push(`Role family match: ${mapMatches[0].role_family}`);
   }
 
-  if (parsed.location.toLowerCase().includes("remote") || parsed.location.toLowerCase().includes("toronto")) {
+  if (
+    parsed.location.toLowerCase().includes("remote") ||
+    parsed.location.toLowerCase().includes("toronto") ||
+    text.includes("remote") ||
+    text.includes("hybrid") ||
+    text.includes("toronto")
+  ) {
     score += 10;
     reasons.push("Preferred location pattern matched");
   }

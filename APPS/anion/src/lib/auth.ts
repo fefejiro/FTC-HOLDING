@@ -2,7 +2,7 @@
 // Uses the Anion-local Supabase browser client so this file has no dependency
 // on the cross-workspace @ftc/auth or @ftc/supabase packages.
 import { createBrowserClient } from '@/app/lib/supabase/client';
-import type { Session } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 export function authEnabled() {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -28,7 +28,7 @@ export function subscribeToAuth(handler: (session: Session | null) => void) {
     };
   }
 
-  return createBrowserClient().auth.onAuthStateChange((_event, session) => handler(session));
+  return createBrowserClient().auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => handler(session));
 }
 
 export async function sendMagicLink(email: string) {

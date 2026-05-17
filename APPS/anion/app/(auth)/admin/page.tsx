@@ -64,6 +64,7 @@ type ParentRow = { id: string; profile_id: string };
 type StudentRow = { id: string; profile_id: string; grade_level: string | null };
 type ProfileNameRow = { id: string; display_name: string };
 type ParentStudentLinkRow = { parent_id: string; student_id: string; created_at: string };
+type RecentProfile = { id: string; display_name: string | null; created_at: string };
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const user = await getCurrentUser();
@@ -283,7 +284,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             Recent Sign-ups
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {recentProfiles.map((p) => (
+            {recentProfiles.map((p: RecentProfile) => (
               <div
                 key={p.id}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8 }}

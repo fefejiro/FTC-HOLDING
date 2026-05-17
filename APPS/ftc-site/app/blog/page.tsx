@@ -15,9 +15,10 @@ export const metadata: Metadata = {
 
 export default function BlogPage() {
   return (
-    <div className="container page-content blog-page">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container blog-page">
       <h1>Una Labs Blog</h1>
-      <p className="page-intro">
+      <p className="sunrise-lead">
         Practical writing on AI product development, automation systems, and how Una Labs
         ships real-world products like PeacePad and SayWetin.
       </p>
@@ -45,6 +46,7 @@ export default function BlogPage() {
             </p>
           </article>
         ))}
+      </div>
       </div>
     </div>
   );

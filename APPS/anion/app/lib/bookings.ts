@@ -75,6 +75,11 @@ type ParentProfileRow = {
   profile_id: string;
 };
 
+type ParentStudentLinkRow = {
+  student_id: string;
+  created_at: string;
+};
+
 async function getStudentNameMap(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   studentIds: string[],
@@ -297,14 +302,14 @@ export async function listParentLinkedStudents(): Promise<ParentLinkedStudent[]>
     throw new Error(linksError.message);
   }
 
-  const studentIds = Array.from(new Set((links ?? []).map((row) => row.student_id as string)));
+  const studentIds: string[] = Array.from(new Set((links ?? []).map((row: ParentStudentLinkRow) => row.student_id as string)));
   if (studentIds.length === 0) {
     return [];
   }
 
   const studentNameMap = await getStudentNameMap(supabase, studentIds);
 
-  return (links ?? []).map((link) => ({
+  return (links ?? []).map((link: ParentStudentLinkRow) => ({
     id: link.student_id as string,
     display_name: studentNameMap.get(link.student_id as string)?.displayName ?? `Student ${(link.student_id as string).slice(0, 8)}`,
     grade_level: studentNameMap.get(link.student_id as string)?.gradeLevel ?? null,

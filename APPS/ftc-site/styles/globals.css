@@ -15928,6 +15928,93 @@ body {
   gap: 8px;
 }
 
+/* Una Labs brand shell override: white + orange system */
+body.brand-una {
+  --bg: #fffdf9;
+  --bg-soft: #fff7ef;
+  --surface: #ffffff;
+  --surface-2: #fff8f1;
+  --surface-3: #fff3e7;
+  --glass: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  --text: #101828;
+  --muted: #667085;
+  --copy: #344054;
+  --accent: #f97316;
+  --accent-2: #fb923c;
+  --shadow-soft: 0 10px 28px rgba(249, 115, 22, 0.08);
+  --shadow-glow: 0 0 0 1px rgba(249, 115, 22, 0.16), 0 18px 40px rgba(251, 146, 60, 0.16);
+  color: var(--text);
+  background:
+    radial-gradient(980px 580px at -8% -16%, rgba(251, 146, 60, 0.2) 0%, transparent 58%),
+    radial-gradient(760px 520px at 110% -12%, rgba(251, 191, 36, 0.16) 0%, transparent 62%),
+    linear-gradient(180deg, #fffdf9 0%, #fff9f3 56%, #fffefc 100%);
+}
+
+body.brand-una header {
+  background: rgba(255, 252, 247, 0.9);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+body.brand-una .brand,
+body.brand-una .nav-link.active,
+body.brand-una h1,
+body.brand-una h2,
+body.brand-una h3,
+body.brand-una h4 {
+  color: #101828;
+}
+
+body.brand-una .nav-link {
+  color: #475467;
+}
+
+body.brand-una .nav-link:hover {
+  color: #101828;
+  background: rgba(249, 115, 22, 0.08);
+}
+
+body.brand-una .nav-link.active {
+  background: linear-gradient(120deg, rgba(249, 115, 22, 0.18), rgba(251, 146, 60, 0.12));
+  border: 1px solid rgba(249, 115, 22, 0.28);
+}
+
+body.brand-una .card,
+body.brand-una .hero,
+body.brand-una .hero-media-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-soft);
+}
+
+body.brand-una .btn-primary,
+body.brand-una .header-start-btn {
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(249, 115, 22, 0.22);
+}
+
+body.brand-una .btn-primary:hover,
+body.brand-una .header-start-btn:hover {
+  background: linear-gradient(135deg, #ea580c, #f97316);
+}
+
+body.brand-una .btn-secondary,
+body.brand-una .header-login-link {
+  border-color: rgba(249, 115, 22, 0.35);
+  color: #c2410c;
+  background: #fff7ed;
+}
+
+body.brand-una .muted,
+body.brand-una .section-heading p,
+body.brand-una .page-intro,
+body.brand-una .footer-copy,
+body.brand-una .footer-subtitle,
+body.brand-una .brand-subtitle {
+  color: #667085;
+}
+
 .hero-mockup-card--1 {
   top: 0;
   left: 0;

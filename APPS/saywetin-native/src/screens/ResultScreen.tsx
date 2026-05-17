@@ -64,6 +64,10 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
   const retryPersistenceRef = useRef(RetryPersistence.getInstance());
   const analyticsRef = useRef(ResultScreenAnalytics.getInstance());
   const sectionLoadStartTimesRef = useRef<Record<string, number>>({});
+  const autoFetchAttemptRef = useRef<{ lyricTrackId: string | null; meaningTrackId: string | null }>({
+    lyricTrackId: null,
+    meaningTrackId: null,
+  });
 
   const fallbackQuery = `${track.artist} ${track.title}`.trim();
   const spotifySearchUrl = `https://open.spotify.com/search/${encodeURIComponent(fallbackQuery)}`;
@@ -316,6 +320,42 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     }
   };
 
+  useEffect(() => {
+    if (!track.id) {
+      return;
+    }
+
+    // Auto-fetch lyrics once per track when payload does not include inline lyric text.
+    if (
+      !lyricsSection.ready &&
+      !lyricsSection.loading &&
+      !lyricsSection.error &&
+      autoFetchAttemptRef.current.lyricTrackId !== track.id
+    ) {
+      autoFetchAttemptRef.current.lyricTrackId = track.id;
+      retryLyricsSection();
+    }
+
+    // Auto-fetch meaning once per track when payload does not include meaning/analysis.
+    if (
+      !meaningSection.ready &&
+      !meaningSection.loading &&
+      !meaningSection.error &&
+      autoFetchAttemptRef.current.meaningTrackId !== track.id
+    ) {
+      autoFetchAttemptRef.current.meaningTrackId = track.id;
+      retryMeaningSection();
+    }
+  }, [
+    track.id,
+    lyricsSection.ready,
+    lyricsSection.loading,
+    lyricsSection.error,
+    meaningSection.ready,
+    meaningSection.loading,
+    meaningSection.error,
+  ]);
+
   const openLiveLyrics = async () => {
     if (openingLiveLyrics) {
       return;
@@ -329,10 +369,8 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
     }
   };
 
-  const isSoftLyricsDelay =
-    lyricsSection.errorCode === 'unavailable' || lyricsSection.errorCode === 'timeout';
-  const isSoftMeaningDelay =
-    meaningSection.errorCode === 'unavailable' || meaningSection.errorCode === 'timeout';
+  const isSoftLyricsDelay = lyricsSection.errorCode === 'timeout';
+  const isSoftMeaningDelay = meaningSection.errorCode === 'timeout';
   const spotifyDirectAvailable = Boolean(track.spotify.trackId || track.spotify.uri);
   const youtubeDirectAvailable = Boolean(track.youtube.videoId);
 
@@ -375,7 +413,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
               <Text style={styles.pendingText}>Finding the best lyric match...</Text>
             ) : (
               <Text style={styles.loadingText}>Finding the best lyric match...</Text>
-            )
+            )}
 
             <View style={styles.sectionDivider} />
 
@@ -401,7 +439,7 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
               <Text style={styles.pendingText}>Meaning is not available yet for this line.</Text>
             ) : (
               <Text style={styles.loadingText}>Preparing meaning...</Text>
-            )
+            )}
 
             {culturalSummary && (
               <Text style={styles.culturalText}>{culturalSummary}</Text>

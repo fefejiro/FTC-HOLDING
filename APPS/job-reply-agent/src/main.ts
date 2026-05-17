@@ -284,8 +284,9 @@ export async function runCommand(args: {
           resumePath
         })
     });
-    const approved = approveAllDrafts(db);
 
+    // Send only pre-approved drafts (those already marked as "approved" by the processor).
+    // Do NOT auto-approve all drafts (draft-first control model).
     const pending = getApprovedPendingDrafts(db)
       .filter((draft) => Boolean(draft.gmail_draft_id))
       .slice(0, cfg.rules.automation.max_sends_per_day);
@@ -305,7 +306,7 @@ export async function runCommand(args: {
       }
     }
 
-    logger.info({ processOutcome, approved, sent }, "run:gmail-cycle completed.");
+    logger.info({ processOutcome, sent }, "run:gmail-cycle completed (only pre-approved drafts sent).");
     return;
   }
 

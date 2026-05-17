@@ -354,7 +354,6 @@ export async function POST(req: NextRequest) {
   }
 
   // Continue with webhook calls as optional fallback
-  let webhookSent = false;
   const webhookUrl = process.env.OG_TRADES_LEADS_WEBHOOK_URL;
   if (webhookUrl) {
     try {
@@ -370,7 +369,6 @@ export async function POST(req: NextRequest) {
         })
       });
 
-      webhookSent = response.ok;
       if (!response.ok) {
         logger.warn("og_trades_lead_webhook_failed", {
           status: response.status

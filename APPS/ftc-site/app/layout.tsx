@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { Inter, Space_Grotesk } from "next/font/google";
 import React from "react";
 import { SITE_URL } from "../lib/site";
+import { getRequestHost } from "../lib/requestHost";
 import "../styles/globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -99,6 +100,8 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const requestHost = getRequestHost();
+
   return (
     <html lang="en">
       <head>
@@ -109,9 +112,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <ScrollReveal />
         <RootBrandRouter>
-          <Header />
+          <Header initialHost={requestHost} />
           <main className="main-shell">{children}</main>
-          <Footer />
+          <Footer initialHost={requestHost} />
         </RootBrandRouter>
         {GOOGLE_ANALYTICS_ID ? <Analytics /> : null}
         <ChatWidget />

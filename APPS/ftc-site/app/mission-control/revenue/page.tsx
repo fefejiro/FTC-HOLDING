@@ -26,14 +26,15 @@ export default function RevenueOpsPage() {
   }
 
   return (
-    <div className="container page-content mission-control-page revenue-ops-page">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container mission-control-page revenue-ops-page">
       <section className="hero mission-control-hero revenue-ops-hero">
         <div className="hero-noise" aria-hidden="true" />
         <div className="mission-control-hero-grid">
           <div className="hero-copy mission-control-copy">
-            <p className="eyebrow">Revenue ops</p>
+            <p className="sunrise-kicker">Revenue ops</p>
             <h1>Close the loop from request ID to real commercial movement.</h1>
-            <p className="lead hero-subtitle">
+            <p className="sunrise-lead hero-subtitle">
               The public site now tracks ATEAM starts, handoffs, and intake submissions. This
               private surface records what happens next: qualification, calls, proposals, and won/lost outcomes.
             </p>
@@ -125,6 +126,7 @@ export default function RevenueOpsPage() {
           </div>
         </article>
       </section>
+      </div>
     </div>
   );
 }

@@ -107,7 +107,7 @@ export default function SummaryClient() {
         <div className="card summary-card">
           <div className="summary-card-header">
             <p className="eyebrow">Your project brief</p>
-            <h2>{summary.name}'s Project</h2>
+            <h2>{summary.name}&apos;s Project</h2>
             <p className="summary-email">{summary.email}</p>
           </div>
 

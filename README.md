@@ -2,7 +2,8 @@
 
 **Owner:** Manchi (Mike Fejiro) — `fefejiro` on GitHub  
 **Git remote:** `https://github.com/fefejiro/FTC-HOLDING.git`  
-**Primary branch:** `main`
+**Primary branch:** `main`  
+**Repository visibility:** 🟢 **PUBLIC** (changed 2026-05-11 — unlocks unlimited free GitHub Actions minutes)
 
 FTC Holding is a product studio. This monorepo contains all production apps, shared packages, and operational docs. New devs: read this file first, then `DOCS/FTC_PROJECT_LEDGER.md` for project status, then `DOCS/RUNBOOK.md` for ops.
 
@@ -29,7 +30,7 @@ FTC Holding is a product studio. This monorepo contains all production apps, sha
 
 ---
 
-## Project Status (as of 2026-05-04)
+## Project Status (as of 2026-05-11)
 
 See `DOCS/FTC_PROJECT_LEDGER.md` for the authoritative status. Summary:
 
@@ -79,6 +80,21 @@ Root files that matter:
 | Email | Resend + custom SMTP | Per-app config |
 | Payments | Stripe | See `DOCS/stripe-setup-handover.md` |
 | Domains | Cloudflare DNS | See `DOCS/DOMAIN_AND_OWNERSHIP_MAP.md` |
+
+---
+
+## Automation & GitHub Profile
+
+**GitHub Actions Workflows:**
+- `job-reply-agent.yml` — Runs every 15 min, weekdays 8AM–9PM EST; processes recruiter emails and sends approved drafts
+- `job-reply-report.yml` — Runs daily at 6PM EST; sends end-of-day summary report
+- Both workflows verified operational on public repo (unlimited free minutes)
+- See `APPS/job-reply-agent/README.md` and `APPS/job-reply-agent/ops/BACKLOG.md` for details
+
+**GitHub Profile:**
+- Repository: `fefejiro/fefejiro` (public, custom README at root)
+- Profile URL: https://github.com/fefejiro
+- Profile README configured (awaiting GitHub cache refresh for full display)
 
 ---
 

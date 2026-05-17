@@ -13,7 +13,7 @@
     "android:test:preflight": "node ops/android-test-loop.cjs preflight",
     "android:test:run": "node ops/android-test-loop.cjs run",
     "android:test:expo-go": "expo start --tunnel",
-    "android:bundle:release:fast": "cd android && gradlew.bat :app:bundleRelease -x lintVitalAnalyzeRelease --parallel --build-cache --configuration-cache",
+    "android:bundle:release:fast": "cd android && gradlew.bat :app:bundleRelease -x lintVitalAnalyzeRelease --parallel --build-cache",
     "release:preflight": "node ops/release-preflight.cjs",
     "version:show": "node ops/version-governance.cjs show",
     "version:sync": "node ops/version-governance.cjs sync",

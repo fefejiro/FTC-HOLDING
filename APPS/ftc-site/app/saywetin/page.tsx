@@ -22,18 +22,19 @@ export default function SayWetinPage() {
   if (!sayWetin) notFound();
 
   return (
-    <article className="container page-content case-study">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <article className="container case-study">
       <div className="product-hero-layout fade-on-scroll">
         <div className="product-hero-copy">
           <div className="product-hero-top">
             <ProductStatusBadge status={sayWetin.status} />
           </div>
           <h1>SayWetin</h1>
-          <p className="lead">
+          <p className="sunrise-lead">
             SayWetin is a Nigerian music AI product built by Una Labs to translate lyrics,
             slang, and cultural context into plain-language insight.
           </p>
-          <p className="page-intro">{sayWetin.summary}</p>
+          <p className="sunrise-lead">{sayWetin.summary}</p>
           <div className="hero-actions">
             {sayWetin.googlePlayUrl ? (
               <a
@@ -101,6 +102,7 @@ export default function SayWetinPage() {
           </Link>
         </p>
       </section>
-    </article>
+      </article>
+    </div>
   );
 }

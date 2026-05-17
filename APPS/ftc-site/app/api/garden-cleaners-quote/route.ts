@@ -248,7 +248,8 @@ export async function POST(req: NextRequest) {
     const supabase = createServerClient();
     let { error } = await supabase.from("garden_cleaners_quotes").insert([quoteRecord]);
     if (error && hasMissingAddOnsColumn(error)) {
-      const { add_ons, ...quoteRecordWithoutAddOns } = quoteRecord;
+      const { add_ons: _addOns, ...quoteRecordWithoutAddOns } = quoteRecord;
+      void _addOns;
       ({ error } = await supabase.from("garden_cleaners_quotes").insert([quoteRecordWithoutAddOns]));
     }
     if (error) {

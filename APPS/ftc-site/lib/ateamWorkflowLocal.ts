@@ -4,7 +4,6 @@ import type {
   StatusNarrative,
   WorkflowAgentRole,
   WorkflowCatalog,
-  WorkflowCategoryValue,
   WorkflowEvaluation,
   WorkflowIntake,
   WorkflowPlan,
@@ -427,7 +426,7 @@ function createLocalRun(payload: {
     nonGoals: toText(payload.intake?.nonGoals || template?.intake?.nonGoals, 260),
   };
 
-  let request = buildWorkflowRequestUnsafe({
+  const request = buildWorkflowRequestUnsafe({
     idea: payload.idea,
     category,
     intake,
@@ -560,7 +559,7 @@ function updateLocalRunAnswers(runId: string, body: Record<string, unknown>) {
   const planPatch = body.plan && typeof body.plan === "object" ? cloneJson(body.plan as Record<string, unknown>) : {};
   const templateId = toText(body.templateId, 80) || toText(run.meta?.templateId, 80);
 
-  let request = buildWorkflowRequestUnsafe({
+  const request = buildWorkflowRequestUnsafe({
     idea: run.idea,
     category: run.category,
     intake,

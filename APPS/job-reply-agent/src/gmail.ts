@@ -18,6 +18,7 @@ export interface GmailStatusLabelConfig {
   sent: string;
   skipped: string;
   blocked: string;
+  approved: string;
 }
 
 export type GmailStatusLabelState = keyof GmailStatusLabelConfig;
@@ -256,6 +257,17 @@ export async function listRecruiterInboundMessages(
   return output;
 }
 
+function getAttachmentMime(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  if (ext === ".docx") {
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }
+  if (ext === ".pdf") return "application/pdf";
+  if (ext === ".doc") return "application/msword";
+  if (ext === ".txt") return "text/plain";
+  return "application/octet-stream";
+}
+
 function buildMimeMessage(params: {
   to: string;
   subject: string;
@@ -326,7 +338,7 @@ function buildMimeMessage(params: {
     bodyPart,
     "",
     `--${boundary}`,
-    `Content-Type: application/pdf; name=\"${fileName}\"`,
+    `Content-Type: ${getAttachmentMime(fileName)}; name=\"${fileName}\"`,
     "Content-Transfer-Encoding: base64",
     `Content-Disposition: attachment; filename=\"${fileName}\"`,
     "",

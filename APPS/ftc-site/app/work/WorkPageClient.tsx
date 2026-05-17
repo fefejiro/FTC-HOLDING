@@ -36,18 +36,19 @@ export default function WorkPageClient() {
   const totalLive = clientLaunches.filter((l) => String(l.status).toLowerCase().includes("live")).length;
 
   return (
-    <div className="container page-content client-launches-page">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container client-launches-page">
 
-      {/* ── Hero ── */}
-      <section className="wl-hero">
-        <div className="wl-hero-copy">
-          <p className="eyebrow">Client Launches</p>
-          <h1>Live delivery snapshots, kept separate from products.</h1>
-          <p className="wl-hero-lead">
-            Every project below moved through structured intake, a clear scope decision, and governed
-            delivery execution. This is the delivery side of the studio — not a portfolio, a live track record.
-          </p>
-        </div>
+        {/* ── Hero ── */}
+        <section className="wl-hero">
+          <div className="wl-hero-copy">
+            <p className="sunrise-kicker">Client Launches</p>
+            <h1>Live delivery snapshots, kept separate from products.</h1>
+            <p className="sunrise-lead">
+              Every project below moved through structured intake, a clear scope decision, and governed
+              delivery execution. This is the delivery side of the studio — not a portfolio, a live track record.
+            </p>
+          </div>
         <div className="wl-hero-stats" aria-label="Studio delivery stats">
           <div className="wl-stat">
             <span className="wl-stat-value">{clientLaunches.length}</span>
@@ -354,7 +355,7 @@ export default function WorkPageClient() {
           </Link>
         </div>
       </article>
-
+      </div>
     </div>
   );
 }

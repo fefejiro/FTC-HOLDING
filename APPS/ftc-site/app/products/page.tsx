@@ -32,11 +32,12 @@ export default function ProductsPage() {
   const shippedProducts = projectCaseStudies.filter((item) => item.slug !== "ateam");
 
   return (
-    <div className="container page-content products-page">
-      <section className="products-intro">
-        <p className="eyebrow">Products</p>
-        <h1>Products built inside Una Labs</h1>
-        <p className="page-intro">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container">
+        <section className="products-intro" style={{ marginBottom: "32px" }}>
+          <p className="sunrise-kicker">Products</p>
+          <h1>Products built inside Una Labs</h1>
+          <p className="sunrise-lead">
           ATEAM is the core system — the workflow engine Una Labs runs internally. Dispatch,
           SayWetin, and PeacePad are shipped products built and operated inside it.
         </p>
@@ -154,6 +155,7 @@ export default function ProductsPage() {
           </a>
         </div>
       </article>
+      </div>
     </div>
   );
 }

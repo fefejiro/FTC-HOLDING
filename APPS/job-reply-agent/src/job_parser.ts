@@ -130,6 +130,147 @@ function guessRole(subject: string, body: string): string {
   return subject.replace(/re:\s*/i, "").trim() || "Unknown Role";
 }
 
+/**
+ * Extract a clean role title from the raw subject/body by removing:
+ * - Prefixes like "New Position", "Job Opening", "Opportunity", "Requisition"
+ * - Patterns like RQ123, Req #456, #789 (requisition IDs)
+ * - Separators like ||, |, — (when used to separate requisition from role)
+ */
+function cleanRoleTitle(subject: string, body: string): string {
+  const rawTitle = guessRole(subject, body);
+
+  // Remove "New Position ||" or similar prefix patterns
+  let cleaned = rawTitle
+    .replace(/^new\s+position\s*[||:\-\s]+/i, "")
+    .replace(/^job\s+opening\s*[||:\-\s]+/i, "")
+    .replace(/^opportunity\s*[||:\-\s]+/i, "")
+    .replace(/^requisition\s*[||:\-\s]+/i, "")
+    .trim();
+
+  // Remove requisition ID patterns (RQ12345, Req #123, #123)
+  cleaned = cleaned
+    .replace(/\bRQ\d+\s*[-|:]*\s*/gi, "")
+    .replace(/\bReq\s+#?\d+\s*[-|:]*\s*/gi, "")
+    .replace(/^\s*#\d+\s*[-|:]*\s*/i, "")
+    .trim();
+
+  // Remove trailing separators (||, -, etc.) and trim
+  cleaned = cleaned.replace(/\s*[||\-–—]\s*$/, "").trim();
+
+  // Normalize multiple spaces
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+
+  // Fallback
+  return cleaned || rawTitle;
+}
+
+/**
+ * Extract alignment keywords from job description (JD) using an allowlist.
+ * Returns top 3-5 unique keywords that appear in the JD.
+ */
+function extractAlignmentKeywords(jdText: string): string[] {
+  const allowlist = [
+    "Automation",
+    "API",
+    "Python",
+    "SQL",
+    "SDLC",
+    "ERP",
+    "WMS",
+    "POS",
+    "UAT",
+    "Deployment",
+    "Cloud",
+    "Integration",
+    "Enterprise Systems",
+    "AI Workflow Automation",
+    "JavaScript",
+    "TypeScript",
+    "React",
+    "Node",
+    "Express",
+    "Database",
+    "Agile",
+    "Scrum",
+    "REST",
+    "JSON",
+    "XML",
+    "Testing",
+    "Jenkins",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "Azure",
+    "Google Cloud",
+    "DevOps",
+    "CI/CD",
+    "Git",
+    "Linux",
+    "Windows",
+    "RabbitMQ",
+    "Kafka",
+    "Redis",
+    "MongoDB",
+    "PostgreSQL",
+    "MySQL",
+    "Oracle",
+    "SAP",
+    "Salesforce",
+    "ServiceNow",
+    "Azure DevOps",
+    "Jira",
+    "Confluence",
+    "GraphQL",
+    "Microservices",
+    "Kubernetes",
+    "Terraform",
+    "Ansible",
+    "Webpack",
+    "Vite",
+    "NPM",
+    "Yarn",
+    "Maven",
+    "Gradle",
+    "SonarQube",
+    "Security",
+    "Authentication",
+    "OAuth",
+    "JWT",
+    "SSL/TLS",
+    "Performance Optimization",
+    "Troubleshooting",
+    "Problem Solving",
+    "Communication",
+    "Leadership",
+    "Project Management",
+    "Business Analysis",
+    "Requirements",
+    "Documentation",
+    "Training"
+  ];
+
+  const lowerJD = jdText.toLowerCase();
+  const found = new Map<string, number>(); // keyword -> count
+
+  for (const keyword of allowlist) {
+    const lowerKeyword = keyword.toLowerCase();
+    // Count occurrences (simple word-match; could be more sophisticated)
+    const regex = new RegExp(`\\b${lowerKeyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
+    const matches = lowerJD.match(regex);
+    if (matches) {
+      found.set(keyword, matches.length);
+    }
+  }
+
+  // Sort by frequency (descending) and return top 5
+  const sorted = Array.from(found.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([keyword]) => keyword)
+    .slice(0, 5);
+
+  return sorted.length > 0 ? sorted : [];
+}
+
 function guessEmploymentType(text: string): string {
   const haystack = text.toLowerCase();
   if (haystack.includes("contract")) return "Contract";
@@ -144,6 +285,9 @@ export function parseRecruiterEmail(message: RecruiterMessage): ParsedOpportunit
   const combined = `${decodedSubject}\n${decodedBody}`;
 
   const roleTitle = guessRole(decodedSubject, decodedBody);
+  const cleanedRoleTitle = cleanRoleTitle(decodedSubject, decodedBody);
+  const alignmentKeywords = extractAlignmentKeywords(combined);
+
   const company = extractFirstMatch(combined, [
     /company\s*:\s*([^\n]+)/i,
     /client\s*:\s*([^\n]+)/i,
@@ -189,6 +333,8 @@ export function parseRecruiterEmail(message: RecruiterMessage): ParsedOpportunit
 
   return {
     roleTitle,
+    cleanRoleTitle: cleanedRoleTitle,
+    alignmentKeywords,
     company,
     location,
     employmentType: guessEmploymentType(combined),

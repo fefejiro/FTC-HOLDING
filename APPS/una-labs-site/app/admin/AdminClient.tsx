@@ -148,6 +148,39 @@ type BillingInfo = {
   trial_end: number | null;
 };
 
+type InfraService = {
+  name: string;
+  status: 'green' | 'yellow' | 'red';
+  detail: string;
+  lastCheckedAt?: string;
+};
+
+type InfraProvider = {
+  id: string;
+  label: string;
+  status: 'green' | 'yellow' | 'red';
+  services: InfraService[];
+};
+
+type InfraAlert = {
+  source: string;
+  level: 'info' | 'warning' | 'critical';
+  message: string;
+  at: string;
+};
+
+type InfraMonitor = {
+  generatedAt: string;
+  summary: {
+    overallStatus: 'green' | 'yellow' | 'red';
+    activeAlerts: number;
+    autoDebugEnabled: boolean;
+    note: string;
+  };
+  providers: InfraProvider[];
+  recentAlerts: InfraAlert[];
+};
+
 type State =
   | { phase: 'loading' }
   | { phase: 'denied'; reason: 'unauthenticated' | 'unauthorized' }
@@ -258,6 +291,8 @@ export function AdminClient() {
   const [brandingForm, setBrandingForm] = useState({ companyName: '', primaryColor: '#4DB8A8', logoUrl: '', tagline: '', replyEmail: '' });
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [brandingSaveMsg, setBrandingSaveMsg] = useState<string | null>(null);
+  const [infraMonitor, setInfraMonitor] = useState<InfraMonitor | null>(null);
+  const [infraMonitorError, setInfraMonitorError] = useState<string | null>(null);
 
   // Phase 15: Webhooks
   type WebhookEndpoint = { id: string; url: string; events: string[]; created_at: string };
@@ -331,6 +366,18 @@ export function AdminClient() {
       // Non-fatal for admin page.
     }
     if (!options?.silent) setAutoCollectLoading(false);
+  }
+
+  async function loadInfraMonitor() {
+    try {
+      const response = await fetch(`/ops/infra-live-status.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Infra monitor unavailable (${response.status})`);
+      const payload = await response.json() as InfraMonitor;
+      setInfraMonitor(payload);
+      setInfraMonitorError(null);
+    } catch (error) {
+      setInfraMonitorError(error instanceof Error ? error.message : 'Unable to load infra monitor feed.');
+    }
   }
 
   async function loadDashboardData(options?: { silent?: boolean }) {
@@ -422,6 +469,7 @@ export function AdminClient() {
       }
 
       await refreshAutoCollect(session.access_token, { silent });
+      await loadInfraMonitor();
 
       // Fetch engineering queue (non-fatal)
       void (async () => {
@@ -1024,6 +1072,65 @@ export function AdminClient() {
                 <p className="mt-3 text-[11px] font-semibold text-brand-teal">Open route →</p>
               </a>
             ))}
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-border bg-bg-offwhite p-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <Badge variant="orange">Infra monitor</Badge>
+                <h3 className="mt-3 text-h4 text-tx-heading">Railway, Cloudflare, and Supabase</h3>
+                <p className="mt-1 text-body-sm text-tx-secondary">Live alert context for lively, splendid, enchanting, Cloudflare, and Supabase.</p>
+              </div>
+              <a
+                href="/ops/infra-live-status.json"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-border px-3 py-2 text-body-sm font-semibold text-tx-heading hover:bg-white"
+              >
+                Open infra feed
+              </a>
+            </div>
+
+            {infraMonitorError && <p className="mt-4 text-body-sm text-red-600">{infraMonitorError}</p>}
+
+            {infraMonitor && (
+              <>
+                <div className="mt-4 grid md:grid-cols-4 gap-3">
+                  <div className="rounded-xl border border-border bg-white px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-wider text-tx-muted">Overall</p>
+                    <p className="mt-1 text-h4 text-tx-heading uppercase">{infraMonitor.summary.overallStatus}</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-white px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-wider text-tx-muted">Active alerts</p>
+                    <p className="mt-1 text-h4 text-tx-heading">{infraMonitor.summary.activeAlerts}</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-white px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-wider text-tx-muted">Auto debug</p>
+                    <p className="mt-1 text-h4 text-tx-heading">{infraMonitor.summary.autoDebugEnabled ? 'On' : 'Off'}</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-white px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-wider text-tx-muted">Updated</p>
+                    <p className="mt-1 text-body-sm text-tx-heading">{formatDate(infraMonitor.generatedAt)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid md:grid-cols-3 gap-3">
+                  {infraMonitor.providers.map((provider) => (
+                    <div key={provider.id} className="rounded-xl border border-border bg-white px-4 py-3">
+                      <p className="text-body-sm font-semibold text-tx-heading">{provider.label}</p>
+                      <p className="mt-1 text-[11px] uppercase tracking-wider text-tx-muted">Status: {provider.status}</p>
+                      <ul className="mt-3 space-y-2">
+                        {provider.services.map((service) => (
+                          <li key={service.name} className="text-body-sm text-tx-secondary">
+                            <span className="font-semibold text-tx-heading">{service.name}</span> - {service.status}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 

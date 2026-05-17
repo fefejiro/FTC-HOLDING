@@ -129,7 +129,7 @@ export default function EmergencyPromptPrivacyPage() {
 
       <h2>8. Your Rights (PIPEDA / Canadian Privacy Law)</h2>
       <p>
-        Under Canada's Personal Information Protection and Electronic Documents
+        Under Canada&apos;s Personal Information Protection and Electronic Documents
         Act (PIPEDA), you have the right to:
       </p>
       <ul>

@@ -19,26 +19,29 @@ export const metadata = {
 export default function PeacePadProductPage() {
   if (!peacepad) {
     return (
-      <div className="container page-content">
-        <h1>PeacePad</h1>
-        <p className="page-intro">Flagship Una Labs product overview coming soon.</p>
-        <Link href="/products" className="inline-link">
-          Back to products
-        </Link>
+      <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+        <div className="container">
+          <h1>PeacePad</h1>
+          <p className="sunrise-lead">Flagship Una Labs product overview coming soon.</p>
+          <Link href="/products" className="inline-link">
+            Back to products
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container page-content">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <div className="container">
       <section className="page-media-banner fade-on-scroll">
         <div className="page-media-copy">
           <div className="product-hero-top">
-            <p className="eyebrow">Flagship product</p>
+            <p className="sunrise-kicker">Flagship product</p>
             <ProductStatusBadge status={peacepad.status} />
           </div>
           <h1>{peacepad.name}</h1>
-          <p className="page-intro">Pre-send communication safety for high-stakes conversations.</p>
+          <p className="sunrise-lead">Pre-send communication safety for high-stakes conversations.</p>
           <p>{peacepad.summary}</p>
           <div className="product-actions">
             {peacepad.googlePlayUrl ? (
@@ -119,6 +122,7 @@ export default function PeacePadProductPage() {
           <p>Flagship Una Labs product demonstrating AI-assisted workflow delivery.</p>
         </div>
       </section>
+      </div>
     </div>
   );
 }

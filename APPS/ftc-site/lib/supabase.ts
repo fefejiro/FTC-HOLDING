@@ -1,13 +1,22 @@
-import { createBrowserClient } from '@ftc/supabase';
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-let _client: ReturnType<typeof createBrowserClient> | null = null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-export function getSupabase(): ReturnType<typeof createBrowserClient> {
+let _client: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient {
   if (!_client) {
     if (typeof window === 'undefined') {
       throw new Error('getSupabase() called on server; use createServerClient instead');
     }
-    _client = createBrowserClient();
+    if (!supabaseUrl) {
+      throw new Error("Public Supabase URL is required. Set NEXT_PUBLIC_SUPABASE_URL.");
+    }
+    if (!supabaseAnonKey) {
+      throw new Error("Public Supabase anon key is required. Set NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+    }
+    _client = createClient(supabaseUrl, supabaseAnonKey);
   }
   return _client;
 }

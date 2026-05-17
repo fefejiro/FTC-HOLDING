@@ -4,7 +4,7 @@ mappings:
     keywords: [technical program manager, tpm, program manager, project manager, delivery lead, roadmap, cross-functional, release readiness, stakeholder management]
     resume: resumes/Fejiro_TPM_Systems.pdf
   - role_family: business_systems_analysis
-    keywords: [business analyst, business systems analyst, requirements, brd, frd, user stories, acceptance criteria, uat, process mapping]
+    keywords: [business analyst, business system analyst, business systems analyst, payments business analyst, retail payments, faster payments, iso 20022, microservices, api, requirements, brd, frd, user stories, acceptance criteria, uat, process mapping, jira, confluence]
     resume: resumes/Fejiro_Business_Analyst.pdf
   - role_family: mobile_app_ba
     keywords: [mobile application, mobile app, ios, android, product ba, ux, ui, ecommerce, loyalty, payment]

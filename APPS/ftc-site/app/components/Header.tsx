@@ -10,7 +10,6 @@ import {
   getGardenCleanersNavLinks,
   isGardenCleanersCustomHost
 } from "../../lib/gardenCleaners";
-import { isGardenPortalAuthConfigured } from "../../lib/gardenPortalAuth";
 import { getOgTradesBrandedPath, getOgTradesNavLinks, isOgTradesCustomHost, ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
 import GardenBrandMark from "./garden-cleaners/GardenBrandMark";
@@ -64,7 +63,6 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
   const isOgTradesSite = (pathname?.startsWith("/og-trades-academy") ?? false) || isOgTradesHost;
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
   const isDefaultUnaSite = !isGardenSite && !isOgTradesSite && !isPolarSite;
-  const isGardenPortalAuthReady = isGardenPortalAuthConfigured();
   const gardenPortalHref = getGardenCleanersPortalUrl("#portal-access");
 
   useEffect(() => {
@@ -194,31 +192,17 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
 
             // --- GARDEN CLEANERS: Insert Portal Login CTA ---
             if (isGardenSite && link.label === "Get a Quote") {
-              if (isGardenPortalAuthReady) {
-                // Insert portal sign-in before quote only when auth is configured.
-                return [
-                  <Link
-                    key="portal-login"
-                    href={gardenPortalHref}
-                    prefetch={false}
-                    className="garden-portal-login-cta"
-                    aria-label="Sign In to client portal"
-                  >
-                    Sign In
-                  </Link>,
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    prefetch={false}
-                    className={`nav-link${isPathActive(pathname, link.href) ? " active" : ""}`}
-                    aria-current={isPathActive(pathname, link.href) ? "page" : undefined}
-                  >
-                    {link.label}
-                  </Link>
-                ];
-              }
-
-              return (
+              // Always show portal login; disable if auth not ready
+              return [
+                <Link
+                  key="portal-login"
+                  href={gardenPortalHref}
+                  prefetch={false}
+                  className="garden-portal-login-cta"
+                  aria-label="Sign In to client portal"
+                >
+                  Sign In
+                </Link>,
                 <Link
                   key={link.href}
                   href={link.href}
@@ -228,7 +212,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                 >
                   {link.label}
                 </Link>
-              );
+              ];
             }
 
             const isActive = isPathActive(pathname, link.href);
@@ -291,32 +275,18 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
               {navLinks.map((link) => {
                 // Insert Portal Login before Get a Quote in mobile nav
                 if (isGardenSite && link.label === "Get a Quote") {
-                  if (isGardenPortalAuthReady) {
-                    return [
-                      <Link
-                        key="portal-login-mobile"
-                        href={gardenPortalHref}
-                        prefetch={false}
-                        className="mobile-panel-link garden-portal-login-cta"
-                        aria-label="Portal Login"
-                        onClick={closeMenu}
-                      >
-                        Portal Login
-                      </Link>,
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        prefetch={false}
-                        className={`mobile-panel-link${isPathActive(pathname, link.href) ? " active" : ""}`}
-                        aria-current={isPathActive(pathname, link.href) ? "page" : undefined}
-                        onClick={closeMenu}
-                      >
-                        {link.label}
-                      </Link>
-                    ];
-                  }
-
-                  return (
+                  // Always show portal login; disable if auth not ready
+                  return [
+                    <Link
+                      key="portal-login-mobile"
+                      href={gardenPortalHref}
+                      prefetch={false}
+                      className="mobile-panel-link garden-portal-login-cta"
+                      aria-label="Portal Login"
+                      onClick={closeMenu}
+                    >
+                      Portal Login
+                    </Link>,
                     <Link
                       key={link.href}
                       href={link.href}
@@ -327,7 +297,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                     >
                       {link.label}
                     </Link>
-                  );
+                  ];
                 }
                 const isActive = (link.label === "Products" || link.label === "Product") && isDefaultUnaSite
                   ? isProductsPath(pathname)

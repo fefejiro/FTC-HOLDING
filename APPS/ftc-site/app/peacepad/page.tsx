@@ -23,18 +23,19 @@ export default function PeacePadPage() {
   if (!peacePad) notFound();
 
   return (
-    <article className="container page-content case-study">
+    <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
+      <article className="container case-study">
       <div className="product-hero-layout fade-on-scroll">
         <div className="product-hero-copy">
           <div className="product-hero-top">
             <ProductStatusBadge status={peacePad.status} />
           </div>
           <h1>PeacePad</h1>
-          <p className="lead">
+          <p className="sunrise-lead">
             PeacePad is an AI communication platform that helps users pause, review tone, and
             choose better outcomes before sending high-stakes messages.
           </p>
-          <p className="page-intro">{peacePad.summary}</p>
+          <p className="sunrise-lead">{peacePad.summary}</p>
           <div className="hero-actions">
             {peacePad.googlePlayUrl ? (
               <a
@@ -122,6 +123,7 @@ export default function PeacePadPage() {
           </Link>
         </p>
       </section>
-    </article>
+      </article>
+    </div>
   );
 }

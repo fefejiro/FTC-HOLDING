@@ -3,6 +3,9 @@ location: Toronto, Ontario, Canada
 target_titles:
   - Technical Program Manager
   - Business Systems Analyst
+  - Business System Analyst
+  - Business Analyst
+  - Payments Business Analyst
   - Enterprise Systems Analyst
   - IT Project Manager
   - ERP Systems Analyst
@@ -12,6 +15,9 @@ core_strengths:
   - enterprise systems modernization
   - ERP WMS POS systems
   - API integrations
+  - API and microservices architecture
+  - retail payments and faster payments
+  - ISO 20022 standards
   - requirements gathering
   - UAT coordination
   - technical program management
