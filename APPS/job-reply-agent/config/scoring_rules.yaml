@@ -1,0 +1,54 @@
+# Job Hunt OS — Scoring rubric (sum to 100)
+
+weights:
+  title_match: 20
+  skills_match: 25
+  industry_match: 15
+  location_fit: 10
+  compensation_fit: 10
+  work_authorization_fit: 10
+  seniority_fit: 5
+  application_effort: 5
+
+bands:
+  package_ready: 85
+  needs_review: 70
+  save_only: 55
+
+# Hard red flags trigger `blocked` regardless of score.
+hard_red_flags:
+  - u.s. citizen only
+  - us citizen only
+  - must be a u.s. citizen
+  - must be a us citizen
+  - green card only
+  - permanent resident only
+  - active security clearance required
+  - active secret clearance
+  - top secret clearance required
+  - asks for sin
+  - asks for ssn
+  - asks for passport
+  - asks for bank information
+  - asks for payment
+  - pay to apply
+  - upfront fee
+  - suspicious attachment
+
+# Softer signals that demote score but do not block.
+soft_red_flags:
+  - no visa sponsorship
+  - must be authorized to work in the united states
+  - on-site only chicago
+  - on-site only san francisco
+
+seniority_floor:
+  blocked:
+    - junior
+    - intern
+    - co-op
+    - graduate
+  needs_review:
+    - associate
+    - level 1
+    - entry level

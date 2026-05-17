@@ -1,0 +1,127 @@
+# Job Hunt OS — Search definitions
+# Used by sourcing adapters. `companies` seeds direct ATS pulls
+# (Greenhouse / Lever / Ashby). `searches` defines query intents
+# used to score and filter incoming jobs.
+
+companies:
+  greenhouse:
+    # Examples — replace with real targets. Slugs from boards.greenhouse.io/<slug>
+    - shopify
+    - faire
+    - clio
+    - hopper
+    - benevity
+    - wealthsimple
+  lever:
+    # Slugs from jobs.lever.co/<slug>
+    - intelcom
+    - properly
+  ashby:
+    # Slugs from jobs.ashbyhq.com/<slug>
+    - cohere
+
+searches:
+  technical_program_manager:
+    titles:
+      - Technical Program Manager
+      - Technical Project Manager
+      - Program Manager, Enterprise Systems
+      - Delivery Manager
+      - Digital Transformation Manager
+    keywords:
+      - enterprise systems
+      - integrations
+      - API
+      - SDLC
+      - Agile
+      - release
+      - UAT
+      - stakeholder
+      - cloud
+    locations:
+      - Toronto
+      - Ontario
+      - Remote
+      - Canada
+      - United States
+    minimum_rate: 70
+    minimum_salary: 120000
+
+  wms_supply_chain:
+    titles:
+      - WMS Project Manager
+      - Supply Chain Systems Manager
+      - ERP Project Manager
+      - Warehouse Systems Analyst
+      - WMS Business Analyst
+    keywords:
+      - WMS
+      - ERP
+      - warehouse
+      - supply chain
+      - Manhattan
+      - Blue Yonder
+      - inbound
+      - outbound
+      - picking
+      - packing
+      - shipping
+      - inventory
+    locations:
+      - Toronto
+      - Ontario
+      - Remote
+      - Canada
+      - United States
+    minimum_rate: 80
+    minimum_salary: 130000
+
+  ai_product_owner:
+    titles:
+      - AI Product Owner
+      - Product Owner, AI
+      - AI Product Manager
+      - Product Manager, AI Workflow
+      - Technical Product Owner
+    keywords:
+      - AI
+      - autonomous agents
+      - product ownership
+      - workflow
+      - automation
+      - architecture
+      - 0 to 1
+      - roadmap
+    locations:
+      - Remote
+      - Canada
+      - United States
+    minimum_rate: 75
+    minimum_salary: 130000
+
+excluded_keywords:
+  - junior
+  - intern
+  - unpaid
+  - commission only
+  - door to door
+  - active secret clearance
+  - top secret clearance
+  - u.s. citizen only
+  - us citizen only
+  - green card only
+  - no visa sponsorship
+  - must be a u.s. citizen
+  - must be a us citizen
+
+industries:
+  - retail
+  - logistics
+  - warehouse
+  - supply chain
+  - government
+  - public sector
+  - saas
+  - ai
+  - workflow automation
+  - enterprise systems

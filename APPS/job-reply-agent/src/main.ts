@@ -22,6 +22,7 @@ import {
 } from "./processor.js";
 import { buildDailyReport, renderDailyReport } from "./reporter.js";
 import { seedSampleData } from "./seed.js";
+import { isHuntCommand, runHuntCommand } from "./hunt/cli.js";
 
 function parseDateArg(argv: string[]): string | undefined {
   const flag = argv.find((item) => item.startsWith("--date="));
@@ -40,6 +41,7 @@ export function parseCommandArgs(argv: string[]): {
   dateArg: string | undefined;
   codeArg: string | undefined;
   limitArg: number | undefined;
+  sourceArg: string | undefined;
 } {
   const limitRaw = parseArg(argv, "limit");
   const limitArg = limitRaw && /^\d+$/.test(limitRaw) ? Number(limitRaw) : undefined;
@@ -47,7 +49,8 @@ export function parseCommandArgs(argv: string[]): {
     command: argv[2],
     dateArg: parseDateArg(argv),
     codeArg: parseArg(argv, "code"),
-    limitArg
+    limitArg,
+    sourceArg: parseArg(argv, "source")
   };
 }
 
@@ -56,11 +59,13 @@ export async function runCommand(args: {
   dateArg?: string;
   codeArg?: string;
   limitArg?: number;
+  sourceArg?: string;
 }): Promise<void> {
   const command = args.command;
   const dateArg = args.dateArg;
   const codeArg = args.codeArg;
   const limitArg = args.limitArg;
+  const sourceArg = args.sourceArg;
   const reportDate = dateArg || format(new Date(), "yyyy-MM-dd");
 
   if (command === "db:reset") {
@@ -71,6 +76,11 @@ export async function runCommand(args: {
 
   const cfg = loadConfig();
   const db = getDb();
+
+  if (isHuntCommand(command)) {
+    await runHuntCommand({ command, db, limitArg, dateArg, sourceArg });
+    return;
+  }
 
   if (command === "gmail:auth:url") {
     const url = getGmailConsentUrl(cfg.env);
@@ -356,7 +366,7 @@ export async function runCommand(args: {
   }
 
   logger.info(
-    "No command supplied. Use one of: gmail:auth:url, gmail:auth:save --code=..., db:reset, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, report:daily."
+    "No command supplied. Use one of: gmail:auth:url, gmail:auth:save --code=..., db:reset, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, report:daily, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export."
   );
 }
 

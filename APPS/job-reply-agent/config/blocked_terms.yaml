@@ -1,0 +1,46 @@
+# Phrases the document quality gate refuses to ship.
+# Any presence in generated resume / cover letter / answer => Needs Review.
+
+generic_ai_phrases:
+  - results-driven
+  - passionate
+  - in today's fast-paced
+  - leveraged synergies
+  - synergize
+  - move the needle
+  - rockstar
+  - ninja
+  - guru
+
+forbidden_claims:
+  - u.s. citizen
+  - us citizen
+  - u.s. citizenship
+  - us citizenship
+  - green card
+  - permanent resident of the united states
+  - active u.s. security clearance
+  - active security clearance
+  - secret clearance
+  - top secret clearance
+
+forbidden_artifacts:
+  - "&nbsp;"
+  - "&ndash;"
+  - "&mdash;"
+  - "&amp;"
+  - "&quot;"
+  - "<div"
+  - "<span"
+  - "<p>"
+  - "<br"
+
+# Requisition-junk patterns that must not leak into resume titles.
+requisition_title_patterns:
+  - "^new position"
+  - "^rq\\d+"
+  - "rq\\d+ -"
+  - "^re:"
+  - "^fwd:"
+  - "^fw:"
+  - "\\|\\|"

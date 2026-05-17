@@ -1,0 +1,55 @@
+# Per-source rules: politeness, rate limits, automation policy.
+
+defaults:
+  request_delay_ms: 1500
+  max_requests_per_minute: 20
+  user_agent: "FTC-JobHuntOS/1.0 (+https://unalabs.cloud)"
+  respect_robots_txt: true
+
+sources:
+  greenhouse:
+    enabled: true
+    type: json_feed
+    base_url: "https://boards-api.greenhouse.io/v1/boards"
+  lever:
+    enabled: true
+    type: json_feed
+    base_url: "https://api.lever.co/v0/postings"
+  ashby:
+    enabled: true
+    type: json_feed
+    base_url: "https://api.ashbyhq.com/posting-api/job-board"
+  gmail_alerts:
+    enabled: true
+    type: gmail_harvest
+    label: "JOB ALERTS"
+    senders:
+      - jobalerts-noreply@linkedin.com
+      - noreply@indeed.com
+      - jobalert@dice.com
+      - workday-noreply
+  ops_bps:
+    enabled: false
+    type: manual_paste
+    note: "Public Ontario procurement portal. Manual paste of RQ URLs."
+  linkedin:
+    enabled: true
+    type: manual_paste
+    automation: drafts_only
+  workday:
+    enabled: true
+    type: manual_paste
+    automation: assist_only
+  dice:
+    enabled: false
+    type: gmail_alert_only
+  indeed:
+    enabled: false
+    type: gmail_alert_only
+
+apply_assist:
+  trusted_apply_hosts:
+    - boards.greenhouse.io
+    - jobs.lever.co
+    - jobs.ashbyhq.com
+  blocked_apply_hosts: []

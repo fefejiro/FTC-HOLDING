@@ -1,0 +1,149 @@
+# Job Hunt OS — Truth Bank
+# Single source of truth for resume, cover letter, application answers,
+# recruiter messages, and STAR stories. Generators MUST NOT emit claims
+# that fall outside `approved_*` sets, and MUST refuse anything matching
+# `do_not_claim` (hard fail) or `manual_review_claims` (Needs Review).
+
+candidate:
+  first_name: Fejiro
+  last_name: Efiuvwere
+  city: Whitby
+  province: Ontario
+  country: Canada
+  phone: "+1-416-473-2732"
+  email: fejiro.efiuvwere@gmail.com
+  linkedin: https://www.linkedin.com/in/fejiro-efiuvwere
+  website: https://unalabs.cloud
+
+employment_history:
+  - employer: Talize
+    role: IT Business Systems Manager
+    start: "2023-09"
+    end: present
+    location: Toronto, Ontario, Canada
+  - employer: Canadian Tire
+    role: Lead Business Analyst Tester
+    start: "2021-05"
+    end: "2023-08"
+    location: Toronto, Ontario, Canada
+  - employer: Home Depot
+    role: Senior QA, Google Cloud Platform
+    start: "2020-08"
+    end: "2021-04"
+    location: Toronto, Ontario, Canada
+  - employer: LCBO
+    role: QA Lead and Systems Analyst, Manhattan WMOS
+    start: "2019-09"
+    end: "2020-05"
+    location: Toronto, Ontario, Canada
+  - employer: SCI Logistics
+    role: Senior QA
+    start: "2018-01"
+    end: "2019-08"
+    location: Toronto, Ontario, Canada
+  - employer: SEARS
+    role: Systems Analyst
+    start: "2016-01"
+    end: "2017-12"
+    location: Toronto, Ontario, Canada
+  - employer: The Brick
+    role: QA Test Analyst
+    start: "2014-03"
+    end: "2015-12"
+    location: Toronto, Ontario, Canada
+
+education:
+  - school: St. Lawrence College
+    credential: Post Graduate, Supply Chain
+    year: 2015
+  - school: Humber College
+    credential: Post Graduate, Wireless Telecom
+    year: 2014
+  - school: University of Port Harcourt
+    credential: B.Eng Electrical and Electronic Engineering
+    year: 2009
+
+certifications:
+  - ITIL Foundations V3
+  - ServiceNow CIS-ITSM
+  - PM Foundations
+  - PCI Compliance
+  - Prompt Engineering with ChatGPT
+  - REST API
+
+languages:
+  - English, Fluent
+
+approved_tools:
+  - Jira
+  - Confluence
+  - Smartsheet
+  - Microsoft Project
+  - ServiceNow
+  - SQL
+  - Postman
+  - Selenium
+  - HP Application Lifecycle Management
+  - Zephyr
+  - Azure
+  - Google Cloud Platform
+  - SharePoint
+  - API integrations
+  - SAP
+  - Manhattan WMOS
+  - NetSuite WMS
+  - Logfire WMS
+  - POS systems
+  - ERP systems
+  - WMS systems
+
+approved_projects:
+  - Talize POS modernization
+  - Talize business systems modernization
+  - Talize loyalty API platform
+  - Canadian Tire omni-channel fulfillment integration
+  - Home Depot SAP microservices and Google Cloud integration
+  - LCBO Manhattan WMOS implementation support
+  - SCI Logistics Manhattan WMS enhancements
+  - Sears Canada AS400 to Manhattan WMOS migration
+  - The Brick supply chain systems and SAP/WMS initiatives
+  - Ministry of Finance RIDE-TI modernization
+  - PeacePad AI-assisted communication platform
+  - Una Labs ATEAM workflow automation
+
+approved_claims:
+  - Led enterprise systems delivery across retail, logistics, and government environments.
+  - Managed cross-functional teams, vendors, technology stakeholders, and business users.
+  - Supported WMS, ERP, POS, API, and cloud integration initiatives.
+  - Delivered requirements, user stories, acceptance criteria, testing, UAT, deployment readiness, and post-go-live support.
+  - Built and led AI workflow and product strategy initiatives through PeacePad, Una Labs, and ATEAM.
+  - Worked across Agile, Hybrid, and Waterfall delivery models.
+  - Supported 0 to 1 product development and workflow modernization.
+
+manual_review_claims:
+  - Direct hands-on Blue Yonder implementation
+  - Salesforce architect certification
+  - U.S. work authorization
+  - Green card
+  - U.S. citizen
+  - Security clearance
+  - Deep production Salesforce AI agent implementation
+  - Direct coding ownership unless role evidence supports it
+
+do_not_claim:
+  - U.S. citizen
+  - U.S. citizenship
+  - Green card holder
+  - Permanent resident of the United States
+  - active U.S. security clearance
+  - secret clearance
+  - top secret clearance
+  - direct Blue Yonder hands-on implementation
+  - Salesforce certified architect
+
+approved_work_authorization_language:
+  canada:
+    - Canadian citizen.
+    - Authorized to work in Canada.
+  united_states:
+    - Canadian citizen. May be eligible for TN status under USMCA for qualifying professional roles, where applicable.

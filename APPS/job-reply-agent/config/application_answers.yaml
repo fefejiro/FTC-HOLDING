@@ -1,0 +1,92 @@
+# Approved answers for application form fields.
+# Generators MUST emit "Needs Review" for any field not represented here.
+
+name:
+  first: Fejiro
+  last: Efiuvwere
+
+contact:
+  phone: "+1-416-473-2732"
+  email: fejiro.efiuvwere@gmail.com
+  linkedin: https://www.linkedin.com/in/fejiro-efiuvwere
+  website: https://unalabs.cloud
+
+location:
+  city: Whitby
+  province: Ontario
+  country: Canada
+  postal_code: ""
+
+canada_work_authorization:
+  answer: "Canadian citizen. Authorized to work in Canada."
+
+united_states_work_authorization:
+  default_answer: Needs Review
+  safe_note: "Canadian citizen. May be eligible for TN status under USMCA for qualifying professional roles, where applicable."
+  never_claim:
+    - U.S. citizen
+    - Green card holder
+    - Permanent resident of the United States
+    - No sponsorship needed for all roles
+
+salary_expectation:
+  default: Needs Review
+
+relocation:
+  default: Needs Review
+
+eeo:
+  default: "Prefer not to answer"
+
+# Fields the safe filler is allowed to type into without pausing.
+safe_fields:
+  - first_name
+  - last_name
+  - email
+  - phone
+  - city
+  - province
+  - state
+  - country
+  - linkedin
+  - linkedin_url
+  - website
+  - portfolio
+  - portfolio_url
+  - current_company
+  - current_title
+
+# Fields that ALWAYS trigger a pause.
+sensitive_fields:
+  - work_authorization
+  - visa_sponsorship
+  - sponsorship
+  - salary
+  - salary_expectation
+  - hourly_rate
+  - desired_compensation
+  - relocation
+  - willing_to_relocate
+  - eeo
+  - race
+  - ethnicity
+  - gender
+  - disability
+  - veteran
+  - criminal
+  - background_check
+  - date_of_birth
+  - dob
+  - street_address
+  - sin
+  - ssn
+  - social_security
+  - passport
+  - drivers_license
+  - driver_license
+  - references
+  - reference_contact
+  - legal_attestation
+  - attestation
+  - submit
+  - final_submit

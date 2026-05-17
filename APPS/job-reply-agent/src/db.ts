@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { initHuntSchema } from "./hunt/db.js";
 
 export function getDb(dbPath = path.join(process.cwd(), "data", "job_leads.sqlite")): Database.Database {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -8,6 +9,7 @@ export function getDb(dbPath = path.join(process.cwd(), "data", "job_leads.sqlit
   db.pragma("journal_mode = WAL");
   initSchema(db);
   migrateSchema(db);
+  initHuntSchema(db);
   return db;
 }
 
