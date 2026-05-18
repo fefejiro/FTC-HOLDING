@@ -6,10 +6,6 @@ on:
     - cron: "0 23 * * 1-5"
   workflow_dispatch: {}
 
-defaults:
-  run:
-    working-directory: APPS/job-reply-agent
-
 jobs:
   daily-report:
     name: Daily Report
@@ -39,10 +35,10 @@ jobs:
             job-agent-db-
 
       - name: Install dependencies
-        run: npm ci
+        run: npm --prefix APPS/job-reply-agent ci
 
       - name: Build
-        run: npm run build
+        run: npm --prefix APPS/job-reply-agent run build
 
       - name: Gmail report secrets preflight
         id: gmail_report_preflight
@@ -73,8 +69,8 @@ jobs:
         env:
           TOKENS_JSON: ${{ secrets.JOB_AGENT_GMAIL_TOKENS_JSON }}
         run: |
-          mkdir -p data
-          printf '%s' "$TOKENS_JSON" > data/gmail_tokens.json
+          mkdir -p APPS/job-reply-agent/data
+          printf '%s' "$TOKENS_JSON" > APPS/job-reply-agent/data/gmail_tokens.json
 
       - name: Write .env
         if: steps.gmail_report_preflight.outputs.ready == 'true'
@@ -84,16 +80,21 @@ jobs:
           ACCOUNT_EMAIL: ${{ secrets.JOB_AGENT_GMAIL_ACCOUNT_EMAIL }}
           REPORT_TO: ${{ secrets.JOB_AGENT_REPORT_TO }}
         run: |
-          printf 'GMAIL_AUTH_MODE=oauth\n' > .env
-          printf 'GMAIL_CLIENT_ID=%s\n' "$CLIENT_ID" >> .env
-          printf 'GMAIL_CLIENT_SECRET=%s\n' "$CLIENT_SECRET" >> .env
-          printf 'GMAIL_REDIRECT_URI=http://localhost:3007/oauth2callback\n' >> .env
-          printf 'GMAIL_TOKENS_PATH=./data/gmail_tokens.json\n' >> .env
-          printf 'GMAIL_ACCOUNT_EMAIL=%s\n' "$ACCOUNT_EMAIL" >> .env
-          printf 'REPORT_TO=%s\n' "$REPORT_TO" >> .env
-          printf 'AGENT_TZ=America/Toronto\n' >> .env
-          printf 'DAILY_REPORT_ENABLE_SEND=true\n' >> .env
+          printf 'GMAIL_AUTH_MODE=oauth\n' > APPS/job-reply-agent/.env
+          printf 'GMAIL_CLIENT_ID=%s\n' "$CLIENT_ID" >> APPS/job-reply-agent/.env
+          printf 'GMAIL_CLIENT_SECRET=%s\n' "$CLIENT_SECRET" >> APPS/job-reply-agent/.env
+          printf 'GMAIL_REDIRECT_URI=http://localhost:3007/oauth2callback\n' >> APPS/job-reply-agent/.env
+          printf 'GMAIL_TOKENS_PATH=./data/gmail_tokens.json\n' >> APPS/job-reply-agent/.env
+          printf 'GMAIL_ACCOUNT_EMAIL=%s\n' "$ACCOUNT_EMAIL" >> APPS/job-reply-agent/.env
+          printf 'REPORT_TO=%s\n' "$REPORT_TO" >> APPS/job-reply-agent/.env
+          printf 'AGENT_TZ=America/Toronto\n' >> APPS/job-reply-agent/.env
+          printf 'DAILY_REPORT_ENABLE_SEND=true\n' >> APPS/job-reply-agent/.env
 
       - name: Send daily report
         if: steps.gmail_report_preflight.outputs.ready == 'true'
-        run: node dist/main.js report:daily
+        working-directory: APPS/job-reply-agent
+        run: |
+          if ! node dist/main.js report:daily; then
+            echo "::warning::Daily report send did not complete. Most common cause is expired/revoked OAuth tokens; refresh JOB_AGENT_GMAIL_TOKENS_JSON and rerun."
+            exit 0
+          fi
