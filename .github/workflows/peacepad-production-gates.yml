@@ -14,11 +14,53 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Determine whether PeacePad gates are in scope
+        id: scope
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            "run_gates=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            "reason=manual dispatch" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            exit 0
+          }
+
+          $before = "${{ github.event.before }}"
+          $after = "${{ github.sha }}"
+          if ([string]::IsNullOrWhiteSpace($before) -or $before -match "^0+$") {
+            $before = "HEAD~1"
+          }
+
+          $changed = git diff --name-only $before $after
+          $patterns = @(
+            "^APPS/peacepad/",
+            "^scripts/verify-peacepad-",
+            "^\.github/workflows/peacepad-production-gates\.yml$"
+          )
+
+          $inScope = $false
+          foreach ($file in $changed) {
+            foreach ($pattern in $patterns) {
+              if ($file -match $pattern) {
+                $inScope = $true
+              }
+            }
+          }
+
+          if ($inScope) {
+            "run_gates=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            "reason=PeacePad-related files changed" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          } else {
+            "run_gates=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            "reason=no PeacePad production files changed" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          }
 
       - name: Determine gate mode
         id: gate_mode
@@ -50,6 +92,7 @@ jobs:
           "now_utc=$($nowUtc.ToString('o'))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Run production gate checks
+        if: steps.scope.outputs.run_gates == 'true'
         shell: pwsh
         env:
           GATE_MODE: ${{ steps.gate_mode.outputs.mode }}
@@ -90,6 +133,8 @@ jobs:
           $summary = @"
           ## PeacePad Production Gates
 
+          - Scope decision: `${{ steps.scope.outputs.run_gates }}`
+          - Scope reason: `${{ steps.scope.outputs.reason }}`
           - Gate mode: `${{ steps.gate_mode.outputs.mode }}`
           - Window state: `${{ steps.gate_mode.outputs.window }}`
           - Run time (UTC): `${{ steps.gate_mode.outputs.now_utc }}`
