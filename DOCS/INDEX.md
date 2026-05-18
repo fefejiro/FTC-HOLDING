@@ -19,6 +19,7 @@ This index organizes the highest-signal documentation currently in the repo with
 
 - [Runbook](RUNBOOK.md)
 - [Repo Status And Next Actions 2026-05-18](REPO_STATUS_AND_NEXT_ACTIONS_2026-05-18.md)
+- [Production Handover Readiness 2026-05-18](PRODUCTION_HANDOVER_READINESS_2026-05-18.md)
 - [Recovery Checklist 2026-04-28](RECOVERY_CHECKLIST_2026-04-28.md)
 - [Recovery And Workspace Map 2026-04-28](RECOVERY_AND_WORKSPACE_MAP_2026-04-28.md)
 - [Secrets And Skills Inventory 2026-04-28](SECRET_AND_SKILLS_INVENTORY_2026-04-28.md)
