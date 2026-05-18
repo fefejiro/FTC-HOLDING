@@ -22,6 +22,7 @@ import {
 } from "./processor.js";
 import { buildDailyReport, renderDailyReport } from "./reporter.js";
 import { seedSampleData } from "./seed.js";
+import { buildHuntReport, generateOutreachDrafts, generatePackages, ingestGmailJobAlerts, ingestManualJob, isJobAlertEmail, scoreJobs } from "./hunt.js";
 
 function parseDateArg(argv: string[]): string | undefined {
   const flag = argv.find((item) => item.startsWith("--date="));
@@ -40,6 +41,7 @@ export function parseCommandArgs(argv: string[]): {
   dateArg: string | undefined;
   codeArg: string | undefined;
   limitArg: number | undefined;
+  fileArg: string | undefined;
 } {
   const limitRaw = parseArg(argv, "limit");
   const limitArg = limitRaw && /^\d+$/.test(limitRaw) ? Number(limitRaw) : undefined;
@@ -47,7 +49,8 @@ export function parseCommandArgs(argv: string[]): {
     command: argv[2],
     dateArg: parseDateArg(argv),
     codeArg: parseArg(argv, "code"),
-    limitArg
+    limitArg,
+    fileArg: parseArg(argv, "file")
   };
 }
 
@@ -56,11 +59,13 @@ export async function runCommand(args: {
   dateArg?: string;
   codeArg?: string;
   limitArg?: number;
+  fileArg?: string;
 }): Promise<void> {
   const command = args.command;
   const dateArg = args.dateArg;
   const codeArg = args.codeArg;
   const limitArg = args.limitArg;
+  const fileArg = args.fileArg;
   const reportDate = dateArg || format(new Date(), "yyyy-MM-dd");
 
   if (command === "db:reset") {
@@ -146,12 +151,14 @@ export async function runCommand(args: {
       return;
     }
 
+    const huntAlerts = ingestGmailJobAlerts(db, inbox);
+    const recruiterMessages = inbox.filter((message) => !isJobAlertEmail(message));
     const outcome = await processGmailInbox({
       db,
       profile: cfg.profile,
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
-      messages: inbox,
+      messages: recruiterMessages,
       includeTnLine: true,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
@@ -171,7 +178,7 @@ export async function runCommand(args: {
         })
     });
 
-    logger.info({ outcome }, "process:gmail completed.");
+    logger.info({ huntAlerts, outcome }, "process:gmail completed.");
     return;
   }
 
@@ -260,12 +267,14 @@ export async function runCommand(args: {
       cfg.rules.automation.max_drafts_per_day
     );
 
+    const huntAlerts = ingestGmailJobAlerts(db, inbox);
+    const recruiterMessages = inbox.filter((message) => !isJobAlertEmail(message));
     const processOutcome = await processGmailInbox({
       db,
       profile: cfg.profile,
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
-      messages: inbox,
+      messages: recruiterMessages,
       includeTnLine: true,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
@@ -306,7 +315,33 @@ export async function runCommand(args: {
       }
     }
 
-    logger.info({ processOutcome, sent }, "run:gmail-cycle completed (only pre-approved drafts sent).");
+    logger.info({ huntAlerts, processOutcome, sent }, "run:gmail-cycle completed (only pre-approved drafts sent).");
+    return;
+  }
+
+
+  if (command === "hunt:ingest") {
+    if (!fileArg) { logger.error("Missing --file path."); return; }
+    const id = ingestManualJob(db, fileArg);
+    logger.info({ id }, "hunt:ingest completed.");
+    return;
+  }
+
+  if (command === "hunt:score") {
+    const scored = scoreJobs(db);
+    logger.info({ scored }, "hunt:score completed.");
+    return;
+  }
+
+  if (command === "hunt:package") {
+    const packaged = generatePackages(db);
+    const outreachDrafts = generateOutreachDrafts(db);
+    logger.info({ packaged, outreachDrafts }, "hunt:package completed.");
+    return;
+  }
+
+  if (command === "hunt:report") {
+    logger.info(`\n${buildHuntReport(db)}`);
     return;
   }
 
@@ -362,7 +397,7 @@ export async function runCommand(args: {
 
 async function run(): Promise<void> {
   const parsed = parseCommandArgs(process.argv);
-  await runCommand(parsed);
+  await runCommand(parsed as any);
 }
 
 run().catch((error) => {
