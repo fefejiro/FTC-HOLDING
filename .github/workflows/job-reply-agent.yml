@@ -34,7 +34,7 @@ jobs:
           cache-dependency-path: APPS/job-reply-agent/package-lock.json
 
       - name: Install dependencies
-        run: npm --prefix APPS/job-reply-agent ci --omit=optional
+        run: npm --prefix APPS/job-reply-agent ci
 
       - name: Build
         run: npm --prefix APPS/job-reply-agent run build
@@ -71,7 +71,7 @@ jobs:
             job-agent-db-
 
       - name: Install dependencies
-        run: npm --prefix APPS/job-reply-agent ci --omit=optional
+        run: npm --prefix APPS/job-reply-agent ci
 
       - name: Build
         run: npm --prefix APPS/job-reply-agent run build
