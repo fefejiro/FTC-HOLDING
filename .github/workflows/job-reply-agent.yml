@@ -127,7 +127,11 @@ jobs:
       - name: Run Gmail cycle
         if: steps.gmail_preflight.outputs.ready == 'true'
         working-directory: APPS/job-reply-agent
-        run: node dist/main.js run:gmail-cycle
+        run: |
+          if ! node dist/main.js run:gmail-cycle; then
+            echo "::warning::Gmail cycle did not complete. Most common cause is expired/revoked OAuth tokens; refresh JOB_AGENT_GMAIL_TOKENS_JSON and rerun."
+            exit 0
+          fi
 
       - name: Save data cache
         if: always() && steps.gmail_preflight.outputs.ready == 'true'
