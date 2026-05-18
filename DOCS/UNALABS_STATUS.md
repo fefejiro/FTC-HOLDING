@@ -5,10 +5,10 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 ## Latest Snapshot
 
 <!-- AUTO:UNALABS_SNAPSHOT:START -->
-- Generated at: 2026-05-07T10:35:14.499Z
+- Generated at: 2026-05-18T23:36:07.187Z
 - Site origin: https://unalabs.cloud
 - Worker origin: https://una-stripe-api.fejiro-efiuvwere.workers.dev
-- Smoke status: 14/14 checks passed
+- Smoke status: 5/14 checks passed
 - Admin smoke mode: unauthenticated admin guard smoke only
 - Phase 9 focus: AutoCollect automation and health observability are live; scheduled run verification and paid-invoice reconciliation are the close-out steps.
 - Sprint source: FTC_MASTER.md
@@ -20,15 +20,15 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 | Check | Result | Detail |
 |-------|--------|--------|
 | Homepage | PASS | 200 |
-| Start flow | PASS | 308 \| /start/ |
-| Summary page | PASS | 308 \| /start/summary/ |
-| Confirmation page | PASS | 308 \| /confirmation/ |
-| Status page (protected) | PASS | 308 \| /status/ |
-| Login route | PASS | 308 \| /login/ |
-| Portal page | PASS | 308 \| /portal/ |
-| Proposal page | PASS | 308 \| /dashboard/proposal/ |
-| Report page | PASS | 308 \| /dashboard/report/ |
-| Admin page | PASS | 308 \| /admin/ |
+| Start flow | FAIL | expected 200/308 got 404 |
+| Summary page | FAIL | expected 200/308 got 200 |
+| Confirmation page | FAIL | expected 200/308 got 404 |
+| Status page (protected) | FAIL | expected 308 got 404 |
+| Login route | FAIL | expected 200/308 got 200 |
+| Portal page | FAIL | expected 200/308 got 200 |
+| Proposal page | FAIL | expected 200/308 got 404 |
+| Report page | FAIL | expected 200/308 got 404 |
+| Admin page | FAIL | expected 200/308 got 404 |
 | AutoCollect list auth guard | PASS | 401 |
 | AutoCollect health auth guard | PASS | 401 |
 | AutoCollect sync auth guard | PASS | 401 |
