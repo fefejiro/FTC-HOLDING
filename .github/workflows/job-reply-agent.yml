@@ -17,10 +17,6 @@ on:
     - cron: "*/15 0-2 * * 2-6"
   workflow_dispatch: {}
 
-defaults:
-  run:
-    working-directory: APPS/job-reply-agent
-
 jobs:
   build-test:
     name: Build and test
@@ -38,13 +34,13 @@ jobs:
           cache-dependency-path: APPS/job-reply-agent/package-lock.json
 
       - name: Install dependencies
-        run: npm ci --omit=optional
+        run: npm --prefix APPS/job-reply-agent ci --omit=optional
 
       - name: Build
-        run: npm run build
+        run: npm --prefix APPS/job-reply-agent run build
 
       - name: Test
-        run: npm test
+        run: npm --prefix APPS/job-reply-agent test
 
   gmail-cycle:
     name: Gmail Cycle
@@ -75,17 +71,17 @@ jobs:
             job-agent-db-
 
       - name: Install dependencies
-        run: npm ci --omit=optional
+        run: npm --prefix APPS/job-reply-agent ci --omit=optional
 
       - name: Build
-        run: npm run build
+        run: npm --prefix APPS/job-reply-agent run build
 
       - name: Write Gmail tokens
         env:
           TOKENS_JSON: ${{ secrets.JOB_AGENT_GMAIL_TOKENS_JSON }}
         run: |
-          mkdir -p data
-          printf '%s' "$TOKENS_JSON" > data/gmail_tokens.json
+          mkdir -p APPS/job-reply-agent/data
+          printf '%s' "$TOKENS_JSON" > APPS/job-reply-agent/data/gmail_tokens.json
 
       - name: Write .env
         env:
@@ -94,17 +90,18 @@ jobs:
           ACCOUNT_EMAIL: ${{ secrets.JOB_AGENT_GMAIL_ACCOUNT_EMAIL }}
           REPORT_TO: ${{ secrets.JOB_AGENT_REPORT_TO }}
         run: |
-          printf 'GMAIL_AUTH_MODE=oauth\n' > .env
-          printf 'GMAIL_CLIENT_ID=%s\n' "$CLIENT_ID" >> .env
-          printf 'GMAIL_CLIENT_SECRET=%s\n' "$CLIENT_SECRET" >> .env
-          printf 'GMAIL_REDIRECT_URI=http://localhost:3007/oauth2callback\n' >> .env
-          printf 'GMAIL_TOKENS_PATH=./data/gmail_tokens.json\n' >> .env
-          printf 'GMAIL_ACCOUNT_EMAIL=%s\n' "$ACCOUNT_EMAIL" >> .env
-          printf 'REPORT_TO=%s\n' "$REPORT_TO" >> .env
-          printf 'AGENT_TZ=America/Toronto\n' >> .env
-          printf 'DAILY_REPORT_ENABLE_SEND=true\n' >> .env
+          printf 'GMAIL_AUTH_MODE=oauth\n' > APPS/job-reply-agent/.env
+          printf 'GMAIL_CLIENT_ID=%s\n' "$CLIENT_ID" >> APPS/job-reply-agent/.env
+          printf 'GMAIL_CLIENT_SECRET=%s\n' "$CLIENT_SECRET" >> APPS/job-reply-agent/.env
+          printf 'GMAIL_REDIRECT_URI=http://localhost:3007/oauth2callback\n' >> APPS/job-reply-agent/.env
+          printf 'GMAIL_TOKENS_PATH=./data/gmail_tokens.json\n' >> APPS/job-reply-agent/.env
+          printf 'GMAIL_ACCOUNT_EMAIL=%s\n' "$ACCOUNT_EMAIL" >> APPS/job-reply-agent/.env
+          printf 'REPORT_TO=%s\n' "$REPORT_TO" >> APPS/job-reply-agent/.env
+          printf 'AGENT_TZ=America/Toronto\n' >> APPS/job-reply-agent/.env
+          printf 'DAILY_REPORT_ENABLE_SEND=true\n' >> APPS/job-reply-agent/.env
 
       - name: Run Gmail cycle
+        working-directory: APPS/job-reply-agent
         run: node dist/main.js run:gmail-cycle
 
       - name: Save data cache
