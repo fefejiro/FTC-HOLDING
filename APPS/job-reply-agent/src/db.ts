@@ -58,6 +58,50 @@ function initSchema(db: Database.Database): void {
       updated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS hunt_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT,
+      company TEXT,
+      location TEXT,
+      work_mode TEXT,
+      employment_type TEXT,
+      source TEXT,
+      source_url TEXT,
+      apply_url TEXT,
+      description TEXT,
+      required_skills TEXT,
+      preferred_skills TEXT,
+      work_authorization_language TEXT,
+      salary_or_rate TEXT,
+      red_flags TEXT,
+      gmail_message_id TEXT,
+      gmail_thread_id TEXT,
+      recruiter_email TEXT,
+      score INTEGER,
+      status TEXT NOT NULL DEFAULT 'discovered',
+      needs_review INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS hunt_packages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id INTEGER NOT NULL,
+      resume_text TEXT NOT NULL,
+      cover_letter_text TEXT NOT NULL,
+      next_action TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS hunt_outreach_drafts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id INTEGER NOT NULL,
+      draft_type TEXT NOT NULL,
+      body TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'waiting',
+      created_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS decisions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       message_id TEXT NOT NULL,
@@ -71,6 +115,10 @@ function initSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_decisions_status ON decisions (status);
     CREATE INDEX IF NOT EXISTS idx_opportunities_score ON opportunities (match_score DESC);
     CREATE INDEX IF NOT EXISTS idx_drafts_approved ON drafts (approved, sent);
+    CREATE INDEX IF NOT EXISTS idx_hunt_jobs_status ON hunt_jobs (status);
+    CREATE INDEX IF NOT EXISTS idx_hunt_jobs_gmail_message ON hunt_jobs (gmail_message_id);
+    CREATE INDEX IF NOT EXISTS idx_hunt_jobs_apply_url ON hunt_jobs (apply_url);
+    CREATE INDEX IF NOT EXISTS idx_hunt_outreach_status ON hunt_outreach_drafts (status);
   `);
 }
 
@@ -81,6 +129,9 @@ function migrateSchema(db: Database.Database): void {
   ensureColumn(db, "opportunities", "parser_confidence", "INTEGER");
   ensureColumn(db, "drafts", "gmail_draft_id", "TEXT");
   ensureColumn(db, "drafts", "recipient_email", "TEXT");
+  ensureColumn(db, "hunt_jobs", "gmail_message_id", "TEXT");
+  ensureColumn(db, "hunt_jobs", "gmail_thread_id", "TEXT");
+  ensureColumn(db, "hunt_jobs", "recruiter_email", "TEXT");
 }
 
 function ensureColumn(

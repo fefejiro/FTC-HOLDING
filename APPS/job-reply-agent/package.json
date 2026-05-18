@@ -22,7 +22,11 @@
     "send:approved:gmail": "tsx src/main.ts send:approved:gmail",
     "run:mock-cycle": "tsx src/main.ts run:mock-cycle",
     "run:gmail-cycle": "tsx src/main.ts run:gmail-cycle",
-    "lint": "echo lint-placeholder"
+    "lint": "echo lint-placeholder",
+    "hunt:ingest": "tsx src/main.ts hunt:ingest",
+    "hunt:score": "tsx src/main.ts hunt:score",
+    "hunt:package": "tsx src/main.ts hunt:package",
+    "hunt:report": "tsx src/main.ts hunt:report"
   },
   "keywords": [],
   "author": "",
