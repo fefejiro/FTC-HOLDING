@@ -44,7 +44,32 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Gmail report secrets preflight
+        id: gmail_report_preflight
+        env:
+          TOKENS_JSON: ${{ secrets.JOB_AGENT_GMAIL_TOKENS_JSON }}
+          CLIENT_ID: ${{ secrets.JOB_AGENT_GMAIL_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.JOB_AGENT_GMAIL_CLIENT_SECRET }}
+          ACCOUNT_EMAIL: ${{ secrets.JOB_AGENT_GMAIL_ACCOUNT_EMAIL }}
+          REPORT_TO: ${{ secrets.JOB_AGENT_REPORT_TO }}
+        run: |
+          missing=()
+          [ -n "$TOKENS_JSON" ] || missing+=("JOB_AGENT_GMAIL_TOKENS_JSON")
+          [ -n "$CLIENT_ID" ] || missing+=("JOB_AGENT_GMAIL_CLIENT_ID")
+          [ -n "$CLIENT_SECRET" ] || missing+=("JOB_AGENT_GMAIL_CLIENT_SECRET")
+          [ -n "$ACCOUNT_EMAIL" ] || missing+=("JOB_AGENT_GMAIL_ACCOUNT_EMAIL")
+          [ -n "$REPORT_TO" ] || missing+=("JOB_AGENT_REPORT_TO")
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping scheduled daily report send. Missing required secret(s): ${missing[*]}"
+            exit 0
+          fi
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
       - name: Write Gmail tokens
+        if: steps.gmail_report_preflight.outputs.ready == 'true'
         env:
           TOKENS_JSON: ${{ secrets.JOB_AGENT_GMAIL_TOKENS_JSON }}
         run: |
@@ -52,6 +77,7 @@ jobs:
           printf '%s' "$TOKENS_JSON" > data/gmail_tokens.json
 
       - name: Write .env
+        if: steps.gmail_report_preflight.outputs.ready == 'true'
         env:
           CLIENT_ID: ${{ secrets.JOB_AGENT_GMAIL_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.JOB_AGENT_GMAIL_CLIENT_SECRET }}
@@ -69,4 +95,5 @@ jobs:
           printf 'DAILY_REPORT_ENABLE_SEND=true\n' >> .env
 
       - name: Send daily report
+        if: steps.gmail_report_preflight.outputs.ready == 'true'
         run: node dist/main.js report:daily
