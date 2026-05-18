@@ -19,6 +19,8 @@ test-results/
 **/coverage/
 **/*.log
 **/.DS_Store
+**/*.sqlite-shm
+**/*.sqlite-wal
 **/.local/
 **/.cache/
 **/.turbo/
@@ -73,6 +75,13 @@ output/playwright/**
 .tmp-cap.json
 play-store-key.json
 secrets/
+
+# Job agent runtime/generated artifacts
+APPS/job-reply-agent/data/*.sqlite-shm
+APPS/job-reply-agent/data/*.sqlite-wal
+APPS/job-reply-agent/resumes/CoverLetter_*.txt
+APPS/job-reply-agent/resumes/*_Tailored.docx
+APPS/job-reply-agent/resumes/*_Cover_Letter.docx
 
 # Agent workspace state is local, but recovered repo skills are onboarding assets.
 .agents/*
