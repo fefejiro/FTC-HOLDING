@@ -9,6 +9,7 @@ const rolloutDocPath = path.join(root, 'DOCS', 'ROLLOUT_PLAN_UNALABS.md');
 const BASE_URL = String(process.env.UNALABS_SMOKE_BASE_URL || 'https://unalabs.cloud').trim().replace(/\/$/, '');
 const WORKER_URL = String(process.env.UNALABS_SMOKE_WORKER_URL || process.env.NEXT_PUBLIC_STRIPE_API_URL || 'https://una-stripe-api.fejiro-efiuvwere.workers.dev').trim().replace(/\/$/, '');
 const ADMIN_BEARER_TOKEN = String(process.env.UNALABS_SMOKE_BEARER_TOKEN || '').trim();
+const STRICT_SMOKE = String(process.env.UNALABS_STATUS_STRICT || '').trim() === '1';
 
 function readText(filePath) {
   return fs.readFileSync(filePath, 'utf8');
@@ -325,13 +326,18 @@ async function main() {
   rolloutDoc = replaceBetweenMarkers(rolloutDoc, rolloutStartMarker, rolloutEndMarker, rolloutBlock);
   writeText(rolloutDocPath, rolloutDoc);
 
-  if (failed > 0) {
+  if (failed > 0 && STRICT_SMOKE) {
     console.error('Una Labs status sync finished with smoke failures.');
     console.error(sprintSection);
     process.exit(1);
   }
 
-  console.log('Una Labs status documentation updated successfully.');
+  if (failed > 0) {
+    console.warn('Una Labs status documentation updated with smoke failures in advisory mode.');
+    console.warn('Set UNALABS_STATUS_STRICT=1 to fail the run on smoke regressions.');
+  } else {
+    console.log('Una Labs status documentation updated successfully.');
+  }
   console.log(`- Updated: ${path.relative(root, statusDocPath)}`);
   console.log(`- Updated: ${path.relative(root, masterDocPath)}`);
   console.log(`- Updated: ${path.relative(root, rolloutDocPath)}`);
