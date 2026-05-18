@@ -2,7 +2,20 @@
 
 A human-readable, cross-project delivery ledger for FTC/Una Labs. Use this template to track project status, commits, blockers, QA, human follow-up, and next actions for every major project.
 
+Last refreshed: 2026-05-18
+
 ---
+
+## Job Hunt OS / Job Reply Agent
+- **Current status:** Active (Phase 2.5/4A intake PR open)
+- **Last known commits:** 0bbdbfae on PR #124 (`feat(job-agent): normalize hunt job intake`)
+- **Blockers:**
+  - PR #124 is unstable because of external Cloudflare deployment checks, not local job-agent build/test failures
+  - Apply Assist remains intentionally gated and not started
+- **Tests/QA:** `npm run build` and `npm test` passed locally in `APPS/job-reply-agent`
+- **Human follow-up notes:** Decide whether Cloudflare external checks should block a job-agent-only PR
+- **Next action:** Merge PR #124 after reviewing Cloudflare deployment noise or rerun/bypass external checks by repo policy
+- **Estimated remaining effort:** ~0.25d for merge/CI policy cleanup, then new Apply Assist scope
 
 ## Garden Cleaners
 - **Current status:** GO (pending final owner/client acceptance and security signoff)
