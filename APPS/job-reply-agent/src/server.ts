@@ -59,7 +59,7 @@ function renderDashboard(state: {
     ["process", "Process Gmail Inbox"],
     ["approve", "Approve Drafts"],
     ["send", "Send Approved"],
-    ["cycle", "Run Full Cycle"],
+    ["cycle", "Run Intake Cycle"],
     ["report", "Generate Report"]
   ]
     .map(([action, label]) => {
@@ -516,8 +516,9 @@ async function handleAction(action: ServerAction, body: any): Promise<{ status: 
           resumePath
         })
     });
-    const approved = approveAllDrafts(db);
-    const pending = getApprovedPendingDrafts(db).filter((draft) => Boolean(draft.gmail_draft_id));
+    const pending = getApprovedPendingDrafts(db)
+      .filter((draft) => Boolean(draft.gmail_draft_id))
+      .slice(0, cfg.rules.automation.max_sends_per_day);
 
     let sent = 0;
     for (const draft of pending) {
@@ -534,7 +535,7 @@ async function handleAction(action: ServerAction, body: any): Promise<{ status: 
       }
     }
 
-    return { status: 200, message: JSON.stringify({ processOutcome, approved, sent }) };
+    return { status: 200, message: JSON.stringify({ processOutcome, approved: 0, sent, note: "Only drafts approved before this cycle were eligible to send." }) };
   }
 
   if (action === "report") {
