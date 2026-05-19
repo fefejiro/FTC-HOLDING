@@ -14,6 +14,7 @@ import { logger } from "./logger.js";
 import { getApprovedPendingDrafts, insertDecision, markDraftSent } from "./message_store.js";
 import { approveAllDrafts, processGmailInbox } from "./processor.js";
 import { buildDailyReport, renderDailyReport } from "./reporter.js";
+import { buildHuntReport, generateOutreachDrafts, generatePackages, scoreJobs } from "./hunt.js";
 
 type ServerAction =
   | "auth-url"
@@ -22,7 +23,9 @@ type ServerAction =
   | "approve"
   | "send"
   | "cycle"
-  | "report";
+  | "report"
+  | "hunt-score"
+  | "hunt-package";
 
 const PORT = Number(process.env.PORT || 3007);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -45,6 +48,9 @@ function renderDashboard(state: {
   authMode: string;
   reportSubject: string;
   reportBody: string;
+  huntReport: HuntDashboardReport;
+  huntJobs: HuntDashboardJob[];
+  huntDrafts: HuntDashboardDraft[];
   status: string;
   token: string;
 }): string {
@@ -178,9 +184,66 @@ function renderDashboard(state: {
       font-size: 14px;
     }
     .muted { color: var(--muted); font-size: 13px; }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .metric {
+      background: #fff;
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 12px;
+      min-height: 72px;
+    }
+    .metric strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1;
+      color: var(--accent-2);
+    }
+    .metric span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .table th, .table td {
+      text-align: left;
+      border-bottom: 1px solid var(--panel-border);
+      padding: 9px 8px;
+      vertical-align: top;
+    }
+    .table th {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #e6f4f1;
+      color: var(--accent-2);
+      font-weight: 800;
+      font-size: 12px;
+      white-space: nowrap;
+    }
     @media (max-width: 920px) {
       .shell { grid-template-columns: 1fr; }
       .controls { grid-template-columns: 1fr; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -199,6 +262,18 @@ function renderDashboard(state: {
         <div class="muted">Live report preview</div>
         <div class="card">${escapeHtml(state.reportSubject)}\n\n${escapeHtml(state.reportBody)}</div>
       </div>
+      <div class="section">
+        <div class="eyebrow">Hunt OS</div>
+        <div class="metric-grid">${renderHuntMetrics(state.huntReport)}</div>
+        <div class="section">
+          <div class="muted">Latest jobs</div>
+          ${renderHuntJobsTable(state.huntJobs)}
+        </div>
+        <div class="section">
+          <div class="muted">Outreach drafts waiting</div>
+          ${renderHuntDraftsTable(state.huntDrafts)}
+        </div>
+      </div>
     </section>
     <section class="panel">
       <div class="eyebrow">Controls</div>
@@ -206,10 +281,111 @@ function renderDashboard(state: {
       <div class="section">
         <div class="muted">This server should be hosted on an always-on machine or cloud VM. Once deployed, your phone can reach it from anywhere.</div>
       </div>
+      <div class="section">
+        <div class="eyebrow">Hunt Actions</div>
+        <div class="controls">
+          <form method="post" action="/api/hunt-score${state.token ? `?token=${encodeURIComponent(state.token)}` : ""}">
+            <button class="btn" type="submit">Score Hunt Jobs</button>
+          </form>
+          <form method="post" action="/api/hunt-package${state.token ? `?token=${encodeURIComponent(state.token)}` : ""}">
+            <button class="btn" type="submit">Generate Packages</button>
+          </form>
+        </div>
+        <div class="section">
+          <div class="muted">These actions only score, package, and create waiting outreach drafts. They do not send, apply, or submit.</div>
+        </div>
+      </div>
     </section>
   </main>
 </body>
 </html>`;
+}
+
+interface HuntDashboardReport {
+  discovered: number;
+  scored: number;
+  package_ready: number;
+  package_generated: number;
+  needs_review: number;
+  blocked: number;
+  outreach_drafts_waiting: number;
+  recommended_next_action: string;
+}
+
+interface HuntDashboardJob {
+  id: number;
+  title: string;
+  company: string;
+  source: string;
+  status: string;
+  score: number | null;
+  needs_review: number;
+}
+
+interface HuntDashboardDraft {
+  id: number;
+  job_id: number;
+  draft_type: string;
+  body: string;
+  status: string;
+  created_at: string;
+}
+
+function getHuntDashboard(db = getDb()): {
+  report: HuntDashboardReport;
+  jobs: HuntDashboardJob[];
+  drafts: HuntDashboardDraft[];
+} {
+  const report = JSON.parse(buildHuntReport(db)) as HuntDashboardReport;
+  const jobs = db
+    .prepare("SELECT id,title,company,source,status,score,needs_review FROM hunt_jobs ORDER BY id DESC LIMIT 10")
+    .all() as HuntDashboardJob[];
+  const drafts = db
+    .prepare("SELECT id,job_id,draft_type,body,status,created_at FROM hunt_outreach_drafts WHERE status='waiting' ORDER BY id DESC LIMIT 10")
+    .all() as HuntDashboardDraft[];
+  return { report, jobs, drafts };
+}
+
+function renderHuntMetrics(report: HuntDashboardReport): string {
+  const metrics: Array<[string, number | string]> = [
+    ["Discovered", report.discovered],
+    ["Scored", report.scored],
+    ["Generated", report.package_generated],
+    ["Drafts", report.outreach_drafts_waiting],
+    ["Review", report.needs_review],
+    ["Blocked", report.blocked]
+  ];
+  return metrics
+    .map(([label, value]) => `<div class="metric"><strong>${escapeHtml(String(value))}</strong><span>${escapeHtml(label)}</span></div>`)
+    .join("");
+}
+
+function renderHuntJobsTable(jobs: HuntDashboardJob[]): string {
+  if (jobs.length === 0) return `<div class="card">No hunt jobs yet.</div>`;
+  const rows = jobs
+    .map((job) => `
+      <tr>
+        <td>${escapeHtml(job.title || "Untitled")}</td>
+        <td>${escapeHtml(job.company || "Unknown")}</td>
+        <td>${escapeHtml(job.source || "manual")}</td>
+        <td><span class="pill">${escapeHtml(job.status)}</span></td>
+        <td>${job.score ?? ""}</td>
+      </tr>`)
+    .join("");
+  return `<table class="table"><thead><tr><th>Role</th><th>Company</th><th>Source</th><th>Status</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderHuntDraftsTable(drafts: HuntDashboardDraft[]): string {
+  if (drafts.length === 0) return `<div class="card">No waiting outreach drafts.</div>`;
+  const rows = drafts
+    .map((draft) => `
+      <tr>
+        <td>${escapeHtml(draft.draft_type)}</td>
+        <td>${escapeHtml(draft.body)}</td>
+        <td><span class="pill">${escapeHtml(draft.status)}</span></td>
+      </tr>`)
+    .join("");
+  return `<table class="table"><thead><tr><th>Type</th><th>Draft</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -367,6 +543,17 @@ async function handleAction(action: ServerAction, body: any): Promise<{ status: 
     return { status: 200, message: `${rendered.subject}\n\n${rendered.body}` };
   }
 
+  if (action === "hunt-score") {
+    const scored = scoreJobs(db);
+    return { status: 200, message: JSON.stringify({ scored }) };
+  }
+
+  if (action === "hunt-package") {
+    const packaged = generatePackages(db);
+    const outreachDrafts = generateOutreachDrafts(db);
+    return { status: 200, message: JSON.stringify({ packaged, outreachDrafts }) };
+  }
+
   return { status: 400, message: "Unknown action" };
 }
 
@@ -394,11 +581,15 @@ async function start(): Promise<void> {
         const db = getDb();
         const report = buildDailyReport(db, new Date());
         const rendered = renderDailyReport(report);
+        const huntDashboard = getHuntDashboard(db);
         const html = renderDashboard({
           mode: cfg.rules.automation.mode,
           authMode: cfg.env.authMode,
           reportSubject: rendered.subject,
           reportBody: rendered.body,
+          huntReport: huntDashboard.report,
+          huntJobs: huntDashboard.jobs,
+          huntDrafts: huntDashboard.drafts,
           status: "Ready",
           token
         });
@@ -411,14 +602,23 @@ async function start(): Promise<void> {
         const cfg = loadConfig();
         const db = getDb();
         const report = buildDailyReport(db, new Date());
+        const hunt = getHuntDashboard(db);
         res.writeHead(200, { "content-type": "application/json" });
         res.end(
           JSON.stringify({
             mode: cfg.rules.automation.mode,
             authMode: cfg.env.authMode,
-            report
+            report,
+            hunt
           })
         );
+        return;
+      }
+
+      if (req.method === "GET" && url.pathname === "/api/hunt") {
+        const db = getDb();
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify(getHuntDashboard(db)));
         return;
       }
 
