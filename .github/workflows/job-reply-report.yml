@@ -83,7 +83,7 @@ jobs:
           printf 'GMAIL_AUTH_MODE=oauth\n' > APPS/job-reply-agent/.env
           printf 'GMAIL_CLIENT_ID=%s\n' "$CLIENT_ID" >> APPS/job-reply-agent/.env
           printf 'GMAIL_CLIENT_SECRET=%s\n' "$CLIENT_SECRET" >> APPS/job-reply-agent/.env
-          printf 'GMAIL_REDIRECT_URI=http://localhost:3007/oauth2callback\n' >> APPS/job-reply-agent/.env
+          printf 'GMAIL_REDIRECT_URI=http://localhost\n' >> APPS/job-reply-agent/.env
           printf 'GMAIL_TOKENS_PATH=./data/gmail_tokens.json\n' >> APPS/job-reply-agent/.env
           printf 'GMAIL_ACCOUNT_EMAIL=%s\n' "$ACCOUNT_EMAIL" >> APPS/job-reply-agent/.env
           printf 'REPORT_TO=%s\n' "$REPORT_TO" >> APPS/job-reply-agent/.env
