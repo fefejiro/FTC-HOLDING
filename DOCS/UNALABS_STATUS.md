@@ -5,7 +5,7 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 ## Latest Snapshot
 
 <!-- AUTO:UNALABS_SNAPSHOT:START -->
-- Generated at: 2026-05-19T20:04:27.658Z
+- Generated at: 2026-05-19T21:46:06.501Z
 - Site origin: https://unalabs.cloud
 - Worker origin: https://una-stripe-api.fejiro-efiuvwere.workers.dev
 - Smoke status: 4/14 checks passed
@@ -20,9 +20,9 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 | Check | Result | Detail |
 |-------|--------|--------|
 | Homepage | FAIL | expected 200 got 404 |
-| Start flow | FAIL | expected 200/308 got 404 |
+| Start flow | FAIL | expected 200/308 got 200 |
 | Summary page | FAIL | expected 200/308 got 404 |
-| Confirmation page | FAIL | expected 200/308 got 404 |
+| Confirmation page | FAIL | expected 200/308 got 200 |
 | Status page (protected) | FAIL | expected 308 got 404 |
 | Login route | FAIL | expected 200/308 got 200 |
 | Portal page | FAIL | expected 200/308 got 200 |
