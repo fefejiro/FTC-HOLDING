@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { pathToFileURL } from "node:url";
 import { loadConfig } from "./config.js";
 import { getDb, resetDb } from "./db.js";
 import { sendEmail } from "./email_sender.js";
@@ -32,8 +33,14 @@ function parseDateArg(argv: string[]): string | undefined {
 
 function parseArg(argv: string[], name: string): string | undefined {
   const prefix = `--${name}=`;
-  const found = argv.find((item) => item.startsWith(prefix));
-  return found ? found.slice(prefix.length) : undefined;
+  const equalsForm = argv.find((item) => item.startsWith(prefix));
+  if (equalsForm) return equalsForm.slice(prefix.length);
+
+  const separateFlagIndex = argv.findIndex((item) => item === `--${name}`);
+  if (separateFlagIndex === -1) return undefined;
+
+  const value = argv[separateFlagIndex + 1];
+  return value && !value.startsWith("--") ? value : undefined;
 }
 
 export function parseCommandArgs(argv: string[]): {
@@ -400,7 +407,9 @@ async function run(): Promise<void> {
   await runCommand(parsed as any);
 }
 
-run().catch((error) => {
-  logger.error({ err: error }, "Fatal error in main.");
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run().catch((error) => {
+    logger.error({ err: error }, "Fatal error in main.");
+    process.exit(1);
+  });
+}

@@ -12,8 +12,13 @@ This initial implementation includes:
 
 - config-driven mode controls and risk policy files
 - SQLite schema for opportunities and decision states
+- Hunt OS tables for normalized job leads, generated packages, and outreach drafts
 - daily report aggregation
 - OAuth-first Gmail inbox intake, drafting, and sending
+- Gmail job-alert intake for LinkedIn, Indeed, Dice, Workday, Greenhouse, Lever, Ashby, recruiter, and agency-style alerts
+- manual pasted-job intake for job descriptions and apply URLs
+- Greenhouse, Lever, and Ashby source normalization
+- draft-only outreach generation for connection notes, recruiter follow-ups, cold intros, and post-application follow-ups
 - daily self-report via Gmail API (SMTP fallback supported)
 - responsive browser control surface for desktop and mobile
 - sample data seeding for local verification
@@ -32,10 +37,39 @@ This initial implementation includes:
 - `npm run run:mock-cycle`
 - `npm run run:gmail-cycle`
 - `npm run report -- --date=YYYY-MM-DD`
+- `npm run hunt:ingest -- --file ./data/manual_job.txt`
+- `npm run hunt:score`
+- `npm run hunt:package`
+- `npm run hunt:report`
 - `npm run build`
 - `npm run serve`
 
 If `--date` is omitted, current date is used.
+
+## Job Hunt OS Workflow
+
+Manual pasted-job flow:
+
+1. Add a pasted job description to a local text file such as `data/manual_job.txt`.
+2. Run `npm run hunt:ingest -- --file ./data/manual_job.txt`.
+3. Run `npm run hunt:score`.
+4. Run `npm run hunt:package`.
+5. Run `npm run hunt:report`.
+
+The ingestion path normalizes title, company, location, work mode, employment type, source, source URL, apply URL, description, required skills, preferred skills, work authorization language, salary/rate, and red flags into `hunt_jobs`.
+
+Gmail job-alert flow:
+
+- `process:gmail` and `run:gmail-cycle` read recruiter/job-alert messages and normalize job-alert leads into `hunt_jobs`.
+- The system reads and normalizes job alerts. It does not send, delete, archive, auto-apply, auto-submit, or run LinkedIn automation.
+
+Safety gates:
+
+- Never claim U.S. citizen, Green Card, U.S. permanent resident, or security clearance.
+- Salary/rate, work authorization, relocation, EEO, legal attestation, references, SIN/SSN, passport, date of birth, and final-submit language are marked for review.
+- Dice and Indeed are handled through Gmail alerts or manual pasted job text/URL.
+- Workday remains manual/open-and-pause only.
+- Outreach drafts are saved in the database as waiting drafts under 120 words. They are not sent.
 
 ## Fast Dry-Run Workflow
 
@@ -128,6 +162,14 @@ For a report-only daily task (optional), use:
 `powershell -ExecutionPolicy Bypass -File scripts/register-daily-report-task.ps1 -RunTime 19:00`
 
 ## GitHub Actions Automation
+
+Current production notes:
+
+- `.github/workflows/job-reply-agent.yml` runs build/test as a hard gate and runs `node dist/main.js run:gmail-cycle` for scheduled Gmail cycles.
+- `.github/workflows/job-reply-report.yml` runs `node dist/main.js report:daily` for end-of-day summaries.
+- Required scheduled Gmail secrets are `JOB_AGENT_GMAIL_TOKENS_JSON`, `JOB_AGENT_GMAIL_CLIENT_ID`, `JOB_AGENT_GMAIL_CLIENT_SECRET`, `JOB_AGENT_GMAIL_ACCOUNT_EMAIL`, and optionally `JOB_AGENT_REPORT_TO`.
+- Scheduled Gmail/report runtime failures, such as expired OAuth tokens, warn instead of turning the whole repo red. Refresh `JOB_AGENT_GMAIL_TOKENS_JSON` when GitHub reports an OAuth warning.
+- As of 2026-05-18, Job Reply Agent build/test, Daily Report, and Gmail scheduled workflows have fresh green `main` validations.
 
 The job-reply-agent is deployed to GitHub Actions for scheduled, hands-off operation:
 
