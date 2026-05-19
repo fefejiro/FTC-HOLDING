@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import YAML from "yaml";
 import type { RecruiterMessage } from "./types.js";
 
 export type HuntJobStatus = "discovered" | "scored" | "package_ready" | "package_generated" | "needs_review" | "blocked";
@@ -45,6 +46,12 @@ export interface NormalizedHuntJob {
   gmail_thread_id: string;
   recruiter_email: string;
   needs_review: number;
+}
+
+interface TruthBlocks {
+  employment?: Array<{ bullets?: string[] }>;
+  skills_pool?: string[];
+  summary_pool?: string[];
 }
 
 const FORBIDDEN_AUTH_CLAIMS = [/\bu\.?s\.? citizen\b/i, /green card/i, /permanent resident/i, /security clearance/i];
@@ -171,15 +178,31 @@ export function scoreJobs(db: Database.Database): number {
 }
 
 export function generatePackages(db: Database.Database): number {
-  const jobs = db.prepare("SELECT id,title,company,description,work_authorization_language FROM hunt_jobs WHERE status='scored'").all() as any[];
+  const truth = loadTruthBlocks();
+  const jobs = db.prepare("SELECT id,title,company,description,required_skills,preferred_skills,work_authorization_language FROM hunt_jobs WHERE status='scored'").all() as any[];
   let n = 0;
   for (const j of jobs) {
     if (FORBIDDEN_AUTH_CLAIMS.some((re) => re.test(`${j.description} ${j.work_authorization_language || ""}`))) {
       db.prepare("UPDATE hunt_jobs SET status='blocked', needs_review=1, updated_at=? WHERE id=?").run(new Date().toISOString(), j.id);
       continue;
     }
-    const resume = `Tailored resume summary for ${j.title} at ${j.company}. Focus: systems delivery, automation, stakeholder clarity, and measurable execution.`;
-    const cover = `Dear Hiring Team,\n\nI am interested in the ${j.title} role at ${j.company}. My background combines product delivery, workflow automation, CRM systems, and practical AI tooling. I would welcome the chance to discuss how that mix can help your team move faster with less operational drag.`;
+    const requiredSkills = parseJsonArray(j.required_skills);
+    const preferredSkills = parseJsonArray(j.preferred_skills);
+    const resume = buildTruthBackedResumeText({
+      title: j.title,
+      company: j.company,
+      description: j.description,
+      requiredSkills,
+      preferredSkills,
+      truth
+    });
+    const cover = buildCoverLetterText({
+      title: j.title,
+      company: j.company,
+      requiredSkills,
+      preferredSkills,
+      truth
+    });
     db.prepare("INSERT INTO hunt_packages (job_id,resume_text,cover_letter_text,next_action,created_at) VALUES (?,?,?,?,?)").run(j.id, resume, cover, "review_outreach_drafts", new Date().toISOString());
     db.prepare("UPDATE hunt_jobs SET status='package_generated', updated_at=? WHERE id=?").run(new Date().toISOString(), j.id);
     n++;
@@ -347,6 +370,101 @@ function buildOutreachBody(draftType: string, title: string, company: string): s
 function sanitizeDraft(body: string): string {
   const clean = cleanText(body.replace(/[—–]/g, "-").replace(/<[^>]+>/g, ""));
   return clean.split(/\s+/).slice(0, 120).join(" ");
+}
+
+function loadTruthBlocks(): TruthBlocks {
+  const truthPath = path.join(process.cwd(), "config", "resume_truth_blocks.yaml");
+  if (!fs.existsSync(truthPath)) return {};
+  try {
+    const parsed = YAML.parse(fs.readFileSync(truthPath, "utf-8"));
+    return parsed && typeof parsed === "object" ? parsed as TruthBlocks : {};
+  } catch {
+    return {};
+  }
+}
+
+function buildTruthBackedResumeText(args: {
+  title: string;
+  company: string;
+  description: string;
+  requiredSkills: string[];
+  preferredSkills: string[];
+  truth: TruthBlocks;
+}): string {
+  const haystack = `${args.description}\n${args.requiredSkills.join("\n")}\n${args.preferredSkills.join("\n")}`;
+  const skills = selectSkills(args.truth, haystack);
+  const bullets = selectTruthBullets(args.truth, haystack);
+  const summary = selectSummary(args.truth, args.description);
+
+  return [
+    `Target role: ${args.title || "Role"}${args.company ? ` at ${args.company}` : ""}`,
+    "",
+    "Summary",
+    summary,
+    "",
+    "Aligned skills",
+    ...skills.map((skill) => `- ${skill}`),
+    "",
+    "Selected truthful experience bullets",
+    ...bullets.map((bullet) => `- ${bullet}`)
+  ].join("\n");
+}
+
+function buildCoverLetterText(args: {
+  title: string;
+  company: string;
+  requiredSkills: string[];
+  preferredSkills: string[];
+  truth: TruthBlocks;
+}): string {
+  const role = args.title || "the role";
+  const org = args.company || "your team";
+  const skills = selectSkills(args.truth, [...args.requiredSkills, ...args.preferredSkills].join("\n")).slice(0, 4);
+  const focus = skills.length > 0 ? skills.join(", ") : "systems delivery, automation, stakeholder clarity, and measurable execution";
+
+  return [
+    "Dear Hiring Team,",
+    "",
+    `I am interested in ${role} at ${org}. My background combines enterprise systems delivery, workflow automation, CRM implementation, and practical AI tooling.`,
+    "",
+    `For this role, I would focus on ${focus}. I am careful about delivery details, cross-functional alignment, and making work easier to operate after launch.`,
+    "",
+    "I would welcome the chance to discuss fit, team priorities, and next steps.",
+    "",
+    "Sincerely,",
+    "Fejiro Efiuvwere"
+  ].join("\n");
+}
+
+function selectSummary(truth: TruthBlocks, description: string): string {
+  const summaries = truth.summary_pool?.filter(Boolean) || [];
+  if (summaries.length > 0) return cleanText(summaries[0]);
+  if (/ai|automation|workflow|agent/i.test(description)) {
+    return "Systems delivery lead with experience turning ambiguous workflow problems into reliable tools, automations, and operating processes.";
+  }
+  return "Systems delivery lead with experience across enterprise applications, workflow automation, stakeholder alignment, and practical execution.";
+}
+
+function selectSkills(truth: TruthBlocks, haystack: string): string[] {
+  const pool = truth.skills_pool?.filter(Boolean) || [
+    "Automation & Workflow Design",
+    "Project Management & SDLC",
+    "Business Analysis & Requirements Gathering",
+    "API Integration",
+    "CRM Systems"
+  ];
+  const lower = haystack.toLowerCase();
+  const matched = pool.filter((skill) => skill.toLowerCase().split(/[^a-z0-9]+/).some((part) => part.length > 3 && lower.includes(part)));
+  return [...new Set(matched.length > 0 ? matched : pool)].slice(0, 6);
+}
+
+function selectTruthBullets(truth: TruthBlocks, haystack: string): string[] {
+  const lower = haystack.toLowerCase();
+  const allBullets = (truth.employment || []).flatMap((job) => job.bullets || []);
+  const matched = allBullets.filter((bullet) =>
+    bullet.toLowerCase().split(/[^a-z0-9]+/).some((part) => part.length > 4 && lower.includes(part))
+  );
+  return [...new Set(matched.length > 0 ? matched : allBullets)].slice(0, 6);
 }
 
 function cleanText(value: string): string {

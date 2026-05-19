@@ -155,10 +155,15 @@ describe("hunt flow", () => {
 
     const packaged = generatePackages(db);
     const drafts = generateOutreachDrafts(db);
+    const pkg = db.prepare("SELECT resume_text, cover_letter_text FROM hunt_packages LIMIT 1").get() as any;
     const waiting = db.prepare("SELECT body, status FROM hunt_outreach_drafts").all() as any[];
     const sendable = db.prepare("SELECT COUNT(*) as c FROM drafts WHERE approved=1 OR sent=1").get() as any;
 
     expect(packaged).toBe(1);
+    expect(pkg.resume_text).toContain("Selected truthful experience bullets");
+    expect(pkg.resume_text).toContain("Aligned skills");
+    expect(pkg.cover_letter_text).toContain("Dear Hiring Team");
+    expect(pkg.cover_letter_text).not.toMatch(/U\.?S\.? citizen|Green Card|permanent resident|security clearance/i);
     expect(drafts).toBe(4);
     expect(waiting.every((draft) => draft.status === "waiting")).toBe(true);
     expect(waiting.every((draft) => draft.body.split(/\s+/).length <= 120)).toBe(true);
