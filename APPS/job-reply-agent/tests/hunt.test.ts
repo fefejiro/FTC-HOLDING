@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getDb } from "../src/db.js";
 import {
+  buildHuntReport,
   generateOutreachDrafts,
   generatePackages,
   ingestGmailJobAlerts,
@@ -36,7 +37,7 @@ function gmailMessage(overrides: Partial<RecruiterMessage> = {}): RecruiterMessa
 describe("hunt flow", () => {
   it("manual job ingestion parser extracts core fields and review flags", () => {
     const parsed = parseManualJobText([
-      "Title: Senior TypeScript Engineer",
+      "\uFEFFTitle: Senior TypeScript Engineer",
       "Company: Acme",
       "Location: Toronto",
       "Source URL: https://example.com/jobs/1",
@@ -50,6 +51,7 @@ describe("hunt flow", () => {
     ].join("\n"));
 
     expect(parsed.title).toContain("TypeScript");
+    expect(parsed.title).not.toContain("Title:");
     expect(parsed.company).toBe("Acme");
     expect(parsed.source).toBe("lever");
     expect(parsed.work_mode).toBe("remote");
@@ -58,6 +60,33 @@ describe("hunt flow", () => {
     expect(JSON.parse(parsed.preferred_skills)).toContain("React");
     expect(parsed.salary_or_rate).toContain("130k");
     expect(parsed.needs_review).toBe(1);
+  });
+
+  it("manual happy path can score, package, draft outreach, and report next action", () => {
+    const db = getDb(":memory:");
+    insertHuntJob(db, parseManualJobText([
+      "Title: Senior Workflow Engineer",
+      "Company: Northstar",
+      "Location: Toronto Remote",
+      "Apply URL: https://jobs.lever.co/northstar/workflow",
+      "Description: Remote full-time role building TypeScript, Node, React, CRM automation, and AI workflow tools.",
+      "Required Skills:",
+      "- TypeScript",
+      "- Node",
+      "- React",
+      "- CRM automation",
+      "Preferred Skills:",
+      "- Salesforce"
+    ].join("\n")));
+
+    expect(scoreJobs(db)).toBe(1);
+    expect(generatePackages(db)).toBe(1);
+    expect(generateOutreachDrafts(db)).toBe(4);
+
+    const report = JSON.parse(buildHuntReport(db));
+    expect(report.package_generated).toBe(1);
+    expect(report.outreach_drafts_waiting).toBe(4);
+    expect(report.recommended_next_action).toBe("review_outreach_drafts");
   });
 
   it("identifies and parses Gmail job alerts without sending anything", () => {
