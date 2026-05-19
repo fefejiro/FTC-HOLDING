@@ -62,20 +62,21 @@ const SOURCE_HOSTS: Array<[RegExp, HuntSource]> = [
 ];
 
 export function parseManualJobText(content: string): NormalizedHuntJob {
-  const sourceUrl = getLabel(content, "Source URL");
-  const applyUrl = getLabel(content, "Apply URL") || extractUrls(content).find(isKnownJobUrl) || sourceUrl;
+  const normalizedContent = stripByteOrderMark(content);
+  const sourceUrl = getLabel(normalizedContent, "Source URL");
+  const applyUrl = getLabel(normalizedContent, "Apply URL") || extractUrls(normalizedContent).find(isKnownJobUrl) || sourceUrl;
   return normalizeHuntJob({
-    title: getLabel(content, "Title") || guessTitle(content),
-    company: getLabel(content, "Company") || getLabel(content, "Employer") || guessCompany(content),
-    location: getLabel(content, "Location"),
-    source: normalizeSourceName(getLabel(content, "Source") || applyUrl || sourceUrl || "manual"),
+    title: getLabel(normalizedContent, "Title") || guessTitle(normalizedContent),
+    company: getLabel(normalizedContent, "Company") || getLabel(normalizedContent, "Employer") || guessCompany(normalizedContent),
+    location: getLabel(normalizedContent, "Location"),
+    source: normalizeSourceName(getLabel(normalizedContent, "Source") || applyUrl || sourceUrl || "manual"),
     source_url: sourceUrl,
     apply_url: applyUrl,
-    description: getLabelBlock(content, "Description") || content.trim(),
-    required_skills: extractSkills(content, /required(?: skills| qualifications)?:([\s\S]*?)(?:preferred(?: skills| qualifications)?:|benefits?:|salary:|$)/i),
-    preferred_skills: extractSkills(content, /preferred(?: skills| qualifications)?:([\s\S]*?)(?:benefits?:|salary:|$)/i),
-    work_authorization_language: extractLine(content, /(work authorization|visa|sponsorship)[^\n]*/i),
-    salary_or_rate: extractSalary(content)
+    description: getLabelBlock(normalizedContent, "Description") || normalizedContent.trim(),
+    required_skills: extractSkills(normalizedContent, /required(?: skills| qualifications)?:([\s\S]*?)(?:preferred(?: skills| qualifications)?:|benefits?:|salary:|$)/i),
+    preferred_skills: extractSkills(normalizedContent, /preferred(?: skills| qualifications)?:([\s\S]*?)(?:benefits?:|salary:|$)/i),
+    work_authorization_language: extractLine(normalizedContent, /(work authorization|visa|sponsorship)[^\n]*/i),
+    salary_or_rate: extractSalary(normalizedContent)
   });
 }
 
@@ -350,6 +351,10 @@ function sanitizeDraft(body: string): string {
 
 function cleanText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function stripByteOrderMark(value: string): string {
+  return value.replace(/^\uFEFF/, "");
 }
 
 function parseJsonArray(value: string): string[] {
