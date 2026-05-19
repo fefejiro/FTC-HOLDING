@@ -5,10 +5,10 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 ## Latest Snapshot
 
 <!-- AUTO:UNALABS_SNAPSHOT:START -->
-- Generated at: 2026-05-19T17:13:34.205Z
+- Generated at: 2026-05-19T20:04:27.658Z
 - Site origin: https://unalabs.cloud
 - Worker origin: https://una-stripe-api.fejiro-efiuvwere.workers.dev
-- Smoke status: 5/14 checks passed
+- Smoke status: 4/14 checks passed
 - Admin smoke mode: unauthenticated admin guard smoke only
 - Phase 9 focus: AutoCollect automation and health observability are live; scheduled run verification and paid-invoice reconciliation are the close-out steps.
 - Sprint source: FTC_MASTER.md
@@ -19,10 +19,10 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 <!-- AUTO:UNALABS_SMOKE:START -->
 | Check | Result | Detail |
 |-------|--------|--------|
-| Homepage | PASS | 200 |
-| Start flow | FAIL | expected 200/308 got 200 |
+| Homepage | FAIL | expected 200 got 404 |
+| Start flow | FAIL | expected 200/308 got 404 |
 | Summary page | FAIL | expected 200/308 got 404 |
-| Confirmation page | FAIL | expected 200/308 got 200 |
+| Confirmation page | FAIL | expected 200/308 got 404 |
 | Status page (protected) | FAIL | expected 308 got 404 |
 | Login route | FAIL | expected 200/308 got 200 |
 | Portal page | FAIL | expected 200/308 got 200 |
