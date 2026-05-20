@@ -5,12 +5,12 @@ export async function GET() {
   const response: PlatformStatusResponse = {
     ok: true,
     service: 'anion-web',
-    phase: 'phase1-call-closure-failed-auth-blocked',
+    phase: 'phase1-auth-blocked-missing-supabase-env',
     release: '0.2.7',
     runtime: {
       web: 'live',
       health: 'ok',
-      authAndRoles: 'blocked-invalid-credentials',
+      authAndRoles: 'blocked-missing-supabase-public-env',
       bookings: 'implemented-not-auth-verified',
       billing: 'ready-with-external-keys',
       liveClassroom: 'implemented-not-auth-verified',
@@ -20,6 +20,7 @@ export async function GET() {
       externalConfig: [
         'stripe_live_keys',
         'daily_api_key',
+        'supabase_public_env_vars',
         'supabase_auth_allow_list',
         'confirmed_phase1_test_credentials',
       ],

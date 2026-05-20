@@ -3,8 +3,8 @@
   "name": "Anion Class App",
   "updatedAt": "2026-05-20T00:00:00.000Z",
   "overall": "yellow",
-  "stage": "phase1-auth-blocked-live-runtime",
-  "summary": "Anion is live on Cloudflare with Google-only login, but it is not yet production-ready. External Stripe/Daily/Supabase config remains incomplete, authenticated Phase 1 evidence is still blocked, and legal/monitoring sign-off is still open.",
+  "stage": "phase1-auth-blocked-missing-supabase-env",
+  "summary": "Anion is live on Cloudflare with Google-only login, but it is not yet production-ready. The immediate auth blocker is missing public Supabase environment configuration in production, alongside incomplete Stripe/Daily setup, blocked authenticated evidence, and open legal/monitoring sign-off.",
   "metrics": [
     {
       "label": "Docs",
@@ -15,7 +15,7 @@
     {
       "label": "Web Lane",
       "value": "live-but-blocked",
-      "detail": "Core surfaces are deployed live, but auth/roles, bookings, and classroom flows are not yet fully re-verified with confirmed production credentials after the Google-only auth switch.",
+      "detail": "Core surfaces are deployed live, but the current production login path is blocked because the public Supabase auth env vars are not available to the browser runtime, and auth/roles, bookings, and classroom flows are not yet re-verified after the Google-only auth switch.",
       "status": "yellow"
     },
     {
@@ -27,7 +27,7 @@
     {
       "label": "Live Runtime",
       "value": "live-runtime-blocked",
-      "detail": "Cloudflare deployment is live, but Stripe live keys, Daily API config, Supabase auth allow-list confirmation, and authenticated Phase 1 verification are still blocking full production sign-off.",
+      "detail": "Cloudflare deployment is live, but `NEXT_PUBLIC_SUPABASE_URL` and/or `NEXT_PUBLIC_SUPABASE_ANON_KEY` are currently missing in the browser runtime, and Stripe live keys, Daily API config, Supabase auth allow-list confirmation, and authenticated Phase 1 verification are still blocking full production sign-off.",
       "status": "yellow"
     },
     {
@@ -98,7 +98,8 @@
     "terms": "APPS/anion/docs/TERMS.md"
   },
   "nextActions": [
-    "Complete PRODUCTION-READINESS.md external blocker checklist — configure Stripe live keys, Daily API key/domain, Supabase domain allow-list, and confirm Cloudflare env vars/secrets.",
+    "Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` correctly in the Anion Cloudflare production environment, then re-test Google sign-in.",
+    "Complete the remaining PRODUCTION-READINESS.md external blocker checklist — configure Stripe live keys, Daily API key/domain, Supabase domain allow-list, and confirm Cloudflare env vars/secrets.",
     "Run a new authenticated Phase 1 evidence pass for parent, tutor, and admin using the Google-only auth flow and update the production closure artifact.",
     "Obtain legal review and sign-off on docs/PRIVACY.md and docs/TERMS.md before publishing to users.",
     "Configure uptime monitor for /api/health endpoint (see MONITORING-ALERTS.md §Setup Guide).",
