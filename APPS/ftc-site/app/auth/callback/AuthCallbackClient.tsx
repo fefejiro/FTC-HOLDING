@@ -17,6 +17,7 @@ function readAuthError(searchParams: URLSearchParams): string {
 export default function AuthCallbackClient() {
   const [state, setState] = useState<CallbackState>("loading");
   const [message, setMessage] = useState("Finalizing your sign-in...");
+  const [envNotConfigured, setEnvNotConfigured] = useState(false);
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
   const hasProcessedRef = useRef(false);
@@ -40,6 +41,7 @@ export default function AuthCallbackClient() {
     const authError = readAuthError(query);
     if (authError) {
       setState("error");
+      setEnvNotConfigured(false);
       setMessage(authError);
       return;
     }
@@ -111,6 +113,7 @@ export default function AuthCallbackClient() {
     const timeoutId = window.setTimeout(() => {
       if (!active) return;
       setState("error");
+      setEnvNotConfigured(false);
       setMessage("We could not finish sign-in automatically. Use one of the links below to continue.");
     }, 8000);
 
@@ -143,8 +146,10 @@ export default function AuthCallbackClient() {
       } catch (err) {
         if (!active) return;
         setState("error");
+        setEnvNotConfigured(false);
         const baseMessage = err instanceof Error ? err.message : "Unable to finish sign-in.";
         if (/Public Supabase (URL|anon key) is required/i.test(baseMessage)) {
+          setEnvNotConfigured(true);
           setMessage("Portal sign-in is not configured for this deployment yet. Please contact support or return to the portal.");
           return;
         }
@@ -172,32 +177,45 @@ export default function AuthCallbackClient() {
         {state === "error" ? (
           <article className="card" style={{ padding: 24 }}>
             <div className="hero-actions">
-              <Link
-                href={getAdminDashboardUrl(
-                  resolveProductContext({
-                    host: typeof window !== "undefined" ? window.location.host : "",
-                    pathname: "/auth/callback",
-                    search: typeof window !== "undefined" ? window.location.search : "",
-                    productHint: searchParams.get("product"),
-                    returnTo: searchParams.get("returnTo")
-                  }),
-                  typeof window !== "undefined" ? window.location.origin : undefined
-                )}
-                className="btn btn-primary"
-              >
-                Open admin dashboard
-              </Link>
-              <Link
-                href={getPostLoginDestination(null, typeof window !== "undefined" ? window.location.origin : "", {
-                  pathname: "/auth/callback",
-                  search: typeof window !== "undefined" ? window.location.search : "",
-                  productHint: searchParams.get("product"),
-                  returnTo: searchParams.get("returnTo")
-                })}
-                className="btn btn-secondary"
-              >
-                Open workspace
-              </Link>
+              {envNotConfigured ? (
+                <>
+                  <Link href="/portal#portal-access" className="btn btn-primary">
+                    Open portal
+                  </Link>
+                  <Link href="/contact" className="btn btn-secondary">
+                    Contact support
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href={getAdminDashboardUrl(
+                      resolveProductContext({
+                        host: typeof window !== "undefined" ? window.location.host : "",
+                        pathname: "/auth/callback",
+                        search: typeof window !== "undefined" ? window.location.search : "",
+                        productHint: searchParams.get("product"),
+                        returnTo: searchParams.get("returnTo")
+                      }),
+                      typeof window !== "undefined" ? window.location.origin : undefined
+                    )}
+                    className="btn btn-primary"
+                  >
+                    Open admin dashboard
+                  </Link>
+                  <Link
+                    href={getPostLoginDestination(null, typeof window !== "undefined" ? window.location.origin : "", {
+                      pathname: "/auth/callback",
+                      search: typeof window !== "undefined" ? window.location.search : "",
+                      productHint: searchParams.get("product"),
+                      returnTo: searchParams.get("returnTo")
+                    })}
+                    className="btn btn-secondary"
+                  >
+                    Open workspace
+                  </Link>
+                </>
+              )}
             </div>
           </article>
         ) : null}
