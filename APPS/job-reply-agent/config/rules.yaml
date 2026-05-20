@@ -5,10 +5,10 @@ automation:
   max_drafts_per_day: 50
   max_sends_per_day: 50
   schedule:
-    business_hours_start: 8
-    business_hours_end: 21
-    business_hours_interval_minutes: 15
-    after_hours_interval_minutes: 60
+    business_hours_start: 7
+    business_hours_end: 22
+    business_hours_interval_minutes: 60
+    after_hours_interval_minutes: 240
     quiet_hours_start: 23
     quiet_hours_end: 7
     no_auto_send_weekdays: []
@@ -48,12 +48,23 @@ risk_controls:
     - exclusive representation
     - urgent share details
     - salary expectation
-    - work authorization
-    - u.s. onsite
-    - relocation
-    - clearance required
-    - u.s. citizenship required
-    - green card required
+
+scraper:
+  enabled: true
+  dice:
+    enabled: true
+    keywords:
+      - enterprise architect
+      - technical program manager
+      - business systems analyst
+    max_jobs_per_run: 25
+  indeed:
+    enabled: true
+    keywords:
+      - enterprise architect
+      - technical program manager
+      - business systems analyst
+    max_jobs_per_run: 25
 
 trusted_recruiter_domains:
   - example-recruiter.com

@@ -78,6 +78,31 @@ secrets/
 
 # Job agent runtime/generated artifacts
 APPS/job-reply-agent/data/*.sqlite-shm
+APPS/job-reply-agent/data/*.db
+APPS/job-reply-agent/data/*.sqlite
+APPS/job-reply-agent/data/gmail_tokens*.json
+APPS/job-reply-agent/data/playwright-profile/
+APPS/job-reply-agent/client_secret_*.json
+APPS/job-reply-agent/config/application_answers.yaml
+APPS/job-reply-agent/scripts/apply-*.ts
+APPS/job-reply-agent/scripts/check-*.ts
+APPS/job-reply-agent/scripts/dice-*.ts
+APPS/job-reply-agent/scripts/force-*.ts
+APPS/job-reply-agent/scripts/launch-*.bat
+APPS/job-reply-agent/scripts/probe-*.ts
+APPS/job-reply-agent/scripts/promote-*.ts
+APPS/job-reply-agent/scripts/run-*.cmd
+APPS/job-reply-agent/scripts/test-*.ts
+APPS/job-reply-agent/src/automation.ts
+APPS/job-reply-agent/src/hunt/
+APPS/job-reply-agent/tests/automation.test.ts
+
+# Generated resume bank (compiled from agent)
+DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/
+
+# Local dev mounts / artifacts
+APPS/fefejiro
+_pushfix/
 APPS/job-reply-agent/data/*.sqlite-wal
 APPS/job-reply-agent/resumes/CoverLetter_*.txt
 APPS/job-reply-agent/resumes/*_Tailored.docx

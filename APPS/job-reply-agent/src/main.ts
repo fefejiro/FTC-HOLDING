@@ -1,5 +1,4 @@
 import { format } from "date-fns";
-import { pathToFileURL } from "node:url";
 import { loadConfig } from "./config.js";
 import { getDb, resetDb } from "./db.js";
 import { sendEmail } from "./email_sender.js";
@@ -23,41 +22,44 @@ import {
 } from "./processor.js";
 import { buildDailyReport, renderDailyReport } from "./reporter.js";
 import { seedSampleData } from "./seed.js";
-import { buildHuntReport, generateOutreachDrafts, generatePackages, ingestGmailJobAlerts, ingestManualJob, isJobAlertEmail, scoreJobs } from "./hunt.js";
+import { isHuntCommand, runHuntCommand } from "./hunt/cli.js";
 
 function parseDateArg(argv: string[]): string | undefined {
-  const flag = argv.find((item) => item.startsWith("--date="));
-  if (!flag) return undefined;
-  return flag.split("=")[1];
+  return parseOptionArg(argv, "date");
 }
 
-function parseArg(argv: string[], name: string): string | undefined {
+function parseOptionArg(argv: string[], name: string): string | undefined {
   const prefix = `--${name}=`;
-  const equalsForm = argv.find((item) => item.startsWith(prefix));
-  if (equalsForm) return equalsForm.slice(prefix.length);
+  const index = argv.findIndex((item) => item === `--${name}` || item.startsWith(prefix));
+  if (index === -1) return undefined;
 
-  const separateFlagIndex = argv.findIndex((item) => item === `--${name}`);
-  if (separateFlagIndex === -1) return undefined;
+  const found = argv[index];
+  if (found.startsWith(prefix)) {
+    return found.slice(prefix.length);
+  }
 
-  const value = argv[separateFlagIndex + 1];
-  return value && !value.startsWith("--") ? value : undefined;
+  const next = argv[index + 1];
+  if (!next || next.startsWith("--")) return undefined;
+  return next;
 }
 
 export function parseCommandArgs(argv: string[]): {
   command: string | undefined;
   dateArg: string | undefined;
   codeArg: string | undefined;
-  limitArg: number | undefined;
   fileArg: string | undefined;
+  limitArg: number | undefined;
+  sourceArg: string | undefined;
 } {
-  const limitRaw = parseArg(argv, "limit");
+  const limitRaw = parseOptionArg(argv, "limit");
   const limitArg = limitRaw && /^\d+$/.test(limitRaw) ? Number(limitRaw) : undefined;
   return {
     command: argv[2],
     dateArg: parseDateArg(argv),
-    codeArg: parseArg(argv, "code"),
+    codeArg: parseOptionArg(argv, "code"),
+    fileArg: parseOptionArg(argv, "file"),
     limitArg,
-    fileArg: parseArg(argv, "file")
+    sourceArg: parseOptionArg(argv, "source")
   };
 }
 
@@ -65,14 +67,16 @@ export async function runCommand(args: {
   command?: string;
   dateArg?: string;
   codeArg?: string;
-  limitArg?: number;
   fileArg?: string;
+  limitArg?: number;
+  sourceArg?: string;
 }): Promise<void> {
   const command = args.command;
   const dateArg = args.dateArg;
   const codeArg = args.codeArg;
-  const limitArg = args.limitArg;
   const fileArg = args.fileArg;
+  const limitArg = args.limitArg;
+  const sourceArg = args.sourceArg;
   const reportDate = dateArg || format(new Date(), "yyyy-MM-dd");
 
   if (command === "db:reset") {
@@ -83,6 +87,11 @@ export async function runCommand(args: {
 
   const cfg = loadConfig();
   const db = getDb();
+
+  if (isHuntCommand(command)) {
+    await runHuntCommand({ command, db, limitArg, dateArg, sourceArg, fileArg });
+    return;
+  }
 
   if (command === "gmail:auth:url") {
     const url = getGmailConsentUrl(cfg.env);
@@ -158,14 +167,12 @@ export async function runCommand(args: {
       return;
     }
 
-    const huntAlerts = ingestGmailJobAlerts(db, inbox);
-    const recruiterMessages = inbox.filter((message) => !isJobAlertEmail(message));
     const outcome = await processGmailInbox({
       db,
       profile: cfg.profile,
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
-      messages: recruiterMessages,
+      messages: inbox,
       includeTnLine: true,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
@@ -185,7 +192,7 @@ export async function runCommand(args: {
         })
     });
 
-    logger.info({ huntAlerts, outcome }, "process:gmail completed.");
+    logger.info({ outcome }, "process:gmail completed.");
     return;
   }
 
@@ -274,14 +281,12 @@ export async function runCommand(args: {
       cfg.rules.automation.max_drafts_per_day
     );
 
-    const huntAlerts = ingestGmailJobAlerts(db, inbox);
-    const recruiterMessages = inbox.filter((message) => !isJobAlertEmail(message));
     const processOutcome = await processGmailInbox({
       db,
       profile: cfg.profile,
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
-      messages: recruiterMessages,
+      messages: inbox,
       includeTnLine: true,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
@@ -322,33 +327,7 @@ export async function runCommand(args: {
       }
     }
 
-    logger.info({ huntAlerts, processOutcome, sent }, "run:gmail-cycle completed (only pre-approved drafts sent).");
-    return;
-  }
-
-
-  if (command === "hunt:ingest") {
-    if (!fileArg) { logger.error("Missing --file path."); return; }
-    const id = ingestManualJob(db, fileArg);
-    logger.info({ id }, "hunt:ingest completed.");
-    return;
-  }
-
-  if (command === "hunt:score") {
-    const scored = scoreJobs(db);
-    logger.info({ scored }, "hunt:score completed.");
-    return;
-  }
-
-  if (command === "hunt:package") {
-    const packaged = generatePackages(db);
-    const outreachDrafts = generateOutreachDrafts(db);
-    logger.info({ packaged, outreachDrafts }, "hunt:package completed.");
-    return;
-  }
-
-  if (command === "hunt:report") {
-    logger.info(`\n${buildHuntReport(db)}`);
+    logger.info({ processOutcome, sent }, "run:gmail-cycle completed (only pre-approved drafts sent).");
     return;
   }
 
@@ -398,18 +377,16 @@ export async function runCommand(args: {
   }
 
   logger.info(
-    "No command supplied. Use one of: gmail:auth:url, gmail:auth:save --code=..., db:reset, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, report:daily."
+    "No command supplied. Use one of: gmail:auth:url, gmail:auth:save --code=..., db:reset, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, report:daily, hunt:ingest, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export."
   );
 }
 
 async function run(): Promise<void> {
   const parsed = parseCommandArgs(process.argv);
-  await runCommand(parsed as any);
+  await runCommand(parsed);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  run().catch((error) => {
-    logger.error({ err: error }, "Fatal error in main.");
-    process.exit(1);
-  });
-}
+run().catch((error) => {
+  logger.error({ err: error }, "Fatal error in main.");
+  process.exit(1);
+});

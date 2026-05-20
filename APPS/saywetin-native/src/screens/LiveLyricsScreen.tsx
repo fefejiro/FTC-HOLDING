@@ -8,12 +8,32 @@ import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
 
+function firstSentence(input: string | null | undefined, maxChars = 140): string {
+  if (!input) return '';
+  const collapsed = input.replace(/\s+/g, ' ').trim();
+  if (!collapsed) return '';
+  const match = collapsed.match(/[^.!?]+[.!?]/);
+  const candidate = (match ? match[0] : collapsed).trim();
+  if (candidate.length <= maxChars) return candidate;
+  return candidate.slice(0, maxChars - 1).trimEnd() + '…';
+}
+
+function shortVibeTag(input: string | null | undefined, maxChars = 32): string {
+  if (!input) return '';
+  const collapsed = input.replace(/\s+/g, ' ').trim();
+  if (!collapsed) return '';
+  const candidate = collapsed.split(/[.,;:·]/)[0].trim();
+  if (candidate.length <= maxChars) return candidate;
+  return candidate.slice(0, maxChars - 1).trimEnd() + '…';
+}
+
 type LiveLyricsScreenProps = {
   track: RitualTrack;
   onBack: () => void;
 };
 
-type ContextTab = 'meaning' | 'slang' | 'vibe' | 'culture' | 'reply';
+// ContextTab inline UI removed: live lyrics now shows a compact preview that
+// opens the full TapExplainSheet on tap.
 
 export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
   // Initialize timing references at component mount time for accuracy
@@ -25,6 +45,13 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     track.audioSampleMidpointAtMs ?? track.sampleCapturedAtMs ?? effectiveResultShownAtMs;
   const effectiveMatchedOffsetMs =
     track.matchedSongOffsetMs ?? track.providerSongOffsetMs ?? track.lyricsAnchorOffsetMs ?? 0;
+
+  // A "real anchor" means we trust that matchedSongOffsetMs reflects where in
+  // the song the captured audio actually was. Without that we should not pin
+  // playback to 0:01 — we should tell the user timing is unavailable instead.
+  const hasReliableTiming =
+    typeof track.matchedSongOffsetMs === 'number' && track.matchedSongOffsetMs >= 0 &&
+    typeof track.audioSampleMidpointAtMs === 'number' && track.audioSampleMidpointAtMs > 0;
 
   const derivedDisplaySongOffsetMs = Math.max(
     0,
@@ -45,7 +72,6 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
   const [syncWarn, setSyncWarn] = useState(false);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [selectedLine, setSelectedLine] = useState<SyncedLyricLine | null>(null);
-  const [contextTab, setContextTab] = useState<ContextTab>('meaning');
   const [manualOffsetMs, setManualOffsetMs] = useState(0);
   const [lineMeaningCache, setLineMeaningCache] = useState<Record<string, SyncedLyricLine>>({});
   const [lineLoadingById, setLineLoadingById] = useState<Record<string, boolean>>({});
@@ -93,6 +119,14 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     };
   }, [track.id, track.displaySongOffsetMs]);
 
+  // If we have lyrics but no real timing anchor, do not pretend playback is at
+  // 0:01 — surface the unavailable banner instead.
+  useEffect(() => {
+    if (lyrics.length > 0 && !hasReliableTiming) {
+      setFallbackReason((prev) => prev ?? 'notiming');
+    }
+  }, [lyrics.length, hasReliableTiming]);
+
   useEffect(() => {
     let frame = 0;
 
@@ -135,6 +169,8 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
 
   const activeLine = lyrics[currentLineIndex] ?? null;
 
+  const initialScrollDoneRef = useRef(false);
+
   useEffect(() => {
     if (!scrollRef.current || currentLineIndex <= 0) {
       return;
@@ -144,7 +180,12 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
     for (let i = 0; i < currentLineIndex; i += 1) {
       offset += lineHeights.current[i] ?? 80;
     }
-    scrollRef.current.scrollTo({ y: Math.max(0, offset - 160), animated: true });
+    const targetY = Math.max(0, offset - 160);
+    // First scroll: jump without animation so the top of lyrics never flashes
+    // before we land on the active line. Subsequent scrolls animate.
+    const animated = initialScrollDoneRef.current;
+    scrollRef.current.scrollTo({ y: targetY, animated });
+    initialScrollDoneRef.current = true;
   }, [currentLineIndex]);
 
   const hydrateLineMeaning = async (line: SyncedLyricLine): Promise<SyncedLyricLine> => {
@@ -300,10 +341,7 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
           return (
             <Pressable
               key={line.id}
-              onPress={() => {
-                openExplain(line, originalIndex);
-                setContextTab('meaning');
-              }}
+              onPress={() => openExplain(line, originalIndex)}
               onLayout={(event) => {
                 lineHeights.current[originalIndex] = event.nativeEvent.layout.height;
               }}
@@ -311,44 +349,25 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
             >
               <Text style={[styles.lineText, { opacity, fontSize, lineHeight: fontSize * 1.35 }]}>{line.text}</Text>
 
-              {active && activeLine?.meaning ? (
-                <View style={styles.contextCard}>
-                  <View style={styles.contextTabRow}>
-                    {(['meaning', 'slang', 'vibe', 'culture', 'reply'] as const).map((tabKey) => (
-                      <Pressable
-                        key={tabKey}
-                        style={[styles.contextTab, contextTab === tabKey && styles.contextTabActive]}
-                        onPress={() => setContextTab(tabKey)}
-                      >
-                        <Text style={[styles.contextTabText, contextTab === tabKey && styles.contextTabTextActive]}>
-                          {tabKey === 'meaning'
-                            ? 'Meaning'
-                            : tabKey === 'slang'
-                              ? 'Slang'
-                              : tabKey === 'vibe'
-                                ? 'Vibe'
-                                : tabKey === 'culture'
-                                  ? 'Culture'
-                                  : 'Reply'}
+              {active ? (
+                <Pressable
+                  style={styles.contextPreview}
+                  onPress={() => openExplain(line, originalIndex)}
+                >
+                  <View style={styles.contextPreviewBody}>
+                    <Text style={styles.contextPreviewMeaning} numberOfLines={2}>
+                      {firstSentence(activeLine?.meaning) || 'Tap Explain for meaning, slang, vibe, and culture.'}
+                    </Text>
+                    {shortVibeTag(activeLine?.vibe) ? (
+                      <View style={styles.contextVibeChip}>
+                        <Text style={styles.contextVibeChipText} numberOfLines={1}>
+                          {shortVibeTag(activeLine?.vibe)}
                         </Text>
-                      </Pressable>
-                    ))}
+                      </View>
+                    ) : null}
                   </View>
-
-                  <Text style={styles.contextBody}>
-                    {contextTab === 'meaning'
-                      ? activeLine.meaning
-                      : contextTab === 'slang'
-                        ? activeLine.alternates.length > 0
-                          ? activeLine.alternates.join(' · ')
-                          : 'No slang notes yet.'
-                        : contextTab === 'vibe'
-                          ? activeLine.vibe || 'Vibe note not available yet.'
-                          : contextTab === 'culture'
-                            ? activeLine.culture || (activeLine.related.length > 0 ? activeLine.related.join(' · ') : 'No culture note yet.')
-                            : activeLine.reply || activeLine.artistIntent || 'No reply cue yet.'}
-                  </Text>
-                </View>
+                  <Text style={styles.contextPreviewCta}>Tap Explain →</Text>
+                </Pressable>
               ) : null}
             </Pressable>
           );
@@ -518,6 +537,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     padding: 12,
+  },
+  contextPreview: {
+    marginTop: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+    backgroundColor: 'rgba(90,55,180,0.16)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  contextPreviewBody: {
+    flex: 1,
+    gap: 6,
+  },
+  contextPreviewMeaning: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  contextVibeChip: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: 'rgba(139,124,246,0.22)',
+    borderWidth: 1,
+    borderColor: colors.violetEdge,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  contextVibeChipText: {
+    color: colors.violetSoft,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  contextPreviewCta: {
+    color: colors.violetSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   footer: {
     paddingHorizontal: 28,

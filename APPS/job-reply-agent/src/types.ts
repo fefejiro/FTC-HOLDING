@@ -158,6 +158,19 @@ export interface RulesConfig {
       no_sensitive_requests?: boolean;
     };
   };
+  scraper?: {
+    enabled: boolean;
+    dice?: {
+      enabled: boolean;
+      keywords: string[];
+      max_jobs_per_run: number;
+    };
+    indeed?: {
+      enabled: boolean;
+      keywords: string[];
+      max_jobs_per_run: number;
+    };
+  };
 }
 
 export interface ResumeMapConfig {
@@ -167,4 +180,30 @@ export interface ResumeMapConfig {
     keywords: string[];
     resume: string;
   }>;
+}
+
+export interface ApplicationAnswersConfig {
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  linkedin_url?: string;
+  github_url?: string;
+  portfolio_url?: string;
+  city?: string;
+  location?: string;
+  current_title?: string;
+  current_company?: string;
+  work_authorization_text?: string;
+  relocation_preference?: string;
+  salary_expectation?: string;
+  preferred_role_types?: string[];
+  defaults?: {
+    portfolio_url?: string;
+  };
+  eeo?: {
+    gender?: string;
+    veteran_status?: string;
+    disability_status?: string;
+    ethnicity?: string;
+  };
 }

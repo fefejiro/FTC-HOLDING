@@ -1,50 +1,20 @@
-name: Job Reply Agent
+name: Job Reply — Gmail Cycle
 
 on:
-  pull_request:
-    branches: [ "main" ]
-    paths:
-      - "APPS/job-reply-agent/**"
-      - ".github/workflows/job-reply-agent.yml"
-  push:
-    branches: [ "main" ]
-    paths:
-      - "APPS/job-reply-agent/**"
-      - ".github/workflows/job-reply-agent.yml"
   schedule:
-    # Hourly, all days. Runs in GitHub-hosted cloud even when laptop is offline.
-    - cron: "0 * * * *"
+    # Every 15 min, Mon–Fri, 8 AM – 9 PM EST (13:00–02:00 UTC)
+    - cron: "*/15 13-23 * * 1-5"
+    - cron: "*/15 0-2 * * 2-6"
   workflow_dispatch: {}
 
+defaults:
+  run:
+    working-directory: APPS/job-reply-agent
+
 jobs:
-  build-test:
-    name: Build and test
+  gmail-cycle:
+    name: Gmail Cycle
     runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: APPS/job-reply-agent/package-lock.json
-
-      - name: Install dependencies
-        run: npm --prefix APPS/job-reply-agent ci
-
-      - name: Build
-        run: npm --prefix APPS/job-reply-agent run build
-
-      - name: Test
-        run: npm --prefix APPS/job-reply-agent test
-
-  hourly-hunt-cycle:
-    name: Hourly Hunt Cycle
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout
@@ -70,79 +40,40 @@ jobs:
             job-agent-db-
 
       - name: Install dependencies
-        run: npm --prefix APPS/job-reply-agent ci
+        run: npm ci
 
       - name: Build
-        run: npm --prefix APPS/job-reply-agent run build
-
-      - name: Gmail secrets preflight
-        id: gmail_preflight
-        env:
-          TOKENS_JSON: ${{ secrets.JOB_AGENT_GMAIL_TOKENS_JSON }}
-          CLIENT_ID: ${{ secrets.JOB_AGENT_GMAIL_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.JOB_AGENT_GMAIL_CLIENT_SECRET }}
-          ACCOUNT_EMAIL: ${{ secrets.JOB_AGENT_GMAIL_ACCOUNT_EMAIL }}
-        run: |
-          missing=()
-          [ -n "$TOKENS_JSON" ] || missing+=("JOB_AGENT_GMAIL_TOKENS_JSON")
-          [ -n "$CLIENT_ID" ] || missing+=("JOB_AGENT_GMAIL_CLIENT_ID")
-          [ -n "$CLIENT_SECRET" ] || missing+=("JOB_AGENT_GMAIL_CLIENT_SECRET")
-          [ -n "$ACCOUNT_EMAIL" ] || missing+=("JOB_AGENT_GMAIL_ACCOUNT_EMAIL")
-
-          if [ "${#missing[@]}" -gt 0 ]; then
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping scheduled Gmail cycle. Missing required secret(s): ${missing[*]}"
-            exit 0
-          fi
-
-          echo "ready=true" >> "$GITHUB_OUTPUT"
+        run: npm run build
 
       - name: Write Gmail tokens
-        if: steps.gmail_preflight.outputs.ready == 'true'
         env:
           TOKENS_JSON: ${{ secrets.JOB_AGENT_GMAIL_TOKENS_JSON }}
         run: |
-          mkdir -p APPS/job-reply-agent/data
-          printf '%s' "$TOKENS_JSON" > APPS/job-reply-agent/data/gmail_tokens.json
+          mkdir -p data
+          printf '%s' "$TOKENS_JSON" > data/gmail_tokens.json
 
       - name: Write .env
-        if: steps.gmail_preflight.outputs.ready == 'true'
         env:
           CLIENT_ID: ${{ secrets.JOB_AGENT_GMAIL_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.JOB_AGENT_GMAIL_CLIENT_SECRET }}
           ACCOUNT_EMAIL: ${{ secrets.JOB_AGENT_GMAIL_ACCOUNT_EMAIL }}
           REPORT_TO: ${{ secrets.JOB_AGENT_REPORT_TO }}
         run: |
-          printf 'GMAIL_AUTH_MODE=oauth\n' > APPS/job-reply-agent/.env
-          printf 'GMAIL_CLIENT_ID=%s\n' "$CLIENT_ID" >> APPS/job-reply-agent/.env
-          printf 'GMAIL_CLIENT_SECRET=%s\n' "$CLIENT_SECRET" >> APPS/job-reply-agent/.env
-          printf 'GMAIL_REDIRECT_URI=http://localhost\n' >> APPS/job-reply-agent/.env
-          printf 'GMAIL_TOKENS_PATH=./data/gmail_tokens.json\n' >> APPS/job-reply-agent/.env
-          printf 'GMAIL_ACCOUNT_EMAIL=%s\n' "$ACCOUNT_EMAIL" >> APPS/job-reply-agent/.env
-          printf 'REPORT_TO=%s\n' "$REPORT_TO" >> APPS/job-reply-agent/.env
-          printf 'AGENT_TZ=America/Toronto\n' >> APPS/job-reply-agent/.env
-          printf 'DAILY_REPORT_ENABLE_SEND=true\n' >> APPS/job-reply-agent/.env
+          printf 'GMAIL_AUTH_MODE=oauth\n' > .env
+          printf 'GMAIL_CLIENT_ID=%s\n' "$CLIENT_ID" >> .env
+          printf 'GMAIL_CLIENT_SECRET=%s\n' "$CLIENT_SECRET" >> .env
+          printf 'GMAIL_REDIRECT_URI=http://localhost:3007/oauth2callback\n' >> .env
+          printf 'GMAIL_TOKENS_PATH=./data/gmail_tokens.json\n' >> .env
+          printf 'GMAIL_ACCOUNT_EMAIL=%s\n' "$ACCOUNT_EMAIL" >> .env
+          printf 'REPORT_TO=%s\n' "$REPORT_TO" >> .env
+          printf 'AGENT_TZ=America/Toronto\n' >> .env
+          printf 'DAILY_REPORT_ENABLE_SEND=true\n' >> .env
 
-      - name: Run hourly hunt auto-run
-        if: steps.gmail_preflight.outputs.ready == 'true'
-        working-directory: APPS/job-reply-agent
-        run: |
-          if ! node dist/main.js hunt:auto-run; then
-            echo "::warning::Hourly hunt:auto-run did not complete. Most common cause is expired/revoked OAuth tokens or temporary browser/site protection issues."
-            exit 0
-          fi
-
-      - name: Send hourly report email
-        if: steps.gmail_preflight.outputs.ready == 'true'
-        working-directory: APPS/job-reply-agent
-        run: |
-          if ! node dist/main.js report:daily; then
-            echo "::warning::Hourly report send did not complete."
-            exit 0
-          fi
+      - name: Run Gmail cycle
+        run: node dist/main.js run:gmail-cycle
 
       - name: Save data cache
-        if: always() && steps.gmail_preflight.outputs.ready == 'true'
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: APPS/job-reply-agent/data/job_leads.sqlite

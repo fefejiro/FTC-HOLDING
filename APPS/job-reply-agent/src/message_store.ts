@@ -118,15 +118,23 @@ export function markDraftSent(db: Database.Database, messageId: string): boolean
 
 export function getApprovedPendingDrafts(db: Database.Database): Array<{
   message_id: string;
+  thread_id: string;
+  subject: string;
+  body: string;
+  resume_path: string;
   gmail_draft_id: string | null;
   recipient_email: string | null;
 }> {
   return db
     .prepare(
-      "SELECT message_id, gmail_draft_id, recipient_email FROM drafts WHERE approved = 1 AND sent = 0 ORDER BY id ASC"
+      "SELECT message_id, thread_id, subject, body, resume_path, gmail_draft_id, recipient_email FROM drafts WHERE approved = 1 AND sent = 0 ORDER BY id ASC"
     )
     .all() as Array<{
     message_id: string;
+    thread_id: string;
+    subject: string;
+    body: string;
+    resume_path: string;
     gmail_draft_id: string | null;
     recipient_email: string | null;
   }>;

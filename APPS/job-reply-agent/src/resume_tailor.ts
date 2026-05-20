@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import JSZip from "jszip";
-import { logger } from "./logger.js";
+import { logger } from "./logger";
 import type { ParsedOpportunity } from "./types.js";
 
 export interface TailorArgs {
