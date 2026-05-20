@@ -77,7 +77,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | 3.1 | `GET https://[domain]/api/health` | `200 { "ok": true }` | ✅ `https://anion.unalabs.cloud/api/health` returns 200 (2026-05-20) |
 | 3.2 | `GET https://[domain]/api/status` | `200` with status map | |
 | 3.3 | Homepage loads without error | Page renders, no console errors | |
-| 3.4 | Magic-link sign-in flow completes | Session established, redirects to role dashboard | |
+| 3.4 | Google sign-in flow completes | OAuth session established, redirects to role dashboard | |
 | 3.5 | Parent role redirected to `/parent` | Correct dashboard shown | |
 | 3.6 | Tutor role redirected to `/tutor` | Correct dashboard shown | |
 | 3.7 | Admin role can access `/admin` | Metrics visible | |

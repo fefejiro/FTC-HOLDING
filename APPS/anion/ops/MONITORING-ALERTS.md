@@ -31,9 +31,9 @@ This document defines the metrics, alert thresholds, routing, and ownership for 
 
 | Metric | Description | Alert Condition |
 |--------|-------------|----------------|
-| Magic-link delivery rate | % of OTP emails delivered | < 95% over 15 min |
-| Auth callback error rate | `/auth/callback` 4xx/5xx | > 5% in 5 min |
-| Session creation failures | Supabase auth errors | > 10 in 5 min |
+| Google OAuth redirect success rate | % of Google sign-in attempts that reach a valid session | < 95% over 15 min |
+| Auth callback error rate | `/auth/callback` 4xx/5xx after OAuth return | > 5% in 5 min |
+| Session creation failures | Supabase auth/session errors after Google sign-in | > 10 in 5 min |
 
 ### Bookings
 

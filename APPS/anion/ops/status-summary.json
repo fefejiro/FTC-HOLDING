@@ -1,10 +1,10 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-05-07T00:00:00.000Z",
-  "overall": "green",
-  "stage": "m1-m5-complete-client-handover",
-  "summary": "M1–M5 fully implemented and build-verified. Auth, bookings, Stripe billing, Daily.co live classroom, and admin dashboard are all production-ready. Awaiting client env var configuration before Cloudflare deployment.",
+  "updatedAt": "2026-05-20T00:00:00.000Z",
+  "overall": "yellow",
+  "stage": "phase1-auth-blocked-live-runtime",
+  "summary": "Anion is live on Cloudflare with Google-only login, but it is not yet production-ready. External Stripe/Daily/Supabase config remains incomplete, authenticated Phase 1 evidence is still blocked, and legal/monitoring sign-off is still open.",
   "metrics": [
     {
       "label": "Docs",
@@ -14,9 +14,9 @@
     },
     {
       "label": "Web Lane",
-      "value": "m5-complete",
-      "detail": "All five milestones implemented: auth, bookings, Stripe, Daily video, admin dashboard. Build passes.",
-      "status": "green"
+      "value": "live-but-blocked",
+      "detail": "Core surfaces are deployed live, but auth/roles, bookings, and classroom flows are not yet fully re-verified with confirmed production credentials after the Google-only auth switch.",
+      "status": "yellow"
     },
     {
       "label": "Database",
@@ -26,8 +26,8 @@
     },
     {
       "label": "Live Runtime",
-      "value": "pending-client-env-vars",
-      "detail": "Stripe and Daily keys are empty — client must complete PRODUCTION-READINESS.md external blocker checklist before deploying to Cloudflare Workers.",
+      "value": "live-runtime-blocked",
+      "detail": "Cloudflare deployment is live, but Stripe live keys, Daily API config, Supabase auth allow-list confirmation, and authenticated Phase 1 verification are still blocking full production sign-off.",
       "status": "yellow"
     },
     {
@@ -41,12 +41,12 @@
     {
       "name": "TypeScript",
       "status": "green",
-      "detail": "npx tsc --noEmit passes with zero errors."
+      "detail": "The primary Anion workspace has passed type-check/build previously, but the clean release worktree needs dependency install reconciliation before `npm run ci:check` is reproducible there."
     },
     {
       "name": "Next.js build",
       "status": "green",
-      "detail": "npm run build passes cleanly — 19/19 pages compiled."
+      "detail": "Current live deployment is healthy, but committed source required status/auth doc reconciliation and the clean release worktree has not yet reproduced a full passing `ci:check`."
     },
     {
       "name": "Git commits",
@@ -56,7 +56,7 @@
     {
       "name": "Client handover",
       "status": "green",
-      "detail": "ops/CLIENT-HANDOVER.md updated with external blocker checklist for Stripe, Daily, Supabase, and Cloudflare."
+      "detail": "ops/CLIENT-HANDOVER.md now reflects Google OAuth auth and current external blocker checklist for Stripe, Daily, Supabase, and Cloudflare."
     },
     {
       "name": "Privacy & Terms",
@@ -70,13 +70,13 @@
     },
     {
       "name": "Monitoring & alerts",
-      "status": "green",
-      "detail": "ops/MONITORING-ALERTS.md documents metrics, thresholds, alert routing, and ownership."
+      "status": "yellow",
+      "detail": "ops/MONITORING-ALERTS.md is updated for Google OAuth, but actual uptime/alert destinations are still placeholders and need to be configured."
     },
     {
       "name": "Production readiness",
-      "status": "green",
-      "detail": "ops/PRODUCTION-READINESS.md is the consolidated pass/fail checklist for go-live including external blocker gates."
+      "status": "yellow",
+      "detail": "ops/PRODUCTION-READINESS.md is the consolidated go-live checklist, but several external config, functional smoke, security, legal, and ops gates remain unsigned."
     }
   ],
   "connections": [
@@ -98,7 +98,8 @@
     "terms": "APPS/anion/docs/TERMS.md"
   },
   "nextActions": [
-    "Complete PRODUCTION-READINESS.md external blocker checklist — configure Stripe live keys, Daily API key, Supabase domain allow-list, and Cloudflare env vars.",
+    "Complete PRODUCTION-READINESS.md external blocker checklist — configure Stripe live keys, Daily API key/domain, Supabase domain allow-list, and confirm Cloudflare env vars/secrets.",
+    "Run a new authenticated Phase 1 evidence pass for parent, tutor, and admin using the Google-only auth flow and update the production closure artifact.",
     "Obtain legal review and sign-off on docs/PRIVACY.md and docs/TERMS.md before publishing to users.",
     "Configure uptime monitor for /api/health endpoint (see MONITORING-ALERTS.md §Setup Guide).",
     "Run quarterly disaster recovery test and update DISASTER-RECOVERY.md test log."

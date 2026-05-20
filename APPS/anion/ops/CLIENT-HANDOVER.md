@@ -15,7 +15,7 @@
 
 | Milestone | Feature | Status |
 |-----------|---------|--------|
-| M1 | Magic-link auth (PKCE), route guards, role redirect | ✅ Done |
+| M1 | Google OAuth auth, route guards, role redirect | ✅ Done |
 | M1 DB | RLS policies for profiles + user\_roles | ✅ Applied to live DB |
 | M2 | Booking request flow — parent creates, tutor accepts/declines | ✅ Done |
 | M2 DB | Bookings table + RLS | ✅ Applied to live DB |
@@ -156,7 +156,7 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 
 ## User Journey (End-to-End)
 
-1. **Parent signs up** → `/login` → magic link email → `/auth/callback` → `/parent`
+1. **Parent signs in** → `/login` → Google OAuth → `/auth/callback` → `/parent`
 2. **Parent chooses a plan** → `/pricing` → Stripe checkout → subscription synced via webhook
 3. **Parent books a session** → `/parent` → tutor accepts → booking status = `accepted`
 4. **Both join the lesson** → `/lesson/[bookingId]` → Daily.co video call

@@ -16,12 +16,12 @@ Expected: `200` and JSON with `ok: true`.
 Pass/Fail: __________
 
 3. Call `GET /api/status`.
-Expected: `200` and JSON includes `placeholders` map for M2-M5.
+Expected: `200` and JSON includes `runtime` and `blockers` fields.
 Pass/Fail: __________
 
 ## 2. Auth Baseline
-1. Initiate magic-link sign-in flow.
-Expected: Redirect to callback and session established.
+1. Initiate Google sign-in flow.
+Expected: Redirect to Google OAuth, return to callback, and session established.
 Pass/Fail: __________
 
 2. Access role dashboard with active session.

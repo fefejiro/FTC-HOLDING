@@ -61,11 +61,19 @@ export type PlatformStatusResponse = {
   ok: true;
   service: 'anion-web';
   phase: string;
-  placeholders: {
-    m2Booking: 'planned';
-    m3Billing: 'scaffolded';
-    m4LiveClassroom: 'scaffolded';
-    m5OpsQa: 'scaffolded';
+  release: string;
+  runtime: {
+    web: 'live';
+    health: 'ok';
+    authAndRoles: string;
+    bookings: string;
+    billing: string;
+    liveClassroom: string;
+    opsAndQa: string;
+  };
+  blockers: {
+    externalConfig: string[];
+    legal: string[];
   };
   timestamp: string;
 };
