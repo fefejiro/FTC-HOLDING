@@ -1,0 +1,111 @@
+version: 1
+
+identity:
+  name: Fejiro Efiuvwere
+  email: fejiro.efiuvwere@gmail.com
+  phone: 416.473.2732
+  location: Greater Toronto Area, Canada
+  links:
+    - linkedin.com/in/fejiro-efiuvwere
+    - unalabs.cloud
+    - github.com/fefejiro
+
+tracks:
+  retail_analytics:
+    keywords:
+      - retail
+      - network analytics
+      - store operations
+      - canadian tire
+      - omnichannel
+      - data quality
+      - analytics delivery
+    subtitle: Business Systems | Data Quality | Retail Operations | AI-Ready Delivery
+    summary_templates:
+      - "Retail analytics delivery and business systems leader translating operational problems into structured systems, reporting controls, and measurable outcomes."
+      - "Strong fit for {company} {title}: cross-functional delivery leadership, stakeholder alignment, clear success metrics, and decision-ready outputs."
+      - "Experienced in store operations, POS, ERP, WMS, API integrations, UAT governance, dashboards, release readiness, and executive reporting."
+      - "Known for clarifying priorities, removing blockers, coordinating vendors and technical teams, and maintaining delivery quality."
+      - "Portfolio includes practical enterprise systems, secure AI workflow automation, and API integration work through GitHub and Una Labs."
+    core_strengths:
+      - Analytics delivery leadership and governance
+      - Business and technical translation
+      - Retail and store operations systems
+      - Data quality and validation discipline
+      - Enterprise integration and platform delivery
+      - UAT, release readiness, and executive reporting
+      - Cross-functional stakeholder alignment
+  azure_cloud:
+    keywords:
+      - azure
+      - cloud enterprise architect
+      - landing zone
+      - cloud migration
+      - cloud governance
+      - devsecops
+      - enterprise architecture
+    subtitle: Enterprise Architecture | Cloud Platform Delivery | Integration Governance | Operational Reliability
+    summary_templates:
+      - "Enterprise architecture and systems delivery leader focused on cloud modernization, integration governance, and reliable execution."
+      - "Strong fit for {company} {title}: translating business and delivery priorities into architecture decisions, migration sequencing, and measurable outcomes."
+      - "Experience across enterprise integrations, API strategy, data validation, UAT discipline, release planning, and stakeholder governance."
+      - "Known for reducing ambiguity, aligning technical and non-technical teams, and maintaining delivery quality under complex dependencies."
+      - "Portfolio includes enterprise systems and AI-enabled workflow automation assets relevant to cloud-enabled operating models."
+    core_strengths:
+      - Cloud architecture and migration governance
+      - Enterprise integration and API strategy
+      - Platform reliability and release readiness
+      - Cross-functional architecture communication
+      - UAT and quality risk controls
+      - Delivery planning, dependency management, and reporting
+      - Security-minded implementation discipline
+  enterprise_delivery:
+    keywords:
+      - enterprise systems
+      - technical program manager
+      - business systems analyst
+      - integration
+      - platform
+    subtitle: Enterprise Systems | Delivery Governance | Integration Execution | Operational Impact
+    summary_templates:
+      - "Enterprise systems and delivery leader turning ambiguous business goals into structured, testable, and operationally reliable outcomes."
+      - "Strong fit for {company} {title}: stakeholder alignment, requirements clarity, delivery governance, and measurable implementation impact."
+      - "Experience across integrations, platform operations, UAT discipline, release readiness, and executive communication."
+      - "Known for balancing delivery speed with quality, documentation, and operational sustainability."
+      - "Portfolio includes workflow automation, product strategy, and practical implementation assets through GitHub and Una Labs."
+    core_strengths:
+      - Enterprise systems delivery leadership
+      - Requirements translation and governance
+      - API and platform integration execution
+      - UAT, defect triage, and validation standards
+      - Stakeholder communication and reporting
+      - Risk management and release discipline
+      - Continuous improvement through automation
+
+experience_pool:
+  - text: Led modernization of Ontario revenue processing and document-management systems with release readiness evidence, traceability, and executive reporting.
+    tags: [retail, governance, delivery]
+  - text: Coordinated stakeholders, technical teams, and vendors to improve implementation readiness, risk visibility, and post-deployment stability.
+    tags: [delivery, governance, architecture]
+  - text: Built governance across issue triage, UAT, change readiness, and support escalation for multi-location retail technology operations.
+    tags: [retail, uat, delivery]
+  - text: Improved transaction processing performance and reduced store-level downtime by 40 percent through structured systems and operations coordination.
+    tags: [retail, operations]
+  - text: Led acceptance-testing governance for enterprise retail modernization and reduced deployment risk across POS, loyalty, and omnichannel workflows.
+    tags: [retail, uat, integration]
+  - text: Bridged business stakeholders, QA, IT, and vendors by converting operational scenarios into acceptance criteria and go-live readiness evidence.
+    tags: [uat, governance, delivery]
+  - text: Supported omnichannel fulfillment modernization via SAP microservices, cloud integration, API workflows, and release coordination.
+    tags: [cloud, integration, delivery]
+  - text: Mapped API endpoints to business use cases, maintained acceptance criteria, and validated SIT and UAT outcomes across fulfillment workflows.
+    tags: [integration, uat, architecture]
+  - text: Led QA strategy and post-production readiness for warehouse and ecommerce platform initiatives with clear risk and defect reporting.
+    tags: [uat, operations, delivery]
+  - text: Delivered business analysis and continuous improvement for retail logistics, WMS, inventory, reporting, and customer-service workflows.
+    tags: [retail, operations]
+  - text: Managed cross-functional delivery governance for enterprise software and ERP initiatives, including scope, documentation, vendor coordination, and training.
+    tags: [architecture, delivery, governance]
+
+portfolio:
+  - GitHub portfolio demonstrates enterprise systems, integration-first implementation, and secure workflow automation patterns.
+  - Una Labs work demonstrates practical AI-enabled operations and productized delivery workflows.

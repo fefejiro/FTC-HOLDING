@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import YAML from "yaml";
+import { buildTailoredCoverLetter, buildTailoredResumeContent, renderTailoredResumeText } from "./resume_style.js";
 import type { RecruiterMessage } from "./types.js";
 export { scrapeDice, scrapeIndeed, ingestScrapedJobs } from "./hunt/scraper.js";
 
@@ -284,31 +285,43 @@ export function scoreHuntJob(job: {
 }
 
 export function generatePackages(db: Database.Database): number {
-  const truth = loadTruthBlocks();
   const jobs = db.prepare("SELECT id,title,company,description,required_skills,preferred_skills,work_authorization_language FROM hunt_jobs WHERE status='scored'").all() as any[];
   let n = 0;
   for (const j of jobs) {
+    const title = cleanText(j.title || "");
+    const company = cleanText(j.company || "");
+    if (!title || !company) {
+      db.prepare("UPDATE hunt_jobs SET status='needs_review', needs_review=1, next_action='review_missing_role_or_company', updated_at=? WHERE id=?").run(new Date().toISOString(), j.id);
+      continue;
+    }
+
     if (FORBIDDEN_AUTH_CLAIMS.some((re) => re.test(`${j.description} ${j.work_authorization_language || ""}`))) {
       db.prepare("UPDATE hunt_jobs SET status='blocked', needs_review=1, updated_at=? WHERE id=?").run(new Date().toISOString(), j.id);
       continue;
     }
+
     const requiredSkills = parseJsonArray(j.required_skills);
     const preferredSkills = parseJsonArray(j.preferred_skills);
-    const resume = buildTruthBackedResumeText({
-      title: j.title,
-      company: j.company,
-      description: j.description,
-      requiredSkills,
-      preferredSkills,
-      truth
+    const styledResume = buildTailoredResumeContent({
+      roleTitle: title,
+      company,
+      jdText: j.description || ""
     });
+
+    if (styledResume.needsReview) {
+      db.prepare("UPDATE hunt_jobs SET status='needs_review', needs_review=1, next_action='review_resume_contamination', updated_at=? WHERE id=?").run(new Date().toISOString(), j.id);
+      continue;
+    }
+
+    const resume = renderTailoredResumeText(styledResume);
     const cover = buildCoverLetterText({
-      title: j.title,
-      company: j.company,
+      title,
+      company,
       requiredSkills,
       preferredSkills,
-      truth
+      truth: {}
     });
+
     db.prepare("INSERT INTO hunt_packages (job_id,resume_text,cover_letter_text,next_action,created_at) VALUES (?,?,?,?,?)").run(j.id, resume, cover, "review_outreach_drafts", new Date().toISOString());
     db.prepare("UPDATE hunt_jobs SET status='package_generated', updated_at=? WHERE id=?").run(new Date().toISOString(), j.id);
     n++;
@@ -826,23 +839,12 @@ function buildTruthBackedResumeText(args: {
   preferredSkills: string[];
   truth: TruthBlocks;
 }): string {
-  const haystack = `${args.description}\n${args.requiredSkills.join("\n")}\n${args.preferredSkills.join("\n")}`;
-  const skills = selectSkills(args.truth, haystack);
-  const bullets = selectTruthBullets(args.truth, haystack);
-  const summary = selectSummary(args.truth, args.description);
-
-  return [
-    `Target role: ${args.title || "Role"}${args.company ? ` at ${args.company}` : ""}`,
-    "",
-    "Summary",
-    summary,
-    "",
-    "Aligned skills",
-    ...skills.map((skill) => `- ${skill}`),
-    "",
-    "Selected truthful experience bullets",
-    ...bullets.map((bullet) => `- ${bullet}`)
-  ].join("\n");
+  const styled = buildTailoredResumeContent({
+    roleTitle: args.title,
+    company: args.company,
+    jdText: `${args.description}\n${args.requiredSkills.join("\n")}\n${args.preferredSkills.join("\n")}`
+  });
+  return renderTailoredResumeText(styled);
 }
 
 function buildCoverLetterText(args: {
@@ -852,23 +854,12 @@ function buildCoverLetterText(args: {
   preferredSkills: string[];
   truth: TruthBlocks;
 }): string {
-  const role = args.title || "the role";
-  const org = args.company || "your team";
-  const skills = selectSkills(args.truth, [...args.requiredSkills, ...args.preferredSkills].join("\n")).slice(0, 4);
-  const focus = skills.length > 0 ? skills.join(", ") : "systems delivery, automation, stakeholder clarity, and measurable execution";
-
-  return [
-    "Dear Hiring Team,",
-    "",
-    `I am interested in ${role} at ${org}. My background combines enterprise systems delivery, workflow automation, CRM implementation, and practical AI tooling.`,
-    "",
-    `For this role, I would focus on ${focus}. I am careful about delivery details, cross-functional alignment, and making work easier to operate after launch.`,
-    "",
-    "I would welcome the chance to discuss fit, team priorities, and next steps.",
-    "",
-    "Sincerely,",
-    "Fejiro Efiuvwere"
-  ].join("\n");
+  const cover = buildTailoredCoverLetter({
+    roleTitle: args.title,
+    company: args.company,
+    jdText: [...args.requiredSkills, ...args.preferredSkills].join("\n")
+  });
+  return cover.text;
 }
 
 function selectSummary(truth: TruthBlocks, description: string): string {

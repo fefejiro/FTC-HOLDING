@@ -229,15 +229,41 @@ describe("hunt flow", () => {
     const sendable = db.prepare("SELECT COUNT(*) as c FROM drafts WHERE approved=1 OR sent=1").get() as any;
 
     expect(packaged).toBe(1);
-    expect(pkg.resume_text).toContain("Selected truthful experience bullets");
-    expect(pkg.resume_text).toContain("Aligned skills");
+    expect(pkg.resume_text).toContain("Target Title:");
+    expect(pkg.resume_text).toContain("Subtitle:");
+    expect(pkg.resume_text).toContain("Core Strengths");
+    expect(pkg.resume_text).toContain("Selected Experience Bullets");
     expect(pkg.cover_letter_text).toContain("Dear Hiring Team");
+    expect(pkg.cover_letter_text).toContain("Technical Program Manager");
+    expect(pkg.cover_letter_text).toContain("Acme");
     expect(pkg.cover_letter_text).not.toMatch(/U\.?S\.? citizen|Green Card|permanent resident|security clearance/i);
+    expect(pkg.cover_letter_text).not.toMatch(/WMS Project Manager|Blue Yonder|North West Company/i);
     expect(drafts).toBe(4);
     expect(waiting.every((draft) => draft.status === "waiting")).toBe(true);
     expect(waiting.every((draft) => draft.body.split(/\s+/).length <= 120)).toBe(true);
     expect(waiting.every((draft) => !/[—<]/.test(draft.body))).toBe(true);
     expect(sendable.c).toBe(0);
+  });
+
+  it("missing title or company moves scored job to needs_review instead of generic fallback", () => {
+    const db = getDb(":memory:");
+    insertHuntJob(db, normalizeSourceJob({
+      title: "",
+      company: "",
+      apply_url: "https://jobs.lever.co/acme/role-123",
+      description: "Cloud platform delivery and architecture governance"
+    }));
+    db.prepare("UPDATE hunt_jobs SET status='scored', score=80 WHERE id=1").run();
+
+    const packaged = generatePackages(db);
+    const job = db.prepare("SELECT status, needs_review, next_action FROM hunt_jobs WHERE id=1").get() as any;
+    const packages = db.prepare("SELECT COUNT(*) as c FROM hunt_packages").get() as any;
+
+    expect(packaged).toBe(0);
+    expect(packages.c).toBe(0);
+    expect(job.status).toBe("needs_review");
+    expect(job.needs_review).toBe(1);
+    expect(job.next_action).toBe("review_missing_role_or_company");
   });
 
   it("salary-sensitive jobs pause for review before packaging", () => {

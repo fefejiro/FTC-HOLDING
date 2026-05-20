@@ -1,0 +1,20 @@
+version: 1
+
+contamination_terms:
+  - WMS Project Manager
+  - Blue Yonder
+  - North West Company
+
+unsupported_claim_patterns:
+  - "\\bteam of\\s+\\d+"
+  - "\\bbudget(?:s)?\\b"
+  - "\\bdistribution center(?:s)?\\b"
+  - "\\bclient count(?:s)?\\b"
+  - "\\bmrr\\b"
+  - "\\bpricing ownership\\b"
+  - "\\bgross margin\\b"
+  - "\\bnet margin\\b"
+  - "\\bp&l\\b"
+  - "\\bu\\.?s\\.? citizen\\b"
+  - "\\bgreen card\\b"
+  - "\\bsecurity clearance\\b"
