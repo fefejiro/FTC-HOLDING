@@ -2,13 +2,23 @@
 // Uses the Anion-local Supabase browser client so this file has no dependency
 // on the cross-workspace @ftc/auth or @ftc/supabase packages.
 import { createBrowserClient } from '@/app/lib/supabase/client';
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+
+export type AuthUser = {
+  id: string;
+  email?: string | null;
+  [key: string]: unknown;
+};
+
+export type AuthSession = {
+  user: AuthUser | null;
+  [key: string]: unknown;
+};
 
 export function authEnabled() {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
-export async function loadSession(): Promise<Session | null> {
+export async function loadSession(): Promise<AuthSession | null> {
   if (!authEnabled()) {
     return null;
   }
@@ -17,7 +27,7 @@ export async function loadSession(): Promise<Session | null> {
   return data.session;
 }
 
-export function subscribeToAuth(handler: (session: Session | null) => void) {
+export function subscribeToAuth(handler: (session: AuthSession | null) => void) {
   if (!authEnabled()) {
     return {
       data: {
@@ -28,7 +38,7 @@ export function subscribeToAuth(handler: (session: Session | null) => void) {
     };
   }
 
-  return createBrowserClient().auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => handler(session));
+  return createBrowserClient().auth.onAuthStateChange((_event: unknown, session: AuthSession | null) => handler(session));
 }
 
 export async function sendMagicLink(email: string) {

@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
 import { loadSession, subscribeToAuth } from '../lib/auth';
+import type { AuthSession, AuthUser } from '../lib/auth';
 
 type CurrentUserState = {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
+  session: AuthSession | null;
   isLoading: boolean;
 };
 
