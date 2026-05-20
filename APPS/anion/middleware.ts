@@ -16,10 +16,12 @@ export async function middleware(request: NextRequest) {
 
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  // Skip Supabase session refresh if env vars are not configured (e.g. health checks).
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (supabaseUrl && supabaseAnonKey) {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -32,11 +34,11 @@ export async function middleware(request: NextRequest) {
           );
         },
       },
-    },
-  );
+    });
 
-  // Refresh the session — do NOT remove this call.
-  await supabase.auth.getUser();
+    // Refresh the session — do NOT remove this call.
+    await supabase.auth.getUser();
+  }
 
   if (isApiPath) {
     return applyApiSecurityHeaders(supabaseResponse, request);
@@ -48,8 +50,9 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except static files and Next.js internals.
+     * Match all request paths except static files, Next.js internals,
+     * and the health check endpoint.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/health|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
