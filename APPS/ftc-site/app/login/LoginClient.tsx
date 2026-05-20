@@ -38,7 +38,7 @@ export default function LoginClient() {
         pathname: pathname || window.location.pathname,
         search: window.location.search
       });
-      const returnTo = product === "garden" ? "/garden-cleaners/portal" : "/products";
+      const returnTo = product === "garden" ? "/garden-cleaners/portal#portal-access" : "/products";
       const redirectTo = buildProductCallbackUrl({
         origin: window.location.origin,
         product,

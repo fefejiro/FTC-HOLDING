@@ -49,6 +49,10 @@ export default function RootBrandRouter({ children }: { children: ReactNode }) {
   const unaThemeClass = PRODUCT_AUTH_CONFIG.una.themeBodyClass;
   const gardenThemeClass = PRODUCT_AUTH_CONFIG.garden.themeBodyClass;
 
+  function isGardenAuthPath(pathname: string): boolean {
+    return pathname === '/auth/callback' || pathname.startsWith('/auth/callback/');
+  }
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -73,7 +77,7 @@ export default function RootBrandRouter({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (!isGardenCleanersPublicPath(pathname)) {
+      if (!isGardenCleanersPublicPath(pathname) && !isGardenAuthPath(pathname)) {
         window.location.replace('/');
         return;
       }

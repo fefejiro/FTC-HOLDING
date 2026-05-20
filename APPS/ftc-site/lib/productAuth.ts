@@ -136,6 +136,66 @@ function getGardenPortalPathForHost(host: string): string {
   return getGardenCleanersBrandedPath("/portal", { host });
 }
 
+function parseRelativeReturnToPath(returnTo: string): URL | null {
+  const trimmedReturnTo = String(returnTo || "").trim();
+
+  if (!trimmedReturnTo.startsWith("/")) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(trimmedReturnTo, "https://unalabs.local");
+    return parsed.origin === "https://unalabs.local" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveGardenReturnToPath(returnTo: string, host: string): string | null {
+  const parsed = parseRelativeReturnToPath(returnTo);
+  if (!parsed) {
+    return null;
+  }
+
+  const pathname = parsed.pathname;
+  const isGardenPath =
+    pathname === "/portal" ||
+    pathname.startsWith("/portal/") ||
+    pathname === "/garden-cleaners" ||
+    pathname.startsWith("/garden-cleaners/");
+
+  if (!isGardenPath) {
+    return null;
+  }
+
+  const internalPath = pathname.startsWith("/garden-cleaners")
+    ? pathname.slice("/garden-cleaners".length) || "/"
+    : pathname;
+  const brandedPath = getGardenCleanersBrandedPath(internalPath, { host });
+
+  return `${brandedPath}${parsed.search}${parsed.hash}`;
+}
+
+function resolveUnaReturnToPath(returnTo: string): string | null {
+  const parsed = parseRelativeReturnToPath(returnTo);
+  if (!parsed) {
+    return null;
+  }
+
+  const pathname = parsed.pathname;
+  const leaksToGarden =
+    pathname === "/portal" ||
+    pathname.startsWith("/portal/") ||
+    pathname === "/garden-cleaners" ||
+    pathname.startsWith("/garden-cleaners/");
+
+  if (leaksToGarden) {
+    return null;
+  }
+
+  return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+}
+
 export function buildProductCallbackUrl(input: {
   origin: string;
   product: ProductKey;
@@ -204,6 +264,15 @@ export function resolveProductDestination(input: {
       return PRODUCT_AUTH_CONFIG.una.adminPath;
     }
 
+    const safeUnaReturnTo = resolveUnaReturnToPath(normalizedReturnTo);
+    if (safeUnaReturnTo && normalizedOrigin) {
+      return `${normalizedOrigin}${safeUnaReturnTo}`;
+    }
+
+    if (safeUnaReturnTo) {
+      return safeUnaReturnTo;
+    }
+
     if (normalizedOrigin) {
       return `${normalizedOrigin}${PRODUCT_AUTH_CONFIG.una.dashboardPath}`;
     }
@@ -219,12 +288,17 @@ export function resolveProductDestination(input: {
         ? `${gardenPortalPath}#staff`
         : `${gardenPortalPath}#customer`;
 
-  if (normalizedOrigin) {
-    return `${normalizedOrigin}${gardenRolePath}`;
+  const safeGardenReturnTo = resolveGardenReturnToPath(normalizedReturnTo, normalizedHost);
+  if (safeGardenReturnTo && normalizedOrigin) {
+    return `${normalizedOrigin}${safeGardenReturnTo}`;
   }
 
-  if (normalizedReturnTo) {
-    return normalizedReturnTo;
+  if (safeGardenReturnTo) {
+    return safeGardenReturnTo;
+  }
+
+  if (normalizedOrigin) {
+    return `${normalizedOrigin}${gardenRolePath}`;
   }
 
   return gardenRolePath;

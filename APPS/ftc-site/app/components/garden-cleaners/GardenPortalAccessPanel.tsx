@@ -179,6 +179,14 @@ export default function GardenPortalAccessPanel() {
   const isAdmin = role === "admin";
   const isStaff = role === "staff";
   const isCustomer = role === "client";
+  const signedInRoleLabel =
+    role === "client"
+      ? "client (customer lane)"
+      : role === "staff"
+        ? "staff"
+        : role === "admin"
+          ? "admin"
+          : "";
 
   // Filtered jobs for staff/admin
   const visibleJobs = useMemo(() => {
@@ -620,7 +628,7 @@ export default function GardenPortalAccessPanel() {
     const redirectTo = buildProductCallbackUrl({
       origin: window.location.origin,
       product: "garden",
-      returnTo: "/garden-cleaners/portal"
+      returnTo: "/garden-cleaners/portal#portal-access"
     });
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -703,7 +711,7 @@ export default function GardenPortalAccessPanel() {
             {authState === "loading" && "Checking portal session..."}
             {authState === "unauthenticated" && "Sign in required"}
             {authState === "unavailable" && "Portal sign-in setup in progress"}
-            {authState === "authenticated" && `Signed in as ${role}`}
+            {authState === "authenticated" && `Signed in as ${signedInRoleLabel}`}
           </h2>
           {userEmail ? <p>{userEmail}</p> : null}
 
