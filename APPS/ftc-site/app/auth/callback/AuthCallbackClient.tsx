@@ -182,8 +182,8 @@ export default function AuthCallbackClient() {
                   <Link href="/portal#portal-access" className="btn btn-primary">
                     Open portal
                   </Link>
-                  <Link href="/contact" className="btn btn-secondary">
-                    Contact support
+                  <Link href="/" className="btn btn-secondary">
+                    Back to home
                   </Link>
                 </>
               ) : (

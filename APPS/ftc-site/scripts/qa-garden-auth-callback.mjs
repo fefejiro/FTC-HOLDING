@@ -21,21 +21,22 @@ async function run() {
   const hasConfiguredMessage = /not configured for this deployment/i.test(body);
 
   const primaryLabel = hasConfiguredMessage ? /open portal/i : /open admin dashboard/i;
-  const secondaryLabel = hasConfiguredMessage ? /contact support/i : /open workspace/i;
+  const secondaryLabel = hasConfiguredMessage ? /back to home/i : /open workspace/i;
 
-  const primaryLink = page.getByRole("link", { name: primaryLabel });
-  const secondaryLink = page.getByRole("link", { name: secondaryLabel });
+  const primaryLink = page.getByRole("link", { name: primaryLabel }).first();
+  const secondaryLink = page.getByRole("link", { name: secondaryLabel }).first();
 
   const primaryHref = await primaryLink.getAttribute("href");
   const secondaryHref = await secondaryLink.getAttribute("href");
 
-  await primaryLink.click();
-  await page.waitForLoadState("networkidle");
+  await primaryLink.click({ force: true });
+  await page.waitForTimeout(1200);
   const afterPrimary = page.url();
 
   await page.goto(callbackUrl, { waitUntil: "networkidle", timeout: 60000 });
-  await secondaryLink.click();
-  await page.waitForLoadState("networkidle");
+  const secondaryLinkAfterReload = page.getByRole("link", { name: secondaryLabel }).first();
+  await secondaryLinkAfterReload.click({ force: true });
+  await page.waitForTimeout(1200);
   const afterSecondary = page.url();
 
   const result = {
@@ -53,7 +54,15 @@ async function run() {
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
 
-  if (hasGlobalCrash) {
+  const primaryNavigated =
+    (primaryHref === "/portal#portal-access" && /\/portal#portal-access$/i.test(afterPrimary)) ||
+    (primaryHref?.includes("/portal#admin") && /\/portal#admin$/i.test(afterPrimary));
+
+  const secondaryNavigated =
+    (secondaryHref === "/" && /gardencleaners\.ca\/$/i.test(afterSecondary)) ||
+    (secondaryHref?.includes("/portal#portal-access") && /\/portal#portal-access$/i.test(afterSecondary));
+
+  if (hasGlobalCrash || !primaryNavigated || !secondaryNavigated) {
     process.exitCode = 1;
   }
 }
