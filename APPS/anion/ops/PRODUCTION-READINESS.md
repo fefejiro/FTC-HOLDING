@@ -1,7 +1,7 @@
 # Anion Class App — Production Readiness Checklist
 
 **Version:** 1.0  
-**Last Updated:** 2026-05-07  
+**Last Updated:** 2026-05-20  
 **Run before:** Every production deployment or client handover
 
 Fill in **Pass**, **Fail**, or **N/A** for each item. Any **Fail** must be resolved before proceeding.
@@ -50,9 +50,9 @@ All third-party credentials must be configured before deployment. **No deploymen
 
 | # | Check | Action Required | Done? |
 |---|-------|----------------|-------|
-| SB1 | `NEXT_PUBLIC_SUPABASE_URL` is set | Cloudflare Workers env vars | ☐ |
-| SB2 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` is set | Cloudflare Workers env vars | ☐ |
-| SB3 | `SUPABASE_SERVICE_ROLE_KEY` is set | Cloudflare Workers env vars (secret) | ☐ |
+| SB1 | `NEXT_PUBLIC_SUPABASE_URL` is set | `npx wrangler secret put NEXT_PUBLIC_SUPABASE_URL --name anion-web` (value: `https://aaaextkrfoqomzmjjkxe.supabase.co`) | ☐ |
+| SB2 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` is set | `npx wrangler secret put NEXT_PUBLIC_SUPABASE_ANON_KEY --name anion-web` (value: from [Supabase → Settings → API → anon/public key](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/settings/api)) | ☐ |
+| SB3 | `SUPABASE_SERVICE_ROLE_KEY` is set | `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name anion-web` (value: from [Supabase → Settings → API → service_role key](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/settings/api)) | ☐ |
 | SB4 | Production domain added to Supabase Auth allow-list | [Supabase → Auth → URL Configuration](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/auth/url-configuration) | ☐ |
 | SB5 | Redirect URL `https://[domain]/auth/callback` is in the allow-list | Same as above | ☐ |
 | SB6 | All current migrations applied to live database (currently 17) | Check `supabase/migrations/` vs applied | ☐ |
@@ -65,7 +65,8 @@ All third-party credentials must be configured before deployment. **No deploymen
 | CF1 | Custom domain configured and DNS propagated | [Cloudflare → Pages → Custom domains](https://dash.cloudflare.com) | ☐ |
 | CF2 | SSL/TLS set to Full (Strict) | Cloudflare → SSL/TLS | ☐ |
 | CF3 | All env vars and secrets set in Workers environment | Cloudflare → Workers → Settings → Variables | ☐ |
-| CF4 | Worker deployment succeeds: `npm run deploy:worker` | Deployment log shows success | ☐ |
+| CF4 | Worker deployment succeeds: `npm run deploy:worker` | Deployment log shows success | ✅ 2026-05-20 — Version 61951451 live |
+| CF5 | `/api/health` returns `{"ok":true}` | `curl https://anion.unalabs.cloud/api/health` | ✅ 2026-05-20 — Verified 200 |
 
 ---
 
@@ -73,7 +74,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 
 | # | Check | Expected | Result |
 |---|-------|----------|--------|
-| 3.1 | `GET https://[domain]/api/health` | `200 { "ok": true }` | |
+| 3.1 | `GET https://[domain]/api/health` | `200 { "ok": true }` | ✅ `https://anion.unalabs.cloud/api/health` returns 200 (2026-05-20) |
 | 3.2 | `GET https://[domain]/api/status` | `200` with status map | |
 | 3.3 | Homepage loads without error | Page renders, no console errors | |
 | 3.4 | Magic-link sign-in flow completes | Session established, redirects to role dashboard | |
