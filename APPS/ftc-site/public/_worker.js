@@ -610,6 +610,194 @@ async function handleGardenQuoteStatus(request, env) {
   return json({ ok: true });
 }
 
+async function handleGardenNotifications(request, env) {
+  const caller = await requireCaller(request, env);
+  if (caller instanceof Response) return caller;
+
+  if (request.method === "GET") {
+    const url = new URL(request.url);
+    const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") || 30)));
+    const userId = encodeURIComponent(caller.authUserId || "");
+    const userEmail = encodeURIComponent(caller.email || "");
+    const result = await supabaseAdminRest(
+      env,
+      `rest/v1/garden_cleaners_notifications?select=*&or=(user_id.eq.${userId},email.eq.${userEmail})&order=created_at.desc&limit=${limit}`
+    );
+    if (result instanceof Response) return result;
+    return json({ ok: true, notifications: result.data || [] });
+  }
+
+  if (request.method === "PATCH") {
+    const payload = await request.json().catch(() => null);
+    const notificationId = normalizeText(payload?.notification_id);
+    if (!notificationId) {
+      return json({ ok: false, error: "notification_id is required" }, 400);
+    }
+
+    const userId = encodeURIComponent(caller.authUserId || "");
+    const userEmail = encodeURIComponent(caller.email || "");
+    const result = await supabaseAdminRest(
+      env,
+      `rest/v1/garden_cleaners_notifications?id=eq.${encodeURIComponent(notificationId)}&or=(user_id.eq.${userId},email.eq.${userEmail})`,
+      {
+        method: "PATCH",
+        body: { read_at: new Date().toISOString() },
+        prefer: "return=minimal"
+      }
+    );
+    if (result instanceof Response) return result;
+    return json({ ok: true });
+  }
+
+  return json({ ok: false, error: "Method not allowed." }, 405);
+}
+
+async function handleGardenJobNote(request, env) {
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed." }, 405);
+  }
+
+  const caller = await requireAdmin(request, env);
+  if (caller instanceof Response) return caller;
+
+  const payload = await request.json().catch(() => null);
+  const jobId = normalizeText(payload?.job_id);
+  const noteBody = normalizeText(payload?.body);
+  const visibility = normalizeText(payload?.visibility || "internal").toLowerCase();
+
+  if (!jobId) {
+    return json({ ok: false, error: "job_id is required" }, 400);
+  }
+  if (!noteBody) {
+    return json({ ok: false, error: "Note body is required" }, 400);
+  }
+  if (!["internal", "customer_visible"].includes(visibility)) {
+    return json({ ok: false, error: "Invalid visibility" }, 400);
+  }
+
+  const jobResult = await supabaseAdminRest(
+    env,
+    `rest/v1/garden_cleaners_jobs?select=id,customer_email&id=eq.${encodeURIComponent(jobId)}&limit=1`
+  );
+  if (jobResult instanceof Response) return jobResult;
+  const job = Array.isArray(jobResult.data) ? jobResult.data[0] : null;
+  if (!job) {
+    return json({ ok: false, error: "Job not found" }, 404);
+  }
+
+  const action = visibility === "customer_visible" ? "job_customer_comment_added" : "job_internal_note_added";
+  const insertResult = await supabaseAdminRest(env, "rest/v1/garden_cleaners_audit_log", {
+    method: "POST",
+    body: [{
+      actor_email: caller.email,
+      action,
+      target_email: normalizeEmail(job.customer_email || "") || null,
+      details: {
+        job_id: jobId,
+        body: noteBody,
+        visibility
+      }
+    }],
+    prefer: "return=minimal"
+  });
+  if (insertResult instanceof Response) return insertResult;
+  return json({ ok: true });
+}
+
+async function handleGardenJobProgressNote(request, env) {
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed." }, 405);
+  }
+
+  const caller = await requireCaller(request, env);
+  if (caller instanceof Response) return caller;
+  if (caller.role !== "staff") {
+    return forbidden("Staff access required");
+  }
+
+  const payload = await request.json().catch(() => null);
+  const jobId = normalizeText(payload?.job_id);
+  const progressNote = normalizeText(payload?.note);
+  if (!jobId) {
+    return json({ ok: false, error: "job_id is required" }, 400);
+  }
+  if (!progressNote) {
+    return json({ ok: false, error: "note is required" }, 400);
+  }
+
+  const staffProfileId = normalizeText(caller.profile?.id || "");
+  if (!staffProfileId) {
+    return forbidden("Staff access required");
+  }
+
+  const jobResult = await supabaseAdminRest(
+    env,
+    `rest/v1/garden_cleaners_jobs?select=id,customer_email,staff_profile_id&id=eq.${encodeURIComponent(jobId)}&limit=1`
+  );
+  if (jobResult instanceof Response) return jobResult;
+  const job = Array.isArray(jobResult.data) ? jobResult.data[0] : null;
+  if (!job) {
+    return json({ ok: false, error: "Job not found" }, 404);
+  }
+  if (String(job.staff_profile_id || "") !== staffProfileId) {
+    return forbidden("Staff can only add progress notes to assigned jobs");
+  }
+
+  const insertResult = await supabaseAdminRest(env, "rest/v1/garden_cleaners_audit_log", {
+    method: "POST",
+    body: [{
+      actor_email: caller.email,
+      action: "job_progress_note_added",
+      target_email: normalizeEmail(job.customer_email || "") || null,
+      details: {
+        job_id: jobId,
+        note: progressNote
+      }
+    }],
+    prefer: "return=minimal"
+  });
+  if (insertResult instanceof Response) return insertResult;
+  return json({ ok: true });
+}
+
+async function handleGardenNotificationSubscription(request, env) {
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "Method not allowed." }, 405);
+  }
+
+  const caller = await requireCaller(request, env);
+  if (caller instanceof Response) return caller;
+
+  const payload = await request.json().catch(() => null);
+  const subscription = payload?.subscription;
+  const endpoint = normalizeText(subscription?.endpoint);
+  if (!endpoint) {
+    return json({ ok: false, error: "subscription is required" }, 400);
+  }
+
+  const upsertRow = {
+    user_id: caller.authUserId || null,
+    email: caller.email || null,
+    endpoint,
+    p256dh: normalizeText(subscription?.keys?.p256dh) || null,
+    auth: normalizeText(subscription?.keys?.auth) || null,
+    user_agent: normalizeText(subscription?.userAgent || request.headers.get("user-agent") || "") || null,
+    updated_at: new Date().toISOString()
+  };
+
+  const result = await supabaseAdminRest(
+    env,
+    "rest/v1/garden_cleaners_notification_subscriptions?on_conflict=endpoint",
+    {
+      method: "POST",
+      body: [upsertRow],
+      prefer: "resolution=merge-duplicates,return=minimal"
+    }
+  );
+  if (result instanceof Response) return result;
+  return json({ ok: true, pushReady: true });
+}
+
 async function handleGardenAdminUsers(request, env) {
   const caller = await requireAdmin(request, env);
   if (caller instanceof Response) return caller;
@@ -815,6 +1003,18 @@ export default {
     }
     if (url.pathname === "/api/garden-cleaners-job-status") {
       return handleGardenJobStatus(request, env);
+    }
+    if (url.pathname === "/api/garden-cleaners-job-note") {
+      return handleGardenJobNote(request, env);
+    }
+    if (url.pathname === "/api/garden-cleaners-job-progress-note") {
+      return handleGardenJobProgressNote(request, env);
+    }
+    if (url.pathname === "/api/garden-cleaners-notifications") {
+      return handleGardenNotifications(request, env);
+    }
+    if (url.pathname === "/api/garden-cleaners-notification-subscription") {
+      return handleGardenNotificationSubscription(request, env);
     }
     if (url.pathname === "/api/garden-cleaners-admin-users") {
       return handleGardenAdminUsers(request, env);

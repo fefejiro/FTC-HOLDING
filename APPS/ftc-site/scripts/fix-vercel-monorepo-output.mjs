@@ -54,6 +54,9 @@ function shouldCopyPagesWorker() {
   if (["garden", "garden-cleaners", "gardencleaners", "1", "true"].includes(explicitWorkerTarget)) {
     return true;
   }
+  if (["0", "false", "no", "off"].includes(explicitWorkerTarget)) {
+    return false;
+  }
   // Add OG Trades Academy static build target support
   const explicitPagesTarget = String(process.env.FTC_SITE_PAGES_TARGET || "").trim().toLowerCase();
   if (["og-trades", "ogtrades", "og-trades-academy", "ogtradesacademy"].includes(explicitPagesTarget)) {
@@ -61,7 +64,13 @@ function shouldCopyPagesWorker() {
   }
 
   const pagesUrl = String(process.env.CF_PAGES_URL || "").trim().toLowerCase();
-  return pagesUrl.includes("gardencleaners");
+  if (pagesUrl.includes("ogtradesacademy")) {
+    return false;
+  }
+
+  // Garden is the default Pages target for this bundle, so keep the worker
+  // unless a caller explicitly opts out or selects OG.
+  return true;
 }
 
 async function ensureCompatibilityMirror() {
