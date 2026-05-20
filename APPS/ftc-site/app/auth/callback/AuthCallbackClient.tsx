@@ -18,6 +18,7 @@ export default function AuthCallbackClient() {
   const [state, setState] = useState<CallbackState>("loading");
   const [message, setMessage] = useState("Finalizing your sign-in...");
   const [envNotConfigured, setEnvNotConfigured] = useState(false);
+  const [brandLabel, setBrandLabel] = useState("Account access");
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
   const hasProcessedRef = useRef(false);
@@ -38,6 +39,15 @@ export default function AuthCallbackClient() {
       productHint,
       returnTo
     });
+
+    if (activeProduct === "una") {
+      setBrandLabel("Una Labs");
+    } else if (activeProduct === "garden") {
+      setBrandLabel("Garden Cleaners");
+    } else {
+      setBrandLabel("Account access");
+    }
+
     const authError = readAuthError(query);
     if (authError) {
       setState("error");
@@ -169,7 +179,7 @@ export default function AuthCallbackClient() {
     <section className="section sunrise-section">
       <div className="container" style={{ maxWidth: 760 }}>
         <div className="sunrise-section-heading">
-          <p className="sunrise-kicker">Account access</p>
+          <p className="sunrise-kicker">{brandLabel}</p>
           <h1>{state === "loading" ? "Signing you in" : "Sign-in needs attention"}</h1>
           <p>{message}</p>
         </div>

@@ -9,9 +9,6 @@ export default function AuthCallbackPage() {
       fallback={
         <main className="min-h-screen bg-slate-950 px-6 py-16 text-white">
           <section className="mx-auto max-w-xl rounded-3xl border border-white/10 bg-white/10 p-8">
-            <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
-              Garden Cleaners
-            </p>
             <h1 className="mt-4 text-3xl font-semibold">
               Completing sign-in
             </h1>
