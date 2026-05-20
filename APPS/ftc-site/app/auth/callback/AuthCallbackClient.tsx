@@ -45,15 +45,14 @@ export default function AuthCallbackClient() {
     }
 
     let active = true;
-    const supabase = getSupabase();
 
-    const finalizeSession = async () => {
+    const finalizeSession = async (authClient: any) => {
       const code = query.get("code");
       const tokenHash = query.get("token_hash");
       const typeParam = query.get("type") ?? "magiclink";
 
       if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: exchangeError } = await authClient.exchangeCodeForSession(code);
         if (exchangeError) {
           throw exchangeError;
         }
@@ -61,9 +60,9 @@ export default function AuthCallbackClient() {
       }
 
       if (tokenHash) {
-        const { error: verifyError } = await supabase.auth.verifyOtp({
+        const { error: verifyError } = await authClient.verifyOtp({
           token_hash: tokenHash,
-          type: typeParam as Parameters<typeof supabase.auth.verifyOtp>[0]["type"]
+          type: typeParam
         });
         if (verifyError) {
           throw verifyError;
@@ -76,7 +75,7 @@ export default function AuthCallbackClient() {
       const refreshToken = hash.get("refresh_token");
 
       if (accessToken && refreshToken) {
-        const { error: setSessionError } = await supabase.auth.setSession({
+        const { error: setSessionError } = await authClient.setSession({
           access_token: accessToken,
           refresh_token: refreshToken
         });
@@ -87,8 +86,8 @@ export default function AuthCallbackClient() {
       }
     };
 
-    const routeAuthenticatedUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
+    const routeAuthenticatedUser = async (authClient: any) => {
+      const { data, error } = await authClient.getUser();
 
       if (error) {
         throw error;
@@ -117,13 +116,16 @@ export default function AuthCallbackClient() {
 
     const bootstrap = async () => {
       try {
-        await finalizeSession();
-        const routed = await routeAuthenticatedUser();
+        const supabase = getSupabase();
+        const authClient = supabase.auth as any;
+
+        await finalizeSession(authClient);
+        const routed = await routeAuthenticatedUser(authClient);
         if (routed || !active) return;
 
         const {
           data: { subscription }
-        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        } = authClient.onAuthStateChange(async (_event: string, session: { user?: { email?: string } } | null) => {
           if (!active || !session?.user?.email) {
             return;
           }
@@ -141,7 +143,12 @@ export default function AuthCallbackClient() {
       } catch (err) {
         if (!active) return;
         setState("error");
-        setMessage(err instanceof Error ? err.message : "Unable to finish sign-in.");
+        const baseMessage = err instanceof Error ? err.message : "Unable to finish sign-in.";
+        if (/Public Supabase (URL|anon key) is required/i.test(baseMessage)) {
+          setMessage("Portal sign-in is not configured for this deployment yet. Please contact support or return to the portal.");
+          return;
+        }
+        setMessage(baseMessage);
       }
     };
 
