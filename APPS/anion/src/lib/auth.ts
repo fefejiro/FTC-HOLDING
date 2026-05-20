@@ -41,19 +41,15 @@ export function subscribeToAuth(handler: (session: AuthSession | null) => void) 
   return createBrowserClient().auth.onAuthStateChange((_event: unknown, session: AuthSession | null) => handler(session));
 }
 
-export async function sendMagicLink(email: string) {
+
+export async function signInWithGoogle() {
   if (!authEnabled()) {
     throw new Error('Supabase auth is not configured for this environment.');
   }
-
-  const redirectTo =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback`
-      : undefined;
-
-  return createBrowserClient().auth.signInWithOtp({
-    email,
-    options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+  const redirectTo = typeof window !== 'undefined' ? window.location.origin + '/dashboard' : undefined;
+  return createBrowserClient().auth.signInWithOAuth({
+    provider: 'google',
+    options: redirectTo ? { redirectTo } : undefined,
   });
 }
 
