@@ -12,7 +12,7 @@
 
 ### Option A: Via Supabase Dashboard (Easiest)
 
-1. Go to [Supabase Dashboard](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/sql/new)
+1. Go to [Supabase SQL Editor](https://aaaextkrfoqomzmjjkxe.supabase.co/sql/new)
 2. Create **New Query**
 3. Paste the contents of **`APPS/anion/supabase/migrations/20260505_000001_init_foundation.sql`**
 4. Click **Run** (wait for ✅ success)
@@ -118,7 +118,7 @@ supabase db push  # Applies all migrations in supabase/migrations/
 
 ### Via Supabase Dashboard SQL
 
-1. Go to [SQL Editor](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/sql/new)
+1. Go to [SQL Editor](https://aaaextkrfoqomzmjjkxe.supabase.co/sql/new)
 2. Run this query to see all created users and their profiles:
    ```sql
    select p.id, p.display_name, p.auth_user_id

@@ -86,7 +86,7 @@
 
 ### 1️⃣ Apply Migrations to Supabase (5 min)
 
-**Go to:** [Supabase SQL Editor](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/sql/new)
+**Go to:** [Supabase SQL Editor](https://aaaextkrfoqomzmjjkxe.supabase.co/sql/new)
 
 **Step 1:** Copy contents of `APPS/anion/supabase/migrations/20260505_000001_init_foundation.sql`  
 **Step 2:** Paste into SQL editor → Click **Run**  
@@ -120,7 +120,7 @@
 
 **Assign roles manually (Supabase Dashboard):**
 
-1. Go to [Table Editor](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/editor) → `profiles`
+1. Go to [Table Editor](https://aaaextkrfoqomzmjjkxe.supabase.co/editor?schema=public) → `profiles`
 2. Note the `id` of each profile
 3. Go to Table Editor → `user_roles`
 4. Insert rows:
