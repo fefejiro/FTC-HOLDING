@@ -34,13 +34,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body>
         <SwRegister />
+        <header style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: 'white' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Link href="/" style={{ fontSize: '18px', fontWeight: '700', color: 'var(--brand-teal)', textDecoration: 'none' }}>Anion</Link>
+            <nav className="nav" style={{ margin: '0', padding: '0', border: 'none', borderBottom: 'none' }}>
+              <Link href="/tutors" style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', textDecoration: 'none' }}>Find Tutors</Link>
+              <Link href="/pricing" style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', textDecoration: 'none' }}>Pricing</Link>
+              {user ? (
+                <Link href="/dashboard" style={{ fontSize: '14px', fontWeight: '600', color: 'white', backgroundColor: 'var(--brand-teal)', padding: '8px 16px', borderRadius: '6px', textDecoration: 'none' }}>Dashboard</Link>
+              ) : (
+                <Link href="/login" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--brand-teal)', textDecoration: 'none' }}>Sign in</Link>
+              )}
+            </nav>
+          </div>
+        </header>
         <main>
-          <nav className="nav">
-            <Link href="/">Anion</Link>
-            <Link href="/tutors">Tutors</Link>
-            <Link href="/pricing">Pricing</Link>
-            {user ? <Link href="/dashboard">Dashboard</Link> : <Link href="/login">Login</Link>}
-          </nav>
           {children}
         </main>
       </body>

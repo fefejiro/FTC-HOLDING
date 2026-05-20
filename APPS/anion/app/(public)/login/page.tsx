@@ -30,63 +30,67 @@ export default function LoginPage() {
 
   if (state === 'sent') {
     return (
-      <section className="surface card" style={{ maxWidth: 400, margin: '4rem auto', textAlign: 'center' }}>
-        <h1>Check your inbox</h1>
-        <p>We sent a magic link to <strong>{email}</strong>.</p>
-        <p className="muted">Click the link in the email to sign in. You can close this tab.</p>
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={() => { setState('idle'); setEmail(''); }}
-          style={{ marginTop: '1rem' }}
-        >
-          Use a different email
-        </button>
-      </section>
+      <div style={{ maxWidth: '400px', margin: '64px auto' }}>
+        <div className="surface card" style={{ padding: 'var(--spacing-8)', textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: 'var(--spacing-6)' }}>✓</div>
+          <h1 className="h2" style={{ marginBottom: 'var(--spacing-2)' }}>Check your inbox</h1>
+          <p className="body secondary" style={{ marginBottom: 'var(--spacing-6)' }}>We sent a magic link to <strong style={{ color: 'var(--text-heading)' }}>{email}</strong>.</p>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => { setState('idle'); setEmail(''); }}
+            style={{ marginTop: 'var(--spacing-4)', width: '100%' }}
+          >
+            Try another email
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <section className="surface card" style={{ maxWidth: 400, margin: '4rem auto' }}>
-      <h1 style={{ marginBottom: '0.25rem' }}>Sign in</h1>
-      <p className="muted" style={{ marginBottom: '1.5rem' }}>
-        Enter your email and we&apos;ll send a magic link — no password needed.
-      </p>
+    <div style={{ maxWidth: '400px', margin: '64px auto' }}>
+      <div className="surface card" style={{ padding: 'var(--spacing-8)' }}>
+        <h1 className="h2" style={{ marginBottom: 'var(--spacing-2)' }}>Sign in to Anion</h1>
+        <p className="body-sm secondary" style={{ marginBottom: 'var(--spacing-6)' }}>
+          Enter your email and we&apos;ll send a magic link—no password needed.
+        </p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <label htmlFor="email" style={{ fontWeight: 600, fontSize: '0.875rem' }}>
-          Email address
-        </label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          required
-          disabled={state === 'loading'}
-          autoComplete="email"
-          style={{ padding: '0.5rem 0.75rem', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '1rem' }}
-        />
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
+          <label htmlFor="email" style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-heading)' }}>
+            Email address
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            required
+            disabled={state === 'loading'}
+            autoComplete="email"
+          />
 
-        {state === 'error' && (
-          <p role="alert" style={{ color: '#dc2626', fontSize: '0.875rem', margin: 0 }}>
-            {errorMessage}
-          </p>
-        )}
+          {state === 'error' && (
+            <p role="alert" style={{ color: 'var(--danger)', fontSize: '14px', margin: '0' }}>
+              ✕ {errorMessage}
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={state === 'loading' || !email.trim()}
-          style={{ marginTop: '0.25rem' }}
-        >
-          {state === 'loading' ? 'Sending…' : 'Send magic link'}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={state === 'loading' || !email.trim()}
+            className="btn-primary"
+            style={{ width: '100%', marginTop: 'var(--spacing-2)' }}
+          >
+            {state === 'loading' ? 'Sending…' : 'Send magic link'}
+          </button>
+        </form>
 
-      <p className="muted" style={{ marginTop: '1.25rem', fontSize: '0.875rem', textAlign: 'center' }}>
-        <Link href="/">Back to home</Link>
-      </p>
-    </section>
+        <p className="body-sm secondary" style={{ marginTop: 'var(--spacing-6)', textAlign: 'center' }}>
+          <Link href="/" style={{ color: 'var(--brand-teal)', fontWeight: '500' }}>← Back to home</Link>
+        </p>
+      </div>
+    </div>
   );
 }

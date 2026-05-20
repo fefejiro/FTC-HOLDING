@@ -83,66 +83,84 @@ export default function PricingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-16 px-4">
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wide mb-2">
-            Plans &amp; Pricing
-          </p>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Invest in your child&#39;s success
+    <div style={{ backgroundColor: 'var(--bg-offwhite)', minHeight: '100vh', paddingTop: 'var(--spacing-12)', paddingBottom: 'var(--spacing-12)', paddingLeft: 'var(--spacing-4)', paddingRight: 'var(--spacing-4)' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-12)' }}>
+          <p className="kicker" style={{ marginBottom: 'var(--spacing-3)' }}>Plans &amp; Pricing</p>
+          <h1 className="display" style={{ marginBottom: 'var(--spacing-4)' }}>
+            Invest in learning that sticks
           </h1>
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-            All plans include live one-on-one sessions with vetted tutors. Cancel anytime.
+          <p className="body" style={{ fontSize: '18px', color: 'var(--text-secondary)', maxWidth: '700px', margin: '0 auto' }}>
+            All plans include live one-on-one sessions with vetted tutors, interactive whiteboards, and progress tracking. Cancel anytime.
           </p>
         </div>
 
         {error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center">
+          <div style={{ marginBottom: 'var(--spacing-8)', padding: 'var(--spacing-4)', backgroundColor: 'rgba(185, 28, 28, 0.1)', border: '1px solid rgba(185, 28, 28, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--danger)', fontSize: '14px', textAlign: 'center' }}>
             {error}
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-3" style={{ gap: 'var(--spacing-8)' }}>
           {PLANS.map((plan) => (
             <div
               key={plan.id}
-              className={`relative rounded-2xl p-8 flex flex-col ${
-                plan.highlight
-                  ? 'bg-indigo-600 text-white shadow-2xl scale-105'
-                  : 'bg-white text-gray-900 border border-gray-200 shadow-md'
-              }`}
+              className="surface"
+              style={{
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                padding: 'var(--spacing-8)',
+                backgroundColor: plan.highlight ? 'var(--brand-teal)' : 'var(--surface)',
+                boxShadow: plan.highlight ? 'var(--shadow-xl)' : 'var(--shadow-md)',
+                border: plan.highlight ? 'none' : '1px solid #e2e8f0',
+                transform: plan.highlight ? 'scale(1.05)' : 'scale(1)',
+                transition: 'all 0.3s ease',
+              }}
             >
               {plan.highlight && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                <span style={{
+                  position: 'absolute',
+                  top: '-12px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: 'var(--brand-orange)',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  padding: 'var(--spacing-1) var(--spacing-3)',
+                  borderRadius: '999px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}>
                   Most Popular
                 </span>
               )}
 
-              <div className="mb-6">
-                <h2 className={`text-xl font-bold mb-1 ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>
+              <div style={{ marginBottom: 'var(--spacing-6)' }}>
+                <h2 className="h3" style={{ marginBottom: 'var(--spacing-2)', color: plan.highlight ? 'white' : 'var(--text-heading)' }}>
                   {plan.name}
                 </h2>
-                <p className={`text-sm mb-4 ${plan.highlight ? 'text-indigo-200' : 'text-gray-500'}`}>
+                <p className="body-sm" style={{ marginBottom: 'var(--spacing-4)', color: plan.highlight ? 'rgba(255, 255, 255, 0.9)' : 'var(--text-secondary)' }}>
                   {plan.description}
                 </p>
-                <div className="flex items-baseline gap-1">
-                  <span className={`text-4xl font-extrabold ${plan.highlight ? 'text-white' : 'text-gray-900'}`}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--spacing-2)' }}>
+                  <span style={{ fontSize: '36px', fontWeight: '700', color: plan.highlight ? 'white' : 'var(--text-heading)' }}>
                     {plan.price}
                   </span>
-                  <span className={`text-sm ${plan.highlight ? 'text-indigo-200' : 'text-gray-500'}`}>
+                  <span style={{ fontSize: '14px', color: plan.highlight ? 'rgba(255, 255, 255, 0.8)' : 'var(--text-secondary)' }}>
                     {plan.period}
                   </span>
                 </div>
               </div>
 
-              <ul className="flex-1 space-y-3 mb-8">
+              <ul style={{ flex: 1, marginBottom: 'var(--spacing-8)', listStyle: 'none', padding: 0, margin: 0 }}>
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-sm">
-                    <span className={`mt-0.5 flex-shrink-0 ${plan.highlight ? 'text-indigo-200' : 'text-indigo-600'}`}>
+                  <li key={feature} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-3)', fontSize: '14px' }}>
+                    <span style={{ marginTop: '2px', flexShrink: 0, color: plan.highlight ? 'white' : 'var(--brand-teal)' }}>
                       ✓
                     </span>
-                    <span className={plan.highlight ? 'text-indigo-100' : 'text-gray-600'}>{feature}</span>
+                    <span style={{ color: plan.highlight ? 'rgba(255, 255, 255, 0.95)' : 'var(--text-body)' }}>{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -151,11 +169,19 @@ export default function PricingPage() {
                 type="button"
                 disabled={loading !== null}
                 onClick={() => handleSubscribe(plan.id)}
-                className={`w-full py-3 px-6 rounded-lg font-semibold text-sm transition-opacity disabled:opacity-60 ${
-                  plan.highlight
-                    ? 'bg-white text-indigo-600 hover:bg-indigo-50'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                }`}
+                style={{
+                  width: '100%',
+                  padding: 'var(--spacing-3) var(--spacing-4)',
+                  borderRadius: 'var(--radius-md)',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  border: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  backgroundColor: plan.highlight ? 'white' : 'var(--brand-teal)',
+                  color: plan.highlight ? 'var(--brand-teal)' : 'white',
+                  transition: 'all 0.15s ease',
+                  opacity: loading ? 0.6 : 1,
+                }}
               >
                 {loading === plan.id ? 'Redirecting…' : `Get ${plan.name}`}
               </button>
@@ -163,10 +189,10 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-10">
+        <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', marginTop: 'var(--spacing-12)' }}>
           Payments are processed securely by Stripe. No card stored on our servers.
         </p>
       </div>
-    </main>
+    </div>
   );
 }
