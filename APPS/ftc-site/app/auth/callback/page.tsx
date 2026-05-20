@@ -1,7 +1,26 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import AuthCallbackClient from "./AuthCallbackClient";
 
 export const dynamic = "force-static";
+
+export const metadata: Metadata = {
+  title: "Completing sign-in",
+  description: "Please wait while we finish your secure session.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+  openGraph: {
+    title: "Completing sign-in",
+    description: "Please wait while we finish your secure session.",
+    siteName: "Account access",
+  },
+  twitter: {
+    title: "Completing sign-in",
+    description: "Please wait while we finish your secure session.",
+  },
+};
 
 export default function AuthCallbackPage() {
   return (
