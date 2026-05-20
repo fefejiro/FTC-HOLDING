@@ -19,9 +19,10 @@ async function run() {
   const hasGlobalCrash = /An unexpected error occurred|SOMETHING WENT WRONG/i.test(body);
   const hasAttentionHeading = /Sign-in needs attention/i.test(body);
   const hasConfiguredMessage = /not configured for this deployment/i.test(body);
+  const hasOpenPortalCta = (await page.getByRole("link", { name: /open portal/i }).count()) > 0;
 
-  const primaryLabel = hasConfiguredMessage ? /open portal/i : /open admin dashboard/i;
-  const secondaryLabel = hasConfiguredMessage ? /back to home/i : /open workspace/i;
+  const primaryLabel = hasOpenPortalCta ? /open portal/i : /open admin dashboard/i;
+  const secondaryLabel = hasOpenPortalCta ? /back to home/i : /open workspace/i;
 
   const primaryLink = page.getByRole("link", { name: primaryLabel }).first();
   const secondaryLink = page.getByRole("link", { name: secondaryLabel }).first();
