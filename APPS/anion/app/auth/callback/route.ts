@@ -5,8 +5,10 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const successRedirect = '/dashboard';
+  const next = searchParams.get('next');
+  const successRedirect = next && next.startsWith('/') ? next : '/dashboard';
   const failureRedirect = '/login?error=auth_callback_failed';
+  const canonicalOrigin = process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL || process.env.NEXT_PUBLIC_SITE_URL || origin;
 
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -29,10 +31,10 @@ export async function GET(request: NextRequest) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${successRedirect}`);
+      return NextResponse.redirect(`${canonicalOrigin}${successRedirect}`);
     }
   }
 
   // Something went wrong — send back to login with error indicator
-  return NextResponse.redirect(`${origin}${failureRedirect}`);
+  return NextResponse.redirect(`${canonicalOrigin}${failureRedirect}`);
 }

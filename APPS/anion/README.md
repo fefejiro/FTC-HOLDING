@@ -10,11 +10,14 @@ Primary production delivery lane for Anion.
 - Daily React for live classroom
 
 ## Current State
-- M0 platform realignment in progress
+- M0 platform realignment complete
 - App Router route skeleton established
 - OpenNext and Wrangler deployment contract added
-- Supabase migrations folder initialized
-- M1-M5 implementation remains in scheduled phases
+- Supabase migrations folder initialized and applied
+- M1-M5 core implementation exists in code, but authenticated production closure is currently blocked
+- Current Phase 1 execution status: FAIL (hard blocker: no valid confirmed production role test credentials for parent/tutor/student)
+- Runtime status endpoint is now aligned: live `/api/status` reports blocked Phase 1 closure state
+- Governance rule: do not mark overall green while critical items in `ops/PRODUCTION-READINESS.md` remain open
 
 ## Commands
 - npm run dev

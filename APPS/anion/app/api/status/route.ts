@@ -5,12 +5,25 @@ export async function GET() {
   const response: PlatformStatusResponse = {
     ok: true,
     service: 'anion-web',
-    phase: 'M2-M5-scaffold-bootstrap',
-    placeholders: {
-      m2Booking: 'planned',
-      m3Billing: 'scaffolded',
-      m4LiveClassroom: 'scaffolded',
-      m5OpsQa: 'scaffolded',
+    phase: 'phase1-call-closure-failed-auth-blocked',
+    release: '0.2.12',
+    runtime: {
+      web: 'live',
+      health: 'ok',
+      authAndRoles: 'blocked-invalid-credentials',
+      bookings: 'implemented-not-auth-verified',
+      billing: 'ready-with-external-keys',
+      liveClassroom: 'implemented-not-auth-verified',
+      opsAndQa: 'blocked-phase1-fail',
+    },
+    blockers: {
+      externalConfig: [
+        'stripe_live_keys',
+        'daily_api_key',
+        'supabase_auth_allow_list',
+        'confirmed_phase1_test_credentials',
+      ],
+      legal: ['privacy_policy_signoff', 'terms_signoff'],
     },
     timestamp: new Date().toISOString(),
   };

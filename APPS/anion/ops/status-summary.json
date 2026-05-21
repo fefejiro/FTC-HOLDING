@@ -1,10 +1,10 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-05-07T00:00:00.000Z",
-  "overall": "green",
-  "stage": "m1-m5-complete-client-handover",
-  "summary": "M1–M5 fully implemented and build-verified. Auth, bookings, Stripe billing, Daily.co live classroom, and admin dashboard are all production-ready. Awaiting client env var configuration before Cloudflare deployment.",
+  "updatedAt": "2026-05-21T17:12:00.000Z",
+  "overall": "red",
+  "stage": "phase1-call-closure-pending-auth-evidence",
+  "summary": "Production runtime is live, verified, and newly deployed with callback-domain hardening and premium login UX. Phase 1 remains non-green because authenticated parent/tutor/student call journey evidence is still pending behind external configuration and confirmed role test-credential gates. Privacy/Terms legal review also remains open.",
   "metrics": [
     {
       "label": "Docs",
@@ -14,9 +14,9 @@
     },
     {
       "label": "Web Lane",
-      "value": "m5-complete",
-      "detail": "All five milestones implemented: auth, bookings, Stripe, Daily video, admin dashboard. Build passes.",
-      "status": "green"
+      "value": "deployed-and-verified-pending-role-journey-evidence",
+      "detail": "Core milestones are deployed and runtime probes pass in production; authenticated role journey evidence remains pending.",
+      "status": "yellow"
     },
     {
       "label": "Database",
@@ -26,14 +26,14 @@
     },
     {
       "label": "Live Runtime",
-      "value": "pending-client-env-vars",
-      "detail": "Stripe and Daily keys are empty — client must complete PRODUCTION-READINESS.md external blocker checklist before deploying to Cloudflare Workers.",
+      "value": "live-verified-phase1-open",
+      "detail": "Production health/status/auth-callback probes pass and worker deployment is current; authenticated role journeys are pending manual evidence runs.",
       "status": "yellow"
     },
     {
       "label": "Trust Docs",
-      "value": "placeholder-ready",
-      "detail": "PRIVACY.md and TERMS.md created as implementation-ready placeholders awaiting legal review before publication.",
+      "value": "policy-routes-live-legal-signoff-pending",
+      "detail": "Public /privacy and /terms routes plus cookie consent banner are implemented. Final legal review and sign-off are still required before formal publication approval.",
       "status": "yellow"
     }
   ],
@@ -46,12 +46,12 @@
     {
       "name": "Next.js build",
       "status": "green",
-      "detail": "npm run build passes cleanly — 19/19 pages compiled."
+      "detail": "npm run ci:check passes cleanly in APPS/anion."
     },
     {
       "name": "Git commits",
       "status": "green",
-      "detail": "Two commits: 21e45561 (M1-M2) and 39e6dc32 (M3-M5). Ready to push."
+      "detail": "Ops and handoff docs were updated for M1 closure and production readiness tracking."
     },
     {
       "name": "Client handover",
@@ -75,8 +75,13 @@
     },
     {
       "name": "Production readiness",
-      "status": "green",
-      "detail": "ops/PRODUCTION-READINESS.md is the consolidated pass/fail checklist for go-live including external blocker gates."
+      "status": "red",
+      "detail": "Phase 1 authenticated call evidence is currently FAIL and critical go-live rows remain open in ops/PRODUCTION-READINESS.md."
+    },
+    {
+      "name": "Phase 1 call closure",
+      "status": "red",
+      "detail": "Runtime callback hardening is deployed, but authenticated parent/tutor/student join and leave/rejoin evidence is still pending confirmed role test credentials."
     }
   ],
   "connections": [
@@ -98,9 +103,12 @@
     "terms": "APPS/anion/docs/TERMS.md"
   },
   "nextActions": [
-    "Complete PRODUCTION-READINESS.md external blocker checklist — configure Stripe live keys, Daily API key, Supabase domain allow-list, and Cloudflare env vars.",
-    "Obtain legal review and sign-off on docs/PRIVACY.md and docs/TERMS.md before publishing to users.",
-    "Configure uptime monitor for /api/health endpoint (see MONITORING-ALERTS.md §Setup Guide).",
+    "Confirm Supabase Auth allow-list includes https://anion.unalabs.cloud/auth/callback and current production domain entries.",
+    "Provision and confirm production parent/tutor/student role test credentials, then execute authenticated Phase 1 lesson journeys.",
+    "Capture parent/tutor/student join and leave/rejoin evidence in ops/PHASE1-CALL-PRODUCTION-CLOSURE.md and flip verdict only after all role paths pass.",
+    "Complete PRODUCTION-READINESS.md external blocker checklist (Stripe live keys/prices/webhook, Daily API key/domain, Supabase auth entries).",
+    "Obtain legal review and sign-off on docs/PRIVACY.md and docs/TERMS.md before formal publication approval.",
+    "Configure uptime monitor for /api/health endpoint (see MONITORING-ALERTS.md Setup Guide).",
     "Run quarterly disaster recovery test and update DISASTER-RECOVERY.md test log."
   ]
 }

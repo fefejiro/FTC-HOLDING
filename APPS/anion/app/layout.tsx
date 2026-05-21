@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import './globals.css';
 import SwRegister from './components/SwRegister';
+import CookieConsentBanner from './components/CookieConsentBanner';
 import { getCurrentUser } from './lib/auth/getCurrentUser';
 
 export const viewport: Viewport = {
@@ -51,6 +52,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main>
           {children}
         </main>
+        <CookieConsentBanner />
+        <footer style={{ borderTop: '1px solid #e2e8f0', backgroundColor: 'white', marginTop: '24px' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>Anion platform status: production handoff in progress.</p>
+            <nav style={{ display: 'flex', gap: '12px', alignItems: 'center' }} aria-label="Legal links">
+              <Link href="/privacy" style={{ fontSize: '13px', color: 'var(--text-secondary)', textDecoration: 'none' }}>Privacy</Link>
+              <Link href="/terms" style={{ fontSize: '13px', color: 'var(--text-secondary)', textDecoration: 'none' }}>Terms</Link>
+            </nav>
+          </div>
+        </footer>
       </body>
     </html>
   );

@@ -18,7 +18,7 @@ Anion Class App is an FTC client committed, production bound education platform 
 
 1. Build the web app first. Do not pull `anion-mobile` into active delivery unless the issue explicitly says so.
 2. Treat M0 as already completed unless a regression is discovered.
-3. Current active next milestone is M1 foundation wiring, auth, role resolution, and dashboard routing.
+3. Current active milestone is Phase 1 production closure for lesson call flow and same-day truth alignment.
 4. Every issue must have:
    - one primary owner
    - one reviewer
@@ -55,11 +55,11 @@ Anion Class App is an FTC client committed, production bound education platform 
 
 ## Current execution order
 
-- **M1 (active):** auth, role resolution, dashboard routing, Supabase profile wiring → owner: `anion-web-builder`, reviewer: `anion-qa-release`
-- **M2:** tutor directory, booking flow, session records → owner: `anion-web-builder`
-- **M3:** billing and access control → owner: `anion-billing-access`
-- **M4:** Daily lesson room → owner: `anion-live-classroom`
-- **M5:** real time collaboration, QA hardening, release gating → owner: `anion-qa-release`
+- **Phase 1 (active, currently blocked):** call production closure (accepted booking -> lesson access -> Daily join -> leave/rejoin) + same-day truth alignment across runtime/docs. Current hard blocker: no valid confirmed production role test credentials (parent/tutor/student) â†’ owner: `anion-live-classroom`, reviewer: `anion-qa-release`
+- **Phase 2:** external production blockers (Stripe, Daily, Supabase callback allow-list) â†’ owner: `anion-billing-access`
+- **Phase 3:** theme/background production finish limited to validated call-flow surfaces â†’ owner: `anion-web-builder`
+- **Phase 4:** hard verification for booking->call and billing->subscription sync â†’ owner: `anion-qa-release`
+- **Phase 5:** final go/no-go with canonical evidence, blockers, owners, recommendation â†’ owner: `anion-program-director`
 
 ## How to start a session in agent mode
 

@@ -60,12 +60,25 @@ export type DailyRoomTokenResponse = {
 export type PlatformStatusResponse = {
   ok: true;
   service: 'anion-web';
-  phase: string;
-  placeholders: {
-    m2Booking: 'planned';
-    m3Billing: 'scaffolded';
-    m4LiveClassroom: 'scaffolded';
-    m5OpsQa: 'scaffolded';
+  phase: 'production-handoff' | 'phase1-call-closure-failed-auth-blocked';
+  release: string;
+  runtime: {
+    web: 'live';
+    health: 'ok';
+    authAndRoles: 'ready' | 'blocked-invalid-credentials';
+    bookings: 'ready' | 'implemented-not-auth-verified';
+    billing: 'ready-with-external-keys';
+    liveClassroom: 'ready-with-external-keys' | 'implemented-not-auth-verified';
+    opsAndQa: 'ready' | 'blocked-phase1-fail';
+  };
+  blockers: {
+    externalConfig: Array<
+      'stripe_live_keys' |
+      'daily_api_key' |
+      'supabase_auth_allow_list' |
+      'confirmed_phase1_test_credentials'
+    >;
+    legal: Array<'privacy_policy_signoff' | 'terms_signoff'>;
   };
   timestamp: string;
 };

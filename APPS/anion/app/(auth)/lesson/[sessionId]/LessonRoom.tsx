@@ -47,6 +47,7 @@ export default function LessonRoom({
   classroomTimeline,
 }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
+  const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'left'>('loading');
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -115,7 +116,7 @@ export default function LessonRoom({
         callRef.current = null;
       }
     };
-  }, [sessionId, userId, participantRole, displayName]);
+  }, [sessionId, userId, participantRole, displayName, attempt]);
 
   if (status === 'left') {
     return (
@@ -134,7 +135,21 @@ export default function LessonRoom({
         <div style={{ fontSize: '64px', marginBottom: 'var(--spacing-6)' }}>⚠️</div>
         <h1 className="h2" style={{ marginBottom: 'var(--spacing-2)' }}>Could not join session</h1>
         <p style={{ color: 'var(--danger)', marginBottom: 'var(--spacing-6)', fontSize: '14px' }}>✕ {error}</p>
-        <a href="/dashboard" className="btn-primary" style={{ padding: 'var(--spacing-3) var(--spacing-6)', display: 'inline-block' }}>Back to Dashboard</a>
+        <div style={{ display: 'flex', gap: 'var(--spacing-3)', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button
+            type="button"
+            className="btn-primary"
+            style={{ padding: 'var(--spacing-3) var(--spacing-6)' }}
+            onClick={() => {
+              setError(null);
+              setStatus('loading');
+              setAttempt((value) => value + 1);
+            }}
+          >
+            Retry Join
+          </button>
+          <a href="/dashboard" className="btn-secondary" style={{ padding: 'var(--spacing-3) var(--spacing-6)', display: 'inline-block' }}>Back to Dashboard</a>
+        </div>
       </div>
     );
   }

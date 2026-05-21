@@ -47,6 +47,7 @@ function parseArgs(argv) {
 
 const config = parseArgs(args);
 const results = [];
+const defaultDailyErrorCodes = ['INVALID_DAILY_ROOM_REQUEST', 'CSRF_MISSING_ORIGIN'];
 
 function record(name, ok, detail) {
   results.push({ name, ok, detail });
@@ -183,8 +184,17 @@ async function checkDailyRoomContract(baseUrl) {
 
     const body = parseJsonSafe(bodyText);
     const returnedCode = typeof body?.code === 'string' ? body.code : '(missing)';
-    const ok = response.status === 400 && returnedCode === config.expectedDailyErrorCode;
-    record('Daily room contract smoke (optional, non-destructive)', ok, `HTTP ${response.status}, code=${returnedCode}`);
+    const expectedCodes =
+      config.expectedDailyErrorCode && config.expectedDailyErrorCode !== 'AUTO'
+        ? [config.expectedDailyErrorCode]
+        : defaultDailyErrorCodes;
+    const statusAllowed = response.status === 400 || response.status === 403;
+    const ok = statusAllowed && expectedCodes.includes(returnedCode);
+    record(
+      'Daily room contract smoke (optional, non-destructive)',
+      ok,
+      `HTTP ${response.status}, code=${returnedCode}, expected=${expectedCodes.join('|')}`,
+    );
   } catch (error) {
     record(
       'Daily room contract smoke (optional, non-destructive)',

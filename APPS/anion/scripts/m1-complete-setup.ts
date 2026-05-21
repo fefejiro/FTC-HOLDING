@@ -19,21 +19,24 @@ if (!ACCESS_TOKEN) {
 interface TestUser {
   email: string;
   password: string;
-  role: 'parent' | 'tutor' | 'admin' | 'student';
+  role: 'parent' | 'tutor' | 'student';
 }
 
 const testUsers: TestUser[] = [
   { email: 'test-parent-m1@example.com', password: 'TestPassword2026!Parent', role: 'parent' },
   { email: 'test-tutor-m1@example.com', password: 'TestPassword2026!Tutor', role: 'tutor' },
-  { email: 'test-admin-m1@example.com', password: 'TestPassword2026!Admin', role: 'admin' },
+  { email: 'test-student-m1@example.com', password: 'TestPassword2026!Student', role: 'student' },
 ];
 
 async function createAuthUser(email: string, password: string): Promise<string | null> {
+  const serviceRoleKey = await getServiceRoleKey();
+
   try {
-    const response = await fetch(`${MANAGEMENT_URL}/v1/projects/${PROJECT_ID}/auth/users`, {
+    const response = await fetch(`${PROJECT_URL}/auth/v1/admin/users`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${ACCESS_TOKEN}`,
+        'Authorization': `Bearer ${serviceRoleKey}`,
+        'apikey': serviceRoleKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -46,6 +49,14 @@ async function createAuthUser(email: string, password: string): Promise<string |
     if (response.status === 201 || response.status === 200) {
       const data = await response.json();
       return data.id;
+    }
+
+    // User may already exist; reuse existing auth id for idempotent setup.
+    if (response.status === 422 || response.status === 409) {
+      const existingId = await findAuthUserIdByEmail(email, serviceRoleKey);
+      if (existingId) {
+        return existingId;
+      }
     }
 
     const text = await response.text();
@@ -71,6 +82,47 @@ async function executeQuery(sql: string): Promise<boolean> {
   } catch (error) {
     return false;
   }
+}
+
+async function getServiceRoleKey(): Promise<string> {
+  const response = await fetch(`${MANAGEMENT_URL}/v1/projects/${PROJECT_ID}/api-keys`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${ACCESS_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to fetch API keys: ${response.status} ${text.substring(0, 200)}`);
+  }
+
+  const keys = (await response.json()) as Array<{ name?: string; api_key?: string }>;
+  const serviceRole = keys.find((key) => key.name === 'service_role' && key.api_key);
+
+  if (!serviceRole?.api_key) {
+    throw new Error('service_role key not found via Supabase Management API.');
+  }
+
+  return serviceRole.api_key;
+}
+
+async function findAuthUserIdByEmail(email: string, serviceRoleKey: string): Promise<string | null> {
+  const encodedEmail = encodeURIComponent(email);
+  const response = await fetch(`${PROJECT_URL}/auth/v1/admin/users?email=${encodedEmail}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${serviceRoleKey}`,
+      'apikey': serviceRoleKey,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) return null;
+  const data = (await response.json()) as { users?: Array<{ id: string; email?: string }> };
+  const existing = data.users?.find((user) => user.email?.toLowerCase() === email.toLowerCase());
+  return existing?.id ?? null;
 }
 
 async function main() {
@@ -110,12 +162,13 @@ async function main() {
   console.log('M1 SETUP — STATUS & NEXT STEPS');
   console.log('='.repeat(80) + '\n');
 
+  const targetCount = testUsers.length;
   const createdCount = createdUsers.filter(u => u.authId).length;
   
-  if (createdCount === 3) {
+  if (createdCount === targetCount) {
     console.log('✅ ALL TEST ACCOUNTS CREATED AUTOMATICALLY!\n');
   } else if (createdCount > 0) {
-    console.log(`⚠️  ${createdCount}/3 test accounts created automatically.\n`);
+    console.log(`⚠️  ${createdCount}/${targetCount} test accounts created automatically.\n`);
   } else {
     console.log('⚠️  Test accounts require manual creation in Supabase Dashboard.\n');
   }
@@ -126,7 +179,7 @@ async function main() {
   console.log(`   Go to: ${PROJECT_URL}/editor?schema=public`);
   console.log('   Check: profiles, user_roles, students, parents, tutors exist\n');
 
-  if (createdCount < 3) {
+  if (createdCount < targetCount) {
     console.log('2️⃣  Create Missing Test Users');
     console.log(`   Go to: ${PROJECT_URL}/auth/users`);
     console.log('   Click [+ Create a new user] for:');

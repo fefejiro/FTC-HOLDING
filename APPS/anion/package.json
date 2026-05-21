@@ -35,6 +35,7 @@
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.0.0-beta.3",
     "@playwright/test": "^1.49.0",
+    "@tailwindcss/node": "4.2.4",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/node": "^22.15.29",
     "@types/react": "^19.1.2",

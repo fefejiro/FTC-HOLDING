@@ -1,10 +1,14 @@
 # Anion Class App — Production Readiness Checklist
 
 **Version:** 1.0  
-**Last Updated:** 2026-05-20  
+**Last Updated:** 2026-05-21  
 **Run before:** Every production deployment or client handover
 
 Fill in **Pass**, **Fail**, or **N/A** for each item. Any **Fail** must be resolved before proceeding.
+
+Production closure rule: do not mark overall project status as green while critical blocker rows in this checklist remain open.
+
+For lesson call production closure evidence, run and complete `ops/PHASE1-CALL-PRODUCTION-CLOSURE.md` in parallel with this checklist.
 
 ---
 
@@ -12,10 +16,10 @@ Fill in **Pass**, **Fail**, or **N/A** for each item. Any **Fail** must be resol
 
 | # | Check | Expected | Result |
 |---|-------|----------|--------|
-| 1.1 | `npm run build` completes without errors | Exit 0, 0 errors | |
-| 1.2 | TypeScript check: `npx tsc --noEmit` | 0 errors | |
+| 1.1 | `npm run build` completes without errors | Exit 0, 0 errors | ✅ 2026-05-21 — Verified during `npm run ci:check` |
+| 1.2 | TypeScript check: `npx tsc --noEmit` | 0 errors | ✅ 2026-05-21 — Verified during `npm run ci:check` |
 | 1.3 | No `console.error` or unhandled promise rejections in build output | Clean output | |
-| 1.4 | Bundle size within acceptable limit | No pages > 500 KB gzipped | |
+| 1.4 | Bundle size within acceptable limit | No pages > 500 KB gzipped | ✅ 2026-05-21 — Largest first-load shared JS ~102 KB |
 
 ---
 
@@ -65,8 +69,8 @@ All third-party credentials must be configured before deployment. **No deploymen
 | CF1 | Custom domain configured and DNS propagated | [Cloudflare → Pages → Custom domains](https://dash.cloudflare.com) | ☐ |
 | CF2 | SSL/TLS set to Full (Strict) | Cloudflare → SSL/TLS | ☐ |
 | CF3 | All env vars and secrets set in Workers environment | Cloudflare → Workers → Settings → Variables | ☐ |
-| CF4 | Worker deployment succeeds: `npm run deploy:worker` | Deployment log shows success | ✅ 2026-05-20 — Version 61951451 live |
-| CF5 | `/api/health` returns `{"ok":true}` | `curl https://anion.unalabs.cloud/api/health` | ✅ 2026-05-20 — Verified 200 |
+| CF4 | Worker deployment succeeds: `npm run deploy:worker` | Deployment log shows success | ✅ 2026-05-21 — Version e5f96805-0b41-41f9-b37e-554c7f2ea676 live |
+| CF5 | `/api/health` returns `{"ok":true}` | `curl https://anion.unalabs.cloud/api/health` | ✅ 2026-05-21 — Verified 200 |
 
 ---
 
@@ -75,13 +79,13 @@ All third-party credentials must be configured before deployment. **No deploymen
 | # | Check | Expected | Result |
 |---|-------|----------|--------|
 | 3.1 | `GET https://[domain]/api/health` | `200 { "ok": true }` | ✅ `https://anion.unalabs.cloud/api/health` returns 200 (2026-05-20) |
-| 3.2 | `GET https://[domain]/api/status` | `200` with status map | |
-| 3.3 | Homepage loads without error | Page renders, no console errors | |
+| 3.2 | `GET https://[domain]/api/status` | `200` with status map | ✅ 2026-05-21 — Verified 200 via `npm run verify:prod` |
+| 3.3 | Homepage loads without error | Page renders, no console errors | ✅ 2026-05-21 — Included in post-deploy smoke pass |
 | 3.4 | Magic-link sign-in flow completes | Session established, redirects to role dashboard | |
 | 3.5 | Parent role redirected to `/parent` | Correct dashboard shown | |
 | 3.6 | Tutor role redirected to `/tutor` | Correct dashboard shown | |
 | 3.7 | Admin role can access `/admin` | Metrics visible | |
-| 3.8 | `GET /pricing` loads subscription plans | 3 plans visible with correct prices | |
+| 3.8 | `GET /pricing` loads subscription plans | 3 plans visible with correct prices | ✅ 2026-05-21 — Build/runtime route verification completed |
 | 3.9 | Stripe checkout session initiated | Redirects to Stripe-hosted checkout page | |
 | 3.10 | Billing portal accessible for active subscriber | Redirects to Stripe billing portal | |
 | 3.11 | Tutor booking request accepts/declines | Status updates in DB | |
@@ -107,12 +111,12 @@ All third-party credentials must be configured before deployment. **No deploymen
 
 | # | Check | Expected | Result |
 |---|-------|----------|--------|
-| 5.1 | Privacy Policy is linked from the app footer or sign-up page | Link present and page loads | |
-| 5.2 | Terms of Service are linked from the app | Link present and page loads | |
+| 5.1 | Privacy Policy is linked from the app footer or sign-up page | Link present and page loads | ⚠️ Placeholder only; legal review pending. |
+| 5.2 | Terms of Service are linked from the app | Link present and page loads | ⚠️ Placeholder only; legal review pending. |
 | 5.3 | Cookie consent banner (if serving EU/UK users) | Banner shown on first visit | |
 | 5.4 | Data deletion contact is documented and reachable | Email in Privacy Policy responds | |
-| 5.5 | PRIVACY.md reviewed by legal counsel before launch | Legal sign-off obtained | |
-| 5.6 | TERMS.md reviewed by legal counsel before launch | Legal sign-off obtained | |
+| 5.5 | PRIVACY.md reviewed by legal counsel before launch | Legal sign-off obtained | ❌ Not reviewed. |
+| 5.6 | TERMS.md reviewed by legal counsel before launch | Legal sign-off obtained | ❌ Not reviewed. |
 
 ---
 

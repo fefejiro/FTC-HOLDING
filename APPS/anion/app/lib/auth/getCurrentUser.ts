@@ -58,6 +58,16 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       role,
     };
   } catch (error) {
+    const dynamicServerUsage =
+      typeof error === 'object' &&
+      error !== null &&
+      ((error as { digest?: string }).digest === 'DYNAMIC_SERVER_USAGE' ||
+        String((error as { description?: string }).description ?? '').includes('Dynamic server usage'));
+
+    if (dynamicServerUsage) {
+      return null;
+    }
+
     // Network errors or Supabase unavailability should not 500 the page —
     // treat as unauthenticated so callers can redirect to /login.
     console.error('[getCurrentUser] Failed to resolve session:', error);

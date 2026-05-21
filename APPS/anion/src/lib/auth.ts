@@ -41,15 +41,48 @@ export function subscribeToAuth(handler: (session: AuthSession | null) => void) 
   return createBrowserClient().auth.onAuthStateChange((_event: unknown, session: AuthSession | null) => handler(session));
 }
 
+function getAuthCallbackUrl(): string | undefined {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  const configuredBase =
+    process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    window.location.origin;
+
+  const normalizedBase = configuredBase.replace(/\/$/, '');
+  return `${normalizedBase}/auth/callback`;
+}
+
+export async function sendMagicLink(email: string) {
+  if (!authEnabled()) {
+    throw new Error('Supabase auth is not configured for this environment.');
+  }
+
+  const emailRedirectTo = getAuthCallbackUrl();
+
+  return createBrowserClient().auth.signInWithOtp({
+    email,
+    options: emailRedirectTo ? { emailRedirectTo } : undefined,
+  });
+}
 
 export async function signInWithGoogle() {
   if (!authEnabled()) {
     throw new Error('Supabase auth is not configured for this environment.');
   }
-  const redirectTo = typeof window !== 'undefined' ? window.location.origin + '/dashboard' : undefined;
+  const redirectTo = getAuthCallbackUrl();
   return createBrowserClient().auth.signInWithOAuth({
     provider: 'google',
-    options: redirectTo ? { redirectTo } : undefined,
+    options: redirectTo
+      ? {
+          redirectTo,
+          queryParams: {
+            prompt: 'select_account',
+          },
+        }
+      : undefined,
   });
 }
 

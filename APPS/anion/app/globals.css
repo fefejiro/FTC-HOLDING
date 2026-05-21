@@ -14,6 +14,8 @@
   --brand-teal: #0f766e;
   --brand-teal-dark: #115e59;
   --brand-teal-light: #ccf0ee;
+  --brand: var(--brand-teal);
+  --brand-dark: var(--brand-teal-dark);
   --brand-orange: #ea580c;
   --warning: #b45309;
   --danger: #b91c1c;

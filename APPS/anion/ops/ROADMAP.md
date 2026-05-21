@@ -1,6 +1,6 @@
 # Anion Delivery Roadmap
 
-Last updated: 2026-05-06
+Last updated: 2026-05-20 (Phase 1 execution update)
 Primary production lane: anion web app
 
 ## Delivery Principles
@@ -8,9 +8,20 @@ Primary production lane: anion web app
 - Keep work in reviewable phases with explicit entry/exit criteria.
 - Do not accept architecture sprawl or unapproved vendor additions.
 - Maintain ADR and changelog discipline on every significant platform decision.
+- Do not report overall status as green while critical blockers in `ops/PRODUCTION-READINESS.md` are open.
+
+## Active Production Closure Order (current)
+1. Phase 1: Call production closure with authenticated evidence (parent, tutor, student) - currently blocked by missing valid confirmed production role test credentials
+2. Same-day truth alignment across runtime `/api/status` and governance docs
+3. External production gates (Stripe, Daily, Supabase callback allow-list)
+4. Background/theme finish only on validated call-flow surfaces
+5. Hard verification for booking->call and billing->subscription sync
+6. Final canonical go/no-go report
 
 ## M0: Platform Realignment (new mandatory gate)
 Goal: Align repo foundations with approved production stack before feature build-out.
+
+Status: Complete
 
 Scope:
 - Migrate anion from Vite SPA to Next.js App Router.
@@ -31,7 +42,7 @@ Exit criteria:
 ## M1: Foundation Wiring
 Goal: Authenticated role routing and base dashboards.
 
-Status: In progress (core auth flow implemented; hardening in cleanup)
+Status: Implemented in code; production closure still open
 
 Scope:
 - Supabase auth/session wiring and role resolution.
@@ -45,15 +56,13 @@ Delivered:
 - Base role dashboards are scaffolded and route correctly after sign-in.
 
 Remaining to close M1:
-- Apply and verify RLS policies in target Supabase environment.
-- Remove temporary server-side service-role fallback in user resolution.
-- Confirm callback redirect allow-list is correctly set for all environments.
-- Re-run unattended auth smoke with policy-only reads.
+- Client-owned runtime env vars and any final environment allow-list updates.
+- Manual auth smoke and role-routing verification during handoff.
 
 ## M2: Booking System
 Goal: End-to-end tutor booking flow.
 
-Status: Not started
+Status: Implemented in code; awaiting production-closure verification
 
 Scope:
 - Tutor discovery and filtering.
@@ -63,7 +72,7 @@ Scope:
 ## M3: Billing
 Goal: Production-safe billing with Stripe only.
 
-Status: Not started
+Status: Implemented in code; blocked by external production configuration
 
 Scope:
 - Checkout session API route.
@@ -74,7 +83,7 @@ Scope:
 ## M4: Live Classroom
 Goal: Session-linked Daily React room flow.
 
-Status: Not started
+Status: Implemented in code; Phase 1 call production closure execution currently FAIL due to auth credential blocker
 
 Scope:
 - Daily room token issuance from server routes.
@@ -84,7 +93,7 @@ Scope:
 ## M5: Operations + QA Stabilization
 Goal: Stable launch readiness for web lane.
 
-Status: Not started
+Status: In progress (hard verification and canonical signoff pending)
 
 Scope:
 - Operator dashboard metrics and moderation.
