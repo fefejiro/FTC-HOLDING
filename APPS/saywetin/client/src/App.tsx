@@ -10,6 +10,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { LiveMiniPlayer } from "@/components/live-mini-player";
 import { UpdateNotification } from "@/components/update-notification";
 import { VersionGuard } from "@/components/version-guard";
+import { PwaInstallBanner } from "@/components/pwa-install-banner";
 import { isListenModeLocation } from "@/lib/navigation";
 import Home from "@/pages/home";
 import SongDetail from "@/pages/song-detail";
@@ -191,6 +192,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background pt-[env(safe-area-inset-top)]">
+      <PwaInstallBanner route={location} />
       <div className={hideBottomNav ? '' : 'pb-20'}>
         <Router />
       </div>

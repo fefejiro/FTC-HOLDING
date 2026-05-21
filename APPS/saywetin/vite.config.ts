@@ -1,4 +1,5 @@
-import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 import fs from "node:fs";
 import path from "path";
 
@@ -23,9 +24,94 @@ const frontendBuildInfo = {
     null,
 };
 
-const config = {
+export default defineConfig({
+  esbuild: {
+    jsx: "automatic",
+  },
   plugins: [
-    react(),
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: false,
+      includeAssets: [
+        "favicon.png",
+        "apple-touch-icon.png",
+        "app-icon.jpg",
+        "saywetin-logo.png",
+        "og-image.png",
+      ],
+      manifest: {
+        id: "/",
+        name: "SayWetin: Lyrics & Meaning",
+        short_name: "SayWetin",
+        description:
+          "Recognize songs, follow live lyrics, and understand slang and cultural meaning.",
+        start_url: "/",
+        scope: "/",
+        display: "standalone",
+        background_color: "#0A0A0F",
+        theme_color: "#00C853",
+        categories: ["music", "lifestyle", "entertainment"],
+        icons: [
+          {
+            src: "/apple-touch-icon.png",
+            sizes: "180x180",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/saywetin-logo.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable",
+          },
+        ],
+        shortcuts: [
+          {
+            name: "Listen Now",
+            short_name: "Listen",
+            description: "Start listening and recognize what is playing.",
+            url: "/",
+            icons: [{ src: "/favicon.png", sizes: "32x32", type: "image/png" }],
+          },
+          {
+            name: "Search Lyrics",
+            short_name: "Search",
+            description: "Search lyrics, artist names, and slang meanings.",
+            url: "/explore",
+            icons: [{ src: "/favicon.png", sizes: "32x32", type: "image/png" }],
+          },
+        ],
+      },
+      workbox: {
+        navigateFallback: "/index.html",
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/api\.saywetin\.app\/.*$/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "saywetin-api",
+              networkTimeoutSeconds: 8,
+              expiration: {
+                maxEntries: 80,
+                maxAgeSeconds: 60 * 60,
+              },
+            },
+          },
+          {
+            urlPattern: /\/assets\/.*\.(?:js|css|woff2?|png|jpe?g|webp|svg)$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "saywetin-assets",
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+            },
+          },
+        ],
+      },
+    }),
   ],
   define: {
     __SAYWETIN_FRONTEND_BUILD__: JSON.stringify(frontendBuildInfo),
@@ -48,6 +134,4 @@ const config = {
       deny: ["**/.*"],
     },
   },
-};
-
-export default config;
+});

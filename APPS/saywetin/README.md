@@ -27,6 +27,8 @@ This folder is the current source of truth for SayWetin.
 - API runtime: Railway service `sunny-acceptance` on `https://api.saywetin.app`
 - Frontend API base: `https://api.saywetin.app` (or relative `/api/*` only when explicitly running single-host fallback)
 - Capacitor production web host remains `https://saywetin.app`
+- The web frontend now supports PWA installability on `saywetin.app` via `manifest.webmanifest` and a service worker (`sw.js`).
+  - Existing users may need a hard refresh or service worker unregister if they still see old cached content.
 - `api.saywetin.ca` is not part of the default production contract.
 - `www.saywetin.app` should redirect to `https://saywetin.app` at Cloudflare; the Pages `_redirects` file must stay as SPA fallback only.
 

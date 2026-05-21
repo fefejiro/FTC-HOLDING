@@ -182,21 +182,26 @@ export default function Home() {
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col">
         <div className="pt-4">
-          <p className="mb-3 text-[11px] uppercase tracking-[0.28em] text-white/45">Saywetin</p>
+          <p className="mb-3 text-[11px] uppercase tracking-[0.28em] text-white/45">SayWetin</p>
           <h2
             className="font-serif text-4xl leading-[0.95] tracking-tight text-white sm:text-5xl"
             data-testid="heading-app-title"
           >
-            Hear the song.
+            Recognize the song.
             <br />
-            <span style={{ color: '#B5A8FF', fontStyle: 'italic' }}>Catch the meaning.</span>
+            <span style={{ color: '#B5A8FF', fontStyle: 'italic' }}>Follow the lyrics. Catch the meaning.</span>
           </h2>
           <p
             className="mt-4 max-w-xs text-sm leading-6 text-white/68 sm:text-base"
             data-testid="text-app-description"
           >
-            One tap opens the lyric and what it really means.
+            One tap recognizes what is playing, pulls in live lyrics, and explains the slang, context, and cultural meaning.
           </p>
+          <div className="mt-5 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em] text-white/70">
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5">Song recognition</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5">Live lyrics</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5">Slang meaning</span>
+          </div>
         </div>
 
         <div className="relative flex justify-center pb-4 pt-12">
@@ -227,7 +232,7 @@ export default function Home() {
           </button>
         </div>
 
-        <p className="mt-3 text-center text-sm text-white/52">Tap to listen</p>
+        <p className="mt-3 text-center text-sm text-white/52">Tap to recognize what is playing now</p>
 
         <button
           type="button"
@@ -239,8 +244,8 @@ export default function Home() {
             <Search className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-white">Search instead</p>
-            <p className="mt-1 text-xs text-white/45">Find a lyric, slang, or artist.</p>
+            <p className="text-sm font-medium text-white">Search lyrics or meaning</p>
+            <p className="mt-1 text-xs text-white/45">Find a lyric, slang phrase, artist, or track.</p>
           </div>
           <ChevronRight className="h-4 w-4 text-white/40" />
         </button>
