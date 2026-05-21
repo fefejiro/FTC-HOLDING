@@ -3,6 +3,7 @@ export const runtime = "edge";
 import type { MetadataRoute } from "next";
 import { blogPosts } from "../lib/blog";
 import { projectCaseStudies } from "../lib/content";
+import { gardenGtaLocationPages } from "../lib/gardenCleaners";
 import { SITE_URL } from "../lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -25,6 +26,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/garden-cleaners/services`, lastModified, priority: 0.8 },
     { url: `${SITE_URL}/garden-cleaners/contact`, lastModified, priority: 0.7 },
     { url: `${SITE_URL}/garden-cleaners/quote`, lastModified, priority: 0.8 },
+    { url: `${SITE_URL}/garden-cleaners/toronto`, lastModified, priority: 0.9 },
     { url: `${SITE_URL}/portal`, lastModified, priority: 0.8 },
     { url: `${SITE_URL}/polar-anchor`, lastModified, priority: 0.8 },
     { url: `${SITE_URL}/polar-anchor/about`, lastModified, priority: 0.7 },
@@ -49,5 +51,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(post.updatedAt),
     priority: 0.7
   }));
-  return [...staticEntries, ...workEntries, ...blogEntries];
+  const gardenLocationEntries = gardenGtaLocationPages.map((location) => ({
+    url: `${SITE_URL}/garden-cleaners/gta/${location.slug}`,
+    lastModified,
+    priority: 0.8
+  }));
+
+  return [...staticEntries, ...workEntries, ...blogEntries, ...gardenLocationEntries];
 }

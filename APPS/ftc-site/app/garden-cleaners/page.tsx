@@ -10,13 +10,13 @@ import GardenServiceShowcase from "../components/garden-cleaners/GardenServiceSh
 import GardenTestimonials from "../components/garden-cleaners/GardenTestimonials";
 import GardenTrustStrip from "../components/garden-cleaners/GardenTrustStrip";
 import type { GardenContentSection } from "../../lib/gardenContracts";
-import { gardenCleanersConfig, gardenServices, getGardenCleanersMetadata, getGardenCleanersPortalUrl } from "../../lib/gardenCleaners";
+import { gardenCleanersConfig, gardenCleanersSeoAreas, gardenServices, getGardenCleanersMetadata, getGardenCleanersPortalUrl } from "../../lib/gardenCleaners";
 
 const workflowSection: GardenContentSection = {
   id: "garden-home-workflow",
   kind: "workflow",
   eyebrow: "How it works",
-  title: "A simple three-step path from request to clean handoff.",
+  title: "A simple three-step path from request to premium-ready handoff.",
   description:
     "The process is designed to stay fast, clear, and low-friction for homeowners, offices, and property managers.",
   cards: [
@@ -118,7 +118,7 @@ const structuredData = {
     "addressRegion": "Ontario",
     "addressCountry": "CA"
   },
-  "areaServed": gardenCleanersConfig.serviceAreas.map((area) => ({ "@type": "City", "name": area })),
+  "areaServed": gardenCleanersSeoAreas.map((area) => ({ "@type": "City", "name": area })),
   "openingHoursSpecification": [
     { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "08:00", "closes": "18:00" },
     { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "15:00" }
@@ -192,7 +192,11 @@ export default function GardenCleanersHomePage() {
                 data-analytics-location="home_services_overview"
                 data-analytics-label="open_regional_portal"
               >
-                Open the regional portal
+                Open client portal access
+              </Link>
+              {" · "}
+              <Link href="/garden-cleaners/toronto" prefetch={false} className="inline-link">
+                See Toronto and GTA cleaning service coverage
               </Link>
             </p>
           </div>
@@ -200,6 +204,42 @@ export default function GardenCleanersHomePage() {
             {gardenServices.slice(0, 6).map((service) => (
               <GardenServiceCard key={service.slug} service={service} />
             ))}
+          </div>
+        </section>
+
+        <section className="section garden-section garden-portal-benefits-section">
+          <div className="section-heading">
+            <p className="eyebrow">Client portal benefits</p>
+            <h2>After booking, clients stay informed through a role-based portal.</h2>
+            <p>
+              The portal is part of the service experience, not an afterthought. Customers can follow service status, staff can update progress, and admin can monitor delivery performance.
+            </p>
+          </div>
+          <div className="cards-grid cards-grid-4 garden-portal-benefits-grid">
+            <article className="card garden-proof-card">
+              <h3>Customer lane</h3>
+              <p>Track status, view service history, and request help without email back-and-forth.</p>
+            </article>
+            <article className="card garden-proof-card">
+              <h3>Staff lane</h3>
+              <p>Assigned jobs, notes, and completion updates stay aligned with operations.</p>
+            </article>
+            <article className="card garden-proof-card">
+              <h3>Admin lane</h3>
+              <p>Quotes, jobs, assignments, and reporting summaries are visible in one place.</p>
+            </article>
+            <article className="card garden-proof-card">
+              <h3>Faster support</h3>
+              <p>Clients can request quote follow-up, issue support, and operations contact from clear action points.</p>
+            </article>
+          </div>
+          <div className="hero-actions">
+            <Link href={getGardenCleanersPortalUrl()} prefetch={false} className="btn btn-primary">
+              Sign in to Client Portal
+            </Link>
+            <Link href="/garden-cleaners/quote" prefetch={false} className="btn btn-secondary">
+              Start with a Quote
+            </Link>
           </div>
         </section>
 
@@ -338,7 +378,10 @@ export default function GardenCleanersHomePage() {
         <section className="section garden-section">
           <div className="section-heading">
             <p className="eyebrow">Client feedback</p>
-            <h2>What clients value about the experience.</h2>
+            <h2>What clients value most about Garden Cleaners.</h2>
+            <p>
+              Trust is earned through punctuality, communication, and a finish that feels ready for family life, team operations, or property handoff.
+            </p>
           </div>
           <GardenTestimonials />
         </section>
@@ -388,12 +431,12 @@ export default function GardenCleanersHomePage() {
         </section>
 
         <CTABanner
-          title="Need a cleaning plan that fits your schedule?"
-          description="Request a free quote and Garden Cleaners will follow up with the right next step for your property."
-          primaryLabel="Get a Free Quote"
+          title="Ready for a cleaner, better-managed property experience?"
+          description="Request a quote or open the portal to move from inquiry to scheduled service with clear visibility."
+          primaryLabel="Request Premium Quote"
           primaryHref="/garden-cleaners/quote"
-          secondaryLabel="Contact Garden Cleaners"
-          secondaryHref="/garden-cleaners/contact"
+          secondaryLabel="Open Client Portal"
+          secondaryHref={getGardenCleanersPortalUrl()}
         />
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions, gardenAddOns } from "../../../lib/gardenCleaners";
+import { gardenAddOns, gardenCleanersConfig, gardenFrequencies, gardenPropertyTypes, gardenServiceOptions, getGardenCleanersPortalUrl } from "../../../lib/gardenCleaners";
 import { trackEvent } from "../../../lib/analytics";
 import type { GardenFormSource, GardenQuotePayload } from "../../../lib/gardenContracts";
 
@@ -353,7 +353,17 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
             </div>
           ) : null}
           {message && submitState === "error" ? (
-            <p className="form-feedback error" role="alert">{message}</p>
+            <div className="garden-quote-recovery" role="alert">
+              <p className="form-feedback error">{message}</p>
+              <p>
+                If this keeps happening, call <a href={gardenCleanersConfig.phoneHref}>{gardenCleanersConfig.phoneDisplay}</a> or email{" "}
+                <a href={gardenCleanersConfig.emailHref}>{gardenCleanersConfig.email}</a> and operations will complete your quote manually.
+              </p>
+              <div className="hero-actions">
+                <a className="btn btn-secondary" href="/garden-cleaners/contact">Contact operations</a>
+                <a className="btn btn-secondary" href={getGardenCleanersPortalUrl()}>Open client portal</a>
+              </div>
+            </div>
           ) : null}
         </>
       )}

@@ -1,5 +1,78 @@
 # Release Notes — FTC Site
 
+## 2026-05-21 — Garden Cleaners GTA/Toronto SEO Expansion
+
+### Summary
+
+- Added a dedicated Toronto and GTA landing page for Garden Cleaners local-intent search coverage.
+- Added GTA sub-location pages (Scarborough, North York, Etobicoke, Markham, Vaughan) to expand long-tail local search coverage.
+- Expanded Garden metadata keyword targets to include Toronto and GTA cleaning terms.
+- Improved search-engine crawl signals for Garden custom domain robots and sitemap behavior.
+- Enriched GTA location pages with unique neighborhood content, service-use-case copy, FAQ entities, and local testimonial snippets.
+
+### Changes
+
+- `lib/gardenCleaners.ts`
+  - Expanded `gardenCleanersKeywords` with Toronto/GTA local terms.
+  - Added `gardenCleanersSeoAreas` for broader local service-area schema coverage.
+  - Added Open Graph locale signal (`en_CA`) in Garden metadata.
+- `app/garden-cleaners/toronto/page.tsx`
+  - New static Toronto page with localized copy, CTA routing, and internal links to GTA sub-location pages.
+  - Added JSON-LD `HouseCleaning` and `FAQPage` structured data.
+- `app/garden-cleaners/gta/[location]/page.tsx`
+  - Added static-generated GTA sub-location SEO pages for Scarborough, North York, Etobicoke, Markham, and Vaughan.
+  - Added JSON-LD `HouseCleaning`, `BreadcrumbList`, `FAQPage`, and `Service` (review snippet) schema per local page.
+  - Added location-specific neighborhood coverage lists, common request use-cases, and localized FAQ/testimonial content.
+- `app/garden-cleaners/page.tsx`
+  - Updated structured data `areaServed` to use SEO area list.
+  - Added internal link to Toronto/GTA page from Garden homepage.
+- `app/sitemap.ts`
+  - Added `/garden-cleaners/toronto` and dynamic GTA sub-location entries for indexation.
+- `app/robots.ts`
+  - Added Garden custom-host branch so robots host/sitemap point to `gardencleaners.ca` when crawled on Garden domain.
+
+### Validation
+
+- File diagnostics on updated SEO files: clean.
+- Production build completed successfully (`next build`) with new routes generated, including `/garden-cleaners/toronto` and `/garden-cleaners/gta/[location]` static paths.
+- Targeted lint command still reports missing ESLint in this environment (`ESLint must be installed`).
+
+## 2026-05-20 — Garden Portal Dashboard Premium Polish
+
+### Summary
+
+- Upgraded Garden portal dashboard presentation for customer, staff, and admin lanes with stronger visual hierarchy, status-driven scanning, and cleaner interaction affordances.
+- Replaced remaining high-visibility inline UI styling in the portal workflow with reusable class-based styles for consistency and easier maintenance.
+- Added subtle motion and emphasis patterns for dashboard widgets without changing the underlying business logic.
+
+### UX Improvements
+
+- **KPI hierarchy refinement:** Increased numeric prominence and improved metric readability with tabular number rendering in dashboard KPI cards.
+- **Queue clarity:** Added status-toned queue card accents so pending, in-progress, and completed states are easier to scan at a glance.
+- **Quotes conversion visibility:** Converted quote status text into status chips and upgraded quote conversion rows into structured cards.
+- **Portal shell polish:** Improved spacing and visual rhythm across hero, session access, sticky action rail, and admin tab controls.
+- **Admin panel continuity:** Completed class-based styling pass across user-management and audit sections for a more cohesive premium look.
+
+### Motion & Interaction
+
+- Added staggered fade-up reveal for dashboard sections on desktop/tablet.
+- Added bar-grow animation for mini chart visualizations.
+- Added subtle hover states for KPI cards, queue cards, quote conversion cards, and status chips.
+- Disabled section-entry animations on narrow screens to preserve mobile responsiveness.
+
+### Files Changed
+
+- `app/components/garden-cleaners/GardenPortalAccessPanel.tsx`
+  - Added status-chip rendering for quote conversion rows.
+  - Added status-tone class mapping for queue cards.
+- `styles/globals.css`
+  - Added/extended Garden dashboard classes for premium visual system, interactions, and responsive safeguards.
+
+### Validation
+
+- `get_errors` on touched files: clean.
+- Focused lint (`GardenPortalAccessPanel.tsx`): no new lint regressions from this polish pass; existing pre-existing `no-explicit-any` and one hook dependency warning remain in the component.
+
 ## 2026-05-08 — Auth Routing & Theme Restoration
 
 ### Fixed Issues

@@ -32,6 +32,12 @@ export type GardenMediaAsset = {
   caption: string;
 };
 
+export type GardenGtaLocationPage = {
+  slug: string;
+  name: string;
+  focus: string;
+};
+
 export const gardenCleanersBasePath = '/garden-cleaners' as const;
 const GARDEN_CLEANERS_SITE_URL_DEFAULT = 'https://gardencleaners.ca';
 const configuredGardenCleanersSiteUrl = String(
@@ -45,12 +51,62 @@ export const GARDEN_CLEANERS_PORTAL_PATH = '/portal';
 const GARDEN_CLEANERS_OG_IMAGE = `${GARDEN_CLEANERS_SITE_URL}/garden-cleaners/opengraph-image`;
 export const gardenCleanersKeywords = [
   'Garden Cleaners',
+  'cleaning services Toronto',
+  'GTA cleaning services',
+  'house cleaning Toronto',
+  'office cleaning Toronto',
+  'commercial cleaning Toronto',
+  'deep cleaning Toronto',
+  'move out cleaning Toronto',
+  'best cleaners in GTA',
   'Oshawa cleaning services',
   'residential cleaning Oshawa',
   'commercial cleaning Oshawa',
   'deep cleaning Oshawa',
   'move out cleaning Oshawa',
   'Durham Region cleaners'
+];
+
+export const gardenCleanersSeoAreas = [
+  'Oshawa',
+  'Whitby',
+  'Ajax',
+  'Pickering',
+  'Toronto',
+  'Scarborough',
+  'North York',
+  'Etobicoke',
+  'Markham',
+  'Vaughan',
+  'Greater Toronto Area'
+] as const;
+
+export const gardenGtaLocationPages: GardenGtaLocationPage[] = [
+  {
+    slug: 'scarborough',
+    name: 'Scarborough',
+    focus: 'condo and family-home cleaning with practical recurring schedules'
+  },
+  {
+    slug: 'north-york',
+    name: 'North York',
+    focus: 'office and mixed-use cleaning support with low-disruption routing'
+  },
+  {
+    slug: 'etobicoke',
+    name: 'Etobicoke',
+    focus: 'residential reset and move-related cleaning workflows'
+  },
+  {
+    slug: 'markham',
+    name: 'Markham',
+    focus: 'recurring and deep cleaning plans for homes and commercial units'
+  },
+  {
+    slug: 'vaughan',
+    name: 'Vaughan',
+    focus: 'commercial and residential cleaning with detail-led service standards'
+  }
 ];
 
 const gardenCleanersCustomHosts = new Set<string>([
@@ -162,6 +218,7 @@ export function getGardenCleanersMetadata({
       url: canonicalUrl,
       siteName: 'Garden Cleaners',
       type: 'website',
+      locale: 'en_CA',
       images: [
         {
           url: GARDEN_CLEANERS_OG_IMAGE,

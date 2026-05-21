@@ -77,6 +77,19 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message || fallback : fallback;
 }
 
+function getStatusTone(status: string): "calm" | "watch" | "action" {
+  const normalized = String(status || "").toLowerCase();
+  if (["pending", "assigned", "in_progress"].includes(normalized)) return "watch";
+  if (["cancelled", "blocked"].includes(normalized)) return "action";
+  return "calm";
+}
+
+function getShortLabel(value: string, maxLength = 12): string {
+  const text = String(value || "").trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 1))}\u2026`;
+}
+
 function resolveRole(email: string): GardenPortalUserRole {
   const normalizedEmail = normalizePortalEmail(email);
   const productRole = resolveProductRole("garden", normalizedEmail);
@@ -149,6 +162,7 @@ export default function GardenPortalAccessPanel() {
   const [queueRegion, setQueueRegion] = useState<"all" | RegionTag>("all");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string>("");
 
   // Admin: user management tab
   const [adminTab, setAdminTab] = useState<"jobs" | "users">("jobs");
@@ -220,6 +234,236 @@ export default function GardenPortalAccessPanel() {
     return jobs;
   }, [jobs, isCustomer]);
 
+  const customerSummary = useMemo(() => {
+    if (!isCustomer) {
+      return {
+        nextService: null as JobRecord | null,
+        activeRequests: 0,
+        locations: [] as string[],
+        recentUpdates: [] as JobRecord[]
+      };
+    }
+
+    const activeStatuses = new Set(["pending", "assigned", "in_progress"]);
+    const nextService = [...customerJobs]
+      .filter((job) => activeStatuses.has(String(job.status || "").toLowerCase()))
+      .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0] || null;
+
+    const locations = Array.from(
+      new Set(
+        customerJobs
+          .map((job) => [job.address, job.city, job.region].filter(Boolean).join(" ").trim())
+          .filter(Boolean)
+      )
+    ).slice(0, 4);
+
+    const recentUpdates = [...customerJobs]
+      .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())
+      .slice(0, 4);
+
+    return {
+      nextService,
+      activeRequests: customerJobs.filter((job) => activeStatuses.has(String(job.status || "").toLowerCase())).length,
+      locations,
+      recentUpdates
+    };
+  }, [customerJobs, isCustomer]);
+
+  const staffSummary = useMemo(() => {
+    if (!isStaff) {
+      return {
+        assigned: 0,
+        inProgress: 0,
+        completedToday: 0
+      };
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      assigned: visibleJobs.length,
+      inProgress: visibleJobs.filter((job) => String(job.status || "").toLowerCase() === "in_progress").length,
+      completedToday: visibleJobs.filter((job) => {
+        const status = String(job.status || "").toLowerCase();
+        const updated = String(job.updated_at || "").slice(0, 10);
+        return status === "completed" && updated === today;
+      }).length
+    };
+  }, [isStaff, visibleJobs]);
+
+  const queueSummary = useMemo(() => {
+    const pending = visibleJobs.filter((job) => ["pending", "assigned"].includes(String(job.status || "").toLowerCase())).length;
+    const inProgress = visibleJobs.filter((job) => String(job.status || "").toLowerCase() === "in_progress").length;
+    const completed = visibleJobs.filter((job) => String(job.status || "").toLowerCase() === "completed").length;
+
+    return {
+      total: visibleJobs.length,
+      pending,
+      inProgress,
+      completed
+    };
+  }, [visibleJobs]);
+
+  const customerFlowSummary = useMemo(() => {
+    if (!isCustomer) {
+      return {
+        pending: 0,
+        inProgress: 0,
+        completed: 0
+      };
+    }
+
+    return {
+      pending: customerJobs.filter((job) => ["pending", "assigned"].includes(String(job.status || "").toLowerCase())).length,
+      inProgress: customerJobs.filter((job) => String(job.status || "").toLowerCase() === "in_progress").length,
+      completed: customerJobs.filter((job) => String(job.status || "").toLowerCase() === "completed").length
+    };
+  }, [customerJobs, isCustomer]);
+
+  const adminReporting = useMemo(() => {
+    if (!isAdmin) {
+      return {
+        activeJobs: 0,
+        newQuotes: 0,
+        dueToday: 0,
+        openIssues: 0,
+        staffAssigned: 0,
+        locationsServed: 0,
+        jobsByStatus: [] as Array<{ label: string; count: number }>,
+        quotesByRegion: [] as Array<{ label: string; count: number }>,
+        issueTrend: [] as Array<{ label: string; count: number }>,
+        volumeTrend: [] as Array<{ label: string; count: number }>
+      };
+    }
+
+    const statusCounts = new Map<string, number>();
+    const quoteRegionCounts = new Map<string, number>();
+    const issueByDay = new Map<string, number>();
+    const volumeByDay = new Map<string, number>();
+    const today = new Date().toISOString().slice(0, 10);
+
+    for (const job of jobs) {
+      const status = String(job.status || "pending").toLowerCase();
+      statusCounts.set(status, (statusCounts.get(status) || 0) + 1);
+
+      const day = String(job.created_at || "").slice(0, 10) || today;
+      volumeByDay.set(day, (volumeByDay.get(day) || 0) + 1);
+
+      if (status === "pending" || status === "in_progress") {
+        const issueDay = String(job.updated_at || job.created_at || "").slice(0, 10) || today;
+        issueByDay.set(issueDay, (issueByDay.get(issueDay) || 0) + 1);
+      }
+    }
+
+    for (const quote of quotes) {
+      const region = String(quote.region || "Unspecified");
+      quoteRegionCounts.set(region, (quoteRegionCounts.get(region) || 0) + 1);
+    }
+
+    const jobsByStatus = Array.from(statusCounts.entries())
+      .map(([label, count]) => ({ label: label.replace("_", " "), count }))
+      .sort((a, b) => b.count - a.count);
+
+    const quotesByRegion = Array.from(quoteRegionCounts.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    const issueTrend = Array.from(issueByDay.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .slice(-7);
+
+    const volumeTrend = Array.from(volumeByDay.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .slice(-7);
+
+    return {
+      activeJobs: jobs.filter((job) => !["completed", "cancelled"].includes(String(job.status || "").toLowerCase())).length,
+      newQuotes: quotes.filter((quote) => ["new", "pending", ""].includes(String(quote.status || "").toLowerCase())).length,
+      dueToday: jobs.filter((job) => String(job.created_at || "").slice(0, 10) === today).length,
+      openIssues: jobs.filter((job) => ["pending", "in_progress"].includes(String(job.status || "").toLowerCase())).length,
+      staffAssigned: new Set(jobs.map((job) => job.staff_profile_id).filter(Boolean)).size,
+      locationsServed: new Set(jobs.map((job) => job.region).filter(Boolean)).size,
+      jobsByStatus,
+      quotesByRegion,
+      issueTrend,
+      volumeTrend
+    };
+  }, [isAdmin, jobs, quotes]);
+
+  const operationsPulse = useMemo(() => {
+    if (authState !== "authenticated") return null;
+
+    const notes: string[] = [];
+    let tone: "calm" | "watch" | "action" = "calm";
+
+    if (isCustomer) {
+      if (customerSummary.activeRequests > 0) {
+        notes.push(`${customerSummary.activeRequests} active request${customerSummary.activeRequests === 1 ? "" : "s"} currently in progress.`);
+      } else {
+        notes.push("No active requests right now. You can schedule your next cleaning any time.");
+      }
+      if (customerSummary.recentUpdates.length > 0) {
+        notes.push(`Recent updates available for ${customerSummary.recentUpdates.length} service item${customerSummary.recentUpdates.length === 1 ? "" : "s"}.`);
+      }
+    }
+
+    if (isStaff) {
+      if (staffSummary.assigned === 0) {
+        tone = "watch";
+        notes.push("No jobs are assigned yet. Check back after dispatch updates.");
+      } else {
+        notes.push(`${staffSummary.assigned} assigned job${staffSummary.assigned === 1 ? "" : "s"} in your queue.`);
+      }
+      if (staffSummary.inProgress > 0) {
+        notes.push(`${staffSummary.inProgress} job${staffSummary.inProgress === 1 ? "" : "s"} currently marked in progress.`);
+      }
+    }
+
+    if (isAdmin) {
+      if (adminReporting.openIssues > 0) {
+        tone = "watch";
+        notes.push(`${adminReporting.openIssues} open issue${adminReporting.openIssues === 1 ? "" : "s"} need monitoring.`);
+      }
+      if (adminReporting.newQuotes > 0) {
+        notes.push(`${adminReporting.newQuotes} new quote${adminReporting.newQuotes === 1 ? "" : "s"} waiting for decision.`);
+      }
+      if (adminReporting.activeJobs > 0) {
+        notes.push(`${adminReporting.activeJobs} active job${adminReporting.activeJobs === 1 ? "" : "s"} currently underway.`);
+      }
+    }
+
+    if (loadError) {
+      tone = "action";
+      notes.unshift("Portal data sync warning: some live records may be stale until refresh succeeds.");
+    }
+
+    if (queueMessage) {
+      notes.push(queueMessage);
+    }
+
+    if (notes.length === 0) {
+      notes.push("Portal status is stable.");
+    }
+
+    return { tone, notes };
+  }, [
+    authState,
+    isCustomer,
+    isStaff,
+    isAdmin,
+    customerSummary.activeRequests,
+    customerSummary.recentUpdates.length,
+    staffSummary.assigned,
+    staffSummary.inProgress,
+    adminReporting.openIssues,
+    adminReporting.newQuotes,
+    adminReporting.activeJobs,
+    loadError,
+    queueMessage
+  ]);
+
   // (Obsolete: queueCounts/regionCounts, now handled by jobs/quotes filtering and UI)
 
   // (Obsolete: regionDraftByProjectId effect, removed after jobs/quotes refactor)
@@ -227,7 +471,8 @@ export default function GardenPortalAccessPanel() {
   // API fetch helpers
   async function fetchWithAuth(url: string, options: RequestInit = {}) {
     const supabase = getSupabase();
-    const { data: sessionData } = await supabase.auth.getSession();
+    const authClient = supabase.auth as any;
+    const { data: sessionData } = await authClient.getSession();
     const accessToken = sessionData.session?.access_token;
     if (!accessToken) throw new Error("No session token");
     return fetch(url, {
@@ -266,6 +511,7 @@ export default function GardenPortalAccessPanel() {
         setJobs(jobsRes.jobs || []);
         setQuotes([]);
       }
+      setLastSyncedAt(new Date().toISOString());
     } catch (error: unknown) {
       setLoadError(getErrorMessage(error, "Failed to load portal data"));
       setJobs([]);
@@ -295,7 +541,8 @@ export default function GardenPortalAccessPanel() {
     async function loadSessionAndData(emailFromSession?: string) {
       try {
         const supabase = getSupabase();
-        const { data: sessionData } = await supabase.auth.getSession();
+        const authClient = supabase.auth as any;
+        const { data: sessionData } = await authClient.getSession();
         const sessionEmail = (emailFromSession || sessionData.session?.user?.email || "").trim().toLowerCase();
 
         if (!mounted) return;
@@ -351,7 +598,8 @@ export default function GardenPortalAccessPanel() {
       await loadSessionAndData();
       try {
         const supabase = getSupabase();
-        const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+        const authClient = supabase.auth as any;
+        const { data } = authClient.onAuthStateChange((_event: string, nextSession: { user?: { email?: string } } | null) => {
           void loadSessionAndData(nextSession?.user?.email || undefined);
         });
         unsubscribe = () => {
@@ -468,7 +716,8 @@ export default function GardenPortalAccessPanel() {
   async function signOut() {
     try {
       const supabase = getSupabase();
-      await supabase.auth.signOut();
+      const authClient = supabase.auth as any;
+      await authClient.signOut();
     } catch {
       setAuthState("unavailable");
     }
@@ -625,12 +874,13 @@ export default function GardenPortalAccessPanel() {
 
   async function handleGoogleSignIn() {
     const supabase = getSupabase();
+    const authClient = supabase.auth as any;
     const redirectTo = buildProductCallbackUrl({
       origin: window.location.origin,
       product: "garden",
       returnTo: "/garden-cleaners/portal#portal-access"
     });
-    await supabase.auth.signInWithOAuth({
+    await authClient.signInWithOAuth({
       provider: "google",
       options: { redirectTo }
     });
@@ -649,13 +899,13 @@ export default function GardenPortalAccessPanel() {
         </p>
       </div>
 
-      <article className="card garden-proof-card" style={{ marginBottom: 16 }}>
+      <article className="card garden-proof-card garden-portal-hero-card">
         <p className="garden-panel-kicker">Regional portal</p>
-        <h3 style={{ marginTop: 0 }}>Need quote help before sign-in?</h3>
-        <p className="muted" style={{ marginTop: 0 }}>
+        <h3 className="garden-portal-hero-title">Need quote help before sign-in?</h3>
+        <p className="muted garden-portal-hero-copy">
           Start a regional quote path or contact operations directly.
         </p>
-        <div className="hero-actions" style={{ marginBottom: 12 }}>
+        <div className="hero-actions garden-portal-hero-actions">
           <a
             className="btn btn-primary"
             href="/garden-cleaners/quote"
@@ -685,10 +935,10 @@ export default function GardenPortalAccessPanel() {
           </a>
         </div>
 
-        <div className="cards-grid cards-grid-3" style={{ marginTop: 8 }}>
+        <div className="cards-grid cards-grid-3 garden-portal-region-grid">
           {PORTAL_REGION_CTA_OPTIONS.map((regionName) => (
-            <article key={regionName} className="card garden-proof-card">
-              <h4 style={{ marginTop: 0 }}>{regionName}</h4>
+            <article key={regionName} className="card garden-proof-card garden-portal-region-card">
+              <h4>{regionName}</h4>
               <p className="muted">Regional quote path for {regionName}.</p>
               <a
                 className="inline-link"
@@ -716,11 +966,10 @@ export default function GardenPortalAccessPanel() {
           {userEmail ? <p>{userEmail}</p> : null}
 
           {authState === "unauthenticated" && (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 32 }}>
+            <div className="garden-auth-cta-wrap">
               <button
                 type="button"
-                className="btn btn-primary"
-                style={{ fontSize: 18, padding: "14px 32px", borderRadius: 8 }}
+                className="btn btn-primary garden-auth-google-btn"
                 onClick={handleGoogleSignIn}
               >
                 Continue with Google
@@ -728,7 +977,7 @@ export default function GardenPortalAccessPanel() {
             </div>
           )}
           {authState === "loading" && loadingTimeout && (
-            <div style={{ color: "#b94a48", background: "#fff0f0", borderRadius: 8, padding: "12px 16px", marginTop: 16 }}>
+            <div className="garden-inline-alert garden-inline-alert--error garden-auth-timeout-alert">
               We couldn&apos;t load your portal access yet. Please sign out and try again, or contact support.
             </div>
           )}
@@ -765,17 +1014,20 @@ export default function GardenPortalAccessPanel() {
             </p>
           ) : null}
           {authState === "authenticated" ? (
-            <p className="muted" style={{ marginTop: 8 }}>
+            <p className="muted garden-lane-meta">
               Visible records: {isAdmin ? `${jobs.length} jobs, ${quotes.length} quotes` : `${visibleJobs.length} jobs`}
             </p>
           ) : null}
-          {loadError && authState === "authenticated" ? <p>{loadError}</p> : null}
-          {queueMessage ? <p>{queueMessage}</p> : null}
+          {authState === "authenticated" && lastSyncedAt ? (
+            <p className="muted garden-lane-meta">
+              Last synced: {new Date(lastSyncedAt).toLocaleString("en-CA")}
+            </p>
+          ) : null}
         </article>
       </div>
 
       {authState !== "authenticated" ? (
-      <div className="hero-actions" style={{ position: "sticky", bottom: 8, zIndex: 5, marginTop: 16 }}>
+      <div className="hero-actions garden-portal-sticky-actions">
         <a
           className="btn btn-primary"
           href="/garden-cleaners/quote"
@@ -792,27 +1044,226 @@ export default function GardenPortalAccessPanel() {
           data-analytics-location="portal_sticky"
           data-analytics-label="contact_ops"
         >
-          Contact ops
+          Contact operations
         </a>
       </div>
       ) : null}
 
       {authState === "authenticated" && (
         <>
+          {operationsPulse ? (
+            <article className={`card garden-proof-card garden-ops-banner garden-ops-banner--${operationsPulse.tone}`}>
+              <h3>Operations status</h3>
+              <ul>
+                {operationsPulse.notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </article>
+          ) : null}
+
+          <section className="garden-dashboard-shell" aria-label="Portal dashboard">
+            {isCustomer && (
+              <>
+                <div className="section-heading garden-dashboard-heading">
+                  <p className="eyebrow">Customer dashboard</p>
+                  <h2>Your service summary</h2>
+                  <p>Track your next service, recent updates, and request support from one place.</p>
+                  <div className="garden-dashboard-notes">
+                    <span className="garden-status-chip garden-status-chip--watch">Pending {customerFlowSummary.pending}</span>
+                    <span className="garden-status-chip garden-status-chip--watch">In progress {customerFlowSummary.inProgress}</span>
+                    <span className="garden-status-chip garden-status-chip--calm">Completed {customerFlowSummary.completed}</span>
+                  </div>
+                </div>
+                <div className="cards-grid cards-grid-4 garden-kpi-grid">
+                  <article className="card garden-proof-card garden-kpi-card garden-kpi-card--priority">
+                    <span>Next service</span>
+                    <strong>{customerSummary.nextService ? String(customerSummary.nextService.status || "Assigned") : "No active service"}</strong>
+                    {customerSummary.nextService ? (
+                      <span className={`garden-status-chip garden-status-chip--${getStatusTone(String(customerSummary.nextService.status || "assigned"))}`}>
+                        {String(customerSummary.nextService.status || "assigned").replace("_", " ")}
+                      </span>
+                    ) : null}
+                    <p>{customerSummary.nextService ? [customerSummary.nextService.address, customerSummary.nextService.city].filter(Boolean).join(" ") : "Create a new request when ready."}</p>
+                  </article>
+                  <article className="card garden-proof-card garden-kpi-card">
+                    <span>Active requests</span>
+                    <strong>{customerSummary.activeRequests}</strong>
+                    <p>Jobs currently pending, assigned, or in progress.</p>
+                  </article>
+                  <article className="card garden-proof-card garden-kpi-card">
+                    <span>Service locations</span>
+                    <strong>{customerSummary.locations.length}</strong>
+                    <p>{customerSummary.locations.length ? customerSummary.locations.slice(0, 2).join(" • ") : "No locations on record yet."}</p>
+                  </article>
+                  <article className="card garden-proof-card garden-kpi-card">
+                    <span>Recent updates</span>
+                    <strong>{customerSummary.recentUpdates.length}</strong>
+                    <p>Latest service history items in your lane.</p>
+                  </article>
+                </div>
+
+                <article className="card garden-proof-card">
+                  <h3>Quick actions</h3>
+                  <div className="hero-actions">
+                    <a className="btn btn-secondary" href="/garden-cleaners/contact">Report an issue</a>
+                    <a className="btn btn-secondary" href="/garden-cleaners/services">Book another service</a>
+                    <a className="btn btn-secondary" href="/garden-cleaners/quote">Request a new quote</a>
+                    <a className="btn btn-secondary" href="/garden-cleaners/contact">Contact operations</a>
+                  </div>
+                </article>
+
+                {customerSummary.recentUpdates.length > 0 && (
+                  <article className="card garden-proof-card">
+                    <h3>Recent service updates</h3>
+                    <div className="cards-grid cards-grid-2">
+                      {customerSummary.recentUpdates.map((job) => (
+                        <article key={job.id} className="card garden-proof-card garden-update-card">
+                          <h4>Job {job.id.slice(0, 8)}</h4>
+                          <p>
+                            <strong>Status:</strong>{" "}
+                            <span className={`garden-status-chip garden-status-chip--${getStatusTone(String(job.status || ""))}`}>
+                              {String(job.status || "unknown").replace("_", " ")}
+                            </span>
+                          </p>
+                          <p><strong>Updated:</strong> {new Date(job.updated_at || job.created_at || Date.now()).toLocaleDateString("en-CA")}</p>
+                          <p><strong>Location:</strong> {[job.address, job.city, job.region].filter(Boolean).join(" ") || "Not provided"}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </article>
+                )}
+              </>
+            )}
+
+            {isStaff && (
+              <>
+                <div className="section-heading garden-dashboard-heading">
+                  <p className="eyebrow">Staff dashboard</p>
+                  <h2>Assigned job operations</h2>
+                  <p>Keep progress current with assignment visibility, location context, and completion actions.</p>
+                  <div className="garden-dashboard-notes">
+                    <span className="garden-status-chip garden-status-chip--watch">Queue {staffSummary.assigned}</span>
+                    <span className="garden-status-chip garden-status-chip--watch">In progress {staffSummary.inProgress}</span>
+                    <span className="garden-status-chip garden-status-chip--calm">Completed today {staffSummary.completedToday}</span>
+                  </div>
+                </div>
+                <div className="cards-grid cards-grid-3 garden-kpi-grid">
+                  <article className="card garden-proof-card garden-kpi-card">
+                    <span>Assigned jobs</span>
+                    <strong>{staffSummary.assigned}</strong>
+                    <p>Current jobs mapped to your staff profile.</p>
+                  </article>
+                  <article className="card garden-proof-card garden-kpi-card">
+                    <span>In progress</span>
+                    <strong>{staffSummary.inProgress}</strong>
+                    <p>Jobs actively underway right now.</p>
+                  </article>
+                  <article className="card garden-proof-card garden-kpi-card">
+                    <span>Completed today</span>
+                    <strong>{staffSummary.completedToday}</strong>
+                    <p>Jobs closed with today&apos;s update timestamp.</p>
+                  </article>
+                </div>
+              </>
+            )}
+
+            {isAdmin && (
+              <>
+                <div className="section-heading garden-dashboard-heading">
+                  <p className="eyebrow">Admin dashboard</p>
+                  <h2>Operations reporting and workload visibility</h2>
+                  <p>Track quote flow, job delivery, team assignment, and issue pressure without leaving the portal.</p>
+                  <div className="garden-dashboard-notes">
+                    <span className={`garden-status-chip garden-status-chip--${adminReporting.openIssues > 0 ? "action" : "calm"}`}>
+                      Open issues {adminReporting.openIssues}
+                    </span>
+                    <span className={`garden-status-chip garden-status-chip--${adminReporting.newQuotes > 0 ? "watch" : "calm"}`}>
+                      New quotes {adminReporting.newQuotes}
+                    </span>
+                    <span className="garden-status-chip garden-status-chip--calm">Locations {adminReporting.locationsServed}</span>
+                  </div>
+                </div>
+                <div className="cards-grid cards-grid-3 garden-kpi-grid">
+                  <article className="card garden-proof-card garden-kpi-card"><span>Active jobs</span><strong>{adminReporting.activeJobs}</strong><p>Open jobs excluding completed and cancelled.</p></article>
+                  <article className="card garden-proof-card garden-kpi-card"><span>New quotes</span><strong>{adminReporting.newQuotes}</strong><p>Quotes awaiting decision or conversion.</p></article>
+                  <article className="card garden-proof-card garden-kpi-card"><span>Jobs due today</span><strong>{adminReporting.dueToday}</strong><p>Jobs created for today&apos;s workload cycle.</p></article>
+                  <article className="card garden-proof-card garden-kpi-card garden-kpi-card--priority"><span>Open issues</span><strong>{adminReporting.openIssues}</strong><p>Pending and in-progress service pressure.</p></article>
+                  <article className="card garden-proof-card garden-kpi-card"><span>Staff assigned</span><strong>{adminReporting.staffAssigned}</strong><p>Distinct staff profiles on active records.</p></article>
+                  <article className="card garden-proof-card garden-kpi-card"><span>Locations served</span><strong>{adminReporting.locationsServed}</strong><p>Distinct regions currently represented.</p></article>
+                </div>
+
+                <div className="garden-report-grid">
+                  <article className="card garden-proof-card">
+                    <h3>Jobs by status</h3>
+                    <div className="garden-mini-chart">
+                      {adminReporting.jobsByStatus.map((item) => (
+                        <div key={item.label} className={`garden-mini-chart-row${item.count > 0 && item.count === (adminReporting.jobsByStatus[0]?.count || 0) ? " garden-mini-chart-row--top" : ""}`}>
+                          <span title={item.label}>{getShortLabel(item.label, 14)}</span>
+                          <div className="garden-mini-chart-bar"><i style={{ width: `${Math.min(100, item.count * 12)}%` }} /></div>
+                          <strong>{item.count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="card garden-proof-card">
+                    <h3>Quotes by region</h3>
+                    <div className="garden-mini-chart">
+                      {adminReporting.quotesByRegion.map((item) => (
+                        <div key={item.label} className={`garden-mini-chart-row${item.count > 0 && item.count === (adminReporting.quotesByRegion[0]?.count || 0) ? " garden-mini-chart-row--top" : ""}`}>
+                          <span title={item.label}>{getShortLabel(item.label, 14)}</span>
+                          <div className="garden-mini-chart-bar"><i style={{ width: `${Math.min(100, item.count * 14)}%` }} /></div>
+                          <strong>{item.count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="card garden-proof-card">
+                    <h3>Issue trend (7 days)</h3>
+                    <div className="garden-mini-chart">
+                      {adminReporting.issueTrend.map((item) => (
+                        <div key={item.label} className={`garden-mini-chart-row${item.count > 0 && item.count === Math.max(...adminReporting.issueTrend.map((trend) => trend.count), 0) ? " garden-mini-chart-row--top" : ""}`}>
+                          <span title={item.label.slice(5)}>{getShortLabel(item.label.slice(5), 10)}</span>
+                          <div className="garden-mini-chart-bar"><i style={{ width: `${Math.min(100, item.count * 16)}%` }} /></div>
+                          <strong>{item.count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="card garden-proof-card">
+                    <h3>Job volume trend (7 days)</h3>
+                    <div className="garden-mini-chart">
+                      {adminReporting.volumeTrend.map((item) => (
+                        <div key={item.label} className={`garden-mini-chart-row${item.count > 0 && item.count === Math.max(...adminReporting.volumeTrend.map((trend) => trend.count), 0) ? " garden-mini-chart-row--top" : ""}`}>
+                          <span title={item.label.slice(5)}>{getShortLabel(item.label.slice(5), 10)}</span>
+                          <div className="garden-mini-chart-bar"><i style={{ width: `${Math.min(100, item.count * 16)}%` }} /></div>
+                          <strong>{item.count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                </div>
+              </>
+            )}
+          </section>
+
           {loading && <div className="loading">Loading portal data...</div>}
           {/* Admin/Staff: Tab switcher */}
           {isAdmin && (
-            <div style={{ display: "flex", gap: 12, margin: "16px 0 8px" }}>
+            <div className="garden-admin-tabs">
               <button
                 type="button"
-                className={adminTab === "jobs" ? "btn btn-primary" : "btn btn-secondary"}
+                className={adminTab === "jobs" ? "btn btn-primary garden-admin-tab-btn" : "btn btn-secondary garden-admin-tab-btn"}
                 onClick={() => setAdminTab("jobs")}
               >
                 Jobs &amp; Quotes
               </button>
               <button
                 type="button"
-                className={adminTab === "users" ? "btn btn-primary" : "btn btn-secondary"}
+                className={adminTab === "users" ? "btn btn-primary garden-admin-tab-btn" : "btn btn-secondary garden-admin-tab-btn"}
                 onClick={() => {
                   setAdminTab("users");
                   if (adminUsers.length === 0) void loadAdminUsers(1);
@@ -825,18 +1276,21 @@ export default function GardenPortalAccessPanel() {
           )}
           {/* Admin: Quotes to convert */}
           {isAdmin && adminTab === "jobs" && quotes.length > 0 && (
-            <article className="card garden-proof-card">
+            <article className="card garden-proof-card garden-quotes-convert-card">
               <h3>Quotes to Convert</h3>
-              <ul>
+              <ul className="garden-quotes-convert-list">
                 {quotes.map((q) => (
-                  <li key={q.id}>
-                    <div>
+                  <li key={q.id} className="garden-quotes-convert-item">
+                    <div className="garden-quotes-convert-line">
                       Email: {q.email} | {q.address} {q.city} | {q.service_type} | {q.property_type}
                     </div>
-                    <div>
-                      <strong>Status:</strong> {String(q.status || "new")}
+                    <div className="garden-quotes-convert-line">
+                      <strong>Status:</strong>{" "}
+                      <span className={`garden-status-chip garden-status-chip--${getStatusTone(String(q.status || "new"))}`}>
+                        {String(q.status || "new").replace("_", " ")}
+                      </span>
                     </div>
-                    <div className="hero-actions" style={{ marginTop: 8 }}>
+                    <div className="hero-actions garden-quotes-convert-actions">
                       <button
                         className="btn btn-secondary"
                         onClick={() => updateQuoteStatus(q.id, "approved")}
@@ -868,6 +1322,13 @@ export default function GardenPortalAccessPanel() {
           {(isAdmin || isStaff) && (!isAdmin || adminTab === "jobs") && (
             <article className="card garden-proof-card">
               <h3>Job Queue</h3>
+              <p className="muted">Scan, filter, and update active job records from one queue.</p>
+              <div className="garden-dashboard-notes garden-queue-summary-notes">
+                <span className="garden-status-chip garden-status-chip--watch">Queue {queueSummary.total}</span>
+                <span className="garden-status-chip garden-status-chip--watch">Pending {queueSummary.pending}</span>
+                <span className="garden-status-chip garden-status-chip--watch">In progress {queueSummary.inProgress}</span>
+                <span className="garden-status-chip garden-status-chip--calm">Completed {queueSummary.completed}</span>
+              </div>
               <div className="intake-form-grid">
                 <label>
                   <span>Status filter</span>
@@ -896,18 +1357,23 @@ export default function GardenPortalAccessPanel() {
               <div className="hero-actions">
                 <button type="button" className="btn btn-secondary" onClick={refreshQueue} disabled={isRefreshing}>{isRefreshing ? "Refreshing..." : "Refresh queue"}</button>
               </div>
-              <div className="cards-grid cards-grid-3">
+              <div className="cards-grid cards-grid-3 garden-queue-grid">
                 {visibleJobs.length ? visibleJobs.map((job) => (
-                  <article key={job.id} className="card garden-proof-card">
-                    <h4>Job: {job.id}</h4>
-                    <p><strong>Status:</strong> {job.status}</p>
+                  <article key={job.id} className={`card garden-proof-card garden-queue-card garden-queue-card--${getStatusTone(String(job.status || ""))}`}>
+                    <h4>Job {job.id.slice(0, 8)}</h4>
+                    <p>
+                      <strong>Status:</strong>{" "}
+                      <span className={`garden-status-chip garden-status-chip--${getStatusTone(String(job.status || ""))}`}>
+                        {String(job.status || "unknown").replace("_", " ")}
+                      </span>
+                    </p>
                     <p><strong>Customer:</strong> {job.customer_email}</p>
-                    <p><strong>Address:</strong> {job.address} {job.city}</p>
-                    <p><strong>Type:</strong> {job.service_type} {job.property_type}</p>
+                    <p><strong>Address:</strong> {[job.address, job.city].filter(Boolean).join(" ") || "Not provided"}</p>
+                    <p><strong>Type:</strong> {[job.service_type, job.property_type].filter(Boolean).join(" • ") || "Not provided"}</p>
                     <p><strong>Created:</strong> {job.created_at ? new Date(job.created_at).toLocaleDateString("en-CA") : "unknown"}</p>
                     {/* Admin: assign staff */}
                     {isAdmin && (
-                      <div>
+                      <div className="garden-queue-assign">
                         <input type="text" placeholder="Staff Profile ID" onBlur={(e) => assignStaffToJob(job.id, e.target.value)} />
                         <span className="note">(Enter staff profile ID and blur to assign)</span>
                       </div>
@@ -920,19 +1386,18 @@ export default function GardenPortalAccessPanel() {
                       </div>
                     )}
                   </article>
-                )) : <div>No jobs found for this view.</div>}
+                )) : <div className="garden-queue-empty">No jobs found for this view.</div>}
               </div>
             </article>
           )}
           {/* Admin: User Management tab */}
           {isAdmin && adminTab === "users" && (
-            <article className="card garden-proof-card">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-                <h3 style={{ margin: 0 }}>User Management</h3>
+            <article className="card garden-proof-card garden-admin-users-panel">
+              <div className="garden-admin-users-header">
+                <h3>User Management</h3>
                 <button
                   type="button"
-                  className="btn btn-primary"
-                  style={{ fontSize: 14 }}
+                  className="btn btn-primary garden-btn-sm"
                   onClick={() => { setShowInviteForm((v) => !v); setInviteFormState("idle"); setInviteFormMessage(""); }}
                 >
                   {showInviteForm ? "Cancel" : "+ Invite User"}
@@ -942,58 +1407,44 @@ export default function GardenPortalAccessPanel() {
               {showInviteForm && (
                 <form
                   onSubmit={submitInviteUser}
-                  style={{
-                    background: "#f0f7f0",
-                    border: "1px solid #cfe3cf",
-                    borderRadius: 12,
-                    padding: 20,
-                    marginBottom: 20,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 12,
-                    maxWidth: 480,
-                  }}
+                  className="garden-admin-invite-form"
                 >
-                  <h4 style={{ margin: 0, color: "#2d4a2d" }}>Invite new user</h4>
-                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span style={{ fontSize: 13, color: "#2d4a2d", fontWeight: 500 }}>Email *</span>
+                  <h4>Invite new user</h4>
+                  <label className="garden-admin-invite-field">
+                    <span>Email *</span>
                     <input
                       type="email"
                       value={inviteEmail}
                       required
                       onChange={(e) => setInviteEmail(e.currentTarget.value)}
                       placeholder="user@example.com"
-                      style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #cfe3cf", fontSize: 15 }}
                     />
                   </label>
-                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span style={{ fontSize: 13, color: "#2d4a2d", fontWeight: 500 }}>Display name</span>
+                  <label className="garden-admin-invite-field">
+                    <span>Display name</span>
                     <input
                       type="text"
                       value={inviteName}
                       onChange={(e) => setInviteName(e.currentTarget.value)}
                       placeholder="Full name (optional)"
-                      style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #cfe3cf", fontSize: 15 }}
                     />
                   </label>
-                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span style={{ fontSize: 13, color: "#2d4a2d", fontWeight: 500 }}>Role</span>
+                  <label className="garden-admin-invite-field">
+                    <span>Role</span>
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.currentTarget.value as typeof inviteRole)}
-                      style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #cfe3cf", fontSize: 15 }}
                     >
                       <option value="client">Client</option>
                       <option value="staff">Staff</option>
                       <option value="admin">Admin</option>
                     </select>
                   </label>
-                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span style={{ fontSize: 13, color: "#2d4a2d", fontWeight: 500 }}>Service region</span>
+                  <label className="garden-admin-invite-field">
+                    <span>Service region</span>
                     <select
                       value={inviteRegion}
                       onChange={(e) => setInviteRegion(e.currentTarget.value)}
-                      style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #cfe3cf", fontSize: 15 }}
                     >
                       <option value="">- Any -</option>
                       {REGION_OPTIONS.filter((r) => r !== "Unspecified").map((r) => (
@@ -1002,22 +1453,21 @@ export default function GardenPortalAccessPanel() {
                     </select>
                   </label>
                   {inviteFormMessage && (
-                    <p style={{ margin: 0, fontSize: 14, color: inviteFormState === "error" ? "#b94a48" : "#2d4a2d", background: inviteFormState === "error" ? "#fff0f0" : "#f0fff0", borderRadius: 6, padding: "8px 10px" }}>
+                    <p className={`garden-inline-alert ${inviteFormState === "error" ? "garden-inline-alert--error" : "garden-inline-alert--success"}`}>
                       {inviteFormMessage}
                     </p>
                   )}
                   <button
                     type="submit"
-                    className="btn btn-primary"
+                    className="btn btn-primary garden-btn-sm"
                     disabled={inviteFormState === "submitting"}
-                    style={{ alignSelf: "flex-start", fontSize: 14 }}
                   >
                     {inviteFormState === "submitting" ? "Sending invite..." : "Send invite"}
                   </button>
                 </form>
               )}
               {/* Search/filter row */}
-              <div className="intake-form-grid" style={{ marginBottom: 12 }}>
+              <div className="intake-form-grid garden-admin-users-filters">
                 <label>
                   <span>Search</span>
                   <input
@@ -1046,25 +1496,25 @@ export default function GardenPortalAccessPanel() {
                   </select>
                 </label>
               </div>
-              <div className="hero-actions" style={{ marginBottom: 12 }}>
-                <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => void loadAdminUsers(1)}>
+              <div className="hero-actions garden-admin-users-actions">
+                <button type="button" className="btn btn-secondary garden-btn-sm" onClick={() => void loadAdminUsers(1)}>
                   {usersMgmtState === "loading" ? "Loading..." : "Search"}
                 </button>
               </div>
-              {usersMgmtError && <p style={{ color: "#b94a48", background: "#fff0f0", borderRadius: 6, padding: "8px 10px", fontSize: 14 }}>{usersMgmtError}</p>}
-              {usersMgmtMessage && <p style={{ color: "#2d4a2d", background: "#f0fff0", borderRadius: 6, padding: "8px 10px", fontSize: 14 }}>{usersMgmtMessage}</p>}
+              {usersMgmtError && <p className="garden-inline-alert garden-inline-alert--error">{usersMgmtError}</p>}
+              {usersMgmtMessage && <p className="garden-inline-alert garden-inline-alert--success">{usersMgmtMessage}</p>}
               {/* User table */}
               {adminUsers.length > 0 ? (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                <div className="garden-admin-table-wrap">
+                  <table className="garden-admin-table">
                     <thead>
-                      <tr style={{ borderBottom: "2px solid #e6ece6", textAlign: "left" }}>
-                        <th style={{ padding: "8px 12px" }}>Email</th>
-                        <th style={{ padding: "8px 12px" }}>Name</th>
-                        <th style={{ padding: "8px 12px" }}>Role</th>
-                        <th style={{ padding: "8px 12px" }}>Region</th>
-                        <th style={{ padding: "8px 12px" }}>Status</th>
-                        <th style={{ padding: "8px 12px" }}>Actions</th>
+                      <tr>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Region</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1072,58 +1522,49 @@ export default function GardenPortalAccessPanel() {
                         const isPending = pendingUserAction === u.id || pendingUserAction === u.email;
                         const isConfirmingDisable = confirmDisableUserId === u.id;
                         return (
-                          <tr key={u.id} style={{ borderBottom: "1px solid #e6ece6", opacity: isPending ? 0.6 : 1 }}>
-                            <td style={{ padding: "8px 12px", wordBreak: "break-all" }}>{u.email}</td>
-                            <td style={{ padding: "8px 12px" }}>{u.display_name || <span style={{ color: "#aaa" }}>-</span>}</td>
-                            <td style={{ padding: "8px 12px" }}>
+                          <tr key={u.id} className={isPending ? "garden-admin-row-pending" : ""}>
+                            <td className="garden-break-all">{u.email}</td>
+                            <td>{u.display_name || <span className="garden-muted-placeholder">-</span>}</td>
+                            <td>
                               <select
                                 value={u.role}
                                 disabled={isPending}
                                 onChange={(e) => void updateUserRole(u.id, e.currentTarget.value as AdminUserRecord["role"])}
-                                style={{ padding: "4px 6px", borderRadius: 4, border: "1px solid #cfe3cf", fontSize: 13 }}
+                                className="garden-table-select"
                               >
                                 <option value="client">Client</option>
                                 <option value="staff">Staff</option>
                                 <option value="admin">Admin</option>
                               </select>
                             </td>
-                            <td style={{ padding: "8px 12px" }}>{u.service_region || <span style={{ color: "#aaa" }}>-</span>}</td>
-                            <td style={{ padding: "8px 12px" }}>
-                              <span style={{
-                                display: "inline-block",
-                                padding: "2px 10px",
-                                borderRadius: 20,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                background: u.is_active ? "#e6f7e6" : "#f7e6e6",
-                                color: u.is_active ? "#2d6a2d" : "#8b2a2a",
-                              }}>
+                            <td>{u.service_region || <span className="garden-muted-placeholder">-</span>}</td>
+                            <td>
+                              <span className={`garden-pill ${u.is_active ? "garden-pill--active" : "garden-pill--disabled"}`}>
                                 {u.is_active ? "Active" : "Disabled"}
                               </span>
                             </td>
-                            <td style={{ padding: "8px 12px" }}>
-                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            <td>
+                              <div className="garden-admin-row-actions">
                                 {u.is_active ? (
                                   isConfirmingDisable ? (
                                     <>
                                       <button
                                         type="button"
-                                        className="btn btn-secondary"
-                                        style={{ fontSize: 12, background: "#f7e6e6", color: "#8b2a2a", border: "1px solid #e8b4b4" }}
+                                        className="btn btn-secondary garden-btn-xs garden-btn-danger-soft"
                                         disabled={isPending}
                                         onClick={() => void toggleUserActive(u.id, false)}
                                       >
                                         Confirm disable
                                       </button>
-                                      <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setConfirmDisableUserId("")}>Cancel</button>
+                                      <button type="button" className="btn btn-secondary garden-btn-xs" onClick={() => setConfirmDisableUserId("")}>Cancel</button>
                                     </>
                                   ) : (
-                                    <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} disabled={isPending} onClick={() => toggleUserActive(u.id, false)}>Disable</button>
+                                    <button type="button" className="btn btn-secondary garden-btn-xs" disabled={isPending} onClick={() => toggleUserActive(u.id, false)}>Disable</button>
                                   )
                                 ) : (
-                                  <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} disabled={isPending} onClick={() => void toggleUserActive(u.id, true)}>Reactivate</button>
+                                  <button type="button" className="btn btn-secondary garden-btn-xs" disabled={isPending} onClick={() => void toggleUserActive(u.id, true)}>Reactivate</button>
                                 )}
-                                <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} disabled={isPending} onClick={() => void resetUserInvite(u.email)}>
+                                <button type="button" className="btn btn-secondary garden-btn-xs" disabled={isPending} onClick={() => void resetUserInvite(u.email)}>
                                   Reset / Resend invite
                                 </button>
                               </div>
@@ -1134,23 +1575,22 @@ export default function GardenPortalAccessPanel() {
                     </tbody>
                   </table>
                   {/* Pagination */}
-                  <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
-                    <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} disabled={adminUsersPage <= 1} onClick={() => void loadAdminUsers(adminUsersPage - 1)}>Prev</button>
-                    <span style={{ fontSize: 13 }}>Page {adminUsersPage} - {adminUsersTotal} total</span>
-                    <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} disabled={adminUsersPage * 25 >= adminUsersTotal} onClick={() => void loadAdminUsers(adminUsersPage + 1)}>Next</button>
+                  <div className="garden-admin-pagination">
+                    <button type="button" className="btn btn-secondary garden-btn-sm" disabled={adminUsersPage <= 1} onClick={() => void loadAdminUsers(adminUsersPage - 1)}>Prev</button>
+                    <span>Page {adminUsersPage} - {adminUsersTotal} total</span>
+                    <button type="button" className="btn btn-secondary garden-btn-sm" disabled={adminUsersPage * 25 >= adminUsersTotal} onClick={() => void loadAdminUsers(adminUsersPage + 1)}>Next</button>
                   </div>
                 </div>
               ) : usersMgmtState === "idle" ? (
-                <div style={{ color: "#4a6a4a", fontSize: 14 }}>No users found. Search above or invite a new user.</div>
+                <div className="garden-admin-empty">No users found. Search above or invite a new user.</div>
               ) : null}
 
-              <div style={{ marginTop: 20, borderTop: "1px solid #e6ece6", paddingTop: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                  <h4 style={{ margin: 0 }}>Recent admin activity</h4>
+              <div className="garden-admin-audit">
+                <div className="garden-admin-audit-header">
+                  <h4>Recent admin activity</h4>
                   <button
                     type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: 13 }}
+                    className="btn btn-secondary garden-btn-sm"
                     onClick={() => void loadAdminAudit()}
                     disabled={adminAuditState === "loading"}
                   >
@@ -1158,37 +1598,37 @@ export default function GardenPortalAccessPanel() {
                   </button>
                 </div>
                 {adminAuditError ? (
-                  <p style={{ color: "#b94a48", background: "#fff0f0", borderRadius: 6, padding: "8px 10px", fontSize: 14, marginTop: 10 }}>
+                  <p className="garden-inline-alert garden-inline-alert--error">
                     {adminAuditError}
                   </p>
                 ) : null}
                 {adminAuditEntries.length > 0 ? (
-                  <div style={{ marginTop: 12, overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <div className="garden-admin-table-wrap garden-admin-audit-table-wrap">
+                    <table className="garden-admin-table garden-admin-table--compact">
                       <thead>
-                        <tr style={{ borderBottom: "2px solid #e6ece6", textAlign: "left" }}>
-                          <th style={{ padding: "8px 10px" }}>When</th>
-                          <th style={{ padding: "8px 10px" }}>Actor</th>
-                          <th style={{ padding: "8px 10px" }}>Action</th>
-                          <th style={{ padding: "8px 10px" }}>Target</th>
+                        <tr>
+                          <th>When</th>
+                          <th>Actor</th>
+                          <th>Action</th>
+                          <th>Target</th>
                         </tr>
                       </thead>
                       <tbody>
                         {adminAuditEntries.map((entry) => (
-                          <tr key={entry.id} style={{ borderBottom: "1px solid #e6ece6" }}>
-                            <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                          <tr key={entry.id}>
+                            <td className="garden-nowrap">
                               {entry.created_at ? new Date(entry.created_at).toLocaleString("en-CA") : "-"}
                             </td>
-                            <td style={{ padding: "8px 10px", wordBreak: "break-all" }}>{entry.actor_email || "-"}</td>
-                            <td style={{ padding: "8px 10px" }}>{entry.action || "-"}</td>
-                            <td style={{ padding: "8px 10px", wordBreak: "break-all" }}>{entry.target_email || entry.target_user_id || "-"}</td>
+                            <td className="garden-break-all">{entry.actor_email || "-"}</td>
+                            <td>{entry.action || "-"}</td>
+                            <td className="garden-break-all">{entry.target_email || entry.target_user_id || "-"}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  <p className="muted" style={{ marginTop: 10 }}>No recent admin activity yet.</p>
+                  <p className="muted garden-admin-audit-empty">No recent admin activity yet.</p>
                 )}
               </div>
             </article>

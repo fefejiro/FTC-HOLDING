@@ -11,7 +11,9 @@ test.describe("Garden portal smoke", () => {
   test("public portal loads with key lanes and CTAs", async ({ page }) => {
     await page.goto(url("/garden-cleaners/portal"), { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { level: 1, name: /regional service coverage/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: /regional service coverage, client intake, and operations routing/i })
+    ).toBeVisible();
     await expect(page.getByText(/client lane/i)).toBeVisible();
     await expect(page.getByText(/operations lane/i)).toBeVisible();
 
@@ -27,6 +29,6 @@ test.describe("Garden portal smoke", () => {
 
     await oshawaLink.click();
     await expect(page).toHaveURL(/\/garden-cleaners\/quote\?region=Oshawa/);
-    await expect(page.getByLabel("Service Region")).toHaveValue("Oshawa");
+    await expect(page.getByRole("textbox", { name: "Service Region" })).toHaveValue("Oshawa");
   });
 });
