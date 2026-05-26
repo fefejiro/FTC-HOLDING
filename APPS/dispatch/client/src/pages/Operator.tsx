@@ -760,7 +760,7 @@ function PinScreen({
           {showResetHelp ? (
             <div className="rounded-xl border border-dispatch-border bg-dispatch-bg/70 p-3 text-sm text-slate-400 leading-relaxed">
               <div className="font-semibold text-white">Operator reset</div>
-              <p className="mt-1">Ask the admin team to reset your on-duty PIN. The current default operator PIN is <span className="font-semibold text-white">9090</span>.</p>
+              <p className="mt-1">Ask the admin team to reset your on-duty PIN. The current default operator PIN is <span className="font-semibold text-white">8080</span>.</p>
             </div>
           ) : null}
           <p className="text-xs leading-relaxed text-slate-500">

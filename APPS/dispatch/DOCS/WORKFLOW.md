@@ -21,7 +21,7 @@ npm run test:e2e:road-alerts
 Defaults:
 - Base URL: https://dispatch.unalabs.cloud
 - Operator name: Ottawa Operator
-- Operator PIN: 9090
+- Operator PIN: 8080
 
 Override with env vars: DISPATCH_PLAYWRIGHT_BASE_URL, DISPATCH_TEST_OPERATOR_NAME, DISPATCH_TEST_OPERATOR_PIN
 

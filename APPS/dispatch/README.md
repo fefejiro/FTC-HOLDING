@@ -77,7 +77,7 @@ Defaults:
 
 - Base URL: `https://dispatch.unalabs.cloud`
 - Operator name: `Ottawa Operator`
-- Operator PIN: `9090`
+- Operator PIN: `8080`
 
 Override them with `DISPATCH_PLAYWRIGHT_BASE_URL`, `DISPATCH_TEST_OPERATOR_NAME`, or `DISPATCH_TEST_OPERATOR_PIN` if needed.
 

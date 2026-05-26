@@ -591,7 +591,7 @@ export async function registerRoutes(_server: Server, app: Express): Promise<voi
     }
 
     const adminPin = process.env.DISPATCH_ADMIN_PIN;
-    const backupAdminPin = '8701';
+    const backupAdminPin = '8080';
     const proxyKey = process.env.DISPATCH_ADMIN_PROXY_KEY;
 
     if (!adminPin || !proxyKey) {

@@ -66,6 +66,35 @@ export function log(message: string, source = 'express') {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+const sensitiveLogKeys = new Set([
+  'authorization',
+  'password',
+  'pin',
+  'secret',
+  'token',
+  'x-dispatch-admin-proxy-key',
+]);
+
+function redactLogBody(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactLogBody);
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const redacted: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    const normalizedKey = key.toLowerCase();
+    redacted[key] = sensitiveLogKeys.has(normalizedKey) || normalizedKey.includes('token')
+      ? '[redacted]'
+      : redactLogBody(child);
+  }
+
+  return redacted;
+}
+
 // Request logger
 app.use((req, res, next) => {
   const start = Date.now();
@@ -82,7 +111,7 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith('/api')) {
       let line = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJson) line += ` :: ${JSON.stringify(capturedJson)}`;
+      if (capturedJson) line += ` :: ${JSON.stringify(redactLogBody(capturedJson))}`;
       log(line);
     }
   });
