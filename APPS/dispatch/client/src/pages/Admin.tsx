@@ -191,7 +191,8 @@ const STATUS_LABEL: Record<RequestStatus, string> = {
 
 const ALL_STATUSES: RequestStatus[] = ['pending', 'accepted', 'en_route', 'completed', 'cancelled'];
 
-function fmt(str: string) {
+function fmt(str: string | null) {
+  if (!str) return 'Not available';
   return new Date(str).toLocaleString('en-CA', {
     month: 'short',
     day: 'numeric',
