@@ -3,10 +3,21 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Any
 
 
 SENSITIVE_KEYS = {"bot_token", "database_url", "api_football_key", "webhook_secret", "authorization"}
+TELEGRAM_BOT_TOKEN_RE = re.compile(r"bot\d+:[A-Za-z0-9_-]+")
+
+
+def redact_secrets(value: str) -> str:
+    redacted = value
+    for key in SENSITIVE_KEYS:
+        env_value = os.getenv(key.upper())
+        if env_value:
+            redacted = redacted.replace(env_value, "[REDACTED]")
+    return TELEGRAM_BOT_TOKEN_RE.sub("bot[REDACTED]", redacted)
 
 
 class JsonFormatter(logging.Formatter):
@@ -14,7 +25,7 @@ class JsonFormatter(logging.Formatter):
         payload: dict[str, Any] = {
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redact_secrets(record.getMessage()),
             "time": self.formatTime(record, "%Y-%m-%dT%H:%M:%SZ"),
         }
         return json.dumps(payload, ensure_ascii=True)
@@ -22,12 +33,7 @@ class JsonFormatter(logging.Formatter):
 
 class RedactSecretsFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        message = str(record.msg)
-        for key in SENSITIVE_KEYS:
-            env_value = os.getenv(key.upper())
-            if env_value:
-                message = message.replace(env_value, "[REDACTED]")
-        record.msg = message
+        record.msg = redact_secrets(str(record.msg))
         return True
 
 
