@@ -54,6 +54,12 @@ scraper:
   dice:
     enabled: true
     keywords:
+      - remote IT manager retail systems
+      - remote service delivery manager
+      - remote business systems manager ERP
+      - remote ERP transformation manager
+      - remote WMS POS program manager
+      - remote QA manager retail systems
       - IT manager retail systems
       - service delivery manager retail systems
       - program manager enterprise systems

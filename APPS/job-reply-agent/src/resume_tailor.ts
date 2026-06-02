@@ -43,7 +43,7 @@ function cropSlug(input: string, maxLen: number): string {
 
 function buildTailoredFileName(roleSlug: string, employerSlug: string): string {
   const prefix = "Fejiro_Efiuvwere_";
-  const suffix = "_Tailored.docx";
+  const suffix = "_Resume.docx";
   const base = `${prefix}${roleSlug}_${employerSlug}${suffix}`;
   if (base.length <= MAX_FILE_BASENAME) {
     return base;
@@ -254,7 +254,7 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
 
   logger.info(
     { templatePath, outPath, newTitle, employerSlug },
-    "Tailored resume DOCX generated."
+    "Role-focused resume DOCX generated."
   );
 
   return {

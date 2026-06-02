@@ -804,7 +804,7 @@ function buildOutreachBody(draftType: string, title: string, company: string): s
       `Hello,`,
       `Following up on the ${role} opportunity at ${org}.`,
       `I am interested and available to continue the process.`,
-      `If helpful, I can share a tailored profile and availability for a quick call.`,
+      `If helpful, I can share a role-focused profile and availability for a quick call.`,
       `Best regards,`,
       `Fejiro Efiuvwere`,
       `https://unalabs.cloud/`,

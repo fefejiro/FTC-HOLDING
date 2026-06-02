@@ -51,6 +51,8 @@
     "hunt:application-proof": "tsx src/main.ts hunt:application-proof",
     "hunt:reconcile-application-proof": "tsx src/main.ts hunt:reconcile-application-proof",
     "hunt:trust-report": "tsx src/main.ts hunt:trust-report",
+    "hunt:premium-queue": "tsx src/main.ts hunt:premium-queue",
+    "hunt:prepare-artifacts": "tsx src/main.ts hunt:prepare-artifacts",
     "lint": "echo lint-placeholder"
   },
   "keywords": [],

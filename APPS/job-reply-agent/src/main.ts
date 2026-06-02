@@ -622,7 +622,7 @@ export async function runCommand(args: {
   }
 
   logger.info(
-    "No command supplied. Use one of: auth:doctor, gmail:auth:url, gmail:auth:local, gmail:auth:save --code=..., gmail:status, db:reset --confirm=RESET, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, run:cloud-cycle, run:laptop-cycle, run:production-cycle, report:daily, hunt:ingest, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:apply-one --job-id=..., hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export, hunt:scrape-dice, hunt:scrape-indeed, hunt:scrape-linkedin, hunt:scrape-all."
+    "No command supplied. Use one of: auth:doctor, gmail:auth:url, gmail:auth:local, gmail:auth:save --code=..., gmail:status, db:reset --confirm=RESET, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, run:laptop-cycle, run:production-cycle, report:daily, hunt:ingest, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:premium-queue, hunt:prepare-artifacts, hunt:apply-one --job-id=..., hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export, hunt:scrape-dice, hunt:scrape-indeed, hunt:scrape-linkedin, hunt:scrape-all."
   );
 }
 

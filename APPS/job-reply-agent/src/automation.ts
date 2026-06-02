@@ -344,7 +344,7 @@ export function buildRecruiterAutoReply(args: {
     lines.push(`My compensation target is ${args.answers.salary_expectation}.`);
   }
 
-  lines.push("I can share a tailored resume and brief project examples if helpful for your team.");
+  lines.push("I can share a role-focused resume and brief project examples if helpful for your team.");
   lines.push(
     "Best regards,",
     args.profile.name,
@@ -955,7 +955,7 @@ export async function runAutoEmailQueue(params: {
 
     if (!recruiterResumePath && packageRow?.resume_text) {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "job-reply-agent-recruiter-"));
-      recruiterResumePath = path.join(tmpDir, "tailored-recruiter-resume.txt");
+      recruiterResumePath = path.join(tmpDir, "recruiter-resume.txt");
       fs.writeFileSync(recruiterResumePath, packageRow.resume_text, "utf8");
     }
 
@@ -1019,7 +1019,7 @@ export async function runAutoEmailQueue(params: {
         status: "waiting_review",
         score: score.score,
         draftId: draft.draftId,
-        reason: hasTailoredResume ? "Below auto-send threshold or waiting review" : "Tailored DOCX resume missing so manual review is required",
+        reason: hasTailoredResume ? "Below auto-send threshold or waiting review" : "DOCX resume artifact missing so manual review is required",
         body
       });
       waitingReview += 1;
@@ -1182,14 +1182,58 @@ export async function runDicePreflight(): Promise<{ ok: boolean; reason: string;
 
   try {
     await page.goto("https://www.dice.com/dashboard", { waitUntil: "domcontentloaded", timeout: timeoutMs });
-    const html = await page.content();
-    const url = page.url();
-    const looksSignedOut = /sign\s*in|log\s*in|create account|forgot password/i.test(html) || /login|signin/i.test(url);
-    if (looksSignedOut) {
-      const screenshotPath = path.join(os.tmpdir(), `job-reply-agent-dice-preflight-${Date.now()}.png`);
-      await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
-      return { ok: false, reason: "Dice preflight failed: signed-in Dice session was not detected.", screenshotPath };
+    let snapshot = await readDicePreflightSnapshot(page);
+
+    if (snapshot.looksPending) {
+      const waitMs = Math.min(15000, Math.max(5000, timeoutMs - 1000));
+      await page.waitForURL(/dice\.com\/(dashboard|my-jobs|jobs|profile|job-detail)/i, { timeout: waitMs }).catch(() => undefined);
+      await page.waitForTimeout(1500).catch(() => undefined);
+      snapshot = await readDicePreflightSnapshot(page);
     }
+
+    if (snapshot.looksPending) {
+      await page.reload({ waitUntil: "domcontentloaded", timeout: Math.min(10000, timeoutMs) }).catch(() => undefined);
+      await page.waitForTimeout(1500).catch(() => undefined);
+      snapshot = await readDicePreflightSnapshot(page);
+    }
+
+    if (snapshot.looksPending) {
+      const screenshotPath = makeDicePreflightScreenshotPath("pending");
+      await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
+      return {
+        ok: false,
+        reason: `Dice preflight pending: Dice is still showing a sign-in/loading transition at ${snapshot.url}. Retry after the page finishes or refresh the Fejiro automation tab.`,
+        screenshotPath
+      };
+    }
+
+    if (snapshot.looksSignedOut) {
+      const screenshotPath = makeDicePreflightScreenshotPath("signed-out");
+      await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
+      return {
+        ok: false,
+        reason: `Dice preflight failed: signed-in Dice session was not detected at ${snapshot.url}.`,
+        screenshotPath
+      };
+    }
+
+    if (snapshot.looksAuthenticatedShell) {
+      return {
+        ok: true,
+        reason: `Dice preflight passed: authenticated browser session detected at ${snapshot.url}.`
+      };
+    }
+
+    if (snapshot.text.length < 25 && /dice\.com/i.test(snapshot.url)) {
+      const screenshotPath = makeDicePreflightScreenshotPath("blank");
+      await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
+      return {
+        ok: false,
+        reason: `Dice preflight inconclusive: Dice returned a mostly blank page at ${snapshot.url}. Refresh the Fejiro automation tab and rerun preflight.`,
+        screenshotPath
+      };
+    }
+
     return { ok: true, reason: "Dice preflight passed: authenticated browser session detected." };
   } catch (error) {
     return {
@@ -1199,6 +1243,35 @@ export async function runDicePreflight(): Promise<{ ok: boolean; reason: string;
   } finally {
     await closeSharedPlaywrightSession().catch(() => undefined);
   }
+}
+
+async function readDicePreflightSnapshot(page: any): Promise<{
+  html: string;
+  text: string;
+  url: string;
+  looksSignedOut: boolean;
+  looksPending: boolean;
+  looksAuthenticatedShell: boolean;
+}> {
+  const html = await page.content().catch(() => "");
+  const text = await page.locator("body").innerText({ timeout: 5000 }).catch(() => stripTags(html));
+  const url = page.url();
+  const combined = `${url}\n${html}\n${text}`;
+  const looksPending = /signing\s+you\s+in|just\s+a\s+moment|loading|please\s+wait/i.test(combined);
+  const looksSignedOut = /sign\s*in|log\s*in|create account|forgot password/i.test(combined) || /\/login|signin/i.test(url);
+  const looksAuthenticatedShell = /dice\.com\/(?:dashboard|my-jobs|jobs|profile|job-detail)/i.test(url) && !looksSignedOut && !looksPending;
+  return {
+    html,
+    text: clean(text.replace(/\s+/g, " ")),
+    url,
+    looksSignedOut,
+    looksPending,
+    looksAuthenticatedShell
+  };
+}
+
+function makeDicePreflightScreenshotPath(slug: string): string {
+  return path.join(diceDebugDir(), `dice-preflight-${safeFileSlug(slug)}-${Date.now()}.png`);
 }
 
 export function syncApplicationProofFromMessages(db: Database.Database, messages: RecruiterMessage[]): { verified: number } {
@@ -1304,7 +1377,8 @@ function evaluateDiceQualityGate(job: any): string {
     return `Dice freshness gate: ${evidence.postedText} is older than ${maxPostedAgeDays} days.`;
   }
 
-  if (evidence.applyButton && evidence.applyButton !== "visible" && evidence.applyButton !== "unknown") {
+  const safeApplyButtons = new Set(["visible", "easy_apply_visible", "unknown"]);
+  if (evidence.applyButton && !safeApplyButtons.has(evidence.applyButton)) {
     return `Dice apply gate: apply button status is ${evidence.applyButton}.`;
   }
 
@@ -1506,8 +1580,8 @@ async function buildApplicationArtifacts(args: {
 }): Promise<{ resumePath: string | null; coverLetterPath: string | null; screenshotPath: string | null }> {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "job-reply-agent-"));
   const packageRow = args.job.package_id ? { resume_text: args.job.resume_text, cover_letter_text: args.job.cover_letter_text } : null;
-  const resumePath = packageRow ? path.join(tmpDir, "tailored-resume.txt") : null;
-  const coverLetterPath = packageRow ? path.join(tmpDir, "tailored-cover-letter.txt") : null;
+  const resumePath = packageRow ? path.join(tmpDir, "resume.txt") : null;
+  const coverLetterPath = packageRow ? path.join(tmpDir, "cover-letter.txt") : null;
 
   if (packageRow && resumePath && coverLetterPath) {
     fs.writeFileSync(resumePath, packageRow.resume_text || "", "utf8");
@@ -1692,7 +1766,7 @@ async function submitDiceEasyApply(args: {
     await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
     return {
       status: "paused",
-      reason: "Tailored DOCX resume is required before Dice Easy Apply can submit.",
+      reason: "DOCX resume artifact is required before Dice Easy Apply can submit.",
       finalUrl: page.url() || args.finalUrl,
       screenshotPath,
       adapter: "dice",

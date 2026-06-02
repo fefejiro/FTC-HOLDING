@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { getDb } from "../src/db.js";
 import {
   buildHuntReport,
@@ -18,6 +20,7 @@ import {
   scoreHuntJob,
   scoreJobs
 } from "../src/hunt.js";
+import { buildPremiumQueueReport, preparePremiumQueueArtifacts } from "../src/hunt/premium_queue.js";
 import type { RecruiterMessage } from "../src/types.js";
 
 function gmailMessage(overrides: Partial<RecruiterMessage> = {}): RecruiterMessage {
@@ -207,6 +210,224 @@ describe("hunt flow", () => {
     expect(result.tier).toBe("tier_3");
     expect(result.status).toBe("blocked");
     expect(result.next_action).toBe("skip_generic_pm");
+  });
+
+  it("premium queue ranks safe Dice Easy Apply candidates without submitting", () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    const info = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Business Systems Analyst",
+      "Northstar",
+      "Remote",
+      "dice",
+      "https://www.dice.com/job-detail/remote-bsa",
+      `[Dice evidence] match_score=84; posted="2 hours ago"; updated="2 hours ago"; apply_button=visible; scraped_at=${now}\nNorthstar Easy Apply Business Systems Analyst Remote ERP POS WMS integration.`,
+      "package_generated",
+      82,
+      "tier_2",
+      now,
+      now
+    );
+    db.prepare("INSERT INTO hunt_packages (job_id, resume_text, cover_letter_text, next_action, created_at) VALUES (?, ?, ?, ?, ?)")
+      .run(Number(info.lastInsertRowid), "resume", "cover", "review_apply_assist", now);
+    const resumePath = path.resolve(".local", "generated-tests", "premium-queue-test.docx");
+    fs.mkdirSync(path.dirname(resumePath), { recursive: true });
+    fs.writeFileSync(resumePath, "test docx placeholder", "utf8");
+    db.prepare(
+      `INSERT INTO application_attempts (run_id, job_id, adapter, apply_url, status, required_fields_json, answered_fields_json, resume_artifact_path, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(1, Number(info.lastInsertRowid), "dice", "https://www.dice.com/job-detail/remote-bsa", "paused", "[]", "[]", resumePath, now, now);
+
+    const report = buildPremiumQueueReport(db, { sourceFilter: "dice", limit: 10 });
+
+    expect(report.rows[0].action).toBe("apply_candidate");
+    expect(report.rows[0].reason).toContain("Easy Apply");
+  });
+
+  it("premium queue holds local-only Dice roles for review", () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Business Systems Analyst",
+      "LocalCo",
+      "Lansing, Michigan",
+      "dice",
+      "https://www.dice.com/job-detail/local-bsa",
+      `[Dice evidence] match_score=91; posted="today"; updated="today"; apply_button=visible; scraped_at=${now}\nEasy Apply. Must live within 1 hour of Lansing at the time of application.`,
+      "package_generated",
+      85,
+      "tier_2",
+      now,
+      now
+    );
+
+    const report = buildPremiumQueueReport(db, { sourceFilter: "dice", limit: 10 });
+
+    expect(report.rows[0].action).toBe("review_location_or_auth");
+    expect(report.rows[0].reason).toContain("local");
+  });
+
+  it("premium queue holds city-state Dice roles for review when remote is not explicit", () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Finance Transformation Program Manager",
+      "Irvine Technology Corporation",
+      "Orlando, Florida",
+      "dice",
+      "https://www.dice.com/job-detail/orlando-program-manager",
+      `[Dice evidence] match_score=78; posted="today"; updated="today"; apply_button=visible; scraped_at=${now}\nEasy Apply finance transformation ERP delivery.`,
+      "package_generated",
+      78,
+      "tier_1",
+      now,
+      now
+    );
+
+    const report = buildPremiumQueueReport(db, { sourceFilter: "dice", limit: 10 });
+
+    expect(report.rows[0].action).toBe("review_location_or_auth");
+  });
+
+  it("premium queue requires real Dice Easy Apply evidence", () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    const info = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Senior ERP Analyst",
+      "ApplyNowCo",
+      "Remote",
+      "dice",
+      "https://www.dice.com/job-detail/apply-now-erp",
+      `[Dice evidence] match_score=88; posted="today"; updated="today"; apply_button=apply_now_visible; scraped_at=${now}\nApply Now Senior ERP Analyst Remote.`,
+      "package_generated",
+      82,
+      "tier_2",
+      now,
+      now
+    );
+    const resumePath = path.resolve(".local", "generated-tests", "apply-now-queue-test.docx");
+    fs.mkdirSync(path.dirname(resumePath), { recursive: true });
+    fs.writeFileSync(resumePath, "test docx placeholder", "utf8");
+    db.prepare(
+      `INSERT INTO application_attempts (run_id, job_id, adapter, apply_url, status, required_fields_json, answered_fields_json, resume_artifact_path, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(1, Number(info.lastInsertRowid), "dice", "https://www.dice.com/job-detail/apply-now-erp", "paused", "[]", "[]", resumePath, now, now);
+
+    const report = buildPremiumQueueReport(db, { sourceFilter: "dice", limit: 10 });
+
+    expect(report.rows[0].action).not.toBe("apply_candidate");
+  });
+
+  it("premium queue holds W2 or US-based Dice roles for review", () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Business Systems Analyst - Remote",
+      "PayrollGateCo",
+      "Remote",
+      "dice",
+      "https://www.dice.com/job-detail/w2-bsa",
+      `[Dice evidence] match_score=88; posted="today"; updated="today"; apply_button=easy_apply_visible; scraped_at=${now}\nEasy Apply. W2 only, no C2C or 1099. Candidate must be US-based.`,
+      "package_generated",
+      82,
+      "tier_2",
+      now,
+      now
+    );
+
+    const report = buildPremiumQueueReport(db, { sourceFilter: "dice", limit: 10 });
+
+    expect(report.rows[0].action).toBe("review_location_or_auth");
+  });
+
+  it("premium artifact prep records durable tailored resume without marking applied", async () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    const job = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Business Systems Manager",
+      "RemoteCo",
+      "Remote",
+      "dice",
+      "https://www.dice.com/job-detail/remote-manager",
+      `[Dice evidence] match_score=88; posted="today"; updated="today"; apply_button=visible; scraped_at=${now}\nEasy Apply ERP WMS POS API integration and retail systems delivery.`,
+      "package_generated",
+      88,
+      "tier_1",
+      now,
+      now
+    );
+    db.prepare("INSERT INTO hunt_packages (job_id, resume_text, cover_letter_text, next_action, created_at) VALUES (?, ?, ?, ?, ?)")
+      .run(Number(job.lastInsertRowid), "resume", "cover letter", "review_apply_assist", now);
+
+    const templatePath = path.resolve(
+      ".local",
+      "resume-references",
+      "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
+    );
+    const outputDir = path.resolve(".local", "generated-tests", "premium-artifacts");
+    const result = await preparePremiumQueueArtifacts(db, {
+      limit: 1,
+      sourceFilter: "dice",
+      templatePath,
+      outputDir
+    });
+    const attempt = db.prepare("SELECT status, resume_artifact_path, cover_letter_artifact_path FROM application_attempts WHERE job_id=?")
+      .get(Number(job.lastInsertRowid)) as any;
+    const jobRow = db.prepare("SELECT status FROM hunt_jobs WHERE id=?").get(Number(job.lastInsertRowid)) as any;
+
+    expect(result.prepared).toHaveLength(1);
+    expect(fs.existsSync(attempt.resume_artifact_path)).toBe(true);
+    expect(attempt.resume_artifact_path).toMatch(/\.docx$/);
+    expect(fs.existsSync(attempt.cover_letter_artifact_path)).toBe(true);
+    expect(attempt.status).toBe("paused");
+    expect(jobRow.status).toBe("package_generated");
+  });
+
+  it("premium queue does not promote previously blocked Dice rows as apply candidates", () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    const job = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "SAP Program Manager",
+      "BlockedCo",
+      "Remote",
+      "dice",
+      "https://www.dice.com/job-detail/blocked-sap",
+      `[Dice evidence] match_score=88; posted="today"; updated="today"; apply_button=visible; scraped_at=${now}\nEasy Apply SAP delivery.`,
+      "blocked",
+      88,
+      "tier_1",
+      now,
+      now
+    );
+    db.prepare(
+      `INSERT INTO application_attempts (run_id, job_id, adapter, apply_url, status, required_fields_json, answered_fields_json, pause_reason, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(1, Number(job.lastInsertRowid), "dice", "https://www.dice.com/job-detail/blocked-sap", "blocked", "[]", "[]", "Prior live detail failed.", now, now);
+
+    const report = buildPremiumQueueReport(db, { sourceFilter: "dice", limit: 10 });
+
+    expect(report.rows[0].action).toBe("review_previous_attempt");
   });
 
   it("creates CRM contacts from Gmail alerts and idempotent follow-up schedules", () => {
