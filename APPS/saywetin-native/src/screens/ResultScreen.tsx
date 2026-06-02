@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View, BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import type { MatchSource, RitualTrack } from '../state/ritual-state';
+import type { RitualTrack } from '../state/ritual-state';
 import { FadeInView } from '../components/FadeInView';
 import { ritualTokens } from '../theme/tokens';
 import { fetchLyricSection, fetchMeaningSection, isSectionError } from '../api/result-sections';
@@ -18,16 +18,6 @@ type SectionState = {
 };
 
 const SLOW_SECTION_THRESHOLD_MS = 3000;
-const SECTION_RETRY_DELAY_MS = 500;
-
-const MATCH_SOURCE_LABELS: Record<MatchSource, string> = {
-  acrcloud: 'Found by audio',
-  ai_transcript: 'Found by transcript',
-  lyric_text: 'Found by lyric',
-  manual: 'Found manually',
-  spotify: 'Found from Spotify',
-  unknown: 'Found',
-};
 
 type ResultScreenProps = {
   track: RitualTrack;
@@ -39,7 +29,36 @@ function confidenceLabel(score: number) {
   if (score >= 70) {
     return 'Strong match';
   }
-  return 'Match found';
+  return 'Possible match';
+}
+
+function firstNonEmptyLine(input: string | null | undefined): string {
+  if (!input) {
+    return '';
+  }
+  for (const raw of input.split(/\r?\n/)) {
+    const trimmed = raw.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+  return '';
+}
+
+function shortMeaningPreview(input: string | null | undefined, maxChars = 160): string {
+  if (!input) {
+    return '';
+  }
+  const collapsed = input.replace(/\s+/g, ' ').trim();
+  if (!collapsed) {
+    return '';
+  }
+  const firstSentenceMatch = collapsed.match(/[^.!?]+[.!?]/);
+  const candidate = (firstSentenceMatch ? firstSentenceMatch[0] : collapsed).trim();
+  if (candidate.length <= maxChars) {
+    return candidate;
+  }
+  return candidate.slice(0, maxChars - 1).trimEnd() + '…';
 }
 
 export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScreenProps) {
@@ -72,6 +91,9 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
   const fallbackQuery = `${track.artist} ${track.title}`.trim();
   const spotifySearchUrl = `https://open.spotify.com/search/${encodeURIComponent(fallbackQuery)}`;
   const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(fallbackQuery)}`;
+  const genreChips = track.chips.filter((chip) => chip.trim().length > 0);
+  const metadataText = [track.year, ...genreChips].filter((item) => Boolean(item)).join(' • ');
+  const confidenceText = `${confidenceLabel(track.matchConfidence)} · ${track.matchConfidence}%`;
 
   const openSpotify = async () => {
     const candidates = [track.spotify.uri, track.spotify.url, track.spotifyUrl, spotifySearchUrl].filter(
@@ -374,95 +396,73 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
   const spotifyDirectAvailable = Boolean(track.spotify.trackId || track.spotify.uri);
   const youtubeDirectAvailable = Boolean(track.youtube.videoId);
 
+  const matchedLine = firstNonEmptyLine(inlineLyrics);
+  const meaningPreview = shortMeaningPreview(meaningText || culturalSummary);
+
+  const lyricsCardText = lyricsSection.loading
+    ? 'Finding the best lyric match…'
+    : lyricsSection.error
+      ? isSoftLyricsDelay
+        ? 'Finding the best lyric match…'
+        : 'Lyric not available yet.'
+      : matchedLine
+        ? matchedLine
+        : isLyricsStalled
+          ? 'Finding the best lyric match…'
+          : 'Finding the best lyric match…';
+
+  const meaningCardText = meaningSection.loading
+    ? 'Preparing meaning…'
+    : meaningSection.error
+      ? isSoftMeaningDelay
+        ? 'Meaning is not available yet for this line.'
+        : 'Meaning is not available yet for this line.'
+      : meaningPreview
+        ? meaningPreview
+        : isMeaningStalled
+          ? 'Meaning is not available yet for this line.'
+          : 'Preparing meaning…';
+
+  const matchedLineReady = Boolean(matchedLine) && !lyricsSection.loading;
+  const meaningReady = Boolean(meaningPreview) && !meaningSection.loading;
+
   return (
     <FadeInView>
       <View style={styles.screen}>
         <View style={styles.ambientGlow} />
 
         <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.title}>{track.title}</Text>
-          <Text style={styles.artist}>{track.artist}</Text>
-
-          <View style={styles.badgesRow}>
-            <Text style={styles.badge}>{MATCH_SOURCE_LABELS[track.matchSource]}</Text>
-            <Text style={styles.badge}>{confidenceLabel(track.matchConfidence)}</Text>
-          </View>
-
           {track.albumArt ? <Image source={{ uri: track.albumArt }} style={styles.cover} /> : null}
 
-          <View style={styles.lyricCard}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>Lyrics</Text>
-              {lyricsSection.error && (
-                <Pressable onPress={retryLyricsSection} style={styles.sectionRetry}>
-                  <Text style={styles.sectionRetryText}>Retry</Text>
-                </Pressable>
-              )}
-            </View>
-            {lyricsSection.loading ? (
-              <Text style={styles.loadingText}>Finding the best lyric match...</Text>
-            ) : lyricsSection.error ? (
-              <Text style={isSoftLyricsDelay ? styles.pendingText : styles.errorText}>
-                {isSoftLyricsDelay
-                  ? 'Finding the best lyric match...'
-                  : lyricsSection.error}
-              </Text>
-            ) : inlineLyrics ? (
-              <Text style={styles.lyricText}>{inlineLyrics}</Text>
-            ) : isLyricsStalled ? (
-              <Text style={styles.pendingText}>Finding the best lyric match...</Text>
-            ) : (
-              <Text style={styles.loadingText}>Finding the best lyric match...</Text>
-            )}
-
-            <View style={styles.sectionDivider} />
-
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>Meaning</Text>
-              {meaningSection.error && (
-                <Pressable onPress={retryMeaningSection} style={styles.sectionRetry}>
-                  <Text style={styles.sectionRetryText}>Retry</Text>
-                </Pressable>
-              )}
-            </View>
-            {meaningSection.loading ? (
-              <Text style={styles.loadingText}>Preparing meaning...</Text>
-            ) : meaningSection.error ? (
-              <Text style={isSoftMeaningDelay ? styles.pendingText : styles.errorText}>
-                {isSoftMeaningDelay
-                  ? 'Meaning is not available yet for this line.'
-                  : meaningSection.error}
-              </Text>
-            ) : meaningText ? (
-              <Text style={styles.meaningText}>{meaningText}</Text>
-            ) : isMeaningStalled ? (
-              <Text style={styles.pendingText}>Meaning is not available yet for this line.</Text>
-            ) : (
-              <Text style={styles.loadingText}>Preparing meaning...</Text>
-            )}
-
-            {culturalSummary && (
-              <Text style={styles.culturalText}>{culturalSummary}</Text>
-            )}
+          <Text style={styles.title}>{track.title}</Text>
+          <Text style={styles.artist}>{track.artist}</Text>
+          {metadataText ? <Text style={styles.metadata}>{metadataText}</Text> : null}
+          <View style={styles.badgesRow}>
+            <Text style={styles.badge}>{confidenceText}</Text>
           </View>
 
-          {track.chips.length > 0 ? (
-            <View style={styles.chipsRow}>
-              {track.chips.map((chip) => (
-                <View key={chip} style={styles.chipItem}>
-                  <Text style={styles.chipText}>{chip}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
+          <View style={styles.matchedLineCard}>
+            <Text style={styles.cardLabel}>Matched line</Text>
+            <Text style={matchedLineReady ? styles.matchedLineText : styles.cardPlaceholder}>
+              {lyricsCardText}
+            </Text>
+            {lyricsSection.error ? (
+              <Pressable onPress={retryLyricsSection} style={styles.sectionRetry}>
+                <Text style={styles.sectionRetryText}>Retry lyrics</Text>
+              </Pressable>
+            ) : null}
+          </View>
 
-          <View style={styles.linksRow}>
-            <Pressable onPress={openSpotify} style={styles.linkButton}>
-              <Text style={styles.linkButtonText}>{spotifyDirectAvailable ? 'Spotify' : 'Search Spotify'}</Text>
-            </Pressable>
-            <Pressable onPress={openYoutube} style={styles.linkButton}>
-              <Text style={styles.linkButtonText}>{youtubeDirectAvailable ? 'YouTube' : 'Search YouTube'}</Text>
-            </Pressable>
+          <View style={styles.meaningCard}>
+            <Text style={styles.cardLabel}>Meaning</Text>
+            <Text style={meaningReady ? styles.meaningPreviewText : styles.cardPlaceholder}>
+              {meaningCardText}
+            </Text>
+            {meaningSection.error ? (
+              <Pressable onPress={retryMeaningSection} style={styles.sectionRetry}>
+                <Text style={styles.sectionRetryText}>Retry meaning</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={styles.actionsRow}>
@@ -471,9 +471,23 @@ export function ResultScreen({ track, onReset, onFollowLiveLyrics }: ResultScree
               style={[styles.primaryButton, openingLiveLyrics && styles.primaryButtonBusy]}
             >
               <Text style={styles.primaryButtonText}>
-                {openingLiveLyrics ? 'Opening Live Lyrics...' : 'Follow Live Lyrics'}
+                {openingLiveLyrics ? 'Opening Live Lyrics…' : 'Follow Live Lyrics'}
               </Text>
             </Pressable>
+
+            <View style={styles.linksRow}>
+              <Pressable onPress={openSpotify} style={styles.linkButton}>
+                <Text style={styles.linkButtonText}>
+                  {spotifyDirectAvailable ? 'Spotify' : 'Search Spotify'}
+                </Text>
+              </Pressable>
+              <Pressable onPress={openYoutube} style={styles.linkButton}>
+                <Text style={styles.linkButtonText}>
+                  {youtubeDirectAvailable ? 'YouTube' : 'Search YouTube'}
+                </Text>
+              </Pressable>
+            </View>
+
             <Pressable onPress={onReset} style={styles.secondaryButton}>
               <Text style={styles.secondaryButtonText}>Listen again</Text>
             </Pressable>
@@ -488,6 +502,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     gap: 12,
+    backgroundColor: '#08060F',
   },
   ambientGlow: {
     position: 'absolute',
@@ -499,19 +514,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.violetWash,
   },
   container: {
-    gap: 14,
-    paddingBottom: 24,
+    gap: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    paddingTop: 8,
   },
   title: {
     color: colors.text,
-    fontSize: 32,
-    lineHeight: 38,
+    fontSize: 30,
+    lineHeight: 36,
     fontFamily: 'PlayfairDisplay_400Regular_Italic',
+    marginTop: 8,
   },
   artist: {
     color: colors.textMuted,
-    fontSize: 18,
-    marginTop: -6,
+    fontSize: 17,
+    marginTop: -8,
   },
   badgesRow: {
     flexDirection: 'row',
@@ -524,15 +542,59 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.violetEdge,
     borderRadius: 999,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   cover: {
-    width: 180,
-    height: 180,
-    borderRadius: 18,
+    width: 200,
+    height: 200,
+    borderRadius: 20,
     alignSelf: 'center',
+  },
+  matchedLineCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(216,196,255,0.28)',
+    backgroundColor: 'rgba(16,12,30,0.94)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 6,
+  },
+  meaningCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,76,0.24)',
+    backgroundColor: 'rgba(17,13,31,0.96)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 6,
+  },
+  cardLabel: {
+    color: '#D6C9F6',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  matchedLineText: {
+    color: colors.text,
+    fontSize: 19,
+    lineHeight: 26,
+    fontFamily: 'PlayfairDisplay_400Regular_Italic',
+  },
+  meaningPreviewText: {
+    color: '#F5F0FF',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  cardPlaceholder: {
+    color: '#C9BCE9',
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
   lyricCard: {
     borderRadius: 16,
@@ -576,6 +638,11 @@ const styles = StyleSheet.create({
     color: colors.violetSoft,
     fontSize: 11,
     fontWeight: '700',
+  },
+  metadata: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: 4,
   },
   sectionDivider: {
     height: 1,
@@ -635,8 +702,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panelSoft,
+    borderColor: 'rgba(216,196,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.075)',
     paddingVertical: 12,
     alignItems: 'center',
   },
@@ -646,7 +713,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   actionsRow: {
-    gap: 10,
+    gap: 12,
+    marginTop: 4,
   },
   primaryButton: {
     borderRadius: 12,
@@ -658,15 +726,15 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   primaryButtonText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panelSoft,
+    borderColor: 'rgba(216,196,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.075)',
     paddingVertical: 14,
     alignItems: 'center',
   },

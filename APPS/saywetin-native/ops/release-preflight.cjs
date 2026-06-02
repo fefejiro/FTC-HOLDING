@@ -27,6 +27,25 @@ function readEnvSource(filePath) {
   return values;
 }
 
+function readExpoCredentials(filePath) {
+  if (!fs.existsSync(filePath)) return {};
+  try {
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const keystore = raw?.android?.keystore || {};
+    const values = {};
+    if (keystore.keystorePath) values.SAYWETIN_KEYSTORE_PATH = path.resolve(APP_ROOT, keystore.keystorePath);
+    if (keystore.keystorePassword) values.SAYWETIN_KEYSTORE_PASSWORD = keystore.keystorePassword;
+    if (keystore.keyAlias) values.SAYWETIN_KEY_ALIAS = keystore.keyAlias;
+    if (keystore.keyPassword) values.SAYWETIN_KEY_PASSWORD = keystore.keyPassword;
+    if (raw?.android?.playServiceAccountKeyPath) {
+      values.SAYWETIN_PLAY_KEY_PATH = path.resolve(APP_ROOT, raw.android.playServiceAccountKeyPath);
+    }
+    return values;
+  } catch {
+    return {};
+  }
+}
+
 function pickValue(key, sources) {
   for (const source of sources) {
     if (source && source[key]) return source[key];
@@ -39,8 +58,9 @@ function main() {
   const androidEnv = readEnvSource(path.join(ANDROID_DIR, 'keystore.properties'));
   const gradleProps = readEnvSource(path.join(ANDROID_DIR, 'gradle.properties'));
   const homeGradle = readEnvSource(path.join(process.env.HOME || process.env.USERPROFILE || '', '.gradle', 'gradle.properties'));
+  const expoCredentials = readExpoCredentials(path.join(APP_ROOT, 'credentials.json'));
 
-  const sources = [process.env, androidEnv, gradleProps, homeGradle, repoEnv];
+  const sources = [process.env, androidEnv, gradleProps, homeGradle, repoEnv, expoCredentials];
   const missing = [];
 
   for (const key of KEYS_TO_CHECK) {
@@ -66,6 +86,13 @@ function main() {
 
   if (!fs.existsSync(keystorePath)) {
     console.log('status: blocked - keystore path does not exist');
+    process.exitCode = 1;
+    return;
+  }
+
+  const playKeyPath = pickValue('SAYWETIN_PLAY_KEY_PATH', sources);
+  if (!fs.existsSync(playKeyPath)) {
+    console.log('status: blocked - Play service account key path does not exist');
     process.exitCode = 1;
     return;
   }

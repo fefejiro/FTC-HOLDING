@@ -1,5 +1,7 @@
 <resources>
   <string name="app_name">SayWetin</string>
+  <string name="quick_tile_label">SayWetin Listen</string>
+  <string name="quick_tile_subtitle">Tap to identify music</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
   <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
 </resources>

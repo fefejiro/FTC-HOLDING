@@ -1,106 +1,45 @@
+
 import { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
+import Svg, { Path, Ellipse, Line, Circle } from 'react-native-svg';
 
 type TalkingDrumMarkProps = {
   size?: number;
-  color?: string;
-  accentColor?: string;
 };
 
 /**
- * Vector-like talking drum mark built from native shapes.
- * No raster background layer is used, so it stays clean over any orb treatment.
+ * SayWetin Talking Drum Mark — clear hourglass drum, gold/ivory on purple, vector, no raster.
  */
-export const TalkingDrumMark = memo(function TalkingDrumMark({
-  size = 74,
-  color = '#F6EFFD',
-  accentColor = '#D6B77A',
-}: TalkingDrumMarkProps) {
-  const shellWidth = Math.round(size * 0.46);
-  const shellHeight = Math.round(size * 0.62);
-  const ropeWidth = Math.max(1, Math.round(size * 0.03));
-  const ropeHeight = Math.round(size * 0.54);
-  const capSize = Math.round(size * 0.3);
-
+export const TalkingDrumMark = memo(function TalkingDrumMark({ size = 110 }: TalkingDrumMarkProps) {
+  // Colors: deep purple bg, gold outline, ivory drum, lavender highlight
+  const gold = '#D9BE86';
+  const ivory = '#F6EFFD';
+  const lavender = '#BFA6F7';
+  const dark = '#2B1747';
   return (
-    <View style={[styles.root, { width: size, height: size }]}>
-      <View
-        style={[
-          styles.shell,
-          {
-            width: shellWidth,
-            height: shellHeight,
-            borderColor: color,
-            borderTopLeftRadius: Math.round(shellWidth * 0.6),
-            borderTopRightRadius: Math.round(shellWidth * 0.6),
-            borderBottomLeftRadius: Math.round(shellWidth * 0.42),
-            borderBottomRightRadius: Math.round(shellWidth * 0.42),
-          },
-        ]}
-      >
-        <View style={[styles.centerBand, { backgroundColor: color }]} />
-      </View>
-
-      <View style={[styles.cap, { width: capSize, height: Math.round(capSize * 0.32), borderColor: accentColor }]} />
-      <View
-        style={[
-          styles.cap,
-          {
-            width: capSize,
-            height: Math.round(capSize * 0.32),
-            borderColor: accentColor,
-            top: size - Math.round(capSize * 0.56),
-          },
-        ]}
-      />
-
-      <View style={[styles.rope, { width: ropeWidth, height: ropeHeight, left: Math.round(size * 0.24), borderColor: accentColor }]} />
-      <View style={[styles.rope, { width: ropeWidth, height: ropeHeight, right: Math.round(size * 0.24), borderColor: accentColor }]} />
-
-      <View style={[styles.highlight, { width: Math.round(shellWidth * 0.34), height: Math.round(shellHeight * 0.18) }]} />
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} viewBox="0 0 110 110" fill="none">
+        {/* Strap */}
+        <Path d="M20 20 Q55 0 90 20" stroke={lavender} strokeWidth={4} fill="none" />
+        {/* Drum heads (top and bottom) */}
+        <Circle cx="55" cy="32" r="18" fill={gold} stroke={dark} strokeWidth={2.5} />
+        <Circle cx="55" cy="78" r="18" fill={gold} stroke={dark} strokeWidth={2.5} />
+        {/* Hourglass drum body */}
+        <Path d="M37 32 Q55 55 37 78" stroke={dark} strokeWidth={5} fill="none" />
+        <Path d="M73 32 Q55 55 73 78" stroke={dark} strokeWidth={5} fill="none" />
+        {/* Drum body fill */}
+        <Path d="M37 32 Q55 55 37 78 Q55 70 73 78 Q55 55 73 32 Q55 40 37 32 Z" fill={ivory} opacity={0.92} />
+        {/* Tension cords (side laces) */}
+        <Line x1="41" y1="38" x2="69" y2="72" stroke={lavender} strokeWidth={2.2} />
+        <Line x1="69" y1="38" x2="41" y2="72" stroke={lavender} strokeWidth={2.2} />
+        <Line x1="55" y1="38" x2="55" y2="72" stroke={lavender} strokeWidth={1.7} />
+        {/* Subtle highlight */}
+        <Ellipse cx="55" cy="55" rx="10" ry="3" fill={lavender} fillOpacity={0.18} />
+        {/* Glow (optional, subtle) */}
+        <Ellipse cx="55" cy="55" rx="44" ry="44" fill={gold} fillOpacity={0.06} />
+      </Svg>
     </View>
   );
 });
 
-const styles = StyleSheet.create({
-  root: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    backgroundColor: 'transparent',
-  },
-  shell: {
-    borderWidth: 2,
-    backgroundColor: 'rgba(246,239,253,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  centerBand: {
-    width: '72%',
-    height: 2,
-    opacity: 0.75,
-  },
-  cap: {
-    position: 'absolute',
-    top: 0,
-    borderWidth: 2,
-    borderRadius: 999,
-    backgroundColor: 'transparent',
-  },
-  rope: {
-    position: 'absolute',
-    top: '23%',
-    borderRadius: 999,
-    borderWidth: 1,
-    backgroundColor: 'transparent',
-    opacity: 0.85,
-  },
-  highlight: {
-    position: 'absolute',
-    top: '32%',
-    left: '36%',
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.32)',
-    transform: [{ rotate: '-18deg' }],
-  },
-});
+

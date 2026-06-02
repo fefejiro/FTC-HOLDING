@@ -2,11 +2,11 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { PlayfairDisplay_400Regular_Italic } from '@expo-google-fonts/playfair-display';
-import { NavigationContainer } from '@react-navigation/native';
+import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { useRitualState, type RitualScreen } from './src/state/ritual-state';
 import { ritualTokens } from './src/theme/tokens';
-import { RitualNavigator } from './src/navigation/RitualNavigator';
-import { useEffect, useState } from 'react';
+import { RitualNavigator, type RitualStackParamList } from './src/navigation/RitualNavigator';
+import { useEffect, useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { colors } = ritualTokens;
@@ -18,6 +18,27 @@ export default function App() {
   const ritual = useRitualState();
   const [, setActiveScreen] = useState<RitualScreen>('home');
   const [fontLoadTimedOut, setFontLoadTimedOut] = useState(false);
+  const linking = useMemo<LinkingOptions<RitualStackParamList>>(
+    () => ({
+      prefixes: ['saywetin://'],
+      config: {
+        screens: {
+          Home: 'home',
+          Listen: {
+            path: 'listen',
+            parse: {
+              autostart: (value: string) => value,
+            },
+          },
+          Result: 'result',
+          LiveLyrics: 'lyrics',
+          ShareMode: 'share',
+          VibeSearch: 'vibe',
+        },
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (fontsLoaded || fontError) return;
@@ -37,7 +58,7 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
       <View style={styles.shell}>
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
           <RitualNavigator ritual={ritual} onScreenChange={setActiveScreen} />
         </NavigationContainer>
       </View>

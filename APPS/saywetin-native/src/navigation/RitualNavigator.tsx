@@ -12,7 +12,7 @@ import type { RitualController, RitualScreen } from '../state/ritual-state';
 // sub-state inside ListenScreen. The public ritual flow is: Listen -> Result.
 export type RitualStackParamList = {
   Home: undefined;
-  Listen: undefined;
+  Listen: { autostart?: string } | undefined;
   Result: undefined;
   LiveLyrics: undefined;
   ShareMode: undefined;
@@ -68,8 +68,9 @@ export function RitualNavigator({ ritual, onScreenChange }: RitualNavigatorProps
       />
       <Stack.Screen
         name="Listen"
-        children={({ navigation }) => (
+        children={({ navigation, route }) => (
           <ListenScreen
+            autoStartToken={route.params?.autostart}
             onRecognized={(track) => {
               ritual.setRecognizedTrack(track);
               ritual.revealResult();

@@ -23,16 +23,17 @@
     "g41audit:send": "node scripts/chatgpt-fallback.mjs --mode g41audit --open --paste --send"
   },
   "dependencies": {
+    "@rolldown/binding-win32-x64-msvc": "1.0.0-rc.17",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tailwindcss/vite": "^4.2.4",
+    "@tailwindcss/vite": "4.2.4",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "6.0.1",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -42,6 +43,6 @@
     "tailwindcss": "^4.2.4",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^8.0.10"
+    "vite": "8.0.10"
   }
 }

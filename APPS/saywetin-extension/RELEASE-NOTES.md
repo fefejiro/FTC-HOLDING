@@ -1,5 +1,13 @@
 # SayWetin Chrome Extension — Release Notes
 
+## v1.0.2 (2026-05-21)
+
+### Highlights
+- Popup copy aligned with the live Play Store positioning: song recognition, live lyrics, and meaning
+- Premium popup finish with stronger ambient motion and cleaner result wording
+- Web Store metadata guidance updated to match the shipped SayWetin app language
+- Open-on-web CTA aligned with the fuller SayWetin experience
+
 ## v1.0.1 (2026-04-30)
 
 ### Highlights

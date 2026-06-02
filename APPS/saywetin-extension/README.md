@@ -1,6 +1,6 @@
 # SayWetin — Chrome Extension
 
-Recognize any song playing in your browser tab and instantly see lyrics, cultural meaning, and artist context — powered by the SayWetin API.
+Recognize any song playing in your browser tab and instantly see the lyric, slang meaning, and cultural context behind it, powered by the SayWetin API.
 
 ## Status
 
@@ -10,12 +10,12 @@ Recognize any song playing in your browser tab and instantly see lyrics, cultura
 
 ## What it does
 
-- Glass orb tap-to-listen UI (Shazam-style)
+- Premium glass-orb tap-to-listen UI
 - Captures audio from the active browser tab via `chrome.tabCapture`
 - Sends a 5–10s fingerprint to the SayWetin backend (ACRCloud recognition)
-- Displays: track title, artist, album art, lyrics, and cultural analysis
+- Displays: track title, artist, lyric, and meaning/context
 - Tap any lyric line for deeper meaning
-- Links to open the track on Spotify or YouTube
+- Opens the fuller SayWetin experience for track follow-up
 
 ## Tech stack
 

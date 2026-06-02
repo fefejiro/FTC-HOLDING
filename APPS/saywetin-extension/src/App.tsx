@@ -148,12 +148,189 @@ const App: React.FC = () => {
 
   const startCountdown = () => {
     setCountdown(7);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
     timerRef.current = setInterval(() => {
       setCountdown((c) => {
-        if (c <= 1) { clearInterval(timerRef.current!); return 0; }
+        if (c <= 1) {
+          clearInterval(timerRef.current!);
+          timerRef.current = null;
+          return 0;
+        }
         return c - 1;
       });
     }, 1000);
+  };
+
+  const getStreamId = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        // @ts-expect-error: Chrome extension API
+        chrome.runtime.sendMessage({ type: "START_TAB_CAPTURE" }, (response: { error?: string; streamId?: string }) => {
+          if (response?.error) {
+            reject(new Error(response.error));
+            return;
+          }
+          if (!response?.streamId) {
+            reject(new Error("Could not obtain stream ID from background"));
+            return;
+          }
+          resolve(response.streamId);
+        });
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error("Failed to start tab capture"));
+      }
+    });
+  };
+
+  const isNetworkError = (message: string) => {
+    const text = message.toLowerCase();
+    return text.includes("network") || text.includes("failed") || text.includes("timeout") || text.includes("server");
+  };
+
+  const formatSearchUrl = (query: string, provider: "spotify" | "youtube") => {
+    const encoded = encodeURIComponent(query);
+    return provider === "spotify"
+      ? `https://open.spotify.com/search/${encoded}`
+      : `https://www.youtube.com/results?search_query=${encoded}`;
+  };
+
+  const normalizeResult = (payload: any): TrackResult => ({
+    track: payload.track || payload.title || "Unknown song",
+    artist: payload.artist || payload.performer || "Unknown artist",
+    lyric: payload.lyric || payload.line || "",
+    meaning: payload.meaning || payload.context || "",
+    trackId: payload.trackId || payload.id || undefined,
+    language: payload.language || payload.locale || undefined,
+  });
+
+  const createAudioConstraints = (streamId: string) => {
+    return {
+      audio: {
+        mandatory: {
+          chromeMediaSource: "tab",
+          chromeMediaSourceId: streamId,
+        },
+      },
+    } as unknown as MediaStreamConstraints;
+  };
+
+  const getPreferredRecorderOptions = (): MediaRecorderOptions | undefined => {
+    if (typeof MediaRecorder === "undefined") {
+      return undefined;
+    }
+    if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+      return { mimeType: "audio/webm;codecs=opus" };
+    }
+    if (MediaRecorder.isTypeSupported("audio/webm")) {
+      return { mimeType: "audio/webm" };
+    }
+    return undefined;
+  };
+
+  const recordTabAudio = async (stream: MediaStream): Promise<Blob> => {
+    return new Promise<Blob>((resolve, reject) => {
+      const recorderOptions = getPreferredRecorderOptions();
+      let recorder: MediaRecorder;
+      try {
+        recorder = new MediaRecorder(stream, recorderOptions as MediaRecorderOptions);
+      } catch (error) {
+        try {
+          recorder = new MediaRecorder(stream);
+        } catch (fallbackError) {
+          reject(fallbackError instanceof Error ? fallbackError : new Error("MediaRecorder is not supported"));
+          return;
+        }
+      }
+
+      const chunks: BlobPart[] = [];
+      let ended = false;
+
+      const cleanup = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      recorder.onerror = (event) => {
+        if (!ended) {
+          ended = true;
+          cleanup();
+          const recorderError = event as any;
+          reject(new Error(recorderError.error?.message || "Recording failed"));
+        }
+      };
+
+      recorder.onstop = () => {
+        if (ended) {
+          return;
+        }
+        ended = true;
+        cleanup();
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        if (blob.size === 0) {
+          reject(new Error("No audio was captured"));
+          return;
+        }
+        resolve(blob);
+      };
+
+      try {
+        recorder.start();
+      } catch (startError) {
+        cleanup();
+        reject(startError instanceof Error ? startError : new Error("Failed to start audio recording"));
+        return;
+      }
+
+      setTimeout(() => {
+        if (!ended) {
+          try {
+            recorder.stop();
+          } catch {
+            if (!ended) {
+              ended = true;
+              cleanup();
+              reject(new Error("Failed to stop recording"));
+            }
+          }
+        }
+      }, 7000);
+    });
+  };
+
+  const renderTrackChips = (track: TrackResult) => {
+    const chips = [track.language, track.artist, track.trackId ? "Matched" : undefined].filter(Boolean) as string[];
+    return (
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginTop: 10 }}>
+        {chips.map((chip) => (
+          <span
+            key={chip}
+            style={{
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.05)",
+              padding: "6px 10px",
+              fontSize: 10,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#d1d5db",
+            }}
+          >
+            {chip}
+          </span>
+        ))}
+      </div>
+    );
   };
 
   const handleTap = async () => {
@@ -162,90 +339,62 @@ const App: React.FC = () => {
     setError(null);
     startCountdown();
 
-    // --- MOCK MODE: fast UI testing without real tab capture ---
     if (IS_MOCK) {
       setTimeout(() => {
         setResult({
           track: "Essence (feat. Tems)",
           artist: "Wizkid",
           lyric: "You be the answer to my prayer",
-          meaning: "A declaration of divine love — the beloved is answered prayer made flesh, rooted in Yoruba spiritual expression where blessings take human form.",
+          meaning:
+            "A declaration of divine love — the beloved is answered prayer made flesh, rooted in Yoruba spiritual expression where blessings take human form.",
           trackId: "mock-001",
-          language: "Yoruba/English",
+          language: "Yoruba / English",
         });
         setAppState("result");
       }, 3000);
       return;
     }
 
-    try {
-      // @ts-expect-error: Chrome extension API
-      chrome.runtime.sendMessage({ type: "START_TAB_CAPTURE" }, async (response: { error?: string; streamId?: string }) => {
-        if (response?.error) {
-          setError(response.error);
-          setAppState("error");
-          return;
-        }
-        const streamId = response?.streamId;
-        if (!streamId) {
-          setError("Could not obtain stream ID from background");
-          setAppState("error");
-          return;
-        }
-        try {
-          const tabAudioConstraints = {
-            mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId },
-          } as unknown as MediaTrackConstraints;
+    const capturePromise = async () => {
+      const streamId = await getStreamId();
+      const constraints = createAudioConstraints(streamId);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const audioBlob = await recordTabAudio(stream);
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
 
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: tabAudioConstraints,
-          });
-          const recorder = new MediaRecorder(stream);
-          const chunks: BlobPart[] = [];
-          recorder.ondataavailable = (e: BlobEvent) => { if (e.data.size > 0) chunks.push(e.data); };
-          recorder.onstop = async () => {
-            stream.getTracks().forEach((t) => t.stop());
-            const blob = new Blob(chunks, { type: "audio/webm" });
-            try {
-              const formData = new FormData();
-              formData.append("audio", blob, "audio.webm");
-              const res = await fetch(`${API_BASE}/api/recognize`, { method: "POST", body: formData });
-              if (!res.ok) throw new Error(`Server error: ${res.status}`);
-              const data = await res.json();
-              setResult({
-                track: data.track || "Unknown",
-                artist: data.artist || "",
-                lyric: data.lyric || "",
-                meaning: data.meaning || "",
-                trackId: data.trackId || data.id || "",
-                language: data.language || "",
-              });
-              setAppState("result");
-              // sync to account if authed
-              try {
-                const session = localStorage.getItem("saywetin_session");
-                if (session && data.trackId) {
-                  await fetch(`${API_BASE}/api/recent-recognition`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session}` },
-                    body: JSON.stringify({ trackId: data.trackId }),
-                  });
-                }
-              } catch { /* non-fatal */ }
-            } catch (err) {
-              setError((err as Error).message || "Recognition failed");
-              setAppState("error");
-            }
-          };
-          recorder.start();
-          setTimeout(() => recorder.stop(), 7000);
-        } catch (err) {
-          setError((err as Error).message || "Could not capture tab audio");
-          setAppState("error");
-        }
+      const response = await fetch(`${API_BASE}/api/recognize`, {
+        method: "POST",
+        body: formData,
       });
-    } catch (e) {
-      setError((e as Error).message || "Unknown error");
+
+      if (!response.ok) {
+        throw new Error(`Recognition failed (${response.status})`);
+      }
+
+      const data = await response.json();
+      const normalized = normalizeResult(data);
+
+      if (!normalized.track || normalized.track === "Unknown song") {
+        throw new Error(data.error || data.message || "Could not identify the song. Try again with clearer audio.");
+      }
+
+      setResult(normalized);
+      setAppState("result");
+    };
+
+    try {
+      await capturePromise();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Recognition failed";
+      const userMessage = isNetworkError(message)
+        ? "Network or server issue. Check your connection and try again."
+        : message.toLowerCase().includes("permission")
+          ? "Allow audio capture for SayWetin and try again."
+          : message.toLowerCase().includes("tab")
+            ? "Make sure a browser tab is playing audio and try again."
+            : "I could not hear the song clearly. Try again with a louder tab audio source.";
+      setError(userMessage);
       setAppState("error");
     }
   };
@@ -257,6 +406,10 @@ const App: React.FC = () => {
     setCountdown(7);
     if (timerRef.current) clearInterval(timerRef.current);
   };
+
+  const searchQuery = result ? `${result.track} ${result.artist}`.trim() : "";
+  const spotifySearchUrl = formatSearchUrl(searchQuery || "saywetin", "spotify");
+  const youtubeSearchUrl = formatSearchUrl(searchQuery || "saywetin", "youtube");
 
   return (
     <div
@@ -274,6 +427,17 @@ const App: React.FC = () => {
         overflow: "hidden",
       }}
     >
+      <div
+        style={{
+          position: "absolute",
+          inset: -80,
+          background:
+            "radial-gradient(circle at 20% 20%, rgba(56,189,248,0.16) 0%, transparent 28%), radial-gradient(circle at 80% 18%, rgba(168,85,247,0.18) 0%, transparent 32%), radial-gradient(circle at 50% 100%, rgba(244,114,182,0.14) 0%, transparent 34%)",
+          animation: "ambientFloat 12s ease-in-out infinite alternate",
+          pointerEvents: "none",
+        }}
+      />
+
       {/* Ambient glow behind orb */}
       <div
         style={{
@@ -290,7 +454,7 @@ const App: React.FC = () => {
       />
 
       {/* Logo + wordmark */}
-      <div className="flex items-center gap-2 mb-6 z-10">
+      <div className="flex items-center gap-2 mb-3 z-10">
         <svg width="28" height="27" viewBox="0 0 48 46" fill="none">
           <path fill="#a855f7" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"/>
         </svg>
@@ -299,16 +463,51 @@ const App: React.FC = () => {
         </span>
       </div>
 
+      <div style={{ position: "relative", zIndex: 10, textAlign: "center", marginBottom: 18, maxWidth: 280 }}>
+        <div style={{ fontSize: 10, color: "#c4b5fd", textTransform: "uppercase", letterSpacing: "0.16em", marginBottom: 8 }}>
+          Lyrics and meaning
+        </div>
+        <div style={{ fontSize: 22, lineHeight: 1.05, fontWeight: 800, color: "#ffffff" }}>
+          Recognize the song. <span style={{ color: "#d8b4fe" }}>Catch the meaning.</span>
+        </div>
+        <div style={{ marginTop: 8, fontSize: 12, lineHeight: 1.5, color: "#cbd5e1" }}>
+          Capture tab audio, pull the lyric, and explain the slang and cultural context behind the line.
+        </div>
+      </div>
+
       {/* Idle / Listening state */}
       {(appState === "idle" || appState === "listening") && (
         <>
           <OrbButton state={appState} onClick={handleTap} countdown={countdown} />
           <p style={{ marginTop: 20, fontSize: 14, color: appState === "listening" ? "#c084fc" : "#9ca3af", fontWeight: 500, letterSpacing: "0.03em" }}>
-            {appState === "listening" ? "Listening to tab audio…" : "Tap to recognise"}
+            {appState === "listening" ? "Listening to tab audio..." : "Tap to recognize"}
           </p>
           <p style={{ marginTop: 6, fontSize: 11, color: "#4b5563" }}>
-            {appState === "idle" ? "Play a song in any tab first" : "Recording 7 seconds…"}
+            {appState === "idle" ? "Play a song in your browser tab first" : "Recording 7 seconds..."}
           </p>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginTop: 14, maxWidth: 260 }}>
+            {[
+              "Song recognition",
+              "Live lyric",
+              "Slang meaning",
+            ].map((item) => (
+              <span
+                key={item}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.05)",
+                  padding: "6px 10px",
+                  fontSize: 10,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#d1d5db",
+                }}
+              >
+                {item}
+              </span>
+            ))}
+          </div>
           {IS_MOCK && (
             <div style={{ marginTop: 8, fontSize: 10, color: "#7c3aed", background: "rgba(124,58,237,0.12)", borderRadius: 6, padding: "3px 10px" }}>
               MOCK MODE — no real API call
@@ -328,18 +527,19 @@ const App: React.FC = () => {
             {result.artist && (
               <div style={{ fontSize: 13, color: "#a78bfa", marginTop: 4 }}>{result.artist}</div>
             )}
+            {renderTrackChips(result)}
           </div>
 
           {result.lyric && (
             <div style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-              <div style={{ fontSize: 10, color: "#6d28d9", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Lyric</div>
+              <div style={{ fontSize: 10, color: "#6d28d9", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Live lyric</div>
               <div style={{ fontSize: 14, color: "#e9d5ff", fontStyle: "italic", lineHeight: 1.5 }}>"{result.lyric}"</div>
             </div>
           )}
 
           {result.meaning && (
             <div style={{ background: "rgba(71,191,255,0.06)", border: "1px solid rgba(71,191,255,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-              <div style={{ fontSize: 10, color: "#0ea5e9", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Cultural Meaning</div>
+              <div style={{ fontSize: 10, color: "#0ea5e9", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Meaning and context</div>
               <div style={{ fontSize: 13, color: "#bae6fd", lineHeight: 1.6 }}>{result.meaning}</div>
             </div>
           )}
@@ -357,7 +557,7 @@ const App: React.FC = () => {
                   letterSpacing: "0.03em",
                 }}
               >
-                Full Track →
+                Open on SayWetin →
               </a>
             )}
             <button
@@ -368,8 +568,38 @@ const App: React.FC = () => {
                 color: "#a78bfa", fontWeight: 600, fontSize: 12, cursor: "pointer",
               }}
             >
-              Recognise Again
+              Recognize again
             </button>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <a
+              href={spotifySearchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 10,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                color: "#fff", fontWeight: 700, fontSize: 12, textDecoration: "none",
+                letterSpacing: "0.03em",
+              }}
+            >
+              Search Spotify
+            </a>
+            <a
+              href={youtubeSearchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 10,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                color: "#fff", fontWeight: 700, fontSize: 12, textDecoration: "none",
+                letterSpacing: "0.03em",
+              }}
+            >
+              Search YouTube
+            </a>
           </div>
         </div>
       )}
@@ -393,11 +623,15 @@ const App: React.FC = () => {
       )}
 
       {/* Footer */}
-      <div style={{ position: "absolute", bottom: 12, fontSize: 10, color: "#374151", letterSpacing: "0.08em" }}>
-        SAYWETIN · AFRICAN LYRICS DECODER
+      <div style={{ position: "absolute", bottom: 12, fontSize: 10, color: "#4b5563", letterSpacing: "0.08em" }}>
+        SAYWETIN · SONGS, LYRICS, MEANING
       </div>
 
       <style>{`
+        @keyframes ambientFloat {
+          0% { transform: translate3d(-8px, -4px, 0) scale(1); }
+          100% { transform: translate3d(10px, 8px, 0) scale(1.06); }
+        }
         @keyframes ripple {
           0% { transform: scale(0.85); opacity: 0.7; }
           100% { transform: scale(1.6); opacity: 0; }

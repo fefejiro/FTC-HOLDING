@@ -57,7 +57,7 @@ export type ResolvedYoutubeLink = {
   url: string | null;
   title: string | null;
   channelTitle: string | null;
-  source: 'official' | 'vevo' | 'topic' | 'search_fallback' | 'unknown';
+  source: 'official' | 'topic' | 'verified_artist' | 'search_fallback' | 'unknown';
 };
 
 export type CulturalAnalysisEntry = {

@@ -38,7 +38,10 @@ export type SectionError = {
 // ============================================================================
 
 const FETCH_TIMEOUT_MS = 8000;
-const RETRY_ATTEMPTS = 2;
+
+const TRACK_DETAILS_CACHE_TTL_MS = 15000;
+const trackDetailsCache = new Map<string, { atMs: number; data: RecognizedTrackResponse }>();
+const trackDetailsInFlight = new Map<string, Promise<RecognizedTrackResponse>>();
 
 // ============================================================================
 // Type Guards & Utilities
@@ -122,18 +125,44 @@ type RecognizedTrackResponse = {
   }> | null;
 };
 
+async function fetchTrackDetails(trackId: string): Promise<RecognizedTrackResponse> {
+  const now = Date.now();
+  const cached = trackDetailsCache.get(trackId);
+  if (cached && now - cached.atMs <= TRACK_DETAILS_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  const inFlight = trackDetailsInFlight.get(trackId);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}/api/recognized-tracks/${encodeURIComponent(trackId)}`;
+
+  const request = (async () => {
+    const data = await fetchWithTimeout<RecognizedTrackResponse>(url, {}, FETCH_TIMEOUT_MS);
+    trackDetailsCache.set(trackId, { atMs: Date.now(), data });
+    return data;
+  })();
+
+  trackDetailsInFlight.set(trackId, request);
+  try {
+    return await request;
+  } finally {
+    trackDetailsInFlight.delete(trackId);
+  }
+}
+
 /**
  * Fetch lyrics for a track from the backend
  * Falls back to fallback-unavailable gracefully on network issues
  */
 export async function fetchLyricSection(trackId: string): Promise<LyricSectionResult | SectionError> {
-  const baseUrl = getApiBaseUrl();
-  const url = `${baseUrl}/api/recognized-tracks/${encodeURIComponent(trackId)}`;
-
   try {
-    console.log('[result-sections] lyric fetch start', { url });
+    console.log('[result-sections] lyric fetch start', { trackId });
 
-    const data = await fetchWithTimeout<RecognizedTrackResponse>(url, {}, FETCH_TIMEOUT_MS);
+    const data = await fetchTrackDetails(trackId);
 
     console.log('[result-sections] lyric fetch success', {
       hasLyrics: Boolean(data?.lyrics?.text),
@@ -211,13 +240,10 @@ export async function fetchLyricSection(trackId: string): Promise<LyricSectionRe
  * Gracefully handles missing cultural context
  */
 export async function fetchMeaningSection(trackId: string): Promise<MeaningSectionResult | SectionError> {
-  const baseUrl = getApiBaseUrl();
-  const url = `${baseUrl}/api/recognized-tracks/${encodeURIComponent(trackId)}`;
-
   try {
-    console.log('[result-sections] meaning fetch start', { url });
+    console.log('[result-sections] meaning fetch start', { trackId });
 
-    const data = await fetchWithTimeout<RecognizedTrackResponse>(url, {}, FETCH_TIMEOUT_MS);
+    const data = await fetchTrackDetails(trackId);
 
     console.log('[result-sections] meaning fetch success', {
       analysisCount: data?.culturalAnalysis?.length ?? 0,

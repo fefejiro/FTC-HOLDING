@@ -32,6 +32,12 @@
 - [x] Short and long description
 - [x] Feature highlights
 
+Suggested listing copy aligned with the live app:
+
+- Title: `SayWetin: Lyrics & Meaning`
+- Short description: `Recognize songs in your browser tab, follow the lyric, and understand slang and cultural meaning instantly.`
+- Feature highlights: `Song recognition`, `Live lyric follow-up`, `Slang meaning`, `Cultural context`
+
 ## 6. Privacy & Compliance
 - [x] No tracking, analytics, or ads
 - [x] User audio is only sent to backend for recognition

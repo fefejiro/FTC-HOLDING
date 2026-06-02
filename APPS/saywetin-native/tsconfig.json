@@ -1,7 +1,9 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "lib": ["esnext"],
+    "types": ["react", "react-native"]
   },
   "exclude": ["docs/design-source/**/*"]
 }

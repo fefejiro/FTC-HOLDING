@@ -1,0 +1,98 @@
+{
+  "layer": "uat",
+  "startedAt": "2026-06-01T13:38:47.711Z",
+  "scenarios": [
+    {
+      "file": "identify-journey.json",
+      "name": "UAT — End-user music recognition journey",
+      "ok": true,
+      "steps": [
+        {
+          "id": "U1",
+          "title": "Backend reachable",
+          "ok": true,
+          "status": 200,
+          "failures": [],
+          "body": {
+            "status": "ok"
+          }
+        },
+        {
+          "id": "U2",
+          "title": "Backend reports DB schema ready",
+          "ok": true,
+          "status": 200,
+          "failures": [],
+          "body": {
+            "acrcloud": {
+              "configured": true,
+              "service": "Audio Recognition"
+            },
+            "lyrics": {
+              "configured": true,
+              "service": "LRCLIB + Lyrics.ovh + optional fallbacks",
+              "providers": [
+                "LRCLIB",
+                "Lyrics.ovh",
+                "Genius",
+                "AZLyrics",
+                "AI recall fallback"
+              ],
+              "geniusApiKey": "Configured",
+              "aiFallback": "openai configured"
+            },
+            "openai": {
+              "configured": true,
+              "provider": "openai",
+              "model": "gpt-4o-mini",
+              "apiKeySource": "OPENAI_API_KEY",
+              "baseURLSource": null,
+              "service": "AI Cultural Context"
+            },
+            "database": {
+              "configured": true,
+              "connected": true,
+              "schemaReady": true
+            }
+          }
+        },
+        {
+          "id": "U3",
+          "title": "User searches song by lyric snippet (Burna Boy)",
+          "ok": true,
+          "status": 200,
+          "failures": [],
+          "body": {
+            "success": true,
+            "sessionId": "7054ef86-db36-4bc4-ac87-adb1f5741196",
+            "recognizedTrack": {
+              "id": "12509557-2625-4749-bd60-7ddb87f90002",
+              "title": "Forever",
+              "artist": "Burna Boy",
+              "album": null,
+              "duration": null,
+              "genre": null,
+              "spotifyId": null,
+              "youtubeId": null,
+              "confidenceScore": 90,
+              "coverArtUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/e9/a0/16/e9a016aa-a82f-8e67-50b2-f1101e0be964/22UM1IM30248.rgb.jpg/1200x1200bb.jpg",
+              "matchSource": "lyric_text"
+            },
+            "matchSource": "lyric_text",
+            "confidence": 90,
+            "processingTime": 1007
+          }
+        },
+        {
+          "id": "U4",
+          "title": "Listening history is queryable",
+          "ok": true,
+          "status": 200,
+          "failures": [],
+          "body": []
+        }
+      ]
+    }
+  ],
+  "ok": true
+}

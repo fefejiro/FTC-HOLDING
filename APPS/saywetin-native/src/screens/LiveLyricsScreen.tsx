@@ -7,6 +7,10 @@ import type { RitualTrack, SyncedLyricLine } from '../state/ritual-state';
 import { ritualTokens } from '../theme/tokens';
 
 const { colors } = ritualTokens;
+const PROVISIONAL_LINE_MS = 1800;
+const AUTO_CALIBRATION_LIMIT = 2;
+const AUTO_CALIBRATION_THRESHOLD_MS = 900;
+const AUTO_CALIBRATION_MAX_STEP_MS = 900;
 
 function firstSentence(input: string | null | undefined, maxChars = 140): string {
   if (!input) return '';
@@ -25,6 +29,38 @@ function shortVibeTag(input: string | null | undefined, maxChars = 32): string {
   const candidate = collapsed.split(/[.,;:·]/)[0].trim();
   if (candidate.length <= maxChars) return candidate;
   return candidate.slice(0, maxChars - 1).trimEnd() + '…';
+}
+
+function buildProvisionalLyrics(lyricText: string | null | undefined, startOffsetMs: number): SyncedLyricLine[] {
+  const text = (lyricText || '').trim();
+  if (!text) {
+    return [];
+  }
+
+  const rawLines = text
+    .split(/\r?\n|(?<=[.!?])\s+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .slice(0, 24);
+
+  return rawLines.map((line, index) => {
+    const startMs = Math.max(0, startOffsetMs + index * PROVISIONAL_LINE_MS);
+    const endMs = startMs + PROVISIONAL_LINE_MS;
+    return {
+      id: `prov-${index}`,
+      text: line,
+      startMs,
+      endMs,
+      tappable: false,
+      meaning: '',
+      vibe: '',
+      culture: '',
+      artistIntent: '',
+      reply: '',
+      alternates: [],
+      related: [],
+    };
+  });
 }
 
 type LiveLyricsScreenProps = {
@@ -66,8 +102,13 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
   // Only calculate elapsed if result was shown in the past (avoid future timestamps)
   const elapsedSinceResultShownMs = Math.max(0, Math.min(Date.now() - effectiveResultShownAtMs, 120000)); // Cap at 2 min
   const initialSongOffsetMs = initialDisplaySongOffsetMs + elapsedSinceResultShownMs;
+  const initialLyrics =
+    track.syncedLyrics.length > 0 ? track.syncedLyrics : buildProvisionalLyrics(track.lyric, initialSongOffsetMs);
 
-  const [lyrics, setLyrics] = useState<SyncedLyricLine[]>(track.syncedLyrics);
+  const [lyrics, setLyrics] = useState<SyncedLyricLine[]>(initialLyrics);
+  const [usingProvisionalLyrics, setUsingProvisionalLyrics] = useState(
+    track.syncedLyrics.length === 0 && initialLyrics.length > 0,
+  );
   const [positionMs, setPositionMs] = useState(initialSongOffsetMs);
   const [syncWarn, setSyncWarn] = useState(false);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
@@ -82,6 +123,8 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
   const scrollRef = useRef<ScrollView>(null);
   const lineHeights = useRef<Record<number, number>>({});
   const inFlightExplainRef = useRef<Record<string, Promise<SyncedLyricLine>>>({});
+  const previousLineIndexRef = useRef(0);
+  const autoCalibrationRemainingRef = useRef(AUTO_CALIBRATION_LIMIT);
 
   // Handle hardware back button to return to Result (not reset)
   useFocusEffect(() => {
@@ -103,6 +146,7 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
 
       if (loaded && loaded.lines.length > 0) {
         setLyrics(loaded.lines);
+        setUsingProvisionalLyrics(false);
         if (loaded.songOffsetMs > 0 && !track.displaySongOffsetMs) {
           baseDisplayOffsetRef.current = loaded.songOffsetMs;
         }
@@ -110,8 +154,10 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
         return;
       }
 
-      setLyrics([]);
-      setFallbackReason('notiming');
+      if (initialLyrics.length === 0) {
+        setLyrics([]);
+        setFallbackReason('notiming');
+      }
     })();
 
     return () => {
@@ -168,6 +214,42 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
   }, [lyrics, positionMs]);
 
   const activeLine = lyrics[currentLineIndex] ?? null;
+
+  useEffect(() => {
+    if (lyrics.length === 0) {
+      previousLineIndexRef.current = 0;
+      return;
+    }
+
+    const previousIndex = previousLineIndexRef.current;
+    previousLineIndexRef.current = currentLineIndex;
+
+    if (currentLineIndex === previousIndex || usingProvisionalLyrics || fallbackReason) {
+      return;
+    }
+
+    if (autoCalibrationRemainingRef.current <= 0) {
+      return;
+    }
+
+    const targetLine = lyrics[currentLineIndex];
+    if (!targetLine) {
+      return;
+    }
+
+    const driftMs = targetLine.startMs - positionMs;
+    if (Math.abs(driftMs) < AUTO_CALIBRATION_THRESHOLD_MS) {
+      return;
+    }
+
+    const correctionMs = Math.max(
+      -AUTO_CALIBRATION_MAX_STEP_MS,
+      Math.min(AUTO_CALIBRATION_MAX_STEP_MS, driftMs),
+    );
+
+    autoCalibrationRemainingRef.current -= 1;
+    setManualOffsetMs((current) => current + correctionMs);
+  }, [currentLineIndex, lyrics, positionMs, usingProvisionalLyrics, fallbackReason]);
 
   const initialScrollDoneRef = useRef(false);
 
@@ -283,6 +365,7 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
   const onResync = () => {
     resultShownAtRef.current = Date.now();
     baseDisplayOffsetRef.current = initialDisplaySongOffsetMs;
+    autoCalibrationRemainingRef.current = AUTO_CALIBRATION_LIMIT;
     setManualOffsetMs(0);
     setPositionMs(initialDisplaySongOffsetMs);
     setSyncWarn(false);
@@ -297,12 +380,14 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
 
   const inlineIndicator = fallbackReason
     ? 'Exact lyric timing is unavailable.'
-    : syncWarn
-      ? 'Timing drift detected. Tap Re-sync if lines feel off.'
-      : null;
+    : usingProvisionalLyrics
+      ? 'Syncing timed lyrics...'
+      : syncWarn
+        ? 'Timing drift detected. Tap Re-sync if lines feel off.'
+        : null;
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} collapsable={false}>
       <View style={styles.ambientGlow} pointerEvents="none" />
 
       <View style={styles.topRow}>
@@ -330,7 +415,13 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
       ) : null}
 
       <ScrollView ref={scrollRef} contentContainerStyle={styles.lyricsWrap} showsVerticalScrollIndicator={false}>
-        {lyrics.length === 0 ? <Text style={styles.waitingText}>Waiting for lyrics...</Text> : null}
+        {lyrics.length === 0 ? (
+          <View style={styles.loadingState}>
+            <View style={styles.loadingPill} />
+            <View style={[styles.loadingPill, styles.loadingPillShort]} />
+            <Text style={styles.waitingText}>Preparing lyrics...</Text>
+          </View>
+        ) : null}
 
         {displayedLyrics.map(({ line, originalIndex }) => {
           const active = originalIndex === currentLineIndex;
@@ -397,8 +488,10 @@ export function LiveLyricsScreen({ track, onBack }: LiveLyricsScreenProps) {
 
 const styles = StyleSheet.create({
   screen: {
+    ...StyleSheet.absoluteFillObject,
     flex: 1,
     backgroundColor: '#08060F',
+    zIndex: 10,
   },
   ambientGlow: {
     position: 'absolute',
@@ -485,10 +578,25 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   waitingText: {
-    color: colors.textMuted,
+    color: colors.text,
     fontSize: 16,
     textAlign: 'center',
-    marginTop: 40,
+    fontWeight: '600',
+  },
+  loadingState: {
+    alignItems: 'center',
+    marginTop: 54,
+    gap: 12,
+  },
+  loadingPill: {
+    width: 190,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  loadingPillShort: {
+    width: 128,
+    backgroundColor: 'rgba(139,124,246,0.2)',
   },
   linePressable: {
     paddingVertical: 10,

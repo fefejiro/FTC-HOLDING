@@ -1,3 +1,7 @@
-• Tighter, more natural cultural translations — like a friend explaining, not a textbook.
-• Faster tap-to-translate (next lines pre-loaded in the background).
-• Cleaner meaning sheet: translation + one focused "What it means" block.
+What's new in this release:
+
+- Faster song recognition with a quicker tap-to-listen flow.
+- Smoother live lyrics follow with better sync behavior and faster line loading.
+- More natural cultural translations and cleaner meaning explanations.
+- Improved Quick Settings access on Android for faster launch into listening.
+- Polished interaction feedback for a more responsive, reliable experience.

@@ -17,6 +17,7 @@ export function useAudioSession() {
       await setAudioModeAsync({
         allowsRecording: true,
         playsInSilentMode: true,
+        shouldRouteThroughEarpiece: false,
       });
       if (mounted) {
         ready.current = true;
@@ -31,6 +32,7 @@ export function useAudioSession() {
       setAudioModeAsync({
         allowsRecording: false,
         playsInSilentMode: false,
+        shouldRouteThroughEarpiece: false,
       }).catch(() => {
         // best-effort cleanup
       });

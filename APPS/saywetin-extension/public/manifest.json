@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "SayWetin: African Lyrics Decoder",
-  "description": "Tap to recognize any African song in your browser tab and instantly see the lyrics, translation, and cultural meaning.",
+  "name": "SayWetin: Lyrics & Meaning",
+  "description": "Recognize songs in your browser tab, follow the lyric, and understand slang and cultural meaning instantly.",
   "version": "0.1.0",
   "action": {
     "default_popup": "popup.html",

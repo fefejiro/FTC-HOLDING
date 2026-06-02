@@ -1,7 +1,9 @@
 import type { MatchSource, RitualTrack, ResolvedSpotifyLink, ResolvedYoutubeLink } from '../state/ritual-state';
+import { getApiBaseUrl } from './config';
 
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+const apiBaseUrl = getApiBaseUrl();
 const railWayFallbackBaseUrl = 'https://saywetin-api-production.up.railway.app';
+const LISTEN_UPLOAD_TIMEOUT_MS = 55000;
 
 type ListenResponse = {
   success: boolean;
@@ -175,8 +177,13 @@ function normalizeYoutubeSource(
   hasDirectVideo: boolean,
 ): ResolvedYoutubeLink['source'] {
   const value = (source || '').toLowerCase().trim();
-  if (value === 'official' || value === 'vevo' || value === 'topic') {
+  // Accept canonical values plus the legacy 'vevo' label (now mapped to
+  // verified_artist) so older API payloads keep working.
+  if (value === 'official' || value === 'topic' || value === 'verified_artist') {
     return value;
+  }
+  if (value === 'vevo') {
+    return 'verified_artist';
   }
   if (!hasDirectVideo) {
     return 'search_fallback';
@@ -343,10 +350,6 @@ export async function uploadListenSample(
   recordingUri: string,
   durationMs: number,
 ): Promise<RitualTrack> {
-  if (!apiBaseUrl) {
-    throw new Error('EXPO_PUBLIC_API_BASE_URL is missing');
-  }
-
   const startedAt = Date.now();
 
   const baseCandidates = [apiBaseUrl];
@@ -354,21 +357,23 @@ export async function uploadListenSample(
     baseCandidates.push(railWayFallbackBaseUrl);
   }
 
-  const form = new FormData();
-  form.append('audio', {
-    uri: recordingUri,
-    type: 'audio/mp4',
-    name: 'recording.m4a',
-  } as unknown as Blob);
-  form.append('duration', String(durationMs));
-
   let uploadResponse: Response | null = null;
+  let recognizedBaseUrl = apiBaseUrl;
   let lastNetworkError: unknown = null;
+  let lastHttpError: { status: number; message: string; url: string } | null = null;
 
   for (const baseUrl of baseCandidates) {
     const uploadUrl = `${baseUrl}/api/listen`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), LISTEN_UPLOAD_TIMEOUT_MS);
+    const form = new FormData();
+    form.append('audio', {
+      uri: recordingUri,
+      type: 'audio/mp4',
+      name: 'recording.m4a',
+    } as unknown as Blob);
+    form.append('duration', String(durationMs));
+
     console.log('[listen] upload begin', { url: uploadUrl, uri: recordingUri, durationMs });
     try {
       uploadResponse = await fetch(uploadUrl, {
@@ -382,6 +387,35 @@ export async function uploadListenSample(
         status: uploadResponse.status,
         elapsedMs: Date.now() - startedAt,
       });
+      if (!uploadResponse.ok && baseUrl !== baseCandidates[baseCandidates.length - 1]) {
+        let message = `HTTP ${uploadResponse.status}`;
+        let serverHandledRequest = false;
+        try {
+          const errorPayload = (await uploadResponse.clone().json()) as Partial<ListenResponse>;
+          message = errorPayload.error || message;
+          serverHandledRequest = Boolean(errorPayload.error);
+        } catch {
+          // Keep the status-only message if the server did not return JSON.
+        }
+        const shouldTryNextEndpoint =
+          !serverHandledRequest ||
+          uploadResponse.status === 408 ||
+          uploadResponse.status === 429 ||
+          uploadResponse.status >= 500;
+        if (!shouldTryNextEndpoint) {
+          recognizedBaseUrl = baseUrl;
+          break;
+        }
+        lastHttpError = { status: uploadResponse.status, message, url: uploadUrl };
+        console.warn('[listen] upload returned non-ok; trying next endpoint', {
+          url: uploadUrl,
+          status: uploadResponse.status,
+          message,
+        });
+        uploadResponse = null;
+        continue;
+      }
+      recognizedBaseUrl = baseUrl;
       break;
     } catch (err: any) {
       clearTimeout(timeoutId);
@@ -394,6 +428,9 @@ export async function uploadListenSample(
   }
 
   if (!uploadResponse) {
+    if (lastHttpError) {
+      throw new Error(`Listen API failed at ${lastHttpError.url}: ${lastHttpError.message}`);
+    }
     throw new Error(`Listen upload failed: ${(lastNetworkError as any)?.message || String(lastNetworkError)}`);
   }
 
@@ -422,7 +459,7 @@ export async function uploadListenSample(
   };
 
   try {
-    const detailUrl = `${apiBaseUrl}/api/recognized-tracks/${encodeURIComponent(payload.recognizedTrack.id)}`;
+    const detailUrl = `${recognizedBaseUrl}/api/recognized-tracks/${encodeURIComponent(payload.recognizedTrack.id)}`;
     const fetchDetail = async () => {
       console.log('[listen] detail fetch begin', detailUrl);
       const detailResponse = await fetch(detailUrl);
@@ -456,10 +493,6 @@ export async function uploadListenSample(
 export type IdentifyByTextError = Error & { code?: string };
 
 export async function identifyByText(query: string): Promise<RitualTrack> {
-  if (!apiBaseUrl) {
-    throw new Error('EXPO_PUBLIC_API_BASE_URL is missing');
-  }
-
   const trimmed = query.trim();
   if (trimmed.length < 3) {
     const err = new Error('Type at least 3 characters of a lyric or phrase.') as IdentifyByTextError;

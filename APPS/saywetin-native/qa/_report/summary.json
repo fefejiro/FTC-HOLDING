@@ -1,0 +1,305 @@
+{
+  "startedAt": "2026-06-01T13:38:52.926Z",
+  "ok": true,
+  "layers": [
+    {
+      "name": "smoke",
+      "ok": true,
+      "code": 0,
+      "durationMs": 2869,
+      "tail": "SayWetin backend smoke @ https://saywetin-api-production.up.railway.app\n  ... health PASS (status ok)\n  ... identify-by-text (well-known lyric) PASS (Burna Boy — Forever)\n\n2/2 passed\n"
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "code": 0,
+      "durationMs": 1627,
+      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m unit/confidence.test.ts \u001b[2m(\u001b[22m\u001b[2m2 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 3\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m unit/live-lyrics-index.test.ts \u001b[2m(\u001b[22m\u001b[2m4 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 3\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m2 passed\u001b[39m\u001b[22m\u001b[90m (2)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m6 passed\u001b[39m\u001b[22m\u001b[90m (6)\u001b[39m\n\u001b[2m   Start at \u001b[22m 09:38:03\n\u001b[2m   Duration \u001b[22m 518ms\u001b[2m (transform 57ms, setup 0ms, collect 67ms, tests 6ms, environment 0ms, prepare 321ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
+    },
+    {
+      "name": "api",
+      "ok": true,
+      "code": 0,
+      "durationMs": 3849,
+      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m api/endpoints.test.ts \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 2179\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://api.saywetin.app\u001b[2m > \u001b[22mGET /api/health -> 200 ok \u001b[33m337\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://api.saywetin.app\u001b[2m > \u001b[22mGET /api/status -> reports configured services \u001b[33m428\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://api.saywetin.app\u001b[2m > \u001b[22mPOST /api/identify-by-text -> 200 OR 503 (until OpenAI key set) \u001b[33m1179\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m5 passed\u001b[39m\u001b[22m\u001b[90m (5)\u001b[39m\n\u001b[2m   Start at \u001b[22m 09:38:04\n\u001b[2m   Duration \u001b[22m 2.67s\u001b[2m (transform 35ms, setup 0ms, collect 44ms, tests 2.18s, environment 0ms, prepare 135ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
+    },
+    {
+      "name": "contract",
+      "ok": true,
+      "code": 0,
+      "durationMs": 4101,
+      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m contract/shapes.test.ts \u001b[2m(\u001b[22m\u001b[2m3 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 2387\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/health matches schema \u001b[33m347\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/status matches schema \u001b[33m445\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/identify-by-text matches success-or-error union \u001b[33m1593\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[90m (3)\u001b[39m\n\u001b[2m   Start at \u001b[22m 09:38:08\n\u001b[2m   Duration \u001b[22m 2.92s\u001b[2m (transform 38ms, setup 0ms, collect 60ms, tests 2.39s, environment 0ms, prepare 137ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
+    },
+    {
+      "name": "security",
+      "ok": true,
+      "code": 0,
+      "durationMs": 4311,
+      "tail": "  PASS npm-audit (saywetin-native) (critical=0 high=0)\n  PASS secret-scan (clean)\n  PASS https-headers (ok)\n  PASS admin-protected (status=404)\n"
+    },
+    {
+      "name": "perf",
+      "ok": true,
+      "code": 0,
+      "durationMs": 31101,
+      "tail": "[perf] health -> GET https://api.saywetin.app/api/health\n[perf] status -> GET https://api.saywetin.app/api/status\n  PASS health: p99=344ms rps=227.3 err=0\n  PASS status: p99=994ms rps=83.9 err=0\n"
+    },
+    {
+      "name": "uat",
+      "ok": true,
+      "code": 0,
+      "durationMs": 2658,
+      "tail": "  PASS uat UAT — End-user music recognition journey :: U1 Backend reachable\n  PASS uat UAT — End-user music recognition journey :: U2 Backend reports DB schema ready\n  PASS uat UAT — End-user music recognition journey :: U3 User searches song by lyric snippet (Burna Boy)\n  PASS uat UAT — End-user music recognition journey :: U4 Listening history is queryable\n"
+    },
+    {
+      "name": "bat",
+      "ok": true,
+      "code": 0,
+      "durationMs": 2269,
+      "tail": "  PASS bat BAT — Business acceptance: recognition core works for paying-tier flow :: B1 Recognition by text returns artist + title\n  PASS bat BAT — Business acceptance: recognition core works for paying-tier flow :: B2 Garbage input is rejected, not 500\n"
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "code": 0,
+      "durationMs": 887,
+      "tail": ""
+    }
+  ],
+  "detail": {
+    "perf": null,
+    "security": null,
+    "uat": {
+      "layer": "uat",
+      "startedAt": "2026-06-01T13:38:47.711Z",
+      "scenarios": [
+        {
+          "file": "identify-journey.json",
+          "name": "UAT — End-user music recognition journey",
+          "ok": true,
+          "steps": [
+            {
+              "id": "U1",
+              "title": "Backend reachable",
+              "ok": true,
+              "status": 200,
+              "failures": [],
+              "body": {
+                "status": "ok"
+              }
+            },
+            {
+              "id": "U2",
+              "title": "Backend reports DB schema ready",
+              "ok": true,
+              "status": 200,
+              "failures": [],
+              "body": {
+                "acrcloud": {
+                  "configured": true,
+                  "service": "Audio Recognition"
+                },
+                "lyrics": {
+                  "configured": true,
+                  "service": "LRCLIB + Lyrics.ovh + optional fallbacks",
+                  "providers": [
+                    "LRCLIB",
+                    "Lyrics.ovh",
+                    "Genius",
+                    "AZLyrics",
+                    "AI recall fallback"
+                  ],
+                  "geniusApiKey": "Configured",
+                  "aiFallback": "openai configured"
+                },
+                "openai": {
+                  "configured": true,
+                  "provider": "openai",
+                  "model": "gpt-4o-mini",
+                  "apiKeySource": "OPENAI_API_KEY",
+                  "baseURLSource": null,
+                  "service": "AI Cultural Context"
+                },
+                "database": {
+                  "configured": true,
+                  "connected": true,
+                  "schemaReady": true
+                }
+              }
+            },
+            {
+              "id": "U3",
+              "title": "User searches song by lyric snippet (Burna Boy)",
+              "ok": true,
+              "status": 200,
+              "failures": [],
+              "body": {
+                "success": true,
+                "sessionId": "7054ef86-db36-4bc4-ac87-adb1f5741196",
+                "recognizedTrack": {
+                  "id": "12509557-2625-4749-bd60-7ddb87f90002",
+                  "title": "Forever",
+                  "artist": "Burna Boy",
+                  "album": null,
+                  "duration": null,
+                  "genre": null,
+                  "spotifyId": null,
+                  "youtubeId": null,
+                  "confidenceScore": 90,
+                  "coverArtUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/e9/a0/16/e9a016aa-a82f-8e67-50b2-f1101e0be964/22UM1IM30248.rgb.jpg/1200x1200bb.jpg",
+                  "matchSource": "lyric_text"
+                },
+                "matchSource": "lyric_text",
+                "confidence": 90,
+                "processingTime": 1007
+              }
+            },
+            {
+              "id": "U4",
+              "title": "Listening history is queryable",
+              "ok": true,
+              "status": 200,
+              "failures": [],
+              "body": []
+            }
+          ]
+        }
+      ],
+      "ok": true
+    },
+    "bat": {
+      "layer": "bat",
+      "startedAt": "2026-06-01T13:38:50.344Z",
+      "scenarios": [
+        {
+          "file": "recognition-core.json",
+          "name": "BAT — Business acceptance: recognition core works for paying-tier flow",
+          "ok": true,
+          "steps": [
+            {
+              "id": "B1",
+              "title": "Recognition by text returns artist + title",
+              "ok": true,
+              "status": 200,
+              "failures": [],
+              "body": {
+                "success": true,
+                "sessionId": "a8cef22f-3d25-4eaf-a6a6-6f69c9493456",
+                "recognizedTrack": {
+                  "id": "f86e3e89-879b-47f0-8a81-8eff0a7a2886",
+                  "title": "Forever",
+                  "artist": "Burna Boy",
+                  "album": null,
+                  "duration": null,
+                  "genre": null,
+                  "spotifyId": null,
+                  "youtubeId": null,
+                  "confidenceScore": 90,
+                  "coverArtUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/e9/a0/16/e9a016aa-a82f-8e67-50b2-f1101e0be964/22UM1IM30248.rgb.jpg/1200x1200bb.jpg",
+                  "matchSource": "lyric_text"
+                },
+                "matchSource": "lyric_text",
+                "confidence": 90,
+                "processingTime": 1062
+              }
+            },
+            {
+              "id": "B2",
+              "title": "Garbage input is rejected, not 500",
+              "ok": true,
+              "status": 400,
+              "failures": [],
+              "body": {
+                "success": false,
+                "errorCode": "QUERY_TOO_SHORT",
+                "error": "Please enter at least 3 characters of a lyric, phrase, or song title."
+              }
+            }
+          ]
+        }
+      ],
+      "ok": true
+    },
+    "e2e": {
+      "layer": "e2e",
+      "startedAt": "2026-06-01T13:38:52.887Z",
+      "runs": [],
+      "ok": false,
+      "skipped": true,
+      "reason": "maestro CLI not installed (see qa/e2e/run.mjs header)"
+    },
+    "vitest": {
+      "numTotalTestSuites": 2,
+      "numPassedTestSuites": 2,
+      "numFailedTestSuites": 0,
+      "numPendingTestSuites": 0,
+      "numTotalTests": 3,
+      "numPassedTests": 3,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "numTodoTests": 0,
+      "snapshot": {
+        "added": 0,
+        "failure": false,
+        "filesAdded": 0,
+        "filesRemoved": 0,
+        "filesRemovedList": [],
+        "filesUnmatched": 0,
+        "filesUpdated": 0,
+        "matched": 0,
+        "total": 0,
+        "unchecked": 0,
+        "uncheckedKeysByFile": [],
+        "unmatched": 0,
+        "updated": 0,
+        "didUpdate": false
+      },
+      "startTime": 1780321088723,
+      "success": true,
+      "testResults": [
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "Contract: response shapes"
+              ],
+              "fullName": "Contract: response shapes /api/health matches schema",
+              "status": "passed",
+              "title": "/api/health matches schema",
+              "duration": 347.30170000000004,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Contract: response shapes"
+              ],
+              "fullName": "Contract: response shapes /api/status matches schema",
+              "status": "passed",
+              "title": "/api/status matches schema",
+              "duration": 444.73169999999993,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Contract: response shapes"
+              ],
+              "fullName": "Contract: response shapes /api/identify-by-text matches success-or-error union",
+              "status": "passed",
+              "title": "/api/identify-by-text matches success-or-error union",
+              "duration": 1593.4021000000002,
+              "failureMessages": [],
+              "meta": {}
+            }
+          ],
+          "startTime": 1780321089222,
+          "endTime": 1780321091607.402,
+          "status": "passed",
+          "message": "",
+          "name": "C:/FTC HOLDING/APPS/saywetin-native/qa/contract/shapes.test.ts"
+        }
+      ]
+    }
+  }
+}

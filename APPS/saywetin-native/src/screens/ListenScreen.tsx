@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BackHandler, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AudioModule, RecordingPresets, useAudioRecorder } from 'expo-audio';
 import { FadeInView } from '../components/FadeInView';
@@ -12,8 +12,9 @@ import { ritualTokens } from '../theme/tokens';
 import { getStatusSubtitle, shouldShowSlowNetworkWarning, getSlowNetworkMessage } from '../utils/status-messaging';
 
 const { colors } = ritualTokens;
-const CAPTURE_DURATION_MS = 5000;
-const MATCHING_AUTO_ADVANCE_MS = 250;
+const CAPTURE_DURATION_MS = 6000;
+const PRIVATE_LISTENING_CAPTURE_DURATION_MS = 8000;
+const MATCHING_AUTO_ADVANCE_MS = 120;
 const LISTEN_MICROCOPY = ['Tap to listen'];
 
 type ListenPhase =
@@ -70,31 +71,43 @@ function inferInputRoute(nameOrType: string): InputRoute {
   return 'unknown';
 }
 
-function scoreRecorderInput(name: string, type: string) {
-  const sample = `${name} ${type}`.toLowerCase();
-  if (
+function isBluetoothRecorderInput(sample: string) {
+  return (
     sample.includes('bluetooth') ||
     sample.includes('bt') ||
     sample.includes('sco') ||
     sample.includes('ble') ||
     sample.includes('airpods')
-  ) {
-    return 3;
-  }
-  if (
+  );
+}
+
+function isWiredRecorderInput(sample: string) {
+  return (
     sample.includes('wired') ||
     sample.includes('headset') ||
     sample.includes('headphone') ||
     sample.includes('usb')
-  ) {
-    return 2;
-  }
-  if (
+  );
+}
+
+function isBuiltInRecorderInput(sample: string) {
+  return (
     sample.includes('built-in') ||
     sample.includes('builtin') ||
-    sample.includes('internal') ||
-    sample.includes('mic')
-  ) {
+    sample.includes('built in') ||
+    sample.includes('internal')
+  );
+}
+
+function scoreRecorderInput(name: string, type: string) {
+  const sample = `${name} ${type}`.toLowerCase();
+  if (isBuiltInRecorderInput(sample)) {
+    return 3;
+  }
+  if (isWiredRecorderInput(sample)) {
+    return 2;
+  }
+  if (isBluetoothRecorderInput(sample)) {
     return 1;
   }
   return 0;
@@ -111,7 +124,7 @@ function isNetworkError(message: string) {
 }
 
 function toOrbPhase(phase: ListenPhase): OrbPhase {
-  if (phase === 'capturing') {
+  if (phase === 'requesting-permission' || phase === 'capturing') {
     return 'listening';
   }
   if (phase === 'uploading' || phase === 'matching') {
@@ -124,10 +137,15 @@ function isBusyPhase(phase: ListenPhase) {
   return phase === 'requesting-permission' || phase === 'capturing' || phase === 'uploading' || phase === 'matching';
 }
 
-export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTrack) => void }) {
+function getCaptureDurationMs(audioRoute: ReturnType<typeof useAudioRoute>) {
+  return audioRoute.isPrivateListening ? PRIVATE_LISTENING_CAPTURE_DURATION_MS : CAPTURE_DURATION_MS;
+}
+
+export function ListenScreen({ onRecognized, autoStartToken }: { onRecognized: (track: RitualTrack) => void; autoStartToken?: string }) {
   const [phase, setPhase] = useState<ListenPhase>('idle');
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [failureReason, setFailureReason] = useState<'permission_denied' | 'network' | 'capture' | 'unknown' | null>(null);
   const [showLyricInput, setShowLyricInput] = useState(false);
   const [lyricQuery, setLyricQuery] = useState('');
   const [lyricBusy, setLyricBusy] = useState(false);
@@ -141,6 +159,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
   const stageStartedAtRef = useRef(0);
   const timelineRef = useRef<AttemptTimeline | null>(null);
   const abortControllerRef = useRef(new AbortController());
+  const lastAutoStartTokenRef = useRef<string | undefined>(undefined);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const audioRoute = useAudioRoute();
@@ -217,6 +236,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
     attemptIdRef.current = requestId;
 
     setErrorMessage(null);
+    setFailureReason(null);
     setShowLyricInput(false);
     selectedInputRouteRef.current = 'unknown';
 
@@ -234,7 +254,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
         return;
       }
       if (!permission.granted) {
-        throw new Error('Microphone permission denied');
+        throw new Error('permission_denied');
       }
 
       timelineRef.current = {
@@ -242,8 +262,10 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
         permissionGrantedAtMs: Date.now(),
       };
 
+      const captureDurationMs = getCaptureDurationMs(audioRoute);
+
       setPhase('capturing');
-      setSecondsLeft(Math.ceil(CAPTURE_DURATION_MS / 1000));
+      setSecondsLeft(Math.ceil(captureDurationMs / 1000));
 
       await audioRecorder.prepareToRecordAsync();
 
@@ -286,7 +308,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       }, 1000);
 
       await new Promise((resolve) => {
-        const timer = setTimeout(resolve, CAPTURE_DURATION_MS);
+        const timer = setTimeout(resolve, captureDurationMs);
         stopCaptureRef.current = () => {
           clearTimeout(timer);
           resolve(null);
@@ -322,7 +344,7 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
       };
 
       setPhase('uploading');
-      const recognizedTrack = await uploadListenSample(recordingUri, CAPTURE_DURATION_MS);
+      const recognizedTrack = await uploadListenSample(recordingUri, captureDurationMs);
 
       if (attemptIdRef.current !== requestId) {
         return;
@@ -381,22 +403,51 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
         return;
       }
 
-      const message = String(error?.message || 'Could not identify song. Try again.');
-      const network = isNetworkError(message);
+      const rawMessage = String(error?.message || 'Could not identify song. Try again.');
+      const normalized = rawMessage.toLowerCase();
+      const permissionDenied = normalized.includes('permission_denied') || normalized.includes('permission denied');
+      const network = isNetworkError(rawMessage);
+      const capture = rawMessage.includes('no recording') || rawMessage.includes('could not hear enough music');
+
+      const message = permissionDenied
+        ? 'Microphone access is required. Open settings to allow SayWetin to listen.'
+        : network
+          ? 'Network issue detected. Check your connection and tap retry.'
+          : capture
+            ? 'I could not hear enough music. Move closer to the speaker and try again.'
+            : 'Could not identify the song. Try again or match by lyric.';
+      const reason = permissionDenied ? 'permission_denied' : network ? 'network' : capture ? 'capture' : 'unknown';
+
       setPhase(network ? 'offline' : 'failed');
-      setErrorMessage('I could not hear enough music.');
+      setFailureReason(reason);
+      setErrorMessage(message);
       setShowLyricInput(true);
       setSecondsLeft(0);
 
       console.warn('[listen] recognition failed', {
         requestId,
-        message,
+        message: rawMessage,
         selectedInputRoute: selectedInputRouteRef.current,
+        failureReason: reason,
       });
     } finally {
       stopCaptureRef.current = null;
     }
   };
+
+  useEffect(() => {
+    const token = autoStartToken;
+    if (!token || token === lastAutoStartTokenRef.current) {
+      return;
+    }
+
+    if (isBusyPhase(phase)) {
+      return;
+    }
+
+    lastAutoStartTokenRef.current = token;
+    void startRecognition();
+  }, [autoStartToken, phase]);
 
   const submitLyric = async () => {
     if (lyricBusy || isBusyPhase(phase)) {
@@ -466,6 +517,16 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
     return getSlowNetworkMessage(phase, stageElapsedMs);
   }, [phase, stageElapsedMs]);
 
+  const showRetryAction = phase === 'failed' || phase === 'offline' || phase === 'cancelled';
+
+  const openSettings = async () => {
+    try {
+      await Linking.openSettings();
+    } catch {
+      console.warn('[listen] open settings failed');
+    }
+  };
+
   return (
     <FadeInView duration={orbPhase === 'matching' ? 220 : 180}>
       <View style={styles.screen}>
@@ -480,10 +541,32 @@ export function ListenScreen({ onRecognized }: { onRecognized: (track: RitualTra
         <OrbListener phase={orbPhase} onPress={orbPhase === 'matching' ? undefined : startRecognition} />
 
         <Text style={styles.orbHint}>
-          {phase === 'capturing' ? 'Tap to stop' : phase === 'idle' ? microcopy : ''}
+          {phase === 'capturing'
+            ? 'Tap to stop'
+            : phase === 'requesting-permission'
+              ? 'Preparing microphone...'
+              : phase === 'idle'
+                ? microcopy
+                : ''}
         </Text>
 
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+        {failureReason === 'permission_denied' ? (
+          <Pressable onPress={openSettings} style={styles.settingsButton}>
+            <Text style={styles.settingsButtonText}>Open microphone settings</Text>
+          </Pressable>
+        ) : null}
+
+        {showRetryAction ? (
+          <Pressable
+            onPress={startRecognition}
+            style={[styles.retryButton, isBusyPhase(phase) && styles.retryButtonDisabled]}
+            disabled={isBusyPhase(phase)}
+          >
+            <Text style={styles.retryButtonText}>{phase === 'offline' ? 'Retry now' : 'Try again'}</Text>
+          </Pressable>
+        ) : null}
 
         {slowNetworkWarningVisible && slowNetworkWarningText ? (
           <Text style={[styles.errorText, { color: colors.amber, opacity: 0.8 }]}>{slowNetworkWarningText}</Text>
@@ -592,6 +675,37 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   lyricButtonText: {
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  retryButton: {
+    marginTop: 10,
+    alignSelf: 'center',
+    backgroundColor: colors.violet,
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  retryButtonDisabled: {
+    opacity: 0.6,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  settingsButton: {
+    marginTop: 10,
+    alignSelf: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.violetSoft,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  settingsButtonText: {
     color: colors.text,
     fontWeight: '700',
     fontSize: 14,

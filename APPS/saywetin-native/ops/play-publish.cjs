@@ -21,10 +21,31 @@ const APP_ROOT = path.resolve(__dirname, '..');
 const ANDROID_DIR = path.join(APP_ROOT, 'android');
 const AAB_PATH = path.join(ANDROID_DIR, 'app', 'build', 'outputs', 'bundle', 'release', 'app-release.aab');
 const PACKAGE_NAME = 'com.saywetin.app';
-const DEFAULT_KEY_PATH =
-  process.env.SAYWETIN_PLAY_KEY_PATH ||
-  'C:\\Users\\mikef\\Documents\\saywetin-play-service-account.json';
+const FALLBACK_PLAY_KEY_PATH = 'C:\\Users\\mikef\\Documents\\saywetin-play-service-account.json';
 const DEFAULT_RELEASE_KEYSTORE = path.join(ANDROID_DIR, 'app', 'saywetin-release.keystore');
+
+function readExpoCredentials() {
+  const credentialsPath = path.join(APP_ROOT, 'credentials.json');
+  if (!fs.existsSync(credentialsPath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+const expoCredentials = readExpoCredentials();
+const expoKeystore = expoCredentials?.android?.keystore || {};
+
+function resolvePlayKeyPath() {
+  return (
+    process.env.SAYWETIN_PLAY_KEY_PATH ||
+    (expoCredentials?.android?.playServiceAccountKeyPath
+      ? path.resolve(APP_ROOT, expoCredentials.android.playServiceAccountKeyPath)
+      : '') ||
+    FALLBACK_PLAY_KEY_PATH
+  );
+}
 
 function parseArgs(argv) {
   const out = { track: 'internal', rollout: 1.0, promote: false, from: null, to: null, notes: null };
@@ -41,15 +62,16 @@ function parseArgs(argv) {
 }
 
 async function authClient() {
-  if (!fs.existsSync(DEFAULT_KEY_PATH)) {
+  const playKeyPath = resolvePlayKeyPath();
+  if (!fs.existsSync(playKeyPath)) {
     throw new Error(
-      `Service account key not found at ${DEFAULT_KEY_PATH}. ` +
+      `Service account key not found at ${playKeyPath}. ` +
         `Create one in Google Cloud Console (Play Android Developer API enabled) and grant it ` +
         `'Release manager' on this app in Play Console → Setup → API access.`,
     );
   }
   const auth = new google.auth.GoogleAuth({
-    keyFile: DEFAULT_KEY_PATH,
+    keyFile: playKeyPath,
     scopes: ['https://www.googleapis.com/auth/androidpublisher'],
   });
   return auth.getClient();
@@ -57,15 +79,16 @@ async function authClient() {
 
 function hasSigningEnv() {
   return Boolean(
-    process.env.SAYWETIN_KEYSTORE_PASSWORD &&
-      process.env.SAYWETIN_KEY_ALIAS &&
-      process.env.SAYWETIN_KEY_PASSWORD,
+    (process.env.SAYWETIN_KEYSTORE_PASSWORD || expoKeystore.keystorePassword) &&
+      (process.env.SAYWETIN_KEY_ALIAS || expoKeystore.keyAlias) &&
+      (process.env.SAYWETIN_KEY_PASSWORD || expoKeystore.keyPassword),
   );
 }
 
 function resolveReleaseKeystorePath() {
   return (
     process.env.SAYWETIN_KEYSTORE_PATH ||
+    (expoKeystore.keystorePath ? path.resolve(APP_ROOT, expoKeystore.keystorePath) : '') ||
     (fs.existsSync(DEFAULT_RELEASE_KEYSTORE) ? DEFAULT_RELEASE_KEYSTORE : '')
   );
 }
@@ -83,6 +106,9 @@ function failFastIfSigningMissing() {
     );
   }
   process.env.SAYWETIN_KEYSTORE_PATH = keystorePath;
+  process.env.SAYWETIN_KEYSTORE_PASSWORD = process.env.SAYWETIN_KEYSTORE_PASSWORD || expoKeystore.keystorePassword;
+  process.env.SAYWETIN_KEY_ALIAS = process.env.SAYWETIN_KEY_ALIAS || expoKeystore.keyAlias;
+  process.env.SAYWETIN_KEY_PASSWORD = process.env.SAYWETIN_KEY_PASSWORD || expoKeystore.keyPassword;
 }
 
 function readReleaseNotes(explicit) {

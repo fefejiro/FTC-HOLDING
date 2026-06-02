@@ -1,5 +1,6 @@
 package com.saywetin.app
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 
@@ -24,6 +25,11 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "main"
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]

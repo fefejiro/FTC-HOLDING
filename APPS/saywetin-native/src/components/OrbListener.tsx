@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ritualTokens } from '../theme/tokens';
 
@@ -18,6 +18,7 @@ const PULSE_DURATION_MS = 3500;
 const NIGERIA_GLYPHS = ['A', 'B', 'E', 'I', 'N', 'O', 'U', 'S', '1', '2', '3', '7', '#', 'N', 'o', '*', '+', '~', '<', '>'];
 
 export function OrbListener({ phase, onPress }: OrbListenerProps) {
+  const [isPressed, setIsPressed] = useState(false);
   const isIdle = phase === 'idle';
   const isListening = phase === 'listening';
   const isMatching = phase === 'matching';
@@ -324,12 +325,21 @@ export function OrbListener({ phase, onPress }: OrbListenerProps) {
           })}
         </Animated.View>
 
-        <Pressable onPress={onPress} disabled={!onPress} hitSlop={20}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={() => setIsPressed(true)}
+          onPressOut={() => setIsPressed(false)}
+          disabled={!onPress}
+          hitSlop={28}
+          pressRetentionOffset={28}
+          android_ripple={{ color: 'rgba(255,255,255,0.16)', radius: ORB_SIZE / 2, borderless: false }}
+          style={styles.orbPressable}
+        >
           <Animated.View
             style={[
               styles.orbHit,
               {
-                transform: [{ scale: orbScale }, { scale: tighten }],
+                transform: [{ scale: orbScale }, { scale: tighten }, { scale: isPressed ? 0.96 : 1 }],
                 shadowColor: ringTint as unknown as string,
                 shadowOpacity: isActive ? 0.85 : 0.55,
               },
@@ -487,6 +497,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 40,
     elevation: 24,
+  },
+  orbPressable: {
+    borderRadius: ORB_SIZE / 2,
+    overflow: 'hidden',
   },
   glassOrb: {
     width: ORB_SIZE,

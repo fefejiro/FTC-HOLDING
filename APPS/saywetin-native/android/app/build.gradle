@@ -97,8 +97,8 @@ android {
         applicationId 'com.saywetin.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 42
-        versionName "1.3.6"
+        versionCode 43
+        versionName "1.3.7"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -109,7 +109,7 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        // Release signing — prefers env vars (CI), falls back to gradle.properties,
+        // Release signing â€” prefers env vars (CI), falls back to gradle.properties,
         // and is only registered when the keystore file is actually present so
         // local debug builds keep working without it.
         release {
@@ -125,12 +125,15 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            applicationIdSuffix ".debug"
+            resValue "string", "app_name", "SayWetin QA"
         }
         release {
-            // Use release signingConfig when keystore env is wired; otherwise fall
-            // back to debug so dev builds still produce a runnable APK locally.
             def hasReleaseKeystore = (signingConfigs.release.storeFile != null)
-            signingConfig hasReleaseKeystore ? signingConfigs.release : signingConfigs.debug
+            if (!hasReleaseKeystore) {
+                throw new GradleException("Release keystore missing. Set SAYWETIN_KEYSTORE_PATH and signing passwords before building a Play Store AAB.")
+            }
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

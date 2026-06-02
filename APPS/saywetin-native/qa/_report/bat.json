@@ -1,0 +1,53 @@
+{
+  "layer": "bat",
+  "startedAt": "2026-06-01T13:38:50.344Z",
+  "scenarios": [
+    {
+      "file": "recognition-core.json",
+      "name": "BAT — Business acceptance: recognition core works for paying-tier flow",
+      "ok": true,
+      "steps": [
+        {
+          "id": "B1",
+          "title": "Recognition by text returns artist + title",
+          "ok": true,
+          "status": 200,
+          "failures": [],
+          "body": {
+            "success": true,
+            "sessionId": "a8cef22f-3d25-4eaf-a6a6-6f69c9493456",
+            "recognizedTrack": {
+              "id": "f86e3e89-879b-47f0-8a81-8eff0a7a2886",
+              "title": "Forever",
+              "artist": "Burna Boy",
+              "album": null,
+              "duration": null,
+              "genre": null,
+              "spotifyId": null,
+              "youtubeId": null,
+              "confidenceScore": 90,
+              "coverArtUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/e9/a0/16/e9a016aa-a82f-8e67-50b2-f1101e0be964/22UM1IM30248.rgb.jpg/1200x1200bb.jpg",
+              "matchSource": "lyric_text"
+            },
+            "matchSource": "lyric_text",
+            "confidence": 90,
+            "processingTime": 1062
+          }
+        },
+        {
+          "id": "B2",
+          "title": "Garbage input is rejected, not 500",
+          "ok": true,
+          "status": 400,
+          "failures": [],
+          "body": {
+            "success": false,
+            "errorCode": "QUERY_TOO_SHORT",
+            "error": "Please enter at least 3 characters of a lyric, phrase, or song title."
+          }
+        }
+      ]
+    }
+  ],
+  "ok": true
+}
