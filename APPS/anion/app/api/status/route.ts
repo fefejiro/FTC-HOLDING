@@ -5,15 +5,15 @@ export async function GET() {
   const response: PlatformStatusResponse = {
     ok: true,
     service: 'anion-web',
-    phase: 'phase1-call-closure-failed-auth-blocked',
-    release: '0.2.12',
+    phase: 'phase1-call-closure-pending-production-evidence',
+    release: '0.2.13',
     runtime: {
       web: 'live',
       health: 'ok',
       authAndRoles: 'blocked-invalid-credentials',
       bookings: 'implemented-not-auth-verified',
       billing: 'ready-with-external-keys',
-      liveClassroom: 'implemented-not-auth-verified',
+      liveClassroom: 'local-contract-green-production-evidence-pending',
       opsAndQa: 'blocked-phase1-fail',
     },
     blockers: {

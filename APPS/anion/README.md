@@ -16,6 +16,7 @@ Primary production delivery lane for Anion.
 - Supabase migrations folder initialized and applied
 - M1-M5 core implementation exists in code, but authenticated production closure is currently blocked
 - Current Phase 1 execution status: FAIL (hard blocker: no valid confirmed production role test credentials for parent/tutor/student)
+- Live classroom rule: assigned tutor and student join the Daily room; parent has booking visibility but does not join the call unless future product requirements change
 - Runtime status endpoint is now aligned: live `/api/status` reports blocked Phase 1 closure state
 - Governance rule: do not mark overall green while critical items in `ops/PRODUCTION-READINESS.md` remain open
 
@@ -41,6 +42,7 @@ Primary production delivery lane for Anion.
 
 Smoke tests live in `tests/smoke.spec.ts` and cover:
 - `GET /api/health` - service liveness
+- `POST /api/daily/room` - malformed requests return `400`, unauthenticated valid-shaped requests return `401`
 - `/login` - sign-in form renders correctly
 - `/pricing` - all three plan cards visible
 - `/parent`, `/dashboard`, `/lesson/:id` - redirect to `/login` when unauthenticated

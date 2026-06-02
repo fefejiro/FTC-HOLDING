@@ -1,6 +1,6 @@
 # Anion Delivery Roadmap
 
-Last updated: 2026-05-20 (Phase 1 execution update)
+Last updated: 2026-05-26 (Daily classroom local contract update)
 Primary production lane: anion web app
 
 ## Delivery Principles
@@ -11,7 +11,7 @@ Primary production lane: anion web app
 - Do not report overall status as green while critical blockers in `ops/PRODUCTION-READINESS.md` are open.
 
 ## Active Production Closure Order (current)
-1. Phase 1: Call production closure with authenticated evidence (parent, tutor, student) - currently blocked by missing valid confirmed production role test credentials
+1. Phase 1: Call production closure with authenticated evidence (parent visibility/denial, tutor join/rejoin, student join/rejoin) - currently blocked by missing valid confirmed production role test credentials and external config proof
 2. Same-day truth alignment across runtime `/api/status` and governance docs
 3. External production gates (Stripe, Daily, Supabase callback allow-list)
 4. Background/theme finish only on validated call-flow surfaces
@@ -83,12 +83,13 @@ Scope:
 ## M4: Live Classroom
 Goal: Session-linked Daily React room flow.
 
-Status: Implemented in code; Phase 1 call production closure execution currently FAIL due to auth credential blocker
+Status: Implemented in code; local Daily contract green; Phase 1 production evidence still open
 
 Scope:
 - Daily room token issuance from server routes.
 - Join readiness checks and room lifecycle state.
 - Tutor and student session joins from booked classes.
+- Parent booking visibility without Daily call participation.
 
 ## M5: Operations + QA Stabilization
 Goal: Stable launch readiness for web lane.

@@ -185,23 +185,9 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
                   Status: <strong>{booking.status}</strong>
                 </p>
                 {booking.status === 'accepted' ? (
-                  <a
-                    href={`/lesson/${booking.id}`}
-                    style={{
-                      display: 'inline-block',
-                      marginTop: 10,
-                      background: '#16a34a',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 8,
-                      padding: '8px 14px',
-                      textDecoration: 'none',
-                      fontSize: 14,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Join Lesson
-                  </a>
+                  <p className="muted" style={{ margin: '10px 0 0' }}>
+                    Accepted. The assigned student joins from the student dashboard.
+                  </p>
                 ) : null}
               </article>
             ))}

@@ -1,7 +1,7 @@
 # Anion Class App — Production Readiness Checklist
 
 **Version:** 1.0  
-**Last Updated:** 2026-05-21  
+**Last Updated:** 2026-05-26  
 **Run before:** Every production deployment or client handover
 
 Fill in **Pass**, **Fail**, or **N/A** for each item. Any **Fail** must be resolved before proceeding.
@@ -89,7 +89,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | 3.9 | Stripe checkout session initiated | Redirects to Stripe-hosted checkout page | |
 | 3.10 | Billing portal accessible for active subscriber | Redirects to Stripe billing portal | |
 | 3.11 | Tutor booking request accepts/declines | Status updates in DB | |
-| 3.12 | Daily.co room created for accepted booking | Room URL returned, video call joinable | |
+| 3.12 | Daily.co room created for accepted booking | Assigned tutor/student receive room URL and token; parent direct access denied | Local API/UI contract green 2026-05-26; production authenticated evidence pending |
 | 3.13 | 404 page renders for unknown routes | Custom not-found page | |
 
 ---

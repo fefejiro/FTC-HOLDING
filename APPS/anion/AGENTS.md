@@ -55,7 +55,7 @@ Anion Class App is an FTC client committed, production bound education platform 
 
 ## Current execution order
 
-- **Phase 1 (active, currently blocked):** call production closure (accepted booking -> lesson access -> Daily join -> leave/rejoin) + same-day truth alignment across runtime/docs. Current hard blocker: no valid confirmed production role test credentials (parent/tutor/student) â†’ owner: `anion-live-classroom`, reviewer: `anion-qa-release`
+- **Phase 1 (active, currently blocked):** call production closure (accepted booking -> parent visibility/denial -> tutor/student Daily join -> leave/rejoin) + same-day truth alignment across runtime/docs. Current hard blocker: no valid confirmed production role test credentials and production Daily evidence -> owner: `anion-live-classroom`, reviewer: `anion-qa-release`
 - **Phase 2:** external production blockers (Stripe, Daily, Supabase callback allow-list) â†’ owner: `anion-billing-access`
 - **Phase 3:** theme/background production finish limited to validated call-flow surfaces â†’ owner: `anion-web-builder`
 - **Phase 4:** hard verification for booking->call and billing->subscription sync â†’ owner: `anion-qa-release`

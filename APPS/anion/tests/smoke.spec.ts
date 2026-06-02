@@ -26,6 +26,43 @@ test.describe('Health', () => {
   });
 });
 
+test.describe('API contract - daily room', () => {
+  test('POST /api/daily/room with malformed body returns 400 INVALID_DAILY_ROOM_REQUEST', async ({
+    request,
+  }) => {
+    const response = await request.post('/api/daily/room', {
+      headers: {
+        origin: 'http://localhost:4178',
+      },
+      data: {
+        bookingId: 'smoke-test-booking',
+      },
+    });
+    expect(response.status()).toBe(400);
+    const body = (await response.json()) as { ok: boolean; code: string };
+    expect(body.ok).toBe(false);
+    expect(body.code).toBe('INVALID_DAILY_ROOM_REQUEST');
+  });
+
+  test('POST /api/daily/room without auth returns 401 UNAUTHENTICATED', async ({
+    request,
+  }) => {
+    const response = await request.post('/api/daily/room', {
+      headers: {
+        origin: 'http://localhost:4178',
+      },
+      data: {
+        bookingId: 'smoke-test-booking',
+        participantRole: 'student',
+      },
+    });
+    expect(response.status()).toBe(401);
+    const body = (await response.json()) as { ok: boolean; code: string };
+    expect(body.ok).toBe(false);
+    expect(body.code).toBe('UNAUTHENTICATED');
+  });
+});
+
 test.describe('Public routes', () => {
   test('login page renders sign-in form', async ({ page }) => {
     await page.goto('/login');
@@ -36,7 +73,7 @@ test.describe('Public routes', () => {
 
   test('pricing page renders all three plan cards', async ({ page }) => {
     await page.goto('/pricing');
-    await expect(page.locator('h1')).toContainText('Invest in your child');
+    await expect(page.locator('h1')).toContainText('Invest in learning that sticks');
     await expect(page.getByRole('button', { name: 'Get Starter' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Get Growth' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Get Unlimited' })).toBeVisible();
@@ -65,6 +102,9 @@ test.describe('API contract — billing/checkout', () => {
     request,
   }) => {
     const response = await request.post('/api/billing/checkout', {
+      headers: {
+        origin: 'http://localhost:4178',
+      },
       data: {
         bookingId: 'smoke-test-booking',
         planId: 'starter',

@@ -46,21 +46,39 @@ export type StripeWebhookEnvelope = {
 export type DailyRoomTokenRequest = {
   bookingId: string;
   participantRole: 'student' | 'tutor';
-  userId: string;
 };
 
-export type DailyRoomTokenResponse = {
-  ok: false;
-  placeholder: true;
-  code: 'DAILY_TOKEN_ISSUANCE_NOT_IMPLEMENTED';
-  message: string;
-  todo: string;
+export type DailyRoomTokenSuccessResponse = {
+  ok: true;
+  roomUrl: string;
+  token: string;
+  roomName: string;
+  expiresAt: string;
 };
+
+export type DailyRoomTokenErrorResponse = {
+  ok: false;
+  code:
+    | 'CSRF_MISSING_ORIGIN'
+    | 'CSRF_INVALID_ORIGIN'
+    | 'CSRF_CROSS_SITE_BLOCKED'
+    | 'RATE_LIMITED'
+    | 'INVALID_DAILY_ROOM_REQUEST'
+    | 'UNAUTHENTICATED'
+    | 'LESSON_ACCESS_DENIED'
+    | 'DAILY_NOT_CONFIGURED'
+    | 'DAILY_API_ERROR';
+  message?: string;
+  validationErrors?: string[];
+  requestId?: string;
+};
+
+export type DailyRoomTokenResponse = DailyRoomTokenSuccessResponse | DailyRoomTokenErrorResponse;
 
 export type PlatformStatusResponse = {
   ok: true;
   service: 'anion-web';
-  phase: 'production-handoff' | 'phase1-call-closure-failed-auth-blocked';
+  phase: 'production-handoff' | 'phase1-call-closure-failed-auth-blocked' | 'phase1-call-closure-pending-production-evidence';
   release: string;
   runtime: {
     web: 'live';
@@ -68,7 +86,7 @@ export type PlatformStatusResponse = {
     authAndRoles: 'ready' | 'blocked-invalid-credentials';
     bookings: 'ready' | 'implemented-not-auth-verified';
     billing: 'ready-with-external-keys';
-    liveClassroom: 'ready-with-external-keys' | 'implemented-not-auth-verified';
+    liveClassroom: 'ready-with-external-keys' | 'implemented-not-auth-verified' | 'local-contract-green-production-evidence-pending';
     opsAndQa: 'ready' | 'blocked-phase1-fail';
   };
   blockers: {

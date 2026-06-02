@@ -21,7 +21,7 @@
 | M2 DB | Bookings table + RLS | ✅ Applied to live DB |
 | M3 | Stripe checkout, billing portal, webhook subscription sync | ✅ Done |
 | M3 DB | Subscriptions table + RLS | ✅ Applied to live DB |
-| M4 | Daily.co live classroom (room creation, video call, join flow) | ✅ Done |
+| M4 | Daily.co live classroom (room creation, tutor/student video call, join/rejoin flow) | Local contract done; production evidence pending |
 | M5 | Admin dashboard with live Supabase metrics | ✅ Done |
 
 ---
@@ -140,9 +140,9 @@ To apply future migrations, use the Supabase Management API (see `scripts/run-mi
 
 | Role | Access |
 |------|--------|
-| `parent` | Book sessions, manage subscription, join lessons |
+| `parent` | Book sessions, manage subscription, view accepted lesson status |
 | `tutor` | Accept/decline bookings, join lessons |
-| `student` | View their sessions |
+| `student` | View and join their sessions |
 | `admin` | Operator dashboard with platform metrics |
 
 Roles are set in the `user_roles` table. To make a user an admin:
@@ -159,7 +159,7 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 1. **Parent signs up** → `/login` → magic link email → `/auth/callback` → `/parent`
 2. **Parent chooses a plan** → `/pricing` → Stripe checkout → subscription synced via webhook
 3. **Parent books a session** → `/parent` → tutor accepts → booking status = `accepted`
-4. **Both join the lesson** → `/lesson/[bookingId]` → Daily.co video call
+4. **Tutor and student join the lesson** -> `/lesson/[bookingId]` -> Daily.co video call
 5. **Admin monitors** → `/admin` → live user/booking/subscription metrics
 
 ---
@@ -174,7 +174,7 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 - [ ] Run `npm run preflight:prod`
 - [ ] Run `npm run deploy:worker`
 - [ ] Run `npm run verify:prod` (with `ANION_BASE_URL` set)
-- [ ] Test: sign up, book, subscribe, join lesson, admin view
+- [ ] Test: sign up, book, subscribe, parent booking visibility, tutor/student lesson join and rejoin, admin view
 
 > **Full production-readiness gate:** See [PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md) for the complete pass/fail checklist before going live.
 

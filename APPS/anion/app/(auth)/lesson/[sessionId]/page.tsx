@@ -16,7 +16,7 @@ export default async function LessonSessionPage({ params }: LessonPageProps) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
-  if (user.role !== 'parent' && user.role !== 'tutor' && user.role !== 'admin' && user.role !== 'student') {
+  if (user.role !== 'tutor' && user.role !== 'student') {
     redirect('/dashboard');
   }
 
