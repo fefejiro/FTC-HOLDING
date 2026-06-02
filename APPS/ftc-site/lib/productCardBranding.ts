@@ -67,6 +67,16 @@ export const productCardBranding: Record<string, ProductCardBranding> = {
       height: dispatchLogo.height
     }
   },
+  anion: {
+    offerCopy:
+      "A pre-launch classroom workflow for tutor discovery, bookings, parent/student onboarding, and live lessons.",
+    secondaryLabel: "See Anion case study",
+    supportPoints: [
+      "Pre-launch education workflow",
+      "Tutor, parent, student, and admin roles",
+      "Roadmap-backed classroom delivery"
+    ]
+  },
   ateam: {
     offerCopy: ateamModeSummary,
     secondaryLabel: "Enter ATEAM",

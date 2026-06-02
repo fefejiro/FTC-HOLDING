@@ -27,12 +27,32 @@ function createAdminClient() {
   });
 }
 
+function getAuthAdminClient(admin: ReturnType<typeof createAdminClient>) {
+  return (admin.auth as unknown as {
+    admin: {
+      inviteUserByEmail: (
+        email: string,
+        options?: { redirectTo?: string; data?: Record<string, unknown> }
+      ) => Promise<{ data: { user?: { id?: string; email?: string | null } | null }; error: { message?: string } | null }>;
+      listUsers: () => Promise<{ data: { users: Array<{ id: string; email?: string | null }> }; error: { message?: string } | null }>;
+      generateLink: (input: {
+        type: "recovery" | "invite";
+        email: string;
+        options?: { redirectTo?: string };
+      }) => Promise<{ data?: unknown; error: { message?: string } | null }>;
+    };
+  }).admin;
+}
+
 async function resolveCallerEmail(req: NextRequest): Promise<string | null> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7);
   const admin = createAdminClient();
-  const { data, error } = await admin.auth.getUser(token);
+  const authClient = admin.auth as unknown as {
+    getUser: (jwt?: string) => Promise<{ data: { user: { email?: string | null } | null }; error: { message?: string } | null }>;
+  };
+  const { data, error } = await authClient.getUser(token);
   if (error || !data.user) return null;
   return (data.user.email || "").trim().toLowerCase();
 }
@@ -169,7 +189,8 @@ export async function POST(req: NextRequest) {
 
     // Invite the user via Supabase Auth
     const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || "https://gardencleaners.ca"}/garden-cleaners/portal#portal-access`;
-    const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    const authAdmin = getAuthAdminClient(admin);
+    const { data: inviteData, error: inviteError } = await authAdmin.inviteUserByEmail(email, {
       redirectTo,
       data: { display_name: displayName, garden_role: role },
     });
@@ -312,7 +333,8 @@ export async function PUT(req: NextRequest) {
     const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || "https://gardencleaners.ca"}/garden-cleaners/portal#portal-access`;
 
     // Find existing auth user by email
-    const { data: listData, error: listError } = await admin.auth.admin.listUsers();
+    const authAdmin = getAuthAdminClient(admin);
+    const { data: listData, error: listError } = await authAdmin.listUsers();
     if (listError) {
       return NextResponse.json({ ok: false, error: listError.message }, { status: 500 });
     }
@@ -320,7 +342,7 @@ export async function PUT(req: NextRequest) {
 
     if (existingUser) {
       // Send password reset
-      const { error: resetError } = await admin.auth.admin.generateLink({
+      const { error: resetError } = await authAdmin.generateLink({
         type: "recovery",
         email,
         options: { redirectTo },
@@ -331,7 +353,7 @@ export async function PUT(req: NextRequest) {
       await writeAuditLog(admin, caller.email, "reset_password", email, existingUser.id);
     } else {
       // Send fresh invite
-      const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
+      const { data: inviteData, error: inviteError } = await authAdmin.inviteUserByEmail(email, { redirectTo });
       if (inviteError) {
         return NextResponse.json({ ok: false, error: inviteError.message }, { status: 400 });
       }

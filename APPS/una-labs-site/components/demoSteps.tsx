@@ -303,7 +303,7 @@ export const demoSteps: Record<string, { label: string; screen: React.ReactNode 
           </div>
           <ScreenRow label="Register" value="Matched — informal" accent />
           <ScreenRow label="Cultural fit" value="High" accent />
-          <ScreenSub>Generic AI can't do this. Saywetin can.</ScreenSub>
+          <ScreenSub>Generic AI can't do this. SayWetin can.</ScreenSub>
         </div>
       ),
     },

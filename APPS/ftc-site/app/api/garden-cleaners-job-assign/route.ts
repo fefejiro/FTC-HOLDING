@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { data: actorData } = await supabase.auth.getUser();
+    const { data: actorData } = await (supabase.auth as any).getUser();
     await supabase.from("garden_cleaners_audit_log").insert({
       actor_email: String(actorData.user?.email || "unknown").toLowerCase(),
       action: "job_assigned",
@@ -97,3 +97,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+

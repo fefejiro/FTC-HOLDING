@@ -4,7 +4,7 @@ import { saveGardenPushSubscription } from "../../../lib/gardenPortalNotificatio
 
 export async function POST(req: NextRequest) {
   const supabase = createServerClient(req.headers);
-  const { data: authData, error: authError } = await supabase.auth.getUser();
+  const { data: authData, error: authError } = await (supabase.auth as any).getUser();
   if (authError || !authData.user?.email) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
@@ -27,3 +27,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
+

@@ -35,7 +35,7 @@ function toNumberOrNull(value: unknown): number | null {
 
 async function resolveRoleAndUser(req: NextRequest) {
   const supabase = createServerClient(req.headers);
-  const { data: authData, error: authError } = await supabase.auth.getUser();
+  const { data: authData, error: authError } = await (supabase.auth as any).getUser();
   if (authError || !authData.user?.id) {
     return { supabase, error: NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 }) };
   }
@@ -247,3 +247,4 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ ok: true, location: data });
 }
+

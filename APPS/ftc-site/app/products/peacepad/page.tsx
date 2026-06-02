@@ -54,8 +54,8 @@ export default function PeacePadProductPage() {
                 Install on Google Play
               </a>
             ) : null}
-            <Link href={`/work/${peacepad.slug}`} className="btn btn-secondary">
-              Read case study
+            <Link href="/products/peacepad" className="btn btn-secondary">
+              View product overview
             </Link>
           </div>
         </div>

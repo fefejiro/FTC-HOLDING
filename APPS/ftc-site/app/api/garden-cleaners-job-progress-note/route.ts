@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "note is required" }, { status: 400 });
   }
 
-  const { data: actorData, error: actorError } = await supabase.auth.getUser();
+  const { data: actorData, error: actorError } = await (supabase.auth as any).getUser();
   if (actorError || !actorData.user) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
@@ -65,3 +65,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+

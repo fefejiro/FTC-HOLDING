@@ -34,12 +34,24 @@ function AuthCallbackClient() {
         const code = searchParams.get('code');
         const tokenHash = searchParams.get('token_hash');
         const typeParam = searchParams.get('type') ?? 'magiclink';
+        const authClient = client.auth as {
+          exchangeCodeForSession?: (value: string) => Promise<{ error: Error | null }>;
+          verifyOtp: (value: {
+            token_hash: string;
+            type: Parameters<typeof client.auth.verifyOtp>[0]['type'];
+          }) => Promise<{ error: Error | null }>;
+          setSession: (value: { access_token: string; refresh_token: string }) => Promise<{ error: Error | null }>;
+          getSession: typeof client.auth.getSession;
+        };
 
         if (code) {
-          const { error: exchangeError } = await client.auth.exchangeCodeForSession(code);
+          if (!authClient.exchangeCodeForSession) {
+            throw new Error('OAuth code exchange is not supported by the current auth client version.');
+          }
+          const { error: exchangeError } = await authClient.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
         } else if (tokenHash) {
-          const { error: verifyError } = await client.auth.verifyOtp({
+          const { error: verifyError } = await authClient.verifyOtp({
             token_hash: tokenHash,
             type: typeParam as Parameters<typeof client.auth.verifyOtp>[0]['type'],
           });
@@ -49,7 +61,7 @@ function AuthCallbackClient() {
           const accessToken = hash.get('access_token');
           const refreshToken = hash.get('refresh_token');
           if (accessToken && refreshToken) {
-            const { error: setSessionError } = await client.auth.setSession({
+            const { error: setSessionError } = await authClient.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
             });
@@ -58,7 +70,7 @@ function AuthCallbackClient() {
           }
         }
 
-        const { data } = await client.auth.getSession();
+        const { data } = await authClient.getSession();
         if (!data.session?.user) {
           throw new Error('No active session after sign-in verification.');
         }

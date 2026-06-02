@@ -218,8 +218,8 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     tags: ["Dispatch", "Roadside", "Operations"],
     summary:
       "Dispatch is Una Labs' roadside assistance system for direct customer intake, invited operator demos, and official Ottawa incident visibility.",
-    status: "early",
-    availabilityLabel: "Live on Una Labs",
+    status: "live",
+    availabilityLabel: "Live web app",
     marketingBullets: [
       "Roadside intake in the browser",
       "Operator workflow with live updates",
@@ -244,7 +244,7 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
         "Public and private subdomain split"
       ],
       outcome:
-        "Dispatch is already live on Una Labs as a real roadside product, not a static concept page."
+        "Dispatch is live as a web product with public driver intake, operator workflow, and a private admin surface; Google Play status is tracked separately from the web launch."
     }
   },
   {
@@ -255,8 +255,8 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
     tags: ["Audio", "Culture", "AI"],
     summary:
       "SayWetin combines audio recognition with cultural interpretation to explain meaning, slang, and context.",
-    status: "live",
-    availabilityLabel: "Live on Google Play",
+    status: "early",
+    availabilityLabel: "Play Store candidate",
     googlePlayUrl: "https://play.google.com/store/apps/details?id=com.saywetin.app",
     marketingBullets: [
       "Recognize Nigerian songs",
@@ -282,7 +282,45 @@ export const projectCaseStudies: ProjectCaseStudy[] = [
         "Cloud-backed service architecture"
       ],
       outcome:
-        "SayWetin is an active product track that demonstrates Una Labs' creative technology and audio-intelligence direction."
+        "SayWetin is an active product track with a clean concept surface and Android release candidate; the next credibility gate is a tested Play Store push."
+    }
+  },
+  {
+    slug: "anion",
+    name: "Anion Class App",
+    tagline: "Pre-launch classroom workflow for tutors, parents, students, and live lessons.",
+    pillar: "business-intelligence",
+    tags: ["Education", "Classroom", "Pre-launch"],
+    summary:
+      "Anion Class App is a pre-launch education workflow being shaped around tutor discovery, parent/student onboarding, bookings, and live class sessions.",
+    status: "coming",
+    availabilityLabel: "Pre-launch case study",
+    marketingBullets: [
+      "Tutor, parent, student, and admin roles",
+      "Booking and class-session workflow",
+      "Roadmap framed around launch readiness"
+    ],
+    sections: {
+      problem:
+        "Small education teams need a clearer path from interest to scheduled class without stitching together separate intake, payment, and video tools.",
+      insight:
+        "The credible launch path is not to claim a finished marketplace too early; it is to show the role model, class flow, and release gates honestly.",
+      solution:
+        "Anion Class App is being structured as a phased classroom product: public discovery, authenticated role dashboards, booking governance, and Daily-powered lesson rooms.",
+      capabilities: [
+        "Role-based parent, student, tutor, and admin surfaces",
+        "Tutor discovery and booking workflow",
+        "Live lesson room foundation",
+        "Operational status and release documentation"
+      ],
+      technology: [
+        "Next.js app surface",
+        "Supabase-backed auth and data model",
+        "Daily classroom integration path",
+        "Stripe billing path in roadmap"
+      ],
+      outcome:
+        "Anion should be presented as pre-launch and roadmap-backed: enough substance for a portfolio case study, without implying public availability or completed marketplace liquidity."
     }
   },
   {

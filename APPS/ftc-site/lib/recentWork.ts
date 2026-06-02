@@ -125,18 +125,18 @@ export const gardenCleanersLaunch: ClientLaunch = {
   tileTitle: "Garden Cleaners",
   subtitle: "Professional cleaning services, Oshawa, Ontario",
   service: "Website and quote system",
-  status: "Live",
+  status: "Public site live / post-launch hardening",
   tags: ["Cleaning Services", "Local SEO", "Quote System"],
   summary:
-    "Website and quote lead system for a residential and commercial cleaning company serving Oshawa and the Durham Region, Ontario, with recurring booking and move-in/move-out capability.",
-  currentFocus: ["Oshawa local search presence", "Residential booking flow", "Move-in/out service visibility"],
+    "Public website and quote lead system for a residential and commercial cleaning company serving Oshawa and the Durham Region, Ontario. Booking and portal operations are being hardened after launch.",
+  currentFocus: ["Oshawa local search presence", "Residential quote flow", "Move-in/out service visibility"],
   nextMilestone: ["Google Business Profile setup", "Recurring booking path", "Durham Region expansion"],
   startedLabel: "Started 11 days ago",
   lastUpdatedLabel: "Last update: 10 hours ago",
   phase: {
     current: 4,
     total: 4,
-    label: "Live"
+    label: "Post-launch"
   },
   offerProof: {
     value: "prototype-direction-sprint",

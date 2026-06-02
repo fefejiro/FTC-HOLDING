@@ -51,7 +51,7 @@ function prettyProductName(product: string): string {
     case 'peacepad':
       return 'PeacePad';
     case 'saywetin':
-      return 'Saywetin';
+      return 'SayWetin';
     default:
       return product;
   }

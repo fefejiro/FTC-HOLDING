@@ -47,8 +47,8 @@ export default function PeacePadPage() {
                 Get it on Google Play
               </a>
             ) : null}
-            <Link href="/work/peacepad" className="btn btn-secondary">
-              Read case study
+            <Link href="/products/peacepad" className="btn btn-secondary">
+              View product overview
             </Link>
           </div>
         </div>
@@ -118,8 +118,8 @@ export default function PeacePadPage() {
           </Link>.
         </p>
         <p className="section-link-row">
-          <Link href="/work/peacepad" prefetch={false} className="inline-link">
-            Read full PeacePad case study
+          <Link href="/products/peacepad" prefetch={false} className="inline-link">
+            View PeacePad product overview
           </Link>
         </p>
       </section>

@@ -24,7 +24,9 @@ function getProductOverviewHref(project: ProjectCaseStudy): string {
       ? "/saywetin"
       : project.slug === "dispatch"
         ? "/products/dispatch"
-      : ATEAM_SITE_URL;
+        : project.slug === "anion"
+          ? "/products/anion"
+          : ATEAM_SITE_URL;
 }
 
 export default function ProductsPage() {
@@ -39,7 +41,8 @@ export default function ProductsPage() {
           <h1>Products built inside Una Labs</h1>
           <p className="sunrise-lead">
           ATEAM is the core system — the workflow engine Una Labs runs internally. Dispatch,
-          SayWetin, and PeacePad are shipped products built and operated inside it.
+          SayWetin, PeacePad, and Anion are shown with clear stage labels so live products,
+          demo surfaces, and pre-launch work do not blur together.
         </p>
       </section>
 
@@ -51,7 +54,7 @@ export default function ProductsPage() {
               <h2>ATEAM</h2>
               <p className="muted">The core system. The workflow engine Una Labs runs internally.</p>
               <p>
-                {ateamModeSummary} Dispatch, SayWetin, and PeacePad are built and operated inside it.
+                {ateamModeSummary} Dispatch, SayWetin, PeacePad, and Anion are built or governed inside it.
               </p>
               <ul className="feature-list compact-feature-list">
                 {(featuredAteam.marketingBullets ?? productCardBranding.ateam.supportPoints ?? []).map((bullet) => (

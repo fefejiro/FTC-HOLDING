@@ -46,8 +46,8 @@ export default function SayWetinPage() {
                 Get it on Google Play
               </a>
             ) : null}
-            <Link href="/work/saywetin" className="btn btn-secondary">
-              Read case study
+            <Link href="/saywetin" className="btn btn-secondary">
+              View product overview
             </Link>
           </div>
         </div>
@@ -97,8 +97,8 @@ export default function SayWetinPage() {
           learn more on the <Link href="/about" className="inline-link">about page</Link>.
         </p>
         <p className="section-link-row">
-          <Link href="/work/saywetin" prefetch={false} className="inline-link">
-            Read full SayWetin case study
+          <Link href="/saywetin" prefetch={false} className="inline-link">
+            View SayWetin product overview
           </Link>
         </p>
       </section>

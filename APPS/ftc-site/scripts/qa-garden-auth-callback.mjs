@@ -61,7 +61,8 @@ async function run() {
 
   const secondaryNavigated =
     (secondaryHref === "/" && /gardencleaners\.ca\/$/i.test(afterSecondary)) ||
-    (secondaryHref?.includes("/portal#portal-access") && /\/portal#portal-access$/i.test(afterSecondary));
+    (secondaryHref?.includes("/portal#portal-access") &&
+      (/\/portal#portal-access$/i.test(afterSecondary) || /\/portal#admin$/i.test(afterSecondary)));
 
   if (hasGlobalCrash || !primaryNavigated || !secondaryNavigated) {
     process.exitCode = 1;

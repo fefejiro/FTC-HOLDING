@@ -66,6 +66,23 @@ const FAQS = [
   }
 ];
 
+const HOW_TO_VIDEOS = [
+  {
+    title: "How Una Labs structures rough requests",
+    summary:
+      "A direct walkthrough of how a plain-language request gets converted into a documented brief and execution path.",
+    src: "/images/brand/unalabs-hero.mp4",
+    poster: "/images/brand/unalabs-hero.PNG"
+  },
+  {
+    title: "How shipped work looks in production",
+    summary:
+      "A product delivery showcase that demonstrates how outputs move from scoped plan to released experience.",
+    src: "/images/brand/saywetin-showcase.mp4",
+    poster: "/images/brand/saywetin-og.png"
+  }
+];
+
 export default function HowItWorksPage() {
   return (
     <div className="main-shell hiw-page">
@@ -111,6 +128,44 @@ export default function HowItWorksPage() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      {/* ── VIDEO WALKTHROUGHS ── */}
+      <section className="section">
+        <div className="container">
+          <div className="section-heading home-section-heading">
+            <p className="eyebrow">How-to videos</p>
+            <h2>Watch the process, not a GIF loop</h2>
+            <p className="muted hiw-video-lead">
+              These are real walkthrough clips with playback controls so clients can review
+              each stage at their own pace.
+            </p>
+          </div>
+
+          <div className="hiw-videos-grid" aria-label="How Una Labs process walkthrough videos">
+            {HOW_TO_VIDEOS.map((video) => (
+              <article key={video.title} className="card hiw-video-card">
+                <div className="hiw-video-frame-wrap">
+                  <video
+                    className="hiw-video-frame"
+                    controls
+                    preload="metadata"
+                    playsInline
+                    poster={video.poster}
+                    aria-label={video.title}
+                  >
+                    <source src={video.src} type="video/mp4" />
+                    {video.title}
+                  </video>
+                </div>
+                <div className="hiw-video-copy">
+                  <h3>{video.title}</h3>
+                  <p>{video.summary}</p>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -206,10 +206,10 @@ git -C "C:\FTC HOLDING" status -sb
 ## Anion Ops Snapshot (Auto)
 
 <!-- AUTO:ANION_MASTER:START -->
-- Updated at: 2026-04-23T00:00:00.000Z
-- Overall: yellow
-- Stage: foundation
-- Metrics tracked: 4
-- Checks tracked: 3
+- Updated at: 2026-05-21T17:12:00.000Z
+- Overall: red
+- Stage: phase1-call-closure-pending-auth-evidence
+- Metrics tracked: 5
+- Checks tracked: 9
 - Canonical status doc: DOCS/ANION/status/STATUS.md
 <!-- AUTO:ANION_MASTER:END -->

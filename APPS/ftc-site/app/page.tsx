@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import HomePageExperience from "./components/HomePageExperience";
 
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: "Una Labs | Rough Request In. Scoped Delivery Out.",
   description:

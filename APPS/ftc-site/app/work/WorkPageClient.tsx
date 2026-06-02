@@ -33,7 +33,7 @@ function PhaseBar({ current, total, label }: { current: number; total: number; l
 export default function WorkPageClient() {
   const [featuredLaunch, ...additionalLaunches] = Array.from(clientLaunches);
   const launchesByOffer = new Map(clientLaunches.map((l) => [l.offerProof.value, l]));
-  const totalLive = clientLaunches.filter((l) => String(l.status).toLowerCase().includes("live")).length;
+  const totalPublic = clientLaunches.filter((l) => /live|public/i.test(String(l.status))).length;
 
   return (
     <div className="home-page home-page--sunrise" style={{ background: "#f5f7f9" }}>
@@ -43,10 +43,10 @@ export default function WorkPageClient() {
         <section className="wl-hero">
           <div className="wl-hero-copy">
             <p className="sunrise-kicker">Client Launches</p>
-            <h1>Live delivery snapshots, kept separate from products.</h1>
+            <h1>Delivery snapshots, kept separate from products.</h1>
             <p className="sunrise-lead">
               Every project below moved through structured intake, a clear scope decision, and governed
-              delivery execution. This is the delivery side of the studio — not a portfolio, a live track record.
+              delivery execution. This is the delivery side of the studio — active client tracks with stage labels kept honest.
             </p>
           </div>
         <div className="wl-hero-stats" aria-label="Studio delivery stats">
@@ -55,8 +55,8 @@ export default function WorkPageClient() {
             <span className="wl-stat-label">Active launches</span>
           </div>
           <div className="wl-stat">
-            <span className="wl-stat-value">{totalLive}</span>
-            <span className="wl-stat-label">Live right now</span>
+            <span className="wl-stat-value">{totalPublic}</span>
+            <span className="wl-stat-label">Public/live surfaces</span>
           </div>
           <div className="wl-stat">
             <span className="wl-stat-value">3</span>
@@ -135,7 +135,7 @@ export default function WorkPageClient() {
 
       {/* ── Divider ── */}
       <div className="wl-divider" aria-hidden="true">
-        <span className="wl-divider-label">Live launches</span>
+        <span className="wl-divider-label">Launch snapshots</span>
       </div>
 
       {/* ── Featured launch ── */}
@@ -159,7 +159,7 @@ export default function WorkPageClient() {
               </div>
             </div>
             <div className="wl-launch-header-right">
-              <span className="wl-status-pill wl-status-pill--live">● Live</span>
+              <span className="wl-status-pill wl-status-pill--live">{featuredLaunch.status}</span>
               {featuredLaunch.lastUpdatedLabel ? (
                 <span className="wl-update-label">{featuredLaunch.lastUpdatedLabel}</span>
               ) : null}
@@ -239,7 +239,7 @@ export default function WorkPageClient() {
             <p className="eyebrow">Also live</p>
             <h2>More active launches</h2>
             <p className="wl-section-sub">
-              Live systems in motion — each with a delivery track, current focus, and an open path to start something similar.
+              Systems in motion — each with a delivery track, current focus, and an open path to start something similar.
             </p>
           </div>
           <div className="wl-launches-grid">
@@ -262,7 +262,7 @@ export default function WorkPageClient() {
                       <p className="wl-launch-subtitle">{launch.subtitle}</p>
                     </div>
                   </div>
-                  <span className="wl-status-pill wl-status-pill--live">● Live</span>
+                  <span className="wl-status-pill wl-status-pill--live">{launch.status}</span>
                 </div>
 
                 <div className="wl-launch-service-row">

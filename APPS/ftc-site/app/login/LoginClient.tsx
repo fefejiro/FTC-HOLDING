@@ -33,6 +33,7 @@ export default function LoginClient() {
 
     try {
       const supabase = getSupabase();
+      const authClient = supabase.auth as any;
       const product = resolveProductContext({
         host: window.location.host,
         pathname: pathname || window.location.pathname,
@@ -44,7 +45,7 @@ export default function LoginClient() {
         product,
         returnTo
       });
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { error: oauthError } = await authClient.signInWithOAuth({
         provider: "google",
         options: { redirectTo }
       });

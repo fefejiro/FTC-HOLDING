@@ -1,0 +1,94 @@
+name: Production Uptime Alerts
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  uptime-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check critical production URLs
+        id: checks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          declare -a checks=(
+            "Una Labs Home|https://unalabs.cloud/|200"
+            "Una Labs Capabilities|https://unalabs.cloud/capabilities|200"
+            "Anion Health|https://anion.unalabs.cloud/api/health|200"
+            "Garden Home|https://gardencleaners.ca/|200"
+            "SayWetin API Health|https://api.saywetin.app/health|200"
+          )
+
+          failures=""
+
+          for item in "${checks[@]}"; do
+            IFS='|' read -r name url expected <<< "$item"
+            status=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" "$url" || true)
+            if [[ "$status" != "$expected" ]]; then
+              failures+="- ${name}: ${url} returned ${status} (expected ${expected})\n"
+            fi
+          done
+
+          if [[ -n "$failures" ]]; then
+            {
+              echo "has_failures=true"
+              echo "failure_report<<EOF"
+              printf "%b" "$failures"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            echo "Production uptime checks failed"
+            exit 1
+          fi
+
+          echo "has_failures=false" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update outage issue
+        if: failure() && steps.checks.outputs.has_failures == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = '[ALERT] Production uptime failure';
+            const label = 'outage-alert';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const body = [
+              'Automated uptime check detected one or more failing production endpoints.',
+              '',
+              'Failed checks:',
+              `${{ toJSON(steps.checks.outputs.failure_report) }}`,
+              '',
+              `Workflow run: https://github.com/${owner}/${repo}/actions/runs/${context.runId}`,
+              '',
+              `Detected at: ${new Date().toISOString()}`,
+            ].join('\n');
+
+            const { data: labels } = await github.rest.issues.listLabelsForRepo({ owner, repo, per_page: 100 });
+            if (!labels.find((l) => l.name === label)) {
+              await github.rest.issues.createLabel({ owner, repo, name: label, color: 'b60205', description: 'Automated production outage alerts' });
+            }
+
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: label,
+              per_page: 50,
+            });
+
+            const existing = openIssues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body });
+            } else {
+              await github.rest.issues.create({ owner, repo, title, body, labels: [label] });
+            }

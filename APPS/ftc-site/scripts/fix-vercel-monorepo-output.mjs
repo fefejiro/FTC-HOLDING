@@ -64,13 +64,15 @@ function shouldCopyPagesWorker() {
   }
 
   const pagesUrl = String(process.env.CF_PAGES_URL || "").trim().toLowerCase();
+  if (pagesUrl.includes("gardencleaners")) {
+    return true;
+  }
   if (pagesUrl.includes("ogtradesacademy")) {
     return false;
   }
 
-  // Garden is the default Pages target for this bundle, so keep the worker
-  // unless a caller explicitly opts out or selects OG.
-  return true;
+  // Default to no worker for core ftc-site/unalabs deployments.
+  return false;
 }
 
 async function ensureCompatibilityMirror() {
@@ -123,7 +125,7 @@ async function ensureCompatibilityMirror() {
   // Ensure public static assets (images, brand, media, etc.) exist in output root.
   if (await pathExists(publicDir)) {
     await mkdir(vercelOutputStaticDir, { recursive: true });
-    for (const entry of ["images", "brand", "media", "connect", "favicon.ico", "logo.png", "sitemap.xml"]) {
+    for (const entry of ["images", "brand", "media", "connect", "favicon.ico", "logo.png", "sitemap.xml", "robots.txt"]) {
       const sourcePath = path.join(publicDir, entry);
       const destinationPath = path.join(vercelOutputStaticDir, entry);
       if (await pathExists(sourcePath)) {

@@ -461,10 +461,10 @@ export const productPages: Record<string, ProductPageContent> = {
       },
       {
         eyebrow: 'Proof path',
-        title: 'Saywetin case study',
+        title: 'SayWetin case study',
         description: 'A shipped product where the delivered value is easiest to trust when the operational story stays clear.',
-        href: '/products/saywetin',
-        hrefLabel: 'See Saywetin',
+        href: '/saywetin',
+        hrefLabel: 'See SayWetin',
       },
     ],
   },
@@ -814,10 +814,10 @@ export const solutionPages: Record<string, SolutionPageContent> = {
       },
       {
         eyebrow: 'Real proof',
-        title: 'Saywetin',
+        title: 'SayWetin',
         description: 'A real language and intelligence product that shows how workflow, product thinking, and AI can meet in a shipped surface.',
-        href: '/products/saywetin',
-        hrefLabel: 'See Saywetin',
+        href: '/saywetin',
+        hrefLabel: 'See SayWetin',
       },
     ],
   },
@@ -1064,15 +1064,15 @@ export const caseStudies: Record<string, CaseStudyContent> = {
   },
   saywetin: {
     slug: 'saywetin',
-    title: 'Saywetin',
-    metaTitle: 'Saywetin Case Study',
+    title: 'SayWetin',
+    metaTitle: 'SayWetin Case Study',
     metaDescription:
       'A live language and culture intelligence product that demonstrates real AI product execution.',
     eyebrow: 'Case study',
-    headline: 'Saywetin is real AI product work shipped into the world',
+    headline: 'SayWetin is real AI product work shipped into the world',
     subheadline:
-      'Saywetin shows a different side of the Una Labs capability set: language intelligence, product craft, and a real consumer-facing surface with actual complexity behind it. From language recognition to live consumer app — scoped, built, and deployed through the same process available to you today.',
-    primaryAction: { label: 'Visit Saywetin', href: 'https://saywetin.app', external: true },
+      'SayWetin shows a different side of the Una Labs capability set: language intelligence, product craft, and a real consumer-facing surface with actual complexity behind it. From language recognition to live consumer app — scoped, built, and deployed through the same process available to you today.',
+    primaryAction: { label: 'Visit SayWetin', href: 'https://saywetin.app', external: true },
     secondaryAction: { label: 'Start a similar build', href: '/start?source=case_study_saywetin&product=saywetin' },
     liveUrl: 'https://saywetin.app',
     heroStats: [
@@ -1085,7 +1085,7 @@ export const caseStudies: Record<string, CaseStudyContent> = {
       eyebrow: 'What mattered',
       title: 'Language products need both technical capability and careful surface design',
       body:
-        'When a product handles recognition, interpretation, or cultural nuance, the public-facing experience has to stay confident and useful. Saywetin is proof that Una Labs can build at that level.',
+        'When a product handles recognition, interpretation, or cultural nuance, the public-facing experience has to stay confident and useful. SayWetin is proof that Una Labs can build at that level.',
       points: [
         'The product promise depends on more than generic AI copy.',
         'Recognition and interpretation flows need thoughtful UX framing.',
@@ -1111,7 +1111,7 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     ],
     impact: {
       eyebrow: 'Why it matters for Una Labs',
-      title: 'Saywetin shows technical ambition backed by execution',
+      title: 'SayWetin shows technical ambition backed by execution',
       body:
         'This case study helps prospective clients see that Una Labs is capable of serious product work, especially where AI capability needs to become a real user experience rather than a concept slide.',
       points: [
@@ -1146,7 +1146,7 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     eyebrow: 'Case study',
     headline: 'A full local-services site built from brief to launch',
     subheadline:
-      'Garden Cleaners is a demo build that shows Una Labs can deliver a complete, production-quality local business presence: brand identity, service pages, quote request flow, and local SEO metadata — all scoped and shipped through the same delivery process available today.',
+      'Garden Cleaners is a public client launch that shows Una Labs can deliver a complete local business presence: brand identity, service pages, quote request flow, and local SEO metadata — all scoped and shipped through the same delivery process available today.',
     primaryAction: { label: 'Start a similar build', href: '/start?source=case_study_garden_cleaners&product=local-services' },
     secondaryAction: { label: 'See how it works', href: '/how-it-works' },
     liveUrl: '',
@@ -1274,8 +1274,8 @@ export const caseStudies: Record<string, CaseStudyContent> = {
       {
         eyebrow: 'Related case study',
         title: 'Garden Cleaners',
-        description: 'Another demo vertical build for a local service business — same delivery standard, simpler service structure.',
-        href: '/products/garden-cleaners',
+        description: 'Another client launch for a local service business — same delivery standard, simpler service structure.',
+        href: '/garden-cleaners',
         hrefLabel: 'See Garden Cleaners',
       },
       {
@@ -1326,7 +1326,7 @@ export const demoModules: DemoModule[] = [
     product: 'PeacePad',
     title: 'AI-backed analysis built for high-trust decisions',
     description:
-      'PeacePad walks users through sensitive residential data analysis with calm, guided UX — showing how AI can feel trustworthy in emotionally loaded contexts.',
+      'PeacePad walks users through sensitive communication review with calm, guided UX — showing how AI can feel trustworthy in emotionally loaded contexts.',
     placeholder: 'Walkthrough coming soon.',
     bullets: [
       'Structured data capture that reduces user anxiety.',
@@ -1338,17 +1338,17 @@ export const demoModules: DemoModule[] = [
   {
     slug: 'saywetin',
     label: 'Product Depth',
-    product: 'Saywetin',
+    product: 'SayWetin',
     title: 'Culture-aware AI that works in the real world',
     description:
-      'Saywetin demonstrates language and cultural intelligence built into a production app — proof that Una Labs ships AI that goes beyond generic outputs.',
+      'SayWetin demonstrates language and cultural intelligence built into a production app — proof that Una Labs ships AI that goes beyond generic outputs.',
     placeholder: 'Walkthrough coming soon.',
     bullets: [
       'Real language recognition across cultural contexts.',
       'AI outputs that feel locally relevant, not generic.',
       'Shipped and live — not a prototype or concept deck.',
     ],
-    cta: { label: 'See Saywetin case study', href: '/products/saywetin' },
+    cta: { label: 'See SayWetin case study', href: '/saywetin' },
   },
 ];
 
@@ -1356,7 +1356,7 @@ export const proofHighlights = [
   {
     value: '4',
     label: 'Live products',
-    note: 'Una Labs, Dispatch, PeacePad, and Saywetin — all deployed, all real.',
+    note: 'Una Labs, Dispatch, PeacePad, and SayWetin — all deployed, all real.',
   },
   {
     value: '< 5 min',

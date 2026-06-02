@@ -7,6 +7,7 @@ function getProductHref(slug: string) {
   if (slug === "peacepad") return "/products/peacepad";
   if (slug === "saywetin") return "/saywetin";
   if (slug === "dispatch") return "/products/dispatch";
+  if (slug === "anion") return "/products/anion";
   return "/products";
 }
 
@@ -44,10 +45,10 @@ export default function HomePageExperience() {
           <div className="sunrise-hero-shell">
             <div className="sunrise-hero-copy">
               <p className="sunrise-kicker">Una Labs</p>
-              <h1>Fast websites, lead systems, and AI-assisted workflows.</h1>
+              <h1>Shipped products, client launches, and AI-assisted delivery systems.</h1>
               <p className="sunrise-lead">
-                Una Labs structures your intake, scopes the work with AI, and gives every project a live workspace.
-                Your clients can see what is done, what is in progress, and what comes next.
+                Una Labs builds practical software surfaces for service businesses, creative products, and founder-led operations.
+                The portfolio is strongest when each product is clear about its stage: live, demo-ready, or pre-launch.
               </p>
               <div className="sunrise-action-row">
                 <Link href="/start" prefetch={false} className="sunrise-btn sunrise-btn--primary">
@@ -201,7 +202,7 @@ export default function HomePageExperience() {
           <div className="sunrise-section-heading">
             <p className="sunrise-kicker">Studio products</p>
             <h2>Built inside the same operating system</h2>
-            <p>Dispatch, SayWetin, and PeacePad are product proofs of the same workflow-led delivery model.</p>
+            <p>Dispatch, SayWetin, PeacePad, and Anion show the same workflow-led delivery model at different product stages.</p>
           </div>
           <div className="sunrise-products-grid">
             {primaryProducts.map((project) => (

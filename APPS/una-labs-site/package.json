@@ -12,19 +12,19 @@
     "@ftc/auth": "*",
     "@ftc/supabase": "*",
     "@supabase/supabase-js": "^2.30.0",
+    "autoprefixer": "^10.5.0",
     "next": "^15.5.15",
+    "postcss": "^8.4.31",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^3.4.19"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "autoprefixer": "^10",
     "eslint": "^8",
     "eslint-config-next": "^15.3.1",
-    "postcss": "^8",
-    "tailwindcss": "^3",
     "typescript": "^5"
   }
 }
