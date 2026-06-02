@@ -74,7 +74,7 @@ scraper:
       - implementation program manager
     max_jobs_per_run: 25
   indeed:
-    enabled: false
+    enabled: true
     keywords:
       - enterprise architect
       - technical program manager
@@ -83,7 +83,7 @@ scraper:
       - product operations manager
       - transformation manager
       - implementation program manager
-    max_jobs_per_run: 25
+    max_jobs_per_run: 10
   linkedin:
     enabled: false
     keywords:
