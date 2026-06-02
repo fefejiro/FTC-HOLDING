@@ -1,68 +1,68 @@
 {
-  "startedAt": "2026-06-01T13:38:52.926Z",
+  "startedAt": "2026-06-02T06:46:04.014Z",
   "ok": true,
   "layers": [
     {
       "name": "smoke",
       "ok": true,
       "code": 0,
-      "durationMs": 2869,
-      "tail": "SayWetin backend smoke @ https://saywetin-api-production.up.railway.app\n  ... health PASS (status ok)\n  ... identify-by-text (well-known lyric) PASS (Burna Boy — Forever)\n\n2/2 passed\n"
+      "durationMs": 3465,
+      "tail": "SayWetin backend smoke @ https://saywetin-api-production.up.railway.app\n  ... health PASS (status ok)\n  ... identify-by-text (well-known lyric) PASS (Burna Boy — Love You Forever)\n\n2/2 passed\n"
     },
     {
       "name": "unit",
       "ok": true,
       "code": 0,
-      "durationMs": 1627,
-      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m unit/confidence.test.ts \u001b[2m(\u001b[22m\u001b[2m2 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 3\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m unit/live-lyrics-index.test.ts \u001b[2m(\u001b[22m\u001b[2m4 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 3\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m2 passed\u001b[39m\u001b[22m\u001b[90m (2)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m6 passed\u001b[39m\u001b[22m\u001b[90m (6)\u001b[39m\n\u001b[2m   Start at \u001b[22m 09:38:03\n\u001b[2m   Duration \u001b[22m 518ms\u001b[2m (transform 57ms, setup 0ms, collect 67ms, tests 6ms, environment 0ms, prepare 321ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
+      "durationMs": 3807,
+      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m unit/live-lyrics-index.test.ts \u001b[2m(\u001b[22m\u001b[2m4 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 5\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m unit/confidence.test.ts \u001b[2m(\u001b[22m\u001b[2m2 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 4\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m2 passed\u001b[39m\u001b[22m\u001b[90m (2)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m6 passed\u001b[39m\u001b[22m\u001b[90m (6)\u001b[39m\n\u001b[2m   Start at \u001b[22m 02:45:06\n\u001b[2m   Duration \u001b[22m 951ms\u001b[2m (transform 102ms, setup 0ms, collect 113ms, tests 9ms, environment 1ms, prepare 558ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
     },
     {
       "name": "api",
       "ok": true,
       "code": 0,
-      "durationMs": 3849,
-      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m api/endpoints.test.ts \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 2179\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://api.saywetin.app\u001b[2m > \u001b[22mGET /api/health -> 200 ok \u001b[33m337\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://api.saywetin.app\u001b[2m > \u001b[22mGET /api/status -> reports configured services \u001b[33m428\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://api.saywetin.app\u001b[2m > \u001b[22mPOST /api/identify-by-text -> 200 OR 503 (until OpenAI key set) \u001b[33m1179\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m5 passed\u001b[39m\u001b[22m\u001b[90m (5)\u001b[39m\n\u001b[2m   Start at \u001b[22m 09:38:04\n\u001b[2m   Duration \u001b[22m 2.67s\u001b[2m (transform 35ms, setup 0ms, collect 44ms, tests 2.18s, environment 0ms, prepare 135ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
+      "durationMs": 4942,
+      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m api/endpoints.test.ts \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 2276\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://api.saywetin.app\u001b[2m > \u001b[22mGET /api/health -> 200 ok \u001b[33m421\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://api.saywetin.app\u001b[2m > \u001b[22mGET /api/status -> reports configured services \u001b[33m407\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m API integration @ https://api.saywetin.app\u001b[2m > \u001b[22mPOST /api/identify-by-text -> 200 OR 503 (until OpenAI key set) \u001b[33m1227\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m5 passed\u001b[39m\u001b[22m\u001b[90m (5)\u001b[39m\n\u001b[2m   Start at \u001b[22m 02:45:09\n\u001b[2m   Duration \u001b[22m 3.15s\u001b[2m (transform 48ms, setup 0ms, collect 50ms, tests 2.28s, environment 0ms, prepare 206ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
     },
     {
       "name": "contract",
       "ok": true,
       "code": 0,
-      "durationMs": 4101,
-      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m contract/shapes.test.ts \u001b[2m(\u001b[22m\u001b[2m3 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 2387\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/health matches schema \u001b[33m347\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/status matches schema \u001b[33m445\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/identify-by-text matches success-or-error union \u001b[33m1593\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[90m (3)\u001b[39m\n\u001b[2m   Start at \u001b[22m 09:38:08\n\u001b[2m   Duration \u001b[22m 2.92s\u001b[2m (transform 38ms, setup 0ms, collect 60ms, tests 2.39s, environment 0ms, prepare 137ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
+      "durationMs": 4539,
+      "tail": "\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/FTC HOLDING/APPS/saywetin-native/qa\u001b[39m\n\n \u001b[32m✓\u001b[39m contract/shapes.test.ts \u001b[2m(\u001b[22m\u001b[2m3 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 1766\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/health matches schema \u001b[33m349\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/status matches schema \u001b[33m429\u001b[2mms\u001b[22m\u001b[39m\n   \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m Contract: response shapes\u001b[2m > \u001b[22m/api/identify-by-text matches success-or-error union \u001b[33m987\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[90m (3)\u001b[39m\n\u001b[2m   Start at \u001b[22m 02:45:14\n\u001b[2m   Duration \u001b[22m 2.76s\u001b[2m (transform 70ms, setup 0ms, collect 90ms, tests 1.77s, environment 0ms, prepare 271ms)\u001b[22m\n\nJSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json\n"
     },
     {
       "name": "security",
       "ok": true,
       "code": 0,
-      "durationMs": 4311,
+      "durationMs": 7897,
       "tail": "  PASS npm-audit (saywetin-native) (critical=0 high=0)\n  PASS secret-scan (clean)\n  PASS https-headers (ok)\n  PASS admin-protected (status=404)\n"
     },
     {
       "name": "perf",
       "ok": true,
       "code": 0,
-      "durationMs": 31101,
-      "tail": "[perf] health -> GET https://api.saywetin.app/api/health\n[perf] status -> GET https://api.saywetin.app/api/status\n  PASS health: p99=344ms rps=227.3 err=0\n  PASS status: p99=994ms rps=83.9 err=0\n"
+      "durationMs": 31666,
+      "tail": "[perf] health -> GET https://api.saywetin.app/api/health\n[perf] status -> GET https://api.saywetin.app/api/status\n  PASS health: p99=120ms rps=234.5 err=0\n  PASS status: p99=962ms rps=80.6 err=0\n"
     },
     {
       "name": "uat",
       "ok": true,
       "code": 0,
-      "durationMs": 2658,
+      "durationMs": 3231,
       "tail": "  PASS uat UAT — End-user music recognition journey :: U1 Backend reachable\n  PASS uat UAT — End-user music recognition journey :: U2 Backend reports DB schema ready\n  PASS uat UAT — End-user music recognition journey :: U3 User searches song by lyric snippet (Burna Boy)\n  PASS uat UAT — End-user music recognition journey :: U4 Listening history is queryable\n"
     },
     {
       "name": "bat",
       "ok": true,
       "code": 0,
-      "durationMs": 2269,
+      "durationMs": 2681,
       "tail": "  PASS bat BAT — Business acceptance: recognition core works for paying-tier flow :: B1 Recognition by text returns artist + title\n  PASS bat BAT — Business acceptance: recognition core works for paying-tier flow :: B2 Garbage input is rejected, not 500\n"
     },
     {
       "name": "e2e",
       "ok": true,
       "code": 0,
-      "durationMs": 887,
+      "durationMs": 1099,
       "tail": ""
     }
   ],
@@ -71,7 +71,7 @@
     "security": null,
     "uat": {
       "layer": "uat",
-      "startedAt": "2026-06-01T13:38:47.711Z",
+      "startedAt": "2026-06-02T06:45:57.756Z",
       "scenarios": [
         {
           "file": "identify-journey.json",
@@ -135,9 +135,9 @@
               "failures": [],
               "body": {
                 "success": true,
-                "sessionId": "7054ef86-db36-4bc4-ac87-adb1f5741196",
+                "sessionId": "ce0fa0d3-1082-4e1a-b9df-a19a3b752715",
                 "recognizedTrack": {
-                  "id": "12509557-2625-4749-bd60-7ddb87f90002",
+                  "id": "94995ed4-0f0f-4f16-aa06-8c4e1ad326b3",
                   "title": "Forever",
                   "artist": "Burna Boy",
                   "album": null,
@@ -151,7 +151,7 @@
                 },
                 "matchSource": "lyric_text",
                 "confidence": 90,
-                "processingTime": 1007
+                "processingTime": 1402
               }
             },
             {
@@ -169,7 +169,7 @@
     },
     "bat": {
       "layer": "bat",
-      "startedAt": "2026-06-01T13:38:50.344Z",
+      "startedAt": "2026-06-02T06:46:00.996Z",
       "scenarios": [
         {
           "file": "recognition-core.json",
@@ -184,9 +184,9 @@
               "failures": [],
               "body": {
                 "success": true,
-                "sessionId": "a8cef22f-3d25-4eaf-a6a6-6f69c9493456",
+                "sessionId": "2e4558d2-135e-4094-a2f9-501b4763896f",
                 "recognizedTrack": {
-                  "id": "f86e3e89-879b-47f0-8a81-8eff0a7a2886",
+                  "id": "74a77996-d921-4763-8710-040f9af7b756",
                   "title": "Forever",
                   "artist": "Burna Boy",
                   "album": null,
@@ -200,7 +200,7 @@
                 },
                 "matchSource": "lyric_text",
                 "confidence": 90,
-                "processingTime": 1062
+                "processingTime": 1208
               }
             },
             {
@@ -222,7 +222,7 @@
     },
     "e2e": {
       "layer": "e2e",
-      "startedAt": "2026-06-01T13:38:52.887Z",
+      "startedAt": "2026-06-02T06:46:03.980Z",
       "runs": [],
       "ok": false,
       "skipped": true,
@@ -254,7 +254,7 @@
         "updated": 0,
         "didUpdate": false
       },
-      "startTime": 1780321088723,
+      "startTime": 1780382714588,
       "success": true,
       "testResults": [
         {
@@ -266,7 +266,7 @@
               "fullName": "Contract: response shapes /api/health matches schema",
               "status": "passed",
               "title": "/api/health matches schema",
-              "duration": 347.30170000000004,
+              "duration": 348.79319999999996,
               "failureMessages": [],
               "meta": {}
             },
@@ -277,7 +277,7 @@
               "fullName": "Contract: response shapes /api/status matches schema",
               "status": "passed",
               "title": "/api/status matches schema",
-              "duration": 444.73169999999993,
+              "duration": 429.4087999999999,
               "failureMessages": [],
               "meta": {}
             },
@@ -288,13 +288,13 @@
               "fullName": "Contract: response shapes /api/identify-by-text matches success-or-error union",
               "status": "passed",
               "title": "/api/identify-by-text matches success-or-error union",
-              "duration": 1593.4021000000002,
+              "duration": 986.6748,
               "failureMessages": [],
               "meta": {}
             }
           ],
-          "startTime": 1780321089222,
-          "endTime": 1780321091607.402,
+          "startTime": 1780382715559,
+          "endTime": 1780382717324.6748,
           "status": "passed",
           "message": "",
           "name": "C:/FTC HOLDING/APPS/saywetin-native/qa/contract/shapes.test.ts"

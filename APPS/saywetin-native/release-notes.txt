@@ -1,7 +1,6 @@
 What's new in this release:
 
-- Faster song recognition with a quicker tap-to-listen flow.
-- Smoother live lyrics follow with better sync behavior and faster line loading.
-- More natural cultural translations and cleaner meaning explanations.
-- Improved Quick Settings access on Android for faster launch into listening.
-- Polished interaction feedback for a more responsive, reliable experience.
+- Fixed an Android launch issue that could stop the app from opening after install.
+- Improved the tap-to-listen startup flow so the microphone loads only when you start listening.
+- Kept song recognition, lyrics, and meaning explanations working with the same SayWetin flow.
+- Added reliability checks around Android QA builds and Play Store release packaging.

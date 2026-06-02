@@ -141,7 +141,54 @@ function getCaptureDurationMs(audioRoute: ReturnType<typeof useAudioRoute>) {
   return audioRoute.isPrivateListening ? PRIVATE_LISTENING_CAPTURE_DURATION_MS : CAPTURE_DURATION_MS;
 }
 
-export function ListenScreen({ onRecognized, autoStartToken }: { onRecognized: (track: RitualTrack) => void; autoStartToken?: string }) {
+type ListenScreenProps = {
+  onRecognized: (track: RitualTrack) => void;
+  autoStartToken?: string;
+};
+
+export function ListenScreen({ onRecognized, autoStartToken }: ListenScreenProps) {
+  const [activationToken, setActivationToken] = useState<string | undefined>(autoStartToken);
+
+  useEffect(() => {
+    if (autoStartToken) {
+      setActivationToken(autoStartToken);
+    }
+  }, [autoStartToken]);
+
+  if (!activationToken) {
+    return (
+      <ColdStartListenScreen
+        onStart={() => {
+          setActivationToken(`tap-${Date.now()}`);
+        }}
+      />
+    );
+  }
+
+  return <ActiveListenScreen onRecognized={onRecognized} autoStartToken={activationToken} />;
+}
+
+function ColdStartListenScreen({ onStart }: { onStart: () => void }) {
+  return (
+    <FadeInView duration={180}>
+      <View style={styles.screen}>
+        <View style={styles.ambientTop} />
+
+        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+          SayWetin
+        </Text>
+
+        <Text style={styles.subtitle}>Ready when the music is playing.</Text>
+
+        <OrbListener phase="idle" onPress={onStart} />
+
+        <Text style={styles.orbHint}>Tap to listen</Text>
+      </View>
+    </FadeInView>
+  );
+}
+
+function ActiveListenScreen({ onRecognized, autoStartToken }: ListenScreenProps) {
   const [phase, setPhase] = useState<ListenPhase>('idle');
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

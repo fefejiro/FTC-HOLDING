@@ -15,17 +15,17 @@
   .badge.fail{background:#fce8e6;color:#b00020}
 </style></head><body>
 <h1>SayWetin QA Report <span class="badge ok">GREEN</span></h1>
-<div class="meta">Generated 2026-06-01T13:38:52.926Z</div>
+<div class="meta">Generated 2026-06-02T06:46:04.014Z</div>
 <table><thead><tr><th>Layer</th><th>Result</th><th>Duration</th><th>Exit</th><th>Tail</th></tr></thead>
 <tbody>
   <tr class="ok">
     <td>smoke</td>
     <td>PASS</td>
-    <td>2.9s</td>
+    <td>3.5s</td>
     <td>exit 0</td>
     <td><pre>SayWetin backend smoke @ https://saywetin-api-production.up.railway.app
   ... health PASS (status ok)
-  ... identify-by-text (well-known lyric) PASS (Burna Boy — Forever)
+  ... identify-by-text (well-known lyric) PASS (Burna Boy — Love You Forever)
 
 2/2 passed
 </pre></td>
@@ -33,18 +33,18 @@
   <tr class="ok">
     <td>unit</td>
     <td>PASS</td>
-    <td>1.6s</td>
+    <td>3.8s</td>
     <td>exit 0</td>
     <td><pre>
 [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FTC HOLDING/APPS/saywetin-native/qa[39m
 
- [32m✓[39m unit/confidence.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 3[2mms[22m[39m
- [32m✓[39m unit/live-lyrics-index.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 3[2mms[22m[39m
+ [32m✓[39m unit/live-lyrics-index.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m unit/confidence.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 4[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
 [2m      Tests [22m [1m[32m6 passed[39m[22m[90m (6)[39m
-[2m   Start at [22m 09:38:03
-[2m   Duration [22m 518ms[2m (transform 57ms, setup 0ms, collect 67ms, tests 6ms, environment 0ms, prepare 321ms)[22m
+[2m   Start at [22m 02:45:06
+[2m   Duration [22m 951ms[2m (transform 102ms, setup 0ms, collect 113ms, tests 9ms, environment 1ms, prepare 558ms)[22m
 
 JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json
 </pre></td>
@@ -52,20 +52,20 @@ JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.jso
   <tr class="ok">
     <td>api</td>
     <td>PASS</td>
-    <td>3.8s</td>
+    <td>4.9s</td>
     <td>exit 0</td>
     <td><pre>
 [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FTC HOLDING/APPS/saywetin-native/qa[39m
 
- [32m✓[39m api/endpoints.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2179[2mms[22m[39m
-   [33m[2m✓[22m[39m API integration @ https://api.saywetin.app[2m &gt; [22mGET /api/health -&gt; 200 ok [33m337[2mms[22m[39m
-   [33m[2m✓[22m[39m API integration @ https://api.saywetin.app[2m &gt; [22mGET /api/status -&gt; reports configured services [33m428[2mms[22m[39m
-   [33m[2m✓[22m[39m API integration @ https://api.saywetin.app[2m &gt; [22mPOST /api/identify-by-text -&gt; 200 OR 503 (until OpenAI key set) [33m1179[2mms[22m[39m
+ [32m✓[39m api/endpoints.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2276[2mms[22m[39m
+   [33m[2m✓[22m[39m API integration @ https://api.saywetin.app[2m &gt; [22mGET /api/health -&gt; 200 ok [33m421[2mms[22m[39m
+   [33m[2m✓[22m[39m API integration @ https://api.saywetin.app[2m &gt; [22mGET /api/status -&gt; reports configured services [33m407[2mms[22m[39m
+   [33m[2m✓[22m[39m API integration @ https://api.saywetin.app[2m &gt; [22mPOST /api/identify-by-text -&gt; 200 OR 503 (until OpenAI key set) [33m1227[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m5 passed[39m[22m[90m (5)[39m
-[2m   Start at [22m 09:38:04
-[2m   Duration [22m 2.67s[2m (transform 35ms, setup 0ms, collect 44ms, tests 2.18s, environment 0ms, prepare 135ms)[22m
+[2m   Start at [22m 02:45:09
+[2m   Duration [22m 3.15s[2m (transform 48ms, setup 0ms, collect 50ms, tests 2.28s, environment 0ms, prepare 206ms)[22m
 
 JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json
 </pre></td>
@@ -73,20 +73,20 @@ JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.jso
   <tr class="ok">
     <td>contract</td>
     <td>PASS</td>
-    <td>4.1s</td>
+    <td>4.5s</td>
     <td>exit 0</td>
     <td><pre>
 [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FTC HOLDING/APPS/saywetin-native/qa[39m
 
- [32m✓[39m contract/shapes.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 2387[2mms[22m[39m
-   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/health matches schema [33m347[2mms[22m[39m
-   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/status matches schema [33m445[2mms[22m[39m
-   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/identify-by-text matches success-or-error union [33m1593[2mms[22m[39m
+ [32m✓[39m contract/shapes.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1766[2mms[22m[39m
+   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/health matches schema [33m349[2mms[22m[39m
+   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/status matches schema [33m429[2mms[22m[39m
+   [33m[2m✓[22m[39m Contract: response shapes[2m &gt; [22m/api/identify-by-text matches success-or-error union [33m987[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
-[2m   Start at [22m 09:38:08
-[2m   Duration [22m 2.92s[2m (transform 38ms, setup 0ms, collect 60ms, tests 2.39s, environment 0ms, prepare 137ms)[22m
+[2m   Start at [22m 02:45:14
+[2m   Duration [22m 2.76s[2m (transform 70ms, setup 0ms, collect 90ms, tests 1.77s, environment 0ms, prepare 271ms)[22m
 
 JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.json
 </pre></td>
@@ -94,7 +94,7 @@ JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.jso
   <tr class="ok">
     <td>security</td>
     <td>PASS</td>
-    <td>4.3s</td>
+    <td>7.9s</td>
     <td>exit 0</td>
     <td><pre>  PASS npm-audit (saywetin-native) (critical=0 high=0)
   PASS secret-scan (clean)
@@ -105,18 +105,18 @@ JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.jso
   <tr class="ok">
     <td>perf</td>
     <td>PASS</td>
-    <td>31.1s</td>
+    <td>31.7s</td>
     <td>exit 0</td>
     <td><pre>[perf] health -&gt; GET https://api.saywetin.app/api/health
 [perf] status -&gt; GET https://api.saywetin.app/api/status
-  PASS health: p99=344ms rps=227.3 err=0
-  PASS status: p99=994ms rps=83.9 err=0
+  PASS health: p99=120ms rps=234.5 err=0
+  PASS status: p99=962ms rps=80.6 err=0
 </pre></td>
   </tr>
   <tr class="ok">
     <td>uat</td>
     <td>PASS</td>
-    <td>2.7s</td>
+    <td>3.2s</td>
     <td>exit 0</td>
     <td><pre>  PASS uat UAT — End-user music recognition journey :: U1 Backend reachable
   PASS uat UAT — End-user music recognition journey :: U2 Backend reports DB schema ready
@@ -127,7 +127,7 @@ JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.jso
   <tr class="ok">
     <td>bat</td>
     <td>PASS</td>
-    <td>2.3s</td>
+    <td>2.7s</td>
     <td>exit 0</td>
     <td><pre>  PASS bat BAT — Business acceptance: recognition core works for paying-tier flow :: B1 Recognition by text returns artist + title
   PASS bat BAT — Business acceptance: recognition core works for paying-tier flow :: B2 Garbage input is rejected, not 500
@@ -136,7 +136,7 @@ JSON report written to C:/FTC HOLDING/APPS/saywetin-native/qa/_report/vitest.jso
   <tr class="ok">
     <td>e2e</td>
     <td>PASS</td>
-    <td>0.9s</td>
+    <td>1.1s</td>
     <td>exit 0</td>
     <td><pre></pre></td>
   </tr></tbody></table>
