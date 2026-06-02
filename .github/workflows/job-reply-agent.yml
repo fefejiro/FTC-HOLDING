@@ -13,7 +13,7 @@ defaults:
 
 jobs:
   gmail-cycle:
-    name: Gmail Cycle
+    name: Cloud-safe Gmail and proof cycle
     runs-on: ubuntu-latest
 
     steps:
@@ -62,15 +62,15 @@ jobs:
           printf 'GMAIL_AUTH_MODE=oauth\n' > .env
           printf 'GMAIL_CLIENT_ID=%s\n' "$CLIENT_ID" >> .env
           printf 'GMAIL_CLIENT_SECRET=%s\n' "$CLIENT_SECRET" >> .env
-          printf 'GMAIL_REDIRECT_URI=http://localhost:3007/oauth2callback\n' >> .env
+          printf 'GMAIL_REDIRECT_URI=http://127.0.0.1:3007\n' >> .env
           printf 'GMAIL_TOKENS_PATH=./data/gmail_tokens.json\n' >> .env
           printf 'GMAIL_ACCOUNT_EMAIL=%s\n' "$ACCOUNT_EMAIL" >> .env
           printf 'REPORT_TO=%s\n' "$REPORT_TO" >> .env
           printf 'AGENT_TZ=America/Toronto\n' >> .env
           printf 'DAILY_REPORT_ENABLE_SEND=true\n' >> .env
 
-      - name: Run Gmail cycle
-        run: node dist/main.js run:gmail-cycle
+      - name: Run cloud-safe cycle
+        run: node dist/main.js run:cloud-cycle
 
       - name: Save data cache
         if: always()

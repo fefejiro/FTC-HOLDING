@@ -170,6 +170,11 @@ export interface RulesConfig {
       keywords: string[];
       max_jobs_per_run: number;
     };
+    linkedin?: {
+      enabled: boolean;
+      keywords: string[];
+      max_jobs_per_run: number;
+    };
   };
 }
 

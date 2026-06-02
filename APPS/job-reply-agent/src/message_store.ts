@@ -116,6 +116,23 @@ export function markDraftSent(db: Database.Database, messageId: string): boolean
   return result.changes > 0;
 }
 
+export function updateDraftTransportMeta(
+  db: Database.Database,
+  messageId: string,
+  args: { gmailDraftId?: string | null; recipientEmail?: string | null }
+): boolean {
+  const result = db
+    .prepare(
+      `UPDATE drafts
+       SET gmail_draft_id = COALESCE(?, gmail_draft_id),
+           recipient_email = COALESCE(?, recipient_email),
+           updated_at = ?
+       WHERE message_id = ?`
+    )
+    .run(args.gmailDraftId ?? null, args.recipientEmail ?? null, new Date().toISOString(), messageId);
+  return result.changes > 0;
+}
+
 export function getApprovedPendingDrafts(db: Database.Database): Array<{
   message_id: string;
   thread_id: string;

@@ -166,6 +166,34 @@ describe("hunt flow", () => {
     expect(result.score).toBeGreaterThanOrEqual(80);
   });
 
+  it("adds extra priority for US and Canada remote or hybrid roles", () => {
+    const remoteNorthAmerica = scoreHuntJob({
+      title: "Operations Analyst",
+      company: "Northstar",
+      location: "Toronto, Canada Remote",
+      work_mode: "remote",
+      description: "Operations analysis and reporting with cross-functional coordination.",
+      required_skills: JSON.stringify([]),
+      preferred_skills: "[]",
+      needs_review: 0,
+      red_flags: "[]"
+    });
+
+    const genericOnsite = scoreHuntJob({
+      title: "Operations Analyst",
+      company: "Northstar",
+      location: "Europe Onsite",
+      work_mode: "onsite",
+      description: "Operations analysis and reporting with cross-functional coordination.",
+      required_skills: JSON.stringify([]),
+      preferred_skills: "[]",
+      needs_review: 0,
+      red_flags: "[]"
+    });
+
+    expect(remoteNorthAmerica.score).toBeGreaterThan(genericOnsite.score);
+  });
+
   it("does not promote generic project manager roles without systems signal", () => {
     const result = scoreHuntJob({
       title: "Project Manager",

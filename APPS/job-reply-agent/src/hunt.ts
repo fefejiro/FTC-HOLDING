@@ -195,7 +195,7 @@ export function insertHuntJob(db: Database.Database, p: NormalizedHuntJob): numb
 }
 
 export function scoreJobs(db: Database.Database): number {
-  const jobs = db.prepare("SELECT id,title,company,description,required_skills,preferred_skills,needs_review,red_flags,source,recruiter_email FROM hunt_jobs WHERE status IN ('discovered','needs_review')").all() as any[];
+  const jobs = db.prepare("SELECT id,title,company,location,work_mode,description,required_skills,preferred_skills,needs_review,red_flags,source,recruiter_email FROM hunt_jobs WHERE status IN ('discovered','needs_review')").all() as any[];
   let n = 0;
   for (const j of jobs) {
     const result = scoreHuntJob(j);
@@ -214,6 +214,8 @@ export function scoreJobs(db: Database.Database): number {
 export function scoreHuntJob(job: {
   title?: string;
   company?: string;
+  location?: string;
+  work_mode?: string;
   description?: string;
   required_skills?: string;
   preferred_skills?: string;
@@ -240,10 +242,11 @@ export function scoreHuntJob(job: {
   const systems = countMatches(haystack, SYSTEMS_SIGNALS);
   const automation = countMatches(haystack, AUTOMATION_SIGNALS);
   const skillScore = Math.min(24, (requiredSkills.length + preferredSkills.length) * 4);
+  const geoScore = scoreGeographyPreference(job.location || "", job.work_mode || "");
 
   if (roleTier1 && systems > 0) {
     return {
-      score: Math.min(100, 72 + systems * 6 + automation * 3 + skillScore),
+      score: Math.min(100, 72 + systems * 6 + automation * 3 + skillScore + geoScore),
       tier: "tier_1",
       status: job.needs_review ? "needs_review" : "scored",
       next_action: job.needs_review ? "review_sensitive_fields_then_package" : "generate_package",
@@ -253,7 +256,7 @@ export function scoreHuntJob(job: {
 
   if (roleTier1 || (roleTier2 && systems > 0)) {
     return {
-      score: Math.min(89, 58 + systems * 5 + automation * 2 + skillScore),
+      score: Math.min(89, 58 + systems * 5 + automation * 2 + skillScore + geoScore),
       tier: "tier_2",
       status: "needs_review",
       next_action: "review_medium_fit",
@@ -266,7 +269,7 @@ export function scoreHuntJob(job: {
   const genericProject = /\bproject manager\b/i.test(haystack);
   if (genericProject && systems === 0) {
     return {
-      score: 35,
+      score: Math.min(100, 35 + geoScore),
       tier: "tier_3",
       status: "blocked",
       next_action: "skip_generic_pm",
@@ -274,7 +277,7 @@ export function scoreHuntJob(job: {
     };
   }
 
-  const score = Math.min(74, 35 + systems * 6 + automation * 4 + skillScore);
+  const score = Math.min(74, 35 + systems * 6 + automation * 4 + skillScore + geoScore);
   return {
     score,
     tier: score >= 60 ? "tier_3" : "blocked",
@@ -284,8 +287,35 @@ export function scoreHuntJob(job: {
   };
 }
 
+function scoreGeographyPreference(location: string, workMode: string): number {
+  const blob = `${location || ""} ${workMode || ""}`.toLowerCase();
+  let bonus = 0;
+
+  if (/\b(remote\b|work from home|wfh)\b/.test(blob)) bonus += 12;
+  else if (/\bhybrid\b/.test(blob)) bonus += 10;
+  else if (/\bonsite\b|\bon-site\b|\bon site\b/.test(blob)) bonus += 6;
+
+  if (/\b(canada|toronto|ontario|vancouver|montreal|calgary|ottawa|edmonton|winnipeg|halifax)\b/.test(blob)) {
+    bonus += 12;
+  }
+  if (/\b(united states|usa|u\.s\.a\.|u\.s\.)\b/.test(blob)) {
+    bonus += 12;
+  }
+
+  return Math.min(24, bonus);
+}
+
 export function generatePackages(db: Database.Database): number {
-  const jobs = db.prepare("SELECT id,title,company,description,required_skills,preferred_skills,work_authorization_language FROM hunt_jobs WHERE status='scored'").all() as any[];
+  const jobs = db.prepare(`
+    SELECT id,title,company,description,required_skills,preferred_skills,work_authorization_language,status,next_action,tier
+    FROM hunt_jobs
+    WHERE status = 'scored'
+       OR (
+         status = 'needs_review'
+         AND next_action = 'review_medium_fit'
+         AND COALESCE(tier, '') IN ('tier_1','tier_2','tier_3')
+       )
+  `).all() as any[];
   let n = 0;
   for (const j of jobs) {
     const title = cleanText(j.title || "");
@@ -322,8 +352,16 @@ export function generatePackages(db: Database.Database): number {
       truth: {}
     });
 
-    db.prepare("INSERT INTO hunt_packages (job_id,resume_text,cover_letter_text,next_action,created_at) VALUES (?,?,?,?,?)").run(j.id, resume, cover, "review_outreach_drafts", new Date().toISOString());
-    db.prepare("UPDATE hunt_jobs SET status='package_generated', updated_at=? WHERE id=?").run(new Date().toISOString(), j.id);
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO hunt_packages (job_id,resume_text,cover_letter_text,next_action,created_at)
+      VALUES (?,?,?,?,?)
+      ON CONFLICT(job_id) DO UPDATE SET
+        resume_text=excluded.resume_text,
+        cover_letter_text=excluded.cover_letter_text,
+        next_action=excluded.next_action
+    `).run(j.id, resume, cover, "review_outreach_drafts", now);
+    db.prepare("UPDATE hunt_jobs SET status='package_generated', next_action='review_apply_assist', updated_at=? WHERE id=?").run(now, j.id);
     n++;
   }
   return n;

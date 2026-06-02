@@ -23,7 +23,10 @@ This initial implementation includes:
 - `npm run db:reset`
 - `npm run seed -- --date=YYYY-MM-DD`
 - `npm run gmail:auth:url`
+- `npm run gmail:auth:local`
 - `npm run gmail:auth:save -- --code=YOUR_CODE`
+- `npm run gmail:status`
+- `npm run auth:doctor`
 - `npm run process:mock`
 - `npm run process:gmail`
 - `npm run approve:all`
@@ -55,13 +58,20 @@ Or run steps 2 to 4 together:
 2. Set OAuth values in `.env`:
    - `GMAIL_CLIENT_ID`
    - `GMAIL_CLIENT_SECRET`
-   - `GMAIL_REDIRECT_URI` (must match Google console)
+   - `GMAIL_REDIRECT_URI=http://127.0.0.1:3007` (desktop loopback redirect; must match the OAuth client flow)
    - `GMAIL_ACCOUNT_EMAIL`
-3. Generate consent URL:
-   - `npm run gmail:auth:url`
-4. Open URL, authorize, copy `code` from callback URL, then save tokens:
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` are accepted aliases.
+3. Start the local callback server in another terminal:
+   - `npm run serve`
+4. Generate the local consent URL:
+   - `npm run gmail:auth:local`
+5. Open URL and authorize. The callback page should save tokens automatically. If you copy the code manually, save it with:
    - `npm run gmail:auth:save -- --code=PASTE_CODE`
-5. Keep `GMAIL_AUTH_MODE=oauth` and `DAILY_REPORT_ENABLE_SEND=true`.
+6. Verify:
+   - `npm run gmail:status`
+7. Run the full auth preflight:
+   - `npm run auth:doctor`
+8. Keep `GMAIL_AUTH_MODE=oauth` and `DAILY_REPORT_ENABLE_SEND=true`.
 
 ## SMTP Fallback (Optional)
 
@@ -83,6 +93,18 @@ Use only when you explicitly want SMTP mode.
 Or one command:
 
 `npm run run:gmail-cycle`
+
+## Dice Browser Auth
+
+Dice browser automation uses a persistent Chrome profile exposed through CDP. Start it with:
+
+`npm run browser:attach-chrome`
+
+Complete Dice login once in the visible Chrome window, then verify:
+
+`npm run hunt:dice-preflight`
+
+The expected healthy result is `Dice preflight passed: authenticated browser session detected.` If preflight says the signed-in session was not detected, do not run submit automation yet.
 
 ## Desktop + Mobile Control Surface
 

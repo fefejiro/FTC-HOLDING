@@ -1,11 +1,33 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { initHuntSchema } from "./hunt/db.js";
 
-export function getDb(dbPath = path.join(process.cwd(), "data", "job_leads.sqlite")): Database.Database {
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+export function resolveProjectPath(...parts: string[]): string {
+  return path.join(PROJECT_ROOT, ...parts);
+}
+
+export function resolveDbPath(dbPath?: string): string {
+  if (!dbPath) {
+    return resolveProjectPath("data", "job_leads.sqlite");
+  }
+
+  if (dbPath === ":memory:" || dbPath.startsWith("file:")) {
+    return dbPath;
+  }
+
+  return path.resolve(dbPath);
+}
+
+export function getDb(dbPath?: string): Database.Database {
+  const resolvedDbPath = resolveDbPath(dbPath);
+  if (resolvedDbPath !== ":memory:" && !resolvedDbPath.startsWith("file:")) {
+    fs.mkdirSync(path.dirname(resolvedDbPath), { recursive: true });
+  }
+  const db = new Database(resolvedDbPath);
   db.pragma("journal_mode = WAL");
   initSchema(db);
   migrateSchema(db);
@@ -13,9 +35,13 @@ export function getDb(dbPath = path.join(process.cwd(), "data", "job_leads.sqlit
   return db;
 }
 
-export function resetDb(dbPath = path.join(process.cwd(), "data", "job_leads.sqlite")): void {
-  if (fs.existsSync(dbPath)) {
-    fs.rmSync(dbPath, { force: true });
+export function resetDb(dbPath?: string): void {
+  const resolvedDbPath = resolveDbPath(dbPath);
+  if (resolvedDbPath === ":memory:" || resolvedDbPath.startsWith("file:")) {
+    return;
+  }
+  if (fs.existsSync(resolvedDbPath)) {
+    fs.rmSync(resolvedDbPath, { force: true });
   }
 }
 

@@ -3,7 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import YAML from "yaml";
-import type { ProfileConfig, ResumeMapConfig, RulesConfig } from "./types.js";
+import type {
+  ApplicationAnswersConfig,
+  ProfileConfig,
+  ResumeMapConfig,
+  RulesConfig
+} from "./types.js";
+import { resolveProjectPath } from "./db.js";
 
 const profileSchema = z.object({
   name: z.string(),
@@ -65,6 +71,53 @@ const rulesSchema = z.object({
     block_keywords: z.array(z.string()),
     require_review_keywords: z.array(z.string())
   }),
+  scraper: z
+    .object({
+      enabled: z.boolean(),
+      dice: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      indeed: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      linkedin: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      robert_half: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      workopolis: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      mercor: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional()
+    })
+    .optional(),
   trusted_recruiter_domains: z.array(z.string()),
   resume_tailoring: z
     .object({
@@ -100,7 +153,7 @@ const resumeMapSchema = z.object({
 });
 
 function readYaml<T>(relativePath: string): T {
-  const filePath = path.join(process.cwd(), relativePath);
+  const filePath = resolveProjectPath(relativePath);
   const raw = fs.readFileSync(filePath, "utf8");
   return YAML.parse(raw) as T;
 }
@@ -109,6 +162,7 @@ export function loadConfig(): {
   profile: ProfileConfig;
   rules: RulesConfig;
   resumeMap: ResumeMapConfig;
+  applicationAnswers: ApplicationAnswersConfig;
   env: {
     authMode: "oauth" | "smtp";
     gmailClientId: string;
@@ -129,13 +183,19 @@ export function loadConfig(): {
   const profile = profileSchema.parse(readYaml<ProfileConfig>("config/profile.yaml"));
   const rules = rulesSchema.parse(readYaml<RulesConfig>("config/rules.yaml"));
   const resumeMap = resumeMapSchema.parse(readYaml<ResumeMapConfig>("config/resume_map.yaml"));
+  const applicationAnswers = readYaml<ApplicationAnswersConfig>("config/application_answers.yaml");
 
   const authMode = process.env.GMAIL_AUTH_MODE === "smtp" ? "smtp" : "oauth";
-  const gmailClientId = process.env.GMAIL_CLIENT_ID || "";
-  const gmailClientSecret = process.env.GMAIL_CLIENT_SECRET || "";
-  const gmailRedirectUri = process.env.GMAIL_REDIRECT_URI || "http://localhost:3007/oauth2callback";
-  const gmailTokensPath =
-    process.env.GMAIL_TOKENS_PATH || path.join(process.cwd(), "data", "gmail_tokens.json");
+  const gmailClientId = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "";
+  const gmailClientSecret = process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "";
+  const gmailRedirectUri =
+    process.env.GMAIL_REDIRECT_URI ||
+    process.env.GOOGLE_REDIRECT_URI ||
+    "http://127.0.0.1:3007";
+  const envTokensPath = process.env.GMAIL_TOKENS_PATH || "";
+  const gmailTokensPath = envTokensPath
+    ? (path.isAbsolute(envTokensPath) ? envTokensPath : resolveProjectPath(envTokensPath))
+    : resolveProjectPath("data", "gmail_tokens.json");
   const gmailAccountEmail = process.env.GMAIL_ACCOUNT_EMAIL || "";
 
   const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
@@ -151,6 +211,7 @@ export function loadConfig(): {
     profile,
     rules,
     resumeMap,
+    applicationAnswers,
     env: {
       authMode,
       gmailClientId,

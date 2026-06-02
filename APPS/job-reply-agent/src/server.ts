@@ -503,6 +503,8 @@ interface HuntDashboardApplicationCase {
   cover_letter_text: string;
   final_url: string;
   screenshot_path: string;
+  resume_artifact_path: string;
+  cover_letter_artifact_path: string;
 }
 
 interface HuntDashboardReviewDraft {
@@ -576,7 +578,9 @@ function getHuntDashboard(db = getDb()): {
          COALESCE(p.resume_text, '') AS resume_text,
          COALESCE(p.cover_letter_text, '') AS cover_letter_text,
          COALESCE(a.final_url, '') AS final_url,
-         COALESCE(a.screenshot_path, '') AS screenshot_path
+         COALESCE(a.screenshot_path, '') AS screenshot_path,
+         COALESCE(a.resume_artifact_path, '') AS resume_artifact_path,
+         COALESCE(a.cover_letter_artifact_path, '') AS cover_letter_artifact_path
        FROM hunt_jobs j
        LEFT JOIN application_attempts a ON a.job_id = j.id
        LEFT JOIN hunt_packages p ON p.job_id = j.id
@@ -904,6 +908,9 @@ function renderApplicationCasesTable(cases: HuntDashboardApplicationCase[]): str
       const jd = item.description ? `<details><summary>View JD</summary><div class="card">${escapeHtml(item.description.slice(0, 2400))}</div></details>` : "";
       const resume = item.resume_text ? `<details><summary>View tailored resume text</summary><div class="card">${escapeHtml(item.resume_text.slice(0, 2400))}</div></details>` : "";
       const cover = item.cover_letter_text ? `<details><summary>View cover letter text</summary><div class="card">${escapeHtml(item.cover_letter_text.slice(0, 2000))}</div></details>` : "";
+      const artifactPaths = item.resume_artifact_path || item.cover_letter_artifact_path
+        ? `<details><summary>View artifact file paths</summary><div class="card">${item.resume_artifact_path ? `<div><strong>Resume file:</strong> ${escapeHtml(item.resume_artifact_path)}</div>` : ""}${item.cover_letter_artifact_path ? `<div><strong>Cover letter file:</strong> ${escapeHtml(item.cover_letter_artifact_path)}</div>` : ""}</div></details>`
+        : "";
       return `
       <tr>
         <td>
@@ -919,7 +926,7 @@ function renderApplicationCasesTable(cases: HuntDashboardApplicationCase[]): str
           ${pause}
           ${resumeAction}
         </td>
-        <td>${draftAssist}${jd}${resume}${cover}</td>
+        <td>${draftAssist}${jd}${resume}${cover}${artifactPaths}</td>
       </tr>`;
     })
     .join("");
@@ -1251,6 +1258,20 @@ async function start(): Promise<void> {
         const cfg = loadConfig();
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ url: getGmailConsentUrl(cfg.env) }));
+        return;
+      }
+
+      if (req.method === "GET" && (url.pathname === "/oauth2callback" || url.pathname === "/")) {
+        const code = url.searchParams.get("code");
+        if (!code) {
+          res.writeHead(400, { "content-type": "text/plain" });
+          res.end(`Missing OAuth code. ${url.searchParams.get("error") || ""}`);
+          return;
+        }
+        const cfg = loadConfig();
+        await exchangeCodeAndSaveTokens(cfg.env, code);
+        res.writeHead(200, { "content-type": "text/html" });
+        res.end("<h1>Gmail OAuth saved</h1><p>You can close this tab and rerun npm run gmail:status.</p>");
         return;
       }
 

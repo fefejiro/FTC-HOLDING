@@ -54,16 +54,67 @@ scraper:
   dice:
     enabled: true
     keywords:
+      - IT manager retail systems
+      - service delivery manager retail systems
+      - program manager enterprise systems
+      - ERP WMS POS manager
+      - QA manager retail systems
       - enterprise architect
       - technical program manager
       - business systems analyst
+      - delivery program manager
+      - product operations manager
+      - transformation manager
+      - implementation program manager
     max_jobs_per_run: 25
   indeed:
-    enabled: true
+    enabled: false
     keywords:
       - enterprise architect
       - technical program manager
       - business systems analyst
+      - delivery program manager
+      - product operations manager
+      - transformation manager
+      - implementation program manager
+    max_jobs_per_run: 25
+  linkedin:
+    enabled: false
+    keywords:
+      - enterprise architect
+      - technical program manager
+      - business systems analyst
+      - delivery program manager
+      - product operations manager
+      - transformation manager
+      - implementation program manager
+    max_jobs_per_run: 25
+  robert_half:
+    enabled: false
+    keywords:
+      - enterprise architect
+      - technical program manager
+      - business systems analyst
+      - delivery program manager
+      - product operations manager
+    max_jobs_per_run: 25
+  workopolis:
+    enabled: false
+    keywords:
+      - enterprise architect
+      - technical program manager
+      - business systems analyst
+      - delivery program manager
+      - product operations manager
+    max_jobs_per_run: 25
+  mercor:
+    enabled: false
+    keywords:
+      - enterprise architect
+      - technical program manager
+      - business systems analyst
+      - delivery program manager
+      - product operations manager
     max_jobs_per_run: 25
 
 trusted_recruiter_domains:
@@ -71,7 +122,7 @@ trusted_recruiter_domains:
 
 resume_tailoring:
   enabled: true
-  template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Fejiro_Efiuvwere_WMS_Project_Manager_North_West_Company_Tailored.docx"
+  template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
   output_dir: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes"
   attach_mode: docx_only
   auto_send: false
