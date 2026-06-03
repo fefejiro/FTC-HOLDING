@@ -224,6 +224,7 @@ async function main(): Promise<void> {
 
   const jobIdArg = Number(getArg("job-id") || NaN);
   const clickApply = hasFlag("click-apply");
+  const prepareOnly = hasFlag("prepare-only");
   const job = selectJob(db, Number.isFinite(jobIdArg) ? jobIdArg : undefined);
   if (!job) {
     throw new Error("No eligible Indeed job found. Run npm run hunt:scrape-indeed:visible first.");
@@ -235,6 +236,31 @@ async function main(): Promise<void> {
 
   const runId = createRun(db);
   const artifacts = await prepareArtifacts(job);
+  if (prepareOnly) {
+    finishRun(db, runId, {
+      jobId: job.id,
+      status: "package_prepared",
+      reason: "Generated Indeed resume and cover letter artifacts without browser navigation.",
+      resumePath: artifacts.resumePath,
+      coverLetterPath: artifacts.coverLetterPath
+    });
+
+    console.log(JSON.stringify({
+      jobId: job.id,
+      title: job.title,
+      company: job.company,
+      score: job.score,
+      tier: job.tier,
+      status: "package_prepared",
+      reason: "Generated Indeed resume and cover letter artifacts without browser navigation.",
+      resumePath: artifacts.resumePath,
+      coverLetterPath: artifacts.coverLetterPath
+    }, null, 2));
+
+    db.close();
+    return;
+  }
+
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const outDir = path.resolve(".local", "visible-indeed-assist");
   fs.mkdirSync(outDir, { recursive: true });

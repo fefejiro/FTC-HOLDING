@@ -36,6 +36,14 @@ function splitParagraphs(text: string): string[] {
   return text.replace(/\r\n/g, "\n").split("\n");
 }
 
+function hasScrapeNoise(value: string): boolean {
+  const text = clean(value);
+  return /\beasily apply\b/i.test(text)
+    || /\bat Unknown\b/i.test(text)
+    || /\bUnknown\.\s+Enterprise systems/i.test(text)
+    || /\brole at Unknown\b/i.test(text);
+}
+
 export function buildFallbackCoverLetter(input: CoverLetterInput): string {
   const role = clean(input.roleTitle) || "the role";
   const company = clean(input.company) || "your team";
@@ -57,7 +65,7 @@ export function buildFallbackCoverLetter(input: CoverLetterInput): string {
 
   return [
     "Fejiro Efiuvwere",
-    "Greater Toronto Area, Canada | fejiro.efiuvwere@gmail.com | 416.473.2732",
+    "Greater Toronto Area, Canada | fejiro.efiuvwere@gmail.com | +1 647 473 3500",
     "",
     new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
     "",
@@ -92,7 +100,10 @@ export async function writeCoverLetterArtifacts(args: {
   const base = path.basename(args.resumeDocxPath).replace(/\.docx$/i, "_Cover_Letter");
   const textPath = path.join(outputDir, `${base}.txt`);
   const docxPath = path.join(outputDir, `${base}.docx`);
-  const coverText = clean(args.coverText) ? args.coverText.trim() : buildFallbackCoverLetter(args.fallback);
+  const suppliedCoverText = args.coverText.trim();
+  const coverText = clean(suppliedCoverText) && !hasScrapeNoise(suppliedCoverText)
+    ? suppliedCoverText
+    : buildFallbackCoverLetter(args.fallback);
 
   fs.writeFileSync(textPath, coverText, "utf8");
   fs.writeFileSync(docxPath, await buildCoverLetterDocx(coverText));

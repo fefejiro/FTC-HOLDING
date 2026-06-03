@@ -34,4 +34,35 @@ describe("cover letter artifacts", () => {
     expect(documentXml).toContain("Project Manager");
     expect(documentXml).toContain("Entergrade Solutions");
   });
+
+  it("regenerates the artifact when saved cover text contains scraped Indeed noise", async () => {
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "job-agent-cover-noise-"));
+    const resumeDocxPath = path.join(outputDir, "Fejiro_Efiuvwere_Program_Manager_Servicenow_Dacaro_Resume.docx");
+    fs.writeFileSync(resumeDocxPath, "placeholder");
+
+    const artifacts = await writeCoverLetterArtifacts({
+      outputDir,
+      resumeDocxPath,
+      coverText: [
+        "Dear Hiring Team,",
+        "",
+        "I am applying for Program Manager ServiceNow Easily apply Dacaro Software Services Inc Toronto, ON $125-$150 an hour Contract +1 at Unknown.",
+        "",
+        "Sincerely,",
+        "Fejiro Efiuvwere"
+      ].join("\n"),
+      fallback: {
+        roleTitle: "Program Manager ServiceNow",
+        company: "Dacaro Software Services Inc",
+        location: "Toronto, ON",
+        jobDescription: "ServiceNow program manager for enterprise delivery, API integration, and delivery governance."
+      }
+    });
+
+    const text = fs.readFileSync(artifacts.textPath, "utf8");
+    expect(text).toContain("Program Manager ServiceNow");
+    expect(text).toContain("Dacaro Software Services Inc");
+    expect(text).not.toMatch(/Easily apply|at Unknown/i);
+    expect(text).toContain("+1 647 473 3500");
+  });
 });
