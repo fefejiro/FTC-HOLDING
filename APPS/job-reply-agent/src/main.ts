@@ -550,6 +550,11 @@ export async function runCommand(args: {
     await runHuntCommand({ command: "hunt:package", db, limitArg, dateArg, sourceArg, fileArg });
     await runHuntCommand({ command: "hunt:apply-assist", db, limitArg, dateArg, sourceArg, fileArg });
 
+    if (!preflight.ok) {
+      logger.warn({ preflight }, "Laptop Dice apply queue skipped because Dice preflight is not ready.");
+      return;
+    }
+
     const { summary, report } = await runAutoApplyQueueAndReport({
       db,
       cfg,

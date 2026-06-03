@@ -34,6 +34,7 @@
     "schedule:run-now": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/daily-run.ps1",
     "schedule:status": "powershell -NoProfile -Command \"& { $names=@('JobReplyAgent-Periodic','JobReplyAgent-Gmail','JobReplyAgentDailyReport'); foreach ($name in $names) { $task=Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue; if ($task) { $info=$task | Get-ScheduledTaskInfo; [pscustomobject]@{ TaskName=$task.TaskName; State=$task.State; LastRunTime=$info.LastRunTime; LastTaskResult=$info.LastTaskResult; NextRunTime=$info.NextRunTime } } } } | Format-Table -AutoSize\"",
     "browser:attach-chrome": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-chrome-cdp.ps1",
+    "browser:fejiro-status": "python scripts/fejiro_chrome_status.py",
     "hunt:status": "tsx src/main.ts hunt:status",
     "hunt:scout": "tsx src/main.ts hunt:scout",
     "hunt:score": "tsx src/main.ts hunt:score",

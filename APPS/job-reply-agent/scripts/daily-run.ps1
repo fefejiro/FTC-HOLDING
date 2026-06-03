@@ -45,9 +45,6 @@ function Run-Step($label, $cmd) {
 "=== Scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
 "Working dir: $root" | Tee-Object -FilePath $log -Append
 
-$profileDir = Join-Path $root ".local\chrome-fejiro-profile5-cdp"
-New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
-
 $existingCdp = $false
 try {
   $ready = Invoke-WebRequest -Uri "http://127.0.0.1:9333/json/version" -UseBasicParsing -TimeoutSec 2
@@ -57,10 +54,13 @@ try {
 }
 
 if (-not $existingCdp) {
-  $chromeExit = Run-Step "0. Start automation Chrome" "npm run browser:attach-chrome -- -UserDataDir `"$profileDir`" -ProfileDirectory `"Profile 5`" -StartUrl `"https://www.dice.com/dashboard`""
-  if ($chromeExit -ne 0) {
-    "Automation Chrome did not start cleanly; continuing so the log captures the real blocker." | Tee-Object -FilePath $log -Append
-  }
+  "No Chrome CDP session is already available on 127.0.0.1:9333. Not launching a new Chrome/profile; keeping Fejiro's existing Chrome window untouched." | Tee-Object -FilePath $log -Append
+  $statusExit = Run-Step "1. Status snapshot" "npm run hunt:status"
+  $queueExit = Run-Step "2. Premium Dice queue snapshot" "npm run hunt:premium-queue -- --source=dice --limit=10"
+  if ($statusExit -ne 0) { exit $statusExit }
+  if ($queueExit -ne 0) { exit $queueExit }
+  "=== Success $(Get-Date -Format 'HH:mm:ss'): no-launch status/queue-only mode ===" | Tee-Object -FilePath $log -Append
+  exit 0
 }
 
 $env:JOB_AGENT_CDP_URL = "http://127.0.0.1:9333"
