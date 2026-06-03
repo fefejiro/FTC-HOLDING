@@ -163,7 +163,7 @@ async function getSharedPlaywrightSession(forceHeadless: boolean): Promise<Share
   const playwright = await import("playwright");
   const cdpUrl = process.env.JOB_AGENT_CDP_URL;
 
-  // CDP attach mode: connect to a user-launched Chrome (--remote-debugging-port=9222)
+  // CDP attach mode: connect to a user-launched Chrome (--remote-debugging-port=9333)
   // so LinkedIn / Indeed bot detection sees a real human-launched browser.
   if (cdpUrl) {
     try {
@@ -198,7 +198,7 @@ async function getSharedPlaywrightSession(forceHeadless: boolean): Promise<Share
   if (process.env.JOB_AGENT_REQUIRE_CDP === "true") {
     throw new Error(
       "JOB_AGENT_REQUIRE_CDP is set but no Chrome is attached. " +
-      "Start Chrome with scripts/start-chrome-cdp.ps1 and set JOB_AGENT_CDP_URL=http://127.0.0.1:9222."
+      "Start Chrome with scripts/start-chrome-cdp.ps1 and set JOB_AGENT_CDP_URL=http://127.0.0.1:9333."
     );
   }
 

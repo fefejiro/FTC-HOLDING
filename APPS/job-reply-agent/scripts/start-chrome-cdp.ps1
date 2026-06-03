@@ -13,8 +13,8 @@ param(
 #
 # Usage:
 #   pwsh scripts/start-chrome-cdp.ps1 -ProfileDirectory "Profile 5"
-#   # sign in to Dice manually in the opened window once
-#   $env:JOB_AGENT_CDP_URL = "http://127.0.0.1:9222"
+#   # sign in to Dice/Indeed manually in the opened Fejiro window once
+#   $env:JOB_AGENT_CDP_URL = "http://127.0.0.1:9333"
 #   $env:JOB_AGENT_REQUIRE_CDP = "true"
 #   npm run hunt:dice-preflight
 

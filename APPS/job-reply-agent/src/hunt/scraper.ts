@@ -62,7 +62,7 @@ async function getSharedScraperSession(): Promise<SharedScraperSession> {
   if (process.env.JOB_AGENT_REQUIRE_CDP === "true") {
     throw new Error(
       "JOB_AGENT_REQUIRE_CDP is set but no Chrome is attached. " +
-      "Start Chrome with scripts/start-chrome-cdp.ps1 and set JOB_AGENT_CDP_URL=http://127.0.0.1:9222."
+      "Start Chrome with scripts/start-chrome-cdp.ps1 and set JOB_AGENT_CDP_URL=http://127.0.0.1:9333."
     );
   }
 
@@ -389,7 +389,7 @@ export async function scrapeLinkedIn(searchQuery: string, maxJobs: number = 50):
       if (/captcha|challenge|security verification|sign in|checkpoint/i.test(html)) {
         logger.warn(
           { cdp: Boolean(process.env.JOB_AGENT_CDP_URL) },
-          "LinkedIn returned a bot/sign-in challenge. Start Chrome with scripts/start-chrome-cdp.ps1, sign in manually, then set JOB_AGENT_CDP_URL=http://127.0.0.1:9222 and rerun."
+          "LinkedIn returned a bot/sign-in challenge. Start Chrome with scripts/start-chrome-cdp.ps1, sign in manually, then set JOB_AGENT_CDP_URL=http://127.0.0.1:9333 and rerun."
         );
         return [];
       }
