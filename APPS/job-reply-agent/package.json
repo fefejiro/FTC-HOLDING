@@ -47,6 +47,8 @@
     "hunt:export": "tsx src/main.ts hunt:export",
     "hunt:scrape-dice": "tsx src/main.ts hunt:scrape-dice",
     "hunt:scrape-indeed": "tsx src/main.ts hunt:scrape-indeed",
+    "hunt:scrape-indeed:visible": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/visible-indeed-cycle.ps1",
+    "hunt:indeed-visible-assist": "tsx scripts/indeed-visible-assist.ts",
     "hunt:scrape-linkedin": "tsx src/main.ts hunt:scrape-linkedin",
     "hunt:scrape-all": "tsx src/main.ts hunt:scrape-all",
     "hunt:dice-preflight": "tsx src/main.ts hunt:dice-preflight",

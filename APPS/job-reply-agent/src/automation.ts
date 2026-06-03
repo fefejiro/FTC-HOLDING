@@ -1897,7 +1897,10 @@ function resolveFieldAnswer(field: FieldDescriptor, answerMap: Record<string, st
 
   // Provide resilient fallback matching for common application prompts
   // whose labels vary widely across ATS providers.
-  if (/work authorization|authorized to work|legally authorized|eligible to work|visa|sponsorship/.test(fieldText)) {
+  if (/work authorization|authorized to work|legally authorized|eligible to work|visa|sponsorship|citizen|permanent\s+resident/.test(fieldText)) {
+    const choice = resolveWorkAuthorizationChoice(field, fieldText, args);
+    if (choice) return { ...choice, isSensitive: true };
+
     const value = clean(args.answers.work_authorization_text || args.profile.work_authorization_note);
     if (value) return { answer: value, source: "saved_answer_fallback", isSensitive: true };
   }
@@ -1936,6 +1939,47 @@ function resolveFieldAnswer(field: FieldDescriptor, answerMap: Record<string, st
   }
 
   return { answer: "", source: "", isSensitive: sensitive };
+}
+
+function resolveWorkAuthorizationChoice(
+  field: FieldDescriptor,
+  fieldText: string,
+  args: { profile: ProfileConfig; answers: ApplicationAnswersConfig }
+): { answer: string; source: string } | null {
+  if (!isYesNoField(field)) return null;
+
+  const workAuthText = clean(args.answers.work_authorization_text || args.profile.work_authorization_note).toLowerCase();
+  const canadianCitizen = /\bcanadian citizen\b/.test(workAuthText);
+  if (!canadianCitizen) return null;
+
+  const asksCanadianCitizenOrPr =
+    /canadian/.test(fieldText) &&
+    (/citizen/.test(fieldText) || /permanent\s+resident/.test(fieldText) || /\bpr\b/.test(fieldText));
+  if (asksCanadianCitizenOrPr) {
+    return { answer: "Yes", source: "saved_canadian_citizenship" };
+  }
+
+  const asksCanadaWorkEligibility =
+    /canada|canadian/.test(fieldText) &&
+    /(authorized|authorised|eligible|legally).{0,80}(work|employment)/.test(fieldText);
+  if (asksCanadaWorkEligibility) {
+    return { answer: "Yes", source: "saved_canada_work_authorization" };
+  }
+
+  const asksCanadaSponsorship =
+    /(canada|canadian)/.test(fieldText) &&
+    /(require|need|now|future|currently).{0,100}(sponsor|sponsorship|visa)/.test(fieldText);
+  if (asksCanadaSponsorship || /(sponsor|sponsorship|visa).{0,100}(canada|canadian)/.test(fieldText)) {
+    return { answer: "No", source: "saved_canada_work_authorization" };
+  }
+
+  return null;
+}
+
+function isYesNoField(field: FieldDescriptor): boolean {
+  const optionText = field.options.join(" ").toLowerCase();
+  if (/\byes\b/.test(optionText) && /\bno\b/.test(optionText)) return true;
+  return /^(radio|checkbox|select)$/i.test(field.type);
 }
 
 function isSensitiveField(field: FieldDescriptor): boolean {

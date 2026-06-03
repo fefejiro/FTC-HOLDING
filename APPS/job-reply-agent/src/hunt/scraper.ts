@@ -6,7 +6,7 @@ import type { NormalizedHuntJob } from "../hunt.js";
 import { resolveProjectPath } from "../db.js";
 import fs from "node:fs";
 
-interface ScrapedJob {
+export interface ScrapedJob {
   title: string;
   company: string;
   location?: string;
@@ -459,20 +459,26 @@ export function ingestScrapedJobs(db: Database.Database, jobs: ScrapedJob[], sou
 
   for (const job of jobs) {
     // Check for existing job by URL or title+company combo
-    const byUrl = db.prepare("SELECT id FROM hunt_jobs WHERE apply_url = ? LIMIT 1").get(job.apply_url);
-    const byTitleCompany = db.prepare("SELECT id FROM hunt_jobs WHERE title = ? AND company = ? AND source = ? LIMIT 1").get(job.title, job.company, source);
+    const byUrl = db.prepare("SELECT id, title, company FROM hunt_jobs WHERE apply_url = ? LIMIT 1").get(job.apply_url);
+    const byTitleCompany = db.prepare("SELECT id, title, company FROM hunt_jobs WHERE title = ? AND company = ? AND source = ? LIMIT 1").get(job.title, job.company, source);
 
-    const existing = (byUrl || byTitleCompany) as { id?: number } | undefined;
+    const existing = (byUrl || byTitleCompany) as { id?: number; title?: string; company?: string } | undefined;
     if (existing?.id) {
+      const nextTitle = shouldRefreshExistingTitle(existing.title || "", job.title) ? job.title : "";
+      const nextCompany = shouldRefreshExistingCompany(existing.company || "", job.company) ? job.company : "";
       db.prepare(
         `UPDATE hunt_jobs
-         SET location=COALESCE(NULLIF(?, ''), location),
+         SET title=COALESCE(NULLIF(?, ''), title),
+             company=COALESCE(NULLIF(?, ''), company),
+             location=COALESCE(NULLIF(?, ''), location),
              source_url=COALESCE(NULLIF(?, ''), source_url),
              description=COALESCE(NULLIF(?, ''), description),
              salary_or_rate=COALESCE(NULLIF(?, ''), salary_or_rate),
              updated_at=?
          WHERE id=?`
       ).run(
+        nextTitle,
+        nextCompany,
         job.location || "",
         job.source_url || "",
         job.description || "",
@@ -508,4 +514,24 @@ export function ingestScrapedJobs(db: Database.Database, jobs: ScrapedJob[], sou
 
   logger.info({ source, ingested }, "Scraped jobs ingested");
   return ingested;
+}
+
+function shouldRefreshExistingTitle(current: string, next: string): boolean {
+  const oldValue = String(current || "").trim();
+  const newValue = String(next || "").trim();
+  if (!newValue) return false;
+  if (!oldValue) return true;
+  if (/easily apply|often replies|view similar jobs|employee assistance|dental care|\$[\d,]/i.test(oldValue)) return true;
+  if (oldValue.length > 120 && newValue.length < oldValue.length) return true;
+  return false;
+}
+
+function shouldRefreshExistingCompany(current: string, next: string): boolean {
+  const oldValue = String(current || "").trim();
+  const newValue = String(next || "").trim();
+  if (!newValue || /^unknown$/i.test(newValue)) return false;
+  if (!oldValue || /^unknown$/i.test(oldValue)) return true;
+  if (/easily apply|often replies|terms|job post|remote|\$[\d,]/i.test(oldValue)) return true;
+  if (oldValue.length > 90 && newValue.length < oldValue.length) return true;
+  return false;
 }

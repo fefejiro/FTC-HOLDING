@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Database from "better-sqlite3";
+import { writeCoverLetterArtifacts } from "../cover_letter.js";
 import { logger } from "../logger.js";
 import { tailorResumeForJD } from "../resume_tailor.js";
 
@@ -21,6 +22,7 @@ type QueueRow = {
   company: string;
   location: string;
   source: string;
+  source_url: string;
   apply_url: string;
   description: string;
   status: string;
@@ -69,7 +71,7 @@ export function buildPremiumQueueReport(
 
   const rows = db
     .prepare(
-      `SELECT j.id, j.title, j.company, j.location, j.source, j.apply_url, j.description,
+      `SELECT j.id, j.title, j.company, j.location, j.source, j.source_url, j.apply_url, j.description,
               j.status, j.score, j.tier, j.next_action,
               a.status AS attempt_status, a.pause_reason, a.resume_artifact_path, a.screenshot_path
        FROM hunt_jobs j
@@ -136,6 +138,7 @@ function classifyPremiumQueueItem(row: QueueRow): PremiumQueueItem {
   const verified = row.status === "applied_verified" || row.attempt_status === "submitted_verified";
   const previouslyBlocked = row.status === "blocked" || row.attempt_status === "blocked";
   const reconciledOldAttempt = /reconciled|not counted as applied|submitted_unverified/i.test(row.pause_reason || "");
+  const noisyIndeedRow = hasNoisyIndeedRow(row);
   const durableDocxResume = Boolean(row.resume_artifact_path && /\.docx$/i.test(row.resume_artifact_path) && fs.existsSync(row.resume_artifact_path) && !/[\\/]temp[\\/]|appdata[\\/]local[\\/]temp/i.test(row.resume_artifact_path));
   const safeCurrentStatus = ["package_generated", "apply_ready"].includes(row.status) || (row.status === "needs_review" && !reconciledOldAttempt && !previouslyBlocked);
 
@@ -151,15 +154,18 @@ function classifyPremiumQueueItem(row: QueueRow): PremiumQueueItem {
   } else if (evidence.postedAgeDays !== null && evidence.postedAgeDays > 21) {
     action = "skip_stale";
     reason = `Posted age is ${evidence.postedAgeDays} days, older than the 21 day freshness gate.`;
+  } else if (previouslyBlocked || reconciledOldAttempt) {
+    action = "review_previous_attempt";
+    reason = "This job has a prior blocked/reconciled attempt, so it needs a fresh live detail check before any new submit.";
+  } else if (noisyIndeedRow) {
+    action = "needs_manual_review";
+    reason = "Indeed row looks noisy or placeholder-derived; refresh from a live detail page before packaging or submit.";
   } else if (localGate) {
     action = "review_location_or_auth";
     reason = "Description contains local, onsite, residency, or hybrid-onsite wording.";
   } else if (externalGate) {
     action = "review_external_high_fit";
     reason = "Live detail or prior attempt says this is regular Apply/external, so Easy Apply-only automation should not submit.";
-  } else if (previouslyBlocked || reconciledOldAttempt) {
-    action = "review_previous_attempt";
-    reason = "This job has a prior blocked/reconciled attempt, so it needs a fresh live detail check before any new submit.";
   } else if (!durableDocxResume) {
     action = "review_missing_artifact";
     reason = "No durable DOCX resume artifact is recorded yet.";
@@ -219,12 +225,17 @@ export async function preparePremiumQueueArtifacts(
         templatePath,
         outputDir
       });
-      const coverLetterPath = writeDurableCoverLetter(outputDir, tailored.docxPath, packageRow.cover_letter_text || "");
+      const cover = await writeDurableCoverLetter(outputDir, tailored.docxPath, packageRow.cover_letter_text || "", {
+        roleTitle: row.title,
+        company: row.company,
+        location: row.location,
+        jobDescription: row.description
+      });
       upsertPreparedArtifactAttempt(db, {
         runId,
         row,
         resumePath: tailored.docxPath,
-        coverLetterPath
+        coverLetterPath: cover.docxPath
       });
       prepared.push({
         jobId: row.id,
@@ -232,7 +243,7 @@ export async function preparePremiumQueueArtifacts(
         company: row.company,
         action: row.action,
         resumePath: tailored.docxPath,
-        coverLetterPath,
+        coverLetterPath: cover.docxPath,
         reason: "Prepared durable role-focused artifacts only; no submit attempted."
       });
     } catch (error) {
@@ -254,9 +265,9 @@ function rankPremiumItem(row: QueueRow, action: PremiumAction, diceMatchScore: n
   const actionWeight: Record<PremiumAction, number> = {
     apply_candidate: 1000,
     review_external_high_fit: 650,
+    review_missing_artifact: 575,
     review_location_or_auth: 450,
     review_previous_attempt: 425,
-    review_missing_artifact: 375,
     needs_manual_review: 350,
     skip_stale: 100,
     skip_low_fit: 50,
@@ -276,6 +287,42 @@ function hasLocationOrResidencyGate(location: string, text: string): boolean {
   if (explicitRemote) return false;
 
   return hasCityStateLocation(combined);
+}
+
+function hasNoisyIndeedRow(row: QueueRow): boolean {
+  if (row.source !== "indeed") return false;
+  const company = (row.company || "").trim();
+  const title = (row.title || "").trim();
+  const url = row.apply_url || row.source_url || "";
+
+  if (/(?:fedcba9876543210|cdef0123456789ab|a1b2c3d4e5f67890|f1e2d3c4b5a67890|123456789abcdef0)/i.test(url)) {
+    return true;
+  }
+
+  if (!company || /^(unknown|terms|privacy|feedback)$/i.test(company)) {
+    return true;
+  }
+
+  if (/\b(?:easily apply|often replies|job description opens|select an option)\b/i.test(`${company}\n${title}`)) {
+    return true;
+  }
+
+  if (
+    /\b(manager|analyst|owner|director|specialist|consultant|coordinator)\b/i.test(company)
+    && (
+      company.length > 25
+      || /\b(remote|hybrid|winnipeg|toronto|ontario|canada|month|contract|fully|new)\b/i.test(company)
+      || /\b[A-Z]\d[A-Z]\s*\d[A-Z]\d\b/i.test(company)
+    )
+  ) {
+    return true;
+  }
+
+  if (company.length > 90 || title.length > 150) {
+    return true;
+  }
+
+  return false;
 }
 
 function hasCityStateLocation(value: string): boolean {
@@ -303,12 +350,18 @@ function resolveTemplatePath(templatePath: string): string {
   return candidates.find((candidate) => fs.existsSync(candidate)) || "";
 }
 
-function writeDurableCoverLetter(outputDir: string, docxPath: string, coverText: string): string {
-  fs.mkdirSync(outputDir, { recursive: true });
-  const coverBase = path.basename(docxPath).replace(/\.docx$/i, "_Cover_Letter.txt");
-  const coverLetterPath = path.join(outputDir, coverBase);
-  fs.writeFileSync(coverLetterPath, coverText || "", "utf8");
-  return coverLetterPath;
+async function writeDurableCoverLetter(
+  outputDir: string,
+  docxPath: string,
+  coverText: string,
+  fallback: { roleTitle: string; company: string; location?: string; jobDescription?: string }
+): Promise<{ textPath: string; docxPath: string }> {
+  return writeCoverLetterArtifacts({
+    outputDir,
+    resumeDocxPath: docxPath,
+    coverText,
+    fallback
+  });
 }
 
 function createArtifactPrepRun(db: Database.Database, requested: number): number {
