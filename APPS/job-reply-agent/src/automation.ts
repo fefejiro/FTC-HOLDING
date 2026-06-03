@@ -2044,6 +2044,12 @@ function diceDebugDir(): string {
   return dir;
 }
 
+function indeedProofDir(): string {
+  const dir = resolveProjectPath(".local", "indeed-proof");
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
 function safeFileSlug(value: string): string {
   return clean(value)
     .replace(/[^a-zA-Z0-9]+/g, "-")
@@ -2383,6 +2389,76 @@ async function verifyDiceAppliedHistory(args: {
     };
   } finally {
     await page.close().catch(() => undefined);
+  }
+}
+
+export function matchesIndeedAppliedHistoryText(args: {
+  text: string;
+  title: string;
+  company: string;
+}): boolean {
+  const normalized = normalizeProofText(args.text);
+  const titleNeedle = normalizeProofText(args.title);
+  const companyNeedle = normalizeProofText(args.company);
+  const titleWords = titleNeedle.split(" ").filter((word) => word.length > 2);
+  const companyWords = companyNeedle.split(" ").filter((word) => word.length > 2 && !["inc", "llc", "ltd", "corp", "co"].includes(word));
+  const titleMatched = Boolean(titleNeedle)
+    && (normalized.includes(titleNeedle) || titleWords.filter((word) => normalized.includes(word)).length >= Math.min(3, titleWords.length));
+  const companyMatched = Boolean(companyNeedle)
+    && (normalized.includes(companyNeedle) || companyWords.filter((word) => normalized.includes(word)).length >= Math.min(2, companyWords.length || 2));
+  return titleMatched && companyMatched;
+}
+
+export async function verifyIndeedAppliedHistoryForJob(job: {
+  title: string;
+  company: string;
+}): Promise<{ ok: boolean; reason: string; url?: string; screenshotPath?: string }> {
+  const cdpUrl = process.env.JOB_AGENT_CDP_URL;
+  if (!cdpUrl) {
+    return {
+      ok: false,
+      reason: "Indeed Applied verification requires the existing Fejiro Chrome CDP session. Set JOB_AGENT_CDP_URL before verifying."
+    };
+  }
+
+  const playwright = await import("playwright");
+  const browser = await playwright.chromium.connectOverCDP(cdpUrl);
+  const context = browser.contexts()[0] || (await browser.newContext());
+  const page = await context.newPage();
+  const screenshotPath = path.join(indeedProofDir(), `indeed-applied-history-${safeFileSlug(`${job.company}-${job.title}`)}-${Date.now()}.png`);
+
+  try {
+    await page.goto("https://myjobs.indeed.com/applied", { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForTimeout(5000);
+    const text = await collectVisibleTextIncludingShadow(page).catch(() => "");
+    await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
+    if (/dashboard\/login|\/login|sign\s*in|log\s*in|create an account|continue with google/i.test(`${page.url()} ${text}`)) {
+      return {
+        ok: false,
+        reason: "Indeed Applied verification could not run because the CDP browser is not signed in to Indeed.",
+        url: page.url(),
+        screenshotPath
+      };
+    }
+
+    if (matchesIndeedAppliedHistoryText({ text, title: job.title, company: job.company })) {
+      return {
+        ok: true,
+        reason: `${job.company} - ${job.title} appears in Indeed My Jobs Applied history.`,
+        url: page.url(),
+        screenshotPath
+      };
+    }
+
+    return {
+      ok: false,
+      reason: `${job.company} - ${job.title} was not found in Indeed My Jobs Applied history.`,
+      url: page.url(),
+      screenshotPath
+    };
+  } finally {
+    await page.close().catch(() => undefined);
+    await browser.close().catch(() => undefined);
   }
 }
 

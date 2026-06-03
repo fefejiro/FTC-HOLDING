@@ -32,6 +32,7 @@ const HUNT_COMMANDS = new Set([
   "hunt:scrape-all",
   "hunt:dice-preflight",
   "hunt:verify-dice-applied",
+  "hunt:verify-indeed-applied",
   "hunt:application-proof",
   "hunt:reconcile-application-proof",
   "hunt:trust-report",
@@ -133,6 +134,34 @@ export async function runHuntCommand(args: {
         .run(result.reason, result.screenshotPath || null, now, job.id);
     }
     logger.info({ job, result }, "hunt:verify-dice-applied completed.");
+    return;
+  }
+
+  if (command === "hunt:verify-indeed-applied") {
+    if (!args.jobIdArg) {
+      throw new Error("Missing --job-id argument for hunt:verify-indeed-applied.");
+    }
+    const job = db.prepare("SELECT id, title, company FROM hunt_jobs WHERE id=? LIMIT 1").get(args.jobIdArg) as { id: number; title: string; company: string } | undefined;
+    if (!job) {
+      throw new Error(`Job ${args.jobIdArg} not found.`);
+    }
+    const { verifyIndeedAppliedHistoryForJob } = await import("../automation.js");
+    const result = await verifyIndeedAppliedHistoryForJob(job);
+    if (result.ok) {
+      const now = new Date().toISOString();
+      db.prepare("UPDATE hunt_jobs SET status='applied_verified', next_action='interview_followup', updated_at=? WHERE id=?").run(now, job.id);
+      db.prepare(`
+        UPDATE application_attempts
+        SET status='submitted_verified',
+            pause_reason=?,
+            screenshot_path=COALESCE(?, screenshot_path),
+            final_url=COALESCE(?, final_url),
+            submitted_at=COALESCE(submitted_at, ?),
+            updated_at=?
+        WHERE job_id=?
+      `).run(result.reason, result.screenshotPath || null, result.url || null, now, now, job.id);
+    }
+    logger.info({ job, result }, "hunt:verify-indeed-applied completed.");
     return;
   }
 

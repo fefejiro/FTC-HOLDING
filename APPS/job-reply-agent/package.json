@@ -53,6 +53,7 @@
     "hunt:scrape-all": "tsx src/main.ts hunt:scrape-all",
     "hunt:dice-preflight": "tsx src/main.ts hunt:dice-preflight",
     "hunt:verify-dice-applied": "tsx src/main.ts hunt:verify-dice-applied",
+    "hunt:verify-indeed-applied": "tsx src/main.ts hunt:verify-indeed-applied",
     "hunt:application-proof": "tsx src/main.ts hunt:application-proof",
     "hunt:reconcile-application-proof": "tsx src/main.ts hunt:reconcile-application-proof",
     "hunt:trust-report": "tsx src/main.ts hunt:trust-report",
