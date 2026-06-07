@@ -261,6 +261,11 @@ def upload_file_from_resume_options(window, file_path: str, wait_seconds: float)
     if "Upload a different file" not in visible_text(window):
         window.set_focus()
         time.sleep(0.2)
+        keyboard.send_keys("{ENTER}")
+        time.sleep(0.6)
+    if "Upload a different file" not in visible_text(window):
+        window.set_focus()
+        time.sleep(0.2)
         keyboard.send_keys("{SPACE}")
         time.sleep(0.6)
     if not click_visible_button(window, "Resume options", scroll_attempts=3):
@@ -438,6 +443,17 @@ def run_dom_dump(window, wait_seconds: float) -> dict:
     text: clean(a.innerText || a.textContent || a.getAttribute('aria-label') || ''),
     href: a.href || ''
   })).filter((item) => item.text || item.href).slice(0, 500);
+  const controls = [...document.querySelectorAll('button,a,input[type="button"],input[type="submit"],[role="button"],[role="menuitem"]')].map((el) => {
+    const rect = el.getBoundingClientRect();
+    return {
+      text: clean(el.innerText || el.textContent || el.value || el.getAttribute('aria-label') || ''),
+      tag: el.tagName,
+      role: el.getAttribute('role') || '',
+      type: el.getAttribute('type') || '',
+      disabled: Boolean(el.disabled || el.getAttribute('aria-disabled') === 'true'),
+      rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }
+    };
+  }).filter((item) => item.text || item.role || item.type).slice(0, 500);
   const cards = [...document.querySelectorAll('[data-jk], li, div')].map((el) => {
     const text = clean(el.innerText || el.textContent || '');
     const link = el.querySelector && el.querySelector('a[href]');
@@ -449,6 +465,7 @@ def run_dom_dump(window, wait_seconds: float) -> dict:
     title: document.title,
     text: clean(document.body.innerText || '').slice(0, 20000),
     links,
+    controls,
     cards
   };
   document.documentElement.innerHTML = '<head><title>Job Agent DOM Dump</title></head><body><pre id="job-agent-dump" style="white-space:pre-wrap;font:12px monospace;"></pre></body>';
