@@ -12,7 +12,8 @@ The job agent is operating in proof-first mode. Dice, Indeed, and Monster discov
 - Gmail cycle ran cleanly: processed `0`, drafted `0`, sent `0`, skipped `8` self-sent messages, errors `0`.
 - Scheduled tasks are enabled and returning last result `0`.
 - Build passes.
-- Full test suite passes: `9 files / 70 tests`.
+- Full test suite passes: `9 files / 71 tests`.
+- Discovery scheduler now continues visible Fejiro Dice/Indeed/Monster discovery even when CDP is unavailable; it does not submit applications in that mode.
 
 ## Discovery And Packages
 
@@ -55,28 +56,35 @@ The job agent is operating in proof-first mode. Dice, Indeed, and Monster discov
 
 Chrome CDP is unavailable on `127.0.0.1:9333`.
 
-Because of that, Dice/Indeed submit automation must not launch another browser profile. The agent now pauses Dice apply attempts when auth is only available through the visible Fejiro fallback.
+Because of that, Dice/Indeed submit automation must not launch another browser profile. The agent now pauses Dice/Indeed apply attempts when auth is only available through the visible Fejiro fallback.
 
-Safe next step to enable verified submissions:
+Latest CDP test:
 
-1. Close all Chrome windows.
-2. Start Fejiro Chrome with CDP:
+- Closing Chrome and relaunching the real Fejiro `Profile 5` with `--remote-debugging-port=9333` started Chrome with the flag, but Chrome did not expose the port.
+- A `.local` cloned Fejiro profile did expose CDP on `127.0.0.1:9333`, but Dice auth did not carry over and Chrome showed the copied profile as `Paused`.
+- Therefore the clone is not safe for submissions unless the user signs into Dice/Indeed/Monster inside that CDP-enabled clone once.
 
-```powershell
-npm --prefix APPS/job-reply-agent run browser:attach-chrome
-```
+Safe next paths to enable verified submissions:
 
-3. Confirm:
+1. User signs into Dice/Indeed/Monster once inside the CDP-enabled local profile, then rerun:
 
 ```powershell
 npm --prefix APPS/job-reply-agent run auth:doctor
 ```
 
-4. Only then retry:
+2. Or continue using the real visible Fejiro profile for discovery, package generation, screenshots, and `manual_open_pause` until a trusted submit verifier exists.
+
+3. Only after auth is valid in the controllable profile, retry a proof-backed apply command:
 
 ```powershell
 npm --prefix APPS/job-reply-agent run hunt:apply-one -- --job-id=917
 ```
+
+## Latest Application State
+
+- No new job was counted as submitted in the latest run.
+- New Indeed packages for jobs `1077`, `1078`, and `1079` were generated and opened through visible Fejiro Chrome, then recorded as `manual_open_pause` with trusted resume and cover artifacts.
+- Latest status snapshot: `applied_verified=27`, `submitted_verified=8`, `submitted_unverified=0`, `auto_apply_ready=20`, `auto_apply_paused=366`.
 
 ## Latest Evidence Commands
 
@@ -90,4 +98,3 @@ npm --prefix APPS/job-reply-agent run hunt:status
 npm --prefix APPS/job-reply-agent run hunt:trust-report -- --limit=20
 npm --prefix APPS/job-reply-agent run browser:fejiro-status
 ```
-
