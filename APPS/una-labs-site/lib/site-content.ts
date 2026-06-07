@@ -928,6 +928,7 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     heroStats: [
       { value: 'Live', label: 'Ottawa deployment', detail: 'The system is running in the real world, not a design mockup.' },
       { value: 'Operational', label: 'Workflow product', detail: 'Customer requests, operator state, and status updates all matter.' },
+      { value: 'Play Store', label: 'Android listed live', detail: 'Dispatch is represented as a live Android app in the production portfolio status board.' },
       { value: 'Proof', label: 'For Una Labs', detail: 'This is one of the strongest examples of the build standard behind the brand.' },
     ],
     heroVisual: 'delivery',
@@ -1134,6 +1135,82 @@ export const caseStudies: Record<string, CaseStudyContent> = {
         description: 'Products with richer delivery context need better reporting and proof layers too.',
         href: '/product/reporting',
         hrefLabel: 'View reporting',
+      },
+    ],
+  },
+
+  anion: {
+    slug: 'anion',
+    title: 'Anion Class App',
+    metaTitle: 'Anion Class App Case Study',
+    metaDescription:
+      'An education product foundation that shows Una Labs can structure a premium tutoring platform with clear phase-by-phase execution.',
+    eyebrow: 'Case study',
+    headline: 'Anion Class App is a structured education product build in progress',
+    subheadline:
+      'Anion demonstrates how Una Labs handles products that require role-based access, bookings, subscriptions, and parent-student trust. The foundation is complete, and the next execution phase is clearly scoped.',
+    primaryAction: { label: 'Review readiness brief', href: '/status?project=anion' },
+    secondaryAction: { label: 'Start a similar build', href: '/start?source=case_study_anion&product=education' },
+    liveUrl: '',
+    heroStats: [
+      { value: 'Foundation', label: 'Scaffold complete', detail: 'Web shell, mobile shell, shared packages, and schema planning are in repo.' },
+      { value: 'Governed', label: 'Execution path', detail: 'Auth, tutor discovery, booking, and billing are sequenced in a controlled roadmap.' },
+      { value: 'Pre-launch', label: 'No risky claims', detail: 'Positioned honestly as build-in-progress with production intent.' },
+    ],
+    heroVisual: 'intake',
+    challenge: {
+      eyebrow: 'What mattered',
+      title: 'Education products fail when trust and workflow are loosely defined',
+      body:
+        'Parents, students, and tutors need predictable flows: account setup, discovery, availability, booking, payment, and post-session continuity. Anion is structured around making these paths explicit before launch.',
+      points: [
+        'Role boundaries need to be clear across parent, tutor, and admin contexts.',
+        'Booking and subscription logic must be reliable before marketing scale.',
+        'Product messaging must be precise about what is already live versus planned.',
+      ],
+    },
+    shipped: [
+      {
+        icon: '🏗️',
+        title: 'Repo-level product foundation',
+        description: 'Core documentation, schema baseline, and app scaffolds are in place for disciplined implementation.',
+      },
+      {
+        icon: '🧭',
+        title: 'Phase-by-phase roadmap',
+        description: 'The next lanes are explicit: Supabase auth, tutor discovery, booking flow, and payments integration.',
+      },
+      {
+        icon: '🛡️',
+        title: 'Truthful portfolio positioning',
+        description: 'Anion is represented as a structured pre-launch product instead of being overstated as fully live.',
+      },
+    ],
+    impact: {
+      eyebrow: 'Why it matters for Una Labs',
+      title: 'Anion adds depth to the portfolio with transparent execution maturity',
+      body:
+        'This case study shows that Una Labs can structure complex education software responsibly: clear constraints, staged delivery, and honest go-to-market positioning.',
+      points: [
+        'It broadens the portfolio beyond operations and local-services products.',
+        'It demonstrates disciplined planning for high-trust workflows.',
+        'It gives clients a credible view of what pre-launch readiness looks like.',
+      ],
+    },
+    related: [
+      {
+        eyebrow: 'Related case study',
+        title: 'PeacePad',
+        description: 'Another trust-sensitive product where calm UX and operational discipline matter.',
+        href: '/products/peacepad',
+        hrefLabel: 'See PeacePad',
+      },
+      {
+        eyebrow: 'Related surface',
+        title: 'Intake & Scoping',
+        description: 'The same structured intake model used for live products is used to govern Anion execution.',
+        href: '/product/intake-scoping',
+        hrefLabel: 'View intake surface',
       },
     ],
   },
