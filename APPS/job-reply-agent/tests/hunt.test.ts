@@ -562,6 +562,50 @@ describe("hunt flow", () => {
     expect(jobRow.status).toBe("package_generated");
   });
 
+  it("premium artifact prep can build durable artifacts when a high-fit row has no hunt package yet", async () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    const job = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Business Product Manager",
+      "Premium Retail Services",
+      "Remote",
+      "indeed",
+      "https://ca.indeed.com/viewjob?jk=premium-product",
+      "Easy Apply product delivery role covering retail systems, backlog refinement, stakeholder engagement, UAT, POS workflow, analytics, and enterprise process improvement.",
+      "needs_review",
+      96,
+      "tier_1",
+      now,
+      now
+    );
+
+    const templatePath = path.resolve(
+      ".local",
+      "resume-references",
+      "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
+    );
+    const outputDir = path.resolve(".local", "generated-tests", "premium-artifacts-no-package");
+    const result = await preparePremiumQueueArtifacts(db, {
+      limit: 1,
+      sourceFilter: "indeed",
+      templatePath,
+      outputDir
+    });
+    const attempt = db.prepare("SELECT status, resume_artifact_path, cover_letter_artifact_path FROM application_attempts WHERE job_id=?")
+      .get(Number(job.lastInsertRowid)) as any;
+
+    expect(result.skipped).toHaveLength(0);
+    expect(result.prepared).toHaveLength(1);
+    expect(fs.existsSync(attempt.resume_artifact_path)).toBe(true);
+    expect(fs.existsSync(attempt.cover_letter_artifact_path)).toBe(true);
+    expect(attempt.resume_artifact_path).toMatch(/\.docx$/);
+    expect(attempt.cover_letter_artifact_path).toMatch(/\.docx$/);
+    expect(attempt.status).toBe("paused");
+  });
+
   it("trust report orders by latest application activity instead of attempt id", () => {
     const db = getDb(":memory:");
     const older = "2026-06-02T09:00:00.000Z";

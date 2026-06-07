@@ -228,10 +228,6 @@ export async function preparePremiumQueueArtifacts(
     const packageRow = db
       .prepare("SELECT cover_letter_text FROM hunt_packages WHERE job_id=? LIMIT 1")
       .get(row.id) as { cover_letter_text?: string } | undefined;
-    if (!packageRow) {
-      skipped.push({ jobId: row.id, title: row.title, company: row.company, action: row.action, reason: "No generated hunt package exists yet." });
-      continue;
-    }
 
     try {
       const tailored = await tailorResumeForJD({
@@ -240,7 +236,7 @@ export async function preparePremiumQueueArtifacts(
         templatePath,
         outputDir
       });
-      const cover = await writeDurableCoverLetter(outputDir, tailored.docxPath, packageRow.cover_letter_text || "", {
+      const cover = await writeDurableCoverLetter(outputDir, tailored.docxPath, packageRow?.cover_letter_text || buildSafeCoverLetterText(row), {
         roleTitle: row.title,
         company: row.company,
         location: row.location,
@@ -482,6 +478,40 @@ async function writeDurableCoverLetter(
     coverText,
     fallback
   });
+}
+
+function buildSafeCoverLetterText(row: QueueRow): string {
+  const title = cleanInline(row.title || "the role");
+  const company = cleanInline(row.company || "your team");
+  const focus = inferCoverFocus(row);
+  return [
+    "Dear Hiring Team,",
+    "",
+    `I am writing to express my interest in the ${title} role at ${company}. My background spans enterprise systems delivery, business analysis, stakeholder engagement, process improvement, and cross-functional technology implementation across retail, logistics, public-sector, and operations-focused environments.`,
+    "",
+    `This opportunity stood out because it aligns with my experience in ${focus}. I bring a practical delivery style, strong documentation discipline, and the ability to work with business and technical teams to clarify needs, manage execution, support UAT, and improve workflows without losing sight of operational outcomes.`,
+    "",
+    "I would welcome the opportunity to discuss how my experience can support your team.",
+    "",
+    "Sincerely,",
+    "Fejiro Efiuvwere"
+  ].join("\n");
+}
+
+function inferCoverFocus(row: QueueRow): string {
+  const text = `${row.title}\n${row.description}`.toLowerCase();
+  const matches = [
+    { re: /\b(wms|warehouse|inventory|logistics|supply chain|blue yonder|manhattan)\b/i, text: "WMS, supply chain systems, operational workflows, data validation, and implementation support" },
+    { re: /\b(erp|sap|oracle|dynamics|netsuite|business central)\b/i, text: "ERP transformation, systems integration, process mapping, stakeholder coordination, and delivery governance" },
+    { re: /\b(product|backlog|roadmap|owner|user stories|acceptance criteria)\b/i, text: "product delivery, backlog refinement, requirements management, stakeholder alignment, and user-focused implementation" },
+    { re: /\b(project manager|program manager|pmo|governance|risk|raid|vendor)\b/i, text: "project delivery, governance, vendor coordination, release readiness, risk management, and executive reporting" },
+    { re: /\b(business analyst|requirements|process mapping|uat|jira|confluence|devops)\b/i, text: "requirements gathering, current-state and future-state analysis, process mapping, Agile delivery, UAT, and business documentation" }
+  ];
+  return matches.find((match) => match.re.test(text))?.text || "enterprise technology delivery, stakeholder engagement, requirements clarification, UAT support, and process improvement";
+}
+
+function cleanInline(value: string): string {
+  return value.replace(/\s+/g, " ").replace(/[<>]/g, "").trim();
 }
 
 function createArtifactPrepRun(db: Database.Database, requested: number): number {
