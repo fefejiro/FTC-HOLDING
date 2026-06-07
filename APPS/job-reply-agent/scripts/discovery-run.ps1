@@ -61,19 +61,17 @@ try {
     $env:JOB_AGENT_CDP_URL = "http://127.0.0.1:9333"
     $env:JOB_AGENT_REQUIRE_CDP = "true"
     $env:JOB_AGENT_SCRAPER_TIMEOUT_MS = "30000"
-
-    $diceExit = Run-Step "2. Visible Dice discovery" "npm run hunt:scrape-dice:visible -- -Limit 20"
-    $indeedExit = Run-Step "3. Visible Indeed discovery" "npm run hunt:scrape-indeed:visible -- -Limit 20"
-    $monsterExit = Run-Step "4. Visible Monster discovery" "npm run hunt:scrape-monster:visible -- -Limit 20"
-
-    if ($diceExit -ne 0) { "Dice discovery exited with $diceExit; continuing to queues." | Tee-Object -FilePath $log -Append }
-    if ($indeedExit -ne 0) { "Indeed discovery exited with $indeedExit; continuing to queues." | Tee-Object -FilePath $log -Append }
-    if ($monsterExit -ne 0) { "Monster discovery exited with $monsterExit; continuing to queues." | Tee-Object -FilePath $log -Append }
   } else {
-    "No Chrome CDP session is available on 127.0.0.1:9333. Discovery scheduler will not launch Chrome or submit applications." | Tee-Object -FilePath $log -Append
-    $statusOnlyExit = Run-Step "2. Status snapshot" "npm run hunt:status"
-    if ($statusOnlyExit -ne 0) { exit $statusOnlyExit }
+    "No Chrome CDP session is available on 127.0.0.1:9333. Continuing with visible Fejiro Chrome discovery only; no submissions will be attempted." | Tee-Object -FilePath $log -Append
   }
+
+  $diceExit = Run-Step "2. Visible Dice discovery" "npm run hunt:scrape-dice:visible -- -Limit 20"
+  $indeedExit = Run-Step "3. Visible Indeed discovery" "npm run hunt:scrape-indeed:visible -- -Limit 20"
+  $monsterExit = Run-Step "4. Visible Monster discovery" "npm run hunt:scrape-monster:visible -- -Limit 20"
+
+  if ($diceExit -ne 0) { "Dice discovery exited with $diceExit; continuing to queues." | Tee-Object -FilePath $log -Append }
+  if ($indeedExit -ne 0) { "Indeed discovery exited with $indeedExit; continuing to queues." | Tee-Object -FilePath $log -Append }
+  if ($monsterExit -ne 0) { "Monster discovery exited with $monsterExit; continuing to queues." | Tee-Object -FilePath $log -Append }
 
   $queueDiceExit = Run-Step "5. Premium Dice queue" "npm run hunt:premium-queue -- --source=dice --limit=20"
   $queueIndeedExit = Run-Step "6. Premium Indeed queue" "npm run hunt:premium-queue -- --source=indeed --limit=20"
