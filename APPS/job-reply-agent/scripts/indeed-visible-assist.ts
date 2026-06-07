@@ -35,6 +35,14 @@ function safeSlug(value: string): string {
     .slice(0, 80) || "indeed-job";
 }
 
+function shortResumeCopy(job: JobRow, resumePath: string): string {
+  const dir = path.dirname(resumePath);
+  const role = safeSlug(job.title).replace(/-/g, "_").slice(0, 28) || "resume";
+  const shortPath = path.join(dir, `I_${job.id}_${role}_Resume.docx`);
+  fs.copyFileSync(resumePath, shortPath);
+  return shortPath;
+}
+
 function getArg(name: string): string {
   const prefix = `--${name}=`;
   const direct = process.argv.find((arg) => arg.startsWith(prefix));
@@ -190,9 +198,23 @@ function upsertAttempt(db: ReturnType<typeof getDb>, args: {
 }
 
 function classifyPage(dumpPath: string): { status: string; reason: string; finalUrl: string } {
-  const dump = JSON.parse(fs.readFileSync(dumpPath, "utf8")) as { url?: string; title?: string; text?: string };
+  const dump = JSON.parse(fs.readFileSync(dumpPath, "utf8")) as {
+    url?: string;
+    title?: string;
+    text?: string;
+    uploadResult?: { ok?: boolean; reason?: string };
+  };
   const text = clean(`${dump.title || ""} ${dump.url || ""} ${dump.text || ""}`);
   const finalUrl = clean(dump.url);
+  const uploadReason = clean(dump.uploadResult?.reason);
+
+  if (dump.uploadResult && !dump.uploadResult.ok) {
+    return {
+      status: "manual_open_pause",
+      reason: `Indeed generated resume upload is not verified: ${uploadReason || "unknown upload failure"}`,
+      finalUrl
+    };
+  }
 
   if (/job is no longer available|no longer accepting applications|not found|404/i.test(text)) {
     return { status: "blocked", reason: "Indeed posting appears closed or unavailable; no submit attempted.", finalUrl };
@@ -203,6 +225,13 @@ function classifyPage(dumpPath: string): { status: string; reason: string; final
   }
 
   if (/smartapply\.indeed\.com\/beta\/indeedapply\/form\/resume-selection-module/i.test(finalUrl) || /upload or create a resume|resume selection|select a resume/i.test(text)) {
+    if (dump.uploadResult?.ok) {
+      return {
+        status: "manual_open_pause",
+        reason: `Indeed SmartApply generated resume upload verified. ${uploadReason} Continue/submit remains paused until review, cover letter, screeners, and applied-history proof are verified.`,
+        finalUrl
+      };
+    }
     if (/use your indeed resume|recommended .*\.pdf|uploaded (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(text)) {
       return {
         status: "manual_open_pause",
@@ -248,6 +277,7 @@ async function main(): Promise<void> {
   const jobIdArg = Number(getArg("job-id") || NaN);
   const clickApply = hasFlag("click-apply");
   const prepareOnly = hasFlag("prepare-only");
+  const uploadResume = hasFlag("upload-resume");
   const job = selectJob(db, Number.isFinite(jobIdArg) ? jobIdArg : undefined);
   if (!job) {
     throw new Error("No eligible Indeed job found. Run npm run hunt:scrape-indeed:visible first.");
@@ -259,12 +289,13 @@ async function main(): Promise<void> {
 
   const runId = createRun(db);
   const artifacts = await prepareArtifacts(job);
+  const resumeForAttempt = uploadResume ? shortResumeCopy(job, artifacts.resumePath) : artifacts.resumePath;
   if (prepareOnly) {
     finishRun(db, runId, {
       jobId: job.id,
       status: "package_prepared",
       reason: "Generated Indeed resume and cover letter artifacts without browser navigation.",
-      resumePath: artifacts.resumePath,
+      resumePath: resumeForAttempt,
       coverLetterPath: artifacts.coverLetterPath
     });
 
@@ -276,7 +307,7 @@ async function main(): Promise<void> {
       tier: job.tier,
       status: "package_prepared",
       reason: "Generated Indeed resume and cover letter artifacts without browser navigation.",
-      resumePath: artifacts.resumePath,
+      resumePath: resumeForAttempt,
       coverLetterPath: artifacts.coverLetterPath
     }, null, 2));
 
@@ -302,6 +333,9 @@ async function main(): Promise<void> {
   if (clickApply) {
     pythonArgs.push("--click-apply", "--click-wait", "6");
   }
+  if (uploadResume) {
+    pythonArgs.push("--upload-file", resumeForAttempt, "--upload-wait", "10");
+  }
   execFileSync("python", pythonArgs, { stdio: "inherit" });
 
   const page = classifyPage(dumpPath);
@@ -312,7 +346,7 @@ async function main(): Promise<void> {
     reason: page.reason,
     finalUrl: page.finalUrl || job.apply_url,
     screenshotPath,
-    resumePath: artifacts.resumePath,
+    resumePath: resumeForAttempt,
     coverLetterPath: artifacts.coverLetterPath
   });
   finishRun(db, runId, {
@@ -321,7 +355,7 @@ async function main(): Promise<void> {
     reason: page.reason,
     clickedApply: clickApply,
     screenshotPath,
-    resumePath: artifacts.resumePath,
+    resumePath: resumeForAttempt,
     coverLetterPath: artifacts.coverLetterPath
   });
 
@@ -336,7 +370,7 @@ async function main(): Promise<void> {
     clickedApply: clickApply,
     finalUrl: page.finalUrl || job.apply_url,
     screenshotPath,
-    resumePath: artifacts.resumePath,
+    resumePath: resumeForAttempt,
     coverLetterPath: artifacts.coverLetterPath
   }, null, 2));
 
