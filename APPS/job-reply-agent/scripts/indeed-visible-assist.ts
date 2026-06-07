@@ -203,10 +203,12 @@ function classifyPage(dumpPath: string): { status: string; reason: string; final
     title?: string;
     text?: string;
     uploadResult?: { ok?: boolean; reason?: string };
+    supportingUploadResult?: { ok?: boolean; reason?: string };
   };
   const text = clean(`${dump.title || ""} ${dump.url || ""} ${dump.text || ""}`);
   const finalUrl = clean(dump.url);
   const uploadReason = clean(dump.uploadResult?.reason);
+  const supportingUploadReason = clean(dump.supportingUploadResult?.reason);
 
   if (dump.uploadResult && !dump.uploadResult.ok) {
     return {
@@ -216,8 +218,40 @@ function classifyPage(dumpPath: string): { status: string; reason: string; final
     };
   }
 
+  if (dump.supportingUploadResult && !dump.supportingUploadResult.ok) {
+    return {
+      status: "manual_open_pause",
+      reason: `Indeed cover letter/supporting document upload is not verified: ${supportingUploadReason || "unknown upload failure"}`,
+      finalUrl
+    };
+  }
+
   if (/job is no longer available|no longer accepting applications|not found|404/i.test(text)) {
     return { status: "blocked", reason: "Indeed posting appears closed or unavailable; no submit attempted.", finalUrl };
+  }
+
+  if (/work location:\s*in person|reliably commute or plan to relocate|ability to commute\/relocate/i.test(text)) {
+    return {
+      status: "blocked",
+      reason: "Indeed live detail shows in-person/commute-or-relocate requirements, so this is not safe for automatic remote-focused submission. No submit attempted.",
+      finalUrl
+    };
+  }
+
+  if (/\bhybrid work model\b|(?:\b2|\b3|\btwo|\bthree)\s+days?\s+per\s+week\s+in\b|days?\s+per\s+week\s+(?:at|in)\s+.*\boffice\b/i.test(text)) {
+    return {
+      status: "blocked",
+      reason: "Indeed live detail shows a hybrid/in-office schedule requirement, so this is not safe for automatic remote-focused submission. No submit attempted.",
+      finalUrl
+    };
+  }
+
+  if (/647[-\s]?473[-\s]?3500|\+1[-\s]?647[-\s]?473[-\s]?3500/i.test(text)) {
+    return {
+      status: "manual_open_pause",
+      reason: "Indeed SmartApply is showing the stale old phone number 647-473-3500. Update to +1 416 473 2732 before continuing or submitting.",
+      finalUrl
+    };
   }
 
   if (/sign in|login|verify it'?s you|enter code|continue with google/i.test(text)) {
@@ -246,7 +280,22 @@ function classifyPage(dumpPath: string): { status: string; reason: string; final
     };
   }
 
+  if (/apply on company site|apply on employer site|continue on company site|company website/i.test(text)) {
+    return {
+      status: "manual_open_pause",
+      reason: "Indeed posting is an external/company-site application, not Indeed Easy Apply. Package is ready, but submission needs a separate verified company-site proof path.",
+      finalUrl
+    };
+  }
+
   if (/smartapply\.indeed\.com\/beta\/indeedapply\/form\/review-module/i.test(finalUrl) || /review your application|submit your application|captcha|recaptcha|i'?m not a robot/i.test(text)) {
+    if (dump.supportingUploadResult?.ok) {
+      return {
+        status: "manual_open_pause",
+        reason: `Indeed SmartApply review reached with generated cover/supporting document verified. ${supportingUploadReason} Final submit remains paused until resume selection, role/company, screeners, and applied-history proof are verified.`,
+        finalUrl
+      };
+    }
     return {
       status: "manual_open_pause",
       reason: "Indeed SmartApply review or human-verification step reached with generated artifacts recorded; final submit remains paused until the page can be visually verified and applied-history proof can be captured.",
@@ -278,6 +327,7 @@ async function main(): Promise<void> {
   const clickApply = hasFlag("click-apply");
   const prepareOnly = hasFlag("prepare-only");
   const uploadResume = hasFlag("upload-resume");
+  const uploadCover = hasFlag("upload-cover");
   const job = selectJob(db, Number.isFinite(jobIdArg) ? jobIdArg : undefined);
   if (!job) {
     throw new Error("No eligible Indeed job found. Run npm run hunt:scrape-indeed:visible first.");
@@ -336,6 +386,9 @@ async function main(): Promise<void> {
   if (uploadResume) {
     pythonArgs.push("--upload-file", resumeForAttempt, "--upload-wait", "10");
   }
+  if (uploadCover) {
+    pythonArgs.push("--upload-supporting-file", artifacts.coverLetterPath, "--upload-wait", "10");
+  }
   execFileSync("python", pythonArgs, { stdio: "inherit" });
 
   const page = classifyPage(dumpPath);
@@ -354,6 +407,7 @@ async function main(): Promise<void> {
     status: page.status,
     reason: page.reason,
     clickedApply: clickApply,
+    uploadedCover: uploadCover,
     screenshotPath,
     resumePath: resumeForAttempt,
     coverLetterPath: artifacts.coverLetterPath
@@ -368,6 +422,7 @@ async function main(): Promise<void> {
     status: page.status,
     reason: page.reason,
     clickedApply: clickApply,
+    uploadedCover: uploadCover,
     finalUrl: page.finalUrl || job.apply_url,
     screenshotPath,
     resumePath: resumeForAttempt,

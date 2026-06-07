@@ -131,7 +131,7 @@ def run_javascript_url(window, payload: str, wait_seconds: float) -> None:
 def click_apply_control(window, wait_seconds: float) -> None:
     payload = r"""(() => {
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-  const candidates = [...document.querySelectorAll('button,a,input[type="button"],input[type="submit"]')];
+  const candidates = [...document.querySelectorAll('button,a,input[type="button"],input[type="submit"],[role="button"]')];
   const target = candidates.find((el) => {
     const text = clean(el.innerText || el.textContent || el.value || el.getAttribute('aria-label') || '');
     return /^(apply with indeed|apply now|continue to apply|apply)$/i.test(text) || /apply with indeed|indeed apply/i.test(text);
@@ -145,6 +145,9 @@ def click_apply_control(window, wait_seconds: float) -> None:
   document.documentElement.setAttribute('data-job-agent-click-apply', 'clicked');
 })()"""
     run_javascript_url(window, payload, wait_seconds)
+    if "Apply with Indeed" in visible_text(window):
+        click_visible_text(window, "Apply with Indeed")
+        time.sleep(wait_seconds)
 
 
 def click_text_control(window, text_pattern: str, wait_seconds: float) -> None:
@@ -201,7 +204,9 @@ def click_visible_button(window, label: str, scroll_attempts: int = 0) -> bool:
                 except Exception:
                     pass
         if attempt < scroll_attempts:
-            mouse.scroll(coords=(1500, 800), wheel_dist=-5)
+            scroll_x = max(window_rect.left + 50, min(window_rect.right - 50, window_rect.mid_point().x))
+            scroll_y = max(window_rect.top + 120, min(window_rect.bottom - 80, window_rect.mid_point().y))
+            mouse.scroll(coords=(scroll_x, scroll_y), wheel_dist=-5)
             time.sleep(0.6)
     return False
 
@@ -241,8 +246,8 @@ def upload_file_from_resume_options(window, file_path: str, wait_seconds: float)
     time.sleep(0.4)
     scroll_and_click_resume_options = r"""(() => {
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-  const target = [...document.querySelectorAll('button,[role="button"]')]
-    .find((el) => clean(el.innerText || el.textContent || el.getAttribute('aria-label') || '') === 'Resume options');
+  const target = [...document.querySelectorAll('button,[role="button"],a')]
+    .find((el) => /resume options/i.test(clean(el.innerText || el.textContent || el.getAttribute('aria-label') || '')));
   if (!target) {
     document.documentElement.setAttribute('data-job-agent-resume-options', 'not-found');
     return;
@@ -332,6 +337,99 @@ def upload_file_from_resume_options(window, file_path: str, wait_seconds: float)
     }
 
 
+def find_new_file_picker(before_handles: set[int], timeout_seconds: float = 15.0):
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        time.sleep(0.5)
+        for candidate in Desktop(backend="uia").windows():
+            try:
+                if candidate.handle in before_handles:
+                    continue
+                title = candidate.window_text() or ""
+                class_name = candidate.class_name() or ""
+            except Exception:
+                continue
+            lowered = title.lower()
+            if class_name in ("#32770", "CabinetWClass") or "open" in lowered or "choose" in lowered or "upload" in lowered:
+                return candidate, title
+    return None, ""
+
+
+def fill_file_picker(picker, file_path: Path) -> None:
+    picker.set_focus()
+    time.sleep(0.3)
+    previous_clipboard = pyperclip.paste()
+    pyperclip.copy(str(file_path.resolve()))
+    try:
+        keyboard.send_keys("%n")
+        time.sleep(0.2)
+        keyboard.send_keys("^a")
+        time.sleep(0.1)
+        keyboard.send_keys("^v")
+        time.sleep(0.2)
+        keyboard.send_keys("{ENTER}")
+    finally:
+        time.sleep(0.2)
+        pyperclip.copy(previous_clipboard)
+
+
+def upload_supporting_document(window, file_path: str, wait_seconds: float) -> dict:
+    file = Path(file_path)
+    if not file.exists():
+        return {"ok": False, "reason": f"Supporting document not found: {file_path}"}
+
+    before_handles = set()
+    for candidate in Desktop(backend="uia").windows():
+        try:
+            before_handles.add(candidate.handle)
+        except Exception:
+            pass
+
+    window.set_focus()
+    time.sleep(0.4)
+    click_add_near_supporting_docs = r"""(() => {
+  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+  const buttons = [...document.querySelectorAll('button,[role="button"],a')];
+  const addButtons = buttons.filter((el) => /^add$/i.test(clean(el.innerText || el.textContent || el.getAttribute('aria-label') || '')));
+  if (!addButtons.length) {
+    document.documentElement.setAttribute('data-job-agent-supporting-add', 'not-found');
+    return;
+  }
+  const target = addButtons[0];
+  target.scrollIntoView({ block: 'center', inline: 'center' });
+  target.focus();
+  target.click();
+  document.documentElement.setAttribute('data-job-agent-supporting-add', 'clicked');
+})()"""
+    run_javascript_url(window, click_add_near_supporting_docs, 1.0)
+    time.sleep(1.0)
+    if "No cover letter or additional documents added" in visible_text(window):
+        click_visible_button(window, "Add", scroll_attempts=4)
+
+    time.sleep(1.0)
+    picker, picker_title = find_new_file_picker(before_handles, timeout_seconds=3.0)
+    if not picker:
+        for label in ("Upload a file", "Upload file", "Add file", "Choose file"):
+            if click_visible_text(window, label):
+                break
+        picker, picker_title = find_new_file_picker(before_handles, timeout_seconds=12.0)
+
+    if not picker:
+        return {"ok": False, "reason": "Supporting document file picker did not open."}
+
+    fill_file_picker(picker, file)
+    time.sleep(wait_seconds)
+    page_text = visible_text(window)
+    basename = file.name
+    if basename.lower() in page_text.lower() or "cover" in page_text.lower():
+        return {"ok": True, "reason": f"Supporting document upload appears visible: {basename}", "pickerTitle": picker_title}
+    return {
+        "ok": False,
+        "reason": f"Supporting document upload attempted, but filename is not visible on the page: {basename}",
+        "pickerTitle": picker_title,
+    }
+
+
 def run_dom_dump(window, wait_seconds: float) -> dict:
     # Chrome strips pasted javascript: URLs. Type the prefix, paste the payload.
     payload = r"""(() => {
@@ -389,6 +487,7 @@ def main() -> int:
     parser.add_argument("--click-text", help="Click a visible button/link whose text matches this regex before capture.")
     parser.add_argument("--click-wait", type=float, default=5.0)
     parser.add_argument("--upload-file", help="Use Resume options -> Upload a different file, then upload this file path.")
+    parser.add_argument("--upload-supporting-file", help="Use Supporting documents -> Add, then upload this file path.")
     parser.add_argument("--upload-wait", type=float, default=8.0)
     parser.add_argument("--leave-dump-page", action="store_true", help="Leave the tab on the copied JSON dump page instead of restoring the captured URL.")
     parser.add_argument("--no-dump", action="store_true", help="Navigate/click/screenshot only; do not replace the page with a DOM dump.")
@@ -407,6 +506,9 @@ def main() -> int:
         upload_result = None
         if args.upload_file:
             upload_result = upload_file_from_resume_options(window, args.upload_file, args.upload_wait)
+        supporting_upload_result = None
+        if args.upload_supporting_file:
+            supporting_upload_result = upload_supporting_document(window, args.upload_supporting_file, args.upload_wait)
         after_title = window.window_text()
         if args.screenshot:
             screenshot_path = Path(args.screenshot)
@@ -425,6 +527,8 @@ def main() -> int:
                 data["screenshotPath"] = str(Path(args.screenshot).resolve())
             if upload_result is not None:
                 data["uploadResult"] = upload_result
+            if supporting_upload_result is not None:
+                data["supportingUploadResult"] = supporting_upload_result
             out.write_text(json.dumps(data, indent=2), encoding="utf-8")
             print(f"Wrote visible Chrome action capture: {out.resolve()}")
             print(f"Visible Chrome title before: {before_title}")
@@ -437,6 +541,8 @@ def main() -> int:
             data["screenshotPath"] = str(Path(args.screenshot).resolve())
         if upload_result is not None:
             data["uploadResult"] = upload_result
+        if supporting_upload_result is not None:
+            data["supportingUploadResult"] = supporting_upload_result
         out.write_text(json.dumps(data, indent=2), encoding="utf-8")
         if not args.leave_dump_page and data.get("url"):
             navigate_current_tab(window, "about:blank", 0.5)
