@@ -49,13 +49,12 @@ try {
   Remove-Item Env:\JOB_AGENT_REQUIRE_CDP -ErrorAction SilentlyContinue
 
   $statusExit = Run-Step "0. Fejiro Chrome status" "npm run browser:fejiro-status"
-  if ($statusExit -eq 0) {
-    $authExit = Run-Step "1. Auth doctor" "npm run auth:doctor"
+  $visibleFejiroReady = ($statusExit -eq 0)
+  if ($visibleFejiroReady) {
+    "Auth doctor intentionally skipped for scheduled discovery. The visible Fejiro profile is present; avoiding auth:doctor prevents Playwright from launching or using a separate Chrome profile when CDP is unavailable." | Tee-Object -FilePath $log -Append
   } else {
-    $authExit = 1
     "Auth doctor skipped because the visible Fejiro Chrome profile was not found. This avoids launching or using another Chrome profile." | Tee-Object -FilePath $log -Append
   }
-  $visibleFejiroReady = ($statusExit -eq 0 -and $authExit -eq 0)
   if (-not $visibleFejiroReady) {
     "Visible Fejiro browser/auth is not ready. Browser scraping will be skipped; package prep, queues, and trust reports will still run from saved data. No submissions will be attempted." | Tee-Object -FilePath $log -Append
   }
