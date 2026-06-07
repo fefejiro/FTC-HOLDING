@@ -1,5 +1,6 @@
 # Scheduled Job Discovery Run
-# Scrapes visible signed-in job sites and refreshes premium queues without submitting.
+# Scrapes visible signed-in job sites, refreshes premium queues, and prepares
+# trusted resume/cover packages without submitting.
 $ErrorActionPreference = "Continue"
 $root = "C:\FTC HOLDING\APPS\job-reply-agent"
 $logDir = Join-Path $root "logs"
@@ -44,10 +45,20 @@ try {
   "=== Discovery scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
   "Working dir: $root" | Tee-Object -FilePath $log -Append
 
+  Remove-Item Env:\JOB_AGENT_CDP_URL -ErrorAction SilentlyContinue
+  Remove-Item Env:\JOB_AGENT_REQUIRE_CDP -ErrorAction SilentlyContinue
+
   $statusExit = Run-Step "0. Fejiro Chrome status" "npm run browser:fejiro-status"
-  $authExit = Run-Step "1. Auth doctor" "npm run auth:doctor"
-  if ($statusExit -ne 0) { exit $statusExit }
-  if ($authExit -ne 0) { exit $authExit }
+  if ($statusExit -eq 0) {
+    $authExit = Run-Step "1. Auth doctor" "npm run auth:doctor"
+  } else {
+    $authExit = 1
+    "Auth doctor skipped because the visible Fejiro Chrome profile was not found. This avoids launching or using another Chrome profile." | Tee-Object -FilePath $log -Append
+  }
+  $visibleFejiroReady = ($statusExit -eq 0 -and $authExit -eq 0)
+  if (-not $visibleFejiroReady) {
+    "Visible Fejiro browser/auth is not ready. Browser scraping will be skipped; package prep, queues, and trust reports will still run from saved data. No submissions will be attempted." | Tee-Object -FilePath $log -Append
+  }
 
   $existingCdp = $false
   try {
@@ -61,29 +72,41 @@ try {
     $env:JOB_AGENT_CDP_URL = "http://127.0.0.1:9333"
     $env:JOB_AGENT_REQUIRE_CDP = "true"
     $env:JOB_AGENT_SCRAPER_TIMEOUT_MS = "30000"
-  } else {
+  } elseif ($visibleFejiroReady) {
     "No Chrome CDP session is available on 127.0.0.1:9333. Continuing with visible Fejiro Chrome discovery only; no submissions will be attempted." | Tee-Object -FilePath $log -Append
   }
 
-  $diceExit = Run-Step "2. Visible Dice discovery" "npm run hunt:scrape-dice:visible -- -Limit 20"
-  $indeedExit = Run-Step "3. Visible Indeed discovery" "npm run hunt:scrape-indeed:visible -- -Limit 20"
-  $monsterExit = Run-Step "4. Visible Monster discovery" "npm run hunt:scrape-monster:visible -- -Limit 20"
+  if ($visibleFejiroReady) {
+    $diceExit = Run-Step "2. Visible Dice discovery" "npm run hunt:scrape-dice:visible -- -Limit 20"
+    $indeedExit = Run-Step "3. Visible Indeed discovery" "npm run hunt:scrape-indeed:visible -- -Limit 20"
+    $monsterExit = Run-Step "4. Visible Monster discovery" "npm run hunt:scrape-monster:visible -- -Limit 20"
 
-  if ($diceExit -ne 0) { "Dice discovery exited with $diceExit; continuing to queues." | Tee-Object -FilePath $log -Append }
-  if ($indeedExit -ne 0) { "Indeed discovery exited with $indeedExit; continuing to queues." | Tee-Object -FilePath $log -Append }
-  if ($monsterExit -ne 0) { "Monster discovery exited with $monsterExit; continuing to queues." | Tee-Object -FilePath $log -Append }
+    if ($diceExit -ne 0) { "Dice discovery exited with $diceExit; continuing to queues." | Tee-Object -FilePath $log -Append }
+    if ($indeedExit -ne 0) { "Indeed discovery exited with $indeedExit; continuing to queues." | Tee-Object -FilePath $log -Append }
+    if ($monsterExit -ne 0) { "Monster discovery exited with $monsterExit; continuing to queues." | Tee-Object -FilePath $log -Append }
+  } else {
+    "=== 2-4. Visible site discovery skipped: Fejiro Chrome is not visible/auth-ready ===" | Tee-Object -FilePath $log -Append
+  }
 
   $queueDiceExit = Run-Step "5. Premium Dice queue" "npm run hunt:premium-queue -- --source=dice --limit=20"
   $queueIndeedExit = Run-Step "6. Premium Indeed queue" "npm run hunt:premium-queue -- --source=indeed --limit=20"
   $queueMonsterExit = Run-Step "7. Premium Monster queue" "npm run hunt:premium-queue -- --source=monster --limit=20"
-  $trustExit = Run-Step "8. Trust report" "npm run hunt:trust-report -- --limit=20"
+  $prepDiceExit = Run-Step "8. Prepare Dice packages" "npm run hunt:prepare-artifacts -- --source=dice --limit=4"
+  $prepIndeedExit = Run-Step "9. Prepare Indeed packages" "npm run hunt:prepare-artifacts -- --source=indeed --limit=4"
+  $prepMonsterExit = Run-Step "10. Prepare Monster packages" "npm run hunt:prepare-artifacts -- --source=monster --limit=4"
+  $trustExit = Run-Step "11. Trust report" "npm run hunt:trust-report -- --limit=25"
+  $statusSnapshotExit = Run-Step "12. Status snapshot" "npm run hunt:status"
 
   if ($queueDiceExit -ne 0) { exit $queueDiceExit }
   if ($queueIndeedExit -ne 0) { exit $queueIndeedExit }
   if ($queueMonsterExit -ne 0) { exit $queueMonsterExit }
+  if ($prepDiceExit -ne 0) { "Dice package prep exited with $prepDiceExit; continuing to trust report." | Tee-Object -FilePath $log -Append }
+  if ($prepIndeedExit -ne 0) { "Indeed package prep exited with $prepIndeedExit; continuing to trust report." | Tee-Object -FilePath $log -Append }
+  if ($prepMonsterExit -ne 0) { "Monster package prep exited with $prepMonsterExit; continuing to trust report." | Tee-Object -FilePath $log -Append }
   if ($trustExit -ne 0) { exit $trustExit }
+  if ($statusSnapshotExit -ne 0) { exit $statusSnapshotExit }
 
-  "=== Success $(Get-Date -Format 'HH:mm:ss'): discovery-only mode completed; no submissions attempted ===" | Tee-Object -FilePath $log -Append
+  "=== Success $(Get-Date -Format 'HH:mm:ss'): discovery/package-prep mode completed; no submissions attempted ===" | Tee-Object -FilePath $log -Append
 } finally {
   Remove-Item -Path $lock -Force -ErrorAction SilentlyContinue
 }

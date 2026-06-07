@@ -57,8 +57,14 @@ if (-not $existingCdp) {
   "No Chrome CDP session is already available on 127.0.0.1:9333. Not launching a new Chrome/profile; keeping Fejiro's existing Chrome window untouched." | Tee-Object -FilePath $log -Append
   $statusExit = Run-Step "1. Status snapshot" "npm run hunt:status"
   $queueExit = Run-Step "2. Premium Dice queue snapshot" "npm run hunt:premium-queue -- --source=dice --limit=10"
+  $indeedQueueExit = Run-Step "3. Premium Indeed queue snapshot" "npm run hunt:premium-queue -- --source=indeed --limit=10"
+  $monsterQueueExit = Run-Step "4. Premium Monster queue snapshot" "npm run hunt:premium-queue -- --source=monster --limit=10"
+  $trustExit = Run-Step "5. Trust report snapshot" "npm run hunt:trust-report -- --limit=15"
   if ($statusExit -ne 0) { exit $statusExit }
   if ($queueExit -ne 0) { exit $queueExit }
+  if ($indeedQueueExit -ne 0) { exit $indeedQueueExit }
+  if ($monsterQueueExit -ne 0) { exit $monsterQueueExit }
+  if ($trustExit -ne 0) { exit $trustExit }
   "=== Success $(Get-Date -Format 'HH:mm:ss'): no-launch status/queue-only mode ===" | Tee-Object -FilePath $log -Append
   exit 0
 }
