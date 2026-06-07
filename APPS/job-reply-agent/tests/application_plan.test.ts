@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { buildApplicationPlan } from "../src/automation.js";
+import { afterEach, describe, expect, it } from "vitest";
+import { automationDeps, buildApplicationPlan, runAutoApplyOneJob } from "../src/automation.js";
+import { getDb } from "../src/db.js";
 import type { ApplicationAnswersConfig, ProfileConfig } from "../src/types.js";
 
 const profile: ProfileConfig = {
@@ -20,7 +21,13 @@ const answers: ApplicationAnswersConfig = {
   work_authorization_text: "Canadian citizen, eligible for TN status under USMCA for qualifying roles."
 };
 
+const originalRunDicePreflight = automationDeps.runDicePreflight;
+
 describe("application plan sensitive answer resolution", () => {
+  afterEach(() => {
+    automationDeps.runDicePreflight = originalRunDicePreflight;
+  });
+
   it("answers Canadian citizen and Canada sponsorship yes/no fields from saved candidate truth", () => {
     const plan = buildApplicationPlan({
       url: "https://smartapply.indeed.com/example",
@@ -78,5 +85,38 @@ describe("application plan sensitive answer resolution", () => {
 
     expect(plan.entries).toEqual([]);
     expect(plan.pauseReasons[0]?.reason).toMatch(/Missing answer/);
+  });
+
+  it("pauses Dice apply-one when auth is only available through visible fallback without CDP", async () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    const inserted = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "IT Director",
+      "Robert Half",
+      "dice",
+      "https://www.dice.com/job-detail/test-it-director",
+      "[Dice evidence] match_score=90; posted=\"today\"; apply_button=easy_apply_visible",
+      "package_generated",
+      99,
+      "tier_1",
+      now,
+      now
+    );
+    automationDeps.runDicePreflight = async () => ({
+      ok: true,
+      reason: "Dice preflight passed: visible Fejiro Chrome session is authenticated. Visible fallback used because CDP is unavailable.",
+      screenshotPath: "proof.png"
+    });
+
+    const result = await runAutoApplyOneJob({ db, cfg: { profile, applicationAnswers: answers } as any, jobId: Number(inserted.lastInsertRowid) });
+    const attempt = db.prepare("SELECT status, pause_reason, screenshot_path FROM application_attempts WHERE job_id=?").get(Number(inserted.lastInsertRowid)) as any;
+
+    expect(result.status).toBe("paused");
+    expect(attempt.status).toBe("manual_open_pause");
+    expect(attempt.pause_reason).toContain("will not open or submit from another browser profile");
+    expect(attempt.screenshot_path).toBe("proof.png");
   });
 });

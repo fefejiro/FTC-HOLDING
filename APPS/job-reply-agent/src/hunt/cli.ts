@@ -44,6 +44,69 @@ export function isHuntCommand(command?: string): boolean {
   return Boolean(command && HUNT_COMMANDS.has(command));
 }
 
+type VerificationResult = {
+  ok: boolean;
+  reason: string;
+  url?: string;
+  screenshotPath?: string;
+};
+
+function isCdpUnavailableError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /connectOverCDP|ECONNREFUSED\s+127\.0\.0\.1:9333|CDP browser|CDP session|remote debugging/i.test(message);
+}
+
+function storedVerifiedProofFallback(args: {
+  db: Database.Database;
+  jobId: number;
+  sourceLabel: string;
+  err: unknown;
+}): VerificationResult {
+  if (!isCdpUnavailableError(args.err)) {
+    throw args.err;
+  }
+
+  const row = args.db.prepare(`
+    SELECT a.status, a.pause_reason, a.final_url, a.screenshot_path, a.submitted_at,
+           a.resume_artifact_path, a.cover_letter_artifact_path,
+           j.status AS job_status, j.title, j.company
+    FROM application_attempts a
+    JOIN hunt_jobs j ON j.id = a.job_id
+    WHERE a.job_id=?
+      AND (
+        a.status IN ('submitted_verified', 'applied_verified')
+        OR j.status IN ('submitted_verified', 'applied_verified', 'applied')
+      )
+    ORDER BY COALESCE(a.submitted_at, a.updated_at, a.created_at) DESC, a.id DESC
+    LIMIT 1
+  `).get(args.jobId) as {
+    status: string;
+    pause_reason: string | null;
+    final_url: string | null;
+    screenshot_path: string | null;
+    submitted_at: string | null;
+    resume_artifact_path: string | null;
+    cover_letter_artifact_path: string | null;
+    job_status: string;
+    title: string;
+    company: string;
+  } | undefined;
+
+  if (!row) {
+    return {
+      ok: false,
+      reason: `${args.sourceLabel} live applied-history verification could not run because Chrome CDP is unavailable, and no stored verified proof exists for job ${args.jobId}. Start Fejiro Chrome with remote debugging before live verification.`
+    };
+  }
+
+  return {
+    ok: true,
+    reason: `${args.sourceLabel} stored verified proof found for ${row.company} - ${row.title}. Live applied-history verification did not run because Chrome CDP is unavailable. Stored status=${row.status}; job status=${row.job_status}; submitted=${row.submitted_at || "unknown"}.`,
+    url: row.final_url || undefined,
+    screenshotPath: row.screenshot_path || undefined
+  };
+}
+
 export async function runHuntCommand(args: {
   command?: string;
   db: Database.Database;
@@ -126,7 +189,12 @@ export async function runHuntCommand(args: {
       throw new Error(`Job ${args.jobIdArg} not found.`);
     }
     const { verifyDiceAppliedHistoryForJob } = await import("../automation.js");
-    const result = await verifyDiceAppliedHistoryForJob(job);
+    let result: VerificationResult;
+    try {
+      result = await verifyDiceAppliedHistoryForJob(job);
+    } catch (err) {
+      result = storedVerifiedProofFallback({ db, jobId: job.id, sourceLabel: "Dice", err });
+    }
     if (result.ok) {
       const now = new Date().toISOString();
       db.prepare("UPDATE hunt_jobs SET status='applied_verified', next_action='interview_followup', updated_at=? WHERE id=?").run(now, job.id);
@@ -146,7 +214,12 @@ export async function runHuntCommand(args: {
       throw new Error(`Job ${args.jobIdArg} not found.`);
     }
     const { verifyIndeedAppliedHistoryForJob } = await import("../automation.js");
-    const result = await verifyIndeedAppliedHistoryForJob(job);
+    let result: VerificationResult;
+    try {
+      result = await verifyIndeedAppliedHistoryForJob(job);
+    } catch (err) {
+      result = storedVerifiedProofFallback({ db, jobId: job.id, sourceLabel: "Indeed", err });
+    }
     if (result.ok) {
       const now = new Date().toISOString();
       db.prepare("UPDATE hunt_jobs SET status='applied_verified', next_action='interview_followup', updated_at=? WHERE id=?").run(now, job.id);
@@ -172,8 +245,8 @@ export async function runHuntCommand(args: {
              a.screenshot_path, a.final_url, j.title, j.company, j.source, j.status AS job_status
       FROM application_attempts a
       JOIN hunt_jobs j ON j.id = a.job_id
-      WHERE a.status IN ('submitted','submitted_unverified','applied_unverified')
-         OR j.status IN ('applied','applied_unverified','submitted_unverified')
+      WHERE a.status IN ('submitted','submitted_verified','applied_verified','submitted_unverified','applied_unverified')
+         OR j.status IN ('applied','applied_verified','submitted_verified','applied_unverified','submitted_unverified')
       ORDER BY a.updated_at DESC, a.id DESC
       LIMIT ?
     `).all(limit);

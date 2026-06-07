@@ -19,7 +19,7 @@ export type HuntJobStatus =
   | "follow_up_due"
   | "needs_review"
   | "blocked";
-export type HuntSource = "manual" | "gmail_alert" | "greenhouse" | "lever" | "ashby" | "linkedin" | "indeed" | "dice" | "workday" | "recruiter" | "agency_alert";
+export type HuntSource = "manual" | "gmail_alert" | "greenhouse" | "lever" | "ashby" | "linkedin" | "indeed" | "dice" | "monster" | "workday" | "recruiter" | "agency_alert";
 export type HuntTier = "tier_1" | "tier_2" | "tier_3" | "blocked";
 
 export interface HuntJobInput {
@@ -92,6 +92,7 @@ const SOURCE_HOSTS: Array<[RegExp, HuntSource]> = [
   [/linkedin\.com/i, "linkedin"],
   [/indeed\.com/i, "indeed"],
   [/dice\.com/i, "dice"],
+  [/monster\.(?:com|ca)/i, "monster"],
   [/myworkdayjobs\.com|workdayjobs\.com/i, "workday"]
 ];
 
@@ -571,7 +572,22 @@ export function generateInterviewPrep(db: Database.Database): number {
 }
 
 export function buildHuntReport(db: Database.Database): string {
-  const statuses = ["discovered", "scored", "package_ready", "package_generated", "outreach_ready", "apply_ready", "applied", "interview", "follow_up_due", "needs_review", "blocked"];
+  const statuses = [
+    "discovered",
+    "scored",
+    "package_ready",
+    "package_generated",
+    "outreach_ready",
+    "apply_ready",
+    "applied",
+    "applied_verified",
+    "submitted_verified",
+    "submitted_unverified",
+    "interview",
+    "follow_up_due",
+    "needs_review",
+    "blocked"
+  ];
   const counts = Object.fromEntries(statuses.map((s) => [s, (db.prepare("SELECT COUNT(*) as c FROM hunt_jobs WHERE status=?").get(s) as any).c]));
   const drafts = (db.prepare("SELECT COUNT(*) as c FROM hunt_outreach_drafts WHERE status='waiting'").get() as any).c;
   const followupsDue = (db.prepare("SELECT COUNT(*) as c FROM hunt_followups WHERE status='due'").get() as any).c;

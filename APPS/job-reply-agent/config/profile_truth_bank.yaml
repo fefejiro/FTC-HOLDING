@@ -23,7 +23,7 @@ tracks:
     subtitle: Business Systems | Data Quality | Retail Operations | AI-Ready Delivery
     summary_templates:
       - "Retail analytics delivery and business systems leader translating operational problems into structured systems, reporting controls, and measurable outcomes."
-      - "Strong fit for {company} {title}: cross-functional delivery leadership, stakeholder alignment, clear success metrics, and decision-ready outputs."
+      - "Experienced in cross-functional delivery leadership, stakeholder alignment, clear success metrics, and decision-ready outputs for {company} retail environments."
       - "Experienced in store operations, POS, ERP, WMS, API integrations, UAT governance, dashboards, release readiness, and executive reporting."
       - "Known for clarifying priorities, removing blockers, coordinating vendors and technical teams, and maintaining delivery quality."
       - "Portfolio includes practical enterprise systems, secure AI workflow automation, and API integration work through GitHub and Una Labs."
@@ -47,7 +47,7 @@ tracks:
     subtitle: Enterprise Architecture | Cloud Platform Delivery | Integration Governance | Operational Reliability
     summary_templates:
       - "Enterprise architecture and systems delivery leader focused on cloud modernization, integration governance, and reliable execution."
-      - "Strong fit for {company} {title}: translating business and delivery priorities into architecture decisions, migration sequencing, and measurable outcomes."
+      - "Translates {company} business and delivery priorities into architecture decisions, migration sequencing, and measurable outcomes."
       - "Experience across enterprise integrations, API strategy, data validation, UAT discipline, release planning, and stakeholder governance."
       - "Known for reducing ambiguity, aligning technical and non-technical teams, and maintaining delivery quality under complex dependencies."
       - "Portfolio includes enterprise systems and AI-enabled workflow automation assets relevant to cloud-enabled operating models."
@@ -59,6 +59,89 @@ tracks:
       - UAT and quality risk controls
       - Delivery planning, dependency management, and reporting
       - Security-minded implementation discipline
+  salesforce_crm_delivery:
+    keywords:
+      - salesforce
+      - crm
+      - service cloud
+      - sales cloud
+      - salesforce cpq
+      - appbuilder
+      - agentforce
+      - enterprise applications
+      - implementation partner
+      - jira
+      - confluence
+    subtitle: Salesforce-Adjacent Delivery | CRM Workflows | Enterprise Applications | Implementation Governance
+    summary_templates:
+      - "Enterprise applications and Salesforce-adjacent delivery leader coordinating CRM workflows, implementation readiness, vendor handoffs, and operational adoption."
+      - "Brings Salesforce ecosystem exposure, business systems project leadership, Agile coordination, and clear implementation governance for {company} environments."
+      - "Experience across CRM-adjacent workflows, enterprise applications, API integrations, Jira-backed requirements, UAT discipline, release readiness, and stakeholder communication."
+      - "Known for turning ambiguous business needs into acceptance criteria, risk registers, status reporting, training material, and go-live evidence."
+      - "Portfolio includes practical enterprise systems, integration-first delivery, and workflow automation work through GitHub and Una Labs."
+    core_strengths:
+      - Salesforce and CRM-adjacent workflow support
+      - Enterprise application project management
+      - Jira, Confluence, requirements, and acceptance criteria
+      - Vendor and implementation partner coordination
+      - UAT, release readiness, and adoption support
+      - Risk register, status reporting, and change control discipline
+      - API integration and data validation coordination
+  project_program_management:
+    keywords:
+      - project manager
+      - program manager
+      - delivery governance
+      - raid
+      - risk register
+      - pmo
+      - executive reporting
+      - implementation planning
+      - release readiness
+    subtitle: Project Delivery | Governance | UAT Readiness | Stakeholder Reporting
+    summary_templates:
+      - "IT project and delivery leader coordinating enterprise systems workstreams, stakeholder reporting, implementation readiness, and measurable outcomes."
+      - "Brings governance discipline across delivery planning, risk visibility, vendor coordination, UAT, release readiness, and executive communication."
+      - "Experienced in translating ambiguous delivery needs into clear scope, milestones, dependencies, status reporting, and operational readiness evidence."
+      - "Known for reducing delivery ambiguity, improving cross-functional handoffs, and keeping business and technical teams aligned."
+      - "Portfolio includes practical enterprise systems, workflow automation, and implementation assets through GitHub and Una Labs."
+    core_strengths:
+      - Project and program delivery governance
+      - RAID, risk visibility, and dependency management
+      - Vendor and cross-functional coordination
+      - UAT, release readiness, and implementation planning
+      - Executive reporting and stakeholder communication
+      - Scope, status, and delivery documentation
+      - Enterprise systems and workflow improvement
+  wms_erp_supply_chain:
+    keywords:
+      - wms
+      - erp
+      - warehouse
+      - warehouse management
+      - supply chain
+      - logistics
+      - inventory
+      - fulfillment
+      - manhattan
+      - sap
+      - oracle
+      - pos integration
+    subtitle: WMS & ERP Delivery | Warehouse Operations | Inventory Workflows | UAT Readiness
+    summary_templates:
+      - "WMS, ERP, and supply-chain systems professional experienced in warehouse operations, inventory workflows, integration readiness, and operational support."
+      - "Connects business process detail with systems delivery across WMS, ERP, POS-adjacent integrations, SQL/data validation, UAT, and release readiness."
+      - "Experienced in clarifying warehouse and fulfillment workflows, documenting operational requirements, coordinating defects, and supporting go-live stability."
+      - "Known for improving traceability between business operations, system behavior, test evidence, and production support outcomes."
+      - "Portfolio includes practical enterprise systems, workflow automation, and integration-first implementation assets through GitHub and Una Labs."
+    core_strengths:
+      - WMS, ERP, and supply-chain systems delivery
+      - Warehouse operations and fulfillment workflows
+      - Inventory, reporting, and data validation
+      - POS-adjacent and enterprise integration coordination
+      - UAT, defect triage, and release readiness
+      - SQL-backed analysis and operational reporting
+      - Logistics process improvement and support readiness
   enterprise_delivery:
     keywords:
       - enterprise systems
@@ -69,7 +152,7 @@ tracks:
     subtitle: Enterprise Systems | Delivery Governance | Integration Execution | Operational Impact
     summary_templates:
       - "Enterprise systems and delivery leader turning ambiguous business goals into structured, testable, and operationally reliable outcomes."
-      - "Strong fit for {company} {title}: stakeholder alignment, requirements clarity, delivery governance, and measurable implementation impact."
+      - "Brings stakeholder alignment, requirements clarity, delivery governance, and measurable implementation impact across {company} enterprise systems."
       - "Experience across integrations, platform operations, UAT discipline, release readiness, and executive communication."
       - "Known for balancing delivery speed with quality, documentation, and operational sustainability."
       - "Portfolio includes workflow automation, product strategy, and practical implementation assets through GitHub and Una Labs."
@@ -84,27 +167,80 @@ tracks:
 
 experience_pool:
   - text: Led modernization of Ontario revenue processing and document-management systems with release readiness evidence, traceability, and executive reporting.
-    tags: [retail, governance, delivery]
+    tags: [ba, requirements, governance, delivery, project]
+    source: master_resume_orange_template
+    employer: Ontario Government
+    confidence: 100
+    verified: true
   - text: Coordinated stakeholders, technical teams, and vendors to improve implementation readiness, risk visibility, and post-deployment stability.
     tags: [delivery, governance, architecture]
+    source: profile_truth_bank
+    confidence: 70
+    verified: false
   - text: Built governance across issue triage, UAT, change readiness, and support escalation for multi-location retail technology operations.
-    tags: [retail, uat, delivery]
+    tags: [retail, uat, delivery, project]
+    source: master_resume_orange_template
+    employer: Talize
+    confidence: 100
+    verified: true
   - text: Improved transaction processing performance and reduced store-level downtime by 40 percent through structured systems and operations coordination.
-    tags: [retail, operations]
+    tags: [retail, operations, support]
+    source: master_resume_orange_template
+    employer: Talize
+    confidence: 100
+    verified: true
   - text: Led acceptance-testing governance for enterprise retail modernization and reduced deployment risk across POS, loyalty, and omnichannel workflows.
-    tags: [retail, uat, integration]
+    tags: [retail, uat, integration, project]
+    source: master_resume_orange_template
+    employer: Canadian Tire Corporation
+    confidence: 100
+    verified: true
   - text: Bridged business stakeholders, QA, IT, and vendors by converting operational scenarios into acceptance criteria and go-live readiness evidence.
-    tags: [uat, governance, delivery]
+    tags: [ba, requirements, uat, governance, delivery]
+    source: master_resume_orange_template
+    employer: Canadian Tire Corporation
+    confidence: 100
+    verified: true
   - text: Supported omnichannel fulfillment modernization via SAP microservices, cloud integration, API workflows, and release coordination.
-    tags: [cloud, integration, delivery]
+    tags: [wms, erp, supply_chain, cloud, integration, delivery]
+    source: master_resume_orange_template
+    employer: The Home Depot Canada
+    confidence: 100
+    verified: true
   - text: Mapped API endpoints to business use cases, maintained acceptance criteria, and validated SIT and UAT outcomes across fulfillment workflows.
-    tags: [integration, uat, architecture]
+    tags: [ba, requirements, wms, supply_chain, integration, uat, architecture]
+    source: master_resume_orange_template
+    employer: The Home Depot Canada
+    confidence: 100
+    verified: true
   - text: Led QA strategy and post-production readiness for warehouse and ecommerce platform initiatives with clear risk and defect reporting.
-    tags: [uat, operations, delivery]
+    tags: [wms, warehouse, supply_chain, uat, operations, delivery]
+    source: master_resume_orange_template
+    employer: LCBO
+    confidence: 100
+    verified: true
   - text: Delivered business analysis and continuous improvement for retail logistics, WMS, inventory, reporting, and customer-service workflows.
-    tags: [retail, operations]
+    tags: [ba, wms, warehouse, supply_chain, retail, operations]
+    source: master_resume_orange_template
+    employer: SCI Group Inc.
+    confidence: 100
+    verified: true
   - text: Managed cross-functional delivery governance for enterprise software and ERP initiatives, including scope, documentation, vendor coordination, and training.
-    tags: [architecture, delivery, governance]
+    tags: [erp, project, architecture, delivery, governance]
+    source: master_resume_orange_template
+    employer: NNPC Limited
+    confidence: 100
+    verified: true
+  - text: Worked in Salesforce implementation and CRM business requirements environments, supporting cross-functional business analysis, documentation, workflow validation, and stakeholder coordination.
+    tags: [crm, salesforce, delivery, governance]
+    source: profile_truth_bank
+    confidence: 60
+    verified: false
+  - text: Supported Salesforce and CRM-adjacent workflows through requirements clarification, Jira user stories, acceptance criteria, UAT planning, vendor coordination, and adoption documentation.
+    tags: [crm, salesforce, uat, delivery]
+    source: profile_truth_bank
+    confidence: 60
+    verified: false
 
 portfolio:
   - GitHub portfolio demonstrates enterprise systems, integration-first implementation, and secure workflow automation patterns.

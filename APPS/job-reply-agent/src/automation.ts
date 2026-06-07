@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import type Database from "better-sqlite3";
 import { logger } from "./logger.js";
 import type { ApplicationAnswersConfig, ProfileConfig, RecruiterMessage, ResumeMapConfig, RulesConfig } from "./types.js";
@@ -804,6 +805,26 @@ export async function runAutoApplyOneJob(params: {
         updateApplicationRun(db, runId, "completed", { ready: 1, submitted: 0, paused: 0, blocked: 1 });
         return { jobId, status: "blocked_needs_auth", reason: preflight.reason, finalUrl: job.apply_url, screenshotPath: preflight.screenshotPath };
       }
+      if (isVisibleFallbackWithoutCdp(preflight.reason)) {
+        const reason = [
+          preflight.reason,
+          "Dice submit paused: authenticated Fejiro Chrome was verified visually, but CDP is unavailable, so the agent will not open or submit from another browser profile."
+        ].join(" ");
+        recordApplicationAttempt(db, {
+          runId,
+          jobId: job.id,
+          adapter: "dice",
+          applyUrl: job.apply_url,
+          status: "manual_open_pause",
+          requiredFields: [],
+          answeredFields: [],
+          pauseReason: reason,
+          finalUrl: job.apply_url,
+          screenshotPath: preflight.screenshotPath
+        });
+        updateApplicationRun(db, runId, "completed", { ready: 1, submitted: 0, paused: 1, blocked: 0 });
+        return { jobId, status: "paused", reason, finalUrl: job.apply_url, screenshotPath: preflight.screenshotPath, adapter: "dice" };
+      }
     }
 
     const diceQualityReason = evaluateDiceQualityGate(job);
@@ -1173,14 +1194,18 @@ export async function runAutoApplyQueueAndReport(params: {
   return { summary, report: buildApplicationQueueReport(params.db) };
 }
 
+function isVisibleFallbackWithoutCdp(reason: string): boolean {
+  return /visible\s+fallback|cdp\s+is\s+unavailable|did not expose the configured CDP endpoint|no Chrome is attached/i.test(String(reason || ""));
+}
+
 export async function runDicePreflight(): Promise<{ ok: boolean; reason: string; screenshotPath?: string }> {
   const timeoutMs = Math.max(5000, Number(process.env.JOB_AGENT_PREFLIGHT_TIMEOUT_MS || 20000));
-  const session = await getSharedPlaywrightSession(process.env.JOB_AGENT_HEADLESS === "true" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true");
-  const page = session.page || (await session.context.newPage());
-  page.setDefaultTimeout(timeoutMs);
-  page.setDefaultNavigationTimeout(timeoutMs);
-
   try {
+    const session = await getSharedPlaywrightSession(process.env.JOB_AGENT_HEADLESS === "true" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true");
+    const page = session.page || (await session.context.newPage());
+    page.setDefaultTimeout(timeoutMs);
+    page.setDefaultNavigationTimeout(timeoutMs);
+
     await page.goto("https://www.dice.com/dashboard", { waitUntil: "domcontentloaded", timeout: timeoutMs });
     let snapshot = await readDicePreflightSnapshot(page);
 
@@ -1236,12 +1261,113 @@ export async function runDicePreflight(): Promise<{ ok: boolean; reason: string;
 
     return { ok: true, reason: "Dice preflight passed: authenticated browser session detected." };
   } catch (error) {
+    const visibleFallback = runVisibleDicePreflightFallback(timeoutMs, error);
+    if (visibleFallback) return visibleFallback;
+
     return {
       ok: false,
       reason: `Dice preflight failed: ${error instanceof Error ? error.message : "browser check failed"}.`
     };
   } finally {
     await closeSharedPlaywrightSession().catch(() => undefined);
+  }
+}
+
+type VisibleDicePreflightCapture = {
+  requestedUrl?: string;
+  finalUrl?: string;
+  visibleChromeTitleBefore?: string;
+  visibleChromeTitleAfterNavigation?: string;
+  screenshotPath?: string;
+};
+
+export function classifyVisibleDicePreflightCapture(capture: VisibleDicePreflightCapture): { ok: boolean; reason: string; screenshotPath?: string } {
+  const finalUrl = clean(capture.finalUrl || capture.requestedUrl || "");
+  const title = clean(capture.visibleChromeTitleAfterNavigation || "");
+  const combined = clean(`${finalUrl} ${title} ${capture.visibleChromeTitleBefore || ""}`);
+  const screenshotPath = capture.screenshotPath;
+
+  if (/accounts\.google\.com|\/login|signin|sign\s*in|log\s*in|create account/i.test(combined)) {
+    return {
+      ok: false,
+      reason: `Dice visible preflight failed: signed-in Dice session was not detected at ${finalUrl || title || "the visible Chrome tab"}.`,
+      screenshotPath
+    };
+  }
+
+  const looksLikeDiceShell = /dice\.com/i.test(combined);
+  const looksAuthenticated =
+    /\/dashboard|\/my-jobs|\/jobs|\/profile|\/profiles|\/job-detail/i.test(finalUrl) ||
+    /\b(Profile|Home Feed|Profile Visibility|Alerts|Improve Your Profile|Fejiro Efiuvwere)\b/i.test(combined);
+
+  if (looksLikeDiceShell && looksAuthenticated) {
+    return {
+      ok: true,
+      reason: `Dice preflight passed: visible Fejiro Chrome session is authenticated at ${finalUrl || title}.`,
+      screenshotPath
+    };
+  }
+
+  return {
+    ok: false,
+    reason: `Dice visible preflight inconclusive at ${finalUrl || title || "the visible Chrome tab"}.`,
+    screenshotPath
+  };
+}
+
+function runVisibleDicePreflightFallback(
+  timeoutMs: number,
+  cdpError: unknown
+): { ok: boolean; reason: string; screenshotPath?: string } | null {
+  if (process.env.JOB_AGENT_DISABLE_VISIBLE_DICE_PREFLIGHT === "true") return null;
+
+  const scriptPath = resolveProjectPath("scripts", "visible_chrome_dom_dump.py");
+  if (!fs.existsSync(scriptPath)) return null;
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const outDir = diceDebugDir();
+  fs.mkdirSync(outDir, { recursive: true });
+  const capturePath = path.join(outDir, `dice-visible-preflight-${stamp}.json`);
+  const screenshotPath = path.join(outDir, `dice-visible-preflight-${stamp}.png`);
+  const waitSeconds = String(Math.max(5, Math.min(20, Math.ceil(timeoutMs / 1000))));
+
+  try {
+    execFileSync(
+      "python",
+      [
+        scriptPath,
+        "--url",
+        "https://www.dice.com/dashboard",
+        "--out",
+        capturePath,
+        "--screenshot",
+        screenshotPath,
+        "--wait",
+        waitSeconds,
+        "--no-dump"
+      ],
+      {
+        cwd: resolveProjectPath("."),
+        stdio: "pipe",
+        timeout: timeoutMs + 10000
+      }
+    );
+    const capture = JSON.parse(fs.readFileSync(capturePath, "utf8")) as VisibleDicePreflightCapture;
+    const classified = classifyVisibleDicePreflightCapture({
+      ...capture,
+      screenshotPath: capture.screenshotPath || screenshotPath
+    });
+    const rawCdpReason = cdpError instanceof Error ? cdpError.message : "CDP attach failed";
+    const cdpReason = /JOB_AGENT_REQUIRE_CDP|Start Chrome with scripts\/start-chrome-cdp\.ps1/i.test(rawCdpReason)
+      ? "Chrome did not expose the configured CDP endpoint"
+      : rawCdpReason;
+    return {
+      ...classified,
+      reason: `${classified.reason} Visible fallback used because CDP is unavailable: ${cdpReason}`
+    };
+  } catch (visibleError) {
+    logger.warn({ error: visibleError }, "Visible Dice preflight fallback failed.");
+    return null;
   }
 }
 

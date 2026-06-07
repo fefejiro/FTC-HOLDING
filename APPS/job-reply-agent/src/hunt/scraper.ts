@@ -454,7 +454,7 @@ export async function scrapeLinkedIn(searchQuery: string, maxJobs: number = 50):
  * Ingest scraped jobs into hunt_jobs table.
  * Deduplicates by apply_url and title+company.
  */
-export function ingestScrapedJobs(db: Database.Database, jobs: ScrapedJob[], source: "dice" | "indeed" | "linkedin" | "robert_half" | "workopolis" | "mercor"): number {
+export function ingestScrapedJobs(db: Database.Database, jobs: ScrapedJob[], source: "dice" | "indeed" | "linkedin" | "monster" | "robert_half" | "workopolis" | "mercor"): number {
   let ingested = 0;
 
   for (const job of jobs) {

@@ -3,6 +3,11 @@ import path from "node:path";
 import JSZip from "jszip";
 import { beforeAll, describe, expect, it } from "vitest";
 import { tailorResumeForJD } from "../src/resume_tailor";
+import {
+  APPROVED_ORANGE_TEMPLATE_BASENAME,
+  FORBIDDEN_VISIBLE_RESUME_PHRASES,
+  isApprovedOrangeTemplatePath
+} from "../src/resume_style";
 
 const templatePath = path.resolve(
   process.cwd(),
@@ -14,9 +19,12 @@ const outputDir = path.resolve(process.cwd(), ".local", "generated-tests");
 
 async function extractDocText(filePath: string): Promise<string> {
   const zip = await JSZip.loadAsync(fs.readFileSync(filePath));
-  const docXml = await zip.file("word/document.xml")?.async("string");
-  if (!docXml) return "";
-  return docXml
+  const xmlTexts = await Promise.all(
+    Object.keys(zip.files)
+      .filter((name) => /^word\/(?:document|header\d*|footer\d*)\.xml$/i.test(name))
+      .map(async (name) => zip.file(name)?.async("string") || "")
+  );
+  return xmlTexts.join(" ")
     .replace(/<w:tab\/?\s*>/g, "\t")
     .replace(/<w:br\/?\s*>/g, "\n")
     .replace(/<[^>]+>/g, " ")
@@ -33,6 +41,11 @@ describe("Resume Tailoring Engine", () => {
     if (!fs.existsSync(templatePath)) {
       throw new Error(`Missing reference template at ${templatePath}`);
     }
+  });
+
+  it("uses the approved orange resume template by default", () => {
+    expect(path.basename(templatePath)).toBe(APPROVED_ORANGE_TEMPLATE_BASENAME);
+    expect(isApprovedOrangeTemplatePath(templatePath)).toBe(true);
   });
 
   it("generates JD-aligned Canadian Tire styled resume in DOCX", async () => {
@@ -64,9 +77,174 @@ describe("Resume Tailoring Engine", () => {
     const text = await extractDocText(result.docxPath);
     expect(text).toContain("Manager, Network Analytics");
     expect(text).toMatch(/core strengths/i);
-    expect(text).toContain("PORTFOLIO");
+    expect(text).toMatch(/PORTFOLIO|SELECTED ACHIEVEMENTS/);
     expect(text).toContain("Canadian Tire");
     expect(text).not.toMatch(/WMS Project Manager|Blue Yonder|North West Company/i);
+  });
+
+  it("generates an RQ-style Business Analyst resume without exposing internal tailoring language", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "RQ11067 - Senior Business Analyst",
+        company: "Ontario Public Service",
+        location: "Toronto, ON",
+        employmentType: "Contract",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "RQ11067 - Senior Business Analyst",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: [
+        "RQ11067 Senior Business Analyst for I&IT public sector delivery.",
+        "Requires requirements gathering, stakeholder engagement, current-state and future-state analysis, business process mapping, use cases, user stories, acceptance criteria, backlog refinement, Product Owner support, Agile ceremonies, UAT, DevOps, Jira, Confluence, Oracle, SQL, AODA-aware documentation, information management, workflows, and approval processes."
+      ].join(" "),
+      templatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    expect(path.basename(result.docxPath)).toMatch(/RQ11067/i);
+    expect(text).toContain("Senior Business Analyst");
+    expect(text).toMatch(/I&IT business analysis/i);
+    expect(text).toMatch(/requirements gathering/i);
+    expect(text).toMatch(/stakeholder engagement/i);
+    expect(text).toMatch(/current-state and future-state/i);
+    expect(text).toMatch(/business process mapping/i);
+    expect(text).toMatch(/use cases/i);
+    expect(text).toMatch(/user stories/i);
+    expect(text).toMatch(/acceptance criteria/i);
+    expect(text).toMatch(/backlog refinement/i);
+    expect(text).toMatch(/Product Owner support/i);
+    expect(text).toMatch(/Agile ceremonies/i);
+    expect(text).toMatch(/UAT/i);
+    expect(text).toMatch(/DevOps, Jira, Confluence, Oracle, and SQL/i);
+    expect(text).toMatch(/public sector delivery/i);
+    expect(text).toMatch(/AODA-aware documentation/i);
+    expect(text).toMatch(/information management/i);
+    expect(text).toMatch(/Workflow analysis and approval process improvement/i);
+    expect(text).not.toMatch(/\bRQ\d+\b/i);
+    expect(text).not.toMatch(/Target Role Alignment/i);
+    expect(text).not.toMatch(/\btailored\b/i);
+    for (const phrase of FORBIDDEN_VISIBLE_RESUME_PHRASES) {
+      expect(text.toLowerCase()).not.toContain(phrase);
+    }
+  });
+
+  it("creates a structurally valid DOCX package", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Business Systems Analyst",
+        company: "Workflow Health",
+        location: "",
+        employmentType: "",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Business Systems Analyst",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: "Business analysis, workflow approvals, stakeholder engagement, Jira, Confluence, SQL, and UAT.",
+      templatePath,
+      outputDir
+    });
+
+    const zip = await JSZip.loadAsync(fs.readFileSync(result.docxPath));
+    expect(zip.file("[Content_Types].xml")).toBeTruthy();
+    expect(zip.file("word/document.xml")).toBeTruthy();
+    expect(result.provenanceStats?.selectedBulletCount).toBeGreaterThan(0);
+    expect(result.provenanceStats?.placedEmployerBulletCount).toBeGreaterThan(0);
+    expect(result.provenanceStats?.rejectedEmployerPlacementCount).toBeGreaterThan(0);
+    expect(result.provenanceStats?.fallbackBulletCount).toBeGreaterThan(0);
+  });
+
+  it("keeps unverified or unknown-employer bullets out of employer experience sections", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Salesforce CRM Business Systems Project Manager",
+        company: "CRM Delivery Office",
+        location: "",
+        employmentType: "",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Salesforce CRM Business Systems Project Manager",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: "Salesforce CRM, Service Cloud, Jira, Confluence, requirements clarification, UAT, vendor coordination, adoption documentation.",
+      templatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    const experienceOnly = text.split(/SELECTED ACHIEVEMENTS|PORTFOLIO/i)[0];
+    expect(text).toMatch(/SELECTED ACHIEVEMENTS/i);
+    expect(text).toMatch(/Salesforce implementation and CRM business requirements/i);
+    expect(experienceOnly).not.toMatch(/Salesforce implementation and CRM business requirements/i);
+    expect(result.provenanceStats?.fallbackBulletCount).toBeGreaterThan(0);
+  });
+
+  it("keeps employer-tagged bullets attached to the matching employer", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Ontario Government Business Analyst",
+        company: "Ontario Government",
+        location: "",
+        employmentType: "",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Ontario Government Business Analyst",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: "I&IT business analyst requirements gathering stakeholder engagement acceptance criteria UAT public sector documentation.",
+      templatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    expect(text).toMatch(/Ontario Government \| System Software Manager[\s\S]{0,700}Led modernization of Ontario revenue processing/i);
+    expect(text).not.toMatch(/Talize \| Information Technology Business System Manager[\s\S]{0,700}Led modernization of Ontario revenue processing/i);
+  });
+
+  it("classifies WMS and ERP roles outside the Business Analyst lane", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "WMS Consultant",
+        company: "Retail Logistics Group",
+        location: "",
+        employmentType: "",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "WMS Consultant",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: "WMS ERP warehouse operations inventory logistics fulfillment SQL data validation UAT operational support process improvement.",
+      templatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    expect(result.subtitle).toMatch(/WMS & ERP Delivery/i);
+    expect(text).toMatch(/WMS, ERP, and supply-chain systems/i);
+    expect(text).not.toMatch(/I&IT Business Analysis/i);
+    expect(text).not.toMatch(/public sector systems/i);
   });
 
   it("generates JD-aligned Azure resume without retail contamination", async () => {
@@ -94,6 +272,39 @@ describe("Resume Tailoring Engine", () => {
     expect(result.newTitle).toBe("Azure Cloud Enterprise Architect");
     expect(text).toContain("Azure Cloud Enterprise Architect");
     expect(text).toMatch(/cloud|architecture|integration|governance/i);
+    expect(text).not.toMatch(/WMS Project Manager|Blue Yonder|North West Company/i);
+  });
+
+  it("generates Salesforce CRM delivery resume when Salesforce is required", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Business Systems - Project Manager",
+        company: "Addepar",
+        location: "Calgary, AB / Remote",
+        employmentType: "Full-time",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Business Systems - Project Manager",
+        alignmentKeywords: [],
+        salaryOrRate: "$102,000-$127,000 a year",
+        isUsRole: false
+      },
+      jdText: [
+        "Lead technology and software implementations with vendors and internal stakeholders.",
+        "Experience with Salesforce required.",
+        "Service Cloud, Salesforce CPQ, AppBuilder, Jira, Confluence, and Agile delivery are desirable."
+      ].join(" "),
+      templatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    expect(result.newTitle).toBe("Business Systems - Project Manager");
+    expect(text).toContain("Addepar");
+    expect(text).toMatch(/Salesforce|CRM/i);
+    expect(text).toMatch(/Jira|Confluence|implementation/i);
     expect(text).not.toMatch(/WMS Project Manager|Blue Yonder|North West Company/i);
   });
 

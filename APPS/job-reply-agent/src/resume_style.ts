@@ -8,10 +8,36 @@ export interface TailoredResumeContent {
   summaryBullets: string[];
   coreStrengths: string[];
   experienceBullets: string[];
+  experienceBulletRecords: TailoredExperienceBullet[];
+  additionalAchievementBullets: string[];
   portfolioBullets: string[];
   track: string;
   needsReview: boolean;
   needsReviewReasons: string[];
+  provenanceStats: ResumeProvenanceStats;
+}
+
+export interface ResumeBulletProvenance {
+  source: string;
+  employer: string;
+  confidence: number;
+  verified: boolean;
+}
+
+export interface TailoredExperienceBullet {
+  text: string;
+  tags: string[];
+  score: number;
+  provenance: ResumeBulletProvenance;
+}
+
+export interface ResumeProvenanceStats {
+  selectedBulletCount: number;
+  employerAttributedBulletCount: number;
+  unattributedBulletCount: number;
+  rejectedEmployerPlacementCount: number;
+  fallbackBulletCount: number;
+  placedEmployerBulletCount: number;
 }
 
 interface TruthTrack {
@@ -24,6 +50,10 @@ interface TruthTrack {
 interface ExperienceItem {
   text: string;
   tags?: string[];
+  source?: string;
+  employer?: string;
+  confidence?: number;
+  verified?: boolean;
 }
 
 interface TruthBank {
@@ -38,6 +68,41 @@ interface ScoringRules {
 }
 
 const DEFAULT_CONTAMINATION_TERMS = ["WMS Project Manager", "Blue Yonder", "North West Company"];
+export const APPROVED_ORANGE_TEMPLATE_BASENAME = "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx";
+export const FORBIDDEN_VISIBLE_RESUME_PHRASES = [
+  "tailored",
+  "target role alignment",
+  "strong fit for",
+  "based on the job description",
+  "job agent",
+  "application package"
+] as const;
+const FORBIDDEN_VISIBLE_RESUME_PATTERNS = [
+  ...FORBIDDEN_VISIBLE_RESUME_PHRASES.map((phrase) => new RegExp(`\\b${escapeRegex(phrase)}\\b`, "i")),
+  /\bRQ\d+\b/i
+];
+const SALESFORCE_SIGNALS = /\b(salesforce|crm|service cloud|sales cloud|salesforce cpq|appbuilder|agentforce)\b/i;
+const AZURE_CLOUD_SIGNALS = /\b(azure|cloud enterprise architect|landing zone|cloud migration|cloud governance|devsecops|enterprise architecture)\b/i;
+const WMS_ERP_SUPPLY_CHAIN_SIGNALS = /\b(wms|warehouse|warehouse management|erp|supply chain|logistics|inventory|distribution center|distribution centres?|fulfillment|blue yonder|manhattan|sap|oracle|pos integration|warehouse operations)\b/i;
+const RETAIL_TECH_SIGNALS = /\b(pos|store systems|store operations|retail operations|merchandising|omni[- ]?channel|loyalty|retail technology)\b/i;
+const PROJECT_PROGRAM_SIGNALS = /\b(project manager|program manager|delivery manager|pmo|portfolio|raid|risk register|budget|governance|executive reporting|implementation planning|release readiness)\b/i;
+const BUSINESS_ANALYSIS_TITLE_SIGNALS = /\b(business analyst|systems analyst|business systems analyst|iit business analyst|i&it business analyst)\b/i;
+const BUSINESS_ANALYSIS_DETAIL_SIGNALS = [
+  /\brequirements?\b/i,
+  /\bstakeholder/i,
+  /\bcurrent[- ]state\b/i,
+  /\bfuture[- ]state\b/i,
+  /\bprocess mapping\b/i,
+  /\buse cases?\b/i,
+  /\buser stor(?:y|ies)\b/i,
+  /\bacceptance criteria\b/i,
+  /\bbacklog\b/i,
+  /\bproduct owner\b/i,
+  /\bagile\b/i,
+  /\buat\b/i,
+  /\baoda\b/i,
+  /\binformation management\b/i
+];
 const DEFAULT_UNSUPPORTED_PATTERNS = [
   /\bteam of\s+\d+/i,
   /\bbudget(?:s)?\b/i,
@@ -84,6 +149,29 @@ function clean(input: string): string {
   return input.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function isApprovedOrangeTemplatePath(templatePath: string): boolean {
+  return path.basename(templatePath).toLowerCase() === APPROVED_ORANGE_TEMPLATE_BASENAME.toLowerCase();
+}
+
+export function sanitizeVisibleResumeText(input: string): string {
+  let value = clean(input)
+    .replace(/\bstrong fit for\b/gi, "Experienced with")
+    .replace(/\bbased on the job description\b/gi, "for the role")
+    .replace(/\btarget role alignment\b/gi, "Professional Summary")
+    .replace(/\bapplication package\b/gi, "resume")
+    .replace(/\bjob agent\b/gi, "workflow")
+    .replace(/\btailored\b/gi, "role-focused")
+    .replace(/\bRQ\d+\b/gi, "")
+    .replace(/\s+([:;,.])/g, "$1");
+
+  value = value.replace(/\s{2,}/g, " ").trim();
+  return value;
+}
+
 function normalizeTitle(title: string): string {
   return clean(title).replace(/[\u2013\u2014]/g, "-");
 }
@@ -113,6 +201,33 @@ function scoreTrack(track: TruthTrack | undefined, tokens: Set<string>): number 
 
 function detectTrack(title: string, company: string, jdText: string, truthBank: TruthBank): string {
   const corpus = `${title}\n${company}\n${jdText}`;
+  if (BUSINESS_ANALYSIS_TITLE_SIGNALS.test(title)) {
+    return "business_analysis";
+  }
+  if (/\b(wms|warehouse|erp|supply chain|logistics|inventory|fulfillment)\b/i.test(title)) {
+    return "wms_erp_supply_chain";
+  }
+  if (SALESFORCE_SIGNALS.test(corpus)) {
+    return "salesforce_crm_delivery";
+  }
+  if (AZURE_CLOUD_SIGNALS.test(corpus)) {
+    return "azure_cloud";
+  }
+  if (/\b(project manager|program manager|delivery manager|pmo)\b/i.test(title)) {
+    return "project_program_management";
+  }
+  if (WMS_ERP_SUPPLY_CHAIN_SIGNALS.test(corpus)) {
+    return "wms_erp_supply_chain";
+  }
+  if (RETAIL_TECH_SIGNALS.test(corpus)) {
+    return "retail_analytics";
+  }
+  if (PROJECT_PROGRAM_SIGNALS.test(corpus)) {
+    return "project_program_management";
+  }
+  if (isBusinessAnalysisRole(title, jdText)) {
+    return "business_analysis";
+  }
   const tokens = new Set(tokenize(corpus));
   const tracks = truthBank.tracks || {};
 
@@ -139,7 +254,73 @@ function fillTemplate(template: string, title: string, company: string): string 
   );
 }
 
-function pickExperienceBullets(track: string, jdText: string, experiencePool: ExperienceItem[]): string[] {
+function isBusinessAnalysisRole(title: string, jdText: string): boolean {
+  const corpus = `${title}\n${jdText}`;
+  if (BUSINESS_ANALYSIS_TITLE_SIGNALS.test(corpus)) {
+    return true;
+  }
+  return BUSINESS_ANALYSIS_DETAIL_SIGNALS.filter((pattern) => pattern.test(corpus)).length >= 4;
+}
+
+function businessAnalysisContent(): Pick<TailoredResumeContent, "subtitle" | "summaryBullets" | "coreStrengths"> {
+  return {
+    subtitle: "I&IT Business Analysis | Agile Delivery | Public Sector Systems | UAT Governance",
+    summaryBullets: [
+      "Senior business analyst experienced in I&IT delivery, requirements gathering, stakeholder engagement, and clear documentation for complex public sector systems.",
+      "Translates current-state and future-state analysis into business process mapping, use cases, user stories, acceptance criteria, and delivery-ready backlog items.",
+      "Supports Product Owners and delivery teams through backlog refinement, Agile ceremonies, UAT planning, defect triage, and release readiness evidence.",
+      "Works across DevOps, Jira, Confluence, Oracle, SQL, workflow analysis and approval process improvement, information management, and AODA-aware documentation.",
+      "Known for clarifying ambiguity, aligning business and technical stakeholders, and improving implementation quality across regulated service environments."
+    ],
+    coreStrengths: [
+      "I&IT business analysis and requirements gathering",
+      "Stakeholder engagement and workshop facilitation",
+      "Current-state and future-state process mapping",
+      "Use cases, user stories, and acceptance criteria",
+      "Backlog refinement and Product Owner support",
+      "Agile ceremonies, UAT planning, and defect triage",
+      "DevOps, Jira, Confluence, Oracle, and SQL",
+      "Public sector delivery, AODA-aware documentation, and information management",
+      "Workflow analysis and approval process improvement"
+    ]
+  };
+}
+
+function normalizeEmployer(value: string): string {
+  return clean(value)
+    .toLowerCase()
+    .replace(/\b(corporation|corp|incorporated|inc|limited|ltd|llc|canada)\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function canPlaceExperienceBulletUnderEmployer(record: TailoredExperienceBullet, employerContext: string): boolean {
+  const provenance = record.provenance;
+  if (!provenance.verified) return false;
+  if (!provenance.employer) return false;
+  const sourceEmployer = normalizeEmployer(provenance.employer);
+  const targetEmployer = normalizeEmployer(employerContext);
+  if (!sourceEmployer || !targetEmployer) return false;
+  return sourceEmployer === targetEmployer || sourceEmployer.includes(targetEmployer) || targetEmployer.includes(sourceEmployer);
+}
+
+function toExperienceRecord(item: ExperienceItem, score: number): TailoredExperienceBullet {
+  const confidence = typeof item.confidence === "number" ? item.confidence : 60;
+  return {
+    text: sanitizeVisibleResumeText(item.text),
+    tags: item.tags || [],
+    score,
+    provenance: {
+      source: clean(item.source || "profile_truth_bank"),
+      employer: clean(item.employer || ""),
+      confidence,
+      verified: Boolean(item.verified)
+    }
+  };
+}
+
+function pickExperienceBullets(track: string, jdText: string, experiencePool: ExperienceItem[]): TailoredExperienceBullet[] {
   const jdTokens = new Set(tokenize(jdText));
   const scored = experiencePool
     .map((item) => {
@@ -148,16 +329,29 @@ function pickExperienceBullets(track: string, jdText: string, experiencePool: Ex
       let score = 0;
       if (track === "retail_analytics" && tags.includes("retail")) score += 3;
       if (track === "azure_cloud" && (tags.includes("cloud") || tags.includes("architecture"))) score += 3;
+      if (track === "salesforce_crm_delivery" && (tags.includes("salesforce") || tags.includes("crm"))) score += 4;
+      if (track === "business_analysis" && (tags.includes("ba") || tags.includes("requirements") || tags.includes("uat"))) score += 4;
+      if (track === "project_program_management" && (tags.includes("delivery") || tags.includes("governance") || tags.includes("project"))) score += 4;
+      if (track === "wms_erp_supply_chain" && (tags.includes("wms") || tags.includes("erp") || tags.includes("supply_chain") || tags.includes("warehouse") || tags.includes("retail"))) score += 4;
       if (tags.includes("delivery")) score += 1;
       for (const token of textTokens) {
         if (jdTokens.has(token)) score += 1;
       }
-      return { text: clean(item.text), score };
+      if (item.verified) score += 1;
+      return toExperienceRecord(item, score);
     })
     .sort((a, b) => b.score - a.score);
 
-  const selected = scored.slice(0, 8).map((item) => item.text);
-  return [...new Set(selected)].slice(0, 8);
+  const selected: TailoredExperienceBullet[] = [];
+  const seen = new Set<string>();
+  for (const item of scored.filter((entry) => entry.score >= 3)) {
+    const key = item.text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    selected.push(item);
+    if (selected.length >= 20) break;
+  }
+  return selected;
 }
 
 function checkContamination(text: string, jdText: string, scoringRules: ScoringRules): string[] {
@@ -216,38 +410,60 @@ export function buildTailoredResumeContent(args: {
   const scoringRules = getScoringRules();
   const track = detectTrack(roleTitle, company, jdText, truthBank);
   const trackConfig = truthBank.tracks?.[track] || truthBank.tracks?.enterprise_delivery || {};
+  const businessAnalysis = track === "business_analysis";
+  const baContent = businessAnalysis ? businessAnalysisContent() : null;
 
   const subtitle = clean(
-    trackConfig.subtitle
+    baContent?.subtitle
+      || trackConfig.subtitle
       || "Enterprise Systems | Delivery Governance | Integration Execution | Operational Impact"
   );
 
   const summaryTemplates = trackConfig.summary_templates || [];
-  const summaryBullets = (summaryTemplates.length > 0
+  const summaryBullets = (baContent?.summaryBullets || (summaryTemplates.length > 0
     ? summaryTemplates.map((template) => fillTemplate(String(template), roleTitle, company))
     : [
         `${roleTitle} leader focused on structured delivery, measurable outcomes, and clear stakeholder communication.`,
-        `Strong fit for ${company}: practical execution across enterprise systems, integrations, and release governance.`,
+        `Experienced with ${company} priorities across enterprise systems, integrations, and release governance.`,
         "Known for reducing ambiguity, improving handoffs, and driving reliable implementation quality.",
         "Combines business translation with technical delivery discipline across complex environments.",
         "Portfolio includes practical implementation work across GitHub and Una Labs assets."
-      ])
+      ]))
+    .map(sanitizeVisibleResumeText)
     .slice(0, 5);
 
-  const coreStrengths = [...new Set((trackConfig.core_strengths || []).map((item) => clean(item)).filter(Boolean))].slice(0, 7);
-  const experienceBullets = pickExperienceBullets(track, jdText, truthBank.experience_pool || []);
-  const portfolioBullets = [...new Set((truthBank.portfolio || []).map((item) => clean(item)).filter(Boolean))].slice(0, 2);
+  const coreStrengths = [...new Set((baContent?.coreStrengths || trackConfig.core_strengths || []).map((item) => sanitizeVisibleResumeText(item)).filter(Boolean))].slice(0, baContent ? 9 : 7);
+  const experienceBulletRecords = pickExperienceBullets(track, jdText, truthBank.experience_pool || []);
+  const experienceBullets = experienceBulletRecords.map((item) => item.text);
+  const additionalAchievementBullets = experienceBulletRecords
+    .filter((item) => !item.provenance.employer || !item.provenance.verified)
+    .map((item) => item.text)
+    .slice(0, 6);
+  const portfolioBullets = [...new Set((truthBank.portfolio || []).map((item) => sanitizeVisibleResumeText(item)).filter(Boolean))].slice(0, 2);
+  const provenanceStats: ResumeProvenanceStats = {
+    selectedBulletCount: experienceBulletRecords.length,
+    employerAttributedBulletCount: experienceBulletRecords.filter((item) => item.provenance.employer && item.provenance.verified).length,
+    unattributedBulletCount: experienceBulletRecords.filter((item) => !item.provenance.employer || !item.provenance.verified).length,
+    rejectedEmployerPlacementCount: 0,
+    fallbackBulletCount: additionalAchievementBullets.length,
+    placedEmployerBulletCount: 0
+  };
 
   const joined = [
-    roleTitle,
+    sanitizeVisibleResumeText(roleTitle),
     subtitle,
     ...summaryBullets,
     ...coreStrengths,
     ...experienceBullets,
+    ...additionalAchievementBullets,
     ...portfolioBullets
   ].join("\n");
 
   needsReviewReasons.push(...checkContamination(joined, jdText, scoringRules));
+  const forbiddenPhrase = FORBIDDEN_VISIBLE_RESUME_PATTERNS.find((pattern) => pattern.test(joined));
+  if (forbiddenPhrase) {
+    needsReviewReasons.push(`forbidden visible resume phrase detected: ${forbiddenPhrase.source}`);
+  }
 
   return {
     targetTitle: roleTitle,
@@ -255,10 +471,13 @@ export function buildTailoredResumeContent(args: {
     summaryBullets,
     coreStrengths,
     experienceBullets,
+    experienceBulletRecords,
+    additionalAchievementBullets,
     portfolioBullets,
     track,
     needsReview: needsReviewReasons.length > 0,
-    needsReviewReasons
+    needsReviewReasons,
+    provenanceStats
   };
 }
 
@@ -303,7 +522,7 @@ export function buildTailoredCoverLetter(args: {
 
 export function renderTailoredResumeText(content: TailoredResumeContent): string {
   return [
-    `Target Title: ${content.targetTitle}`,
+    `Target Title: ${sanitizeVisibleResumeText(content.targetTitle)}`,
     `Subtitle: ${content.subtitle}`,
     "",
     "Summary",
@@ -314,6 +533,9 @@ export function renderTailoredResumeText(content: TailoredResumeContent): string
     "",
     "Selected Experience Bullets",
     ...content.experienceBullets.map((bullet) => `- ${bullet}`),
+    ...(content.additionalAchievementBullets.length > 0
+      ? ["", "Selected Achievements", ...content.additionalAchievementBullets.map((bullet) => `- ${bullet}`)]
+      : []),
     "",
     "Portfolio",
     ...content.portfolioBullets.map((bullet) => `- ${bullet}`)

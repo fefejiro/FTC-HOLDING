@@ -21,6 +21,9 @@ import {
   scoreJobs
 } from "../src/hunt.js";
 import { buildPremiumQueueReport, preparePremiumQueueArtifacts } from "../src/hunt/premium_queue.js";
+import { buildTrustReport } from "../src/hunt/trust_report.js";
+import { extractVisibleDiceJobs } from "../scripts/ingest-visible-dice.js";
+import { extractVisibleMonsterJobs } from "../scripts/ingest-visible-monster.js";
 import type { RecruiterMessage } from "../src/types.js";
 
 function gmailMessage(overrides: Partial<RecruiterMessage> = {}): RecruiterMessage {
@@ -124,14 +127,16 @@ describe("hunt flow", () => {
     expect(drafts.c).toBe(0);
   });
 
-  it("normalizes Greenhouse, Lever, and Ashby sources into the same shape", () => {
+  it("normalizes Greenhouse, Lever, Ashby, and Monster sources into the same shape", () => {
     const greenhouse = normalizeSourceJob({ title: "Engineer", company: "A", apply_url: "https://boards.greenhouse.io/a/jobs/1", description: "Remote TypeScript" });
     const lever = normalizeSourceJob({ title: "Engineer", company: "B", apply_url: "https://jobs.lever.co/b/2", description: "Hybrid Node" });
     const ashby = normalizeSourceJob({ title: "Engineer", company: "C", apply_url: "https://jobs.ashbyhq.com/c/3", description: "Onsite CRM" });
+    const monster = normalizeSourceJob({ title: "ERP Manager", company: "D", apply_url: "https://www.monster.com/job-openings/erp-manager-remote-123", description: "Remote ERP WMS POS" });
 
     expect(greenhouse.source).toBe("greenhouse");
     expect(lever.source).toBe("lever");
     expect(ashby.source).toBe("ashby");
+    expect(monster.source).toBe("monster");
     expect(greenhouse.status).toBeUndefined();
     expect(greenhouse.required_skills).toBe("[]");
   });
@@ -245,6 +250,162 @@ describe("hunt flow", () => {
 
     expect(report.rows[0].action).toBe("apply_candidate");
     expect(report.rows[0].reason).toContain("Easy Apply");
+  });
+
+  it("premium queue does not promote unresolved manual pauses as apply candidates", () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    const info = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, next_action, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Technical Solutions Specialist",
+      "VersaFile",
+      "Remote Canada",
+      "indeed",
+      "https://ca.indeed.com/viewjob?jk=versafile",
+      "Indeed Easy Apply. Technical solutions, ERP, workflow, and document-management delivery.",
+      "needs_review",
+      74,
+      "tier_3",
+      "review_sensitive_fields_then_package",
+      now,
+      now
+    );
+    const resumePath = path.resolve(".local", "generated-tests", "versafile-tss.docx");
+    fs.mkdirSync(path.dirname(resumePath), { recursive: true });
+    fs.writeFileSync(resumePath, "test docx placeholder", "utf8");
+    db.prepare(
+      `INSERT INTO application_attempts (run_id, job_id, adapter, apply_url, status, required_fields_json, answered_fields_json, pause_reason, resume_artifact_path, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      1,
+      Number(info.lastInsertRowid),
+      "indeed_visible",
+      "https://ca.indeed.com/viewjob?jk=versafile",
+      "manual_open_pause",
+      JSON.stringify(["desired_pay", "full_address", "postal_code"]),
+      JSON.stringify([{ label: "address", answer: "missing_saved_truthful_full_address", source: "manual_pause" }]),
+      "Paused at SmartApply screener. Required full Address and Postal/ZIP; do not invent address. No submit attempted.",
+      resumePath,
+      now,
+      now
+    );
+
+    const report = buildPremiumQueueReport(db, { sourceFilter: "indeed", limit: 10 });
+
+    expect(report.rows[0].action).toBe("needs_manual_review");
+    expect(report.rows[0].reason).toContain("Previous live attempt paused");
+  });
+
+  it("premium queue demotes non-target Indeed sales and operations roles", () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Hotel Sales Account Director",
+      "Association Market",
+      "Winnipeg, MB",
+      "indeed",
+      "https://ca.indeed.com/viewjob?jk=hotel-sales",
+      "Sales account management for hotel and hospitality customers.",
+      "package_generated",
+      100,
+      "tier_1",
+      now,
+      now
+    );
+
+    const report = buildPremiumQueueReport(db, { sourceFilter: "indeed", limit: 10 });
+
+    expect(report.rows[0].action).toBe("skip_non_target");
+    expect(report.rows[0].reason).toContain("outside the target");
+  });
+
+  it("extracts visible Dice jobs with match and Easy Apply evidence", () => {
+    const jobs = extractVisibleDiceJobs({
+      title: "Dice jobs",
+      url: "https://www.dice.com/jobs?q=remote+business+systems",
+      links: [
+        {
+          text: "Business Systems Manager - ERP Retail",
+          href: "https://www.dice.com/job-detail/abc-123"
+        }
+      ],
+      cards: [
+        {
+          href: "https://www.dice.com/job-detail/abc-123",
+          text: "Business Systems Manager - ERP Retail Northstar Remote Dice Job Match Score 84% Posted today Easy Apply ERP WMS POS delivery."
+        }
+      ]
+    });
+
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].source_url).toContain("dice.com/job-detail/abc-123");
+    expect(jobs[0].dice_match_score).toBe(84);
+    expect(jobs[0].dice_apply_button_status).toBe("easy_apply_visible");
+    expect(jobs[0].description).toContain("[Dice evidence]");
+  });
+
+  it("extracts visible Monster jobs as scout-only opportunities", () => {
+    const jobs = extractVisibleMonsterJobs({
+      title: "Monster jobs",
+      url: "https://www.monster.com/jobs/search?q=remote+business+systems+analyst&where=Remote",
+      links: [
+        {
+          text: "Business Systems Analyst - ERP Retail",
+          href: "https://www.monster.com/job-openings/business-systems-analyst-erp-retail-remote"
+        },
+        {
+          text: "IBP / Ariba / SAP Supply Chain Program Manager",
+          href: "https://www.monster.com/job-openings/ibp-ariba-sap-supply-chain-program-manager"
+        }
+      ],
+      cards: [
+        {
+          href: "https://www.monster.com/job-openings/business-systems-analyst-erp-retail-remote",
+          text: "Business Systems Analyst - ERP Retail Northstar Remote Quick Apply Posted today ERP WMS POS delivery."
+        },
+        {
+          href: "https://www.monster.com/job-openings/ibp-ariba-sap-supply-chain-program-manager",
+          text: "IBP / Ariba / SAP Supply Chain Program Manager Mindlance 10 days agoRemote"
+        }
+      ]
+    });
+
+    expect(jobs).toHaveLength(2);
+    expect(jobs[0].source_url).toContain("monster.com/job-openings/business-systems-analyst");
+    expect(jobs[0].company).toBe("Northstar");
+    expect(jobs[0].description).toContain("[Monster visible evidence]");
+    expect(jobs[1].company).toBe("Mindlance");
+    expect(jobs[1].description).toContain("posted=\"10 days ago\"");
+  });
+
+  it("premium queue skips unrelated Monster roles before artifact generation", () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Tax Director - Private Client Services (REMOTE)",
+      "AccountingCo",
+      "Remote",
+      "monster",
+      "https://www.monster.com/job-openings/tax-director-private-client-services-remote",
+      `[Monster visible evidence] posted="today"; quick_apply=unknown; scraped_at=${now}\nTax Director - Private Client Services remote.`,
+      "package_generated",
+      90,
+      "tier_1",
+      now,
+      now
+    );
+
+    const report = buildPremiumQueueReport(db, { sourceFilter: "monster", limit: 10 });
+
+    expect(report.rows[0].action).toBe("skip_non_target");
   });
 
   it("premium queue holds local-only Dice roles for review", () => {
@@ -399,6 +560,52 @@ describe("hunt flow", () => {
     expect(fs.existsSync(attempt.cover_letter_artifact_path)).toBe(true);
     expect(attempt.status).toBe("paused");
     expect(jobRow.status).toBe("package_generated");
+  });
+
+  it("trust report orders by latest application activity instead of attempt id", () => {
+    const db = getDb(":memory:");
+    const older = "2026-06-02T09:00:00.000Z";
+    const newer = "2026-06-03T15:06:15.158Z";
+    const staleJob = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, source, apply_url, description, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Stale Project Manager",
+      "OldCo",
+      "indeed",
+      "https://example.com/stale",
+      "Older application activity.",
+      "manual_open_pause",
+      older,
+      older
+    );
+    const verifiedJob = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, source, apply_url, description, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Business Systems Analyst (REMOTE)",
+      "NTT DATA",
+      "indeed",
+      "https://example.com/ntt",
+      "Verified application updated today.",
+      "applied_verified",
+      older,
+      newer
+    );
+
+    db.prepare(
+      `INSERT INTO application_attempts (run_id, job_id, adapter, apply_url, status, required_fields_json, answered_fields_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(1, Number(verifiedJob.lastInsertRowid), "indeed", "https://example.com/ntt", "submitted_verified", "[]", "[]", older, newer);
+    db.prepare(
+      `INSERT INTO application_attempts (run_id, job_id, adapter, apply_url, status, required_fields_json, answered_fields_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(1, Number(staleJob.lastInsertRowid), "indeed", "https://example.com/stale", "manual_open_pause", "[]", "[]", older, older);
+
+    const report = buildTrustReport(db, { limit: 1 });
+
+    expect(report.rows[0].job_id).toBe(Number(verifiedJob.lastInsertRowid));
+    expect(report.rows[0].company).toBe("NTT DATA");
   });
 
   it("premium queue does not promote previously blocked Dice rows as apply candidates", () => {

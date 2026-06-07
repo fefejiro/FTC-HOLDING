@@ -7,6 +7,27 @@ import pyperclip
 from pywinauto import Desktop, keyboard
 
 
+def profile_label(window) -> str:
+    try:
+        for button in window.descendants(control_type="Button"):
+            try:
+                text = button.window_text() or ""
+                props = button.get_properties()
+                automation_id = props.get("automation_id") or ""
+            except Exception:
+                continue
+            if automation_id == "view_1018" and text:
+                return text.strip()
+    except Exception:
+        return ""
+    return ""
+
+
+def is_fejiro_profile(window) -> bool:
+    label = profile_label(window).lower()
+    return "fejiro" in label and "mike" not in label and "michael" not in label
+
+
 def find_chrome_window():
     candidates = []
     for window in Desktop(backend="uia").windows():
@@ -20,6 +41,16 @@ def find_chrome_window():
 
     if not candidates:
         raise RuntimeError("No visible Google Chrome window found.")
+
+    fejiro_windows = [window for window in candidates if is_fejiro_profile(window)]
+    if not fejiro_windows:
+        seen = ", ".join(
+            f"{window.window_text()} [profile={profile_label(window) or 'unknown'}]"
+            for window in candidates
+        )
+        raise RuntimeError(f"No visible Fejiro Chrome profile window found. Seen: {seen}")
+
+    candidates = fejiro_windows
 
     for window in candidates:
         title = window.window_text()
@@ -38,6 +69,21 @@ def navigate_current_tab(window, url: str, wait_seconds: float) -> None:
     keyboard.send_keys("^v")
     keyboard.send_keys("{ENTER}")
     time.sleep(wait_seconds)
+
+
+def read_current_url(window) -> str:
+    window.set_focus()
+    time.sleep(0.2)
+    previous_clipboard = pyperclip.paste()
+    keyboard.send_keys("^l")
+    time.sleep(0.2)
+    keyboard.send_keys("^c")
+    time.sleep(0.2)
+    current_url = pyperclip.paste()
+    keyboard.send_keys("{ESC}")
+    time.sleep(0.1)
+    pyperclip.copy(previous_clipboard)
+    return current_url
 
 
 def run_javascript_url(window, payload: str, wait_seconds: float) -> None:
@@ -127,6 +173,7 @@ def main() -> int:
     parser.add_argument("--click-apply", action="store_true", help="Click a visible Apply/Apply with Indeed control before capture.")
     parser.add_argument("--click-wait", type=float, default=5.0)
     parser.add_argument("--leave-dump-page", action="store_true", help="Leave the tab on the copied JSON dump page instead of restoring the captured URL.")
+    parser.add_argument("--no-dump", action="store_true", help="Navigate/click/screenshot only; do not replace the page with a DOM dump.")
     args = parser.parse_args()
 
     out = Path(args.out)
@@ -141,6 +188,22 @@ def main() -> int:
         screenshot_path = Path(args.screenshot)
         screenshot_path.parent.mkdir(parents=True, exist_ok=True)
         window.capture_as_image().save(screenshot_path)
+    if args.no_dump:
+        final_url = read_current_url(window)
+        data = {
+            "capturedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "requestedUrl": args.url,
+            "finalUrl": final_url,
+            "visibleChromeTitleBefore": before_title,
+            "visibleChromeTitleAfterNavigation": after_title,
+        }
+        if args.screenshot:
+            data["screenshotPath"] = str(Path(args.screenshot).resolve())
+        out.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        print(f"Wrote visible Chrome action capture: {out.resolve()}")
+        print(f"Visible Chrome title before: {before_title}")
+        print(f"Visible Chrome title after navigation: {after_title}")
+        return 0
     data = run_dom_dump(window, args.dump_wait)
     data["visibleChromeTitleBefore"] = before_title
     data["visibleChromeTitleAfterNavigation"] = after_title

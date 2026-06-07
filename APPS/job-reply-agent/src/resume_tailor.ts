@@ -2,7 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import JSZip from "jszip";
 import { logger } from "./logger";
-import { buildTailoredResumeContent } from "./resume_style.js";
+import {
+  buildTailoredResumeContent,
+  canPlaceExperienceBulletUnderEmployer,
+  FORBIDDEN_VISIBLE_RESUME_PHRASES,
+  isApprovedOrangeTemplatePath,
+  sanitizeVisibleResumeText,
+  type ResumeProvenanceStats,
+  type TailoredExperienceBullet
+} from "./resume_style.js";
 import type { ParsedOpportunity } from "./types.js";
 
 export interface TailorArgs {
@@ -18,6 +26,7 @@ export interface TailorResult {
   employerSlug: string;
   newTitle: string;
   subtitle: string;
+  provenanceStats?: ResumeProvenanceStats;
   needsReview?: boolean;
   needsReviewReasons?: string[];
 }
@@ -143,6 +152,74 @@ function replaceFirstBulletLines(paragraphs: string[], start: number, end: numbe
   }
 }
 
+interface ExperiencePlacementResult {
+  placed: TailoredExperienceBullet[];
+  unplaced: TailoredExperienceBullet[];
+  rejectedEmployerPlacementCount: number;
+}
+
+function isBulletParagraph(text: string): boolean {
+  return text.startsWith("â€¢") || text.startsWith("•") || /^[-*]\s+/.test(text);
+}
+
+function extractEmployerHeading(text: string): string {
+  const match = text.match(/^([^|]{2,90})\s+\|\s+.+$/);
+  if (!match) return "";
+  const employer = match[1].trim();
+  if (/^(summary|experience|education|portfolio|selected achievements)$/i.test(employer)) {
+    return "";
+  }
+  return employer;
+}
+
+function replaceEmployerSafeBulletLines(
+  paragraphs: string[],
+  start: number,
+  end: number,
+  records: TailoredExperienceBullet[]
+): ExperiencePlacementResult {
+  if (start < 0 || end < start) {
+    return {
+      placed: [],
+      unplaced: [...records],
+      rejectedEmployerPlacementCount: records.length
+    };
+  }
+
+  const remaining = [...records];
+  const placed: TailoredExperienceBullet[] = [];
+  let currentEmployer = "";
+
+  for (let index = start; index <= end; index += 1) {
+    const text = paragraphText(paragraphs[index]);
+    const employer = extractEmployerHeading(text);
+    if (employer) {
+      currentEmployer = employer;
+      continue;
+    }
+    if (!isBulletParagraph(text) || !currentEmployer) {
+      continue;
+    }
+
+    const replacementIndex = remaining.findIndex((record) =>
+      canPlaceExperienceBulletUnderEmployer(record, currentEmployer)
+    );
+    if (replacementIndex < 0) {
+      continue;
+    }
+
+    const [record] = remaining.splice(replacementIndex, 1);
+    placed.push(record);
+    paragraphs[index] = setParagraphText(paragraphs[index], `â€¢ ${record.text}`);
+  }
+
+  return {
+    placed,
+    unplaced: remaining,
+    rejectedEmployerPlacementCount: records.length - placed.length
+  };
+}
+
 function joinParagraphs(templateXml: string, updatedParagraphs: string[]): string {
   let cursor = 0;
   return templateXml.replace(/<w:p\b[\s\S]*?<\/w:p>/g, () => {
@@ -153,13 +230,16 @@ function joinParagraphs(templateXml: string, updatedParagraphs: string[]): strin
 }
 
 /**
- * Tailor the resume to align with the job description and prevent contamination.
+ * Build a role-focused professional resume and prevent visible process language.
  */
 export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult> {
   const { parsed, jdText, templatePath, outputDir } = args;
 
   if (!fs.existsSync(templatePath)) {
     throw new Error(`Resume template not found: ${templatePath}`);
+  }
+  if (!isApprovedOrangeTemplatePath(templatePath)) {
+    throw new Error(`needs_review:resume_template_must_be_approved_orange:${path.basename(templatePath)}`);
   }
   fs.mkdirSync(outputDir, { recursive: true });
 
@@ -171,6 +251,7 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
   }
 
   const newTitle = normalizeTitle(rawRole);
+  const visibleTitle = sanitizeVisibleResumeText(newTitle);
   const roleSlug = cropSlug(titleCaseSlug(newTitle) || "Project_Manager", MAX_SLUG_PART);
   const employerSlug = cropSlug(titleCaseSlug(rawEmployer) || "Employer", MAX_SLUG_PART);
 
@@ -215,9 +296,9 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
 
   const titleLimit = subtitleIdx >= 0 ? subtitleIdx : nameIdx >= 0 ? nameIdx : summaryHeadingIdx;
   const titleIndexes = preambleIndexes.filter((index) => index < titleLimit).slice(0, 4);
-  const titleLines = splitTitleToLines(newTitle, Math.max(1, titleIndexes.length || 1));
+  const titleLines = splitTitleToLines(visibleTitle, Math.max(1, titleIndexes.length || 1));
   if (titleIndexes.length === 0) {
-    paragraphs[0] = setParagraphText(paragraphs[0], newTitle);
+    paragraphs[0] = setParagraphText(paragraphs[0], visibleTitle);
   } else {
     titleIndexes.forEach((index, i) => {
       paragraphs[index] = setParagraphText(paragraphs[index], titleLines[i] || "");
@@ -237,6 +318,7 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
   const portfolioStart = portfolioHeadingIdx >= 0 ? portfolioHeadingIdx + 1 : -1;
   const portfolioEnd = portfolioStart >= 0 ? paragraphs.length - 1 : -1;
 
+  /*
   replaceSectionLines(paragraphs, summaryStart, summaryEnd, tailored.summaryBullets.map((item) => `• ${item}`));
   replaceSectionLines(paragraphs, coreStart, coreEnd, tailored.coreStrengths.map((item) => `• ${item}`));
   replaceFirstBulletLines(paragraphs, experienceStart, experienceEnd, tailored.experienceBullets.map((item) => `• ${item}`));
@@ -244,8 +326,33 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
     replaceSectionLines(paragraphs, portfolioStart, portfolioEnd, tailored.portfolioBullets.map((item) => `• ${item}`));
   }
 
+  */
+  const bulletPrefix = "\u00e2\u20ac\u00a2 ";
+  replaceSectionLines(paragraphs, summaryStart, summaryEnd, tailored.summaryBullets.map((item) => `${bulletPrefix}${item}`));
+  replaceSectionLines(paragraphs, coreStart, coreEnd, tailored.coreStrengths.map((item) => `${bulletPrefix}${item}`));
+  const placement = replaceEmployerSafeBulletLines(paragraphs, experienceStart, experienceEnd, tailored.experienceBulletRecords);
+  const fallbackSpan = portfolioStart >= 0 && portfolioEnd >= portfolioStart ? portfolioEnd - portfolioStart + 1 : 0;
+  const fallbackRecords = placement.unplaced.slice(0, fallbackSpan);
+  if (portfolioStart >= 0) {
+    if (fallbackRecords.length > 0 && portfolioHeadingIdx >= 0) {
+      paragraphs[portfolioHeadingIdx] = setParagraphText(paragraphs[portfolioHeadingIdx], "SELECTED ACHIEVEMENTS");
+      replaceSectionLines(paragraphs, portfolioStart, portfolioEnd, fallbackRecords.map((item) => `${bulletPrefix}${item.text}`));
+    } else {
+      replaceSectionLines(paragraphs, portfolioStart, portfolioEnd, tailored.portfolioBullets.map((item) => `${bulletPrefix}${item}`));
+    }
+  }
+
   const updatedXml = joinParagraphs(xml, paragraphs);
-  zip.file("word/document.xml", updatedXml);
+  zip.file("word/document.xml", sanitizeVisibleDocXml(updatedXml));
+
+  const visibleXmlEntries = Object.keys(zip.files).filter((fileName) =>
+    /^word\/(?:header|footer)\d*\.xml$/i.test(fileName)
+  );
+  await Promise.all(visibleXmlEntries.map(async (fileName) => {
+    const entry = zip.file(fileName);
+    if (!entry) return;
+    zip.file(fileName, sanitizeVisibleDocXml(await entry.async("string")));
+  }));
 
   const outName = buildTailoredFileName(roleSlug, employerSlug);
   const outPath = path.join(outputDir, outName);
@@ -263,7 +370,27 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
     employerSlug,
     newTitle,
     subtitle: tailored.subtitle,
+    provenanceStats: {
+      ...tailored.provenanceStats,
+      placedEmployerBulletCount: placement.placed.length,
+      rejectedEmployerPlacementCount: placement.rejectedEmployerPlacementCount,
+      fallbackBulletCount: fallbackRecords.length
+    },
     needsReview: false,
     needsReviewReasons: []
   };
+}
+
+function sanitizeVisibleDocXml(xml: string): string {
+  return xml.replace(/<w:p\b[\s\S]*?<\/w:p>/g, (paragraphXml) => {
+    const text = paragraphText(paragraphXml);
+    if (!text) return paragraphXml;
+    const hasForbiddenText = FORBIDDEN_VISIBLE_RESUME_PHRASES.some((phrase) =>
+      new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text)
+    );
+    if (!hasForbiddenText && !/\bRQ\d+\b/i.test(text)) {
+      return paragraphXml;
+    }
+    return setParagraphText(paragraphXml, sanitizeVisibleResumeText(text));
+  });
 }

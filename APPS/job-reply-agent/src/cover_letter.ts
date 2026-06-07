@@ -53,6 +53,9 @@ export function buildFallbackCoverLetter(input: CoverLetterInput): string {
     : "I am comfortable coordinating across business, technical, vendor, and leadership stakeholders while keeping delivery details visible.";
 
   const focus = [
+    /ai|machine learning|ml\b|document intelligence|automation|decisioning/i.test(description) ? "AI-enabled workflow, automation, and decision-support delivery" : "",
+    /mortgage|lending|loan|underwriting|origination|los\b|financial services/i.test(description) ? "regulated lending and mortgage-platform domain awareness" : "",
+    /salesforce|crm|service cloud|sales cloud|cpq|appbuilder|agentforce/i.test(description) ? "Salesforce and CRM-adjacent delivery" : "",
     /erp|sap|oracle|business systems/i.test(description) ? "ERP and enterprise systems delivery" : "",
     /wms|warehouse|fulfillment|supply chain/i.test(description) ? "WMS, fulfillment, and operational platform readiness" : "",
     /pos|retail|omnichannel|loyalty/i.test(description) ? "retail systems, POS, and omnichannel transformation" : "",
@@ -62,10 +65,16 @@ export function buildFallbackCoverLetter(input: CoverLetterInput): string {
   const focusText = focus.length
     ? focus.join(", ")
     : "enterprise systems delivery, stakeholder coordination, implementation readiness, vendor communication, UAT governance, and release-risk control";
+  const domainLine = /mortgage|lending|loan|underwriting|origination|los\b|financial services/i.test(description)
+    ? "For a lending technology environment, I would be especially useful in translating regulated operational workflows into clear requirements, decision logic, testable acceptance criteria, and feedback loops that help product, engineering, and business experts move with confidence."
+    : "";
+  const aiLine = /ai|machine learning|ml\b|document intelligence|automation|decisioning/i.test(description)
+    ? "I am also comfortable using AI tools in day-to-day delivery work for discovery, documentation, analysis, validation, and measurement while keeping human judgment, business rules, and auditability visible."
+    : "";
 
   return [
     "Fejiro Efiuvwere",
-    "Greater Toronto Area, Canada | fejiro.efiuvwere@gmail.com | +1 647 473 3500",
+    "Greater Toronto Area, Canada | fejiro.efiuvwere@gmail.com | +1 416 473 2732",
     "",
     new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
     "",
@@ -78,7 +87,9 @@ export function buildFallbackCoverLetter(input: CoverLetterInput): string {
     "",
     `I am excited to apply for the ${role} role at ${company}. My background combines ${focusText}.`,
     "",
-    "In recent roles, I have helped business and technical teams turn unclear operational needs into structured requirements, acceptance criteria, issue logs, readiness dashboards, training material, and go-live evidence. I have supported enterprise transformation work across government, retail, logistics, WMS, POS, ERP, SAP microservices, Google Cloud integration, and business systems validation.",
+    "In recent roles, I have helped business and technical teams turn unclear operational needs into structured requirements, acceptance criteria, issue logs, readiness dashboards, training material, and go-live evidence. I have supported enterprise transformation work across government, retail, logistics, WMS, POS, ERP, SAP microservices, Google Cloud integration, CRM-adjacent workflows, and business systems validation.",
+    "",
+    [domainLine, aiLine].filter(Boolean).join(" "),
     "",
     `I would bring ${company} a calm, execution-focused delivery leader who can bridge business users, technical teams, vendors, and leadership while keeping scope, risks, timelines, and implementation details clear. ${remoteLine}`,
     "",

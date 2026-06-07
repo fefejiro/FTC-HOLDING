@@ -63,6 +63,30 @@ describe("cover letter artifacts", () => {
     expect(text).toContain("Program Manager ServiceNow");
     expect(text).toContain("Dacaro Software Services Inc");
     expect(text).not.toMatch(/Easily apply|at Unknown/i);
-    expect(text).toContain("+1 647 473 3500");
+    expect(text).toContain("+1 416 473 2732");
+  });
+
+  it("includes Salesforce and CRM focus when the job description requires Salesforce", async () => {
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "job-agent-cover-salesforce-"));
+    const resumeDocxPath = path.join(outputDir, "Fejiro_Efiuvwere_Business_Systems_Project_Manager_Addepar_Resume.docx");
+    fs.writeFileSync(resumeDocxPath, "placeholder");
+
+    const artifacts = await writeCoverLetterArtifacts({
+      outputDir,
+      resumeDocxPath,
+      coverText: "",
+      fallback: {
+        roleTitle: "Business Systems - Project Manager",
+        company: "Addepar",
+        location: "Calgary, AB / Remote",
+        jobDescription: "Experience with Salesforce required. Service Cloud, Salesforce CPQ, Jira, Confluence, software implementations, and business systems delivery."
+      }
+    });
+
+    const text = fs.readFileSync(artifacts.textPath, "utf8");
+    expect(text).toContain("Addepar");
+    expect(text).toMatch(/Salesforce/i);
+    expect(text).toMatch(/CRM-adjacent/i);
+    expect(text).not.toMatch(/tailored/i);
   });
 });

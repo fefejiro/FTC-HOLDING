@@ -1,19 +1,21 @@
 param(
-  [int]$Limit = 10
+  [int]$Limit = 15
 )
 
 $ErrorActionPreference = "Stop"
 $root = "C:\FTC HOLDING\APPS\job-reply-agent"
-$outDir = Join-Path $root ".local\visible-indeed"
+$outDir = Join-Path $root ".local\visible-dice"
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
 $queries = @(
-  "remote technical program manager ERP",
-  "remote business systems analyst",
+  "remote IT manager retail systems",
   "remote service delivery manager",
+  "remote business systems manager ERP",
   "remote ERP transformation manager",
   "remote WMS POS program manager",
-  "remote product operations manager"
+  "remote QA manager retail systems",
+  "program manager enterprise systems",
+  "business systems analyst ERP"
 )
 
 Push-Location $root
@@ -21,19 +23,19 @@ try {
   foreach ($query in $queries) {
     $slug = ($query -replace '[^a-zA-Z0-9]+','-').Trim('-').ToLowerInvariant()
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $url = "https://ca.indeed.com/jobs?q=$([uri]::EscapeDataString($query))&l=Remote&sc=0kf%3Aattr%28DSQF7%29%3B&fromage=7&sort=date"
+    $url = "https://www.dice.com/jobs?q=$([uri]::EscapeDataString($query))&page=1&pageSize=20&language=en"
     $out = Join-Path $outDir "$stamp-$slug.json"
     python scripts\visible_chrome_dom_dump.py --url $url --out $out --wait 8
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $out)) {
-      Write-Warning "Skipping Indeed ingest for '$query' because the visible DOM dump failed."
+      Write-Warning "Skipping Dice ingest for '$query' because the visible DOM dump failed."
       continue
     }
-    npx tsx scripts\ingest-visible-indeed.ts --file=$out
+    npx tsx scripts\ingest-visible-dice.ts --file=$out
   }
 
-  npm run hunt:score -- --source=indeed
-  npm run hunt:package -- --source=indeed
-  npm run hunt:premium-queue -- --source=indeed --limit=$Limit
+  npm run hunt:score -- --source=dice
+  npm run hunt:package -- --source=dice
+  npm run hunt:premium-queue -- --source=dice --limit=$Limit
 } finally {
   Pop-Location
 }

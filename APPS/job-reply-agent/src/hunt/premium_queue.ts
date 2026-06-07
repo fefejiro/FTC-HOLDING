@@ -13,6 +13,7 @@ type PremiumAction =
   | "review_missing_artifact"
   | "skip_low_fit"
   | "skip_stale"
+  | "skip_non_target"
   | "already_verified"
   | "needs_manual_review";
 
@@ -30,6 +31,8 @@ type QueueRow = {
   tier: string | null;
   next_action: string | null;
   attempt_status: string | null;
+  required_fields_json: string | null;
+  answered_fields_json: string | null;
   pause_reason: string | null;
   resume_artifact_path: string | null;
   screenshot_path: string | null;
@@ -73,7 +76,8 @@ export function buildPremiumQueueReport(
     .prepare(
       `SELECT j.id, j.title, j.company, j.location, j.source, j.source_url, j.apply_url, j.description,
               j.status, j.score, j.tier, j.next_action,
-              a.status AS attempt_status, a.pause_reason, a.resume_artifact_path, a.screenshot_path
+              a.status AS attempt_status, a.required_fields_json, a.answered_fields_json,
+              a.pause_reason, a.resume_artifact_path, a.screenshot_path
        FROM hunt_jobs j
        LEFT JOIN application_attempts a ON a.job_id = j.id
        WHERE ${where.join(" AND ")}
@@ -138,7 +142,12 @@ function classifyPremiumQueueItem(row: QueueRow): PremiumQueueItem {
   const verified = row.status === "applied_verified" || row.attempt_status === "submitted_verified";
   const previouslyBlocked = row.status === "blocked" || row.attempt_status === "blocked";
   const reconciledOldAttempt = /reconciled|not counted as applied|submitted_unverified/i.test(row.pause_reason || "");
+  const unresolvedPauseGate = hasUnresolvedPauseGate(row);
   const noisyIndeedRow = hasNoisyIndeedRow(row);
+  const noisyMonsterRow = hasNoisyMonsterRow(row);
+  const nonTargetIndeedRole = hasNonTargetIndeedRole(row);
+  const nonTargetRole = hasNonTargetRole(row);
+  const weakMonsterTarget = hasWeakMonsterTarget(row);
   const durableDocxResume = Boolean(row.resume_artifact_path && /\.docx$/i.test(row.resume_artifact_path) && fs.existsSync(row.resume_artifact_path) && !/[\\/]temp[\\/]|appdata[\\/]local[\\/]temp/i.test(row.resume_artifact_path));
   const safeCurrentStatus = ["package_generated", "apply_ready"].includes(row.status) || (row.status === "needs_review" && !reconciledOldAttempt && !previouslyBlocked);
 
@@ -157,9 +166,15 @@ function classifyPremiumQueueItem(row: QueueRow): PremiumQueueItem {
   } else if (previouslyBlocked || reconciledOldAttempt) {
     action = "review_previous_attempt";
     reason = "This job has a prior blocked/reconciled attempt, so it needs a fresh live detail check before any new submit.";
-  } else if (noisyIndeedRow) {
+  } else if (unresolvedPauseGate) {
     action = "needs_manual_review";
-    reason = "Indeed row looks noisy or placeholder-derived; refresh from a live detail page before packaging or submit.";
+    reason = "Previous live attempt paused on required fields, human verification, or a saved-truth blocker; do not auto-promote until resolved.";
+  } else if (nonTargetIndeedRole || nonTargetRole || weakMonsterTarget) {
+    action = "skip_non_target";
+    reason = "Role appears outside the target IT/product/systems lane; do not package or submit without a fresh live-detail override.";
+  } else if (noisyIndeedRow || noisyMonsterRow) {
+    action = "needs_manual_review";
+    reason = "Source row looks noisy or placeholder-derived; refresh from a live detail page before packaging or submit.";
   } else if (localGate) {
     action = "review_location_or_auth";
     reason = "Description contains local, onsite, residency, or hybrid-onsite wording.";
@@ -270,6 +285,7 @@ function rankPremiumItem(row: QueueRow, action: PremiumAction, diceMatchScore: n
     review_previous_attempt: 425,
     needs_manual_review: 350,
     skip_stale: 100,
+    skip_non_target: 75,
     skip_low_fit: 50,
     already_verified: 0
   };
@@ -295,11 +311,15 @@ function hasNoisyIndeedRow(row: QueueRow): boolean {
   const title = (row.title || "").trim();
   const url = row.apply_url || row.source_url || "";
 
-  if (/(?:fedcba9876543210|cdef0123456789ab|a1b2c3d4e5f67890|f1e2d3c4b5a67890|123456789abcdef0)/i.test(url)) {
+  if (/(?:fedcba9876543210|cdef0123456789ab|a1b2c3d4e5f67890|f1e2d3c4b5a67890|123456789abcdef0|456789abcdef0123)/i.test(url)) {
     return true;
   }
 
   if (!company || /^(unknown|terms|privacy|feedback)$/i.test(company)) {
+    return true;
+  }
+
+  if (/\bexplore high paying jobs\b/i.test(`${company}\n${title}`)) {
     return true;
   }
 
@@ -323,6 +343,106 @@ function hasNoisyIndeedRow(row: QueueRow): boolean {
   }
 
   return false;
+}
+
+function hasNoisyMonsterRow(row: QueueRow): boolean {
+  if (row.source !== "monster") return false;
+  const company = (row.company || "").trim();
+  const title = (row.title || "").trim();
+  const text = `${title}\n${company}\n${row.description || ""}`;
+
+  if (!company || /^unknown$/i.test(company)) {
+    return true;
+  }
+
+  if (hasCityStateLocation(company) || /\bUnited States\s*\(/i.test(company) || /\(\s*$/.test(company)) {
+    return true;
+  }
+
+  if (/\b\d+\+?\s*(?:days?|d|weeks?|w)\s*ago/i.test(company) || /remote$/i.test(company)) {
+    return true;
+  }
+
+  if (company.length > 75 || title.length > 150) {
+    return true;
+  }
+
+  if (title.toLowerCase().includes(company.toLowerCase()) || company.toLowerCase().includes(title.toLowerCase())) {
+    return true;
+  }
+
+  if (/\b(?:quick apply|apply now|job description|monster)\b/i.test(company)) {
+    return true;
+  }
+
+  return false;
+}
+
+function stripEvidenceAndUrls(value: string): string {
+  return String(value || "")
+    .replace(/\[.*?evidence\][^\n]*/gi, "")
+    .replace(/https?:\/\/\S+/gi, "");
+}
+
+function hasWeakMonsterTarget(row: QueueRow): boolean {
+  if (row.source !== "monster") return false;
+  const descriptionText = stripEvidenceAndUrls(row.description || "");
+  const text = `${row.title || ""}\n${row.company || ""}\n${row.location || ""}\n${descriptionText}`;
+
+  return !/\b(?:i\.?t\.?|information technology|technical product|business systems?|systems analyst|business analyst|data management|data products?|service delivery|enterprise systems?|platform|integration|implementation|erp|sap|oracle|netsuite|dynamics|wms|mawm|warehouse systems?|pos|retail systems?|supply chain|logistics|qa|quality assurance|pega systems?)\b/i.test(text);
+}
+
+function hasNonTargetIndeedRole(row: QueueRow): boolean {
+  if (row.source !== "indeed") return false;
+  const heading = `${row.title}\n${row.company}`.toLowerCase();
+  const description = `${row.location}\n${row.description}`.toLowerCase();
+  const text = `${heading}\n${description}`;
+
+  const nonTargetSignals = /\b(account manager|sales account|hotel sales|industry sales|landscape|property management|metalworking fluids|electrical project|production manager|construction|renovation|site supervisor|estimator)\b/i;
+  if (!nonTargetSignals.test(text)) return false;
+
+  const strongHeadingTarget = /\b(it|information technology|software|technical|product owner|product manager|business systems?|systems analyst|business analyst|erp|wms|pos|qa|quality assurance|crm|digital|implementation|service delivery|enterprise systems?|platform|program manager)\b/i;
+  if (strongHeadingTarget.test(heading)) return false;
+
+  const projectManagerWithSystemsTarget =
+    /\bproject manager\b/i.test(heading)
+    && /\b(it|information technology|software|technical|erp|wms|pos|qa|quality assurance|crm|digital|implementation|service delivery|enterprise systems?|platform|systems integration|business systems?)\b/i.test(description);
+
+  return !projectManagerWithSystemsTarget;
+}
+
+function hasNonTargetRole(row: QueueRow): boolean {
+  const heading = `${row.title || ""}\n${row.company || ""}`;
+  const descriptionText = stripEvidenceAndUrls(row.description || "");
+  const text = `${heading}\n${row.location || ""}\n${descriptionText}`;
+
+  const unrelatedRoleSignal =
+    /\b(?:bcba|board certified behavior analyst|mortgage claims?|tax director|tax manager|private client services|accounting senior manager|commercial underwriting|payroll director|bridge project manager|rebar project manager|electrical engineering manager|construction|renovation|consumer engagement manager|customer service case manager|automotive training and development|market area manager|fleet implementation manager|behavioral health|restaurant|hotel sales|property management)\b/i;
+  if (!unrelatedRoleSignal.test(text)) return false;
+
+  const strongTargetHeading =
+    /\b(?:i\.?t\.?|information technology|technical product|business systems?|systems analyst|business analyst|service delivery|enterprise systems?|platform|integration|erp|sap|oracle|wms|warehouse systems?|pos|retail systems?|supply chain|data products?|qa|quality assurance|program manager|project manager)\b/i;
+  if (strongTargetHeading.test(heading) && /\b(?:erp|sap|oracle|wms|warehouse|pos|retail systems?|business systems?|enterprise systems?|integration|technical|i\.?t\.?|information technology|service delivery|platform)\b/i.test(text)) {
+    return false;
+  }
+
+  return true;
+}
+
+function hasUnresolvedPauseGate(row: QueueRow): boolean {
+  const text = [
+    row.attempt_status || "",
+    row.pause_reason || "",
+    row.required_fields_json || "",
+    row.answered_fields_json || "",
+    row.next_action || ""
+  ].join("\n");
+
+  if (row.attempt_status === "manual_open_pause") {
+    return true;
+  }
+
+  return /\b(recaptcha|captcha|human verification|authenticator|address|postal|zip|missing_saved_truthful|do not invent|required fields?|required questions?|screener|driver'?s?\s+licen[cs]e|vehicle|criminal|conviction|manual_pause|external\s+.+survey|survey\s+.+required)\b/i.test(text);
 }
 
 function hasCityStateLocation(value: string): boolean {
@@ -416,7 +536,9 @@ function upsertPreparedArtifactAttempt(db: Database.Database, args: {
 }
 
 function parseDiceEvidence(description: string): { matchScore: number | null; postedAgeDays: number | null; applyButton: string } {
-  const line = String(description || "").split(/\r?\n/).find((entry) => entry.startsWith("[Dice evidence]")) || "";
+  const line = String(description || "")
+    .split(/\r?\n/)
+    .find((entry) => entry.startsWith("[Dice evidence]") || entry.startsWith("[Monster visible evidence]") || entry.startsWith("[Indeed visible evidence]")) || "";
   const matchRaw = line.match(/\bmatch_score=(\d{1,3}|unknown)\b/i)?.[1] || "";
   const postedText = line.match(/\bposted="([^"]*)"/i)?.[1] || "";
   return {
