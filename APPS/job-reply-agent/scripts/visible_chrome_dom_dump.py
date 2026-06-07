@@ -7,6 +7,36 @@ import pyperclip
 from pywinauto import Desktop, keyboard
 
 
+class VisibleBrowserLock:
+    def __init__(self, timeout_seconds: float = 180.0):
+        self.path = Path(".local/visible-browser.lock")
+        self.timeout_seconds = timeout_seconds
+        self.acquired = False
+
+    def __enter__(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        deadline = time.time() + self.timeout_seconds
+        while time.time() < deadline:
+            try:
+                self.path.mkdir()
+                self.acquired = True
+                (self.path / "owner.txt").write_text(str(time.time()), encoding="utf-8")
+                return self
+            except FileExistsError:
+                time.sleep(0.5)
+        raise RuntimeError(f"Timed out waiting for visible Chrome lock: {self.path.resolve()}")
+
+    def __exit__(self, exc_type, exc, tb):
+        if not self.acquired:
+            return
+        try:
+            for child in self.path.iterdir():
+                child.unlink()
+            self.path.rmdir()
+        except Exception:
+            pass
+
+
 def profile_label(window) -> str:
     try:
         for button in window.descendants(control_type="Button"):
@@ -117,6 +147,27 @@ def click_apply_control(window, wait_seconds: float) -> None:
     run_javascript_url(window, payload, wait_seconds)
 
 
+def click_text_control(window, text_pattern: str, wait_seconds: float) -> None:
+    pattern_json = json.dumps(text_pattern)
+    payload = r"""(() => {
+  const pattern = new RegExp(""" + pattern_json + r""", 'i');
+  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+  const candidates = [...document.querySelectorAll('button,a,input[type="button"],input[type="submit"],[role="button"]')];
+  const target = candidates.find((el) => {
+    const text = clean(el.innerText || el.textContent || el.value || el.getAttribute('aria-label') || '');
+    return pattern.test(text);
+  });
+  if (!target) {
+    document.documentElement.setAttribute('data-job-agent-click-text', 'not-found');
+    return;
+  }
+  target.scrollIntoView({ block: 'center', inline: 'center' });
+  target.click();
+  document.documentElement.setAttribute('data-job-agent-click-text', 'clicked');
+})()"""
+    run_javascript_url(window, payload, wait_seconds)
+
+
 def run_dom_dump(window, wait_seconds: float) -> dict:
     # Chrome strips pasted javascript: URLs. Type the prefix, paste the payload.
     payload = r"""(() => {
@@ -171,50 +222,55 @@ def main() -> int:
     parser.add_argument("--wait", type=float, default=8.0)
     parser.add_argument("--dump-wait", type=float, default=1.5)
     parser.add_argument("--click-apply", action="store_true", help="Click a visible Apply/Apply with Indeed control before capture.")
+    parser.add_argument("--click-text", help="Click a visible button/link whose text matches this regex before capture.")
     parser.add_argument("--click-wait", type=float, default=5.0)
     parser.add_argument("--leave-dump-page", action="store_true", help="Leave the tab on the copied JSON dump page instead of restoring the captured URL.")
     parser.add_argument("--no-dump", action="store_true", help="Navigate/click/screenshot only; do not replace the page with a DOM dump.")
     args = parser.parse_args()
 
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    window = find_chrome_window()
-    before_title = window.window_text()
-    navigate_current_tab(window, args.url, args.wait)
-    if args.click_apply:
-        click_apply_control(window, args.click_wait)
-    after_title = window.window_text()
-    if args.screenshot:
-        screenshot_path = Path(args.screenshot)
-        screenshot_path.parent.mkdir(parents=True, exist_ok=True)
-        window.capture_as_image().save(screenshot_path)
-    if args.no_dump:
-        final_url = read_current_url(window)
-        data = {
-            "capturedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "requestedUrl": args.url,
-            "finalUrl": final_url,
-            "visibleChromeTitleBefore": before_title,
-            "visibleChromeTitleAfterNavigation": after_title,
-        }
+    with VisibleBrowserLock():
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        window = find_chrome_window()
+        before_title = window.window_text()
+        navigate_current_tab(window, args.url, args.wait)
+        if args.click_apply:
+            click_apply_control(window, args.click_wait)
+        if args.click_text:
+            click_text_control(window, args.click_text, args.click_wait)
+        after_title = window.window_text()
+        if args.screenshot:
+            screenshot_path = Path(args.screenshot)
+            screenshot_path.parent.mkdir(parents=True, exist_ok=True)
+            window.capture_as_image().save(screenshot_path)
+        if args.no_dump:
+            final_url = read_current_url(window)
+            data = {
+                "capturedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "requestedUrl": args.url,
+                "finalUrl": final_url,
+                "visibleChromeTitleBefore": before_title,
+                "visibleChromeTitleAfterNavigation": after_title,
+            }
+            if args.screenshot:
+                data["screenshotPath"] = str(Path(args.screenshot).resolve())
+            out.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            print(f"Wrote visible Chrome action capture: {out.resolve()}")
+            print(f"Visible Chrome title before: {before_title}")
+            print(f"Visible Chrome title after navigation: {after_title}")
+            return 0
+        data = run_dom_dump(window, args.dump_wait)
+        data["visibleChromeTitleBefore"] = before_title
+        data["visibleChromeTitleAfterNavigation"] = after_title
         if args.screenshot:
             data["screenshotPath"] = str(Path(args.screenshot).resolve())
         out.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        print(f"Wrote visible Chrome action capture: {out.resolve()}")
+        if not args.leave_dump_page and data.get("url"):
+            navigate_current_tab(window, "about:blank", 0.5)
+            navigate_current_tab(window, data["url"], 1.5)
+        print(f"Wrote DOM dump: {out.resolve()}")
         print(f"Visible Chrome title before: {before_title}")
         print(f"Visible Chrome title after navigation: {after_title}")
-        return 0
-    data = run_dom_dump(window, args.dump_wait)
-    data["visibleChromeTitleBefore"] = before_title
-    data["visibleChromeTitleAfterNavigation"] = after_title
-    if args.screenshot:
-        data["screenshotPath"] = str(Path(args.screenshot).resolve())
-    out.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    if not args.leave_dump_page and data.get("url"):
-        navigate_current_tab(window, data["url"], 1.0)
-    print(f"Wrote DOM dump: {out.resolve()}")
-    print(f"Visible Chrome title before: {before_title}")
-    print(f"Visible Chrome title after navigation: {after_title}")
     return 0
 
 

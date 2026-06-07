@@ -202,6 +202,29 @@ function classifyPage(dumpPath: string): { status: string; reason: string; final
     return { status: "manual_open_pause", reason: "Indeed sign-in or verification gate is visible in Fejiro Chrome; no submit attempted.", finalUrl };
   }
 
+  if (/smartapply\.indeed\.com\/beta\/indeedapply\/form\/resume-selection-module/i.test(finalUrl) || /upload or create a resume|resume selection|select a resume/i.test(text)) {
+    if (/use your indeed resume|recommended .*\.pdf|uploaded (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(text)) {
+      return {
+        status: "manual_open_pause",
+        reason: "Indeed SmartApply resume-selection step reached, but Indeed is showing a stored/default resume. Continue is unsafe until the generated DOCX resume is uploaded or selected and visually verified.",
+        finalUrl
+      };
+    }
+    return {
+      status: "manual_open_pause",
+      reason: "Indeed SmartApply resume-selection step reached with generated DOCX resume and cover letter recorded; upload/continue/submit remains paused until proof-safe automation can verify the selected file.",
+      finalUrl
+    };
+  }
+
+  if (/smartapply\.indeed\.com\/beta\/indeedapply\/form\/review-module/i.test(finalUrl) || /review your application|submit your application|captcha|recaptcha|i'?m not a robot/i.test(text)) {
+    return {
+      status: "manual_open_pause",
+      reason: "Indeed SmartApply review or human-verification step reached with generated artifacts recorded; final submit remains paused until the page can be visually verified and applied-history proof can be captured.",
+      finalUrl
+    };
+  }
+
   if (/apply with indeed|easily apply|apply now|continue to apply/i.test(text)) {
     return {
       status: "manual_open_pause",
