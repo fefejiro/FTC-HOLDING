@@ -14,6 +14,10 @@ export default defineConfig({
     baseURL,
     headless: true,
     viewport: { width: 1280, height: 720 },
+    permissions: ['camera', 'microphone'],
+    launchOptions: {
+      args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+    },
   },
   webServer: skipWebServer
     ? undefined
@@ -31,6 +35,14 @@ export default defineConfig({
             process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
           NEXT_PUBLIC_SUPABASE_ANON_KEY:
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-anon-key-for-smoke',
+          ANION_LOCAL_DEMO: process.env.ANION_LOCAL_DEMO ?? '',
+          ANION_LOCAL_VIDEO_MODE: process.env.ANION_LOCAL_VIDEO_MODE ?? '',
+          NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? `http://localhost:${port}`,
+          NEXT_PUBLIC_AUTH_REDIRECT_URL: process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL ?? `http://localhost:${port}`,
+          SECURITY_ALLOWED_ORIGINS:
+            process.env.SECURITY_ALLOWED_ORIGINS ?? `http://localhost:${port},http://127.0.0.1:${port}`,
+          SECURITY_ALLOW_LOCALHOST_ORIGINS: process.env.SECURITY_ALLOW_LOCALHOST_ORIGINS ?? 'true',
+          SECURITY_CSRF_MODE: process.env.SECURITY_CSRF_MODE ?? 'relaxed',
         },
       },
 });

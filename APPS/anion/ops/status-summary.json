@@ -1,10 +1,10 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-05-21T17:12:00.000Z",
+  "updatedAt": "2026-06-08T10:45:00.000Z",
   "overall": "red",
   "stage": "phase1-call-closure-pending-auth-evidence",
-  "summary": "Production runtime is live, verified, and newly deployed with callback-domain hardening and premium login UX. Phase 1 remains non-green because authenticated parent/tutor/student call journey evidence is still pending behind external configuration and confirmed role test-credential gates. Privacy/Terms legal review also remains open.",
+  "summary": "Production runtime is live and verified, Supabase Worker secrets are present, and local build/test/video gates pass. Phase 1 remains non-green because Cloudflare Worker anion-web is missing Daily and Stripe provider secrets, authenticated parent/tutor/student call evidence has not passed, and Stripe billing evidence is blocked by WEBHOOK_NOT_CONFIGURED until provider settings are added. Privacy/Terms legal review also remains open.",
   "metrics": [
     {
       "label": "Docs",
@@ -76,7 +76,7 @@
     {
       "name": "Production readiness",
       "status": "red",
-      "detail": "Phase 1 authenticated call evidence is currently FAIL and critical go-live rows remain open in ops/PRODUCTION-READINESS.md."
+      "detail": "prod:doctor blocks on missing Daily and Stripe provider secrets; stricter verify:prod catches Stripe WEBHOOK_NOT_CONFIGURED; Phase 1 authenticated call evidence is currently FAIL and critical go-live rows remain open in ops/PRODUCTION-READINESS.md."
     },
     {
       "name": "Phase 1 call closure",
@@ -106,7 +106,10 @@
     "Confirm Supabase Auth allow-list includes https://anion.unalabs.cloud/auth/callback and current production domain entries.",
     "Provision and confirm production parent/tutor/student role test credentials, then execute authenticated Phase 1 lesson journeys.",
     "Capture parent/tutor/student join and leave/rejoin evidence in ops/PHASE1-CALL-PRODUCTION-CLOSURE.md and flip verdict only after all role paths pass.",
-    "Complete PRODUCTION-READINESS.md external blocker checklist (Stripe live keys/prices/webhook, Daily API key/domain, Supabase auth entries).",
+    "Set missing Cloudflare Worker provider secrets: DAILY_API_KEY, DAILY_DOMAIN, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_STARTER, STRIPE_PRICE_GROWTH, and STRIPE_PRICE_UNLIMITED.",
+    "Run npm run prod:doctor until it passes before attempting handover.",
+    "Complete PRODUCTION-READINESS.md external blocker checklist (Stripe test-mode keys/prices/webhook for handover evidence, Daily API key/domain, Supabase auth entries).",
+    "Run npm run billing:evidence after Stripe provider settings are available and store the generated JSON/Markdown report.",
     "Obtain legal review and sign-off on docs/PRIVACY.md and docs/TERMS.md before formal publication approval.",
     "Configure uptime monitor for /api/health endpoint (see MONITORING-ALERTS.md Setup Guide).",
     "Run quarterly disaster recovery test and update DISASTER-RECOVERY.md test log."

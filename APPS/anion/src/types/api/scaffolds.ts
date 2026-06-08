@@ -51,9 +51,10 @@ export type DailyRoomTokenRequest = {
 export type DailyRoomTokenSuccessResponse = {
   ok: true;
   roomUrl: string;
-  token: string;
+  token?: string;
   roomName: string;
   expiresAt: string;
+  localMode?: boolean;
 };
 
 export type DailyRoomTokenErrorResponse = {
@@ -91,7 +92,7 @@ export type PlatformStatusResponse = {
   };
   blockers: {
     externalConfig: Array<
-      'stripe_live_keys' |
+      'stripe_provider_keys' |
       'daily_api_key' |
       'supabase_auth_allow_list' |
       'confirmed_phase1_test_credentials'

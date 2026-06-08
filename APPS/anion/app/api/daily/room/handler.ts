@@ -5,6 +5,7 @@ import { enforceRateLimit } from '@/app/lib/security/rate-limit';
 import { logger } from '@/app/lib/logger';
 import { getOrCreateRequestId } from '@/app/lib/request-id';
 import { resolveLessonParticipantRoleForUser } from '@/app/lib/bookings';
+import { isLocalDemoEnabled } from '@/app/lib/local-demo';
 import type { CurrentUser } from '@/app/lib/auth/getCurrentUser';
 import type { DailyRoomTokenRequest } from '@/src/types/api/scaffolds';
 
@@ -146,6 +147,17 @@ export function createDailyRoomPostHandler(overrides: Partial<DailyRoomHandlerDe
 
     const domain = deps.env.DAILY_DOMAIN;
     const apiKey = deps.env.DAILY_API_KEY;
+    if (isLocalDemoEnabled() && deps.env.ANION_LOCAL_VIDEO_MODE === 'demo') {
+      deps.logger.info({ route, requestId, userId: user.profileId, localMode: true, latencyMs: deps.now() - start });
+      return NextResponse.json({
+        ok: true,
+        localMode: true,
+        roomUrl: `local-demo://${roomName}`,
+        roomName,
+        expiresAt: new Date(deps.now() + 3 * 60 * 60 * 1000).toISOString(),
+      });
+    }
+
     if (!domain || !apiKey) {
       const missing = [!domain ? 'DAILY_DOMAIN' : null, !apiKey ? 'DAILY_API_KEY' : null].filter(Boolean).join(', ');
       deps.logger.error({ route, requestId, userId: user.profileId, code: 'DAILY_NOT_CONFIGURED', missing, latencyMs: deps.now() - start });

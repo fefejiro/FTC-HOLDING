@@ -29,6 +29,9 @@ Primary production delivery lane for Anion.
 - npm run test:e2e
 - npm run ci:check
 - npm run preflight:prod
+- npm run prod:doctor
+- npm run phase1:evidence
+- npm run billing:evidence
 - npm run verify:prod
 - npm run perf:baseline
 - npm run build:worker
@@ -86,3 +89,82 @@ npm run ci:check --workspace APPS/anion
 
 Runs `tsc --noEmit` and `next build` in sequence - the same checks as the
 `validate` CI job.
+
+## Production Doctor
+
+Use this before claiming Anion is ready for live users:
+
+```bash
+ANION_BASE_URL=https://anion.unalabs.cloud npm run prod:doctor
+```
+
+The doctor checks production health/status and Cloudflare Worker secret
+inventory. It intentionally exits non-zero while Daily or Stripe provider
+secrets are missing, because tutor/student video calls and billing cannot be
+proven without those provider settings.
+
+After `prod:doctor` passes, run the authenticated video-call evidence gate:
+
+```bash
+ANION_BASE_URL=https://anion.unalabs.cloud \
+NEXT_PUBLIC_SUPABASE_URL=https://aaaextkrfoqomzmjjkxe.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=... \
+ANION_PHASE1_BOOKING_ID=... \
+ANION_PARENT_EMAIL=... \
+ANION_TUTOR_EMAIL=... \
+ANION_STUDENT_EMAIL=... \
+npm run phase1:evidence
+```
+
+This creates a timestamped screenshot/report folder under `test-results/` and
+only passes after parent booking visibility/denial plus tutor/student dashboard,
+token, join, leave, rejoin, and concurrent-join evidence are proven. Set
+`ANION_ADMIN_EMAIL` to include admin dashboard evidence, and set
+`ANION_EVIDENCE_POST_CLASSROOM=1` only when a controlled test classroom post is
+acceptable.
+
+After Stripe test-mode provider settings are present, run the billing evidence
+gate:
+
+```bash
+ANION_BASE_URL=https://anion.unalabs.cloud \
+NEXT_PUBLIC_SUPABASE_URL=https://aaaextkrfoqomzmjjkxe.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=... \
+STRIPE_SECRET_KEY=... \
+STRIPE_WEBHOOK_SECRET=... \
+STRIPE_PRICE_STARTER=... \
+ANION_PHASE1_BOOKING_ID=... \
+ANION_PARENT_EMAIL=... \
+npm run billing:evidence
+```
+
+This creates a timestamped billing report under `test-results/` and proves app
+checkout session creation, Stripe Checkout page opening, signed webhook
+handling, subscription sync, and billing portal session creation in test mode.
+
+## Local Demo Video Mode
+
+This repo includes a local-only demo mode so Anion can run on a laptop without
+Supabase, Daily, or Stripe secrets. It is guarded by `ANION_LOCAL_DEMO=1` and is
+disabled in production builds.
+
+Start the local app:
+
+```powershell
+npm run local:demo
+```
+
+Open:
+
+- Parent dashboard: http://localhost:4178/api/local-demo/sign-in?role=parent&next=/parent
+- Tutor lesson: http://localhost:4178/api/local-demo/sign-in?role=tutor&next=/lesson/demo-accepted-lesson
+- Student lesson: http://localhost:4178/api/local-demo/sign-in?role=student&next=/lesson/demo-accepted-lesson
+
+Verify the local camera-backed lesson flow:
+
+```powershell
+npm run test:local-video
+```
+
+This proves parent denial plus tutor/student local video join, leave, and rejoin.
+Production Daily video still requires `DAILY_API_KEY` and `DAILY_DOMAIN`.

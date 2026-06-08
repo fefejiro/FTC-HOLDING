@@ -1,5 +1,6 @@
 import { createServerClient } from '../supabase/server';
 import { redirect } from 'next/navigation';
+import { getLocalDemoCurrentUser, isLocalDemoEnabled } from '../local-demo';
 
 export type AppRole = 'student' | 'parent' | 'tutor' | 'admin';
 
@@ -19,6 +20,11 @@ export type CurrentUser = {
  */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
+    if (isLocalDemoEnabled()) {
+      const localDemoUser = await getLocalDemoCurrentUser();
+      if (localDemoUser) return localDemoUser;
+    }
+
     const supabase = await createServerClient();
 
     const {

@@ -1,4 +1,9 @@
 import { createServerClient } from './supabase/server';
+import {
+  localDemoClassroomPosts,
+  localDemoTutorClassroomStudents,
+  isLocalDemoEnabled,
+} from './local-demo';
 
 type ClassroomRole = 'student' | 'tutor';
 
@@ -207,6 +212,8 @@ async function getCurrentClassroomActor(supabase: Awaited<ReturnType<typeof crea
 }
 
 export async function listClassroomPosts(limit = 50): Promise<ClassroomPost[]> {
+  if (isLocalDemoEnabled()) return localDemoClassroomPosts.slice(0, limit);
+
   const supabase = await createServerClient();
 
   const actor = await getCurrentClassroomActor(supabase);
@@ -242,6 +249,8 @@ export async function listClassroomPostsForStudentIds(
   limit = 50,
   existingClient?: Awaited<ReturnType<typeof createServerClient>>,
 ): Promise<ClassroomPost[]> {
+  if (isLocalDemoEnabled()) return localDemoClassroomPosts.slice(0, limit);
+
   const supabase = existingClient ?? await createServerClient();
   const visibleStudentIds = Array.from(new Set(studentIds.filter(Boolean)));
   if (visibleStudentIds.length === 0) {
@@ -263,6 +272,8 @@ export async function listClassroomPostsForStudentIds(
 }
 
 export async function listTutorClassroomStudents(): Promise<TutorClassroomStudent[]> {
+  if (isLocalDemoEnabled()) return localDemoTutorClassroomStudents;
+
   const supabase = await createServerClient();
   const actor = await getCurrentClassroomActor(supabase);
 
@@ -295,6 +306,8 @@ export async function listTutorClassroomStudents(): Promise<TutorClassroomStuden
 }
 
 export async function createClassroomPost(input: { body: string; studentId?: string }): Promise<void> {
+  if (isLocalDemoEnabled()) return;
+
   const supabase = await createServerClient();
   const actor = await getCurrentClassroomActor(supabase);
 

@@ -11,6 +11,45 @@
 
 ---
 
+## Current Handover Gate
+
+As of 2026-06-08, production is reachable and Supabase Worker secrets are present, but handover is still blocked by missing provider secrets:
+
+- `DAILY_API_KEY`
+- `DAILY_DOMAIN`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_STARTER`
+- `STRIPE_PRICE_GROWTH`
+- `STRIPE_PRICE_UNLIMITED`
+
+Run this gate before client handover:
+
+```powershell
+npm run prod:doctor
+```
+
+The command must pass before tutor/student video-call evidence and billing evidence can be considered production-ready.
+
+After provider secrets are present, run authenticated video-call evidence:
+
+```powershell
+npm run phase1:evidence
+```
+
+Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ANION_PHASE1_BOOKING_ID`, `ANION_PARENT_EMAIL`, `ANION_TUTOR_EMAIL`, and `ANION_STUDENT_EMAIL`.
+
+After Stripe test-mode provider settings are present, run billing evidence:
+
+```powershell
+npm run billing:evidence
+```
+
+Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `ANION_PHASE1_BOOKING_ID`, and `ANION_PARENT_EMAIL`. Use Stripe test-mode keys for this handover pass; live billing keys are a later switch after UB approval.
+
+---
+
 ## What Was Built
 
 | Milestone | Feature | Status |
@@ -79,9 +118,9 @@ NEXT_PUBLIC_SUPABASE_URL=https://aaaextkrfoqomzmjjkxe.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
 SUPABASE_SERVICE_ROLE_KEY=<service role key>
 
-# Stripe — fill in after completing Step 2 and 3 above
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
-STRIPE_SECRET_KEY=sk_live_...
+# Stripe - test mode first for handover evidence
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_STARTER=price_...
 STRIPE_PRICE_GROWTH=price_...
@@ -114,7 +153,7 @@ Set each env var in the Cloudflare dashboard under **Workers & Pages → anion �
 
 Optional post-deploy probes:
 
-- Stripe webhook endpoint reachability: set `CHECK_STRIPE_WEBHOOK=1`
+- Stripe webhook configured signature gate: set `CHECK_STRIPE_WEBHOOK=1` and expect `400 MISSING_SIGNATURE`
 - Daily room contract smoke (non-destructive): set `CHECK_DAILY_ROOM_SMOKE=1`
 
 ---
@@ -186,15 +225,16 @@ SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
 
 ### Stripe (required for billing)
 
-- [ ] **S1** — Stripe account in live mode
-- [ ] **S2** — `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_live_...`
-- [ ] **S3** — `STRIPE_SECRET_KEY` = `sk_live_...` (set as Cloudflare secret)
+- [ ] **S1** — Stripe test mode configured for handover evidence
+- [ ] **S2** — `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_test_...`
+- [ ] **S3** — `STRIPE_SECRET_KEY` = `sk_test_...` (set as Cloudflare secret)
 - [ ] **S4** — Three prices created in Stripe (Starter, Growth, Unlimited)
 - [ ] **S5** — `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_UNLIMITED` set
 - [ ] **S6** — Webhook endpoint registered: `https://[domain]/api/webhooks/stripe`
 - [ ] **S7** — Webhook events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
 - [ ] **S8** — `STRIPE_WEBHOOK_SECRET` = `whsec_...` (from Stripe webhook signing secret)
-- [ ] **S9** — Stripe test event → endpoint returns 200 ✅
+- [ ] **S9** — `CHECK_STRIPE_WEBHOOK=1 npm run verify:prod` returns `400 MISSING_SIGNATURE`, not `WEBHOOK_NOT_CONFIGURED`
+- [ ] **S10** — `npm run billing:evidence` passes and stores JSON/Markdown evidence
 
 ### Daily.co (required for live classroom)
 

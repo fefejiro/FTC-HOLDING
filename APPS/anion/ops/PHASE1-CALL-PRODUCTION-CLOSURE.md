@@ -1,6 +1,6 @@
 # Phase 1 â€” Call Production Closure (Strict)
 
-Last updated: 2026-05-26
+Last updated: 2026-06-08
 Owner: anion-live-classroom
 Reviewer: anion-qa-release
 
@@ -16,7 +16,14 @@ Parents must be able to see accepted booking context, but they are not live-call
 - One accepted booking exists with linked parent, tutor, and student.
 - Test accounts are available for parent visibility plus tutor/student call participation.
 - Runtime under test has valid Daily credentials (`DAILY_API_KEY`, `DAILY_DOMAIN`) or blocker is explicitly recorded.
-- Evidence is captured in this file before marking pass.
+- Evidence is captured by the automated command and linked from this file before marking pass.
+- Automated evidence command is available after provider secrets and role emails are confirmed:
+
+```powershell
+npm run phase1:evidence
+```
+
+Required env vars: `ANION_BASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ANION_PHASE1_BOOKING_ID`, `ANION_PARENT_EMAIL`, `ANION_TUTOR_EMAIL`, and `ANION_STUDENT_EMAIL`. Optional: `ANION_ADMIN_EMAIL` for admin dashboard evidence and `ANION_EVIDENCE_POST_CLASSROOM=1` for a controlled classroom-feed write proof.
 
 ## Pass Criteria
 
@@ -25,6 +32,8 @@ Phase 1 is PASS only if all required role flows pass:
 - Tutor can access lesson and join Daily room.
 - Student can access lesson and join Daily room.
 - Tutor and student can each leave and rejoin once on the same accepted booking.
+- Tutor and student can join the same accepted booking concurrently.
+- Tutor writing board, student learning feed, and role dashboards are screenshot-captured.
 
 If any role fails, Phase 1 is FAIL and blocker owner must be assigned.
 
@@ -76,13 +85,15 @@ If any role fails, Phase 1 is FAIL and blocker owner must be assigned.
 | DAILY_KEYS_UNVERIFIED | External runtime config | Client/Ops | Yes | n/a | Daily token/join/leave/rejoin checks remain blocked behind authenticated role access |
 | M1_SETUP_ROLE_MATRIX_DEFECT | Code defect (fixed) | Web/Ops | No | working tree | `scripts/m1-complete-setup.ts` now provisions parent+tutor+student and creates auth users via `auth/v1/admin/users` (deprecated management endpoint removed) |
 | BOOKING_SCHEMA_DRIFT_STUDENT_ID_MISSING | Production schema drift | Ops/DB | No | fixed in-session | `public.bookings.student_id` column + index added in production; accepted booking `63404ecd-6b16-4466-bb15-745208cab970` updated with student assignment |
+| PROVIDER_SECRETS_MISSING | External runtime config | Client/Ops | Yes | n/a | 2026-06-08 `prod:doctor` confirms Cloudflare Worker `anion-web` has Supabase secrets only. Missing Daily and Stripe provider settings block production video and billing evidence. |
+| EVIDENCE_RUNNER_WEAK_ASSERTIONS | Tooling defect | Web/Ops | No | working tree | 2026-06-08 evidence runner hardened to fail closed on sign-in, assert dashboard surfaces, capture direct Daily token proof, prove concurrent tutor/student join, and write JSON plus Markdown reports. |
 
 ## Phase 1 Verdict
 
 - Verdict: [ ] PASS [x] FAIL
-- Date: 2026-05-20
+- Date: 2026-06-08
 - Decider: anion-live-classroom (execution), anion-qa-release (pending review)
-- Summary: Local Daily classroom implementation and API contract tests are green. Phase 1 remains FAIL because authenticated production evidence for parent visibility/denial plus tutor/student lesson access, Daily join, and leave/rejoin has not yet been re-run and captured with confirmed role test credentials.
+- Summary: Local Daily classroom implementation, API contract tests, and local video tests are green. Production health/status are reachable. Phase 1 remains FAIL because Cloudflare is missing Daily provider settings and authenticated production evidence for parent visibility/denial plus tutor/student lesson access, Daily join, leave/rejoin, and concurrent join has not yet passed.
 
 ## Same-day Truth Alignment Required
 

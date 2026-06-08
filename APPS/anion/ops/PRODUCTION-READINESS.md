@@ -1,7 +1,7 @@
 # Anion Class App — Production Readiness Checklist
 
 **Version:** 1.0  
-**Last Updated:** 2026-05-26  
+**Last Updated:** 2026-06-08
 **Run before:** Every production deployment or client handover
 
 Fill in **Pass**, **Fail**, or **N/A** for each item. Any **Fail** must be resolved before proceeding.
@@ -9,6 +9,14 @@ Fill in **Pass**, **Fail**, or **N/A** for each item. Any **Fail** must be resol
 Production closure rule: do not mark overall project status as green while critical blocker rows in this checklist remain open.
 
 For lesson call production closure evidence, run and complete `ops/PHASE1-CALL-PRODUCTION-CLOSURE.md` in parallel with this checklist.
+
+Current machine-checkable gate:
+
+```powershell
+npm run prod:doctor
+```
+
+2026-06-08 result: production health/status and Supabase secrets pass, but Daily and Stripe provider secrets are missing from Cloudflare Worker `anion-web`, so video-call and billing production evidence remain blocked. Stricter optional verification now fails Stripe with `WEBHOOK_NOT_CONFIGURED` until `STRIPE_WEBHOOK_SECRET` is present.
 
 ---
 
@@ -31,15 +39,16 @@ All third-party credentials must be configured before deployment. **No deploymen
 
 | # | Check | Action Required | Done? |
 |---|-------|----------------|-------|
-| S1 | Stripe account is in **live mode** (not test mode) | Toggle in Stripe dashboard | ☐ |
-| S2 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is set to `pk_live_...` | Cloudflare Workers env vars | ☐ |
-| S3 | `STRIPE_SECRET_KEY` is set to `sk_live_...` | Cloudflare Workers env vars (secret) | ☐ |
+| S1 | Stripe test mode is configured for handover evidence | Use Stripe test dashboard | ☐ |
+| S2 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is set to `pk_test_...` | Cloudflare Workers env vars | ☐ |
+| S3 | `STRIPE_SECRET_KEY` is set to `sk_test_...` | Cloudflare Workers env vars (secret) | ☐ |
 | S4 | Three prices created: Starter / Growth / Unlimited | [Stripe → Products](https://dashboard.stripe.com/products) | ☐ |
 | S5 | `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_UNLIMITED` set to `price_...` values | Cloudflare Workers env vars | ☐ |
 | S6 | Webhook endpoint registered: `https://[domain]/api/webhooks/stripe` | [Stripe → Webhooks](https://dashboard.stripe.com/webhooks) | ☐ |
 | S7 | Webhook listens for: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` | Stripe webhook config | ☐ |
 | S8 | `STRIPE_WEBHOOK_SECRET` is set to `whsec_...` (from webhook signing secret) | Cloudflare Workers env vars (secret) | ☐ |
-| S9 | Test webhook delivery successful (Stripe sends ping → endpoint returns 200) | Stripe webhook dashboard → Send test event | ☐ |
+| S9 | Webhook signature gate configured | `CHECK_STRIPE_WEBHOOK=1 npm run verify:prod` returns `400 MISSING_SIGNATURE` | ☐ |
+| S10 | Billing evidence passes | `npm run billing:evidence` stores JSON/Markdown report | ☐ |
 
 ### 2B — Daily.co
 

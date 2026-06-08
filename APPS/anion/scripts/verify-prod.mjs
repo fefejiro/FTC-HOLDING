@@ -147,7 +147,7 @@ async function checkAuthCallback(baseUrl) {
 async function checkStripeWebhook(baseUrl) {
   const url = `${baseUrl}/api/webhooks/stripe`;
   try {
-    const { response } = await fetchWithTimeout(url, {
+    const { response, bodyText } = await fetchWithTimeout(url, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -157,12 +157,17 @@ async function checkStripeWebhook(baseUrl) {
       redirect: 'manual',
     });
 
-    // Reachability-only check: this confirms route wiring exists without requiring a valid signature.
-    const ok = response.status !== 404;
-    record('Stripe webhook endpoint reachability (optional)', ok, `HTTP ${response.status}`);
+    const body = parseJsonSafe(bodyText);
+    const returnedCode = typeof body?.code === 'string' ? body.code : '(missing)';
+    const ok = response.status === 400 && returnedCode === 'MISSING_SIGNATURE';
+    record(
+      'Stripe webhook configured signature gate (optional)',
+      ok,
+      `HTTP ${response.status}, code=${returnedCode}`,
+    );
   } catch (error) {
     record(
-      'Stripe webhook endpoint reachability (optional)',
+      'Stripe webhook configured signature gate (optional)',
       false,
       error instanceof Error ? error.message : String(error),
     );
@@ -235,7 +240,7 @@ async function main() {
   if (config.checkStripeWebhook) {
     await checkStripeWebhook(config.baseUrl);
   } else {
-    record('Stripe webhook endpoint reachability (optional)', true, 'Skipped (set CHECK_STRIPE_WEBHOOK=1 to enable)');
+    record('Stripe webhook configured signature gate (optional)', true, 'Skipped (set CHECK_STRIPE_WEBHOOK=1 to enable)');
   }
 
   if (config.checkDailyRoom) {

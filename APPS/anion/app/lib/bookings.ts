@@ -1,4 +1,13 @@
 import { createServerClient } from './supabase/server';
+import {
+  DEMO_BOOKING_ID,
+  localDemoBooking,
+  localDemoBookingDetail,
+  localDemoLessonCards,
+  localDemoLinkedStudents,
+  localDemoTutorOptions,
+  isLocalDemoEnabled,
+} from './local-demo';
 
 export type BookingStatus = 'pending' | 'accepted' | 'declined';
 
@@ -236,6 +245,8 @@ async function getProfileIdForAuthUser(supabase: Awaited<ReturnType<typeof creat
 }
 
 export async function listTutorOptions(): Promise<TutorOption[]> {
+  if (isLocalDemoEnabled()) return localDemoTutorOptions;
+
   const supabase = await createServerClient();
 
   const { data, error } = await supabase
@@ -251,6 +262,8 @@ export async function listTutorOptions(): Promise<TutorOption[]> {
 }
 
 export async function listParentBookings(): Promise<BookingRow[]> {
+  if (isLocalDemoEnabled()) return [localDemoBooking];
+
   const supabase = await createServerClient();
 
   const { data, error } = await supabase
@@ -279,6 +292,8 @@ export async function listParentBookings(): Promise<BookingRow[]> {
 }
 
 export async function listParentLinkedStudents(): Promise<ParentLinkedStudent[]> {
+  if (isLocalDemoEnabled()) return localDemoLinkedStudents;
+
   const supabase = await createServerClient();
   const profileId = await getProfileIdForAuthUser(supabase);
 
@@ -318,6 +333,8 @@ export async function listParentLinkedStudents(): Promise<ParentLinkedStudent[]>
 }
 
 export async function listTutorBookings(): Promise<BookingRow[]> {
+  if (isLocalDemoEnabled()) return [localDemoBooking];
+
   const supabase = await createServerClient();
 
   const { data, error } = await supabase
@@ -346,6 +363,8 @@ export async function listTutorBookings(): Promise<BookingRow[]> {
 }
 
 export async function listAdminRecentBookings(limit = 10): Promise<BookingDisplayDetail[]> {
+  if (isLocalDemoEnabled()) return [localDemoBookingDetail].slice(0, limit);
+
   const supabase = await createServerClient();
 
   const { data, error } = await supabase
@@ -392,6 +411,11 @@ export async function listAdminRecentBookings(limit = 10): Promise<BookingDispla
 }
 
 export async function getBookingDisplayDetail(bookingId: string): Promise<BookingDisplayDetail> {
+  if (isLocalDemoEnabled()) {
+    if (bookingId !== DEMO_BOOKING_ID) throw new Error('Booking not found.');
+    return localDemoBookingDetail;
+  }
+
   const supabase = await createServerClient();
 
   const { data, error } = await supabase
@@ -438,6 +462,8 @@ export async function getBookingDisplayDetail(bookingId: string): Promise<Bookin
 }
 
 export async function listStudentAcceptedBookings(): Promise<StudentLessonCard[]> {
+  if (isLocalDemoEnabled()) return localDemoLessonCards;
+
   const supabase = await createServerClient();
   const profileId = await getProfileIdForAuthUser(supabase);
 
@@ -489,6 +515,13 @@ export async function resolveLessonParticipantRoleForUser(input: {
   profileId: string;
   role: 'student' | 'parent' | 'tutor' | 'admin';
 }): Promise<'student' | 'tutor'> {
+  if (isLocalDemoEnabled()) {
+    if (input.bookingId !== DEMO_BOOKING_ID) throw new Error('Booking not found.');
+    if (input.role === 'tutor') return 'tutor';
+    if (input.role === 'student') return 'student';
+    throw new Error('You are not allowed to access this lesson.');
+  }
+
   const supabase = await createServerClient();
 
   const { data: booking, error: bookingError } = await supabase
@@ -505,8 +538,8 @@ export async function resolveLessonParticipantRoleForUser(input: {
     throw new Error('Lesson room is only available for accepted bookings.');
   }
 
-  if (input.role === 'admin') {
-    return 'student';
+  if (input.role === 'admin' || input.role === 'parent') {
+    throw new Error('Live lessons are available to the assigned student and tutor only.');
   }
 
   if (input.role === 'tutor') {
@@ -519,19 +552,6 @@ export async function resolveLessonParticipantRoleForUser(input: {
 
     if (!tutorError && tutor) {
       return 'tutor';
-    }
-  }
-
-  if (input.role === 'parent') {
-    const { data: parent, error: parentError } = await supabase
-      .from('parents')
-      .select('id')
-      .eq('profile_id', input.profileId)
-      .eq('id', booking.parent_id)
-      .single();
-
-    if (!parentError && parent) {
-      return 'student';
     }
   }
 
@@ -573,6 +593,8 @@ export async function createBookingRequest(input: {
   durationMinutes: number;
   notes?: string;
 }): Promise<void> {
+  if (isLocalDemoEnabled()) return;
+
   const supabase = await createServerClient();
 
   const profileId = await getProfileIdForAuthUser(supabase);
@@ -622,6 +644,8 @@ export async function setBookingStatus(input: {
   bookingId: string;
   status: Extract<BookingStatus, 'accepted' | 'declined'>;
 }): Promise<void> {
+  if (isLocalDemoEnabled()) return;
+
   const supabase = await createServerClient();
 
   const { data: existing, error: readError } = await supabase

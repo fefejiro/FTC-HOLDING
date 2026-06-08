@@ -6,7 +6,7 @@ export async function GET() {
     ok: true,
     service: 'anion-web',
     phase: 'phase1-call-closure-pending-production-evidence',
-    release: '0.2.13',
+    release: '0.2.14',
     runtime: {
       web: 'live',
       health: 'ok',
@@ -18,7 +18,7 @@ export async function GET() {
     },
     blockers: {
       externalConfig: [
-        'stripe_live_keys',
+        'stripe_provider_keys',
         'daily_api_key',
         'supabase_auth_allow_list',
         'confirmed_phase1_test_credentials',

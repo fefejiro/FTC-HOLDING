@@ -31,6 +31,7 @@ type RoomData = {
   token?: string;
   roomName?: string;
   expiresAt?: string;
+  localMode?: boolean;
   message?: string;
   code?: string;
   requestId?: string;
@@ -143,6 +144,64 @@ export default function LessonRoom({
     }
   }, []);
 
+  const startLocalDemoFrame = useCallback(async () => {
+    if (!frameRef.current) {
+      throw new Error('Classroom frame is not ready. Please retry.');
+    }
+
+    frameRef.current.innerHTML = '';
+    const wrapper = document.createElement('div');
+    wrapper.setAttribute('data-testid', 'local-demo-video-room');
+    wrapper.style.cssText = [
+      'height:100%',
+      'display:grid',
+      'grid-template-columns:minmax(0,1fr) minmax(180px,260px)',
+      'gap:16px',
+      'padding:16px',
+      'background:#0f172a',
+      'color:#fff',
+      'box-sizing:border-box',
+    ].join(';');
+
+    const videoPanel = document.createElement('div');
+    videoPanel.style.cssText = 'position:relative;border-radius:12px;overflow:hidden;background:#111827;min-height:320px;';
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute('data-testid', 'local-demo-self-video');
+    video.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    videoPanel.appendChild(video);
+
+    const peerPanel = document.createElement('div');
+    peerPanel.style.cssText = [
+      'border-radius:12px',
+      'border:1px solid rgba(255,255,255,.18)',
+      'background:linear-gradient(135deg,#115e59,#1e293b)',
+      'display:flex',
+      'flex-direction:column',
+      'align-items:center',
+      'justify-content:center',
+      'text-align:center',
+      'padding:16px',
+    ].join(';');
+    peerPanel.innerHTML = `<div style="font-size:40px;font-weight:800;margin-bottom:8px;">${participantRole === 'tutor' ? 'ZS' : 'AT'}</div><div style="font-weight:700;">${participantRole === 'tutor' ? 'Zoe Demo Student' : 'Ada Demo Tutor'}</div><div style="font-size:13px;opacity:.78;margin-top:6px;">Local demo participant</div>`;
+
+    wrapper.appendChild(videoPanel);
+    wrapper.appendChild(peerPanel);
+    frameRef.current.appendChild(wrapper);
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    video.srcObject = stream;
+    callRef.current = {
+      join: async () => {},
+      on: () => {},
+      destroy: async () => {
+        stream.getTracks().forEach((track) => track.stop());
+      },
+    };
+  }, [participantRole]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -165,10 +224,16 @@ export default function LessonRoom({
         const data = (await res.json()) as RoomData;
         if (cancelled) return;
 
-        if (!data.ok || !data.roomUrl || !data.token) {
+        if (!data.ok || !data.roomUrl || (!data.token && !data.localMode)) {
           setError(describeJoinFailure(data));
           setRequestId(data.requestId ?? null);
           setStatus('error');
+          return;
+        }
+
+        if (data.localMode) {
+          await startLocalDemoFrame();
+          if (!cancelled) setStatus('connected');
           return;
         }
 
@@ -197,7 +262,7 @@ export default function LessonRoom({
           setStatus('left');
         });
 
-        await callObject.join({ url: data.roomUrl, token: data.token, userName: displayName });
+        await callObject.join({ url: data.roomUrl, token: data.token ?? '', userName: displayName });
         if (!cancelled) setStatus('connected');
       } catch (err) {
         if (!cancelled) {
@@ -213,7 +278,7 @@ export default function LessonRoom({
       cancelled = true;
       void destroyDailyFrame();
     };
-  }, [sessionId, userId, participantRole, displayName, attempt, destroyDailyFrame]);
+  }, [sessionId, userId, participantRole, displayName, attempt, destroyDailyFrame, startLocalDemoFrame]);
 
   if (status === 'left') {
     return (
@@ -280,10 +345,24 @@ export default function LessonRoom({
           </p>
         </div>
         {status === 'connected' ? (
-          <span className="badge badge-success" data-testid="lesson-call-status">
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--success)', animation: 'pulse 2s infinite' }} />
-            Connected
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)' }}>
+            <span className="badge badge-success" data-testid="lesson-call-status">
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--success)', animation: 'pulse 2s infinite' }} />
+              Connected
+            </span>
+            <button
+              type="button"
+              className="btn-secondary"
+              data-testid="leave-lesson-button"
+              style={{ padding: '8px 12px' }}
+              onClick={() => {
+                void destroyDailyFrame();
+                setStatus('left');
+              }}
+            >
+              Leave lesson
+            </button>
+          </div>
         ) : (
           <span className="body-sm secondary" data-testid="lesson-call-status">Connecting...</span>
         )}
