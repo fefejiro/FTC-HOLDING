@@ -384,9 +384,12 @@ async function main(): Promise<void> {
     pythonArgs.push("--click-apply", "--click-wait", "6");
   }
   if (uploadResume) {
-    pythonArgs.push("--upload-file", resumeForAttempt, "--upload-wait", "10");
+    pythonArgs.push("--upload-file", resumeForAttempt, "--upload-wait", "10", "--no-dump");
   }
   if (uploadCover) {
+    if (!pythonArgs.includes("--no-dump")) {
+      pythonArgs.push("--no-dump");
+    }
     pythonArgs.push("--upload-supporting-file", artifacts.coverLetterPath, "--upload-wait", "10");
   }
   execFileSync("python", pythonArgs, { stdio: "inherit" });

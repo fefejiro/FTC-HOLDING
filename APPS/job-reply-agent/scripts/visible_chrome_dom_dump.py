@@ -230,6 +230,53 @@ def click_visible_text(window, label: str) -> bool:
     return False
 
 
+def click_dom_control(window, text_pattern: str, wait_seconds: float = 0.8) -> dict:
+    marker = "JOB_AGENT_RECT:"
+    payload = r"""(() => {
+  const pattern = new RegExp(%s, 'i');
+  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+  const candidates = [...document.querySelectorAll('button,a,input[type="button"],input[type="submit"],[role="button"],[role="menuitem"]')];
+  const target = candidates.find((el) => pattern.test(clean(el.innerText || el.textContent || el.value || el.getAttribute('aria-label') || '')));
+  if (!target) {
+    document.title = 'JOB_AGENT_RECT:' + JSON.stringify({ ok: false, reason: 'not-found' });
+    return;
+  }
+  target.scrollIntoView({ block: 'center', inline: 'center' });
+  target.focus();
+  setTimeout(() => {
+    const rect = target.getBoundingClientRect();
+    document.title = 'JOB_AGENT_RECT:' + JSON.stringify({
+      ok: true,
+      text: clean(target.innerText || target.textContent || target.value || target.getAttribute('aria-label') || ''),
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height)
+    });
+  }, 100);
+})()""" % json.dumps(text_pattern)
+    run_javascript_url(window, payload, wait_seconds)
+    title = window.window_text() or ""
+    start = title.find(marker)
+    if start < 0:
+        return {"ok": False, "reason": "rect marker not found in Chrome title"}
+    raw = title[start + len(marker):].split(" - Google Chrome", 1)[0]
+    try:
+        rect = json.loads(raw)
+    except Exception as exc:
+        return {"ok": False, "reason": f"could not parse rect marker: {exc}", "raw": raw}
+    if not rect.get("ok"):
+        return rect
+    if rect.get("width", 0) <= 0 or rect.get("height", 0) <= 0:
+        return {"ok": False, "reason": "control has no visible rectangle", "rect": rect}
+    window_rect = window.rectangle()
+    x = int(window_rect.left + rect["x"] + rect["width"] / 2)
+    y = int(window_rect.top + rect["y"] + rect["height"] / 2)
+    mouse.click(button="left", coords=(x, y))
+    time.sleep(wait_seconds)
+    return {"ok": True, "reason": f"clicked DOM control '{rect.get('text', text_pattern)}'", "coords": [x, y], "rect": rect}
+
+
 def upload_file_from_resume_options(window, file_path: str, wait_seconds: float) -> dict:
     file = Path(file_path)
     if not file.exists():
@@ -244,20 +291,7 @@ def upload_file_from_resume_options(window, file_path: str, wait_seconds: float)
 
     window.set_focus()
     time.sleep(0.4)
-    scroll_and_click_resume_options = r"""(() => {
-  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-  const target = [...document.querySelectorAll('button,[role="button"],a')]
-    .find((el) => /resume options/i.test(clean(el.innerText || el.textContent || el.getAttribute('aria-label') || '')));
-  if (!target) {
-    document.documentElement.setAttribute('data-job-agent-resume-options', 'not-found');
-    return;
-  }
-  target.scrollIntoView({ block: 'center', inline: 'center' });
-  target.focus();
-  target.click();
-  document.documentElement.setAttribute('data-job-agent-resume-options', 'clicked');
-})()"""
-    run_javascript_url(window, scroll_and_click_resume_options, 0.8)
+    resume_options_click = click_dom_control(window, r"^Resume options$")
     if "Upload a different file" not in visible_text(window):
         window.set_focus()
         time.sleep(0.2)
@@ -275,6 +309,8 @@ def upload_file_from_resume_options(window, file_path: str, wait_seconds: float)
         time.sleep(0.8)
 
     if not click_visible_text(window, "Upload a different file"):
+        click_dom_control(window, r"^Upload a different file$")
+    if not find_new_file_picker(before_handles, timeout_seconds=1.5)[0]:
         click_upload = r"""(() => {
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
   const target = [...document.querySelectorAll('button,[role="button"],li,[role="menuitem"],div')]
@@ -312,7 +348,16 @@ def upload_file_from_resume_options(window, file_path: str, wait_seconds: float)
             break
 
     if not picker:
-        return {"ok": False, "reason": "Upload file picker did not open."}
+        select_file_click = click_dom_control(window, r"^Select file$")
+        picker, picker_title = find_new_file_picker(before_handles, timeout_seconds=8.0)
+
+    if not picker:
+        return {
+            "ok": False,
+            "reason": "Upload file picker did not open.",
+            "resumeOptionsClick": resume_options_click,
+            "selectFileClick": locals().get("select_file_click"),
+        }
 
     picker.set_focus()
     time.sleep(0.3)
@@ -536,6 +581,9 @@ def main() -> int:
             data = {
                 "capturedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "requestedUrl": args.url,
+                "url": final_url,
+                "title": after_title.replace(" - Google Chrome", ""),
+                "text": visible_text(window),
                 "finalUrl": final_url,
                 "visibleChromeTitleBefore": before_title,
                 "visibleChromeTitleAfterNavigation": after_title,
