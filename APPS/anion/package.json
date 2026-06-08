@@ -19,7 +19,7 @@
     "billing:evidence": "node ./scripts/billing-evidence.mjs",
     "verify:prod": "node ./scripts/verify-prod.mjs",
     "perf:baseline": "k6 run ./scripts/perf-baseline.k6.js",
-    "build:worker": "opennextjs-cloudflare build",
+    "build:worker": "opennextjs-cloudflare build && node ./scripts/assert-worker-bundle-prod-env.mjs",
     "preview:worker": "opennextjs-cloudflare preview",
     "deploy:worker": "opennextjs-cloudflare deploy",
     "status:sync": "node ../../scripts/update-anion-status.mjs"

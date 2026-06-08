@@ -16,7 +16,7 @@ Current machine-checkable gate:
 npm run prod:doctor
 ```
 
-2026-06-08 result: production health/status and Supabase secrets pass, but Daily and Stripe provider secrets are missing from Cloudflare Worker `anion-web`, so video-call and billing production evidence remain blocked. Stricter optional verification now fails Stripe with `WEBHOOK_NOT_CONFIGURED` until `STRIPE_WEBHOOK_SECRET` is present.
+2026-06-08 result: `prod:doctor` passes production health/status and Cloudflare Worker provider-secret inventory for Supabase, Daily, and Stripe. `verify:prod` now fails closed because the deployed lazy auth bundle still contains the local Supabase placeholder config. Production handover remains blocked until the Worker is rebuilt with the real build-time `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
 ---
 
@@ -47,7 +47,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | S6 | Webhook endpoint registered: `https://[domain]/api/webhooks/stripe` | [Stripe → Webhooks](https://dashboard.stripe.com/webhooks) | ☐ |
 | S7 | Webhook listens for: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` | Stripe webhook config | ☐ |
 | S8 | `STRIPE_WEBHOOK_SECRET` is set to `whsec_...` (from webhook signing secret) | Cloudflare Workers env vars (secret) | ☐ |
-| S9 | Webhook signature gate configured | `CHECK_STRIPE_WEBHOOK=1 npm run verify:prod` returns `400 MISSING_SIGNATURE` | ☐ |
+| S9 | Webhook signature gate configured | `CHECK_STRIPE_WEBHOOK=1 npm run verify:prod` returns `400 MISSING_SIGNATURE` | PASS 2026-06-08 |
 | S10 | Billing evidence passes | `npm run billing:evidence` stores JSON/Markdown report | ☐ |
 
 ### 2B — Daily.co
@@ -56,7 +56,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 |---|-------|----------------|-------|
 | D1 | Daily.co account is active and domain is provisioned | [Daily.co Dashboard](https://dashboard.daily.co) | ☐ |
 | D2 | `DAILY_API_KEY` is set | Cloudflare Workers env vars (secret) | ☐ |
-| D3 | `DAILY_DOMAIN` is set to `yourcompany.daily.co` | Cloudflare Workers env vars | ☐ |
+| D3 | `DAILY_DOMAIN` is set to `yourcompany.daily.co` | Cloudflare Workers env vars | PASS 2026-06-08 |
 | D4 | Test room creation: `POST /api/daily/room` returns room URL | Use smoke test step 3.2 | ☐ |
 
 ### 2C — Supabase
@@ -66,6 +66,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | SB1 | `NEXT_PUBLIC_SUPABASE_URL` is set | `npx wrangler secret put NEXT_PUBLIC_SUPABASE_URL --name anion-web` (value: `https://aaaextkrfoqomzmjjkxe.supabase.co`) | ☐ |
 | SB2 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` is set | `npx wrangler secret put NEXT_PUBLIC_SUPABASE_ANON_KEY --name anion-web` (value: from [Supabase → Settings → API → anon/public key](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/settings/api)) | ☐ |
 | SB3 | `SUPABASE_SERVICE_ROLE_KEY` is set | `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name anion-web` (value: from [Supabase → Settings → API → service_role key](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/settings/api)) | ☐ |
+| SB3a | Production Worker bundle has real public Supabase config baked into client auth chunks | `npm run build:worker` passes bundle guard; `verify:prod` reports `placeholder=no` for lazy auth chunk | FAIL 2026-06-08 - current production lazy chunk still contains placeholder |
 | SB4 | Production domain added to Supabase Auth allow-list | [Supabase → Auth → URL Configuration](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/auth/url-configuration) | ☐ |
 | SB5 | Redirect URL `https://[domain]/auth/callback` is in the allow-list | Same as above | ☐ |
 | SB6 | All current migrations applied to live database (currently 17) | Check `supabase/migrations/` vs applied | ☐ |

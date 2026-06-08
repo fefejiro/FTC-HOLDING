@@ -10,16 +10,15 @@ export async function GET() {
     runtime: {
       web: 'live',
       health: 'ok',
-      authAndRoles: 'blocked-invalid-credentials',
+      authAndRoles: 'blocked-public-config',
       bookings: 'implemented-not-auth-verified',
       billing: 'ready-with-external-keys',
-      liveClassroom: 'local-contract-green-production-evidence-pending',
+      liveClassroom: 'ready-with-external-keys',
       opsAndQa: 'blocked-phase1-fail',
     },
     blockers: {
       externalConfig: [
-        'stripe_provider_keys',
-        'daily_api_key',
+        'supabase_public_bundle_placeholder',
         'supabase_auth_allow_list',
         'confirmed_phase1_test_credentials',
       ],

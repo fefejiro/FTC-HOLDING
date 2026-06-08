@@ -47,29 +47,54 @@ function parseJsonSafe(value) {
   }
 }
 
-async function fetchJson(path) {
-  const response = await fetch(`${baseUrl}${path}`, {
-    headers: { accept: 'application/json' },
-    redirect: 'manual',
-  });
-  const text = await response.text();
-  return { response, body: parseJsonSafe(text), text };
+async function fetchJson(path, attempts = 3) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const response = await fetch(`${baseUrl}${path}`, {
+        headers: { accept: 'application/json' },
+        redirect: 'manual',
+        signal: controller.signal,
+      });
+      const text = await response.text();
+      return { response, body: parseJsonSafe(text), text, attempts: attempt };
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, 750 * attempt));
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw lastError;
+}
+
+function describeFetchError(error) {
+  if (!(error instanceof Error)) return String(error);
+  const cause = error.cause instanceof Error ? ` (${error.cause.message})` : '';
+  return `${error.message}${cause}`;
 }
 
 async function checkProductionHttp() {
   try {
     const health = await fetchJson('/api/health');
-    record('Production /api/health', health.response.status === 200 && health.body?.ok === true, `HTTP ${health.response.status}`);
+    record('Production /api/health', health.response.status === 200 && health.body?.ok === true, `HTTP ${health.response.status}, attempts=${health.attempts}`);
   } catch (error) {
-    record('Production /api/health', false, error instanceof Error ? error.message : String(error), 'blocker');
+    record('Production /api/health', false, describeFetchError(error), 'blocker');
   }
 
   try {
     const status = await fetchJson('/api/status');
     const phase = typeof status.body?.phase === 'string' ? status.body.phase : '(missing phase)';
-    record('Production /api/status', status.response.status === 200 && status.body?.ok === true, `HTTP ${status.response.status}, phase=${phase}`);
+    record('Production /api/status', status.response.status === 200 && status.body?.ok === true, `HTTP ${status.response.status}, phase=${phase}, attempts=${status.attempts}`);
   } catch (error) {
-    record('Production /api/status', false, error instanceof Error ? error.message : String(error), 'blocker');
+    record('Production /api/status', false, describeFetchError(error), 'blocker');
   }
 }
 

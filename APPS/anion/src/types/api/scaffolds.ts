@@ -84,7 +84,7 @@ export type PlatformStatusResponse = {
   runtime: {
     web: 'live';
     health: 'ok';
-    authAndRoles: 'ready' | 'blocked-invalid-credentials';
+    authAndRoles: 'ready' | 'blocked-invalid-credentials' | 'blocked-public-config';
     bookings: 'ready' | 'implemented-not-auth-verified';
     billing: 'ready-with-external-keys';
     liveClassroom: 'ready-with-external-keys' | 'implemented-not-auth-verified' | 'local-contract-green-production-evidence-pending';
@@ -95,6 +95,7 @@ export type PlatformStatusResponse = {
       'stripe_provider_keys' |
       'daily_api_key' |
       'supabase_auth_allow_list' |
+      'supabase_public_bundle_placeholder' |
       'confirmed_phase1_test_credentials'
     >;
     legal: Array<'privacy_policy_signoff' | 'terms_signoff'>;

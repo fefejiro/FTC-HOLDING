@@ -54,20 +54,31 @@ function record(name, ok, detail) {
   console.log(`[${ok ? 'PASS' : 'FAIL'}] ${name}${detail ? `: ${detail}` : ''}`);
 }
 
-async function fetchWithTimeout(url, init = {}, timeoutMs = 15000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+async function fetchWithTimeout(url, init = {}, timeoutMs = 15000, attempts = 3) {
+  let lastError;
 
-  try {
-    const response = await fetch(url, {
-      ...init,
-      signal: controller.signal,
-    });
-    const bodyText = await response.text();
-    return { response, bodyText };
-  } finally {
-    clearTimeout(timer);
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: controller.signal,
+      });
+      const bodyText = await response.text();
+      return { response, bodyText, attempts: attempt };
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, 750 * attempt));
+      }
+    } finally {
+      clearTimeout(timer);
+    }
   }
+
+  throw lastError;
 }
 
 function parseJsonSafe(raw) {
@@ -140,6 +151,109 @@ async function checkAuthCallback(baseUrl) {
       'Auth callback URL sanity (/auth/callback)',
       false,
       error instanceof Error ? error.message : String(error),
+    );
+  }
+}
+
+function extractScriptPaths(html) {
+  const paths = new Set();
+  const regex = /["'](\/_next\/static\/[^"']+?\.js)["']/g;
+  let match;
+  while ((match = regex.exec(html))) {
+    paths.add(match[1]);
+  }
+  return [...paths];
+}
+
+function extractLazyChunkPaths(scriptBodies, chunkIds) {
+  const paths = new Set();
+
+  for (const body of scriptBodies) {
+    for (const chunkId of chunkIds) {
+      const directMatch = body.match(new RegExp(`${chunkId}:"([a-f0-9]+)"`));
+      if (directMatch?.[1]) {
+        paths.add(`/_next/static/chunks/${chunkId}.${directMatch[1]}.js`);
+      }
+    }
+
+    const chunkMapMatch = body.match(/\.u=e=>.*?\+\(\(?(\{[^}]+\})\[e\]\|\|e\)\+"\."\+\((\{[^}]+\})\[e\]\+"/);
+    if (!chunkMapMatch) continue;
+
+    let prefixes;
+    let hashes;
+    try {
+      prefixes = JSON.parse(chunkMapMatch[1].replace(/(\d+):/g, '"$1":'));
+      hashes = JSON.parse(chunkMapMatch[2].replace(/(\d+):/g, '"$1":'));
+    } catch {
+      continue;
+    }
+
+    for (const chunkId of chunkIds) {
+      const id = String(chunkId);
+      const hash = hashes[id];
+      if (!hash) continue;
+      const basename = prefixes[id] || id;
+      paths.add(`/_next/static/chunks/${basename}.${hash}.js`);
+    }
+  }
+
+  return [...paths];
+}
+
+async function checkPublicBundleConfig(baseUrl) {
+  try {
+    const login = await fetchWithTimeout(`${baseUrl}/login`, {
+      method: 'GET',
+      headers: { Accept: 'text/html' },
+      redirect: 'manual',
+    });
+
+    const scriptPaths = extractScriptPaths(login.bodyText).slice(0, 40);
+    const bodies = [login.bodyText];
+    const initialScriptBodies = [];
+
+    for (const scriptPath of scriptPaths) {
+      const script = await fetchWithTimeout(`${baseUrl}${scriptPath}`, {
+        method: 'GET',
+        headers: { Accept: 'application/javascript,text/javascript,*/*' },
+        redirect: 'manual',
+      });
+      if (script.response.status === 200) {
+        bodies.push(script.bodyText);
+        initialScriptBodies.push(script.bodyText);
+      }
+    }
+
+    const lazyScriptPaths = extractLazyChunkPaths(initialScriptBodies, [623]);
+    for (const scriptPath of lazyScriptPaths) {
+      const script = await fetchWithTimeout(`${baseUrl}${scriptPath}`, {
+        method: 'GET',
+        headers: { Accept: 'application/javascript,text/javascript,*/*' },
+        redirect: 'manual',
+      });
+      if (script.response.status === 200) {
+        bodies.push(script.bodyText);
+      }
+    }
+
+    const combined = bodies.join('\n');
+    const hasPlaceholder =
+      combined.includes('https://placeholder.supabase.co') ||
+      combined.includes('placeholder-anon-key-for-local-demo');
+    const hasProductionUrl = combined.includes('https://aaaextkrfoqomzmjjkxe.supabase.co');
+
+    record(
+      'Production public bundle Supabase config',
+      !hasPlaceholder,
+      `${scriptPaths.length + lazyScriptPaths.length} JS chunk(s) checked; lazy=${lazyScriptPaths.length}; placeholder=${hasPlaceholder ? 'yes' : 'no'}; prodUrl=${hasProductionUrl ? 'yes' : 'not-in-initial-chunks'}`,
+    );
+  } catch (error) {
+    record(
+      'Production public bundle Supabase config',
+      false,
+      error instanceof Error
+        ? `${error.message}${error.cause instanceof Error ? ` (${error.cause.message})` : ''}`
+        : String(error),
     );
   }
 }
@@ -236,6 +350,7 @@ async function main() {
   await checkHealth(config.baseUrl);
   await checkStatus(config.baseUrl);
   await checkAuthCallback(config.baseUrl);
+  await checkPublicBundleConfig(config.baseUrl);
 
   if (config.checkStripeWebhook) {
     await checkStripeWebhook(config.baseUrl);

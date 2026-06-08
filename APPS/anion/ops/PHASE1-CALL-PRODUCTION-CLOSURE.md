@@ -82,10 +82,11 @@ If any role fails, Phase 1 is FAIL and blocker owner must be assigned.
 | AUTH_PROVISIONING_ACCESS_MISSING | External auth provisioning access | Client/Ops | No | fixed in-session | Resolved in this cycle: valid `SUPABASE_API_TOKEN` supplied, project API keys retrieved, and parent/tutor/student users created via Auth Admin API |
 | AUTH_REDIRECT_DOMAIN_MISMATCH | Runtime auth routing/config | Web/Ops | No | 0.2.10 + 0.2.12 | Callback hardening deployed; production callback sanity now redirects on `anion.unalabs.cloud`. Remaining Phase 1 blocker is authenticated role journey evidence, not callback-domain mismatch |
 | PARENT_CALL_PARTICIPATION_RULE | Product access rule | Web/Product | No | working tree | Parent call participation removed from current success criteria. Parent visibility remains required; Daily room access is restricted to assigned tutor and student. |
-| DAILY_KEYS_UNVERIFIED | External runtime config | Client/Ops | Yes | n/a | Daily token/join/leave/rejoin checks remain blocked behind authenticated role access |
+| DAILY_KEYS_UNVERIFIED | External runtime config | Client/Ops | No | fixed in-session | 2026-06-08 Cloudflare Worker `anion-web` secret inventory includes Daily API key/domain. Daily evidence still waits on authenticated role flow, not provider setup. |
 | M1_SETUP_ROLE_MATRIX_DEFECT | Code defect (fixed) | Web/Ops | No | working tree | `scripts/m1-complete-setup.ts` now provisions parent+tutor+student and creates auth users via `auth/v1/admin/users` (deprecated management endpoint removed) |
 | BOOKING_SCHEMA_DRIFT_STUDENT_ID_MISSING | Production schema drift | Ops/DB | No | fixed in-session | `public.bookings.student_id` column + index added in production; accepted booking `63404ecd-6b16-4466-bb15-745208cab970` updated with student assignment |
-| PROVIDER_SECRETS_MISSING | External runtime config | Client/Ops | Yes | n/a | 2026-06-08 `prod:doctor` confirms Cloudflare Worker `anion-web` has Supabase secrets only. Missing Daily and Stripe provider settings block production video and billing evidence. |
+| PROVIDER_SECRETS_MISSING | External runtime config | Client/Ops | No | fixed in-session | 2026-06-08 `prod:doctor` confirms Cloudflare Worker `anion-web` has Supabase, Daily, and Stripe provider secrets. |
+| SUPABASE_PUBLIC_BUNDLE_PLACEHOLDER | Build/runtime config | Web/Ops | Yes | working tree guardrail | 2026-06-08 `verify:prod` now catches the lazy auth chunk with `placeholder=yes`. Rebuild with real build-time Supabase public env before authenticated evidence or handover. |
 | EVIDENCE_RUNNER_WEAK_ASSERTIONS | Tooling defect | Web/Ops | No | working tree | 2026-06-08 evidence runner hardened to fail closed on sign-in, assert dashboard surfaces, capture direct Daily token proof, prove concurrent tutor/student join, and write JSON plus Markdown reports. |
 
 ## Phase 1 Verdict
@@ -93,7 +94,7 @@ If any role fails, Phase 1 is FAIL and blocker owner must be assigned.
 - Verdict: [ ] PASS [x] FAIL
 - Date: 2026-06-08
 - Decider: anion-live-classroom (execution), anion-qa-release (pending review)
-- Summary: Local Daily classroom implementation, API contract tests, and local video tests are green. Production health/status are reachable. Phase 1 remains FAIL because Cloudflare is missing Daily provider settings and authenticated production evidence for parent visibility/denial plus tutor/student lesson access, Daily join, leave/rejoin, and concurrent join has not yet passed.
+- Summary: Local Daily classroom implementation, API contract tests, and local video tests are green. Production health/status are reachable and provider secrets are present. Phase 1 remains FAIL because the deployed lazy auth bundle still contains local Supabase placeholder config, so authenticated production evidence for parent visibility/denial plus tutor/student lesson access, Daily join, leave/rejoin, and concurrent join has not yet passed.
 
 ## Same-day Truth Alignment Required
 
