@@ -1,12 +1,19 @@
 import { createServerClient as createSSRServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { getRuntimeSupabaseAnonKey, getRuntimeSupabaseUrl } from '../runtime-env';
 
 export async function createServerClient() {
   const cookieStore = await cookies();
+  const supabaseUrl = getRuntimeSupabaseUrl();
+  const supabaseAnonKey = getRuntimeSupabaseAnonKey();
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase public runtime configuration.');
+  }
 
   return createSSRServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {

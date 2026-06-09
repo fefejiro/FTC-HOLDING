@@ -3,6 +3,7 @@ node_modules/
 .open-next/
 out/
 .env.local
+.env.production.local
 .wrangler/
 tsconfig.tsbuildinfo
 .vscode/

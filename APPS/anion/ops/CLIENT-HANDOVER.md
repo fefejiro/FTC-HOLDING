@@ -1,282 +1,180 @@
-# Anion Class App — Client Handover
+# Anion Class App - Client Handover
 
 > Status: supporting reference.
 >
 > Use `NEXT-24H-EXECUTION-BOARD.md` for the active engineering execution queue.
-> This file should stay focused on handover prerequisites and client setup context.
+> This file stays focused on production handover prerequisites, setup context,
+> and client-facing truth.
 
-**Version:** 0.2.0  
-**Delivered:** 2026-05-07  
-**Milestones:** M1 Auth · M2 Bookings · M3 Stripe Billing · M4 Daily Live Classroom · M5 Admin Dashboard
-
----
+**Version:** 0.2.15
+**Updated:** 2026-06-09
+**Production URL:** https://anion.unalabs.cloud
+**Milestones:** M1 Auth, M2 Bookings, M3 Stripe Billing, M4 Daily Live Classroom, M5 Admin Dashboard
 
 ## Current Handover Gate
 
-As of 2026-06-08, production is reachable and Supabase Worker secrets are present, but handover is still blocked by missing provider secrets:
+As of 2026-06-09, production is reachable and Cloudflare Worker provider settings for Supabase, Daily, and Stripe are present. The public browser auth-config blocker is fixed in production.
 
-- `DAILY_API_KEY`
-- `DAILY_DOMAIN`
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_STARTER`
-- `STRIPE_PRICE_GROWTH`
-- `STRIPE_PRICE_UNLIMITED`
+Handover is still blocked by evidence, not provider inventory:
 
-Run this gate before client handover:
+- Authenticated parent visibility and parent call-denial evidence.
+- Authenticated tutor Daily join, leave, and rejoin evidence.
+- Authenticated student Daily join, leave, and rejoin evidence.
+- Stripe test checkout, signed webhook, subscription sync, and billing portal evidence.
+- Privacy/Terms legal signoff.
+
+Run this gate before any client handover claim:
 
 ```powershell
-npm run prod:doctor
+ANION_BASE_URL=https://anion.unalabs.cloud npm run prod:doctor
 ```
 
-The command must pass before tutor/student video-call evidence and billing evidence can be considered production-ready.
+Expected current result: pass.
 
-After provider secrets are present, run authenticated video-call evidence:
+Run strict production verification:
 
 ```powershell
+$env:ANION_BASE_URL="https://anion.unalabs.cloud"
+$env:CHECK_STRIPE_WEBHOOK="1"
+$env:CHECK_DAILY_ROOM_SMOKE="1"
+$env:EXPECTED_DAILY_ERROR_CODE="AUTO"
+npm run verify:prod
+```
+
+Expected current result: pass, including:
+
+- Auth callback redirects on `https://anion.unalabs.cloud`.
+- Public browser Supabase config has `placeholder=no`.
+- Stripe unsigned webhook returns `400 MISSING_SIGNATURE`.
+- Daily room smoke returns a configured auth/CSRF gate, not provider-missing.
+
+## Evidence Commands
+
+After `prod:doctor` passes, run authenticated video-call evidence:
+
+```powershell
+$env:ANION_BASE_URL="https://anion.unalabs.cloud"
+$env:NEXT_PUBLIC_SUPABASE_URL="https://aaaextkrfoqomzmjjkxe.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="..."
+$env:ANION_PHASE1_BOOKING_ID="..."
+$env:ANION_PARENT_EMAIL="..."
+$env:ANION_TUTOR_EMAIL="..."
+$env:ANION_STUDENT_EMAIL="..."
 npm run phase1:evidence
 ```
 
-Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ANION_PHASE1_BOOKING_ID`, `ANION_PARENT_EMAIL`, `ANION_TUTOR_EMAIL`, and `ANION_STUDENT_EMAIL`.
+Required proof:
+
+- Parent can see the accepted booking.
+- Parent cannot join the Daily room.
+- Tutor can join, leave, and rejoin.
+- Student can join, leave, and rejoin.
+- Tutor and student can join the same booking concurrently.
+- Tutor writing board, student learning feed, and role dashboards are screenshot-captured.
 
 After Stripe test-mode provider settings are present, run billing evidence:
 
 ```powershell
+$env:ANION_BASE_URL="https://anion.unalabs.cloud"
+$env:NEXT_PUBLIC_SUPABASE_URL="https://aaaextkrfoqomzmjjkxe.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="..."
+$env:STRIPE_SECRET_KEY="..."
+$env:STRIPE_WEBHOOK_SECRET="..."
+$env:STRIPE_PRICE_STARTER="..."
+$env:ANION_PHASE1_BOOKING_ID="..."
+$env:ANION_PARENT_EMAIL="..."
 npm run billing:evidence
 ```
 
-Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `ANION_PHASE1_BOOKING_ID`, and `ANION_PARENT_EMAIL`. Use Stripe test-mode keys for this handover pass; live billing keys are a later switch after UB approval.
+Required proof:
 
----
+- App creates a checkout session.
+- Stripe Checkout opens in test mode.
+- Production webhook accepts a valid signed Stripe event.
+- Subscription state is reflected in the app/admin surfaces.
+- Billing portal session can be created.
 
 ## What Was Built
 
 | Milestone | Feature | Status |
 |-----------|---------|--------|
-| M1 | Magic-link auth (PKCE), route guards, role redirect | ✅ Done |
-| M1 DB | RLS policies for profiles + user\_roles | ✅ Applied to live DB |
-| M2 | Booking request flow — parent creates, tutor accepts/declines | ✅ Done |
-| M2 DB | Bookings table + RLS | ✅ Applied to live DB |
-| M3 | Stripe checkout, billing portal, webhook subscription sync | ✅ Done |
-| M3 DB | Subscriptions table + RLS | ✅ Applied to live DB |
-| M4 | Daily.co live classroom (room creation, tutor/student video call, join/rejoin flow) | Local contract done; production evidence pending |
-| M5 | Admin dashboard with live Supabase metrics | ✅ Done |
+| M1 | Google OAuth, magic-link auth, route guards, role redirects | Done |
+| M1 DB | RLS policies for profiles and user_roles | Applied to live DB |
+| M2 | Booking request flow: parent creates, tutor accepts/declines | Done |
+| M2 DB | Bookings table and RLS | Applied to live DB |
+| M3 | Stripe checkout, billing portal, webhook subscription sync | Implemented; evidence pending |
+| M3 DB | Subscriptions table and RLS | Applied to live DB |
+| M4 | Daily.co live classroom: room creation, tutor/student video call, join/rejoin | Implemented; production evidence pending |
+| M5 | Admin dashboard with live Supabase metrics | Done |
 
----
+## Provider Setup Summary
 
-## Production Setup Checklist
+### Supabase
 
-Complete these steps before going live. They require access to third-party dashboards.
+- Live project ref: `aaaextkrfoqomzmjjkxe`.
+- Public URL: `https://aaaextkrfoqomzmjjkxe.supabase.co`.
+- Worker runtime bindings supply public URL, anon key, and service role key.
+- Production callback to confirm in Supabase Auth allow-list: `https://anion.unalabs.cloud/auth/callback`.
 
-### 1. Supabase Auth — Allow-list your production domain
+### Daily.co
 
-In [Supabase Dashboard → Authentication → URL Configuration](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/auth/url-configuration):
+- Daily provider settings are present in Cloudflare Worker runtime.
+- Daily domain is configured.
+- Non-destructive production smoke verifies the route is configured and protected.
+- Final proof still requires authenticated tutor/student join, leave, and rejoin evidence.
 
-- **Site URL:** `https://your-production-domain.com`
-- **Redirect URLs:** Add `https://your-production-domain.com/auth/callback`
+### Stripe
 
-### 2. Stripe — Create products and price IDs
+- Stripe settings are present in Cloudflare Worker runtime for test-mode handover.
+- Plans required: Starter `$49/mo`, Growth `$89/mo`, Unlimited `$149/mo`.
+- Webhook endpoint: `https://anion.unalabs.cloud/api/webhooks/stripe`.
+- Required events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`.
+- Signature gate passes by rejecting unsigned requests with `400 MISSING_SIGNATURE`.
+- Final proof still requires `npm run billing:evidence`.
 
-In [Stripe Dashboard → Products](https://dashboard.stripe.com/products):
+### Cloudflare
 
-Create three recurring monthly prices and note each **Price ID** (`price_xxxxx`):
+- Worker name: `anion-web`.
+- Production route: `https://anion.unalabs.cloud`.
+- Deploy command: `npm run deploy:worker`.
+- Runtime public Supabase config is injected from Worker bindings; browser bundle guard prevents local placeholders from being served.
 
-| Plan | Monthly Price | Sessions |
-|------|-------------|---------|
-| Starter | $49 | 4/month |
-| Growth | $89 | 8/month |
-| Unlimited | $149 | Unlimited |
+## User Journey
 
-### 3. Stripe — Register the webhook
+1. Parent signs in via `/login` using Google OAuth or secure email link.
+2. Parent chooses a plan on `/pricing` and completes Stripe checkout.
+3. Parent books a session on `/parent`.
+4. Tutor accepts the session.
+5. Tutor and student join `/lesson/[bookingId]` for the Daily call.
+6. Parent sees accepted booking context but does not join the call.
+7. Admin monitors users, bookings, and subscriptions on `/admin`.
 
-In [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks):
+## Known Limitations
 
-- **Endpoint URL:** `https://your-production-domain.com/api/webhooks/stripe`
-- **Events to listen for:**
-  - `checkout.session.completed`
-  - `customer.subscription.updated`
-  - `customer.subscription.deleted`
-- After saving, copy the **Signing Secret** — this is your `STRIPE_WEBHOOK_SECRET`.
+- Background customization is not implemented.
+- Phase 1 production call evidence is not yet captured with confirmed role accounts.
+- Stripe billing evidence is not yet captured end to end in test mode.
+- Privacy and Terms pages are placeholders pending legal signoff.
+- Live billing keys should not be switched on until UB approves test-mode evidence.
 
-### 4. Daily.co — Get your API key
+## Support And Rollback
 
-In [Daily.co Dashboard → Developers](https://dashboard.daily.co/developers):
-
-- Copy your **API Key** → `DAILY_API_KEY`
-- Your domain (e.g. `yourcompany.daily.co`) → `DAILY_DOMAIN`
-
----
-
-## Environment Variables
-
-Set all of these in your Cloudflare Workers environment (or `.env.local` for local dev):
-
-```env
-# Supabase (already set)
-NEXT_PUBLIC_SUPABASE_URL=https://aaaextkrfoqomzmjjkxe.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-SUPABASE_SERVICE_ROLE_KEY=<service role key>
-
-# Stripe - test mode first for handover evidence
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_STARTER=price_...
-STRIPE_PRICE_GROWTH=price_...
-STRIPE_PRICE_UNLIMITED=price_...
-
-# Daily.co — fill in after completing Step 4 above
-DAILY_API_KEY=...
-DAILY_DOMAIN=yourcompany.daily.co
-```
-
----
-
-## Deploying to Cloudflare Workers
-
-```powershell
-cd "C:\FTC HOLDING\APPS\anion"
-
-# Go-live preflight (env + typecheck + Next build + worker build + migration sanity)
-npm run preflight:prod
-
-# Deploy
-npm run deploy:worker
-
-# Post-deploy verification (set production URL)
-$env:ANION_BASE_URL="https://your-production-domain.com"
-npm run verify:prod
-```
-
-Set each env var in the Cloudflare dashboard under **Workers & Pages → anion → Settings → Variables** (or via `wrangler secret put VARIABLE_NAME`).
-
-Optional post-deploy probes:
-
-- Stripe webhook configured signature gate: set `CHECK_STRIPE_WEBHOOK=1` and expect `400 MISSING_SIGNATURE`
-- Daily room contract smoke (non-destructive): set `CHECK_DAILY_ROOM_SMOKE=1`
-
----
-
-## Database Migrations
-
-All migrations have been applied to the live Supabase project. Files are in `supabase/migrations/`:
-
-| File | Status |
-|------|--------|
-| `20260505_000001_init_foundation.sql` | ✅ Applied |
-| `20260506_000002_auth_rls.sql` | ✅ Applied |
-| `20260506_000003_bookings_m2.sql` | ✅ Applied |
-| `20260507_000004_subscriptions_m3.sql` | ✅ Applied |
-| `20260508_000005_security_hardening.sql` | ✅ Added |
-| `20260509_000006_stripe_webhook_events.sql` | ✅ Added |
-
-To apply future migrations, use the Supabase Management API (see `scripts/run-migrations.cjs`).
-
----
-
-## User Roles
-
-| Role | Access |
-|------|--------|
-| `parent` | Book sessions, manage subscription, view accepted lesson status |
-| `tutor` | Accept/decline bookings, join lessons |
-| `student` | View and join their sessions |
-| `admin` | Operator dashboard with platform metrics |
-
-Roles are set in the `user_roles` table. To make a user an admin:
-
-```sql
-INSERT INTO user_roles (profile_id, role)
-SELECT id, 'admin' FROM profiles WHERE email = 'admin@yourdomain.com';
-```
-
----
-
-## User Journey (End-to-End)
-
-1. **Parent signs up** → `/login` → magic link email → `/auth/callback` → `/parent`
-2. **Parent chooses a plan** → `/pricing` → Stripe checkout → subscription synced via webhook
-3. **Parent books a session** → `/parent` → tutor accepts → booking status = `accepted`
-4. **Tutor and student join the lesson** -> `/lesson/[bookingId]` -> Daily.co video call
-5. **Admin monitors** → `/admin` → live user/booking/subscription metrics
-
----
-
-## What the Client Needs to Do
-
-- [ ] Add production domain to Supabase Auth allow-list
-- [ ] Create 3 Stripe prices and copy IDs into env vars
-- [ ] Register Stripe webhook endpoint and copy signing secret
-- [ ] Get Daily.co API key and domain
-- [ ] Set all env vars in Cloudflare Workers
-- [ ] Run `npm run preflight:prod`
-- [ ] Run `npm run deploy:worker`
-- [ ] Run `npm run verify:prod` (with `ANION_BASE_URL` set)
-- [ ] Test: sign up, book, subscribe, parent booking visibility, tutor/student lesson join and rejoin, admin view
-
-> **Full production-readiness gate:** See [PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md) for the complete pass/fail checklist before going live.
-
----
-
-## External Blocker Checklist
-
-**Deployment is blocked until all items below are resolved.** These require access to third-party accounts.
-
-### Stripe (required for billing)
-
-- [ ] **S1** — Stripe test mode configured for handover evidence
-- [ ] **S2** — `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_test_...`
-- [ ] **S3** — `STRIPE_SECRET_KEY` = `sk_test_...` (set as Cloudflare secret)
-- [ ] **S4** — Three prices created in Stripe (Starter, Growth, Unlimited)
-- [ ] **S5** — `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_UNLIMITED` set
-- [ ] **S6** — Webhook endpoint registered: `https://[domain]/api/webhooks/stripe`
-- [ ] **S7** — Webhook events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
-- [ ] **S8** — `STRIPE_WEBHOOK_SECRET` = `whsec_...` (from Stripe webhook signing secret)
-- [ ] **S9** — `CHECK_STRIPE_WEBHOOK=1 npm run verify:prod` returns `400 MISSING_SIGNATURE`, not `WEBHOOK_NOT_CONFIGURED`
-- [ ] **S10** — `npm run billing:evidence` passes and stores JSON/Markdown evidence
-
-### Daily.co (required for live classroom)
-
-- [ ] **D1** — Daily.co account active and domain provisioned
-- [ ] **D2** — `DAILY_API_KEY` set (Cloudflare secret)
-- [ ] **D3** — `DAILY_DOMAIN` = `yourcompany.daily.co`
-- [ ] **D4** — Test room creation via `/api/daily/room` returns a valid room URL
-
-### Supabase (required for auth and data)
-
-- [ ] **SB1** — `NEXT_PUBLIC_SUPABASE_URL` set
-- [ ] **SB2** — `NEXT_PUBLIC_SUPABASE_ANON_KEY` set
-- [ ] **SB3** — `SUPABASE_SERVICE_ROLE_KEY` set (Cloudflare secret)
-- [ ] **SB4** — Production domain in Supabase Auth allow-list
-- [ ] **SB5** — Redirect URL `https://[domain]/auth/callback` in allow-list
-- [ ] **SB6** — All current migrations applied to live Supabase project (currently 17)
-
-### Cloudflare (required for deployment)
-
-- [ ] **CF1** — Custom domain configured and DNS propagated
-- [ ] **CF2** — SSL/TLS set to Full (Strict)
-- [ ] **CF3** — All env vars and secrets confirmed in Cloudflare Workers settings
-- [ ] **CF4** — `npm run deploy:worker` succeeds without errors
-
----
-
-## Support Contacts
-
-- **Supabase project ref:** `aaaextkrfoqomzmjjkxe`
-- **GitHub repo:** `https://github.com/fefejiro/FTC-HOLDING`
-- **App path in monorepo:** `APPS/anion/`
-
----
+- Production health: `https://anion.unalabs.cloud/api/health`.
+- Production status: `https://anion.unalabs.cloud/api/status`.
+- Recovery docs:
+  - `ops/DISASTER-RECOVERY.md`
+  - `ops/MONITORING-ALERTS.md`
+  - `ops/STRIPE-WEBHOOK-RECOVERY.md`
+- Rollback: redeploy the previous Cloudflare Worker version from the Cloudflare dashboard or rerun `npm run deploy:worker` from a known-good commit.
 
 ## Additional Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md) | Full pass/fail production checklist |
-| [MONITORING-ALERTS.md](./MONITORING-ALERTS.md) | Metrics, thresholds, alert routing |
-| [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) | Backup, restore, incident response |
-| [STRIPE-WEBHOOK-RECOVERY.md](./STRIPE-WEBHOOK-RECOVERY.md) | Failed Stripe webhook replay procedure |
-| [M5-SMOKE-TEST-CHECKLIST.md](./M5-SMOKE-TEST-CHECKLIST.md) | Pre-release smoke tests |
-| [docs/PRIVACY.md](../docs/PRIVACY.md) | Privacy policy (placeholder — legal review required) |
-| [docs/TERMS.md](../docs/TERMS.md) | Terms of service (placeholder — legal review required) |
+| `ops/PRODUCTION-READINESS.md` | Full pass/fail production checklist |
+| `ops/PHASE1-CALL-PRODUCTION-CLOSURE.md` | Live-classroom evidence runbook |
+| `ops/MONITORING-ALERTS.md` | Metrics, thresholds, alert routing |
+| `ops/DISASTER-RECOVERY.md` | Backup, restore, incident response |
+| `ops/STRIPE-WEBHOOK-RECOVERY.md` | Failed Stripe webhook replay procedure |
+| `docs/PRIVACY.md` | Privacy policy placeholder pending legal review |
+| `docs/TERMS.md` | Terms placeholder pending legal review |

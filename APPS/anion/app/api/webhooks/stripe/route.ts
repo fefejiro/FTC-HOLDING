@@ -6,13 +6,14 @@ import { logger } from '@/app/lib/logger';
 import { getOrCreateRequestId } from '@/app/lib/request-id';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/app/lib/rate-limit';
 import { writeAudit } from '@/app/lib/audit';
+import { getRuntimeEnvValue, getRuntimeSupabaseUrl } from '@/app/lib/runtime-env';
 
 // Webhook handler must read the raw request body for signature verification.
 export const runtime = 'nodejs';
 
 function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getRuntimeSupabaseUrl();
+  const key = getRuntimeEnvValue('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !key) throw new Error('Missing Supabase service role env vars');
   return createClient(url, key, { auth: { persistSession: false } });
 }

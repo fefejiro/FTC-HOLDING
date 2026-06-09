@@ -14,7 +14,14 @@ export function getAllowedOrigins(env: NodeJS.ProcessEnv = process.env): string[
     (env.NODE_ENV !== 'production' && env.CF_PAGES !== '1');
 
   if (allowLocalhost) {
-    configured.push('http://localhost:4178', 'http://127.0.0.1:4178', 'http://localhost:3000', 'http://127.0.0.1:3000');
+    const localHosts = ['localhost', '127.0.0.1'];
+    const localPorts = ['4178', '3000'];
+
+    for (const host of localHosts) {
+      for (const port of localPorts) {
+        configured.push(`http://${host}:${port}`);
+      }
+    }
   }
 
   return Array.from(new Set(configured));

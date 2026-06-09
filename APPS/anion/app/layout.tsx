@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import './globals.css';
+import PublicRuntimeConfig from './components/PublicRuntimeConfig';
 import SwRegister from './components/SwRegister';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import { getCurrentUser } from './lib/auth/getCurrentUser';
@@ -34,6 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body>
+        <PublicRuntimeConfig />
         <SwRegister />
         <header style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: 'white' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

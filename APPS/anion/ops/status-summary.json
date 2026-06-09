@@ -1,10 +1,10 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-06-08T10:45:00.000Z",
+  "updatedAt": "2026-06-09T12:00:00.000Z",
   "overall": "red",
   "stage": "phase1-call-closure-pending-auth-evidence",
-  "summary": "Production runtime is live, Cloudflare Worker provider secrets for Supabase, Daily, and Stripe are present, and local check/test/e2e gates pass. Phase 1 remains non-green because the deployed lazy auth bundle still contains the local Supabase placeholder config, so authenticated parent/tutor/student evidence and billing evidence cannot be trusted until Anion is rebuilt with the real build-time Supabase public env. Privacy/Terms legal review also remains open.",
+  "summary": "Production runtime is live, Cloudflare Worker provider secrets for Supabase, Daily, and Stripe are present, and local check/test/e2e gates pass. The public Supabase browser-bundle placeholder blocker is fixed in production; strict verify:prod now reports placeholder=no for the lazy auth chunk. Phase 1 remains non-green until authenticated parent/tutor/student evidence, Stripe billing evidence, and Privacy/Terms legal signoff are completed.",
   "metrics": [
     {
       "label": "Docs",
@@ -27,7 +27,7 @@
     {
       "label": "Live Runtime",
       "value": "live-verified-phase1-open",
-      "detail": "Production health/status/auth-callback probes pass and worker deployment is current; authenticated role journeys are pending manual evidence runs.",
+      "detail": "Production health/status/auth-callback probes pass, public browser auth config is production-safe, and worker deployment is current; authenticated role journeys are pending evidence runs.",
       "status": "yellow"
     },
     {
@@ -75,13 +75,13 @@
     },
     {
       "name": "Production readiness",
-      "status": "red",
-      "detail": "prod:doctor passes provider-secret inventory, but stricter verify:prod catches the lazy auth bundle placeholder. build:worker now fails closed when local/demo Supabase placeholders are present. Phase 1 authenticated call evidence is currently FAIL and critical go-live rows remain open in ops/PRODUCTION-READINESS.md."
+      "status": "yellow",
+      "detail": "prod:doctor passes provider-secret inventory and strict verify:prod passes with public bundle placeholder=no. Phase 1 authenticated call evidence and Stripe billing evidence are still open, so production handover remains non-green."
     },
     {
       "name": "Phase 1 call closure",
       "status": "red",
-      "detail": "Runtime callback hardening is deployed, but authenticated parent/tutor/student join and leave/rejoin evidence is blocked until the public Supabase build config is corrected and confirmed role test credentials are used."
+      "detail": "Runtime callback hardening and public browser config are deployed. Authenticated parent/tutor/student join and leave/rejoin evidence is still pending until confirmed role test credentials are used in the production evidence runner."
     }
   ],
   "connections": [
@@ -106,10 +106,8 @@
     "Confirm Supabase Auth allow-list includes https://anion.unalabs.cloud/auth/callback and current production domain entries.",
     "Provision and confirm production parent/tutor/student role test credentials, then execute authenticated Phase 1 lesson journeys.",
     "Capture parent/tutor/student join and leave/rejoin evidence in ops/PHASE1-CALL-PRODUCTION-CLOSURE.md and flip verdict only after all role paths pass.",
-    "Rebuild and deploy with real build-time public env: NEXT_PUBLIC_SUPABASE_URL=https://aaaextkrfoqomzmjjkxe.supabase.co, NEXT_PUBLIC_SUPABASE_ANON_KEY from Supabase Settings API, NEXT_PUBLIC_SITE_URL=https://anion.unalabs.cloud, and NEXT_PUBLIC_AUTH_REDIRECT_URL=https://anion.unalabs.cloud.",
-    "Run npm run build:worker until the bundle guard passes, then deploy the worker.",
-    "Run npm run prod:doctor and CHECK_STRIPE_WEBHOOK=1 CHECK_DAILY_ROOM_SMOKE=1 EXPECTED_DAILY_ERROR_CODE=AUTO npm run verify:prod until both pass.",
-    "Complete PRODUCTION-READINESS.md external blocker checklist (Stripe test-mode keys/prices/webhook for handover evidence, Daily API key/domain, Supabase auth entries).",
+    "Keep npm run build:worker bundle guard and CHECK_STRIPE_WEBHOOK=1 CHECK_DAILY_ROOM_SMOKE=1 EXPECTED_DAILY_ERROR_CODE=AUTO npm run verify:prod green before each handover claim.",
+    "Complete PRODUCTION-READINESS.md remaining external checklist rows for authenticated Supabase allow-list confirmation, billing evidence, and role journey evidence.",
     "Run npm run billing:evidence after Stripe provider settings are available and store the generated JSON/Markdown report.",
     "Obtain legal review and sign-off on docs/PRIVACY.md and docs/TERMS.md before formal publication approval.",
     "Configure uptime monitor for /api/health endpoint (see MONITORING-ALERTS.md Setup Guide).",

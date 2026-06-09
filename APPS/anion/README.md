@@ -9,15 +9,52 @@ Primary production delivery lane for Anion.
 - Stripe as payment rail for this phase
 - Daily React for live classroom
 
+## Authentication
+
+Anion uses **Google OAuth** as the primary authentication method via Supabase, with a secure email magic-link fallback for handoff and QA accounts. There are no Anion-managed passwords.
+
+1. Users click "Continue with Google" on the login page (`/login`)
+2. They're redirected to the Supabase OAuth endpoint
+3. Supabase handles the Google OAuth flow and returns an auth code
+4. The code is exchanged at `/auth/callback` for a Supabase session
+5. User is redirected to their dashboard (`/parent`, `/student`, or `/tutor`)
+
+### Google OAuth Setup (Supabase)
+
+To enable Google OAuth in Supabase:
+
+1. Go to https://app.supabase.com → Project `aaaextkrfoqomzmjjkxe`
+2. Navigate to **Authentication** → **Providers**
+3. Enable **Google** provider
+4. Configure Google OAuth credentials from Google Cloud Console
+5. Add redirect URIs:
+   - `https://aaaextkrfoqomzmjjkxe.supabase.co/auth/v1/callback`
+   - `https://anion.unalabs.cloud/auth/callback`
+
+The `/auth/callback` route is the hardened entry point that exchanges OAuth codes for sessions and validates the callback origin.
+
+### Client-side Auth
+
+Authentication helpers live in `src/lib/auth.ts`:
+- `signInWithGoogle()` - Initiates OAuth flow
+- `signInWithMagicLink()` - Sends a secure email link for fallback sign-in
+- `loadSession()` - Gets current auth session
+- `logout()` - Signs out user
+
+Server-side auth resolution in `app/lib/auth/getCurrentUser.ts`:
+- Returns authenticated user with role (student, parent, tutor, admin)
+- Looks up user profile and assigned role from database
+- Returns null if no active session
+
 ## Current State
 - M0 platform realignment complete
 - App Router route skeleton established
 - OpenNext and Wrangler deployment contract added
 - Supabase migrations folder initialized and applied
-- M1-M5 core implementation exists in code, but authenticated production closure is currently blocked
-- Current Phase 1 execution status: FAIL (hard blocker: no valid confirmed production role test credentials for parent/tutor/student)
+- M1-M5 core implementation exists in code, but authenticated production closure is still pending evidence
+- Current Phase 1 execution status: FAIL until parent/tutor/student production evidence is captured
 - Live classroom rule: assigned tutor and student join the Daily room; parent has booking visibility but does not join the call unless future product requirements change
-- Runtime status endpoint is now aligned: live `/api/status` reports blocked Phase 1 closure state
+- Runtime status endpoint is now aligned: live `/api/status` reports live runtime with pending Phase 1 closure evidence
 - Governance rule: do not mark overall green while critical items in `ops/PRODUCTION-READINESS.md` remain open
 
 ## Commands
@@ -46,14 +83,23 @@ Primary production delivery lane for Anion.
 Smoke tests live in `tests/smoke.spec.ts` and cover:
 - `GET /api/health` - service liveness
 - `POST /api/daily/room` - malformed requests return `400`, unauthenticated valid-shaped requests return `401`
-- `/login` - sign-in form renders correctly
+- `/login` - sign-in form renders correctly (Google auth button and secure email link fallback visible)
 - `/pricing` - all three plan cards visible
+
+### Google OAuth tests (Playwright)
+
+Google auth tests live in `tests/google-auth.spec.ts` and cover:
+- Google sign-in button visibility and clickability
+- OAuth flow initiation
+- Auth callback error handling
+- Login page rendering with Google as primary auth
 - `/parent`, `/dashboard`, `/lesson/:id` - redirect to `/login` when unauthenticated
 - `POST /api/billing/checkout` - returns `401 UNAUTHENTICATED` when no session
 
 The tests are designed to run without real credentials. Unauthenticated routes
 never reach Supabase or Stripe, so placeholder env vars are sufficient locally and
-in CI.
+in CI. Production browser auth config is injected at runtime from Cloudflare Worker
+bindings and guarded so local placeholders are not served to users.
 
 #### Run locally
 
@@ -99,9 +145,13 @@ ANION_BASE_URL=https://anion.unalabs.cloud npm run prod:doctor
 ```
 
 The doctor checks production health/status and Cloudflare Worker secret
-inventory. It intentionally exits non-zero while Daily or Stripe provider
-secrets are missing, because tutor/student video calls and billing cannot be
+inventory. It exits non-zero when required Supabase, Daily, or Stripe provider
+settings are missing, because tutor/student video calls and billing cannot be
 proven without those provider settings.
+
+Production public Supabase config is injected into the browser at runtime from
+Cloudflare Worker bindings. `npm run build:worker` includes a browser-bundle
+guard that fails if local/demo placeholders would be served to users.
 
 After `prod:doctor` passes, run the authenticated video-call evidence gate:
 
@@ -167,4 +217,6 @@ npm run test:local-video
 ```
 
 This proves parent denial plus tutor/student local video join, leave, and rejoin.
-Production Daily video still requires `DAILY_API_KEY` and `DAILY_DOMAIN`.
+Production Daily provider settings are configured, but handover still requires
+authenticated production evidence for parent visibility/denial and tutor/student
+Daily join, leave, and rejoin.

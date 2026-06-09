@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  getRuntimeCanonicalOrigin,
+  getRuntimeSupabaseAnonKey,
+  getRuntimeSupabaseUrl,
+} from '@/app/lib/runtime-env';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -8,12 +13,18 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next');
   const successRedirect = next && next.startsWith('/') ? next : '/dashboard';
   const failureRedirect = '/login?error=auth_callback_failed';
-  const canonicalOrigin = process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL || process.env.NEXT_PUBLIC_SITE_URL || origin;
+  const canonicalOrigin = getRuntimeCanonicalOrigin(origin);
+  const supabaseUrl = getRuntimeSupabaseUrl();
+  const supabaseAnonKey = getRuntimeSupabaseAnonKey();
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.redirect(`${canonicalOrigin}${failureRedirect}`);
+  }
 
   const cookieStore = await cookies();
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {

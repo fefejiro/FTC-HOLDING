@@ -1,7 +1,7 @@
 // Auth helpers for client components.
 // Uses the Anion-local Supabase browser client so this file has no dependency
 // on the cross-workspace @ftc/auth or @ftc/supabase packages.
-import { createBrowserClient } from '@/app/lib/supabase/client';
+import { createBrowserClient, getPublicConfig } from '@/app/lib/supabase/client';
 
 export type AuthUser = {
   id: string;
@@ -15,7 +15,7 @@ export type AuthSession = {
 };
 
 export function authEnabled() {
-  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return !!getPublicConfig();
 }
 
 export async function loadSession(): Promise<AuthSession | null> {
@@ -46,12 +46,7 @@ function getAuthCallbackUrl(): string | undefined {
     return undefined;
   }
 
-  const configuredBase =
-    process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    window.location.origin;
-
-  const normalizedBase = configuredBase.replace(/\/$/, '');
+  const normalizedBase = window.location.origin.replace(/\/$/, '');
   return `${normalizedBase}/auth/callback`;
 }
 

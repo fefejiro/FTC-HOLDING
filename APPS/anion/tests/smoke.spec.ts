@@ -67,8 +67,9 @@ test.describe('Public routes', () => {
   test('login page renders sign-in form', async ({ page }) => {
     await page.goto('/login');
     await expect(page.locator('h1')).toContainText('Sign in');
-    await expect(page.getByLabel('Email address')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Send magic link' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Continue with Google/i })).toBeVisible();
+    await expect(page.getByLabel(/Email address/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /Email me a secure link/i })).toBeVisible();
   });
 
   test('pricing page renders all three plan cards', async ({ page }) => {

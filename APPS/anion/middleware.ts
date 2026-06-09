@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { applyApiSecurityHeaders, handleApiCorsPreflight, isApiRequestOriginDenied } from '@/app/lib/security/http';
+import { getRuntimeSupabaseAnonKey, getRuntimeSupabaseUrl } from '@/app/lib/runtime-env';
 
 export async function middleware(request: NextRequest) {
   const isApiPath = request.nextUrl.pathname.startsWith('/api/');
@@ -17,8 +18,8 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   // Skip Supabase session refresh if env vars are not configured (e.g. health checks).
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = getRuntimeSupabaseUrl();
+  const supabaseAnonKey = getRuntimeSupabaseAnonKey();
 
   if (supabaseUrl && supabaseAnonKey) {
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {

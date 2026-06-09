@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-type State = 'idle' | 'loading' | 'sent' | 'error';
+type State = 'idle' | 'google-loading' | 'magic-loading' | 'sent' | 'error';
 
 export default function LoginPage() {
   const [state, setState] = useState<State>('idle');
@@ -11,7 +11,7 @@ export default function LoginPage() {
 
   async function handleMagicLinkSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState('loading');
+    setState('magic-loading');
     setErrorMessage('');
 
     try {
@@ -19,12 +19,12 @@ export default function LoginPage() {
       setState('sent');
     } catch (err: any) {
       setState('error');
-      setErrorMessage(err?.message || 'Could not send magic link.');
+      setErrorMessage(err?.message || 'Could not send sign-in link.');
     }
   }
 
   async function handleGoogleSignIn() {
-    setState('loading');
+    setState('google-loading');
     setErrorMessage('');
 
     try {
@@ -83,7 +83,7 @@ export default function LoginPage() {
           Sign in to Anion
         </h2>
         <p className="body-sm secondary" style={{ marginBottom: 'var(--spacing-6)' }}>
-          Use magic link or Google. Both routes return through the secure callback endpoint.
+          Use Google or a secure email link. No password is required.
         </p>
 
         {state === 'sent' && (
@@ -98,7 +98,7 @@ export default function LoginPage() {
               padding: '10px 12px',
             }}
           >
-            Magic link sent. Check your inbox for {email}.
+            Sign-in link sent. Check your inbox for {email}.
           </p>
         )}
 
@@ -118,7 +118,17 @@ export default function LoginPage() {
           </p>
         )}
 
-        <form onSubmit={handleMagicLinkSubmit} style={{ marginBottom: 'var(--spacing-4)' }}>
+        <button
+          type="button"
+          className="btn-primary"
+          style={{ width: '100%', marginBottom: 'var(--spacing-4)' }}
+          onClick={handleGoogleSignIn}
+          disabled={state === 'google-loading' || state === 'magic-loading'}
+        >
+          {state === 'google-loading' ? 'Signing in...' : 'Continue with Google'}
+        </button>
+
+        <form onSubmit={handleMagicLinkSubmit} style={{ marginBottom: 'var(--spacing-5)' }}>
           <label htmlFor="email">Email address</label>
           <input
             id="email"
@@ -129,28 +139,18 @@ export default function LoginPage() {
             onChange={(event) => setEmail(event.target.value)}
             placeholder="name@school.com"
             required
-            disabled={state === 'loading'}
+            disabled={state === 'google-loading' || state === 'magic-loading'}
             style={{ marginBottom: 'var(--spacing-3)' }}
           />
           <button
             type="submit"
-            className="btn-primary"
+            className="btn-secondary"
             style={{ width: '100%' }}
-            disabled={state === 'loading'}
+            disabled={state === 'google-loading' || state === 'magic-loading'}
           >
-            {state === 'loading' ? 'Sending...' : 'Send magic link'}
+            {state === 'magic-loading' ? 'Sending...' : 'Email me a secure link'}
           </button>
         </form>
-
-        <button
-          type="button"
-          className="btn-secondary"
-          style={{ width: '100%', marginBottom: 'var(--spacing-5)' }}
-          onClick={handleGoogleSignIn}
-          disabled={state === 'loading'}
-        >
-          Continue with Google
-        </button>
 
         <p className="body-sm secondary" style={{ textAlign: 'center', margin: 0 }}>
           <Link href="/" style={{ color: 'var(--brand-teal)', fontWeight: '600' }}>
